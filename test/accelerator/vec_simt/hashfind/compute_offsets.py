@@ -2,9 +2,12 @@
 """Compute hash indices and offsets for first 256 query keys."""
 
 import struct
+from pathlib import Path
+
+DATA_FILE = Path(__file__).resolve().parent / 'data_obj' / 'lookup_keys.data'
 
 # Read first 256 query keys
-with open('/remote/lms01/j00827727/jcore/JanusCoreBench/test/accelerator/vec_simt/hashfind/data_obj/lookup_keys.data', 'rb') as f:
+with DATA_FILE.open('rb') as f:
     keys = []
     for i in range(256):
         data = f.read(8)

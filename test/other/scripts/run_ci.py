@@ -6,11 +6,14 @@ import argparse
 import json
 import math
 import subprocess
+from pathlib import Path
+
+OTHER_ROOT = Path(__file__).resolve().parent.parent
 
 def compile():
-    os.chdir(os.path.dirname(__file__)+"/tileop_api")
-    print(os.getcwd())
-    subprocess.run("./compile.all", shell=True)
+    compile_dir = OTHER_ROOT / "tileop_api"
+    print(compile_dir)
+    subprocess.run("./compile.all", cwd=compile_dir, shell=True)
     return
 
 def run():
@@ -39,5 +42,3 @@ if __name__ == '__main__':
     compile()
     run()
     verify()
-
-    
