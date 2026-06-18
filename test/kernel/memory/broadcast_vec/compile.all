@@ -1,0 +1,49 @@
+#! /bin/bash
+make    TESTCASE=broadcast_vec_07 DType=__half tMs=32 MAX_DIMs=2 \
+        IN_SHAPEs=1443,1 OUT_SHAPEs=1443,129 IN_DIMs=2 OUT_DIMs=2 \
+        gIMs=1443*1 gOMs=1443*129 \
+        TESTNAME=broadcast_vec_to_07 \
+        IN_SHAPE_NAME=1443_1 OUT_SHAPE_NAME=1443_129 res_check=off diss
+
+# kTileRows=64 variant (fewer iterations, larger tiles)
+# make    TESTCASE=broadcast_vec_07 DType=__half tMs=64 MAX_DIMs=2 \
+#         IN_SHAPEs=1443,1 OUT_SHAPEs=1443,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1443*1 gOMs=1443*129 \
+#         TESTNAME=broadcast_vec_to_07 \
+#         IN_SHAPE_NAME=1443_1 OUT_SHAPE_NAME=1443_129 res_check=off diss
+
+# kTileRows=4 variant
+# make    TESTCASE=broadcast_vec_07 DType=__half tMs=4 MAX_DIMs=2 \
+#         IN_SHAPEs=1443,1 OUT_SHAPEs=1443,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1443*1 gOMs=1443*129 \
+#         TESTNAME=broadcast_vec_to_07 \
+#         IN_SHAPE_NAME=1443_1 OUT_SHAPE_NAME=1443_129 res_check=off diss
+
+# broadcast_vec_029: (1280,1,49)->(1280,8,49) half, kTileBatch=16, kInner=49
+make    TESTCASE=broadcast_vec_029 DType=__half tMs=16 kInners=49 MAX_DIMs=3 \
+        IN_SHAPEs=1280,1,49 OUT_SHAPEs=1280,8,49 IN_DIMs=3 OUT_DIMs=3 \
+        gIMs=1280*1*49 gOMs=1280*8*49 \
+        TESTNAME=broadcast_vec_to_029 \
+        IN_SHAPE_NAME=1280_1_49 OUT_SHAPE_NAME=1280_8_49 res_check=off diss
+
+# broadcast_vec_039: (8192,1,16)->(8192,8,16) half, kTileBatch=16, kInner=16
+# tMs here means kTileBatch (batches per tile, must be power-of-2)
+make    TESTCASE=broadcast_vec_039 DType=__half tMs=16 kInners=16 MAX_DIMs=3 \
+        IN_SHAPEs=8192,1,16 OUT_SHAPEs=8192,8,16 IN_DIMs=3 OUT_DIMs=3 \
+        gIMs=8192*1*16 gOMs=8192*8*16 \
+        TESTNAME=broadcast_vec_to_039 \
+        IN_SHAPE_NAME=8192_1_16 OUT_SHAPE_NAME=8192_8_16 res_check=off diss
+
+# kTileBatch=32 variant (fewer iterations, larger tiles)
+# make    TESTCASE=broadcast_vec_039 DType=__half tMs=32 kInners=16 MAX_DIMs=3 \
+#         IN_SHAPEs=8192,1,16 OUT_SHAPEs=8192,8,16 IN_DIMs=3 OUT_DIMs=3 \
+#         gIMs=8192*1*16 gOMs=8192*8*16 \
+#         TESTNAME=broadcast_vec_to_039 \
+#         IN_SHAPE_NAME=8192_1_16 OUT_SHAPE_NAME=8192_8_16 res_check=off diss
+
+# kTileBatch=8 variant
+# make    TESTCASE=broadcast_vec_039 DType=__half tMs=8 kInners=16 MAX_DIMs=3 \
+#         IN_SHAPEs=8192,1,16 OUT_SHAPEs=8192,8,16 IN_DIMs=3 OUT_DIMs=3 \
+#         gIMs=8192*1*16 gOMs=8192*8*16 \
+#         TESTNAME=broadcast_vec_to_039 \
+#         IN_SHAPE_NAME=8192_1_16 OUT_SHAPE_NAME=8192_8_16 res_check=off diss

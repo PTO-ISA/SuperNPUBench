@@ -1,0 +1,5 @@
+#! /bin/bash
+make    TESTCASE=reducesum_row DType=int32_t tM_s=16 tN_s=512 \
+        gM_s=16 gN_s=1024 \
+        diss
+

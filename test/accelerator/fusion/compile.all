@@ -1,0 +1,98 @@
+#! /bin/bash 
+make TESTCASE=fa1
+make TESTCASE=fa2
+make TESTCASE=fa3
+make TESTCASE=fa5
+make TESTCASE=fa6
+make TESTCASE=fa7
+make TESTCASE=fa8
+make TESTCASE=fa9
+make TESTCASE=fa10
+make TESTCASE=fa11
+
+make TESTCASE=fa1  opt1=on
+make TESTCASE=fa2  opt1=on
+make TESTCASE=fa3  opt1=on
+make TESTCASE=fa5  opt1=on
+make TESTCASE=fa6  opt1=on
+make TESTCASE=fa7  opt1=on
+make TESTCASE=fa8  opt1=on
+make TESTCASE=fa9  opt1=on
+make TESTCASE=fa10 opt1=on
+
+make TESTCASE=fa1  opt2=on
+make TESTCASE=fa2  opt2=on
+make TESTCASE=fa3  opt2=on
+make TESTCASE=fa5  opt2=on
+make TESTCASE=fa6  opt2=on
+make TESTCASE=fa7  opt2=on
+make TESTCASE=fa8  opt2=on
+make TESTCASE=fa9  opt2=on
+make TESTCASE=fa10 opt2=on
+
+make TESTCASE=fa1  opt3=on
+make TESTCASE=fa2  opt3=on
+make TESTCASE=fa3  opt3=on
+make TESTCASE=fa4  opt3=on
+make TESTCASE=fa5  opt3=on
+make TESTCASE=fa6  opt3=on
+make TESTCASE=fa7  opt3=on
+make TESTCASE=fa8  opt3=on
+make TESTCASE=fa9  opt3=on
+make TESTCASE=fa10 opt3=on
+
+make TESTCASE=fa1  opt3=on template=on
+make TESTCASE=fa2  opt3=on template=on
+make TESTCASE=fa3  opt3=on template=on
+make TESTCASE=fa4  opt3=on template=on
+make TESTCASE=fa5  opt3=on template=on
+make TESTCASE=fa6  opt3=on template=on
+make TESTCASE=fa7  opt3=on template=on
+make TESTCASE=fa8  opt3=on template=on
+make TESTCASE=fa9  opt3=on template=on
+make TESTCASE=fa10 opt3=on template=on
+
+make TESTCASE=fa1  opt3=on multitile=on
+make TESTCASE=fa2  opt3=on multitile=on
+make TESTCASE=fa3  opt3=on multitile=on
+make TESTCASE=fa4  opt3=on multitile=on
+make TESTCASE=fa5  opt3=on multitile=on
+make TESTCASE=fa6  opt3=on multitile=on
+make TESTCASE=fa7  opt3=on multitile=on
+make TESTCASE=fa8  opt3=on multitile=on
+make TESTCASE=fa9  opt3=on multitile=on
+make TESTCASE=fa10 opt3=on multitile=on
+
+make TESTCASE=fa1  opt3=on template=on multitile=on
+make TESTCASE=fa2  opt3=on template=on multitile=on
+make TESTCASE=fa3  opt3=on template=on multitile=on
+make TESTCASE=fa4  opt3=on template=on multitile=on
+make TESTCASE=fa5  opt3=on template=on multitile=on
+make TESTCASE=fa6  opt3=on template=on multitile=on
+make TESTCASE=fa7  opt3=on template=on multitile=on
+make TESTCASE=fa8  opt3=on template=on multitile=on
+make TESTCASE=fa9  opt3=on template=on multitile=on
+make TESTCASE=fa10 opt3=on template=on multitile=on
+
+make TESTCASE=fa1 opt4=on
+make TESTCASE=fa1 opt4=on template=on
+
+
+
+make TESTCASE=fa1 manual=on         S=512 Tm=128 Tk=128 X=2 Y=4
+
+# make TESTCASE=fag34
+# make TESTCASE=fag36
+# make TESTCASE=fag40
+# make TESTCASE=flashmla13
+# make TESTCASE=flashmla13_ubm
+# make TESTCASE=flashmla15
+# make TESTCASE=flashmla17
+# make TESTCASE=flashmla19
+# make TESTCASE=flashmla21
+# make TESTCASE=flashmla21_final_gu
+# make TESTCASE=flashmla21_flashmla
+# make TESTCASE=flashmla25
+# make TESTCASE=flashmla26
+# make TESTCASE=ifa31
+# make TESTCASE=ifa33

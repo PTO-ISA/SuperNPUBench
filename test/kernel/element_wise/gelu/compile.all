@@ -1,0 +1,2 @@
+#! /bin/bash
+make TESTCASE=gelu DTYPE=__bf16 tMs=2048 gMs=24*8*1024 SHAPE_NAME=24_8_1024 Approximate=false diss

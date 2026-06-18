@@ -1,0 +1,33 @@
+#! /bin/bash 
+
+make TESTCASE=fa1 dynamic_unroll=on S=128 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=192 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=256 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=320 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=384 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=448 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=512 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=576 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=640 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=704 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=768 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=832 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=896 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=960 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa1 dynamic_unroll=on S=1024 Tm=128 Tk=128 X=2 Y=4
+
+# make TESTCASE=fa1 dynamic=on S=128 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=192 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=256 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=320 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=384 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=448 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=512 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=576 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=640 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=704 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=768 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=832 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=896 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=960 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa1 dynamic=on S=1024 Tm=128 Tk=128 X=1 Y=1

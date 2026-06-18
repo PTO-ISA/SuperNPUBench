@@ -1,0 +1,17 @@
+#! /bin/bash
+
+make TESTCASE=softmax M=512  N=128 tM=32 tN=32
+make TESTCASE=softmax M=576  N=256 tM=64 tN=32
+make TESTCASE=softmax M=1024 N=256 tM=64 tN=32
+make TESTCASE=softmax M=1024 N=512 tM=128 tN=64
+make TESTCASE=softmax M=2048 N=512 tM=128 tN=64
+
+make TESTCASE=softmax M=128  N=512 tM=32 tN=32
+make TESTCASE=softmax M=256  N=576 tM=64 tN=32
+make TESTCASE=softmax M=256  N=1024 tM=64 tN=32
+make TESTCASE=softmax M=512  N=1024 tM=128 tN=64
+
+make TESTCASE=softmax M=1024 N=1024 tM=64 tN=64
+
+make TESTCASE=onlinesoftmax M=512  N=128 tM=32 tN=32
+make TESTCASE=onlinesoftmax M=576  N=128 tM=64 tN=32

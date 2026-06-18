@@ -1,0 +1,13 @@
+make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=false -DMBUF=1 -DTm=128' target=1buf.reuse.tumn.tQ128.elf
+make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=false -DMBUF=2 -DTm=128' target=2buf.reuse.tumn.tQ128.elf
+make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=false -DMBUF=4 -DTm=128' target=4buf.reuse.tumn.tQ128.elf
+make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=false -DMBUF=1 -DTm=64'  target=1buf.reuse.tumn.tQ64.elf
+make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=false -DMBUF=2 -DTm=64'  target=2buf.reuse.tumn.tQ64.elf
+make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=false -DMBUF=4 -DTm=64'  target=4buf.reuse.tumn.tQ64.elf
+
+# make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=true -DMBUF=1 -DTm=128' target=1buf.tu.tQ128.elf
+# make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=true -DMBUF=2 -DTm=128' target=2buf.tu.tQ128.elf
+# make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=true -DMBUF=4 -DTm=128' target=4buf.tu.tQ128.elf
+# make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=true -DMBUF=1 -DTm=64'  target=1buf.tu.tQ64.elf
+# make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=true -DMBUF=2 -DTm=64'  target=2buf.tu.tQ64.elf
+# make TESTCASE=fa1 CC_OPT=default CFLAGS='-DENABLE_TENSOR_INSTR -DMULTI_TILE_OPT3 -DTEMPLATE -DMULTI_REUSE -mllvm -linxv5-enable-tile-clock-hand=true -DMBUF=4 -DTm=64'  target=4buf.tu.tQ64.elf

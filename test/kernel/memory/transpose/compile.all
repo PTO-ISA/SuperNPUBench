@@ -1,0 +1,16 @@
+#! /bin/bash
+make    TESTCASE=transpose DType=int32_t MAX_DIM=8 tM=512 \
+        IN_SHAPE=2,2,4,4,8,4 OUT_SHAPE=2,2,8,4,4,4 \
+        IN_SHAPE_NAME=2_2_4_4_8_4 OUT_SHAPE_NAME=2_2_8_4_4_4 \
+        IN_DIM=6 OUT_DIM=6 \
+        TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=4 \
+        gIM=2*2*4*4*8*4 gOM=2*2*8*4*4*4 \
+        diss
+
+#make    TESTCASE=transpose DType=int32_t MAX_DIM=8 tM=512 \
+#        IN_SHAPE=2,2,4,4,8 OUT_SHAPE=2,2,8,4,4 \
+#        IN_SHAPE_NAME=2_2_4_4_8 OUT_SHAPE=2_2_8_4_4 \
+#        IN_DIM=5 OUT_DIM=5 \
+#        TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=4 \
+#        gIM=2*2*4*4*8 gOM=2*2*8*4*4 \
+#        diss        

@@ -1,0 +1,25 @@
+#! /bin/bash
+
+make TESTCASE=normalization MODE=layer M=1024  N=1024 tM=64  tN=64
+make TESTCASE=normalization MODE=layer M=1024  N=1024 tM=128 tN=64
+make TESTCASE=normalization MODE=layer M=1024  N=1024 tM=64 tN=128
+
+make TESTCASE=normalization MODE=layer M=1024  N=2048 tM=64  tN=64
+make TESTCASE=normalization MODE=layer M=1024  N=2048 tM=128 tN=64
+make TESTCASE=normalization MODE=layer M=1024  N=2048 tM=64 tN=128
+
+make TESTCASE=normalization MODE=layer M=2048  N=1024 tM=64  tN=64
+make TESTCASE=normalization MODE=layer M=2048  N=1024 tM=128 tN=64
+make TESTCASE=normalization MODE=layer M=2048  N=1024 tM=64 tN=128
+
+make TESTCASE=normalization MODE=rms M=1024  N=1024 tM=64  tN=64
+make TESTCASE=normalization MODE=rms M=1024  N=1024 tM=128 tN=64
+make TESTCASE=normalization MODE=rms M=1024  N=1024 tM=64 tN=128
+
+make TESTCASE=normalization MODE=rms M=1024  N=2048 tM=64  tN=64
+make TESTCASE=normalization MODE=rms M=1024  N=2048 tM=128 tN=64
+make TESTCASE=normalization MODE=rms M=1024  N=2048 tM=64 tN=128
+
+make TESTCASE=normalization MODE=rms M=2048  N=1024 tM=64  tN=64
+make TESTCASE=normalization MODE=rms M=2048  N=1024 tM=128 tN=64
+make TESTCASE=normalization MODE=rms M=2048  N=1024 tM=64 tN=128

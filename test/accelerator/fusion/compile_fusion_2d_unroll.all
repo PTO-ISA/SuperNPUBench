@@ -1,0 +1,835 @@
+#! /bin/bash 
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa1 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=4
+
+
+
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa2 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=4
+
+
+
+
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa3 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=4
+
+
+
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa5 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=4
+
+
+
+
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa6 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=4
+
+
+
+
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa7 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=4
+
+
+
+
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=512 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=1024 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=128 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=64 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=128 Tk=64 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=4
+
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=4
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=1
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=2
+make TESTCASE=fa8 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=4
+
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=1
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=2
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=128 X=1 Y=4
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=1
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=2
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=128 X=2 Y=4
+
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=1
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=2
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=64 X=1 Y=4
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=1
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=2
+# make TESTCASE=fa4 2d_unroll=on         S=2048 Tm=64 Tk=64 X=2 Y=4
+
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=1
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=2
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=128 X=1 Y=4
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=1
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=2
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=128 X=2 Y=4
+
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=1
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=2
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=64 X=1 Y=4
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=1
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=2
+# make TESTCASE=fa4 2d_unroll=on         S=3072 Tm=64 Tk=64 X=2 Y=4
+
+
+# make TESTCASE=fa1 2d_unroll=on         S=4096 Tm=128 Tk=128 X=1 Y=4
+# make TESTCASE=fa1 2d_unroll=on         S=4096 Tm=64 Tk=128 X=1 Y=4
+# make TESTCASE=fa2 2d_unroll=on         S=4096 Tm=128 Tk=64 X=1 Y=4
+# make TESTCASE=fa3 2d_unroll=on         S=4096 Tm=128 Tk=128 X=2 Y=2
+# make TESTCASE=fa4 2d_unroll=on         S=4096 Tm=64 Tk=128 X=2 Y=4

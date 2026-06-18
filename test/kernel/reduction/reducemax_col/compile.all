@@ -1,0 +1,5 @@
+#! /bin/bash
+make    TESTCASE=reducemax_col DType=int32_t tM_s=32 tN_s=128 \
+        gM_s=8192 gN_s=1024 \
+        diss
+

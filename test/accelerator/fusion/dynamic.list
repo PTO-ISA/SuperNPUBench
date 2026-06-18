@@ -1,0 +1,15 @@
+make TESTCASE=fa1 dynamic=on S=128  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S128
+make TESTCASE=fa1 dynamic=on S=192  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S192
+make TESTCASE=fa1 dynamic=on S=256  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S256
+make TESTCASE=fa1 dynamic=on S=320  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S320
+make TESTCASE=fa1 dynamic=on S=384  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S384
+make TESTCASE=fa1 dynamic=on S=448  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S448
+make TESTCASE=fa1 dynamic=on S=512  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S512
+make TESTCASE=fa1 dynamic=on S=576  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S576
+make TESTCASE=fa1 dynamic=on S=640  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S640
+make TESTCASE=fa1 dynamic=on S=704  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S704
+make TESTCASE=fa1 dynamic=on S=768  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S768
+make TESTCASE=fa1 dynamic=on S=832  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S832
+make TESTCASE=fa1 dynamic=on S=896  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S896
+make TESTCASE=fa1 dynamic=on S=960  Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S960
+make TESTCASE=fa1 dynamic=on S=1024 Tm=128 Tk=128 X=1 Y=1 CC_OPT=default CFLAGS="-DENABLE_TENSOR_INSTR -mllvm -linxv5-enable-tile-clock-hand=false" target=S1024
