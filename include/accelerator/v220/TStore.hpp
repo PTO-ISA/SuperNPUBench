@@ -8,14 +8,14 @@ using namespace pto;
 
 namespace PTO
 {
-    template <is_tile_data tile_shape>
+    template <is_tile_data_v tile_shape>
     __aicore__ void TSTORE(__gm__ tile_shape::DType *dst, tile_shape &src, unsigned gms)
     {
-        constexpr uint16_t nBurst = src::kRows;
-        constexpr uint32_t lenBurst = src::kCols * sizeof(tile_shape::DType);
-        constexpr uint32_t gmGap = (GMS - src::kCols) * sizeof(tile_shape::DType);
+        constexpr uint16_t nBurst = src::Rows;
+        constexpr uint32_t lenBurst = src::Cols * sizeof(tile_shape::DType);
+        constexpr uint32_t gmGap = (GMS - src::Cols) * sizeof(tile_shape::DType);
         constexpr uint32_t blockSize = BLOCK_BYTE_SIZE / sizeof(tile_shape::DType);
-        constexpr uint32_t ubGap = (src::kRowStride - src::kCols) / blockSize;
+        constexpr uint32_t ubGap = (src::RowStride - src::Cols) / blockSize;
 
         static_assert(nBurst < ((1ULL << 12) - 1ULL));
         static_assert(lenBurst < ((1ULL << 21) - 1ULL));

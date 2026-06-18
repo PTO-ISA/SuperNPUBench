@@ -6,6 +6,24 @@
 
 namespace pto {
 
+/// comparison predicates
+/// 
+/// Example usage:
+/// @code
+/// CmpMode pred = CmpMode::eq;  // equality comparison
+/// if (pred == CmpMode::slt) {
+///     // signed less than comparison
+/// }
+/// @endcode
+enum class CmpMode {
+  EQ,  ///< Equal (==)
+  NE,  ///< Not equal (!=)
+  GT,  ///< Greater than (>)
+  LT,  ///< Less than (<)
+  GE,  ///< Greater than or equal (>=)
+  LE,  ///< Less than or equal (<=)
+};
+
 /// Padding Value : keep SAME with asm encoding
 enum class PadValue {
   Zero = 0,
@@ -208,6 +226,11 @@ struct GlobalTensor {
   static constexpr int staticStride[5] = {Stride::staticStride[0], Stride::staticStride[1],
                                           Stride::staticStride[2], Stride::staticStride[3],
                                           Stride::staticStride[4]};
+  static constexpr bool isRowMajor = Layout_ == Layout::ND;
+  static constexpr int RowStride = staticStride[3];
+  static constexpr int ColStride = staticStride[4];
+
+  inline GlobalTensor() = default;
 
   inline GlobalTensor(DType *data, const Shape &shape = defaultShape, const Stride &stride = defaultStride)
   {
@@ -226,7 +249,7 @@ struct GlobalTensor {
     if constexpr (staticStride[4] == DYNAMIC) stride_.stride[4] = stride.stride[4];
   }
 
-  inline int GetShape(const int dim)
+  inline int GetShape(const int dim) const
   {
     switch (dim) {
       case 0: return GetShapeSize<staticShape[0]>(dim);
@@ -238,7 +261,7 @@ struct GlobalTensor {
     }
   }
 
-  inline int GetStride(const int dim)
+  inline int GetStride(const int dim) const
   {
     switch (dim) {
       case 0: return GetStrideSize<staticStride[0]>(dim);
@@ -255,7 +278,7 @@ struct GlobalTensor {
 
 private:
   template <int StaticShape>
-  inline int GetShapeSize(const int dim)
+  inline int GetShapeSize(const int dim) const
   {
     if constexpr (StaticShape == DYNAMIC)
       return shape_.shape[dim];
@@ -264,7 +287,7 @@ private:
   }
 
   template <int StaticStride>
-  inline int GetStrideSize(const int dim)
+  inline int GetStrideSize(const int dim) const
   {
     if constexpr (StaticStride == DYNAMIC)
       return stride_.stride[dim];
@@ -297,22 +320,22 @@ public:
 
   static constexpr int getInnerRow() {
     if constexpr (SFractalSize_ == 1024) { // output/acc
-      static_assert(sizeof(DType) == 4, "Size of datatype != 4");
+      static_assert(type_traits<DType>::bits == 32, "Size of datatype != 4");
       return 16;
     } else {
       return isBoxedLayout
-                ? (isInnerRowMajor ? 16 : byteSize / sizeof(DType))
+                ? (isInnerRowMajor ? 16 : byteSize * 8 / type_traits<DType>::bits)
                 : 1;
     }
   }
 
   static constexpr int getInnerCol() {
       if constexpr (SFractalSize_ == 1024) { // output/acc
-        static_assert(sizeof(DType) == 4, "Size of datatype != 4");
+        static_assert(type_traits<DType>::bits == 32, "Size of datatype != 4");
         return 16;
       } else {
         return isBoxedLayout
-                  ? (isInnerRowMajor ? byteSize / sizeof(DType) : 16)
+                  ? (isInnerRowMajor ? byteSize * 8 / type_traits<DType>::bits : 16)
                   : 1;
       }
   }
@@ -323,11 +346,10 @@ public:
   static constexpr int RowStride = BFractal_ == BLayout::RowMajor ? Cols : 1;
   static constexpr int ColStride = BFractal_ == BLayout::RowMajor ? 1 : Rows;
 
-  static constexpr int kBytes = Rows_ * Cols_ * sizeof(DType);
-  static_assert(kBytes % 512 == 0, "Tile size must be 512 bytes aligned");
-  static_assert(((kBytes / 512 - 1) & (kBytes / 512)) == 0, "Tile size must by (512 * 2 ^ n) Bytes");
-  //static_assert(kBytes >= 512 && kBytes <= 32 * 1024, "Tile size must be in [512B, 32kB]");
-
+  static constexpr int kBytes = (Rows_ * Cols_ * type_traits<DType>::bits + 7) / 8;
+  // static_assert(kBytes % 512 == 0, "Tile size must be 512 bytes aligned");
+  // static_assert(((kBytes / 512 - 1) & (kBytes / 512)) == 0, "Tile size must by (512 * 2 ^ n) Bytes");
+  // static_assert(kBytes >= 512 && kBytes <= 64 * 1024, "Tile size must be in [512B, 32kB]");
 
   static constexpr int ValidRow = RowValid_;
   static constexpr int ValidCol = ColValid_;
@@ -382,20 +404,20 @@ public:
   static_assert(Cols % InnerCols == 0,
                 "Layout cols must be divisible by inner box cols");
 
-  // static_assert(
-  //     (BFractal_ == BLayout::RowMajor && SFractal_ == SLayout::NoneBox && Cols * sizeof(DType) % 32 == 0) ||
-  //     (BFractal_ == BLayout::ColMajor && SFractal_ == SLayout::NoneBox && Rows * sizeof(DType) % 32 == 0) ||
-  //     (SFractal_ != SLayout::NoneBox) && (Rows % InnerRows == 0 && Cols % InnerCols == 0),
-  //     "BFractal_ is RowMajor and SFractal_ is NoneBox: Rows must be 32 bytes align, \
-  //       BFractal_ is ColMajor and SFractal_ is NoneBox: Cols must be 32 bytes align, \
-  //       SFractal_ in not NoneBox: Rows/Cols must be integer multiple of InnerRows/InnerCols."
-  //       );
+  static_assert(
+      (BFractal_ == BLayout::RowMajor && SFractal_ == SLayout::NoneBox && Cols * type_traits<DType>::bits % (32 * 8) == 0) ||
+      (BFractal_ == BLayout::ColMajor && SFractal_ == SLayout::NoneBox && Rows * type_traits<DType>::bits % (32 * 8) == 0) ||
+      (SFractal_ != SLayout::NoneBox) && (Rows % InnerRows == 0 && Cols % InnerCols == 0),
+      "BFractal_ is RowMajor and SFractal_ is NoneBox: Rows must be 32 bytes align, \
+        BFractal_ is ColMajor and SFractal_ is NoneBox: Cols must be 32 bytes align, \
+        SFractal_ in not NoneBox: Rows/Cols must be integer multiple of InnerRows/InnerCols."
+        );
 
   static_assert(SFractalSize_ == 512 || SFractalSize_ == 1024,
                 "SFractalSize_ illegal");
 
 #ifdef __linx
-  using TileDType = DType tile_size(Rows *Cols);
+  using TileDType = DType tile_size(Rows *Cols / (sizeof(DType) * 8 / type_traits<DType>::bits));
 #else
   using TileDType = DType[Rows * Cols];
 #endif
@@ -490,17 +512,17 @@ public:
   using DType = Element_;
   using MLayout = MLayout_;
 
-  static constexpr int kNumel = get_numel<MLayout>;
-  static constexpr int kRows = num_rows<MLayout>;
-  static constexpr int kCols = num_cols<MLayout>;
-  static constexpr int kRowStride = row_stride<MLayout>;
-  static constexpr int kColStride = col_stride<MLayout>;
+  static constexpr int Numel = get_numel<MLayout>;
+  static constexpr int Rows = num_rows<MLayout>;
+  static constexpr int Cols = num_cols<MLayout>;
+  static constexpr int RowStride = row_stride<MLayout>;
+  static constexpr int ColStride = col_stride<MLayout>;
   static constexpr LayoutEnum kType = layout_type<MLayout>;
 
   static constexpr bool isRowMajor = kType == LayoutEnum::kRowMajor;
 
   using shape_t = Shape<1, 1, 1, 1, 1>;
-  using stride_t = typename stride_selector<kRows, kCols, isRowMajor>::type;
+  using stride_t = typename stride_selector<Rows, Cols, isRowMajor>::type;
   static constexpr Layout layout_t = isRowMajor ? Layout::ND : Layout::DN;
 
   using Impl = GlobalTensor<DType, shape_t, stride_t, layout_t>;
@@ -516,22 +538,22 @@ public:
   };
 
   template <typename T = void,
-            typename = std::enable_if_t<(kRows != DYNAMIC && kCols != DYNAMIC), T>>
+            typename = std::enable_if_t<(Rows != DYNAMIC && Cols != DYNAMIC), T>>
   global_tensor(DType* data)
             : impl_(data), layout_(MLayout{}) {}
 
   template <typename T = void,
-            typename = std::enable_if_t<(kRows == DYNAMIC && kCols != DYNAMIC) || (kRows != DYNAMIC && kCols == DYNAMIC), T>>
+            typename = std::enable_if_t<(Rows == DYNAMIC && Cols != DYNAMIC) || (Rows != DYNAMIC && Cols == DYNAMIC), T>>
   global_tensor(DType* data, int stride) {
-    if constexpr ((kRows == DYNAMIC && kCols != DYNAMIC && isRowMajor) || (kRows != DYNAMIC && kCols == DYNAMIC && !isRowMajor)) {
-      impl_ = Impl(data, shape_t{}, stride_t(stride)), layout_(MLayout{});
+    if constexpr ((Rows == DYNAMIC && Cols != DYNAMIC && isRowMajor) || (Rows != DYNAMIC && Cols == DYNAMIC && !isRowMajor)) {
+      impl_ = Impl(data, shape_t{}, stride_t(stride)); layout_ = MLayout{};
     } else {
-      impl_ = Impl(data, shape_t{}, stride_t(stride, stride)), layout_(MLayout{});
+      impl_ = Impl(data, shape_t{}, stride_t(stride, stride)); layout_ = MLayout{};
     }
   }
 
   template <typename T = void,
-            typename = std::enable_if_t<(kRows == DYNAMIC && kCols == DYNAMIC), T>>
+            typename = std::enable_if_t<(Rows == DYNAMIC && Cols == DYNAMIC), T>>
   global_tensor(DType* data, int dynamicRow, int dynamicCol)
             : impl_(data, shape_t{}, stride_t(dynamicRow*dynamicCol, dynamicCol, dynamicRow)), layout_(MLayout{}) {}
 
@@ -551,17 +573,20 @@ template <typename T> struct is_tile : std::false_type {
   static constexpr SLayout layout_enum = SLayout::NoneBox;
 };
 
-template <typename Element_, typename Layout_, typename Stride_>
-struct is_global<GlobalTensor<Element_, Layout_, Stride_>> : std::true_type {};
+template <typename Element_, typename Shape_, typename Stride_>
+struct is_global<GlobalTensor<Element_, Shape_, Stride_>> : std::true_type {};
+
+template <typename Element_, typename Shape_, typename Stride_, Layout Layout_>
+struct is_global<GlobalTensor<Element_, Shape_, Stride_, Layout_>> : std::true_type {};
 
 template <typename Element_, typename Layout_>
 struct is_global<global_tensor<Element_, Layout_>> : std::true_type {};
 
 template <Location Loc_, typename Element_, const int Rows_, const int Cols_,
           const BLayout BFractal_, const int RowValid_, const int ColValid_,
-          const SLayout SFractal_, const int SFractalSize_>
+          const SLayout SFractal_, const int SFractalSize_, const PadValue PadVal_>
 struct is_tile<Tile<Loc_, Element_, Rows_, Cols_, BFractal_, RowValid_,
-                    ColValid_, SFractal_, SFractalSize_>> : std::true_type {
+                    ColValid_, SFractal_, SFractalSize_, PadVal_>> : std::true_type {
   static constexpr SLayout layout_enum = SFractal_;
 };
 
@@ -589,7 +614,7 @@ template <typename T> concept is_boxed_data_v = is_boxed_tile<T>;
 
 template <typename shape> int index(int i, int j) {
   if constexpr (is_global_data_v<shape>) {
-    return i * shape::kRowStride + j * shape::kColStride;
+    return i * shape::RowStride + j * shape::ColStride;
   } else if constexpr (is_tile_data_v<shape>) {
     if constexpr (is_boxed_data_v<shape>) {
       int sub_tile_i = i / shape::InnerRows;
@@ -616,7 +641,6 @@ template <typename shape> int index(int i, int j) {
 }
 
 template <typename tile_shape>
-static inline __attribute__((always_inline))
 const char* get_layout_str() {
   if constexpr (!tile_shape::isBoxedLayout) {
     if constexpr (tile_shape::isRowMajor)
@@ -631,7 +655,6 @@ const char* get_layout_str() {
 }
 
 template <typename tile_shape>
-static inline __attribute__((always_inline))
 void print_tile_info() {
   std::cout << "Tile Rows Number: " << tile_shape::Rows << std::endl;
   std::cout << "Tile Columns Number: " << tile_shape::Cols << std::endl;

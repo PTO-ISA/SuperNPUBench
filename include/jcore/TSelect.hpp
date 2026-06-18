@@ -16,10 +16,10 @@ TSelect_Vec_RowMajor(typename tile_shape::TileDType __out__ dst,
   size_t i = blkv_get_index_x();
   size_t j = blkv_get_index_y();
 
-  typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape::DType *s0_ptr = blkv_get_tile_ptr(src0);
-  typename tile_shape::DType *s1_ptr = blkv_get_tile_ptr(src1);
-  typename tile_shape_index::DType *si_ptr = blkv_get_tile_ptr(cond);
+  __vbuf__ typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape::DType *s0_ptr = blkv_get_tile_ptr(src0);
+  __vbuf__ typename tile_shape::DType *s1_ptr = blkv_get_tile_ptr(src1);
+  __vbuf__ typename tile_shape_index::DType *si_ptr = blkv_get_tile_ptr(cond);
   size_t index = j * tile_shape::RowStride + i;
   d_ptr[index] = (si_ptr[index] == 1) ? s0_ptr[index] : s1_ptr[index];
 }
@@ -33,10 +33,10 @@ TSelect_Vec_ColMajor(typename tile_shape::TileDType __out__ dst,
   size_t i = blkv_get_index_x();
   size_t j = blkv_get_index_y();
 
-  typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape::DType *s0_ptr = blkv_get_tile_ptr(src0);
-  typename tile_shape::DType *s1_ptr = blkv_get_tile_ptr(src1);
-  typename tile_shape_index::DType *si_ptr = blkv_get_tile_ptr(cond);
+  __vbuf__ typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape::DType *s0_ptr = blkv_get_tile_ptr(src0);
+  __vbuf__ typename tile_shape::DType *s1_ptr = blkv_get_tile_ptr(src1);
+  __vbuf__ typename tile_shape_index::DType *si_ptr = blkv_get_tile_ptr(cond);
   size_t index = j * tile_shape::ColStride + i;
   d_ptr[index] = (si_ptr[index] == 1) ? s0_ptr[index] : s1_ptr[index];
 }
@@ -52,10 +52,10 @@ TSelect_NzLayout_Impl(typename tile_shape::TileDType __out__ dst,
   size_t j = blkv_get_index_y();
   static constexpr int block_cols = tile_shape::Cols / tile_shape::InnerCols;
 
-  typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape::DType *s0_ptr = blkv_get_tile_ptr(src0);
-  typename tile_shape::DType *s1_ptr = blkv_get_tile_ptr(src1);
-  typename tile_shape_index::DType *si_ptr = blkv_get_tile_ptr(cond);
+  __vbuf__ typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape::DType *s0_ptr = blkv_get_tile_ptr(src0);
+  __vbuf__ typename tile_shape::DType *s1_ptr = blkv_get_tile_ptr(src1);
+  __vbuf__ typename tile_shape_index::DType *si_ptr = blkv_get_tile_ptr(cond);
 
 #pragma clang loop unroll(full)
   for (size_t k = 0; k < block_cols; ++k) {
@@ -74,6 +74,11 @@ void TSELECT_Impl(tile_shape &dst, tile_shape_index &cond, tile_shape &src0,
                 "Error! cond: Rows != src: Rows");
   static_assert(!tile_shape::isBoxedLayout && !tile_shape_index::isBoxedLayout,
                 "Not support Fractal layout");
+  static_assert(tile_shape::ValidRow != DYNAMIC && tile_shape::ValidCol != DYNAMIC &&
+                tile_shape_index::ValidRow != DYNAMIC && tile_shape_index::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc && tile_shape_index::Loc != Location::Acc, 
+              "Unsupport ACC to be input or output here");
   static constexpr size_t row = tile_shape::ValidRow;
   static constexpr size_t col = tile_shape::ValidCol;
   static constexpr size_t Y =

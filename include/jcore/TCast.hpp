@@ -36,8 +36,8 @@ TCast_NzLayout_Imp(typename tile_shape_out::TileDType __out__ dst,
   size_t j = blkv_get_index_y();
   static constexpr int block_cols =
       tile_shape_in::Cols / tile_shape_in::InnerCols;
-  typename tile_shape_out::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape_in::DType *src_tile_ptr = blkv_get_tile_ptr(src);
+  __vbuf__ typename tile_shape_out::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape_in::DType *src_tile_ptr = blkv_get_tile_ptr(src);
   using type = typename tile_shape_out::DType;
 #pragma clang loop unroll(full)
   for (size_t k = 0; k < block_cols; ++k) {
@@ -55,9 +55,10 @@ void TCAST_Impl(tile_shape_out &dst, tile_shape_in &src) {
   static_assert(tile_shape_in::InnerRows == tile_shape_out::InnerRows &&
                     tile_shape_in::InnerCols == tile_shape_out::InnerCols,
                 "Error! Inner shape is not equal!");
-
-  static constexpr size_t row = tile_shape_in::ValidRow;
-  static constexpr size_t col = tile_shape_in::ValidCol;
+  static_assert(tile_shape_out::Loc != Location::Acc && 
+                tile_shape_in::Loc != Location::Acc, "Unsupport ACC to be input or output here");
+  size_t row = src.GetValidRow();
+  size_t col = src.GetValidCol();
   static constexpr size_t row_lines =
       tile_shape_in::Rows / (LaneNum / tile_shape_in::InnerCols);
   if constexpr (is_Nz_layout<tile_shape_in>::value &&

@@ -49,7 +49,11 @@ void TEXPANDROW_Impl(tile_shape_out &dst, tile_shape_in &src) {
                 "Error! Cude A:Columns != Cude B:Columns");
   static_assert(tile_shape_out::ValidCol == tile_shape_in::ValidCol,
                 "Error! Cude A:ValidCol != Cude B:ValidCol");
-
+  static_assert(tile_shape_in::ValidRow != DYNAMIC && tile_shape_in::ValidCol != DYNAMIC &&
+                tile_shape_out::ValidRow != DYNAMIC && tile_shape_out::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_out::Loc != Location::Acc && tile_shape_in::Loc != Location::Acc, 
+              "Unsupport ACC to be input or output here");
   if constexpr (is_Nz_layout<tile_shape_out>::value) {
     TExpandRow2NzImp<tile_shape_out, tile_shape_in>(dst.data(), src.data());
   } else if constexpr (tile_shape_out::isBoxedLayout == false) {

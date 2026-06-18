@@ -50,7 +50,9 @@ void TAdd_NzLayout_Imp(typename tile_shape::TileDType dst,
 template <is_tile_data_v tile_shape>
 void TADD_Impl(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
   static_assert(!tile_shape::isBoxedLayout && "Not Support boxed layout!");
-
+  static_assert(tile_shape::ValidRow != DYNAMIC && tile_shape::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   if constexpr (tile_shape::isRowMajor) {
     TAdd_RowMajor_Imp<tile_shape>(dst.data(), src0.data(), src1.data());
   } else {

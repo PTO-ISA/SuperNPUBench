@@ -12,20 +12,23 @@ struct global_iterator {
   global_iterator(DType *data) : data_(data) {}
 
   /*2D*/
+  static_assert(glb_tensor::staticStride[0] == 1 && glb_tensor::staticStride[1] == 1 &&
+                "global_iterator can only be use in 2D global_tensor");
   auto operator()(int i, int j) {
+    using shape = Shape<1, 1, 1, 1, 1>;
+    using stride = std::conditional_t<glb_tensor::isRowMajor,
+          Stride<1, 1, glb_tensor::RowStride * glb_tensor::ColStride, glb_tensor::RowStride, 1>,
+          Stride<1, 1, glb_tensor::RowStride * glb_tensor::ColStride, 1, glb_tensor::ColStride>>;
 
-    // assert(i >= 0 && i < row_dim && "i out of the range!");
-    // assert(j >= 0 && j < col_dim && "j out of the range!");
-    using tile_layout =
-        MatrixLayout<tl_tensor::Rows, tl_tensor::Cols, glb_tensor::kRowStride,
-                     glb_tensor::kColStride>;
-
-    using new_tile = global_tensor<DType, tile_layout>;
+    using new_tile =
+      std::conditional_t<glb_tensor::isRowMajor,
+          GlobalTensor<DType, shape, stride, Layout::ND>,
+          GlobalTensor<DType, shape, stride, Layout::DN>>;
 
     int offset =
         glb_tensor::isRowMajor
-            ? i * glb_tensor::kCols * tl_tensor::Rows + j * tl_tensor::Cols
-            : i * tl_tensor::Rows + j * glb_tensor::kRows * tl_tensor::Cols;
+            ? i * glb_tensor::RowStride * tl_tensor::Rows + j * tl_tensor::Cols
+            : i * tl_tensor::Rows + j * glb_tensor::Rows * tl_tensor::Cols;
 
     new_tile tile(data_ + offset);
     return tile;

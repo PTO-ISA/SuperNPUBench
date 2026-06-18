@@ -5,13 +5,13 @@
 #include "type.hpp"
 
 namespace PTO {
-    template <is_tile_data tile_shape>
+    template <is_tile_data_v tile_shape>
     [aicore] void TLOAD(tile_shape &dst, __gm__ tile_shape::DType *src, unsigned gms) {
-        uint16_t nBurst = dst::kRows;
-        uint16_t lenBurst = dst::kCols * sizeof(tile_shape::DType);
-        uint32_t gmGap = (GMS - dst::kCols) * sizeof(tile_shape::DType);
+        uint16_t nBurst = dst::Rows;
+        uint16_t lenBurst = dst::Cols * sizeof(tile_shape::DType);
+        uint32_t gmGap = (GMS - dst::Cols) * sizeof(tile_shape::DType);
         constexpr uint32_t blockSize = BLOCK_BYTE_SIZE / sizeof(T);
-        constexpr uint32_t ubGap = (dst::kRowStride - dst::kCols) / blockSize;
+        constexpr uint32_t ubGap = (dst::RowStride - dst::Cols) / blockSize;
 
         if constexpr (sizeof(tile_shape::DType) == 1) {
             copy_gm_to_ubuf_align_b8(

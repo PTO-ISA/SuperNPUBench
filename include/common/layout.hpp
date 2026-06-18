@@ -68,47 +68,47 @@ const char *layout_type_to_str(LayoutEnum type) {
 class MatrixLayoutPrettyPrinter {
   template <typename Layout>
   static void print(std::ostream &out, const Layout &layout) {
-    out << layout_type_to_str(Layout::kType) << "<" << Layout::kRows << ", "
-        << Layout::kCols << ">, Strides<" << Layout::kRowStride << ", "
-        << Layout::kColStride << ">, Numel = " << Layout::kNumel;
+    out << layout_type_to_str(Layout::kType) << "<" << Layout::Rows << ", "
+        << Layout::Cols << ">, Strides<" << Layout::RowStride << ", "
+        << Layout::ColStride << ">, Numel = " << Layout::Numel;
   }
 };
 
-template <const int kRows_, const int kCols_, const int kRowStride_,
-          const int kColStride_,
+template <const int Rows_, const int Cols_, const int RowStride_,
+          const int ColStride_,
           const LayoutEnum kType_ =
-              kColStride_ == 1 ? LayoutEnum::kRowMajor : LayoutEnum::kColMajor>
+              ColStride_ == 1 ? LayoutEnum::kRowMajor : LayoutEnum::kColMajor>
 struct MatrixLayout {
-  static constexpr int kRows = kRows_;
-  static constexpr int kCols = kCols_;
+  static constexpr int Rows = Rows_;
+  static constexpr int Cols = Cols_;
 
-  static constexpr int kRowStride = kRowStride_;
-  static constexpr int kColStride = kColStride_;
+  static constexpr int RowStride = RowStride_;
+  static constexpr int ColStride = ColStride_;
 
-  static constexpr int kNumel = kRows * kCols;
+  static constexpr int Numel = Rows * Cols;
 
   static constexpr LayoutEnum kType = kType_;
 
-  int operator()(int i, int j) const { return i * kRowStride + j * kColStride; }
+  int operator()(int i, int j) const { return i * RowStride + j * ColStride; }
 };
 
-template <const int kRow, const int kCol, const int kStride = kCol>
-using RowMajor = MatrixLayout<kRow, kCol, kStride, 1>;
+template <const int Row, const int Col, const int kStride = Col>
+using RowMajor = MatrixLayout<Row, Col, kStride, 1>;
 
-template <const int kRow, const int kCol, const int kStride = kRow>
-using ColMajor = MatrixLayout<kRow, kCol, 1, kStride>;
+template <const int Row, const int Col, const int kStride = Row>
+using ColMajor = MatrixLayout<Row, Col, 1, kStride>;
 
-template <typename Layout> static constexpr size_t num_rows = Layout::kRows;
+template <typename Layout> static constexpr size_t num_rows = Layout::Rows;
 
-template <typename Layout> static constexpr size_t num_cols = Layout::kCols;
-
-template <typename Layout>
-static constexpr size_t row_stride = Layout::kRowStride;
+template <typename Layout> static constexpr size_t num_cols = Layout::Cols;
 
 template <typename Layout>
-static constexpr size_t col_stride = Layout::kColStride;
+static constexpr size_t row_stride = Layout::RowStride;
 
-template <typename Layout> static constexpr size_t get_numel = Layout::kNumel;
+template <typename Layout>
+static constexpr size_t col_stride = Layout::ColStride;
+
+template <typename Layout> static constexpr size_t get_numel = Layout::Numel;
 
 template <typename Layout_>
 static constexpr LayoutEnum layout_type = Layout_::kType;
@@ -124,8 +124,8 @@ template <typename Layout_> struct is_col_major {
 template <typename Layout> struct is_contiguous {
   static constexpr bool value =
       is_row_major<Layout>::value
-          ? (Layout::kRowStride == Layout::kCols && Layout::kColStride == 1)
-          : (Layout::kColStride == Layout::kRows && Layout::kRowStride == 1);
+          ? (Layout::RowStride == Layout::Cols && Layout::ColStride == 1)
+          : (Layout::ColStride == Layout::Rows && Layout::RowStride == 1);
 };
 
 template <typename OuterLayout_, typename InnerLayout_>
@@ -133,33 +133,33 @@ struct BlockMatrixLayout {
   using InnerLayout = InnerLayout_;
   using OuterLayout = OuterLayout_;
 
-  static constexpr int kRows = OuterLayout_::kRows;
-  static constexpr int kCols = OuterLayout_::kCols;
-  static constexpr int kNumel = OuterLayout_::kNumel;
+  static constexpr int Rows = OuterLayout_::Rows;
+  static constexpr int Cols = OuterLayout_::Cols;
+  static constexpr int Numel = OuterLayout_::Numel;
 
-  static constexpr int kInnerRows = InnerLayout_::kRows;
-  static constexpr int kInnerCols = InnerLayout_::kCols;
+  static constexpr int kInnerRows = InnerLayout_::Rows;
+  static constexpr int kInnerCols = InnerLayout_::Cols;
 
-  static_assert(kRows % kInnerRows == 0,
+  static_assert(Rows % kInnerRows == 0,
                 "OuterLayout rows must be divisible by InnerLayout rows");
-  static_assert(kCols % kInnerCols == 0,
+  static_assert(Cols % kInnerCols == 0,
                 "OuterLayout cols must be divisible by InnerLayout cols");
 
-  static constexpr int kInnerNumel = InnerLayout_::kNumel;
+  static constexpr int kInnerNumel = InnerLayout_::Numel;
   static constexpr LayoutEnum kType = OuterLayout::kType;
 
-  static constexpr int kTileRows = kRows / kInnerRows;
-  static constexpr int kTileCols = kCols / kInnerCols;
+  static constexpr int kTileRows = Rows / kInnerRows;
+  static constexpr int kTileCols = Cols / kInnerCols;
 
   static constexpr bool kIsRowMajor = is_row_major<OuterLayout>::value;
   static constexpr bool kIsContiguous = is_contiguous<OuterLayout>::value;
 
-  static constexpr int kRowStride =
+  static constexpr int RowStride =
       kIsContiguous ? (kIsRowMajor ? kTileCols * kInnerNumel : kInnerNumel)
-                    : OuterLayout::kRowStride;
-  static constexpr int kColStride =
+                    : OuterLayout::RowStride;
+  static constexpr int ColStride =
       kIsContiguous ? (kIsRowMajor ? kInnerNumel : kTileRows * kInnerNumel)
-                    : OuterLayout::kColStride;
+                    : OuterLayout::ColStride;
 
   int operator()(int i, int j) const {
     const int outer_i = RowDivMod::div(i);
@@ -172,8 +172,8 @@ struct BlockMatrixLayout {
   }
 
   void dump() const {
-    for (int i = 0; i < kRows; ++i) {
-      for (int j = 0; j < kCols; ++j) {
+    for (int i = 0; i < Rows; ++i) {
+      for (int j = 0; j < Cols; ++j) {
         printf("%d, ", operator()(i, j));
       }
       printf("\n");
@@ -189,7 +189,7 @@ private:
   using RowDivMod = DivModSelector<kInnerRowsIsPow2, kInnerRows>;
   using ColDivMod = DivModSelector<kInnerColsIsPow2, kInnerCols>;
 
-  using BlockOuter = MatrixLayout<kTileRows, kTileCols, kRowStride, kColStride,
+  using BlockOuter = MatrixLayout<kTileRows, kTileCols, RowStride, ColStride,
                                   OuterLayout::kType>;
   BlockOuter outer_;
   InnerLayout inner_;
@@ -210,21 +210,21 @@ operator<<(std::ostream &out,
 template <typename OuterLayout_, typename InnerLayout_>
 concept BlockRowMajorLayout =
     is_row_major<OuterLayout_>::value && is_row_major<InnerLayout_>::value;
-
+ 
 template <typename OuterLayout_, typename InnerLayout_>
 concept BlockColMajorLayout =
     is_col_major<OuterLayout_>::value && is_col_major<InnerLayout_>::value;
-
+ 
 template <typename OuterLayout_, typename InnerLayout_>
 concept BlockMixedLayout = (is_row_major<OuterLayout_>::value &&
                             is_col_major<InnerLayout_>::value) ||
                            (is_col_major<OuterLayout_>::value &&
                             is_row_major<InnerLayout_>::value);
-
+ 
 template <typename OuterLayout_, typename InnerLayout_>
   requires BlockRowMajorLayout<OuterLayout_, InnerLayout_>
 using BlockRowMajor = BlockMatrixLayout<OuterLayout_, InnerLayout_>;
-
+ 
 template <typename OuterLayout_, typename InnerLayout_>
   requires BlockColMajorLayout<OuterLayout_, InnerLayout_>
 using BlockColMajor = BlockMatrixLayout<OuterLayout_, InnerLayout_>;

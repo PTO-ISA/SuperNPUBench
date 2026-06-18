@@ -43,6 +43,9 @@ template <is_tile_data_v tile_shape>
 void TRSQRT_Impl(tile_shape &dst, tile_shape &src) {
   static constexpr uint16_t row = tile_shape::ValidRow;
   static constexpr uint16_t col = tile_shape::ValidCol;
+  static_assert(row != DYNAMIC && col != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   if constexpr (tile_shape::isRowMajor) {
     if constexpr (std::is_same<typename tile_shape::DType, float>::value) {
       TRSqrt_RowMajor_Imp_f32<tile_shape>

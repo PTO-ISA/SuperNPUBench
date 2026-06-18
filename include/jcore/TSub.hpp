@@ -35,9 +35,9 @@ Tsub_NzLayout_Impl(typename tile_shape::TileDType __out__ dst,
   size_t i = blkv_get_index_x();
   size_t j = blkv_get_index_y();
   static constexpr int block_cols = tile_shape::Cols / tile_shape::InnerCols;
-  typename tile_shape::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape::DType *src0_tile_ptr = blkv_get_tile_ptr(src0);
-  typename tile_shape::DType *src1_tile_ptr = blkv_get_tile_ptr(src1);
+  __vbuf__ typename tile_shape::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape::DType *src0_tile_ptr = blkv_get_tile_ptr(src0);
+  __vbuf__ typename tile_shape::DType *src1_tile_ptr = blkv_get_tile_ptr(src1);
 
 #pragma clang loop unroll(full)
   for (size_t k = 0; k < block_cols; ++k) {
@@ -49,8 +49,9 @@ Tsub_NzLayout_Impl(typename tile_shape::TileDType __out__ dst,
 
 template <is_tile_data_v tile_shape>
 void TSUB_Impl(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
-  static constexpr size_t row = tile_shape::ValidRow;
-  static constexpr size_t col = tile_shape::ValidCol;
+  size_t row = src0.GetValidRow();
+  size_t col = src0.GetValidCol();
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   static constexpr size_t row_lines =
       tile_shape::Rows / (LaneNum / tile_shape::InnerCols);
 

@@ -13,8 +13,8 @@ TAssemble_RowMajor_Imp(typename tile_shape_out::TileDType __out__ dst,
                        const typename tile_shape_in1::TileDType __in__ src1,
                        const typename tile_shape_in2::TileDType __in__ src2) {
   size_t i = blkv_get_index_x();
-  typename tile_shape_out::DType *dst_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape_in0::DType *src0_ptr = blkv_get_tile_ptr(src0);
+  __vbuf__ typename tile_shape_out::DType *dst_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape_in0::DType *src0_ptr = blkv_get_tile_ptr(src0);
 #pragma clang loop unroll(full)
   for (size_t j = 0; j < tile_shape_in0::ValidCol; ++j) {
     size_t idx_out0 = i * tile_shape_out::RowStride + j;
@@ -22,7 +22,7 @@ TAssemble_RowMajor_Imp(typename tile_shape_out::TileDType __out__ dst,
     dst_ptr[idx_out0] = src0_ptr[idx_in0];
   }
 
-  typename tile_shape_in1::DType *src1_ptr = blkv_get_tile_ptr(src1);
+  __vbuf__ typename tile_shape_in1::DType *src1_ptr = blkv_get_tile_ptr(src1);
 #pragma clang loop unroll(full)
   for (size_t j = 0; j < tile_shape_in1::ValidCol; ++j) {
     size_t idx_out1 =
@@ -31,7 +31,7 @@ TAssemble_RowMajor_Imp(typename tile_shape_out::TileDType __out__ dst,
     dst_ptr[idx_out1] = src1_ptr[idx_in1];
   }
 
-  typename tile_shape_in2::DType *src2_ptr = blkv_get_tile_ptr(src2);
+  __vbuf__ typename tile_shape_in2::DType *src2_ptr = blkv_get_tile_ptr(src2);
 #pragma clang loop unroll(full)
   for (size_t j = 0; j < tile_shape_in2::ValidCol; ++j) {
     size_t idx_out2 = tile_shape_in0::ValidCol + tile_shape_in1::ValidCol +
@@ -49,8 +49,8 @@ TAssemble_ColMajor_Imp(typename tile_shape_out::TileDType __out__ dst,
                        const typename tile_shape_in1::TileDType __in__ src1,
                        const typename tile_shape_in2::TileDType __in__ src2) {
   size_t i = blkv_get_index_x();
-  typename tile_shape_out::DType *dst_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape_in0::DType *src0_ptr = blkv_get_tile_ptr(src0);
+  __vbuf__ typename tile_shape_out::DType *dst_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape_in0::DType *src0_ptr = blkv_get_tile_ptr(src0);
 #pragma clang loop unroll(full)
   for (size_t j = 0; j < tile_shape_in0::ValidCol; ++j) {
     size_t idx_out0 = j * tile_shape_out::ColStride + i;
@@ -58,7 +58,7 @@ TAssemble_ColMajor_Imp(typename tile_shape_out::TileDType __out__ dst,
     dst_ptr[idx_out0] = src0_ptr[idx_in0];
   }
 
-  typename tile_shape_in1::DType *src1_ptr = blkv_get_tile_ptr(src1);
+  __vbuf__ typename tile_shape_in1::DType *src1_ptr = blkv_get_tile_ptr(src1);
 #pragma clang loop unroll(full)
   for (size_t j = 0; j < tile_shape_in1::ValidCol; ++j) {
     size_t idx_out1 =
@@ -67,7 +67,7 @@ TAssemble_ColMajor_Imp(typename tile_shape_out::TileDType __out__ dst,
     dst_ptr[idx_out1] = src1_ptr[idx_in1];
   }
 
-  typename tile_shape_in2::DType *src2_ptr = blkv_get_tile_ptr(src2);
+  __vbuf__ typename tile_shape_in2::DType *src2_ptr = blkv_get_tile_ptr(src2);
 #pragma clang loop unroll(full)
   for (size_t j = 0; j < tile_shape_in2::ValidCol; ++j) {
     size_t idx_out2 = tile_shape_in0::Numel + tile_shape_in1::Numel +
@@ -87,8 +87,8 @@ void __vec__ TAssemble_NzLayout_Imp(
   size_t i = blkv_get_index_x();
   size_t j = blkv_get_index_y();
 
-  typename tile_shape_out::DType *dst_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape_in0::DType *src0_ptr = blkv_get_tile_ptr(src0);
+  __vbuf__ typename tile_shape_out::DType *dst_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape_in0::DType *src0_ptr = blkv_get_tile_ptr(src0);
   static constexpr int block_cols_src0 =
       tile_shape_in0::Cols / tile_shape_in0::kInnerCols;
 #pragma clang loop unroll(full)
@@ -99,7 +99,7 @@ void __vec__ TAssemble_NzLayout_Imp(
     dst_ptr[idx_out0] = src0_ptr[idx_in0];
   }
 
-  typename tile_shape_in1::DType *src1_ptr = blkv_get_tile_ptr(src1);
+  __vbuf__ typename tile_shape_in1::DType *src1_ptr = blkv_get_tile_ptr(src1);
   static constexpr int block_cols_src1 =
       tile_shape_in1::Cols / tile_shape_in1::kInnerCols;
 #pragma clang loop unroll(full)
@@ -110,7 +110,7 @@ void __vec__ TAssemble_NzLayout_Imp(
     dst_ptr[idx_out1] = src1_ptr[idx_in1];
   }
 
-  typename tile_shape_in2::DType *src2_ptr = blkv_get_tile_ptr(src2);
+  __vbuf__ typename tile_shape_in2::DType *src2_ptr = blkv_get_tile_ptr(src2);
   static constexpr int block_cols_src2 =
       tile_shape_in2::Cols / tile_shape_in2::kInnerCols;
 #pragma clang loop unroll(full)
@@ -126,19 +126,27 @@ template <is_tile_data_v tile_shape_in0, is_tile_data_v tile_shape_in1,
           is_tile_data_v tile_shape_in2, is_tile_data_v tile_shape_out>
 void TASSEMBLE_Impl(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1,
                tile_shape_in2 &src2) {
-  static_assert(tile_shape_out::Rows == tile_shape_in0::Rows &&
-                    tile_shape_out::Rows == tile_shape_in1::Rows &&
-                    tile_shape_out::Rows == tile_shape_in2::Rows,
+  static_assert(tile_shape_out::ValidRow != DYNAMIC && tile_shape_out::ValidCol != DYNAMIC &&
+                tile_shape_in0::ValidRow != DYNAMIC && tile_shape_in0::ValidCol != DYNAMIC &&
+                tile_shape_in1::ValidRow != DYNAMIC && tile_shape_in1::ValidCol != DYNAMIC &&
+                tile_shape_in2::ValidRow != DYNAMIC && tile_shape_in2::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_out::ValidRow == tile_shape_in0::ValidRow &&
+                    tile_shape_out::ValidRow == tile_shape_in1::ValidRow &&
+                    tile_shape_out::ValidRow == tile_shape_in2::ValidRow,
                 "Error! All tile rows must be equal");
-  static_assert(tile_shape_in0::Cols == tile_shape_in0::ValidCol &&
-                    tile_shape_in1::Cols == tile_shape_in1::ValidCol &&
-                    tile_shape_in2::Cols == tile_shape_in2::ValidCol,
+  static_assert(tile_shape_in0::ValidCol == tile_shape_in0::ValidCol &&
+                    tile_shape_in1::ValidCol == tile_shape_in1::ValidCol &&
+                    tile_shape_in2::ValidCol == tile_shape_in2::ValidCol,
                 "Error! Mask for columns are forbidden");
   static_assert(
-      tile_shape_out::Cols ==
-          tile_shape_in0::Cols + tile_shape_in1::Cols + tile_shape_in2::Cols,
+      tile_shape_out::ValidCol ==
+          tile_shape_in0::ValidCol + tile_shape_in1::ValidCol + tile_shape_in2::ValidCol,
       "Error! Output columns must equal the sum of the input columns.");
-
+  static_assert(tile_shape_out::Loc != Location::Acc && 
+                tile_shape_in0::Loc != Location::Acc && 
+                tile_shape_in1::Loc != Location::Acc &&
+                tile_shape_in2::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   static constexpr size_t dst_row = tile_shape_out::ValidRow;
   static constexpr size_t row_lines =
       tile_shape_out::Rows / (LaneNum / tile_shape_out::InnerCols);

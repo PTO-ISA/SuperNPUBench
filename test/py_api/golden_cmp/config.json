@@ -1,0 +1,76 @@
+{
+    "cases": [
+        {
+            "name": "tadd",
+            "group": "tadd",
+            "input_shapes": [[16, 16], [16, 16]],
+            "output_shape": [16, 16],
+            "ref_func":"lambda input: tadd(input[0], input[1])", 
+            "test_func":"lambda res, input: tileop_py.tadd_api.tadd(res, input[0], input[1])"
+        },
+        {
+            "name": "tsub",
+            "group": "tsub",
+            "input_shapes": [[16, 16], [16, 16]],
+            "output_shape": [16, 16],
+            "ref_func":"lambda input: tsub(input[0], input[1])",
+            "test_func":"lambda res, input: tileop_py.tsub_api.tsub(res, input[0], input[1])"
+        },
+        {
+            "name": "texp",
+            "group": "texp",
+            "input_shapes": [[16, 16]],
+            "output_shape": [16, 16],
+            "ref_func":"lambda input: texp(input[0])",
+            "test_func":"lambda res, input: tileop_py.texp_api.texp(res, input[0])"
+        },
+        {
+            "name": "tmax",
+            "group": "tmax",
+            "input_shapes": [[16, 16], [16, 16]],
+            "output_shape": [16, 16],
+            "ref_func":"lambda input: tmax(input[0], input[1])",
+            "test_func":"lambda res, input: tileop_py.tmax_api.tmax(res, input[0], input[1])"
+        },
+        {
+            "name": "tcvtnz2zn",
+            "group": "tcvt",
+            "input_shapes": [[32,32]],
+            "output_shape": [32,32],
+            "ref_func":"lambda input: tcvt(32,32,'fp32',input[0],'Nz','Zn')",
+            "test_func":"lambda res, input: tileop_py.tcvt_api.tcvtnz2zn(res, input[0])"
+        },
+        {
+            "name": "tcvtzn2nz",
+            "group": "tcvt",
+            "input_shapes": [[32,32]],
+            "output_shape": [32,32],
+            "ref_func":"lambda input: tcvt(32,32,'fp32',input[0],'Zn','Nz')",
+            "test_func":"lambda res, input: tileop_py.tcvt_api.tcvtzn2nz(res, input[0])"
+        },
+        {
+            "name": "tcvtnz2rowmajor",
+            "group": "tcvt",
+            "input_shapes": [[32,32]],
+            "output_shape": [32,32],
+            "ref_func":"lambda input: tcvt(32,32,'fp32',input[0],'Nz','Rowmajor')",
+            "test_func":"lambda res, input: tileop_py.tcvt_api.tcvtnz2rowmajor(res, input[0])"
+        },
+        {
+            "name": "tcvtrowmajor2nz",
+            "group": "tcvt",
+            "input_shapes": [[32,32]],
+            "output_shape": [32,32],
+            "ref_func":"lambda input: tcvt(32,32,'fp32',input[0],'Rowmajor','Nz')",
+            "test_func":"lambda res, input: tileop_py.tcvt_api.tcvtrowmajor2nz(res, input[0])"
+        },
+        {
+            "name": "flash_attention",
+            "group": "flash_attention",
+            "input_shapes": [[64,256],[64,256],[64,256]],
+            "output_shape": [64,256],
+            "ref_func":"lambda input: attention(input[0], input[1], input[2])",
+            "test_func":"lambda res, input: tileop_py.flash_attention_api.flash_attention(res, input[0], torch.t(input[1]).contiguous(), input[2])"
+        }
+    ]
+}

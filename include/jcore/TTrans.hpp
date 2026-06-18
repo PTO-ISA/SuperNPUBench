@@ -36,8 +36,8 @@ TTrans_NzLayout_Impl(typename tile_shape_out::TileDType __out__ dst,
   size_t j = blkv_get_index_y();
   static constexpr int block_cols =
       tile_shape_in::Cols / tile_shape_in::InnerCols;
-  typename tile_shape_out::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape_in::DType *src_tile_ptr = blkv_get_tile_ptr(src);
+  __vbuf__ typename tile_shape_out::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape_in::DType *src_tile_ptr = blkv_get_tile_ptr(src);
 #pragma clang loop unroll(full)
   for (size_t k = 0; k < block_cols; ++k) {
     size_t row_src =
@@ -66,7 +66,11 @@ void TTRANS_Impl(tile_shape_out &dst, tile_shape_in &src) {
       tile_shape_in::Rows == tile_shape_out::Cols &&
           tile_shape_in::Cols == tile_shape_out::Rows,
       "Error! Input rows != Output Columns or Input Columns != Output rows");
-
+  static_assert(tile_shape_in::ValidRow != DYNAMIC && tile_shape_in::ValidCol != DYNAMIC &&
+                tile_shape_out::ValidRow != DYNAMIC && tile_shape_out::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_out::Loc != Location::Acc && tile_shape_in::Loc != Location::Acc, 
+              "Unsupport ACC to be input or output here");
   static constexpr size_t row = tile_shape_in::ValidRow;
   static constexpr size_t col = tile_shape_in::ValidCol;
   static constexpr size_t row_lines =

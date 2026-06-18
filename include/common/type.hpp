@@ -1,6 +1,10 @@
 #ifndef _INCLUDE_TYPE_H_
 #define _INCLUDE_TYPE_H_
 
+template <typename E> struct type_traits {
+  static constexpr int bits = sizeof(E) * 8;
+};
+
 #ifdef __linx
 #include <jcore/type.hpp>
 #elif defined(__cpu_sim__)

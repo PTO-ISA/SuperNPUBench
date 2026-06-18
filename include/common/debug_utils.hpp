@@ -11,7 +11,6 @@
 
 namespace pto {
 template <typename tile_shape>
-static inline __attribute__((always_inline))
 void print_tile(tile_shape &tile) {
   print_tile_Impl(tile);
 }

@@ -13,6 +13,36 @@ template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_B,
 void MATMUL(tile_shape_C &dst, tile_shape_A &src0, tile_shape_B &src1) {
   MATMUL_Impl(dst, src0, src1);
 }
+
+template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_AX,
+          is_tile_data_v tile_shape_B, is_tile_data_v tile_shape_BX,
+          is_tile_data_v tile_shape_C>
+void MATMULMX(tile_shape_C &dst, tile_shape_A &src0, tile_shape_AX &src0_scale,
+             tile_shape_B &src1, tile_shape_BX &src1_scale) {
+  MATMULMX_Impl(dst, src0, src0_scale, src1, src1_scale);
+}
+
+template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_B,
+          is_tile_data_v tile_shape_BX, is_tile_data_v tile_shape_C>
+void MATMULMXB(tile_shape_C &dst, tile_shape_A &src0, tile_shape_B &src1, tile_shape_BX &src1_scale) {
+  MATMULMXB_Impl(dst, src0, src1, src1_scale);
+}
+
+template <is_tile_data_v tile_shape_A,  is_tile_data_v tile_shape_AX,
+          is_tile_data_v tile_shape_B,  is_tile_data_v tile_shape_BX,
+          is_tile_data_v tile_shape_C>
+void MATMACCMX(tile_shape_C &dst, tile_shape_A &src0,  tile_shape_AX &src0x,
+               tile_shape_B &src1,  tile_shape_BX &src1x) {
+  MATMACCMX_Impl(dst, src0, src0x, src1, src1x);
+}
+
+template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_B, 
+          is_tile_data_v tile_shape_BX, is_tile_data_v tile_shape_C>
+void MATMACCMXB(tile_shape_C &dst, tile_shape_A &src0,
+                tile_shape_B &src1, tile_shape_BX &src1x) {
+  MATMACCMXB_Impl(dst, src0, src1, src1x);
+}
+
 template <is_tile_data_v tile_shape> void TABS(tile_shape &dst, tile_shape &src) {
   TABS_Impl(dst, src);
 }
@@ -24,6 +54,10 @@ template <is_tile_data_v tile_shape>
 void TADDS(tile_shape &dst, tile_shape &src, typename tile_shape::DType s) {
   TADDS_Impl(dst, src, s);
 }
+template <is_tile_data_v tile_shape>
+void TAND(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+  TAND_Impl(dst, src0, src1);
+}
 template <is_tile_data_v tile_shape_in0, is_tile_data_v tile_shape_in1,
           is_tile_data_v tile_shape_in2, is_tile_data_v tile_shape_out>
 void TASSEMBLE(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1,
@@ -33,6 +67,14 @@ void TASSEMBLE(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1,
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TCAST(tile_shape_out &dst, tile_shape_in &src) {
   TCAST_Impl(dst, src);
+}
+template <is_tile_data_v tile_shape, typename T, int descending>
+void TCI(tile_shape &dst, T s) {
+  TCI_Impl<tile_shape, T, descending>(dst, s);
+}
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void TCMP(tile_shape_out &dst, tile_shape_in &src0, tile_shape_in &src1, CmpMode cmpMode) {
+  TCMP_Impl(dst, src0, src1, cmpMode);
 }
 template <is_tile_data_v tile_shape>
 void TCOPY(tile_shape &dst, tile_shape &src) {
@@ -78,6 +120,10 @@ void TEXTRACT(tile_shape_out &dst, tile_shape_in &src, uint16_t offset_i,
               uint16_t offset_j) {
   TEXTRACT_Impl(dst, src, offset_i, offset_j);
 }
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void TFILLPAD(tile_shape_out &dst, tile_shape_in &src) {
+  TFILLPAD_Impl(dst, src);
+}
 template <is_tile_data_v tile_shape_dst, is_tile_data_v tile_shape_src,
           is_tile_data_v tile_shape_indices>
 void TGATHER(tile_shape_dst &dst, tile_shape_src &src,
@@ -109,8 +155,21 @@ void TMULS(tile_shape &dst, tile_shape &src, typename tile_shape::DType s) {
   TMULS_Impl(dst, src, s);
 }
 template <is_tile_data_v tile_shape>
+void TOR(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+  TOR_Impl(dst, src0, src1);
+}
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in, typename T>
+void TPAD(tile_shape_out &dst, const tile_shape_in &src, T pad_value,
+          size_t up_pad, size_t left_pad, size_t down_pad, size_t right_pad) {
+  TPAD_Impl(dst, src, pad_value, up_pad, left_pad, down_pad, right_pad);
+}
+template <is_tile_data_v tile_shape>
 void TRECIP(tile_shape &dst, tile_shape &src) {
   TRECIP_Impl(dst, src);
+}
+template <is_tile_data_v tile_shape>
+void TREM(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+  TREM_Impl(dst, src0, src1);
 }
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TRESHAPE(tile_shape_out &tile_out, tile_shape_in &tile_in) {

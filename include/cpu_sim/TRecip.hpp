@@ -46,6 +46,9 @@ void TRecip_NzLayout_Imp(typename tile_shape::TileDType dst,
 
 template <is_tile_data_v tile_shape>
 void TRECIP_Impl(tile_shape &dst, tile_shape &src) {
+  static_assert(tile_shape::ValidRow != DYNAMIC && tile_shape::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   if constexpr (is_Nz_layout<tile_shape>::value) {
     TRecip_NzLayout_Imp<tile_shape>(dst.data(), src.data());
   } else if constexpr (tile_shape::isBoxedLayout == false) {

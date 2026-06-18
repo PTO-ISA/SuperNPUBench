@@ -44,12 +44,16 @@ void TExpandCol2NzImp(typename tile_shape_out::TileDType dst,
 
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TEXPANDCOL_Impl(tile_shape_out &dst, tile_shape_in &src) {
+  static_assert(tile_shape_in::ValidRow != DYNAMIC && tile_shape_in::ValidCol != DYNAMIC &&
+                tile_shape_out::ValidRow != DYNAMIC && tile_shape_out::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
   static_assert((tile_shape_out::Rows == tile_shape_in::Rows) &&
                     (tile_shape_out::ValidRow == tile_shape_in::ValidRow),
                 "Error! Cude A:Rows != Cude B:Rows");
   static_assert(tile_shape_out::ValidRow == tile_shape_in::ValidRow,
                 "Error! Cude A:ValidRow != Cude B:ValidRow");
-
+  static_assert(tile_shape_out::Loc != Location::Acc && tile_shape_in::Loc != Location::Acc, 
+              "Unsupport ACC to be input or output here");
   if constexpr (is_Nz_layout<tile_shape_out>::value) {
     TExpandCol2NzImp<tile_shape_out, tile_shape_in>(dst.data(), src.data());
   } else if constexpr (tile_shape_out::isBoxedLayout == false) {

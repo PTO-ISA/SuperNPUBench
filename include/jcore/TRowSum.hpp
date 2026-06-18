@@ -51,6 +51,23 @@ void __vec__ TRowSum_NzLayout_Impl(typename tile_shape_out::TileDType __out__ ds
   }
 }
 
+template <typename tile_shape_out, typename tile_shape_in>
+void __vec__
+TRowSum_NoFractal_Impl_Dynamic(typename tile_shape_out::TileDType __out__ dst,
+                  const typename tile_shape_in::TileDType __in__ src, const size_t src_valid_col) {
+  size_t i = blkv_get_index_x();
+  size_t idx_org = i * tile_shape_in::RowStride;
+  typename tile_shape_in::DType sum = blkv_get_tile_ptr(src)[idx_org];
+
+  for (size_t j = 1; j < src_valid_col; ++j) {
+    size_t now_idx =
+        i * tile_shape_in::RowStride + j * tile_shape_in::ColStride;
+    sum = sum + blkv_get_tile_ptr(src)[now_idx];
+  }
+  size_t idx_dst = i * tile_shape_out::RowStride;
+  blkv_get_tile_ptr(dst)[idx_dst] = sum;
+}
+
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TROWSUM_Impl(tile_shape_out &dst, tile_shape_in &src) {
   static_assert(tile_shape_in::Rows == tile_shape_out::Rows,
@@ -59,9 +76,25 @@ void TROWSUM_Impl(tile_shape_out &dst, tile_shape_in &src) {
                 "valid column must be 1.");
   static_assert(!tile_shape_out::isBoxedLayout && !tile_shape_in::isBoxedLayout,
                 "Not support Fractal layout");
-  static constexpr size_t row = tile_shape_in::ValidRow;
-  static constexpr size_t col = tile_shape_in::ValidCol;
-  static constexpr size_t Y = row / (LaneNum / tile_shape_in::InnerCols);
+  static_assert(tile_shape_out::Loc != Location::Acc && tile_shape_in::Loc != Location::Acc, 
+              "Unsupport ACC to be input or output here");
+  size_t row = src.GetValidRow();
+  size_t col = src.GetValidCol();
+
+  if constexpr (tile_shape_in::ValidRow == DYNAMIC || tile_shape_in::ValidCol == DYNAMIC ||
+                tile_shape_out::ValidRow == DYNAMIC || tile_shape_out::ValidCol == DYNAMIC) {
+    if constexpr (tile_shape_in::isBoxedLayout == false){
+      TRowSum_NoFractal_Impl_Dynamic<tile_shape_out, tile_shape_in>
+        <<<row, 1, 1>>>(dst.data(), src.data(), col);
+    } else {
+      static_assert(tile_shape_in::isBoxedLayout == false,
+                  "Storage type not supported");
+    }
+
+    return;
+  }
+
+  size_t Y = row / (LaneNum / tile_shape_in::InnerCols);
   if constexpr (is_Nz_layout<tile_shape_in>::value) {
     TRowSum_NzLayout_Impl<tile_shape_out, tile_shape_in>
         <<<LaneNum, Y, 1>>>(dst.data(), src.data());

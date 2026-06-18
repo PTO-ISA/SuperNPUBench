@@ -1,5 +1,5 @@
-#ifndef TAND_HPP
-#define TAND_HPP
+#ifndef TOR_HPP
+#define TOR_HPP
 
 #include "common/pto_tile.hpp"
 #include "jcore/constants.hpp"
@@ -14,7 +14,9 @@ void __vec__ TOr_Vec_RowMajor(
   size_t j = blkv_get_index_y();
 
   size_t index = j * tile_shape::RowStride + i;
-  blkv_get_tile_ptr(dst)[index] = blkv_get_tile_ptr(src0)[index] | blkv_get_tile_ptr(src1)[index];
+  blkv_get_tile_ptr(dst)[index] =
+      blkv_get_tile_ptr(src0)[index] |
+      blkv_get_tile_ptr(src1)[index];
 }
 
 template <typename tile_shape>
@@ -26,27 +28,46 @@ void __vec__ TOr_Vec_ColMajor(
   size_t j = blkv_get_index_y();
 
   size_t index = j * tile_shape::ColStride + i;
-  blkv_get_tile_ptr(dst)[index] = blkv_get_tile_ptr(src0)[index] | blkv_get_tile_ptr(src1)[index];
+  blkv_get_tile_ptr(dst)[index] =
+      blkv_get_tile_ptr(src0)[index] |
+      blkv_get_tile_ptr(src1)[index];
 }
 
 template <is_tile_data_v tile_shape>
 void TOR_Impl(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
-  static constexpr size_t tile_rows = tile_shape::ValidRow;
-  static constexpr size_t tile_cols = tile_shape::ValidCol;
+  static constexpr size_t row = tile_shape::ValidRow;
+  static constexpr size_t col = tile_shape::ValidCol;
 
-  static_assert(std::is_same_v<typename tile_shape::DType, int32_t>,
-                "TOR requires DType to be int32_t");
-  static_assert(tile_rows != DYNAMIC && tile_cols != DYNAMIC,
+  static_assert(row != DYNAMIC && col != DYNAMIC,
                 "TODO: Support tile dynamic shape!");
-  static_assert(tile_shape::isBoxedLayout == false,
-                "TOR not support Boxed Layout!");
+  static_assert(tile_shape::Loc == Location::Vec, "Only VEC tile type are supported");
+  static_assert(!tile_shape::isBoxedLayout, "TOR not support Boxed Layout!");
 
-  if constexpr (tile_shape::isRowMajor) {
-    TOr_Vec_RowMajor<tile_shape><<<tile_cols, tile_rows, 1>>>
-                      (dst.data(), src0.data(), src1.data());
+  if constexpr (std::is_same<typename tile_shape::DType, int64_t>::value ||
+                std::is_same<typename tile_shape::DType, int32_t>::value ||
+                std::is_same<typename tile_shape::DType, int16_t>::value ||
+                std::is_same<typename tile_shape::DType, int8_t>::value ||
+                std::is_same<typename tile_shape::DType, unsigned long>::value ||
+                std::is_same<typename tile_shape::DType, unsigned int>::value ||
+                std::is_same<typename tile_shape::DType, unsigned short>::value ||
+                std::is_same<typename tile_shape::DType, unsigned char>::value) {
+    if constexpr (tile_shape::isRowMajor) {
+      TOr_Vec_RowMajor<tile_shape><<<col, row, 1>>>
+                        (dst.data(), src0.data(), src1.data());
+    } else {
+      TOr_Vec_ColMajor<tile_shape><<<row, col, 1>>>
+                        (dst.data(), src0.data(), src1.data());
+    }
   } else {
-    TOr_Vec_ColMajor<tile_shape><<<tile_cols, tile_rows, 1>>>
-                      (dst.data(), src0.data(), src1.data());
+    static_assert(std::is_same<typename tile_shape::DType, int64_t>::value ||
+                  std::is_same<typename tile_shape::DType, int32_t>::value ||
+                  std::is_same<typename tile_shape::DType, int16_t>::value ||
+                  std::is_same<typename tile_shape::DType, int8_t>::value ||
+                  std::is_same<typename tile_shape::DType, unsigned long>::value ||
+                  std::is_same<typename tile_shape::DType, unsigned int>::value ||
+                  std::is_same<typename tile_shape::DType, unsigned short>::value ||
+                  std::is_same<typename tile_shape::DType, unsigned char>::value,
+                  "Only int data type are supported");
   }
 }
 

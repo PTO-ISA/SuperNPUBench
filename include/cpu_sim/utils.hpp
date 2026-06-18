@@ -12,7 +12,7 @@ void print_tile_Impl(const tile_shape &tile) {
   std::copy(tile.data(), tile.data() + tile_size, d);
 
   print_tile_info<tile_shape>();
-  std::cout << std::fixed << std::setprecision(4);
+  std::cout << std::fixed << std::scientific << std::setprecision(4);
   if constexpr (!tile_shape::isBoxedLayout) {
     if constexpr (tile_shape::isRowMajor) {
       for (int i = 0; i < tile_shape::Rows; i++) {

@@ -19,8 +19,6 @@ typedef _Float16 __half;
 #ifdef __x86_64__
 #if (__GNUC__ > 12) || (__GNUC__ == 12 && __GNUC_MINOR__ >= 1)
 typedef _Float16 __half;
-#else
-typedef float __half;
 #endif
 #elif defined(__aarch64__) && defined(__ARM_NEON)
 #include "arm_fp16.h"

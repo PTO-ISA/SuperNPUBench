@@ -35,8 +35,8 @@ TRowMaxExpand_NzLayoput_Impl(typename tile_shape::TileDType __out__ dst,
   unsigned j = blkv_get_index_y();
   static constexpr int col_fract_nums =
       tile_shape::Cols / tile_shape::InnerCols;
-  typename tile_shape::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape::DType *src_tile_ptr = blkv_get_tile_ptr(src);
+  __vbuf__ typename tile_shape::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape::DType *src_tile_ptr = blkv_get_tile_ptr(src);
   typename tile_shape::DType data = src_tile_ptr[j * LaneNum + i];
 #pragma clang loop unroll(full)
   for (unsigned k = 1; k < col_fract_nums; ++k) {
@@ -61,6 +61,9 @@ template <is_tile_data_v tile_shape>
 void TROWMAXEXPAND_Impl(tile_shape &dst, tile_shape &src) {
   static constexpr size_t row = tile_shape::ValidRow;
   static constexpr size_t col = tile_shape::ValidCol;
+  static_assert(row != DYNAMIC && col != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   static constexpr size_t Y = row / (LaneNum / tile_shape::InnerCols);
   static_assert(!tile_shape::isBoxedLayout, "Not support Fractal layout");
   if constexpr (is_Nz_layout<tile_shape>::value) {

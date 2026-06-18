@@ -41,8 +41,9 @@ void __vec__ TMuls2NzImpl(typename tile_shape::TileDType __out__ dst,
 }
 template <is_tile_data_v tile_shape>
 void TMULS_Impl(tile_shape &dst, tile_shape &src, typename tile_shape::DType s) {
-  static constexpr size_t row = tile_shape::ValidRow;
-  static constexpr size_t col = tile_shape::ValidCol;
+  size_t row = src.GetValidRow();
+  size_t col = src.GetValidCol(); 
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   static constexpr size_t Y =
       tile_shape::Rows / (LaneNum / tile_shape::InnerCols);
   if constexpr (is_Nz_layout<tile_shape>::value) {

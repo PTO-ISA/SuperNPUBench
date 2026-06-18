@@ -51,8 +51,8 @@ void __vec__ TExtract_NzLayout_Imp(
   static constexpr int block_cols =
       tile_shape_out::Cols / tile_shape_out::InnerCols;
 
-  typename tile_shape_out::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape_in::DType *src_tile_ptr = blkv_get_tile_ptr(src);
+  __vbuf__ typename tile_shape_out::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape_in::DType *src_tile_ptr = blkv_get_tile_ptr(src);
 #pragma clang loop unroll(full)
   for (size_t k = 0; k < block_cols; ++k) {
     size_t idx_src = k * tile_shape_in::Rows * tile_shape_in::InnerCols +
@@ -67,12 +67,14 @@ void __vec__ TExtract_NzLayout_Imp(
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TEXTRACT_Impl(tile_shape_out &dst, tile_shape_in &src, size_t offset_row,
               size_t offset_col) {
-  static constexpr size_t dst_row = tile_shape_out::ValidRow;
-  static constexpr size_t dst_col = tile_shape_out::ValidCol;
+  size_t dst_row = dst.GetValidRow();
+  size_t dst_col = dst.GetValidCol();
   static constexpr size_t row_lines =
       tile_shape_out::Rows / (LaneNum / tile_shape_out::InnerCols);
   static_assert(!tile_shape_out::isBoxedLayout && !tile_shape_in::isBoxedLayout,
                 "Not support Fractal layout");
+  static_assert(tile_shape_out::Loc != Location::Acc && tile_shape_in::Loc != Location::Acc, 
+              "Unsupport ACC to be input or output here");
   if constexpr (is_Nz_layout<tile_shape_in>::value &&
                 is_Nz_layout<tile_shape_in>::value) {
     TExtract_NzLayout_Imp<tile_shape_out, tile_shape_in>

@@ -14,9 +14,9 @@ void __vec__ TGather_Vec_RowMajor(
   size_t i = blkv_get_index_x();
   size_t j = blkv_get_index_y();
 
-  typename tile_shape_dst::DType *d_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape_src::DType *s0_ptr = blkv_get_tile_ptr(src);
-  typename tile_shape_indices::DType *si_ptr = blkv_get_tile_ptr(indices);
+  __vbuf__ typename tile_shape_dst::DType *d_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape_src::DType *s0_ptr = blkv_get_tile_ptr(src);
+  __vbuf__ typename tile_shape_indices::DType *si_ptr = blkv_get_tile_ptr(indices);
   size_t index = j * tile_shape_indices::RowStride + i;
   size_t idx = si_ptr[index] * tile_shape_src::RowStride + i;
   d_ptr[index] = s0_ptr[idx];
@@ -31,9 +31,9 @@ void __vec__ TGather_Vec_ColMajor(
   size_t i = blkv_get_index_x();
   size_t j = blkv_get_index_y();
 
-  typename tile_shape_dst::DType *d_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape_src::DType *s0_ptr = blkv_get_tile_ptr(src);
-  typename tile_shape_indices::DType *si_ptr = blkv_get_tile_ptr(indices);
+  __vbuf__ typename tile_shape_dst::DType *d_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape_src::DType *s0_ptr = blkv_get_tile_ptr(src);
+  __vbuf__ typename tile_shape_indices::DType *si_ptr = blkv_get_tile_ptr(indices);
   size_t index = j * tile_shape_indices::ColStride + i;
   size_t idx = si_ptr[index] + j * tile_shape_src::ColStride;
   d_ptr[index] = s0_ptr[idx];
@@ -49,9 +49,15 @@ void TGATHER_Impl(tile_shape_dst &dst, tile_shape_src &src,
   static_assert(!tile_shape_dst::isBoxedLayout && !tile_shape_src::isBoxedLayout &&
                    !tile_shape_indices::isBoxedLayout,
                 "Not support Fractal layout");
+  static_assert(tile_shape_dst::ValidRow != DYNAMIC && tile_shape_dst::ValidCol != DYNAMIC &&
+                tile_shape_src::ValidRow != DYNAMIC && tile_shape_src::ValidCol != DYNAMIC &&
+                tile_shape_indices::ValidRow != DYNAMIC && tile_shape_indices::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_dst::Loc != Location::Acc && 
+                tile_shape_src::Loc != Location::Acc && 
+                tile_shape_indices::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   static constexpr size_t row = tile_shape_dst::ValidRow;
   static constexpr size_t col = tile_shape_dst::ValidCol;
-
   if constexpr (tile_shape_src::isRowMajor &&
                 tile_shape_indices::isRowMajor &&
                 tile_shape_dst::isRowMajor) {

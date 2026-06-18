@@ -48,6 +48,9 @@ void TMaxs2NzImp(typename tile_shape::TileDType dst,
 
 template <is_tile_data_v tile_shape>
 void TMAXS_Impl(tile_shape &dst, tile_shape &src, typename tile_shape::DType s) {
+  static_assert(tile_shape::ValidRow != DYNAMIC && tile_shape::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   if constexpr (is_Nz_layout<tile_shape>::value) {
     TMaxs2NzImp<tile_shape>(dst.data(), src.data(), s);
   } else if constexpr (tile_shape::isBoxedLayout == false) {

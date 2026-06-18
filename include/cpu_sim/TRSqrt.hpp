@@ -19,6 +19,9 @@ void TRSqrt_RowMajor_Imp(typename tile_shape::TileDType dst,
 
 template <is_tile_data_v tile_shape>
 void TRSQRT_Impl(tile_shape &dst, tile_shape &src) {
+  static_assert(tile_shape::ValidRow != DYNAMIC && tile_shape::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   if constexpr (tile_shape::isRowMajor) {
     TRSqrt_RowMajor_Imp<tile_shape>(dst.data(), src.data());
   } else {

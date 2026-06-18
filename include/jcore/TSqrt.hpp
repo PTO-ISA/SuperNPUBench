@@ -32,8 +32,8 @@ TSqrt_NzLayout_Impl(typename tile_shape::TileDType __out__ dst,
   size_t i = blkv_get_index_x();
   size_t j = blkv_get_index_y();
   static constexpr int block_cols = tile_shape::Cols / tile_shape::InnerCols;
-  typename tile_shape::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape::DType *src_tile_ptr = blkv_get_tile_ptr(src);
+  __vbuf__ typename tile_shape::DType *dst_tile_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape::DType *src_tile_ptr = blkv_get_tile_ptr(src);
 #pragma clang loop unroll(full)
   for (size_t k = 0; k < block_cols; ++k) {
     size_t idx =
@@ -46,6 +46,9 @@ template <is_tile_data_v tile_shape>
 void TSQRT_Impl(tile_shape &dst, tile_shape &src) {
   static constexpr size_t row = tile_shape::ValidRow;
   static constexpr size_t col = tile_shape::ValidCol;
+  static_assert(row != DYNAMIC && col != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   static constexpr size_t row_lines =
       tile_shape::Rows / (LaneNum / tile_shape::InnerCols);
 

@@ -98,10 +98,19 @@ template <is_tile_data_v tile_shape_in0, is_tile_data_v tile_shape_in1,
           is_tile_data_v tile_shape_in2, is_tile_data_v tile_shape_out>
 void TASSEMBLE_Impl(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1,
                tile_shape_in2 &src2) {
-  static_assert(tile_shape_out::Rows == tile_shape_in0::Rows &&
-                    tile_shape_out::Rows == tile_shape_in1::Rows &&
-                    tile_shape_out::Rows == tile_shape_in2::Rows,
+  static_assert(tile_shape_out::ValidRow == tile_shape_in0::ValidRow &&
+                    tile_shape_out::ValidRow == tile_shape_in1::ValidRow &&
+                    tile_shape_out::ValidRow == tile_shape_in2::ValidRow,
                 "Error! All tile rows must be equal");
+  static_assert(tile_shape_out::ValidRow != DYNAMIC && tile_shape_out::ValidCol != DYNAMIC &&
+                tile_shape_in0::ValidRow != DYNAMIC && tile_shape_in0::ValidCol != DYNAMIC &&
+                tile_shape_in1::ValidRow != DYNAMIC && tile_shape_in1::ValidCol != DYNAMIC &&
+                tile_shape_in2::ValidRow != DYNAMIC && tile_shape_in2::ValidCol != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_out::Loc != Location::Acc && 
+                tile_shape_in0::Loc != Location::Acc && 
+                tile_shape_in1::Loc != Location::Acc &&
+                tile_shape_in2::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   static_assert(std::is_same<typename tile_shape_in0::DType,
                              typename tile_shape_in1::DType>::value &&
                     std::is_same<typename tile_shape_in1::DType,
@@ -110,12 +119,12 @@ void TASSEMBLE_Impl(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &s
                                  typename tile_shape_out::DType>::value,
                 "Error! All data types must be equal");
   static_assert(
-      tile_shape_out::Cols ==
-          tile_shape_in0::Cols + tile_shape_in1::Cols + tile_shape_in2::Cols,
+      tile_shape_out::ValidCol ==
+          tile_shape_in0::ValidCol + tile_shape_in1::ValidCol + tile_shape_in2::ValidCol,
       "Error! Output columns must equal the sum of the input columns.");
-  static_assert(tile_shape_in0::Cols == tile_shape_in0::ValidCol &&
-                    tile_shape_in1::Cols == tile_shape_in1::ValidCol &&
-                    tile_shape_in2::Cols == tile_shape_in2::ValidCol,
+  static_assert(tile_shape_in0::ValidCol == tile_shape_in0::ValidCol &&
+                    tile_shape_in1::ValidCol == tile_shape_in1::ValidCol &&
+                    tile_shape_in2::ValidCol == tile_shape_in2::ValidCol,
                 "Error! Mask for columns are forbidden");
 
   if constexpr (is_Nz_layout<tile_shape_in0>::value &&

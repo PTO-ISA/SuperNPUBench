@@ -41,8 +41,8 @@ void __vec__ TAdds_NzLayout_Impl(
   size_t j = blkv_get_index_y();
   static constexpr int block_cols = tile_shape::Cols / tile_shape::InnerCols;
 
-  typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape::DType *s_ptr = blkv_get_tile_ptr(src);
+  __vbuf__ typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape::DType *s_ptr = blkv_get_tile_ptr(src);
 
   #pragma clang loop unroll(full)
   for (size_t k = 0; k < block_cols; ++k) {
@@ -56,6 +56,9 @@ template <is_tile_data_v tile_shape>
 void TADDS_Impl(tile_shape &dst, tile_shape &src, typename tile_shape::DType s) {
   static constexpr size_t row = tile_shape::ValidRow;
   static constexpr size_t col = tile_shape::ValidCol;
+  static_assert(row != DYNAMIC && col != DYNAMIC,
+              "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   static constexpr size_t Y =
       tile_shape::Rows / (LaneNum / tile_shape::InnerCols);
 

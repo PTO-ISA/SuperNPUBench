@@ -43,9 +43,9 @@ void __vec__ TAdd_NzLayout_Impl(
   size_t j = blkv_get_index_y();
   static constexpr int block_cols = tile_shape::Cols / tile_shape::InnerCols;
 
-  typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
-  typename tile_shape::DType *s0_ptr = blkv_get_tile_ptr(src0);
-  typename tile_shape::DType *s1_ptr = blkv_get_tile_ptr(src1);
+  __vbuf__ typename tile_shape::DType *d_ptr = blkv_get_tile_ptr(dst);
+  __vbuf__ typename tile_shape::DType *s0_ptr = blkv_get_tile_ptr(src0);
+  __vbuf__ typename tile_shape::DType *s1_ptr = blkv_get_tile_ptr(src1);
   
   #pragma clang loop unroll(full)
   for (size_t k = 0; k < block_cols; ++k) {
@@ -57,11 +57,9 @@ void __vec__ TAdd_NzLayout_Impl(
 
 template <is_tile_data_v tile_shape>
 void TADD_Impl(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
-  static constexpr size_t tile_rows = tile_shape::ValidRow;
-  static constexpr size_t tile_cols = tile_shape::ValidCol;
-
-  static_assert(tile_rows != DYNAMIC && tile_cols != DYNAMIC,
-                "TODO: Support tile dynamic shape!");
+  size_t tile_rows = src0.GetValidRow();
+  size_t tile_cols = src0.GetValidCol();
+  static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   static_assert(tile_shape::isBoxedLayout == false,
                 "TADD not support Boxed Layout!");
 
@@ -69,7 +67,7 @@ void TADD_Impl(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
     TAdd_Vec_RowMajor<tile_shape><<<tile_cols, tile_rows, 1>>>
                       (dst.data(), src0.data(), src1.data());
   } else {
-    TAdd_Vec_ColMajor<tile_shape><<<tile_cols, tile_rows, 1>>>
+    TAdd_Vec_ColMajor<tile_shape><<<tile_rows, tile_cols, 1>>>
                       (dst.data(), src0.data(), src1.data());
   }
 

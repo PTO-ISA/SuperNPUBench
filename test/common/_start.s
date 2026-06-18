@@ -6,6 +6,5 @@ _start:
   c.setret 2, ->ra
 _end:
   bstart.aux fall
-  addi zero, 0x5e, ->x1
-  acrc 1
+  acrc 3
   c.bstop
