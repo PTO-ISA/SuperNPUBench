@@ -6,47 +6,57 @@ import argparse
 import json
 import math
 import subprocess
+import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
+from pathlib import Path
 
 MAX_WORKERS = 20  #parallel thread num depend on your machine
 
-root = "JanusCoreBench/test/"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TEST_ROOT = REPO_ROOT / "test"
+CM_LOG_DIR = TEST_ROOT / "cm_log"
 
 compile_result = {"pass":[], "fail":[], "timeout":[]}
 
 compile_list = [
-    "./tileop_test/compile.all",
-    "./kernel/compile_softmax.all",
-    "./kernel/compile_gemm.all",
-    "./kernel/compile_linear.all",
-    "./kernel/compile_matmul.all",
-    "./kernel/compile_flash_attention.all",
-    "./lmbench/compile_mem.all",
-    "./vec/compile_lat_bw.all",
-    "./cube/compile.all",
-    "./deepseek/compile.all",
-    "./accelerator/vec_simd/compile.all",
-    "./accelerator/fusion/compile.all",
+    "other/tileop_test/compile.all",
+    "kernel/orther/compile_softmax.all",
+    "kernel/orther/compile_gemm.all",
+    "kernel/orther/compile_linear.all",
+    "kernel/orther/compile_matmul.all",
+    "kernel/orther/compile_flash_attention.all",
+    "other/lmbench/compile_mem.all",
+    "other/vec/compile_lat_bw.all",
+    "other/cube/compile.all",
+    "other/deepseek/compile.all",
+    "accelerator/vec_simd/compile.all",
+    "accelerator/fusion/compile.all",
 ]
 
 def cmd_config_parse(list):
     pass
 
-def compile_elf(list):
-    cmd_path = list
-    cmd_dir = os.path.dirname(os.path.abspath(cmd_path)).split(root, 1)[-1]
-    cmd = os.path.basename(os.path.abspath(cmd_path)).split(".")[0] + "_" + cmd_dir.replace("/", "_")
+def compile_elf(compile_file):
+    cmd_path = TEST_ROOT / compile_file
+    cmd_dir = cmd_path.parent
+    cmd_rel_dir = cmd_dir.relative_to(TEST_ROOT)
+    cmd = f"{cmd_path.stem}_{str(cmd_rel_dir).replace(os.sep, '_')}"
     print(f"processing {cmd}...")
 
     compile_out = ""
-    with open(f"../cm_log/{cmd}.log", "a+") as f:
+    if not cmd_path.exists():
+        compile_result["fail"].append(f"{cmd_rel_dir}:missing {cmd_path.name}")
+        print(f"{cmd} missing...")
+        return
+
+    with open(CM_LOG_DIR / f"{cmd}.log", "a+") as f:
         with open(cmd_path, "r") as f2:
             for line in f2:
                 line = line.strip()
                 if "make TESTCASE" in line and not line.startswith("#"):
                     try:
-                        result = subprocess.run(f"cd {cmd_dir};{line};", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=60, universal_newlines=True)
+                        result = subprocess.run(line, cwd=cmd_dir, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=60, universal_newlines=True)
                         compile_out = result.stdout
                         f.writelines(compile_out)
                         if ".elf" in compile_out and "error" not in compile_out:
@@ -55,9 +65,9 @@ def compile_elf(list):
                             elf_name = ''.join(elf_name)
                             compile_result["pass"].append(elf_name) 
                         else:
-                            compile_result["fail"].append(f"{cmd_dir}:{line}")
+                            compile_result["fail"].append(f"{cmd_rel_dir}:{line}")
                     except subprocess.TimeoutExpired:
-                            compile_result["timeout"].append(f"{cmd_dir}:{line}")
+                            compile_result["timeout"].append(f"{cmd_rel_dir}:{line}")
                         
     print(f"{cmd} finished...")
 
@@ -66,9 +76,11 @@ if __name__ == '__main__':
     parser.add_argument("-plat", dest="plat", default="linx", type=str, help="set platform for compile: jcore/cpu_sim/arm_sme")
     args = parser.parse_args()
 
-    os.chdir(os.path.dirname(__file__)+"/../")
-    print(f"cur_dir is {os.getcwd()}")
-    os.system("rm -rf ../cm_log;mkdir ../cm_log")
+    os.environ["PLAT"] = args.plat
+    print(f"test_root is {TEST_ROOT}")
+    if CM_LOG_DIR.exists():
+        shutil.rmtree(CM_LOG_DIR)
+    CM_LOG_DIR.mkdir(parents=True)
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {executor.submit(compile_elf, list): list for list in compile_list}
@@ -77,7 +89,7 @@ if __name__ == '__main__':
             #path, status, output = future.result()
     
     #Summary
-    with open(f"../cm_log/compile_summary.log", "w") as f:
+    with open(CM_LOG_DIR / "compile_summary.log", "w") as f:
         f.write(f"Compile Summary:\n")
         f.write(f"pass: {len(compile_result['pass'])}\n")
         f.write(f"fail: {len(compile_result['fail'])}\n")

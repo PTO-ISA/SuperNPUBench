@@ -5,4 +5,4 @@ TARGET = $(ELF_HEAD)_$(TESTCASE)_$(TEST_OP)_$(dtype)_M$(M)_N$(N)_K$(K).elf
 endif
 
 SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
-include ../common/Makefile.common
+include ../../common/Makefile.common

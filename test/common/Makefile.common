@@ -1,8 +1,9 @@
-ROOT := $(shell echo $(CURDIR) | sed -e "s@\(.*\)/JanusCoreBench/.*@\1/JanusCoreBench@")
-TEST_ROOT := $(shell echo $(CURDIR) | sed -e "s@\(.*\)/JanusCoreBench\/test/.*@\1/JanusCoreBench\/test@")
-CATEGORY := $(shell echo $(CURDIR) | sed -e 's/\(.*\)JanusCoreBench\/test\/\(.*\)/\2/')
-CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')
-OBJ_ROOT := $(shell realpath $(TEST_ROOT)/../output)
+COMMON_MAKEFILE := $(abspath $(lastword $(MAKEFILE_LIST)))
+TEST_ROOT := $(abspath $(dir $(COMMON_MAKEFILE))/..)
+ROOT := $(abspath $(TEST_ROOT)/..)
+CATEGORY := $(patsubst $(TEST_ROOT)/%,%,$(CURDIR))
+CATEGORY_NAME := $(subst /,_,$(CATEGORY))
+OBJ_ROOT := $(abspath $(ROOT)/output)
 CASE_SRC_DIR := $(CATEGORY)/src
 ELF_DIR := $(OBJ_ROOT)/$(CATEGORY)/elf
 SRC_DIR := $(shell dirname $(SRC_FILE))

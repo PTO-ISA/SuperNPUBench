@@ -51,7 +51,7 @@ in Makefile, following is necessary
 ```
 SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
 TARGET = $(ELF_HEAD)_$(TESTCASE).elf
-include ../common/Makefile.common
+include ../../common/Makefile.common
 ```
 2. Or you can create a separate directory for a new test sub-category
 Add "src" dir to place your src file.
@@ -109,4 +109,3 @@ Method 2: pass the qemu-linx binary location through make command parameter e.g.
 
 ## run all cases
 `make sim_all`
-
