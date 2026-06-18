@@ -1,50 +1,101 @@
-Method 1: in Makefile.common to specify COMPILER DIRECTORY(COMPILER_DIR) in your own environment
+# Test Navigation
 
-Method 2: invoke the make command with COMPILER_DIR in parameter e.g.:
+The `test` tree contains focused API tests, kernel and accelerator suites,
+Python golden-comparison tests, and batch scripts. Most make-driven suites
+reuse [`common/Makefile.common`](common/Makefile.common), so the same
+`TESTCASE`, `PLAT`, `COMPILER_DIR`, and `QEMU` variables work across many
+directories.
 
-`make TESTCASE=TAdd PLAT=linx COMPILER_DIR=/path-to-compiler-bin-dir`
+## Directory Map
 
-## x86 plat
-`make clean;make TESTCASE=TAdd PLAT=cpu`
-`make clean;make TESTCASE=attention PLAT=cpu`
+| Path | Use it for |
+| --- | --- |
+| [`common`](common) | Shared make rules, platform flags, output layout, and simulator targets. |
+| [`tileop_api`](tileop_api) | Small TileOP API tests. This is the best first stop for validating an individual API operation. |
+| [`py_api`](py_api) | Python extension build and golden-comparison tests. |
+| [`accelerator`](accelerator) | Accelerator-oriented suites such as cube, vector, DMA, fusion, and versioned target tests. |
+| [`kernel`](kernel) | Kernel suites for control, element-wise, fusion, GEMM, memory, reduction, sort, and related cases. |
+| [`other`](other) | Additional model, microbenchmark, TileOP, vector, and script-driven suites. |
+| [`script`](script) | Recursive compile/run helper for larger batch workflows. |
 
-## arm plat
-`make clean;make TESTCASE=TAdd PLAT=arm_sme`
-`make clean;make TESTCASE=attention PLAT=arm_sme`
-## linxISA plat
-`make clean;make TESTCASE=TAdd PLAT=linx`
-`make clean;make TESTCASE=attention PLAT=linx`
+## Common Build Pattern
 
-## build all cases
+```sh
+cd test/tileop_api
+make clean
+make TESTCASE=TAdd PLAT=cpu COMPILER_DIR=/usr/bin
+make TESTCASE=TAdd PLAT=linx COMPILER_DIR=/path/to/linx/compiler/bin
+make TESTCASE=TAdd PLAT=linx QEMU=/path/to/qemu-linx sim
+```
 
-`make PLAT=linx build_all`
+Platform values:
 
-## output
-- the elf will be in output dir/case_name
+| Platform | Backend |
+| --- | --- |
+| `PLAT=cpu` | CPU simulation backend with `__cpu_sim__`. |
+| `PLAT=linx` | Linx target backend with `__linx`. |
+| `PLAT=arm_sme` | Arm SME-oriented backend with `__ARM_FEATURE_SME`. |
 
-# compile py lib
-- make clean;make TESTCASE=tileop_py PLAT=cpu PY_LIB=on
+Common targets:
 
-It will generate tileop_py.so in output/tileop_py
+```sh
+make TESTCASE=<case> all
+make TESTCASE=<case> diss
+make TESTCASE=<case> sim
+make TESTCASE=<case> debug
+make clean
+make clean_all
+```
 
-using golden cmp.py to compare python result with tileop_c result
+Build products are written below the repository-level `output/` directory.
 
-- python3 golden_cmp/golden_cmp.py -i tadd(for example)
+## Batch Runs
 
-- for how to add new case, please ref to golden_cmp/README.md
+Several suites include a local `compile.all` file. Run it from the suite
+directory:
 
-# run case
+```sh
+cd test/tileop_api && bash compile.all
+cd test/py_api && bash compile.all
+cd test/kernel/gemm/matmul && bash compile.all
+cd test/accelerator/vec_simt && bash compile.all
+```
 
-## set qemu simulator binary
-Method 1: change the `QEMU` variable in Makefile.common to the qemu-linx binary location
+For recursive compile/run automation, see [`script/README.md`](script/README.md).
 
-Method 2: pass the qemu-linx binary location through make command parameter e.g.:
-`make TESTCASE=TAdd QEMU=path-to-qemu-linx-bin-exe`
+## Python Golden Comparison
 
-## run a single case
+```sh
+cd test/py_api
+make clean
+make TESTCASE=tileop_py
+python3 golden_cmp/golden_cmp.py -i tadd
+```
 
-`make TESTCASE=TAdd sim`
+For adding golden-comparison cases, see
+[`py_api/golden_cmp/README.md`](py_api/golden_cmp/README.md).
 
-## run all cases
-`make sim_all`
+## Adding A Test Case
 
+For an existing make-driven suite:
+
+1. Add the source file under that suite's `src/` directory.
+2. Set `SRC_FILE`, `TARGET`, and any suite-specific variables in the local
+   `Makefile`.
+3. Include [`common/Makefile.common`](common/Makefile.common).
+4. Add the case to the local `compile.all` file if it belongs in batch runs.
+
+Minimal local makefile shape:
+
+```make
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
+TARGET = $(ELF_HEAD)_$(TESTCASE).elf
+include ../common/Makefile.common
+```
+
+Adjust the relative include path when the suite is nested more deeply.
+
+For a new suite, create a directory with `src/`, a small local `Makefile`, and
+an optional `compile.all` batch entrypoint.
+
+Back to the repository overview: [`../README.md`](../README.md).
