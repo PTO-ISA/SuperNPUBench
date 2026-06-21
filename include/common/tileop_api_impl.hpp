@@ -3,6 +3,7 @@
 
 #ifdef __linx
 #include "jcore/MatMul.hpp"
+#include "jcore/TAbs.hpp"
 #include "jcore/TAdd.hpp"
 #include "jcore/TAdds.hpp"
 #include "jcore/TAnd.hpp"
