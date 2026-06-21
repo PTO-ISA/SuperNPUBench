@@ -5,6 +5,30 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+// ROWSUM + EXPAND
+template <is_tile_data_v tile_shape>
+void TROWSUMEXPAND_Impl(tile_shape &dst, tile_shape &src) {
+  static_assert(tile_shape::ValidRow != DYNAMIC &&
+                    tile_shape::ValidCol != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+  static_assert(!tile_shape::isBoxedLayout, "Not support Fractal layout");
+
+  size_t rows = src.GetValidRow();
+  size_t cols = src.GetValidCol();
+  for (size_t row = 0; row < rows; ++row) {
+    typename tile_shape::DType sum = src.data()[index<tile_shape>(row, 0)];
+    for (size_t col = 1; col < cols; ++col) {
+      sum += src.data()[index<tile_shape>(row, col)];
+    }
+    for (size_t col = 0; col < cols; ++col) {
+      dst.data()[index<tile_shape>(row, col)] = sum;
+    }
+  }
+}
+#else
 template <typename tile_shape>
 void __vec__
 TRowSumExpand_NoFractal_Impl(typename tile_shape::TileDType __out__ dst,
@@ -76,4 +100,5 @@ void TROWSUMEXPAND_Impl(tile_shape &dst, tile_shape &src) {
   }
 }
 
+#endif
 #endif
