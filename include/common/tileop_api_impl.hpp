@@ -2,6 +2,7 @@
 #define TILEOP_API_IMPL_HPP
 
 #ifdef __linx
+#include "jcore/MatMacc.hpp"
 #include "jcore/MatMul.hpp"
 #include "jcore/TAbs.hpp"
 #include "jcore/TAdd.hpp"
