@@ -5,6 +5,34 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void TEXPANDROW_Impl(tile_shape_out &dst, tile_shape_in &src) {
+  static_assert((tile_shape_out::Cols == tile_shape_in::Cols) &&
+                    (tile_shape_out::ValidCol == tile_shape_in::ValidCol),
+                "Error! Cude A:Columns != Cude B:Columns");
+  static_assert(!tile_shape_out::isBoxedLayout && !tile_shape_in::isBoxedLayout,
+                "Not support Fractal layout");
+  static_assert(tile_shape_in::ValidRow != DYNAMIC &&
+                    tile_shape_in::ValidCol != DYNAMIC &&
+                    tile_shape_out::ValidRow != DYNAMIC &&
+                    tile_shape_out::ValidCol != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_out::Loc != Location::Acc &&
+                    tile_shape_in::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+
+  size_t row = dst.GetValidRow();
+  size_t col = dst.GetValidCol();
+  for (size_t row_idx = 0; row_idx < row; ++row_idx) {
+    for (size_t col_idx = 0; col_idx < col; ++col_idx) {
+      size_t dst_index = index<tile_shape_out>(row_idx, col_idx);
+      size_t src_index = index<tile_shape_in>(0, col_idx);
+      dst.data()[dst_index] = src.data()[src_index];
+    }
+  }
+}
+#else
 template <typename tile_shape_out, typename tile_shape_in>
 void __vec__
 TExpandRow_RowImpl(typename tile_shape_out::TileDType __out__ dst,
@@ -78,4 +106,5 @@ void TEXPANDROW_Impl(tile_shape_out &dst, tile_shape_in &src) {
   }
 }
 
+#endif
 #endif

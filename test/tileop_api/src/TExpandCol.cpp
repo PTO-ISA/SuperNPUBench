@@ -5,6 +5,39 @@
 #include "../linxStartEnd.hpp"
 #endif
 
+#ifdef __linx
+int main();
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void
+_start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
+
 template <uint16_t row, uint16_t col, typename T> void test_rm(T *dst, T *src) {
   using gm_shape_in = global_tensor<T, RowMajor<row, col>>;
   using gm_shape_out = global_tensor<T, RowMajor<row, col>>;
@@ -39,6 +72,24 @@ template <uint16_t row, uint16_t col, typename T> void test_cm(T *dst, T *src) {
 }
 
 int main() {
+#ifdef __linx
+  constexpr uint16_t row = 4;
+  constexpr uint16_t col = 8;
+  constexpr uint16_t size = row * col;
+
+  static int64_t dst_rm[size];
+  static int64_t dst_cm[size];
+  static int64_t src_rm[size];
+  static int64_t src_cm[size];
+  init_dst(dst_rm, size);
+  init_dst(dst_cm, size);
+  init_src_int(src_rm, size);
+  init_src_int(src_cm, size);
+
+  test_rm<row, col, int64_t>(dst_rm, src_rm);
+  test_cm<row, col, int64_t>(dst_cm, src_cm);
+  return 0;
+#else
   const uint16_t row = 32;
   const uint16_t col = 32;
 
@@ -131,4 +182,5 @@ int main() {
   free(src5);
 
   return 0;
+#endif
 }
