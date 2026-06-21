@@ -12,6 +12,7 @@
 #include "jcore/TSub.hpp"
 #include "jcore/TSubs.hpp"
 #include "jcore/TMul.hpp"
+#include "jcore/TMuls.hpp"
 
 #elif defined(__ARM_FEATURE_SME)
 #include "aarch64/MatMacc.hpp"
