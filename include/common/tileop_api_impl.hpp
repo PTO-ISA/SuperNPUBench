@@ -7,6 +7,7 @@
 #include "jcore/TAnd.hpp"
 #include "jcore/TCopyIn.hpp"
 #include "jcore/TCopyOut.hpp"
+#include "jcore/TOr.hpp"
 #include "jcore/TSub.hpp"
 
 #elif defined(__ARM_FEATURE_SME)
