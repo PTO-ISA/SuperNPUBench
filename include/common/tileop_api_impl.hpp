@@ -22,6 +22,7 @@
 #include "jcore/TExpandRow.hpp"
 #include "jcore/TExpandScalar.hpp"
 #include "jcore/TReshape.hpp"
+#include "jcore/TRowMax.hpp"
 #include "jcore/TRowSum.hpp"
 #include "jcore/TPad.hpp"
 #include "jcore/TTrans.hpp"
