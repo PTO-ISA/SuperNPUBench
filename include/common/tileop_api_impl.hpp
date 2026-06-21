@@ -10,6 +10,7 @@
 #include "jcore/TCopyOut.hpp"
 #include "jcore/TOr.hpp"
 #include "jcore/TSub.hpp"
+#include "jcore/TSubs.hpp"
 
 #elif defined(__ARM_FEATURE_SME)
 #include "aarch64/MatMacc.hpp"
