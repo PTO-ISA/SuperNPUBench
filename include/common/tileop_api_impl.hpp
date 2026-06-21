@@ -13,6 +13,7 @@
 #include "jcore/TSubs.hpp"
 #include "jcore/TMul.hpp"
 #include "jcore/TMuls.hpp"
+#include "jcore/TMax.hpp"
 
 #elif defined(__ARM_FEATURE_SME)
 #include "aarch64/MatMacc.hpp"
