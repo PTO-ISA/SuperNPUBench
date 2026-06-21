@@ -5,6 +5,38 @@
 #include "../linxStartEnd.hpp"
 #endif
 
+#ifdef __linx
+int main();
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void _start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
+
 //  C = A - B
 template <size_t gm_row, size_t gm_col, size_t tile_row, size_t tile_col,
           typename T>
@@ -63,14 +95,35 @@ void test_cm(T *dst, T *src0, T *src1) {
 }
 
 int main() {
-  const size_t gm_row = 32;
-  const size_t gm_col = 32;
-  const size_t tile_row = 32;
-  const size_t tile_col = 32;
+#ifdef __linx
+  constexpr size_t gm_row = 4;
+  constexpr size_t gm_col = 4;
+  constexpr size_t tile_row = 4;
+  constexpr size_t tile_col = 4;
+#else
+  constexpr size_t gm_row = 32;
+  constexpr size_t gm_col = 32;
+  constexpr size_t tile_row = 32;
+  constexpr size_t tile_col = 32;
+#endif
 
-  size_t gm_size = gm_row * gm_col;
-  size_t tile_size = tile_row * tile_col;
+  constexpr size_t gm_size = gm_row * gm_col;
+  constexpr size_t tile_size = tile_row * tile_col;
+  (void)tile_size;
 
+#ifdef __linx
+  static int64_t dst_int64[gm_size];
+  static int64_t src0_int64[gm_size];
+  static int64_t src1_int64[gm_size];
+  init_dst(dst_int64, gm_size);
+  init_src_int(src0_int64, gm_size);
+  init_src_int(src1_int64, gm_size);
+
+  test_rm<gm_row, gm_col, tile_row, tile_col, int64_t>(dst_int64, src0_int64,
+                                                       src1_int64);
+
+  return 0;
+#else
   // int8_t
   int8_t *dst_int8 = (int8_t *)malloc(gm_size * sizeof(int8_t));
   check_mem_alloc(dst_int8);
@@ -191,4 +244,5 @@ int main() {
   free(src1_f32);
 
   return 0;
+#endif
 }

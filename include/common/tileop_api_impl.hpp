@@ -6,6 +6,7 @@
 #include "jcore/TAdd.hpp"
 #include "jcore/TCopyIn.hpp"
 #include "jcore/TCopyOut.hpp"
+#include "jcore/TSub.hpp"
 
 #elif defined(__ARM_FEATURE_SME)
 #include "aarch64/MatMacc.hpp"
