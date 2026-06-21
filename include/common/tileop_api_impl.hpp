@@ -7,6 +7,7 @@
 #include "jcore/TAdd.hpp"
 #include "jcore/TAdds.hpp"
 #include "jcore/TAnd.hpp"
+#include "jcore/TCmp.hpp"
 #include "jcore/TCI.hpp"
 #include "jcore/TCopy.hpp"
 #include "jcore/TCopyIn.hpp"
