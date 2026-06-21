@@ -6,6 +6,40 @@
 
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void TTRANS_Impl(tile_shape_out &dst, tile_shape_in &src) {
+  static_assert(
+      tile_shape_in::Rows == tile_shape_out::Cols &&
+          tile_shape_in::Cols == tile_shape_out::Rows,
+      "Error! Input rows != Output Columns or Input Columns != Output rows");
+  static_assert(tile_shape_in::ValidRow != DYNAMIC &&
+                    tile_shape_in::ValidCol != DYNAMIC &&
+                    tile_shape_out::ValidRow != DYNAMIC &&
+                    tile_shape_out::ValidCol != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_out::Loc != Location::Acc &&
+                    tile_shape_in::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+  static_assert(tile_shape_out::isBoxedLayout == false &&
+                    tile_shape_in::isBoxedLayout == false,
+                "Storage layout type not supported");
+
+  size_t rows = src.GetValidRow();
+  size_t cols = src.GetValidCol();
+  for (size_t row = 0; row < rows; ++row) {
+    for (size_t col = 0; col < cols; ++col) {
+      size_t src_index = tile_shape_in::isRowMajor
+                             ? row * tile_shape_in::RowStride + col
+                             : col * tile_shape_in::ColStride + row;
+      size_t dst_index = tile_shape_out::isRowMajor
+                             ? col * tile_shape_out::RowStride + row
+                             : row * tile_shape_out::ColStride + col;
+      dst.data()[dst_index] = src.data()[src_index];
+    }
+  }
+}
+#else
 template <typename tile_shape_out, typename tile_shape_in>
 void __vec__
 TTrans_RowMajor(typename tile_shape_out::TileDType __out__ dst,
@@ -96,5 +130,6 @@ void TTRANS_Impl(tile_shape_out &dst, tile_shape_in &src) {
                   "Storage layout type not supported");
   }
 }
+#endif
 
 #endif

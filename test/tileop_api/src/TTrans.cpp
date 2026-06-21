@@ -5,6 +5,38 @@
 #include "../linxStartEnd.hpp"
 #endif
 
+#ifdef __linx
+int main();
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void _start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
+
 template <size_t row, size_t col, typename T> void test_rm(T *dst, T *src) {
   using gm_shape_in = global_tensor<T, RowMajor<row, col>>;
   using gm_shape_out = global_tensor<T, RowMajor<col, row>>;
@@ -40,12 +72,27 @@ template <size_t row, size_t col, typename T> void test_cm(T *dst, T *src) {
 }
 
 int main() {
-  const size_t row = 32;
-  const size_t col = 32;
+#ifdef __linx
+  constexpr size_t row = 4;
+  constexpr size_t col = 4;
+#else
+  constexpr size_t row = 32;
+  constexpr size_t col = 32;
+#endif
 
-  size_t size_in = row * col;
-  size_t size_out = col * row;
+  constexpr size_t size_in = row * col;
+  constexpr size_t size_out = col * row;
 
+#ifdef __linx
+  static int64_t dst[size_out];
+  static int64_t src[size_in];
+  init_dst(dst, size_out);
+  init_src_int(src, size_in);
+
+  test_rm<row, col, int64_t>(dst, src);
+
+  return 0;
+#else
   // int8
   int8_t *dst_int8 = (int8_t *)malloc(size_out * sizeof(int8_t));
   check_mem_alloc(dst_int8);
@@ -137,4 +184,5 @@ int main() {
   free(src_f32);
 
   return 0;
+#endif
 }
