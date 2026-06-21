@@ -18,6 +18,7 @@
 #include "jcore/TOr.hpp"
 #include "jcore/TRem.hpp"
 #include "jcore/TRecip.hpp"
+#include "jcore/TSqrt.hpp"
 #include "jcore/TSub.hpp"
 #include "jcore/TSubs.hpp"
 #include "jcore/TMul.hpp"
