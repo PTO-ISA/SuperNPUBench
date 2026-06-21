@@ -4,6 +4,7 @@
 #ifdef __linx
 #include "jcore/MatMul.hpp"
 #include "jcore/TAdd.hpp"
+#include "jcore/TAdds.hpp"
 #include "jcore/TAnd.hpp"
 #include "jcore/TCopyIn.hpp"
 #include "jcore/TCopyOut.hpp"
