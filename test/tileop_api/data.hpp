@@ -1,8 +1,16 @@
 #ifndef DATA_H
 #define DATA_H
 
+#ifdef __linx
+#include <stddef.h>
+#include <stdint.h>
+extern "C" void exit(int);
+extern "C" void *malloc(size_t);
+extern "C" int printf(const char *, ...);
+#else
 #include <iostream>
 #include <cmath>
+#endif
 #include "common/type.hpp"
 
 float s_fp32 = 0.1;
@@ -36,7 +44,13 @@ void init_src_int8(int8_t *aar, uint16_t size) {
 
 template <typename T> void init_src_fp(T *aar, uint16_t size) {
   for (uint16_t i = 0; i < size; i++) {
+#ifdef __linx
+    const float x = (i + 1) / 100.0f;
+    const float x2 = x * x;
+    aar[i] = x * (1.0f - x2 / 6.0f + (x2 * x2) / 120.0f);
+#else
     aar[i] = sin((i + 1) / 100.0f);
+#endif
   }
 }
 
@@ -81,22 +95,37 @@ template <typename T> void init_rows_fp(T *aar, uint16_t row, uint16_t col) {
 }
 
 template <typename T> void OutArray(const T *aar, size_t size) {
+#ifdef __linx
+  (void)aar;
+  (void)size;
+#else
   for (uint16_t i = 0; i < size; i++) {
     std::cout << aar[i] << " ";
   }
   std::cout << std::endl;
+#endif
 }
 void OutArray(const int8_t *aar, size_t size) {
+#ifdef __linx
+  (void)aar;
+  (void)size;
+#else
   for (uint16_t i = 0; i < size; i++) {
     std::cout << static_cast<int32_t>(aar[i]) << " ";
   }
   std::cout << std::endl;
+#endif
 }
 void OutArray(const __half *aar, size_t size) {
+#ifdef __linx
+  (void)aar;
+  (void)size;
+#else
   for (uint16_t i = 0; i < size; i++) {
     std::cout << static_cast<__fp16>(aar[i]) << " ";
   }
   std::cout << std::endl;
+#endif
 }
 
 // check memory allocation

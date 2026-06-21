@@ -50,7 +50,8 @@ CXX = $(COMPILER_DIR)/clang++
 LINK = $(COMPILER_DIR)/clang++
 DUMP = $(COMPILER_DIR)/llvm-objdump
 COPY = $(COMPILER_DIR)/llvm-objcopy
-CC_O = -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true
+CC_O = -c -target linx64-linx-none-elf -fenable-matrix -O2
+CC_LINK ?= -target linx64-linx-none-elf -nostdlib
 CC_VER ?= -std=c++20
 # COMM_SRC_FILE += $(ROOT)/test/common/_start.s
 # COMM_SRC_DIR = $(shell dirname $(COMM_SRC_FILE))
