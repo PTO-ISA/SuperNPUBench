@@ -5,6 +5,29 @@
 
 using namespace pto;
 
+#ifdef __linx
+template <is_global_data_v gm_shape, is_tile_data_v tile_shape>
+void TCOPYOUT_Impl(gm_shape &dst, tile_shape &src) {
+  size_t rows = src.GetValidRow();
+  size_t cols = src.GetValidCol();
+  static_assert(tile_shape::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+  static_assert(tile_shape::isBoxedLayout == false,
+                "Linx smoke TCOPYOUT supports only unboxed tiles");
+
+  for (size_t row = 0; row < rows; ++row) {
+    for (size_t col = 0; col < cols; ++col) {
+      size_t gm_index = gm_shape::isRowMajor
+                            ? row * gm_shape::RowStride + col
+                            : col * gm_shape::ColStride + row;
+      size_t tile_index = tile_shape::isRowMajor
+                              ? row * tile_shape::RowStride + col
+                              : col * tile_shape::ColStride + row;
+      dst.data()[gm_index] = src.data()[tile_index];
+    }
+  }
+}
+#else
 // cube left -> gm row major
 template <typename gm_shape, typename tile_shape>
 void __mtc__ CopyOut2NzImpl1D(typename gm_shape::DType __out__ *dst,
@@ -272,5 +295,6 @@ void TCOPYOUT_Impl(gm_shape &dst, tile_shape &src) {
   
 #endif
 }
+#endif
 
 #endif

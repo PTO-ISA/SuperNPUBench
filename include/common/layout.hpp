@@ -3,7 +3,9 @@
 
 #include <stdint.h>
 
+#ifndef __linx
 #include <iostream>
+#endif
 #include <type_traits>
 
 #include "common/math_utils.hpp"
@@ -65,6 +67,7 @@ const char *layout_type_to_str(LayoutEnum type) {
   return "UnsupportedLayout";
 }
 
+#ifndef __linx
 class MatrixLayoutPrettyPrinter {
   template <typename Layout>
   static void print(std::ostream &out, const Layout &layout) {
@@ -73,6 +76,7 @@ class MatrixLayoutPrettyPrinter {
         << Layout::ColStride << ">, Numel = " << Layout::Numel;
   }
 };
+#endif
 
 template <const int Rows_, const int Cols_, const int RowStride_,
           const int ColStride_,
@@ -196,6 +200,7 @@ private:
 };
 
 /// @brief Pretty printer for BlockMatrixLayout
+#ifndef __linx
 template <typename OuterLayout_, typename InnerLayout_>
 static std::ostream &
 operator<<(std::ostream &out,
@@ -206,6 +211,7 @@ operator<<(std::ostream &out,
       << "  }";
   return out;
 }
+#endif
 
 template <typename OuterLayout_, typename InnerLayout_>
 concept BlockRowMajorLayout =

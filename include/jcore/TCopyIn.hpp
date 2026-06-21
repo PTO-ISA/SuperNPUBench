@@ -2,10 +2,38 @@
 #define TCOPYIN_HPP
 
 #include "common/pto_tile.hpp"
+#ifdef ENABLE_TENSOR_INSTR
 #include "template_asm.hpp"
+#endif
 
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
+void TCOPYIN_Impl(tile_shape &dst, gm_shape &src) {
+  size_t rows = dst.GetValidRow();
+  size_t cols = dst.GetValidCol();
+  static_assert(tile_shape::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+  static_assert(gm_shape::staticStride[0] == 1 &&
+                    gm_shape::staticStride[1] == 1,
+                "TODO: Support global tensor more than 3 dimensions");
+  static_assert(tile_shape::isBoxedLayout == false,
+                "Linx smoke TCOPYIN supports only unboxed tiles");
+
+  for (size_t row = 0; row < rows; ++row) {
+    for (size_t col = 0; col < cols; ++col) {
+      size_t gm_index = gm_shape::isRowMajor
+                            ? row * gm_shape::RowStride + col
+                            : col * gm_shape::ColStride + row;
+      size_t tile_index = tile_shape::isRowMajor
+                              ? row * tile_shape::RowStride + col
+                              : col * tile_shape::ColStride + row;
+      dst.data()[tile_index] = src.data()[gm_index];
+    }
+  }
+}
+#else
 // gm row major -> tile Nz
 template <typename tile_shape, typename gm_shape>
 void __mtc__ CopyInRow2NzImpl1D(typename tile_shape::TileDType __out__ dst,
@@ -395,5 +423,6 @@ void TCOPYIN_Impl(tile_shape &dst, gm_shape &src) {
   _TCOPYIN_Impl(dst, src);
   #endif
 }
+#endif
 
 #endif

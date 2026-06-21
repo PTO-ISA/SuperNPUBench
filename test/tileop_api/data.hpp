@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 extern "C" void exit(int);
+extern "C" void free(void *);
 extern "C" void *malloc(size_t);
 extern "C" int printf(const char *, ...);
 #else
@@ -13,12 +14,21 @@ extern "C" int printf(const char *, ...);
 #endif
 #include "common/type.hpp"
 
+#ifdef __linx
+static constexpr float s_fp32 = 0.1f;
+static constexpr __half s_fp16 = __half(0.0f);
+static constexpr int8_t s_i8 = 1;
+static constexpr int16_t s_i16 = 1;
+static constexpr int32_t s_i32 = 1;
+static constexpr int64_t s_i64 = 1;
+#else
 float s_fp32 = 0.1;
 __half s_fp16 = 0.1;
 int8_t s_i8 = 1;
 int16_t s_i16 = 1;
 int32_t s_i32 = 1;
 int64_t s_i64 = 1;
+#endif
 
 template <typename T> void init_src_uint(T *aar, uint16_t size) {
   for (uint16_t i = 0; i < size; i++) {
