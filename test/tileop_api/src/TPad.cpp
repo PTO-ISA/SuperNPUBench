@@ -5,6 +5,39 @@
 #include "../linxStartEnd.hpp"
 #endif
 
+#ifdef __linx
+int main();
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void
+_start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
+
 template <uint16_t tile_row, uint16_t tile_col, uint16_t valid_row, uint16_t valid_col,
           uint16_t dst_tile_row, uint16_t dst_tile_col, typename T>
 void test_pad_rm(T *dst, T *src, T pad_value, size_t up_pad, size_t left_pad, size_t down_pad, size_t right_pad) {
@@ -104,6 +137,29 @@ void test_single_type() {
 }
 
 int main() {
+#ifdef __linx
+    constexpr uint16_t tile_row = 4;
+    constexpr uint16_t tile_col = 4;
+    constexpr uint16_t valid_row = 2;
+    constexpr uint16_t valid_col = 2;
+    constexpr size_t up_pad = 1;
+    constexpr size_t left_pad = 1;
+    constexpr size_t down_pad = 1;
+    constexpr size_t right_pad = 1;
+    constexpr uint16_t dst_tile_row = valid_row + up_pad + down_pad;
+    constexpr uint16_t dst_tile_col = valid_col + left_pad + right_pad;
+    constexpr uint16_t size = tile_row * tile_col;
+
+    static int64_t dst[size];
+    static int64_t src[size];
+    init_dst(dst, size);
+    init_src_int(src, size);
+
+    test_pad_rm<tile_row, tile_col, valid_row, valid_col, dst_tile_row,
+                dst_tile_col, int64_t>(dst, src, static_cast<int64_t>(0),
+                                        up_pad, left_pad, down_pad, right_pad);
+    return 0;
+#else
     printf("Results:\n");
     // 依次测试各种数据类型可通过, 一起运行测试会有精度错误
     // test_single_type<int8_t>();
@@ -114,4 +170,5 @@ int main() {
     test_single_type<float>();
     
     return 0;
+#endif
 }

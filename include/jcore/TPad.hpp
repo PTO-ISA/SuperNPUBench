@@ -3,9 +3,61 @@
 
 #include "common/pto_tile.hpp"
 #include "jcore/constants.hpp"
+#ifndef __linx
 #include <assert.h>
+#endif
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in,
+          typename T>
+void TPAD_Impl(tile_shape_out &dst, const tile_shape_in &src, T pad_value,
+               size_t up_pad, size_t left_pad, size_t down_pad,
+               size_t right_pad) {
+  static_assert(!tile_shape_out::isBoxedLayout &&
+                    !tile_shape_in::isBoxedLayout,
+                "Not support Boxed Layout!");
+  static_assert(tile_shape_out::Loc == Location::Vec &&
+                    tile_shape_in::Loc == Location::Vec,
+                "Only VEC tile type are supported");
+  static_assert(tile_shape_out::ValidRow != DYNAMIC &&
+                    tile_shape_out::ValidCol != DYNAMIC &&
+                    tile_shape_in::ValidRow != DYNAMIC &&
+                    tile_shape_in::ValidCol != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_out::ValidRow >= tile_shape_in::ValidRow &&
+                    tile_shape_out::ValidCol >= tile_shape_in::ValidCol,
+                "Dst must cover src shape!");
+
+  size_t src_valid_row = src.GetValidRow();
+  size_t src_valid_col = src.GetValidCol();
+  size_t dst_valid_row = dst.GetValidRow();
+  size_t dst_valid_col = dst.GetValidCol();
+  size_t after_pad_row = up_pad + src_valid_row + down_pad;
+  size_t after_pad_col = left_pad + src_valid_col + right_pad;
+
+  if (after_pad_row > dst_valid_row || after_pad_col > dst_valid_col) {
+    return;
+  }
+
+  for (size_t row = 0; row < dst_valid_row; ++row) {
+    for (size_t col = 0; col < dst_valid_col; ++col) {
+      size_t dst_index = index<tile_shape_out>(row, col);
+      bool in_src_range = row >= up_pad && row < up_pad + src_valid_row &&
+                          col >= left_pad && col < left_pad + src_valid_col;
+      if (in_src_range) {
+        size_t src_row = row - up_pad;
+        size_t src_col = col - left_pad;
+        size_t src_index = index<tile_shape_in>(src_row, src_col);
+        dst.data()[dst_index] = src.data()[src_index];
+      } else {
+        dst.data()[dst_index] =
+            static_cast<typename tile_shape_out::DType>(pad_value);
+      }
+    }
+  }
+}
+#else
 template <typename tile_shape_out, typename tile_shape_in, typename T>
 void __vec__ TPad_Vec_RowMajor(typename tile_shape_out::TileDType __out__ dst,
                             const typename tile_shape_in::TileDType __in__ src, const T __in__ pad_value,
@@ -101,4 +153,5 @@ void TPAD_Impl(tile_shape_out &dst, const tile_shape_in &src,
                     "Storage layout type not supported");
   }
 }
+#endif
 #endif

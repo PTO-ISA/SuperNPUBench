@@ -18,6 +18,7 @@
 #include "jcore/TMax.hpp"
 #include "jcore/TMaxs.hpp"
 #include "jcore/TReshape.hpp"
+#include "jcore/TPad.hpp"
 #include "jcore/TTrans.hpp"
 
 #elif defined(__ARM_FEATURE_SME)
