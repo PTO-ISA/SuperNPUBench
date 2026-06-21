@@ -5,6 +5,25 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape>
+void TMUL_Impl(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+  size_t rows = src0.GetValidRow();
+  size_t cols = src0.GetValidCol();
+  static_assert(tile_shape::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+  static_assert(!tile_shape::isBoxedLayout, "TMUL not support Boxed Layout!");
+
+  for (size_t row = 0; row < rows; ++row) {
+    for (size_t col = 0; col < cols; ++col) {
+      size_t index = tile_shape::isRowMajor
+                         ? row * tile_shape::RowStride + col
+                         : col * tile_shape::ColStride + row;
+      dst.data()[index] = src0.data()[index] * src1.data()[index];
+    }
+  }
+}
+#else
 template <typename tile_shape>
 void __vec__
 TmulImpl_RowMajor(typename tile_shape::TileDType __out__ dst,
@@ -67,5 +86,6 @@ void TMUL_Impl(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
                   "Storage layout type not supported");
   }
 }
+#endif
 
 #endif
