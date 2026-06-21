@@ -5,6 +5,38 @@
 #include "../linxStartEnd.hpp"
 #endif
 
+#ifdef __linx
+int main();
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void _start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
+
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row,
           uint64_t tile_col, typename T>
 void test(T *dst, T *src) {
@@ -24,14 +56,32 @@ void test(T *dst, T *src) {
 }
 
 int main() {
-  const size_t gm_row = 64;
-  const size_t gm_col = 64;
-  const size_t tile_row = 64;
-  const size_t tile_col = 64;
+#ifdef __linx
+  constexpr size_t gm_row = 4;
+  constexpr size_t gm_col = 8;
+  constexpr size_t tile_row = 4;
+  constexpr size_t tile_col = 8;
+#else
+  constexpr size_t gm_row = 64;
+  constexpr size_t gm_col = 64;
+  constexpr size_t tile_row = 64;
+  constexpr size_t tile_col = 64;
+#endif
 
-  size_t gm_size = gm_row * gm_col;
-  size_t tile_size = tile_row * tile_col;
+  constexpr size_t gm_size = gm_row * gm_col;
+  constexpr size_t tile_size = tile_row * tile_col;
+  (void)tile_size;
 
+#ifdef __linx
+  static int64_t dst[gm_size];
+  static int64_t src[gm_size];
+  init_dst(dst, gm_size);
+  init_src_uint(src, gm_size);
+
+  test<gm_row, gm_col, tile_row, tile_col, int64_t>(dst, src);
+
+  return 0;
+#else
   // int8_t
   int8_t *dst_int8 = (int8_t *)malloc(gm_size * sizeof(int8_t));
   check_mem_alloc(dst_int8);
@@ -123,4 +173,5 @@ int main() {
   free(dst_f32);
   free(src_f32);
   return 0;
+#endif
 }
