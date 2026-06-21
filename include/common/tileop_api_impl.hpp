@@ -15,6 +15,7 @@
 #include "jcore/TDiv.hpp"
 #include "jcore/TDivs.hpp"
 #include "jcore/TOr.hpp"
+#include "jcore/TRem.hpp"
 #include "jcore/TSub.hpp"
 #include "jcore/TSubs.hpp"
 #include "jcore/TMul.hpp"
