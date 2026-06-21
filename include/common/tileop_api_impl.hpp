@@ -18,6 +18,7 @@
 #include "jcore/TMuls.hpp"
 #include "jcore/TMax.hpp"
 #include "jcore/TMaxs.hpp"
+#include "jcore/TExpandScalar.hpp"
 #include "jcore/TReshape.hpp"
 #include "jcore/TPad.hpp"
 #include "jcore/TTrans.hpp"
