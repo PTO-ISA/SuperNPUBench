@@ -12,6 +12,7 @@
 #include "jcore/TCopy.hpp"
 #include "jcore/TCopyIn.hpp"
 #include "jcore/TCopyOut.hpp"
+#include "jcore/TCvt.hpp"
 #include "jcore/TDiv.hpp"
 #include "jcore/TDivs.hpp"
 #include "jcore/TOr.hpp"

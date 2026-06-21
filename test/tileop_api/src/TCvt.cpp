@@ -5,6 +5,39 @@
 #include "../linxStartEnd.hpp"
 #endif
 
+#ifdef __linx
+int main();
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void
+_start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
+
 template <uint16_t row, uint16_t col> void testRow2Nz(float *dst, float *src) {
   using gm_shape = global_tensor<float, RowMajor<row, col>>;
 
@@ -96,6 +129,62 @@ template <uint16_t row, uint16_t col> void testNz2Nz(float *dst, float *src) {
 }
 
 int main() {
+#ifdef __linx
+  constexpr uint16_t row = 16;
+  constexpr uint16_t col = 16;
+  using row_tile = Tile<Location::Vec, int64_t, row, col>;
+  using col_tile = Tile<Location::Vec, int64_t, row, col, BLayout::ColMajor>;
+  using nz_tile = TileLeft<int64_t, row, col>;
+  using zn_tile = TileRight<int64_t, row, col>;
+
+  row_tile row_src;
+  row_tile row_round;
+  col_tile col_src;
+  col_tile col_round;
+  nz_tile nz_a;
+  nz_tile nz_b;
+  zn_tile zn;
+
+  for (size_t i = 0; i < row; ++i) {
+    for (size_t j = 0; j < col; ++j) {
+      row_src.data()[index<row_tile>(i, j)] =
+          static_cast<int64_t>((i + 1) * 100 + j);
+      col_src.data()[index<col_tile>(i, j)] =
+          static_cast<int64_t>((i + 1) * 1000 + j);
+    }
+  }
+
+  TCVT(nz_a, row_src);
+  TCVT(row_round, nz_a);
+  TCVT(zn, nz_a);
+  TCVT(nz_b, zn);
+
+  for (size_t i = 0; i < row; ++i) {
+    for (size_t j = 0; j < col; ++j) {
+      if (row_round.data()[index<row_tile>(i, j)] !=
+          row_src.data()[index<row_tile>(i, j)]) {
+        return 1;
+      }
+      if (nz_b.data()[index<nz_tile>(i, j)] !=
+          nz_a.data()[index<nz_tile>(i, j)]) {
+        return 2;
+      }
+    }
+  }
+
+  TCVT(nz_a, col_src);
+  TCVT(col_round, nz_a);
+  for (size_t i = 0; i < row; ++i) {
+    for (size_t j = 0; j < col; ++j) {
+      if (col_round.data()[index<col_tile>(i, j)] !=
+          col_src.data()[index<col_tile>(i, j)]) {
+        return 3;
+      }
+    }
+  }
+
+  return 0;
+#else
   const uint16_t row = 16;
   const uint16_t col = 32;
 
@@ -150,4 +239,5 @@ int main() {
   free(src2);
 
   return 0;
+#endif
 }
