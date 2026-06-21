@@ -14,6 +14,7 @@
 #include "jcore/TMul.hpp"
 #include "jcore/TMuls.hpp"
 #include "jcore/TMax.hpp"
+#include "jcore/TMaxs.hpp"
 
 #elif defined(__ARM_FEATURE_SME)
 #include "aarch64/MatMacc.hpp"
