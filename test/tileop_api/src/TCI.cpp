@@ -5,6 +5,39 @@
 #include "../linxStartEnd.hpp"
 #endif
 
+#ifdef __linx
+int main();
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void
+_start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
+
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row,
           uint64_t tile_col,typename T>
 void test_rm(T *dst, T s) {
@@ -46,6 +79,22 @@ void test_cm(T *dst, T s) {
 }
 
 int main() {
+#ifdef __linx
+  constexpr uint16_t gm_row = 8;
+  constexpr uint16_t gm_col = 8;
+  constexpr uint16_t tile_row = 8;
+  constexpr uint16_t tile_col = 8;
+  constexpr uint16_t gm_size = gm_row * gm_col;
+
+  static int32_t dst_rm[gm_size];
+  static int32_t dst_cm[gm_size];
+  init_dst(dst_rm, gm_size);
+  init_dst(dst_cm, gm_size);
+
+  test_rm<gm_row, gm_col, tile_row, tile_col, int32_t>(dst_rm, s_i32);
+  test_cm<gm_row, gm_col, tile_row, tile_col, int32_t>(dst_cm, s_i32);
+  return 0;
+#else
   const uint16_t gm_row = 64;
   const uint16_t gm_col = 32;
   const uint16_t tile_row = 64;
@@ -127,4 +176,5 @@ int main() {
   free(dst5);
 
   return 0;
+#endif
 }
