@@ -16,6 +16,7 @@
 #include "jcore/TCvt.hpp"
 #include "jcore/TDiv.hpp"
 #include "jcore/TDivs.hpp"
+#include "jcore/TExp.hpp"
 #include "jcore/TOr.hpp"
 #include "jcore/TRem.hpp"
 #include "jcore/TRecip.hpp"

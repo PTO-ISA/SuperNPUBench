@@ -5,6 +5,43 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+template <typename T>
+T linx_tile_iexp(T value) {
+  T result = static_cast<T>(1);
+  result +=
+      (value >= static_cast<T>(1)) ? static_cast<T>(2) : static_cast<T>(0);
+  result +=
+      (value >= static_cast<T>(2)) ? static_cast<T>(4) : static_cast<T>(0);
+  result +=
+      (value >= static_cast<T>(3)) ? static_cast<T>(13) : static_cast<T>(0);
+  result +=
+      (value >= static_cast<T>(4)) ? static_cast<T>(35) : static_cast<T>(0);
+  result +=
+      (value >= static_cast<T>(5)) ? static_cast<T>(93) : static_cast<T>(0);
+  return result;
+}
+
+template <is_tile_data_v tile_shape>
+void TEXP_Impl(tile_shape &dst, tile_shape &src) {
+  size_t rows = src.GetValidRow();
+  size_t cols = src.GetValidCol();
+  static_assert(tile_shape::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+  static_assert(!tile_shape::isBoxedLayout, "TEXP not support Boxed Layout!");
+  static_assert(std::is_integral<typename tile_shape::DType>::value,
+                "Linx direct TEXP supports integral smoke types only");
+
+  for (size_t row = 0; row < rows; ++row) {
+    for (size_t col = 0; col < cols; ++col) {
+      size_t tile_index = tile_shape::isRowMajor
+                              ? row * tile_shape::RowStride + col
+                              : col * tile_shape::ColStride + row;
+      dst.data()[tile_index] = linx_tile_iexp(src.data()[tile_index]);
+    }
+  }
+}
+#else
 template <typename tile_shape>
 void __vec__
 TExpImpl_RowMajor(typename tile_shape::TileDType __out__ dst,
@@ -64,5 +101,7 @@ template <is_tile_data_v tile_shape> void TEXP_Impl(tile_shape &dst, tile_shape 
                   "Data type not supported");
   }
 }
+
+#endif
 
 #endif
