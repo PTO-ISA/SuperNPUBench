@@ -5,12 +5,72 @@
 #include "../linxStartEnd.hpp"
 #endif
 
-template <uint16_t row, uint16_t col> void test(float *dst, float *src) {
-  using gm_shape_in = global_tensor<float, RowMajor<row, col>>;
-  using gm_shape_out = global_tensor<float, RowMajor<row, col>>;
+#ifdef __linx
+int main();
 
-  using tile_shape_in = Tile<Location::Vec, float, row, col, BLayout::RowMajor>;
-  using tile_shape_out = Tile<Location::Vec, float, row, col, BLayout::RowMajor>;
+extern "C" void *memcpy(void *dst, const void *src, size_t n) {
+  volatile uint8_t *d = static_cast<volatile uint8_t *>(dst);
+  const volatile uint8_t *s = static_cast<const volatile uint8_t *>(src);
+  for (size_t i = 0; i < n; ++i) {
+    d[i] = s[i];
+  }
+  return dst;
+}
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void
+_start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
+
+template <uint16_t row, uint16_t col, typename T> void test_rm(T *dst, T *src) {
+  using gm_shape_in = global_tensor<T, RowMajor<row, col>>;
+  using gm_shape_out = global_tensor<T, RowMajor<row, col>>;
+
+  using tile_shape_in = Tile<Location::Vec, T, row, col, BLayout::RowMajor>;
+  using tile_shape_out = Tile<Location::Vec, T, row, col, BLayout::RowMajor>;
+
+  gm_shape_in s0(src);
+  gm_shape_out res(dst);
+
+  tile_shape_in d0;
+  tile_shape_out d1;
+
+  TCOPYIN(d0, s0);
+  TROWSUMEXPAND(d1, d0);
+  TCOPYOUT(res, d1);
+}
+
+template <uint16_t row, uint16_t col, typename T> void test_cm(T *dst, T *src) {
+  using gm_shape_in = global_tensor<T, ColMajor<row, col>>;
+  using gm_shape_out = global_tensor<T, ColMajor<row, col>>;
+
+  using tile_shape_in = Tile<Location::Vec, T, row, col, BLayout::ColMajor>;
+  using tile_shape_out = Tile<Location::Vec, T, row, col, BLayout::ColMajor>;
 
   gm_shape_in s0(src);
   gm_shape_out res(dst);
@@ -24,35 +84,118 @@ template <uint16_t row, uint16_t col> void test(float *dst, float *src) {
 }
 
 int main() {
-  const uint16_t row = 64;
-  const uint16_t col = 128;
+#ifdef __linx
+  constexpr uint16_t row = 4;
+  constexpr uint16_t col = 8;
+  constexpr uint16_t size = row * col;
+
+  static int64_t dst_rm[size];
+  static int64_t dst_cm[size];
+  static int64_t src_rm[size];
+  static int64_t src_cm[size];
+  init_dst(dst_rm, size);
+  init_dst(dst_cm, size);
+  init_src_int(src_rm, size);
+  init_src_int(src_cm, size);
+
+  test_rm<row, col, int64_t>(dst_rm, src_rm);
+  test_cm<row, col, int64_t>(dst_cm, src_cm);
+  return 0;
+#else
+  const size_t row = 32;
+  const size_t col = 32;
 
   size_t size_in = row * col;
   size_t size_out = row * col;
 
-  float *dst = (float *)malloc(size_out * sizeof(float));
-  check_mem_alloc(dst);
-  init_dst(dst, size_out);
+  // int8_t
+  int8_t *dst_int8 = (int8_t *)malloc(size_out * sizeof(int8_t));
+  check_mem_alloc(dst_int8);
+  init_dst(dst_int8, size_out);
 
-  float *src = (float *)malloc(size_in * sizeof(float));
-  check_mem_alloc(src);
-  init_src_fp(src, size_in);
+  int8_t *src_int8 = (int8_t *)malloc(size_in * sizeof(int8_t));
+  check_mem_alloc(src_int8);
+  init_src_uint(src_int8, size_in);
+
+  // int16_t
+  int16_t *dst_int16 = (int16_t *)malloc(size_out * sizeof(int16_t));
+  check_mem_alloc(dst_int16);
+  init_dst(dst_int16, size_out);
+
+  int16_t *src_int16 = (int16_t *)malloc(size_in * sizeof(int16_t));
+  check_mem_alloc(src_int16);
+  init_src_uint(src_int16, size_in);
+
+  // int32_t
+  int32_t *dst_int32 = (int32_t *)malloc(size_out * sizeof(int32_t));
+  check_mem_alloc(dst_int32);
+  init_dst(dst_int32, size_out);
+
+  int32_t *src_int32 = (int32_t *)malloc(size_in * sizeof(int32_t));
+  check_mem_alloc(src_int32);
+  init_src_uint(src_int32, size_in);
+
+  // int64_t
+  int64_t *dst_int64 = (int64_t *)malloc(size_out * sizeof(int64_t));
+  check_mem_alloc(dst_int64);
+  init_dst(dst_int64, size_out);
+
+  int64_t *src_int64 = (int64_t *)malloc(size_in * sizeof(int64_t));
+  check_mem_alloc(src_int64);
+  init_src_uint(src_int64, size_in);
+
+  // __half
+  __half *dst_f16 = (__half *)malloc(size_out * sizeof(__half));
+  check_mem_alloc(dst_f16);
+  init_dst(dst_f16, size_out);
+
+  __half *src_f16 = (__half *)malloc(size_in * sizeof(__half));
+  check_mem_alloc(src_f16);
+  init_src_fp(src_f16, size_in);
+
+  // __fp32
+  __fp32 *dst_f32 = (__fp32 *)malloc(size_out * sizeof(__fp32));
+  check_mem_alloc(dst_f32);
+  init_dst(dst_f32, size_out);
+
+  __fp32 *src_f32 = (__fp32 *)malloc(size_in * sizeof(__fp32));
+  check_mem_alloc(src_f32);
+  init_src_fp(src_f32, size_in);
 
 #ifdef LINX_PMC
   PMC_START();
 #endif
 
-  test<row, col>(dst, src);
+  test_rm<row, col, int8_t>(dst_int8, src_int8);
+  test_rm<row, col, int16_t>(dst_int16, src_int16);
+  test_rm<row, col, int32_t>(dst_int32, src_int32);
+  test_rm<row, col, int64_t>(dst_int64, src_int64);
+  test_rm<row, col, __half>(dst_f16, src_f16);
 
 #ifdef LINX_PMC
   PMC_END();
 #endif
 
   printf("Result:\n");
-  OutArray(dst, size_out);
+  OutArray(dst_int8, size_out);
+  OutArray(dst_int16, size_out);
+  OutArray(dst_int32, size_out);
+  OutArray(dst_int64, size_out);
+  OutArray(dst_f16, size_out);
+  OutArray(dst_f32, size_out);
 
-  free(dst);
-  free(src);
-
+  free(dst_int8);
+  free(src_int8);
+  free(dst_int16);
+  free(src_int16);
+  free(dst_int32);
+  free(src_int32);
+  free(dst_int64);
+  free(src_int64);
+  free(dst_f16);
+  free(src_f16);
+  free(dst_f32);
+  free(src_f32);
   return 0;
+#endif
 }
