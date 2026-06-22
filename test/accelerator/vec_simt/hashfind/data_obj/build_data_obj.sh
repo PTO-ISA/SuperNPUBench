@@ -1,9 +1,20 @@
 #!/bin/bash
-COMPILER_DIR="${COMPILER_DIR:-/remote/lms60/c00622284/janus/linxisa_compiler_v0.55/linx_blockisa_llvm_musl/bin}"
-DATA_OBJ_DIR="$1"
-OUTPUT_DIR="$2"
+set -euo pipefail
+
+COMPILER_DIR="${COMPILER_DIR:-/usr/bin}"
+LINX_TARGET="${LINX_TARGET:-linx64-linx-none-elf}"
+DATA_OBJ_DIR="${1:?data object directory required}"
+OUTPUT_DIR="${2:?output directory required}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CASE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 mkdir -p "$OUTPUT_DIR"
+
+if [[ ! -f "${DATA_OBJ_DIR}/simple_inserted_slot.data" ||
+      ! -f "${DATA_OBJ_DIR}/simple_lookup_keys.data" ||
+      ! -f "${DATA_OBJ_DIR}/simple_lookup_values.data" ]]; then
+    (cd "$CASE_DIR" && python3 gen_data_simple.py)
+fi
 
 build_one() {
     local name="$1"
@@ -26,12 +37,8 @@ _binary_${name}_data_end:
 .equ _binary_${name}_data_size, .-_binary_${name}_data_start
 EOF
 
-    $COMPILER_DIR/clang++ -target linx64v5 -c "$asm_file" -o "$obj_file"
+    "${COMPILER_DIR}/clang++" -target "$LINX_TARGET" -c "$asm_file" -o "$obj_file"
 }
-
-build_one "inserted_slot"
-build_one "lookup_keys"
-build_one "lookup_values"
 
 # Simple dataset (8192 entries, 80% load, 1024 queries)
 build_one "simple_inserted_slot"

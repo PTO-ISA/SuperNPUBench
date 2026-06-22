@@ -1,9 +1,13 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
+#ifndef __linx
 #include "fileop.h"
+#endif
 #include "template_asm.h"
+#ifndef __linx
 #include <stdio.h>
 #include <string.h>
+#endif
 
 // #define FOR_GFSIM
 // ============================================================================
@@ -143,7 +147,7 @@ static int find_kth_bin(const uint32_t hist[256], int k, int& need_from_kth) {
 // ============================================================================
 
 int main() {
-#ifndef FOR_GFSIM
+#if !defined(FOR_GFSIM) && !defined(__linx)
     printf("=== TopK Test (SIMT per-bucket) ===\n");
     printf("Input: %d  TopK: %d  Tiles: %d  TileSize: %d\n",
            kInputCount, kTopK, kNumTiles, kTileSize);
@@ -168,7 +172,7 @@ int main() {
         global_high8_hist[b] = histResult[b];
     }
 
-#ifndef FOR_GFSIM
+#if !defined(FOR_GFSIM) && !defined(__linx)
     printf("\nPhase 1: high8 histograms built (1 SIMT launch, 256 lanes).\n");
     fflush(stdout);
 #endif
@@ -179,7 +183,7 @@ int main() {
     int need_from_kth_bin = 0;
     int kth_bin = find_kth_bin(global_high8_hist, kTopK, need_from_kth_bin);
 
-#ifndef FOR_GFSIM
+#if !defined(FOR_GFSIM) && !defined(__linx)
     printf("\nPhase 2: kth_bin=%d  need_from_kth_bin=%d\n",
            kth_bin, need_from_kth_bin);
     uint64_t total_above = 0;
@@ -220,7 +224,7 @@ int main() {
         }
     }
 
-#ifndef FOR_GFSIM
+#if !defined(FOR_GFSIM) && !defined(__linx)
     printf("\nPhase 4: low8_boundary=%d\n", low8_boundary);
     printf("  Global low8 hist (kth bin) total: %lu\n", cumsum_low);
     fflush(stdout);
@@ -229,7 +233,9 @@ int main() {
     // -------------------------------------------------------------------------
     // Phase 5: Scalar masked scatter (directly on g_input / g_output)
     // -------------------------------------------------------------------------
-    memset(g_output, 0, sizeof(g_output));
+    for (int i = 0; i < kInputCount; i++) {
+        g_output[i] = 0;
+    }
     for (int i = 0; i < kInputCount; i++) {
         uint16_t val  = g_input[i];
         uint8_t  high8 = static_cast<uint8_t>(val >> 8);
@@ -252,7 +258,7 @@ int main() {
         }
     }
 
-#ifndef FOR_GFSIM
+#if !defined(FOR_GFSIM) && !defined(__linx)
     printf("\nPhase 5: Collected %d output elements (expected %d)\n",
            out_count, kTopK);
     fflush(stdout);
@@ -264,7 +270,9 @@ int main() {
     int cmp_count = (out_count < kTopK) ? out_count : kTopK;
 
     uint16_t result_sorted[2048];
-    memcpy(result_sorted, result, sizeof(result_sorted));
+    for (int i = 0; i < cmp_count; i++) {
+        result_sorted[i] = result[i];
+    }
     for (int i = 0; i < cmp_count; i++) {
         for (int j = i + 1; j < cmp_count; j++) {
             if (result_sorted[i] < result_sorted[j]) {
@@ -280,7 +288,7 @@ int main() {
         if (result_sorted[i] == g_expected[i]) match++;
     }
 
-#ifndef FOR_GFSIM
+#if !defined(FOR_GFSIM) && !defined(__linx)
     printf("\n=== Verification (vs. embedded standard answer) ===\n");
     printf("Match: %d/%d (%.1f%%)\n", match, cmp_count, 100.0 * match / cmp_count);
     printf("Output[0..9]:    ");
@@ -291,7 +299,7 @@ int main() {
 #endif
 
     int ret = (match == cmp_count) ? 0 : 1;
-#ifndef FOR_GFSIM
+#if !defined(FOR_GFSIM) && !defined(__linx)
     printf("%s\n", ret ? "FAIL" : "PASS");
     fflush(stdout);
 #endif

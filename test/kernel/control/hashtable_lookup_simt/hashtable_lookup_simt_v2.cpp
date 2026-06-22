@@ -1,5 +1,9 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
+#include "template_asm.h"
+#ifndef __linx
+#include <stdio.h>
+#endif
 
 // ============================================================================
 // ELF Data layout — embedded binary data produced by build_data_obj.sh
@@ -141,7 +145,7 @@ int main() {
         kEntrySize, kMaxProbe);
     BENCHEND;
 
-#ifndef FOR_GFSIM
+#if !defined(FOR_GFSIM) && !defined(__linx)
     // Print SIMT kernel computed hash values for first 64 keys
     printf("\n=== SIMT kernel hash values (first 64 keys) ===\n");
     printf("%4s  %22s  %10s  %7s  %10s  %10s\n", "Idx", "Key", "Hash(hex)", "Slot", "SIMT_out", "Expected");
@@ -164,7 +168,7 @@ int main() {
         }
     }
 
-#ifndef FOR_GFSIM
+#if !defined(FOR_GFSIM) && !defined(__linx)
     if (mismatch_count > 0) {
         printf("\n=== Mismatching keys (%d total) ===\n", mismatch_count);
         printf("%7s  %22s  %10s  %7s  %10s  %10s\n", "Idx", "Key", "Hash(hex)", "Slot", "Got", "Expected");

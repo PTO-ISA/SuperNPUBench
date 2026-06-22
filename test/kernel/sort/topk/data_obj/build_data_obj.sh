@@ -1,9 +1,19 @@
 #!/bin/bash
-COMPILER_DIR="${COMPILER_DIR:-/remote/lms01/j00827727/jcore/compilers/linx_blockisa_llvm_musl0.56.16/bin}"
-DATA_OBJ_DIR="$1"
-OUTPUT_DIR="$2"
+set -euo pipefail
+
+COMPILER_DIR="${COMPILER_DIR:-/usr/bin}"
+LINX_TARGET="${LINX_TARGET:-linx64-linx-none-elf}"
+DATA_OBJ_DIR="${1:?data object directory required}"
+OUTPUT_DIR="${2:?output directory required}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CASE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 mkdir -p "$OUTPUT_DIR"
+
+if [[ ! -f "${DATA_OBJ_DIR}/input_131072.data" ||
+      ! -f "${DATA_OBJ_DIR}/top_2048_out.data" ]]; then
+    (cd "$CASE_DIR" && python3 gen_topk_data.py)
+fi
 
 build_one() {
     local name="$1"
@@ -25,7 +35,7 @@ _binary_${name}_data_end:
 .equ _binary_${name}_data_size, .-_binary_${name}_data_start
 EOF
 
-    $COMPILER_DIR/clang++ -target linx64v5 -c "$asm_file" -o "$obj_file"
+    "${COMPILER_DIR}/clang++" -target "$LINX_TARGET" -c "$asm_file" -o "$obj_file"
 }
 
 build_one "input_131072"

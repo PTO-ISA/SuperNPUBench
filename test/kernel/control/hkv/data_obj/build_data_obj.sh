@@ -1,9 +1,22 @@
 #!/bin/bash
-COMPILER_DIR="${COMPILER_DIR:-/remote/lms01/j00827727/jcore/compilers/linx_blockisa_llvm_musl0.56.16/bin}"
-DATA_OBJ_DIR="$1"
-OUTPUT_DIR="$2"
+set -euo pipefail
+
+COMPILER_DIR="${COMPILER_DIR:-/usr/bin}"
+LINX_TARGET="${LINX_TARGET:-linx64-linx-none-elf}"
+DATA_OBJ_DIR="${1:?data object directory required}"
+OUTPUT_DIR="${2:?output directory required}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CASE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 mkdir -p "$OUTPUT_DIR"
+
+if [[ ! -f "${DATA_OBJ_DIR}/buckets.bin" ||
+      ! -f "${DATA_OBJ_DIR}/buckets_size.bin" ||
+      ! -f "${DATA_OBJ_DIR}/lookup_keys.bin" ||
+      ! -f "${DATA_OBJ_DIR}/lookedup_values.bin" ||
+      ! -f "${DATA_OBJ_DIR}/key_score_digest.bin" ]]; then
+    (cd "$CASE_DIR" && python3 gen_data.py)
+fi
 
 build_one() {
     local name="$1"
@@ -28,7 +41,7 @@ _binary_${sym_name}_end:
 .equ _binary_${sym_name}_size, .-_binary_${sym_name}_start
 EOF
 
-    $COMPILER_DIR/clang++ -target linx64v5 -c "$asm_file" -o "$obj_file"
+    "${COMPILER_DIR}/clang++" -target "$LINX_TARGET" -c "$asm_file" -o "$obj_file"
 }
 
 build_one "buckets.bin"

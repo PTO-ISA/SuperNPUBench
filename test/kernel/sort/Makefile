@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := all
+
 TARGET = $(ELF_HEAD)_$(TESTCASE).elf
 
 # Override target name for topk
@@ -10,7 +12,7 @@ SRC_FILE +=  $(TEST_ROOT)/$(CATEGORY)/$(TESTCASE)/$(TESTCASE).cpp
 EXTRA_OBJ_FILES :=
 EXTRA_OBJ_DEPS :=
 DATA_OBJ_DIR := topk/data_obj
-OUTPUT_DATA_OBJ_DIR := ../../../output/kernel/sort/topk/data_obj
+OUTPUT_DATA_OBJ_DIR = $(OBJ_ROOT)/$(CATEGORY)/topk/data_obj
 
 ifeq ($(TESTCASE), topk)
 EXTRA_OBJ_FILES += $(OUTPUT_DATA_OBJ_DIR)/input_131072.o
@@ -21,9 +23,7 @@ pre_work: build_data_objs
 build_data_objs:
 	@COMPILER_DIR="$(COMPILER_DIR)" $(DATA_OBJ_DIR)/build_data_obj.sh $(DATA_OBJ_DIR) $(OUTPUT_DATA_OBJ_DIR)
 
-$(OUTPUT_DATA_OBJ_DIR)/%.o: $(DATA_OBJ_DIR)/%.s pre_work
-	@mkdir -p $(shell dirname $@)
-	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+$(EXTRA_OBJ_FILES): pre_work
 endif
 
 ifeq ($(opt), on)

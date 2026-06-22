@@ -153,29 +153,29 @@ def main():
             return u - (1 << 64)
         return u
 
-    # Write simple_inserted_slot.data (hashtable)
+    # Write inserted_slot.data (hashtable)
     output_dir = "data_obj"
-    with open(f"{output_dir}/simple_inserted_slot.data", "wb") as f:
+    with open(f"{output_dir}/inserted_slot.data", "wb") as f:
         for key, value, padding in table:
             # Pack as: key(int64), value(int32), padding(int32)
             f.write(struct.pack("<q", u64_to_i64(key)))   # little-endian int64
             f.write(struct.pack("<i", value))  # little-endian int32
             f.write(struct.pack("<i", padding))  # little-endian int32
 
-    # Write simple_lookup_keys.data
-    with open(f"{output_dir}/simple_lookup_keys.data", "wb") as f:
+    # Write lookup_keys.data
+    with open(f"{output_dir}/lookup_keys.data", "wb") as f:
         for key in query_keys:
             f.write(struct.pack("<q", u64_to_i64(key)))
 
-    # Write simple_lookup_values.data
-    with open(f"{output_dir}/simple_lookup_values.data", "wb") as f:
+    # Write lookup_values.data
+    with open(f"{output_dir}/lookup_values.data", "wb") as f:
         for val in expected_values:
             f.write(struct.pack("<i", val))
 
     print(f"\nGenerated files in {output_dir}/:")
-    print(f"  simple_inserted_slot.data:  {CAP * 16} bytes ({CAP} entries)")
-    print(f"  simple_lookup_keys.data:    {NUM_QUERIES * 8} bytes ({NUM_QUERIES} keys)")
-    print(f"  simple_lookup_values.data:  {NUM_QUERIES * 4} bytes ({NUM_QUERIES} values)")
+    print(f"  inserted_slot.data:  {CAP * 16} bytes ({CAP} entries)")
+    print(f"  lookup_keys.data:    {NUM_QUERIES * 8} bytes ({NUM_QUERIES} keys)")
+    print(f"  lookup_values.data:  {NUM_QUERIES * 4} bytes ({NUM_QUERIES} values)")
 
     # Verify offsets exceed uint16_t
     max_offset = CAP * 16 - 8  # Last key starts 8 bytes before end

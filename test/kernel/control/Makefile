@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := all
+
 TARGET = $(ELF_HEAD)_$(TESTCASE)$(SUFFIX).elf
 
 # Override target names
@@ -39,7 +41,7 @@ EXTRA_OBJ_DEPS :=
 
 # Data object files location (relative paths)
 DATA_OBJ_DIR := hashtable_lookup_simd/data_obj
-OUTPUT_DATA_OBJ_DIR := ../../../output/kernel/control/hashtable_lookup_simd/data_obj
+OUTPUT_DATA_OBJ_DIR = $(OBJ_ROOT)/$(CATEGORY)/hashtable_lookup_simd/data_obj
 
 # hashtable_lookup_simd uses embedded data (large dataset for 2.55M-entry table)
 ifeq ($(TESTCASE), hashtable_lookup_simd)
@@ -52,9 +54,7 @@ pre_work: build_sim_data_objs
 build_sim_data_objs:
 	@COMPILER_DIR="$(COMPILER_DIR)" $(DATA_OBJ_DIR)/build_data_obj.sh $(DATA_OBJ_DIR) $(OUTPUT_DATA_OBJ_DIR)
 
-$(OUTPUT_DATA_OBJ_DIR)/%.o: $(DATA_OBJ_DIR)/%.s pre_work
-	@mkdir -p $(shell dirname $@)
-	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+$(EXTRA_OBJ_FILES): pre_work
 
 endif
 
@@ -70,9 +70,7 @@ pre_work: build_simt_data_objs
 build_simt_data_objs:
 	@COMPILER_DIR="$(COMPILER_DIR)" $(DATA_OBJ_DIR)/build_data_obj.sh $(DATA_OBJ_DIR) $(OUTPUT_DATA_OBJ_DIR)
 
-$(OUTPUT_DATA_OBJ_DIR)/%.o: $(DATA_OBJ_DIR)/%.s pre_work
-	@mkdir -p $(shell dirname $@)
-	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+$(EXTRA_OBJ_FILES): pre_work
 
 endif
 
@@ -87,15 +85,13 @@ pre_work: build_simt_v2_data_objs
 build_simt_v2_data_objs:
 	@COMPILER_DIR="$(COMPILER_DIR)" $(DATA_OBJ_DIR)/build_data_obj.sh $(DATA_OBJ_DIR) $(OUTPUT_DATA_OBJ_DIR)
 
-$(OUTPUT_DATA_OBJ_DIR)/%.o: $(DATA_OBJ_DIR)/%.s pre_work
-	@mkdir -p $(shell dirname $@)
-	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+$(EXTRA_OBJ_FILES): pre_work
 
 endif
 
 # hkv uses embedded data
 HKV_DATA_OBJ_DIR := hkv/data_obj
-HKV_OUTPUT_DATA_OBJ_DIR := ../../../output/kernel/control/hkv/data_obj
+HKV_OUTPUT_DATA_OBJ_DIR = $(OBJ_ROOT)/$(CATEGORY)/hkv/data_obj
 
 ifeq ($(TESTCASE), hkv)
 EXTRA_OBJ_FILES += $(HKV_OUTPUT_DATA_OBJ_DIR)/buckets.bin.o
@@ -109,9 +105,7 @@ pre_work: build_hkv_data_objs
 build_hkv_data_objs:
 	@COMPILER_DIR="$(COMPILER_DIR)" $(HKV_DATA_OBJ_DIR)/build_data_obj.sh $(HKV_DATA_OBJ_DIR) $(HKV_OUTPUT_DATA_OBJ_DIR)
 
-$(HKV_OUTPUT_DATA_OBJ_DIR)/%.o: $(HKV_DATA_OBJ_DIR)/%.s pre_work
-	@mkdir -p $(shell dirname $@)
-	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+$(EXTRA_OBJ_FILES): pre_work
 
 endif
 

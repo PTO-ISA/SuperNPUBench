@@ -71,7 +71,7 @@ CC_O += -fPIC
 CC_LINK += -shared
 endif
 
-INCLUDE += -I$(ROOT)/include -I$(ROOT)/kernels -I$(ROOT)/test/common -I$(ROOT)/test/kernels/src
+INCLUDE += -I$(ROOT)/include -I$(ROOT)/kernels -I$(ROOT)/test/common -I$(ROOT)/test/common/src -I$(ROOT)/test/kernels/src
 QEMU = /remote/lms60/c00622284/qemu/LinxBlockModel/build/qemu-linx
 
 CC_O_ALL = $(CC_O) $(CC_VER) $(CC_OPTS)
@@ -112,9 +112,9 @@ $(OBJ_DIR)%.o: $(COMM_SRC_DIR)%.s
 	@mkdir -p $(shell dirname $@)
 	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
 
-$(TARGET): $(OBJ) $(COMM_OBJ)
+$(TARGET): $(OBJ) $(COMM_OBJ) $(EXTRA_OBJ_FILES)
 	@mkdir -p $(shell dirname $@)
-	$(LINK) $(CC_LINK) $(COMM_OBJ) $(OBJ) -o $@
+	$(LINK) $(CC_LINK) $(COMM_OBJ) $(OBJ) $(EXTRA_OBJ_FILES) -o $@
 
 pre_work:
 	@mkdir -p $(OBJ_DIR)

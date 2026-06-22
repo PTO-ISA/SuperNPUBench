@@ -1,5 +1,9 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
+#include "template_asm.h"
+#ifndef __linx
+#include <stdio.h>
+#endif
 
 // ============================================================================
 // ELF Data layout — embedded binary data produced by build_data_obj.sh
@@ -153,6 +157,7 @@ int main() {
         }
     }
 
+#ifndef __linx
     if (mismatch_count > 0) {
         printf("\n=== Mismatching keys (%d total) ===\n", mismatch_count);
         printf("%7s  %22s  %10s  %10s\n", "Idx", "Key", "Got", "Expected");
@@ -167,6 +172,7 @@ int main() {
     printf("\n=== hashtable_lookup_simt ===\n");
     printf("Match: %d/%d (%d %%)\n", match, kNum, int(100 * double(match) / double(kNum)));
     fflush(stdout);
+#endif
     return (match == kNum) ? 0 : 1;
 #else
     return 0;
