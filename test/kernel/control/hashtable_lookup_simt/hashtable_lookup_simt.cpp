@@ -1,3 +1,164 @@
+#if defined(__linx) && defined(FOR_GFSIM) && (defined(LINX_HT_DIRECT) || defined(LINX_HASHTABLE_DIRECT_SMOKE))
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
+typedef int int32_t;
+typedef long long int64_t;
+
+#ifndef kNum
+#define kNum 1024
+#endif
+
+#ifndef MAX_PROBE
+#define MAX_PROBE 512
+#endif
+
+#ifndef LINX_HT_CAPACITY
+#ifdef LINX_HASH_CAPACITY
+#define LINX_HT_CAPACITY LINX_HASH_CAPACITY
+#else
+#define LINX_HT_CAPACITY 2048u
+#endif
+#endif
+
+#ifndef LINX_HT_SCAN
+#ifdef LINX_HASH_LINEAR_SCAN
+#define LINX_HT_SCAN LINX_HASH_LINEAR_SCAN
+#else
+#define LINX_HT_SCAN 0
+#endif
+#endif
+
+struct TableEntry {
+    int64_t key;
+    int32_t value;
+    int32_t padding;
+};
+
+extern "C" {
+    extern const uint8_t _binary_inserted_slot_data_start[];
+    extern const uint8_t _binary_lookup_keys_data_start[];
+    extern const uint8_t _binary_lookup_values_data_start[];
+}
+
+static uint32_t rotl32(uint32_t value, uint32_t shift) {
+    return (value << shift) | (value >> (32u - shift));
+}
+
+static uint32_t murmurhash3_i64(int64_t key) {
+    const uint32_t c1_local = 0xcc9e2d51u;
+    const uint32_t c2_local = 0x1b873593u;
+    const uint32_t c3_local = 0xe6546b64u;
+    unsigned long long bits = (unsigned long long)key;
+    uint32_t h = 0u;
+    uint32_t block = (uint32_t)bits;
+
+    block *= c1_local;
+    block = rotl32(block, 15u);
+    block *= c2_local;
+    h ^= block;
+    h = rotl32(h, 13u);
+    h = h * 5u + c3_local;
+
+    block = (uint32_t)(bits >> 32);
+    block *= c1_local;
+    block = rotl32(block, 15u);
+    block *= c2_local;
+    h ^= block;
+    h = rotl32(h, 13u);
+    h = h * 5u + c3_local;
+
+    h ^= 8u;
+    h ^= h >> 16u;
+    h *= 0x85ebca6bu;
+    h ^= h >> 13u;
+    h *= 0xc2b2ae35u;
+    h ^= h >> 16u;
+    return h;
+}
+
+static uint32_t first_slot(uint32_t hash) {
+#if (LINX_HT_CAPACITY & (LINX_HT_CAPACITY - 1u)) == 0
+    return hash & (LINX_HT_CAPACITY - 1u);
+#else
+    return hash % LINX_HT_CAPACITY;
+#endif
+}
+
+int main() {
+    const TableEntry* table =
+        (const TableEntry*)_binary_inserted_slot_data_start;
+    const int64_t* keys =
+        (const int64_t*)_binary_lookup_keys_data_start;
+    const int32_t* expected =
+        (const int32_t*)_binary_lookup_values_data_start;
+
+    int32_t mismatches = 0;
+    for (int32_t i = 0; i < kNum; ++i) {
+#if LINX_HT_SCAN
+        int32_t found = -1;
+        for (uint32_t slot = 0; slot < LINX_HT_CAPACITY; ++slot) {
+            const TableEntry* entry = table + slot;
+            if (entry->key == keys[i]) {
+                found = entry->value;
+                break;
+            }
+        }
+#else
+        uint32_t slot = first_slot(murmurhash3_i64(keys[i]));
+        int32_t found = -1;
+        for (int32_t probe = 0; probe < MAX_PROBE; ++probe) {
+            const TableEntry* entry = table + slot;
+            if (entry->key == keys[i]) {
+                found = entry->value;
+                break;
+            }
+            if ((unsigned long long)entry->key == 0x8000000000000000ull) {
+                break;
+            }
+            ++slot;
+            if (slot == LINX_HT_CAPACITY) {
+                slot = 0;
+            }
+        }
+#endif
+        if (found != expected[i]) {
+            ++mismatches;
+        }
+    }
+    return mismatches == 0 ? 0 : 1;
+}
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+    if (code == 0) {
+        __asm__ volatile(
+            "BSTART.STD\n"
+            "lui 65545, ->u\n"
+            "lui 5, ->t\n"
+            "addi t#1, 1365, ->t\n"
+            "c.swi t#1, [u#1, 0]\n"
+            "BSTOP\n"
+            ::: "memory");
+    } else {
+        __asm__ volatile(
+            "BSTART.STD\n"
+            "lui 65545, ->u\n"
+            "lui 19, ->t\n"
+            "addi t#1, 819, ->t\n"
+            "c.swi t#1, [u#1, 0]\n"
+            "BSTOP\n"
+            ::: "memory");
+    }
+    while (1) {
+        __asm__ volatile("" ::: "memory");
+    }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void _start(void) {
+    linx_supernpu_exit((uint32_t)main());
+}
+
+#else
+
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "template_asm.h"
@@ -178,3 +339,5 @@ int main() {
     return 0;
 #endif
 }
+
+#endif
