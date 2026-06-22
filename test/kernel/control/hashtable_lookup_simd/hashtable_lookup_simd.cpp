@@ -1,8 +1,12 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
+#ifndef __linx
 #include "fileop.h"
+#endif
 #include "template_asm.h"
+#ifndef __linx
 #include <stdio.h>
+#endif
 
 // ============================================================================
 // Tile operation implementations
@@ -551,6 +555,7 @@ int main() {
         }
     }
 
+#ifndef __linx
     printf("=== hashtable_lookup_simd ===\n");
     printf("Match: %d/%d (%.4f%%)\n", match, kNum, 100.0 * double(match) / double(kNum));
 
@@ -567,9 +572,6 @@ int main() {
         }
     }
     fflush(stdout);
-#endif
-
-#ifndef FOR_GFSIM
     int ret = (match == kNum) ? 0 : 1;
     if (!ret) {
         printf("PASS\n");
@@ -577,6 +579,7 @@ int main() {
         printf("FAIL\n");
     }
     fflush(stdout);
+#endif
     return ret;
 #else
     return 0;
