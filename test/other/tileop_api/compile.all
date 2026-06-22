@@ -14,7 +14,6 @@ make TESTCASE=TCvt
 make TESTCASE=TDiv
 make TESTCASE=TDivs
 make TESTCASE=test_MatMacc
-make TESTCASE=test_matmul
 make TESTCASE=test_MatMul
 make TESTCASE=TExp
 make TESTCASE=TExpandCol
