@@ -2,6 +2,7 @@
 #define LAYOUT_HPP
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifndef __linx
 #include <iostream>
@@ -175,6 +176,7 @@ struct BlockMatrixLayout {
     return outer_(outer_i, outer_j) + inner_(inner_i, inner_j);
   }
 
+#ifndef __linx
   void dump() const {
     for (int i = 0; i < Rows; ++i) {
       for (int j = 0; j < Cols; ++j) {
@@ -183,6 +185,7 @@ struct BlockMatrixLayout {
       printf("\n");
     }
   }
+#endif
 
   auto get_outer_layout() const { return decltype(outer_){}; }
 

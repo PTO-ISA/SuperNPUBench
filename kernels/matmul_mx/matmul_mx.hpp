@@ -4,7 +4,9 @@
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
 #include <cstdint>
+#ifndef __linx
 #include <cstdio>
+#endif
 #include "utils/layout_transform.hpp"
 
 

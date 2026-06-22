@@ -1,8 +1,49 @@
 #include <common/pto_tileop.hpp>
+#ifdef __linx
+#include <stddef.h>
+#include <stdint.h>
+#else
 #include <cstring>
 #include "fileop.h"
 #include "common.h"
 #include "benchmark.h"
+#endif
+
+#ifdef __linx
+#define BENCHSTART __asm__ __volatile__("B.HINT TRACE.begin\n" : : :);
+#define BENCHEND __asm__ __volatile__("B.HINT TRACE.end\n" : : :);
+
+int main();
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+    __asm__ volatile("" ::: "memory");
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void _start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
 
 #ifndef globM 
 #define globM 120

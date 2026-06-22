@@ -4,11 +4,11 @@ ifeq ($(TYPE), HIF4_HIF4)
    OPFILE = $(notdir $(OPPATH))
    OPNAME = $(patsubst %.cpp,%, $(OPFILE))
    DEFINES += -DglobM=$(M) -DglobN=$(N) -DglobK=$(K) -DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK)
-      Batch = 1
-      ifneq ($(B), )
-      Batch = $(B)
-      DEFINES += -DBatch=$(B)
-      endif
+	      Batch = 1
+	      ifneq ($(B), )
+	      Batch = $(B)
+	      endif
+	      DEFINES += -DBatch=$(Batch)
    ifneq ($(VER), )
       DEFINES += -D$(VER)
    else 
@@ -29,11 +29,11 @@ ifeq ($(TYPE), A16W4)
    OPFILE = $(notdir $(OPPATH))
    OPNAME = $(patsubst %.cpp,%, $(OPFILE))
    DEFINES += -DglobM=$(M) -DglobN=$(N) -DglobK=$(K) -DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK)
-      Batch = 1
-      ifneq ($(B), )
-      Batch = $(B)
-      endif
-   DEFINES += -DBatch=$(B)
+   Batch = 1
+   ifneq ($(B), )
+   Batch = $(B)
+   endif
+   DEFINES += -DBatch=$(Batch)
    # TARGET = $(OPNAME)_B$(Batch)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
    TARGET = $(ELF_HEAD)/$(TESTCASE)_$(TYPE)_$(MODE)_B$(Batch)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
 endif
