@@ -1,9 +1,14 @@
 #include <common/pto_tileop.hpp>
 
+#ifdef __linx
+#include <stddef.h>
+#include <stdint.h>
+#else
 #include <cstdint>
 #include <cstdio>
 
 #include "fileop.h"
+#endif
 #include "element_wise/gelu.hpp"
 
 

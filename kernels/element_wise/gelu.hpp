@@ -2,8 +2,13 @@
 #include "../test/accelerator/include/accelerator_fusion.h"
 
 #include "template_asm.h"
+#ifdef __linx
+#include <stddef.h>
+#include <stdint.h>
+#else
 #include <cstdint>
 #include <cstdio>
+#endif
 // 海思解决方案 新版多项式拟合
 
 // ==============================================
