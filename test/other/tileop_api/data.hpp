@@ -1,16 +1,34 @@
 #ifndef DATA_H
 #define DATA_H
 
+#ifdef __linx
+#include <stddef.h>
+#include <stdint.h>
+extern "C" void exit(int);
+extern "C" void free(void *);
+extern "C" void *malloc(size_t);
+extern "C" int printf(const char *, ...);
+#else
 #include <iostream>
 #include <cmath>
-#include <common/type.hpp>
+#endif
+#include "common/type.hpp"
 
+#ifdef __linx
+static constexpr float s_fp32 = 0.1f;
+static constexpr __half s_fp16 = __half(0.0f);
+static constexpr int8_t s_i8 = 1;
+static constexpr int16_t s_i16 = 1;
+static constexpr int32_t s_i32 = 1;
+static constexpr int64_t s_i64 = 1;
+#else
 float s_fp32 = 0.1;
 __half s_fp16 = 0.1;
 int8_t s_i8 = 1;
 int16_t s_i16 = 1;
 int32_t s_i32 = 1;
 int64_t s_i64 = 1;
+#endif
 
 template <typename T> void init_src_uint(T *aar, uint16_t size) {
   for (uint16_t i = 0; i < size; i++) {
@@ -23,16 +41,38 @@ template <typename T> void init_src_int(T *aar, uint16_t size) {
     aar[i] = -(i + 1);
   }
 }
+void init_src_int8(int8_t *aar, uint16_t size) {
+  for (uint16_t i = 0; i < size; i++) {
+    uint16_t val = i % 256;
+    if (val != 128) {
+      aar[i] = val - 128;
+    } else {
+      aar[i] = -128;
+    }
+  }
+}
 
 template <typename T> void init_src_fp(T *aar, uint16_t size) {
   for (uint16_t i = 0; i < size; i++) {
+#ifdef __linx
+    const float x = (i + 1) / 100.0f;
+    const float x2 = x * x;
+    aar[i] = x * (1.0f - x2 / 6.0f + (x2 * x2) / 120.0f);
+#else
     aar[i] = sin((i + 1) / 100.0f);
+#endif
   }
 }
 
 template <typename T> void init_dst(T *aar, uint16_t size) {
   for (uint16_t i = 0; i < size; i++) {
     aar[i] = 0.0;
+  }
+}
+
+template <typename T> void init_dst_no_zero(T *aar, uint16_t size) {
+  for (uint16_t i = 0; i < size; i++) {
+    aar[i] = 1.0;
   }
 }
 
@@ -56,11 +96,46 @@ template <typename T> void init_01(T *aar, uint16_t row, uint16_t col) {
   }
 }
 
+template <typename T> void init_rows_fp(T *aar, uint16_t row, uint16_t col) {
+  for (uint16_t i = 0; i < row; ++i) {
+    for (uint16_t j = 0; j < col; ++j) {
+        aar[i * col + j] = (i * col + j) / 100.0f;
+    }
+  }
+}
+
 template <typename T> void OutArray(const T *aar, size_t size) {
+#ifdef __linx
+  (void)aar;
+  (void)size;
+#else
   for (uint16_t i = 0; i < size; i++) {
     std::cout << aar[i] << " ";
   }
   std::cout << std::endl;
+#endif
+}
+void OutArray(const int8_t *aar, size_t size) {
+#ifdef __linx
+  (void)aar;
+  (void)size;
+#else
+  for (uint16_t i = 0; i < size; i++) {
+    std::cout << static_cast<int32_t>(aar[i]) << " ";
+  }
+  std::cout << std::endl;
+#endif
+}
+void OutArray(const __half *aar, size_t size) {
+#ifdef __linx
+  (void)aar;
+  (void)size;
+#else
+  for (uint16_t i = 0; i < size; i++) {
+    std::cout << static_cast<__fp16>(aar[i]) << " ";
+  }
+  std::cout << std::endl;
+#endif
 }
 
 // check memory allocation

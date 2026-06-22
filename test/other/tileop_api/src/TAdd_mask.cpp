@@ -5,13 +5,64 @@
 #include "../linxStartEnd.hpp"
 #endif
 
+#ifdef __linx
+int main();
+
+extern "C" void *memcpy(void *dst, const void *src, size_t n) {
+  volatile uint8_t *d = static_cast<volatile uint8_t *>(dst);
+  const volatile uint8_t *s = static_cast<const volatile uint8_t *>(src);
+  for (size_t i = 0; i < n; ++i) {
+    d[i] = s[i];
+  }
+  return dst;
+}
+
+extern "C" void *memset(void *dst, int value, size_t n) {
+  volatile uint8_t *d = static_cast<volatile uint8_t *>(dst);
+  const uint8_t byte = static_cast<uint8_t>(value);
+  for (size_t i = 0; i < n; ++i) {
+    d[i] = byte;
+  }
+  return dst;
+}
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void
+_start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+#endif
+
 using namespace pto;
 
 template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row,
-          uint16_t tile_col>
-void test(float *c_ptr, float *a_ptr, float *b_ptr) {
-  using gm_shape = global_tensor<float, RowMajor<gm_row, gm_col>>;
-  using tile_shape = Tile<Location::Vec, float, tile_row, tile_col, BLayout::RowMajor>;
+          uint16_t tile_col, typename T>
+void test(T *c_ptr, T *a_ptr, T *b_ptr) {
+  using gm_shape = global_tensor<T, RowMajor<gm_row, gm_col>>;
+  using tile_shape = Tile<Location::Vec, T, tile_row, tile_col, BLayout::RowMajor>;
   using glb_iterator = global_iterator<gm_shape, tile_shape>;
 
   static constexpr int block_row = gm_row / tile_row;
@@ -20,10 +71,11 @@ void test(float *c_ptr, float *a_ptr, float *b_ptr) {
   static constexpr int remainder_col = gm_col % tile_col;
 
   using trailing_rows_shape =
-      Tile<Location::Vec, float, tile_row, tile_col, BLayout::RowMajor, tile_row, remainder_col>;
+      Tile<Location::Vec, T, tile_row, tile_col, BLayout::RowMajor, tile_row, remainder_col>;
   using trailing_cols_shape =
-      Tile<Location::Vec, float, tile_row, tile_col, BLayout::RowMajor, remainder_row, tile_col>;
-  using trailing_corner_shape = Tile<Location::Vec, float, tile_row, tile_col, BLayout::RowMajor, remainder_row, remainder_col>;
+      Tile<Location::Vec, T, tile_row, tile_col, BLayout::RowMajor, remainder_row, tile_col>;
+  using trailing_corner_shape = Tile<Location::Vec, T, tile_row, tile_col, BLayout::RowMajor,
+                                            remainder_row, remainder_col>;
 
   glb_iterator gAIter(a_ptr);
   glb_iterator gBIter(b_ptr);
@@ -79,14 +131,33 @@ void test(float *c_ptr, float *a_ptr, float *b_ptr) {
 }
 
 int main() {
-  const uint16_t gm_row = 123;
-  const uint16_t gm_col = 123;
-  const uint16_t tile_row = 32;
-  const uint16_t tile_col = 32;
+#ifdef __linx
+  constexpr uint16_t gm_row = 6;
+  constexpr uint16_t gm_col = 6;
+  constexpr uint16_t tile_row = 4;
+  constexpr uint16_t tile_col = 4;
+#else
+  const uint16_t gm_row = 66;
+  const uint16_t gm_col = 66;
+  const uint16_t tile_row = 16;
+  const uint16_t tile_col = 16;
+#endif
 
-  size_t gm_size = gm_row * gm_col;
-  size_t tile_size = tile_row * tile_col;
+  constexpr size_t gm_size = gm_row * gm_col;
+  constexpr size_t tile_size = tile_row * tile_col;
+  (void)tile_size;
 
+#ifdef __linx
+  static int64_t dst[gm_size];
+  static int64_t src0[gm_size];
+  static int64_t src1[gm_size];
+  init_dst(dst, gm_size);
+  init_src_int(src0, gm_size);
+  init_src_uint(src1, gm_size);
+
+  test<gm_row, gm_col, tile_row, tile_col, int64_t>(dst, src0, src1);
+  return 0;
+#else
   float *dst = (float *)malloc(gm_size * sizeof(float));
   check_mem_alloc(dst);
   init_dst(dst, gm_size);
@@ -116,4 +187,5 @@ int main() {
   free(src1);
 
   return 0;
+#endif
 }
