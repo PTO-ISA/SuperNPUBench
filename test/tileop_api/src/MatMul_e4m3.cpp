@@ -4,6 +4,71 @@
 #include "../linxStartEnd.hpp"
 #endif
 
+#ifdef __linx
+int main();
+
+extern "C" void *memcpy(void *dst, const void *src, size_t n) {
+  auto *d = static_cast<unsigned char *>(dst);
+  const auto *s = static_cast<const unsigned char *>(src);
+  for (size_t i = 0; i < n; ++i) {
+    d[i] = s[i];
+  }
+  return dst;
+}
+
+static inline __attribute__((noreturn)) void linx_supernpu_exit(uint32_t code) {
+  if (code == 0) {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 5, ->t\n"
+        "addi t#1, 1365, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  } else {
+    __asm__ volatile(
+        "BSTART.STD\n"
+        "lui 65545, ->u\n"
+        "lui 19, ->t\n"
+        "addi t#1, 819, ->t\n"
+        "c.swi t#1, [u#1, 0]\n"
+        "BSTOP\n"
+        ::: "memory");
+  }
+  while (1) {
+    __asm__ volatile("" ::: "memory");
+  }
+}
+
+extern "C" __attribute__((noreturn, section(".text._start"))) void _start(void) {
+  linx_supernpu_exit(static_cast<uint32_t>(main()));
+}
+
+template <uint16_t M, uint16_t N, uint16_t K>
+void test(int64_t *dst, int64_t *src0, int64_t *src1) {
+  using gm_shape_A = global_tensor<int64_t, RowMajor<M, K>>;
+  using gm_shape_B = global_tensor<int64_t, RowMajor<K, N>>;
+  using gm_shape_C = global_tensor<int64_t, RowMajor<M, N>>;
+
+  using tile_shape_A = Tile<Location::Vec, int64_t, M, K, BLayout::RowMajor>;
+  using tile_shape_B = Tile<Location::Vec, int64_t, K, N, BLayout::RowMajor>;
+  using tile_shape_C = Tile<Location::Vec, int64_t, M, N, BLayout::RowMajor>;
+
+  gm_shape_A s0(src0);
+  gm_shape_B s1(src1);
+  gm_shape_C res(dst);
+
+  tile_shape_A d0;
+  tile_shape_B d1;
+  tile_shape_C d2;
+
+  TCOPYIN(d0, s0);
+  TCOPYIN(d1, s1);
+  MATMUL(d2, d0, d1);
+  TCOPYOUT(res, d2);
+}
+#else
 template <typename TA, typename TB>
 void __vec__ test_cvt(typename TA::TileDType __out__ a,
                       typename TB::TileDType __in__ b) {
@@ -47,8 +112,41 @@ void test(float *dst, float *src0, float *src1) {
   MATMUL(d2, lda, ldb);
   TCOPYOUT(res, d2);
 }
+#endif
 
 int main() {
+#ifdef __linx
+  constexpr uint16_t M = 4;
+  constexpr uint16_t K = 4;
+  constexpr uint16_t N = 4;
+  constexpr size_t size_A = M * K;
+  constexpr size_t size_B = K * N;
+  constexpr size_t size_C = M * N;
+
+  static int64_t dst_i64[size_C];
+  static int64_t src0_i64[size_A];
+  static int64_t src1_i64[size_B];
+
+  init_dst(dst_i64, size_C);
+  init_src_int(src0_i64, size_A);
+  init_src_int(src1_i64, size_B);
+
+  test<M, N, K>(dst_i64, src0_i64, src1_i64);
+
+  for (size_t row = 0; row < M; ++row) {
+    for (size_t col = 0; col < N; ++col) {
+      int64_t expected = 0;
+      for (size_t k = 0; k < K; ++k) {
+        expected += src0_i64[row * K + k] * src1_i64[k * N + col];
+      }
+      if (dst_i64[row * N + col] != expected) {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
+#else
   const uint16_t M = 64;
   const uint16_t K = 32;
   const uint16_t N = 128;
@@ -86,4 +184,5 @@ int main() {
   free(src1);
 
   return 0;
+#endif
 }
