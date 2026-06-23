@@ -1,5 +1,6 @@
 #! /bin/bash
 make TESTCASE=hashtable_lookup_simt SUFFIX=_kNum16_htscan_gfsim EXTRA_DEFINES="-DkNum=16 -DLINX_HT_CAPACITY=2048 -DLINX_HT_SCAN=1 -DLINX_HT_DIRECT=1 -DFOR_GFSIM" diss
+make TESTCASE=hashtable_lookup_simt SUFFIX=_kNum16_htprobe_gfsim EXTRA_DEFINES="-DkNum=16 -DLINX_HT_CAPACITY=2048 -DLINX_HT_DIRECT=1 -DFOR_GFSIM" diss
 make TESTCASE=hashtable_lookup_simt SUFFIX=_kNum6144_kNumThreads6144_kMaxProbe512_break_debug_on EXTRA_DEFINES="-DkNum=6144 -DkNumThreads=6144 -DMAX_PROBE=512" diss
 make TESTCASE=hashtable_lookup_simt SUFFIX=_kNum6144_kNumThreads6144_kMaxProbe512_break_debug_off EXTRA_DEFINES="-DkNum=6144 -DkNumThreads=6144 -DMAX_PROBE=512 -DFOR_GFSIM" diss
 make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum6144_kMaxProbe512_knum_col256_debug_on EXTRA_DEFINES="-DkNum=6144 -DMAX_PROBE=512 -DNUM_COL=256" diss
