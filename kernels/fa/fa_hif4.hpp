@@ -3,7 +3,6 @@
 
 #include "template_asm.h"
 #include "linx_blkc.h"
-#include "utils/layout_transform.hpp"
 
 // This kernel process 64 elements
 template<typename tileData, typename tileScale, typename tileSrc>
