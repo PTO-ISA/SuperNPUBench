@@ -42,11 +42,21 @@ ifeq ($(TESTCASE), fa_2d_unroll)
    endif
    Tm = 128
    Tk = 128
+   X = 1
+   Y = 1
+   ifneq ($(X), )
+      X = $(X)
+   endif
+   ifneq ($(Y), )
+      Y = $(Y)
+   endif
    DEFINES += -DTsq=$(Sq)
    DEFINES += -DTskv=$(Skv)
    DEFINES += -DTm=$(Tm)
    DEFINES += -DTk=$(Tk)
-   TARGET = $(ELF_HEAD)/$(TESTCASE)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk).elf
+   DEFINES += -DXdim=$(X)
+   DEFINES += -DYdim=$(Y)
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk)_X$(X)_Y$(Y).elf
 endif
 
 include ../../common/Makefile.common
