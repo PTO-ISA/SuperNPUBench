@@ -1,5 +1,0 @@
-#! /bin/bash
-
-make TESTCASE=accel_hashtable_insert_cmp_host
-make TESTCASE=accel_hashtable_lookup_cmp_host
-make TESTCASE=hashfind

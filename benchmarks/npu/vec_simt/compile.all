@@ -1,0 +1,5 @@
+#! /bin/bash
+
+make TESTCASE=npu_hashtable_insert_cmp_host
+make TESTCASE=npu_hashtable_lookup_cmp_host
+make TESTCASE=hashfind
