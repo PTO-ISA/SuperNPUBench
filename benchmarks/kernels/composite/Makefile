@@ -66,6 +66,7 @@ endif
 
 CP = cp
 DEST_DIR = ~/elf_subset/subset_matmul_reuse/
+INCLUDE += -I$(ROOT)/kernels/other
 SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
 include ../../common/Makefile.common
 

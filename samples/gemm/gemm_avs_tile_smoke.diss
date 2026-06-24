@@ -1,0 +1,48 @@
+
+generated/avs-tile-smoke/compiler/avs/obj/gemm.o:	file format elf64-linx
+
+Disassembly of section .text:
+
+0000000000000000 <gemm_i32>:
+; gemm_i32():
+       0: 41 00 d5 0a  FENTRY	[ra ~ s2], sp!, 40
+       4: 00 08        C.BSTART.STD
+       6: 06 28        c.movr	zero,	->a3
+       8: 15 03 00 04  addi	zero, 64,	->a4
+       c: 95 03 00 01  addi	zero, 16,	->a5
+      10: 46 41        c.movr	a3,	->a6
+
+0000000000000012 <.LBB0_1>:
+; .LBB0_1():
+      12: 00 08        C.BSTART.STD
+      14: 95 7f 64 00  slli	a6, 6,	->t
+      18: 85 04 82 07  add	a2, t#1,	->a7
+      1c: c6 a0        c.movr	a1,	->x0
+      1e: 46 a9        c.movr	a3,	->x1
+
+0000000000000020 <.LBB0_2>:
+; .LBB0_2():
+      20: 00 08        C.BSTART.STD
+      22: 09 ab 54 17  lw	[a7, x1<<2],	->x2
+      26: 95 ff 2a 00  slli	x1, 2,	->t
+      2a: 85 8b 84 07  add	a7, t#1,	->x3
+      2e: 46 59        c.movr	a3,	->s0
+
+0000000000000030 <.LBB0_5>:
+; .LBB0_5():
+      30: 04 00        C.BSTART	COND, 0x30
+      32: 09 2f b1 06  lw	[a0, s0],	->u
+      36: 89 2f ba 06  lw	[x0, s0],	->t
+      3a: 47 7b cc b1  maddw	t#1, u#1, x2,	->x2
+      3e: 95 85 45 00  addi	s0, 4,	->s0
+      42: f6 32        c.setc.ne	s0, a4
+      44: e4 fe        C.BSTART	COND, 0x20
+      46: 59 20 7b 01  swi	x2, [x3, 0]
+      4a: 15 0a 0a 04  addi	x0, 64,	->x0
+      4e: 95 8a 1a 00  addi	x1, 1,	->x1
+      52: 76 3d        c.setc.ne	x1, a5
+      54: f4 fd        C.BSTART	COND, 0x12
+      56: 15 01 01 04  addi	a0, 64,	->a0
+      5a: 15 04 14 00  addi	a6, 1,	->a6
+      5e: 36 3a        c.setc.ne	a6, a5
+      60: 41 30 d5 0a  FRET.STK	[ra ~ s2], sp!, 40

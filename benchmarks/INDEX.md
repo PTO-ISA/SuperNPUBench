@@ -230,4 +230,3 @@ Generated from the active `benchmarks/` tree. The suite table records batch buil
 | `legacy/api/python` | [`archive/outdated/tests/other/py_api`](../archive/outdated/tests/other/py_api) | [`tests/py_api`](../tests/py_api) | none | archive/outdated |
 | `legacy/npu/v220` | [`archive/outdated/tests/accelerator/v220`](../archive/outdated/tests/accelerator/v220) | [`benchmarks/npu`](../benchmarks/npu) | none | archive/outdated |
 | `legacy/npu/v310` | [`archive/outdated/tests/accelerator/v310`](../archive/outdated/tests/accelerator/v310) | [`benchmarks/npu`](../benchmarks/npu) | none | archive/outdated |
-| `legacy/toolchain` | [`archive/outdated/compiler/linx_blockisa_llvm_musl.tar.gz`](../archive/outdated/compiler/linx_blockisa_llvm_musl.tar.gz) | use `COMPILER_DIR=<linx-isa-llvm-bin>` | none | archive/outdated |

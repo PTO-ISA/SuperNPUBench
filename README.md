@@ -12,6 +12,7 @@ under `tests/`, and superseded material is preserved under `archive/outdated/`.
 | [`benchmarks`](benchmarks) | Primary active Linx-buildable benchmark tree. Start here for benchmark source and build commands. |
 | [`benchmarks/INDEX.md`](benchmarks/INDEX.md) | Source catalog with benchmark paths, build commands, category, status, and required data objects. |
 | [`benchmarks/common`](benchmarks/common) | Shared make harness, platform selection, compiler flags, simulator targets, and benchmark-local helper headers. |
+| [`compiler`](compiler) | Compiler artifact staging. The checked-in legacy archive is a Git LFS pointer; active builds should pass a real toolchain through `COMPILER_DIR`. |
 | [`include/common`](include/common) | Shared TileOP API surface, data types, tensor helpers, layouts, and compile-time utilities. |
 | [`include/benchmark_support`](include/benchmark_support) | Benchmark-only support headers, including NPU helper APIs used by active suites. |
 | [`include/cpu_sim`](include/cpu_sim) | CPU simulation backend used by checks built with `PLAT=cpu`. |
@@ -20,18 +21,19 @@ under `tests/`, and superseded material is preserved under `archive/outdated/`.
 | [`include/jcore`](include/jcore) | Linx/JCore backend headers used by `PLAT=linx`. |
 | [`kernels`](kernels) | Reusable kernel implementations shared by benchmark entrypoints. |
 | [`models`](models) | Reusable model-level implementation code shared by model benchmarks. |
+| [`samples`](samples) | Checked-in sample compiler disassembly for representative flash attention and GEMM outputs. |
 | [`tests`](tests) | Non-benchmark correctness material that is not the primary Linx benchmark navigation surface. |
 | [`archive/outdated`](archive/outdated) | Preserved duplicate, superseded, generated, or unusable historical material with replacement notes. |
 | `output/` | Generated build products. Treat this as local output, not source. |
 
 ## Getting Started: Linx Compiler And QEMU
 
-These commands assume this workload lives at `$LINXISA_ROOT/workloads/SuperNPUBench` and the Linx superproject is checked out at `/Users/zhoubot/linx-isa`. Adjust `LINXISA_ROOT` if your checkout is elsewhere.
+These commands assume this workload lives at `$LINXISA_ROOT/workloads/SuperNPUBench`. Set `LINXISA_ROOT` to the root of your Linx superproject checkout.
 
 Build the Linx LLVM compiler from `compiler/llvm`:
 
 ```bash
-export LINXISA_ROOT=/Users/zhoubot/linx-isa
+export LINXISA_ROOT=/path/to/linx-isa
 cd "$LINXISA_ROOT"
 
 cmake -S compiler/llvm/llvm -B compiler/llvm/build-linxisa-clang -G Ninja \
@@ -198,4 +200,4 @@ New make-driven benchmark directories should keep the local `Makefile` small and
 
 ## Generated Files
 
-Do not commit generated files from `output/`, object files, executable artifacts, local logs, or disassembly files. Keep source changes in `include/`, `kernels/`, `models/`, `benchmarks/`, `tests/`, and `archive/outdated/`.
+Do not commit generated files from `output/`, object files, executable artifacts, local logs, or ad hoc disassembly files outside [`samples`](samples). Keep source changes in `include/`, `kernels/`, `models/`, `benchmarks/`, `tests/`, `samples/`, `compiler/`, and `archive/outdated/`.

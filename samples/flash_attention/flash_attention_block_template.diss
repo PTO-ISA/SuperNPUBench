@@ -1,0 +1,926 @@
+
+generated/pto_objdump/obj/flash_attention.o:	file format elf64-linx
+
+Disassembly of section .text:
+
+0000000000000000 <pto_flash_attention>:
+       0:      FENTRY	[ra ~ s8], sp!, 208
+       4:      C.BSTART	COND, 0x1c
+       6:      c.movr	a3,	->s1
+       8:      c.movr	a1,	->s7
+       a:      sdi	a0, [sp, 40]
+       e:      c.movr	zero,	->a0
+      10:      c.setc.eq	a4, a0
+      12:      C.BSTART	DIRECT, 0x24
+      14:      c.lwi	[a4, 4],	->t
+      16:      c.sdi	t#1, [sp, 24]
+      18:      lwi	[a4, 0],	->s0
+
+000000000000001c <.LBB0_1>:
+      1c:      C.BSTART.STD
+      1e:      c.movi	5,	->s0
+      20:      sdi	s0, [sp, 24]
+
+0000000000000024 <.LBB0_3>:
+      24:      C.BSTART	COND, 0x1e0
+      26:      c.sext.w	s0,	->t
+      28:      c.movi	5,	->a1
+      2a:      c.setc.ne	t#1, a1
+      2c:      C.BSTART	COND, 0x1e0
+      2e:      c.ldi	[sp, 24],	->t
+      30:      c.sext.w	t#1,	->t
+      32:      c.setc.ne	t#1, a1
+      34:      C.BSTART.STD
+      36:      addi	a2, 64,	->a1
+      3a:      addi	zero, 16,	->x1
+      3e:      addi	zero, 1024,	->a3
+      42:      addi	zero, 64,	->a4
+
+0000000000000046 <.LBB0_6>:
+      46:      C.BSTART.STD
+      48:      slli	a0, 8,	->t
+      4c:      add	s7, t#1,	->a5
+      50:      BSTART.TLOAD	INT32
+      54:      C.B.DIMI	4, 	->lb0
+      56:      C.B.DIMI	16, 	->lb1
+      58:      B.ARG	ND2ZN.normal
+      5c:      B.IOR	[a5,x1],[]
+      60:      B.IOTI	[], last	->t<4KB>
+      64:      BSTART.TLOAD	INT32
+      68:      C.B.DIMI	4, 	->lb0
+      6a:      C.B.DIMI	4, 	->lb1
+      6c:      B.ARG	DN2NZ.normal
+      70:      B.IOR	[a2,x1],[]
+      74:      B.IOTI	[], last	->t<4KB>
+      78:      BSTART.TLOAD	INT32
+      7c:      C.B.DIMI	4, 	->lb0
+      7e:      C.B.DIMI	16, 	->lb1
+      80:      B.ARG	DN2NZ.normal
+      84:      B.IOR	[s1,a3],[]
+      88:      B.IOTI	[], last	->t<4KB>
+      8c:      BSTART.TMATMUL	INT32
+      90:      C.B.DIMI	16, 	->lb0
+      92:      C.B.DIMI	4, 	->lb1
+      94:      C.B.DIMI	4, 	->lb2
+      96:      B.IOTI	[t#1, t#2], last	->acc<4KB>
+      9a:      BSTART.ACCCVT	INT32
+      9e:      B.IOTI	[], last	->m<4KB>
+      a2:
+      a6:      B.ARG	VV
+      aa:      B.IOTI	[m#1]	->t<4KB>
+      ae:      B.IOTI	[], last	->t<4KB>
+      b2:
+      b6:      B.ARG	VV
+      ba:      B.IOTI	[t#2]	->t<4KB>
+      be:      B.IOTI	[], last	->t<4KB>
+      c2:      BSTART.TMATMUL	INT32
+      c6:      C.B.DIMI	16, 	->lb0
+      c8:      C.B.DIMI	16, 	->lb1
+      ca:      C.B.DIMI	4, 	->lb2
+      cc:      B.IOTI	[t#2, t#3], last	->acc<4KB>
+      d0:      BSTART.ACCCVT	INT32
+      d4:      B.IOTI	[], last	->m<4KB>
+      d8:      C.BSTART.STD
+      da:      slli	a0, 10,	->a5
+      de:      c.movr	a1,	->a6
+      e0:      c.movr	x1,	->a7
+
+00000000000000e2 <.LBB0_15>:
+      e2:      BSTART.TLOAD	INT32
+      e6:      C.B.DIMI	4, 	->lb0
+      e8:      C.B.DIMI	4, 	->lb1
+      ea:      B.ARG	DN2NZ.normal
+      ee:      B.IOR	[a6,x1],[]
+      f2:      B.IOTI	[], last	->t<4KB>
+      f6:      C.BSTART.STD
+      f8:      add	s1, a7,	->x0
+      fc:      BSTART.TLOAD	INT32
+     100:      C.B.DIMI	4, 	->lb0
+     102:      C.B.DIMI	16, 	->lb1
+     104:      B.ARG	DN2NZ.normal
+     108:      B.IOR	[x0,a3],[]
+     10c:      B.IOTI	[], last	->t<4KB>
+     110:      BSTART.TMATMUL	INT32
+     114:      C.B.DIMI	16, 	->lb0
+     116:      C.B.DIMI	4, 	->lb1
+     118:      C.B.DIMI	4, 	->lb2
+     11a:      B.IOTI	[t#1, t#2], last	->acc<4KB>
+     11e:      BSTART.ACCCVT	INT32
+     122:      B.IOTI	[], last	->m<4KB>
+     126:
+     12a:      B.ARG	VV
+     12e:      B.IOTI	[m#2]	->t<4KB>
+     132:      B.IOTI	[], last	->t<4KB>
+     136:
+     13a:      B.ARG	VV
+     13e:      B.IOTI	[t#2]	->t<4KB>
+     142:      B.IOTI	[], last	->t<4KB>
+     146:      BSTART.TMATMUL	INT32
+     14a:      C.B.DIMI	16, 	->lb0
+     14c:      C.B.DIMI	16, 	->lb1
+     14e:      C.B.DIMI	4, 	->lb2
+     150:      B.IOTI	[t#2, t#3], last	->acc<4KB>
+     154:      BSTART.ACCCVT	INT32
+     158:      B.IOTI	[], last	->m<4KB>
+     15c:
+     160:      B.ARG	VV
+     164:      B.IOTI	[m#1]	->t<4KB>
+     168:      B.IOTI	[], last	->t<4KB>
+     16c:
+     170:      B.ARG	VV
+     174:      B.IOTI	[m#2]	->t<4KB>
+     178:      B.IOTI	[], last	->t<4KB>
+     17c:
+     180:      B.ARG	VV
+     184:      B.IOTI	[t#2, t#3]	->t<4KB>
+     188:      B.IOTI	[], last	->t<4KB>
+     18c:      C.BSTART.STD
+     18e:      addi	a6, 64,	->a6
+     192:
+     196:      B.ARG	VV
+     19a:      B.IOTI	[t#2]	->t<4KB>
+     19e:      B.IOTI	[], last	->m<4KB>
+     1a2:      C.BSTART	COND, 0xe2
+     1a4:      addi	a7, 16,	->a7
+     1a8:      c.setc.ne	a7, a3
+     1aa:      C.BSTART.STD
+     1ac:      c.ldi	[sp, 40],	->t
+     1ae:      add	t#1, a5,	->a5
+     1b2:
+     1b6:      B.ARG	VV
+     1ba:      B.IOTI	[m#1]	->t<4KB>
+     1be:      B.IOTI	[], last	->t<4KB>
+     1c2:      BSTART.TSTORE	INT32
+     1c6:      C.B.DIMI	16, 	->lb0
+     1c8:      C.B.DIMI	16, 	->lb1
+     1ca:      B.ARG	NORM.normal
+     1ce:      B.IOR	[a5,a4],[]
+     1d2:      B.IOTI	[t#1], last	->t<4KB>
+     1d6:      C.BSTART	COND, 0x306
+     1d8:      addi	a0, 1,	->a0
+     1dc:      c.setc.eq	a0, x1
+     1de:      C.BSTART	DIRECT, 0x46
+
+00000000000001e0 <.LBB0_7>:
+     1e0:      C.BSTART.STD
+     1e2:      c.movr	zero,	->u
+     1e4:      c.movi	1,	->s3
+     1e6:      c.movi	4,	->s5
+     1e8:      c.movi	4,	->t
+     1ea:      c.sdi	t#1, [sp, 72]
+     1ec:      addi	zero, 256,	->t
+     1f0:      c.sdi	t#1, [sp, 64]
+     1f2:      addi	zero, 16,	->t
+     1f6:      c.sdi	t#1, [sp, 16]
+     1f8:      c.movr	u#1,	->s4
+     1fa:      sdi	u#1, [sp, 96]
+     1fe:      c.movr	u#1,	->a3
+     200:      sdi	s1, [sp, 56]
+     204:      sdi	a2, [sp, 80]
+
+0000000000000208 <.LBB0_8>:
+     208:      C.BSTART.STD
+     20a:      sdi	a3, [sp, 8]
+     20e:      slliw	a3, 4,	->t
+     212:      c.sdi	t#1, [sp, 32]
+     214:      ldi	[sp, 96],	->s2
+
+0000000000000218 <.LBB0_9>:
+     218:      C.BSTART.STD
+     21a:      sdi	s2, [sp, 48]
+     21e:      slliw	s2, 8,	->t
+     222:      c.sdi	t#1, [sp, 88]
+     224:      c.ldi	[sp, 96],	->t
+     226:      c.movr	t#1,	->a2
+     228:      c.movr	t#1,	->s2
+     22a:      c.movr	t#1,	->a3
+
+000000000000022c <.LBB0_10>:
+     22c:      C.BSTART.STD
+     22e:      sdi	a2, [sp, 120]
+     232:      hl.sdip	s2, a3, [sp, 104]
+     238:      ldi	[sp, 96],	->s6
+     23c:      c.movr	s6,	->s1
+     23e:      ldi	[sp, 80],	->s2
+
+0000000000000242 <.LBB0_13>:
+     242:      HL.BSTART.STD	CALL, _ZN3pto7kernels15load_scalar_i32EPKvNS0_9pto_dtypeEi, ra=.LBB0_20
+     24a:      addw	s4, s1,	->a2
+     24e:      c.movr	s7,	->a0
+     250:      c.movr	s0,	->a1
+
+0000000000000252 <.LBB0_20>:
+     252:      HL.BSTART.STD	CALL, _ZN3pto7kernels15load_scalar_i32EPKvNS0_9pto_dtypeEi, ra=.LBB0_21
+     25a:      c.movr	s3,	->s8
+     25c:      c.movr	s5,	->s3
+     25e:      c.movr	s7,	->s5
+     260:      c.movr	a0,	->s7
+     262:      ldi	[sp, 120],	->a0
+     266:      addw	a0, s1,	->a2
+     26a:      c.movr	s2,	->a0
+     26c:      c.movr	s0,	->a1
+
+000000000000026e <.LBB0_21>:
+     26e:      C.BSTART	COND, 0x242
+     270:      mulw	a0, s7,	->t
+     274:      c.movr	s5,	->s7
+     276:      c.movr	s3,	->s5
+     278:      c.movr	s8,	->s3
+     27a:      addw	s1, s3,	->s1
+     27e:      addw	t#1, s6,	->s6
+     282:      c.sext.w	s1,	->t
+     284:      c.setc.ne	t#1, s5
+     286:      HL.BSTART.STD	CALL, _ZN3pto7kernels15load_scalar_i32EPKvNS0_9pto_dtypeEi, ra=.LBB0_19
+     28e:      ldi	[sp, 88],	->a0
+     292:      ldi	[sp, 104],	->s2
+     296:      addw	s2, a0,	->a2
+     29a:      c.ldi	[sp, 56],	->t
+     29c:      c.movr	t#1,	->a0
+     29e:      c.movr	s0,	->a1
+
+00000000000002a0 <.LBB0_19>:
+     2a0:      C.BSTART	COND, 0x22c
+     2a2:      ldi	[sp, 72],	->u
+     2a6:      c.ldi	[sp, 120],	->t
+     2a8:      addw	t#1, u#1,	->a2
+     2ac:      mulw	a0, s6,	->u
+     2b0:      c.ldi	[sp, 112],	->t
+     2b2:      addw	u#1, t#1,	->a3
+     2b6:      addw	s2, s3,	->s2
+     2ba:      addw	s2, zero,	->u
+     2be:      c.ldi	[sp, 64],	->t
+     2c0:      c.setc.ne	u#1, t#1
+     2c2:      HL.BSTART.STD	CALL, _ZN3pto7kernels16store_scalar_i32EPvNS0_9pto_dtypeEii, ra=.LBB0_18
+     2ca:      ldi	[sp, 32],	->a0
+     2ce:      ldi	[sp, 48],	->s2
+     2d2:      addw	s2, a0,	->a2
+     2d6:      ldi	[sp, 40],	->a0
+     2da:      ldi	[sp, 24],	->a1
+
+00000000000002de <.LBB0_18>:
+     2de:      C.BSTART	COND, 0x218
+     2e0:      addw	s2, s3,	->s2
+     2e4:      addw	s2, zero,	->u
+     2e8:      c.ldi	[sp, 16],	->t
+     2ea:      c.setc.ne	u#1, t#1
+     2ec:      C.BSTART	COND, 0x208
+     2ee:      c.ldi	[sp, 72],	->t
+     2f0:      addw	s4, t#1,	->s4
+     2f4:      c.ldi	[sp, 8],	->t
+     2f6:      addw	t#1, s3,	->a3
+     2fa:      addw	a3, zero,	->u
+     2fe:      ldi	[sp, 80],	->a2
+     302:      c.ldi	[sp, 64],	->t
+     304:      c.setc.ne	u#1, t#1
+
+0000000000000306 <.LBB0_17>:
+     306:      FRET.STK	[ra ~ s8], sp!, 208
+
+Disassembly of section .text._ZN3pto7kernels15load_scalar_i32EPKvNS0_9pto_dtypeEi:
+
+0000000000000000 <_ZN3pto7kernels15load_scalar_i32EPKvNS0_9pto_dtypeEi>:
+       0:      FENTRY	[ra ~ ra], sp!, 32
+       4:      C.BSTART	COND, 0x40
+       6:      c.movr	a0,	->a3
+       8:      c.movr	zero,	->a0
+       a:      c.sext.w	a1,	->t
+       c:      addw	a1, zero,	->a1
+      10:      c.movi	3,	->a4
+      12:      setc.lt	a4, t#1
+      16:      C.BSTART	COND, 0x5e
+      18:      setc.eqi	a1, 1
+      1c:      C.BSTART	COND, 0x82
+      1e:      setc.eqi	a1, 2
+      22:      C.BSTART	COND, 0x134
+      24:      c.setc.ne	a1, a4
+      26:      HL.BSTART.STD	CALL, _ZN3pto17fp8_e4m3_to_floatENS_10fp8_e4m3_tE, ra=.LBB1_21
+      2e:      addw	a2, zero,	->a0
+      32:      lb	[a3, a0],	->a0
+      36:      sbi	a0, [sp, 23]
+      3a:      addi	sp, 23,	->a0
+
+000000000000003e <.LBB1_21>:
+      3e:      C.BSTART	DIRECT, 0x12e
+
+0000000000000040 <.LBB1_5>:
+      40:      C.BSTART	COND, 0x66
+      42:      setc.eqi	a1, 4
+      46:      C.BSTART	COND, 0xf8
+      48:      setc.eqi	a1, 6
+      4c:      C.BSTART	COND, 0x134
+      4e:      setc.nei	a1, 5
+      52:      C.BSTART.STD
+      54:      c.sext.w	a2,	->t
+      56:      lw	[a3, t#1<<2],	->a0
+      5a:      FRET.STK	[ra ~ ra], sp!, 32
+
+000000000000005e <.LBB1_9>:
+      5e:      C.BSTART	DIRECT, 0x12e
+      60:      c.sext.w	a2,	->t
+      62:      lwu	[a3, t#1<<2],	->a0
+
+0000000000000066 <.LBB1_10>:
+      66:      C.BSTART	DIRECT, 0x12e
+      68:      c.sext.w	a2,	->t
+      6a:      lbu	[a3, t#1],	->t
+      6e:      andi	t#1, 15,	->t
+      72:      slli	t#1, 2,	->u
+      76:      addtpc	0,	->t
+      7a:      addi	t#1, 0,	->t
+      7e:      lwu	[u#1, t#1],	->a0
+
+0000000000000082 <.LBB1_11>:
+      82:      C.BSTART	COND, 0x104
+      84:      c.sext.w	a2,	->t
+      86:      lh	[a3, t#1<<1],	->a3
+      8a:      lui	524288,	->t
+      8e:      andw	a3, t#1,	->a0
+      92:      hl.lui	65535,	->t
+      98:      andw	a3, t#1,	->a1
+      9c:      srliw	a3, 10,	->t
+      a0:      andiw	t#1, 31,	->a2
+      a4:      addw	a2, zero,	->a4
+      a8:      setc.eqi	a4, 31
+      ac:      C.BSTART	COND, 0x116
+      ae:      andiw	a3, 1023,	->a3
+      b2:      c.movr	zero,	->a5
+      b4:      c.setc.ne	a4, a5
+      b6:      C.BSTART	COND, 0x12e
+      b8:      c.sext.w	a3,	->t
+      ba:      c.setc.eq	t#1, a5
+      bc:      C.BSTART	DIRECT, 0x128
+      be:      clz	a3, 31,	->a2
+      c2:      xoriw	a2, 31,	->u
+      c6:      c.movi	9,	->t
+      c8:      subw	t#1, u#1,	->t
+      cc:      addi	zero, 32,	->u
+      d0:      sll	t#1, u#1,	->t
+      d4:      srl	t#1, u#1,	->t
+      d8:      sllw	a1, t#1,	->t
+      dc:      slliw	t#1, 14,	->u
+      e0:      lui	2044,	->t
+      e4:      andw	u#1, t#1,	->u
+      e8:      slliw	a2, 23,	->t
+      ec:      subw	u#1, t#1,	->t
+      f0:      addw	t#1, a0,	->a0
+      f4:      lui	274432,	->a1
+
+00000000000000f8 <.LBB1_15>:
+      f8:      C.BSTART.STD
+      fa:      c.sext.w	a2,	->t
+      fc:      lb	[a3, t#1],	->a0
+     100:      FRET.STK	[ra ~ ra], sp!, 32
+
+0000000000000104 <.LBB1_16>:
+     104:      C.BSTART	DIRECT, 0x12e
+     106:      slliw	a1, 13,	->t
+     10a:      orw	a0, t#1,	->u
+     10e:      lui	522240,	->t
+     112:      orw	u#1, t#1,	->a0
+
+0000000000000116 <.LBB1_17>:
+     116:      C.BSTART.STD
+     118:      slliw	a3, 13,	->t
+     11c:      orw	t#1, a2<<23,	->t
+     120:      addw	t#1, a0,	->a0
+     124:      lui	229376,	->a1
+
+0000000000000128 <.LBB1_18>:
+     128:      C.BSTART.STD
+     12a:      addw	a0, a1,	->a0
+
+000000000000012e <.LBB1_19>:
+     12e:      C.BSTART.STD
+     130:      fcvtz.fs2sw	a0,	->a0
+
+0000000000000134 <.LBB1_20>:
+     134:      FRET.STK	[ra ~ ra], sp!, 32
+
+Disassembly of section .text._ZN3pto7kernels16store_scalar_i32EPvNS0_9pto_dtypeEii:
+
+0000000000000000 <_ZN3pto7kernels16store_scalar_i32EPvNS0_9pto_dtypeEii>:
+       0:      FENTRY	[ra ~ s8], sp!, 96
+       4:      C.BSTART	COND, 0x5e
+       6:      c.sext.w	a1,	->t
+       8:      addw	a1, zero,	->a1
+       c:      c.movi	3,	->a4
+       e:      setc.lt	a4, t#1
+      12:      C.BSTART	COND, 0x7c
+      14:      setc.eqi	a1, 1
+      18:      C.BSTART	COND, 0x114
+      1a:      setc.eqi	a1, 2
+      1e:      C.BSTART	COND, 0x110
+      20:      c.setc.ne	a1, a4
+      22:      C.BSTART	COND, 0x1c4
+      24:      addw	a3, zero,	->a1
+      28:      setc.eqi	a1, 0
+      2c:      C.BSTART	COND, 0x1c8
+      2e:      c.movr	a2,	->s0
+      30:      c.movr	a0,	->s1
+      32:      c.movr	a3,	->s3
+      34:      scvtf.sw2fs	a3,	->a0
+      38:      lui	524288,	->t
+      3c:      xorw	a0, t#1,	->u
+      40:      cmp.lti	a1, 0,	->t
+      44:      csel	t#1, a0, u#1,	->s4
+      48:      hl.lwu.pcr	[.rodata.cst4+0x4],	->t
+      4e:      fge.fs	s4, t#1,	->t
+      52:      xori	t#1, 1,	->t
+      56:      c.setc.eq	t#1, zero
+      58:      C.BSTART	DIRECT, 0x212
+      5a:      c.movr	zero,	->s2
+      5c:      c.movr	s4,	->a0
+
+000000000000005e <.LBB2_4>:
+      5e:      C.BSTART	COND, 0x8c
+      60:      setc.eqi	a1, 4
+      64:      C.BSTART	COND, 0x162
+      66:      setc.eqi	a1, 6
+      6a:      C.BSTART	COND, 0x110
+      6c:      setc.nei	a1, 5
+      70:      C.BSTART.STD
+      72:      c.sext.w	a2,	->t
+      74:      sw	a3, [a0, t#1<<2]
+      78:      FRET.STK	[ra ~ s8], sp!, 96
+
+000000000000007c <.LBB2_9>:
+      7c:      C.BSTART.STD
+      7e:      scvtf.sw2fs	a3,	->u
+      82:      c.sext.w	a2,	->t
+      84:      sw	u#1, [a0, t#1<<2]
+      88:      FRET.STK	[ra ~ s8], sp!, 96
+
+000000000000008c <.LBB2_46>:
+      8c:      C.BSTART.STD
+      8e:      c.movr	a2,	->s2
+      90:      c.movr	a0,	->s1
+      92:      scvtf.sw2fs	a3,	->a0
+      96:      lui	524288,	->t
+      9a:      xorw	a0, t#1,	->u
+      9e:      c.sext.w	a3,	->t
+      a0:      cmp.lti	t#1, 0,	->t
+      a4:      csel	t#1, a0, u#1,	->s4
+      a8:      c.movr	zero,	->s3
+      aa:      c.movi	1,	->s5
+      ac:      addtpc	0,	->t
+      b0:      addi	t#1, 0,	->s6
+      b4:      addi	zero, 32,	->s7
+      b8:      sll	a0, s7,	->t
+      bc:      srl	t#1, s7,	->s0
+      c0:      addi	zero, 16,	->s8
+
+00000000000000c4 <.LBB2_47>:
+      c4:      HL.BSTART.STD	CALL, __subsf3, ra=.LBB2_58
+      cc:      lwi	[s6, 0],	->a0
+      d0:      sll	a0, s7,	->a0
+      d4:      srl	a0, s7,	->a1
+      d8:      c.movr	s0,	->a0
+
+00000000000000da <.LBB2_58>:
+      da:      C.BSTART	COND, 0xc4
+      dc:      lui	524288,	->t
+      e0:      xorw	a0, t#1,	->u
+      e4:      hl.lwu.pcr	[.rodata.cst4],	->t
+      ea:      flt.fs	a0, t#1,	->t
+      ee:      csel	t#1, a0, u#1,	->u
+      f2:      flt.fs	u#1, s4,	->t
+      f6:      csel	t#1, s4, u#1,	->s4
+      fa:      csel	t#1, s3, s5,	->s3
+      fe:      addi	s6, 4,	->s6
+     102:      addi	s5, 1,	->s5
+     106:      c.setc.ne	s5, s8
+     108:      C.BSTART.STD
+     10a:      c.sext.w	s2,	->t
+     10c:      sb	s3, [s1, t#1]
+
+0000000000000110 <.LBB2_49>:
+     110:      FRET.STK	[ra ~ s8], sp!, 96
+
+0000000000000114 <.LBB2_10>:
+     114:      C.BSTART	COND, 0x16e
+     116:      scvtf.sw2fs	a3,	->u
+     11a:      srliw	u#1, 16,	->u
+     11e:      lui	8,	->t
+     122:      andw	u#1, t#1,	->a1
+     126:      hl.lui	8388607,	->t
+     12c:      andw	u#2, t#1,	->a3
+     130:      srliw	u#2, 23,	->a5
+     134:      andiw	a5, 255,	->a4
+     138:      addw	a4, zero,	->a7
+     13c:      setc.nei	a7, 255
+     140:      C.BSTART.STD
+     142:      c.sext.w	a3,	->t
+     144:      cmp.eqi	t#1, 0,	->a3
+     148:      addiw	zero, 512,	->u
+     14c:      c.movr	zero,	->t
+     14e:      csel	a3, u#1, t#1,	->t
+     152:      orw	t#1, a1,	->a1
+
+0000000000000156 <.LBB2_16>:
+     156:      C.BSTART	DIRECT, 0x3aa
+     158:      hl.lui	31744,	->t
+     15e:      orw	a1, t#1,	->a1
+
+0000000000000162 <.LBB2_8>:
+     162:      C.BSTART.STD
+     164:      c.sext.w	a2,	->t
+     166:      sb	a3, [a0, t#1]
+     16a:      FRET.STK	[ra ~ s8], sp!, 96
+
+000000000000016e <.LBB2_12>:
+     16e:      C.BSTART	COND, 0x2d6
+     170:      addi	zero, 32,	->a6
+     174:      sll	a4, a6,	->t
+     178:      srl	t#1, a6,	->x0
+     17c:      setc.geui	x0, 113
+     180:      C.BSTART	COND, 0x3aa
+     182:      setc.ltui	x0, 102
+     186:      C.BSTART	DIRECT, 0x3a4
+     188:      lui	2048,	->t
+     18c:      orw	a3, t#1,	->a3
+     190:      addiw	zero, 126,	->t
+     194:      subw	t#1, a4,	->u
+     198:      addiw	zero, 125,	->t
+     19c:      subw	t#1, a4,	->t
+     1a0:      sll	t#1, a6,	->t
+     1a4:      srl	t#1, a6,	->u
+     1a8:      sll	u#2, a6,	->t
+     1ac:      srl	t#1, a6,	->t
+     1b0:      srlw	a3, t#1,	->u
+     1b4:      srlw	a3, u#2,	->t
+     1b8:      andiw	t#1, 1,	->t
+     1bc:      addw	t#1, u#1,	->t
+     1c0:      andiw	t#1, 1023,	->a3
+
+00000000000001c4 <.LBB2_24>:
+     1c4:      C.BSTART	DIRECT, 0x3de
+     1c6:      c.movr	zero,	->a1
+
+00000000000001c8 <.LBB2_31>:
+     1c8:      C.BSTART.STD
+     1ca:      c.movr	zero,	->s8
+     1cc:      addi	zero, 32,	->s5
+     1d0:      c.movi	1,	->s6
+     1d2:      addi	zero, 29,	->s7
+     1d6:      c.movr	s4,	->a0
+
+00000000000001d8 <.LBB2_32>:
+     1d8:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB2_57
+     1e0:      sll	a0, s5,	->a0
+     1e4:      srl	a0, s5,	->a0
+     1e8:      lui	258048,	->a1
+
+00000000000001ec <.LBB2_57>:
+     1ec:      C.BSTART	COND, 0x212
+     1ee:      addw	s8, s6,	->s2
+     1f2:      hl.lwu.pcr	[.rodata.cst4+0x4],	->t
+     1f8:      fge.fs	a0, t#1,	->t
+     1fc:      xori	t#1, 1,	->t
+     200:      c.setc.ne	t#1, zero
+     202:      C.BSTART	COND, 0x1d8
+     204:      sll	s8, s5,	->t
+     208:      srl	t#1, s5,	->t
+     20c:      setc.ltu	t#1, s7
+     210:      c.movr	s2,	->s8
+
+0000000000000212 <.LBB2_27>:
+     212:      C.BSTART	COND, 0x2c6
+     214:      hl.lwu.pcr	[.rodata.cst4+0x8],	->t
+     21a:      flt.fs	a0, t#1,	->t
+     21e:      xori	t#1, 1,	->t
+     222:      c.setc.ne	t#1, zero
+     224:      C.BSTART.STD
+     226:      addi	zero, 32,	->s5
+     22a:      c.movi	-1,	->s6
+     22c:      subi	zero, 29,	->s7
+
+0000000000000230 <.LBB2_29>:
+     230:      HL.BSTART.STD	CALL, __addsf3, ra=.LBB2_56
+     238:      sll	a0, s5,	->a0
+     23c:      srl	a0, s5,	->a0
+     240:      c.movr	a0,	->a1
+
+0000000000000242 <.LBB2_56>:
+     242:      C.BSTART	COND, 0x262
+     244:      addw	s2, s6,	->a1
+     248:      hl.lwu.pcr	[.rodata.cst4+0x8],	->t
+     24e:      flt.fs	a0, t#1,	->t
+     252:      xori	t#1, 1,	->t
+     256:      c.setc.ne	t#1, zero
+     258:      C.BSTART	COND, 0x230
+     25a:      c.sext.w	s2,	->t
+     25c:      setc.lt	s7, t#1
+     260:      c.movr	a1,	->s2
+
+0000000000000262 <.LBB2_34>:
+     262:      C.BSTART	COND, 0x30c
+     264:      c.movi	7,	->s2
+     266:      c.movi	1,	->t
+     268:      addw	a1, t#1,	->u
+     26c:      sraiw	s3, 31,	->t
+     270:      andiw	t#1, -128,	->s3
+     274:      addw	u#1, zero,	->u
+     278:      c.movi	-6,	->t
+     27a:      setc.lt	t#1, u#1
+     27e:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB2_54
+     286:      sll	s4, s5,	->a0
+     28a:      srl	a0, s5,	->a0
+     28e:      lui	278528,	->a1
+
+0000000000000292 <.LBB2_54>:
+     292:      HL.BSTART.STD	CALL, __addsf3, ra=.LBB2_55
+     29a:      sll	a0, s5,	->a0
+     29e:      srl	a0, s5,	->a0
+     2a2:      lui	258048,	->a1
+
+00000000000002a6 <.LBB2_55>:
+     2a6:      C.BSTART	DIRECT, 0x326
+     2a8:      fcvtz.fs2sw	a0,	->a0
+     2ac:      c.sext.w	a0,	->t
+     2ae:      cmp.gei	t#1, 1,	->u
+     2b2:      c.movr	zero,	->t
+     2b4:      csel	u#1, t#1, a0,	->u
+     2b8:      c.sext.w	u#1,	->t
+     2ba:      cmp.lti	t#1, 7,	->t
+     2be:      csel	t#1, s2, u#1,	->t
+     2c2:      orw	s3, t#1,	->a1
+
+00000000000002c6 <.LBB2_37>:
+     2c6:      C.BSTART	DIRECT, 0x314
+     2c8:      c.movi	7,	->t
+     2ca:      addw	s2, t#1,	->s4
+     2ce:      sraiw	s3, 31,	->t
+     2d2:      andiw	t#1, -128,	->s3
+
+00000000000002d6 <.LBB2_15>:
+     2d6:      C.BSTART	COND, 0x156
+     2d8:      setc.geui	x0, 143
+     2dc:      C.BSTART	COND, 0x38e
+     2de:      sll	a3, a6,	->t
+     2e2:      srl	t#1, a6,	->u
+     2e6:      lui	2047,	->t
+     2ea:      setc.geu	u#1, t#1
+     2ee:      C.BSTART	DIRECT, 0x3a4
+     2f0:      slliw	a4, 10,	->u
+     2f4:      lui	4,	->t
+     2f8:      addw	u#1, t#1,	->u
+     2fc:      lui	1,	->t
+     300:      addw	a3, t#1,	->t
+     304:      srliw	t#1, 13,	->t
+     308:      orw	t#1, u#1,	->a3
+
+000000000000030c <.LBB2_35>:
+     30c:      C.BSTART.STD
+     30e:      addw	a1, s2,	->s4
+     312:      c.movr	a1,	->s2
+
+0000000000000314 <.LBB2_38>:
+     314:      C.BSTART	COND, 0x32c
+     316:      addw	s2, zero,	->s5
+     31a:      c.movi	8,	->s6
+     31c:      setc.lt	s5, s6
+     320:      C.BSTART.STD
+     322:      oriw	s3, 126,	->a1
+
+0000000000000326 <.LBB2_40>:
+     326:      C.BSTART	DIRECT, 0x3de
+     328:      c.movr	s1,	->a0
+     32a:      c.movr	s0,	->a2
+
+000000000000032c <.LBB2_41>:
+     32c:      HL.BSTART.STD	CALL, __addsf3, ra=.LBB2_51
+     334:      addi	zero, 32,	->s7
+     338:      hl.lui	3212836864,	->a1
+     33e:      bxu	a1, 31,	->a1
+     342:      sll	a0, s7,	->a0
+     346:      srl	a0, s7,	->a0
+
+000000000000034a <.LBB2_51>:
+     34a:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB2_52
+     352:      sll	a0, s7,	->a0
+     356:      srl	a0, s7,	->a0
+     35a:      lui	266240,	->a1
+
+000000000000035e <.LBB2_52>:
+     35e:      HL.BSTART.STD	CALL, __addsf3, ra=.LBB2_53
+     366:      sll	a0, s7,	->a0
+     36a:      srl	a0, s7,	->a0
+     36e:      lui	258048,	->a1
+
+0000000000000372 <.LBB2_53>:
+     372:      C.BSTART	COND, 0x3c0
+     374:      fcvtz.fs2sw	a0,	->a1
+     378:      c.sext.w	a1,	->t
+     37a:      setc.lt	t#1, s6
+     37e:      c.movr	s1,	->a0
+     380:      c.movr	s0,	->a2
+     382:      C.BSTART	COND, 0x3b6
+     384:      setc.nei	s5, 7
+     388:      C.BSTART	DIRECT, 0x3de
+     38a:      oriw	s3, 126,	->a1
+
+000000000000038e <.LBB2_18>:
+     38e:      C.BSTART	COND, 0x156
+     390:      setc.eqi	a7, 142
+     394:      C.BSTART.STD
+     396:      slliw	a5, 10,	->u
+     39a:      hl.lui	17408,	->t
+     3a0:      addw	u#1, t#1,	->a3
+
+00000000000003a4 <.LBB2_21>:
+     3a4:      C.BSTART.STD
+     3a6:      orw	a3, a1,	->a1
+
+00000000000003aa <.LBB2_22>:
+     3aa:      C.BSTART.STD
+     3ac:      c.sext.w	a2,	->t
+     3ae:      sh	a1, [a0, t#1<<1]
+     3b2:      FRET.STK	[ra ~ s8], sp!, 96
+
+00000000000003b6 <.LBB2_43>:
+     3b6:      C.BSTART.STD
+     3b8:      c.movr	zero,	->a1
+     3ba:      c.movi	8,	->t
+     3bc:      addw	s2, t#1,	->s4
+
+00000000000003c0 <.LBB2_44>:
+     3c0:      C.BSTART.STD
+     3c2:      c.sext.w	a1,	->t
+     3c4:      cmp.gei	t#1, 1,	->u
+     3c8:      c.movr	zero,	->t
+     3ca:      csel	u#1, t#1, a1,	->u
+     3ce:      andiw	s3, 255,	->u
+     3d2:      slliw	s4, 3,	->t
+     3d6:      orw	t#1, u#1,	->t
+     3da:      orw	t#1, u#2,	->a1
+
+00000000000003de <.LBB2_45>:
+     3de:      C.BSTART.STD
+     3e0:      c.sext.w	a2,	->t
+     3e2:      sb	a1, [a0, t#1]
+     3e6:      FRET.STK	[ra ~ s8], sp!, 96
+
+Disassembly of section .text._ZN3pto17fp8_e4m3_to_floatENS_10fp8_e4m3_tE:
+
+0000000000000000 <_ZN3pto17fp8_e4m3_to_floatENS_10fp8_e4m3_tE>:
+       0:      FENTRY	[ra ~ s5], sp!, 64
+       4:      C.BSTART	COND, 0x5a
+       6:      lbui	[a0, 0],	->u
+       a:      slliw	u#1, 24,	->t
+       e:      sraiw	t#1, 24,	->t
+      12:      c.sext.w	t#1,	->t
+      14:      cmp.gei	t#1, 0,	->u
+      18:      c.movr	zero,	->s1
+      1a:      c.movi	4,	->t
+      1c:      csel	u#1, s1, t#1,	->u
+      20:      addtpc	0,	->t
+      24:      addi	t#1, 0,	->t
+      28:      lwu	[t#1, u#1],	->s0
+      2c:      andiw	u#3, 7,	->s3
+      30:      srliw	u#3, 3,	->t
+      34:      andiw	t#1, 15,	->s4
+      38:      c.sext.w	s4,	->t
+      3a:      c.setc.eq	t#1, s1
+      3c:      C.BSTART	COND, 0xe0
+      3e:      setc.nei	s4, 15
+      42:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB3_27
+      4a:      addi	zero, 32,	->a0
+      4e:      bxu	s0, 31,	->a0
+      52:      lui	276224,	->a1
+
+0000000000000056 <.LBB3_27>:
+      56:      FRET.STK	[ra ~ s5], sp!, 64
+
+000000000000005a <.LBB3_3>:
+      5a:      C.BSTART	COND, 0x1be
+      5c:      c.sext.w	s3,	->t
+      5e:      c.setc.eq	t#1, s1
+      60:      C.BSTART.STD
+      62:      hl.lwu.pcr	[.rodata.cst4+0xc],	->a0
+      68:      c.movi	6,	->s4
+      6a:      addi	zero, 32,	->s2
+      6e:      c.movi	-1,	->s5
+
+0000000000000070 <.LBB3_5>:
+      70:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB3_26
+      78:      sll	a0, s2,	->a0
+      7c:      srl	a0, s2,	->a0
+      80:      lui	258048,	->a1
+
+0000000000000084 <.LBB3_26>:
+      84:      C.BSTART	COND, 0x70
+      86:      addw	s4, s5,	->s4
+      8a:      c.sext.w	s4,	->t
+      8c:      c.setc.ne	t#1, s1
+      8e:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB3_23
+      96:      ucvtf.uw2fs	s3,	->a1
+      9a:      sll	a1, s2,	->a1
+      9e:      srl	a1, s2,	->a2
+      a2:      lui	253952,	->a1
+      a6:      c.movr	a0,	->s1
+      a8:      c.movr	a2,	->a0
+
+00000000000000aa <.LBB3_23>:
+      aa:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB3_24
+      b2:      sll	s0, s2,	->a1
+      b6:      srl	a1, s2,	->a2
+      ba:      sll	a0, s2,	->a0
+      be:      srl	a0, s2,	->a1
+      c2:      c.movr	a2,	->a0
+
+00000000000000c4 <.LBB3_24>:
+      c4:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB3_25
+      cc:      sll	s1, s2,	->a1
+      d0:      sll	a0, s2,	->a0
+      d4:      srl	a1, s2,	->a1
+      d8:      srl	a0, s2,	->a0
+
+00000000000000dc <.LBB3_25>:
+      dc:      FRET.STK	[ra ~ s5], sp!, 64
+
+00000000000000e0 <.LBB3_7>:
+      e0:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB3_20
+      e8:      ucvtf.uw2fs	s3,	->a0
+      ec:      addi	zero, 32,	->s2
+      f0:      sll	a0, s2,	->a0
+      f4:      srl	a0, s2,	->a0
+      f8:      lui	253952,	->a1
+
+00000000000000fc <.LBB3_20>:
+      fc:      HL.BSTART.STD	CALL, __addsf3, ra=.LBB3_21
+     104:      sll	a0, s2,	->a0
+     108:      srl	a0, s2,	->a0
+     10c:      lui	260096,	->a1
+
+0000000000000110 <.LBB3_21>:
+     110:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB3_22
+     118:      sll	s0, s2,	->a1
+     11c:      srl	a1, s2,	->a2
+     120:      sll	a0, s2,	->a0
+     124:      srl	a0, s2,	->a1
+     128:      c.movr	a2,	->a0
+
+000000000000012a <.LBB3_22>:
+     12a:      C.BSTART	COND, 0x174
+     12c:      c.movr	a0,	->s0
+     12e:      c.movi	-7,	->t
+     130:      addw	s4, t#1,	->s3
+     134:      sll	s4, s2,	->t
+     138:      srl	t#1, s2,	->t
+     13c:      setc.ltui	t#1, 7
+     140:      C.BSTART	COND, 0x1a0
+     142:      hl.lwu.pcr	[.rodata.cst4+0xc],	->a0
+     148:      c.sext.w	s3,	->t
+     14a:      c.setc.eq	t#1, s1
+     14c:      C.BSTART.STD
+     14e:      hl.lwu.pcr	[.rodata.cst4+0xc],	->a0
+     154:      c.movi	-1,	->s4
+
+0000000000000156 <.LBB3_12>:
+     156:      HL.BSTART.STD	CALL, __addsf3, ra=.LBB3_19
+     15e:      sll	a0, s2,	->a0
+     162:      srl	a0, s2,	->a0
+     166:      c.movr	a0,	->a1
+
+0000000000000168 <.LBB3_19>:
+     168:      C.BSTART	COND, 0x1a0
+     16a:      addw	s3, s4,	->s3
+     16e:      c.sext.w	s3,	->t
+     170:      c.setc.eq	t#1, s1
+     172:      C.BSTART	DIRECT, 0x156
+
+0000000000000174 <.LBB3_8>:
+     174:      C.BSTART.STD
+     176:      hl.lwu.pcr	[.rodata.cst4+0xc],	->a0
+     17c:      c.movi	1,	->s1
+     17e:      c.movi	1,	->s4
+
+0000000000000180 <.LBB3_9>:
+     180:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB3_18
+     188:      sll	a0, s2,	->a0
+     18c:      srl	a0, s2,	->a0
+     190:      lui	258048,	->a1
+
+0000000000000194 <.LBB3_18>:
+     194:      C.BSTART	COND, 0x180
+     196:      addw	s3, s1,	->s3
+     19a:      c.sext.w	s3,	->t
+     19c:      c.cmp.eqi	0,	->t
+     19e:      c.setc.ne	t#1, s4
+
+00000000000001a0 <.LBB3_13>:
+     1a0:      HL.BSTART.STD	CALL, __mulsf3, ra=.LBB3_17
+     1a8:      sll	s0, s2,	->a1
+     1ac:      srl	a1, s2,	->a2
+     1b0:      sll	a0, s2,	->a0
+     1b4:      srl	a0, s2,	->a1
+     1b8:      c.movr	a2,	->a0
+
+00000000000001ba <.LBB3_17>:
+     1ba:      FRET.STK	[ra ~ s5], sp!, 64
+
+00000000000001be <.LBB3_16>:
+     1be:      C.BSTART.STD
+     1c0:      lui	524288,	->t
+     1c4:      andw	s0, t#1,	->a0
+     1c8:      FRET.STK	[ra ~ s5], sp!, 64
