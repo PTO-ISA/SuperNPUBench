@@ -63,7 +63,7 @@ void test_RowMajor_CmpMode(int32_t *dst, T *src0, T *src1) {
   using gm_shape_out = global_tensor<int32_t, RowMajor<gm_row, gm_col>>;
   using tile_shape_in = Tile<Location::Vec, T, tile_row, tile_col, BLayout::RowMajor>;
   using tile_shape_out = Tile<Location::Vec, int32_t, tile_row, tile_col, BLayout::RowMajor>;
- 
+
   uint16_t block_row = gm_row / tile_row;
   uint16_t block_col = gm_col / tile_col;
   #pragma clang loop unroll(full)
@@ -74,13 +74,13 @@ void test_RowMajor_CmpMode(int32_t *dst, T *src0, T *src1) {
       gm_shape_in s0(src0 + offset);
       gm_shape_in s1(src1 + offset);
       gm_shape_out res(dst + offset);
-  
+
       tile_shape_in d0, d1;
       tile_shape_out d2;
-      TCOPYIN(d0, s0);
-      TCOPYIN(d1, s1);
+      TLOAD(d0, s0);
+      TLOAD(d1, s1);
       TCMP(d2, d1, d0, Mode);  // 使用模板参数Mode
-      TCOPYOUT(res, d2);
+      TSTORE(res, d2);
     }
   }
 }
@@ -92,7 +92,7 @@ void test_ColMajor_CmpMode(int32_t *dst, T *src0, T *src1) {
   using gm_shape_out = global_tensor<int32_t, ColMajor<gm_row, gm_col>>;
   using tile_shape_in = Tile<Location::Vec, T, tile_row, tile_col, BLayout::ColMajor>;
   using tile_shape_out = Tile<Location::Vec, int32_t, tile_row, tile_col, BLayout::ColMajor>;
- 
+
   uint16_t block_row = gm_row / tile_row;
   uint16_t block_col = gm_col / tile_col;
   #pragma clang loop unroll(full)
@@ -103,13 +103,13 @@ void test_ColMajor_CmpMode(int32_t *dst, T *src0, T *src1) {
       gm_shape_in s0(src0 + offset);
       gm_shape_in s1(src1 + offset);
       gm_shape_out res(dst + offset);
-  
+
       tile_shape_in d0, d1;
       tile_shape_out d2;
-      TCOPYIN(d0, s0);
-      TCOPYIN(d1, s1);
+      TLOAD(d0, s0);
+      TLOAD(d1, s1);
       TCMP(d2, d1, d0, Mode);  // 使用模板参数Mode
-      TCOPYOUT(res, d2);
+      TSTORE(res, d2);
     }
   }
 }
@@ -119,7 +119,7 @@ template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row,
           uint16_t tile_col, typename T, CmpMode Mode>
 void test_SingleCmpMode_RowMajor() {
   size_t gm_size = gm_row * gm_col;
-  
+
   int32_t *dst = (int32_t *)malloc(gm_size * sizeof(int32_t));
   check_mem_alloc(dst);
   init_dst(dst, gm_size);
@@ -140,7 +140,7 @@ void test_SingleCmpMode_RowMajor() {
 #endif
 
   OutArray(dst, gm_size);
-  
+
   free(dst);
   free(src0);
   free(src1);
@@ -150,7 +150,7 @@ template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row,
           uint16_t tile_col, typename T, CmpMode Mode>
 void test_SingleCmpMode_ColMajor() {
   size_t gm_size = gm_row * gm_col;
-  
+
   int32_t *dst = (int32_t *)malloc(gm_size * sizeof(int32_t));
   check_mem_alloc(dst);
   init_dst(dst, gm_size);
@@ -171,7 +171,7 @@ void test_SingleCmpMode_ColMajor() {
 #endif
 
   OutArray(dst, gm_size);
-  
+
   free(dst);
   free(src0);
   free(src1);

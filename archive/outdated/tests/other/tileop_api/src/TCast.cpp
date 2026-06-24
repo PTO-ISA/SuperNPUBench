@@ -18,9 +18,9 @@ void test(T2 *dst, T1 *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TCAST(d1, d0);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 int main() {

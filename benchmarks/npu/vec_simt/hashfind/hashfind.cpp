@@ -282,14 +282,14 @@ void loadKeys(typename HashFindTypes<kTileRows, kTileCols>::TileU32& lowTile,
     TileU16 offsetLowTile, offsetHighTile;
     OffsetGT offsetLowGlobal(g_offset_low);
     OffsetGT offsetHighGlobal(g_offset_high);
-    TCOPYIN(offsetLowTile,  offsetLowGlobal);
-    TCOPYIN(offsetHighTile, offsetHighGlobal);
+    TLOAD(offsetLowTile,  offsetLowGlobal);
+    TLOAD(offsetHighTile, offsetHighGlobal);
 
     KeyGT keysGlobal(queries);
     MGATHER(lowTile,  keysGlobal, offsetLowTile);
     MGATHER(highTile, keysGlobal, offsetHighTile);
 
-    TCOPYIN(queryKeyTile, keysGlobal);
+    TLOAD(queryKeyTile, keysGlobal);
 }
 
 // ============================================================================
@@ -487,12 +487,12 @@ void runHashFind(int32_t __out__ *out,
         // Load the 256 distinct update values, then MSCATTER to the table
         using UpdGT = GlobalTensor<int32_t, Shape<1,1,1,kTileRows,kTileCols>, Stride<1,1,1,kTileCols,1>>;
         UpdGT updGlobal(update_values);
-        TCOPYIN(updateTile, updGlobal);
+        TLOAD(updateTile, updGlobal);
         updateValues<kTileRows, kTileCols, kCap>(updateTile, foundIdxTile, table);
     }
 
     TileGT outGlobal(out);
-    TCOPYOUT(outGlobal, outTile);
+    TSTORE(outGlobal, outTile);
 }
 
 template <int kTileRows, int kTileCols, int kCap, int kMaxProbe>

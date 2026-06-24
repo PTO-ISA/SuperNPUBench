@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include <string> 
+#include <string>
 #include "jcore/TOr.hpp"
 
 #ifdef LINX_PMC
@@ -47,10 +47,10 @@ void tor_nd(T *dst, T *src0, T *src1) {
             auto g2 = gdst(i, j);
 
             tile_shape td0(i%2), td1(j%2), td2;
-            // TCOPYIN(td0, g0);
-            // TCOPYIN(td1, g1);
+            // TLOAD(td0, g0);
+            // TLOAD(td1, g1);
             TOR_Impl(td2, td1, td0);
-            // TCOPYOUT(g2, td2);
+            // TSTORE(g2, td2);
         }
     }
 }

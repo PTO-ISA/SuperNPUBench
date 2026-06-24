@@ -49,9 +49,9 @@ template <size_t row, size_t col, typename T> void test_rm(T *dst, T *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TTRANS(d1, d0);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 template <size_t row, size_t col, typename T> void test_cm(T *dst, T *src) {
@@ -66,9 +66,9 @@ template <size_t row, size_t col, typename T> void test_cm(T *dst, T *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TTRANS(d1, d0);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 int main() {

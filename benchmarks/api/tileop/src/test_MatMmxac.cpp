@@ -34,16 +34,16 @@ void test_mx(float *dst, float *src0, float *src0x, float *src1, float *src1x) {
   tile_shape_C  d2;
   tile_shape_O  d3;
 
-  TCOPYIN(d0,  s0);
-  TCOPYIN(d0x, s0x);
-  TCOPYIN(d1,  s1);
-  TCOPYIN(d1x, s1x);
+  TLOAD(d0,  s0);
+  TLOAD(d0x, s0x);
+  TLOAD(d1,  s1);
+  TLOAD(d1x, s1x);
 
   MATMULMX(d2, d0, d0x, d1, d1x);
   MATMACCMX(d2, d0, d0x, d1, d1x);
 
   TCVT(d3, d2);
-  TCOPYOUT(res, d3);
+  TSTORE(res, d3);
 }
 
 template <uint16_t M, uint16_t N, uint16_t K>
@@ -70,15 +70,15 @@ void test_mxb(float *dst, float *src0, float *src1, float *src1x) {
   tile_shape_C  d2;
   tile_shape_O  d3;
 
-  TCOPYIN(d0,  s0);
-  TCOPYIN(d1,  s1);
-  TCOPYIN(d1x, s1x);
+  TLOAD(d0,  s0);
+  TLOAD(d1,  s1);
+  TLOAD(d1x, s1x);
 
   MATMULMXB(d2, d0, d1, d1x);
   MATMACCMXB(d2, d0, d1, d1x);
 
   TCVT(d3, d2);
-  TCOPYOUT(res, d3);
+  TSTORE(res, d3);
 }
 
 int main() {

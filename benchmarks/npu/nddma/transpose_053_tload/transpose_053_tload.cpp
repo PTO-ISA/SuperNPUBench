@@ -54,8 +54,8 @@ int main()
                     gm_shape_out gDst(out + dst_slice_offset);
 
                     tile_shape tmp;
-                    TCOPYIN(tmp, gSrc);
-                    TCOPYOUT(gDst, tmp);
+                    TLOAD(tmp, gSrc);
+                    TSTORE(gDst, tmp);
                 }
             }
         }

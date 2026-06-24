@@ -20,9 +20,9 @@ void test(float *dst, float *src, uint16_t offest) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TEXTRACT(d1, d0, offest);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 int main() {

@@ -25,12 +25,12 @@ void test_ACC(float *dst, float *src0, float *src1) {
   tile_shape_C d2;
   tile_shape_O d3;
 
-  TCOPYIN(d0, s0);
-  TCOPYIN(d1, s1);
+  TLOAD(d0, s0);
+  TLOAD(d1, s1);
   MATMUL(d2, d0, d1);
   TCVT(d3, d2);
   print_tile(d3);
-  TCOPYOUT(res, d3);
+  TSTORE(res, d3);
 }
 
 template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row,
@@ -40,7 +40,7 @@ void test_Nz(T *dst) {
   using tile_shape = TileLeft<T, tile_row, tile_col, 16, 16>;
   gm_shape g(dst);
   tile_shape t;
-  TCOPYIN(t, g);
+  TLOAD(t, g);
   print_tile(t);
 }
 
@@ -51,7 +51,7 @@ void test_Zn(T *dst) {
   using tile_shape = TileRight<T, tile_row, tile_col, 16, 16>;
   gm_shape g(dst);
   tile_shape t;
-  TCOPYIN(t, g);
+  TLOAD(t, g);
   print_tile(t);
 }
 
@@ -62,10 +62,10 @@ void test_RowMajor(T *dst) {
   using tile_shape = Tile<Location::Vec, T, tile_row, tile_col, BLayout::RowMajor>;
   gm_shape g(dst);
   tile_shape t;
-  TCOPYIN(t, g);
+  TLOAD(t, g);
   print_tile(t);
 }
- 
+
 template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row,
           uint16_t tile_col, typename T>
 void test_ColMajor(T *dst) {
@@ -73,7 +73,7 @@ void test_ColMajor(T *dst) {
   using tile_shape = Tile<Location::Vec, T, tile_row, tile_col, BLayout::ColMajor>;
   gm_shape g(dst);
   tile_shape t;
-  TCOPYIN(t, g);
+  TLOAD(t, g);
   print_tile(t);
 }
 

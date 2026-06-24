@@ -23,9 +23,9 @@ void texp_py(float* dst, float* src) {
 
             tile_shape d0, d1;
 
-            TCOPYIN(d0, s0);
+            TLOAD(d0, s0);
             TEXP(d1, d0);
-            TCOPYOUT(res, d1);
+            TSTORE(res, d1);
         }
     }
 }

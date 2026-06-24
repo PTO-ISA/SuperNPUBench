@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "memory/broadcast_nocopyout.hpp"
+#include "memory/broadcast_nostore.hpp"
 
 
 #ifndef DType
@@ -92,8 +92,8 @@ int main() {
     printf("input[2]=%d\n",input[2]);
     printf("input[3]=%d\n",input[3]);
     #endif
-    
-    broadcast_nocopyout<dtype, MAX_DIMs, IN_DIMs, OUT_DIMs, gIMs, gOMs, tMs>(input, output, in_shape, out_shape);
+
+    broadcast_nostore<dtype, MAX_DIMs, IN_DIMs, OUT_DIMs, gIMs, gOMs, tMs>(input, output, in_shape, out_shape);
 
     #ifdef RES_CHECK
     writeBinaryFile(OUTPUT_PATH, (uint8_t*)output, gOMs * sizeof(dtype));

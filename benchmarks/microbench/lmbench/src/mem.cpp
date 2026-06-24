@@ -192,8 +192,8 @@ void tload_nd(dtype *src) {
     for (int j = 0; j < bcol; ++j) {
       uint16_t offset = i * (tile_shape::Rows * gm_shape::Cols) + j * tile_shape::Cols;
       gm_shape gsrc(src + offset);
-      tile_shape tsrc; 
-      TCOPYIN(tsrc, gsrc);
+      tile_shape tsrc;
+      TLOAD(tsrc, gsrc);
     }
   }
 }
@@ -210,8 +210,8 @@ void tload_dn(dtype *src) {
     for (int j = 0; j < bcol; ++j) {
       uint16_t offset = i * (tile_shape::Rows * gm_shape::Cols) + j * tile_shape::Cols;
       gm_shape gsrc(src + offset);
-      tile_shape tsrc; 
-      TCOPYIN(tsrc, gsrc);
+      tile_shape tsrc;
+      TLOAD(tsrc, gsrc);
     }
   }
 }
@@ -228,8 +228,8 @@ void tload_nd2nz(dtype *src) {
     for (int j = 0; j < bcol; ++j) {
       uint16_t offset = i * (tile_shape::Rows * gm_shape::Cols) + j * tile_shape::Cols;
       gm_shape gsrc(src + offset);
-      tile_shape tsrc; 
-      TCOPYIN(tsrc, gsrc);
+      tile_shape tsrc;
+      TLOAD(tsrc, gsrc);
     }
   }
 }
@@ -246,8 +246,8 @@ void tload_nd2zn(dtype *src) {
     for (int j = 0; j < bcol; ++j) {
       uint16_t offset = i * (tile_shape::Rows * gm_shape::Cols) + j * tile_shape::Cols;
       gm_shape gsrc(src + offset);
-      tile_shape tsrc; 
-      TCOPYIN(tsrc, gsrc);
+      tile_shape tsrc;
+      TLOAD(tsrc, gsrc);
     }
   }
 }
@@ -269,8 +269,8 @@ void tload_dn2zn(dtype *src) {
     for (int j = 0; j < bcol; ++j) {
       uint16_t offset = i * (tile_shape::Rows * gm_shape::Cols) + j * tile_shape::Cols;
       gm_shape gsrc(src + offset);
-      tile_shape tsrc; 
-      TCOPYIN(tsrc, gsrc);
+      tile_shape tsrc;
+      TLOAD(tsrc, gsrc);
     }
   }
 }
@@ -289,7 +289,7 @@ void tstore_nd(dtype *dst) {
       uint16_t offset = i * (tile_shape::Rows * gm_shape::Cols) + j * tile_shape::Cols;
       gm_shape gdst(dst + offset);
       tile_shape tdst(0);
-      TCOPYOUT(gdst, tdst);
+      TSTORE(gdst, tdst);
     }
   }
 }
@@ -308,7 +308,7 @@ void tstore_dn(dtype *dst) {
       uint16_t offset = i * (tile_shape::Rows * gm_shape::Cols) + j * tile_shape::Cols;
       gm_shape gdst(dst + offset);
       tile_shape tdst(0);
-      TCOPYOUT(gdst, tdst);
+      TSTORE(gdst, tdst);
     }
   }
 }
@@ -327,7 +327,7 @@ void tstore_nz2nd(dtype *dst) {
       uint16_t offset = i * (tile_shape::Rows * gm_shape::Cols) + j * tile_shape::Cols;
       gm_shape gdst(dst + offset);
       tile_shape tdst(0);
-      TCOPYOUT(gdst, tdst);
+      TSTORE(gdst, tdst);
     }
   }
 }
@@ -353,7 +353,7 @@ int main() {
   using gm_shape = global_tensor<dtype, RowMajor<GROW, GCOL>>;
   using tile_shape = Tile<Location::Vec, dtype, TROW, TCOL, BLayout::RowMajor>;
   Tile<Location::Vec, dtype, TROW, TCOL, BLayout::RowMajor> tsrc(0);
-  
+
   BENCHSTART;
   #pragma clang loop unroll(full)
   for(int i=0;i<LOOP;i++){
@@ -361,7 +361,7 @@ int main() {
       dtype src[gm_size];
       gm_shape gsrc(src);
       Tile<Location::Vec, dtype, TROW, TCOL, BLayout::RowMajor> tmp;
-      uint16_t real_col = gm_shape::Cols / (STRD/sizeof(dtype)); 
+      uint16_t real_col = gm_shape::Cols / (STRD/sizeof(dtype));
       gm_rd<gm_shape><<<real_col, gm_shape::Rows, 1>>>(gsrc.data(), static_cast<uint16_t>(STRD/sizeof(dtype)), tmp.data());
     }
     else if(!strcmp(MODE, "gm_frd")){
@@ -374,7 +374,7 @@ int main() {
       dtype dst[gm_size];
       gm_shape gdst(dst);
       Tile<Location::Vec, dtype, TROW, TCOL, BLayout::RowMajor> tmp;
-      uint16_t real_col = gm_shape::Cols / (STRD/sizeof(dtype));  
+      uint16_t real_col = gm_shape::Cols / (STRD/sizeof(dtype));
       gm_wr<gm_shape><<<real_col, gm_shape::Rows, 1>>>(gdst.data(), static_cast<uint16_t>(STRD/sizeof(dtype)), tmp.data());
     }
     else if(!strcmp(MODE, "gm_fwr")){
@@ -389,7 +389,7 @@ int main() {
       gm_shape gsrc(src);
       gm_shape gdst(dst);
       Tile<Location::Vec, dtype, TROW, TCOL, BLayout::RowMajor> tmp;
-      uint16_t real_col = gm_shape::Cols / (STRD/sizeof(dtype));  
+      uint16_t real_col = gm_shape::Cols / (STRD/sizeof(dtype));
       gm_copy<gm_shape><<<real_col, gm_shape::Rows, 1>>>(gdst.data(), gsrc.data(), static_cast<uint16_t>(STRD/sizeof(dtype)), tmp.data());
     }
     else if(!strcmp(MODE, "gm_fcopy")){
@@ -402,7 +402,7 @@ int main() {
     }
     else if(!strcmp(MODE, "tile_rd")){
       //Tile<Location::Vec, dtype, TROW, TCOL, BLayout::RowMajor> tsrc(0);
-      uint16_t real_col = tile_shape::Cols / (STRD/sizeof(dtype)); 
+      uint16_t real_col = tile_shape::Cols / (STRD/sizeof(dtype));
       tile_rd<tile_shape><<<real_col, tile_shape::Rows, 1>>>(tsrc.data(), static_cast<uint16_t>(STRD/sizeof(dtype)));
     }
     else if(!strcmp(MODE, "tile_frd")){
@@ -411,7 +411,7 @@ int main() {
     }
     else if(!strcmp(MODE, "tile_wr")){
       Tile<Location::Vec, dtype, TROW, TCOL, BLayout::RowMajor> tdst;
-      uint16_t real_col = tile_shape::Cols / (STRD/sizeof(dtype)); 
+      uint16_t real_col = tile_shape::Cols / (STRD/sizeof(dtype));
       tile_wr<tile_shape><<<real_col, tile_shape::Rows, 1>>>(tdst.data(), static_cast<uint16_t>(STRD/sizeof(dtype)));
     }
     else if(!strcmp(MODE, "tile_fwr")){
@@ -421,7 +421,7 @@ int main() {
     else if(!strcmp(MODE, "tile_copy")){
       //Tile<Location::Vec, dtype, TROW, TCOL, BLayout::RowMajor> tsrc(0);
       Tile<Location::Vec, dtype, TROW, TCOL, BLayout::RowMajor> tdst;
-      uint16_t real_col =tile_shape::Cols / (STRD/sizeof(dtype)); 
+      uint16_t real_col =tile_shape::Cols / (STRD/sizeof(dtype));
       tile_copy<tile_shape><<<real_col, tile_shape::Rows, 1>>>(tdst.data(), tsrc.data(), static_cast<uint16_t>(STRD/sizeof(dtype)));
     }
     else if(!strcmp(MODE, "tile_fcopy")){

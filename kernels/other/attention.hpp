@@ -54,8 +54,8 @@ void flash_attention1(float *out_ptr,
 
     for (int j = 0; j < Kb; ++j) {
       // load Q_i, K_j
-      tileQ tQ; TCOPYIN(tQ, gQ(i, 0));
-      tileK tK; TCOPYIN(tK, gK(0, j));
+      tileQ tQ; TLOAD(tQ, gQ(i, 0));
+      tileK tK; TLOAD(tK, gK(0, j));
       // 计算分数块
       tileW tW;
       MATMUL(tW, tQ, tK);
@@ -72,8 +72,8 @@ void flash_attention1(float *out_ptr,
     // 2. 扫描所有 K‑blocks，计算行 exp 和的累加
     tileSum tSum(0);
     for (int j = 0; j < Kb; ++j) {
-      tileQ tQ; TCOPYIN(tQ, gQ(i, 0));
-      tileK tK; TCOPYIN(tK, gK(0, j));
+      tileQ tQ; TLOAD(tQ, gQ(i, 0));
+      tileK tK; TLOAD(tK, gK(0, j));
       tileW tW;
       MATMUL(tW, tQ, tK);
       TMULS(tW, tW, scale);
@@ -95,9 +95,9 @@ void flash_attention1(float *out_ptr,
     // 3. 重算加权，乘 V 并累加到输出
     tO = tileO(0);
     for (int j = 0; j < Kb; ++j) {
-      tileQ tQ; TCOPYIN(tQ, gQ(i, 0));
-      tileK tK; TCOPYIN(tK, gK(0, j));
-      tileV tV; TCOPYIN(tV, gV(j, 0));
+      tileQ tQ; TLOAD(tQ, gQ(i, 0));
+      tileK tK; TLOAD(tK, gK(0, j));
+      tileV tV; TLOAD(tV, gV(j, 0));
 
       tileW tW;
       MATMUL(tW, tQ, tK);
@@ -115,6 +115,6 @@ void flash_attention1(float *out_ptr,
     }
 
     // 写回 global
-    TCOPYOUT(dstO, tO);
+    TSTORE(dstO, tO);
   }
 }

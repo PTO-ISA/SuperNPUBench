@@ -18,7 +18,7 @@ void softmax_local(__half* dst, __half* src){
 
     gm_shape gsrc(src);
     tile_shape tsrc;
-    TCOPYIN(tsrc, gsrc);
+    TLOAD(tsrc, gsrc);
 
     tMax tLocalMax;
     TROWMAX(tLocalMax, tsrc);
@@ -42,7 +42,7 @@ void softmax_local(__half* dst, __half* src){
     TDIV(tres, tExp, tSumExpand);
 
     gm_shape gdst(dst);
-    TCOPYOUT(gdst, tres);
+    TSTORE(gdst, tres);
 }
 
 int main(){

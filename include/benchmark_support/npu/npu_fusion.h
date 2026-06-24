@@ -70,9 +70,9 @@ void __vec__ flashsoftmax_new_max(
     #ifndef RES_CHECK
     upd_max = upd_max * src_scale;
     #endif
-    new_max_ptr[max_idx] = upd_max; 
+    new_max_ptr[max_idx] = upd_max;
 
-    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max); 
+    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max);
 }
 
 template<typename tileMax, typename tileScale>
@@ -147,7 +147,7 @@ void __vec__ flashsoftmax_new_sum(
         typename tileSrc::DType exp_src_3 = src_ptr[src_idx_3];
         typename tileSrc::DType exp_src_01 = exp_src_0 + exp_src_1;
         typename tileSrc::DType exp_src_23 = exp_src_2 + exp_src_3;
-        typename tileSrc::DType exp_src_0123 = exp_src_01 + exp_src_23;        
+        typename tileSrc::DType exp_src_0123 = exp_src_01 + exp_src_23;
         upd_sum += exp_src_0123;
     }
     blkv_get_tile_ptr(new_sum)[sum_idx] = upd_sum;
@@ -467,11 +467,11 @@ void flashsoftmax(float *input, float *max, float *sum, float *input_scale, uint
     using tileMax = Tile<Location::Vec, float, tM, 16, BLayout::RowMajor, tM, 1>;
     using tileSum = Tile<Location::Vec, float, tM, 16, BLayout::RowMajor, tM, 1>;
     using tileScale = Tile<Location::Vec, float, tM, 16, BLayout::RowMajor, tM, 1>;
-    
+
     using tileO = Tile<Location::Vec, float, tM, D, BLayout::RowMajor>;
     using tileO_cast = Tile<Location::Vec, __half, tM, D, BLayout::RowMajor>;
 
-    const int Bm = S/tM; 
+    const int Bm = S/tM;
     const int Bk = S/tK;
 
     for(int i=0;i<Bm;i++){
@@ -481,10 +481,10 @@ void flashsoftmax(float *input, float *max, float *sum, float *input_scale, uint
 
         #pragma clang loop unroll(full)
         for(int j=0;j<Bk;j++){
-            uint32_t offset = i * tM * S + j * tK;  
+            uint32_t offset = i * tM * S + j * tK;
             gmIn gIn(input+offset);
             tileIn tIn;
-            TCOPYIN(tIn, gIn);
+            TLOAD(tIn, gIn);
 
             tileMax tNewMax;
             tileSum tNewSum;
@@ -501,15 +501,15 @@ void flashsoftmax(float *input, float *max, float *sum, float *input_scale, uint
 
         uint32_t offset = i * tM;
         gmMax gMax(max+offset);
-        TCOPYOUT(gMax, tMax);
+        TSTORE(gMax, tMax);
 
         gmSum gSum(sum+offset);
-        TCOPYOUT(gSum, tSum);
+        TSTORE(gSum, tSum);
 
         offset = i * tM * D;
         gmOut gOut(output + offset);
         tileO_cast tO_cast;
         TCAST(tO_cast, tO);
-        TCOPYOUT(gOut, tO_cast);
+        TSTORE(gOut, tO_cast);
     }
 }

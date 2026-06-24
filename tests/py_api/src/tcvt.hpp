@@ -22,13 +22,13 @@ void tcvtnz2zn(float* dst, float* src) {
     tile_shape_nz d1;
     tile_shape_zn d2;
     tile_shape_out d3;
-    
 
-    TCOPYIN(d0, s);
+
+    TLOAD(d0, s);
     TRESHAPE(d1, d0);
     TCVT(d2, d1);
     TRESHAPE(d3, d2);
-    TCOPYOUT(res, d3);
+    TSTORE(res, d3);
 }
 
 
@@ -48,14 +48,14 @@ void tcvtzn2nz(float* dst, float* src) {
     tile_shape_zn d1;
     tile_shape_nz d2;
     tile_shape_out d3;
-    
 
-    TCOPYIN(d0, s);
+
+    TLOAD(d0, s);
     TRESHAPE(d1, d0);
     TCVT(d2, d1);
     TRESHAPE(d3, d2);
-    TCOPYOUT(res, d3);
-    
+    TSTORE(res, d3);
+
 }
 template <uint16_t K>
 void tcvtnz2rowmajor(float* dst, float* src) {
@@ -73,13 +73,13 @@ void tcvtnz2rowmajor(float* dst, float* src) {
     tile_shape_nz d1;
     tile_shape_rowmajor d2;
     tile_shape_out d3;
-    
 
-    TCOPYIN(d0, s);
+
+    TLOAD(d0, s);
     TRESHAPE(d1, d0);
     TCVT(d2, d1);
     TRESHAPE(d3, d2);
-    TCOPYOUT(res, d3);    
+    TSTORE(res, d3);
 }
 
 
@@ -100,13 +100,13 @@ void tcvtrowmajor2nz(float* dst, float* src) {
     tile_shape_rowmajor d1;
     tile_shape_nz d2;
     tile_shape_out d3;
-    
 
-    TCOPYIN(d0, s);
+
+    TLOAD(d0, s);
     TRESHAPE(d1, d0);
     TCVT(d2, d1);
     TRESHAPE(d3, d2);
-    TCOPYOUT(res, d3);      
+    TSTORE(res, d3);
 }
 
 // Python 接口绑定

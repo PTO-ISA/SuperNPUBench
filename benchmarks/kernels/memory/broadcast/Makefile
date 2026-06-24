@@ -3,7 +3,7 @@ DEFINES += -DDType=$(DType) -DtMs=$(tMs) -DMAX_DIMs=$(MAX_DIMs) -DIN_SHAPEs=$(IN
 TARGET = $(ELF_HEAD)_$(TESTCASE)_$(MODE)_DType$(DType)_tM$(tMs)_IN_SHAPE$(IN_SHAPE_NAME)_OUT_SHAPE$(OUT_SHAPE_NAME).elf
 endif
 
-ifeq ($(TESTCASE), broadcast_nocopyout)
+ifeq ($(TESTCASE), broadcast_nostore)
 DEFINES += -DDType=$(DType) -DtMs=$(tMs) -DMAX_DIMs=$(MAX_DIMs) -DIN_SHAPEs=$(IN_SHAPEs) -DOUT_SHAPEs=$(OUT_SHAPEs) -DIN_DIMs=$(IN_DIMs) -DOUT_DIMs=$(OUT_DIMs) -DgIMs=$(gIMs) -DgOMs=$(gOMs)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_$(MODE)_DType$(DType)_tM$(tMs)_IN_SHAPE$(IN_SHAPE_NAME)_OUT_SHAPE$(OUT_SHAPE_NAME).elf
 endif

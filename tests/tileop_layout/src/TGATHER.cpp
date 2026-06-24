@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include <string> 
+#include <string>
 
 #ifdef LINX_PMC
 #include <linxStartEnd.hpp>
@@ -55,10 +55,10 @@ void tgather_nd(float *dst, float *src, uint16_t *indices) {
             tile_shape_src td0(2*i+j);
             tile_shape_indices td1(1);
             tile_shape_dst td2;
-            // TCOPYIN(td0, g0);
-            // TCOPYIN(td1, g1);
+            // TLOAD(td0, g0);
+            // TLOAD(td1, g1);
             TGATHER(td2, td0, td1);
-            // TCOPYOUT(g2, td2);
+            // TSTORE(g2, td2);
         }
     }
 }
@@ -93,10 +93,10 @@ void tgather_dn(float *dst, float *src, uint16_t *indices) {
             tile_shape_src td0(2*i+j);
             tile_shape_indices td1(1);
             tile_shape_dst td2;
-            // TCOPYIN(td0, g0);
-            // TCOPYIN(td1, g1);
+            // TLOAD(td0, g0);
+            // TLOAD(td1, g1);
             TGATHER(td2, td0, td1);
-            // TCOPYOUT(g2, td2);
+            // TSTORE(g2, td2);
         }
     }
 }

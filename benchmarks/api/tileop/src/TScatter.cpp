@@ -23,11 +23,11 @@ void test_RowMajor(float *dst, float *src, uint16_t *indices) {
   tile_shape_indices d1;
   tile_shape_dst d2;
 
-  TCOPYIN(d0, s0);
-  TCOPYIN(d1, s1);
-  TCOPYIN(d2, res);
+  TLOAD(d0, s0);
+  TLOAD(d1, s1);
+  TLOAD(d2, res);
   TSCATTER(d2, d0, d1);
-  TCOPYOUT(res, d2);
+  TSTORE(res, d2);
 }
 
 template <uint16_t dst_row, uint16_t dst_col, uint16_t row, uint16_t col>
@@ -48,11 +48,11 @@ void test_ColMajor(float *dst, float *src, uint16_t *indices) {
   tile_shape_indices d1;
   tile_shape_dst d2;
 
-  TCOPYIN(d0, s0);
-  TCOPYIN(d1, s1);
-  TCOPYIN(d2, res);
+  TLOAD(d0, s0);
+  TLOAD(d1, s1);
+  TLOAD(d2, res);
   TSCATTER(d2, d0, d1);
-  TCOPYOUT(res, d2);
+  TSTORE(res, d2);
 }
 
 int main() {

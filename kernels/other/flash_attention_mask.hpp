@@ -89,7 +89,7 @@ void flash_attention_frac(float *out_ptr, float *q_ptr, float *k_ptr,
   for (int i = 0; i < Qb; ++i) {
     // 加载当前Q块 (仅一次)
     tileQ tQ;
-    TCOPYIN(tQ, gQ(i, 0));
+    TLOAD(tQ, gQ(i, 0));
 
     // 初始化状态: 最大值/指数和/输出累加
     tileMax tMax;
@@ -103,9 +103,9 @@ void flash_attention_frac(float *out_ptr, float *q_ptr, float *k_ptr,
     for (int j = 0; j < Kb; ++j) {
       // 加载K_j和V_j
       tileK tK;
-      TCOPYIN(tK, gK(0, j));
+      TLOAD(tK, gK(0, j));
       tileV tV;
-      TCOPYIN(tV, gV(j, 0));
+      TLOAD(tV, gV(j, 0));
 
       // 计算注意力分数块
       tileW_out tW_out;
@@ -169,9 +169,9 @@ void flash_attention_frac(float *out_ptr, float *q_ptr, float *k_ptr,
     if constexpr (rK) {
       // 加载K_Kb 和V_Kb
       tileK_tcols tK_tcols;
-      TCOPYIN(tK_tcols, gK(0, Kb));
+      TLOAD(tK_tcols, gK(0, Kb));
       tileV_trows tV_trows;
-      TCOPYIN(tV_trows, gV(Kb, 0));
+      TLOAD(tV_trows, gV(Kb, 0));
 
       // 计算注意力分数块
       tileW_out_tcols tW_out_tcols;
@@ -237,10 +237,10 @@ void flash_attention_frac(float *out_ptr, float *q_ptr, float *k_ptr,
     TEXPANDCOL(tInvSumExpanded, tInvSum);
     TMUL(tO, tO, tInvSumExpanded);
 
-    // 写回全局内存-------将第一步和第二部合并，即完成输出tile块的计算，并copyout到
+    // 写回全局内存-------将第一步和第二部合并，即完成输出tile块的计算，并store到
     // gO(i,0)
     auto dstO = gO(i, 0);
-    TCOPYOUT(dstO, tO);
+    TSTORE(dstO, tO);
   }
 
   // 最后的Q-block块(Qb)
@@ -248,7 +248,7 @@ void flash_attention_frac(float *out_ptr, float *q_ptr, float *k_ptr,
 
     // 加载当前Q块 (仅一次)
     tileQ_trows tQ_trows;
-    TCOPYIN(tQ_trows, gQ(Qb, 0));
+    TLOAD(tQ_trows, gQ(Qb, 0));
 
     // 初始化状态: 最大值/指数和/输出累加
     tileMax_trows tMax_trows;
@@ -263,9 +263,9 @@ void flash_attention_frac(float *out_ptr, float *q_ptr, float *k_ptr,
     for (int j = 0; j < Kb; ++j) {
       // 加载K_j和V_j
       tileK tK;
-      TCOPYIN(tK, gK(0, j));
+      TLOAD(tK, gK(0, j));
       tileV tV;
-      TCOPYIN(tV, gV(j, 0));
+      TLOAD(tV, gV(j, 0));
 
       // 计算注意力分数块
       tileW_out_trows tW_out_trows;
@@ -329,9 +329,9 @@ void flash_attention_frac(float *out_ptr, float *q_ptr, float *k_ptr,
     if constexpr (rK) {
       // 加载K_Kb 和V_Kb
       tileK_tcols tK_tcols;
-      TCOPYIN(tK_tcols, gK(0, Kb));
+      TLOAD(tK_tcols, gK(0, Kb));
       tileV_trows tV_trows;
-      TCOPYIN(tV_trows, gV(Kb, 0));
+      TLOAD(tV_trows, gV(Kb, 0));
 
       // 计算注意力分数块
       tileW_out_tcorner tW_out_tcorner;
@@ -397,10 +397,10 @@ void flash_attention_frac(float *out_ptr, float *q_ptr, float *k_ptr,
     TEXPANDCOL(tInvSumExpanded_trows, tInvSum_trows);
     TMUL(tO_trows, tO_trows, tInvSumExpanded_trows);
 
-    // 写回全局内存-----将第三步和第四步合并，即完成输出tile块的计算，并copyout到
+    // 写回全局内存-----将第三步和第四步合并，即完成输出tile块的计算，并store到
     // gO(Qb,0)
     auto dstO = gO(Qb, 0);
-    TCOPYOUT(dstO, tO_trows);
+    TSTORE(dstO, tO_trows);
   }
 }
 

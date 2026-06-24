@@ -7,12 +7,12 @@
  · 文件路径：PTOTileLib/include/cpu_sim/
 
  · 操作说明：
-   
+
    1. 如果是添加一个新的运算方式（如 texp），则需要新建一个 HPP 文件。
    2. 如果是同一运算方式的不同属性（如不同的矩阵尺寸或 tile 大小），则直接在对应的 HPP 文件中添加。
 
  · 标准函数格式：
-   
+
    · 文件头需要包含必要的头文件。
    · 声明变量和函数名称时，需注意命名规范。
    · 如果有一个综合函数记得写清条件
@@ -62,11 +62,11 @@ void TADD(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
 步骤说明：
 
  1. 新建文件：
-    
+
     · 添加固定文件头。
     . 声明要传入的参数
     . 声明矩阵的形状与layout
-    . 进行矩阵操作，并且使用TCOPYIN,TCOPYOUT函数以及上一个步骤声明的函数来进行操作。注意满足TCOPYIN,TCOPYOUT对于矩阵layout的要求。
+    . 进行矩阵操作，并且使用TLOAD,TSTORE函数以及上一个步骤声明的函数来进行操作。注意满足TLOAD,TSTORE对于矩阵layout的要求。
     . 对函数进行绑定，注意在绑定时需要进行接口的转换以及参数的传入。
     . 之后在tileop_py.cpp中加入要编译的文件名
     ```
@@ -90,18 +90,18 @@ void tadd_py(float* dst, float* src0, float* src1){
             int offset = i * (tile_row * gm_col) + j * tile_col;
             gm_shape s0(src0 + offset);
             gm_shape s1(src1 + offset);
-            gm_shape res(dst + offset);  
+            gm_shape res(dst + offset);
 
             tile_shape d0, d1, d2;
-            TCOPYIN(d0, s0);
-            TCOPYIN(d1, s1);
+            TLOAD(d0, s0);
+            TLOAD(d1, s1);
             TADD(d2, d0, d1);
-            TCOPYOUT(res, d2);
+            TSTORE(res, d2);
         }
     }
 }
 
-#ifdef __cpu_sim__ 
+#ifdef __cpu_sim__
     void bind_tadd(py::module_& m) {
         m.def("tadd", [](py::array_t<float> dst_py, py::array_t<float> src0_py, py::array_t<float> src1_py){
             float* dst = static_cast<float*>(dst_py.request().ptr);
@@ -124,7 +124,7 @@ void tadd_py(float* dst, float* src0, float* src1){
 步骤说明：
 
  1. 在config.json文件中的 cases 中添加新测试用例：
-    
+
     · 按照以下格式添加新函数的属性。
         ```
         {
@@ -132,7 +132,7 @@ void tadd_py(float* dst, float* src0, float* src1){
             "group": "tadd",
             "input_shapes": [[16, 16], [16, 16]],
             "output_shape": [16, 16],
-            "ref_func":"lambda input: tadd(input[0], input[1])", 
+            "ref_func":"lambda input: tadd(input[0], input[1])",
             "test_func":"lambda res, input: tileop_py.tadd_api.tadd(res, input[0], input[1])"
         }
         ```
@@ -144,7 +144,7 @@ void tadd_py(float* dst, float* src0, float* src1){
     . **test_func**: 该函数调用的是绑定的函数。
 
  2. 在 ref_func_lib.py 中添加需要进行的python操作：
-    
+
     · 按照以下格式添加python操作。
     ```
     def tadd(a, b):
@@ -160,10 +160,10 @@ void tadd_py(float* dst, float* src0, float* src1){
 
 在 /PTOTileLib/tests/py_api/ 路径下，执行以下命令：
 ```
-make clean  
-make TESTCASE=tileop_py  
-python3 golden_cmp/golden_cmp.py -i tadd  
+make clean
+make TESTCASE=tileop_py
+python3 golden_cmp/golden_cmp.py -i tadd
 ```
-其中 -i 后面跟着的是函数的名称，具体的函数名可以参考 config.json 文件中的内容。  
+其中 -i 后面跟着的是函数的名称，具体的函数名可以参考 config.json 文件中的内容。
 之后print出的对比结果中，在最后两行会显示loss（误差）以及是否pass or fail
 

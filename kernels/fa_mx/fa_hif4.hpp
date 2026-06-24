@@ -272,7 +272,7 @@ void __vec__ pkg_rowmax(
     __bf16x2 upd_max;
     __bf16 old_max_bf160, old_max_bf161;
     linx_cvt(old_max_bf160, old_max_ptr[i*2*tileMax::RowStride]); //float->bf16
-    linx_cvt(old_max_bf161, old_max_ptr[(i*2+1)*tileMax::RowStride]); 
+    linx_cvt(old_max_bf161, old_max_ptr[(i*2+1)*tileMax::RowStride]);
     linx_cvt_package(upd_max, old_max_bf160, old_max_bf161);
 
     // calc tile rowmax
@@ -323,7 +323,7 @@ void __vec__ pkg_rowmax(
     // recalculate scale of softmax
     __bf16x2 scale, old_max_bf16x2;
     linx_cvt_package(old_max_bf16x2, old_max_bf160, old_max_bf161);
-    blkv_bf16x2_fsub(old_max_bf16x2, old_max_bf16x2, upd_max); 
+    blkv_bf16x2_fsub(old_max_bf16x2, old_max_bf16x2, upd_max);
     blkv_bf16x2_fexp(scale, old_max_bf16x2);
     // opt1
     union { __bf16x2 vec; uint32_t u32; } scale_u;
@@ -365,7 +365,7 @@ void __vec__ pkg_rowmax_4src(
     __bf16x2 upd_max;
     __bf16 old_max_bf160, old_max_bf161;
     linx_cvt(old_max_bf160, old_max_ptr[i*2*tileMax::RowStride]); //float->bf16
-    linx_cvt(old_max_bf161, old_max_ptr[(i*2+1)*tileMax::RowStride]); 
+    linx_cvt(old_max_bf161, old_max_ptr[(i*2+1)*tileMax::RowStride]);
     linx_cvt_package(upd_max, old_max_bf160, old_max_bf161);
 
     // calc tile rowmax
@@ -379,7 +379,7 @@ void __vec__ pkg_rowmax_4src(
         uint32_t src_idx_21 =  (2*i + 1) * tileSrc::RowStride + (j + 2) * tileSrc::ColStride;
         uint32_t src_idx_30 =  (2*i) * tileSrc::RowStride + (j + 3) * tileSrc::ColStride;
         uint32_t src_idx_31 =  (2*i + 1) * tileSrc::RowStride + (j + 3) * tileSrc::ColStride;
-        
+
         __bf16x2 s0_0, s0_1, s0_2, s0_3;
         linx_cvt_package(s0_0, src0_ptr[src_idx_00], src0_ptr[src_idx_01]);
         linx_cvt_package(s0_1, src0_ptr[src_idx_10], src0_ptr[src_idx_11]);
@@ -435,7 +435,7 @@ void __vec__ pkg_rowmax_4src(
     // recalculate scale of softmax
     __bf16x2 scale, old_max_bf16x2;
     linx_cvt_package(old_max_bf16x2, old_max_bf160, old_max_bf161);
-    blkv_bf16x2_fsub(old_max_bf16x2, old_max_bf16x2, upd_max); 
+    blkv_bf16x2_fsub(old_max_bf16x2, old_max_bf16x2, upd_max);
     blkv_bf16x2_fexp(scale, old_max_bf16x2);
 
     union { __bf16x2 vec; uint32_t u32; } scale_u;
@@ -480,7 +480,7 @@ void __vec__ pkg_rowmax_4srcx2(
     __bf16x2 upd_max;
     __bf16 old_max_bf160, old_max_bf161;
     linx_cvt(old_max_bf160, old_max_ptr[i*2*tileMax::RowStride]); //float->bf16
-    linx_cvt(old_max_bf161, old_max_ptr[(i*2+1)*tileMax::RowStride]); 
+    linx_cvt(old_max_bf161, old_max_ptr[(i*2+1)*tileMax::RowStride]);
     linx_cvt_package(upd_max, old_max_bf160, old_max_bf161);
 
     // calc tile rowmax
@@ -491,7 +491,7 @@ void __vec__ pkg_rowmax_4srcx2(
         uint32_t src_idx_10 =  (2*i) * tileSrc::RowStride + (j + 1) * tileSrc::ColStride;
         uint32_t src_idx_20 =  (2*i) * tileSrc::RowStride + (j + 2) * tileSrc::ColStride;
         uint32_t src_idx_30 =  (2*i) * tileSrc::RowStride + (j + 3) * tileSrc::ColStride;
-        
+
         __bf16x2 s0_0, s0_1;
         blkv_bf16x2_fmax(s0_0, src0_x2_ptr[src_idx_00], src0_x2_ptr[src_idx_10]);
         blkv_bf16x2_fmax(s0_1, src0_x2_ptr[src_idx_20], src0_x2_ptr[src_idx_30]);
@@ -531,7 +531,7 @@ void __vec__ pkg_rowmax_4srcx2(
     // recalculate scale of softmax
     __bf16x2 scale, old_max_bf16x2;
     linx_cvt_package(old_max_bf16x2, old_max_bf160, old_max_bf161);
-    blkv_bf16x2_fsub(old_max_bf16x2, old_max_bf16x2, upd_max); 
+    blkv_bf16x2_fsub(old_max_bf16x2, old_max_bf16x2, upd_max);
     blkv_bf16x2_fexp(scale, old_max_bf16x2);
 
     union { __bf16x2 vec; uint32_t u32; } scale_u;
@@ -564,12 +564,12 @@ void __vec__ rowsum_2src_with_local_sum(
     linx_cvt_package(src_scale, 1.0f / sqrt((float)qD), 1.0f / sqrt((float)qD));
     __bf16x2 upd_sum, new_max_val;
     __bf16 new_max_bf16_0, new_max_bf16_1;
-    
+
     // Initialize local sum to 0
     linx_cvt_package(upd_sum, 0.0f, 0.0f);
 
     linx_cvt(new_max_bf16_0, blkv_get_tile_ptr(new_max)[i*2*tileMax::RowStride]); //float->bf16
-    linx_cvt(new_max_bf16_1, blkv_get_tile_ptr(new_max)[(i*2+1)*tileMax::RowStride]); 
+    linx_cvt(new_max_bf16_1, blkv_get_tile_ptr(new_max)[(i*2+1)*tileMax::RowStride]);
     linx_cvt_package(new_max_val, new_max_bf16_0, new_max_bf16_1);
 
     #pragma clang loop unroll(full)
@@ -582,7 +582,7 @@ void __vec__ rowsum_2src_with_local_sum(
         uint32_t src_idx_21 =  (2*i + 1) * tileSrc::RowStride + (j + 2) * tileSrc::ColStride;
         uint32_t src_idx_30 =  (2*i) * tileSrc::RowStride + (j + 3) * tileSrc::ColStride;
         uint32_t src_idx_31 =  (2*i + 1) * tileSrc::RowStride + (j + 3) * tileSrc::ColStride;
-        
+
         // Process src0
         __bf16x2 s0_0, s0_1, s0_2, s0_3;
         __bf16x2 sum01_0, sum23_0, sum0123_0;
@@ -590,7 +590,7 @@ void __vec__ rowsum_2src_with_local_sum(
         linx_cvt_package(s0_1, src0_ptr[src_idx_10], src0_ptr[src_idx_11]);
         linx_cvt_package(s0_2, src0_ptr[src_idx_20], src0_ptr[src_idx_21]);
         linx_cvt_package(s0_3, src0_ptr[src_idx_30], src0_ptr[src_idx_31]);
-        
+
         blkv_bf16x2_fmsub(s0_0, s0_0, src_scale, new_max_val);
         blkv_bf16x2_fmsub(s0_1, s0_1, src_scale, new_max_val);
         blkv_bf16x2_fmsub(s0_2, s0_2, src_scale, new_max_val);
@@ -603,7 +603,7 @@ void __vec__ rowsum_2src_with_local_sum(
         blkv_bf16x2_fadd(sum23_0, s0_2, s0_3);
         blkv_bf16x2_fadd(sum0123_0, sum01_0, sum23_0);
         blkv_bf16x2_fadd(upd_sum, upd_sum, sum0123_0);
-        
+
         BLKC_ASSIGN_CAST(src_exp0, src_idx_00, s0_0);
         BLKC_ASSIGN_CAST(src_exp0, src_idx_10, s0_1);
         BLKC_ASSIGN_CAST(src_exp0, src_idx_20, s0_2);
@@ -616,7 +616,7 @@ void __vec__ rowsum_2src_with_local_sum(
         linx_cvt_package(s1_1, src1_ptr[src_idx_10], src1_ptr[src_idx_11]);
         linx_cvt_package(s1_2, src1_ptr[src_idx_20], src1_ptr[src_idx_21]);
         linx_cvt_package(s1_3, src1_ptr[src_idx_30], src1_ptr[src_idx_31]);
-        
+
         blkv_bf16x2_fmsub(s1_0, s1_0, src_scale, new_max_val);
         blkv_bf16x2_fmsub(s1_1, s1_1, src_scale, new_max_val);
         blkv_bf16x2_fmsub(s1_2, s1_2, src_scale, new_max_val);
@@ -629,7 +629,7 @@ void __vec__ rowsum_2src_with_local_sum(
         blkv_bf16x2_fadd(sum23_1, s1_2, s1_3);
         blkv_bf16x2_fadd(sum0123_1, sum01_1, sum23_1);
         blkv_bf16x2_fadd(upd_sum, upd_sum, sum0123_1);
-        
+
         BLKC_ASSIGN_CAST(src_exp1, src_idx_00, s1_0);
         BLKC_ASSIGN_CAST(src_exp1, src_idx_10, s1_1);
         BLKC_ASSIGN_CAST(src_exp1, src_idx_20, s1_2);
@@ -640,7 +640,7 @@ void __vec__ rowsum_2src_with_local_sum(
     sum_u.vec = upd_sum;
     __bf16 sum0 = (sum_u.u32 >> 16) & 0xffff;
     __bf16 sum1 = (sum_u.u32 & 0xffff);
-    
+
     local_sum_ptr[(i*2)*tileSum::RowStride] = sum0;
     local_sum_ptr[(i*2+1)*tileSum::RowStride] = sum1;
 }
@@ -670,12 +670,12 @@ void __vec__ rowsum_2src_with_local_sumx2(
     linx_cvt_package(src_scale, 1.0f / sqrt((float)qD), 1.0f / sqrt((float)qD));
     __bf16x2 upd_sum, new_max_val;
     __bf16 new_max_bf16_0, new_max_bf16_1;
-    
+
     // Initialize local sum to 0
     linx_cvt_package(upd_sum, 0.0f, 0.0f);
 
     linx_cvt(new_max_bf16_0, blkv_get_tile_ptr(new_max)[i*2*tileMax::RowStride]); //float->bf16
-    linx_cvt(new_max_bf16_1, blkv_get_tile_ptr(new_max)[(i*2+1)*tileMax::RowStride]); 
+    linx_cvt(new_max_bf16_1, blkv_get_tile_ptr(new_max)[(i*2+1)*tileMax::RowStride]);
     linx_cvt_package(new_max_val, new_max_bf16_0, new_max_bf16_1);
 
     // row sum
@@ -686,17 +686,17 @@ void __vec__ rowsum_2src_with_local_sumx2(
         uint32_t src_idx_10 =  (2*i) * tileSrc::RowStride + (j + 1) * tileSrc::ColStride;
         uint32_t src_idx_20 =  (2*i) * tileSrc::RowStride + (j + 2) * tileSrc::ColStride;
         uint32_t src_idx_30 =  (2*i) * tileSrc::RowStride + (j + 3) * tileSrc::ColStride;
-        
+
         // Process src0
         __bf16x2 s0_0, s0_1, s0_2, s0_3;
         __bf16x2 sum01_0, sum23_0, sum0123_0;
-        
+
         // 直接将内存读取作为 fmsub 的输入操作数
         blkv_bf16x2_fmsub(s0_0, src0_x2_ptr[src_idx_00], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s0_1, src0_x2_ptr[src_idx_10], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s0_2, src0_x2_ptr[src_idx_20], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s0_3, src0_x2_ptr[src_idx_30], src_scale, new_max_val);
-        
+
         blkv_bf16x2_fexp(s0_0, s0_0);
         blkv_bf16x2_fexp(s0_1, s0_1);
         blkv_bf16x2_fexp(s0_2, s0_2);
@@ -713,12 +713,12 @@ void __vec__ rowsum_2src_with_local_sumx2(
         // Process src1
         __bf16x2 s1_0, s1_1, s1_2, s1_3;
         __bf16x2 sum01_1, sum23_1, sum0123_1;
-        
+
         blkv_bf16x2_fmsub(s1_0, src1_x2_ptr[src_idx_00], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s1_1, src1_x2_ptr[src_idx_10], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s1_2, src1_x2_ptr[src_idx_20], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s1_3, src1_x2_ptr[src_idx_30], src_scale, new_max_val);
-        
+
         blkv_bf16x2_fexp(s1_0, s1_0);
         blkv_bf16x2_fexp(s1_1, s1_1);
         blkv_bf16x2_fexp(s1_2, s1_2);
@@ -727,7 +727,7 @@ void __vec__ rowsum_2src_with_local_sumx2(
         blkv_bf16x2_fadd(sum23_1, s1_2, s1_3);
         blkv_bf16x2_fadd(sum0123_1, sum01_1, sum23_1);
         blkv_bf16x2_fadd(upd_sum, upd_sum, sum0123_1);
-        
+
         blkc_assign_elem(src_exp1_x2_ptr, src_idx_00, s1_0);
         blkc_assign_elem(src_exp1_x2_ptr, src_idx_10, s1_1);
         blkc_assign_elem(src_exp1_x2_ptr, src_idx_20, s1_2);
@@ -738,7 +738,7 @@ void __vec__ rowsum_2src_with_local_sumx2(
     sum_u.vec = upd_sum;
     __bf16 sum0 = (sum_u.u32 >> 16) & 0xffff;
     __bf16 sum1 = (sum_u.u32 & 0xffff);
-    
+
     local_sum_ptr[(i*2)*tileSum::RowStride] = sum0;
     local_sum_ptr[(i*2+1)*tileSum::RowStride] = sum1;
 }
@@ -768,12 +768,12 @@ void __vec__ rowsum_2src_with_local_expx2(
     linx_cvt_package(src_scale, 1.0f / sqrt((float)qD), 1.0f / sqrt((float)qD));
     __bf16x2 upd_sum, new_max_val;
     __bf16 new_max_bf16_0, new_max_bf16_1;
-    
+
     // Initialize local sum to 0
     linx_cvt_package(upd_sum, 0.0f, 0.0f);
 
     linx_cvt(new_max_bf16_0, blkv_get_tile_ptr(new_max)[i*2*tileMax::RowStride]); //float->bf16
-    linx_cvt(new_max_bf16_1, blkv_get_tile_ptr(new_max)[(i*2+1)*tileMax::RowStride]); 
+    linx_cvt(new_max_bf16_1, blkv_get_tile_ptr(new_max)[(i*2+1)*tileMax::RowStride]);
     linx_cvt_package(new_max_val, new_max_bf16_0, new_max_bf16_1);
 
     // row sum
@@ -784,17 +784,17 @@ void __vec__ rowsum_2src_with_local_expx2(
         uint32_t src_idx_10 =  (2*i) * tileSrc::RowStride + (j + 1) * tileSrc::ColStride;
         uint32_t src_idx_20 =  (2*i) * tileSrc::RowStride + (j + 2) * tileSrc::ColStride;
         uint32_t src_idx_30 =  (2*i) * tileSrc::RowStride + (j + 3) * tileSrc::ColStride;
-        
+
         // Process src0
         __bf16x2 s0_0, s0_1, s0_2, s0_3;
         __bf16x2 sum01_0, sum23_0, sum0123_0;
-        
+
         // 直接将内存读取作为 fmsub 的输入操作数
         blkv_bf16x2_fmsub(s0_0, src0_x2_ptr[src_idx_00], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s0_1, src0_x2_ptr[src_idx_10], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s0_2, src0_x2_ptr[src_idx_20], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s0_3, src0_x2_ptr[src_idx_30], src_scale, new_max_val);
-        
+
         blkv_bf16x2_fexp(s0_0, s0_0);
         blkv_bf16x2_fexp(s0_1, s0_1);
         blkv_bf16x2_fexp(s0_2, s0_2);
@@ -811,12 +811,12 @@ void __vec__ rowsum_2src_with_local_expx2(
         // Process src1
         __bf16x2 s1_0, s1_1, s1_2, s1_3;
         __bf16x2 sum01_1, sum23_1, sum0123_1;
-        
+
         blkv_bf16x2_fmsub(s1_0, src1_x2_ptr[src_idx_00], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s1_1, src1_x2_ptr[src_idx_10], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s1_2, src1_x2_ptr[src_idx_20], src_scale, new_max_val);
         blkv_bf16x2_fmsub(s1_3, src1_x2_ptr[src_idx_30], src_scale, new_max_val);
-        
+
         blkv_bf16x2_fexp(s1_0, s1_0);
         blkv_bf16x2_fexp(s1_1, s1_1);
         blkv_bf16x2_fexp(s1_2, s1_2);
@@ -825,7 +825,7 @@ void __vec__ rowsum_2src_with_local_expx2(
         // blkv_bf16x2_fadd(sum23_1, s1_2, s1_3);
         // blkv_bf16x2_fadd(sum0123_1, sum01_1, sum23_1);
         // blkv_bf16x2_fadd(upd_sum, upd_sum, sum0123_1);
-        
+
         blkc_assign_elem(src_exp1_x2_ptr, src_idx_00, s1_0);
         blkc_assign_elem(src_exp1_x2_ptr, src_idx_10, s1_1);
         blkc_assign_elem(src_exp1_x2_ptr, src_idx_20, s1_2);
@@ -836,7 +836,7 @@ void __vec__ rowsum_2src_with_local_expx2(
     // sum_u.vec = upd_sum;
     // __bf16 sum0 = (sum_u.u32 >> 16) & 0xffff;
     // __bf16 sum1 = (sum_u.u32 & 0xffff);
-    
+
     // local_sum_ptr[(i*2)*tileSum::RowStride] = sum0;
     // local_sum_ptr[(i*2+1)*tileSum::RowStride] = sum1;
 }
@@ -890,14 +890,14 @@ void __vec__ rowsum(
     __bf16 new_max_bf16_0, new_max_bf16_1;
     // old_sum * rescale + new_sum
     linx_cvt(old_sum_bf16_0, old_sum_ptr[i*2*tileSum::RowStride]); //float->bf16
-    linx_cvt(old_sum_bf16_1, old_sum_ptr[(i*2+1)*tileSum::RowStride]); 
+    linx_cvt(old_sum_bf16_1, old_sum_ptr[(i*2+1)*tileSum::RowStride]);
     linx_cvt_package(upd_sum, old_sum_bf16_0, old_sum_bf16_1);
     linx_cvt(scale_bf16_0, scale_ptr[i*2*tileSum::RowStride]); //float->bf16
-    linx_cvt(scale_bf16_1, scale_ptr[(i*2+1)*tileSum::RowStride]); 
+    linx_cvt(scale_bf16_1, scale_ptr[(i*2+1)*tileSum::RowStride]);
     linx_cvt_package(scale, scale_bf16_0, scale_bf16_1);
-    blkv_bf16x2_fmul(upd_sum, upd_sum, scale);  
+    blkv_bf16x2_fmul(upd_sum, upd_sum, scale);
     linx_cvt(new_max_bf16_0, blkv_get_tile_ptr(new_max)[i*2*tileMax::RowStride]); //float->bf16
-    linx_cvt(new_max_bf16_1, blkv_get_tile_ptr(new_max)[(i*2+1)*tileMax::RowStride]); 
+    linx_cvt(new_max_bf16_1, blkv_get_tile_ptr(new_max)[(i*2+1)*tileMax::RowStride]);
     linx_cvt_package(new_max_val, new_max_bf16_0, new_max_bf16_1);
 
     // calculate row sum of softmax, l_i
@@ -952,7 +952,7 @@ void __vec__ rowsum(
     sum_u.vec = upd_sum;
     __bf16 sum0 = (sum_u.u32 >> 16) & 0xffff;
     __bf16 sum1 = (sum_u.u32 & 0xffff);
-    
+
     new_sum_ptr[(i*2)*tileSum::RowStride] = sum0;
     new_sum_ptr[(i*2+1)*tileSum::RowStride] = sum1;
 }
@@ -987,7 +987,7 @@ void __vec__ flashsoftmax_dn_mout_cast_kernel_bf16x2(
     __bf16x2 upd_max;
     __bf16 old_max_bf160, old_max_bf161;
     linx_cvt(old_max_bf160, old_max_ptr[i*2*tileMax::RowStride]); //float->bf16
-    linx_cvt(old_max_bf161, old_max_ptr[(i*2+1)*tileMax::RowStride]); 
+    linx_cvt(old_max_bf161, old_max_ptr[(i*2+1)*tileMax::RowStride]);
     linx_cvt_package(upd_max, old_max_bf160, old_max_bf161);
 
     // calc tile rowmax
@@ -1044,7 +1044,7 @@ void __vec__ flashsoftmax_dn_mout_cast_kernel_bf16x2(
     // recalculate scale of softmax
     __bf16x2 scale, old_max_bf16x2;
     linx_cvt_package(old_max_bf16x2, old_max_bf160, old_max_bf161);
-    blkv_bf16x2_fsub(old_max_bf16x2, old_max_bf16x2, upd_max); 
+    blkv_bf16x2_fsub(old_max_bf16x2, old_max_bf16x2, upd_max);
     blkv_bf16x2_fexp(scale, old_max_bf16x2);
     uint32_t scale_idx00 = i*2*tileScale::RowStride;
     uint32_t scale_idx01 = (i*2+1)*tileScale::RowStride;
@@ -1064,7 +1064,7 @@ void __vec__ flashsoftmax_dn_mout_cast_kernel_bf16x2(
     __bf16x2 upd_sum;
     __bf16 old_sum_bf16_0, old_sum_bf16_1;
     linx_cvt(old_sum_bf16_0, old_sum_ptr[i*2*tileSum::RowStride]); //float->bf16
-    linx_cvt(old_sum_bf16_1, old_sum_ptr[(i*2+1)*tileSum::RowStride]); 
+    linx_cvt(old_sum_bf16_1, old_sum_ptr[(i*2+1)*tileSum::RowStride]);
     linx_cvt_package(upd_sum, old_sum_bf16_0, old_sum_bf16_1);
     blkv_bf16x2_fmul(upd_sum, upd_sum, scale);  // *** TODO
 
@@ -1208,9 +1208,9 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
     using gmK = global_tensor<dtype, ColMajor<qD/2, Skv>>;  // K: [qD×S]
     using gmV = global_tensor<dtype, RowMajor<Skv, vD/2>>;  // V: [S×vD]
     using gmO = global_tensor<dtype, ColMajor<Sq, vD/2>>;  // O: [SxvD]
-    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>; 
-    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>; 
-    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>; 
+    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>;
+    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>;
+    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>;
     // tile 寄存器形状
     using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD)/2, kTm, qD/2>;       // [kTm×qD]
     using tileK      = TileRight<dtype, (qD==192? 256:qD)/2, kTk, qD/2, kTk>;      // [vD×kTk]
@@ -1278,7 +1278,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
         tileQ tQ[Xdim];
         tile_QMX tQMX[Xdim];
         // load tile Q,  TODO: add ND2ZZ transform for QMX
-        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore 
+        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x+=2){
                 auto gQ = gIterQ(i+x,0);
@@ -1290,10 +1290,10 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
             for(int x=0;x<Xdim;x++){
                 auto gQ = gIterQ(i+x,0);
                 // auto gQMX = gIterQMX(i+x,0);
-                TCOPYIN(tQ[x], gQ);
-                gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0); 
+                TLOAD(tQ[x], gQ);
+                gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0);
                 MGATHER(tQMX[x], gQMX, nd2zz_offset);
-                // TCOPYIN(tQMX[x], gQMX);
+                // TLOAD(tQMX[x], gQMX);
             }
         #endif
 
@@ -1330,10 +1330,10 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
                 for(int y=0;y<Ydim;y++){
                     auto gK = gIterK(0, j+y);
                     // auto gKM = gIterKMX(0, j+y);
-                    TCOPYIN(tK[y], gK);
+                    TLOAD(tK[y], gK);
                     gen_ND2NN_offset_Impl<gm_KMX, tile_KMX, tile_ND2NNOffset>(gKMX, tKMX[y], nd2nn_offset, 0, j+y);
-                    MGATHER(tKMX[y], gKMX, nd2nn_offset); 
-                    // TCOPYIN(tKMX[y], gKM);
+                    MGATHER(tKMX[y], gKMX, nd2nn_offset);
+                    // TLOAD(tKMX[y], gKM);
                 }
             #endif
 
@@ -1372,7 +1372,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
                                                         tNewMax[x].data(),
                                                         tNewSum[x].data(),
                                                         tExpW[x][0].data(),
-                                                        tW[x][0].data(), // 
+                                                        tW[x][0].data(), //
                                                         tMax[x].data(),
                                                         tSum[x].data());
                         tohif4<tileP_hif4, tile_PMX, tileW_cast><<<tileW_cast::ValidRow, tileW_cast::ValidCol/64, 1>>>(tP_hif4[x][0].data(), tP_scale[x][0].data(), tExpW[x][0].data()); // 64 = 1 group, tExpW(Zn, bf16), tP_scale(ZZ, E6M2 with zero E1_8 && E1_16)
@@ -1383,7 +1383,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
                                                         tNewMax[x].data(),
                                                         tNewSum[x].data(),
                                                         tExpW[x][0].data(),
-                                                        tW[x][0].data(), // 
+                                                        tW[x][0].data(), //
                                                         tMax[x].data(),
                                                         tSum[x].data());
                         tohif4_bf16x2<tileP_hif4, tile_PMX, tileW_cast><<<tileW_cast::ValidRow, tileW_cast::ValidCol/64, 1>>>(tP_hif4[x][0].data(), tP_scale[x][0].data(), tExpW[x][0].data());
@@ -1422,8 +1422,8 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
                 // #pragma clang loop unroll(full)
                 // for(int x=0;x<Xdim;x++){
                 //     new_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(
-                //                                                 tScale[x].data(), 
-                //                                                 tNewMax[x].data(), 
+                //                                                 tScale[x].data(),
+                //                                                 tNewMax[x].data(),
                 //                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                 //                                                 tMax[x].data(),
                 //                                                 scale);
@@ -1432,7 +1432,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
                 //     //                                             tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                 //     //                                             tNewMax[x].data(),
                 //     //                                             scale);
-                    
+
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][0].data(), tExpW[x][0].data(), tExpW[x][1].data(),
                 //                                                                                    tW[x][0].data(), tW[x][1].data(), tNewMax[x].data(), scale);
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
@@ -1450,7 +1450,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){    
+                for(int x=0;x<Xdim;x++){
                     #pragma clang loop unroll(full)
                     for(int k=0;k<2;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
@@ -1470,7 +1470,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){       
+                for(int x=0;x<Xdim;x++){
                     for(int k=0;k<4;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
                     }
@@ -1512,10 +1512,10 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
                 for(int y=0;y<Ydim;y++){
                     auto gV = gIterV(j+y, 0);
                     // auto gVMX = gIterVMX(j+y, 0);
-                    TCOPYIN(tV[y], gV);
+                    TLOAD(tV[y], gV);
                     gen_ND2NN_offset_Impl<gm_VMX, tile_VMX, tile_ND2NNOffset>(gVMX, tVMX[y], nd2nn_offset, j+y, 0);
-                    MGATHER(tVMX[y], gVMX, nd2nn_offset); 
-                    // TCOPYIN(tVMX[y], gVMX);
+                    MGATHER(tVMX[y], gVMX, nd2nn_offset);
+                    // TLOAD(tVMX[y], gVMX);
                 }
             #endif
 
@@ -1586,7 +1586,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
             #pragma clang loop unroll(full)
             for (int x = 0; x < Xdim; ++x) {
                 auto dstO = gIterO(i+x, 0);
-                TCOPYOUT(dstO, tO_cast[x]);//TMOV
+                TSTORE(dstO, tO_cast[x]);//TMOV
             }
         #endif
 
@@ -1601,9 +1601,9 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //     using gmK = global_tensor<dtype, ColMajor<qD/2, Skv>>;  // K: [qD×S]
 //     using gmV = global_tensor<dtype, RowMajor<Skv, vD/2>>;  // V: [S×vD]
 //     using gmO = global_tensor<dtype, ColMajor<Sq, vD/2>>;  // O: [SxvD]
-//     using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>; 
-//     using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>; 
-//     using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>; 
+//     using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>;
+//     using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>;
+//     using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>;
 //     // tile 寄存器形状
 //     using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD)/2, kTm, qD/2>;       // [kTm×qD]
 //     using tileK      = TileRight<dtype, (qD==192? 256:qD)/2, kTk, qD/2, kTk>;      // [vD×kTk]
@@ -1671,7 +1671,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //         tileQ tQ[Xdim];
 //         tile_QMX tQMX[Xdim];
 //         // load tile Q,  TODO: add ND2ZZ transform for QMX
-//         #ifdef MULTI_LDST // don't use, no need for multi tload/tstore 
+//         #ifdef MULTI_LDST // don't use, no need for multi tload/tstore
 //             #pragma clang loop unroll(full)
 //             for(int x=0;x<Xdim;x+=2){
 //                 auto gQ = gIterQ(i+x,0);
@@ -1683,10 +1683,10 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //             for(int x=0;x<Xdim;x++){
 //                 auto gQ = gIterQ(i+x,0);
 //                 // auto gQMX = gIterQMX(i+x,0);
-//                 TCOPYIN(tQ[x], gQ);
-//                 gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0); 
+//                 TLOAD(tQ[x], gQ);
+//                 gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0);
 //                 MGATHER(tQMX[x], gQMX, nd2zz_offset);
-//                 // TCOPYIN(tQMX[x], gQMX);
+//                 // TLOAD(tQMX[x], gQMX);
 //             }
 //         #endif
 
@@ -1723,10 +1723,10 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //                 for(int y=0;y<Ydim;y++){
 //                     auto gK = gIterK(0, j+y);
 //                     // auto gKM = gIterKMX(0, j+y);
-//                     TCOPYIN(tK[y], gK);
+//                     TLOAD(tK[y], gK);
 //                     gen_ND2NN_offset_Impl<gm_KMX, tile_KMX, tile_ND2NNOffset>(gKMX, tKMX[y], nd2nn_offset, 0, j+y);
-//                     MGATHER(tKMX[y], gKMX, nd2nn_offset); 
-//                     // TCOPYIN(tKMX[y], gKM);
+//                     MGATHER(tKMX[y], gKMX, nd2nn_offset);
+//                     // TLOAD(tKMX[y], gKM);
 //                 }
 //             #endif
 
@@ -1765,7 +1765,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //                                                         tNewMax[x].data(),
 //                                                         tNewSum[x].data(),
 //                                                         tExpW[x][0].data(),
-//                                                         tW[x][0].data(), // 
+//                                                         tW[x][0].data(), //
 //                                                         tMax[x].data(),
 //                                                         tSum[x].data());
 //                         tohif4<tileP_hif4, tile_PMX, tileW_cast><<<tileW_cast::ValidRow, tileW_cast::ValidCol/64, 1>>>(tP_hif4[x][0].data(), tP_scale[x][0].data(), tExpW[x][0].data()); // 64 = 1 group, tExpW(Zn, bf16), tP_scale(ZZ, E6M2 with zero E1_8 && E1_16)
@@ -1776,7 +1776,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //                         //                                 tNewMax[x].data(),
 //                         //                                 tNewSum[x].data(),
 //                         //                                 tExpW[x][0].data(),
-//                         //                                 tW[x][0].data(), // 
+//                         //                                 tW[x][0].data(), //
 //                         //                                 tMax[x].data(),
 //                         //                                 tSum[x].data());
 
@@ -1821,8 +1821,8 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //                 #pragma clang loop unroll(full)
 //                 for(int x=0;x<Xdim;x++){
 //                     new_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(
-//                                                                 tScale[x].data(), 
-//                                                                 tNewMax[x].data(), 
+//                                                                 tScale[x].data(),
+//                                                                 tNewMax[x].data(),
 //                                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
 //                                                                 tMax[x].data(),
 //                                                                 scale);
@@ -1831,7 +1831,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //                     //                                             tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
 //                     //                                             tNewMax[x].data(),
 //                     //                                             scale);
-                    
+
 //                     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][0].data(), tExpW[x][0].data(), tExpW[x][1].data(),
 //                                                                                                    tW[x][0].data(), tW[x][1].data(), tNewMax[x].data(), scale);
 //                     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
@@ -1849,7 +1849,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //                 tileSum tLocalSum[Xdim][4];
 
 //                 #pragma clang loop unroll(full)
-//                 for(int x=0;x<Xdim;x++){    
+//                 for(int x=0;x<Xdim;x++){
 //                     #pragma clang loop unroll(full)
 //                     for(int k=0;k<2;k++){
 //                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
@@ -1869,7 +1869,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //                 tileSum tLocalSum[Xdim][4];
 
 //                 #pragma clang loop unroll(full)
-//                 for(int x=0;x<Xdim;x++){       
+//                 for(int x=0;x<Xdim;x++){
 //                     for(int k=0;k<4;k++){
 //                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
 //                     }
@@ -1911,10 +1911,10 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //                 for(int y=0;y<Ydim;y++){
 //                     auto gV = gIterV(j+y, 0);
 //                     // auto gVMX = gIterVMX(j+y, 0);
-//                     TCOPYIN(tV[y], gV);
+//                     TLOAD(tV[y], gV);
 //                     gen_ND2NN_offset_Impl<gm_VMX, tile_VMX, tile_ND2NNOffset>(gVMX, tVMX[y], nd2nn_offset, j+y, 0);
-//                     MGATHER(tVMX[y], gVMX, nd2nn_offset); 
-//                     // TCOPYIN(tVMX[y], gVMX);
+//                     MGATHER(tVMX[y], gVMX, nd2nn_offset);
+//                     // TLOAD(tVMX[y], gVMX);
 //                 }
 //             #endif
 
@@ -1985,7 +1985,7 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, 
 //             #pragma clang loop unroll(full)
 //             for (int x = 0; x < Xdim; ++x) {
 //                 auto dstO = gIterO(i+x, 0);
-//                 TCOPYOUT(dstO, tO_cast[x]);//TMOV
+//                 TSTORE(dstO, tO_cast[x]);//TMOV
 //             }
 //         #endif
 
@@ -2001,9 +2001,9 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
     using gmK = global_tensor<dtype, ColMajor<qD/2, Skv>>;  // K: [qD×S]
     using gmV = global_tensor<dtype, RowMajor<Skv, vD/2>>;  // V: [S×vD]
     using gmO = global_tensor<dtype, ColMajor<Sq, vD/2>>;  // O: [SxvD]
-    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>; 
-    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>; 
-    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>; 
+    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>;
+    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>;
+    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>;
     // tile 寄存器形状
     using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD)/2, kTm, qD/2>;       // [kTm×qD]
     using tileK      = TileRight<dtype, (qD==192? 256:qD)/2, kTk, qD/2, kTk>;      // [vD×kTk]
@@ -2071,7 +2071,7 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
         tileQ tQ[Xdim];
         tile_QMX tQMX[Xdim];
         // load tile Q,  TODO: add ND2ZZ transform for QMX
-        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore 
+        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x+=2){
                 auto gQ = gIterQ(i+x,0);
@@ -2083,10 +2083,10 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
             for(int x=0;x<Xdim;x++){
                 auto gQ = gIterQ(i+x,0);
                 auto gQMX = gIterQMX(i+x,0);
-                TCOPYIN(tQ[x], gQ);
-                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0); 
+                TLOAD(tQ[x], gQ);
+                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0);
                 // MGATHER(tQMX[x], gQMX, nd2zz_offset);
-                TCOPYIN(tQMX[x], gQMX);
+                TLOAD(tQMX[x], gQMX);
             }
         #endif
 
@@ -2123,10 +2123,10 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
                 for(int y=0;y<Ydim;y++){
                     auto gK = gIterK(0, j+y);
                     auto gKM = gIterKMX(0, j+y);
-                    TCOPYIN(tK[y], gK);
+                    TLOAD(tK[y], gK);
                     // gen_ND2NN_offset_Impl<gm_KMX, tile_KMX, tile_ND2NNOffset>(gKMX, tKMX[y], nd2nn_offset, 0, j+y);
-                    // MGATHER(tKMX[y], gKMX, nd2nn_offset); 
-                    TCOPYIN(tKMX[y], gKM);
+                    // MGATHER(tKMX[y], gKMX, nd2nn_offset);
+                    TLOAD(tKMX[y], gKM);
                 }
             #endif
 
@@ -2164,7 +2164,7 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
                                                         tNewMax[x].data(),
                                                         tNewSum[x].data(),
                                                         tExpW[x][0].data(),
-                                                        tW[x][0].data(), // 
+                                                        tW[x][0].data(), //
                                                         tMax[x].data(),
                                                         tSum[x].data());
                         tohif4<tileP_hif4, tile_PMX, tileW_cast><<<tileW_cast::ValidRow, tileW_cast::ValidCol/64, 1>>>(tP_hif4[x][0].data(), tP_scale[x][0].data(), tExpW[x][0].data()); // 64 = 1 group, tExpW(Zn, bf16), tP_scale(ZZ, E6M2 with zero E1_8 && E1_16)
@@ -2176,7 +2176,7 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
                                                         tNewMax[x].data(),
                                                         tNewSum[x].data(),
                                                         tExpW[x][0].data(),
-                                                        tW[x][0].data(), // 
+                                                        tW[x][0].data(), //
                                                         tMax[x].data(),
                                                         tSum[x].data());
                         tohif4_bf16x2<tileP_hif4, tile_PMX, tileW_cast><<<tileW_cast::ValidRow, tileW_cast::ValidCol/64, 1>>>(tP_hif4[x][0].data(), tP_scale[x][0].data(), tExpW[x][0].data());
@@ -2215,8 +2215,8 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
                 // #pragma clang loop unroll(full)
                 // for(int x=0;x<Xdim;x++){
                 //     new_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(
-                //                                                 tScale[x].data(), 
-                //                                                 tNewMax[x].data(), 
+                //                                                 tScale[x].data(),
+                //                                                 tNewMax[x].data(),
                 //                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                 //                                                 tMax[x].data(),
                 //                                                 scale);
@@ -2225,7 +2225,7 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
                 //     //                                             tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                 //     //                                             tNewMax[x].data(),
                 //     //                                             scale);
-                    
+
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][0].data(), tExpW[x][0].data(), tExpW[x][1].data(),
                 //                                                                                    tW[x][0].data(), tW[x][1].data(), tNewMax[x].data(), scale);
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
@@ -2243,7 +2243,7 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){    
+                for(int x=0;x<Xdim;x++){
                     #pragma clang loop unroll(full)
                     for(int k=0;k<2;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
@@ -2263,7 +2263,7 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){       
+                for(int x=0;x<Xdim;x++){
                     for(int k=0;k<4;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
                     }
@@ -2305,10 +2305,10 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
                 for(int y=0;y<Ydim;y++){
                     auto gV = gIterV(j+y, 0);
                     auto gVMX = gIterVMX(j+y, 0);
-                    TCOPYIN(tVMX[y], gVMX);
-                    TCOPYIN(tV[y], gV);
+                    TLOAD(tVMX[y], gVMX);
+                    TLOAD(tV[y], gV);
                     // gen_ND2NN_offset_Impl<gm_VMX, tile_VMX, tile_ND2NNOffset>(gVMX, tVMX[y], nd2nn_offset, j+y, 0);
-                    // MGATHER(tVMX[y], gVMX, nd2nn_offset); 
+                    // MGATHER(tVMX[y], gVMX, nd2nn_offset);
 
                 }
             #endif
@@ -2380,7 +2380,7 @@ void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype
             #pragma clang loop unroll(full)
             for (int x = 0; x < Xdim; ++x) {
                 auto dstO = gIterO(i+x, 0);
-                TCOPYOUT(dstO, tO_cast[x]);//TMOV
+                TSTORE(dstO, tO_cast[x]);//TMOV
             }
         #endif
 
@@ -2395,9 +2395,9 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
     using gmK = global_tensor<dtype, ColMajor<qD/2, Skv>>;  // K: [qD×S]
     using gmV = global_tensor<dtype, RowMajor<Skv, vD/2>>;  // V: [S×vD]
     using gmO = global_tensor<dtype, ColMajor<Sq, vD/2>>;  // O: [SxvD]
-    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>; 
-    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>; 
-    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>; 
+    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>;
+    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>;
+    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>;
     // tile 寄存器形状
     using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD)/2, kTm, qD/2>;       // [kTm×qD]
     using tileK      = TileRight<dtype, (qD==192? 256:qD)/2, kTk, qD/2, kTk>;      // [vD×kTk]
@@ -2466,7 +2466,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
         tileQ tQ[Xdim];
         tile_QMX tQMX[Xdim];
         // load tile Q,  TODO: add ND2ZZ transform for QMX
-        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore 
+        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x+=2){
                 auto gQ = gIterQ(i+x,0);
@@ -2478,10 +2478,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
             for(int x=0;x<Xdim;x++){
                 auto gQ = gIterQ(i+x,0);
                 auto gQMX = gIterQMX(i+x,0);
-                TCOPYIN(tQ[x], gQ);
-                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0); 
+                TLOAD(tQ[x], gQ);
+                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0);
                 // MGATHER(tQMX[x], gQMX, nd2zz_offset);
-                TCOPYIN(tQMX[x], gQMX);
+                TLOAD(tQMX[x], gQMX);
             }
         #endif
 
@@ -2518,10 +2518,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
                 for(int y=0;y<Ydim;y++){
                     auto gK = gIterK(0, j+y);
                     auto gKM = gIterKMX(0, j+y);
-                    TCOPYIN(tK[y], gK);
+                    TLOAD(tK[y], gK);
                     // gen_ND2NN_offset_Impl<gm_KMX, tile_KMX, tile_ND2NNOffset>(gKMX, tKMX[y], nd2nn_offset, 0, j+y);
-                    // MGATHER(tKMX[y], gKMX, nd2nn_offset); 
-                    TCOPYIN(tKMX[y], gKM);
+                    // MGATHER(tKMX[y], gKMX, nd2nn_offset);
+                    TLOAD(tKMX[y], gKM);
                 }
             #endif
 
@@ -2560,7 +2560,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
                                                         tNewMax[x].data(),
                                                         tNewSum[x].data(),
                                                         tExpW[x][0].data(),
-                                                        tW[x][0].data(), // 
+                                                        tW[x][0].data(), //
                                                         tMax[x].data(),
                                                         tSum[x].data());
                         tohif4<tileP_hif4, tile_PMX, tileW_cast><<<tileW_cast::ValidRow, tileW_cast::ValidCol/64, 1>>>(tP_hif4[x][0].data(), tP_scale[x][0].data(), tExpW[x][0].data()); // 64 = 1 group, tExpW(Zn, bf16), tP_scale(ZZ, E6M2 with zero E1_8 && E1_16)
@@ -2572,7 +2572,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
                         //                                 tNewMax[x].data(),
                         //                                 tNewSum[x].data(),
                         //                                 tExpW[x][0].data(),
-                        //                                 tW[x][0].data(), // 
+                        //                                 tW[x][0].data(), //
                         //                                 tMax[x].data(),
                         //                                 tSum[x].data());
                         // bf16tobf16x2();
@@ -2606,13 +2606,13 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
                 // #pragma clang loop unroll(full)
                 // for(int x=0;x<Xdim;x++){
                 //     new_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(
-                //                                                 tScale[x].data(), 
-                //                                                 tNewMax[x].data(), 
+                //                                                 tScale[x].data(),
+                //                                                 tNewMax[x].data(),
                 //                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                 //                                                 tMax[x].data(),
                 //                                                 scale);
 
-                    
+
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][0].data(), tExpW[x][0].data(), tExpW[x][1].data(),
                 //                                                                                    tW[x][0].data(), tW[x][1].data(), tNewMax[x].data(), scale);
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
@@ -2624,8 +2624,8 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
                 #pragma clang loop unroll(full)
                 for(int x=0;x<Xdim;x++){
                     pkg_rowmax_4src<tileW, tileW_cast, tileMax, tileScale, qD><<<tileW::ValidRow/2, 1, 1>>>(
-                                                                tScale[x].data(), 
-                                                                tNewMax[x].data(), 
+                                                                tScale[x].data(),
+                                                                tNewMax[x].data(),
                                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                                                                 tMax[x].data());
 
@@ -2635,7 +2635,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
                     rowsum_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum, qD><<<tileW::ValidRow/2, 1, 1>>>(
                                                                     tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
                                                                     tW[x][2].data(), tW[x][3].data(), tNewMax[x].data());
-                    
+
                     new_sum_of_2_loc_sum_bf16x2<tileScale, tileSum><<<tileSum::ValidRow/2, 1, 1>>>(
                                                                     tNewSum[x].data(), tLocalSum[x][0].data(), tLocalSum[x][1].data(), tSum[x].data(), tScale[x].data());
 
@@ -2649,7 +2649,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){    
+                for(int x=0;x<Xdim;x++){
                     #pragma clang loop unroll(full)
                     for(int k=0;k<2;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
@@ -2669,7 +2669,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){       
+                for(int x=0;x<Xdim;x++){
                     for(int k=0;k<4;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
                     }
@@ -2711,10 +2711,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
                 for(int y=0;y<Ydim;y++){
                     auto gV = gIterV(j+y, 0);
                     auto gVMX = gIterVMX(j+y, 0);
-                    TCOPYIN(tVMX[y], gVMX);
-                    TCOPYIN(tV[y], gV);
+                    TLOAD(tVMX[y], gVMX);
+                    TLOAD(tV[y], gV);
                     // gen_ND2NN_offset_Impl<gm_VMX, tile_VMX, tile_ND2NNOffset>(gVMX, tVMX[y], nd2nn_offset, j+y, 0);
-                    // MGATHER(tVMX[y], gVMX, nd2nn_offset); 
+                    // MGATHER(tVMX[y], gVMX, nd2nn_offset);
 
                 }
             #endif
@@ -2786,7 +2786,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr, dty
             #pragma clang loop unroll(full)
             for (int x = 0; x < Xdim; ++x) {
                 auto dstO = gIterO(i+x, 0);
-                TCOPYOUT(dstO, tO_cast[x]);//TMOV
+                TSTORE(dstO, tO_cast[x]);//TMOV
             }
         #endif
 
@@ -2801,9 +2801,9 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
     using gmK = global_tensor<dtype, ColMajor<qD/2, Skv>>;  // K: [qD×S]
     using gmV = global_tensor<dtype, RowMajor<Skv, vD/2>>;  // V: [S×vD]
     using gmO = global_tensor<dtype, ColMajor<Sq, vD/2>>;  // O: [SxvD]
-    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>; 
-    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>; 
-    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>; 
+    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>;
+    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>;
+    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>;
     // tile 寄存器形状
     using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD)/2, kTm, qD/2>;       // [kTm×qD]
     using tileK      = TileRight<dtype, (qD==192? 256:qD)/2, kTk, qD/2, kTk>;      // [vD×kTk]
@@ -2872,7 +2872,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
         tileQ tQ[Xdim];
         tile_QMX tQMX[Xdim];
         // load tile Q,  TODO: add ND2ZZ transform for QMX
-        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore 
+        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x+=2){
                 auto gQ = gIterQ(i+x,0);
@@ -2884,10 +2884,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
             for(int x=0;x<Xdim;x++){
                 auto gQ = gIterQ(i+x,0);
                 auto gQMX = gIterQMX(i+x,0);
-                TCOPYIN(tQ[x], gQ);
-                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0); 
+                TLOAD(tQ[x], gQ);
+                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0);
                 // MGATHER(tQMX[x], gQMX, nd2zz_offset);
-                TCOPYIN(tQMX[x], gQMX);
+                TLOAD(tQMX[x], gQMX);
             }
         #endif
 
@@ -2924,10 +2924,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
                 for(int y=0;y<Ydim;y++){
                     auto gK = gIterK(0, j+y);
                     auto gKM = gIterKMX(0, j+y);
-                    TCOPYIN(tK[y], gK);
+                    TLOAD(tK[y], gK);
                     // gen_ND2NN_offset_Impl<gm_KMX, tile_KMX, tile_ND2NNOffset>(gKMX, tKMX[y], nd2nn_offset, 0, j+y);
-                    // MGATHER(tKMX[y], gKMX, nd2nn_offset); 
-                    TCOPYIN(tKMX[y], gKM);
+                    // MGATHER(tKMX[y], gKMX, nd2nn_offset);
+                    TLOAD(tKMX[y], gKM);
                 }
             #endif
 
@@ -2966,7 +2966,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
                                                         tNewMax[x].data(),
                                                         tNewSum[x].data(),
                                                         tExpW[x][0].data(),
-                                                        tW[x][0].data(), // 
+                                                        tW[x][0].data(), //
                                                         tMax[x].data(),
                                                         tSum[x].data());
                         tohif4<tileP_hif4, tile_PMX, tileW_cast><<<tileW_cast::ValidRow, tileW_cast::ValidCol/64, 1>>>(tP_hif4[x][0].data(), tP_scale[x][0].data(), tExpW[x][0].data()); // 64 = 1 group, tExpW(Zn, bf16), tP_scale(ZZ, E6M2 with zero E1_8 && E1_16)
@@ -2978,7 +2978,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
                         //                                 tNewMax[x].data(),
                         //                                 tNewSum[x].data(),
                         //                                 tExpW[x][0].data(),
-                        //                                 tW[x][0].data(), // 
+                        //                                 tW[x][0].data(), //
                         //                                 tMax[x].data(),
                         //                                 tSum[x].data());
                         // bf16tobf16x2();
@@ -3012,13 +3012,13 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
                 // #pragma clang loop unroll(full)
                 // for(int x=0;x<Xdim;x++){
                 //     new_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(
-                //                                                 tScale[x].data(), 
-                //                                                 tNewMax[x].data(), 
+                //                                                 tScale[x].data(),
+                //                                                 tNewMax[x].data(),
                 //                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                 //                                                 tMax[x].data(),
                 //                                                 scale);
 
-                    
+
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][0].data(), tExpW[x][0].data(), tExpW[x][1].data(),
                 //                                                                                    tW[x][0].data(), tW[x][1].data(), tNewMax[x].data(), scale);
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
@@ -3030,8 +3030,8 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
                 #pragma clang loop unroll(full)
                 for(int x=0;x<Xdim;x++){
                     pkg_rowmax_4srcx2<tileW, tileW_cast, tileMax, tileScale, qD><<<tileW::ValidRow/2, 1, 1>>>(
-                                                                tScale[x].data(), 
-                                                                tNewMax[x].data(), 
+                                                                tScale[x].data(),
+                                                                tNewMax[x].data(),
                                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                                                                 tMax[x].data());
 
@@ -3041,7 +3041,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
                     rowsum_2src_with_local_sumx2<tileW, tileW_cast, tileMax, tileSum, qD><<<tileW::ValidRow/2, 1, 1>>>(
                                                                     tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
                                                                     tW[x][2].data(), tW[x][3].data(), tNewMax[x].data());
-                    
+
                     new_sum_of_2_loc_sum_bf16x2<tileScale, tileSum><<<tileSum::ValidRow/2, 1, 1>>>(
                                                                     tNewSum[x].data(), tLocalSum[x][0].data(), tLocalSum[x][1].data(), tSum[x].data(), tScale[x].data());
 
@@ -3055,7 +3055,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){    
+                for(int x=0;x<Xdim;x++){
                     #pragma clang loop unroll(full)
                     for(int k=0;k<2;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
@@ -3075,7 +3075,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){       
+                for(int x=0;x<Xdim;x++){
                     for(int k=0;k<4;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
                     }
@@ -3117,10 +3117,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
                 for(int y=0;y<Ydim;y++){
                     auto gV = gIterV(j+y, 0);
                     auto gVMX = gIterVMX(j+y, 0);
-                    TCOPYIN(tVMX[y], gVMX);
-                    TCOPYIN(tV[y], gV);
+                    TLOAD(tVMX[y], gVMX);
+                    TLOAD(tV[y], gV);
                     // gen_ND2NN_offset_Impl<gm_VMX, tile_VMX, tile_ND2NNOffset>(gVMX, tVMX[y], nd2nn_offset, j+y, 0);
-                    // MGATHER(tVMX[y], gVMX, nd2nn_offset); 
+                    // MGATHER(tVMX[y], gVMX, nd2nn_offset);
 
                 }
             #endif
@@ -3192,7 +3192,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_p
             #pragma clang loop unroll(full)
             for (int x = 0; x < Xdim; ++x) {
                 auto dstO = gIterO(i+x, 0);
-                TCOPYOUT(dstO, tO_cast[x]);//TMOV
+                TSTORE(dstO, tO_cast[x]);//TMOV
             }
         #endif
 
@@ -3225,9 +3225,9 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
     using gmK = global_tensor<dtype, ColMajor<qD/2, Skv>>;  // K: [qD×S]
     using gmV = global_tensor<dtype, RowMajor<Skv, vD/2>>;  // V: [S×vD]
     using gmO = global_tensor<dtype, ColMajor<Sq, vD/2>>;  // O: [SxvD]
-    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>; 
-    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>; 
-    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>; 
+    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>;
+    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>;
+    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>;
     // tile 寄存器形状
     using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD)/2, kTm, qD/2>;       // [kTm×qD]
     using tileK      = TileRight<dtype, (qD==192? 256:qD)/2, kTk, qD/2, kTk>;      // [vD×kTk]
@@ -3303,7 +3303,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
         tileQ tQ[Xdim];
         tile_QMX tQMX[Xdim];
         // load tile Q,  TODO: add ND2ZZ transform for QMX
-        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore 
+        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x+=2){
                 auto gQ = gIterQ(i+x,0);
@@ -3315,10 +3315,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
             for(int x=0;x<Xdim;x++){
                 auto gQ = gIterQ(i+x,0);
                 auto gQMX = gIterQMX(i+x,0);
-                TCOPYIN(tQ[x], gQ);
-                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0); 
+                TLOAD(tQ[x], gQ);
+                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0);
                 // MGATHER(tQMX[x], gQMX, nd2zz_offset);
-                TCOPYIN(tQMX[x], gQMX);
+                TLOAD(tQMX[x], gQMX);
             }
         #endif
 
@@ -3355,10 +3355,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
                 for(int y=0;y<Ydim;y++){
                     auto gK = gIterK(0, j+y);
                     auto gKM = gIterKMX(0, j+y);
-                    TCOPYIN(tK[y], gK);
+                    TLOAD(tK[y], gK);
                     // gen_ND2NN_offset_Impl<gm_KMX, tile_KMX, tile_ND2NNOffset>(gKMX, tKMX[y], nd2nn_offset, 0, j+y);
-                    // MGATHER(tKMX[y], gKMX, nd2nn_offset); 
-                    TCOPYIN(tKMX[y], gKM);
+                    // MGATHER(tKMX[y], gKMX, nd2nn_offset);
+                    TLOAD(tKMX[y], gKM);
                 }
             #endif
 
@@ -3400,7 +3400,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
                                                         tNewMax[x].data(),
                                                         tNewSum[x].data(),
                                                         tExpW[x][0].data(),
-                                                        tW[x][0].data(), // 
+                                                        tW[x][0].data(), //
                                                         tMax[x].data(),
                                                         tSum[x].data());
                         tohif4<tileP_hif4, tile_PMX, tileW_cast><<<tileW_cast::ValidRow, tileW_cast::ValidCol/64, 1>>>(tP_hif4[x][0].data(), tP_scale[x][0].data(), tExpW[x][0].data()); // 64 = 1 group, tExpW(Zn, bf16), tP_scale(ZZ, E6M2 with zero E1_8 && E1_16)
@@ -3412,7 +3412,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
                         //                                 tNewMax[x].data(),
                         //                                 tNewSum[x].data(),
                         //                                 tExpW[x][0].data(),
-                        //                                 tW[x][0].data(), // 
+                        //                                 tW[x][0].data(), //
                         //                                 tMax[x].data(),
                         //                                 tSum[x].data());
                         // bf16tobf16x2();
@@ -3446,13 +3446,13 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
                 // #pragma clang loop unroll(full)
                 // for(int x=0;x<Xdim;x++){
                 //     new_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(
-                //                                                 tScale[x].data(), 
-                //                                                 tNewMax[x].data(), 
+                //                                                 tScale[x].data(),
+                //                                                 tNewMax[x].data(),
                 //                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                 //                                                 tMax[x].data(),
                 //                                                 scale);
 
-                    
+
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][0].data(), tExpW[x][0].data(), tExpW[x][1].data(),
                 //                                                                                    tW[x][0].data(), tW[x][1].data(), tNewMax[x].data(), scale);
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
@@ -3465,12 +3465,12 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
                 #pragma clang loop unroll(full)
                 for(int x=0;x<Xdim;x++){
                     pkg_rowmax_4srcx2<tileW, tileW_cast, tileMax, tileScale, qD><<<tileW::ValidRow/2, 1, 1>>>(
-                                                                tScale[x].data(), 
-                                                                tNewMax[x].data(), 
+                                                                tScale[x].data(),
+                                                                tNewMax[x].data(),
                                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                                                                 tMax[x].data());
 
-                    
+
                     rowsum_2src_with_local_expx2<tileW, tileW_cast, tileMax, qD><<<tileW::ValidRow/2, 1, 1>>>(
                                                                     tExpW[x][0].data(), tExpW[x][1].data(),
                                                                     tW[x][0].data(), tW[x][1].data(), tNewMax[x].data());
@@ -3503,7 +3503,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){    
+                for(int x=0;x<Xdim;x++){
                     #pragma clang loop unroll(full)
                     for(int k=0;k<2;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
@@ -3523,7 +3523,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){       
+                for(int x=0;x<Xdim;x++){
                     for(int k=0;k<4;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
                     }
@@ -3565,10 +3565,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
                 for(int y=0;y<Ydim;y++){
                     auto gV = gIterV(j+y, 0);
                     auto gVMX = gIterVMX(j+y, 0);
-                    TCOPYIN(tVMX[y], gVMX);
-                    TCOPYIN(tV[y], gV);
+                    TLOAD(tVMX[y], gVMX);
+                    TLOAD(tV[y], gV);
                     // gen_ND2NN_offset_Impl<gm_VMX, tile_VMX, tile_ND2NNOffset>(gVMX, tVMX[y], nd2nn_offset, j+y, 0);
-                    // MGATHER(tVMX[y], gVMX, nd2nn_offset); 
+                    // MGATHER(tVMX[y], gVMX, nd2nn_offset);
 
                 }
             #endif
@@ -3640,7 +3640,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype
             #pragma clang loop unroll(full)
             for (int x = 0; x < Xdim; ++x) {
                 auto dstO = gIterO(i+x, 0);
-                TCOPYOUT(dstO, tO_cast[x]);//TMOV
+                TSTORE(dstO, tO_cast[x]);//TMOV
             }
         #endif
     }
@@ -3655,9 +3655,9 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
     using gmK = global_tensor<dtype, ColMajor<qD/2, Skv>>;  // K: [qD×S]
     using gmV = global_tensor<dtype, RowMajor<Skv, vD/2>>;  // V: [S×vD]
     using gmO = global_tensor<dtype, ColMajor<Sq, vD/2>>;  // O: [SxvD]
-    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>; 
-    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>; 
-    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>; 
+    using gm_QMX = global_tensor<uint8_t, RowMajor<Sq, qD/w_factor>>;
+    using gm_KMX = global_tensor<uint8_t, ColMajor<qD/w_factor, Skv>>;
+    using gm_VMX = global_tensor<uint8_t, RowMajor<Skv, vD/w_factor>>;
     // tile 寄存器形状
     using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD)/2, kTm, qD/2>;       // [kTm×qD]
     using tileK      = TileRight<dtype, (qD==192? 256:qD)/2, kTk, qD/2, kTk>;      // [vD×kTk]
@@ -3740,7 +3740,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
         tileQ tQ[Xdim];
         tile_QMX tQMX[Xdim];
         // load tile Q,  TODO: add ND2ZZ transform for QMX
-        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore 
+        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x+=2){
                 auto gQ = gIterQ(i+x,0);
@@ -3752,10 +3752,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
             for(int x=0;x<Xdim;x++){
                 auto gQ = gIterQ(i+x,0);
                 auto gQMX = gIterQMX(i+x,0);
-                TCOPYIN(tQ[x], gQ);
-                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0); 
+                TLOAD(tQ[x], gQ);
+                // gen_ND2ZZ_offset_Impl<gm_QMX, tile_QMX, tile_ND2ZZOffset>(gQMX, tQMX[x], nd2zz_offset, i+x, 0);
                 // MGATHER(tQMX[x], gQMX, nd2zz_offset);
-                TCOPYIN(tQMX[x], gQMX);
+                TLOAD(tQMX[x], gQMX);
             }
         #endif
 
@@ -3792,10 +3792,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
                 for(int y=0;y<Ydim;y++){
                     auto gK = gIterK(0, j+y);
                     auto gKM = gIterKMX(0, j+y);
-                    TCOPYIN(tK[y], gK);
+                    TLOAD(tK[y], gK);
                     // gen_ND2NN_offset_Impl<gm_KMX, tile_KMX, tile_ND2NNOffset>(gKMX, tKMX[y], nd2nn_offset, 0, j+y);
-                    // MGATHER(tKMX[y], gKMX, nd2nn_offset); 
-                    TCOPYIN(tKMX[y], gKM);
+                    // MGATHER(tKMX[y], gKMX, nd2nn_offset);
+                    TLOAD(tKMX[y], gKM);
                 }
             #endif
 
@@ -3837,7 +3837,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
                                                         tNewMax[x].data(),
                                                         tNewSum[x].data(),
                                                         tExpW[x][0].data(),
-                                                        tW[x][0].data(), // 
+                                                        tW[x][0].data(), //
                                                         tMax[x].data(),
                                                         tSum[x].data());
                         tohif4<tileP_hif4, tile_PMX, tileW_cast><<<tileW_cast::ValidRow, tileW_cast::ValidCol/64, 1>>>(tP_hif4[x][0].data(), tP_scale[x][0].data(), tExpW[x][0].data()); // 64 = 1 group, tExpW(Zn, bf16), tP_scale(ZZ, E6M2 with zero E1_8 && E1_16)
@@ -3849,7 +3849,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
                         //                                 tNewMax[x].data(),
                         //                                 tNewSum[x].data(),
                         //                                 tExpW[x][0].data(),
-                        //                                 tW[x][0].data(), // 
+                        //                                 tW[x][0].data(), //
                         //                                 tMax[x].data(),
                         //                                 tSum[x].data());
                         // bf16tobf16x2();
@@ -3883,13 +3883,13 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
                 // #pragma clang loop unroll(full)
                 // for(int x=0;x<Xdim;x++){
                 //     new_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(
-                //                                                 tScale[x].data(), 
-                //                                                 tNewMax[x].data(), 
+                //                                                 tScale[x].data(),
+                //                                                 tNewMax[x].data(),
                 //                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                 //                                                 tMax[x].data(),
                 //                                                 scale);
 
-                    
+
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][0].data(), tExpW[x][0].data(), tExpW[x][1].data(),
                 //                                                                                    tW[x][0].data(), tW[x][1].data(), tNewMax[x].data(), scale);
                 //     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
@@ -3902,12 +3902,12 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
                 #pragma clang loop unroll(full)
                 for(int x=0;x<Xdim;x++){
                     pkg_rowmax_4srcx2<tileW, tileW_cast, tileMax, tileScale, qD><<<tileW::ValidRow/2, 1, 1>>>(
-                                                                tScale[x].data(), 
-                                                                tNewMax[x].data(), 
+                                                                tScale[x].data(),
+                                                                tNewMax[x].data(),
                                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                                                                 tMax[x].data());
 
-                    
+
                     rowsum_2src_with_local_expx2<tileW, tileW_cast, tileMax, qD><<<tileW::ValidRow/2, 1, 1>>>(
                                                                     tExpW[x][0].data(), tExpW[x][1].data(),
                                                                     tW[x][0].data(), tW[x][1].data(), tNewMax[x].data());
@@ -3940,7 +3940,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){    
+                for(int x=0;x<Xdim;x++){
                     #pragma clang loop unroll(full)
                     for(int k=0;k<2;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
@@ -3960,7 +3960,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){       
+                for(int x=0;x<Xdim;x++){
                     for(int k=0;k<4;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
                     }
@@ -4002,10 +4002,10 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
                 for(int y=0;y<Ydim;y++){
                     auto gV = gIterV(j+y, 0);
                     auto gVMX = gIterVMX(j+y, 0);
-                    TCOPYIN(tVMX[y], gVMX);
-                    TCOPYIN(tV[y], gV);
+                    TLOAD(tVMX[y], gVMX);
+                    TLOAD(tV[y], gV);
                     // gen_ND2NN_offset_Impl<gm_VMX, tile_VMX, tile_ND2NNOffset>(gVMX, tVMX[y], nd2nn_offset, j+y, 0);
-                    // MGATHER(tVMX[y], gVMX, nd2nn_offset); 
+                    // MGATHER(tVMX[y], gVMX, nd2nn_offset);
 
                 }
             #endif
@@ -4085,7 +4085,7 @@ void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtyp
             #pragma clang loop unroll(full)
             for (int x = 0; x < Xdim; ++x) {
                 auto dstO = gIterO(i+x, 0);
-                TCOPYOUT(dstO, tO_cast[x]);//TMOV
+                TSTORE(dstO, tO_cast[x]);//TMOV
             }
         #endif
     }

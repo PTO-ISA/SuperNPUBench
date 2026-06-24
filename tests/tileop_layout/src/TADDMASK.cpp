@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include <string> 
+#include <string>
 
 #ifdef LINX_PMC
 #include <linxStartEnd.hpp>
@@ -55,10 +55,10 @@ void tadd_mask_nd(float *dst, float *src0, float *src1) {
             auto g2 = gdst(i, j);
 
             tile_shape td0(2*i+j), td1(i+2*j), td2;
-            // TCOPYIN(td0, g0);
-            // TCOPYIN(td1, g1);
+            // TLOAD(td0, g0);
+            // TLOAD(td1, g1);
             TADD(td2, td0, td1);
-            // TCOPYOUT(g2, td2);
+            // TSTORE(g2, td2);
         }
         if constexpr (remainder_col) {
             auto g0 = gsrc0(i, block_col);
@@ -66,10 +66,10 @@ void tadd_mask_nd(float *dst, float *src0, float *src1) {
             auto g2 = gdst(i, block_col);
 
             trailing_rows_shape td0(2*i), td1(i), td2;
-            // TCOPYIN(td0, g0);
-            // TCOPYIN(td1, g1);
+            // TLOAD(td0, g0);
+            // TLOAD(td1, g1);
             TADD(td2, td0, td1);
-            // TCOPYOUT(g2, td2);
+            // TSTORE(g2, td2);
         }
     }
     if constexpr (remainder_row) {
@@ -79,10 +79,10 @@ void tadd_mask_nd(float *dst, float *src0, float *src1) {
             auto g2 = gdst(block_row, j);
 
             trailing_cols_shape td0(j), td1(2*j), td2;
-            // TCOPYIN(td0, g0);
-            // TCOPYIN(td1, g1);
+            // TLOAD(td0, g0);
+            // TLOAD(td1, g1);
             TADD(td2, td0, td1);
-            // TCOPYOUT(g2, td2);
+            // TSTORE(g2, td2);
         }
         if constexpr (remainder_col) {
             auto g0 = gsrc0(block_row, block_col);
@@ -90,10 +90,10 @@ void tadd_mask_nd(float *dst, float *src0, float *src1) {
             auto g2 = gdst(block_row, block_col);
 
             trailing_corner_shape td0(0), td1(1), td2;
-            // TCOPYIN(td0, g0);
-            // TCOPYIN(td1, g1);
+            // TLOAD(td0, g0);
+            // TLOAD(td1, g1);
             TADD(td2, td0, td1);
-            // TCOPYOUT(g2, td2);
+            // TSTORE(g2, td2);
         }
     }
 }

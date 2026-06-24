@@ -4,13 +4,13 @@ using namespace pto;
 
 //in: Input data of shape (N, C, H, W) ->        -> N, 1, C, H, W   ->  N, F, C, H, W
 //filter: Filter weights of shape (F, C, HH, WW) -> 1 ,F, C, HH, WW - > N ,F, C, HH, WW
-//out: Output data, of shape (N, F, H', W')      
+//out: Output data, of shape (N, F, H', W')
 // for j in range(0, H_prime):
 //     for i in range(0, W_prime):
 //        tmp_w = w
 //        tmp_w = tmp_w[np.newaxis,:]
 //        tmp_w = np.repeat(tmp_w, N, axis=0)
-//        tmp_x = x_pad[:, :, j * stride:j * stride + HH, i * stride:i * stride + WW] 
+//        tmp_x = x_pad[:, :, j * stride:j * stride + HH, i * stride:i * stride + WW]
 //        tmp_x = tmp_x[:,np.newaxis]
 //        tmp_x = np.repeat(tmp_x, F, axis=1)
 //        out[:,:,j,i] = np.sum(np.sum(np.sum(tmp_x*tmp_w, axis=-1), axis=-1), axis=-1) \
@@ -26,11 +26,11 @@ using namespace pto;
 //         for i in range(0, W_prime):
 //             tmp_w = w[f, :, :, :]
 //             tmp_w = tmp_w[np.newaxis,:]
-//             tmp_w = np.repeat(tmp_w, N, axis=0) 
+//             tmp_w = np.repeat(tmp_w, N, axis=0)
 //             out[:, f, j, i] = np.sum(np.sum(np.sum(x_pad[:, :, j * stride:j * stride + HH, i * stride:i * stride + WW] * tmp_w, axis=-3), axis=-2), axis=-1)
 
 //pic [N, C, H, W], filter [F, C, HH, WW] -> out [N, F, H', W']
-template<typename dtype, const int N, const int C, const int H, const int W, 
+template<typename dtype, const int N, const int C, const int H, const int W,
         const int F, const int HH, const int WW>
 void conv_forward(dtype *out, dtype *pic, dtype *filter){
     const int stride = 1;
@@ -59,8 +59,8 @@ void conv_forward(dtype *out, dtype *pic, dtype *filter){
                         tile_filt tfilt;
                         tile_filt tpic;
 
-                        TCOPYIN(tfilt, gfilt);
-                        TCOPYIN(tpic, gpic);
+                        TLOAD(tfilt, gfilt);
+                        TLOAD(tpic, gpic);
                         TMUL(tpic, tpic, tfilt);
                         TROWSUMEXPAND(tpic, tpic, tpic);
                         TCOLSUMEXPAND(tpic, tpic, tpic); // sum all element
@@ -68,7 +68,7 @@ void conv_forward(dtype *out, dtype *pic, dtype *filter){
                     }
                     int offset = n*F*H_prime*W_prime + f*H_prime*W_prime + h*W_prime + w;
                     gm_out gO(out+offset);
-                    TCOPYOUT(gO, tmp);
+                    TSTORE(gO, tmp);
                 }
             }
         }

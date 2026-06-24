@@ -38,7 +38,7 @@
     #endif
 #else
     typedef float dtype;
-#endif  
+#endif
 
 template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row, uint16_t tile_col>
 void tsub_nz_left(dtype *dst, dtype *src0, dtype *src1) {
@@ -57,11 +57,11 @@ void tsub_nz_left(dtype *dst, dtype *src0, dtype *src1) {
     for (int i = 0; i < block_row; ++i) {
         for (int j = 0; j < block_col; ++j) {
             tile_shape tsrc0,tsrc1;
-            TCOPYIN(tsrc0, gsrc0(i, j));
-            TCOPYIN(tsrc1, gsrc1(i, j));
+            TLOAD(tsrc0, gsrc0(i, j));
+            TLOAD(tsrc1, gsrc1(i, j));
             TSUB(tsrc0, tsrc0, tsrc1);
             auto gO = gdst(i, j);
-            TCOPYOUT(gO, tsrc0);
+            TSTORE(gO, tsrc0);
         }
     }
 }
@@ -86,11 +86,11 @@ void trowsum_nz_left(dtype *dst, dtype *src) {
         tile_shape_r trsum;
         for (int j = 0; j < block_col; ++j) {
             tile_shape_in tsrc;
-            TCOPYIN(tsrc, gsrc(i, j));
+            TLOAD(tsrc, gsrc(i, j));
             TROWSUM(trsum, tsrc);
         }
         auto gO = gdst(i, 0);
-        TCOPYOUT(gO, trsum);
+        TSTORE(gO, trsum);
     }
 }
 
@@ -115,10 +115,10 @@ void texpandcol_nz_left(dtype *dst, dtype *src) {
         for (int j = 0; j < block_col; ++j) {
             tile_shape_in tsrc;
             tile_shape_expand texpand;
-            TCOPYIN(tsrc, gsrc(i, 0));
+            TLOAD(tsrc, gsrc(i, 0));
             TEXPANDCOL(texpand, tsrc);
             auto gO = gdst(i, j);
-            TCOPYOUT(gO, texpand);
+            TSTORE(gO, texpand);
         }
     }
 }
@@ -140,11 +140,11 @@ void tmul_nz_out(dtype *dst, dtype *src0, dtype *src1) {
     for (int i = 0; i < block_row; ++i) {
         for (int j = 0; j < block_col; ++j) {
             tile_shape tsrc0,tsrc1;
-            TCOPYIN(tsrc0, gsrc0(i, j));
-            TCOPYIN(tsrc1, gsrc1(i, j));
+            TLOAD(tsrc0, gsrc0(i, j));
+            TLOAD(tsrc1, gsrc1(i, j));
             TMUL(tsrc0, tsrc0, tsrc1);
             auto gO = gdst(i, j);
-            TCOPYOUT(gO, tsrc0);
+            TSTORE(gO, tsrc0);
         }
     }
 }
@@ -170,10 +170,10 @@ void texpandcol_nz_out(dtype *dst, dtype *src) {
         for (int j = 0; j < block_col; ++j) {
             tile_shape_in tsrc;
             tile_shape_expand texpand;
-            TCOPYIN(tsrc, gsrc(i, 0));
+            TLOAD(tsrc, gsrc(i, 0));
             TEXPANDCOL(texpand, tsrc);
             auto gO = gdst(i, j);
-            TCOPYOUT(gO, texpand);
+            TSTORE(gO, texpand);
         }
     }
 }
@@ -199,11 +199,11 @@ void trowmax_nz_left(dtype *dst, dtype *src) {
         tile_shape_r trmax;
         for (int j = 0; j < block_col; ++j) {
             tile_shape_in tsrc;
-            TCOPYIN(tsrc, gsrc(i, j));
+            TLOAD(tsrc, gsrc(i, j));
             TROWMAX(trmax, tsrc);
         }
         auto gO = gdst(i, 0);
-        TCOPYOUT(gO, trmax);
+        TSTORE(gO, trmax);
     }
 }
 
@@ -223,10 +223,10 @@ void tmuls_nz_left(dtype *dst, dtype *src, dtype s) {
     for (int i = 0; i < block_row; ++i) {
         for (int j = 0; j < block_col; ++j) {
             tile_shape tsrc;
-            TCOPYIN(tsrc, gsrc(i, j));
+            TLOAD(tsrc, gsrc(i, j));
             TMULS(tsrc, tsrc, s);
             auto gO = gdst(i, j);
-            TCOPYOUT(gO, tsrc);
+            TSTORE(gO, tsrc);
         }
     }
 }
@@ -249,10 +249,10 @@ void tcvt_out_left(dtype *dst, dtype *src) {
         for (int j = 0; j < block_col; ++j) {
             tile_shape_in tsrc;
             tile_shape_out tout;
-            TCOPYIN(tsrc, gsrc(i, j));
+            TLOAD(tsrc, gsrc(i, j));
             TCVT(tout, tsrc);
             auto gO = gdst(i, j);
-            TCOPYOUT(gO, tout);
+            TSTORE(gO, tout);
         }
     }
 }

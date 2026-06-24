@@ -20,9 +20,9 @@ void test_rm(float *dst, float *src, size_t offset_i, size_t offset_j) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TEXTRACT(d1, d0, offset_i, offset_j);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 template <size_t src_row, size_t src_col, size_t dst_row, size_t dst_col>
@@ -43,9 +43,9 @@ void test_rm_dynamic(float *dst, float *src, size_t offset_i, size_t offset_j) {
   tile_shape_in d0(src_valid_row, src_valid_col);
   tile_shape_out d1(dst_valid_row, dst_valid_col);
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TEXTRACT(d1, d0, offset_i, offset_j);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 template <size_t src_row, size_t src_col, size_t dst_row, size_t dst_col>
@@ -61,9 +61,9 @@ void test_cm(float *dst, float *src, size_t offset_i, size_t offset_j) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TEXTRACT(d1, d0, offset_i, offset_j);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 int main() {

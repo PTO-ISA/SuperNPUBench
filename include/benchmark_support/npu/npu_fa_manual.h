@@ -37,9 +37,9 @@ void __vec__ new_max_manual(
     #ifndef RES_CHECK
     upd_max = upd_max * src_scale;
     #endif
-    new_max_ptr[max_idx] = upd_max; 
+    new_max_ptr[max_idx] = upd_max;
 
-    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max); 
+    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max);
 }
 
 template<typename tileSrc, typename tileSrc_cast, typename tileMax>
@@ -88,7 +88,7 @@ void __vec__ new_sum_manual(
         typename tileSrc::DType exp_src_3 = src_ptr[src_idx_3];
         typename tileSrc::DType exp_src_01 = exp_src_0 + exp_src_1;
         typename tileSrc::DType exp_src_23 = exp_src_2 + exp_src_3;
-        typename tileSrc::DType exp_src_0123 = exp_src_01 + exp_src_23;        
+        typename tileSrc::DType exp_src_0123 = exp_src_01 + exp_src_23;
         upd_sum += exp_src_0123;
     }
     blkv_get_tile_ptr(new_sum)[sum_idx] = upd_sum;
@@ -108,7 +108,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
     using tileW_out  = TileAcc<float, kTm, kTk>;      // [kTm×kTk]
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
     using tileW_cast = Tile<Location::Vec, dtype, kTm, kTk, BLayout::ColMajor>;
-    using tileW_left = TileLeft<dtype, kTm, kTk>; 
+    using tileW_left = TileLeft<dtype, kTm, kTk>;
 
     using tileO_out  = TileAcc<float, kTm, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::ColMajor>; // [kTm×vD]
@@ -148,7 +148,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
         #pragma clang loop unroll(full)
         for(int x=0;x<Xdim;x++){
             auto gQ = gIterQ(i+x,0);
-            TCOPYIN(tQ[x], gQ);
+            TLOAD(tQ[x], gQ);
         }
 
         tileMax tMax[Xdim];
@@ -177,9 +177,9 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
             tileW_cast tExpW[Xdim][Ydim];
 
             auto gK = gIterK(0, j+0);
-            TCOPYIN(tK[0], gK);
+            TLOAD(tK[0], gK);
             gK = gIterK(0, j+1);
-            TCOPYIN(tK[1], gK);
+            TLOAD(tK[1], gK);
 
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x++){
@@ -219,7 +219,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
 
             //Q0 * K2 = S2
             gK = gIterK(0, j+2);
-            TCOPYIN(tK[2], gK);
+            TLOAD(tK[2], gK);
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x++){
                 tileW_out tW_out;
@@ -230,7 +230,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
             // P0 * V0 = PV0
             tileV tV[Ydim];
             auto gV = gIterV(j+0, 0);
-            TCOPYIN(tV[0], gV);
+            TLOAD(tV[0], gV);
 
             tileW_left tW_left[Xdim][Ydim];
             #pragma clang loop unroll(full)
@@ -285,7 +285,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
 
             //Q0 * K3 = S3
             gK = gIterK(0, j+3);
-            TCOPYIN(tK[3], gK);
+            TLOAD(tK[3], gK);
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x++){
                 tileW_out tW_out;
@@ -295,7 +295,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
 
             //P1 * V1 = PV1
             gV = gIterV(j+1, 0);
-            TCOPYIN(tV[1], gV);
+            TLOAD(tV[1], gV);
 
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x++){
@@ -341,7 +341,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
 
             //P2 * V2 = PV2
             gV = gIterV(j+2, 0);
-            TCOPYIN(tV[2], gV);
+            TLOAD(tV[2], gV);
 
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x++){
@@ -387,7 +387,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
 
             //P3 * V3 = PV3
             gV = gIterV(j+3, 0);
-            TCOPYIN(tV[3], gV);
+            TLOAD(tV[3], gV);
 
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x++){
@@ -400,7 +400,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
             for(int x=0;x<Xdim;x++){
                 tMax[x] = tNewMax[x];
                 tSum[x] = tNewSum[x];
-            }        
+            }
 
         tileO_cast tO_cast[Xdim];
         #pragma clang loop unroll(full)
@@ -412,7 +412,7 @@ void flash_attention_manual(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v
         #pragma clang loop unroll(full)
         for (int x = 0; x < Xdim; ++x) {
             auto dstO = gIterO(i+x, 0);
-            TCOPYOUT(dstO, tO_cast[x]);
+            TSTORE(dstO, tO_cast[x]);
         }
 
     }

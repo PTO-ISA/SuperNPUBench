@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 
-template <const int kM, const int kN, const int kK, 
+template <const int kM, const int kN, const int kK,
           const int kTM, const int kTN, const int kTK>
 void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float *dequant) {
     using gm_shapeA = global_tensor<__half, RowMajor<kM, kK>>;
@@ -70,8 +70,8 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
             tile_shapeA tA;
             tile_shapeB tB_ori;
             tile_shapeB_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -83,8 +83,8 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
             tile_shapeA_trows tA;
             tile_shapeB_tcols tB_ori;
             tile_shapeB_tcols_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -92,7 +92,7 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
         //quant pre VQF322BF16_PRE
         tile_shapeACC_cvt tACC_cvt;
         TCVT(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
         if constexpr (rmd_N) {
         auto gC = gCIter(i, Nb);
@@ -109,8 +109,8 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
             tile_shapeA tA;
             tile_shapeB_trows tB_ori;
             tile_shapeB_trows_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -121,8 +121,8 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
             tile_shapeA_trows tA;
             tile_shapeB_tcorner tB_ori;
             tile_shapeB_tcorner_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -130,7 +130,7 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
         //quant pre
         tile_shapeC_trows_cvt tACC_cvt;
         TCVT(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
     }
     if constexpr (rmd_M) {
@@ -149,8 +149,8 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
             tile_shapeA_tcols tA;
             tile_shapeB tB_ori;
             tile_shapeB_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -161,15 +161,15 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
             tile_shapeA_tcorner tA;
             tile_shapeB_tcols tB_ori;
             tile_shapeB_tcols_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
 
         tile_shapeC_tcols_cvt tACC_cvt;
         TCVT(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
         if constexpr (rmd_N) {
         auto gC = gCIter(Mb, Nb);
@@ -177,7 +177,7 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
         tile_shapeC_tcorner tACC;
         tile_shapeA_tcols tA(0);
         tile_shapeB_trows_cvt tB(0);
-        MATMUL(tACC, tA, tB);  
+        MATMUL(tACC, tA, tB);
         #pragma clang loop unroll(full)
         for (int k = 0; k < Kb; ++k) {
             auto gA = gAIter(Mb, k);
@@ -186,8 +186,8 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
             tile_shapeA_tcols tA;
             tile_shapeB_trows tB_ori;
             tile_shapeB_trows_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -198,20 +198,20 @@ void matmul_kernel_a16w8(__half *c_ptr, __half *a_ptr, __fp8_e4m3 *b_ptr, float 
             tile_shapeA_tcorner tA;
             tile_shapeB_tcorner tB_ori;
             tile_shapeB_tcorner_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
 
         tile_shapeC_tcorner_cvt tACC_cvt;
         TCVT(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
     }
 }
 
-template <const int kM, const int kN, const int kK, 
+template <const int kM, const int kN, const int kK,
           const int kTM, const int kTN, const int kTK>
 void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, float *dequant) {
     using gm_shapeA = global_tensor<__fp8_e4m3, RowMajor<kM, kK>>;
@@ -277,8 +277,8 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
             tile_shapeA tA;
             tile_shapeB tB_ori;
             tile_shapeB_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -290,8 +290,8 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
             tile_shapeA_trows tA;
             tile_shapeB_tcols tB_ori;
             tile_shapeB_tcols_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -299,7 +299,7 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
         //quant pre VQF322BF16_PRE
         tile_shapeACC_cvt tACC_cvt;
         TCVT(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
         if constexpr (rmd_N) {
         auto gC = gCIter(i, Nb);
@@ -316,8 +316,8 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
             tile_shapeA tA;
             tile_shapeB_trows tB_ori;
             tile_shapeB_trows_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -328,8 +328,8 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
             tile_shapeA_trows tA;
             tile_shapeB_tcorner tB_ori;
             tile_shapeB_tcorner_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -337,7 +337,7 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
         //quant pre
         tile_shapeC_trows_cvt tACC_cvt;
         TCVT(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
     }
     if constexpr (rmd_M) {
@@ -356,8 +356,8 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
             tile_shapeA_tcols tA;
             tile_shapeB tB_ori;
             tile_shapeB_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -368,15 +368,15 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
             tile_shapeA_tcorner tA;
             tile_shapeB_tcols tB_ori;
             tile_shapeB_tcols_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
 
         tile_shapeC_tcols_cvt tACC_cvt;
         TCVT(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
         if constexpr (rmd_N) {
         auto gC = gCIter(Mb, Nb);
@@ -384,7 +384,7 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
         tile_shapeC_tcorner tACC;
         TileLeft<__half, kTM, kTK, rmd_M, kTK> tA(0);
         TileRight<__half, kTK, kTN, kTK, rmd_N> tB(0);
-        MATMUL(tACC, tA, tB);  
+        MATMUL(tACC, tA, tB);
         #pragma clang loop unroll(full)
         for (int k = 0; k < Kb; ++k) {
             auto gA = gAIter(Mb, k);
@@ -393,8 +393,8 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
             tile_shapeA_tcols tA;
             tile_shapeB_trows tB_ori;
             tile_shapeB_trows_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -405,20 +405,20 @@ void matmul_kernel_a8w8(__fp8_e4m3 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr,
             tile_shapeA_tcorner tA;
             tile_shapeB_tcorner tB_ori;
             tile_shapeB_tcorner_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCVT(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
 
         tile_shapeC_tcorner_cvt tACC_cvt;
         TCVT(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
     }
 }
 
-template <const int kM, const int kN, const int kK, 
+template <const int kM, const int kN, const int kK,
           const int kTM, const int kTN, const int kTK>
 void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, __fp8_e4m3 *amx, __fp8_e4m3 *bmx, float *dequant) {
     using gm_shapeA = global_tensor<__fp8_e4m3, RowMajor<kM, kK>>;
@@ -499,8 +499,8 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
             tile_shapeA tA;
             tile_shapeB tB_ori;
             tile_shapeB_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCAST(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -512,16 +512,16 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
             tile_shapeA_trows tA;
             tile_shapeB_tcols tB_ori;
             tile_shapeB_tcols_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB_ori, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB_ori, gB);
             TCAST(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
 
-        //quant pre(acc * dequant_scale) 
+        //quant pre(acc * dequant_scale)
         auto gDQ = gDQIter(0,j);
         tile_shapeDQ tDQ;
-        TCOPYIN(tDQ, gDQ);
+        TLOAD(tDQ, gDQ);
         tile_shapeACC tDQ_expand;
         TEXPANDROW(tDQ_expand,tDQ);
         TMULS(tACC, tACC, tDQ_expand);
@@ -531,7 +531,7 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
         // TMULS(tACC_scale, tACC_scale, static_cast<float>(2));
         tile_shapeACC_cvt tACC_cvt;
         TCAST(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
         if constexpr (rmd_N) {
         auto gC = gCIter(i, Nb);
@@ -548,8 +548,8 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
             tile_shapeA tA;
             tile_shapeB_trows tB_ori;
             tile_shapeB_trows_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             TCAST(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -560,22 +560,22 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
             tile_shapeA_trows tA;
             tile_shapeB_tcorner tB_ori;
             tile_shapeB_tcorner_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             TCAST(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
 
-        //quant pre(acc * dequant_scale) 
+        //quant pre(acc * dequant_scale)
         auto gDQ = gDQIter(0,Nb);
         tile_shapeDQ tDQ;
-        TCOPYIN(tDQ, gDQ);
+        TLOAD(tDQ, gDQ);
         tile_shapeC_trows tDQ_expand;
         TEXPANDROW(tDQ_expand,tDQ);
         TMULS(tACC, tACC, tDQ_expand);
         tile_shapeC_trows_cvt tACC_cvt;
         TCAST(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
     }
     if constexpr (rmd_M) {
@@ -594,8 +594,8 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
             tile_shapeA_tcols tA;
             tile_shapeB tB_ori;
             tile_shapeB_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             TCAST(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -606,8 +606,8 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
             tile_shapeA_tcorner tA;
             tile_shapeB_tcols tB_ori;
             tile_shapeB_tcols_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             TCAST(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -615,13 +615,13 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
         //need quantization for C
         auto gDQ = gDQIter(0,j);
         tile_shapeDQ tDQ;
-        TCOPYIN(tDQ, gDQ);
+        TLOAD(tDQ, gDQ);
         tile_shapeC_tcols tDQ_expand;
         TEXPANDROW(tDQ_expand,tDQ);
         TMULS(tACC, tACC, tDQ_expand);
         tile_shapeC_tcols_cvt tACC_cvt;
         TCAST(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
         if constexpr (rmd_N) {
         auto gC = gCIter(Mb, Nb);
@@ -629,7 +629,7 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
         tile_shapeC_tcorner tACC;
         tile_shapeA_tcols tA(0);
         tile_shapeB_trows_cvt tB(0);
-        MATMUL(tACC, tA, tB);  
+        MATMUL(tACC, tA, tB);
         #pragma clang loop unroll(full)
         for (int k = 0; k < Kb; ++k) {
             auto gA = gAIter(Mb, k);
@@ -638,8 +638,8 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
             tile_shapeA_tcols tA;
             tile_shapeB_trows tB_ori;
             tile_shapeB_trows_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             TCAST(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -650,8 +650,8 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
             tile_shapeA_tcorner tA;
             tile_shapeB_tcorner tB_ori;
             tile_shapeB_tcorner_cvt tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             TCAST(tB, tB_ori);
             MATMACC(tACC, tA, tB);
         }
@@ -660,13 +660,13 @@ void matmul_kernel_mx_a8w8(__bf16 *c_ptr, __fp8_e4m3 *a_ptr, __fp8_e5m2 *b_ptr, 
         //need quantization for C
         auto gDQ = gDQIter(0,Nb);
         tile_shapeDQ tDQ;
-        TCOPYIN(tDQ, gDQ);
+        TLOAD(tDQ, gDQ);
         tile_shapeC_tcorner tDQ_expand;
         TEXPANDROW(tDQ_expand,tDQ);
         TMULS(tACC, tACC, tDQ_expand);
         tile_shapeC_tcorner_cvt tACC_cvt;
         TCAST(tACC_cvt, tACC);
-        TCOPYOUT(gC, tACC_cvt);
+        TSTORE(gC, tACC_cvt);
         }
     }
 }
@@ -724,8 +724,8 @@ void matmul_a32w32(float *c_ptr, float *a_ptr, float *b_ptr) {
 
         tile_shapeA tA;
         tile_shapeB tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
         MATMACC(tACC, tA, tB);
       }
 
@@ -735,12 +735,12 @@ void matmul_a32w32(float *c_ptr, float *a_ptr, float *b_ptr) {
 
         tile_shapeA_trows tA;
         tile_shapeB_tcols tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
         MATMACC(tACC, tA, tB);
       }
 
-      TCOPYOUT(gC, tACC);
+      TSTORE(gC, tACC);
     }
     if constexpr (rmd_N) {
       auto gC = gCIter(i, Nb);
@@ -756,8 +756,8 @@ void matmul_a32w32(float *c_ptr, float *a_ptr, float *b_ptr) {
 
         tile_shapeA tA;
         tile_shapeB_trows tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
         MATMACC(tACC, tA, tB);
       }
       if constexpr (rmd_K) {
@@ -766,11 +766,11 @@ void matmul_a32w32(float *c_ptr, float *a_ptr, float *b_ptr) {
 
         tile_shapeA_trows tA;
         tile_shapeB_tcorner tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
         MATMACC(tACC, tA, tB);
       }
-      TCOPYOUT(gC, tACC);
+      TSTORE(gC, tACC);
     }
   }
   if constexpr (rmd_M) {
@@ -788,8 +788,8 @@ void matmul_a32w32(float *c_ptr, float *a_ptr, float *b_ptr) {
 
         tile_shapeA_tcols tA;
         tile_shapeB tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
         MATMACC(tACC, tA, tB);
       }
       if constexpr (rmd_K) {
@@ -798,11 +798,11 @@ void matmul_a32w32(float *c_ptr, float *a_ptr, float *b_ptr) {
 
         tile_shapeA_tcorner tA;
         tile_shapeB_tcols tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
         MATMACC(tACC, tA, tB);
       }
-      TCOPYOUT(gC, tACC);
+      TSTORE(gC, tACC);
     }
     if constexpr (rmd_N) {
       auto gC = gCIter(Mb, Nb);
@@ -810,7 +810,7 @@ void matmul_a32w32(float *c_ptr, float *a_ptr, float *b_ptr) {
       tile_shapeC_tcorner tACC;
       tile_shapeA_tcols tA(0);
       tile_shapeB_trows tB(0);
-      MATMUL(tACC, tA, tB);  
+      MATMUL(tACC, tA, tB);
       #pragma clang loop unroll(full)
       for (int k = 0; k < Kb; ++k) {
         auto gA = gAIter(Mb, k);
@@ -818,8 +818,8 @@ void matmul_a32w32(float *c_ptr, float *a_ptr, float *b_ptr) {
 
         tile_shapeA_tcols tA;
         tile_shapeB_trows tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
         MATMACC(tACC, tA, tB);
       }
       if constexpr (rmd_K) {
@@ -828,11 +828,11 @@ void matmul_a32w32(float *c_ptr, float *a_ptr, float *b_ptr) {
 
         tile_shapeA_tcorner tA;
         tile_shapeB_tcorner tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
         MATMACC(tACC, tA, tB);
       }
-      TCOPYOUT(gC, tACC);
+      TSTORE(gC, tACC);
     }
   }
 }

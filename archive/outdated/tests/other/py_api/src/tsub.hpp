@@ -18,18 +18,18 @@ void tsub_py(float* dst, float* src0, float* src1) {
             int offset = i * (tile_row * gm_col) + j * tile_col;
             gm_shape s0(src0 + offset);
             gm_shape s1(src1 + offset);
-            gm_shape res(dst + offset);  
+            gm_shape res(dst + offset);
 
             tile_shape d0, d1, d2;
-            TCOPYIN(d0, s0);
-            TCOPYIN(d1, s1);
+            TLOAD(d0, s0);
+            TLOAD(d1, s1);
             TSUB(d2, d0, d1);
-            TCOPYOUT(res, d2);
+            TSTORE(res, d2);
         }
     }
 }
 
-#ifdef __cpu_sim__ 
+#ifdef __cpu_sim__
     void bind_tsub(py::module_& m) {
         m.def("tsub", [](py::array_t<float> dst_py, py::array_t<float> src0_py, py::array_t<float> src1_py){
             float* dst = static_cast<float*>(dst_py.request().ptr);

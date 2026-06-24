@@ -19,9 +19,9 @@ void Identity(dtype *dst, dtype *src){
     for(int i=0;i<Mb;i++){
         for(int j=0;j<Nb;j++){
             tile_shape tsrc;
-            TCOPYIN(tsrc, git_src(i,j));
+            TLOAD(tsrc, git_src(i,j));
             auto gdst = git_dst(i,j);
-            TCOPYOUT(gdst, tsrc);
+            TSTORE(gdst, tsrc);
         }
     }
 }
@@ -29,14 +29,14 @@ void Identity(dtype *dst, dtype *src){
 // output = input * A^T + bias ;;; input = [batch_size, in_features] , A = [out_features, in_features]
 // A should be row major
 template<typename dtype, const int BatSize, const int InFeat, const int OutFeat>
-void Linear(dtype *out, dtype *in, dtype *weight, dtype *bias){    
+void Linear(dtype *out, dtype *in, dtype *weight, dtype *bias){
     gemm<BatSize, OutFeat, InFeat, 64, 64, 64, false, true>(out, in, weight, bias);
 }
 
 // y = x1^T.A.x2 + b, where x1=1xd1, x2=1xd2, A=doxd1xd2
 // in1[DimIn1, 1] in2 [DimIn2, 1] bias[DimOut, 1] weight [DimOut, DimIn1, DimIn2]
 template<typename dtype, const int DimIn1, const int DimIn2, const int DimOut, const bool Bias>
-void BiLinear(dtype *out, dtype *weight, 
+void BiLinear(dtype *out, dtype *weight,
              dtype *in1, dtype *in2, dtype *bias){
     using gm_shapeA = global_tensor<dtype, RowMajor<1, DimIn1>>;
     using gm_shapeB = global_tensor<dtype, RowMajor<DimIn2, 1>>;
@@ -57,25 +57,25 @@ void BiLinear(dtype *out, dtype *weight,
     tile_shapeW  tW;
     tile_shapeBT tmp;
     tile_shapeO  tO;
-    TCOPYIN(tin1, gin1);
-    TCOPYIN(tin2, gin2);
+    TLOAD(tin1, gin1);
+    TLOAD(tin2, gin2);
     for (int i=0;i<DimOut;i++){
         gm_shapeW gW((weight + i * DimIn1 * DimIn2)); //weight[i, 0, 0]
-        TCOPYIN(tW, gW);
+        TLOAD(tW, gW);
         MATMUL(tmp, tin1, tW);
         MATMUL(tO, tmp, tin2);
         gm_shapeO gO(out+i);
-        TCOPYOUT(gO, tO);
+        TSTORE(gO, tO);
     }
     if constexpr (Bias){
         Tile<Location::Vec, dtype, DimOut, 1, BLayout::RowMajor> tout;
         Tile<Location::Vec, dtype, DimOut, 1, BLayout::RowMajor> tbias;
         gm_shapeO gO(out);
         gm_shapeO gbias(bias);
-        TCOPYIN(tout, gO);
-        TCOPYIN(tbias, gbias);
+        TLOAD(tout, gO);
+        TLOAD(tbias, gbias);
         TADD(tout, tout, tbias);
-        TCOPYOUT(gO, tout);
+        TSTORE(gO, tout);
     }
 }
 

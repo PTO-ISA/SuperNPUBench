@@ -47,7 +47,7 @@ void test_rm(T *dst, T s) {
 
   tile_shape d0;
   TEXPANDSCALAR(d0, s);
-  TCOPYOUT(res, d0);
+  TSTORE(res, d0);
 }
 
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row,
@@ -63,7 +63,7 @@ void test_rm_dynamic(T *dst, T s) {
   tile_shape d0(tile_valid_row, tile_valid_col);
 
   TEXPANDSCALAR(d0, s);
-  TCOPYOUT(res, d0);
+  TSTORE(res, d0);
 }
 
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row,
@@ -75,7 +75,7 @@ void test_cm(T *dst, T s) {
 
   tile_shape d0;
   TEXPANDSCALAR(d0, s);
-  TCOPYOUT(res, d0);
+  TSTORE(res, d0);
 }
 
 int main() {

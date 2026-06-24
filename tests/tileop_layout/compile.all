@@ -1,39 +1,39 @@
-make TESTCASE=TCOPYIN MODE=ND2ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYIN MODE=ND2ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYIN MODE=ND2ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYIN MODE=ND2ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TLOAD MODE=ND2ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TLOAD MODE=ND2ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TLOAD MODE=ND2ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TLOAD MODE=ND2ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
-make TESTCASE=TCOPYIN MODE=ND2NZ row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYIN MODE=ND2NZ row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYIN MODE=ND2NZ row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYIN MODE=ND2NZ row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TLOAD MODE=ND2NZ row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TLOAD MODE=ND2NZ row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TLOAD MODE=ND2NZ row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TLOAD MODE=ND2NZ row=64  col=128 trow=16 tcol=32 PLAT=linx
 
-make TESTCASE=TCOPYIN MODE=DN2ZN row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYIN MODE=DN2ZN row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYIN MODE=DN2ZN row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYIN MODE=DN2ZN row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TLOAD MODE=DN2ZN row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TLOAD MODE=DN2ZN row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TLOAD MODE=DN2ZN row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TLOAD MODE=DN2ZN row=64  col=128 trow=16 tcol=32 PLAT=linx
 
-#Tcopyout
-make TESTCASE=TCOPYOUT MODE=ND2ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYOUT MODE=ND2ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYOUT MODE=ND2ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYOUT MODE=ND2ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+#Tstore
+make TESTCASE=TSTORE MODE=ND2ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TSTORE MODE=ND2ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TSTORE MODE=ND2ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TSTORE MODE=ND2ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
-make TESTCASE=TCOPYOUT MODE=NZ2ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYOUT MODE=NZ2ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYOUT MODE=NZ2ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TCOPYOUT MODE=NZ2ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TSTORE MODE=NZ2ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TSTORE MODE=NZ2ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TSTORE MODE=NZ2ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TSTORE MODE=NZ2ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
-# make TESTCASE=TCOPYOUT MODE=ZN2DN row=16  col=16  trow=16 tcol=16 PLAT=linx
-# make TESTCASE=TCOPYOUT MODE=ZN2DN row=64  col=64  trow=16 tcol=16 PLAT=linx
-# make TESTCASE=TCOPYOUT MODE=ZN2DN row=128 col=64  trow=32 tcol=16 PLAT=linx
-# make TESTCASE=TCOPYOUT MODE=ZN2DN row=64  col=128 trow=16 tcol=32 PLAT=linx
+# make TESTCASE=TSTORE MODE=ZN2DN row=16  col=16  trow=16 tcol=16 PLAT=linx
+# make TESTCASE=TSTORE MODE=ZN2DN row=64  col=64  trow=16 tcol=16 PLAT=linx
+# make TESTCASE=TSTORE MODE=ZN2DN row=128 col=64  trow=32 tcol=16 PLAT=linx
+# make TESTCASE=TSTORE MODE=ZN2DN row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #Tadd
-make TESTCASE=TADD MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TADD MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TADD MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TADD MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TADD MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TADD MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TADD MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TADD MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 # make TESTCASE=TADD MODE=NZ row=16  col=16  trow=16 tcol=16 PLAT=linx
 # make TESTCASE=TADD MODE=NZ row=64  col=64  trow=16 tcol=16 PLAT=linx
@@ -46,10 +46,10 @@ make TESTCASE=TADD MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 # make TESTCASE=TADD MODE=ZN row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #Texp
-make TESTCASE=TEXP MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TEXP MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TEXP MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TEXP MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TEXP MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TEXP MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TEXP MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TEXP MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 # make TESTCASE=TEXP MODE=NZ row=16  col=16  trow=16 tcol=16 PLAT=linx
 # make TESTCASE=TEXP MODE=NZ row=64  col=64  trow=16 tcol=16 PLAT=linx
@@ -62,10 +62,10 @@ make TESTCASE=TEXP MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 # make TESTCASE=TEXP MODE=ZN row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #Tcopy
-make TESTCASE=TCOPY  MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPY  MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TCOPY  MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TCOPY  MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TCOPY  MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TCOPY  MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TCOPY  MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TCOPY  MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 # make TESTCASE=TCOPY TEST_TYPE=tileop MODE=DN row=16  col=16  trow=16 tcol=16 PLAT=linx
 # make TESTCASE=TCOPY TEST_TYPE=tileop MODE=DN row=64  col=64  trow=16 tcol=16 PLAT=linx
@@ -139,10 +139,10 @@ make TESTCASE=TASSEMBLE ROW=128 COL1=16 COL2=8 COL3=8 PLAT=linx
 make TESTCASE=TASSEMBLE ROW=128 COL1=8 COL2=16 COL3=8 PLAT=linx
 
 #TADDCAST
-make TESTCASE=TADDCAST MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TADDCAST MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TADDCAST MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TADDCAST MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TADDCAST MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TADDCAST MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TADDCAST MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TADDCAST MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #TABS
 make TESTCASE=TABS TEST_TYPE=tileop MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
@@ -151,10 +151,10 @@ make TESTCASE=TABS TEST_TYPE=tileop MODE=ND row=128 col=64  trow=32 tcol=16 PLAT
 make TESTCASE=TABS TEST_TYPE=tileop MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #TADDMASK
-make TESTCASE=TADDMASK MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TADDMASK MODE=ND row=66  col=66  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TADDMASK MODE=ND row=130 col=66  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TADDMASK MODE=ND row=66  col=130 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TADDMASK MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TADDMASK MODE=ND row=66  col=66  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TADDMASK MODE=ND row=130 col=66  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TADDMASK MODE=ND row=66  col=130 trow=16 tcol=32 PLAT=linx
 
 #TAND
 make TESTCASE=TAND TEST_TYPE=tileop MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
@@ -181,22 +181,22 @@ make TESTCASE=TEXPANDSCALAR TEST_TYPE=tileop MODE=ND row=128 col=64  trow=32 tco
 make TESTCASE=TEXPANDSCALAR TEST_TYPE=tileop MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #TDIV
-make TESTCASE=TDIV MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TDIV MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TDIV MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TDIV MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TDIV MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TDIV MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TDIV MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TDIV MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #TMUL
-make TESTCASE=TMUL MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TMUL MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TMUL MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TMUL MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TMUL MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TMUL MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TMUL MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TMUL MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #TSUB
-make TESTCASE=TSUB MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TSUB MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TSUB MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TSUB MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TSUB MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TSUB MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TSUB MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TSUB MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #TCAST
 make TESTCASE=TCAST TEST_TYPE=tileop MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
@@ -229,10 +229,10 @@ make TESTCASE=TTRANS TEST_TYPE=tileop MODE=ND row=128 col=64  trow=32 tcol=16 PL
 make TESTCASE=TTRANS TEST_TYPE=tileop MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #TMAKERANGE
-make TESTCASE=TMAKERANGE MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TMAKERANGE MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx 
-make TESTCASE=TMAKERANGE MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx 
-make TESTCASE=TMAKERANGE MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx 
+make TESTCASE=TMAKERANGE MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TMAKERANGE MODE=ND row=64  col=64  trow=16 tcol=16 PLAT=linx
+make TESTCASE=TMAKERANGE MODE=ND row=128 col=64  trow=32 tcol=16 PLAT=linx
+make TESTCASE=TMAKERANGE MODE=ND row=64  col=128 trow=16 tcol=32 PLAT=linx
 
 #TOR
 make TESTCASE=TOR TEST_TYPE=tileop MODE=ND row=16  col=16  trow=16 tcol=16 PLAT=linx

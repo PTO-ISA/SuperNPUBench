@@ -165,7 +165,7 @@ int main() {
     using HistGT = GlobalTensor<uint32_t, Shape<1,1,1,16,16>, Stride<1,1,1,16,1>>;
     uint32_t histResult[256];
     HistGT histGlobal(histResult);
-    TCOPYOUT(histGlobal, high8HistTile);
+    TSTORE(histGlobal, high8HistTile);
 
     uint32_t global_high8_hist[256] = {0};
     for (int b = 0; b < 256; b++) {
@@ -204,7 +204,7 @@ int main() {
 
     uint32_t low8HistResult[256];
     HistGT low8HistGlobal(low8HistResult);
-    TCOPYOUT(low8HistGlobal, low8HistTile);
+    TSTORE(low8HistGlobal, low8HistTile);
 
     uint32_t global_low8_hist_kth[256] = {0};
     for (int b = 0; b < 256; b++) {

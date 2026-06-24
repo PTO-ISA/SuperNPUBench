@@ -71,7 +71,7 @@ int main()
             TableGT dstGlobal(gDst);
 
             MGATHER(elemTile, srcGlobal, loadIdxTile16);
-            // TCOPYIN(elemTile, srcGlobal);
+            // TLOAD(elemTile, srcGlobal);
 
             MSCATTER(dstGlobal, elemTile, storeIdxTile16);
         }

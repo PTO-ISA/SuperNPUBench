@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include <string> 
+#include <string>
 
 #ifdef LINX_PMC
 #include <linxStartEnd.hpp>
@@ -54,11 +54,11 @@ void tselect_nd(float *dst, float *src0, float *src1, uint16_t *cond) {
             tile_shape_fp32 td0(2*i+j), td1(i+2*j);
             tile_shape_uint16 td2(i%2);
             tile_shape_fp32 td3;
-            // TCOPYIN(td0, g0);
-            // TCOPYIN(td1, g1);
-            // TCOPYIN(td2, g2);
+            // TLOAD(td0, g0);
+            // TLOAD(td1, g1);
+            // TLOAD(td2, g2);
             TSELECT(td3, td2, td0, td1);
-            // TCOPYOUT(g3, td3);
+            // TSTORE(g3, td3);
         }
     }
 }
@@ -92,11 +92,11 @@ void tselect_dn(float *dst, float *src0, float *src1, uint16_t *cond) {
             tile_shape_fp32 td0(2*i+j), td1(i+2*j);
             tile_shape_uint16 td2(i%2);
             tile_shape_fp32 td3;
-            // TCOPYIN(td0, g0);
-            // TCOPYIN(td1, g1);
-            // TCOPYIN(td2, g2);
+            // TLOAD(td0, g0);
+            // TLOAD(td1, g1);
+            // TLOAD(td2, g2);
             TSELECT(td3, td2, td0, td1);
-            // TCOPYOUT(g3, td3);
+            // TSTORE(g3, td3);
         }
     }
 }

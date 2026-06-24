@@ -58,10 +58,10 @@ void test_rm(T *dst, T *src0, T *src1) {
       auto res = gCIter(i, j);
 
       tile_shape t0, t1, t2;
-      TCOPYIN(t0, s0);
-      TCOPYIN(t1, s1);
+      TLOAD(t0, s0);
+      TLOAD(t1, s1);
       TSUB(t2, t1, t0);
-      TCOPYOUT(res, t2);
+      TSTORE(res, t2);
     }
   }
 }
@@ -86,10 +86,10 @@ void test_cm(T *dst, T *src0, T *src1) {
       auto res = gCIter(j, i);
 
       tile_shape t0, t1, t2;
-      TCOPYIN(t0, s0);
-      TCOPYIN(t1, s1);
+      TLOAD(t0, s0);
+      TLOAD(t1, s1);
       TSUB(t2, t1, t0);
-      TCOPYOUT(res, t2);
+      TSTORE(res, t2);
     }
   }
 }

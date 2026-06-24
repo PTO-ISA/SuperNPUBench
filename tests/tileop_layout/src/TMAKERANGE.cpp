@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include <string> 
+#include <string>
 #include "jcore/TMakeRange.hpp"
 
 #ifdef LINX_PMC
@@ -44,7 +44,7 @@ void tmakerange_nd(float *dst, float s) {
 
             tile_shape td0;
             TMAKERANGE_Impl(td0, s);
-            // TCOPYOUT(g0, td0);
+            // TSTORE(g0, td0);
         }
     }
 }
@@ -67,7 +67,7 @@ void tmakerange_dn(float *dst, float s) {
 
             tile_shape td0;
             // TMAKERANGE_Impl(td0, s);
-            // TCOPYOUT(g0, td0);
+            // TSTORE(g0, td0);
         }
     }
 }

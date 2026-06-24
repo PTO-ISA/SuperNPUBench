@@ -21,7 +21,7 @@
 #endif
 
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row, uint64_t tile_col>
-void copyout_nd2nd(float *dst) {
+void store_nd2nd(float *dst) {
     using tile_shape = Tile<Location::Vec, float, tile_row, tile_col, BLayout::RowMajor>;
     using gm_shape   = global_tensor<float, RowMajor<gm_row, gm_col>>;
 
@@ -36,13 +36,13 @@ void copyout_nd2nd(float *dst) {
         for (int j = 0; j < block_col; ++j) {
         tile_shape d0(i+j);
         auto dstO = gdst(i,j);
-        TCOPYOUT(dstO, d0);
+        TSTORE(dstO, d0);
         }
     }
 }
 
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row, uint64_t tile_col>
-void copyout_nz2nd(float *dst) {
+void store_nz2nd(float *dst) {
     using tile_shape = TileLeft<float, tile_row, tile_col>;
     using gm_shape   = global_tensor<float, RowMajor<gm_row, gm_col>>;
 
@@ -56,13 +56,13 @@ void copyout_nz2nd(float *dst) {
         for (int j = 0; j < block_col; ++j) {
         tile_shape d0(i+j);
         auto dstO = gdst(i,j);
-        TCOPYOUT(dstO, d0);
+        TSTORE(dstO, d0);
         }
     }
 }
 
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row, uint64_t tile_col>
-void copyout_zn2dn(float *dst) {
+void store_zn2dn(float *dst) {
     // using tile_shape = TileRight<float, tile_row, tile_col>;
     // using gm_shape   = global_tensor<float, ColMajor<gm_row, gm_col>>;
 
@@ -76,7 +76,7 @@ void copyout_zn2dn(float *dst) {
     //     for (int j = 0; j < block_col; ++j) {
     //     tile_shape d0(i+j);
     //     auto dstO = gdst(i,j);
-    //     TCOPYOUT(dstO, d0);
+    //     TSTORE(dstO, d0);
     //     }
     // }
 }
@@ -92,15 +92,15 @@ int main() {
     #endif
 
     size_t gm_size = gm_row * gm_col;
-    
+
     float dst[gm_size];
 
     if(!strcmp(MODE, "ND2ND")){
-        copyout_nd2nd<gm_row, gm_col, tile_row, tile_col>(dst);
+        store_nd2nd<gm_row, gm_col, tile_row, tile_col>(dst);
     }else if(!strcmp(MODE, "NZ2ND")){
-        copyout_nz2nd<gm_row, gm_col, tile_row, tile_col>(dst);
+        store_nz2nd<gm_row, gm_col, tile_row, tile_col>(dst);
     }else if(!strcmp(MODE, "ZN2DN")){
-        copyout_zn2dn<gm_row, gm_col, tile_row, tile_col>(dst);
+        store_zn2dn<gm_row, gm_col, tile_row, tile_col>(dst);
     }
 
     #ifdef LINX_PMC

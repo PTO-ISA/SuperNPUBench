@@ -42,7 +42,7 @@ template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row,
 void test_RowMajor(T *dst, T *src0, T *src1) {
   using gm_shape = global_tensor<T, RowMajor<gm_row, gm_col>>;
   using tile_shape = Tile<Location::Vec, T, tile_row, tile_col>;
- 
+
   uint16_t block_row = gm_row / tile_row;
   uint16_t block_col = gm_col / tile_col;
   #pragma clang loop unroll(full)
@@ -53,22 +53,22 @@ void test_RowMajor(T *dst, T *src0, T *src1) {
       gm_shape s0(src0 + offset);
       gm_shape s1(src1 + offset);
       gm_shape res(dst + offset);
-  
+
       tile_shape d0, d1, d2;
-      TCOPYIN(d0, s0);
-      TCOPYIN(d1, s1);
+      TLOAD(d0, s0);
+      TLOAD(d1, s1);
       TOR(d2, d1, d0);
-      TCOPYOUT(res, d2);
+      TSTORE(res, d2);
     }
   }
 }
- 
+
 template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row,
           uint16_t tile_col, typename T>
 void test_ColMajor(T *dst, T *src0, T *src1) {
   using gm_shape = global_tensor<T, ColMajor<gm_row, gm_col>>;
   using tile_shape = Tile<Location::Vec, T, tile_row, tile_col, BLayout::ColMajor>;
- 
+
   uint16_t block_row = gm_row / tile_row;
   uint16_t block_col = gm_col / tile_col;
   #pragma clang loop unroll(full)
@@ -79,12 +79,12 @@ void test_ColMajor(T *dst, T *src0, T *src1) {
       gm_shape s0(src0 + offset);
       gm_shape s1(src1 + offset);
       gm_shape res(dst + offset);
-  
+
       tile_shape d0, d1, d2;
-      TCOPYIN(d0, s0);
-      TCOPYIN(d1, s1);
+      TLOAD(d0, s0);
+      TLOAD(d1, s1);
       TOR(d2, d1, d0);
-      TCOPYOUT(res, d2);
+      TSTORE(res, d2);
     }
   }
 }
@@ -143,63 +143,63 @@ int main() {
   __half *dst_f16 = (__half *)malloc(gm_size * sizeof(__half));
   check_mem_alloc(dst_f16);
   init_dst(dst_f16, gm_size);
- 
+
   __half *src0_f16 = (__half *)malloc(gm_size * sizeof(__half));
   check_mem_alloc(src0_f16);
   init_src_fp(src0_f16, gm_size);
   __half *src1_f16 = (__half *)malloc(gm_size * sizeof(__half));
   check_mem_alloc(src1_f16);
   init_src_fp(src1_f16, gm_size);
- 
+
   int8_t *dst_i8 = (int8_t *)malloc(gm_size * sizeof(int8_t));
   check_mem_alloc(dst_i8);
   init_dst(dst_i8, gm_size);
   int8_t *dst_i8_col = (int8_t *)malloc(gm_size * sizeof(int8_t));
   check_mem_alloc(dst_i8_col);
   init_dst(dst_i8_col, gm_size);
- 
+
   int8_t *src0_i8 = (int8_t *)malloc(gm_size * sizeof(int8_t));
   check_mem_alloc(src0_i8);
   init_src_int(src0_i8, gm_size);
   int8_t *src1_i8 = (int8_t *)malloc(gm_size * sizeof(int8_t));
   check_mem_alloc(src1_i8);
   init_src_int(src1_i8, gm_size);
- 
+
   int16_t *dst_i16 = (int16_t *)malloc(gm_size * sizeof(int16_t));
   check_mem_alloc(dst_i16);
   init_dst(dst_i16, gm_size);
   int16_t *dst_i16_col = (int16_t *)malloc(gm_size * sizeof(int16_t));
   check_mem_alloc(dst_i16_col);
   init_dst(dst_i16_col, gm_size);
- 
+
   int16_t *src0_i16 = (int16_t *)malloc(gm_size * sizeof(int16_t));
   check_mem_alloc(src0_i16);
   init_src_int(src0_i16, gm_size);
   int16_t *src1_i16 = (int16_t *)malloc(gm_size * sizeof(int16_t));
   check_mem_alloc(src1_i16);
   init_src_int(src1_i16, gm_size);
-  
+
   int32_t *dst_i32 = (int32_t *)malloc(gm_size * sizeof(int32_t));
   check_mem_alloc(dst_i32);
   init_dst(dst_i32, gm_size);
   int32_t *dst_i32_col = (int32_t *)malloc(gm_size * sizeof(int32_t));
   check_mem_alloc(dst_i32);
   init_dst(dst_i32_col, gm_size);
- 
+
   int32_t *src0_i32 = (int32_t *)malloc(gm_size * sizeof(int32_t));
   check_mem_alloc(src0_i32);
   init_src_int(src0_i32, gm_size);
   int32_t *src1_i32 = (int32_t *)malloc(gm_size * sizeof(int32_t));
   check_mem_alloc(src1_i32);
   init_src_int(src1_i32, gm_size);
- 
+
   int64_t *dst_i64 = (int64_t *)malloc(gm_size * sizeof(int64_t));
   check_mem_alloc(dst_i64);
   init_dst(dst_i64, gm_size);
   int64_t *dst_i64_col = (int64_t *)malloc(gm_size * sizeof(int64_t));
   check_mem_alloc(dst_i64_col);
   init_dst(dst_i64_col, gm_size);
- 
+
   int64_t *src0_i64 = (int64_t *)malloc(gm_size * sizeof(int64_t));
   check_mem_alloc(src0_i64);
   init_src_int(src0_i64, gm_size);
@@ -220,10 +220,10 @@ int main() {
 
   test_RowMajor<gm_row, gm_col, tile_row, tile_col, int16_t>(dst_i16, src0_i16, src1_i16);
   test_ColMajor<gm_row, gm_col, tile_row, tile_col, int16_t>(dst_i16_col, src0_i16, src1_i16);
- 
+
   test_RowMajor<gm_row, gm_col, tile_row, tile_col, int32_t>(dst_i32, src0_i32, src1_i32);
   test_ColMajor<gm_row, gm_col, tile_row, tile_col, int32_t>(dst_i32_col, src0_i32, src1_i32);
- 
+
   test_RowMajor<gm_row, gm_col, tile_row, tile_col, int64_t>(dst_i64, src0_i64, src1_i64);
   test_ColMajor<gm_row, gm_col, tile_row, tile_col, int64_t>(dst_i64_col, src0_i64, src1_i64);
 
@@ -243,7 +243,7 @@ int main() {
   OutArray(dst_i32_col, gm_size);
   OutArray(dst_i64, gm_size);
   OutArray(dst_i64_col, gm_size);
- 
+
   free(dst);
   free(src0);
   free(src1);
@@ -255,22 +255,22 @@ int main() {
   free(dst_f16);
   free(src0_f16);
   free(src1_f16);
- 
+
   free(dst_i8);
   free(dst_i8_col);
   free(src0_i8);
   free(src1_i8);
- 
+
   free(dst_i16);
   free(dst_i16_col);
   free(src0_i16);
   free(src1_i16);
- 
+
   free(dst_i32);
   free(dst_i32_col);
   free(src0_i32);
   free(src1_i32);
- 
+
   free(dst_i64);
   free(dst_i64_col);
   free(src0_i64);

@@ -74,11 +74,11 @@ void test_RowMajor(T *dst, T *src0, T *src1) {
   tile_shape_B d1;
   tile_shape_C d2;
 
-  TCOPYIN(d0, s0);
-  TCOPYIN(d1, s1);
-  TCOPYIN(d2, res);
+  TLOAD(d0, s0);
+  TLOAD(d1, s1);
+  TLOAD(d2, res);
   MATMACC(d2, d0, d1);
-  TCOPYOUT(res, d2);
+  TSTORE(res, d2);
 }
 
 template <uint16_t M, uint16_t N, uint16_t K, typename T>
@@ -99,11 +99,11 @@ void test_ColMajor(T *dst, T *src0, T *src1) {
   tile_shape_B d1;
   tile_shape_C d2;
 
-  TCOPYIN(d0, s0);
-  TCOPYIN(d1, s1);
-  TCOPYIN(d2, res);
+  TLOAD(d0, s0);
+  TLOAD(d1, s1);
+  TLOAD(d2, res);
   MATMACC(d2, d0, d1);
-  TCOPYOUT(res, d2);
+  TSTORE(res, d2);
 }
 
 int main() {

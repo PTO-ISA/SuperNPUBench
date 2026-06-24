@@ -437,7 +437,7 @@ void runHashFind(int32_t __out__ *out,
 
     // copy in
     KeyGT key_gt(queries);
-    TCOPYIN(queryKeyTile, key_gt);
+    TLOAD(queryKeyTile, key_gt);
 
     // compute hash (writes int64_t byte offsets into probeIdxTile)
     compute_hash_vec(queryKeyTile, probeIdxTile, kCap);
@@ -449,7 +449,7 @@ void runHashFind(int32_t __out__ *out,
 
     // copy out
     OutGT outGlobal(out);
-    TCOPYOUT(outGlobal, outTile);
+    TSTORE(outGlobal, outTile);
 }
 
 template <int kTileRows, int kTileCols, int kCap, int kMaxProbe>

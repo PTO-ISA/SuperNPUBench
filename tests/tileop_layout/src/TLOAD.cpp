@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include <string> 
+#include <string>
 
 #ifdef LINX_PMC
 #include <linxStartEnd.hpp>
@@ -26,7 +26,7 @@
 #endif
 
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row, uint64_t tile_col>
-void copyin_nd2nd(float *src) {
+void load_nd2nd(float *src) {
   using gm_shape = global_tensor<float, RowMajor<gm_row, gm_col>>;
   using tile_shape = Tile<Location::Vec, float, tile_row, tile_col, BLayout::RowMajor>;
   //带mask tile_shape = Tile<Location::Vec, float, tile_row, tile_col, 11, 11>;
@@ -36,14 +36,14 @@ void copyin_nd2nd(float *src) {
     for (int j = 0; j < block_col; ++j) {
       int offset = i * (tile_row * gm_col) + j * tile_col;
       gm_shape s0(src + offset);
-      tile_shape d0; 
-      TCOPYIN(d0, s0);
+      tile_shape d0;
+      TLOAD(d0, s0);
     }
   }
 }
 
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row, uint64_t tile_col>
-void copyin_nd2nz(float *src) {
+void load_nd2nz(float *src) {
   using gm_shape = global_tensor<float, RowMajor<gm_row, gm_col>>;
   using tile_shape = TileLeft<float, tile_row, tile_col>;
 
@@ -56,15 +56,15 @@ void copyin_nd2nz(float *src) {
 
   for (int i = 0; i < block_row; ++i) {
     for (int j = 0; j < block_col; ++j) {
-      tile_shape d0; 
+      tile_shape d0;
       auto g0 =  gsrc(i,j);
-      TCOPYIN(d0, g0);
+      TLOAD(d0, g0);
     }
   }
 }
 
 template <uint64_t gm_row, uint64_t gm_col, uint64_t tile_row, uint64_t tile_col>
-void copyin_dn2zn(float *src) {
+void load_dn2zn(float *src) {
   using gm_shape = global_tensor<float, ColMajor<gm_row, gm_col>>;
   using tile_shape = TileRight<float, tile_row, tile_col>;
 
@@ -77,9 +77,9 @@ void copyin_dn2zn(float *src) {
 
   for (int i = 0; i < block_col; ++i) {
     for (int j = 0; j < block_row; ++j) {
-      tile_shape d0; 
+      tile_shape d0;
       auto g0 =  gsrc(i,j);
-      TCOPYIN(d0, g0);
+      TLOAD(d0, g0);
     }
   }
 }
@@ -100,11 +100,11 @@ int main() {
   float src[gm_size];
 
   if(!strcmp(MODE, "ND2ND")){
-    copyin_nd2nd<gm_row, gm_col, tile_row, tile_col>(src);
+    load_nd2nd<gm_row, gm_col, tile_row, tile_col>(src);
   }else if(!strcmp(MODE, "ND2NZ")){
-    copyin_nd2nz<gm_row, gm_col, tile_row, tile_col>(src);
+    load_nd2nz<gm_row, gm_col, tile_row, tile_col>(src);
   }else if(!strcmp(MODE, "DN2ZN")){
-    copyin_dn2zn<gm_row, gm_col, tile_row, tile_col>(src);
+    load_dn2zn<gm_row, gm_col, tile_row, tile_col>(src);
   }
 
   #ifdef LINX_PMC

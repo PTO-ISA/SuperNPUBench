@@ -20,9 +20,9 @@ void test_RowMajor(float *dst, float *src, float s) {
       gm_shape res(dst + offset);
 
       tile_shape d0, d1;
-      TCOPYIN(d0, s0);
+      TLOAD(d0, s0);
       TMINS(d1, d0, s);
-      TCOPYOUT(res, d1);
+      TSTORE(res, d1);
     }
   }
 }
@@ -42,9 +42,9 @@ void test_ColMajor(float *dst, float *src, float s) {
       gm_shape res(dst + offset);
 
       tile_shape d0, d1;
-      TCOPYIN(d0, s0);
+      TLOAD(d0, s0);
       TMINS(d1, d0, s);
-      TCOPYOUT(res, d1);
+      TSTORE(res, d1);
     }
   }
 }

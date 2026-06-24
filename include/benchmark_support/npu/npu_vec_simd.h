@@ -19,10 +19,10 @@ void matadd(dtype *c_ptr, dtype *a_ptr, dtype *b_ptr) {
       auto gC = gCIter(i, j);
 
       tile_shape tA, tB, tC;
-      TCOPYIN(tA, gA);
-      TCOPYIN(tB, gB);
+      TLOAD(tA, gA);
+      TLOAD(tB, gB);
       TADD(tC, tA, tB);
-      TCOPYOUT(gC, tC);
+      TSTORE(gC, tC);
     }
   }
 }
@@ -41,19 +41,19 @@ void __vec__ rmsnorm_kernel(
     __vbuf__ typename tile_shape::DType *out_ptr = blkv_get_tile_ptr(out);
 
     __half sum;
-    
+
     __half data = static_cast<__half>(in_ptr[j]);
-    asm volatile("l.rdfadd %1.fh, ->%0.h" 
+    asm volatile("l.rdfadd %1.fh, ->%0.h"
             :"=r"(sum)
             :"vr"(data)
             );
-    
+
     #pragma clang loop unroll(full)
     for(int i=1;i<iter;i++){
         size_t idx = i * col + j;
         data = static_cast<__half>(in_ptr[idx]) * static_cast<__half>(in_ptr[idx]);
         typename tile_shape::DType local_sum;
-        asm volatile("l.rdfadd %1.fh, ->%0.h" 
+        asm volatile("l.rdfadd %1.fh, ->%0.h"
                     :"=r"(local_sum)
                     :"vr"(data)
                     );
@@ -61,7 +61,7 @@ void __vec__ rmsnorm_kernel(
     }
 
     sum = blkv_fsqrt( (sum / static_cast<__half>(tile_shape::ValidCol)) );
-      
+
     #pragma clang loop unroll(full)
     for(int i=0;i<iter;i++){
         size_t idx = i * col + j;
@@ -77,14 +77,14 @@ void rmsnorm_oneline(dtype *dst, dtype *src){
 
     gm_shape gsrc(src);
     tile_shape tsrc;
-    TCOPYIN(tsrc, gsrc);
+    TLOAD(tsrc, gsrc);
 
     const int iter = tile_shape::ValidCol / LaneNum;
     tile_shape tdst;
     rmsnorm_kernel<tile_shape><<<LaneNum, 1, 1>>>(tdst.data(), tsrc.data(), LaneNum, iter);
 
     gm_shape gdst(dst);
-    TCOPYOUT(gdst, tdst);
+    TSTORE(gdst, tdst);
 }
 
 // x / (Ex^2) ^ .5
@@ -92,9 +92,9 @@ template<typename dtype, const int kM, const int kN, const int kTM, const int kT
 void rmsnorm(dtype *dst, dtype *src){
     using gm_shape = global_tensor<dtype, RowMajor<kM, kN>>;
     using tile_shape = Tile<Location::Vec, dtype, kTM, kTN, BLayout::RowMajor>;
- 
+
     using tSum = Tile<Location::Vec, dtype, kTM, 256, BLayout::RowMajor, kTM, 1>;
- 
+
     using gIter = global_iterator<gm_shape, tile_shape>;
 
     gIter giter_src(src);
@@ -111,19 +111,19 @@ void rmsnorm(dtype *dst, dtype *src){
         {
             auto gsrc = giter_src(i, j);
             tile_shape tsrc;
- 
-            TCOPYIN(tsrc, gsrc);
+
+            TLOAD(tsrc, gsrc);
 
             tSum tLocalSum;
             TMUL(tsrc, tsrc, tsrc);
             TROWSUM(tLocalSum, tsrc);
             TADD(tAccSquareSum, tAccSquareSum, tLocalSum);
         }
- 
+
         tSum gSqureMean;
         TDIVS(gSqureMean, tAccSquareSum, kN);
         TSQRT(gSqureMean, gSqureMean);
- 
+
         tile_shape gSqureMean_i;
         TEXPANDCOL(gSqureMean_i, gSqureMean);
 
@@ -131,12 +131,12 @@ void rmsnorm(dtype *dst, dtype *src){
         {
             auto  gsrc = giter_src(i,j);
             tile_shape tsrc;
-            TCOPYIN(tsrc, gsrc);
- 
+            TLOAD(tsrc, gsrc);
+
             TDIV(tsrc, tsrc, gSqureMean_i);
- 
+
             auto gdst = giter_dst(i,j);
-            TCOPYOUT(gdst, tsrc);
+            TSTORE(gdst, tsrc);
         }
     }
 }
@@ -161,15 +161,15 @@ void __vec__ layernorm_kernel(
 
     __half data = static_cast<__half>(in_ptr[j]);
     __half data_square = data * data;
-    asm volatile("l.rdfadd %1.fh, ->%0.h" 
+    asm volatile("l.rdfadd %1.fh, ->%0.h"
             :"=r"(sum)
             :"vr"(data)
             );
-    asm volatile("l.rdfadd %1.fh, ->%0.h" 
+    asm volatile("l.rdfadd %1.fh, ->%0.h"
         :"=r"(square_sum)
         :"vr"(data_square)
         );
-    
+
     #pragma clang loop unroll(full)
     for(int i=1;i<iter;i++){
         size_t idx = i * col + j;
@@ -177,11 +177,11 @@ void __vec__ layernorm_kernel(
         data_square = data * data;
         typename tile_shape::DType local_sum;
         typename tile_shape::DType local_square_sum;
-        asm volatile("l.rdfadd %1.fh, ->%0.h" 
+        asm volatile("l.rdfadd %1.fh, ->%0.h"
                     :"=r"(local_sum)
                     :"vr"(data)
                     );
-        asm volatile("l.rdfadd %1.fh, ->%0.h" 
+        asm volatile("l.rdfadd %1.fh, ->%0.h"
                     :"=r"(local_square_sum)
                     :"vr"(data)
                     );
@@ -191,7 +191,7 @@ void __vec__ layernorm_kernel(
 
     sum = (sum / static_cast<__half>(tile_shape::ValidCol));
     square_sum = (square_sum / static_cast<__half>(tile_shape::ValidCol));
-      
+
     #pragma clang loop unroll(full)
     for(int i=0;i<iter;i++){
         size_t idx = i * col + j;
@@ -207,14 +207,14 @@ void layernorm_oneline(dtype *dst, dtype *src){
 
     gm_shape gsrc(src);
     tile_shape tsrc;
-    TCOPYIN(tsrc, gsrc);
+    TLOAD(tsrc, gsrc);
 
     const int iter = tile_shape::ValidCol / LaneNum;
     tile_shape tdst;
     layernorm_kernel<tile_shape><<<LaneNum, 1, 1>>>(tdst.data(), tsrc.data(), LaneNum, iter);
 
     gm_shape gdst(dst);
-    TCOPYOUT(gdst, tdst);
+    TSTORE(gdst, tdst);
 }
 
 
@@ -225,9 +225,9 @@ void layernorm(dtype *dst, dtype *src, float *gamma, float *beta)
     using gm_shape = global_tensor<dtype, RowMajor<kM, kN>>;
 
     using tile_shape = Tile<Location::Vec, dtype, kTM, kTN, BLayout::RowMajor>;
- 
+
     using tSum = Tile<Location::Vec, dtype, kTM, kTN, BLayout::RowMajor, kTM, 1>;
- 
+
     using gIter = global_iterator<gm_shape, tile_shape>;
 
     gIter giter_src(src);
@@ -240,23 +240,23 @@ void layernorm(dtype *dst, dtype *src, float *gamma, float *beta)
     {
         tSum tAccSum(0);        // tiling sum
         tSum tAccSquareSum(0);  // tiling square sum
-  
+
         for(int j=0;j<Nb;j++)
         {
             auto gsrc = giter_src(i, j);
             tile_shape tsrc;
- 
-            TCOPYIN(tsrc, gsrc);
- 
+
+            TLOAD(tsrc, gsrc);
+
             tSum tLocalSum;
             TROWSUM(tLocalSum, tsrc);
             TADD(tAccSum, tAccSum, tLocalSum);
- 
+
             TMUL(tsrc, tsrc, tsrc);
             TROWSUM(tLocalSum, tsrc);
             TADD(tAccSquareSum, tAccSquareSum, tLocalSum);
         }
- 
+
         tSum gMean;        // Ex
         tSum gMeanSquare;  // (Ex)^2
         tSum gStdDev;      // Ex^2
@@ -265,7 +265,7 @@ void layernorm(dtype *dst, dtype *src, float *gamma, float *beta)
         TDIVS(gStdDev, tAccSquareSum, kN);
         TSUB(gStdDev, gStdDev, gMeanSquare);
         TSQRT(gStdDev, gStdDev);
- 
+
         tile_shape gMean_i;
         tile_shape gStdDev_i;
         TEXPANDCOL(gMean_i, gMean);
@@ -275,16 +275,16 @@ void layernorm(dtype *dst, dtype *src, float *gamma, float *beta)
         {
             auto  gsrc = giter_src(i,j);
             tile_shape tsrc;
-            TCOPYIN(tsrc, gsrc);
- 
+            TLOAD(tsrc, gsrc);
+
             TSUB(tsrc, tsrc, gMean_i);    // (x - Ex)
             TDIV(tsrc, tsrc, gStdDev_i);  // (x - Ex) / (Ex^2 - (Ex)^2)^.5
 
             TMULS(tsrc, tsrc, static_cast<dtype>(*gamma));
             TADDS(tsrc, tsrc, static_cast<dtype>(*beta));
- 
+
             auto gdst = giter_dst(i,j);
-            TCOPYOUT(gdst, tsrc);
+            TSTORE(gdst, tsrc);
         }
     }
 }
@@ -297,9 +297,9 @@ void layernorm_bf16(__bf16 *dst, __bf16 *src, float *gamma, float *beta)
     using tile_shape = Tile<Location::Vec, __bf16, kTM, kTN, BLayout::RowMajor>;
 
     using tile_shape_cast = Tile<Location::Vec, __half, kTM, kTN, BLayout::RowMajor>;
- 
+
     using tSum = Tile<Location::Vec, __half, kTM, kTN, BLayout::RowMajor, kTM, 1>;
- 
+
     using gIter = global_iterator<gm_shape, tile_shape>;
 
     gIter giter_src(src);
@@ -312,24 +312,24 @@ void layernorm_bf16(__bf16 *dst, __bf16 *src, float *gamma, float *beta)
     {
         tSum tAccSum(0);        // tiling sum
         tSum tAccSquareSum(0);  // tiling square sum
-  
+
         for(int j=0;j<Nb;j++)
         {
             auto gsrc = giter_src(i, j);
             tile_shape tsrc_ori;
             tile_shape_cast tsrc;
-            TCOPYIN(tsrc_ori, gsrc);
+            TLOAD(tsrc_ori, gsrc);
             TCAST(tsrc, tsrc_ori);
- 
+
             tSum tLocalSum;
             TROWSUM(tLocalSum, tsrc);
             TADD(tAccSum, tAccSum, tLocalSum);
- 
+
             TMUL(tsrc, tsrc, tsrc);
             TROWSUM(tLocalSum, tsrc);
             TADD(tAccSquareSum, tAccSquareSum, tLocalSum);
         }
- 
+
         tSum gMean;        // Ex
         tSum gMeanSquare;  // (Ex)^2
         tSum gStdDev;      // Ex^2
@@ -338,7 +338,7 @@ void layernorm_bf16(__bf16 *dst, __bf16 *src, float *gamma, float *beta)
         TDIVS(gStdDev, tAccSquareSum, kN);
         TSUB(gStdDev, gStdDev, gMeanSquare);
         TSQRT(gStdDev, gStdDev);
- 
+
         tile_shape_cast gMean_i;
         tile_shape_cast gStdDev_i;
         TEXPANDCOL(gMean_i, gMean);
@@ -349,19 +349,19 @@ void layernorm_bf16(__bf16 *dst, __bf16 *src, float *gamma, float *beta)
             auto  gsrc = giter_src(i,j);
             tile_shape tsrc_ori;
             tile_shape_cast tsrc;
-            TCOPYIN(tsrc_ori, gsrc);
+            TLOAD(tsrc_ori, gsrc);
             TCAST(tsrc, tsrc_ori);
- 
+
             TSUB(tsrc, tsrc, gMean_i);    // (x - Ex)
             TDIV(tsrc, tsrc, gStdDev_i);  // (x - Ex) / (Ex^2 - (Ex)^2)^.5
 
             TMULS(tsrc, tsrc, static_cast<__half>(*gamma));
             TADDS(tsrc, tsrc, static_cast<__half>(*beta));
- 
+
             auto gdst = giter_dst(i,j);
             tile_shape_cast tdst;
             TCAST(tdst, tsrc);
-            TCOPYOUT(gdst, tdst);
+            TSTORE(gdst, tdst);
         }
     }
 }
@@ -401,14 +401,14 @@ void layernorm_bf16(__bf16 *dst, __bf16 *src, float *gamma, float *beta)
 //                     gm_pic gpic(pic+ n*C*H*W + c*H*W + h*pool.stride*W + w*pool.stride); //pic[n, c, h*pool.stride, w*pool.stride]
 
 //                     tile_filt tpic;
-//                     TCOPYIN(tpic, gpic);
+//                     TLOAD(tpic, gpic);
 //                     TROWMAXEXPAND(tpic, tpic);
 //                     TCOLMAXEXPAND(tpic, tpic);
 //                     TCOPY(tmp, tpic);
 
 //                     int offset = n*C*H_out*W_out + c*H_out*W_out + h*W_out + w;
 //                     gm_out gO(out+offset);
-//                     TCOPYOUT(gO, tpic);
+//                     TSTORE(gO, tpic);
 //                 }
 //             }
 //         }
@@ -430,35 +430,35 @@ void __vec__ softmax_kernel(
 
     __half max;
     __half sum;
-    
+
     __half data = static_cast<__half>(in_ptr[j]);
-    asm volatile("l.rdfmax %1.fh, ->%0.h" 
+    asm volatile("l.rdfmax %1.fh, ->%0.h"
             :"=r"(max)
             :"vr"(data)
             );
 
-    asm volatile("l.rdfadd %1.fh, ->%0.h" 
+    asm volatile("l.rdfadd %1.fh, ->%0.h"
             :"=r"(sum)
             :"vr"(data)
             );
-    
+
     #pragma clang loop unroll(full)
     for(int i=1;i<iter;i++){
         size_t idx = i * col + j;
         data = static_cast<__half>(in_ptr[idx]);
         typename tile_shape::DType local_max;
-        asm volatile("l.rdfmax %1.fh, ->%0.h" 
+        asm volatile("l.rdfmax %1.fh, ->%0.h"
                     :"=r"(local_max)
                     :"vr"(data)
                     );
         max = blkv_max(max, local_max);
 
         typename tile_shape::DType local_sum;
-        asm volatile("l.rdfadd %1.fh, ->%0.h" 
+        asm volatile("l.rdfadd %1.fh, ->%0.h"
                     :"=r"(local_sum)
                     :"vr"(data)
                     );
-        sum += local_sum;       
+        sum += local_sum;
     }
 
     #pragma clang loop unroll(full)
@@ -476,14 +476,14 @@ void softmax_oneline(dtype *dst, dtype *src){
 
     gm_shape gsrc(src);
     tile_shape tsrc;
-    TCOPYIN(tsrc, gsrc);
+    TLOAD(tsrc, gsrc);
 
     const int iter = tile_shape::ValidCol/ LaneNum;
     tile_shape tdst;
     softmax_kernel<tile_shape><<<LaneNum, 1, 1>>>(tdst.data(), tsrc.data(), LaneNum, iter);
 
     gm_shape gdst(dst);
-    TCOPYOUT(gdst, tdst);
+    TSTORE(gdst, tdst);
 }
 
 template<const int kM, const int kN, const int kTM, const int kTN>
@@ -506,7 +506,7 @@ void softmax_bf16(__bf16* dst, __bf16* src){
             gm_shape gsrc(src+offset);
             tile_shape_ori tsrc_ori;
             tile_shape tsrc;
-            TCOPYIN(tsrc_ori, gsrc);
+            TLOAD(tsrc_ori, gsrc);
             TCAST(tsrc, tsrc_ori);
 
             tMax tLocalMax;
@@ -541,7 +541,7 @@ void softmax_bf16(__bf16* dst, __bf16* src){
             gm_shape gsrc(src+offset);
             tile_shape_ori tsrc_ori;
             tile_shape tsrc;
-            TCOPYIN(tsrc_ori, gsrc);
+            TLOAD(tsrc_ori, gsrc);
             TCAST(tsrc, tsrc_ori);
 
             tile_shape gMax;
@@ -557,7 +557,7 @@ void softmax_bf16(__bf16* dst, __bf16* src){
 
             tile_shape_ori tsrc_out;
             TCAST(tsrc_out, tsrc);
-            TCOPYOUT(gdst, tsrc_out);
+            TSTORE(gdst, tsrc_out);
         }
     }
 }
@@ -581,7 +581,7 @@ void softmax(dtype* dst, dtype* src){
             uint32_t offset = i*kTM*kN+j*kTN;
             gm_shape gsrc(src+offset);
             tile_shape tsrc;
-            TCOPYIN(tsrc, gsrc);
+            TLOAD(tsrc, gsrc);
 
             tMax tLocalMax;
             TROWMAX(tLocalMax, tsrc);
@@ -615,7 +615,7 @@ void softmax(dtype* dst, dtype* src){
             uint32_t offset = i*kTM*kN+j*kTN;
             gm_shape gsrc(src+offset);
             tile_shape tsrc;
-            TCOPYIN(tsrc, gsrc);
+            TLOAD(tsrc, gsrc);
 
             tile_shape gMax;
             tile_shape gSum;
@@ -627,14 +627,14 @@ void softmax(dtype* dst, dtype* src){
             TDIV(tsrc, tsrc, gSum);
 
             gm_shape gdst(dst+offset);
-            TCOPYOUT(gdst, tsrc);
+            TSTORE(gdst, tsrc);
         }
     }
 }
 
 template <const int kM, const int kN, const int kK, const int kTM, const int kTN, const int kTK, const bool Relu>
 void gemm(float *c, float *a, float *b, float alpha, float beta)
-{ 
+{
     using gm_shapeA = global_tensor<float, RowMajor<kM, kK>>;
     using gm_shapeB = global_tensor<float, RowMajor<kK, kN>>;
     using gm_shapeC = global_tensor<float, RowMajor<kM, kN>>;
@@ -681,8 +681,8 @@ void gemm(float *c, float *a, float *b, float alpha, float beta)
 
             tile_shapeA tA;
             tile_shapeB tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             MATMACC(tACC, tA, tB);
         }
 
@@ -692,20 +692,20 @@ void gemm(float *c, float *a, float *b, float alpha, float beta)
 
             tile_shapeA_trows tA;
             tile_shapeB_tcols tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             MATMACC(tACC, tA, tB);
         }
 
         tile_shapeACC oldC;
-        TCOPYIN(oldC, gC);
+        TLOAD(oldC, gC);
         TMULS(tACC, tACC, alpha);
         TMULS(oldC, oldC, beta);
         TADD(tACC, tACC, oldC);
         if constexpr(Relu){
             TMAXS(tACC, tACC, 0);
         }
-        TCOPYOUT(gC, tACC);
+        TSTORE(gC, tACC);
         }
         if constexpr (rmd_N) {
         auto gC = gCIter(i, Nb);
@@ -718,8 +718,8 @@ void gemm(float *c, float *a, float *b, float alpha, float beta)
 
             tile_shapeA tA;
             tile_shapeB_trows tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             MATMACC(tACC, tA, tB);
         }
         if constexpr (rmd_K) {
@@ -728,20 +728,20 @@ void gemm(float *c, float *a, float *b, float alpha, float beta)
 
             tile_shapeA_trows tA;
             tile_shapeB_tcorner tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             MATMACC(tACC, tA, tB);
         }
 
         tile_shapeC_trows oldC;
-        TCOPYIN(oldC, gC);
+        TLOAD(oldC, gC);
         TMULS(tACC, tACC, alpha);
         TMULS(oldC, oldC, beta);
         TADD(tACC, tACC, oldC);
         if constexpr(Relu){
             TMAXS(tACC, tACC, 0);
         }
-        TCOPYOUT(gC, tACC);
+        TSTORE(gC, tACC);
         }
     }
     if constexpr (rmd_M) {
@@ -756,8 +756,8 @@ void gemm(float *c, float *a, float *b, float alpha, float beta)
 
             tile_shapeA_tcols tA;
             tile_shapeB tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             MATMACC(tACC, tA, tB);
         }
         if constexpr (rmd_K) {
@@ -766,20 +766,20 @@ void gemm(float *c, float *a, float *b, float alpha, float beta)
 
             tile_shapeA_tcorner tA;
             tile_shapeB_tcols tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             MATMACC(tACC, tA, tB);
         }
 
         tile_shapeC_tcols oldC;
-        TCOPYIN(oldC, gC);
+        TLOAD(oldC, gC);
         TMULS(tACC, tACC, alpha);
         TMULS(oldC, oldC, beta);
         TADD(tACC, tACC, oldC);
         if constexpr(Relu){
             TMAXS(tACC, tACC, 0);
         }
-        TCOPYOUT(gC, tACC);
+        TSTORE(gC, tACC);
         }
         if constexpr (rmd_N) {
         auto gC = gCIter(Mb, Nb);
@@ -792,8 +792,8 @@ void gemm(float *c, float *a, float *b, float alpha, float beta)
 
             tile_shapeA_tcols tA;
             tile_shapeB_trows tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             MATMACC(tACC, tA, tB);
         }
         if constexpr (rmd_K) {
@@ -802,22 +802,22 @@ void gemm(float *c, float *a, float *b, float alpha, float beta)
 
             tile_shapeA_tcorner tA;
             tile_shapeB_tcorner tB;
-            TCOPYIN(tA, gA);
-            TCOPYIN(tB, gB);
+            TLOAD(tA, gA);
+            TLOAD(tB, gB);
             MATMACC(tACC, tA, tB);
         }
 
         tile_shapeC_tcorner oldC;
-        TCOPYIN(oldC, gC);
+        TLOAD(oldC, gC);
         TMULS(tACC, tACC, alpha);
         TMULS(oldC, oldC, beta);
         TADD(tACC, tACC, oldC);
         if constexpr(Relu){
             TMAXS(tACC, tACC, 0);
         }
-        TCOPYOUT(gC, tACC);
+        TSTORE(gC, tACC);
         }
-    }    
+    }
 }
 
 template<typename dtype, int M, int N, int tM, int tN>
@@ -826,7 +826,7 @@ void gelu(dtype *out, dtype* in){
 }
 
 // w1(in) * silu(w2(in))
-//silu : x / (1 + e^-x) 
+//silu : x / (1 + e^-x)
 template <typename dtype, const int S, const int InDim, const int OutDim, const int tS, const int tInDim, const int tOutDim>
 void swiglu(dtype *out, dtype *in, dtype *w1, dtype *w2){
     using gmIn = global_tensor<dtype, RowMajor<S, InDim>>;
@@ -849,7 +849,7 @@ void swiglu(dtype *out, dtype *in, dtype *w1, dtype *w2){
     const int Sb = S / tS;
     const int Inb = InDim / tInDim;
     const int Outb = OutDim / tOutDim;
-    
+
     for(int i=0;i<Sb;i++){
         for(int j=0;j<Outb;j++){
 
@@ -863,9 +863,9 @@ void swiglu(dtype *out, dtype *in, dtype *w1, dtype *w2){
                 tileIn tIn;
                 tileW tW1;
                 tileW tW2;
-                TCOPYIN(tIn, gIn);
-                TCOPYIN(tW1, gW1);
-                TCOPYIN(tW2, gW2);
+                TLOAD(tIn, gIn);
+                TLOAD(tW1, gW1);
+                TLOAD(tW2, gW2);
 
                 MATMACC(tACC_W1, tIn, tW1);
                 MATMACC(tACC_W2, tIn, tW2);
@@ -880,7 +880,7 @@ void swiglu(dtype *out, dtype *in, dtype *w1, dtype *w2){
             tileACC tOut;
             TMUL(tOut, tACC_W1, tACC_W2);
             auto gOut = gIterOut(i,j);
-            TCOPYOUT(gOut, tOut);
+            TSTORE(gOut, tOut);
         }
     }
 }
@@ -904,13 +904,13 @@ void rope(__bf16 *out, __bf16 *x, __bf16 *freqs_cis){
             gm_shape input(x+offset);
             tile_shape tin_ori;
             tile_shape_rope resh_tin;
-            TCOPYIN(tin_ori, input);   // 64*32
+            TLOAD(tin_ori, input);   // 64*32
             tile_shape_cast tin;
             TCAST(tin, tin_ori);
             TRESHAPE(resh_tin, tin); // 64*32 -> 1024*2
 
             tile_shape_half tin_real;
-            tile_shape_half tin_imag; 
+            tile_shape_half tin_imag;
             TEXTRACT(tin_real, resh_tin, 0, 0);        // real 1024*1
             TEXTRACT(tin_imag, resh_tin, 0, 1);        // image 1024*1
 
@@ -918,7 +918,7 @@ void rope(__bf16 *out, __bf16 *x, __bf16 *freqs_cis){
             gm_shape freqs(freqs_cis+offset);
             tile_shape tfreqs_ori;
             tile_shape_rope tfreqs_resh;
-            TCOPYIN(tfreqs_ori, freqs);
+            TLOAD(tfreqs_ori, freqs);
             tile_shape_cast tfreqs;
             TCAST(tfreqs, tfreqs_ori);
             TRESHAPE(tfreqs_resh, tfreqs);
@@ -958,7 +958,7 @@ void rope(__bf16 *out, __bf16 *x, __bf16 *freqs_cis){
 
             tile_shape_cast tout_resh_cast;
             TCAST(tout_resh_cast, tout_resh);
-            TCOPYOUT(output, tout_resh_cast);
+            TSTORE(output, tout_resh_cast);
         }
     }
 }
@@ -985,16 +985,16 @@ void __vec__ BitonicSortStepDescend_RowMajor_Imp(
         "v.lw   [ta, vn#1.reuse.uh<<2],     ->vt.w\n"       // src[index_part+col/2] = partner_idx
         "v.lw   [ta, vm#2.reuse.uh<<2],     ->vt.w\n"       // src[index] = cur_value
         "v.lw   [ta, vm#1.reuse.uh<<2],     ->vt.w\n"       // src[index_part] = partner_value
-        "v.sw  vt#2.reuse.sw, [to, vm#2.reuse.uh<<2]\n"           // dst[tid] = src[tid]   // copy first 
+        "v.sw  vt#2.reuse.sw, [to, vm#2.reuse.uh<<2]\n"           // dst[tid] = src[tid]   // copy first
         "v.sw  vt#1.reuse.sw, [to, vm#1.reuse.uh<<2]\n"           // dst[partner] = src[partner] // copy first
-        "v.sw  vt#4.reuse.sw, [to, vn#2.reuse.uh<<2]\n"           // dst[tid+col/2] = src[tid+col/2]   // copy first 
+        "v.sw  vt#4.reuse.sw, [to, vn#2.reuse.uh<<2]\n"           // dst[tid+col/2] = src[tid+col/2]   // copy first
         "v.sw  vt#3.reuse.sw, [to, vn#1.reuse.uh<<2]\n"           // dst[partner+col/2] = src[partner+col/2] // copy first
         "v.cmp.lt lc0.uh, vu#1.reuse.uh, ->vn.b\n"          // tid < partner
         "v.and  vu#1.reuse.uh, ri0.uh, ->vn.h\n"            // partner & stage
         "v.cmp.eqi vn#1.reuse.uh, 0, ->vn.b\n"              // partner & stage == 0
         "v.cmp.lt vt#2.reuse.sw, vt#1.reuse.sw, ->vn.b\n"         // cur_value < partner_value
         "v.and vn#4.reuse.ub, vn#2.reuse.ub, ->vu.b\n"            // (tid < partner) & (partner & stage) == 0
-        "v.and vu#1.reuse.ub, vn#1.reuse.ub ->vu.b\n"             // (tid < partner) & ((partner & stage) == 0) & (cur_value < partner_value) 
+        "v.and vu#1.reuse.ub, vn#1.reuse.ub ->vu.b\n"             // (tid < partner) & ((partner & stage) == 0) & (cur_value < partner_value)
         "v.cmp.eqi vu#1.ub, 1, ->vm.b\n"              // sort_descend
         ""
         "v.cmp.eqi vn#3.uh, 1, ->vn.b\n"                // partner & stage == 1
@@ -1015,7 +1015,7 @@ void __vec__ BitonicSortStepDescend_RowMajor_Imp(
         "v.sw  vt#3.sw, [to, vn#2.uh<<2]\n"           // dst[tid+col/2] = src[partner]
         "v.sw  vt#4.sw, [to, vn#1.uh<<2]\n"           // dst[partner+col/2] = src[tid]
         "l.addi t#1.ud, 0, ->p\n"                     // resave p from 1st branch
-        ""                                            // merge 2nd branch two result 
+        ""                                            // merge 2nd branch two result
         "c.bstop\n"
         :
         :"i"(tile_shape::ValidCol)
@@ -1043,7 +1043,7 @@ void TSORTROW(tile_shape &weight, tile_shape &indices, tile_shape &src) {
 
     using tile_shape_sort = Tile<Location::Vec, dtype, tile_shape::Rows, 2*tile_shape::Cols, BLayout::RowMajor>;
     tile_shape_sort dst_sort;
-    tile_shape_sort src_sort; 
+    tile_shape_sort src_sort;
 
     TRANGE_RowMajor<tile_shape><<<col, row>>>(indices.data());
     tile_shape_sort padding(-1);
@@ -1072,14 +1072,14 @@ void topk(dtype *weight, dtype* indices, dtype *x){
     using gmOut = global_tensor<dtype, RowMajor<tokens, tK>>;
     using tileIn = Tile<Location::Vec, dtype, tS, scores, BLayout::RowMajor>;
     using tileOut = Tile<Location::Vec, dtype, tS, 32, BLayout::RowMajor, tS, tK>; // topk < 32
-   
+
     const int block = tokens/tS;
     for(int i=0;i<block;i++){
         gmIn gIn(x+i*tS*scores);
         tileIn tIn;
         tileIn tWeight;
         tileIn tIndice;
-        TCOPYIN(tIn, gIn);
+        TLOAD(tIn, gIn);
         TSORTROW<dtype>(tWeight, tIndice, tIn);
         tileOut tWeightOut;
         TEXTRACT(tWeightOut, tWeight, 0, 0);
@@ -1088,9 +1088,9 @@ void topk(dtype *weight, dtype* indices, dtype *x){
         TEXTRACT(tIndiceOut, tIndice, 0, 0);
 
         gmOut gWeight(weight+i*tS*tK);
-        TCOPYOUT(gWeight, tWeightOut);
+        TSTORE(gWeight, tWeightOut);
 
         gmOut gIndice(indices+i*tS*tK);
-        TCOPYOUT(gIndice, tIndiceOut);
+        TSTORE(gIndice, tIndiceOut);
     }
 }

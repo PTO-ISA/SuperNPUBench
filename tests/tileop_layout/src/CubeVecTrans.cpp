@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include <cstring> 
+#include <cstring>
 
 #ifdef LINX_PMC
 #include <linxStartEnd.hpp>
@@ -64,8 +64,8 @@ void CubeVecTrans(float* dst, float* src0, float* src1){
             for(int k=0;k<Kb;k++){
                 tile_shapeA tA(i+j+k);
                 tile_shapeB tB(i+j+k);
-                // TCOPYIN(tA, gA);
-                // TCOPYIN(tB, gB);
+                // TLOAD(tA, gA);
+                // TLOAD(tB, gB);
                 MATMUL(tACC, tA, tB);
                 tile_shapeD tVecIn;
                 TCVT(tVecIn, tACC);
@@ -76,7 +76,7 @@ void CubeVecTrans(float* dst, float* src0, float* src1){
                 tile_shapeD_out tCubeOut;
                 MATMUL(tCubeOut, tCubeIn_left, tCubeIn_right);
             }
-            //TCOPYOUT(gC, tACC);
+            //TSTORE(gC, tACC);
         }
     }
 }
@@ -85,7 +85,7 @@ int main() {
     float src0[GM*GK];
     float src1[GK*GN];
     float dst[GM*GN];
-    
+
     #ifdef LINX_PMC
     PMC_START();
     #endif

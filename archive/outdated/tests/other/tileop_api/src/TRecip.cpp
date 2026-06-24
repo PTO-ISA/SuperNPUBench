@@ -74,9 +74,9 @@ void test_rm(T *dst, T *src) {
       auto res = gDIter(i, j);
 
       tile_shape t0, t1;
-      TCOPYIN(t0, s0);
+      TLOAD(t0, s0);
       TRECIP(t1, t0);
-      TCOPYOUT(res, t1);
+      TSTORE(res, t1);
     }
   }
 }
@@ -99,9 +99,9 @@ void test_cm(T *dst, T *src) {
       auto res = gDIter(j, i);
 
       tile_shape t0, t1;
-      TCOPYIN(t0, s0);
+      TLOAD(t0, s0);
       TRECIP(t1, t0);
-      TCOPYOUT(res, t1);
+      TSTORE(res, t1);
     }
   }
 }

@@ -1,9 +1,9 @@
-ifeq ($(TESTCASE), TCOPYIN)
+ifeq ($(TESTCASE), TLOAD)
 DEFINES += -DGM_ROW=$(row) -DGM_COL=$(col) -DTR_ROW=$(trow) -DTR_COL=$(tcol)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_$(MODE)_r$(row)_c$(col)_tr$(trow)_tc$(tcol).elf
 endif
 
-ifeq ($(TESTCASE), TCOPYOUT)
+ifeq ($(TESTCASE), TSTORE)
 DEFINES += -DROW=$(row) -DCOL=$(col) -DTROW=$(trow) -DTCOL=$(tcol)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_$(MODE)_r$(row)_c$(col)_tr$(trow)_tc$(tcol).elf
 endif

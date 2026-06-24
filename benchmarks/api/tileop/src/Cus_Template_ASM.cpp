@@ -8,7 +8,7 @@
 
 #ifdef ENABLE_TENSOR_INSTR
 template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
-void TCOPYIN_ASM(tile_shape &dst, gm_shape &src) {
+void TLOAD_ASM(tile_shape &dst, gm_shape &src) {
 
   asm volatile(
     "BSTART.PAR 33, %c1\n"
@@ -37,9 +37,9 @@ void test_Nz(T *dst) {
   gm_shape g(dst);
   tile_shape t;
 #ifdef ENABLE_TENSOR_INSTR
-  TCOPYIN_ASM(t, g);
+  TLOAD_ASM(t, g);
 #else
-  TCOPYIN(t, g);
+  TLOAD(t, g);
 #endif
   print_tile(t);
 }

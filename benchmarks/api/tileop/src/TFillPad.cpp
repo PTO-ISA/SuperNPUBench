@@ -20,9 +20,9 @@ void test_rm(int32_t *dst, int32_t *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TFILLPAD(d1, d0);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 template <size_t tile_row, size_t tile_col, size_t valid_row, size_t valid_col>
@@ -45,9 +45,9 @@ void test_rm_dynamic(int32_t *dst, int32_t *src) {
   tile_shape_in d0(src_valid_row, src_valid_col);
   tile_shape_out d1(dst_valid_row, dst_valid_col);
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TFILLPAD(d1, d0);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 template <size_t tile_row, size_t tile_col, size_t valid_row, size_t valid_col>
@@ -64,9 +64,9 @@ void test_cm(int32_t *dst, int32_t *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TFILLPAD(d1, d0);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 
@@ -89,7 +89,7 @@ int main() {
   int32_t *dst3 = (int32_t *)malloc(size * sizeof(int32_t));
   check_mem_alloc(dst3);
   init_dst(dst3, size);
- 
+
   int32_t *src = (int32_t *)malloc(size * sizeof(int32_t));
   check_mem_alloc(src);
   init_src_int(src, size);

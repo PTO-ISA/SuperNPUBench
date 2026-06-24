@@ -21,10 +21,10 @@ void test(float *dst, uint16_t *srci, float s) {
   tile_shape_srci d0;
   tile_shape_dst d1;
 
-  TCOPYIN(d0, s0);
-  TCOPYIN(d1, s1);
+  TLOAD(d0, s0);
+  TLOAD(d1, s1);
   TSCATTERELEMENTCOL(d1, d0, s);
-  TCOPYOUT(res, d1);
+  TSTORE(res, d1);
 }
 
 int main() {

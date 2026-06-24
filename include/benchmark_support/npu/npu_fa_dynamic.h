@@ -231,9 +231,9 @@ void __vec__ new_max_4src_dynamic(
         upd_max = blkv_max(upd_max, s3_max_0123);
     }
     upd_max = upd_max * src_scale;
-    new_max_ptr[max_idx] = upd_max; 
+    new_max_ptr[max_idx] = upd_max;
 
-    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max); 
+    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max);
 }
 
 template<typename tileSrc, typename tileSum, typename tileScale>
@@ -274,7 +274,7 @@ void __vec__ new_sum_4src_dynamic(
         typename tileSrc::DType s0_exp_src_3 = src0_ptr[src_idx_3];
         typename tileSrc::DType s0_exp_src_01 = s0_exp_src_0 + s0_exp_src_1;
         typename tileSrc::DType s0_exp_src_23 = s0_exp_src_2 + s0_exp_src_3;
-        typename tileSrc::DType s0_exp_src_0123 = s0_exp_src_01 + s0_exp_src_23;  
+        typename tileSrc::DType s0_exp_src_0123 = s0_exp_src_01 + s0_exp_src_23;
 
         typename tileSrc::DType s1_exp_src_0 = src1_ptr[src_idx_0];
         typename tileSrc::DType s1_exp_src_1 = src1_ptr[src_idx_1];
@@ -282,7 +282,7 @@ void __vec__ new_sum_4src_dynamic(
         typename tileSrc::DType s1_exp_src_3 = src1_ptr[src_idx_3];
         typename tileSrc::DType s1_exp_src_01 = s1_exp_src_0 + s1_exp_src_1;
         typename tileSrc::DType s1_exp_src_23 = s1_exp_src_2 + s1_exp_src_3;
-        typename tileSrc::DType s1_exp_src_0123 = s1_exp_src_01 + s1_exp_src_23;  
+        typename tileSrc::DType s1_exp_src_0123 = s1_exp_src_01 + s1_exp_src_23;
 
         typename tileSrc::DType s2_exp_src_0 = src2_ptr[src_idx_0];
         typename tileSrc::DType s2_exp_src_1 = src2_ptr[src_idx_1];
@@ -290,7 +290,7 @@ void __vec__ new_sum_4src_dynamic(
         typename tileSrc::DType s2_exp_src_3 = src2_ptr[src_idx_3];
         typename tileSrc::DType s2_exp_src_01 = s2_exp_src_0 + s2_exp_src_1;
         typename tileSrc::DType s2_exp_src_23 = s2_exp_src_2 + s2_exp_src_3;
-        typename tileSrc::DType s2_exp_src_0123 = s2_exp_src_01 + s2_exp_src_23;  
+        typename tileSrc::DType s2_exp_src_0123 = s2_exp_src_01 + s2_exp_src_23;
 
         typename tileSrc::DType s3_exp_src_0 = src3_ptr[src_idx_0];
         typename tileSrc::DType s3_exp_src_1 = src3_ptr[src_idx_1];
@@ -358,7 +358,7 @@ void __vec__ local_max_4src_dynamic(
         upd_max = blkv_max(upd_max, s0123_max);
     }
     upd_max = upd_max * src_scale;
-    local_max_ptr[max_idx] = upd_max;  
+    local_max_ptr[max_idx] = upd_max;
 }
 
 template<typename tileSrc, typename tileSum>
@@ -396,7 +396,7 @@ void __vec__ local_sum_4src_dynamic(
         typename tileSrc::DType s0_exp_src_3 = src0_ptr[src_idx_3];
         typename tileSrc::DType s0_exp_src_01 = s0_exp_src_0 + s0_exp_src_1;
         typename tileSrc::DType s0_exp_src_23 = s0_exp_src_2 + s0_exp_src_3;
-        typename tileSrc::DType s0_exp_src_0123 = s0_exp_src_01 + s0_exp_src_23;  
+        typename tileSrc::DType s0_exp_src_0123 = s0_exp_src_01 + s0_exp_src_23;
 
         typename tileSrc::DType s1_exp_src_0 = src1_ptr[src_idx_0];
         typename tileSrc::DType s1_exp_src_1 = src1_ptr[src_idx_1];
@@ -404,7 +404,7 @@ void __vec__ local_sum_4src_dynamic(
         typename tileSrc::DType s1_exp_src_3 = src1_ptr[src_idx_3];
         typename tileSrc::DType s1_exp_src_01 = s1_exp_src_0 + s1_exp_src_1;
         typename tileSrc::DType s1_exp_src_23 = s1_exp_src_2 + s1_exp_src_3;
-        typename tileSrc::DType s1_exp_src_0123 = s1_exp_src_01 + s1_exp_src_23;  
+        typename tileSrc::DType s1_exp_src_0123 = s1_exp_src_01 + s1_exp_src_23;
 
         typename tileSrc::DType s2_exp_src_0 = src2_ptr[src_idx_0];
         typename tileSrc::DType s2_exp_src_1 = src2_ptr[src_idx_1];
@@ -412,7 +412,7 @@ void __vec__ local_sum_4src_dynamic(
         typename tileSrc::DType s2_exp_src_3 = src2_ptr[src_idx_3];
         typename tileSrc::DType s2_exp_src_01 = s2_exp_src_0 + s2_exp_src_1;
         typename tileSrc::DType s2_exp_src_23 = s2_exp_src_2 + s2_exp_src_3;
-        typename tileSrc::DType s2_exp_src_0123 = s2_exp_src_01 + s2_exp_src_23;  
+        typename tileSrc::DType s2_exp_src_0123 = s2_exp_src_01 + s2_exp_src_23;
 
         typename tileSrc::DType s3_exp_src_0 = src3_ptr[src_idx_0];
         typename tileSrc::DType s3_exp_src_1 = src3_ptr[src_idx_1];
@@ -463,7 +463,7 @@ __attribute__((noinline)) void flash_attention_dynamic(dtype* out_ptr, dtype* q_
     using tileW_out  = TileAcc<float, kTm, kTk, -1, -1>;      // [kTm×kTk]
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor, -1, -1>;
     using tileW_cast = Tile<Location::Vec, dtype, kTm, kTk, BLayout::ColMajor, -1, -1>;
-    using tileW_left = TileLeft<dtype, kTm, kTk, -1, -1>; 
+    using tileW_left = TileLeft<dtype, kTm, kTk, -1, -1>;
 
     using tileO_out  = TileAcc<float, kTm, vD, -1, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::ColMajor, -1, vD>; // [kTm×vD]
@@ -491,7 +491,7 @@ __attribute__((noinline)) void flash_attention_dynamic(dtype* out_ptr, dtype* q_
         int dyn_m = (i+1) * kTm > Sq ? rQ:kTm;
         tileQ tQ[Xdim]; for (auto& x : tQ) { x = tileQ(dyn_m);}
 
-        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore 
+        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x+=2){
                 size_t offset_Q = (i+x) * tileQ::Rows * qD;
@@ -503,7 +503,7 @@ __attribute__((noinline)) void flash_attention_dynamic(dtype* out_ptr, dtype* q_
             for(int x=0;x<Xdim;x++){
                 size_t offset_Q = (i+x) * tileQ::Rows * qD;
                 gmQ gQ(q_ptr+offset_Q, Sq);
-                TCOPYIN(tQ[x], gQ);
+                TLOAD(tQ[x], gQ);
             }
         #endif
 
@@ -533,7 +533,7 @@ __attribute__((noinline)) void flash_attention_dynamic(dtype* out_ptr, dtype* q_
             for(int y=0;y<Ydim;y++){
                 size_t offset_K = (j+y) * tileK::Cols * qD;
                 gmK gK(k_ptr+offset_K, Skv);
-                TCOPYIN(tK[y], gK);
+                TLOAD(tK[y], gK);
             }
 
             tileW tW[Xdim][Ydim];for (auto& row : tW) for (auto& x : row) { x = tileW(dyn_m, dyn_k);}
@@ -607,8 +607,8 @@ __attribute__((noinline)) void flash_attention_dynamic(dtype* out_ptr, dtype* q_
                 #pragma clang loop unroll(full)
                 for(int x=0;x<Xdim;x++){
                     new_max_4src_dynamic<tileW, tileMax><<<tMax[x].GetValidRow(), 1, 1>>>(
-                                                                tScale[x].data(), 
-                                                                tNewMax[x].data(), 
+                                                                tScale[x].data(),
+                                                                tNewMax[x].data(),
                                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                                                                 tMax[x].data(),
                                                                 scale, tW[0][0].GetValidCol());
@@ -636,7 +636,7 @@ __attribute__((noinline)) void flash_attention_dynamic(dtype* out_ptr, dtype* q_
             for(int y=0;y<Ydim;y++){
                 size_t offset_V = (j+y) * tileV::Rows * vD;
                 gmV gV(v_ptr+offset_V, Skv);
-                TCOPYIN(tV[y], gV);
+                TLOAD(tV[y], gV);
             }
 
             // ColMajor -> Nz
@@ -690,7 +690,7 @@ __attribute__((noinline)) void flash_attention_dynamic(dtype* out_ptr, dtype* q_
         for (int x = 0; x < Xdim; ++x) {
             size_t offset_O = (i+x) * tileO_cast::Rows * vD;
             gmO dstO(out_ptr+offset_O, Sq);
-            TCOPYOUT(dstO, tO_cast[x]);
+            TSTORE(dstO, tO_cast[x]);
         }
 
         i+=Xdim;
@@ -895,7 +895,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
     using tileW_out  = TileAcc<float, kTm, kTk, -1, -1>;      // [kTm×kTk]
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor, -1, -1>;
     using tileW_cast = Tile<Location::Vec, dtype, kTm, kTk, BLayout::ColMajor, -1, -1>;
-    using tileW_left = TileLeft<dtype, kTm, kTk, -1, -1>; 
+    using tileW_left = TileLeft<dtype, kTm, kTk, -1, -1>;
 
     using tileO_out  = TileAcc<float, kTm, vD, -1, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::ColMajor, -1, vD>; // [kTm×vD]
@@ -922,7 +922,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
         for(int x=0;x<dyn_Xdim;x++){
             size_t offset_Q = (i+x) * tileQ::Rows * qD;
             gmQ gQ(q_ptr+offset_Q, Sq);
-            TCOPYIN(tQ[x], gQ);
+            TLOAD(tQ[x], gQ);
         }
 
         tileMax tMax[Xdim]; for (auto& x : tMax) { x = tileMax(dyn_m);}
@@ -941,8 +941,8 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
         tileScale tScale[Xdim]; for (auto& x : tScale) { x = tileScale(dyn_m);}
 
         for (int j = 0; j < Kb; ) {
-            int dyn_Ydim = (j+Ydim)   < (Kb-1)? Ydim: 
-                           (j+Ydim/2) < (Kb-1)? Ydim/2:  
+            int dyn_Ydim = (j+Ydim)   < (Kb-1)? Ydim:
+                           (j+Ydim/2) < (Kb-1)? Ydim/2:
                            (j+Ydim/4) < (Kb-1)? Ydim/4:1;
             int dyn_k = (j+1) * kTk > Skv ? rK:kTk;
 
@@ -951,7 +951,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
             for(int y=0;y<dyn_Ydim;y++){
                 size_t offset_K = (j+y) * tileK::Cols * qD;
                 gmK gK(k_ptr+offset_K, Skv);
-                TCOPYIN(tK[y], gK);
+                TLOAD(tK[y], gK);
             }
 
             tileW tW[Xdim][Ydim];for (auto& row : tW) for (auto& x : row) { x = tileW(dyn_m, dyn_k);}
@@ -1000,12 +1000,12 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
                 tileSum tLocalSum[Xdim][2]; for (auto& row : tLocalSum) for (auto& x : row) { x = tileSum(dyn_m);}
                 for(int x=0;x<dyn_Xdim;x++){
                     new_max_4src_dynamic<tileW, tileMax><<<tMax[x].GetValidRow(), 1, 1>>>(
-                                                                tScale[x].data(), 
-                                                                tNewMax[x].data(), 
+                                                                tScale[x].data(),
+                                                                tNewMax[x].data(),
                                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                                                                 tMax[x].data(),
                                                                 scale, tW[0][0].GetValidCol());
-                    
+
                     src_exp_2src_with_local_sum_dynamic<tileW, tileW_cast, tileMax, tileSum><<<tW[0][0].GetValidRow(), 1, 1>>>(tLocalSum[x][0].data(), tExpW[x][0].data(), tExpW[x][1].data(),
                                                                                                    tW[x][0].data(), tW[x][1].data(), tNewMax[x].data(), scale, tW[0][0].GetValidCol());
                     src_exp_2src_with_local_sum_dynamic<tileW, tileW_cast, tileMax, tileSum><<<tW[0][0].GetValidRow(), 1, 1>>>(tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
@@ -1019,7 +1019,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
             for(int y=0;y<dyn_Ydim;y++){
                 size_t offset_V = (j+y) * tileV::Rows * vD;
                 gmV gV(v_ptr+offset_V, Skv);
-                TCOPYIN(tV[y], gV);
+                TLOAD(tV[y], gV);
             }
 
             // ColMajor -> Nz
@@ -1066,7 +1066,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
         for (int x = 0; x < dyn_Xdim; ++x) {
             size_t offset_O = (i+x) * tileO_cast::Rows * vD;
             gmO dstO(out_ptr+offset_O, Sq);
-            TCOPYOUT(dstO, tO_cast[x]);
+            TSTORE(dstO, tO_cast[x]);
         }
 
         i+=dyn_Xdim;
@@ -1083,7 +1083,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
         for(int x=0;x<Xdim;x++){                                    \
             size_t offset_Q = (i+x) * tileQ::Rows * qD;             \
             gmQ gQ(q_ptr+offset_Q, Sq);                             \
-            TCOPYIN(tQ[x], gQ);                                     \
+            TLOAD(tQ[x], gQ);                                     \
         }                                                           \
                                                                     \
         tileMax tMax[Xdim];                                         \
@@ -1133,7 +1133,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
             for(int y=0;y<Ydim;y++){                                \
                 size_t offset_K = (j+y) * tileK::Cols * qD;         \
                 gmK gK(k_ptr+offset_K, Skv);                        \
-                TCOPYIN(tK[y], gK);                                 \
+                TLOAD(tK[y], gK);                                 \
             }                                                       \
             tileW tW[Xdim][Ydim];                                   \
             _Pragma("clang loop unroll(full)")                      \
@@ -1215,7 +1215,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
             for(int y=0;y<Ydim;y++){ \
                 size_t offset_V = (j+y) * tileV::Rows * vD; \
                 gmV gV(v_ptr+offset_V, Skv); \
-                TCOPYIN(tV[y], gV); \
+                TLOAD(tV[y], gV); \
             } \
             /* ColMajor -> Nz */ \
             /* 计算当前块的加权输出: O_j = W * V */ \
@@ -1270,7 +1270,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
         for (int x = 0; x < Xdim; ++x) { \
             size_t offset_O = (i+x) * tileO_cast::Rows * vD; \
             gmO dstO(out_ptr+offset_O, Sq); \
-            TCOPYOUT(dstO, tO_cast[x]); \
+            TSTORE(dstO, tO_cast[x]); \
         }
 
 template <typename dtype, int qD, int vD, int kTm, int kTk>
@@ -1286,7 +1286,7 @@ __attribute__((noinline)) void flash_attention_dynamic_unroll(dtype* out_ptr, dt
     using tileW_out  = TileAcc<float, kTm, kTk, -1, -1>;      // [kTm×kTk]
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor, -1, -1>;
     using tileW_cast = Tile<Location::Vec, dtype, kTm, kTk, BLayout::ColMajor, -1, -1>;
-    using tileW_left = TileLeft<dtype, kTm, kTk, -1, -1>; 
+    using tileW_left = TileLeft<dtype, kTm, kTk, -1, -1>;
 
     using tileO_out  = TileAcc<float, kTm, vD, -1, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::ColMajor, -1, vD>; // [kTm×vD]

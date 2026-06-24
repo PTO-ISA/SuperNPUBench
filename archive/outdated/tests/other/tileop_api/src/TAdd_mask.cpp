@@ -87,10 +87,10 @@ void test(T *c_ptr, T *a_ptr, T *b_ptr) {
       auto gC = gCIter(i, j);
 
       tile_shape tA, tB, tC;
-      TCOPYIN(tA, gA);
-      TCOPYIN(tB, gB);
+      TLOAD(tA, gA);
+      TLOAD(tB, gB);
       TADD(tC, tA, tB);
-      TCOPYOUT(gC, tC);
+      TSTORE(gC, tC);
     }
     if constexpr (remainder_col) {
       auto gA = gAIter(i, block_col);
@@ -98,10 +98,10 @@ void test(T *c_ptr, T *a_ptr, T *b_ptr) {
       auto gC = gCIter(i, block_col);
 
       trailing_rows_shape tA, tB, tC;
-      TCOPYIN(tA, gA);
-      TCOPYIN(tB, gB);
+      TLOAD(tA, gA);
+      TLOAD(tB, gB);
       TADD(tC, tA, tB);
-      TCOPYOUT(gC, tC);
+      TSTORE(gC, tC);
     }
   }
   if constexpr (remainder_row) {
@@ -111,10 +111,10 @@ void test(T *c_ptr, T *a_ptr, T *b_ptr) {
       auto gC = gCIter(block_row, j);
 
       trailing_cols_shape tA, tB, tC;
-      TCOPYIN(tA, gA);
-      TCOPYIN(tB, gB);
+      TLOAD(tA, gA);
+      TLOAD(tB, gB);
       TADD(tC, tA, tB);
-      TCOPYOUT(gC, tC);
+      TSTORE(gC, tC);
     }
     if constexpr (remainder_col) {
       auto gA = gAIter(block_row, block_col);
@@ -122,10 +122,10 @@ void test(T *c_ptr, T *a_ptr, T *b_ptr) {
       auto gC = gCIter(block_row, block_col);
 
       trailing_corner_shape tA, tB, tC;
-      TCOPYIN(tA, gA);
-      TCOPYIN(tB, gB);
+      TLOAD(tA, gA);
+      TLOAD(tB, gB);
       TADD(tC, tA, tB);
-      TCOPYOUT(gC, tC);
+      TSTORE(gC, tC);
     }
   }
 }

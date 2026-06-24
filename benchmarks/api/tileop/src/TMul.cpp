@@ -50,13 +50,13 @@ void test_rm(T *dst, T *src0, T *src1) {
       int offset = i * (tile_row * gm_col) + j * tile_col;
       gm_shape s0(src0 + offset);
       gm_shape s1(src1 + offset);
-      gm_shape res(dst + offset);  
-  
+      gm_shape res(dst + offset);
+
       tile_shape d0, d1, d2;
-      TCOPYIN(d0, s0);
-      TCOPYIN(d1, s1);
+      TLOAD(d0, s0);
+      TLOAD(d1, s1);
       TMUL(d2, d1, d0);
-      TCOPYOUT(res, d2);
+      TSTORE(res, d2);
     }
   }
 }
@@ -73,13 +73,13 @@ void test_cm(T *dst, T *src0, T *src1) {
       int offset = i * (tile_row * gm_col) + j * tile_col;
       gm_shape s0(src0 + offset);
       gm_shape s1(src1 + offset);
-      gm_shape res(dst + offset);  
-  
+      gm_shape res(dst + offset);
+
       tile_shape d0, d1, d2;
-      TCOPYIN(d0, s0);
-      TCOPYIN(d1, s1);
+      TLOAD(d0, s0);
+      TLOAD(d1, s1);
       TMUL(d2, d1, d0);
-      TCOPYOUT(res, d2);
+      TSTORE(res, d2);
     }
   }
 }
@@ -117,7 +117,7 @@ int main() {
   float *dst = (float *)malloc(gm_size * sizeof(float));
   check_mem_alloc(dst);
   init_dst(dst, gm_size);
- 
+
   float *src0 = (float *)malloc(gm_size * sizeof(float));
   check_mem_alloc(src0);
   init_src_fp(src0, gm_size);

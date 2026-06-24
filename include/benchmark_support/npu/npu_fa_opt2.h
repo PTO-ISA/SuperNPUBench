@@ -9,8 +9,8 @@ void flash_attention_opt2(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_p
     using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD), kTm, qD>;       // [kTm×qD]
     using tileK      = TileRight<dtype, (qD==192? 256:qD), kTk, qD, kTk>;      // [vD×kTk]
     using tileW_out  = TileAcc<float, kTm, kTk>;      // [kTm×kTk]
-    using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>; 
-    using tileW_left = TileLeft<dtype, kTm, kTk>; 
+    using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
+    using tileW_left = TileLeft<dtype, kTm, kTk>;
 
     using tileO_out  = TileAcc<float, kTm, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::RowMajor>; // [kTm×vD]
@@ -34,13 +34,13 @@ void flash_attention_opt2(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_p
     const float scale = 1.0f / sqrt((float)qD);
     const int Qb = (Sq + kTm - 1) / kTm;
     const int Kb = (Skv + kTk - 1) / kTk;
-    
+
     // 对每个 Q-block (i)
     for (int i = 0; i < Qb; ++i) {
         // 加载当前Q块 (仅一次)
         tileQ tQ;
         auto gQ = gIterQ(i,0);
-        TCOPYIN(tQ, gQ);
+        TLOAD(tQ, gQ);
 
         // 初始化状态: 最大值/指数和/输出累加
         tileMax tMax;
@@ -55,8 +55,8 @@ void flash_attention_opt2(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_p
         // 加载K_j和V_j
         auto gK = gIterK(0, j);
         auto gV = gIterV(j, 0);
-        tileK tK; TCOPYIN(tK, gK);
-        tileV tV; TCOPYIN(tV, gV);
+        tileK tK; TLOAD(tK, gK);
+        tileV tV; TLOAD(tV, gV);
 
         // 计算注意力分数块
         tileW_out tW_out;
@@ -94,6 +94,6 @@ void flash_attention_opt2(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_p
         TCAST(tO_cast, tO);
         // 写回全局内存
         auto dstO = gIterO(i, 0);
-        TCOPYOUT(dstO, tO_cast);
+        TSTORE(dstO, tO_cast);
     }
 }

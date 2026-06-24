@@ -23,10 +23,10 @@ void test(float *dst, float *src0, uint16_t *src1) {
   tile_shape_src1 d1;
   tile_shape_dst d2;
 
-  TCOPYIN(d0, s0);
-  TCOPYIN(d1, s1);
+  TLOAD(d0, s0);
+  TLOAD(d1, s1);
   TGATHERELEMENTCOL(d2, d0, d1);
-  TCOPYOUT(res, d2);
+  TSTORE(res, d2);
 }
 
 int main() {

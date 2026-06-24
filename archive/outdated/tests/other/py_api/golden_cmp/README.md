@@ -7,12 +7,12 @@
  · 文件路径：JanusCoreBench/test/golden_cmp/py_api/src/
 
  · 操作说明：
-   
+
    1. 如果是添加一个新的运算方式（如 texp），则需要新建一个 HPP 文件。
    2. 如果是同一运算方式的不同属性（如不同的矩阵尺寸或 tile 大小），则直接在对应的 HPP 文件中添加。
 
  · 标准函数格式：
-   
+
    · 文件头需要包含必要的头文件。
    · 声明变量和函数名称时，需注意命名规范。
    · 函数声明后，需将函数与模块绑定（m.def）。
@@ -47,9 +47,9 @@ void texp1_py(py::array_t<float> dst_py, py::array_t<float> src_py) {
 
             tile_shape d0, d1;
 
-            TCOPYIN(d0, s0);
+            TLOAD(d0, s0);
             TEXP(d1, d0);
-            TCOPYOUT(res, d1);
+            TSTORE(res, d1);
         }
     }
 }
@@ -72,14 +72,14 @@ void bind_texp(py::module_& m) {
 步骤说明：
 
  1. 添加文件头：
-    
+
     · 在文件开头添加包含新 HPP 文件的头文件路径。
     ```
     #include "src/texp1.hpp"
     ```
 
  2. 添加绑定内容：
-    
+
     · 在模块中绑定新函数。
     ```
     py::module_ _api = m.def_submodule("_api", "API module");
@@ -93,7 +93,7 @@ void bind_texp(py::module_& m) {
 步骤说明：
 
  1. 在 cases 中添加新测试用例：
-    
+
     · 按照以下格式添加新函数的属性。
         ```
         {
@@ -109,7 +109,7 @@ void bind_texp(py::module_& m) {
     · **output_shapes**：输出矩阵的形状。
 
  2. 在 op_map 中添加操作映射：
-    
+
     · 按照以下格式添加新操作的映射。
     ```
     "texp": [
@@ -129,10 +129,10 @@ void bind_texp(py::module_& m) {
 
 在 /JanusCoreBench/test 路径下，执行以下命令：
 ```
-make clean  
-make TESTCASE=tileop_py PLAT=cpu PY_LIB=on  
-python3 golden_cmp/golden_cmp.py -i tadd1  
+make clean
+make TESTCASE=tileop_py PLAT=cpu PY_LIB=on
+python3 golden_cmp/golden_cmp.py -i tadd1
 ```
-其中，PLAT 和 PY_LIB 的值可以根据需要进行修改。具体的可选项可参考 common 文件夹下的 Makefile 。其中 -i 后面跟着的是函数的名称，具体的函数名可以参考 config.json 文件中的内容。  
+其中，PLAT 和 PY_LIB 的值可以根据需要进行修改。具体的可选项可参考 common 文件夹下的 Makefile 。其中 -i 后面跟着的是函数的名称，具体的函数名可以参考 config.json 文件中的内容。
 之后print出的对比结果中，在最后两行会显示loss（误差）以及是否pass or fail
 

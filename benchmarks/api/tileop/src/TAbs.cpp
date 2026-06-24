@@ -42,7 +42,7 @@ template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row,
 void test_RowMajor(T *dst, T *src0) {
   using gm_shape = global_tensor<T, RowMajor<gm_row, gm_col>>;
   using tile_shape = Tile<Location::Vec, T, tile_row, tile_col>;
- 
+
   uint16_t block_row = gm_row / tile_row;
   uint16_t block_col = gm_col / tile_col;
   #pragma clang loop unroll(full)
@@ -52,21 +52,21 @@ void test_RowMajor(T *dst, T *src0) {
       int offset = i * (tile_row * gm_col) + j * tile_col;
       gm_shape s0(src0 + offset);
       gm_shape res(dst + offset);
-  
+
       tile_shape d0, d1;
-      TCOPYIN(d0, s0);
+      TLOAD(d0, s0);
       TABS(d1, d0);
-      TCOPYOUT(res, d1);
+      TSTORE(res, d1);
     }
   }
 }
- 
+
 template <uint16_t gm_row, uint16_t gm_col, uint16_t tile_row,
           uint16_t tile_col, typename T>
 void test_ColMajor(T *dst, T *src0) {
   using gm_shape = global_tensor<T, ColMajor<gm_row, gm_col>>;
   using tile_shape = Tile<Location::Vec, T, tile_row, tile_col, BLayout::ColMajor>;
- 
+
   uint16_t block_row = gm_row / tile_row;
   uint16_t block_col = gm_col / tile_col;
   #pragma clang loop unroll(full)
@@ -76,11 +76,11 @@ void test_ColMajor(T *dst, T *src0) {
       int offset = i * (tile_row * gm_col) + j * tile_col;
       gm_shape s0(src0 + offset);
       gm_shape res(dst + offset);
-  
+
       tile_shape d0, d1;
-      TCOPYIN(d0, s0);
+      TLOAD(d0, s0);
       TABS(d1, d0);
-      TCOPYOUT(res, d1);
+      TSTORE(res, d1);
     }
   }
 }
@@ -123,7 +123,7 @@ int main() {
   __half *dst_f16 = (__half *)malloc(gm_size * sizeof(__half));
   check_mem_alloc(dst_f16);
   init_dst(dst_f16, gm_size);
- 
+
   __half *src0_f16 = (__half *)malloc(gm_size * sizeof(__half));
   check_mem_alloc(src0_f16);
   init_src_fp(src0_f16, gm_size);
@@ -146,7 +146,7 @@ int main() {
 
   free(dst_col);
   free(src0_col);
- 
+
   free(dst_f16);
   free(src0_f16);
 

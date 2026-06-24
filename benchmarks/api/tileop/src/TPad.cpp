@@ -52,9 +52,9 @@ void test_pad_rm(T *dst, T *src, T pad_value, size_t up_pad, size_t left_pad, si
   tile_shape_src src_tensor;
   tile_shape_dst dst_tensor;
 
-  TCOPYIN(src_tensor, s0);
+  TLOAD(src_tensor, s0);
   TPAD(dst_tensor, src_tensor, pad_value, up_pad, left_pad, down_pad, right_pad);
-  TCOPYOUT(res, dst_tensor);
+  TSTORE(res, dst_tensor);
 }
 
 template <uint16_t tile_row, uint16_t tile_col, uint16_t valid_row, uint16_t valid_col,
@@ -71,9 +71,9 @@ void test_pad_cm(T *dst, T *src, T pad_value, size_t up_pad, size_t left_pad, si
   tile_shape_src src_tensor;
   tile_shape_dst dst_tensor;
 
-  TCOPYIN(src_tensor, s0);
+  TLOAD(src_tensor, s0);
   TPAD(dst_tensor, src_tensor, pad_value, up_pad, left_pad, down_pad, right_pad);
-  TCOPYOUT(res, dst_tensor);
+  TSTORE(res, dst_tensor);
 }
 
 // 测试单个数据类型的函数
@@ -83,7 +83,7 @@ void test_single_type() {
     const uint16_t tile_col = 32;
     const uint16_t valid_row = 2;
     const uint16_t valid_col = 2;
-    
+
     const int32_t pad_value = 0;
     const size_t up_pad = 1, left_pad = 2, down_pad = 3, right_pad = 4;
     const uint16_t dst_tile_row = valid_row + up_pad + down_pad;
@@ -104,7 +104,7 @@ void test_single_type() {
     // 分配源内存
     T *src = (T *)malloc(size * sizeof(T));
     check_mem_alloc(src);
-    
+
     // 根据类型选择合适的初始化函数
     if constexpr (std::is_integral_v<T>) {
         if constexpr (std::is_unsigned_v<T>) {
@@ -168,7 +168,7 @@ int main() {
     // test_single_type<int64_t>();
     // test_single_type<__half>();
     test_single_type<float>();
-    
+
     return 0;
 #endif
 }

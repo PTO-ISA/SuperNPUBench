@@ -3,7 +3,7 @@
 #include "softmax.hpp"
 #include "benchmark.h"
 
-#ifndef globM 
+#ifndef globM
 #define globM 120
 #endif
 
@@ -36,14 +36,14 @@ void onlinesoftmax_test(dtype* dst, dtype* src){
 
     for(int i=0;i<Mb;i++){
       tile_shape2 tsum(0);
-      tile_shape2 tmax(-10000);    
-      tile_shape tsrc;               
+      tile_shape2 tmax(-10000);
+      tile_shape tsrc;
       for (int j = 0; j < Nb; j++) {
         uint32_t offset = i * kTM * kN + j * kTN;
         gm_shape gsrc(src + offset);
         // tile_shape tsrc;
         tDst tdst;
-        TCOPYIN(tsrc, gsrc);
+        TLOAD(tsrc, gsrc);
         OnlineSoftMax(tdst,tsrc,tmax,tsum);
         TEXTRACT(tsrc, tdst, 0, kTN);
         TEXTRACT(tmax, tdst, 0, 0);
@@ -51,20 +51,20 @@ void onlinesoftmax_test(dtype* dst, dtype* src){
       }
         int offset1 = i * kTM * kN;
         // gm_shape1 res(dst);
-        // TCOPYOUT(res,tmax);
-        gm_shape gsrc1(src + offset1);  
-        gm_shape res(dst + offset1); 
-        tile_shape1 d4;                 
-        tile_shape1 d5;                 
-        tile_shape1 d6; 
+        // TSTORE(res,tmax);
+        gm_shape gsrc1(src + offset1);
+        gm_shape res(dst + offset1);
+        tile_shape1 d4;
+        tile_shape1 d5;
+        tile_shape1 d6;
 
-        TCOPYIN(d4, gsrc1);
+        TLOAD(d4, gsrc1);
         TEXPANDCOL(d5, tmax);
         TEXPANDCOL(d6, tsum);
         TSUB(d4, d4, d5);
         TEXP(d4, d4);
         TDIV(d4, d4, d6);
-        TCOPYOUT(res, d4);
+        TSTORE(res, d4);
     }
 }
 

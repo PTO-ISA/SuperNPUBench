@@ -108,8 +108,8 @@ void matmul(const int loop, src_dtype *a, src_dtype *b) {
     tile_shapeB tB;
     tile_shapeACC tACC;
 
-    TCOPYIN(tA, gA);
-    TCOPYIN(tB, gB);
+    TLOAD(tA, gA);
+    TLOAD(tB, gB);
 
     #pragma clang loop unroll(full)
     for(int i=0;i<LOOP;i++){
@@ -154,22 +154,22 @@ void matmul_ch8(const int loop, src_dtype *a, src_dtype *b) {
     tile_shapeA tA7;
     tile_shapeB tB7;
 
-    TCOPYIN(tA0, gA);
-    TCOPYIN(tB0, gB);
-    TCOPYIN(tA1, gA);
-    TCOPYIN(tB1, gB);
-    TCOPYIN(tA2, gA);
-    TCOPYIN(tB2, gB);
-    TCOPYIN(tA3, gA);
-    TCOPYIN(tB3, gB);
-    TCOPYIN(tA4, gA);
-    TCOPYIN(tB4, gB);
-    TCOPYIN(tA5, gA);
-    TCOPYIN(tB5, gB);
-    TCOPYIN(tA6, gA);
-    TCOPYIN(tB6, gB);
-    TCOPYIN(tA7, gA);
-    TCOPYIN(tB7, gB);
+    TLOAD(tA0, gA);
+    TLOAD(tB0, gB);
+    TLOAD(tA1, gA);
+    TLOAD(tB1, gB);
+    TLOAD(tA2, gA);
+    TLOAD(tB2, gB);
+    TLOAD(tA3, gA);
+    TLOAD(tB3, gB);
+    TLOAD(tA4, gA);
+    TLOAD(tB4, gB);
+    TLOAD(tA5, gA);
+    TLOAD(tB5, gB);
+    TLOAD(tA6, gA);
+    TLOAD(tB6, gB);
+    TLOAD(tA7, gA);
+    TLOAD(tB7, gB);
 
     #pragma clang loop unroll(full)
     for(int i=0;i<LOOP/2;i++){
@@ -194,13 +194,13 @@ void matmacc(const int loop, src_dtype *a, src_dtype *b){
 
     gm_shapeA gA(a);
     gm_shapeB gB(b);
-    
+
     tile_shapeA tA;
     tile_shapeB tB;
     tile_shapeACC tACC;
-    
-    TCOPYIN(tA, gA);
-    TCOPYIN(tB, gB);
+
+    TLOAD(tA, gA);
+    TLOAD(tB, gB);
     MATMUL(tACC, tA, tB);
 
     #pragma clang loop unroll(full)
@@ -246,22 +246,22 @@ void matmacc_ch8(const int loop, src_dtype *a, src_dtype *b) {
     tile_shapeA tA7;
     tile_shapeB tB7;
 
-    TCOPYIN(tA0, gA);
-    TCOPYIN(tB0, gB);
-    TCOPYIN(tA1, gA);
-    TCOPYIN(tB1, gB);
-    TCOPYIN(tA2, gA);
-    TCOPYIN(tB2, gB);
-    TCOPYIN(tA3, gA);
-    TCOPYIN(tB3, gB);
-    TCOPYIN(tA4, gA);
-    TCOPYIN(tB4, gB);
-    TCOPYIN(tA5, gA);
-    TCOPYIN(tB5, gB);
-    TCOPYIN(tA6, gA);
-    TCOPYIN(tB6, gB);
-    TCOPYIN(tA7, gA);
-    TCOPYIN(tB7, gB);
+    TLOAD(tA0, gA);
+    TLOAD(tB0, gB);
+    TLOAD(tA1, gA);
+    TLOAD(tB1, gB);
+    TLOAD(tA2, gA);
+    TLOAD(tB2, gB);
+    TLOAD(tA3, gA);
+    TLOAD(tB3, gB);
+    TLOAD(tA4, gA);
+    TLOAD(tB4, gB);
+    TLOAD(tA5, gA);
+    TLOAD(tB5, gB);
+    TLOAD(tA6, gA);
+    TLOAD(tB6, gB);
+    TLOAD(tA7, gA);
+    TLOAD(tB7, gB);
     MATMUL(tACC, tA0, tB0);
     MATMUL(tACC, tA1, tB1);
     MATMUL(tACC, tA2, tB2);

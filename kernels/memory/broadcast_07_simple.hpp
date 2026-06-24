@@ -40,11 +40,11 @@ void broadcast(
     const size_t *out_shape
     ) {
     const size_t Mb = gOM / tM;
-    const size_t rmd_M = gOM % tM; 
+    const size_t rmd_M = gOM % tM;
 
     using gm_shapeIn = global_tensor<dtype, RowMajor<1, gIM>>;
     using gm_shapeOut = global_tensor<dtype, RowMajor<1, gOM>>;
-    using tile_shapeData = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor>; 
+    using tile_shapeData = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor>;
     using tile_shapeOffset = Tile<Location::Vec, uint32_t, 1, tM, BLayout::RowMajor>;
     using tile_shapeData_rmd = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor, 1, rmd_M>;
     using tile_shapeOffset_rmd = Tile<Location::Vec, uint32_t, 1, tM, BLayout::RowMajor, 1, rmd_M>;
@@ -66,7 +66,7 @@ void broadcast(
         gen_offset_impl<dtype, tile_shapeOffset, MAX_DIM, IN_DIM, OUT_DIM>(offsetTile, in_shape, out_shape, base, total_elements);
         base += total_elements;
         MGATHER(outTile, inGm, offsetTile);
-        TCOPYOUT(gO, outTile);
+        TSTORE(gO, outTile);
     }
     if constexpr (rmd_M) {
         auto gO = gOIter(0, Mb);
@@ -74,6 +74,6 @@ void broadcast(
         gen_offset_impl<dtype, tile_shapeOffset_rmd, MAX_DIM, IN_DIM, OUT_DIM>(offsetTile_rmd, in_shape, out_shape, base, total_elements);
         base += total_elements;
         MGATHER(outTile_rmd, inGm, offsetTile_rmd);
-        TCOPYOUT(gO, outTile_rmd);
+        TSTORE(gO, outTile_rmd);
     }
 }

@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include <string> 
+#include <string>
 
 #ifdef LINX_PMC
 #include <linxStartEnd.hpp>
@@ -43,7 +43,7 @@ void texpandscalar_nd(float *dst, float s) {
 
             tile_shape td0;
             TEXPANDSCALAR(td0, s);
-            // TCOPYOUT(g0, td0);
+            // TSTORE(g0, td0);
         }
     }
 }
@@ -66,7 +66,7 @@ void texpandscalar_dn(float *dst, float s) {
 
             tile_shape td0;
             TEXPANDSCALAR(td0, s);
-            // TCOPYOUT(g0, td0);
+            // TSTORE(g0, td0);
         }
     }
 }

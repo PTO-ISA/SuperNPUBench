@@ -56,8 +56,8 @@ void test_RowMajor(T *dst, T *src0) {
       gm_shape res(dst + offset);
 
       tile_shape d0;
-      TCOPYIN(d0, s0);
-      TCOPYOUT(res, d0);
+      TLOAD(d0, s0);
+      TSTORE(res, d0);
     }
   }
 }
@@ -89,8 +89,8 @@ void test_RowMajor_Dynamic(T *dst, T *src0) {
       gm_shape res(dst + offset, gm_valid_row, gm_valid_col);
 
       tile_shape d0(active_row, active_col);
-      TCOPYIN(d0, s0);
-      TCOPYOUT(res, d0);
+      TLOAD(d0, s0);
+      TSTORE(res, d0);
     }
   }
 }
@@ -114,8 +114,8 @@ void test_ColMajor(T *dst, T *src0) {
       gm_shape res(dst + offset);
 
       tile_shape d0;
-      TCOPYIN(d0, s0);
-      TCOPYOUT(res, d0);
+      TLOAD(d0, s0);
+      TSTORE(res, d0);
     }
   }
 }
@@ -148,8 +148,8 @@ void test_Nz_Dynamic(T *dst, T *src0) {
 
       tile_shape d0(active_row, active_col);
       tile_shape d1(active_row, active_col);
-      TCOPYIN(d0, s0);
-      TCOPYOUT(res, d0);
+      TLOAD(d0, s0);
+      TSTORE(res, d0);
     }
   }
 }

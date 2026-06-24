@@ -16,7 +16,7 @@ void flash_attention(float* out_ptr, float* q_ptr, float* k_ptr, float* v_ptr) {
     using tileK      = TileRight<float, qD, kTk>;      // [vD×kTk]
     using tileW_out  = TileAcc<float, kTm, kTk>;      // [kTm×kTk]
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
-    using tileW_left = TileLeft<float, kTm, kTk>; 
+    using tileW_left = TileLeft<float, kTm, kTk>;
 
     using tileO_out  = TileAcc<float, kTm, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::RowMajor>; // [kTm×vD]
@@ -46,7 +46,7 @@ void flash_attention(float* out_ptr, float* q_ptr, float* k_ptr, float* v_ptr) {
         // 加载当前Q块 (仅一次)
         tileQ tQ;
         auto gQ = gIterQ(i,0);
-        TCOPYIN(tQ, gQ);
+        TLOAD(tQ, gQ);
 
         // 初始化状态: 最大值/指数和/输出累加
         tileMax tMax;
@@ -61,8 +61,8 @@ void flash_attention(float* out_ptr, float* q_ptr, float* k_ptr, float* v_ptr) {
         // 加载K_j和V_j
         auto gK = gIterK(0,j);
         auto gV = gIterV(j,0);
-        tileK tK; TCOPYIN(tK, gK);
-        tileV tV; TCOPYIN(tV, gV);
+        tileK tK; TLOAD(tK, gK);
+        tileV tV; TLOAD(tV, gV);
 
         // 计算注意力分数块
         tileW_out tW_out;
@@ -132,7 +132,7 @@ void flash_attention(float* out_ptr, float* q_ptr, float* k_ptr, float* v_ptr) {
         TCAST(tO_cast, tO);
         // 写回全局内存
         auto dstO = gIterO(i, 0);
-        TCOPYOUT(dstO, tO_cast);
+        TSTORE(dstO, tO_cast);
     }
 }
 
@@ -160,7 +160,7 @@ void __vec__ flashsoftmax_new_max(
         upd_max = blkv_max(upd_max, src_ptr[src_idx] * src_scale);
     }
 
-    new_max_ptr[max_idx] = upd_max; 
+    new_max_ptr[max_idx] = upd_max;
 }
 
 template<typename tileMax, typename tileScale>
@@ -282,8 +282,8 @@ void flash_attention_opt(float* out_ptr, float* q_ptr, float* k_ptr, float* v_pt
     using tileQ      = TileLeft<float, kTm, qD>;       // [kTm×qD]
     using tileK      = TileRight<float, qD, kTk>;      // [vD×kTk]
     using tileW_out  = TileAcc<float, kTm, kTk>;      // [kTm×kTk]
-    using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>; 
-    using tileW_left = TileLeft<float, kTm, kTk>; 
+    using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
+    using tileW_left = TileLeft<float, kTm, kTk>;
 
     using tileO_out  = TileAcc<float, kTm, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::RowMajor>; // [kTm×vD]
@@ -313,7 +313,7 @@ void flash_attention_opt(float* out_ptr, float* q_ptr, float* k_ptr, float* v_pt
         // 加载当前Q块 (仅一次)
         tileQ tQ;
         auto gQ = gIterQ(i, 0);
-        TCOPYIN(tQ, gQ);
+        TLOAD(tQ, gQ);
 
         // 初始化状态: 最大值/指数和/输出累加
         tileMax tMax;
@@ -328,8 +328,8 @@ void flash_attention_opt(float* out_ptr, float* q_ptr, float* k_ptr, float* v_pt
         // 加载K_j和V_j
         auto gK = gIterK(0, j);
         auto gV = gIterV(j, 0);
-        tileK tK; TCOPYIN(tK, gK);
-        tileV tV; TCOPYIN(tV, gV);
+        tileK tK; TLOAD(tK, gK);
+        tileV tV; TLOAD(tV, gV);
 
         // 计算注意力分数块
         tileW_out tW_out;
@@ -367,7 +367,7 @@ void flash_attention_opt(float* out_ptr, float* q_ptr, float* k_ptr, float* v_pt
         TCAST(tO_cast, tO);
         // 写回全局内存
         auto dstO = gIterO(i, 0);
-        TCOPYOUT(dstO, tO_cast);
+        TSTORE(dstO, tO_cast);
     }
 }
 
@@ -382,8 +382,8 @@ void flash_attention_opt2(float* out_ptr, float* q_ptr, float* k_ptr, float* v_p
     using tileQ      = TileLeft<float, kTm, qD>;       // [kTm×qD]
     using tileK      = TileRight<float, qD, kTk>;      // [vD×kTk]
     using tileW_out  = TileAcc<float, kTm, kTk>;      // [kTm×kTk]
-    using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>; 
-    using tileW_left = TileLeft<float, kTm, kTk>; 
+    using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
+    using tileW_left = TileLeft<float, kTm, kTk>;
 
     using tileO_out  = TileAcc<float, kTm, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::RowMajor>; // [kTm×vD]
@@ -413,7 +413,7 @@ void flash_attention_opt2(float* out_ptr, float* q_ptr, float* k_ptr, float* v_p
         // 加载当前Q块 (仅一次)
         tileQ tQ;
         auto gQ = gIterQ(i, 0);
-        TCOPYIN(tQ, gQ);
+        TLOAD(tQ, gQ);
 
         // 初始化状态: 最大值/指数和/输出累加
         tileMax tMax;
@@ -428,8 +428,8 @@ void flash_attention_opt2(float* out_ptr, float* q_ptr, float* k_ptr, float* v_p
         // 加载K_j和V_j
         auto gK = gIterK(0, j);
         auto gV = gIterV(j, 0);
-        tileK tK; TCOPYIN(tK, gK);
-        tileV tV; TCOPYIN(tV, gV);
+        tileK tK; TLOAD(tK, gK);
+        tileV tV; TLOAD(tV, gV);
 
         // 计算注意力分数块
         tileW_out tW_out;
@@ -467,7 +467,7 @@ void flash_attention_opt2(float* out_ptr, float* q_ptr, float* k_ptr, float* v_p
         TCAST(tO_cast, tO);
         // 写回全局内存
         auto dstO = gIterO(i, 0);
-        TCOPYOUT(dstO, tO_cast);
+        TSTORE(dstO, tO_cast);
     }
 }
 
@@ -513,7 +513,7 @@ void flash_attention_frac(float *out_ptr,
   for (int i = 0; i < Qb; ++i) {
     // 加载当前Q块 (仅一次)
     tileQ tQ;
-    TCOPYIN(tQ, gQ(i, 0));
+    TLOAD(tQ, gQ(i, 0));
 
     // 初始化状态: 最大值/指数和/输出累加
     tileMax tMax;
@@ -525,8 +525,8 @@ void flash_attention_frac(float *out_ptr,
     #pragma clang loop unroll(full)
     for (int j = 0; j < Kb; ++j) {
       // 加载K_j和V_j
-      tileK tK; TCOPYIN(tK, gK(0, j));
-      tileV tV; TCOPYIN(tV, gV(j, 0));
+      tileK tK; TLOAD(tK, gK(0, j));
+      tileV tV; TLOAD(tV, gV(j, 0));
 
       // 计算注意力分数块
       tileS tS;
@@ -588,7 +588,7 @@ void flash_attention_frac(float *out_ptr,
 
     // 写回全局内存
     auto dstO = gO(i, 0);
-    TCOPYOUT(dstO, tO);
+    TSTORE(dstO, tO);
   }
 }
 
@@ -622,7 +622,7 @@ void flash_attention_rm(float* out_ptr, float* q_ptr, float* k_ptr, float* v_ptr
     itK gIterK(k_ptr);
     itV gIterV(v_ptr);
     itO gIterO(out_ptr);
-    
+
     const float scale = 1.0f / sqrt((float)qD);
     const int Qb = (S + kTm - 1) / kTm;
     const int Kb = (S + kTk - 1) / kTk;
@@ -633,7 +633,7 @@ void flash_attention_rm(float* out_ptr, float* q_ptr, float* k_ptr, float* v_ptr
         // 加载当前Q块 (仅一次)
         tileQ tQ;
         auto gQ = gIterQ(i, 0);
-        TCOPYIN(tQ, gQ);
+        TLOAD(tQ, gQ);
 
         // 初始化状态: 最大值/指数和/输出累加
         tileMax tMax;
@@ -646,8 +646,8 @@ void flash_attention_rm(float* out_ptr, float* q_ptr, float* k_ptr, float* v_ptr
         // 加载K_j和V_j
         auto gK = gIterK(0, j);
         auto gV = gIterV(j, 0);
-        tileK tK; TCOPYIN(tK, gK);
-        tileV tV; TCOPYIN(tV, gV);
+        tileK tK; TLOAD(tK, gK);
+        tileV tV; TLOAD(tV, gV);
 
         // 计算注意力分数块
         tileW tW;
@@ -706,7 +706,7 @@ void flash_attention_rm(float* out_ptr, float* q_ptr, float* k_ptr, float* v_ptr
 
         // 写回全局内存
         auto dstO = gIterO(i, 0);
-        TCOPYOUT(dstO, tO);
+        TSTORE(dstO, tO);
     }
 }
 
@@ -730,10 +730,10 @@ void flash_attention_opt2_unroll2_aligned(float* out_ptr, float* q_ptr, float* k
     using tileQ      = TileLeft<float, kTm, qD>;
     using tileK      = TileRight<float, qD, kTk>;
     using tileV      = TileRight<float, kTk, vD>;
-    
+
     using tileW_out  = TileAcc<float, kTm, kTk>;
-    using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>; 
-    using tileW_left = TileLeft<float, kTm, kTk>; 
+    using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
+    using tileW_left = TileLeft<float, kTm, kTk>;
 
     using tileO_out  = TileAcc<float, kTm, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::RowMajor>;
@@ -758,7 +758,7 @@ void flash_attention_opt2_unroll2_aligned(float* out_ptr, float* q_ptr, float* k
     for (int i = 0; i < Qb; ++i) {
         tileQ tQ;
         auto gQ = gIterQ(i, 0);
-        TCOPYIN(tQ, gQ);
+        TLOAD(tQ, gQ);
 
         // 初始化状态
         tileMax tMax; TEXPANDSCALAR(tMax, -1e30f);
@@ -768,17 +768,17 @@ void flash_attention_opt2_unroll2_aligned(float* out_ptr, float* q_ptr, float* k
         // --- 定义双缓冲寄存器 ---
         tileK tK_0, tK_1;
         tileV tV_0, tV_1;
-        
+
         tileW_out tW_out_0, tW_out_1;
         tileW tW_0, tW_1;
-        
+
         tileW tExpW_0, tExpW_1;
         tileW_left tW_left_0, tW_left_1;
-        
+
         tileO_out tO_out_0, tO_out_1;
-        tileO tO_tmp_0, tO_tmp_1; 
+        tileO tO_tmp_0, tO_tmp_1;
         tileO tRescaleO_0, tRescaleO_1;
-        
+
         // 状态更新的临时变量
         tileMax tNewMax_0, tNewMax_1;
         tileSum tNewSum_0, tNewSum_1;
@@ -793,15 +793,15 @@ void flash_attention_opt2_unroll2_aligned(float* out_ptr, float* q_ptr, float* k
             auto gK_1 = gIterK(0, j + 1);
             auto gV_1 = gIterV(j + 1, 0);
 
-            TCOPYIN(tK_0, gK_0);
-            TCOPYIN(tV_0, gV_0);
-            TCOPYIN(tK_1, gK_1);
-            TCOPYIN(tV_1, gV_1);
+            TLOAD(tK_0, gK_0);
+            TLOAD(tV_0, gV_0);
+            TLOAD(tK_1, gK_1);
+            TLOAD(tV_1, gV_1);
 
             // 2. MatMul QK Grouping
             // Doubled buffer
             MATMUL(tW_out_0, tQ, tK_0);
-            MATMUL(tW_out_1, tQ, tK_1); 
+            MATMUL(tW_out_1, tQ, tK_1);
 
             // 3. Convert
             TCVT(tW_0, tW_out_0);
@@ -813,11 +813,11 @@ void flash_attention_opt2_unroll2_aligned(float* out_ptr, float* q_ptr, float* k
             );
 
             TMUL(tO, tO, tRescaleO_0); // Rescale O_old
-            
+
             TCVT(tW_left_0, tExpW_0);
             MATMUL(tO_out_0, tW_left_0, tV_0); // Compute P0 * V0
             TCVT(tO_tmp_0, tO_out_0);
-            
+
             TADD(tO, tO, tO_tmp_0); // Accumulate O_new
 
             // Update State 0 -> 1
@@ -855,14 +855,14 @@ void flash_attention_opt2_unroll2_aligned(float* out_ptr, float* q_ptr, float* k
         Tile<Location::Vec, float, kTm, vD, BLayout::RowMajor> tO_cast;
         TCAST(tO_cast, tO);
         auto dstO = gIterO(i, 0);
-        TCOPYOUT(dstO, tO_cast);
+        TSTORE(dstO, tO_cast);
     }
 }
 
 template <typename dtype, int qD, int vD, int kTm, int kTk>
 __attribute__((noinline))
 void flash_attention_dynamic(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_ptr, int Sq, int Skv) {
-    
+
     using gmQ = global_tensor<float, RowMajor<-1, qD>>;  // Q: [S×qD]
     using gmK = global_tensor<float, ColMajor<qD, -1>>;  // K: [qD×S]
     using gmV = global_tensor<float, RowMajor<-1, vD>>;  // V: [S×vD]
@@ -872,7 +872,7 @@ void flash_attention_dynamic(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* 
     using tileK      = TileRight<dtype, qD, kTk, qD, -1>;        // [vD×kTk]
     using tileW_out  = TileAcc<float, kTm, kTk, -1, -1>;         // [kTm×kTk]
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor, -1, -1>;
-    using tileW_left = TileLeft<dtype, kTm, kTk, -1, -1>; 
+    using tileW_left = TileLeft<dtype, kTm, kTk, -1, -1>;
 
     using tileO_out  = TileAcc<float, kTm, vD, -1, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::RowMajor, -1, vD>; // [kTm×vD]
@@ -897,7 +897,7 @@ void flash_attention_dynamic(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* 
         gmQ gQ(q_ptr+offset_Q, Sq);
 
         tileQ tQ(dyn_m);
-        TCOPYIN(tQ, gQ);
+        TLOAD(tQ, gQ);
 
         tileMax tMax(-1e30f, dyn_m);
         tileSum tSum(0, dyn_m);
@@ -906,7 +906,7 @@ void flash_attention_dynamic(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* 
 
         #pragma clang loop unroll(full)
         for (int j = 0; j < Kb; ++j) {
-        
+
             int dyn_k = (j+1) * kTk > Skv ? rK:kTk;
 
             size_t offset_K = j * tileK::Cols * qD;
@@ -914,8 +914,8 @@ void flash_attention_dynamic(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* 
             gmK gK(k_ptr+offset_K, Skv);
             gmV gV(v_ptr+offset_V, Skv);
 
-            tileK tK(dyn_k); TCOPYIN(tK, gK);
-            tileV tV(dyn_k); TCOPYIN(tV, gV);
+            tileK tK(dyn_k); TLOAD(tK, gK);
+            tileV tV(dyn_k); TLOAD(tV, gV);
 
             tileW_out tW_out(dyn_m, dyn_k);
             MATMUL(tW_out, tQ, tK);
@@ -985,7 +985,7 @@ void flash_attention_dynamic(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* 
 
         size_t offset_O = i * tileO_cast::Rows * vD;
         gmO dstO(out_ptr+offset_O, Sq);
-        TCOPYOUT(dstO, tO_cast);
+        TSTORE(dstO, tO_cast);
     }
 }
 

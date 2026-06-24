@@ -1,12 +1,12 @@
-#ifndef TCOPYIN_HPP
-#define TCOPYIN_HPP
+#ifndef CPU_SIM_TLOAD_HPP
+#define CPU_SIM_TLOAD_HPP
 
 #include "common/pto_tile.hpp"
 
 using namespace pto;
 
 template <typename tile_shape, typename gm_shape>
-void CopyInRow2NzImpl1D(typename tile_shape::TileDType dst,
+void LoadRow2NzImpl1D(typename tile_shape::TileDType dst,
                      const typename gm_shape::DType *src) {
   static constexpr int inner_rows = tile_shape::InnerRows;
   static constexpr int inner_cols = tile_shape::InnerCols;
@@ -29,7 +29,7 @@ void CopyInRow2NzImpl1D(typename tile_shape::TileDType dst,
 }
 
 template <typename tile_shape, typename gm_shape>
-void CopyInRow2ZnImpl1D(typename tile_shape::TileDType dst,
+void LoadRow2ZnImpl1D(typename tile_shape::TileDType dst,
                      const typename gm_shape::DType *src) {
   static constexpr int inner_rows = tile_shape::InnerRows;
   static constexpr int inner_cols = tile_shape::InnerCols;
@@ -52,7 +52,7 @@ void CopyInRow2ZnImpl1D(typename tile_shape::TileDType dst,
 }
 
 template <typename tile_shape, typename gm_shape>
-void CopyInCol2ZnImpl1D(typename tile_shape::TileDType dst,
+void LoadCol2ZnImpl1D(typename tile_shape::TileDType dst,
                      const typename gm_shape::DType *src) {
   static constexpr int inner_rows = tile_shape::InnerRows;
   static constexpr int inner_cols = tile_shape::InnerCols;
@@ -75,7 +75,7 @@ void CopyInCol2ZnImpl1D(typename tile_shape::TileDType dst,
 }
 
 template <typename tile_shape, typename gm_shape>
-void TCopyIn_RowMajor_Impl(typename tile_shape::TileDType dst,
+void TLoad_RowMajor_Impl(typename tile_shape::TileDType dst,
                            const typename gm_shape::DType *src) {
   for (size_t i = 0; i < tile_shape::ValidRow; ++i)
     for (size_t j = 0; j < tile_shape::ValidCol; ++j) {
@@ -86,7 +86,7 @@ void TCopyIn_RowMajor_Impl(typename tile_shape::TileDType dst,
 }
 
 template <typename tile_shape, typename gm_shape>
-void TCopyIn_ColMajor_Impl(typename tile_shape::TileDType dst,
+void TLoad_ColMajor_Impl(typename tile_shape::TileDType dst,
                            const typename gm_shape::DType *src) {
   for (size_t i = 0; i < tile_shape::ValidCol; ++i)
     for (size_t j = 0; j < tile_shape::ValidRow; ++j) {
@@ -97,7 +97,7 @@ void TCopyIn_ColMajor_Impl(typename tile_shape::TileDType dst,
 }
 
 template <typename tile_shape, typename gm_shape>
-void CopyInRow2NzImpl1D_Dynamic(tile_shape &dst,
+void LoadRow2NzImpl1D_Dynamic(tile_shape &dst,
                                 gm_shape &src) {
   static constexpr int inner_rows = tile_shape::InnerRows;
   static constexpr int inner_cols = tile_shape::InnerCols;
@@ -120,7 +120,7 @@ void CopyInRow2NzImpl1D_Dynamic(tile_shape &dst,
 }
 
 template <typename tile_shape, typename gm_shape>
-void CopyInRow2ZnImpl1D_Dynamic(tile_shape &dst,
+void LoadRow2ZnImpl1D_Dynamic(tile_shape &dst,
                                 gm_shape &src) {
   static constexpr int inner_rows = tile_shape::InnerRows;
   static constexpr int inner_cols = tile_shape::InnerCols;
@@ -143,7 +143,7 @@ void CopyInRow2ZnImpl1D_Dynamic(tile_shape &dst,
 }
 
 template <typename tile_shape, typename gm_shape>
-void CopyInCol2ZnImpl1D_Dynamic(tile_shape &dst,
+void LoadCol2ZnImpl1D_Dynamic(tile_shape &dst,
                                 gm_shape &src) {
   static constexpr int inner_rows = tile_shape::InnerRows;
   static constexpr int inner_cols = tile_shape::InnerCols;
@@ -166,7 +166,7 @@ void CopyInCol2ZnImpl1D_Dynamic(tile_shape &dst,
 }
 
 template <typename tile_shape, typename gm_shape>
-void TCopyIn_RowMajor_Impl_Dynamic(tile_shape &dst,
+void TLoad_RowMajor_Impl_Dynamic(tile_shape &dst,
                                    gm_shape &src) {
   for (size_t i = 0; i < dst.GetValidRow(); ++i) {
     for (size_t j = 0; j < dst.GetValidCol(); ++j) {
@@ -178,7 +178,7 @@ void TCopyIn_RowMajor_Impl_Dynamic(tile_shape &dst,
 }
 
 template <typename tile_shape, typename gm_shape>
-void TCopyIn_ColMajor_Impl_Dynamic(tile_shape &dst,
+void TLoad_ColMajor_Impl_Dynamic(tile_shape &dst,
                                    gm_shape &src) {
   for (size_t i = 0; i < dst.GetValidCol(); ++i) {
     for (size_t j = 0; j < dst.GetValidRow(); ++j) {
@@ -190,26 +190,26 @@ void TCopyIn_ColMajor_Impl_Dynamic(tile_shape &dst,
 }
 
 template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
-void TCOPYIN_Impl(tile_shape &dst, gm_shape &src) {
+void TLOAD_Impl(tile_shape &dst, gm_shape &src) {
   static_assert(tile_shape::Loc != Location::Acc, "Unsupport ACC to be input or output here");
   if (tile_shape::ValidRow == DYNAMIC || tile_shape::ValidCol == DYNAMIC) { // dynamic
     if constexpr (is_Nz_layout<tile_shape>::value) {
       if constexpr (gm_shape::isRowMajor) {
-        CopyInRow2NzImpl1D_Dynamic<tile_shape, gm_shape>(dst, src);
+        LoadRow2NzImpl1D_Dynamic<tile_shape, gm_shape>(dst, src);
       } else {
         static_assert(gm_shape::isRowMajor, "Storage layout type not supported, gm should rowmajor");
       }
     } else if constexpr (is_Zn_layout<tile_shape>::value) {
       if constexpr (!gm_shape::isRowMajor) {
-        CopyInCol2ZnImpl1D_Dynamic<tile_shape, gm_shape>(dst, src);
+        LoadCol2ZnImpl1D_Dynamic<tile_shape, gm_shape>(dst, src);
       } else {
-        CopyInRow2ZnImpl1D_Dynamic<tile_shape, gm_shape>(dst, src);
+        LoadRow2ZnImpl1D_Dynamic<tile_shape, gm_shape>(dst, src);
       }
     } else if constexpr (tile_shape::isBoxedLayout == false) {
       if constexpr (gm_shape::isRowMajor) {
-        TCopyIn_RowMajor_Impl_Dynamic<tile_shape, gm_shape>(dst, src);
+        TLoad_RowMajor_Impl_Dynamic<tile_shape, gm_shape>(dst, src);
       } else {
-        TCopyIn_ColMajor_Impl_Dynamic<tile_shape, gm_shape>(dst, src);
+        TLoad_ColMajor_Impl_Dynamic<tile_shape, gm_shape>(dst, src);
       }
     } else {
       static_assert(tile_shape::isBoxedLayout == false, "Data type not supported");
@@ -217,21 +217,21 @@ void TCOPYIN_Impl(tile_shape &dst, gm_shape &src) {
   } else { // static
     if constexpr (is_Nz_layout<tile_shape>::value) {
       if constexpr (gm_shape::isRowMajor) {
-        CopyInRow2NzImpl1D<tile_shape, gm_shape>(dst.data(), src.data());
+        LoadRow2NzImpl1D<tile_shape, gm_shape>(dst.data(), src.data());
       } else {
         static_assert(gm_shape::isRowMajor, "Storage layout type not supported, gm should rowmajor");
       }
     } else if constexpr (is_Zn_layout<tile_shape>::value) {
       if constexpr (!gm_shape::isRowMajor) {
-        CopyInCol2ZnImpl1D<tile_shape, gm_shape>(dst.data(), src.data());
+        LoadCol2ZnImpl1D<tile_shape, gm_shape>(dst.data(), src.data());
       } else {
-        CopyInRow2ZnImpl1D<tile_shape, gm_shape>(dst.data(), src.data());
+        LoadRow2ZnImpl1D<tile_shape, gm_shape>(dst.data(), src.data());
       }
     } else if constexpr (tile_shape::isBoxedLayout == false) {
       if constexpr (gm_shape::isRowMajor) {
-        TCopyIn_RowMajor_Impl<tile_shape, gm_shape>(dst.data(), src.data());
+        TLoad_RowMajor_Impl<tile_shape, gm_shape>(dst.data(), src.data());
       } else {
-        TCopyIn_ColMajor_Impl<tile_shape, gm_shape>(dst.data(), src.data());
+        TLoad_ColMajor_Impl<tile_shape, gm_shape>(dst.data(), src.data());
       }
     } else {
       static_assert(tile_shape::isBoxedLayout == false, "Data type not supported");

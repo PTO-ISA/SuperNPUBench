@@ -21,10 +21,10 @@ void test(float *dst, float *src0, float *src1) {
       gm_shape res(dst + offset);
 
       tile_shape d0, d1, d2;
-      TCOPYIN(d0, s0);
-      TCOPYIN(d1, s1);
+      TLOAD(d0, s0);
+      TLOAD(d1, s1);
       TMIN(d2, d1, d0);
-      TCOPYOUT(res, d2);
+      TSTORE(res, d2);
     }
   }
 }

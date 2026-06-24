@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include <string> 
+#include <string>
 
 #ifdef LINX_PMC
 #include <linxStartEnd.hpp>
@@ -47,9 +47,9 @@ void texpandcol_nd(float *dst, float *src) {
 
             tile_shape_in td0(2*i+j);
             tile_shape_out td1;
-            // TCOPYIN(td0, g0);
+            // TLOAD(td0, g0);
             TEXPANDCOL(td1, td0);
-            // TCOPYOUT(g1, td1);
+            // TSTORE(g1, td1);
         }
     }
 }
@@ -76,9 +76,9 @@ void texpandcol_dn(float *dst, float *src) {
 
             tile_shape_in td0(2*i+j);
             tile_shape_out td1;
-            // TCOPYIN(td0, g0);
+            // TLOAD(td0, g0);
             TEXPANDCOL(td1, td0);
-            // TCOPYOUT(g1, td1);
+            // TSTORE(g1, td1);
         }
     }
 }

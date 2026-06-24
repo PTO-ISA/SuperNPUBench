@@ -50,10 +50,10 @@ template <uint16_t row, uint16_t col> void testRow2Nz(float *dst, float *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TCVT(d1, d0);
   TCVT(d0, d1);
-  TCOPYOUT(res, d0);
+  TSTORE(res, d0);
 }
 
 template <uint16_t row, uint16_t col> void testNz2Col(float *dst, float *src) {
@@ -68,10 +68,10 @@ template <uint16_t row, uint16_t col> void testNz2Col(float *dst, float *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TCVT(d1, d0);
   TCVT(d0, d1);
-  TCOPYOUT(res, d0);
+  TSTORE(res, d0);
 }
 
 template <uint16_t row, uint16_t col> void testNz2Zn(float *dst, float *src) {
@@ -86,10 +86,10 @@ template <uint16_t row, uint16_t col> void testNz2Zn(float *dst, float *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TCVT(d1, d0);
   TCVT(d0, d1);
-  TCOPYOUT(res, d0);
+  TSTORE(res, d0);
 }
 
 template <uint16_t row, uint16_t col> void testZn2Nz(float *dst, float *src) {
@@ -104,10 +104,10 @@ template <uint16_t row, uint16_t col> void testZn2Nz(float *dst, float *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TCVT(d1, d0);
   TCVT(d0, d1);
-  TCOPYOUT(res, d0);
+  TSTORE(res, d0);
 }
 
 template <uint16_t row, uint16_t col> void testNz2Nz(float *dst, float *src) {
@@ -122,10 +122,10 @@ template <uint16_t row, uint16_t col> void testNz2Nz(float *dst, float *src) {
   tile_shape_in d0;
   tile_shape_out d1;
 
-  TCOPYIN(d0, s0);
+  TLOAD(d0, s0);
   TCVT(d1, d0);
   TCVT(d0, d1);
-  TCOPYOUT(res, d0);
+  TSTORE(res, d0);
 }
 
 int main() {

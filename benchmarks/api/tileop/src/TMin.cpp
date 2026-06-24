@@ -21,10 +21,10 @@ void test_RowMajor(T *dst, T *src0, T *src1) {
       gm_shape res(dst + offset);
 
       tile_shape d0, d1, d2;
-      TCOPYIN(d0, s0);
-      TCOPYIN(d1, s1);
+      TLOAD(d0, s0);
+      TLOAD(d1, s1);
       TMIN(d2, d1, d0);
-      TCOPYOUT(res, d2);
+      TSTORE(res, d2);
     }
   }
 }
@@ -45,10 +45,10 @@ void test_ColMajor(T *dst, T *src0, T *src1) {
       gm_shape res(dst + offset);
 
       tile_shape d0, d1, d2;
-      TCOPYIN(d0, s0);
-      TCOPYIN(d1, s1);
+      TLOAD(d0, s0);
+      TLOAD(d1, s1);
       TMIN(d2, d1, d0);
-      TCOPYOUT(res, d2);
+      TSTORE(res, d2);
     }
   }
 }
@@ -98,7 +98,7 @@ int main() {
   __half *dst_f16 = (__half *)malloc(gm_size * sizeof(__half));
   check_mem_alloc(dst_f16);
   init_dst(dst_f16, gm_size);
- 
+
   __half *src0_f16 = (__half *)malloc(gm_size * sizeof(__half));
   check_mem_alloc(src0_f16);
   init_src_fp(src0_f16, gm_size);

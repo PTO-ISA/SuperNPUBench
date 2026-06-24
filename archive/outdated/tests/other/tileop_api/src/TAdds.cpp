@@ -54,9 +54,9 @@ void test_RowMajor(T *dst, T *src0, T s) {
       gm_shape res(dst + offset);
 
       tile_shape d0, d1;
-      TCOPYIN(d0, s0);
+      TLOAD(d0, s0);
       TADDS(d1, d0, s);
-      TCOPYOUT(res, d1);
+      TSTORE(res, d1);
     }
   }
 }
@@ -78,9 +78,9 @@ void test_ColMajor(T *dst, T *src0, T s) {
       gm_shape res(dst + offset);
 
       tile_shape d0, d1;
-      TCOPYIN(d0, s0);
+      TLOAD(d0, s0);
       TADDS(d1, d0, s);
-      TCOPYOUT(res, d1);
+      TSTORE(res, d1);
     }
   }
 }
