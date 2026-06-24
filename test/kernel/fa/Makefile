@@ -1,7 +1,7 @@
 # fa testcases: flash_attention, fa, fa_HIF4_HIF4
 
 ifeq ($(TESTCASE), flash_attention)
-   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/flash_attention.cpp
+   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_basic.cpp
    DEFINES += -DBatSz=$(B) -DglobS=$(S) -DglobD=$(D) -DtilM=$(tM) -DtilK=$(tK)
    ifneq ($(MODE), )
       DEFINES += -DMODE=\"$(MODE)\"
@@ -12,7 +12,7 @@ ifeq ($(TESTCASE), flash_attention)
 endif
 
 ifeq ($(TESTCASE), fa)
-   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa.cpp
+   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_fusion.cpp
    ifeq ($(dtype), fp16)
       DEFINES += -DFA_DTYPE=__half
    endif

@@ -4,7 +4,7 @@
 
 #include <common/pto_tileop.hpp>
 #include <cstring>
-#include "fa/flash_attention.hpp"
+#include "fa/fa_basic.hpp"
 #include "fileop.h"
 #include "benchmark.h"
 

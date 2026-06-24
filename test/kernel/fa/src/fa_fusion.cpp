@@ -6,7 +6,7 @@
 #if defined(OPT1) || defined(OPT2) || defined(OPT3) || defined(MULTI_TILE_OPT3) || defined(DCORE) || defined(FA_DYNAMIC) || defined(FA_DYNAMIC_UNROLL) || defined(_2D_UNROLL) || defined(_UNALIGN_2D_UNROLL) || defined(_TEMPLATE_2D_UNROLL) || defined(_2D_UNROLL_PTO) || defined(MANUAL) || defined(OPT4)
 #include "fa/fa_fusion.h"
 #else
-#include "fa/flash_attention.hpp"
+#include "fa/fa_basic.hpp"
 #endif
 #include "src/benchmark.h"
 
