@@ -1,16 +1,81 @@
-#! /bin/bash
-make    TESTCASE=transpose DType=int32_t MAX_DIM=8 tM=512 \
-        IN_SHAPE=2,2,4,4,8,4 OUT_SHAPE=2,2,8,4,4,4 \
-        IN_SHAPE_NAME=2_2_4_4_8_4 OUT_SHAPE_NAME=2_2_8_4_4_4 \
-        IN_DIM=6 OUT_DIM=6 \
-        TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=4 \
-        gIM=2*2*4*4*8*4 gOM=2*2*8*4*4*4 \
-        diss
+#!/bin/bash
+# Transpose operator test cases
 
-#make    TESTCASE=transpose DType=int32_t MAX_DIM=8 tM=512 \
-#        IN_SHAPE=2,2,4,4,8 OUT_SHAPE=2,2,8,4,4 \
-#        IN_SHAPE_NAME=2_2_4_4_8 OUT_SHAPE=2_2_8_4_4 \
-#        IN_DIM=5 OUT_DIM=5 \
-#        TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=4 \
-#        gIM=2*2*4*4*8 gOM=2*2*8*4*4 \
-#        diss        
+# ============================================
+# 3D transpose
+# ============================================
+# 3D: {2, 128, 64} -> {2, 64, 128}
+make TESTCASE=transpose DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=2,128,64 OUT_SHAPE=2,64,128 \
+    IN_SHAPE_NAME=2_128_64 OUT_SHAPE_NAME=2_64_128 \
+    IN_DIM=3 OUT_DIM=3 \
+    TRANSPOSE_DIM1=1 TRANSPOSE_DIM0=2 \
+    gIM='2*128*64' gOM='2*64*128'
+
+# 3D: {8, 1024, 2048} -> {8, 2048, 1024}
+make TESTCASE=transpose DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=8,1024,2048 OUT_SHAPE=8,2048,1024 \
+    IN_SHAPE_NAME=8_1024_2048 OUT_SHAPE_NAME=8_2048_1024 \
+    IN_DIM=3 OUT_DIM=3 \
+    TRANSPOSE_DIM1=1 TRANSPOSE_DIM0=2 \
+    gIM='8*1024*2048' gOM='8*2048*1024'
+
+# ============================================
+# 4D transpose
+# ============================================
+# 4D: {64, 8, 4096, 3} -> {64, 8, 3, 4096}
+make TESTCASE=transpose DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=64,8,4096,3 OUT_SHAPE=64,8,3,4096 \
+    IN_SHAPE_NAME=64_8_4096_3 OUT_SHAPE_NAME=64_8_3_4096 \
+    IN_DIM=4 OUT_DIM=4 \
+    TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=3 \
+    gIM='64*8*4096*3' gOM='64*8*3*4096'
+
+# ============================================
+# 5D transpose
+# ============================================
+# 5D: {64, 8, 64, 4, 128} -> {64, 8, 128, 4, 64}
+make TESTCASE=transpose DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=64,8,64,4,128 OUT_SHAPE=64,8,128,4,64 \
+    IN_SHAPE_NAME=64_8_64_4_128 OUT_SHAPE_NAME=64_8_128_4_64 \
+    IN_DIM=5 OUT_DIM=5 \
+    TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=4 \
+    gIM='64*8*64*4*128' gOM='64*8*128*4*64'
+
+# ============================================
+# 6D transpose
+# ============================================
+# 6D: {2,2,4,4,8,4} -> {2,2,8,4,4,4}
+make TESTCASE=transpose DType=int32_t MAX_DIM=8 tM=512 \
+    IN_SHAPE=2,2,4,4,8,4 OUT_SHAPE=2,2,8,4,4,4 \
+    IN_SHAPE_NAME=2_2_4_4_8_4 OUT_SHAPE_NAME=2_2_8_4_4_4 \
+    IN_DIM=6 OUT_DIM=6 \
+    TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=4 \
+    gIM='2*2*4*4*8*4' gOM='2*2*8*4*4*4'
+
+# 6D: {64,8,64,4,16,7} -> {64,8,16,4,64,7}
+make TESTCASE=transpose DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=64,8,64,4,16,7 OUT_SHAPE=64,8,16,4,64,7 \
+    IN_SHAPE_NAME=64_8_64_4_16_7 OUT_SHAPE_NAME=64_8_16_4_64_7 \
+    IN_DIM=6 OUT_DIM=6 \
+    TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=4 \
+    gIM='64*8*64*4*16*7' gOM='64*8*16*4*64*7'
+
+# ============================================
+# Different data types
+# ============================================
+# int32_t 3D transpose
+make TESTCASE=transpose DType=int32_t MAX_DIM=8 tM=512 \
+    IN_SHAPE=2,128,64 OUT_SHAPE=2,64,128 \
+    IN_SHAPE_NAME=2_128_64 OUT_SHAPE_NAME=2_64_128 \
+    IN_DIM=3 OUT_DIM=3 \
+    TRANSPOSE_DIM1=1 TRANSPOSE_DIM0=2 \
+    gIM='2*128*64' gOM='2*64*128'
+
+# int32_t 4D transpose
+make TESTCASE=transpose DType=int32_t MAX_DIM=8 tM=512 \
+    IN_SHAPE=64,8,4096,3 OUT_SHAPE=64,8,3,4096 \
+    IN_SHAPE_NAME=64_8_4096_3 OUT_SHAPE_NAME=64_8_3_4096 \
+    IN_DIM=4 OUT_DIM=4 \
+    TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=3 \
+    gIM='64*8*4096*3' gOM='64*8*3*4096'
