@@ -5,6 +5,25 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape>
+void TEXPANDSCALAR_Impl(tile_shape &dst, typename tile_shape::DType s) {
+  static_assert(tile_shape::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+  static_assert(!tile_shape::isBoxedLayout,
+                "TEXPANDSCALAR Linx smoke supports only unboxed tiles");
+
+  size_t row = dst.GetValidRow();
+  size_t col = dst.GetValidCol();
+
+  for (size_t row_idx = 0; row_idx < row; ++row_idx) {
+    for (size_t col_idx = 0; col_idx < col; ++col_idx) {
+      size_t tile_index = index<tile_shape>(row_idx, col_idx);
+      dst.data()[tile_index] = s;
+    }
+  }
+}
+#else
 template <typename tile_shape>
 void __vec__
 ExpandScalarImpl_RowMajor(typename tile_shape::TileDType __out__ dst,
@@ -140,4 +159,4 @@ void TEXPANDSCALAR_Impl(tile_shape &dst, typename tile_shape::DType s) {
 }
 
 #endif
-
+#endif

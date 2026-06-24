@@ -36,7 +36,7 @@ void __vec__ BitonicSortStepDescend_RowMajor_Imp(
     //             dst_ptr[i * tile_shape::Cols + tid] =
     //                 src_ptr[i * tile_shape::Cols + tid];
     //             dst_ptr[i * tile_shape::Cols + partner] =
-    //                 src_ptr[i * tile_shape::Cols + partner];                
+    //                 src_ptr[i * tile_shape::Cols + partner];
     //         }
     //     } else {
     //         if (src_ptr[i * tile_shape::Cols + tid] >
@@ -93,15 +93,15 @@ void __vec__ BitonicSortStepDescend_RowMajor_Imp(
     //     "l.sw  vt#1.sw, [to, vm#2.uh<<2]\n"           // dst[tid] = src[partner]
     //     "l.sw  vt#2.sw, [to, vm#1.uh<<2]\n"           // dst[partner] = src[tid]
     //     "l.addi t#1.ud, 0, ->p\n"                     //resave p from 3rd branch
-    //     "l.xori p, -1, ->p\n"                      
+    //     "l.xori p, -1, ->p\n"
     //     "l.and p, t#2.ud, ->p\n"                      //go else for 2nd branch
-    //     "l.cmp.lt vt#1.sw, vt#2.sw, -> vn.b\n"        // src[partner] < src[tid] 
+    //     "l.cmp.lt vt#1.sw, vt#2.sw, -> vn.b\n"        // src[partner] < src[tid]
     //     "l.addi p, 0 ->t.d\n"                         // save p for 4th branch
     //     "l.cmp.eqi vn#1.ub, 1,->p\n"                  // set p if(src[tid] < src[partner])
     //     "l.sw  vt#1.sw, [to, vm#2.uh<<2]\n"           //dst[tid] = src[partner]
     //     "l.sw  vt#2.sw, [to, vm#1.uh<<2]\n"           //dst[partner] = src[tid]
     //     "l.addi t#1.ud, 0, ->p\n"                     //resave p from 4rd branch
-    //     ""                                            //merge 2nd branch two result 
+    //     ""                                            //merge 2nd branch two result
     //     "l.addi t#3.ud, 0, ->p\n"                     //resave p from 2nd branch
     //     "l.addi t#4.ud, 0, ->p\n"                     //resave p from 1st branch
     //     "c.bstop\n"
@@ -122,16 +122,16 @@ void __vec__ BitonicSortStepDescend_RowMajor_Imp(
         "v.lw   [ta, vn#1.reuse.uh<<2],     ->vt.w\n"       // src[index_part+col/2] = partner_idx
         "v.lw   [ta, vm#2.reuse.uh<<2],     ->vt.w\n"       // src[index] = cur_value
         "v.lw   [ta, vm#1.reuse.uh<<2],     ->vt.w\n"       // src[index_part] = partner_value
-        "v.sw  vt#2.reuse.sw, [to, vm#2.reuse.uh<<2]\n"           // dst[tid] = src[tid]   // copy first 
+        "v.sw  vt#2.reuse.sw, [to, vm#2.reuse.uh<<2]\n"           // dst[tid] = src[tid]   // copy first
         "v.sw  vt#1.reuse.sw, [to, vm#1.reuse.uh<<2]\n"           // dst[partner] = src[partner] // copy first
-        "v.sw  vt#4.reuse.sw, [to, vn#2.reuse.uh<<2]\n"           // dst[tid+col/2] = src[tid+col/2]   // copy first 
+        "v.sw  vt#4.reuse.sw, [to, vn#2.reuse.uh<<2]\n"           // dst[tid+col/2] = src[tid+col/2]   // copy first
         "v.sw  vt#3.reuse.sw, [to, vn#1.reuse.uh<<2]\n"           // dst[partner+col/2] = src[partner+col/2] // copy first
         "v.cmp.lt lc0.uh, vu#1.reuse.uh, ->vn.b\n"          // tid < partner
         "v.and  vu#1.reuse.uh, ri0.uh, ->vn.h\n"            // partner & stage
         "v.cmp.eqi vn#1.reuse.uh, 0, ->vn.b\n"              // partner & stage == 0
         "v.cmp.lt vt#2.reuse.sw, vt#1.reuse.sw, ->vn.b\n"         // cur_value < partner_value
         "v.and vn#4.reuse.ub, vn#2.reuse.ub, ->vu.b\n"            // (tid < partner) & (partner & stage) == 0
-        "v.and vu#1.reuse.ub, vn#1.reuse.ub ->vu.b\n"             // (tid < partner) & ((partner & stage) == 0) & (cur_value < partner_value) 
+        "v.and vu#1.reuse.ub, vn#1.reuse.ub ->vu.b\n"             // (tid < partner) & ((partner & stage) == 0) & (cur_value < partner_value)
         "v.cmp.eqi vu#1.ub, 1, ->vm.b\n"              // sort_descend
         ""
         "v.cmp.eqi vn#3.uh, 1, ->vn.b\n"                // partner & stage == 1
@@ -152,7 +152,7 @@ void __vec__ BitonicSortStepDescend_RowMajor_Imp(
         "v.sw  vt#3.sw, [to, vn#2.uh<<2]\n"           // dst[tid+col/2] = src[partner]
         "v.sw  vt#4.sw, [to, vn#1.uh<<2]\n"           // dst[partner+col/2] = src[tid]
         "l.addi t#1.ud, 0, ->p\n"                     // resave p from 1st branch
-        ""                                            // merge 2nd branch two result 
+        ""                                            // merge 2nd branch two result
         "c.bstop\n"
         :
         :"i"(tile_shape::ValidCol)
@@ -171,7 +171,7 @@ TRANGE_RowMajor(typename tile_shape::TileDType __out__ dst) {
 }
 
 template <is_tile_data_v tile_shape, bool ascending = true>
-__attribute__((always_inline)) 
+__attribute__((always_inline))
 void TSORTROW(tile_shape &weight, tile_shape &indices, tile_shape &src) {
     static constexpr uint16_t row = tile_shape::ValidRow;
     static constexpr uint16_t col = tile_shape::ValidCol;
@@ -181,7 +181,7 @@ void TSORTROW(tile_shape &weight, tile_shape &indices, tile_shape &src) {
 
     using tile_shape_sort = Tile<Location::Vec, dtype, tile_shape::Rows, 2*tile_shape::Cols, BLayout::RowMajor>;
     tile_shape_sort dst_sort;
-    tile_shape_sort src_sort; 
+    tile_shape_sort src_sort;
 
     TRANGE_RowMajor<tile_shape><<<col, row>>>(indices.data());
     tile_shape_sort padding(-1);
@@ -196,7 +196,7 @@ void TSORTROW(tile_shape &weight, tile_shape &indices, tile_shape &src) {
                 BitonicSortStepDescend_RowMajor_Imp<tile_shape_sort><<<col, row>>>(dst_sort.data(), src_sort.data(), stage, step);
                 TCOPY(src_sort, dst_sort);
 
-                // TCOPYOUT(gIn, dst);
+                // TSTORE(gIn, dst);
                 // printf("stage:%d step:%d\n", stage, step);
                 // for (int j=0;j<col;j++) {
                 //     printf("%.0f ", tmp[j]);
@@ -246,7 +246,7 @@ void BitonicSortStepDescend_RowMajor_Imp(
                             src[i * tile_shape::Cols + col + partner];
                         dst[i * tile_shape::Cols + col + partner] =
                             src[i * tile_shape::Cols + col + tid];
-                        
+
                     }
                 } else {
                     if (src[i * tile_shape::Cols + tid] >
@@ -279,7 +279,7 @@ template <is_tile_data_v tile_shape, bool ascending = true>
 void TSORTROW(tile_shape &weight, tile_shape &indices, tile_shape &src) {
     using tile_shape_sort = Tile<Location::Vec, dtype, tile_shape::Rows, 2*tile_shape::Cols, BLayout::RowMajor>;
     tile_shape_sort dst_sort;
-    tile_shape_sort src_sort; 
+    tile_shape_sort src_sort;
 
     TRANGE_RowMajor<tile_shape>(indices.data());
     tile_shape_sort padding(0);
@@ -325,7 +325,7 @@ void __vec__ TScatterRow_Vec_RowMajor(
     __vbuf__ typename tile_shape_dst::DType *dst_ptr = blkv_get_tile_ptr(dst);
     __vbuf__ typename tile_shape_dst::DType *src_ptr = blkv_get_tile_ptr(src);
     __vbuf__ typename tile_shape_srci::DType *si_ptr = blkv_get_tile_ptr(srci);
-    dst_ptr[j*tile_shape_dst::RowStride + i] = src_ptr[j*tile_shape_dst::RowStride + i]; 
+    dst_ptr[j*tile_shape_dst::RowStride + i] = src_ptr[j*tile_shape_dst::RowStride + i];
     for(uint16_t k=0;k<tile_shape_srci::ValidCol;k++){
         uint16_t index = j * tile_shape_srci::RowStride + k;
         uint16_t idx = si_ptr[index];
@@ -339,7 +339,7 @@ void TScatterRow_Vec_RowMajor(
     const typename tile_shape_dst::TileDType  src,
     const typename tile_shape_srci::TileDType srci,
     const typename tile_shape_dst::DType s) {
-    
+
     for (uint16_t i = 0; i < tile_shape_dst::ValidRow; ++i){
         for (uint16_t j = 0; j < tile_shape_dst::ValidCol; ++j) {
             dst[i*tile_shape_dst::RowStride+j] = src[i*tile_shape_dst::RowStride+j];
@@ -363,7 +363,7 @@ void topk(dtype *weight, dtype* indices, dtype *x){
     using gmOut = global_tensor<dtype, RowMajor<tokens, num>>;
     using tileIn = Tile<Location::Vec, dtype, tS, scores, BLayout::RowMajor>;
     using tileOut = Tile<Location::Vec, dtype, tS, 32, BLayout::RowMajor, tS, num>; // num < 32
-   
+
     #ifdef __cpu_sim__
     //writeTensorToFile<dtype, tokens, scores>(x, "moe_topk_in_cpp.txt");
     #endif
@@ -374,7 +374,7 @@ void topk(dtype *weight, dtype* indices, dtype *x){
         tileIn tIn;
         tileIn tWeight;
         tileIn tIndice;
-        TCOPYIN(tIn, gIn);
+        TLOAD(tIn, gIn);
         TSORTROW(tWeight, tIndice, tIn);
         tileOut tWeightOut;
         TEXTRACT(tWeightOut, tWeight, 0, 0);
@@ -383,10 +383,10 @@ void topk(dtype *weight, dtype* indices, dtype *x){
         TEXTRACT(tIndiceOut, tIndice, 0, 0);
 
         gmOut gWeight(weight+i*tS*num);
-        TCOPYOUT(gWeight, tWeightOut);
+        TSTORE(gWeight, tWeightOut);
 
         gmOut gIndice(indices+i*tS*num);
-        TCOPYOUT(gIndice, tIndiceOut);
+        TSTORE(gIndice, tIndiceOut);
     }
 
     #ifdef __cpu_sim__
@@ -410,18 +410,18 @@ void sigmoid(dtype *out, dtype* in){
         for(int j=0;j<Nb;j++){
             tile_shape tmp;
             auto gIn = gIterIn(i,j);
-            TCOPYIN(tmp, gIn);
+            TLOAD(tmp, gIn);
             TEXP(tmp,tmp); //e^x
             TRECIP(tmp,tmp); // e^-x
             TADDS(tmp,tmp,static_cast<dtype>(1)); // 1+ e^(-x)
             TRECIP(tmp,tmp); // 1/ (1 + e^-x)
             auto gOut = gIterOut(i,j);
-            TCOPYOUT(gOut, tmp);
+            TSTORE(gOut, tmp);
         }
     }
 }
 
-//select idx array to index every row in "in", then mask with value and create last dim to ext_dim 
+//select idx array to index every row in "in", then mask with value and create last dim to ext_dim
 //out[idx] -> [tokens, in_dim]
 template<typename dtype, int tokens, int in_dim, int idx_dim, int ext_dim>
 void scatter_expand(dtype *out, dtype*idx, dtype *in, dtype value){
@@ -441,11 +441,11 @@ void scatter_expand(dtype *out, dtype*idx, dtype *in, dtype value){
     for(int i=0;i<blocks;i++){
         gmIn gIn(in + i*tS*in_dim);
         tileIn tIn;
-        TCOPYIN(tIn, gIn);
+        TLOAD(tIn, gIn);
 
         gmIdx gIdx(idx + i*tS*idx_dim);
         tileIdx tIdx;
-        TCOPYIN(tIdx, gIdx);
+        TLOAD(tIdx, gIdx);
 
         #ifdef __linx
         static constexpr uint16_t row = tS;
@@ -455,7 +455,7 @@ void scatter_expand(dtype *out, dtype*idx, dtype *in, dtype value){
         #else
         TScatterRow_Vec_RowMajor<tileIn, tileIdx>(tIn.data(), tIn.data(), tIdx.data(), value);
         #endif
-        
+
         Tile<Location::Vec, dtype, tS*in_dim, 1, BLayout::RowMajor> tRe;
         TRESHAPE(tRe, tIn);
 
@@ -463,7 +463,7 @@ void scatter_expand(dtype *out, dtype*idx, dtype *in, dtype value){
         TEXPANDCOL(tOut, tRe);
 
         gmOut gOut(out + i*tS*in_dim*ext_dim);
-        TCOPYOUT(gOut, tOut);
+        TSTORE(gOut, tOut);
     }
 }
 
@@ -481,19 +481,19 @@ void mask_fill(dtype *data, dtype *mask, dtype mask_value){
 
         gm_shape gmask(mask+i*tS*dim);
         tile_shape tmask;
-        TCOPYIN(tdata, gdata);
-        TCOPYIN(tmask, gmask);
+        TLOAD(tdata, gdata);
+        TLOAD(tmask, gmask);
 
         tile_shape tmaskval(mask_value);
 
         TSELECT(tdata, tmask, tmaskval, tdata);
 
-        TCOPYOUT(gdata, tdata);
+        TSTORE(gdata, tdata);
     }
 }
 
 template<typename dtype, const int bsz, const int seq_len, typename args>
-void Gate(dtype *weights, 
+void Gate(dtype *weights,
           dtype *indices,
           dtype *x,
           dtype *bias=nullptr){
@@ -623,14 +623,14 @@ void Gate(dtype *weights,
                 uint64_t offset = i * tS * 2;
                 gm_shape gIn(group_weight.data()+offset);
                 tile_shape tmp;
-                TCOPYIN(tmp, gIn);
+                TLOAD(tmp, gIn);
 
                 tile_shape_out rowsum;
                 TROWSUM(rowsum,tmp);
 
                 offset = i * tS * 1;
                 gm_shape_out gOut(group_weight_sum.data()+offset);
-                TCOPYOUT(gOut, rowsum);
+                TSTORE(gOut, rowsum);
             }
         }
         #ifdef __cpu_sim__
@@ -671,7 +671,7 @@ void Gate(dtype *weights,
 
         //[b*s, n_expert_groups] all-1 matrix to index limit_groups_indices, and set to zero
         Tensor<dtype, tokens, args::n_expert_groups> mask(1);
-        Tensor<dtype, tokens*args::n_expert_groups, args::n_routed_experts/args::n_expert_groups> mask_expand;  
+        Tensor<dtype, tokens*args::n_expert_groups, args::n_routed_experts/args::n_expert_groups> mask_expand;
         scatter_expand<dtype, tokens, args::n_expert_groups, args::n_limited_groups, args::n_routed_experts/args::n_expert_groups>(mask_expand.data(), limit_group_indices.data(), mask.data(), 0); //TSCATTER(重新定义每行indices选对应行的某些列)
         //scores [b*s, n_expert_groups, n_routed_experts/n_expert_groups] mask [b*s, n_expert_groups]
         // to mask irelevant groups with "-inf" except selcted limited groups
@@ -710,7 +710,7 @@ void Gate(dtype *weights,
     writeTensorToFile<dtype, tokens, args::n_activated_experts>(indices, "moe_gate_indices_masked_cpp.txt");
     #endif
 
-    //weights = original_scores.gather(1, indices) should be same as above? 
+    //weights = original_scores.gather(1, indices) should be same as above?
     //gather is extract corresponding score on dim=1, weight([b*s, n_activated_experts])
     if constexpr(args::score_func == ScoreFunc::SIGMOID){
         // weights /= weights.sum weight sum normalization since we have extract some weight so the extract sum is not 1
@@ -722,13 +722,13 @@ void Gate(dtype *weights,
             uint64_t offset = i * tS * args::n_activated_experts;
             gm_shape gIn(weights+offset);
             tile_shape tmp;
-            TCOPYIN(tmp, gIn);
+            TLOAD(tmp, gIn);
 
             tile_shape rowsum;
             TROWSUMEXPAND(rowsum,tmp);
             TDIV(tmp, tmp, rowsum);
             gm_shape gOut(weights+offset);
-            TCOPYOUT(gOut, tmp);
+            TSTORE(gOut, tmp);
         }
     }
 }
@@ -750,7 +750,7 @@ void Gate(dtype *weights,
 //     uint16_t index = j * tile_shape::RowStride + i;
 //     uint16_t idx = src_ptr[index];
 //     sum[idx] = sum[idx] + 1;
-     
+
 //     dst_ptr[idx] = dst_ptr[idx] + 1;
 
 // }
@@ -765,7 +765,7 @@ void Gate(dtype *weights,
 //     for (uint16_t i = 0; i < tile_shape_src::ValidRow; ++i){
 //         for (uint16_t j = 0; j < tile_shape_src::ValidCol; ++j) {
 //             uint16_t idx = src[i * tile_shape_src::RowStride + j];
-//             sum[idx] = sum[idx] + 1;            
+//             sum[idx] = sum[idx] + 1;
 //         }
 //     }
 
@@ -792,13 +792,13 @@ void bincount(size_t *counts, dtype *indices, size_t size){
     // for (int i=0;i<block_tokens;i++) {
     //     gm_idx gidx(indices + i*tS*topk);
     //     tile_idx tidx;
-    //     TCOPYIN(tidx, gidx);
+    //     TLOAD(tidx, gidx);
 
     //     tile_cnt blk_cnt;
     //     TSUM(blk_cnt, gidx);
     //     TADD(tcnt, tcnt, blk_cnt);
     // }
-    // TCOPYOUT(gcnt, tcnt);
+    // TSTORE(gcnt, tcnt);
 
     //naive scalar implementaton
     for(int i=0;i<size;i++){
@@ -808,7 +808,7 @@ void bincount(size_t *counts, dtype *indices, size_t size){
     // for(int i=0;i<expert_cnt;i++){
     //     for (int j=0;j<block_tokens;j++) {
     //         register uint64_t s;
-    //         TCOPYIN(tile_idx, gidx)
+    //         TLOAD(tile_idx, gidx)
     //         rowcondset(tile_idx, tile_idx, j);
     //         TSUM(s, tile_idx);
     //         counts[i] += s;
@@ -822,7 +822,7 @@ void where(dtype *tokens_idx, dtype *topk_idx, dtype *indices, int idx){
 }
 
 // w2(silu(w1(in)) * w3(in))
-//silu : x / (1 + e^-x) 
+//silu : x / (1 + e^-x)
 template <typename dtype, const int S, const int dim, const int inter_dim>
 void MLP(dtype *out, dtype *in, dtype *w1, dtype *w2, dtype *w3){
     const int tS = 64;
@@ -872,8 +872,8 @@ void MLP(dtype *out, dtype *in, dtype *w1, dtype *w2, dtype *w3){
                     auto gW1 = gIterW1(0,k);
                     tileIO  tIn;
                     tileW13 tW1;
-                    TCOPYIN(tIn, gIn);
-                    TCOPYIN(tW1, gW1);
+                    TLOAD(tIn, gIn);
+                    TLOAD(tW1, gW1);
                     MATMUL(tACC_W1, tIn, tW1);
                 }
 
@@ -883,8 +883,8 @@ void MLP(dtype *out, dtype *in, dtype *w1, dtype *w2, dtype *w3){
                     auto gW1 = gIterW1(d,k);
                     tileIO  tIn;
                     tileW13 tW1;
-                    TCOPYIN(tIn, gIn);
-                    TCOPYIN(tW1, gW1);
+                    TLOAD(tIn, gIn);
+                    TLOAD(tW1, gW1);
                     MATMACC(tACC_W1, tIn, tW1);
                 }
 
@@ -897,8 +897,8 @@ void MLP(dtype *out, dtype *in, dtype *w1, dtype *w2, dtype *w3){
                     auto gW3 = gIterW3(0,k);
                     tileIO  tIn;
                     tileW13 tW3;
-                    TCOPYIN(tIn, gIn);
-                    TCOPYIN(tW3, gW3);
+                    TLOAD(tIn, gIn);
+                    TLOAD(tW3, gW3);
                     MATMUL(tACC_W3, tIn, tW3);
                 }
 
@@ -908,8 +908,8 @@ void MLP(dtype *out, dtype *in, dtype *w1, dtype *w2, dtype *w3){
                     auto gW3 = gIterW3(d,k);
                     tileIO  tIn;
                     tileW13 tW3;
-                    TCOPYIN(tIn, gIn);
-                    TCOPYIN(tW3, gW3);
+                    TLOAD(tIn, gIn);
+                    TLOAD(tW3, gW3);
                     MATMACC(tACC_W3, tIn, tW3);
                 }
 
@@ -930,7 +930,7 @@ void MLP(dtype *out, dtype *in, dtype *w1, dtype *w2, dtype *w3){
 
                 auto gW2 = gIterW2(k,j);
                 tileW2 tW2;
-                TCOPYIN(tW2, gW2);
+                TLOAD(tW2, gW2);
                 MATMUL(tACC2_W2, tACC_W13, tW2);
 
                 tileACC2_CVT tACC2_W2_CVT;
@@ -939,7 +939,7 @@ void MLP(dtype *out, dtype *in, dtype *w1, dtype *w2, dtype *w3){
             }
 
             auto gOut = gIterOut(i,j);
-            TCOPYOUT(gOut, tACC2_W2_OUT);
+            TSTORE(gOut, tACC2_W2_OUT);
         }
     }
 }
@@ -979,7 +979,7 @@ void TRowCondSet_Vec_RowMajor(
             dst[i*tile_shape::RowStride+j] = one;
         }else{
             typename tile_shape::DType zero = 0;
-            dst[i*tile_shape::RowStride+j] = zero;            
+            dst[i*tile_shape::RowStride+j] = zero;
         }
     }
   }
@@ -987,7 +987,7 @@ void TRowCondSet_Vec_RowMajor(
 #endif
 
 template<typename dtype, const int bsz, const int seq_len, typename args>
-void MoE(Tensor<dtype, bsz, seq_len, args::dim> & out, 
+void MoE(Tensor<dtype, bsz, seq_len, args::dim> & out,
         Tensor<dtype, bsz, seq_len, args::dim> &x){
     const int tokens = bsz*seq_len;
     //view(x, x); //[bsz, seq_len, dim] -> [b*s, dim]
@@ -1026,7 +1026,7 @@ void MoE(Tensor<dtype, bsz, seq_len, args::dim> & out,
     Tensor<dtype, args::dim, args::moe_inter_dim> experts_w1[args::n_routed_experts];
     Tensor<dtype, args::moe_inter_dim, args::dim> experts_w2[args::n_routed_experts];
     Tensor<dtype, args::dim, args::moe_inter_dim> experts_w3[args::n_routed_experts];
-    
+
     #ifdef __cpu_sim__
     writeTensorToFile<dtype, args::dim, args::moe_inter_dim>(experts_w1[3].data(), "moe_tmp.txt");
     #endif
@@ -1039,14 +1039,14 @@ void MoE(Tensor<dtype, bsz, seq_len, args::dim> & out,
         // printf("current idx is %d\n", idx);
         Tensor<dtype, args::dim, args::moe_inter_dim> expert_w1 =  experts_w1[idx];
         Tensor<dtype, args::moe_inter_dim, args::dim> expert_w2 =  experts_w2[idx];
-        Tensor<dtype, args::dim, args::moe_inter_dim> expert_w3 =  experts_w3[idx]; 
-        
+        Tensor<dtype, args::dim, args::moe_inter_dim> expert_w3 =  experts_w3[idx];
+
         Tensor<dtype, tokens, args::dim> x_mask_w_wt;
         //Tensor<dtype, tokens, args::dim> weight_expand;
         //generate condition matrix for indices that indices == i -> 1, indices !=i -> 0
         //[tokens, n_activated_experts] with corresponding tokens all zeros or all ones
         //finally get x_mask with unselect tokens row set to 0 and multiply with weight in advance;
-        {            
+        {
             const int tS = 64;
             const int tdim = 64;
             using gmIn = global_tensor<dtype, RowMajor<tokens, args::n_activated_experts>>;
@@ -1059,7 +1059,7 @@ void MoE(Tensor<dtype, bsz, seq_len, args::dim> & out,
             for(int i=0;i<block_tokens;i++){
                 gmIn gidx(indices.data()+i*tS*args::n_activated_experts);
                 tileIn  tidx;
-                TCOPYIN(tidx, gidx);
+                TLOAD(tidx, gidx);
 
                 //judege ifeq "i"  to set 1 or 0
                 #ifdef __linx
@@ -1079,7 +1079,7 @@ void MoE(Tensor<dtype, bsz, seq_len, args::dim> & out,
 
                 gmIn gweight(weights.data()+i*tS*args::n_activated_experts);
                 tileIn tweight;
-                TCOPYIN(tweight, gweight);
+                TLOAD(tweight, gweight);
                 TMUL(tweight, tweight, tidx);
                 Tile<Location::Vec, dtype, tS, 16, BLayout::RowMajor, tS, 1> tweight_sum;
                 TROWSUM(tweight_sum, tweight);
@@ -1090,12 +1090,12 @@ void MoE(Tensor<dtype, bsz, seq_len, args::dim> & out,
                     uint64_t offset = i*(tS*args::dim)+j*tdim;
                     gmOut gIn(x.data()+offset);
                     tileOut tOut;
-                    TCOPYIN(tOut, gIn);
+                    TLOAD(tOut, gIn);
                     TMUL(tOut, tOut, tcond);
                     TMUL(tOut, tOut, tweight_expand);
-        
+
                     gmOut gOut(x_mask_w_wt.data()+offset);
-                    TCOPYOUT(gOut, tOut);
+                    TSTORE(gOut, tOut);
                 }
             }
         }
@@ -1124,7 +1124,7 @@ void MoE(Tensor<dtype, bsz, seq_len, args::dim> & out,
         dtype tokens_idx[];
         dtype topk_idx[];
         where(tokens_idx, topk_idx, indices.data(), i);  //idx, top = torch.where(indices == i) 返回index=i的expert的行索引(idx)即哪些token属于这个专家，列索引(top)这个专家属于topk的哪个,需要看下ascend c++做法
-        
+
         //Gather 选出来的tokens，在Scatter到最终out token dim
         for(int i=0;i<tokens_idx.size();i++){
             //shared expert logics
@@ -1142,13 +1142,13 @@ void MoE(Tensor<dtype, bsz, seq_len, args::dim> & out,
         }
         */
     }
-    
+
     Tensor<dtype, args::dim, args::n_shared_experts*args::moe_inter_dim> shared_expert_w1(1);
     Tensor<dtype, args::n_shared_experts*args::moe_inter_dim, args::dim> shared_expert_w2(1);
     Tensor<dtype, args::dim, args::n_shared_experts*args::moe_inter_dim> shared_expert_w3(1);
     Tensor<dtype, bsz*seq_len, args::dim> shared_expert_out;
     MLP<dtype, bsz*seq_len, args::dim, args::n_shared_experts*args::moe_inter_dim>(shared_expert_out.data(), x.data(), shared_expert_w1.data(), shared_expert_w2.data(), shared_expert_w3.data());
-    
+
     matadd<bsz*seq_len, args::dim, 64, 64>(out.data(), y.data(), shared_expert_out.data());
     //reshape (bsz*seq_len, dim) -> (bsz, seq_len, dim)
 }

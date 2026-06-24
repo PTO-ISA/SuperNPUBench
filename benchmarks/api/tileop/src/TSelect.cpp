@@ -1,0 +1,99 @@
+#include "../data.hpp"
+#include <common/pto_tileop.hpp>
+
+#ifdef LINX_PMC
+#include "../linxStartEnd.hpp"
+#endif
+
+template <uint16_t row, uint16_t col>
+void test_RowMajor(float *dst, float *src0, float *src1, uint16_t *cond) {
+  using gm_shape_fp32 = global_tensor<float, RowMajor<row, col>>;
+  using gm_shape_uint16 = global_tensor<uint16_t, RowMajor<row, col>>;
+
+  using tile_shape_fp32 = Tile<Location::Vec, float, row, col, BLayout::RowMajor>;
+  using tile_shape_uint16 = Tile<Location::Vec, uint16_t, row, col, BLayout::RowMajor>;
+
+  gm_shape_fp32 s0(src0);
+  gm_shape_fp32 s1(src1);
+  gm_shape_uint16 s2(cond);
+  gm_shape_fp32 res(dst);
+
+  tile_shape_fp32 d0;
+  tile_shape_fp32 d1;
+  tile_shape_uint16 d2;
+  tile_shape_fp32 d3;
+
+  TLOAD(d0, s0);
+  TLOAD(d1, s1);
+  TLOAD(d2, s2);
+  TSELECT(d3, d2, d0, d1);
+  TSTORE(res, d3);
+}
+
+template <uint16_t row, uint16_t col>
+void test_ColMajor(float *dst, float *src0, float *src1, uint16_t *cond) {
+  using gm_shape_fp32 = global_tensor<float, ColMajor<row, col>>;
+  using gm_shape_uint16 = global_tensor<uint16_t, ColMajor<row, col>>;
+
+  using tile_shape_fp32 = Tile<Location::Vec, float, row, col, BLayout::ColMajor>;
+  using tile_shape_uint16 = Tile<Location::Vec, uint16_t, row, col, BLayout::ColMajor>;
+
+  gm_shape_fp32 s0(src0);
+  gm_shape_fp32 s1(src1);
+  gm_shape_uint16 s2(cond);
+  gm_shape_fp32 res(dst);
+
+  tile_shape_fp32 d0;
+  tile_shape_fp32 d1;
+  tile_shape_uint16 d2;
+  tile_shape_fp32 d3;
+
+  TLOAD(d0, s0);
+  TLOAD(d1, s1);
+  TLOAD(d2, s2);
+  TSELECT(d3, d2, d0, d1);
+  TSTORE(res, d3);
+}
+
+int main() {
+  const uint16_t row = 16;
+  const uint16_t col = 32;
+
+  size_t size = row * col;
+
+  float *dst = (float *)malloc(size * sizeof(float));
+  check_mem_alloc(dst);
+  init_src_fp(dst, size);
+
+  float *src0 = (float *)malloc(size * sizeof(float));
+  check_mem_alloc(src0);
+  init_src_fp(src0, size);
+  float *src1 = (float *)malloc(size * sizeof(float));
+  check_mem_alloc(src1);
+  init_src_fp(src1, size);
+  uint16_t *cond = (uint16_t *)malloc(size * sizeof(uint16_t));
+  check_mem_alloc(cond);
+  init_01(cond, row, col);
+
+#ifdef LINX_PMC
+  PMC_START();
+#endif
+
+  test_RowMajor<row, col>(dst, src0, src1, cond);
+
+  test_ColMajor<row, col>(dst, src0, src1, cond);
+
+#ifdef LINX_PMC
+  PMC_END();
+#endif
+
+  printf("Result:\n");
+  OutArray(dst, size);
+
+  free(dst);
+  free(src0);
+  free(src1);
+  free(cond);
+
+  return 0;
+}

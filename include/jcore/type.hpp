@@ -1,8 +1,76 @@
 #ifndef _INCLUDE_JCORE_TYPE_H_
 #define _INCLUDE_JCORE_TYPE_H_
 
-#include <type_traits>
 #include <cstddef>
+#include <stdint.h>
+#include <type_traits>
+
+#ifdef __linx
+#ifndef tile_size
+#define tile_size(N) __attribute__((tile_size(N)))
+#endif
+#ifndef __in__
+#define __in__
+#endif
+#ifndef __out__
+#define __out__
+#endif
+#ifndef __vec__
+#define __vec__
+#endif
+#ifndef __mtc__
+#define __mtc__
+#endif
+
+struct __fp32 {
+  float value;
+  constexpr __fp32(float v = 0.0f) : value(v) {}
+  constexpr operator float() const { return value; }
+};
+struct __tf32 {
+  uint32_t bits;
+};
+struct __hf32 {
+  uint32_t bits;
+};
+struct __half {
+  uint16_t bits;
+  constexpr __half(float = 0.0f) : bits(0) {}
+};
+struct __hif8 {
+  uint8_t bits;
+};
+struct __fp8_e4m3 {
+  uint8_t bits;
+};
+struct __fp8_e5m2 {
+  uint8_t bits;
+};
+struct __fp6_e3m2 {
+  uint8_t bits;
+};
+struct __fp6_e2m3 {
+  uint8_t bits;
+};
+struct __fp4_e2m1x2 {
+  uint8_t bits;
+};
+struct __fp4_e1m2x2 {
+  uint8_t bits;
+};
+struct __fp8_e8m0 {
+  uint8_t bits;
+};
+struct __fp4_hif4x2 {
+  uint8_t bits;
+};
+struct __int4x2 {
+  uint8_t bits;
+};
+struct __uint4x2 {
+  uint8_t bits;
+};
+#endif
 
 enum __type_code {
   __type_fp64 = 0,
@@ -50,7 +118,9 @@ template<> struct type_traits<__tf32>         : public type_traits_base<__type_t
 template<> struct type_traits<__hf32>         : public type_traits_base<__type_hf32, 32> {};
 
 template<> struct type_traits<__half>         : public type_traits_base<__type_fp16, 16> {};
+#ifndef __linx
 template<> struct type_traits<__bf16>         : public type_traits_base<__type_bf16, 16> {};
+#endif
 template<> struct type_traits<__hif8>         : public type_traits_base<__type_hif8, 8> {};
 
 template<> struct type_traits<__fp8_e4m3>     : public type_traits_base<__type_fp8_e4m3, 8> {};

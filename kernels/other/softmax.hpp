@@ -20,7 +20,7 @@ void softmax(dtype* dst, dtype* src){
             uint32_t offset = i*kTM*kN+j*kTN;
             gm_shape gsrc(src+offset);
             tile_shape tsrc;
-            TCOPYIN(tsrc, gsrc);
+            TLOAD(tsrc, gsrc);
 
             tMax tLocalMax;
             TROWMAX(tLocalMax, tsrc);
@@ -54,7 +54,7 @@ void softmax(dtype* dst, dtype* src){
             uint32_t offset = i*kTM*kN+j*kTN;
             gm_shape gsrc(src+offset);
             tile_shape tsrc;
-            TCOPYIN(tsrc, gsrc);
+            TLOAD(tsrc, gsrc);
 
             tile_shape gMax;
             tile_shape gSum;
@@ -66,7 +66,7 @@ void softmax(dtype* dst, dtype* src){
             TDIV(tsrc, tsrc, gSum);
 
             gm_shape gdst(dst+offset);
-            TCOPYOUT(gdst, tsrc);
+            TSTORE(gdst, tsrc);
         }
     }
 }

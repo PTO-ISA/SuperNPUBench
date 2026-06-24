@@ -5,7 +5,41 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape, typename T, int descending>
+void TCI_Impl(tile_shape &dst, T s) {
+  static constexpr size_t row = tile_shape::ValidRow;
+  static constexpr size_t col = tile_shape::ValidCol;
 
+  static_assert(std::is_same<typename tile_shape::DType, T>::value,
+                "Dst and scalar must be same data type!");
+  static_assert((descending == 0) || (descending == 1),
+                "descending must be 0 or 1!");
+  static_assert(row != DYNAMIC && col != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc == Location::Vec,
+                "Only VEC tile type are supported");
+  static_assert(!tile_shape::isBoxedLayout, "TCI not support Boxed Layout!");
+  static_assert(std::is_same<typename tile_shape::DType, int32_t>::value ||
+                    std::is_same<typename tile_shape::DType, uint32_t>::value ||
+                    std::is_same<typename tile_shape::DType, int16_t>::value ||
+                    std::is_same<typename tile_shape::DType, uint16_t>::value,
+                "Data type not supported");
+
+  for (size_t row_idx = 0; row_idx < row; ++row_idx) {
+    for (size_t col_idx = 0; col_idx < col; ++col_idx) {
+      size_t tile_index = index<tile_shape>(row_idx, col_idx);
+      if constexpr (descending) {
+        dst.data()[tile_index] =
+            s - static_cast<typename tile_shape::DType>(tile_index);
+      } else {
+        dst.data()[tile_index] =
+            s + static_cast<typename tile_shape::DType>(tile_index);
+      }
+    }
+  }
+}
+#else
 template <typename tile_shape, int desc>
 void __vec__ TCIImpl_RowMajor(typename tile_shape::TileDType __out__ dst,
                                 const typename tile_shape::DType __in__ s) {
@@ -70,4 +104,5 @@ if constexpr (std::is_same<typename tile_shape::DType, int32_t>::value ||
   }
 }
 
+#endif
 #endif

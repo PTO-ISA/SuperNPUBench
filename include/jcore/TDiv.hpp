@@ -5,6 +5,26 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape>
+void TDIV_Impl(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+  static constexpr size_t row = tile_shape::ValidRow;
+  static constexpr size_t col = tile_shape::ValidCol;
+  static_assert(tile_shape::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+  static_assert(tile_shape::isBoxedLayout == false,
+                "TDIV not support Boxed Layout!");
+  static_assert(row != DYNAMIC && col != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+
+  for (size_t i = 0; i < row; ++i) {
+    for (size_t j = 0; j < col; ++j) {
+      size_t tile_index = index<tile_shape>(i, j);
+      dst.data()[tile_index] = src0.data()[tile_index] / src1.data()[tile_index];
+    }
+  }
+}
+#else
 template <typename tile_shape>
 void __vec__
 TDivImpl_RowMajor(typename tile_shape::TileDType __out__ dst,
@@ -68,5 +88,6 @@ void TDIV_Impl(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
                   "Storage type not supported");
   }
 }
+#endif
 
 #endif

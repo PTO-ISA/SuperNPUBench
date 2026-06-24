@@ -12,7 +12,7 @@ void print_tile_Impl(tile_shape &tile) {
   typename tile_shape::DType d[tile_size] = {0};
   using dtype = typename tile_shape::DType;
   using shape = Shape<1, 1, 1, 1, 1>;
-  using stride = 
+  using stride =
        std::conditional_t<tile_shape::isRowMajor || tile_shape::isBoxedLayout,
           Stride<1, 1, tile_shape::Rows * tile_shape::Cols, tile_shape::Cols, 1>,
           Stride<1, 1, tile_shape::Rows * tile_shape::Cols, 1, tile_shape::Rows>>;
@@ -21,7 +21,7 @@ void print_tile_Impl(tile_shape &tile) {
           GlobalTensor<dtype, shape, stride, Layout::ND>,
           GlobalTensor<dtype, shape, stride, Layout::DN>>;
   gm_shape dst(d);
-  TCOPYOUT(dst, tile);
+  TSTORE(dst, tile);
 
   print_tile_info<tile_shape>();
   std::cout << std::fixed << std::scientific << std::setprecision(4);

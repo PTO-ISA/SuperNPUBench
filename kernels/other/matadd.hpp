@@ -27,10 +27,10 @@ void matadd(float *c_ptr, float *a_ptr, float *b_ptr) {
       auto gC = gCIter(i, j);
 
       tile_shape tA, tB, tC;
-      TCOPYIN(tA, gA);
-      TCOPYIN(tB, gB);
+      TLOAD(tA, gA);
+      TLOAD(tB, gB);
       TADD(tC, tA, tB);
-      TCOPYOUT(gC, tC);
+      TSTORE(gC, tC);
     }
   }
 }

@@ -26,26 +26,26 @@ using namespace pto;
 
 //     const int Sb = seq_len / tS;
 //     for(int i=0;i<Sb;i++){
-//         Tile<Location::Vec, dtype, dim/2, 1, BLayout::RowMajor> freqs; 
+//         Tile<Location::Vec, dtype, dim/2, 1, BLayout::RowMajor> freqs;
 //         Tile<Location::Vec, dtype, tS, 1, BLayout::RowMajor> t;
 //         TARANGE(freqs, 0, dim, 2);
 //         TARANGE(t, 0, end, 1);
 //         freq_tshape tfreq_cis;
 //         freq_tshape tfreq_cis_real;
 //         freq_tshape tfreq_cis_imag;
-//         TOUTDOT(tfreq_cis, freqs, t); //outer product 
-//         TSIN(tfreq_cis_real, tfreq_cis); // 
+//         TOUTDOT(tfreq_cis, freqs, t); //outer product
+//         TSIN(tfreq_cis_real, tfreq_cis); //
 //         TCOS(tfreq_cis_imag, tfreq_cis);
 //         auto gO_real = gFreq_real(i,0);
 //         auto gO_imag = gFreq_imag(i,0);
-//         TCOPYOUT(gO_real, tfreq_cis_real);
-//         TCOPYOUT(gO_imag, tfreq_cis_imag);
+//         TSTORE(gO_real, tfreq_cis_real);
+//         TSTORE(gO_imag, tfreq_cis_imag);
 //     }
 // }
 
 template<typename dype, const int bsz, const int seq_len, const int dim_in,const int dim_out>
 void projection(Tensor<dtype, bsz, seq_len , dim_out> &out,
-               Tensor<dtype, bsz, seq_len, dim_in> &x, 
+               Tensor<dtype, bsz, seq_len, dim_in> &x,
                Tensor<dtype, dim_in, dim_out> &proj){
 
     for(int i=0;i<bsz;i++){
@@ -59,9 +59,9 @@ template<typename dtype, const int kM, const int kN, const int kTM, const int kT
 void rmsnorm(dtype *dst, dtype *src){
     using gm_shape = global_tensor<dtype, RowMajor<kM, kN>>;
     using tile_shape = Tile<Location::Vec, dtype, kTM, kTN, BLayout::RowMajor>;
- 
+
     using tSum = Tile<Location::Vec, dtype, kTM, 16, BLayout::RowMajor, kTM, 1>;
- 
+
     using gIter = global_iterator<gm_shape, tile_shape>;
 
     gIter giter_src(src);
@@ -78,19 +78,19 @@ void rmsnorm(dtype *dst, dtype *src){
         {
             auto gsrc = giter_src(i, j);
             tile_shape tsrc;
- 
-            TCOPYIN(tsrc, gsrc);
+
+            TLOAD(tsrc, gsrc);
 
             tSum tLocalSum;
             TMUL(tsrc, tsrc, tsrc);
             TROWSUM(tLocalSum, tsrc);
             TADD(tAccSquareSum, tAccSquareSum, tLocalSum);
         }
- 
+
         tSum gSqureMean;
         TDIVS(gSqureMean, tAccSquareSum, kN);
         TSQRT(gSqureMean, gSqureMean);
- 
+
         tile_shape gSqureMean_i;
         TEXPANDCOL(gSqureMean_i, gSqureMean);
 
@@ -98,12 +98,12 @@ void rmsnorm(dtype *dst, dtype *src){
         {
             auto  gsrc = giter_src(i,j);
             tile_shape tsrc;
-            TCOPYIN(tsrc, gsrc);
- 
+            TLOAD(tsrc, gsrc);
+
             TDIV(tsrc, tsrc, gSqureMean_i);
- 
+
             auto gdst = giter_dst(i,j);
-            TCOPYOUT(gdst, tsrc);
+            TSTORE(gdst, tsrc);
         }
     }
 }
@@ -157,12 +157,12 @@ void apply_rotary_emb(dtype *x, dtype *freqs_cis){
             gm_shape input(x+offset);
             tile_shape tin;
             tile_shape_rope resh_tin;
-            TCOPYIN(tin, input);   // 64*32
+            TLOAD(tin, input);   // 64*32
             TRESHAPE(resh_tin, tin); // 64*32 -> 1024*2
             //TTRANS();           // 128*2 -> 2*128
 
             tile_shape_half tin_real;
-            tile_shape_half tin_imag; 
+            tile_shape_half tin_imag;
             TEXTRACT(tin_real, resh_tin, 0, 0);        // real 1024*1
             TEXTRACT(tin_imag, resh_tin, 0, 1);        // image 1024*1
 
@@ -170,7 +170,7 @@ void apply_rotary_emb(dtype *x, dtype *freqs_cis){
             gm_shape freqs(freqs_cis+offset);
             tile_shape tfreqs;
             tile_shape_rope tfreqs_resh;
-            TCOPYIN(tfreqs, freqs);
+            TLOAD(tfreqs, freqs);
             TRESHAPE(tfreqs_resh, tfreqs);
 
             tile_shape_half tfreqs_real;
@@ -203,7 +203,7 @@ void apply_rotary_emb(dtype *x, dtype *freqs_cis){
             tile_shape tout_resh;
             TRESHAPE(tout_resh, tout);
 
-            TCOPYOUT(input, tout_resh);
+            TSTORE(input, tout_resh);
         }
     }
 }
@@ -221,18 +221,18 @@ void split(dtype *out1, dtype *out2, dtype *in){
 
     uint32_t n_row =  row/trow;
     uint32_t n_col1 = dim1/tcol;
-    uint32_t n_col2 = dim2/tcol; 
+    uint32_t n_col2 = dim2/tcol;
 
     for(int i=0;i<n_row;i++){
         for(int j=0;j<n_col1;j++){
             uint32_t offset = i * (trow * (dim1+dim2)) + j * tcol;
             gm_in input(in+offset);
             tile_shape tmp;
-            TCOPYIN(tmp, input);
+            TLOAD(tmp, input);
 
             offset = i * (trow * dim1) + j * tcol;
             gm_out1 output1(out1+offset);
-            TCOPYOUT(output1,tmp);
+            TSTORE(output1,tmp);
         }
     }
 
@@ -241,11 +241,11 @@ void split(dtype *out1, dtype *out2, dtype *in){
             uint32_t offset = i * (trow * (dim1+dim2)) + j * tcol + dim1;
             gm_in input(in+offset);
             tile_shape tmp;
-            TCOPYIN(tmp, input);
+            TLOAD(tmp, input);
 
             offset = i * (trow * dim2) + j * tcol;
             gm_out2 output2(out2+offset);
-            TCOPYOUT(output2,tmp);
+            TSTORE(output2,tmp);
         }
     }
 }
@@ -271,11 +271,11 @@ void concat(dtype *out, dtype *in1, dtype *in2){
             uint32_t offset = i * (trow * dim1) + j * tcol;
             gm_in1 input1(in1 + offset);
             tile_shape tmp;
-            TCOPYIN(tmp, input1);
+            TLOAD(tmp, input1);
 
             offset = i * (trow * (dim1+dim2)) + j * tcol;
             gm_out output(out+offset);
-            TCOPYOUT(output, tmp);
+            TSTORE(output, tmp);
         }
     }
 
@@ -285,11 +285,11 @@ void concat(dtype *out, dtype *in1, dtype *in2){
 
             gm_in2 input2(in2 + offset);
             tile_shape tmp;
-            TCOPYIN(tmp, input2);
+            TLOAD(tmp, input2);
 
             offset = dim1 + i * (trow * (dim1+dim2)) + j * tcol;
             gm_out output(out+offset);
-            TCOPYOUT(output, tmp);
+            TSTORE(output, tmp);
         }
     }
 }
@@ -313,11 +313,11 @@ void permute(dtype *out, dtype *in){
                     tile_shape tmp;
                     gm_shape_in input(in+src_offset);
                     gm_shape_out ouput(out+dst_offset);
-                    TCOPYIN(tmp, input);
-                    TCOPYOUT(ouput, tmp);
+                    TLOAD(tmp, input);
+                    TSTORE(ouput, tmp);
             }
         }
-    }    
+    }
 }
 
 //[row, dim] -> [row, ext_dim, dim]
@@ -333,18 +333,18 @@ void expand(dtype *out, dtype *in){
         uint32_t offset = i * dim;
         gm_in input(in + offset);
         tile_shape tmp;
-        TCOPYIN(tmp, input);
+        TLOAD(tmp, input);
         for(int j=0;j<ext_dim;j++){
             offset = i * ext_dim * dim + j * dim;
             gm_out output(out+offset);
-            TCOPYOUT(output, tmp);
+            TSTORE(output, tmp);
         }
-    }   
+    }
 }
 
 template<typename dtype, const int bsz, const int seq_len, typename args>
-void MLA(Tensor<dtype, bsz, seq_len, args::dim> & out, 
-        Tensor<dtype, bsz, seq_len, args::dim> &x, 
+void MLA(Tensor<dtype, bsz, seq_len, args::dim> & out,
+        Tensor<dtype, bsz, seq_len, args::dim> &x,
         Tensor<dtype, seq_len, args::qk_rope_head_dim> & freqs_cis,
         Tensor<dtype, bsz, args::n_heads, seq_len>* atten_mask=nullptr){
     // do down projection to q_down then do up projection to q_up
@@ -374,7 +374,7 @@ void MLA(Tensor<dtype, bsz, seq_len, args::dim> & out,
     Tensor<dtype, bsz, seq_len, args::n_heads*args::qk_nope_head_dim> q_nope;
     Tensor<dtype, bsz, seq_len, args::n_heads*args::qk_rope_head_dim> q_pe;
     split<dtype, bsz*seq_len*args::n_heads, args::qk_nope_head_dim, args::qk_rope_head_dim>(q_nope.data(), q_pe.data(), q_up.data());
-        
+
     //for q_pe doing rotary embedding
     Tensor<dtype, bsz, args::n_heads, seq_len, args::qk_rope_head_dim> q_perm;
     permute<dtype, bsz, seq_len, args::n_heads, args::qk_rope_head_dim>(q_perm.data(), q_pe.data());
@@ -386,7 +386,7 @@ void MLA(Tensor<dtype, bsz, seq_len, args::dim> & out,
     permute<dtype, bsz, args::n_heads, seq_len, args::qk_rope_head_dim>(q_pe.data(), q_perm.data());
 
     //writeTensorToFile<dtype, bsz*seq_len, args::n_heads*args::qk_rope_head_dim>(q_pe.data(), "q_pe_cpp.txt");
-    
+
     Tensor<dtype, bsz, seq_len, args::n_heads*args::qk_head_dim> q_attn;
     //concat q_nope and q_pe to Q
     concat<dtype, bsz*seq_len*args::n_heads, args::qk_nope_head_dim, args::qk_rope_head_dim>(q_attn.data(), q_nope.data(), q_pe.data());
@@ -394,7 +394,7 @@ void MLA(Tensor<dtype, bsz, seq_len, args::dim> & out,
     // do down projection to k_rope+k_lora_rank, and split to k_rope, k_lora_rank
     Tensor<dtype, bsz, seq_len, args::kv_lora_rank> kv;
     Tensor<dtype, bsz, seq_len, args::qk_rope_head_dim> k_pe;
-    { 
+    {
         Tensor<dtype, args::dim, args::kv_lora_rank+args::qk_rope_head_dim> Wkv_down(1);
         Tensor<dtype, bsz, seq_len, args::kv_lora_rank+args::qk_rope_head_dim> kv_down;
         projection<dtype, bsz, seq_len, args::dim, args::kv_lora_rank+args::qk_rope_head_dim>(kv_down, x, Wkv_down);
@@ -432,15 +432,15 @@ void MLA(Tensor<dtype, bsz, seq_len, args::dim> & out,
     //writeTensorToFile<dtype, bsz*seq_len*args::n_heads, args::qk_head_dim>(k_attn.data(), "k_attn_cpp.txt");
     //writeTensorToFile<dtype, bsz*seq_len*args::n_heads, args::v_head_dim>(v_attn.data(), "v_attn_cpp.txt");
 
-    permute<dtype, bsz, seq_len, args::n_heads, args::qk_head_dim>(q_attn_pm.data(), q_attn.data()); //[b,s,n_heads,qk_head_dim] permute to [b,n_heads,s,qk_head_dim] 
-    permute<dtype, bsz, seq_len, args::n_heads, args::qk_head_dim>(k_attn_pm.data(), k_attn.data()); //[b,s,n_heads,qk_head_dim] permute to [b,n_heads,s,qk_head_dim] 
+    permute<dtype, bsz, seq_len, args::n_heads, args::qk_head_dim>(q_attn_pm.data(), q_attn.data()); //[b,s,n_heads,qk_head_dim] permute to [b,n_heads,s,qk_head_dim]
+    permute<dtype, bsz, seq_len, args::n_heads, args::qk_head_dim>(k_attn_pm.data(), k_attn.data()); //[b,s,n_heads,qk_head_dim] permute to [b,n_heads,s,qk_head_dim]
     permute<dtype, bsz, seq_len, args::n_heads, args::v_head_dim>(v_attn_pm.data(), v_attn.data()); //[b,s,n_heads,v_head_dim]  permute to [b,n_heads,s,v_head_dim]
 
     Tensor<dtype, bsz, seq_len, args::n_heads*args::v_head_dim>  attn_out;
     Tensor<dtype, bsz, args::n_heads, seq_len, args::v_head_dim> attn_tmp;
     for(int i=0;i<bsz;i++){
         for(int j=0;j<args::n_heads;j++){
-            // NOTE: v_head_dim == qk_head_dim since flash_attention impl 
+            // NOTE: v_head_dim == qk_head_dim since flash_attention impl
             // FIXME: consider attn_mask in flash_attention before softmax
             // attn_mask: lower triangle matrix with upper fill with -inf
             flash_attention<seq_len,args::qk_head_dim,args::v_head_dim,32,32>(attn_tmp.data(i,j), q_attn_pm.data(i,j), k_attn_pm.data(i,j), v_attn_pm.data(i,j));
@@ -451,7 +451,7 @@ void MLA(Tensor<dtype, bsz, seq_len, args::dim> & out,
     permute<dtype, bsz, args::n_heads, seq_len, args::v_head_dim>(attn_out.data(), attn_tmp.data());
 
     //writeTensorToFile<dtype, bsz*seq_len*args::n_heads, args::v_head_dim>(attn_out.data(), "attn_out_cpp.txt");
-    
+
     //final output projection
     {
         Tensor<dtype, args::n_heads*args::v_head_dim, args::dim> Wout(1);

@@ -2,10 +2,38 @@
 #define TCVT_HPP
 
 #include "common/pto_tile.hpp"
+#ifndef __linx
 #include "template_asm.hpp"
+#endif
 
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void TCVT_Impl(tile_shape_out &dst, tile_shape_in &src) {
+  static_assert(tile_shape_in::ValidRow != DYNAMIC &&
+                    tile_shape_in::ValidCol != DYNAMIC &&
+                    tile_shape_out::ValidRow != DYNAMIC &&
+                    tile_shape_out::ValidCol != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_in::Loc != Location::Acc,
+                "Linx direct TCVT smoke does not support ACC input");
+  static_assert(tile_shape_out::Loc != Location::Acc,
+                "ACC can not be output tile!");
+  static_assert(tile_shape_in::ValidRow == tile_shape_out::ValidRow &&
+                    tile_shape_in::ValidCol == tile_shape_out::ValidCol,
+                "TCVT direct path requires matching logical shapes");
+
+  for (size_t row = 0; row < tile_shape_in::ValidRow; ++row) {
+    for (size_t col = 0; col < tile_shape_in::ValidCol; ++col) {
+      size_t src_index = index<tile_shape_in>(row, col);
+      size_t dst_index = index<tile_shape_out>(row, col);
+      dst.data()[dst_index] =
+          static_cast<typename tile_shape_out::DType>(src.data()[src_index]);
+    }
+  }
+}
+#else
 template <typename, typename = void>
 struct blkc_has_data_member : std::false_type {};
 
@@ -707,4 +735,5 @@ void TCVT_Impl(tile_shape_out &dst, tile_shape_in &src) {
   }
 }
 
+#endif
 #endif

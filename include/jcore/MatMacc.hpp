@@ -5,6 +5,68 @@
 
 using namespace pto;
 
+#ifdef __linx
+template <typename...>
+struct linx_matmacc_unsupported {
+  static constexpr bool value = false;
+};
+
+// Matrix Multiply and Accumulate: C[MxN] += A[MxK] x B[KxN]
+template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_B,
+          is_tile_data_v tile_shape_C>
+void MATMACC_Impl(tile_shape_C &dst, tile_shape_A &src0, tile_shape_B &src1) {
+  static_assert(tile_shape_A::ValidCol == tile_shape_B::ValidRow,
+                "Linx scalar MATMACC requires A columns to match B rows");
+  static_assert(!tile_shape_A::isBoxedLayout && !tile_shape_B::isBoxedLayout &&
+                    !tile_shape_C::isBoxedLayout,
+                "Linx scalar MATMACC supports only unboxed layouts");
+  static_assert(tile_shape_A::Loc != Location::Acc &&
+                    tile_shape_B::Loc != Location::Acc &&
+                    tile_shape_C::Loc != Location::Acc,
+                "Linx scalar MATMACC does not support ACC tile operands");
+  static_assert(std::is_integral<typename tile_shape_A::DType>::value &&
+                    std::is_integral<typename tile_shape_B::DType>::value &&
+                    std::is_integral<typename tile_shape_C::DType>::value,
+                "Linx scalar MATMACC direct smoke supports integral tiles only");
+
+  constexpr size_t rows = tile_shape_C::ValidRow;
+  constexpr size_t cols = tile_shape_C::ValidCol;
+  constexpr size_t inner = tile_shape_A::ValidCol;
+
+  for (size_t row = 0; row < rows; ++row) {
+    for (size_t col = 0; col < cols; ++col) {
+      typename tile_shape_C::DType acc = dst.data()[index<tile_shape_C>(row, col)];
+      for (size_t k = 0; k < inner; ++k) {
+        acc += src0.data()[index<tile_shape_A>(row, k)] *
+               src1.data()[index<tile_shape_B>(k, col)];
+      }
+      dst.data()[index<tile_shape_C>(row, col)] = acc;
+    }
+  }
+}
+
+template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_AX,
+          is_tile_data_v tile_shape_B, is_tile_data_v tile_shape_BX,
+          is_tile_data_v tile_shape_C>
+void MATMACCMX_Impl(tile_shape_C &, tile_shape_A &, tile_shape_AX &,
+                    tile_shape_B &, tile_shape_BX &) {
+  static_assert(linx_matmacc_unsupported<tile_shape_A, tile_shape_AX,
+                                         tile_shape_B, tile_shape_BX,
+                                         tile_shape_C>::value,
+                "Linx direct MATMACCMX smoke is not implemented");
+}
+
+template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_B,
+          is_tile_data_v tile_shape_BX, is_tile_data_v tile_shape_C>
+void MATMACCMXB_Impl(tile_shape_C &, tile_shape_A &, tile_shape_B &,
+                     tile_shape_BX &) {
+  static_assert(linx_matmacc_unsupported<tile_shape_A, tile_shape_B,
+                                         tile_shape_BX, tile_shape_C>::value,
+                "Linx direct MATMACCMXB smoke is not implemented");
+}
+
+#else
+
 template <typename tile_shape_A, typename tile_shape_B, typename tile_shape_C>
 void __vec__ MatMacc_Vec_Impl(
     typename tile_shape_C::TileDType __out__ dst,
@@ -235,4 +297,5 @@ void MATMACCMXB_Impl(tile_shape_C &dst,
   }
 }
 
+#endif
 #endif

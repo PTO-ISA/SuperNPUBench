@@ -19,7 +19,7 @@
           for(int k=0;k<RK;k++){ \
             size_t offset_A = (i+ii) * gK * tile_shapeA::Rows + k * tile_shapeA::Cols; \
             gm_shapeA gA(src0+offset_A, gM, gK); \
-            TCOPYIN(tA[ii][k], gA); \
+            TLOAD(tA[ii][k], gA); \
           } \
  \
           int dyn_m = (i+ii+1) * tM > gM? rem_m:tM; \
@@ -32,7 +32,7 @@
               size_t offset_B = k * gN * tile_shapeB::Rows + j * tile_shapeB::Cols; \
               gm_shapeB gB(src1 + offset_B, gK, gN); \
               tile_shapeB tB(tK, dyn_n); \
-              TCOPYIN(tB, gB); \
+              TLOAD(tB, gB); \
               if(k==0){ \
                 MATMUL(tACC, tA[ii][k], tB); \
               }else{ \
@@ -51,8 +51,8 @@
                 tile_shapeA tA(dyn_m, dyn_k); \
                 tile_shapeB tB(dyn_k, dyn_n); \
  \
-                TCOPYIN(tA, gA); \
-                TCOPYIN(tB, gB); \
+                TLOAD(tA, gA); \
+                TLOAD(tB, gB); \
                 if(k==0){ \
                   MATMUL(tACC, tA, tB); \
                 }else{ \
@@ -63,7 +63,7 @@
  \
             size_t offset_C = (i+ii) * gN * tile_shapeACC::Rows + j * tile_shapeACC::Cols; \
             gm_shapeC gC(dst + offset_C, gM, gN); \
-            TCOPYOUT_ACC_DYNAMIC(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol()); \
+            TSTORE_ACC_DYNAMIC(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol()); \
           } \
         }
 
@@ -114,7 +114,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
           for(int k=0;k<RK;k++){ \
             size_t offset_B = k * gN * tile_shapeB::Rows + (i+ii) * tile_shapeB::Cols; \
             gm_shapeB gB(src1+offset_B, gK, gN); \
-            TCOPYIN(tB[k][ii], gB); \
+            TLOAD(tB[k][ii], gB); \
           } \
  \
           int dyn_n = (i+ii+1) * tN > gN? rem_n:tN; \
@@ -127,7 +127,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
               size_t offset_A = j * gK * tile_shapeA::Rows + k * tile_shapeA::Cols; \
               gm_shapeA gA(src0 + offset_A, gM, gK); \
               tile_shapeA tA(dyn_m, tK); \
-              TCOPYIN(tA, gA); \
+              TLOAD(tA, gA); \
               if(k==0){ \
                 MATMUL(tACC, tA, tB[k][ii]); \
               }else{ \
@@ -146,8 +146,8 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
                 tile_shapeA tA(dyn_m, dyn_k); \
                 tile_shapeB tB(dyn_k, dyn_n); \
  \
-                TCOPYIN(tA, gA); \
-                TCOPYIN(tB, gB); \
+                TLOAD(tA, gA); \
+                TLOAD(tB, gB); \
                 if(k==0){ \
                   MATMUL(tACC, tA, tB); \
                 }else{ \
@@ -158,7 +158,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
  \
             size_t offset_C =  j * gN * tile_shapeACC::Rows + (i+ii) * tile_shapeACC::Cols; \
             gm_shapeC gC(dst + offset_C, gM, gN); \
-            TCOPYOUT_ACC_DYNAMIC(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol()); \
+            TSTORE_ACC_DYNAMIC(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol()); \
           } \
         }
 
@@ -178,7 +178,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseB(float* dst, dtype* src0, dt
     int rem_m = gM % tM;
     int rem_n = gN % tN;
     int rem_k = gK % tK;
-    
+
     for (int b=0;b<Batch;b++){
       for(int i=0;i<Nb;){
         if((i+RN) <= Nb){

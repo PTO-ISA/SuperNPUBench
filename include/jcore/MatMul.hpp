@@ -5,6 +5,45 @@
 
 using namespace pto;
 
+#ifdef __linx
+
+// Direct-boot Linx smoke uses the scalar fallback until the vector launch
+// syntax is supported in this toolchain lane.
+template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_B,
+          is_tile_data_v tile_shape_C>
+void MATMUL_Impl(tile_shape_C &dst, tile_shape_A &src0, tile_shape_B &src1) {
+  static_assert(!tile_shape_A::isBoxedLayout && !tile_shape_B::isBoxedLayout &&
+                    !tile_shape_C::isBoxedLayout,
+                "Linx scalar MATMUL supports only unboxed layouts");
+  static_assert(tile_shape_A::Loc != Location::Acc &&
+                    tile_shape_B::Loc != Location::Acc &&
+                    tile_shape_C::Loc != Location::Acc,
+                "Linx scalar MATMUL does not support ACC tile operands");
+
+  const size_t rows = dst.GetValidRow();
+  const size_t cols = dst.GetValidCol();
+  const size_t inner =
+      src0.GetValidCol() > src1.GetValidRow() ? src0.GetValidCol()
+                                               : src1.GetValidRow();
+
+  for (size_t row = 0; row < rows; ++row) {
+    for (size_t col = 0; col < cols; ++col) {
+      typename tile_shape_C::DType acc = 0;
+      for (size_t k = 0; k < inner; ++k) {
+        if constexpr (!std::is_same<typename tile_shape_A::DType, __half>::value &&
+                      !std::is_same<typename tile_shape_B::DType, __half>::value &&
+                      !std::is_same<typename tile_shape_C::DType, __half>::value) {
+          acc += src0.data()[index<tile_shape_A>(row, k)] *
+                 src1.data()[index<tile_shape_B>(k, col)];
+        }
+      }
+      dst.data()[index<tile_shape_C>(row, col)] = acc;
+    }
+  }
+}
+
+#else
+
 template <typename tile_shape_A, typename tile_shape_B, typename tile_shape_C>
 void __vec__ MatMul_Vec_Impl(
     typename tile_shape_C::TileDType __out__ dst,
@@ -243,5 +282,7 @@ void MATMULMXB_Impl(tile_shape_C &dst,
                   "Data type not supported");
   }
 }
+
+#endif
 
 #endif

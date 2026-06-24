@@ -167,7 +167,7 @@ void broadcast_mscatter(
     // ======================
     for (int i = 0; i < input_tiles; ++i) {
         auto gIn = gInIter(0, i);
-        TCOPYIN(inDataTile, gIn);
+        TLOAD(inDataTile, gIn);
 
         // 重置广播步进
         memset(bcast_step, 0, sizeof(bcast_step));
@@ -185,7 +185,7 @@ void broadcast_mscatter(
             // 散射写入
             MSCATTER(outGm, inDataTile, offsetTile);
             auto gOffset = gOffsetIter(0, offset_idx);
-            TCOPYOUT(gOffset, offsetTile);
+            TSTORE(gOffset, offsetTile);
             offset_idx ++;
 
             // 下一组广播坐标
@@ -200,7 +200,7 @@ void broadcast_mscatter(
     if constexpr (rmd_input > 0) {
         auto gIn = gInIter(0, input_tiles);
         total_elements = rmd_input;
-        TCOPYIN(inDataTile_rmd, gIn);
+        TLOAD(inDataTile_rmd, gIn);
 
         memset(bcast_step, 0, sizeof(bcast_step));
         done = false;
@@ -212,7 +212,7 @@ void broadcast_mscatter(
             );
             MSCATTER(outGm, inDataTile_rmd, offsetTile_rmd);
             auto gOffset = gOffsetIter(0, offset_idx);
-            TCOPYOUT(gOffset, offsetTile_rmd);
+            TSTORE(gOffset, offsetTile_rmd);
             offset_idx ++;
 
             done = !next_broadcast_step();

@@ -37,14 +37,14 @@ void max_pool_forward(dtype *out, dtype *pic, const pool_pm pool){
                     gm_pic gpic(pic+ n*C*H*W + c*H*W + h*pool.stride*W + w*pool.stride); //pic[n, c, h*pool.stride, w*pool.stride]
 
                     tile_filt tpic;
-                    TCOPYIN(tpic, gpic);
+                    TLOAD(tpic, gpic);
                     TROWMAXEXPAND(tpic, tpic);
                     TCOLMAXEXPAND(tpic, tpic);
                     TCOPY(tmp, tpic);
 
                     int offset = n*C*H_out*W_out + c*H_out*W_out + h*W_out + w;
                     gm_out gO(out+offset);
-                    TCOPYOUT(gO, tpic);
+                    TSTORE(gO, tpic);
                 }
             }
         }
@@ -75,7 +75,7 @@ void avg_pool_forward(dtype *out, dtype *pic, const pool_pm pool){
                     gm_pic gpic(pic+ n*C*H*W + c*H*W + h*pool.stride*W + w*pool.stride); //pic[n, c, h*pool.stride, w*pool.stride]
 
                     tile_filt tpic;
-                    TCOPYIN(tpic, gpic);
+                    TLOAD(tpic, gpic);
                     TROWSUMEXPAND(tpic, tpic);
                     TCOLSUMEXPAND(tpic, tpic);
                     TDIVS(tpic, tpic, HH*WW);
@@ -83,7 +83,7 @@ void avg_pool_forward(dtype *out, dtype *pic, const pool_pm pool){
 
                     int offset = n*C*H_out*W_out + c*H_out*W_out + h*W_out + w;
                     gm_out gO(out+offset);
-                    TCOPYOUT(gO, tpic);
+                    TSTORE(gO, tpic);
                 }
             }
         }

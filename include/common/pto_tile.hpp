@@ -416,7 +416,7 @@ public:
   static_assert(SFractalSize_ == 512 || SFractalSize_ == 1024,
                 "SFractalSize_ illegal");
 
-#ifdef __linx
+#if defined(__linx) && defined(SUPERNPUBENCH_LINX_TILE_SIZE)
   using TileDType = DType tile_size(Rows *Cols / (sizeof(DType) * 8 / type_traits<DType>::bits));
 #else
   using TileDType = DType[Rows * Cols];
@@ -656,6 +656,7 @@ const char* get_layout_str() {
 
 template <typename tile_shape>
 void print_tile_info() {
+#ifndef __linx
   std::cout << "Tile Rows Number: " << tile_shape::Rows << std::endl;
   std::cout << "Tile Columns Number: " << tile_shape::Cols << std::endl;
   std::cout << "Tile Active Rows Number: " << tile_shape::ValidRow << std::endl;
@@ -667,6 +668,7 @@ void print_tile_info() {
   std::cout << "Tile Size: " << tile_shape::Numel << std::endl;
   std::cout << "Tile Layout: " << get_layout_str<tile_shape>() << std::endl;
   std::cout << "Tile Data Dump: " << std::endl;
+#endif
 }
 
 } // namespace pto

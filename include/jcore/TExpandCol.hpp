@@ -5,6 +5,29 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void TEXPANDCOL_Impl(tile_shape_out &dst, tile_shape_in &src) {
+  static_assert((tile_shape_out::Rows == tile_shape_in::Rows) &&
+                    (tile_shape_out::ValidRow == tile_shape_in::ValidRow),
+                "Error! Cude A:Rows != Cude B:Rows");
+  static_assert(!tile_shape_out::isBoxedLayout && !tile_shape_in::isBoxedLayout,
+                "Not support Fractal layout");
+  static_assert(tile_shape_out::Loc != Location::Acc &&
+                    tile_shape_in::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+
+  size_t row = dst.GetValidRow();
+  size_t col = dst.GetValidCol();
+  for (size_t row_idx = 0; row_idx < row; ++row_idx) {
+    for (size_t col_idx = 0; col_idx < col; ++col_idx) {
+      size_t dst_index = index<tile_shape_out>(row_idx, col_idx);
+      size_t src_index = index<tile_shape_in>(row_idx, 0);
+      dst.data()[dst_index] = src.data()[src_index];
+    }
+  }
+}
+#else
 template <typename tile_shape_out, typename tile_shape_in>
 void __vec__
 TExpandCol_RowImpl(typename tile_shape_out::TileDType __out__ dst,
@@ -74,4 +97,5 @@ void TEXPANDCOL_Impl(tile_shape_out &dst, tile_shape_in &src) {
   }
 }
 
+#endif
 #endif

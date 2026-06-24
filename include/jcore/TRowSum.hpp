@@ -5,6 +5,34 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void TROWSUM_Impl(tile_shape_out &dst, tile_shape_in &src) {
+  static_assert(tile_shape_in::Rows == tile_shape_out::Rows,
+                "Error! Input row != Output row.");
+  static_assert(tile_shape_out::ValidCol == 1, "valid column must be 1.");
+  static_assert(!tile_shape_out::isBoxedLayout && !tile_shape_in::isBoxedLayout,
+                "Not support Fractal layout");
+  static_assert(tile_shape_in::ValidRow != DYNAMIC &&
+                    tile_shape_in::ValidCol != DYNAMIC &&
+                    tile_shape_out::ValidRow != DYNAMIC &&
+                    tile_shape_out::ValidCol != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape_out::Loc != Location::Acc &&
+                    tile_shape_in::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+
+  size_t rows = src.GetValidRow();
+  size_t cols = src.GetValidCol();
+  for (size_t row = 0; row < rows; ++row) {
+    typename tile_shape_in::DType sum = src.data()[index<tile_shape_in>(row, 0)];
+    for (size_t col = 1; col < cols; ++col) {
+      sum += src.data()[index<tile_shape_in>(row, col)];
+    }
+    dst.data()[index<tile_shape_out>(row, 0)] = sum;
+  }
+}
+#else
 template <typename tile_shape_out, typename tile_shape_in>
 void __vec__
 TRowSum_NoFractal_Impl(typename tile_shape_out::TileDType __out__ dst,
@@ -107,4 +135,5 @@ void TROWSUM_Impl(tile_shape_out &dst, tile_shape_in &src) {
   }
 }
 
+#endif
 #endif

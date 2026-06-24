@@ -36,7 +36,7 @@ void MATMACCMX(tile_shape_C &dst, tile_shape_A &src0,  tile_shape_AX &src0x,
   MATMACCMX_Impl(dst, src0, src0x, src1, src1x);
 }
 
-template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_B, 
+template <is_tile_data_v tile_shape_A, is_tile_data_v tile_shape_B,
           is_tile_data_v tile_shape_BX, is_tile_data_v tile_shape_C>
 void MATMACCMXB(tile_shape_C &dst, tile_shape_A &src0,
                 tile_shape_B &src1, tile_shape_BX &src1x) {
@@ -81,12 +81,12 @@ void TCOPY(tile_shape &dst, tile_shape &src) {
   TCOPY_Impl(dst, src);
 }
 template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
-void TCOPYIN(tile_shape &dst, gm_shape &src) {
-  TCOPYIN_Impl(dst, src);
+void TLOAD(tile_shape &dst, gm_shape &src) {
+  TLOAD_Impl(dst, src);
 }
 template <is_global_data_v gm_shape, is_tile_data_v tile_shape>
-void TCOPYOUT(gm_shape &dst, tile_shape &src) {
-  TCOPYOUT_Impl(dst, src);
+void TSTORE(gm_shape &dst, tile_shape &src) {
+  TSTORE_Impl(dst, src);
 }
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TCVT(tile_shape_out &dst, tile_shape_in &src) {

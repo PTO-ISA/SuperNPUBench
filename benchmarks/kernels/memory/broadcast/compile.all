@@ -1,0 +1,240 @@
+#! /bin/bash
+make    TESTCASE=broadcast_07 DType=__half tMs=2048 MAX_DIMs=2 \
+        IN_SHAPEs=1334,1 OUT_SHAPEs=1334,129 IN_DIMs=2 OUT_DIMs=2 \
+        gIMs=1334*1 gOMs=1334*129 \
+        TESTNAME=broadcast_to_07 \
+        IN_SHAPE_NAME=1334_1 OUT_SHAPE_NAME=1334_129 res_check=off diss
+
+# # 2\broadcast_to_ABA_019_new fp16
+make    TESTCASE=broadcast_019 DType=__half tMs=2048 MAX_DIMs=3 \
+        IN_SHAPEs=1280,1,49 OUT_SHAPEs=1280,8,49 IN_DIMs=3 OUT_DIMs=3 \
+        gIMs=1280*1*49 gOMs=1280*8*49 \
+        TESTNAME=broadcast_to_ABA_019_new \
+        IN_SHAPE_NAME=1280_1_49 OUT_SHAPE_NAME=1280_8_49 res_check=off diss
+
+# 3\BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004  fp16
+make    TESTCASE=broadcast_Hunyuan DType=__half tMs=2048 MAX_DIMs=5 \
+        IN_SHAPEs=1,1,1,65,128 OUT_SHAPEs=1,1,7,65,128 IN_DIMs=5 OUT_DIMs=5 \
+        gIMs=1*1*1*65*128 gOMs=1*1*7*65*128 \
+        TESTNAME=BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004 \
+        IN_SHAPE_NAME=1_1_1_65_128 OUT_SHAPE_NAME=1_1_7_65_128  res_check=off diss
+
+# 4\Bbroadcast_to_BABA_039  fp16 int32
+make    TESTCASE=broadcast_039 DType=__half tMs=2048 MAX_DIMs=4 \
+        IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+        gIMs=1*128*1*16 gOMs=64*128*8*16 \
+        TESTNAME=Bbroadcast_to_BABA_039 \
+        IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16  res_check=off diss
+
+make    TESTCASE=broadcast_039 DType=__half tMs=2048 MAX_DIMs=4 \
+        IN_SHAPEs=1,8192,1,16 OUT_SHAPEs=1,8192,8,16 IN_DIMs=4 OUT_DIMs=4 \
+        gIMs=1*8192*1*16 gOMs=1*8192*8*16 \
+        TESTNAME=Bbroadcast_to_BABA_039 \
+        IN_SHAPE_NAME=1_8192_1_16 OUT_SHAPE_NAME=1_8192_8_16  res_check=off diss
+
+# make    TESTCASE=broadcast_039 DType=int32_t tMs=2048 MAX_DIMs=4 \
+#         IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#         gIMs=1*128*1*16 gOMs=64*128*8*16 \
+#         TESTNAME=Bbroadcast_to_BABA_039 \
+#         IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16  res_check=off diss
+
+
+
+
+
+
+# make    TESTCASE=broadcast_nostore DType=int32_t tMs=512 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# # NoCopyout 性能分析
+# # # 1\broadcast_to_07 fp16
+# make    TESTCASE=broadcast_nostore DType=__half tMs=128 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# make    TESTCASE=broadcast_nostore DType=__half tMs=512 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# make    TESTCASE=broadcast_nostore DType=__half tMs=2048 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# # # 2\broadcast_to_ABA_019_new fp16
+# make    TESTCASE=broadcast_nostore DType=__half tMs=2048 MAX_DIMs=3 \
+#         IN_SHAPEs=1280,1,49 OUT_SHAPEs=1280,8,49 IN_DIMs=3 OUT_DIMs=3 \
+#         gIMs=1280*1*49 gOMs=1280*8*49 \
+#         TESTNAME=broadcast_to_ABA_019_new \
+#         IN_SHAPE_NAME=1280_1_49 OUT_SHAPE_NAME=1280_8_49 res_check=off diss
+
+# # # 3\BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004  fp16
+# make    TESTCASE=broadcast_nostore DType=__half tMs=2048 MAX_DIMs=5 \
+#         IN_SHAPEs=1,1,1,80,128 OUT_SHAPEs=1,1,7,80,128 IN_DIMs=5 OUT_DIMs=5 \
+#         gIMs=1*1*1*80*128 gOMs=1*1*7*80*128 \
+#         TESTNAME=BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004 \
+#         IN_SHAPE_NAME=1_1_1_80_128 OUT_SHAPE_NAME=1_1_7_80_128  res_check=off diss
+
+# # 4\Bbroadcast_to_BABA_039   fp16 int32
+# make    TESTCASE=broadcast_nostore DType=__half tMs=512 MAX_DIMs=4 \
+#         IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#         gIMs=1*128*1*16 gOMs=64*128*8*16 \
+#         TESTNAME=Bbroadcast_to_BABA_039 \
+#         IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16  res_check=off diss
+
+# make    TESTCASE=broadcast_nostore DType=int32_t tMs=512 MAX_DIMs=4 \
+#         IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#         gIMs=1*128*1*16 gOMs=64*128*8*16 \
+#         TESTNAME=Bbroadcast_to_BABA_039 \
+#         IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16  res_check=off diss
+
+
+
+# # 自定义单核尺寸 性能分析
+# # 1\broadcast_to_07  fp16
+# make    TESTCASE=broadcast DType=__half tMs=128 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# make    TESTCASE=broadcast DType=__half tMs=256 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# make    TESTCASE=broadcast DType=__half tMs=512 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# make    TESTCASE=broadcast DType=__half tMs=768 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# make    TESTCASE=broadcast DType=__half tMs=1024 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# make    TESTCASE=broadcast DType=__half tMs=1536 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# make    TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=2 \
+#         IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=1042*1 gOMs=1042*129 \
+#         TESTNAME=broadcast_to_07 \
+#         IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss
+
+# # # 2\broadcast_to_ABA_019_new fp16
+# make    TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=3 \
+#         IN_SHAPEs=1280,1,49 OUT_SHAPEs=1280,8,49 IN_DIMs=3 OUT_DIMs=3 \
+#         gIMs=1280*1*49 gOMs=1280*8*49 \
+#         TESTNAME=broadcast_to_ABA_019_new \
+#         IN_SHAPE_NAME=1280_1_49 OUT_SHAPE_NAME=1280_8_49 res_check=off diss
+
+# # # 3\BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004  fp16
+# make    TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=5 \
+#         IN_SHAPEs=1,1,1,65,128 OUT_SHAPEs=1,1,7,65,128 IN_DIMs=5 OUT_DIMs=5 \
+#         gIMs=1*1*1*65*128 gOMs=1*1*7*65*128 \
+#         TESTNAME=BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004 \
+#         IN_SHAPE_NAME=1_1_1_65_128 OUT_SHAPE_NAME=1_1_7_65_128  res_check=off diss
+
+# # 4\Bbroadcast_to_BABA_039  fp16 int32
+# make    TESTCASE=broadcast DType=__half tMs=512 MAX_DIMs=4 \
+#         IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#         gIMs=1*128*1*16 gOMs=64*128*8*16 \
+#         TESTNAME=Bbroadcast_to_BABA_039 \
+#         IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16  res_check=off diss
+
+# make    TESTCASE=broadcast DType=int32_t tMs=512 MAX_DIMs=4 \
+#         IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#         gIMs=1*128*1*16 gOMs=64*128*8*16 \
+#         TESTNAME=Bbroadcast_to_BABA_039 \
+#         IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16  res_check=off diss
+
+# gfrun验证通过
+
+# make    TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=5 \
+#         IN_SHAPEs=1,1,1,80,128 OUT_SHAPEs=1,1,7,80,128 IN_DIMs=5 OUT_DIMs=5 \
+#         gIMs=1*1*1*80*128 gOMs=1*1*7*80*128 \
+#         TESTNAME=BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004 \
+#         IN_SHAPE_NAME=1_1_1_80_128 OUT_SHAPE_NAME=1_1_7_80_128  res_check=on diss
+
+# make    TESTCASE=broadcast_mscatter DType=int32_t tMs=512 MAX_DIMs=3 \
+#         IN_SHAPEs=64,1,49 OUT_SHAPEs=64,8,49 IN_DIMs=3 OUT_DIMs=3 \
+#         gIMs=64*1*49 gOMs=64*8*49 \
+#         IN_SHAPE_NAME=64_1_49 OUT_SHAPE_NAME=64_8_49 res_check=on diss
+
+# make    TESTCASE=broadcast DType=int32_t tMs=512 MAX_DIMs=4 \
+#         IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#         gIMs=1*128*1*16 gOMs=64*128*8*16 \
+#         IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16-Tst  res_check=off diss
+
+# make    TESTCASE=broadcast DType=int32_t tMs=2048 MAX_DIMs=3 \
+#         IN_SHAPEs=8192,1,49 OUT_SHAPEs=8192,8,49 IN_DIMs=3 OUT_DIMs=3 \
+#         gIMs=8192*1*49 gOMs=8192*8*49 \
+#         IN_SHAPE_NAME=8192_1_49 OUT_SHAPE_NAME=8192_8_49 res_check=off diss
+
+# make    TESTCASE=broadcast DType=int32_t tMs=512 MAX_DIMs=3 \
+#         IN_SHAPEs=64,1,49 OUT_SHAPEs=64,8,49 IN_DIMs=3 OUT_DIMs=3 \
+#         gIMs=64*1*49 gOMs=64*8*49 \
+#         IN_SHAPE_NAME=64_1_49 OUT_SHAPE_NAME=64_8_49 res_check=off diss
+
+# # BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004
+# make    TESTCASE=broadcast DType=__half tMs=512 MAX_DIMs=5 \
+#         IN_SHAPEs=1,4,1,1034,128 OUT_SHAPEs=1,4,7,1034,128 IN_DIMs=5 OUT_DIMs=5 \
+#         gIMs=1*4*1*1034*128 gOMs=1*4*7*1034*128 \
+#         IN_SHAPE_NAME=1_4_1_1034_128 OUT_SHAPE_NAME=1_4_7_1034_128  res_check=off diss
+
+
+
+######################################
+# broadcast_to_07
+# make    TESTCASE=broadcast DType=int32_t tMs=512 MAX_DIMs=2 \
+#         IN_SHAPEs=66661,1 OUT_SHAPEs=66661,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=66661*1 gOMs=66661*129 \
+#         IN_SHAPE_NAME=66661_1 OUT_SHAPE_NAME=66661_129 res_check=off diss
+
+# make    TESTCASE=broadcast DType=__half tMs=512 MAX_DIMs=2 \
+#         IN_SHAPEs=66661,1 OUT_SHAPEs=66661,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=66661*1 gOMs=66661*129 \
+#         IN_SHAPE_NAME=66661_1 OUT_SHAPE_NAME=66661_129 res_check=off diss
+
+
+# make    TESTCASE=broadcast DType=int32_t tMs=512 MAX_DIMs=3 \
+#         IN_SHAPEs=81920,1,49 OUT_SHAPEs=81920,8,49 IN_DIMs=3 OUT_DIMs=3 \
+#         gIMs=81920*1*49 gOMs=81920*8*49 \
+#         IN_SHAPE_NAME=81920_1_49 OUT_SHAPE_NAME=81920_8_49 res_check=off diss
+
+# make    TESTCASE=broadcast DType=int32_t tMs=512 MAX_DIMs=2 \
+#         IN_SHAPEs=66661,1 OUT_SHAPEs=66661,129 IN_DIMs=2 OUT_DIMs=2 \
+#         gIMs=66661*1 gOMs=66661*129 \
+#         IN_SHAPE_NAME=66661_1 OUT_SHAPE_NAME=66661_129  res_check=off diss
+
+# make    TESTCASE=broadcast DType=int32_t tMs=512 MAX_DIMs=4 \
+#         IN_SHAPEs=1,81920,1,49 OUT_SHAPEs=64,81920,8,49 IN_DIMs=4 OUT_DIMs=4 \
+#         gIMs=1*81920*1*49 gOMs=64*81920*8*49 \
+#         IN_SHAPE_NAME=1_81920_1_49 OUT_SHAPE_NAME=64_81920_8_49  res_check=off diss
+
+### for test ###
+# make    TESTCASE=broadcast_tst DType=int32_t tMs=2048 MAX_DIMs=3 \
+#         IN_SHAPEs=8192,1,49 OUT_SHAPEs=8192,8,49 IN_DIMs=3 OUT_DIMs=3 \
+#         gIMs=8192*1*49 gOMs=8192*8*49 \
+#         IN_SHAPE_NAME=8192_1_49 OUT_SHAPE_NAME=8192_8_49 res_check=off diss

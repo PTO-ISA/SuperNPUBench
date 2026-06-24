@@ -5,6 +5,27 @@
 #include "jcore/constants.hpp"
 using namespace pto;
 
+#ifdef __linx
+template <is_tile_data_v tile_shape>
+void TRECIP_Impl(tile_shape &dst, tile_shape &src) {
+  static constexpr size_t row = tile_shape::ValidRow;
+  static constexpr size_t col = tile_shape::ValidCol;
+  static_assert(row != DYNAMIC && col != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+  static_assert(tile_shape::Loc != Location::Acc,
+                "Unsupport ACC to be input or output here");
+  static_assert(tile_shape::isBoxedLayout == false,
+                "TRECIP not support Boxed Layout!");
+
+  for (size_t i = 0; i < row; ++i) {
+    for (size_t j = 0; j < col; ++j) {
+      size_t tile_index = index<tile_shape>(i, j);
+      dst.data()[tile_index] =
+          static_cast<typename tile_shape::DType>(1) / src.data()[tile_index];
+    }
+  }
+}
+#else
 template <typename tile_shape>
 void __vec__ TRecip_RowMajor(typename tile_shape::TileDType __out__ dst,
                              const typename tile_shape::TileDType __in__ src) {
@@ -62,4 +83,5 @@ void TRECIP_Impl(tile_shape &dst, tile_shape &src) {
   }
 }
 
+#endif
 #endif

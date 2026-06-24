@@ -3,9 +3,64 @@
 
 #include "common/pto_tile.hpp"
 #include "jcore/constants.hpp"
+#ifdef __linx
+#include <stddef.h>
+#else
 #include <assert.h>
+#endif
 using namespace pto;
 
+#ifdef __linx
+template <typename T> static inline int32_t linx_tcmp_value(T a, T b, CmpMode mode) {
+  switch (mode) {
+  case CmpMode::EQ:
+    return a == b;
+  case CmpMode::NE:
+    return a != b;
+  case CmpMode::GT:
+    return a > b;
+  case CmpMode::LT:
+    return a < b;
+  case CmpMode::GE:
+    return a >= b;
+  case CmpMode::LE:
+    return a <= b;
+  }
+  return 0;
+}
+
+template <typename tile_shape_out, typename tile_shape_in>
+void TCMP_Impl(tile_shape_out &dst, tile_shape_in &src0, tile_shape_in &src1,
+               CmpMode cmpMode) {
+  static_assert(tile_shape_in::Rows == tile_shape_out::Rows &&
+                    tile_shape_in::Cols == tile_shape_out::Cols,
+                "Error! Input shape != Output shape");
+  static_assert(tile_shape_in::InnerRows == tile_shape_out::InnerRows &&
+                    tile_shape_in::InnerCols == tile_shape_out::InnerCols,
+                "Error! Inner shape is not equal!");
+  static_assert(tile_shape_out::Loc == Location::Vec &&
+                    tile_shape_in::Loc == Location::Vec,
+                "Only VEC tile type are supported");
+  static_assert(tile_shape_out::isBoxedLayout == false &&
+                    tile_shape_in::isBoxedLayout == false,
+                "TCMP not support Boxed Layout!");
+
+  static constexpr size_t row = tile_shape_in::ValidRow;
+  static constexpr size_t col = tile_shape_in::ValidCol;
+  static_assert(row != DYNAMIC && col != DYNAMIC,
+                "TODO: Support tile dynamic shape!");
+
+  for (size_t i = 0; i < row; ++i) {
+    for (size_t j = 0; j < col; ++j) {
+      size_t in_index = index<tile_shape_in>(i, j);
+      size_t out_index = index<tile_shape_out>(i, j);
+      dst.data()[out_index] =
+          static_cast<typename tile_shape_out::DType>(linx_tcmp_value(
+              src0.data()[in_index], src1.data()[in_index], cmpMode));
+    }
+  }
+}
+#else
 template <typename tile_shape_out, typename tile_shape_in, CmpMode mode>
 void __vec__ TCmp_Vec_RowMajor(typename tile_shape_out::TileDType __out__ dst,
                                 const typename tile_shape_in::TileDType __in__ src0,
@@ -159,4 +214,5 @@ void TCMP_Impl(tile_shape_out &dst, tile_shape_in &src0, tile_shape_in &src1, Cm
                     "Dtype not support!");
   }
 }
+#endif
 #endif
