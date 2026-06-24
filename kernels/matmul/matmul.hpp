@@ -3400,7 +3400,6 @@ __attribute__((noinline)) void matmul_dynamic_reuseB(float* dst, dtype* src0, dt
 }
 */
 
-#include "matmul_dynamic_reuse.hpp"
 
 template <typename dtype, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK>
 void matmul_mx(float *dst, dtype *src0, dtype *src1, uint8_t *src0_mx, uint8_t *src1_mx) {

@@ -35,7 +35,7 @@
 #define ALIGN_MASK 0xfffffffffffff000ull
 #define ALIGN 4*1024
 
-#include "other/matmul.hpp"
+#include "matmul/matmul.hpp"
 
 int main() {
 
@@ -91,30 +91,7 @@ int main() {
     #elif defined(MASK_FP32_DYNAMIC)
       matmul_dynamic_new<float, tilM, tilN, tilK>(dst, src0, src1, globM, globN, globK);
     #elif defined(MASK_FP32_DYNAMIC_REUSE)
-      int Mb = (globM + tilM - 1) / tilM;
-      int Nb = (globN + tilN - 1) / tilN;
-      int Kb = (globK + tilK - 1) / tilK;
-      if((Mb * Kb) > (Kb * Nb)){
-        if(Mb >= 8 && Kb >= 8){
-          matmul_dynamic_reuseA<float, tilM, tilN, tilK,24, 3, 8>(dst, src0, src1, globM, globN, globK);
-        }else if(Mb >= 4 && Kb >= 4){
-          matmul_dynamic_reuseA<float, tilM, tilN, tilK,24, 4, 4>(dst, src0, src1, globM, globN, globK);
-        }else if(Mb >= 2 && Kb >= 2){
-          matmul_dynamic_reuseA<float, tilM, tilN, tilK,24, 2, 2>(dst, src0, src1, globM, globN, globK);
-        }else{
-          matmul_dynamic_reuseA<float, tilM, tilN, tilK,24, 1, 1>(dst, src0, src1, globM, globN, globK);
-        }
-      }else{
-        if(Kb >= 8 && Nb >= 8){
-          matmul_dynamic_reuseB<float, tilM, tilN, tilK, 24, 8, 3>(dst, src0, src1, globM, globN, globK);
-        }else if(Kb >= 4 && Nb >= 4){
-          matmul_dynamic_reuseB<float, tilM, tilN, tilK, 24, 4, 4>(dst, src0, src1, globM, globN, globK);
-        }else if(Kb >= 2 && Nb >= 2){
-          matmul_dynamic_reuseB<float, tilM, tilN, tilK, 24, 2, 2>(dst, src0, src1, globM, globN, globK);
-        }else{
-          matmul_dynamic_reuseB<float, tilM, tilN, tilK, 24, 1, 1>(dst, src0, src1, globM, globN, globK);
-        }
-      }
+      matmul_dynamic_reuseA<float, tilM, tilN, tilK>(dst, src0, src1, globM, globN, globK);
     #endif
     BENCHEND;
 
@@ -165,30 +142,7 @@ int main() {
     #elif defined(MASK_FP16_DYNAMIC)
       matmul_dynamic_new<datatype, tilM, tilN, tilK>(dst, src0, src1, globM, globN, globK);
     #elif defined(MASK_FP16_DYNAMIC_REUSE)
-      int Mb = (globM + tilM - 1) / tilM;
-      int Nb = (globN + tilN - 1) / tilN;
-      int Kb = (globK + tilK - 1) / tilK;
-      if((Mb * Kb) > (Kb * Nb)){
-        if(Mb >= 8 && Kb >= 8){
-          matmul_dynamic_reuseA<datatype, tilM, tilN, tilK,24, 3, 8>(dst, src0, src1, globM, globN, globK);
-        }else if(Mb >= 4 && Kb >= 4){
-          matmul_dynamic_reuseA<datatype, tilM, tilN, tilK,24, 4, 4>(dst, src0, src1, globM, globN, globK);
-        }else if(Mb >= 2 && Kb >= 2){
-          matmul_dynamic_reuseA<datatype, tilM, tilN, tilK,24, 2, 2>(dst, src0, src1, globM, globN, globK);
-        }else{
-          matmul_dynamic_reuseA<datatype, tilM, tilN, tilK,24, 1, 1>(dst, src0, src1, globM, globN, globK);
-        }
-      }else{
-        if(Kb >= 8 && Nb >= 8){
-          matmul_dynamic_reuseB<datatype, tilM, tilN, tilK, 24, 8, 3>(dst, src0, src1, globM, globN, globK);
-        }else if(Kb >= 4 && Nb >= 4){
-          matmul_dynamic_reuseB<datatype, tilM, tilN, tilK, 24, 4, 4>(dst, src0, src1, globM, globN, globK);
-        }else if(Kb >= 2 && Nb >= 2){
-          matmul_dynamic_reuseB<datatype, tilM, tilN, tilK, 24, 2, 2>(dst, src0, src1, globM, globN, globK);
-        }else{
-          matmul_dynamic_reuseB<datatype, tilM, tilN, tilK, 24, 1, 1>(dst, src0, src1, globM, globN, globK);
-        }
-      }
+      matmul_dynamic_reuseA<datatype, tilM, tilN, tilK>(dst, src0, src1, globM, globN, globK);
     #endif
     BENCHEND;
 
@@ -231,30 +185,7 @@ int main() {
     #elif defined(MASK_FP8_DYNAMIC)
       matmul_dynamic_new<__fp8_e4m3, tilM, tilN, tilK>(dst, src0, src1, globM, globN, globK);
     #elif defined(MASK_FP8_DYNAMIC_REUSE)
-      int Mb = (globM + tilM - 1) / tilM;
-      int Nb = (globN + tilN - 1) / tilN;
-      int Kb = (globK + tilK - 1) / tilK;
-      if((Mb * Kb) > (Kb * Nb)){
-        if(Mb >= 8 && Kb >= 8){
-          matmul_dynamic_reuseA<__fp8_e4m3, tilM, tilN, tilK,24, 3, 8>(dst, src0, src1, globM, globN, globK);
-        }else if(Mb >= 4 && Kb >= 4){
-          matmul_dynamic_reuseA<__fp8_e4m3, tilM, tilN, tilK,24, 4, 4>(dst, src0, src1, globM, globN, globK);
-        }else if(Mb >= 2 && Kb >= 2){
-          matmul_dynamic_reuseA<__fp8_e4m3, tilM, tilN, tilK,24, 2, 2>(dst, src0, src1, globM, globN, globK);
-        }else{
-          matmul_dynamic_reuseA<__fp8_e4m3, tilM, tilN, tilK,24, 1, 1>(dst, src0, src1, globM, globN, globK);
-        }
-      }else{
-        if(Kb >= 8 && Nb >= 8){
-          matmul_dynamic_reuseB<__fp8_e4m3, tilM, tilN, tilK, 24, 8, 3>(dst, src0, src1, globM, globN, globK);
-        }else if(Kb >= 4 && Nb >= 4){
-          matmul_dynamic_reuseB<__fp8_e4m3, tilM, tilN, tilK, 24, 4, 4>(dst, src0, src1, globM, globN, globK);
-        }else if(Kb >= 2 && Nb >= 2){
-          matmul_dynamic_reuseB<__fp8_e4m3, tilM, tilN, tilK, 24, 2, 2>(dst, src0, src1, globM, globN, globK);
-        }else{
-          matmul_dynamic_reuseB<__fp8_e4m3, tilM, tilN, tilK, 24, 1, 1>(dst, src0, src1, globM, globN, globK);
-        }
-      }
+      matmul_dynamic_reuseA<__fp8_e4m3, tilM, tilN, tilK>(dst, src0, src1, globM, globN, globK);
     #endif
     BENCHEND;
 
