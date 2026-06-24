@@ -1,9 +1,0 @@
-#! /bin/bash
-
-make TESTCASE=linear MODE=bis DIN1=64  DIN2=128 DOUT=512  bias=off
-make TESTCASE=linear MODE=bis DIN1=128 DIN2=64  DOUT=512  bias=off
-make TESTCASE=linear MODE=bis DIN1=64 DIN2=64 DOUT=256  bias=off
-
-make TESTCASE=linear MODE=bis DIN1=64  DIN2=128 DOUT=512  bias=on
-make TESTCASE=linear MODE=bis DIN1=128 DIN2=64  DOUT=512  bias=on
-make TESTCASE=linear MODE=bis DIN1=64 DIN2=64 DOUT=256  bias=on
