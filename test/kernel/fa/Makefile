@@ -1,4 +1,4 @@
-# fa testcases: fa_HIF4_HIF4, fa_mask
+# fa testcases: fa_HIF4_HIF4, fa_2d_unroll
 
 ifeq ($(TESTCASE), fa_HIF4_HIF4)
    SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_hif4.cpp
@@ -30,15 +30,23 @@ ifeq ($(TESTCASE), fa_HIF4_HIF4)
    endif
 endif
 
-ifeq ($(TESTCASE), fa_mask)
-   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_mask.cpp
-   DEFINES += -DBatSz=$(B) -DglobS=$(S) -DglobD=$(D) -DtilM=$(tM) -DtilK=$(tK)
-   ifneq ($(MODE), )
-      DEFINES += -DMODE=\"$(MODE)\"
-   else
-      DEFINES += -DMODE=\"ALL\"
+ifeq ($(TESTCASE), fa_2d_unroll)
+   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_2d_unroll.cpp
+   Sq = 512
+   Skv = 512
+   ifneq ($(Sq), )
+      Sq = $(Sq)
    endif
-   TARGET = $(ELF_HEAD)/$(TESTCASE)_$(MODE)_B$(B)_S$(S)_D$(D)_tM$(tM)_tK$(tK).elf
+   ifneq ($(Skv), )
+      Skv = $(Skv)
+   endif
+   Tm = 128
+   Tk = 128
+   DEFINES += -DTsq=$(Sq)
+   DEFINES += -DTskv=$(Skv)
+   DEFINES += -DTm=$(Tm)
+   DEFINES += -DTk=$(Tk)
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk).elf
 endif
 
 include ../../common/Makefile.common

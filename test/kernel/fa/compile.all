@@ -2,11 +2,10 @@
 # Flash Attention operator test cases
 
 # ============================================
-# fa_mask: Flash attention with mask support
-# 注意：fa_mask 当前有编译错误，暂时注释
+# fa_2d_unroll: 2D unrolled flash attention
 # ============================================
-# make TESTCASE=fa_mask MODE=ALL B=1 S=32 D=256 tM=16 tK=16
-# make TESTCASE=fa_mask MODE=ALL B=1 S=64 D=256 tM=32 tK=32
+make TESTCASE=fa_2d_unroll Sq=256 Skv=512 Tm=128 Tk=128
+make TESTCASE=fa_2d_unroll Sq=512 Skv=512 Tm=128 Tk=128
 
 # ============================================
 # fa_HIF4_HIF4: HIF4 quantized flash attention
