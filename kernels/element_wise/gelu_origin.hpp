@@ -1,5 +1,5 @@
 #include <common/pto_tileop.hpp>
-#include "../test/accelerator/include/accelerator_fusion.h"
+#include <benchmark_support/npu/npu_fusion.h>
 
 #include "template_asm.h"
 #include <cstdint>
