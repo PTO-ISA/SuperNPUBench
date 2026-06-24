@@ -5,7 +5,7 @@
 
 #include "fileop.h"
 //#include "reduction/reducesum_rowvec.hpp"
-#include "reduction/reducesum_rowvec_single_tree_opt.hpp"
+#include "reduction/reducesum_rowvec_single_tree_opt_2.hpp"
 
 
 
