@@ -441,19 +441,19 @@ void __vec__ normalize(
     blkv_get_tile_ptr(out_cast)[idx] = static_cast<typename tileO_cast::DType>( (blkv_get_tile_ptr(rescale_out)[idx] + blkv_get_tile_ptr(out)[idx]) /  blkv_get_tile_ptr(sum)[idx_sum] );
 }
 
-#include "accelerator_fa_fp4.h"
-#include "accelerator_fa_opt1.h"
-#include "accelerator_fa_opt2.h"
-#include "accelerator_fa_opt3.h"
-#include "accelerator_fa_opt4.h"
-#include "accelerator_fa_dcore.h"
-#include "accelerator_fa_2d_unroll.h"
+#include "fa_fp4.h"
+#include "fa_opt1.h"
+#include "fa_opt2.h"
+#include "fa_opt3.h"
+#include "fa_opt4.h"
+#include "fa_dcore.h"
+#include "fa_2d_unroll.h"
 #ifdef _2D_UNROLL_PTO
-#include "accelerator_fa_2d_unroll_pto.h"
+#include "fa_2d_unroll_pto.h"
 #endif
-#include "accelerator_fa_template_2d_unroll.h"
-#include "accelerator_fa_dynamic.h"
-#include "accelerator_fa_manual.h"
+#include "fa_template_2d_unroll.h"
+#include "fa_dynamic.h"
+#include "fa_manual.h"
 
 template <int S, int D, int tM, int tK>
 void flashsoftmax(float *input, float *max, float *sum, float *input_scale, uint16_t *bitmask_gm, __half *output) {
