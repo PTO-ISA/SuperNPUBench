@@ -1,115 +1,181 @@
 # SuperNPUBench
 
-SuperNPUBench is a kernel and benchmark workspace for LinxISA/PTO-style tile
-programming experiments. The repository is organized around reusable kernels
-and make-driven test suites.
+SuperNPUBench is a high-performance operator library and benchmark platform for LinxISA/PTO-style tile programming. This repository contains reusable kernel implementations and make-driven test suites.
 
-## Repository Map
+## Repository Structure
 
-| Path | Purpose |
-| --- | --- |
-| [`kernels`](kernels) | Reusable kernel implementations, grouped by operation type. |
-| [`test/common`](test/common) | Shared make harness, platform selection, compiler flags, and simulator targets. |
-| [`test/accelerator`](test/accelerator) | Accelerator-oriented benchmark and validation suites (fusion, include). |
-| [`test/kernel`](test/kernel) | Kernel benchmark and validation suites for various operations. |
+```
+SuperNPUBench/
+├── kernels/           # Operator implementations (header-only)
+├── test/
+│   ├── common/        # Common build system
+│   └── kernel/        # Operator test suites
+└── output/            # Build artifacts (not tracked)
+```
 
-### Kernel Implementations
+## Operator Overview
 
-The [`kernels`](kernels) directory contains header-only implementations:
+This repository implements 8 core operator categories with 59 typical configurations:
 
-| Directory | Operations |
-| --- | --- |
-| [`kernels/broadcast`](kernels/broadcast) | Broadcast operations with various shapes and configurations. |
-| [`kernels/concat`](kernels/concat) | Concat-gather and concat-scatter operations. |
-| [`kernels/element_wise`](kernels/element_wise) | Element-wise operations (GELU, etc.). |
-| [`kernels/fa`](kernels/fa) | Flash attention implementations. |
-| [`kernels/gather`](kernels/gather) | Gather operations. |
-| [`kernels/matmul`](kernels/matmul) | Matrix multiplication variants. |
-| [`kernels/reduction`](kernels/reduction) | Reduction operations (max, sum). |
-| [`kernels/transpose`](kernels/transpose) | Transpose operations. |
+| Operator | Count | Typical Scenarios | Description |
+|----------|-------|-------------------|-------------|
+| **matmul** | 13 | FP4/BF16/FP32/FP16/FP8 matrix multiplication | Supports quantization, mixed precision, various reuse strategies |
+| **fa** | 9 | Flash Attention | 2D unroll, HIF4 quantization, various X/Y configs |
+| **transpose** | 8 | 3D~6D tensor transpose | Supports multiple data types and dimension configs |
+| **reduction** | 8 | Row/column reduction (max/sum) | Supports int32_t and __half data types |
+| **gelu** | 8 | GELU activation | Supports exact mode and tanh approximation |
+| **broadcast** | 5 | 2D~5D broadcast | Supports vectorized versions |
+| **gather** | 4 | Data gathering | Large-scale input, power-of-2 dimensions |
+| **concat** | 4 | Data concatenation | gather/scatter modes |
 
-### Test Suites
+See [`kernels/README.md`](kernels/README.md) for detailed operator implementation details.
 
-The [`test/kernel`](test/kernel) directory contains test suites for:
+## Quick Start
 
-- `broadcast` - Broadcast operation tests
-- `concat` - Concat-gather and concat-scatter tests
-- `control` - Control flow tests (hash table lookups)
-- `element_wise` - Element-wise operation tests (GELU)
-- `fa` - Flash attention tests
-- `gather` - Gather operation tests
-- `matmul` - Matrix multiplication tests
-- `reduction` - Reduction operation tests (max, sum)
-- `sort` - Sorting tests (topk)
-- `transpose` - Transpose operation tests
+### 1. Environment Setup
 
-## Quick Navigation
+Requires Linx toolchain (linx_blockisa_llvm_musl):
 
-- To add or update reusable compute code, use the matching domain under
-  [`kernels`](kernels).
-- To run kernel tests, use the `compile.all` files in the relevant
-  [`test/kernel`](test/kernel) subdirectories.
-- For accelerator-specific tests, see [`test/accelerator`](test/accelerator).
+```bash
+export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
+```
 
-## Building Tests
+### 2. Compile Single Operator
 
-Most test directories include [`test/common/Makefile.common`](test/common/Makefile.common).
-The common harness is controlled mainly by `TESTCASE`, `PLAT`,
-`COMPILER_DIR`, and `QEMU`.
-
-```sh
+```bash
 cd test/kernel/matmul
-make clean
-make TESTCASE=matmul TYPE=HIF4_HIF4 M=256 N=2048 K=2048 tM=64 tN=64 tK=128 \
-    COMPILER_DIR=/path/to/linx/compiler/bin
+
+# FP4 x FP4 matrix multiplication
+make TESTCASE=matmul TYPE=HIF4_HIF4 M=256 N=2048 K=2048 tM=128 tN=128 tK=128
+
+# BF16 x FP4 mixed precision
+make TESTCASE=matmul TYPE=A16W4 M=256 N=2048 K=2048 tM=128 tN=128 tK=128
+
+# FP32 mask matmul
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=64 tN=64 tK=64
 ```
 
-| Variable | Meaning |
-| --- | --- |
-| `TESTCASE` | Test case name to build. |
-| `PLAT=linx` | Builds for the Linx target and defines `__linx`. |
-| `COMPILER_DIR` | Directory containing `clang`, `clang++`, `llvm-objdump`, and related tools. |
-| `QEMU` | Simulator binary used by `make sim` for Linx-targeted test execution. |
+### 3. Batch Compilation
 
-Common targets:
+Each operator directory has a `compile.all` script for batch compiling typical configurations:
 
-```sh
-make TESTCASE=<case> all
-make TESTCASE=<case> diss
-make TESTCASE=<case> sim
-make TESTCASE=<case> debug
-make clean
-make clean_all
-```
-
-## Batch Suites
-
-Many suites provide a local `compile.all` file. Run these from the suite
-directory so relative paths and local make variables resolve as intended.
-
-Examples:
-
-```sh
+```bash
 cd test/kernel/matmul && bash compile.all
+cd test/kernel/fa && bash compile.all
 cd test/kernel/broadcast && bash compile.all
-cd test/accelerator/fusion && bash compile.all
 ```
 
-## Adding Work
+### 4. Full Compilation
 
-Use the existing directory shape when adding code:
+Use the `compile_all.sh` script in the root directory to compile all operators:
 
-1. Add reusable compute kernels under the matching [`kernels`](kernels) domain.
-2. Add focused tests under the relevant suite in [`test/kernel`](test/kernel).
-3. Add the case to the local `compile.all` file when it should be part of the
-   batch suite.
+```bash
+./compile_all.sh
+```
 
-New make-driven test directories should keep the local `Makefile` small and
-include [`test/common/Makefile.common`](test/common/Makefile.common) for shared
-platform flags, output paths, simulator targets, and cleanup behavior.
+Build artifacts are output to `output/kernel/<operator>/elf/` directory.
 
-## Generated Files
+## Build System
 
-Do not commit generated files from `output/`, object files, executable test
-artifacts, local logs, or disassembly files. Keep source changes in `kernels/`
-and `test/`.
+### Makefile Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `TESTCASE` | Test case name | `matmul`, `fa_2d_unroll` |
+| `TYPE` | Operator type (matmul only) | `HIF4_HIF4`, `A16W4`, `MASK` |
+| `MODE` | Operator mode | `MASK_FP32`, `BF16x2_NOGATHER` |
+| `M/N/K` | Matrix dimensions | `M=256 N=2048 K=2048` |
+| `tM/tN/tK` | Tile sizes | `tM=128 tN=128 tK=128` |
+| `COMPILER_DIR` | Compiler path | `/path/to/linx/bin` |
+
+### Build Targets
+
+```bash
+make TESTCASE=<case> all      # Compile
+make TESTCASE=<case> diss     # Generate disassembly
+make TESTCASE=<case> sim      # Run in simulator
+make TESTCASE=<case> debug    # Debug mode
+make clean                    # Clean current operator
+make clean_all                # Clean all
+```
+
+See [`test/kernel/README.md`](test/kernel/README.md) for detailed build system documentation.
+
+## Directory Structure
+
+### kernels/ - Operator Implementations
+
+Contains header-only operator implementations organized by function:
+
+- [`kernels/matmul/`](kernels/matmul/) - Matrix multiplication (general, quantized, mixed precision)
+- [`kernels/fa/`](kernels/fa/) - Flash Attention (2D unroll, quantized versions)
+- [`kernels/broadcast/`](kernels/broadcast/) - Broadcast operations (2D~5D)
+- [`kernels/reduction/`](kernels/reduction/) - Reduction operations (max/sum)
+- [`kernels/gather/`](kernels/gather/) - Data gathering
+- [`kernels/concat/`](kernels/concat/) - Data concatenation
+- [`kernels/transpose/`](kernels/transpose/) - Transpose operations (3D~6D)
+- [`kernels/element_wise/`](kernels/element_wise/) - Element-wise operations (GELU)
+
+### test/kernel/ - Test Suites
+
+Contains test code and build scripts for each operator:
+
+- Each operator directory contains `Makefile`, `compile.all`, `src/`
+- `compile.all` defines typical scenario compilation configurations
+- Build artifacts output to `output/kernel/<operator>/elf/`
+
+See [`test/kernel/README.md`](test/kernel/README.md) for detailed test documentation.
+
+## Known Issues
+
+### 1. Compiler Crash (Issue #6)
+
+`fa_2d_unroll` triggers compiler assertion failure with `X=1, Y=1` and `X=2, Y=1` configurations:
+
+```
+Assertion failed: (Reg != 0 && "LinxV5 CallingConv Fail!")
+```
+
+**Workaround**: Avoid using `Ydim=1` configurations.
+
+### 2. Control/Sort Operators
+
+These operators require additional data files (`.data`) which are not currently included in the repository.
+
+## Development Guide
+
+### Adding New Operators
+
+1. Add header-only implementation in `kernels/<operator>/`
+2. Create test directory in `test/kernel/<operator>/`
+3. Write `Makefile` (refer to existing operators)
+4. Write `compile.all` (define typical scenarios)
+5. Add test code in `test/kernel/<operator>/src/`
+
+### Code Standards
+
+- Kernel implementations use header-only approach
+- Use PTO tile programming paradigm
+- Follow existing directory structure and naming conventions
+- Build artifacts are not tracked (already in `.gitignore`)
+
+## Toolchain
+
+- **Compiler**: linx_blockisa_llvm_musl (clang-15, linx64v5-musl)
+- **Compiler flags**: `-mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true -std=c++20`
+- **Target architecture**: Linx64 V5
+
+## Compilation Report
+
+See [`COMPILATION_REPORT.md`](COMPILATION_REPORT.md) for detailed compilation statistics and operator descriptions.
+
+Current statistics:
+- **Total**: 59 ELF files
+- **Operators**: 8 categories
+- **Status**: All compiled successfully
+
+## Related Links
+
+- [Compilation Report](COMPILATION_REPORT.md) - Detailed compilation statistics
+- [Operator Implementations](kernels/README.md) - Kernel implementation details
+- [Test Suites](test/kernel/README.md) - Test system documentation
