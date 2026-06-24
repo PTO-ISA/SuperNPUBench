@@ -78,6 +78,17 @@ ifeq ($(TESTCASE), fa_HIF4_HIF4)
    endif
 endif
 
+ifeq ($(TESTCASE), fa_mask)
+   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_mask.cpp
+   DEFINES += -DBatSz=$(B) -DglobS=$(S) -DglobD=$(D) -DtilM=$(tM) -DtilK=$(tK)
+   ifneq ($(MODE), )
+      DEFINES += -DMODE=\"$(MODE)\"
+   else
+      DEFINES += -DMODE=\"ALL\"
+   endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_$(MODE)_B$(B)_S$(S)_D$(D)_tM$(tM)_tK$(tK).elf
+endif
+
 include ../../common/Makefile.common
 
 clean:

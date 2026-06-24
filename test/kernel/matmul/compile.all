@@ -1,3 +1,21 @@
+#!/bin/bash
+# Matmul operator test cases
+#
+# Supported TYPE values:
+#   - HIF4_HIF4: FP4 x FP4 matmul with microscaling factors
+#   - A16W4: BF16 x FP4 mixed precision matmul
+#
+# Supported VER values (for HIF4_HIF4):
+#   - BASE: Default implementation with gather
+#   - MX_NOGATHER: Implementation without gather
+#   - MX_NOGATHER_REUSEA: Optimized version with A tile reuse
+#
+# Note: compile_gemm.all, compile_matmul.all, and accelerator_compile/
+# are legacy scripts with incompatible parameters. Use this script instead.
+
+# ============================================
+# HIF4_HIF4: FP4 x FP4 matmul (BASE)
+# ============================================
 make TESTCASE=matmul TYPE=HIF4_HIF4 M=256 N=2048 K=2048 tM=64 tN=64 tK=64
 make TESTCASE=matmul TYPE=HIF4_HIF4 M=256 N=2048 K=2048 tM=64 tN=64 tK=128
 make TESTCASE=matmul TYPE=HIF4_HIF4 M=256 N=2048 K=2048 tM=64 tN=64 tK=256
