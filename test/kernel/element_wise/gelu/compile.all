@@ -1,2 +1,49 @@
-#! /bin/bash
-make TESTCASE=gelu DTYPE=__bf16 tMs=2048 gMs=24*8*1024 SHAPE_NAME=24_8_1024 Approximate=false diss
+#!/bin/bash
+# GELU operator test cases
+# Typical scenarios: different data types, shapes, and approximation modes
+
+COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
+
+# ============================================
+# BF16, exact mode
+# ============================================
+# 3D shape: (24, 8, 1024)
+make TESTCASE=gelu COMPILER_DIR=$COMPILER_DIR DTYPE=__bf16 tMs=2048 gMs=24*8*1024 \
+    SHAPE_NAME=24_8_1024 Approximate=false
+
+# 2D shape: (128, 1024)
+make TESTCASE=gelu COMPILER_DIR=$COMPILER_DIR DTYPE=__bf16 tMs=2048 gMs=128*1024 \
+    SHAPE_NAME=128_1024 Approximate=false
+
+# ============================================
+# BF16, approximate mode
+# ============================================
+# 3D shape: (24, 8, 1024)
+make TESTCASE=gelu COMPILER_DIR=$COMPILER_DIR DTYPE=__bf16 tMs=2048 gMs=24*8*1024 \
+    SHAPE_NAME=24_8_1024 Approximate=true
+
+# 2D shape: (128, 1024)
+make TESTCASE=gelu COMPILER_DIR=$COMPILER_DIR DTYPE=__bf16 tMs=2048 gMs=128*1024 \
+    SHAPE_NAME=128_1024 Approximate=true
+
+# ============================================
+# FP16, exact mode
+# ============================================
+# 3D shape: (24, 8, 1024)
+make TESTCASE=gelu COMPILER_DIR=$COMPILER_DIR DTYPE=__half tMs=2048 gMs=24*8*1024 \
+    SHAPE_NAME=24_8_1024 Approximate=false
+
+# 2D shape: (128, 1024)
+make TESTCASE=gelu COMPILER_DIR=$COMPILER_DIR DTYPE=__half tMs=2048 gMs=128*1024 \
+    SHAPE_NAME=128_1024 Approximate=false
+
+# ============================================
+# FP16, approximate mode
+# ============================================
+# 3D shape: (24, 8, 1024)
+make TESTCASE=gelu COMPILER_DIR=$COMPILER_DIR DTYPE=__half tMs=2048 gMs=24*8*1024 \
+    SHAPE_NAME=24_8_1024 Approximate=true
+
+# 2D shape: (128, 1024)
+make TESTCASE=gelu COMPILER_DIR=$COMPILER_DIR DTYPE=__half tMs=2048 gMs=128*1024 \
+    SHAPE_NAME=128_1024 Approximate=true

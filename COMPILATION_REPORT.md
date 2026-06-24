@@ -6,22 +6,22 @@
 
 ## 编译统计
 
-**总计生成 ELF 文件**: 158 个
+**总计生成 ELF 文件**: 59 个
 
 | 算子类别 | ELF 数量 | 状态 |
 |---------|---------|------|
-| matmul | 125 | ✓ 成功 |
-| fa | 16 | ✓ 成功 |
+| matmul | 13 | ✓ 成功 |
+| fa | 9 | ✓ 成功 |
+| transpose | 8 | ✓ 成功 |
+| reduction | 8 | ✓ 成功 |
+| gelu | 8 | ✓ 成功 |
 | broadcast | 5 | ✓ 成功 |
-| reduction | 4 | ✓ 成功 |
 | gather | 4 | ✓ 成功 |
-| concat | 2 | ✓ 成功 |
-| transpose | 1 | ✓ 成功 |
-| element_wise | 1 | ✓ 成功 |
+| concat | 4 | ✓ 成功 |
 
 ## 算子详情
 
-### 1. Matmul (125 个 ELF)
+### 1. Matmul (13 个 ELF)
 
 **Kernel 实现**: `kernels/matmul/`
 - `matmul.hpp` - 通用 matmul 实现（mask、dynamic、vec 等变体）
@@ -33,12 +33,12 @@
 - `matmul.cpp` - 通用 matmul（支持多种数据类型和变体）
 
 **支持的类型**:
-- `TYPE=HIF4_HIF4`: FP4 x FP4 量化 matmul
-- `TYPE=A16W4`: BF16 x FP4 混合精度 matmul
-- `TYPE=MASK`: 通用 matmul，支持多种模式：
-  - `MASK_FP32`, `MASK_FP32_REUSEA`, `MASK_FP32_DYNAMIC`, `MASK_FP32_DYNAMIC_REUSE`
-  - `MASK_FP16`, `MASK_FP16_REUSEA`, `MASK_FP16_DYNAMIC`
-  - `MASK_FP8`, `MASK_FP8_REUSEA`, `MASK_FP8_DYNAMIC`, `MX_FP8`
+- `TYPE=HIF4_HIF4`: FP4 x FP4 量化 matmul (4 configs)
+- `TYPE=A16W4`: BF16 x FP4 混合精度 matmul (3 configs)
+- `TYPE=MASK`: 通用 matmul，支持多种模式 (6 configs):
+  - `MASK_FP32`, `MASK_FP32_REUSEA`, `MASK_FP32_DYNAMIC`
+  - `MASK_FP16`, `MASK_FP16_REUSEA`
+  - `MASK_FP8`, `MASK_FP8_REUSEA`, `MX_FP8`
 
 **编译示例**:
 ```bash
@@ -52,7 +52,7 @@ make TESTCASE=matmul TYPE=A16W4 M=256 N=2048 K=2048 tM=128 tN=128 tK=128
 make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=64 tN=64 tK=64
 ```
 
-### 2. Flash Attention (16 个 ELF)
+### 2. Flash Attention (9 个 ELF)
 
 **Kernel 实现**: `kernels/fa/`
 - `fa_2d_unroll.hpp` - 基础 2D 展开版本
@@ -64,8 +64,8 @@ make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=64 tN=64 tK=6
 - `fa_utils.h` - 通用工具函数
 
 **测试文件**: `test/kernel/fa/src/`
-- `fa_2d_unroll.cpp` - 2D 展开测试
-- `fa_hif4.cpp` - HIF4 量化测试
+- `fa_2d_unroll.cpp` - 2D 展开测试 (8 configs)
+- `fa_hif4.cpp` - HIF4 量化测试 (1 config)
 
 **支持的配置**:
 - `X=1, Y=2/4`
@@ -75,18 +75,22 @@ make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=64 tN=64 tK=6
 **已知问题**:
 - `X=1, Y=1` 和 `X=2, Y=1` 会导致编译器崩溃（见 Issue #6）
 
-### 3. Broadcast (5 个 ELF)
+### 3. Transpose (8 个 ELF)
 
-**Kernel 实现**: `kernels/broadcast/`
-- `broadcast.hpp` - 基础广播
-- `broadcast_07.hpp`, `broadcast_019.hpp`, `broadcast_039.hpp` - 不同维度配置
-- `broadcast_Hunyuan.hpp` - Hunyuan 模型优化
-- `broadcast_vec_*.hpp` - 向量化版本
+**Kernel 实现**: `kernels/transpose/`
+- `transpose.hpp` - 基础转置
+- `transpose_vector_007.hpp`, `transpose_vector_050.hpp` - 向量化版本
 
-**测试文件**: `test/kernel/broadcast/src/`
-- 对应各种 broadcast 配置
+**测试文件**: `test/kernel/transpose/src/transpose.cpp`
 
-### 4. Reduction (4 个 ELF)
+**支持的配置**:
+- 3D transpose (2 configs)
+- 4D transpose (2 configs)
+- 5D transpose (1 config)
+- 6D transpose (2 configs)
+- 不同数据类型 (__half, int32_t)
+
+### 4. Reduction (8 个 ELF)
 
 **Kernel 实现**: `kernels/reduction/`
 - `reducemax_colvec.hpp` - 列方向最大值
@@ -94,25 +98,57 @@ make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=64 tN=64 tK=6
 - `reducesum_colvec.hpp` - 列方向求和
 - `reducesum_rowvec.hpp` - 行方向求和
 
-### 5. Gather (4 个 ELF)
+**测试配置**:
+- reducemax_col: 2 configs (int32_t, __half)
+- reducemax_row: 2 configs (int32_t, __half)
+- reducesum_col: 2 configs (int32_t, __half)
+- reducesum_row: 2 configs (int32_t, __half)
+
+### 5. GELU (8 个 ELF)
+
+**Kernel 实现**: `kernels/element_wise/`
+- `gelu.hpp` - 新版多项式拟合
+- `gelu_origin.hpp` - 旧版多项式拟合 & tanh 近似
+
+**测试文件**: `test/kernel/element_wise/gelu/src/gelu.cpp`
+
+**支持的配置**:
+- 数据类型: __bf16, __half
+- 形状: 24_8_1024 (3D), 128_1024 (2D)
+- 近似模式: false (exact), true (tanh approximation)
+
+### 6. Broadcast (5 个 ELF)
+
+**Kernel 实现**: `kernels/broadcast/`
+- `broadcast.hpp` - 基础广播
+- `broadcast_07.hpp`, `broadcast_019.hpp`, `broadcast_039.hpp` - 不同维度配置
+- `broadcast_Hunyuan.hpp` - Hunyuan 模型优化
+- `broadcast_vec_*.hpp` - 向量化版本
+
+**测试配置**:
+- 2D broadcast (1 config)
+- 3D broadcast (1 config)
+- 4D broadcast (2 configs)
+- 5D broadcast (1 config)
+
+### 7. Gather (4 个 ELF)
 
 **Kernel 实现**: `kernels/gather/gather.hpp`
 
-### 6. Concat (2 个 ELF)
+**测试配置**:
+- 大规模输入 (200000, 875000)
+- 中等规模输入 (754)
+- 2 的幂次维度 (131072)
+
+### 8. Concat (4 个 ELF)
 
 **Kernel 实现**: `kernels/concat/`
 - `concat_gather.hpp` - 拼接-收集
 - `concat_scatter.hpp` - 拼接-散射
 
-### 7. Transpose (1 个 ELF)
-
-**Kernel 实现**: `kernels/transpose/`
-- `transpose.hpp` - 基础转置
-- `transpose_vector_007.hpp`, `transpose_vector_050.hpp` - 向量化版本
-
-### 8. Element-wise (1 个 ELF)
-
-**Kernel 实现**: `kernels/element_wise/gelu.hpp`
+**测试配置**:
+- concat_gather: 2 configs (int32_t, __half)
+- concat_scatter: 2 configs (int32_t, __half)
 
 ## 已知问题
 
@@ -144,7 +180,7 @@ SuperNPUBench/
 ├── kernels/                    # Kernel 实现
 │   ├── broadcast/             # 广播算子
 │   ├── concat/                # 拼接算子
-│   ├── element_wise/          # 逐元素算子
+│   ├── element_wise/          # 逐元素算子 (gelu)
 │   ├── fa/                    # Flash Attention
 │   ├── gather/                # 收集算子
 │   ├── matmul/                # 矩阵乘法
@@ -179,3 +215,6 @@ SuperNPUBench/
 - 增强 matmul 支持：添加 `TYPE=MASK` 支持多种数据类型
 - 修复工具链问题：创建 `fa_utils.h` 提取共享函数
 - 清理 compile.all：注释掉冗余编译配置
+- 修复 gelu 编译：移除对已删除 `fa_fusion.h` 的依赖
+- 扩展各算子典型场景：transpose (8), reduction (8), gelu (8)
+- 精简 matmul 编译目标：从 125 个减少到 13 个典型配置

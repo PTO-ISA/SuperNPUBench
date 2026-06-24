@@ -1,5 +1,12 @@
-#! /bin/bash
-make    TESTCASE=reducemax_row DType=int32_t tM_s=32 tN_s=128 \
-        gM_s=1024 gN_s=8192 \
-        diss
+#!/bin/bash
+# Reducemax row-wise reduction test cases
 
+COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
+
+# Large matrix, int32_t
+make TESTCASE=reducemax_row COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=32 tN_s=128 \
+    gM_s=1024 gN_s=8192
+
+# Large matrix, __half
+make TESTCASE=reducemax_row COMPILER_DIR=$COMPILER_DIR DType=__half tM_s=32 tN_s=128 \
+    gM_s=1024 gN_s=8192

@@ -1,17 +1,39 @@
-#! /bin/bash
-    
-make    TESTCASE=concat_gather DType=int32_t MAX_DIM=8 tM=512 \
-        IN_SHAPE=64,2 OUT_SHAPE=64,2000 \
-        IN_SHAPE_NAME=64_2 OUT_SHAPE_NAME=64_2000 \
-        DATA_DIM=2 CONCAT_DIM=1 \
-        gIM=1000*64*2 gOM=64*2000 \
-        diss
+#!/bin/bash
+# Concat operator test cases
+# Typical scenarios: different data types and shapes
 
-make    TESTCASE=concat_scatter DType=int32_t MAX_DIM=8 tM=512 \
-        IN_SHAPE=64,2 OUT_SHAPE=64,2000 \
-        IN_SHAPE_NAME=64_2 OUT_SHAPE_NAME=64_2000 \
-        DATA_DIM=2 CONCAT_DIM=1 \
-        gIM=1000*64*2 gOM=64*2000 \
-        diss
+COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
 
-#make	TESTCASE=concat_gather PLAT=linx_new diss
+# ============================================
+# concat_gather: Typical scenarios
+# ============================================
+# Small shape, int32_t
+make TESTCASE=concat_gather COMPILER_DIR=$COMPILER_DIR DType=int32_t MAX_DIM=8 tM=512 \
+    IN_SHAPE=64,2 OUT_SHAPE=64,2000 \
+    IN_SHAPE_NAME=64_2 OUT_SHAPE_NAME=64_2000 \
+    DATA_DIM=2 CONCAT_DIM=1 \
+    gIM='1000*64*2' gOM='64*2000'
+
+# Medium shape, __half
+make TESTCASE=concat_gather COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=256,8 OUT_SHAPE=256,8000 \
+    IN_SHAPE_NAME=256_8 OUT_SHAPE_NAME=256_8000 \
+    DATA_DIM=2 CONCAT_DIM=1 \
+    gIM='4000*256*8' gOM='256*8000'
+
+# ============================================
+# concat_scatter: Typical scenarios
+# ============================================
+# Small shape, int32_t
+make TESTCASE=concat_scatter COMPILER_DIR=$COMPILER_DIR DType=int32_t MAX_DIM=8 tM=512 \
+    IN_SHAPE=64,2 OUT_SHAPE=64,2000 \
+    IN_SHAPE_NAME=64_2 OUT_SHAPE_NAME=64_2000 \
+    DATA_DIM=2 CONCAT_DIM=1 \
+    gIM='1000*64*2' gOM='64*2000'
+
+# Medium shape, __half
+make TESTCASE=concat_scatter COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=256,8 OUT_SHAPE=256,8000 \
+    IN_SHAPE_NAME=256_8 OUT_SHAPE_NAME=256_8000 \
+    DATA_DIM=2 CONCAT_DIM=1 \
+    gIM='4000*256*8' gOM='256*8000'

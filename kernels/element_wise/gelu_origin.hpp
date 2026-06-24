@@ -1,5 +1,4 @@
 #include <common/pto_tileop.hpp>
-#include "../fa/fa_fusion.h"
 
 #include "template_asm.h"
 #include <cstdint>
