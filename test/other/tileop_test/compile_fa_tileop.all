@@ -1,0 +1,17 @@
+#! /bin/bash
+
+make TESTCASE=fa_tileop MODE=tcvt_out_left row=256  col=256  trow=64 tcol=64
+
+make TESTCASE=fa_tileop MODE=tmuls_nz_left row=256  col=256  trow=64 tcol=64
+
+make TESTCASE=fa_tileop MODE=tromax_nz_left row=256  col=256  trow=64 tcol=64
+
+make TESTCASE=fa_tileop MODE=texpandcol_nz_out row=256  col=256  trow=64 tcol=64
+
+make TESTCASE=fa_tileop MODE=tmul_nz_out row=256  col=256  trow=64 tcol=64
+
+make TESTCASE=fa_tileop MODE=texpandcol_nz_left row=256  col=256  trow=64 tcol=64
+
+make TESTCASE=fa_tileop MODE=trowsum_nz_left row=256  col=256  trow=64 tcol=64
+
+make TESTCASE=fa_tileop MODE=tsub_nz_left row=256  col=256  trow=64 tcol=64

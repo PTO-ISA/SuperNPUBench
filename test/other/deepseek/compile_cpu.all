@@ -1,0 +1,64 @@
+#! /bin/bash
+
+make TESTCASE=split row=128 dim1=64 dim2=64 PLAT=cpu
+make TESTCASE=split row=256 dim1=64 dim2=128 PLAT=cpu
+make TESTCASE=split row=256 dim1=64 dim2=128 PLAT=cpu
+make TESTCASE=split row=1024 dim1=256 dim2=512 PLAT=cpu
+
+make TESTCASE=concat row=128 dim1=64 dim2=64 PLAT=cpu
+make TESTCASE=concat row=256 dim1=64 dim2=128 PLAT=cpu
+make TESTCASE=concat row=512 dim1=128 dim2=64 PLAT=cpu
+make TESTCASE=concat row=1024 dim1=256 dim2=512 PLAT=cpu
+
+make TESTCASE=permute row=128  dim0=2 dim1=64   dim2=64   dim3=32 PLAT=cpu
+make TESTCASE=permute row=256  dim0=2 dim1=64   dim2=128  dim3=32 PLAT=cpu
+make TESTCASE=permute row=512  dim0=2 dim1=128  dim2=64   dim3=32 PLAT=cpu
+make TESTCASE=permute row=1024 dim0=2 dim1=256  dim2=512  dim3=32 PLAT=cpu
+
+make TESTCASE=expand row=128  dim=64  ext_dim=32 PLAT=cpu
+make TESTCASE=expand row=256  dim=64  ext_dim=32 PLAT=cpu
+make TESTCASE=expand row=512  dim=128 ext_dim=32 PLAT=cpu
+make TESTCASE=expand row=1024 dim=128 ext_dim=32 PLAT=cpu
+
+make TESTCASE=rmsnorm M=1024  N=1024 tM=64  tN=64 PLAT=cpu
+make TESTCASE=rmsnorm M=1024  N=1024 tM=32  tN=64 PLAT=cpu
+make TESTCASE=rmsnorm M=1024  N=1024 tM=64  tN=32 PLAT=cpu
+make TESTCASE=rmsnorm M=1024  N=1024 tM=32  tN=32 PLAT=cpu
+
+make TESTCASE=rope ROW=1024 PE_DIM=128 PLAT=cpu
+make TESTCASE=rope ROW=1024 PE_DIM=64  PLAT=cpu
+make TESTCASE=rope ROW=1024 PE_DIM=32  PLAT=cpu
+make TESTCASE=rope ROW=1024 PE_DIM=256 PLAT=cpu
+
+make TESTCASE=projection BSZ=2 SLEN=128 DIM_IN=128  DIM_OUT=256  PLAT=cpu
+make TESTCASE=projection BSZ=2 SLEN=128 DIM_IN=256  DIM_OUT=128  PLAT=cpu
+make TESTCASE=projection BSZ=2 SLEN=128 DIM_IN=512  DIM_OUT=512  PLAT=cpu
+make TESTCASE=projection BSZ=2 SLEN=128 DIM_IN=1024 DIM_OUT=2048 PLAT=cpu
+
+make TESTCASE=mla PLAT=cpu
+
+#moe part
+make TESTCASE=topk ROW=64 DIM=32 TOPK=8  PLAT=cpu
+make TESTCASE=topk ROW=16 DIM=16 TOPK=16 PLAT=cpu
+make TESTCASE=topk ROW=32 DIM=32 TOPK=16 PLAT=cpu
+make TESTCASE=topk ROW=16 DIM=16 TOPK=4  PLAT=cpu
+ 
+make TESTCASE=gate bzs=2 slen=128 PLAT=cpu
+make TESTCASE=gate bsz=2 slen=256 PLAT=cpu
+make TESTCASE=gate bsz=4 slen=128 PLAT=cpu
+make TESTCASE=gate bsz=4 slen=256 PLAT=cpu
+
+make TESTCASE=mlp ROW=128 DIM=256 INTER_DIM=256 PLAT=cpu
+make TESTCASE=mlp ROW=128 DIM=256 INTER_DIM=512 PLAT=cpu
+make TESTCASE=mlp ROW=128 DIM=128 INTER_DIM=256 PLAT=cpu
+make TESTCASE=mlp ROW=128 DIM=128 INTER_DIM=512 PLAT=cpu
+
+make TESTCASE=mask ROW=64 DIM=8  IDX_DIM=4 EXT_DIM=4 PLAT=cpu 
+make TESTCASE=mask ROW=64 DIM=8  IDX_DIM=4 EXT_DIM=8 PLAT=cpu
+make TESTCASE=mask ROW=64 DIM=8  IDX_DIM=8 EXT_DIM=4 PLAT=cpu
+make TESTCASE=mask ROW=64 DIM=8  IDX_DIM=8 EXT_DIM=8 PLAT=cpu
+
+make TESTCASE=moe PLAT=cpu
+
+#transformer:mla+moe
+make TESTCASE=transformer
