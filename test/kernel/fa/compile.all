@@ -10,16 +10,6 @@ make TESTCASE=flash_attention MODE=ALL B=1 S=128 D=256 tM=16 tK=16
 # make TESTCASE=flash_attention MODE=ALL B=1 S=256 D=256 tM=32 tK=32
 
 # ============================================
-# fa_fusion: Fused flash attention with optimizations
-# 注意：fa_fusion 当前有编译错误，暂时注释
-# ============================================
-# make TESTCASE=fa dtype=fp16
-# make TESTCASE=fa dtype=fp16 opt1=on
-# make TESTCASE=fa dtype=fp16 opt2=on
-# make TESTCASE=fa dtype=fp16 opt3=on
-# make TESTCASE=fa dtype=fp16 opt4=on
-
-# ============================================
 # fa_mask: Flash attention with mask support
 # 注意：fa_mask 当前有编译错误，暂时注释
 # ============================================
