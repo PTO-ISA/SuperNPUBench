@@ -1046,4 +1046,4 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
     }
 }
 
-#include "fa_unalign_2d_unroll.h"
+#include "fa_unalign_2d_unroll.hpp"

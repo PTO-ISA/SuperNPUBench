@@ -1,7 +1,7 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "fileop.h"
-#include "fa/fa_2d_unroll.h"
+#include "fa/fa_2d_unroll.hpp"
 
 #define B 1
 #define H 1
