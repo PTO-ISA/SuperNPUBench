@@ -121,6 +121,26 @@ make TESTCASE=matmul TYPE=HIF4_HIF4 NAME=QuantBatchMatmulV3_292_hif4 M=48 N=96 K
 # make TESTCASE=matmul TYPE=HIF4_HIF4 NAME=QuantBatchMatmulV3_292_hif4 VER=MX_NOGATHER_REUSEA M=48 N=96 K=7168 tM=64 tN=64 tK=2048
 
 # ============================================
+# MASK: Generic matmul variants (uses matmul.cpp)
+# ============================================
+# FP32 variants
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=64 tN=64 tK=64
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32_REUSEA M=256 N=256 K=256 tM=64 tN=64 tK=64
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32_DYNAMIC M=256 N=256 K=256 tM=64 tN=64 tK=64
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32_DYNAMIC_REUSE M=256 N=256 K=256 tM=64 tN=64 tK=64
+
+# FP16 variants
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP16 M=256 N=256 K=256 tM=64 tN=64 tK=64
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP16_REUSEA M=256 N=256 K=256 tM=64 tN=64 tK=64
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP16_DYNAMIC M=256 N=256 K=256 tM=64 tN=64 tK=64
+
+# FP8 variants
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP8 M=256 N=256 K=256 tM=64 tN=64 tK=64
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP8_REUSEA M=256 N=256 K=256 tM=64 tN=64 tK=64
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP8_DYNAMIC M=256 N=256 K=256 tM=64 tN=64 tK=64
+make TESTCASE=matmul TYPE=MASK MODE=MX_FP8 M=256 N=256 K=256 tM=64 tN=64 tK=64
+
+# ============================================
 # QBMMV3_fit80_4096_4096_5120_hif4 (M=512/256, N=1280, K=4096)
 # ============================================
 make TESTCASE=matmul TYPE=HIF4_HIF4 NAME=QBMMV3_fit80_4096_4096_5120_hif4 M=512 N=1280 K=4096 tM=128 tN=128 tK=128
