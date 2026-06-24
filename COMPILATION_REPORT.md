@@ -4,7 +4,7 @@
 
 Full compilation of all kernel operators completed successfully.
 
-**Total ELF files generated: 130**
+**Total ELF files generated: 137**
 
 ## Compilation Results by Operator
 
@@ -17,8 +17,8 @@ Full compilation of all kernel operators completed successfully.
 | concat | 2 | ✓ Success |
 | transpose | 1 | ✓ Success |
 | element_wise | 1 | ✓ Success |
+| fa | 7 | ✓ Success |
 | control | 0 | ✗ Failed (missing data files) |
-| fa | 0 | ✗ Failed (no compile.all) |
 | sort | 0 | ✗ Failed (missing data files) |
 
 ## Changes Made
