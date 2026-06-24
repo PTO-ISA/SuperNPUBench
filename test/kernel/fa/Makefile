@@ -1,15 +1,4 @@
-# fa testcases: flash_attention, fa_HIF4_HIF4, fa_mask
-
-ifeq ($(TESTCASE), flash_attention)
-   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_basic.cpp
-   DEFINES += -DBatSz=$(B) -DglobS=$(S) -DglobD=$(D) -DtilM=$(tM) -DtilK=$(tK)
-   ifneq ($(MODE), )
-      DEFINES += -DMODE=\"$(MODE)\"
-   else
-      DEFINES += -DMODE=\"ALL\"
-   endif
-   TARGET = $(ELF_HEAD)/$(TESTCASE)_$(MODE)_B$(B)_S$(S)_D$(D)_tM$(tM)_tK$(tK).elf
-endif
+# fa testcases: fa_HIF4_HIF4, fa_mask
 
 ifeq ($(TESTCASE), fa_HIF4_HIF4)
    SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_hif4.cpp

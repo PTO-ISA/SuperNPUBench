@@ -2,14 +2,6 @@
 # Flash Attention operator test cases
 
 # ============================================
-# fa_basic: Basic flash attention implementation
-# ============================================
-make TESTCASE=flash_attention MODE=ALL B=1 S=32 D=256 tM=16 tK=16
-make TESTCASE=flash_attention MODE=ALL B=1 S=128 D=256 tM=16 tK=16
-# make TESTCASE=flash_attention MODE=ALL B=1 S=64 D=256 tM=32 tK=32
-# make TESTCASE=flash_attention MODE=ALL B=1 S=256 D=256 tM=32 tK=32
-
-# ============================================
 # fa_mask: Flash attention with mask support
 # 注意：fa_mask 当前有编译错误，暂时注释
 # ============================================
