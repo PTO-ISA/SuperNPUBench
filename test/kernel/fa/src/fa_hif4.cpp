@@ -1,5 +1,4 @@
 #include <common/pto_tileop.hpp>
-// #include "../../include/accelerator_fusion.h"
 #include "benchmark.h"
 #include "fileop.h"
 #include "fa_mx/fa_hif4.hpp"

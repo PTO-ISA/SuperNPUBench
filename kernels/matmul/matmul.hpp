@@ -11,7 +11,7 @@ using namespace pto;
 
 template <is_global_data_v GmOut, is_tile_data_v TileAcc>
 void TCOPYOUT_ACC(GmOut &Gout, TileAcc &tAcc){
-    using TileAccOut = Tile<Location::Vec, __bf16, TileAcc::Rows, TileAcc::Cols, BLayout::RowMajor, TileAcc::ValidRow, TileAcc::ValidCol>;
+    using TileAccOut = Tile<Location::Vec, typename TileAcc::DType, TileAcc::Rows, TileAcc::Cols, BLayout::RowMajor, TileAcc::ValidRow, TileAcc::ValidCol>;
     TileAccOut tAccOut;
     TCVT(tAccOut, tAcc);
     TCOPYOUT(Gout, tAccOut);
@@ -28,11 +28,11 @@ void TCOPYOUT_ACC_DYNAMIC(GmOut &Gout, TileAcc &tAcc, size_t valid_row, size_t v
 // A * B -> C with any shape
 // activation * weight( int8_t->FP16/FP8-> FP32 -> int8_t)
 template <typename dtype, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK>
-void matmul_mask(__bf16 *c_ptr, dtype *a_ptr, dtype *b_ptr) {
+void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
-  using gm_shapeC = global_tensor<__bf16, RowMajor<gM, gN>>;
+  using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
   using tile_shapeA = TileLeft<dtype, tM, tK>;
   using tile_shapeB = TileRight<dtype, tK, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
