@@ -70,7 +70,7 @@ CC_O += -fPIC
 CC_LINK += -shared
 endif
 
-INCLUDE += -I$(ROOT)/include -I$(ROOT)/test/common -I$(ROOT)/test/kernels/src
+INCLUDE += -I$(ROOT)/include -I$(ROOT)/test/common -I$(ROOT)/test/common/src -I$(ROOT)/test/kernels/src -I$(ROOT)/kernels
 QEMU = /remote/lms60/c00622284/qemu/LinxBlockModel/build/qemu-linx
 
 CC_O_ALL = $(CC_O) $(CC_VER) $(CC_OPTS)

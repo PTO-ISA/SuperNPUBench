@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "memory/broadcast_nomg.hpp"
+#include "broadcast/broadcast_nomg.hpp"
 
 
 #ifndef DType

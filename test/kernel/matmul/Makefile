@@ -39,7 +39,7 @@ ifeq ($(TYPE), A16W4)
 endif
 
 SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(OPNAME).cpp
-include ../../../common/Makefile.common
+include ../../common/Makefile.common
 # $(info "CPPFILES is $(CPPFILES)")
 # $(info "CPPFILES is $(OPPATH)")
 # $(info "OPPATH is $(OPNAME)")

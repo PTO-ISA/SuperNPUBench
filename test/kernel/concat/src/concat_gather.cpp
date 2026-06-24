@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "memory/concat_gather.hpp"
+#include "concat/concat_gather.hpp"
 
 
 #ifndef DType

@@ -8,4 +8,4 @@ endif
 
 SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
 $(info  ===> SRC_FILE = $(SRC_FILE))
-include ../../../common/Makefile.common
+include ../../common/Makefile.common

@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "memory/broadcast_mscatter.hpp"
+#include "broadcast/broadcast_mscatter.hpp"
 
 
 #ifndef DType

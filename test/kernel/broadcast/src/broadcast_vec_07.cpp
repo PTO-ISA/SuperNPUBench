@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "memory/broadcast_vec_07.hpp"
+#include "broadcast/broadcast_vec_07.hpp"
 
 
 #ifndef DType

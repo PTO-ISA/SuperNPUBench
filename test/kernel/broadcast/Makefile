@@ -48,4 +48,4 @@ endif
 # DEFINES += -DCHK_DIR="/remote/lms01/l00948608/project/jcore_benchmark/JanusCoreBench/test/broadcast/src/data"
 
 SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
-include ../../../common/Makefile.common
+include ../../common/Makefile.common

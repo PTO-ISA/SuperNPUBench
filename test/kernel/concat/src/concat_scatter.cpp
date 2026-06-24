@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "memory/concat_scatter.hpp"
+#include "concat/concat_scatter.hpp"
 
 
 #ifndef DType
