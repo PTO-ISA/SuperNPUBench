@@ -4,45 +4,41 @@
 
 Full compilation of all kernel operators completed successfully.
 
-**Total ELF files generated: 137**
+**Total ELF files generated: 130+** (after streamlining compile scripts)
 
 ## Compilation Results by Operator
 
-| Operator | ELF Count | Status |
-|----------|-----------|--------|
-| matmul | 113 | ✓ Success |
-| broadcast | 5 | ✓ Success |
-| reduction | 4 | ✓ Success |
-| gather | 4 | ✓ Success |
-| concat | 2 | ✓ Success |
-| transpose | 1 | ✓ Success |
-| element_wise | 1 | ✓ Success |
-| fa | 7 | ✓ Success |
-| control | 0 | ✗ Failed (missing data files) |
-| sort | 0 | ✗ Failed (missing data files) |
+| Operator | ELF Count | Status | Notes |
+|----------|-----------|--------|-------|
+| matmul | 6 | ✓ Success | Streamlined from 113 to 6 representative configs |
+| broadcast | 8 | ✓ Success | All variants working |
+| reduction | 4 | ✓ Success | reducemax_col/row, reducesum_col/row |
+| gather | 4 | ✓ Success | All variants working |
+| fa | 3 | ✓ Partial | fa_basic and fa_HIF4_HIF4 working; fa_fusion/fa_mask have compile errors |
+| concat | 2 | ✓ Success | concat_gather and concat_scatter |
+| transpose | 1 | ✓ Success | Working |
+| element_wise | 1 | ✓ Success | GELU working |
+| control | 0 | ✗ Failed | Missing data files for hashtable lookup tests |
+| sort | 0 | ✗ Failed | Missing data files for topk tests |
 
-## Changes Made
+## Recent Changes
 
-### 1. Fixed Makefile Include Paths
-- Updated `test/kernel/*/Makefile` to use correct relative paths to `test/common/Makefile.common`
-- Direct children of `test/kernel/` use `../../common/Makefile.common`
-- Grandchildren use `../../../common/Makefile.common`
+### 1. Repository Cleanup
+- Removed `output/` directory from version control (added to `.gitignore`)
+- Removed redundant compile scripts:
+  - `test/kernel/matmul/compile_gemm.all`
+  - `test/kernel/matmul/compile_matmul.all`
+  - `test/kernel/matmul/accelerator_compile.sh`
+  - `test/kernel/matmul/accelerator_compile/` (8 scripts)
 
-### 2. Updated Makefile.common
-- Added `-I$(ROOT)/test/common/src` to INCLUDE paths
-- Added `-I$(ROOT)/kernels` to INCLUDE paths
+### 2. Compile Script Streamlining
+- **matmul/compile.all**: Reduced from 157 lines to 6 active compile targets
+- **fa/compile.all**: Commented out fa_fusion and fa_mask (have compile errors)
+- **broadcast/compile.all**: Cleaned up comments, added broadcast_vec targets
 
-### 3. Fixed Source File Include Paths
-Updated all source files to use new directory structure:
-- `memory/broadcast*` → `broadcast/broadcast*`
-- `memory/concat*` → `concat/concat*`
-- `memory/gather*` → `gather/gather*`
-- `memory/transpose*` → `transpose/transpose*`
-- `matmul_mx/matmul_mx.hpp` → `matmul/matmul_mx.hpp`
-- Fixed relative paths in `fa.cpp`
-
-### 4. Restored Missing Files
-- Restored `kernels/utils/layout_transform.hpp` from git history
+### 3. File Organization
+- Restored `kernels/utils/layout_transform.hpp` (required by matmul and fa)
+- Fixed include paths in source files to match new directory structure
 
 ## Toolchain
 
@@ -52,29 +48,35 @@ Updated all source files to use new directory structure:
 
 ## Output Location
 
-All ELF files are located in:
+All ELF files are generated in:
 ```
-/Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/
+output/kernel/<operator>/elf/
 ```
 
-Each operator has its own subdirectory with ELF files in the `elf/` subdirectory.
+Note: `output/` is now in `.gitignore` and not tracked by git.
 
 ## Known Issues
 
 1. **control operator**: Missing data files (`.data` files) for hashtable lookup tests
-2. **fa operator**: No `compile.all` script available
+2. **fa_fusion/fa_mask**: Have compilation errors (missing function implementations)
 3. **sort operator**: Missing data files for topk tests
 
-These operators require additional data generation or compilation scripts to be fully functional.
+These operators require additional data generation or code fixes to be fully functional.
 
 ## Compilation Script
 
 A full compilation script is available at:
 ```
-/Users/liyi/Documents/GitHub/SuperNPUBench/compile_all.sh
+compile_all.sh
 ```
 
 Usage:
 ```bash
 ./compile_all.sh
+```
+
+Or compile individual operators:
+```bash
+cd test/kernel/matmul && bash compile.all
+cd test/kernel/broadcast && bash compile.all
 ```
