@@ -1,4 +1,8 @@
-#include "flash_attention_mask.hpp"
+#ifndef BLKC_ASSIGN_CAST_COMMON
+#define BLKC_ASSIGN_CAST_COMMON BLKC_ASSIGN_PTR
+#endif
+
+#include "fa/flash_attention_mask.hpp"
 #include <common/pto_tileop.hpp>
 #include <cstring>
 #include <iomanip>

@@ -1,6 +1,10 @@
+#ifndef BLKC_ASSIGN_CAST_COMMON
+#define BLKC_ASSIGN_CAST_COMMON BLKC_ASSIGN_PTR
+#endif
+
 #include <common/pto_tileop.hpp>
 #include <cstring>
-#include "flash_attention.hpp"
+#include "fa/flash_attention.hpp"
 #include "fileop.h"
 #include "benchmark.h"
 
