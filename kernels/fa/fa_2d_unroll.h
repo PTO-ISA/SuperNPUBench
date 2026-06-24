@@ -1,5 +1,5 @@
 #include "fa_utils.h"
-#include "fa_fp4.h"
+#include "fa_fp4_utils.h"
 
 #ifndef Xdim
 #define Xdim 2
