@@ -6,5 +6,5 @@ _start:
   c.setret 2, ->ra
 _end:
   bstart.aux fall
-  acrc 3
+  acrc 0
   c.bstop

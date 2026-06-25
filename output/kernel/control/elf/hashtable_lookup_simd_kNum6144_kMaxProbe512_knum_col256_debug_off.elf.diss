@@ -1,0 +1,497 @@
+
+/Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/control/elf/hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col256_debug_off.elf:	file format elf64-unknown
+
+Disassembly of section .text:
+
+00000000000112ac <_start>:
+   112ac: 0212         	C.BSTART.STD	DIRECT, 0x112ee <main>
+   112ae: 5056         	c.setret	0x112b0, ->ra <_end>
+
+00000000000112b0 <_end>:
+   112b0: 0840         	C.BSTART.AUX	
+   112b2: 0000302b     	acrc 0
+   112b6: 0000         	C.BSTOP
+
+00000000000112b8 <_ZN3pto18layout_type_to_strENS_10LayoutEnumE>:
+   112b8: 00d4         	C.BSTART.STD	COND, 0x112d2 <.LBB0_2>
+   112ba: fffff187     	addtpc	-1, 	->a1
+   112be: f896         	c.movi	2, 	->t
+   112c0: 002c6065     	setc.ltu	t#1, a0
+   112c4: 00a2         	C.BSTART.STD	DIRECT, 0x112d8 <.LBB0_3>
+   112c6: 00001f87     	addtpc	1, 	->t
+   112ca: 6c2c0f95     	addi	t#1, 1730, 	->t
+   112ce: 182c3109     	ld	[t#1, a0<<3], 	->a0
+
+00000000000112d2 <.LBB0_2>:
+   112d2: 0800         	C.BSTART.STD	
+   112d4: 0a219115     	subi	a1, 162, 	->a0
+
+00000000000112d8 <.LBB0_3>:
+   112d8: 3800         	C.BSTART.STD	RET
+   112da: 029c         	c.setc.tgt	ra
+   112dc: 0800         	C.BSTART.STD	
+
+00000000000112de <_Z15writeBinaryFilePKcPKhm>:
+   112de: 3800         	C.BSTART.STD	RET
+   112e0: 1056         	c.movi	1, 	->a0
+   112e2: 029c         	c.setc.tgt	ra
+   112e4: 0800         	C.BSTART.STD	
+
+00000000000112e6 <_Z14readBinaryFilePKcPhm>:
+   112e6: 3800         	C.BSTART.STD	RET
+   112e8: 1056         	c.movi	1, 	->a0
+   112ea: 029c         	c.setc.tgt	ra
+   112ec: 0800         	C.BSTART.STD	
+
+00000000000112ee <main>:
+   112ee: 40a50041     	FENTRY	[ra ~ ra], sp!, 256
+   112f2: 0800         	C.BSTART.STD	
+   112f4: 3022         	C.BSTART.STD	DIRECT, 0x118f8 <memset>
+   112f6: 5256         	c.setret	0x11308, ->ra <main+0x1a>
+   112f8: 026fdf87     	addtpc	9981, 	->t
+   112fc: 5a8c0115     	addi	t#1, 1448, 	->a0
+   11300: 0ff00195     	addi	zero, 255, 	->a1
+   11304: 00006217     	lui	6, 	->a2
+   11308: 00001033     	B.HINT TRACE.begin
+   1130c: 0800         	C.BSTART.STD	
+   1130e: 1006         	c.movr	zero, 	->a0
+
+0000000000011310 <.LBB3_4>:
+   11310: 0800         	C.BSTART.STD	
+   11312: 00817195     	slli	a0, 8, 	->a1
+   11316: 026ebf87     	addtpc	9963, 	->t
+   1131a: 58ac0f95     	addi	t#1, 1418, 	->t
+   1131e: 582c0205     	add	t#1, a0<<11, 	->a2
+   11322: 80000295     	addi	zero, 2048, 	->a3
+   11326: 80011181     	BSTART.TMA	TLOAD, S64
+   1132a: 19f01023     	B.DATR	NORM.normal, Null
+   1132e: 000be013     	B.IOT	[], last	->t<2KB>
+   11332: 00520013     	B.IOR	[a2,a3],[]
+   11336: 10000043     	B.DIM	zero, 256, 	->lb0
+   1133a: 407c         	C.B.DIMI	1, 	->lb1
+   1133c: 10002043     	B.DIM	zero, 256, 	->lb2
+   11340: 0800         	C.BSTART.STD	
+   11342: 0026ef97     	lui	622, 	->t
+   11346: 8f0c0215     	addi	t#1, 2288, 	->a2
+   1134a: 02021181     	BSTART.VPAR	VS16
+   1134e: 000b5413     	B.IOT	[t#1.reuse], last	->t<1KB>
+   11352: 00020013     	B.IOR	[a2],[]
+   11356: 10000043     	B.DIM	zero, 256, 	->lb0
+   1135a: 0000cc03     	B.TEXT	0x1168a <_Z21compute_hash_vec_implIN3pto4TileILNS0_8LocationE0ElLi1ELi256ELNS0_7BLayoutE0ELi1ELi256ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EjLi1ELi256ELS3_0ELi1ELi256ELS4_0ELi512ELS5_3EEEEvNT_9TileDTypeENT0_9TileDTypeEj>
+   1135e: 0800         	C.BSTART.STD	
+   11360: 2fd6         	c.movi	-1, 	->a3
+   11362: 02021181     	BSTART.VPAR	VS16
+   11366: 000b6093     	B.IOT	[], last	->u<1KB>
+   1136a: 00028013     	B.IOR	[a3],[]
+   1136e: 10000043     	B.DIM	zero, 256, 	->lb0
+   11372: 00011e03     	B.TEXT	0x117ea <_Z25ExpandScalarImpl_RowMajorIN3pto4TileILNS0_8LocationE0EiLi1ELi256ELNS0_7BLayoutE0ELi1ELi256ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeENS7_5DTypeE>
+   11376: 0800         	C.BSTART.STD	
+   11378: 3006         	c.movr	zero, 	->a4
+
+000000000001137a <.LBB3_8>:
+   1137a: 0800         	C.BSTART.STD	
+   1137c: 00002f87     	addtpc	2, 	->t
+   11380: 624c0395     	addi	t#1, 1572, 	->a5
+   11384: 80411181     	BSTART.TMA	MGATHER, S64
+   11388: 10000043     	B.DIM	zero, 256, 	->lb0
+   1138c: 407c         	C.B.DIMI	1, 	->lb1
+   1138e: 000bd513     	B.IOT	[t#1.reuse], last	->m<2KB>
+   11392: 00038013     	B.IOR	[a5],[]
+   11396: 0800         	C.BSTART.STD	
+   11398: 00838395     	addi	a5, 8, 	->a5
+   1139c: 88411181     	BSTART.TMA	MGATHER, S32
+   113a0: 10000043     	B.DIM	zero, 256, 	->lb0
+   113a4: 407c         	C.B.DIMI	1, 	->lb1
+   113a6: 000b5593     	B.IOT	[t#1.reuse], last	->n<1KB>
+   113aa: 00038013     	B.IOR	[a5],[]
+   113ae: 02021181     	BSTART.VPAR	VS16
+   113b2: 80134413     	B.IOT	[t#2.reuse, m#1]	->t<1KB>
+   113b6: 03034093     	B.IOT	[n#1, t#1]	->u<1KB>
+   113ba: 0108d113     	B.IOT	[u#1], last	->m<32B>
+   113be: 00520013     	B.IOR	[a2,a3],[]
+   113c2: 10000043     	B.DIM	zero, 256, 	->lb0
+   113c6: 00010d03     	B.TEXT	0x117fa <_Z15probe_step_implIN3pto4TileILNS0_8LocationE0ElLi1ELi256ELNS0_7BLayoutE0ELi1ELi256ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EiLi1ELi256ELS3_0ELi1ELi256ELS4_0ELi512ELS5_3EEENS1_ILS2_0EjLi1ELi256ELS3_0ELi1ELi256ELS4_0ELi512ELS5_3EEES7_NS1_ILS2_0ElLi1ELi4ELS3_0ELi1ELi4ELS4_0ELi512ELS5_3EEEEvNT_9TileDTypeESB_NT0_9TileDTypeENT1_9TileDTypeESF_NT2_9TileDTypeESH_NT3_9TileDTypeEji>
+   113ca: 0800         	C.BSTART.STD	
+   113cc: 02000395     	addi	zero, 32, 	->a5
+   113d0: 0d808415     	addi	sp, 216, 	->a6
+   113d4: 80111181     	BSTART.TMA	TSTORE, S64
+   113d8: 19f01023     	B.DATR	NORM.normal, Null
+   113dc: 02085393     	B.IOT	[m#1], last
+   113e0: 00740013     	B.IOR	[a6,a5],[]
+   113e4: 013c         	C.B.DIMI	4, 	->lb0
+   113e6: 407c         	C.B.DIMI	1, 	->lb1
+   113e8: 813c         	C.B.DIMI	4, 	->lb2
+   113ea: f8211181     	BSTART.TMA	TMOV, 
+   113ee: 002bd013     	B.IOT	[t#3], last	->t<2KB>
+   113f2: f8211181     	BSTART.TMA	TMOV, 
+   113f6: 001b5013     	B.IOT	[t#2], last	->t<1KB>
+   113fa: f8211181     	BSTART.TMA	TMOV, 
+   113fe: 010b5093     	B.IOT	[u#1], last	->u<1KB>
+   11402: fbc4         	C.BSTART.STD	COND, 0x1137a <.LBB3_8>
+   11404: 01b0bf99     	ldi	[sp, 216], 	->t
+   11408: 01c0bf99     	ldi	[sp, 224], 	->t
+   1140c: c678         	c.or	t#2, t#1, ->t
+   1140e: 01d0bf99     	ldi	[sp, 232], 	->t
+   11412: c678         	c.or	t#2, t#1, ->t
+   11414: 01e0bf99     	ldi	[sp, 240], 	->t
+   11418: 018cbfc5     	cmp.or	t#2, t#1, 	->t
+   1141c: 098c         	c.addi	a4, 1, ->t
+   1141e: 519c         	c.sext.w	a4, ->t
+   11420: 1ffc6fd5     	cmp.ltui	t#1, 511, 	->t
+   11424: 018da065     	setc.and	t#4, t#1
+   11428: 3686         	c.movr	t#3, 	->a4
+   1142a: 0800         	C.BSTART.STD	
+   1142c: 026fdf87     	addtpc	9981, 	->t
+   11430: 474c0f95     	addi	t#1, 1140, 	->t
+   11434: 103c0185     	add	t#1, a1<<2, 	->a1
+   11438: 40000215     	addi	zero, 1024, 	->a2
+   1143c: 88111181     	BSTART.TMA	TSTORE, S32
+   11440: 19f01023     	B.DATR	NORM.normal, Null
+   11444: 01085393     	B.IOT	[u#1], last
+   11448: 00418013     	B.IOR	[a1,a2],[]
+   1144c: 10000043     	B.DIM	zero, 256, 	->lb0
+   11450: 407c         	C.B.DIMI	1, 	->lb1
+   11452: 10002043     	B.DIM	zero, 256, 	->lb2
+   11456: f5d4         	C.BSTART.STD	COND, 0x11310 <.LBB3_4>
+   11458: 00110115     	addi	a0, 1, 	->a0
+   1145c: 01811075     	setc.nei	a0, 24
+   11460: 00009033     	B.HINT TRACE.end
+   11464: 0800         	C.BSTART.STD	
+   11466: 1006         	c.movr	zero, 	->a0
+   11468: 40a53041     	FRET.STK	[ra ~ ra], sp!, 256
+   1146c: 0800         	C.BSTART.STD	
+
+000000000001146e <__cxx_global_var_init>:
+   1146e: 0184         	C.BSTART.STD	COND, 0x1149e <.LBB4_2>
+   11470: 02703f87     	addtpc	9987, 	->t
+   11474: 520c4f99     	lbui	[t#1, 1312], 	->t
+   11478: 0636         	c.setc.ne	t#1, zero
+   1147a: 0800         	C.BSTART.STD	
+   1147c: 02703f87     	addtpc	9987, 	->t
+   11480: f856         	c.movi	1, 	->t
+   11482: 499c7459     	sdi.u	t#1, [t#2, 1060]
+   11486: 424c8f95     	addi	t#2, 1060, 	->t
+   1148a: 05802059     	swi	zero, [t#1, 8]
+   1148e: 07802059     	swi	zero, [t#1, 12]
+   11492: 09802059     	swi	zero, [t#1, 16]
+   11496: 02703f87     	addtpc	9987, 	->t
+   1149a: f58d04d9     	sbi	t#3, [t#1, 1274]
+
+000000000001149e <.LBB4_2>:
+   1149e: 3800         	C.BSTART.STD	RET
+   114a0: 029c         	c.setc.tgt	ra
+   114a2: 0800         	C.BSTART.STD	
+
+00000000000114a4 <__cxx_global_var_init.4>:
+   114a4: 0184         	C.BSTART.STD	COND, 0x114d4 <.LBB5_2>
+   114a6: 02703f87     	addtpc	9987, 	->t
+   114aa: 4f2c4f99     	lbui	[t#1, 1266], 	->t
+   114ae: 0636         	c.setc.ne	t#1, zero
+   114b0: 0800         	C.BSTART.STD	
+   114b2: 02703f87     	addtpc	9987, 	->t
+   114b6: f856         	c.movi	1, 	->t
+   114b8: 0d9c7459     	sdi.u	t#1, [t#2, 1030]
+   114bc: 406c8f95     	addi	t#2, 1030, 	->t
+   114c0: 05802059     	swi	zero, [t#1, 8]
+   114c4: 07802059     	swi	zero, [t#1, 12]
+   114c8: 09802059     	swi	zero, [t#1, 16]
+   114cc: 02703f87     	addtpc	9987, 	->t
+   114d0: 998d04d9     	sbi	t#3, [t#1, 1228]
+
+00000000000114d4 <.LBB5_2>:
+   114d4: 3800         	C.BSTART.STD	RET
+   114d6: 029c         	c.setc.tgt	ra
+   114d8: 0800         	C.BSTART.STD	
+
+00000000000114da <__cxx_global_var_init.5>:
+   114da: 0184         	C.BSTART.STD	COND, 0x1150a <.LBB6_2>
+   114dc: 02703f87     	addtpc	9987, 	->t
+   114e0: 4c4c4f99     	lbui	[t#1, 1220], 	->t
+   114e4: 0636         	c.setc.ne	t#1, zero
+   114e6: 0800         	C.BSTART.STD	
+   114e8: 02703f87     	addtpc	9987, 	->t
+   114ec: f856         	c.movi	1, 	->t
+   114ee: d19c73d9     	sdi.u	t#1, [t#2, 1000]
+   114f2: 3e8c8f95     	addi	t#2, 1000, 	->t
+   114f6: 05802059     	swi	zero, [t#1, 8]
+   114fa: 07802059     	swi	zero, [t#1, 12]
+   114fe: 09802059     	swi	zero, [t#1, 16]
+   11502: 02703f87     	addtpc	9987, 	->t
+   11506: 3d8d04d9     	sbi	t#3, [t#1, 1182]
+
+000000000001150a <.LBB6_2>:
+   1150a: 3800         	C.BSTART.STD	RET
+   1150c: 029c         	c.setc.tgt	ra
+   1150e: 0800         	C.BSTART.STD	
+
+0000000000011510 <__cxx_global_var_init.6>:
+   11510: 0184         	C.BSTART.STD	COND, 0x11540 <.LBB7_2>
+   11512: 02703f87     	addtpc	9987, 	->t
+   11516: 496c4f99     	lbui	[t#1, 1174], 	->t
+   1151a: 0636         	c.setc.ne	t#1, zero
+   1151c: 0800         	C.BSTART.STD	
+   1151e: 02703f87     	addtpc	9987, 	->t
+   11522: f856         	c.movi	1, 	->t
+   11524: 959c73d9     	sdi.u	t#1, [t#2, 970]
+   11528: 3cac8f95     	addi	t#2, 970, 	->t
+   1152c: 05802059     	swi	zero, [t#1, 8]
+   11530: 07802059     	swi	zero, [t#1, 12]
+   11534: 09802059     	swi	zero, [t#1, 16]
+   11538: 02703f87     	addtpc	9987, 	->t
+   1153c: e18d0459     	sbi	t#3, [t#1, 1136]
+
+0000000000011540 <.LBB7_2>:
+   11540: 3800         	C.BSTART.STD	RET
+   11542: 029c         	c.setc.tgt	ra
+   11544: 0800         	C.BSTART.STD	
+
+0000000000011546 <__cxx_global_var_init.7>:
+   11546: 0184         	C.BSTART.STD	COND, 0x11576 <.LBB8_2>
+   11548: 02703f87     	addtpc	9987, 	->t
+   1154c: 468c4f99     	lbui	[t#1, 1128], 	->t
+   11550: 0636         	c.setc.ne	t#1, zero
+   11552: 0800         	C.BSTART.STD	
+   11554: 02703f87     	addtpc	9987, 	->t
+   11558: f856         	c.movi	1, 	->t
+   1155a: 599c73d9     	sdi.u	t#1, [t#2, 940]
+   1155e: 3acc8f95     	addi	t#2, 940, 	->t
+   11562: 05802059     	swi	zero, [t#1, 8]
+   11566: 07802059     	swi	zero, [t#1, 12]
+   1156a: 09802059     	swi	zero, [t#1, 16]
+   1156e: 02703f87     	addtpc	9987, 	->t
+   11572: 858d0459     	sbi	t#3, [t#1, 1090]
+
+0000000000011576 <.LBB8_2>:
+   11576: 3800         	C.BSTART.STD	RET
+   11578: 029c         	c.setc.tgt	ra
+   1157a: 0800         	C.BSTART.STD	
+
+000000000001157c <__cxx_global_var_init.8>:
+   1157c: 0184         	C.BSTART.STD	COND, 0x115ac <.LBB9_2>
+   1157e: 02703f87     	addtpc	9987, 	->t
+   11582: 43ac4f99     	lbui	[t#1, 1082], 	->t
+   11586: 0636         	c.setc.ne	t#1, zero
+   11588: 0800         	C.BSTART.STD	
+   1158a: 02703f87     	addtpc	9987, 	->t
+   1158e: f856         	c.movi	1, 	->t
+   11590: 1d9c73d9     	sdi.u	t#1, [t#2, 910]
+   11594: 38ec8f95     	addi	t#2, 910, 	->t
+   11598: 05802059     	swi	zero, [t#1, 8]
+   1159c: 07802059     	swi	zero, [t#1, 12]
+   115a0: 09802059     	swi	zero, [t#1, 16]
+   115a4: 02703f87     	addtpc	9987, 	->t
+   115a8: 298d0459     	sbi	t#3, [t#1, 1044]
+
+00000000000115ac <.LBB9_2>:
+   115ac: 3800         	C.BSTART.STD	RET
+   115ae: 029c         	c.setc.tgt	ra
+   115b0: 0800         	C.BSTART.STD	
+
+00000000000115b2 <__cxx_global_var_init.9>:
+   115b2: 0184         	C.BSTART.STD	COND, 0x115e2 <.LBB10_2>
+   115b4: 02703f87     	addtpc	9987, 	->t
+   115b8: 40cc4f99     	lbui	[t#1, 1036], 	->t
+   115bc: 0636         	c.setc.ne	t#1, zero
+   115be: 0800         	C.BSTART.STD	
+   115c0: 02703f87     	addtpc	9987, 	->t
+   115c4: f856         	c.movi	1, 	->t
+   115c6: e19c7359     	sdi.u	t#1, [t#2, 880]
+   115ca: 370c8f95     	addi	t#2, 880, 	->t
+   115ce: 05802059     	swi	zero, [t#1, 8]
+   115d2: 07802059     	swi	zero, [t#1, 12]
+   115d6: 09802059     	swi	zero, [t#1, 16]
+   115da: 02703f87     	addtpc	9987, 	->t
+   115de: cd8d03d9     	sbi	t#3, [t#1, 998]
+
+00000000000115e2 <.LBB10_2>:
+   115e2: 3800         	C.BSTART.STD	RET
+   115e4: 029c         	c.setc.tgt	ra
+   115e6: 0800         	C.BSTART.STD	
+
+00000000000115e8 <__cxx_global_var_init.10>:
+   115e8: 0184         	C.BSTART.STD	COND, 0x11618 <.LBB11_2>
+   115ea: 02703f87     	addtpc	9987, 	->t
+   115ee: 3dec4f99     	lbui	[t#1, 990], 	->t
+   115f2: 0636         	c.setc.ne	t#1, zero
+   115f4: 0800         	C.BSTART.STD	
+   115f6: 02703f87     	addtpc	9987, 	->t
+   115fa: f856         	c.movi	1, 	->t
+   115fc: a59c7359     	sdi.u	t#1, [t#2, 850]
+   11600: 352c8f95     	addi	t#2, 850, 	->t
+   11604: 05802059     	swi	zero, [t#1, 8]
+   11608: 07802059     	swi	zero, [t#1, 12]
+   1160c: 09802059     	swi	zero, [t#1, 16]
+   11610: 02703f87     	addtpc	9987, 	->t
+   11614: 718d03d9     	sbi	t#3, [t#1, 952]
+
+0000000000011618 <.LBB11_2>:
+   11618: 3800         	C.BSTART.STD	RET
+   1161a: 029c         	c.setc.tgt	ra
+   1161c: 0800         	C.BSTART.STD	
+
+000000000001161e <__cxx_global_var_init.11>:
+   1161e: 0184         	C.BSTART.STD	COND, 0x1164e <.LBB12_2>
+   11620: 02703f87     	addtpc	9987, 	->t
+   11624: 3b0c4f99     	lbui	[t#1, 944], 	->t
+   11628: 0636         	c.setc.ne	t#1, zero
+   1162a: 0800         	C.BSTART.STD	
+   1162c: 02703f87     	addtpc	9987, 	->t
+   11630: f856         	c.movi	1, 	->t
+   11632: 699c7359     	sdi.u	t#1, [t#2, 820]
+   11636: 334c8f95     	addi	t#2, 820, 	->t
+   1163a: 05802059     	swi	zero, [t#1, 8]
+   1163e: 07802059     	swi	zero, [t#1, 12]
+   11642: 09802059     	swi	zero, [t#1, 16]
+   11646: 02703f87     	addtpc	9987, 	->t
+   1164a: 158d03d9     	sbi	t#3, [t#1, 906]
+
+000000000001164e <.LBB12_2>:
+   1164e: 3800         	C.BSTART.STD	RET
+   11650: 029c         	c.setc.tgt	ra
+   11652: 0800         	C.BSTART.STD	
+
+0000000000011654 <__cxx_global_var_init.12>:
+   11654: 0184         	C.BSTART.STD	COND, 0x11684 <.LBB13_2>
+   11656: 02703f87     	addtpc	9987, 	->t
+   1165a: 382c4f99     	lbui	[t#1, 898], 	->t
+   1165e: 0636         	c.setc.ne	t#1, zero
+   11660: 0800         	C.BSTART.STD	
+   11662: 02703f87     	addtpc	9987, 	->t
+   11666: f856         	c.movi	1, 	->t
+   11668: 2d9c7359     	sdi.u	t#1, [t#2, 790]
+   1166c: 316c8f95     	addi	t#2, 790, 	->t
+   11670: 05802059     	swi	zero, [t#1, 8]
+   11674: 07802059     	swi	zero, [t#1, 12]
+   11678: 09802059     	swi	zero, [t#1, 16]
+   1167c: 02703f87     	addtpc	9987, 	->t
+   11680: b98d0359     	sbi	t#3, [t#1, 860]
+
+0000000000011684 <.LBB13_2>:
+   11684: 3800         	C.BSTART.STD	RET
+   11686: 029c         	c.setc.tgt	ra
+   11688: 0800         	C.BSTART.STD	
+
+000000000001168a <_Z21compute_hash_vec_implIN3pto4TileILNS0_8LocationE0ElLi1ELi256ELNS0_7BLayoutE0ELi1ELi256ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EjLi1ELi256ELS3_0ELi1ELi256ELS4_0ELi512ELS5_3EEEEvNT_9TileDTypeENT0_9TileDTypeEj>:
+   1168a: 00a5007f 40400005    	v.add	lc0.uh, lc1.uh<<8, 	->vt.d, nosat
+   11692: 0139007f 18080085    	v.add	ta, vt#1.reuse.sd<<3, 	->vu.d, nosat
+   1169a: 0109427f 18082009    	v.lw.local	[ta, vt#1.sd<<3], 	->vt.w
+   116a2: cc9e2f97     	lui	-210462, 	->t
+   116a6: 000a82ff d51c0f95    	l.addi	t#1.sw, 3409, 	->t.w
+   116ae: 015b827f 01800047    	v.mul	vt#1.reuse.sw, t#1.sw, 	->vt.w
+   116b6: 16a88f97     	lui	92808, 	->t
+   116ba: 015a027f 01808047    	v.mul	vt#2.sw, t#1.sw, 	->vt.w
+   116c2: 000a027f 0110d015    	v.srli	vt#2.sw, 17, 	->vt.w
+   116ca: 014a027f 00103005    	v.or	vt#1.sw, vt#2.sw, 	->vt.w
+   116d2: 1b873f97     	lui	112755, 	->t
+   116d6: 000a82ff 593c0f95    	l.addi	t#1.sw, 1427, 	->t.w
+   116de: 015a027f 01800047    	v.mul	vt#1.sw, t#1.sw, 	->vt.w
+   116e6: 000b827f 01305015    	v.srli	vt#1.reuse.sw, 19, 	->vt.w
+   116ee: 014a027f 68103005    	v.or	vt#1.sw, vt#2.sw<<13, 	->vt.w
+   116f6: 017a027f 10000005    	v.add	vt#1.sw, vt#1.reuse.sw<<2, 	->vt.w, nosat
+   116fe: e6546f17     	lui	-105146, 	->u
+   11702: 000a82ff b64e0f15    	l.addi	u#1.sw, 2916, 	->u.w
+   1170a: 015a027f 01c00085    	v.add	vt#1.sw, u#1.sw, 	->vu.w, nosat
+   11712: 0008427f 0014a019    	v.lwi.local	[vu#2.sd, 4], 	->vt.w
+   1171a: 015b827f 01b00047    	v.mul	vt#1.reuse.sw, t#4.sw, 	->vt.w
+   11722: 015a027f 01a08047    	v.mul	vt#2.sw, t#3.sw, 	->vt.w
+   1172a: 000a027f 0110d015    	v.srli	vt#2.sw, 17, 	->vt.w
+   11732: 014a027f 00103005    	v.or	vt#1.sw, vt#2.sw, 	->vt.w
+   1173a: 015a027f 01800047    	v.mul	vt#1.sw, t#1.sw, 	->vt.w
+   11742: 014a027f 00804005    	v.xor	vt#1.sw, vu#1.sw, 	->vt.w
+   1174a: 000b827f 01305015    	v.srli	vt#1.reuse.sw, 19, 	->vt.w
+   11752: 014a027f 68103005    	v.or	vt#1.sw, vt#2.sw<<13, 	->vt.w
+   1175a: 017a027f 10000005    	v.add	vt#1.sw, vt#1.reuse.sw<<2, 	->vt.w, nosat
+   11762: 015a027f 01c00005    	v.add	vt#1.sw, u#1.sw, 	->vt.w, nosat
+   1176a: 000b827f 01005015    	v.srli	vt#1.reuse.sw, 16, 	->vt.w
+   11772: 014a027f 0000c005    	v.xor	vt#2.sw, vt#1.sw, 	->vt.w
+   1177a: 000a027f 00804015    	v.xori	vt#1.sw, 8, 	->vt.w
+   11782: 85ebcf97     	lui	-500036, 	->t
+   11786: 000a82ff a6bc0f95    	l.addi	t#1.sw, 2667, 	->t.w
+   1178e: 015a027f 01800047    	v.mul	vt#1.sw, t#1.sw, 	->vt.w
+   11796: 000b827f 00d05015    	v.srli	vt#1.reuse.sw, 13, 	->vt.w
+   1179e: 014a027f 00104005    	v.xor	vt#1.sw, vt#2.sw, 	->vt.w
+   117a6: c2b2af97     	lui	-251094, 	->t
+   117aa: 000a82ff e35c0f95    	l.addi	t#1.sw, 3637, 	->t.w
+   117b2: 015a027f 01800047    	v.mul	vt#1.sw, t#1.sw, 	->vt.w
+   117ba: 000b827f 01005015    	v.srli	vt#1.reuse.sw, 16, 	->vt.w
+   117c2: 014a027f 00104005    	v.xor	vt#1.sw, vt#2.sw, 	->vt.w
+   117ca: 0052027f 00004057    	v.rem	vt#1.uw, ri0.uw, 	->vt.w
+   117d2: 000a027f 00407015    	v.slli	vt#1.sw, 4, 	->vt.w
+   117da: a0a9547f 004c2049    	v.sw.local	vt#1.sw, [to, lc0<<2, lc1.uh<<10]
+   117e2: 0000000f 00000001    	L.BSTOP
+
+00000000000117ea <_Z25ExpandScalarImpl_RowMajorIN3pto4TileILNS0_8LocationE0EiLi1ELi256ELNS0_7BLayoutE0ELi1ELi256ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeENS7_5DTypeE>:
+   117ea: a8a9547f 004c2049    	v.sw.local	ri0.sw, [to, lc0<<2, lc1.uh<<10]
+   117f2: 0000000f 00000001    	L.BSTOP
+
+00000000000117fa <_Z15probe_step_implIN3pto4TileILNS0_8LocationE0ElLi1ELi256ELNS0_7BLayoutE0ELi1ELi256ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EiLi1ELi256ELS3_0ELi1ELi256ELS4_0ELi512ELS5_3EEENS1_ILS2_0EjLi1ELi256ELS3_0ELi1ELi256ELS4_0ELi512ELS5_3EEES7_NS1_ILS2_0ElLi1ELi4ELS3_0ELi1ELi4ELS4_0ELi512ELS5_3EEEEvNT_9TileDTypeESB_NT0_9TileDTypeENT1_9TileDTypeESF_NT2_9TileDTypeESH_NT3_9TileDTypeEji>:
+   117fa: 00a5007f 40400085    	v.add	lc0.uh, lc1.uh<<8, 	->vu.d, nosat
+   11802: 00a9507f 58483009    	v.ld.local	[ta, lc0<<3, lc1.uh<<11], 	->vt.d
+   1180a: 00a9507f 5848b009    	v.ld.local	[tb, lc0<<3, lc1.uh<<11], 	->vt.d
+   11812: 0108007f 00008045    	v.cmp.eq	vt#2.sd, vt#1.sd, 	->vt.d
+   1181a: 8129007f 01490077    	v.csel	vt#1.sd, tc, te, 	->vt.d
+   11822: 0138427f 10802009    	v.lw.local	[vt#1.sd, vu#1.reuse.sd<<2], 	->vt.w
+   1182a: a0a9547f 004ca049    	v.sw.local	vt#1.sw, [to1, lc0<<2, lc1.uh<<10]
+   11832: 00a9527f 5049a009    	v.lw.local	[td, lc0<<2, lc1.uh<<10], 	->vt.w
+   1183a: 000a027f 01000015    	v.addi	vt#1.sw, 16, 	->vt.w
+   11842: 0803807f 0000606b    	v.icvt.u322u64	vt#1.reuse.uw, 	->vt.d, RNONE, nosat
+   1184a: 000280ff 00407f95    	l.slli	ri0.uw, 4, 	->t.d
+   11852: 0118007f 01806045    	v.cmp.ltu	vt#1.sd, t#1.sd, 	->vt.d
+   1185a: 816a027f 01f10077    	v.csel	vt#1.sd, vt#3.sw, zero.sw, 	->vt.w
+   11862: a0a9547f 004c2049    	v.sw.local	vt#1.sw, [to, lc0<<2, lc1.uh<<10]
+   1186a: 00a9527f 504ca009    	v.lw.local	[to1, lc0<<2, lc1.uh<<10], 	->vt.w
+   11872: 015a007f 00100045    	v.cmp.eq	vt#1.sw, ri1.sw, 	->vt.d
+   1187a: 000800ff 00000f8d    	v.rdadd	vt#1.sd, 	->t.d
+   11882: 0005007f 03f02015    	v.andi	lc0.uh, 63, 	->vt.d
+   1188a: 0008007f 00000055    	v.cmp.eqi	vt#1.sd, 0, 	->vt.d
+   11892: 000100ff 000e0f95    	l.addi	p, 0, 	->t.d
+   1189a: 0000017f 00001e55    	v.cmp.nei	vt#1.ud, 0, ->p
+   118a2: 000100ff 000e0f95    	l.addi	p, 0, 	->t.d
+   118aa: 000880ff 000c0fd5    	l.cmp.eqi	t#1.sd, 0, 	->t.d
+   118b2: 000dbf95     	ori	t#4, 0, 	->t
+   118b6: 000dbf95     	ori	t#4, 0, 	->t
+   118ba: 2c0d1027     	b.ne	t#3, zero, 0x118e6 <.LBB16_2>
+   118be: 00010037     	j	0x118c2 <.LBB16_1>
+
+00000000000118c2 <.LBB16_1>:
+   118c2: 0008007f 00345015    	v.srli	vu#1.sd, 3, 	->vt.d
+   118ca: 0008007f ff802015    	v.andi	vt#1.sd, -8, 	->vt.d
+   118d2: 8909407f c80d7049    	v.sd.u.local	t#2.sd, [to2, vt#1.sd]
+   118da: 000900ff 000fbf95    	l.ori	zero.sd, 0, 	->t.d
+   118e2: 000cbf95     	ori	t#2, 0, 	->t
+
+00000000000118e6 <.LBB16_2>:
+   118e6: 0000817f 000c0e15    	l.addi	t#1.ud, 0, 	->p
+   118ee: 0000000f 00000001    	L.BSTOP
+   118f6: 0000         	C.BSTOP
+
+00000000000118f8 <memset>:
+   118f8: 00a4         	C.BSTART.STD	COND, 0x1190c <.LBB0_4>
+   118fa: 01025f95     	srli	a2, 16, 	->t
+   118fe: 0636         	c.setc.ne	t#1, zero
+   11900: 0800         	C.BSTART.STD	
+   11902: 2886         	c.movr	a0, 	->a3
+
+0000000000011904 <.LBB0_2>:
+   11904: 20329031     	MSET	[a3, a1, a2]
+   11908: 3800         	C.BSTART.STD	RET
+   1190a: 029c         	c.setc.tgt	ra
+
+000000000001190c <.LBB0_4>:
+   1190c: 0800         	C.BSTART.STD	
+   1190e: 2886         	c.movr	a0, 	->a3
+
+0000000000011910 <.LBB0_5>:
+   11910: 0800         	C.BSTART.STD	
+   11912: 0000ff97     	lui	15, 	->t
+   11916: fffc0315     	addi	t#1, 4095, 	->a4
+   1191a: 30329031     	MSET	[a3, a1, a4]
+   1191e: ff34         	C.BSTART.STD	COND, 0x11904 <.LBB0_2>
+   11920: ffff0f97     	lui	-16, 	->t
+   11924: 0e0c         	c.addi	t#1, 1, ->t
+   11926: 01820205     	add	a2, t#1, 	->a2
+   1192a: 01025f95     	srli	a2, 16, 	->t
+   1192e: 0626         	c.setc.eq	t#1, zero
+   11930: 00628285     	add	a3, a4, 	->a3
+   11934: fee2         	C.BSTART.STD	DIRECT, 0x11910 <.LBB0_5>
+   11936: 0800         	C.BSTART.STD	
