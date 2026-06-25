@@ -3,8 +3,8 @@
 
 set -e
 
-export COMPILER_DIR=/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin
-REPO_ROOT=/Users/liyi/Documents/GitHub/SuperNPUBench
+export COMPILER_DIR=${COMPILER_DIR:-/home/river/projects/jcore/SuperNPUBench/compiler/toolchain/2026-06-22/linx_blockisa_llvm_musl/bin}
+REPO_ROOT=${REPO_ROOT:-/home/river/projects/jcore/SuperNPUBench}
 
 echo "=========================================="
 echo "Starting full compilation of all operators"
