@@ -1,61 +1,82 @@
-COMMON_MAKEFILE := $(abspath $(lastword $(MAKEFILE_LIST)))
-TEST_ROOT := $(abspath $(dir $(COMMON_MAKEFILE))/..)
-ROOT := $(abspath $(TEST_ROOT)/..)
-CATEGORY := $(patsubst $(TEST_ROOT)/%,%,$(CURDIR))
-CATEGORY_NAME := $(subst /,_,$(CATEGORY))
-OBJ_ROOT := $(abspath $(ROOT)/output)
+ROOT := $(shell echo $(CURDIR) | sed -e "s@\(.*\)/SuperNPUBench/.*@\1/SuperNPUBench@")
+TEST_ROOT := $(shell echo $(CURDIR) | sed -e "s@\(.*\)/SuperNPUBench\/test/.*@\1/SuperNPUBench\/test@")
+CATEGORY := $(shell echo $(CURDIR) | sed -e 's/\(.*\)SuperNPUBench\/test\/\(.*\)/\2/')
+CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')
+OBJ_ROOT := $(shell realpath $(TEST_ROOT)/../output)
 CASE_SRC_DIR := $(CATEGORY)/src
 ELF_DIR := $(OBJ_ROOT)/$(CATEGORY)/elf
 SRC_DIR := $(shell dirname $(SRC_FILE))
 OBJ_DIR := $(OBJ_ROOT)/$(CASE_SRC_DIR)
 ELF_HEAD := $(ELF_DIR)/$(CATEGORY_NAME)
 
+COMM_SRC_DIR := common/src
+
+COMM_OBJ += $(patsubst %.cpp, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.cpp)))
+COMM_OBJ += $(patsubst %.c, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.c)))
+COMM_OBJ += $(patsubst %.s, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.s)))
+
 OBJ := $(patsubst %.cpp, %.o, $(subst $(SRC_DIR), $(OBJ_DIR), $(SRC_FILE)))
 OBJ := $(patsubst %.c, %.o, $(OBJ))
 OBJ := $(patsubst %.s, %.o, $(OBJ))
 
+LINK_SCRIPT_SRC = $(TEST_ROOT)/$(COMM_SRC_DIR)/baremetal_linx.lds.S
+LINK_SCRIPT =  $(patsubst %.S, %, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(LINK_SCRIPT_SRC)))
+
 PLAT ?= linx
+baremetal ?= off
 
 ifeq ($(PLAT), cpu)
 DEFINES += -D__cpu_sim__
-# wget http://10.50.84.202:8888/other/bisa_share/toolchain/open_source/clang-x86/clang%2Bllvm-15.0.4-x86_64-linux-gnu-rhel-8.4.tar.xz
 COMPILER_DIR ?= /usr/bin
-AS = $(COMPILER_DIR)/clang
-CC = $(COMPILER_DIR)/clang
-CXX = $(COMPILER_DIR)/clang++
-LINK = $(COMPILER_DIR)/clang++
-DUMP = $(COMPILER_DIR)/llvm-objdump
-COPY = $(COMPILER_DIR)/llvm-objcopy
-CC_O = -c -O3
-CC_VER ?= -std=c++20
+AS = $(COMPILER_DIR)/gcc
+CC = $(COMPILER_DIR)/gcc
+CXX = $(COMPILER_DIR)/g++
+LINK = $(COMPILER_DIR)/g++
+DUMP = $(COMPILER_DIR)/objdump
+COPY = $(COMPILER_DIR)/objcopy
+CC_O = -g -c -O0
+CXX_VER ?= -std=c++20
+CC_LINK +=
 else ifeq ($(PLAT), arm_sme)
 DEFINES += -D__ARM_FEATURE_SME
-# wget http://10.50.84.202:8888/other/bisa_share/toolchain/open_source/clang-x86/clang%2Bllvm-15.0.4-x86_64-linux-gnu-rhel-8.4.tar.xz
 COMPILER_DIR ?= /usr/bin
-AS = $(COMPILER_DIR)/clang
-CC = $(COMPILER_DIR)/clang
-CXX = $(COMPILER_DIR)/clang++
-LINK = $(COMPILER_DIR)/clang++
-DUMP = $(COMPILER_DIR)/llvm-objdump
-COPY = $(COMPILER_DIR)/llvm-objcopy
+AS = $(COMPILER_DIR)/aarch64-linux-gnu-gcc
+CC = $(COMPILER_DIR)/aarch64-linux-gnu-gcc
+CXX = $(COMPILER_DIR)/aarch64-linux-gnu-g++
+LINK = $(COMPILER_DIR)/aarch64-linux-gnu-g++
+DUMP = $(COMPILER_DIR)/aarch64-linux-gnu-objdump
+COPY = $(COMPILER_DIR)/aarch64-linux-gnu-objcopy
 CC_O = -c -O3
-CC_VER ?= -std=c++20
+CXX_VER ?= -std=c++20
 else ifeq ($(PLAT), linx)
 DEFINES += -D__linx
-# wget http://example.com/linx_blockisa_llvm_musl.tar.gz
-COMPILER_DIR ?= /usr/bin
+#COMPILER_DIR ?= /remote/lms60/c00622284/janus/linxisa_compiler_v0.55/linx_blockisa_llvm_musl/bin
+COMPILER_DIR ?= /home/l00896942/workdir/linx_blockisa_llvm_musl/bin
 AS = $(COMPILER_DIR)/clang
 CC = $(COMPILER_DIR)/clang 
 CXX = $(COMPILER_DIR)/clang++
 LINK = $(COMPILER_DIR)/clang++
 DUMP = $(COMPILER_DIR)/llvm-objdump
 COPY = $(COMPILER_DIR)/llvm-objcopy
-CC_O = -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true
-CC_VER ?= -std=c++20
-# COMM_SRC_FILE += $(ROOT)/test/common/_start.s
-# COMM_SRC_DIR = $(shell dirname $(COMM_SRC_FILE))
-# COMM_OBJ += $(patsubst %.s, %.o, $(subst $(COMM_SRC_DIR), $(OBJ_DIR), $(COMM_SRC_FILE)))
-# CC_LINK += -nostartfiles $(ROOT)/test/common/_start.s
+CC_O = -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true $(CFLAGS)
+CXX_VER ?= -std=c++20
+	ifneq ($(CC_OPT), default)
+    CC_O += -mllvm -linxv5-enable-HL-Inst-Opt=true \
+			-mllvm -linxv5-enable-dim-opt=true \
+		-mllvm -linxv5-enable-ldst-bridge=false \
+		-mllvm -linxv5-enable-continuous-mem-opt=true \
+		-mllvm -linxv5-enable-tile-clock-hand=false \
+                -mllvm -linxv5-enable-simt-clock-hand=true \
+                -mllvm -enable-misched=false
+	endif
+
+	ifeq ($(baremetal), on)
+	CC_LINK += -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
+	else
+	CC_LINK += -nostartfiles $(ROOT)/test/common/_start.s
+	endif
+
+    DEFINES += -DENABLE_TENSOR_INSTR
 endif
 
 ifeq ($(PY_LIB), on)
@@ -70,34 +91,50 @@ CC_O += -fPIC
 CC_LINK += -shared
 endif
 
-INCLUDE += -I$(ROOT)/include -I$(ROOT)/test/common -I$(ROOT)/test/common/src -I$(ROOT)/test/kernels/src -I$(ROOT)/kernels
-QEMU = /remote/lms60/c00622284/qemu/LinxBlockModel/build/qemu-linx
+INCLUDE += -I$(ROOT)/include -I$(ROOT)/test/common -I$(ROOT)/test/common/src -I$(ROOT)/kernels -I$(ROOT)/models
+QEMU ?= /remote/lms60/c00622284/qemu/LinxBlockModel/build/qemu-linx
 
-CC_O_ALL = $(CC_O) $(CC_VER) $(CC_OPTS)
-# $(info "TEST_ROOT is $(TEST_ROOT)")
-# $(info "ELF_HEAD is $(ELF_HEAD)")
-# $(info "OBJ_ROOT is $(OBJ_ROOT)")
-# $(info "SRC_DIR is $(SRC_DIR)")
-# $(info "OBJ_DIR is $(OBJ_DIR)")
-# $(info "OBJ is $(OBJ)")
-# $(info "COMM_OBJ is $(COMM_OBJ)")
-# $(info "SRC_FILE is $(SRC_FILE)")
-# $(info "TARGET is $(TARGET)")
+CC_O_ALL = $(CC_O) $(CC_OPTS)
+CXX_O_ALL = $(CC_O) $(CXX_VER) $(CC_OPTS)
+
+ifneq ($(baremetal), on)
+COMM_OBJ = 
+LINK_SCRIPT_SRC = 
+LINK_SCRIPT = 
+else
+DEFINES += -D__baremetal
+endif
+
+ifeq ($(res_check), on)
+DEFINES += -DRES_CHECK -DENABLE_BINARY_OUTPUT
+DEFINES += -DCHK_DIR=\"$(ROOT)/compare/$(notdir $(basename $(TARGET)))\"
+CC_LINK = 
+endif
+
+.DEFAULT_GOAL := all
 
 all: pre_work $(TARGET)
 
 diss: pre_work $(TARGET)
 	$(DUMP) -dl $(TARGET) > $(TARGET).diss
 
+ifeq ($(PLAT), linx)
 sim: pre_work $(TARGET)
-	$(QEMU) -run-supertest -blk_optimize force_tb_chained $(TARGET)
+	$(QEMU) -blk_optimize force_tb_chained -s 4096M $(TARGET)
+else ifeq ($(PLAT), cpu)
+sim: pre_work $(TARGET)
+	$(TARGET)
+endif
+
+ddebug: pre_work $(TARGET)
+	$(QEMU) --singlestep -plugin $(TEST_ROOT)/common/liblogbpc.so,out=logbpc.log -blk_optimize force_tb_chained -s 4096M -d cpu,in_asm,exec,nochain,linxmem -D run.log $(TARGET)
 
 debug: pre_work $(TARGET)
-	$(QEMU) -run-supertest -blk_optimize force_tb_chained -d in_asm,exec,nochain,linxmem -D run.log $(TARGET) 
+	$(QEMU) -blk_optimize force_tb_chained -s 4096M -d cpu,in_asm,exec,nochain,linxmem -D run.log $(TARGET)
 
 $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
 	@mkdir -p $(shell dirname $@)
-	$(CXX) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+	$(CXX) $(CXX_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
 
 $(OBJ_DIR)%.o: $(SRC_DIR)%.c
 	@mkdir -p $(shell dirname $@)
@@ -107,21 +144,29 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.s
 	@mkdir -p $(shell dirname $@)
 	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
 
-$(OBJ_DIR)%.o: $(COMM_SRC_DIR)%.s
+$(OBJ_ROOT)/$(COMM_SRC_DIR)%.o: $(TEST_ROOT)/$(COMM_SRC_DIR)%.c
 	@mkdir -p $(shell dirname $@)
-	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+	$(CXX) -mlxbc -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
 
-$(TARGET): $(OBJ) $(COMM_OBJ) $(EXTRA_OBJ_FILES)
+$(OBJ_ROOT)/$(COMM_SRC_DIR)%.o: $(TEST_ROOT)/$(COMM_SRC_DIR)%.s
 	@mkdir -p $(shell dirname $@)
-	$(LINK) $(CC_LINK) $(COMM_OBJ) $(OBJ) $(EXTRA_OBJ_FILES) -o $@
+	$(CXX) -mlxbc -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
+
+$(OBJ_ROOT)/$(COMM_SRC_DIR)%.lds : $(TEST_ROOT)/$(COMM_SRC_DIR)%.lds.S
+	$(CC) $(DEFINES) $(INCLUDE) -E -P -C -o $@ $<
+
+$(TARGET): clean $(LINK_SCRIPT) $(COMM_OBJ) $(OBJ) $(EXTRA_OBJ_FILES)
+	@mkdir -p $(shell dirname $@)
+	$(LINK) $(CC_LINK) $(OBJ) $(COMM_OBJ) $(EXTRA_OBJ_FILES) -o $@
 
 pre_work:
 	@mkdir -p $(OBJ_DIR)
 	@mkdir -p $(ELF_DIR)
+	@mkdir -p $(OBJ_ROOT)/$(COMM_SRC_DIR)
 
 clean:
-#	rm -rf $(OBJ_ROOT)/*/*.o
-	@find $(OBJ_ROOT) -type f -name "*.o" -exec rm -rf {} \;
+	@find $(OBJ_ROOT) -type f -name "${TESTCASE}.o" -exec rm -rf {} \;
+	@rm -rf $(COMM_OBJ) $(LINK_SCRIPT)
 
 clean_all:
 	@rm -rf $(OBJ_ROOT)
