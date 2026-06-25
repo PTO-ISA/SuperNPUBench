@@ -50,8 +50,9 @@ CC_O = -c -O3
 CXX_VER ?= -std=c++20
 else ifeq ($(PLAT), linx)
 DEFINES += -D__linx
-#COMPILER_DIR ?= /remote/lms60/c00622284/janus/linxisa_compiler_v0.55/linx_blockisa_llvm_musl/bin
-COMPILER_DIR ?= /home/l00896942/workdir/linx_blockisa_llvm_musl/bin
+ifndef COMPILER_DIR
+$(error COMPILER_DIR is not set. Export COMPILER_DIR pointing to the linx_blockisa_llvm_musl toolchain bin directory, e.g. export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin)
+endif
 AS = $(COMPILER_DIR)/clang
 CC = $(COMPILER_DIR)/clang 
 CXX = $(COMPILER_DIR)/clang++
