@@ -55,6 +55,8 @@
 
 gfrun 是功能模拟器，验证指令功能的正确性。
 
+### 代表性算子详细测试
+
 | 算子 | 状态 | Block 数量 | 指令数量 | 备注 |
 |------|------|-----------|---------|------|
 | matmul_MASK_MASK_FP16 | ✅ 通过 | 303 | 1,681 | 功能正确 |
@@ -63,7 +65,27 @@ gfrun 是功能模拟器，验证指令功能的正确性。
 | reducemax_col | ✅ 通过 | 65 | 2,448 | 功能正确 |
 | fa_HIF4_HIF4_BF16 | ✅ 通过 | 9 | 28 | 功能正确 |
 
-**gfrun 通过率**: 5/5 (100%)
+### 全量测试结果（63 个 ELF）
+
+| 状态 | 数量 | 算子列表 |
+|------|------|---------|
+| ✅ 快速通过 (<15s) | ~10 | broadcast(部分), reducemax_col, reducesum_col, transpose(部分) |
+| ⏱️ 运行时间长 (>15s) | ~43 | gelu_bf16, fa, gather, matmul(大部分) |
+| ❌ 失败 (exit 134) | 10 | concat(4), gelu_half(4), matmul_HIF4_BASE(2) |
+
+**失败算子详情 (exit code 134 = SIGABRT):**
+- `kernel_concat_concat_gather_DType__half_tM512_IN_SHAPE256_8_OUT_SHAPE256_8000`
+- `kernel_concat_concat_gather_DTypeint32_t_tM512_IN_SHAPE64_2_OUT_SHAPE64_2000`
+- `kernel_concat_concat_scatter_DType__half_tM512_IN_SHAPE256_8_OUT_SHAPE256_8000`
+- `kernel_concat_concat_scatter_DTypeint32_t_tM512_IN_SHAPE64_2_OUT_SHAPE64_2000`
+- `kernel_element_wise_gelu_gelu_Approximate_false_DType__half_tM2048_SHAPE128_1024`
+- `kernel_element_wise_gelu_gelu_Approximate_false_DType__half_tM2048_SHAPE24_8_1024`
+- `kernel_element_wise_gelu_gelu_Approximate_true_DType__half_tM2048_SHAPE128_1024`
+- `kernel_element_wise_gelu_gelu_Approximate_true_DType__half_tM2048_SHAPE24_8_1024`
+- `matmul_HIF4_HIF4_BASE_B1_M256_N2048_K2048_tM128_tN128_tK128`
+- `matmul_HIF4_HIF4_BASE_B1_M512_N1280_K4096_tM128_tN128_tK128`
+
+**注意**: 运行时间长的算子可能需要更长时间才能完成，不代表失败。
 
 ## gfsim 测试结果（周期精确模型）
 
