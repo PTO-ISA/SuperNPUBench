@@ -28,8 +28,6 @@ static uint16_t* g_expected = reinterpret_cast<uint16_t*>(
 // Global-scope buffers
 // ============================================================================
 
-static uint32_t g_tile_high8_hist[kNumBuckets] = {0};
-static uint32_t g_tile_low8_hist_kth[kNumBuckets] = {0};
 static uint16_t g_output[kInputCount];
 
 // ============================================================================

@@ -18,7 +18,6 @@ constexpr int kNumBuckets = 256;
 // Tile type aliases
 // ============================================================================
 
-using TileU16 = Tile<Location::Vec, uint16_t, 16, 16, BLayout::RowMajor>;
 using TileU32 = Tile<Location::Vec, uint32_t, 16, 16, BLayout::RowMajor>;
 
 // ============================================================================
