@@ -111,9 +111,9 @@ $(OBJ_DIR)%.o: $(COMM_SRC_DIR)%.s
 	@mkdir -p $(shell dirname $@)
 	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
 
-$(TARGET): $(OBJ) $(COMM_OBJ)
+$(TARGET): $(OBJ) $(COMM_OBJ) $(EXTRA_OBJ_FILES)
 	@mkdir -p $(shell dirname $@)
-	$(LINK) $(CC_LINK) $(COMM_OBJ) $(OBJ) -o $@
+	$(LINK) $(CC_LINK) $(COMM_OBJ) $(OBJ) $(EXTRA_OBJ_FILES) -o $@
 
 pre_work:
 	@mkdir -p $(OBJ_DIR)

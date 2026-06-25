@@ -12,13 +12,20 @@ EXTRA_OBJ_DEPS :=
 DATA_OBJ_DIR := topk/data_obj
 OUTPUT_DATA_OBJ_DIR := ../../../output/kernel/sort/topk/data_obj
 
+# Generate .data files from Python script if missing
+gen_topk_data:
+	@if [ ! -f $(DATA_OBJ_DIR)/input_131072.data ] || [ ! -f $(DATA_OBJ_DIR)/top_2048_out.data ]; then \
+		echo "Generating topk data..."; \
+		cd topk && python3 gen_topk_data.py; \
+	fi
+
 ifeq ($(TESTCASE), topk)
 EXTRA_OBJ_FILES += $(OUTPUT_DATA_OBJ_DIR)/input_131072.o
 EXTRA_OBJ_FILES += $(OUTPUT_DATA_OBJ_DIR)/top_2048_out.o
 
 pre_work: build_data_objs
 
-build_data_objs:
+build_data_objs: gen_topk_data
 	@COMPILER_DIR="$(COMPILER_DIR)" $(DATA_OBJ_DIR)/build_data_obj.sh $(DATA_OBJ_DIR) $(OUTPUT_DATA_OBJ_DIR)
 
 $(OUTPUT_DATA_OBJ_DIR)/%.o: $(DATA_OBJ_DIR)/%.s pre_work

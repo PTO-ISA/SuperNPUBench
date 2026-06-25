@@ -179,6 +179,6 @@ cd {WORKSPACE}/JanusCoreBench/test/kernel/control
 |------|------|
 | `hashtable_lookup_simd.cpp` | 源码（tile-based SIMD gather + linear probing） |
 | `compute_offsets.py` | 计算 hash 偏移量的辅助脚本 |
-| `gen_data_simple.py` | 生成简单数据集的脚本 |
+| `gen_data.py` | 生成数据集的脚本 |
 | `data_obj/` | 嵌入式数据文件（.data）及构建脚本 |
 | `run_hashtable_lookup_simd.md` | 本文档 |
