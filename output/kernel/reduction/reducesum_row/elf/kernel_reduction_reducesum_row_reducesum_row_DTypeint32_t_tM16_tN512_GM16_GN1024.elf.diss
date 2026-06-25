@@ -1,0 +1,750 @@
+
+/Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/reduction/reducesum_row/elf/kernel_reduction_reducesum_row_reducesum_row_DTypeint32_t_tM16_tN512_GM16_GN1024.elf:	file format elf64-unknown
+
+Disassembly of section .text:
+
+0000000000011224 <_start>:
+   11224: 0212         	C.BSTART.STD	DIRECT, 0x11266 <main>
+   11226: 5056         	c.setret	0x11228, ->ra <_end>
+
+0000000000011228 <_end>:
+   11228: 0840         	C.BSTART.AUX	
+   1122a: 0000302b     	acrc 0
+   1122e: 0000         	C.BSTOP
+
+0000000000011230 <_ZN3pto18layout_type_to_strENS_10LayoutEnumE>:
+   11230: 00d4         	C.BSTART.STD	COND, 0x1124a <.LBB0_2>
+   11232: fffff187     	addtpc	-1, 	->a1
+   11236: f896         	c.movi	2, 	->t
+   11238: 002c6065     	setc.ltu	t#1, a0
+   1123c: 00a2         	C.BSTART.STD	DIRECT, 0x11250 <.LBB0_3>
+   1123e: 00002f87     	addtpc	2, 	->t
+   11242: 14ac0f95     	addi	t#1, 330, 	->t
+   11246: 182c3109     	ld	[t#1, a0<<3], 	->a0
+
+000000000001124a <.LBB0_2>:
+   1124a: 0800         	C.BSTART.STD	
+   1124c: 05219115     	subi	a1, 82, 	->a0
+
+0000000000011250 <.LBB0_3>:
+   11250: 3800         	C.BSTART.STD	RET
+   11252: 029c         	c.setc.tgt	ra
+   11254: 0800         	C.BSTART.STD	
+
+0000000000011256 <_Z15writeBinaryFilePKcPKhm>:
+   11256: 3800         	C.BSTART.STD	RET
+   11258: 1056         	c.movi	1, 	->a0
+   1125a: 029c         	c.setc.tgt	ra
+   1125c: 0800         	C.BSTART.STD	
+
+000000000001125e <_Z14readBinaryFilePKcPhm>:
+   1125e: 3800         	C.BSTART.STD	RET
+   11260: 1056         	c.movi	1, 	->a0
+   11262: 029c         	c.setc.tgt	ra
+   11264: 0800         	C.BSTART.STD	
+
+0000000000011266 <main>:
+   11266: 0800         	C.BSTART.STD	
+   11268: fffeff97     	lui	-17, 	->t
+   1126c: f00c0f95     	addi	t#1, 3840, 	->t
+   11270: 01808085     	add	sp, t#1, 	->sp
+   11274: 1006         	c.movr	zero, 	->a0
+   11276: 02021181     	BSTART.VPAR	VS16
+   1127a: 000c6093     	B.IOT	[], last	->u<4KB>
+   1127e: 00010013     	B.IOR	[a0],[]
+   11282: 043c         	C.B.DIMI	16, 	->lb0
+   11284: 423c         	C.B.DIMI	8, 	->lb1
+   11286: 00042783     	B.TEXT	0x12324 <_Z25ExpandScalarImpl_ColMajorIN3pto4TileILNS0_8LocationE0EiLi16ELi64ELNS0_7BLayoutE1ELi16ELi8ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeENS7_7int32_tE>
+   1128a: 02021181     	BSTART.VPAR	VS16
+   1128e: 000c6013     	B.IOT	[], last	->t<4KB>
+   11292: 00010013     	B.IOR	[a0],[]
+   11296: 043c         	C.B.DIMI	16, 	->lb0
+   11298: 503c         	C.B.DIMI	64, 	->lb1
+   1129a: 00042683     	B.TEXT	0x12334 <_Z25ExpandScalarImpl_ColMajorIN3pto4TileILNS0_8LocationE0EiLi16ELi64ELNS0_7BLayoutE1ELi16ELi64ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeENS7_7int32_tE>
+   1129e: 0800         	C.BSTART.STD	
+   112a0: 00001197     	lui	1, 	->a1
+   112a4: 10008215     	addi	sp, 256, 	->a2
+   112a8: 88011181     	BSTART.TMA	TLOAD, S32
+   112ac: 19f01023     	B.DATR	NORM.normal, Null
+   112b0: 000de113     	B.IOT	[], last	->m<32KB>
+   112b4: 00320013     	B.IOR	[a2,a1],[]
+   112b8: 20000043     	B.DIM	zero, 512, 	->lb0
+   112bc: 443c         	C.B.DIMI	16, 	->lb1
+   112be: 20002043     	B.DIM	zero, 512, 	->lb2
+   112c2: 02021181     	BSTART.VPAR	VS16
+   112c6: 02044893     	B.IOT	[m#1, t#1.reuse]	->u<4KB>
+   112ca: 01085393     	B.IOT	[u#1], last
+   112ce: 00010013     	B.IOR	[a0],[]
+   112d2: 043c         	C.B.DIMI	16, 	->lb0
+   112d4: 413c         	C.B.DIMI	4, 	->lb1
+   112d6: 00008b83     	B.TEXT	0x11504 <_Z20reducesum_row_kernelIN3pto4TileILNS0_8LocationE0EiLi16ELi512ELNS0_7BLayoutE0ELi16ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EiLi16ELi64ELS3_1ELi16ELi64ELS4_0ELi512ELS5_3EEENS1_ILS2_0EiLi16ELi64ELS3_1ELi16ELi8ELS4_0ELi512ELS5_3EEEEvNT1_9TileDTypeENT_9TileDTypeENT0_9TileDTypeESA_m>
+   112da: 0800         	C.BSTART.STD	
+   112dc: 80020215     	addi	a2, 2048, 	->a2
+   112e0: 88011181     	BSTART.TMA	TLOAD, S32
+   112e4: 19f01023     	B.DATR	NORM.normal, Null
+   112e8: 000de113     	B.IOT	[], last	->m<32KB>
+   112ec: 00320013     	B.IOR	[a2,a1],[]
+   112f0: 20000043     	B.DIM	zero, 512, 	->lb0
+   112f4: 443c         	C.B.DIMI	16, 	->lb1
+   112f6: 20002043     	B.DIM	zero, 512, 	->lb2
+   112fa: 0800         	C.BSTART.STD	
+   112fc: 1856         	c.movi	1, 	->a1
+   112fe: 02021181     	BSTART.VPAR	VS16
+   11302: 02044013     	B.IOT	[m#1, t#1]	->t<4KB>
+   11306: 01085393     	B.IOT	[u#1], last
+   1130a: 00018013     	B.IOR	[a1],[]
+   1130e: 043c         	C.B.DIMI	16, 	->lb0
+   11310: 413c         	C.B.DIMI	4, 	->lb1
+   11312: 00007c83     	B.TEXT	0x11504 <_Z20reducesum_row_kernelIN3pto4TileILNS0_8LocationE0EiLi16ELi512ELNS0_7BLayoutE0ELi16ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EiLi16ELi64ELS3_1ELi16ELi64ELS4_0ELi512ELS5_3EEENS1_ILS2_0EiLi16ELi64ELS3_1ELi16ELi8ELS4_0ELi512ELS5_3EEEEvNT1_9TileDTypeENT_9TileDTypeENT0_9TileDTypeESA_m>
+   11316: 02021181     	BSTART.VPAR	VS16
+   1131a: 000ad013     	B.IOT	[t#1], last	->t<512B>
+   1131e: 043c         	C.B.DIMI	16, 	->lb0
+   11320: 0002d503     	B.TEXT	0x11e74 <_Z26reducesum_row_final_kernelIN3pto4TileILNS0_8LocationE0EiLi16ELi64ELNS0_7BLayoutE1ELi16ELi8ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EiLi16ELi8ELS3_0ELi16ELi1ELS4_0ELi512ELS5_3EEEEvNT0_9TileDTypeENT_9TileDTypeE>
+   11324: 0800         	C.BSTART.STD	
+   11326: 1916         	c.movi	4, 	->a1
+   11328: 0c008215     	addi	sp, 192, 	->a2
+   1132c: 88111181     	BSTART.TMA	TSTORE, S32
+   11330: 19f01023     	B.DATR	NORM.normal, Null
+   11334: 00085393     	B.IOT	[t#1], last
+   11338: 00320013     	B.IOR	[a2,a1],[]
+   1133c: 007c         	C.B.DIMI	1, 	->lb0
+   1133e: 443c         	C.B.DIMI	16, 	->lb1
+   11340: 823c         	C.B.DIMI	8, 	->lb2
+   11342: 3800         	C.BSTART.STD	RET
+   11344: 00010f97     	lui	16, 	->t
+   11348: 100c0f95     	addi	t#1, 256, 	->t
+   1134c: 01808085     	add	sp, t#1, 	->sp
+   11350: 029c         	c.setc.tgt	ra
+   11352: 0800         	C.BSTART.STD	
+
+0000000000011354 <__cxx_global_var_init>:
+   11354: 0184         	C.BSTART.STD	COND, 0x11384 <.LBB4_2>
+   11356: 00003f87     	addtpc	3, 	->t
+   1135a: 10ac4f99     	lbui	[t#1, 266], 	->t
+   1135e: 0636         	c.setc.ne	t#1, zero
+   11360: 0800         	C.BSTART.STD	
+   11362: 00003f87     	addtpc	3, 	->t
+   11366: f856         	c.movi	1, 	->t
+   11368: 7d9c7059     	sdi.u	t#1, [t#2, 62]
+   1136c: 03ec8f95     	addi	t#2, 62, 	->t
+   11370: 05802059     	swi	zero, [t#1, 8]
+   11374: 07802059     	swi	zero, [t#1, 12]
+   11378: 09802059     	swi	zero, [t#1, 16]
+   1137c: 00003f87     	addtpc	3, 	->t
+   11380: c98d00d9     	sbi	t#3, [t#1, 228]
+
+0000000000011384 <.LBB4_2>:
+   11384: 3800         	C.BSTART.STD	RET
+   11386: 029c         	c.setc.tgt	ra
+   11388: 0800         	C.BSTART.STD	
+
+000000000001138a <__cxx_global_var_init.4>:
+   1138a: 0184         	C.BSTART.STD	COND, 0x113ba <.LBB5_2>
+   1138c: 00003f87     	addtpc	3, 	->t
+   11390: 0dcc4f99     	lbui	[t#1, 220], 	->t
+   11394: 0636         	c.setc.ne	t#1, zero
+   11396: 0800         	C.BSTART.STD	
+   11398: 00003f87     	addtpc	3, 	->t
+   1139c: f856         	c.movi	1, 	->t
+   1139e: 419c7059     	sdi.u	t#1, [t#2, 32]
+   113a2: 020c8f95     	addi	t#2, 32, 	->t
+   113a6: 05802059     	swi	zero, [t#1, 8]
+   113aa: 07802059     	swi	zero, [t#1, 12]
+   113ae: 09802059     	swi	zero, [t#1, 16]
+   113b2: 00003f87     	addtpc	3, 	->t
+   113b6: 6d8d00d9     	sbi	t#3, [t#1, 182]
+
+00000000000113ba <.LBB5_2>:
+   113ba: 3800         	C.BSTART.STD	RET
+   113bc: 029c         	c.setc.tgt	ra
+   113be: 0800         	C.BSTART.STD	
+
+00000000000113c0 <__cxx_global_var_init.5>:
+   113c0: 0184         	C.BSTART.STD	COND, 0x113f0 <.LBB6_2>
+   113c2: 00003f87     	addtpc	3, 	->t
+   113c6: 0aec4f99     	lbui	[t#1, 174], 	->t
+   113ca: 0636         	c.setc.ne	t#1, zero
+   113cc: 0800         	C.BSTART.STD	
+   113ce: 00003f87     	addtpc	3, 	->t
+   113d2: f856         	c.movi	1, 	->t
+   113d4: 059c7059     	sdi.u	t#1, [t#2, 2]
+   113d8: 002c8f95     	addi	t#2, 2, 	->t
+   113dc: 05802059     	swi	zero, [t#1, 8]
+   113e0: 07802059     	swi	zero, [t#1, 12]
+   113e4: 09802059     	swi	zero, [t#1, 16]
+   113e8: 00003f87     	addtpc	3, 	->t
+   113ec: 118d00d9     	sbi	t#3, [t#1, 136]
+
+00000000000113f0 <.LBB6_2>:
+   113f0: 3800         	C.BSTART.STD	RET
+   113f2: 029c         	c.setc.tgt	ra
+   113f4: 0800         	C.BSTART.STD	
+
+00000000000113f6 <__cxx_global_var_init.6>:
+   113f6: 0184         	C.BSTART.STD	COND, 0x11426 <.LBB7_2>
+   113f8: 00003f87     	addtpc	3, 	->t
+   113fc: 080c4f99     	lbui	[t#1, 128], 	->t
+   11400: 0636         	c.setc.ne	t#1, zero
+   11402: 0800         	C.BSTART.STD	
+   11404: 00003f87     	addtpc	3, 	->t
+   11408: f856         	c.movi	1, 	->t
+   1140a: c99c7fd9     	sdi.u	t#1, [t#2, -28]
+   1140e: 01cc9f95     	subi	t#2, 28, 	->t
+   11412: 05802059     	swi	zero, [t#1, 8]
+   11416: 07802059     	swi	zero, [t#1, 12]
+   1141a: 09802059     	swi	zero, [t#1, 16]
+   1141e: 00003f87     	addtpc	3, 	->t
+   11422: b58d0059     	sbi	t#3, [t#1, 90]
+
+0000000000011426 <.LBB7_2>:
+   11426: 3800         	C.BSTART.STD	RET
+   11428: 029c         	c.setc.tgt	ra
+   1142a: 0800         	C.BSTART.STD	
+
+000000000001142c <__cxx_global_var_init.7>:
+   1142c: 0184         	C.BSTART.STD	COND, 0x1145c <.LBB8_2>
+   1142e: 00003f87     	addtpc	3, 	->t
+   11432: 052c4f99     	lbui	[t#1, 82], 	->t
+   11436: 0636         	c.setc.ne	t#1, zero
+   11438: 0800         	C.BSTART.STD	
+   1143a: 00003f87     	addtpc	3, 	->t
+   1143e: f856         	c.movi	1, 	->t
+   11440: 8d9c7fd9     	sdi.u	t#1, [t#2, -58]
+   11444: 03ac9f95     	subi	t#2, 58, 	->t
+   11448: 05802059     	swi	zero, [t#1, 8]
+   1144c: 07802059     	swi	zero, [t#1, 12]
+   11450: 09802059     	swi	zero, [t#1, 16]
+   11454: 00003f87     	addtpc	3, 	->t
+   11458: 598d0059     	sbi	t#3, [t#1, 44]
+
+000000000001145c <.LBB8_2>:
+   1145c: 3800         	C.BSTART.STD	RET
+   1145e: 029c         	c.setc.tgt	ra
+   11460: 0800         	C.BSTART.STD	
+
+0000000000011462 <__cxx_global_var_init.8>:
+   11462: 0184         	C.BSTART.STD	COND, 0x11492 <.LBB9_2>
+   11464: 00003f87     	addtpc	3, 	->t
+   11468: 024c4f99     	lbui	[t#1, 36], 	->t
+   1146c: 0636         	c.setc.ne	t#1, zero
+   1146e: 0800         	C.BSTART.STD	
+   11470: 00003f87     	addtpc	3, 	->t
+   11474: f856         	c.movi	1, 	->t
+   11476: 519c7fd9     	sdi.u	t#1, [t#2, -88]
+   1147a: 058c9f95     	subi	t#2, 88, 	->t
+   1147e: 05802059     	swi	zero, [t#1, 8]
+   11482: 07802059     	swi	zero, [t#1, 12]
+   11486: 09802059     	swi	zero, [t#1, 16]
+   1148a: 00003f87     	addtpc	3, 	->t
+   1148e: fd8d0fd9     	sbi	t#3, [t#1, -2]
+
+0000000000011492 <.LBB9_2>:
+   11492: 3800         	C.BSTART.STD	RET
+   11494: 029c         	c.setc.tgt	ra
+   11496: 0800         	C.BSTART.STD	
+
+0000000000011498 <__cxx_global_var_init.9>:
+   11498: 0184         	C.BSTART.STD	COND, 0x114c8 <.LBB10_2>
+   1149a: 00003f87     	addtpc	3, 	->t
+   1149e: ff6c4f99     	lbui	[t#1, -10], 	->t
+   114a2: 0636         	c.setc.ne	t#1, zero
+   114a4: 0800         	C.BSTART.STD	
+   114a6: 00003f87     	addtpc	3, 	->t
+   114aa: f856         	c.movi	1, 	->t
+   114ac: 159c7fd9     	sdi.u	t#1, [t#2, -118]
+   114b0: 076c9f95     	subi	t#2, 118, 	->t
+   114b4: 05802059     	swi	zero, [t#1, 8]
+   114b8: 07802059     	swi	zero, [t#1, 12]
+   114bc: 09802059     	swi	zero, [t#1, 16]
+   114c0: 00003f87     	addtpc	3, 	->t
+   114c4: a18d0fd9     	sbi	t#3, [t#1, -48]
+
+00000000000114c8 <.LBB10_2>:
+   114c8: 3800         	C.BSTART.STD	RET
+   114ca: 029c         	c.setc.tgt	ra
+   114cc: 0800         	C.BSTART.STD	
+
+00000000000114ce <__cxx_global_var_init.10>:
+   114ce: 0184         	C.BSTART.STD	COND, 0x114fe <.LBB11_2>
+   114d0: 00003f87     	addtpc	3, 	->t
+   114d4: fc8c4f99     	lbui	[t#1, -56], 	->t
+   114d8: 0636         	c.setc.ne	t#1, zero
+   114da: 0800         	C.BSTART.STD	
+   114dc: 00003f87     	addtpc	3, 	->t
+   114e0: f856         	c.movi	1, 	->t
+   114e2: d99c7f59     	sdi.u	t#1, [t#2, -148]
+   114e6: 094c9f95     	subi	t#2, 148, 	->t
+   114ea: 05802059     	swi	zero, [t#1, 8]
+   114ee: 07802059     	swi	zero, [t#1, 12]
+   114f2: 09802059     	swi	zero, [t#1, 16]
+   114f6: 00003f87     	addtpc	3, 	->t
+   114fa: 458d0fd9     	sbi	t#3, [t#1, -94]
+
+00000000000114fe <.LBB11_2>:
+   114fe: 3800         	C.BSTART.STD	RET
+   11500: 029c         	c.setc.tgt	ra
+   11502: 0800         	C.BSTART.STD	
+
+0000000000011504 <_Z20reducesum_row_kernelIN3pto4TileILNS0_8LocationE0EiLi16ELi512ELNS0_7BLayoutE0ELi16ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EiLi16ELi64ELS3_1ELi16ELi64ELS4_0ELi512ELS5_3EEENS1_ILS2_0EiLi16ELi64ELS3_1ELi16ELi8ELS4_0ELi512ELS5_3EEEEvNT1_9TileDTypeENT_9TileDTypeENT0_9TileDTypeESA_m>:
+   11504: 000500ff 00727f95    	l.slli	lc1.uh, 7, 	->t.d
+   1150c: 00a8807f 480c0005    	v.add	t#1.sd, lc0.uh<<9, 	->vt.d, nosat
+   11514: 0139007f 10080185    	v.add	ta, vt#1.reuse.sd<<2, 	->vn.d, nosat
+   1151c: 0109427f 10082109    	v.lw.local	[ta, vt#1.sd<<2], 	->vm.w
+   11524: 0009c27f 001c2019    	v.lwi.local	[vn#1.reuse.sd, 4], 	->vt.w
+   1152c: 0009c27f 002c2019    	v.lwi.local	[vn#1.reuse.sd, 8], 	->vt.w
+   11534: 0009c27f 003c2019    	v.lwi.local	[vn#1.reuse.sd, 12], 	->vt.w
+   1153c: 0009c27f 004c2099    	v.lwi.local	[vn#1.reuse.sd, 16], 	->vu.w
+   11544: 0009c27f 005c2099    	v.lwi.local	[vn#1.reuse.sd, 20], 	->vu.w
+   1154c: 0009c27f 006c2099    	v.lwi.local	[vn#1.reuse.sd, 24], 	->vu.w
+   11554: 0009c27f 007c2119    	v.lwi.local	[vn#1.reuse.sd, 28], 	->vm.w
+   1155c: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11564: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   1156c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11574: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   1157c: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11584: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   1158c: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11594: 00a900ff 50488f85    	l.add	tb, lc1.uh<<10, 	->t.d, nosat
+   1159c: a0a9547f 0048a049    	v.sw.local	vt#1.sw, [tb, lc0<<2, lc1.uh<<10]
+   115a4: 0009c27f 008c2119    	v.lwi.local	[vn#1.reuse.sd, 32], 	->vm.w
+   115ac: 0009c27f 009c2019    	v.lwi.local	[vn#1.reuse.sd, 36], 	->vt.w
+   115b4: 0009c27f 00ac2019    	v.lwi.local	[vn#1.reuse.sd, 40], 	->vt.w
+   115bc: 0009c27f 00bc2019    	v.lwi.local	[vn#1.reuse.sd, 44], 	->vt.w
+   115c4: 0009c27f 00cc2099    	v.lwi.local	[vn#1.reuse.sd, 48], 	->vu.w
+   115cc: 0009c27f 00dc2099    	v.lwi.local	[vn#1.reuse.sd, 52], 	->vu.w
+   115d4: 0009c27f 00ec2099    	v.lwi.local	[vn#1.reuse.sd, 56], 	->vu.w
+   115dc: 0009c27f 00fc2119    	v.lwi.local	[vn#1.reuse.sd, 60], 	->vm.w
+   115e4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   115ec: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   115f4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   115fc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11604: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1160c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11614: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1161c: 011a507f 21802059    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 64]
+   11624: 0009c27f 010c2119    	v.lwi.local	[vn#1.reuse.sd, 64], 	->vm.w
+   1162c: 0009c27f 011c2019    	v.lwi.local	[vn#1.reuse.sd, 68], 	->vt.w
+   11634: 0009c27f 012c2019    	v.lwi.local	[vn#1.reuse.sd, 72], 	->vt.w
+   1163c: 0009c27f 013c2019    	v.lwi.local	[vn#1.reuse.sd, 76], 	->vt.w
+   11644: 0009c27f 014c2099    	v.lwi.local	[vn#1.reuse.sd, 80], 	->vu.w
+   1164c: 0009c27f 015c2099    	v.lwi.local	[vn#1.reuse.sd, 84], 	->vu.w
+   11654: 0009c27f 016c2099    	v.lwi.local	[vn#1.reuse.sd, 88], 	->vu.w
+   1165c: 0009c27f 017c2119    	v.lwi.local	[vn#1.reuse.sd, 92], 	->vm.w
+   11664: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   1166c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11674: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   1167c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11684: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1168c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11694: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1169c: 011a507f 41802059    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 128]
+   116a4: 0009c27f 018c2119    	v.lwi.local	[vn#1.reuse.sd, 96], 	->vm.w
+   116ac: 0009c27f 019c2019    	v.lwi.local	[vn#1.reuse.sd, 100], 	->vt.w
+   116b4: 0009c27f 01ac2019    	v.lwi.local	[vn#1.reuse.sd, 104], 	->vt.w
+   116bc: 0009c27f 01bc2019    	v.lwi.local	[vn#1.reuse.sd, 108], 	->vt.w
+   116c4: 0009c27f 01cc2099    	v.lwi.local	[vn#1.reuse.sd, 112], 	->vu.w
+   116cc: 0009c27f 01dc2099    	v.lwi.local	[vn#1.reuse.sd, 116], 	->vu.w
+   116d4: 0009c27f 01ec2099    	v.lwi.local	[vn#1.reuse.sd, 120], 	->vu.w
+   116dc: 0009c27f 01fc2119    	v.lwi.local	[vn#1.reuse.sd, 124], 	->vm.w
+   116e4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   116ec: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   116f4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   116fc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11704: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1170c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11714: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1171c: 011a507f 61802059    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 192]
+   11724: 0009c27f 020c2119    	v.lwi.local	[vn#1.reuse.sd, 128], 	->vm.w
+   1172c: 0009c27f 021c2019    	v.lwi.local	[vn#1.reuse.sd, 132], 	->vt.w
+   11734: 0009c27f 022c2019    	v.lwi.local	[vn#1.reuse.sd, 136], 	->vt.w
+   1173c: 0009c27f 023c2019    	v.lwi.local	[vn#1.reuse.sd, 140], 	->vt.w
+   11744: 0009c27f 024c2099    	v.lwi.local	[vn#1.reuse.sd, 144], 	->vu.w
+   1174c: 0009c27f 025c2099    	v.lwi.local	[vn#1.reuse.sd, 148], 	->vu.w
+   11754: 0009c27f 026c2099    	v.lwi.local	[vn#1.reuse.sd, 152], 	->vu.w
+   1175c: 0009c27f 027c2119    	v.lwi.local	[vn#1.reuse.sd, 156], 	->vm.w
+   11764: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   1176c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11774: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   1177c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11784: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1178c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11794: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1179c: 011a507f 81802059    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 256]
+   117a4: 0009c27f 028c2119    	v.lwi.local	[vn#1.reuse.sd, 160], 	->vm.w
+   117ac: 0009c27f 029c2019    	v.lwi.local	[vn#1.reuse.sd, 164], 	->vt.w
+   117b4: 0009c27f 02ac2019    	v.lwi.local	[vn#1.reuse.sd, 168], 	->vt.w
+   117bc: 0009c27f 02bc2019    	v.lwi.local	[vn#1.reuse.sd, 172], 	->vt.w
+   117c4: 0009c27f 02cc2099    	v.lwi.local	[vn#1.reuse.sd, 176], 	->vu.w
+   117cc: 0009c27f 02dc2099    	v.lwi.local	[vn#1.reuse.sd, 180], 	->vu.w
+   117d4: 0009c27f 02ec2099    	v.lwi.local	[vn#1.reuse.sd, 184], 	->vu.w
+   117dc: 0009c27f 02fc2119    	v.lwi.local	[vn#1.reuse.sd, 188], 	->vm.w
+   117e4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   117ec: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   117f4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   117fc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11804: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1180c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11814: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1181c: 011a507f a1802059    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 320]
+   11824: 0009c27f 030c2119    	v.lwi.local	[vn#1.reuse.sd, 192], 	->vm.w
+   1182c: 0009c27f 031c2019    	v.lwi.local	[vn#1.reuse.sd, 196], 	->vt.w
+   11834: 0009c27f 032c2019    	v.lwi.local	[vn#1.reuse.sd, 200], 	->vt.w
+   1183c: 0009c27f 033c2019    	v.lwi.local	[vn#1.reuse.sd, 204], 	->vt.w
+   11844: 0009c27f 034c2099    	v.lwi.local	[vn#1.reuse.sd, 208], 	->vu.w
+   1184c: 0009c27f 035c2099    	v.lwi.local	[vn#1.reuse.sd, 212], 	->vu.w
+   11854: 0009c27f 036c2099    	v.lwi.local	[vn#1.reuse.sd, 216], 	->vu.w
+   1185c: 0009c27f 037c2119    	v.lwi.local	[vn#1.reuse.sd, 220], 	->vm.w
+   11864: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   1186c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11874: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   1187c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11884: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1188c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11894: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1189c: 011a507f c1802059    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 384]
+   118a4: 0009c27f 038c2119    	v.lwi.local	[vn#1.reuse.sd, 224], 	->vm.w
+   118ac: 0009c27f 039c2019    	v.lwi.local	[vn#1.reuse.sd, 228], 	->vt.w
+   118b4: 0009c27f 03ac2019    	v.lwi.local	[vn#1.reuse.sd, 232], 	->vt.w
+   118bc: 0009c27f 03bc2019    	v.lwi.local	[vn#1.reuse.sd, 236], 	->vt.w
+   118c4: 0009c27f 03cc2099    	v.lwi.local	[vn#1.reuse.sd, 240], 	->vu.w
+   118cc: 0009c27f 03dc2099    	v.lwi.local	[vn#1.reuse.sd, 244], 	->vu.w
+   118d4: 0009c27f 03ec2099    	v.lwi.local	[vn#1.reuse.sd, 248], 	->vu.w
+   118dc: 0009c27f 03fc2119    	v.lwi.local	[vn#1.reuse.sd, 252], 	->vm.w
+   118e4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   118ec: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   118f4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   118fc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11904: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1190c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11914: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1191c: 011a507f e1802059    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 448]
+   11924: 0009c27f 040c2119    	v.lwi.local	[vn#1.reuse.sd, 256], 	->vm.w
+   1192c: 0009c27f 041c2019    	v.lwi.local	[vn#1.reuse.sd, 260], 	->vt.w
+   11934: 0009c27f 042c2019    	v.lwi.local	[vn#1.reuse.sd, 264], 	->vt.w
+   1193c: 0009c27f 043c2019    	v.lwi.local	[vn#1.reuse.sd, 268], 	->vt.w
+   11944: 0009c27f 044c2099    	v.lwi.local	[vn#1.reuse.sd, 272], 	->vu.w
+   1194c: 0009c27f 045c2099    	v.lwi.local	[vn#1.reuse.sd, 276], 	->vu.w
+   11954: 0009c27f 046c2099    	v.lwi.local	[vn#1.reuse.sd, 280], 	->vu.w
+   1195c: 0009c27f 047c2119    	v.lwi.local	[vn#1.reuse.sd, 284], 	->vm.w
+   11964: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   1196c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11974: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   1197c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11984: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1198c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11994: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1199c: 011a507f 018020d9    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 512]
+   119a4: 0009c27f 048c2119    	v.lwi.local	[vn#1.reuse.sd, 288], 	->vm.w
+   119ac: 0009c27f 049c2019    	v.lwi.local	[vn#1.reuse.sd, 292], 	->vt.w
+   119b4: 0009c27f 04ac2019    	v.lwi.local	[vn#1.reuse.sd, 296], 	->vt.w
+   119bc: 0009c27f 04bc2019    	v.lwi.local	[vn#1.reuse.sd, 300], 	->vt.w
+   119c4: 0009c27f 04cc2099    	v.lwi.local	[vn#1.reuse.sd, 304], 	->vu.w
+   119cc: 0009c27f 04dc2099    	v.lwi.local	[vn#1.reuse.sd, 308], 	->vu.w
+   119d4: 0009c27f 04ec2099    	v.lwi.local	[vn#1.reuse.sd, 312], 	->vu.w
+   119dc: 0009c27f 04fc2119    	v.lwi.local	[vn#1.reuse.sd, 316], 	->vm.w
+   119e4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   119ec: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   119f4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   119fc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11a04: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11a0c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11a14: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11a1c: 011a507f 218020d9    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 576]
+   11a24: 0009c27f 050c2119    	v.lwi.local	[vn#1.reuse.sd, 320], 	->vm.w
+   11a2c: 0009c27f 051c2019    	v.lwi.local	[vn#1.reuse.sd, 324], 	->vt.w
+   11a34: 0009c27f 052c2019    	v.lwi.local	[vn#1.reuse.sd, 328], 	->vt.w
+   11a3c: 0009c27f 053c2019    	v.lwi.local	[vn#1.reuse.sd, 332], 	->vt.w
+   11a44: 0009c27f 054c2099    	v.lwi.local	[vn#1.reuse.sd, 336], 	->vu.w
+   11a4c: 0009c27f 055c2099    	v.lwi.local	[vn#1.reuse.sd, 340], 	->vu.w
+   11a54: 0009c27f 056c2099    	v.lwi.local	[vn#1.reuse.sd, 344], 	->vu.w
+   11a5c: 0009c27f 057c2119    	v.lwi.local	[vn#1.reuse.sd, 348], 	->vm.w
+   11a64: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11a6c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11a74: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11a7c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11a84: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11a8c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11a94: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11a9c: 011a507f 418020d9    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 640]
+   11aa4: 0009c27f 058c2119    	v.lwi.local	[vn#1.reuse.sd, 352], 	->vm.w
+   11aac: 0009c27f 059c2019    	v.lwi.local	[vn#1.reuse.sd, 356], 	->vt.w
+   11ab4: 0009c27f 05ac2019    	v.lwi.local	[vn#1.reuse.sd, 360], 	->vt.w
+   11abc: 0009c27f 05bc2019    	v.lwi.local	[vn#1.reuse.sd, 364], 	->vt.w
+   11ac4: 0009c27f 05cc2099    	v.lwi.local	[vn#1.reuse.sd, 368], 	->vu.w
+   11acc: 0009c27f 05dc2099    	v.lwi.local	[vn#1.reuse.sd, 372], 	->vu.w
+   11ad4: 0009c27f 05ec2099    	v.lwi.local	[vn#1.reuse.sd, 376], 	->vu.w
+   11adc: 0009c27f 05fc2119    	v.lwi.local	[vn#1.reuse.sd, 380], 	->vm.w
+   11ae4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11aec: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11af4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11afc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11b04: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11b0c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11b14: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11b1c: 011a507f 618020d9    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 704]
+   11b24: 0009c27f 060c2119    	v.lwi.local	[vn#1.reuse.sd, 384], 	->vm.w
+   11b2c: 0009c27f 061c2019    	v.lwi.local	[vn#1.reuse.sd, 388], 	->vt.w
+   11b34: 0009c27f 062c2019    	v.lwi.local	[vn#1.reuse.sd, 392], 	->vt.w
+   11b3c: 0009c27f 063c2019    	v.lwi.local	[vn#1.reuse.sd, 396], 	->vt.w
+   11b44: 0009c27f 064c2099    	v.lwi.local	[vn#1.reuse.sd, 400], 	->vu.w
+   11b4c: 0009c27f 065c2099    	v.lwi.local	[vn#1.reuse.sd, 404], 	->vu.w
+   11b54: 0009c27f 066c2099    	v.lwi.local	[vn#1.reuse.sd, 408], 	->vu.w
+   11b5c: 0009c27f 067c2119    	v.lwi.local	[vn#1.reuse.sd, 412], 	->vm.w
+   11b64: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11b6c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11b74: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11b7c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11b84: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11b8c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11b94: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11b9c: 011a507f 818020d9    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 768]
+   11ba4: 0009c27f 068c2119    	v.lwi.local	[vn#1.reuse.sd, 416], 	->vm.w
+   11bac: 0009c27f 069c2019    	v.lwi.local	[vn#1.reuse.sd, 420], 	->vt.w
+   11bb4: 0009c27f 06ac2019    	v.lwi.local	[vn#1.reuse.sd, 424], 	->vt.w
+   11bbc: 0009c27f 06bc2019    	v.lwi.local	[vn#1.reuse.sd, 428], 	->vt.w
+   11bc4: 0009c27f 06cc2099    	v.lwi.local	[vn#1.reuse.sd, 432], 	->vu.w
+   11bcc: 0009c27f 06dc2099    	v.lwi.local	[vn#1.reuse.sd, 436], 	->vu.w
+   11bd4: 0009c27f 06ec2099    	v.lwi.local	[vn#1.reuse.sd, 440], 	->vu.w
+   11bdc: 0009c27f 06fc2119    	v.lwi.local	[vn#1.reuse.sd, 444], 	->vm.w
+   11be4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11bec: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11bf4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11bfc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11c04: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11c0c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11c14: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11c1c: 011a507f a18020d9    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 832]
+   11c24: 0009c27f 070c2119    	v.lwi.local	[vn#1.reuse.sd, 448], 	->vm.w
+   11c2c: 0009c27f 071c2019    	v.lwi.local	[vn#1.reuse.sd, 452], 	->vt.w
+   11c34: 0009c27f 072c2019    	v.lwi.local	[vn#1.reuse.sd, 456], 	->vt.w
+   11c3c: 0009c27f 073c2019    	v.lwi.local	[vn#1.reuse.sd, 460], 	->vt.w
+   11c44: 0009c27f 074c2099    	v.lwi.local	[vn#1.reuse.sd, 464], 	->vu.w
+   11c4c: 0009c27f 075c2099    	v.lwi.local	[vn#1.reuse.sd, 468], 	->vu.w
+   11c54: 0009c27f 076c2099    	v.lwi.local	[vn#1.reuse.sd, 472], 	->vu.w
+   11c5c: 0009c27f 077c2119    	v.lwi.local	[vn#1.reuse.sd, 476], 	->vm.w
+   11c64: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11c6c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11c74: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11c7c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11c84: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11c8c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11c94: 014a027f 01000185    	v.add	vt#1.sw, vm#1.sw, 	->vn.w, nosat
+   11c9c: 011bd07f c18c20d9    	v.swi.local	vn#1.reuse.sw, [t#1.sd, lc0<<2, 896]
+   11ca4: 0009c27f 078ca119    	v.lwi.local	[vn#2.reuse.sd, 480], 	->vm.w
+   11cac: 0009c27f 079ca019    	v.lwi.local	[vn#2.reuse.sd, 484], 	->vt.w
+   11cb4: 0009c27f 07aca019    	v.lwi.local	[vn#2.reuse.sd, 488], 	->vt.w
+   11cbc: 0009c27f 07bca019    	v.lwi.local	[vn#2.reuse.sd, 492], 	->vt.w
+   11cc4: 0009c27f 07cca099    	v.lwi.local	[vn#2.reuse.sd, 496], 	->vu.w
+   11ccc: 0009c27f 07dca099    	v.lwi.local	[vn#2.reuse.sd, 500], 	->vu.w
+   11cd4: 0009c27f 07eca099    	v.lwi.local	[vn#2.reuse.sd, 504], 	->vu.w
+   11cdc: 0008427f 07fca119    	v.lwi.local	[vn#2.sd, 508], 	->vm.w
+   11ce4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11cec: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11cf4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11cfc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11d04: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11d0c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11d14: 014a027f 01000185    	v.add	vt#1.sw, vm#1.sw, 	->vn.w, nosat
+   11d1c: 011bd07f e18c20d9    	v.swi.local	vn#1.reuse.sw, [t#1.sd, lc0<<2, 960]
+   11d24: 00a9527f 5048a109    	v.lw.local	[tb, lc0<<2, lc1.uh<<10], 	->vm.w
+   11d2c: 0008d27f 010c2019    	v.lwi.local	[t#1.sd, lc0<<2, 64], 	->vt.w
+   11d34: 0008d27f 020c2019    	v.lwi.local	[t#1.sd, lc0<<2, 128], 	->vt.w
+   11d3c: 0008d27f 030c2019    	v.lwi.local	[t#1.sd, lc0<<2, 192], 	->vt.w
+   11d44: 0008d27f 040c2099    	v.lwi.local	[t#1.sd, lc0<<2, 256], 	->vu.w
+   11d4c: 0008d27f 050c2099    	v.lwi.local	[t#1.sd, lc0<<2, 320], 	->vu.w
+   11d54: 0008d27f 060c2099    	v.lwi.local	[t#1.sd, lc0<<2, 384], 	->vu.w
+   11d5c: 0008d27f 070c2119    	v.lwi.local	[t#1.sd, lc0<<2, 448], 	->vm.w
+   11d64: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11d6c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11d74: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11d7c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11d84: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11d8c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11d94: 014a027f 01000105    	v.add	vt#1.sw, vm#1.sw, 	->vm.w, nosat
+   11d9c: 0008d27f 080c2019    	v.lwi.local	[t#1.sd, lc0<<2, 512], 	->vt.w
+   11da4: 0008d27f 090c2019    	v.lwi.local	[t#1.sd, lc0<<2, 576], 	->vt.w
+   11dac: 0008d27f 0a0c2099    	v.lwi.local	[t#1.sd, lc0<<2, 640], 	->vu.w
+   11db4: 0008d27f 0b0c2099    	v.lwi.local	[t#1.sd, lc0<<2, 704], 	->vu.w
+   11dbc: 0008d27f 0c0c2099    	v.lwi.local	[t#1.sd, lc0<<2, 768], 	->vu.w
+   11dc4: 0008d27f 0d0c2119    	v.lwi.local	[t#1.sd, lc0<<2, 832], 	->vm.w
+   11dcc: 014a027f 00100005    	v.add	vt#1.sw, vt#2.sw, 	->vt.w, nosat
+   11dd4: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11ddc: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11de4: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11dec: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11df4: 014a027f 01900005    	v.add	vt#1.sw, vn#2.sw, 	->vt.w, nosat
+   11dfc: 014a027f 01800005    	v.add	vt#1.sw, vn#1.sw, 	->vt.w, nosat
+   11e04: 011bd07f 018020d9    	v.swi.local	vt#1.reuse.sw, [t#1.sd, lc0<<2, 512]
+   11e0c: 014a027f 01100005    	v.add	vt#1.sw, vm#2.sw, 	->vt.w, nosat
+   11e14: a0a9547f 0048a049    	v.sw.local	vt#1.sw, [tb, lc0<<2, lc1.uh<<10]
+   11e1c: 00a900ff 38490f85    	l.add	tc, lc1.uh<<7, 	->t.d, nosat
+   11e24: 00a9527f 38492009    	v.lw.local	[tc, lc0<<2, lc1.uh<<7], 	->vt.w
+   11e2c: 00a900ff 384c0f85    	l.add	to, lc1.uh<<7, 	->t.d, nosat
+   11e34: a0a952ff 004c2049    	v.sw.local	vt#1.sw, [to, lc0<<2, lc1.uh<<7]
+   11e3c: 0008d27f 010ca019    	v.lwi.local	[t#2.sd, lc0<<2, 64], 	->vt.w
+   11e44: 011a507f 21802059    	v.swi.local	vt#1.sw, [t#1.sd, lc0<<2, 64]
+   11e4c: 000880ff 00407f95    	l.slli	ri0.sd, 4, 	->t.d
+   11e54: 00a880ff 284c0f85    	l.add	t#1.sd, lc1.uh<<5, 	->t.d, nosat
+   11e5c: 00a9527f 5048a009    	v.lw.local	[tb, lc0<<2, lc1.uh<<10], 	->vt.w
+   11e64: a119507f 018c2049    	v.sw.local	vt#1.sw, [to, lc0<<2, t#1.sd<<2]
+   11e6c: 0000000f 00000001    	L.BSTOP
+
+0000000000011e74 <_Z26reducesum_row_final_kernelIN3pto4TileILNS0_8LocationE0EiLi16ELi64ELNS0_7BLayoutE1ELi16ELi8ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EiLi16ELi8ELS3_0ELi16ELi1ELS4_0ELi512ELS5_3EEEEvNT0_9TileDTypeENT_9TileDTypeE>:
+   11e74: 0129527f 01f82109    	v.lw.local	[ta, lc0<<2, zero.sd], 	->vm.w
+   11e7c: 0009527f 01082019    	v.lwi.local	[ta, lc0<<2, 64], 	->vt.w
+   11e84: 0009527f 02082019    	v.lwi.local	[ta, lc0<<2, 128], 	->vt.w
+   11e8c: 0009527f 03082019    	v.lwi.local	[ta, lc0<<2, 192], 	->vt.w
+   11e94: 0009527f 04082099    	v.lwi.local	[ta, lc0<<2, 256], 	->vu.w
+   11e9c: 0009527f 05082099    	v.lwi.local	[ta, lc0<<2, 320], 	->vu.w
+   11ea4: 0009527f 06082099    	v.lwi.local	[ta, lc0<<2, 384], 	->vu.w
+   11eac: 0009527f 07082119    	v.lwi.local	[ta, lc0<<2, 448], 	->vm.w
+   11eb4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11ebc: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11ec4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11ecc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11ed4: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11edc: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11ee4: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11eec: a129507f 01f82049    	v.sw.local	vt#1.sw, [ta, lc0<<2, zero.sd<<2]
+   11ef4: 0009527f 08082119    	v.lwi.local	[ta, lc0<<2, 512], 	->vm.w
+   11efc: 0009527f 09082019    	v.lwi.local	[ta, lc0<<2, 576], 	->vt.w
+   11f04: 0009527f 0a082019    	v.lwi.local	[ta, lc0<<2, 640], 	->vt.w
+   11f0c: 0009527f 0b082019    	v.lwi.local	[ta, lc0<<2, 704], 	->vt.w
+   11f14: 0009527f 0c082099    	v.lwi.local	[ta, lc0<<2, 768], 	->vu.w
+   11f1c: 0009527f 0d082099    	v.lwi.local	[ta, lc0<<2, 832], 	->vu.w
+   11f24: 0009527f 0e082099    	v.lwi.local	[ta, lc0<<2, 896], 	->vu.w
+   11f2c: 0009527f 0f082119    	v.lwi.local	[ta, lc0<<2, 960], 	->vm.w
+   11f34: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11f3c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11f44: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11f4c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11f54: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11f5c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11f64: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11f6c: 012a507f 010020d9    	v.swi.local	vt#1.sw, [ta, lc0<<2, 512]
+   11f74: 0009527f 10082119    	v.lwi.local	[ta, lc0<<2, 1024], 	->vm.w
+   11f7c: 0009527f 11082019    	v.lwi.local	[ta, lc0<<2, 1088], 	->vt.w
+   11f84: 0009527f 12082019    	v.lwi.local	[ta, lc0<<2, 1152], 	->vt.w
+   11f8c: 0009527f 13082019    	v.lwi.local	[ta, lc0<<2, 1216], 	->vt.w
+   11f94: 0009527f 14082099    	v.lwi.local	[ta, lc0<<2, 1280], 	->vu.w
+   11f9c: 0009527f 15082099    	v.lwi.local	[ta, lc0<<2, 1344], 	->vu.w
+   11fa4: 0009527f 16082099    	v.lwi.local	[ta, lc0<<2, 1408], 	->vu.w
+   11fac: 0009527f 17082119    	v.lwi.local	[ta, lc0<<2, 1472], 	->vm.w
+   11fb4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   11fbc: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11fc4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   11fcc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   11fd4: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   11fdc: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   11fe4: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   11fec: 012a507f 01002159    	v.swi.local	vt#1.sw, [ta, lc0<<2, 1024]
+   11ff4: 0009527f 18082119    	v.lwi.local	[ta, lc0<<2, 1536], 	->vm.w
+   11ffc: 0009527f 19082019    	v.lwi.local	[ta, lc0<<2, 1600], 	->vt.w
+   12004: 0009527f 1a082019    	v.lwi.local	[ta, lc0<<2, 1664], 	->vt.w
+   1200c: 0009527f 1b082019    	v.lwi.local	[ta, lc0<<2, 1728], 	->vt.w
+   12014: 0009527f 1c082099    	v.lwi.local	[ta, lc0<<2, 1792], 	->vu.w
+   1201c: 0009527f 1d082099    	v.lwi.local	[ta, lc0<<2, 1856], 	->vu.w
+   12024: 0009527f 1e082099    	v.lwi.local	[ta, lc0<<2, 1920], 	->vu.w
+   1202c: 0009527f 1f082119    	v.lwi.local	[ta, lc0<<2, 1984], 	->vm.w
+   12034: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   1203c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   12044: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   1204c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   12054: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1205c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   12064: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1206c: 012a507f 010021d9    	v.swi.local	vt#1.sw, [ta, lc0<<2, 1536]
+   12074: 0009527f 20082119    	v.lwi.local	[ta, lc0<<2, 2048], 	->vm.w
+   1207c: 0009527f 21082019    	v.lwi.local	[ta, lc0<<2, 2112], 	->vt.w
+   12084: 0009527f 22082019    	v.lwi.local	[ta, lc0<<2, 2176], 	->vt.w
+   1208c: 0009527f 23082019    	v.lwi.local	[ta, lc0<<2, 2240], 	->vt.w
+   12094: 0009527f 24082099    	v.lwi.local	[ta, lc0<<2, 2304], 	->vu.w
+   1209c: 0009527f 25082099    	v.lwi.local	[ta, lc0<<2, 2368], 	->vu.w
+   120a4: 0009527f 26082099    	v.lwi.local	[ta, lc0<<2, 2432], 	->vu.w
+   120ac: 0009527f 27082119    	v.lwi.local	[ta, lc0<<2, 2496], 	->vm.w
+   120b4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   120bc: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   120c4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   120cc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   120d4: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   120dc: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   120e4: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   120ec: 012a507f 01002259    	v.swi.local	vt#1.sw, [ta, lc0<<2, 2048]
+   120f4: 0009527f 28082119    	v.lwi.local	[ta, lc0<<2, 2560], 	->vm.w
+   120fc: 0009527f 29082019    	v.lwi.local	[ta, lc0<<2, 2624], 	->vt.w
+   12104: 0009527f 2a082019    	v.lwi.local	[ta, lc0<<2, 2688], 	->vt.w
+   1210c: 0009527f 2b082019    	v.lwi.local	[ta, lc0<<2, 2752], 	->vt.w
+   12114: 0009527f 2c082099    	v.lwi.local	[ta, lc0<<2, 2816], 	->vu.w
+   1211c: 0009527f 2d082099    	v.lwi.local	[ta, lc0<<2, 2880], 	->vu.w
+   12124: 0009527f 2e082099    	v.lwi.local	[ta, lc0<<2, 2944], 	->vu.w
+   1212c: 0009527f 2f082119    	v.lwi.local	[ta, lc0<<2, 3008], 	->vm.w
+   12134: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   1213c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   12144: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   1214c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   12154: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1215c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   12164: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   1216c: 012a507f 010022d9    	v.swi.local	vt#1.sw, [ta, lc0<<2, 2560]
+   12174: 0009527f 30082119    	v.lwi.local	[ta, lc0<<2, 3072], 	->vm.w
+   1217c: 0009527f 31082019    	v.lwi.local	[ta, lc0<<2, 3136], 	->vt.w
+   12184: 0009527f 32082019    	v.lwi.local	[ta, lc0<<2, 3200], 	->vt.w
+   1218c: 0009527f 33082019    	v.lwi.local	[ta, lc0<<2, 3264], 	->vt.w
+   12194: 0009527f 34082099    	v.lwi.local	[ta, lc0<<2, 3328], 	->vu.w
+   1219c: 0009527f 35082099    	v.lwi.local	[ta, lc0<<2, 3392], 	->vu.w
+   121a4: 0009527f 36082099    	v.lwi.local	[ta, lc0<<2, 3456], 	->vu.w
+   121ac: 0009527f 37082119    	v.lwi.local	[ta, lc0<<2, 3520], 	->vm.w
+   121b4: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   121bc: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   121c4: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   121cc: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   121d4: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   121dc: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   121e4: 014a027f 01000005    	v.add	vt#1.sw, vm#1.sw, 	->vt.w, nosat
+   121ec: 012a507f 01002359    	v.swi.local	vt#1.sw, [ta, lc0<<2, 3072]
+   121f4: 0009527f 38082119    	v.lwi.local	[ta, lc0<<2, 3584], 	->vm.w
+   121fc: 0009527f 39082019    	v.lwi.local	[ta, lc0<<2, 3648], 	->vt.w
+   12204: 0009527f 3a082019    	v.lwi.local	[ta, lc0<<2, 3712], 	->vt.w
+   1220c: 0009527f 3b082019    	v.lwi.local	[ta, lc0<<2, 3776], 	->vt.w
+   12214: 0009527f 3c082099    	v.lwi.local	[ta, lc0<<2, 3840], 	->vu.w
+   1221c: 0009527f 3d082099    	v.lwi.local	[ta, lc0<<2, 3904], 	->vu.w
+   12224: 0009527f 3e082099    	v.lwi.local	[ta, lc0<<2, 3968], 	->vu.w
+   1222c: 0009527f 3f082119    	v.lwi.local	[ta, lc0<<2, 4032], 	->vm.w
+   12234: 014a027f 01110005    	v.add	vt#3.sw, vm#2.sw, 	->vt.w, nosat
+   1223c: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   12244: 014a027f 00200005    	v.add	vt#1.sw, vt#3.sw, 	->vt.w, nosat
+   1224c: 014a027f 00a00005    	v.add	vt#1.sw, vu#3.sw, 	->vt.w, nosat
+   12254: 014a027f 00900005    	v.add	vt#1.sw, vu#2.sw, 	->vt.w, nosat
+   1225c: 014a027f 00800005    	v.add	vt#1.sw, vu#1.sw, 	->vt.w, nosat
+   12264: 014a027f 01000085    	v.add	vt#1.sw, vm#1.sw, 	->vu.w, nosat
+   1226c: 012bd07f 010423d9    	v.swi.local	vu#1.reuse.sw, [ta, lc0<<2, 3584]
+   12274: 0129527f 01f82009    	v.lw.local	[ta, lc0<<2, zero.sd], 	->vt.w
+   1227c: 0009527f 08082019    	v.lwi.local	[ta, lc0<<2, 512], 	->vt.w
+   12284: 014a027f 00100085    	v.add	vt#1.sw, vt#2.sw, 	->vu.w, nosat
+   1228c: b929507f 41f82049    	v.sw.local	vu#1.reuse.sw, [ta, lc0<<2, zero.sd<<2]
+   12294: 0009527f 10082019    	v.lwi.local	[ta, lc0<<2, 1024], 	->vt.w
+   1229c: 0009527f 18082019    	v.lwi.local	[ta, lc0<<2, 1536], 	->vt.w
+   122a4: 014a027f 00100085    	v.add	vt#1.sw, vt#2.sw, 	->vu.w, nosat
+   122ac: 012bd07f 01042159    	v.swi.local	vu#1.reuse.sw, [ta, lc0<<2, 1024]
+   122b4: 0009527f 20082019    	v.lwi.local	[ta, lc0<<2, 2048], 	->vt.w
+   122bc: 0009527f 28082019    	v.lwi.local	[ta, lc0<<2, 2560], 	->vt.w
+   122c4: 014a027f 00100005    	v.add	vt#1.sw, vt#2.sw, 	->vt.w, nosat
+   122cc: 012bd07f 01002259    	v.swi.local	vt#1.reuse.sw, [ta, lc0<<2, 2048]
+   122d4: 0009527f 30082019    	v.lwi.local	[ta, lc0<<2, 3072], 	->vt.w
+   122dc: 014a027f 00050005    	v.add	vu#3.sw, vt#1.sw, 	->vt.w, nosat
+   122e4: 012bd07f 01002359    	v.swi.local	vt#1.reuse.sw, [ta, lc0<<2, 3072]
+   122ec: 014a027f 00940005    	v.add	vu#1.sw, vu#2.sw, 	->vt.w, nosat
+   122f4: 014a027f 00308005    	v.add	vt#2.sw, vt#4.sw, 	->vt.w, nosat
+   122fc: 012bd07f 01002259    	v.swi.local	vt#1.reuse.sw, [ta, lc0<<2, 2048]
+   12304: 014a027f 00100005    	v.add	vt#1.sw, vt#2.sw, 	->vt.w, nosat
+   1230c: b929507f 01f82049    	v.sw.local	vt#1.reuse.sw, [ta, lc0<<2, zero.sd<<2]
+   12314: a0a941ff 000c2049    	v.sw.local	vt#1.sw, [to, lc0.uh<<5]
+   1231c: 0000000f 00000001    	L.BSTOP
+
+0000000000012324 <_Z25ExpandScalarImpl_ColMajorIN3pto4TileILNS0_8LocationE0EiLi16ELi64ELNS0_7BLayoutE1ELi16ELi8ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeENS7_7int32_tE>:
+   12324: a8a9527f 004c2049    	v.sw.local	ri0.sw, [to, lc0<<2, lc1.uh<<6]
+   1232c: 0000000f 00000001    	L.BSTOP
+
+0000000000012334 <_Z25ExpandScalarImpl_ColMajorIN3pto4TileILNS0_8LocationE0EiLi16ELi64ELNS0_7BLayoutE1ELi16ELi64ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeENS7_7int32_tE>:
+   12334: a8a9527f 004c2049    	v.sw.local	ri0.sw, [to, lc0<<2, lc1.uh<<6]
+   1233c: 0000000f 00000001    	L.BSTOP

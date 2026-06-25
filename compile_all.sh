@@ -1,7 +1,7 @@
 #!/bin/bash
 # Full compilation script for all kernel operators
 
-set -e
+# Don't use set -e as some operators may fail to compile
 
 export COMPILER_DIR=${COMPILER_DIR:-/home/river/projects/jcore/SuperNPUBench/compiler/toolchain/2026-06-22/linx_blockisa_llvm_musl/bin}
 REPO_ROOT=${REPO_ROOT:-/home/river/projects/jcore/SuperNPUBench}
@@ -31,9 +31,12 @@ compile_operator() {
     if [ -f "compile.all" ]; then
         echo "Running compile.all with baremetal=off..."
         export baremetal=off
-        bash compile.all 2>&1 | grep -E "(error:|warning:|Compiling|Linking|elf)" || true
+        if bash compile.all 2>&1; then
+            echo "✓ $operator_name compilation completed"
+        else
+            echo "✗ $operator_name compilation failed"
+        fi
         unset baremetal
-        echo "✓ $operator_name compilation completed"
     else
         echo "Warning: No compile.all found in $operator_path"
         return 1

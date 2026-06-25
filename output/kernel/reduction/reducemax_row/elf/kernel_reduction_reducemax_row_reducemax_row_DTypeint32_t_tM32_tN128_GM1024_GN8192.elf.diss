@@ -1,0 +1,545 @@
+
+/Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/reduction/reducemax_row/elf/kernel_reduction_reducemax_row_reducemax_row_DTypeint32_t_tM32_tN128_GM1024_GN8192.elf:	file format elf64-unknown
+
+Disassembly of section .text:
+
+000000000001121c <_start>:
+   1121c: 0212         	C.BSTART.STD	DIRECT, 0x1125e <main>
+   1121e: 5056         	c.setret	0x11220, ->ra <_end>
+
+0000000000011220 <_end>:
+   11220: 0840         	C.BSTART.AUX	
+   11222: 0000302b     	acrc 0
+   11226: 0000         	C.BSTOP
+
+0000000000011228 <_ZN3pto18layout_type_to_strENS_10LayoutEnumE>:
+   11228: 00d4         	C.BSTART.STD	COND, 0x11242 <.LBB0_2>
+   1122a: fffff187     	addtpc	-1, 	->a1
+   1122e: f896         	c.movi	2, 	->t
+   11230: 002c6065     	setc.ltu	t#1, a0
+   11234: 00a2         	C.BSTART.STD	DIRECT, 0x11248 <.LBB0_3>
+   11236: 00002f87     	addtpc	2, 	->t
+   1123a: 4f6c1f95     	subi	t#1, 1270, 	->t
+   1123e: 182c3109     	ld	[t#1, a0<<3], 	->a0
+
+0000000000011242 <.LBB0_2>:
+   11242: 0800         	C.BSTART.STD	
+   11244: 05219115     	subi	a1, 82, 	->a0
+
+0000000000011248 <.LBB0_3>:
+   11248: 3800         	C.BSTART.STD	RET
+   1124a: 029c         	c.setc.tgt	ra
+   1124c: 0800         	C.BSTART.STD	
+
+000000000001124e <_Z15writeBinaryFilePKcPKhm>:
+   1124e: 3800         	C.BSTART.STD	RET
+   11250: 1056         	c.movi	1, 	->a0
+   11252: 029c         	c.setc.tgt	ra
+   11254: 0800         	C.BSTART.STD	
+
+0000000000011256 <_Z14readBinaryFilePKcPhm>:
+   11256: 3800         	C.BSTART.STD	RET
+   11258: 1056         	c.movi	1, 	->a0
+   1125a: 029c         	c.setc.tgt	ra
+   1125c: 0800         	C.BSTART.STD	
+
+000000000001125e <main>:
+   1125e: 0800         	C.BSTART.STD	
+   11260: fdffef97     	lui	-8194, 	->t
+   11264: f00c0f95     	addi	t#1, 3840, 	->t
+   11268: 01808085     	add	sp, t#1, 	->sp
+   1126c: 0800         	C.BSTART.STD	
+   1126e: 00001f97     	lui	1, 	->t
+   11272: 100c0f95     	addi	t#1, 256, 	->t
+   11276: 01808105     	add	sp, t#1, 	->a0
+   1127a: 1806         	c.movr	zero, 	->a1
+
+000000000001127c <.LBB3_2>:
+   1127c: 0800         	C.BSTART.STD	
+   1127e: 2006         	c.movr	zero, 	->a2
+   11280: 02021181     	BSTART.VPAR	VS16
+   11284: 000b6013     	B.IOT	[], last	->t<1KB>
+   11288: 00020013     	B.IOR	[a2],[]
+   1128c: 483c         	C.B.DIMI	32, 	->lb1
+   1128e: 00029883     	B.TEXT	0x11cf0 <_Z25ExpandScalarImpl_RowMajorIN3pto4TileILNS0_8LocationE0EiLi32ELi8ELNS0_7BLayoutE0ELi32ELi1ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeENS7_7int32_tE>
+   11292: 0800         	C.BSTART.STD	
+   11294: 04000295     	addi	zero, 64, 	->a3
+   11298: 2086         	c.movr	a0, 	->a2
+
+000000000001129a <.LBB3_4>:
+   1129a: 0800         	C.BSTART.STD	
+   1129c: 00008317     	lui	8, 	->a4
+   112a0: 88011181     	BSTART.TMA	TLOAD, S32
+   112a4: 19f01023     	B.DATR	NORM.normal, Null
+   112a8: 000d6093     	B.IOT	[], last	->u<16KB>
+   112ac: 00620013     	B.IOR	[a2,a4],[]
+   112b0: 203c         	C.B.DIMI	128, 	->lb0
+   112b2: 483c         	C.B.DIMI	32, 	->lb1
+   112b4: a03c         	C.B.DIMI	128, 	->lb2
+   112b6: 02021181     	BSTART.VPAR	VS16
+   112ba: 010b4013     	B.IOT	[u#1, t#1], last	->t<1KB>
+   112be: 083c         	C.B.DIMI	32, 	->lb0
+   112c0: 00008403     	B.TEXT	0x114d0 <_Z20reducemax_row_kernelIN3pto4TileILNS0_8LocationE0EiLi32ELi128ELNS0_7BLayoutE0ELi32ELi128ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EiLi32ELi8ELS3_0ELi32ELi1ELS4_0ELi512ELS5_3EEEEvNT0_9TileDTypeENT_9TileDTypeES9_>
+   112c4: f8211181     	BSTART.TMA	TMOV, 
+   112c8: 000b5013     	B.IOT	[t#1], last	->t<1KB>
+   112cc: fe74         	C.BSTART.STD	COND, 0x1129a <.LBB3_4>
+   112ce: 20020215     	addi	a2, 512, 	->a2
+   112d2: 00129295     	subi	a3, 1, 	->a3
+   112d6: 0176         	c.setc.ne	a3, zero
+   112d8: 0800         	C.BSTART.STD	
+   112da: 10008f95     	addi	sp, 256, 	->t
+   112de: 383c0205     	add	t#1, a1<<7, 	->a2
+   112e2: 2916         	c.movi	4, 	->a3
+   112e4: 88111181     	BSTART.TMA	TSTORE, S32
+   112e8: 19f01023     	B.DATR	NORM.normal, Null
+   112ec: 00085393     	B.IOT	[t#1], last
+   112f0: 00520013     	B.IOR	[a2,a3],[]
+   112f4: 007c         	C.B.DIMI	1, 	->lb0
+   112f6: 483c         	C.B.DIMI	32, 	->lb1
+   112f8: 823c         	C.B.DIMI	8, 	->lb2
+   112fa: fc14         	C.BSTART.STD	COND, 0x1127c <.LBB3_2>
+   112fc: 00118195     	addi	a1, 1, 	->a1
+   11300: 02019075     	setc.nei	a1, 32
+   11304: 00100f97     	lui	256, 	->t
+   11308: 01810105     	add	a0, t#1, 	->a0
+   1130c: 3800         	C.BSTART.STD	RET
+   1130e: 1006         	c.movr	zero, 	->a0
+   11310: 02001f97     	lui	8193, 	->t
+   11314: 100c0f95     	addi	t#1, 256, 	->t
+   11318: 01808085     	add	sp, t#1, 	->sp
+   1131c: 029c         	c.setc.tgt	ra
+   1131e: 0800         	C.BSTART.STD	
+
+0000000000011320 <__cxx_global_var_init>:
+   11320: 0184         	C.BSTART.STD	COND, 0x11350 <.LBB4_2>
+   11322: 00003f87     	addtpc	3, 	->t
+   11326: af6c4f99     	lbui	[t#1, -1290], 	->t
+   1132a: 0636         	c.setc.ne	t#1, zero
+   1132c: 0800         	C.BSTART.STD	
+   1132e: 00003f87     	addtpc	3, 	->t
+   11332: f856         	c.movi	1, 	->t
+   11334: 559c7a59     	sdi.u	t#1, [t#2, -1494]
+   11338: 5d6c9f95     	subi	t#2, 1494, 	->t
+   1133c: 05802059     	swi	zero, [t#1, 8]
+   11340: 07802059     	swi	zero, [t#1, 12]
+   11344: 09802059     	swi	zero, [t#1, 16]
+   11348: 00003f87     	addtpc	3, 	->t
+   1134c: a18d0ad9     	sbi	t#3, [t#1, -1328]
+
+0000000000011350 <.LBB4_2>:
+   11350: 3800         	C.BSTART.STD	RET
+   11352: 029c         	c.setc.tgt	ra
+   11354: 0800         	C.BSTART.STD	
+
+0000000000011356 <__cxx_global_var_init.4>:
+   11356: 0184         	C.BSTART.STD	COND, 0x11386 <.LBB5_2>
+   11358: 00003f87     	addtpc	3, 	->t
+   1135c: ac8c4f99     	lbui	[t#1, -1336], 	->t
+   11360: 0636         	c.setc.ne	t#1, zero
+   11362: 0800         	C.BSTART.STD	
+   11364: 00003f87     	addtpc	3, 	->t
+   11368: f856         	c.movi	1, 	->t
+   1136a: 199c7a59     	sdi.u	t#1, [t#2, -1524]
+   1136e: 5f4c9f95     	subi	t#2, 1524, 	->t
+   11372: 05802059     	swi	zero, [t#1, 8]
+   11376: 07802059     	swi	zero, [t#1, 12]
+   1137a: 09802059     	swi	zero, [t#1, 16]
+   1137e: 00003f87     	addtpc	3, 	->t
+   11382: 458d0ad9     	sbi	t#3, [t#1, -1374]
+
+0000000000011386 <.LBB5_2>:
+   11386: 3800         	C.BSTART.STD	RET
+   11388: 029c         	c.setc.tgt	ra
+   1138a: 0800         	C.BSTART.STD	
+
+000000000001138c <__cxx_global_var_init.5>:
+   1138c: 0184         	C.BSTART.STD	COND, 0x113bc <.LBB6_2>
+   1138e: 00003f87     	addtpc	3, 	->t
+   11392: a9ac4f99     	lbui	[t#1, -1382], 	->t
+   11396: 0636         	c.setc.ne	t#1, zero
+   11398: 0800         	C.BSTART.STD	
+   1139a: 00003f87     	addtpc	3, 	->t
+   1139e: f856         	c.movi	1, 	->t
+   113a0: dd9c79d9     	sdi.u	t#1, [t#2, -1554]
+   113a4: 612c9f95     	subi	t#2, 1554, 	->t
+   113a8: 05802059     	swi	zero, [t#1, 8]
+   113ac: 07802059     	swi	zero, [t#1, 12]
+   113b0: 09802059     	swi	zero, [t#1, 16]
+   113b4: 00003f87     	addtpc	3, 	->t
+   113b8: e98d0a59     	sbi	t#3, [t#1, -1420]
+
+00000000000113bc <.LBB6_2>:
+   113bc: 3800         	C.BSTART.STD	RET
+   113be: 029c         	c.setc.tgt	ra
+   113c0: 0800         	C.BSTART.STD	
+
+00000000000113c2 <__cxx_global_var_init.6>:
+   113c2: 0184         	C.BSTART.STD	COND, 0x113f2 <.LBB7_2>
+   113c4: 00003f87     	addtpc	3, 	->t
+   113c8: a6cc4f99     	lbui	[t#1, -1428], 	->t
+   113cc: 0636         	c.setc.ne	t#1, zero
+   113ce: 0800         	C.BSTART.STD	
+   113d0: 00003f87     	addtpc	3, 	->t
+   113d4: f856         	c.movi	1, 	->t
+   113d6: a19c79d9     	sdi.u	t#1, [t#2, -1584]
+   113da: 630c9f95     	subi	t#2, 1584, 	->t
+   113de: 05802059     	swi	zero, [t#1, 8]
+   113e2: 07802059     	swi	zero, [t#1, 12]
+   113e6: 09802059     	swi	zero, [t#1, 16]
+   113ea: 00003f87     	addtpc	3, 	->t
+   113ee: 8d8d0a59     	sbi	t#3, [t#1, -1466]
+
+00000000000113f2 <.LBB7_2>:
+   113f2: 3800         	C.BSTART.STD	RET
+   113f4: 029c         	c.setc.tgt	ra
+   113f6: 0800         	C.BSTART.STD	
+
+00000000000113f8 <__cxx_global_var_init.7>:
+   113f8: 0184         	C.BSTART.STD	COND, 0x11428 <.LBB8_2>
+   113fa: 00003f87     	addtpc	3, 	->t
+   113fe: a3ec4f99     	lbui	[t#1, -1474], 	->t
+   11402: 0636         	c.setc.ne	t#1, zero
+   11404: 0800         	C.BSTART.STD	
+   11406: 00003f87     	addtpc	3, 	->t
+   1140a: f856         	c.movi	1, 	->t
+   1140c: 659c79d9     	sdi.u	t#1, [t#2, -1614]
+   11410: 64ec9f95     	subi	t#2, 1614, 	->t
+   11414: 05802059     	swi	zero, [t#1, 8]
+   11418: 07802059     	swi	zero, [t#1, 12]
+   1141c: 09802059     	swi	zero, [t#1, 16]
+   11420: 00003f87     	addtpc	3, 	->t
+   11424: 318d0a59     	sbi	t#3, [t#1, -1512]
+
+0000000000011428 <.LBB8_2>:
+   11428: 3800         	C.BSTART.STD	RET
+   1142a: 029c         	c.setc.tgt	ra
+   1142c: 0800         	C.BSTART.STD	
+
+000000000001142e <__cxx_global_var_init.8>:
+   1142e: 0184         	C.BSTART.STD	COND, 0x1145e <.LBB9_2>
+   11430: 00003f87     	addtpc	3, 	->t
+   11434: a10c4f99     	lbui	[t#1, -1520], 	->t
+   11438: 0636         	c.setc.ne	t#1, zero
+   1143a: 0800         	C.BSTART.STD	
+   1143c: 00003f87     	addtpc	3, 	->t
+   11440: f856         	c.movi	1, 	->t
+   11442: 299c79d9     	sdi.u	t#1, [t#2, -1644]
+   11446: 66cc9f95     	subi	t#2, 1644, 	->t
+   1144a: 05802059     	swi	zero, [t#1, 8]
+   1144e: 07802059     	swi	zero, [t#1, 12]
+   11452: 09802059     	swi	zero, [t#1, 16]
+   11456: 00003f87     	addtpc	3, 	->t
+   1145a: d58d09d9     	sbi	t#3, [t#1, -1558]
+
+000000000001145e <.LBB9_2>:
+   1145e: 3800         	C.BSTART.STD	RET
+   11460: 029c         	c.setc.tgt	ra
+   11462: 0800         	C.BSTART.STD	
+
+0000000000011464 <__cxx_global_var_init.9>:
+   11464: 0184         	C.BSTART.STD	COND, 0x11494 <.LBB10_2>
+   11466: 00003f87     	addtpc	3, 	->t
+   1146a: 9e2c4f99     	lbui	[t#1, -1566], 	->t
+   1146e: 0636         	c.setc.ne	t#1, zero
+   11470: 0800         	C.BSTART.STD	
+   11472: 00003f87     	addtpc	3, 	->t
+   11476: f856         	c.movi	1, 	->t
+   11478: ed9c7959     	sdi.u	t#1, [t#2, -1674]
+   1147c: 68ac9f95     	subi	t#2, 1674, 	->t
+   11480: 05802059     	swi	zero, [t#1, 8]
+   11484: 07802059     	swi	zero, [t#1, 12]
+   11488: 09802059     	swi	zero, [t#1, 16]
+   1148c: 00003f87     	addtpc	3, 	->t
+   11490: 798d09d9     	sbi	t#3, [t#1, -1604]
+
+0000000000011494 <.LBB10_2>:
+   11494: 3800         	C.BSTART.STD	RET
+   11496: 029c         	c.setc.tgt	ra
+   11498: 0800         	C.BSTART.STD	
+
+000000000001149a <__cxx_global_var_init.10>:
+   1149a: 0184         	C.BSTART.STD	COND, 0x114ca <.LBB11_2>
+   1149c: 00003f87     	addtpc	3, 	->t
+   114a0: 9b4c4f99     	lbui	[t#1, -1612], 	->t
+   114a4: 0636         	c.setc.ne	t#1, zero
+   114a6: 0800         	C.BSTART.STD	
+   114a8: 00003f87     	addtpc	3, 	->t
+   114ac: f856         	c.movi	1, 	->t
+   114ae: b19c7959     	sdi.u	t#1, [t#2, -1704]
+   114b2: 6a8c9f95     	subi	t#2, 1704, 	->t
+   114b6: 05802059     	swi	zero, [t#1, 8]
+   114ba: 07802059     	swi	zero, [t#1, 12]
+   114be: 09802059     	swi	zero, [t#1, 16]
+   114c2: 00003f87     	addtpc	3, 	->t
+   114c6: 1d8d09d9     	sbi	t#3, [t#1, -1650]
+
+00000000000114ca <.LBB11_2>:
+   114ca: 3800         	C.BSTART.STD	RET
+   114cc: 029c         	c.setc.tgt	ra
+   114ce: 0800         	C.BSTART.STD	
+
+00000000000114d0 <_Z20reducemax_row_kernelIN3pto4TileILNS0_8LocationE0EiLi32ELi128ELNS0_7BLayoutE0ELi32ELi128ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEENS1_ILS2_0EiLi32ELi8ELS3_0ELi32ELi1ELS4_0ELi512ELS5_3EEEEvNT0_9TileDTypeENT_9TileDTypeES9_>:
+   114d0: 00a9427f 2808a109    	v.lw.local	[tb, lc0.uh<<5], 	->vm.w
+   114d8: 00a9007f 48080185    	v.add	ta, lc0.uh<<9, 	->vn.d, nosat
+   114e0: 00a9427f 48082009    	v.lw.local	[ta, lc0.uh<<9], 	->vt.w
+   114e8: 0009c27f 001c2019    	v.lwi.local	[vn#1.reuse.sd, 4], 	->vt.w
+   114f0: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   114f8: 0009c27f 002c2019    	v.lwi.local	[vn#1.reuse.sd, 8], 	->vt.w
+   11500: 0009c27f 003c2019    	v.lwi.local	[vn#1.reuse.sd, 12], 	->vt.w
+   11508: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11510: 0009c27f 004c2019    	v.lwi.local	[vn#1.reuse.sd, 16], 	->vt.w
+   11518: 0009c27f 005c2019    	v.lwi.local	[vn#1.reuse.sd, 20], 	->vt.w
+   11520: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11528: 0009c27f 006c2019    	v.lwi.local	[vn#1.reuse.sd, 24], 	->vt.w
+   11530: 0009c27f 007c2019    	v.lwi.local	[vn#1.reuse.sd, 28], 	->vt.w
+   11538: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11540: 014a127f 0095005b    	v.max	vu#3.sw, vu#2.sw, 	->vt.w
+   11548: 014a127f 0014005b    	v.max	vu#1.sw, vt#2.sw, 	->vt.w
+   11550: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11558: 014a127f 000800db    	v.max	vm#1.sw, vt#1.sw, 	->vu.w
+   11560: 0009c27f 008c2019    	v.lwi.local	[vn#1.reuse.sd, 32], 	->vt.w
+   11568: 0009c27f 009c2019    	v.lwi.local	[vn#1.reuse.sd, 36], 	->vt.w
+   11570: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11578: 0009c27f 00ac2019    	v.lwi.local	[vn#1.reuse.sd, 40], 	->vt.w
+   11580: 0009c27f 00bc2019    	v.lwi.local	[vn#1.reuse.sd, 44], 	->vt.w
+   11588: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11590: 0009c27f 00cc2019    	v.lwi.local	[vn#1.reuse.sd, 48], 	->vt.w
+   11598: 0009c27f 00dc2019    	v.lwi.local	[vn#1.reuse.sd, 52], 	->vt.w
+   115a0: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   115a8: 0009c27f 00ec2019    	v.lwi.local	[vn#1.reuse.sd, 56], 	->vt.w
+   115b0: 0009c27f 00fc2019    	v.lwi.local	[vn#1.reuse.sd, 60], 	->vt.w
+   115b8: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   115c0: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   115c8: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   115d0: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   115d8: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   115e0: 0009c27f 010c2019    	v.lwi.local	[vn#1.reuse.sd, 64], 	->vt.w
+   115e8: 0009c27f 011c2019    	v.lwi.local	[vn#1.reuse.sd, 68], 	->vt.w
+   115f0: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   115f8: 0009c27f 012c2019    	v.lwi.local	[vn#1.reuse.sd, 72], 	->vt.w
+   11600: 0009c27f 013c2019    	v.lwi.local	[vn#1.reuse.sd, 76], 	->vt.w
+   11608: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11610: 0009c27f 014c2019    	v.lwi.local	[vn#1.reuse.sd, 80], 	->vt.w
+   11618: 0009c27f 015c2019    	v.lwi.local	[vn#1.reuse.sd, 84], 	->vt.w
+   11620: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11628: 0009c27f 016c2019    	v.lwi.local	[vn#1.reuse.sd, 88], 	->vt.w
+   11630: 0009c27f 017c2019    	v.lwi.local	[vn#1.reuse.sd, 92], 	->vt.w
+   11638: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11640: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11648: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11650: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11658: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   11660: 0009c27f 018c2019    	v.lwi.local	[vn#1.reuse.sd, 96], 	->vt.w
+   11668: 0009c27f 019c2019    	v.lwi.local	[vn#1.reuse.sd, 100], 	->vt.w
+   11670: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11678: 0009c27f 01ac2019    	v.lwi.local	[vn#1.reuse.sd, 104], 	->vt.w
+   11680: 0009c27f 01bc2019    	v.lwi.local	[vn#1.reuse.sd, 108], 	->vt.w
+   11688: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11690: 0009c27f 01cc2019    	v.lwi.local	[vn#1.reuse.sd, 112], 	->vt.w
+   11698: 0009c27f 01dc2019    	v.lwi.local	[vn#1.reuse.sd, 116], 	->vt.w
+   116a0: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   116a8: 0009c27f 01ec2019    	v.lwi.local	[vn#1.reuse.sd, 120], 	->vt.w
+   116b0: 0009c27f 01fc2019    	v.lwi.local	[vn#1.reuse.sd, 124], 	->vt.w
+   116b8: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   116c0: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   116c8: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   116d0: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   116d8: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   116e0: 0009c27f 020c2019    	v.lwi.local	[vn#1.reuse.sd, 128], 	->vt.w
+   116e8: 0009c27f 021c2019    	v.lwi.local	[vn#1.reuse.sd, 132], 	->vt.w
+   116f0: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   116f8: 0009c27f 022c2019    	v.lwi.local	[vn#1.reuse.sd, 136], 	->vt.w
+   11700: 0009c27f 023c2019    	v.lwi.local	[vn#1.reuse.sd, 140], 	->vt.w
+   11708: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11710: 0009c27f 024c2019    	v.lwi.local	[vn#1.reuse.sd, 144], 	->vt.w
+   11718: 0009c27f 025c2019    	v.lwi.local	[vn#1.reuse.sd, 148], 	->vt.w
+   11720: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11728: 0009c27f 026c2019    	v.lwi.local	[vn#1.reuse.sd, 152], 	->vt.w
+   11730: 0009c27f 027c2019    	v.lwi.local	[vn#1.reuse.sd, 156], 	->vt.w
+   11738: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11740: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11748: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11750: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11758: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   11760: 0009c27f 028c2019    	v.lwi.local	[vn#1.reuse.sd, 160], 	->vt.w
+   11768: 0009c27f 029c2019    	v.lwi.local	[vn#1.reuse.sd, 164], 	->vt.w
+   11770: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11778: 0009c27f 02ac2019    	v.lwi.local	[vn#1.reuse.sd, 168], 	->vt.w
+   11780: 0009c27f 02bc2019    	v.lwi.local	[vn#1.reuse.sd, 172], 	->vt.w
+   11788: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11790: 0009c27f 02cc2019    	v.lwi.local	[vn#1.reuse.sd, 176], 	->vt.w
+   11798: 0009c27f 02dc2019    	v.lwi.local	[vn#1.reuse.sd, 180], 	->vt.w
+   117a0: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   117a8: 0009c27f 02ec2019    	v.lwi.local	[vn#1.reuse.sd, 184], 	->vt.w
+   117b0: 0009c27f 02fc2019    	v.lwi.local	[vn#1.reuse.sd, 188], 	->vt.w
+   117b8: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   117c0: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   117c8: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   117d0: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   117d8: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   117e0: 0009c27f 030c2019    	v.lwi.local	[vn#1.reuse.sd, 192], 	->vt.w
+   117e8: 0009c27f 031c2019    	v.lwi.local	[vn#1.reuse.sd, 196], 	->vt.w
+   117f0: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   117f8: 0009c27f 032c2019    	v.lwi.local	[vn#1.reuse.sd, 200], 	->vt.w
+   11800: 0009c27f 033c2019    	v.lwi.local	[vn#1.reuse.sd, 204], 	->vt.w
+   11808: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11810: 0009c27f 034c2019    	v.lwi.local	[vn#1.reuse.sd, 208], 	->vt.w
+   11818: 0009c27f 035c2019    	v.lwi.local	[vn#1.reuse.sd, 212], 	->vt.w
+   11820: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11828: 0009c27f 036c2019    	v.lwi.local	[vn#1.reuse.sd, 216], 	->vt.w
+   11830: 0009c27f 037c2019    	v.lwi.local	[vn#1.reuse.sd, 220], 	->vt.w
+   11838: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11840: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11848: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11850: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11858: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   11860: 0009c27f 038c2019    	v.lwi.local	[vn#1.reuse.sd, 224], 	->vt.w
+   11868: 0009c27f 039c2019    	v.lwi.local	[vn#1.reuse.sd, 228], 	->vt.w
+   11870: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11878: 0009c27f 03ac2019    	v.lwi.local	[vn#1.reuse.sd, 232], 	->vt.w
+   11880: 0009c27f 03bc2019    	v.lwi.local	[vn#1.reuse.sd, 236], 	->vt.w
+   11888: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11890: 0009c27f 03cc2019    	v.lwi.local	[vn#1.reuse.sd, 240], 	->vt.w
+   11898: 0009c27f 03dc2019    	v.lwi.local	[vn#1.reuse.sd, 244], 	->vt.w
+   118a0: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   118a8: 0009c27f 03ec2019    	v.lwi.local	[vn#1.reuse.sd, 248], 	->vt.w
+   118b0: 0009c27f 03fc2019    	v.lwi.local	[vn#1.reuse.sd, 252], 	->vt.w
+   118b8: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   118c0: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   118c8: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   118d0: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   118d8: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   118e0: 0009c27f 040c2019    	v.lwi.local	[vn#1.reuse.sd, 256], 	->vt.w
+   118e8: 0009c27f 041c2019    	v.lwi.local	[vn#1.reuse.sd, 260], 	->vt.w
+   118f0: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   118f8: 0009c27f 042c2019    	v.lwi.local	[vn#1.reuse.sd, 264], 	->vt.w
+   11900: 0009c27f 043c2019    	v.lwi.local	[vn#1.reuse.sd, 268], 	->vt.w
+   11908: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11910: 0009c27f 044c2019    	v.lwi.local	[vn#1.reuse.sd, 272], 	->vt.w
+   11918: 0009c27f 045c2019    	v.lwi.local	[vn#1.reuse.sd, 276], 	->vt.w
+   11920: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11928: 0009c27f 046c2019    	v.lwi.local	[vn#1.reuse.sd, 280], 	->vt.w
+   11930: 0009c27f 047c2019    	v.lwi.local	[vn#1.reuse.sd, 284], 	->vt.w
+   11938: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11940: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11948: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11950: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11958: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   11960: 0009c27f 048c2019    	v.lwi.local	[vn#1.reuse.sd, 288], 	->vt.w
+   11968: 0009c27f 049c2019    	v.lwi.local	[vn#1.reuse.sd, 292], 	->vt.w
+   11970: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11978: 0009c27f 04ac2019    	v.lwi.local	[vn#1.reuse.sd, 296], 	->vt.w
+   11980: 0009c27f 04bc2019    	v.lwi.local	[vn#1.reuse.sd, 300], 	->vt.w
+   11988: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11990: 0009c27f 04cc2019    	v.lwi.local	[vn#1.reuse.sd, 304], 	->vt.w
+   11998: 0009c27f 04dc2019    	v.lwi.local	[vn#1.reuse.sd, 308], 	->vt.w
+   119a0: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   119a8: 0009c27f 04ec2019    	v.lwi.local	[vn#1.reuse.sd, 312], 	->vt.w
+   119b0: 0009c27f 04fc2019    	v.lwi.local	[vn#1.reuse.sd, 316], 	->vt.w
+   119b8: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   119c0: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   119c8: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   119d0: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   119d8: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   119e0: 0009c27f 050c2019    	v.lwi.local	[vn#1.reuse.sd, 320], 	->vt.w
+   119e8: 0009c27f 051c2019    	v.lwi.local	[vn#1.reuse.sd, 324], 	->vt.w
+   119f0: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   119f8: 0009c27f 052c2019    	v.lwi.local	[vn#1.reuse.sd, 328], 	->vt.w
+   11a00: 0009c27f 053c2019    	v.lwi.local	[vn#1.reuse.sd, 332], 	->vt.w
+   11a08: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11a10: 0009c27f 054c2019    	v.lwi.local	[vn#1.reuse.sd, 336], 	->vt.w
+   11a18: 0009c27f 055c2019    	v.lwi.local	[vn#1.reuse.sd, 340], 	->vt.w
+   11a20: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11a28: 0009c27f 056c2019    	v.lwi.local	[vn#1.reuse.sd, 344], 	->vt.w
+   11a30: 0009c27f 057c2019    	v.lwi.local	[vn#1.reuse.sd, 348], 	->vt.w
+   11a38: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11a40: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11a48: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11a50: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11a58: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   11a60: 0009c27f 058c2019    	v.lwi.local	[vn#1.reuse.sd, 352], 	->vt.w
+   11a68: 0009c27f 059c2019    	v.lwi.local	[vn#1.reuse.sd, 356], 	->vt.w
+   11a70: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11a78: 0009c27f 05ac2019    	v.lwi.local	[vn#1.reuse.sd, 360], 	->vt.w
+   11a80: 0009c27f 05bc2019    	v.lwi.local	[vn#1.reuse.sd, 364], 	->vt.w
+   11a88: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11a90: 0009c27f 05cc2019    	v.lwi.local	[vn#1.reuse.sd, 368], 	->vt.w
+   11a98: 0009c27f 05dc2019    	v.lwi.local	[vn#1.reuse.sd, 372], 	->vt.w
+   11aa0: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11aa8: 0009c27f 05ec2019    	v.lwi.local	[vn#1.reuse.sd, 376], 	->vt.w
+   11ab0: 0009c27f 05fc2019    	v.lwi.local	[vn#1.reuse.sd, 380], 	->vt.w
+   11ab8: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11ac0: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11ac8: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11ad0: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11ad8: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   11ae0: 0009c27f 060c2019    	v.lwi.local	[vn#1.reuse.sd, 384], 	->vt.w
+   11ae8: 0009c27f 061c2019    	v.lwi.local	[vn#1.reuse.sd, 388], 	->vt.w
+   11af0: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11af8: 0009c27f 062c2019    	v.lwi.local	[vn#1.reuse.sd, 392], 	->vt.w
+   11b00: 0009c27f 063c2019    	v.lwi.local	[vn#1.reuse.sd, 396], 	->vt.w
+   11b08: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11b10: 0009c27f 064c2019    	v.lwi.local	[vn#1.reuse.sd, 400], 	->vt.w
+   11b18: 0009c27f 065c2019    	v.lwi.local	[vn#1.reuse.sd, 404], 	->vt.w
+   11b20: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11b28: 0009c27f 066c2019    	v.lwi.local	[vn#1.reuse.sd, 408], 	->vt.w
+   11b30: 0009c27f 067c2019    	v.lwi.local	[vn#1.reuse.sd, 412], 	->vt.w
+   11b38: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11b40: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11b48: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11b50: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11b58: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   11b60: 0009c27f 068c2019    	v.lwi.local	[vn#1.reuse.sd, 416], 	->vt.w
+   11b68: 0009c27f 069c2019    	v.lwi.local	[vn#1.reuse.sd, 420], 	->vt.w
+   11b70: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11b78: 0009c27f 06ac2019    	v.lwi.local	[vn#1.reuse.sd, 424], 	->vt.w
+   11b80: 0009c27f 06bc2019    	v.lwi.local	[vn#1.reuse.sd, 428], 	->vt.w
+   11b88: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11b90: 0009c27f 06cc2019    	v.lwi.local	[vn#1.reuse.sd, 432], 	->vt.w
+   11b98: 0009c27f 06dc2019    	v.lwi.local	[vn#1.reuse.sd, 436], 	->vt.w
+   11ba0: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11ba8: 0009c27f 06ec2019    	v.lwi.local	[vn#1.reuse.sd, 440], 	->vt.w
+   11bb0: 0009c27f 06fc2019    	v.lwi.local	[vn#1.reuse.sd, 444], 	->vt.w
+   11bb8: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11bc0: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11bc8: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11bd0: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11bd8: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   11be0: 0009c27f 070c2019    	v.lwi.local	[vn#1.reuse.sd, 448], 	->vt.w
+   11be8: 0009c27f 071c2019    	v.lwi.local	[vn#1.reuse.sd, 452], 	->vt.w
+   11bf0: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11bf8: 0009c27f 072c2019    	v.lwi.local	[vn#1.reuse.sd, 456], 	->vt.w
+   11c00: 0009c27f 073c2019    	v.lwi.local	[vn#1.reuse.sd, 460], 	->vt.w
+   11c08: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11c10: 0009c27f 074c2019    	v.lwi.local	[vn#1.reuse.sd, 464], 	->vt.w
+   11c18: 0009c27f 075c2019    	v.lwi.local	[vn#1.reuse.sd, 468], 	->vt.w
+   11c20: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11c28: 0009c27f 076c2019    	v.lwi.local	[vn#1.reuse.sd, 472], 	->vt.w
+   11c30: 0009c27f 077c2019    	v.lwi.local	[vn#1.reuse.sd, 476], 	->vt.w
+   11c38: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11c40: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11c48: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11c50: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11c58: 014a127f 000500db    	v.max	vu#3.sw, vt#1.sw, 	->vu.w
+   11c60: 0009c27f 078c2019    	v.lwi.local	[vn#1.reuse.sd, 480], 	->vt.w
+   11c68: 0009c27f 079c2019    	v.lwi.local	[vn#1.reuse.sd, 484], 	->vt.w
+   11c70: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11c78: 0009c27f 07ac2019    	v.lwi.local	[vn#1.reuse.sd, 488], 	->vt.w
+   11c80: 0009c27f 07bc2019    	v.lwi.local	[vn#1.reuse.sd, 492], 	->vt.w
+   11c88: 014a127f 000080db    	v.max	vt#2.sw, vt#1.sw, 	->vu.w
+   11c90: 0009c27f 07cc2019    	v.lwi.local	[vn#1.reuse.sd, 496], 	->vt.w
+   11c98: 0009c27f 07dc2019    	v.lwi.local	[vn#1.reuse.sd, 500], 	->vt.w
+   11ca0: 014a127f 0000815b    	v.max	vt#2.sw, vt#1.sw, 	->vm.w
+   11ca8: 0009c27f 07ec2019    	v.lwi.local	[vn#1.reuse.sd, 504], 	->vt.w
+   11cb0: 0008427f 07fc2019    	v.lwi.local	[vn#1.sd, 508], 	->vt.w
+   11cb8: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11cc0: 014a127f 0084805b    	v.max	vu#2.sw, vu#1.sw, 	->vt.w
+   11cc8: 014a127f 0018005b    	v.max	vm#1.sw, vt#2.sw, 	->vt.w
+   11cd0: 014a127f 0000805b    	v.max	vt#2.sw, vt#1.sw, 	->vt.w
+   11cd8: 014a127f 0005005b    	v.max	vu#3.sw, vt#1.sw, 	->vt.w
+   11ce0: a0a941ff 000c2049    	v.sw.local	vt#1.sw, [to, lc0.uh<<5]
+   11ce8: 0000000f 00000001    	L.BSTOP
+
+0000000000011cf0 <_Z25ExpandScalarImpl_RowMajorIN3pto4TileILNS0_8LocationE0EiLi32ELi8ELNS0_7BLayoutE0ELi32ELi1ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeENS7_7int32_tE>:
+   11cf0: a8a951ff 004c2049    	v.sw.local	ri0.sw, [to, lc0<<2, lc1.uh<<5]
+   11cf8: 0000000f 00000001    	L.BSTOP

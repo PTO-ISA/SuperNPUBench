@@ -1,0 +1,2228 @@
+
+/Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/matmul/elf/kernel_matmul/matmul_HIF4_HIF4_BASE_B1_M256_N2048_K2048_tM128_tN128_tK128.elf:	file format elf64-unknown
+
+Disassembly of section .text:
+
+00000000000112dc <_start>:
+   112dc: 0212         	C.BSTART.STD	DIRECT, 0x1131e <main>
+   112de: 5056         	c.setret	0x112e0, ->ra <_end>
+
+00000000000112e0 <_end>:
+   112e0: 0840         	C.BSTART.AUX	
+   112e2: 0000302b     	acrc 0
+   112e6: 0000         	C.BSTOP
+
+00000000000112e8 <_ZN3pto18layout_type_to_strENS_10LayoutEnumE>:
+   112e8: 00d4         	C.BSTART.STD	COND, 0x11302 <.LBB0_2>
+   112ea: fffff187     	addtpc	-1, 	->a1
+   112ee: f896         	c.movi	2, 	->t
+   112f0: 002c6065     	setc.ltu	t#1, a0
+   112f4: 00a2         	C.BSTART.STD	DIRECT, 0x11308 <.LBB0_3>
+   112f6: 00004f87     	addtpc	4, 	->t
+   112fa: 0f6c1f95     	subi	t#1, 246, 	->t
+   112fe: 182c3109     	ld	[t#1, a0<<3], 	->a0
+
+0000000000011302 <.LBB0_2>:
+   11302: 0800         	C.BSTART.STD	
+   11304: 0da19115     	subi	a1, 218, 	->a0
+
+0000000000011308 <.LBB0_3>:
+   11308: 3800         	C.BSTART.STD	RET
+   1130a: 029c         	c.setc.tgt	ra
+   1130c: 0800         	C.BSTART.STD	
+
+000000000001130e <_Z15writeBinaryFilePKcPKhm>:
+   1130e: 3800         	C.BSTART.STD	RET
+   11310: 1056         	c.movi	1, 	->a0
+   11312: 029c         	c.setc.tgt	ra
+   11314: 0800         	C.BSTART.STD	
+
+0000000000011316 <_Z14readBinaryFilePKcPhm>:
+   11316: 3800         	C.BSTART.STD	RET
+   11318: 1056         	c.movi	1, 	->a0
+   1131a: 029c         	c.setc.tgt	ra
+   1131c: 0800         	C.BSTART.STD	
+
+000000000001131e <main>:
+   1131e: fea50fc1     	FENTRY	[ra ~ ra], sp!, 32760
+   11322: 0800         	C.BSTART.STD	
+   11324: 0800         	C.BSTART.STD	
+   11326: ff96ff97     	lui	-1681, 	->t
+   1132a: 1f8c0f95     	addi	t#1, 504, 	->t
+   1132e: 01808085     	add	sp, t#1, 	->sp
+   11332: 0800         	C.BSTART.STD	
+   11334: 00001f17     	lui	1, 	->u
+   11338: 00616f97     	lui	1558, 	->t
+   1133c: cf8c0f95     	addi	t#1, 3320, 	->t
+   11340: c048         	c.add	sp, t#1, ->t
+   11342: e608         	c.add	t#1, u#1, ->t
+   11344: 00bc21e7     	bic	t#1, 0, 12, 	->a1
+   11348: 00214f97     	lui	532, 	->t
+   1134c: 4f8c0f95     	addi	t#1, 1272, 	->t
+   11350: c048         	c.add	sp, t#1, ->t
+   11352: e608         	c.add	t#1, u#1, ->t
+   11354: 00bc2267     	bic	t#1, 0, 12, 	->a2
+   11358: 0020af97     	lui	522, 	->t
+   1135c: 4e8c0f95     	addi	t#1, 1256, 	->t
+   11360: c048         	c.add	sp, t#1, ->t
+   11362: e608         	c.add	t#1, u#1, ->t
+   11364: 00bc22e7     	bic	t#1, 0, 12, 	->a3
+   11368: 00200f97     	lui	512, 	->t
+   1136c: 4d8c0f95     	addi	t#1, 1240, 	->t
+   11370: c048         	c.add	sp, t#1, ->t
+   11372: e608         	c.add	t#1, u#1, ->t
+   11374: 00bc2367     	bic	t#1, 0, 12, 	->a4
+   11378: 0d808f95     	addi	sp, 216, 	->t
+   1137c: e608         	c.add	t#1, u#1, ->t
+   1137e: 00bc2167     	bic	t#1, 0, 12, 	->a0
+   11382: 00001033     	B.HINT TRACE.begin
+   11386: 00f2         	C.BSTART.STD	DIRECT, 0x113a4 <_Z11matmul_mxfpI12__fp4_hif4x2Li256ELi2048ELi1024ELi128ELi128ELi64ES0_Li1ELi16EEvPfPT_PT6_PhS6_>
+   11388: 5056         	c.setret	0x1138a, ->ra <main+0x6c>
+   1138a: 00009033     	B.HINT TRACE.end
+   1138e: 0800         	C.BSTART.STD	
+   11390: 1006         	c.movr	zero, 	->a0
+   11392: 00690f97     	lui	1680, 	->t
+   11396: e08c0f95     	addi	t#1, 3592, 	->t
+   1139a: 01808085     	add	sp, t#1, 	->sp
+   1139e: fea53fc1     	FRET.STK	[ra ~ ra], sp!, 32760
+   113a2: 0800         	C.BSTART.STD	
+
+00000000000113a4 <_Z11matmul_mxfpI12__fp4_hif4x2Li256ELi2048ELi1024ELi128ELi128ELi64ES0_Li1ELi16EEvPfPT_PT6_PhS6_>:
+   113a4: 81358041     	FENTRY	[s0 ~ s8], sp!, 512
+   113a8: 0800         	C.BSTART.STD	
+   113aa: 0800         	C.BSTART.STD	
+   113ac: 6a11b059     	sdi	a1, [sp, 424]
+   113b0: 68113059     	sdi	a0, [sp, 416]
+   113b4: 001e0f97     	lui	480, 	->t
+   113b8: c108         	c.add	a2, t#1, ->t
+   113ba: 661c3059     	sdi	t#1, [sp, 408]
+   113be: 001c0f97     	lui	448, 	->t
+   113c2: c108         	c.add	a2, t#1, ->t
+   113c4: 641c3059     	sdi	t#1, [sp, 400]
+   113c8: 001a0f97     	lui	416, 	->t
+   113cc: c108         	c.add	a2, t#1, ->t
+   113ce: 621c3059     	sdi	t#1, [sp, 392]
+   113d2: 00180f97     	lui	384, 	->t
+   113d6: c108         	c.add	a2, t#1, ->t
+   113d8: 601c3059     	sdi	t#1, [sp, 384]
+   113dc: 00160f97     	lui	352, 	->t
+   113e0: c108         	c.add	a2, t#1, ->t
+   113e2: 5e1c3059     	sdi	t#1, [sp, 376]
+   113e6: 00140f97     	lui	320, 	->t
+   113ea: c108         	c.add	a2, t#1, ->t
+   113ec: 5c1c3059     	sdi	t#1, [sp, 368]
+   113f0: 00120f97     	lui	288, 	->t
+   113f4: c108         	c.add	a2, t#1, ->t
+   113f6: 5a1c3059     	sdi	t#1, [sp, 360]
+   113fa: 00100f97     	lui	256, 	->t
+   113fe: c108         	c.add	a2, t#1, ->t
+   11400: 581c3059     	sdi	t#1, [sp, 352]
+   11404: 000e0f97     	lui	224, 	->t
+   11408: c108         	c.add	a2, t#1, ->t
+   1140a: 561c3059     	sdi	t#1, [sp, 344]
+   1140e: 000c0f97     	lui	192, 	->t
+   11412: c108         	c.add	a2, t#1, ->t
+   11414: 541c3059     	sdi	t#1, [sp, 336]
+   11418: 000a0f97     	lui	160, 	->t
+   1141c: c108         	c.add	a2, t#1, ->t
+   1141e: 521c3059     	sdi	t#1, [sp, 328]
+   11422: 00080f97     	lui	128, 	->t
+   11426: c108         	c.add	a2, t#1, ->t
+   11428: 501c3059     	sdi	t#1, [sp, 320]
+   1142c: 00060f97     	lui	96, 	->t
+   11430: c108         	c.add	a2, t#1, ->t
+   11432: 4e1c3059     	sdi	t#1, [sp, 312]
+   11436: 00040f97     	lui	64, 	->t
+   1143a: c108         	c.add	a2, t#1, ->t
+   1143c: 4c1c3059     	sdi	t#1, [sp, 304]
+   11440: 00020f97     	lui	32, 	->t
+   11444: 6c123059     	sdi	a2, [sp, 432]
+   11448: c108         	c.add	a2, t#1, ->t
+   1144a: 4a1c3059     	sdi	t#1, [sp, 296]
+   1144e: 1056         	c.movi	1, 	->a0
+   11450: 1806         	c.movr	zero, 	->a1
+
+0000000000011452 <.LBB4_2>:
+   11452: 0800         	C.BSTART.STD	
+   11454: 48113059     	sdi	a0, [sp, 288]
+   11458: 0350bf99     	ldi	[sp, 424], 	->t
+   1145c: 883c0105     	add	t#1, a1<<17, 	->a0
+   11460: 04010f95     	addi	a0, 64, 	->t
+   11464: 461c3059     	sdi	t#1, [sp, 280]
+   11468: 08010f95     	addi	a0, 128, 	->t
+   1146c: 441c3059     	sdi	t#1, [sp, 272]
+   11470: 0c010f95     	addi	a0, 192, 	->t
+   11474: 421c3059     	sdi	t#1, [sp, 264]
+   11478: 10010f95     	addi	a0, 256, 	->t
+   1147c: 401c3059     	sdi	t#1, [sp, 256]
+   11480: 14010f95     	addi	a0, 320, 	->t
+   11484: 3e1c3059     	sdi	t#1, [sp, 248]
+   11488: 18010f95     	addi	a0, 384, 	->t
+   1148c: 3c1c3059     	sdi	t#1, [sp, 240]
+   11490: 1c010f95     	addi	a0, 448, 	->t
+   11494: 3a1c3059     	sdi	t#1, [sp, 232]
+   11498: 20010f95     	addi	a0, 512, 	->t
+   1149c: 381c3059     	sdi	t#1, [sp, 224]
+   114a0: 24010f95     	addi	a0, 576, 	->t
+   114a4: 361c3059     	sdi	t#1, [sp, 216]
+   114a8: 28010f95     	addi	a0, 640, 	->t
+   114ac: 341c3059     	sdi	t#1, [sp, 208]
+   114b0: 2c010f95     	addi	a0, 704, 	->t
+   114b4: 321c3059     	sdi	t#1, [sp, 200]
+   114b8: 30010f95     	addi	a0, 768, 	->t
+   114bc: 301c3059     	sdi	t#1, [sp, 192]
+   114c0: 34010815     	addi	a0, 832, 	->s5
+   114c4: 38010895     	addi	a0, 896, 	->s6
+   114c8: 3c010915     	addi	a0, 960, 	->s7
+   114cc: 0340b219     	ldi	[sp, 416], 	->a2
+   114d0: a0320985     	add	a2, a1<<20, 	->s8
+   114d4: 3806         	c.movr	zero, 	->a5
+   114d6: 4006         	c.movr	zero, 	->a6
+
+00000000000114d8 <.LBB4_3>:
+   114d8: 0800         	C.BSTART.STD	
+   114da: 0360b219     	ldi	[sp, 432], 	->a2
+   114de: 00720485     	add	a2, a5, 	->a7
+   114e2: 40000a15     	addi	zero, 1024, 	->x0
+   114e6: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   114ea: 19f01223     	B.DATR	ND2NZ.normal, Null
+   114ee: 000ce013     	B.IOT	[], last	->t<8KB>
+   114f2: 01410013     	B.IOR	[a0,x0],[]
+   114f6: 103c         	C.B.DIMI	64, 	->lb0
+   114f8: 603c         	C.B.DIMI	128, 	->lb1
+   114fa: 903c         	C.B.DIMI	64, 	->lb2
+   114fc: 0800         	C.BSTART.STD	
+   114fe: 80000215     	addi	zero, 2048, 	->a2
+   11502: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11506: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   1150a: 000ce093     	B.IOT	[], last	->u<8KB>
+   1150e: 00448013     	B.IOR	[a7,a2],[]
+   11512: 203c         	C.B.DIMI	128, 	->lb0
+   11514: 503c         	C.B.DIMI	64, 	->lb1
+   11516: a03c         	C.B.DIMI	128, 	->lb2
+   11518: 0800         	C.BSTART.STD	
+   1151a: 02303b05     	or	zero, a1.sw, 	->x2
+   1151e: 7006         	c.movr	zero, 	->s3
+   11520: 4916         	c.movi	4, 	->a7
+   11522: 08000a95     	addi	zero, 128, 	->x1
+   11526: 04000615     	addi	zero, 64, 	->s1
+   1152a: 5856         	c.movi	1, 	->s0
+   1152c: 02021181     	BSTART.VPAR	VS16
+   11530: 000b6113     	B.IOT	[], last	->m<1KB>
+   11534: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11538: 71648013     	B.IOR	[a7,x2,s3],[]
+   1153c: 013c         	C.B.DIMI	4, 	->lb0
+   1153e: 00030403     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11542: d8411181     	BSTART.TMA	MGATHER, U8
+   11546: 20000043     	B.DIM	zero, 512, 	->lb0
+   1154a: 407c         	C.B.DIMI	1, 	->lb1
+   1154c: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11550: 00028013     	B.IOR	[a3],[]
+   11554: 0800         	C.BSTART.STD	
+   11556: 02803685     	or	zero, a6.sw, 	->s2
+   1155a: 02021181     	BSTART.VPAR	VS16
+   1155e: 000b6193     	B.IOT	[], last	->n<1KB>
+   11562: 48458013     	B.IOR	[s0,a2,a7],[]
+   11566: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   1156a: 013c         	C.B.DIMI	4, 	->lb0
+   1156c: 00030683     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11570: d8411181     	BSTART.TMA	MGATHER, U8
+   11574: 20000043     	B.DIM	zero, 512, 	->lb0
+   11578: 407c         	C.B.DIMI	1, 	->lb1
+   1157a: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   1157e: 00030013     	B.IOR	[a4],[]
+   11582: 70431181     	BSTART.CUBE	TMATMULMX, HiF4x2
+   11586: 80004393     	B.IOT	[t#1, m#1]
+   1158a: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   1158e: 203c         	C.B.DIMI	128, 	->lb0
+   11590: 603c         	C.B.DIMI	128, 	->lb1
+   11592: 903c         	C.B.DIMI	64, 	->lb2
+   11594: 0800         	C.BSTART.STD	
+   11596: 0250bf99     	ldi	[sp, 296], 	->t
+   1159a: 007c0705     	add	t#1, a5, 	->s3
+   1159e: 0230b799     	ldi	[sp, 280], 	->s4
+   115a2: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   115a6: 19f01223     	B.DATR	ND2NZ.normal, Null
+   115aa: 000ce013     	B.IOT	[], last	->t<8KB>
+   115ae: 01478013     	B.IOR	[s4,x0],[]
+   115b2: 103c         	C.B.DIMI	64, 	->lb0
+   115b4: 603c         	C.B.DIMI	128, 	->lb1
+   115b6: 903c         	C.B.DIMI	64, 	->lb2
+   115b8: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   115bc: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   115c0: 000ce093     	B.IOT	[], last	->u<8KB>
+   115c4: 00470013     	B.IOR	[s3,a2],[]
+   115c8: 203c         	C.B.DIMI	128, 	->lb0
+   115ca: 503c         	C.B.DIMI	64, 	->lb1
+   115cc: a03c         	C.B.DIMI	128, 	->lb2
+   115ce: 02021181     	BSTART.VPAR	VS16
+   115d2: 000b6113     	B.IOT	[], last	->m<1KB>
+   115d6: a8c58013     	B.IOR	[s0,s1,x1],[]
+   115da: 59648013     	B.IOR	[a7,x2,s0],[]
+   115de: 013c         	C.B.DIMI	4, 	->lb0
+   115e0: 0002db83     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   115e4: d8411181     	BSTART.TMA	MGATHER, U8
+   115e8: 20000043     	B.DIM	zero, 512, 	->lb0
+   115ec: 407c         	C.B.DIMI	1, 	->lb1
+   115ee: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   115f2: 00028013     	B.IOR	[a3],[]
+   115f6: 02021181     	BSTART.VPAR	VS16
+   115fa: 000b6193     	B.IOT	[], last	->n<1KB>
+   115fe: 48458013     	B.IOR	[s0,a2,a7],[]
+   11602: 68ba8013     	B.IOR	[x1,s0,s2],[]
+   11606: 013c         	C.B.DIMI	4, 	->lb0
+   11608: 0002df83     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   1160c: d8411181     	BSTART.TMA	MGATHER, U8
+   11610: 20000043     	B.DIM	zero, 512, 	->lb0
+   11614: 407c         	C.B.DIMI	1, 	->lb1
+   11616: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   1161a: 00030013     	B.IOR	[a4],[]
+   1161e: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11622: 80004393     	B.IOT	[t#1, m#1]
+   11626: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   1162a: 203c         	C.B.DIMI	128, 	->lb0
+   1162c: 603c         	C.B.DIMI	128, 	->lb1
+   1162e: 903c         	C.B.DIMI	64, 	->lb2
+   11630: 0800         	C.BSTART.STD	
+   11632: 0260bf99     	ldi	[sp, 304], 	->t
+   11636: 007c0705     	add	t#1, a5, 	->s3
+   1163a: 0220b799     	ldi	[sp, 272], 	->s4
+   1163e: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11642: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11646: 000ce013     	B.IOT	[], last	->t<8KB>
+   1164a: 01478013     	B.IOR	[s4,x0],[]
+   1164e: 103c         	C.B.DIMI	64, 	->lb0
+   11650: 603c         	C.B.DIMI	128, 	->lb1
+   11652: 903c         	C.B.DIMI	64, 	->lb2
+   11654: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11658: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   1165c: 000ce093     	B.IOT	[], last	->u<8KB>
+   11660: 00470013     	B.IOR	[s3,a2],[]
+   11664: 203c         	C.B.DIMI	128, 	->lb0
+   11666: 503c         	C.B.DIMI	64, 	->lb1
+   11668: a03c         	C.B.DIMI	128, 	->lb2
+   1166a: 0800         	C.BSTART.STD	
+   1166c: 7096         	c.movi	2, 	->s3
+   1166e: 02021181     	BSTART.VPAR	VS16
+   11672: 000b6113     	B.IOT	[], last	->m<1KB>
+   11676: a8c58013     	B.IOR	[s0,s1,x1],[]
+   1167a: 71648013     	B.IOR	[a7,x2,s3],[]
+   1167e: 013c         	C.B.DIMI	4, 	->lb0
+   11680: 0002b383     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11684: d8411181     	BSTART.TMA	MGATHER, U8
+   11688: 20000043     	B.DIM	zero, 512, 	->lb0
+   1168c: 407c         	C.B.DIMI	1, 	->lb1
+   1168e: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11692: 00028013     	B.IOR	[a3],[]
+   11696: 02021181     	BSTART.VPAR	VS16
+   1169a: 000b6193     	B.IOT	[], last	->n<1KB>
+   1169e: 48458013     	B.IOR	[s0,a2,a7],[]
+   116a2: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   116a6: 013c         	C.B.DIMI	4, 	->lb0
+   116a8: 0002b783     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   116ac: d8411181     	BSTART.TMA	MGATHER, U8
+   116b0: 20000043     	B.DIM	zero, 512, 	->lb0
+   116b4: 407c         	C.B.DIMI	1, 	->lb1
+   116b6: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   116ba: 00030013     	B.IOR	[a4],[]
+   116be: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   116c2: 80004393     	B.IOT	[t#1, m#1]
+   116c6: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   116ca: 203c         	C.B.DIMI	128, 	->lb0
+   116cc: 603c         	C.B.DIMI	128, 	->lb1
+   116ce: 903c         	C.B.DIMI	64, 	->lb2
+   116d0: 0800         	C.BSTART.STD	
+   116d2: 0270bf99     	ldi	[sp, 312], 	->t
+   116d6: 007c0705     	add	t#1, a5, 	->s3
+   116da: 0210b799     	ldi	[sp, 264], 	->s4
+   116de: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   116e2: 19f01223     	B.DATR	ND2NZ.normal, Null
+   116e6: 000ce013     	B.IOT	[], last	->t<8KB>
+   116ea: 01478013     	B.IOR	[s4,x0],[]
+   116ee: 103c         	C.B.DIMI	64, 	->lb0
+   116f0: 603c         	C.B.DIMI	128, 	->lb1
+   116f2: 903c         	C.B.DIMI	64, 	->lb2
+   116f4: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   116f8: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   116fc: 000ce093     	B.IOT	[], last	->u<8KB>
+   11700: 00470013     	B.IOR	[s3,a2],[]
+   11704: 203c         	C.B.DIMI	128, 	->lb0
+   11706: 503c         	C.B.DIMI	64, 	->lb1
+   11708: a03c         	C.B.DIMI	128, 	->lb2
+   1170a: 0800         	C.BSTART.STD	
+   1170c: 70d6         	c.movi	3, 	->s3
+   1170e: 02021181     	BSTART.VPAR	VS16
+   11712: 000b6113     	B.IOT	[], last	->m<1KB>
+   11716: a8c58013     	B.IOR	[s0,s1,x1],[]
+   1171a: 71648013     	B.IOR	[a7,x2,s3],[]
+   1171e: 013c         	C.B.DIMI	4, 	->lb0
+   11720: 00028b83     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11724: d8411181     	BSTART.TMA	MGATHER, U8
+   11728: 20000043     	B.DIM	zero, 512, 	->lb0
+   1172c: 407c         	C.B.DIMI	1, 	->lb1
+   1172e: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11732: 00028013     	B.IOR	[a3],[]
+   11736: 02021181     	BSTART.VPAR	VS16
+   1173a: 000b6193     	B.IOT	[], last	->n<1KB>
+   1173e: 48458013     	B.IOR	[s0,a2,a7],[]
+   11742: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11746: 013c         	C.B.DIMI	4, 	->lb0
+   11748: 00028f83     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   1174c: d8411181     	BSTART.TMA	MGATHER, U8
+   11750: 20000043     	B.DIM	zero, 512, 	->lb0
+   11754: 407c         	C.B.DIMI	1, 	->lb1
+   11756: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   1175a: 00030013     	B.IOR	[a4],[]
+   1175e: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11762: 80004393     	B.IOT	[t#1, m#1]
+   11766: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   1176a: 203c         	C.B.DIMI	128, 	->lb0
+   1176c: 603c         	C.B.DIMI	128, 	->lb1
+   1176e: 903c         	C.B.DIMI	64, 	->lb2
+   11770: 0800         	C.BSTART.STD	
+   11772: 0280bf99     	ldi	[sp, 320], 	->t
+   11776: 007c0705     	add	t#1, a5, 	->s3
+   1177a: 0200b799     	ldi	[sp, 256], 	->s4
+   1177e: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11782: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11786: 000ce013     	B.IOT	[], last	->t<8KB>
+   1178a: 01478013     	B.IOR	[s4,x0],[]
+   1178e: 103c         	C.B.DIMI	64, 	->lb0
+   11790: 603c         	C.B.DIMI	128, 	->lb1
+   11792: 903c         	C.B.DIMI	64, 	->lb2
+   11794: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11798: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   1179c: 000ce093     	B.IOT	[], last	->u<8KB>
+   117a0: 00470013     	B.IOR	[s3,a2],[]
+   117a4: 203c         	C.B.DIMI	128, 	->lb0
+   117a6: 503c         	C.B.DIMI	64, 	->lb1
+   117a8: a03c         	C.B.DIMI	128, 	->lb2
+   117aa: 02021181     	BSTART.VPAR	VS16
+   117ae: 000b6113     	B.IOT	[], last	->m<1KB>
+   117b2: a8c58013     	B.IOR	[s0,s1,x1],[]
+   117b6: 49648013     	B.IOR	[a7,x2,a7],[]
+   117ba: 013c         	C.B.DIMI	4, 	->lb0
+   117bc: 00026483     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   117c0: d8411181     	BSTART.TMA	MGATHER, U8
+   117c4: 20000043     	B.DIM	zero, 512, 	->lb0
+   117c8: 407c         	C.B.DIMI	1, 	->lb1
+   117ca: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   117ce: 00028013     	B.IOR	[a3],[]
+   117d2: 02021181     	BSTART.VPAR	VS16
+   117d6: 000b6193     	B.IOT	[], last	->n<1KB>
+   117da: 48458013     	B.IOR	[s0,a2,a7],[]
+   117de: 689a8013     	B.IOR	[x1,a7,s2],[]
+   117e2: 013c         	C.B.DIMI	4, 	->lb0
+   117e4: 00026883     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   117e8: d8411181     	BSTART.TMA	MGATHER, U8
+   117ec: 20000043     	B.DIM	zero, 512, 	->lb0
+   117f0: 407c         	C.B.DIMI	1, 	->lb1
+   117f2: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   117f6: 00030013     	B.IOR	[a4],[]
+   117fa: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   117fe: 80004393     	B.IOT	[t#1, m#1]
+   11802: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11806: 203c         	C.B.DIMI	128, 	->lb0
+   11808: 603c         	C.B.DIMI	128, 	->lb1
+   1180a: 903c         	C.B.DIMI	64, 	->lb2
+   1180c: 0800         	C.BSTART.STD	
+   1180e: 0290bf99     	ldi	[sp, 328], 	->t
+   11812: 007c0705     	add	t#1, a5, 	->s3
+   11816: 01f0b799     	ldi	[sp, 248], 	->s4
+   1181a: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   1181e: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11822: 000ce013     	B.IOT	[], last	->t<8KB>
+   11826: 01478013     	B.IOR	[s4,x0],[]
+   1182a: 103c         	C.B.DIMI	64, 	->lb0
+   1182c: 603c         	C.B.DIMI	128, 	->lb1
+   1182e: 903c         	C.B.DIMI	64, 	->lb2
+   11830: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11834: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11838: 000ce093     	B.IOT	[], last	->u<8KB>
+   1183c: 00470013     	B.IOR	[s3,a2],[]
+   11840: 203c         	C.B.DIMI	128, 	->lb0
+   11842: 503c         	C.B.DIMI	64, 	->lb1
+   11844: a03c         	C.B.DIMI	128, 	->lb2
+   11846: 0800         	C.BSTART.STD	
+   11848: 7156         	c.movi	5, 	->s3
+   1184a: 02021181     	BSTART.VPAR	VS16
+   1184e: 000b6113     	B.IOT	[], last	->m<1KB>
+   11852: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11856: 71648013     	B.IOR	[a7,x2,s3],[]
+   1185a: 013c         	C.B.DIMI	4, 	->lb0
+   1185c: 00023c83     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11860: d8411181     	BSTART.TMA	MGATHER, U8
+   11864: 20000043     	B.DIM	zero, 512, 	->lb0
+   11868: 407c         	C.B.DIMI	1, 	->lb1
+   1186a: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   1186e: 00028013     	B.IOR	[a3],[]
+   11872: 02021181     	BSTART.VPAR	VS16
+   11876: 000b6193     	B.IOT	[], last	->n<1KB>
+   1187a: 48458013     	B.IOR	[s0,a2,a7],[]
+   1187e: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11882: 013c         	C.B.DIMI	4, 	->lb0
+   11884: 00024083     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11888: d8411181     	BSTART.TMA	MGATHER, U8
+   1188c: 20000043     	B.DIM	zero, 512, 	->lb0
+   11890: 407c         	C.B.DIMI	1, 	->lb1
+   11892: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11896: 00030013     	B.IOR	[a4],[]
+   1189a: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   1189e: 80004393     	B.IOT	[t#1, m#1]
+   118a2: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   118a6: 203c         	C.B.DIMI	128, 	->lb0
+   118a8: 603c         	C.B.DIMI	128, 	->lb1
+   118aa: 903c         	C.B.DIMI	64, 	->lb2
+   118ac: 0800         	C.BSTART.STD	
+   118ae: 02a0bf99     	ldi	[sp, 336], 	->t
+   118b2: 007c0705     	add	t#1, a5, 	->s3
+   118b6: 01e0b799     	ldi	[sp, 240], 	->s4
+   118ba: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   118be: 19f01223     	B.DATR	ND2NZ.normal, Null
+   118c2: 000ce013     	B.IOT	[], last	->t<8KB>
+   118c6: 01478013     	B.IOR	[s4,x0],[]
+   118ca: 103c         	C.B.DIMI	64, 	->lb0
+   118cc: 603c         	C.B.DIMI	128, 	->lb1
+   118ce: 903c         	C.B.DIMI	64, 	->lb2
+   118d0: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   118d4: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   118d8: 000ce093     	B.IOT	[], last	->u<8KB>
+   118dc: 00470013     	B.IOR	[s3,a2],[]
+   118e0: 203c         	C.B.DIMI	128, 	->lb0
+   118e2: 503c         	C.B.DIMI	64, 	->lb1
+   118e4: a03c         	C.B.DIMI	128, 	->lb2
+   118e6: 0800         	C.BSTART.STD	
+   118e8: 7196         	c.movi	6, 	->s3
+   118ea: 02021181     	BSTART.VPAR	VS16
+   118ee: 000b6113     	B.IOT	[], last	->m<1KB>
+   118f2: a8c58013     	B.IOR	[s0,s1,x1],[]
+   118f6: 71648013     	B.IOR	[a7,x2,s3],[]
+   118fa: 013c         	C.B.DIMI	4, 	->lb0
+   118fc: 00021483     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11900: d8411181     	BSTART.TMA	MGATHER, U8
+   11904: 20000043     	B.DIM	zero, 512, 	->lb0
+   11908: 407c         	C.B.DIMI	1, 	->lb1
+   1190a: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   1190e: 00028013     	B.IOR	[a3],[]
+   11912: 02021181     	BSTART.VPAR	VS16
+   11916: 000b6193     	B.IOT	[], last	->n<1KB>
+   1191a: 48458013     	B.IOR	[s0,a2,a7],[]
+   1191e: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11922: 013c         	C.B.DIMI	4, 	->lb0
+   11924: 00021883     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11928: d8411181     	BSTART.TMA	MGATHER, U8
+   1192c: 20000043     	B.DIM	zero, 512, 	->lb0
+   11930: 407c         	C.B.DIMI	1, 	->lb1
+   11932: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11936: 00030013     	B.IOR	[a4],[]
+   1193a: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   1193e: 80004393     	B.IOT	[t#1, m#1]
+   11942: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11946: 203c         	C.B.DIMI	128, 	->lb0
+   11948: 603c         	C.B.DIMI	128, 	->lb1
+   1194a: 903c         	C.B.DIMI	64, 	->lb2
+   1194c: 0800         	C.BSTART.STD	
+   1194e: 02b0bf99     	ldi	[sp, 344], 	->t
+   11952: 007c0705     	add	t#1, a5, 	->s3
+   11956: 01d0b799     	ldi	[sp, 232], 	->s4
+   1195a: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   1195e: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11962: 000ce013     	B.IOT	[], last	->t<8KB>
+   11966: 01478013     	B.IOR	[s4,x0],[]
+   1196a: 103c         	C.B.DIMI	64, 	->lb0
+   1196c: 603c         	C.B.DIMI	128, 	->lb1
+   1196e: 903c         	C.B.DIMI	64, 	->lb2
+   11970: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11974: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11978: 000ce093     	B.IOT	[], last	->u<8KB>
+   1197c: 00470013     	B.IOR	[s3,a2],[]
+   11980: 203c         	C.B.DIMI	128, 	->lb0
+   11982: 503c         	C.B.DIMI	64, 	->lb1
+   11984: a03c         	C.B.DIMI	128, 	->lb2
+   11986: 0800         	C.BSTART.STD	
+   11988: 71d6         	c.movi	7, 	->s3
+   1198a: 02021181     	BSTART.VPAR	VS16
+   1198e: 000b6113     	B.IOT	[], last	->m<1KB>
+   11992: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11996: 71648013     	B.IOR	[a7,x2,s3],[]
+   1199a: 013c         	C.B.DIMI	4, 	->lb0
+   1199c: 0001ec83     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   119a0: d8411181     	BSTART.TMA	MGATHER, U8
+   119a4: 20000043     	B.DIM	zero, 512, 	->lb0
+   119a8: 407c         	C.B.DIMI	1, 	->lb1
+   119aa: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   119ae: 00028013     	B.IOR	[a3],[]
+   119b2: 02021181     	BSTART.VPAR	VS16
+   119b6: 000b6193     	B.IOT	[], last	->n<1KB>
+   119ba: 48458013     	B.IOR	[s0,a2,a7],[]
+   119be: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   119c2: 013c         	C.B.DIMI	4, 	->lb0
+   119c4: 0001f083     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   119c8: d8411181     	BSTART.TMA	MGATHER, U8
+   119cc: 20000043     	B.DIM	zero, 512, 	->lb0
+   119d0: 407c         	C.B.DIMI	1, 	->lb1
+   119d2: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   119d6: 00030013     	B.IOR	[a4],[]
+   119da: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   119de: 80004393     	B.IOT	[t#1, m#1]
+   119e2: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   119e6: 203c         	C.B.DIMI	128, 	->lb0
+   119e8: 603c         	C.B.DIMI	128, 	->lb1
+   119ea: 903c         	C.B.DIMI	64, 	->lb2
+   119ec: 0800         	C.BSTART.STD	
+   119ee: 02c0bf99     	ldi	[sp, 352], 	->t
+   119f2: 007c0705     	add	t#1, a5, 	->s3
+   119f6: 01c0b799     	ldi	[sp, 224], 	->s4
+   119fa: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   119fe: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11a02: 000ce013     	B.IOT	[], last	->t<8KB>
+   11a06: 01478013     	B.IOR	[s4,x0],[]
+   11a0a: 103c         	C.B.DIMI	64, 	->lb0
+   11a0c: 603c         	C.B.DIMI	128, 	->lb1
+   11a0e: 903c         	C.B.DIMI	64, 	->lb2
+   11a10: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11a14: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11a18: 000ce093     	B.IOT	[], last	->u<8KB>
+   11a1c: 00470013     	B.IOR	[s3,a2],[]
+   11a20: 203c         	C.B.DIMI	128, 	->lb0
+   11a22: 503c         	C.B.DIMI	64, 	->lb1
+   11a24: a03c         	C.B.DIMI	128, 	->lb2
+   11a26: 0800         	C.BSTART.STD	
+   11a28: 7216         	c.movi	8, 	->s3
+   11a2a: 02021181     	BSTART.VPAR	VS16
+   11a2e: 000b6113     	B.IOT	[], last	->m<1KB>
+   11a32: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11a36: 71648013     	B.IOR	[a7,x2,s3],[]
+   11a3a: 013c         	C.B.DIMI	4, 	->lb0
+   11a3c: 0001c483     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11a40: d8411181     	BSTART.TMA	MGATHER, U8
+   11a44: 20000043     	B.DIM	zero, 512, 	->lb0
+   11a48: 407c         	C.B.DIMI	1, 	->lb1
+   11a4a: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11a4e: 00028013     	B.IOR	[a3],[]
+   11a52: 02021181     	BSTART.VPAR	VS16
+   11a56: 000b6193     	B.IOT	[], last	->n<1KB>
+   11a5a: 48458013     	B.IOR	[s0,a2,a7],[]
+   11a5e: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11a62: 013c         	C.B.DIMI	4, 	->lb0
+   11a64: 0001c883     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11a68: d8411181     	BSTART.TMA	MGATHER, U8
+   11a6c: 20000043     	B.DIM	zero, 512, 	->lb0
+   11a70: 407c         	C.B.DIMI	1, 	->lb1
+   11a72: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11a76: 00030013     	B.IOR	[a4],[]
+   11a7a: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11a7e: 80004393     	B.IOT	[t#1, m#1]
+   11a82: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11a86: 203c         	C.B.DIMI	128, 	->lb0
+   11a88: 603c         	C.B.DIMI	128, 	->lb1
+   11a8a: 903c         	C.B.DIMI	64, 	->lb2
+   11a8c: 0800         	C.BSTART.STD	
+   11a8e: 02d0bf99     	ldi	[sp, 360], 	->t
+   11a92: 007c0705     	add	t#1, a5, 	->s3
+   11a96: 01b0b799     	ldi	[sp, 216], 	->s4
+   11a9a: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11a9e: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11aa2: 000ce013     	B.IOT	[], last	->t<8KB>
+   11aa6: 01478013     	B.IOR	[s4,x0],[]
+   11aaa: 103c         	C.B.DIMI	64, 	->lb0
+   11aac: 603c         	C.B.DIMI	128, 	->lb1
+   11aae: 903c         	C.B.DIMI	64, 	->lb2
+   11ab0: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11ab4: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11ab8: 000ce093     	B.IOT	[], last	->u<8KB>
+   11abc: 00470013     	B.IOR	[s3,a2],[]
+   11ac0: 203c         	C.B.DIMI	128, 	->lb0
+   11ac2: 503c         	C.B.DIMI	64, 	->lb1
+   11ac4: a03c         	C.B.DIMI	128, 	->lb2
+   11ac6: 0800         	C.BSTART.STD	
+   11ac8: 7256         	c.movi	9, 	->s3
+   11aca: 02021181     	BSTART.VPAR	VS16
+   11ace: 000b6113     	B.IOT	[], last	->m<1KB>
+   11ad2: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11ad6: 71648013     	B.IOR	[a7,x2,s3],[]
+   11ada: 013c         	C.B.DIMI	4, 	->lb0
+   11adc: 00019c83     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11ae0: d8411181     	BSTART.TMA	MGATHER, U8
+   11ae4: 20000043     	B.DIM	zero, 512, 	->lb0
+   11ae8: 407c         	C.B.DIMI	1, 	->lb1
+   11aea: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11aee: 00028013     	B.IOR	[a3],[]
+   11af2: 02021181     	BSTART.VPAR	VS16
+   11af6: 000b6193     	B.IOT	[], last	->n<1KB>
+   11afa: 48458013     	B.IOR	[s0,a2,a7],[]
+   11afe: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11b02: 013c         	C.B.DIMI	4, 	->lb0
+   11b04: 0001a083     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11b08: d8411181     	BSTART.TMA	MGATHER, U8
+   11b0c: 20000043     	B.DIM	zero, 512, 	->lb0
+   11b10: 407c         	C.B.DIMI	1, 	->lb1
+   11b12: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11b16: 00030013     	B.IOR	[a4],[]
+   11b1a: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11b1e: 80004393     	B.IOT	[t#1, m#1]
+   11b22: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11b26: 203c         	C.B.DIMI	128, 	->lb0
+   11b28: 603c         	C.B.DIMI	128, 	->lb1
+   11b2a: 903c         	C.B.DIMI	64, 	->lb2
+   11b2c: 0800         	C.BSTART.STD	
+   11b2e: 02e0bf99     	ldi	[sp, 368], 	->t
+   11b32: 007c0705     	add	t#1, a5, 	->s3
+   11b36: 01a0b799     	ldi	[sp, 208], 	->s4
+   11b3a: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11b3e: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11b42: 000ce013     	B.IOT	[], last	->t<8KB>
+   11b46: 01478013     	B.IOR	[s4,x0],[]
+   11b4a: 103c         	C.B.DIMI	64, 	->lb0
+   11b4c: 603c         	C.B.DIMI	128, 	->lb1
+   11b4e: 903c         	C.B.DIMI	64, 	->lb2
+   11b50: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11b54: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11b58: 000ce093     	B.IOT	[], last	->u<8KB>
+   11b5c: 00470013     	B.IOR	[s3,a2],[]
+   11b60: 203c         	C.B.DIMI	128, 	->lb0
+   11b62: 503c         	C.B.DIMI	64, 	->lb1
+   11b64: a03c         	C.B.DIMI	128, 	->lb2
+   11b66: 0800         	C.BSTART.STD	
+   11b68: 7296         	c.movi	10, 	->s3
+   11b6a: 02021181     	BSTART.VPAR	VS16
+   11b6e: 000b6113     	B.IOT	[], last	->m<1KB>
+   11b72: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11b76: 71648013     	B.IOR	[a7,x2,s3],[]
+   11b7a: 013c         	C.B.DIMI	4, 	->lb0
+   11b7c: 00017483     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11b80: d8411181     	BSTART.TMA	MGATHER, U8
+   11b84: 20000043     	B.DIM	zero, 512, 	->lb0
+   11b88: 407c         	C.B.DIMI	1, 	->lb1
+   11b8a: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11b8e: 00028013     	B.IOR	[a3],[]
+   11b92: 02021181     	BSTART.VPAR	VS16
+   11b96: 000b6193     	B.IOT	[], last	->n<1KB>
+   11b9a: 48458013     	B.IOR	[s0,a2,a7],[]
+   11b9e: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11ba2: 013c         	C.B.DIMI	4, 	->lb0
+   11ba4: 00017883     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11ba8: d8411181     	BSTART.TMA	MGATHER, U8
+   11bac: 20000043     	B.DIM	zero, 512, 	->lb0
+   11bb0: 407c         	C.B.DIMI	1, 	->lb1
+   11bb2: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11bb6: 00030013     	B.IOR	[a4],[]
+   11bba: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11bbe: 80004393     	B.IOT	[t#1, m#1]
+   11bc2: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11bc6: 203c         	C.B.DIMI	128, 	->lb0
+   11bc8: 603c         	C.B.DIMI	128, 	->lb1
+   11bca: 903c         	C.B.DIMI	64, 	->lb2
+   11bcc: 0800         	C.BSTART.STD	
+   11bce: 02f0bf99     	ldi	[sp, 376], 	->t
+   11bd2: 007c0705     	add	t#1, a5, 	->s3
+   11bd6: 0190b799     	ldi	[sp, 200], 	->s4
+   11bda: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11bde: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11be2: 000ce013     	B.IOT	[], last	->t<8KB>
+   11be6: 01478013     	B.IOR	[s4,x0],[]
+   11bea: 103c         	C.B.DIMI	64, 	->lb0
+   11bec: 603c         	C.B.DIMI	128, 	->lb1
+   11bee: 903c         	C.B.DIMI	64, 	->lb2
+   11bf0: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11bf4: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11bf8: 000ce093     	B.IOT	[], last	->u<8KB>
+   11bfc: 00470013     	B.IOR	[s3,a2],[]
+   11c00: 203c         	C.B.DIMI	128, 	->lb0
+   11c02: 503c         	C.B.DIMI	64, 	->lb1
+   11c04: a03c         	C.B.DIMI	128, 	->lb2
+   11c06: 0800         	C.BSTART.STD	
+   11c08: 72d6         	c.movi	11, 	->s3
+   11c0a: 02021181     	BSTART.VPAR	VS16
+   11c0e: 000b6113     	B.IOT	[], last	->m<1KB>
+   11c12: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11c16: 71648013     	B.IOR	[a7,x2,s3],[]
+   11c1a: 013c         	C.B.DIMI	4, 	->lb0
+   11c1c: 00014c83     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11c20: d8411181     	BSTART.TMA	MGATHER, U8
+   11c24: 20000043     	B.DIM	zero, 512, 	->lb0
+   11c28: 407c         	C.B.DIMI	1, 	->lb1
+   11c2a: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11c2e: 00028013     	B.IOR	[a3],[]
+   11c32: 02021181     	BSTART.VPAR	VS16
+   11c36: 000b6193     	B.IOT	[], last	->n<1KB>
+   11c3a: 48458013     	B.IOR	[s0,a2,a7],[]
+   11c3e: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11c42: 013c         	C.B.DIMI	4, 	->lb0
+   11c44: 00015083     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11c48: d8411181     	BSTART.TMA	MGATHER, U8
+   11c4c: 20000043     	B.DIM	zero, 512, 	->lb0
+   11c50: 407c         	C.B.DIMI	1, 	->lb1
+   11c52: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11c56: 00030013     	B.IOR	[a4],[]
+   11c5a: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11c5e: 80004393     	B.IOT	[t#1, m#1]
+   11c62: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11c66: 203c         	C.B.DIMI	128, 	->lb0
+   11c68: 603c         	C.B.DIMI	128, 	->lb1
+   11c6a: 903c         	C.B.DIMI	64, 	->lb2
+   11c6c: 0800         	C.BSTART.STD	
+   11c6e: 0300bf99     	ldi	[sp, 384], 	->t
+   11c72: 007c0705     	add	t#1, a5, 	->s3
+   11c76: 0180b799     	ldi	[sp, 192], 	->s4
+   11c7a: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11c7e: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11c82: 000ce013     	B.IOT	[], last	->t<8KB>
+   11c86: 01478013     	B.IOR	[s4,x0],[]
+   11c8a: 103c         	C.B.DIMI	64, 	->lb0
+   11c8c: 603c         	C.B.DIMI	128, 	->lb1
+   11c8e: 903c         	C.B.DIMI	64, 	->lb2
+   11c90: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11c94: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11c98: 000ce093     	B.IOT	[], last	->u<8KB>
+   11c9c: 00470013     	B.IOR	[s3,a2],[]
+   11ca0: 203c         	C.B.DIMI	128, 	->lb0
+   11ca2: 503c         	C.B.DIMI	64, 	->lb1
+   11ca4: a03c         	C.B.DIMI	128, 	->lb2
+   11ca6: 0800         	C.BSTART.STD	
+   11ca8: 7316         	c.movi	12, 	->s3
+   11caa: 02021181     	BSTART.VPAR	VS16
+   11cae: 000b6113     	B.IOT	[], last	->m<1KB>
+   11cb2: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11cb6: 71648013     	B.IOR	[a7,x2,s3],[]
+   11cba: 013c         	C.B.DIMI	4, 	->lb0
+   11cbc: 00012483     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11cc0: d8411181     	BSTART.TMA	MGATHER, U8
+   11cc4: 20000043     	B.DIM	zero, 512, 	->lb0
+   11cc8: 407c         	C.B.DIMI	1, 	->lb1
+   11cca: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11cce: 00028013     	B.IOR	[a3],[]
+   11cd2: 02021181     	BSTART.VPAR	VS16
+   11cd6: 000b6193     	B.IOT	[], last	->n<1KB>
+   11cda: 48458013     	B.IOR	[s0,a2,a7],[]
+   11cde: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11ce2: 013c         	C.B.DIMI	4, 	->lb0
+   11ce4: 00012883     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11ce8: d8411181     	BSTART.TMA	MGATHER, U8
+   11cec: 20000043     	B.DIM	zero, 512, 	->lb0
+   11cf0: 407c         	C.B.DIMI	1, 	->lb1
+   11cf2: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11cf6: 00030013     	B.IOR	[a4],[]
+   11cfa: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11cfe: 80004393     	B.IOT	[t#1, m#1]
+   11d02: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11d06: 203c         	C.B.DIMI	128, 	->lb0
+   11d08: 603c         	C.B.DIMI	128, 	->lb1
+   11d0a: 903c         	C.B.DIMI	64, 	->lb2
+   11d0c: 0800         	C.BSTART.STD	
+   11d0e: 0310bf99     	ldi	[sp, 392], 	->t
+   11d12: 007c0705     	add	t#1, a5, 	->s3
+   11d16: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11d1a: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11d1e: 000ce013     	B.IOT	[], last	->t<8KB>
+   11d22: 01480013     	B.IOR	[s5,x0],[]
+   11d26: 103c         	C.B.DIMI	64, 	->lb0
+   11d28: 603c         	C.B.DIMI	128, 	->lb1
+   11d2a: 903c         	C.B.DIMI	64, 	->lb2
+   11d2c: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11d30: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11d34: 000ce093     	B.IOT	[], last	->u<8KB>
+   11d38: 00470013     	B.IOR	[s3,a2],[]
+   11d3c: 203c         	C.B.DIMI	128, 	->lb0
+   11d3e: 503c         	C.B.DIMI	64, 	->lb1
+   11d40: a03c         	C.B.DIMI	128, 	->lb2
+   11d42: 0800         	C.BSTART.STD	
+   11d44: 7356         	c.movi	13, 	->s3
+   11d46: 02021181     	BSTART.VPAR	VS16
+   11d4a: 000b6113     	B.IOT	[], last	->m<1KB>
+   11d4e: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11d52: 71648013     	B.IOR	[a7,x2,s3],[]
+   11d56: 013c         	C.B.DIMI	4, 	->lb0
+   11d58: 0000fd83     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11d5c: d8411181     	BSTART.TMA	MGATHER, U8
+   11d60: 20000043     	B.DIM	zero, 512, 	->lb0
+   11d64: 407c         	C.B.DIMI	1, 	->lb1
+   11d66: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11d6a: 00028013     	B.IOR	[a3],[]
+   11d6e: 02021181     	BSTART.VPAR	VS16
+   11d72: 000b6193     	B.IOT	[], last	->n<1KB>
+   11d76: 48458013     	B.IOR	[s0,a2,a7],[]
+   11d7a: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11d7e: 013c         	C.B.DIMI	4, 	->lb0
+   11d80: 00010183     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11d84: d8411181     	BSTART.TMA	MGATHER, U8
+   11d88: 20000043     	B.DIM	zero, 512, 	->lb0
+   11d8c: 407c         	C.B.DIMI	1, 	->lb1
+   11d8e: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11d92: 00030013     	B.IOR	[a4],[]
+   11d96: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11d9a: 80004393     	B.IOT	[t#1, m#1]
+   11d9e: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11da2: 203c         	C.B.DIMI	128, 	->lb0
+   11da4: 603c         	C.B.DIMI	128, 	->lb1
+   11da6: 903c         	C.B.DIMI	64, 	->lb2
+   11da8: 0800         	C.BSTART.STD	
+   11daa: 0320bf99     	ldi	[sp, 400], 	->t
+   11dae: 007c0705     	add	t#1, a5, 	->s3
+   11db2: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11db6: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11dba: 000ce013     	B.IOT	[], last	->t<8KB>
+   11dbe: 01488013     	B.IOR	[s6,x0],[]
+   11dc2: 103c         	C.B.DIMI	64, 	->lb0
+   11dc4: 603c         	C.B.DIMI	128, 	->lb1
+   11dc6: 903c         	C.B.DIMI	64, 	->lb2
+   11dc8: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11dcc: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11dd0: 000ce093     	B.IOT	[], last	->u<8KB>
+   11dd4: 00470013     	B.IOR	[s3,a2],[]
+   11dd8: 203c         	C.B.DIMI	128, 	->lb0
+   11dda: 503c         	C.B.DIMI	64, 	->lb1
+   11ddc: a03c         	C.B.DIMI	128, 	->lb2
+   11dde: 0800         	C.BSTART.STD	
+   11de0: 7396         	c.movi	14, 	->s3
+   11de2: 02021181     	BSTART.VPAR	VS16
+   11de6: 000b6113     	B.IOT	[], last	->m<1KB>
+   11dea: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11dee: 71648013     	B.IOR	[a7,x2,s3],[]
+   11df2: 013c         	C.B.DIMI	4, 	->lb0
+   11df4: 0000d683     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11df8: d8411181     	BSTART.TMA	MGATHER, U8
+   11dfc: 20000043     	B.DIM	zero, 512, 	->lb0
+   11e00: 407c         	C.B.DIMI	1, 	->lb1
+   11e02: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11e06: 00028013     	B.IOR	[a3],[]
+   11e0a: 02021181     	BSTART.VPAR	VS16
+   11e0e: 000b6193     	B.IOT	[], last	->n<1KB>
+   11e12: 48458013     	B.IOR	[s0,a2,a7],[]
+   11e16: 68ea8013     	B.IOR	[x1,s3,s2],[]
+   11e1a: 013c         	C.B.DIMI	4, 	->lb0
+   11e1c: 0000da83     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11e20: d8411181     	BSTART.TMA	MGATHER, U8
+   11e24: 20000043     	B.DIM	zero, 512, 	->lb0
+   11e28: 407c         	C.B.DIMI	1, 	->lb1
+   11e2a: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11e2e: 00030013     	B.IOR	[a4],[]
+   11e32: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11e36: 80004393     	B.IOT	[t#1, m#1]
+   11e3a: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11e3e: 203c         	C.B.DIMI	128, 	->lb0
+   11e40: 603c         	C.B.DIMI	128, 	->lb1
+   11e42: 903c         	C.B.DIMI	64, 	->lb2
+   11e44: 0800         	C.BSTART.STD	
+   11e46: 0330bf99     	ldi	[sp, 408], 	->t
+   11e4a: 007c0705     	add	t#1, a5, 	->s3
+   11e4e: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11e52: 19f01223     	B.DATR	ND2NZ.normal, Null
+   11e56: 000ce013     	B.IOT	[], last	->t<8KB>
+   11e5a: 01490013     	B.IOR	[s7,x0],[]
+   11e5e: 103c         	C.B.DIMI	64, 	->lb0
+   11e60: 603c         	C.B.DIMI	128, 	->lb1
+   11e62: 903c         	C.B.DIMI	64, 	->lb2
+   11e64: 70011181     	BSTART.TMA	TLOAD, HiF4x2
+   11e68: 19f011a3     	B.DATR	ND2ZN.normal, Null
+   11e6c: 000ce093     	B.IOT	[], last	->u<8KB>
+   11e70: 00470013     	B.IOR	[s3,a2],[]
+   11e74: 203c         	C.B.DIMI	128, 	->lb0
+   11e76: 503c         	C.B.DIMI	64, 	->lb1
+   11e78: a03c         	C.B.DIMI	128, 	->lb2
+   11e7a: 0800         	C.BSTART.STD	
+   11e7c: a3d6         	c.movi	15, 	->x0
+   11e7e: 02021181     	BSTART.VPAR	VS16
+   11e82: 000b6113     	B.IOT	[], last	->m<1KB>
+   11e86: a8c58013     	B.IOR	[s0,s1,x1],[]
+   11e8a: a1648013     	B.IOR	[a7,x2,x0],[]
+   11e8e: 013c         	C.B.DIMI	4, 	->lb0
+   11e90: 0000af83     	B.TEXT	0x1214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11e94: d8411181     	BSTART.TMA	MGATHER, U8
+   11e98: 20000043     	B.DIM	zero, 512, 	->lb0
+   11e9c: 407c         	C.B.DIMI	1, 	->lb1
+   11e9e: 020cd113     	B.IOT	[m#1], last	->m<8KB>
+   11ea2: 00028013     	B.IOR	[a3],[]
+   11ea6: 02021181     	BSTART.VPAR	VS16
+   11eaa: 000b6193     	B.IOT	[], last	->n<1KB>
+   11eae: 48458013     	B.IOR	[s0,a2,a7],[]
+   11eb2: 694a8013     	B.IOR	[x1,x0,s2],[]
+   11eb6: 013c         	C.B.DIMI	4, 	->lb0
+   11eb8: 0000b383     	B.TEXT	0x12186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>
+   11ebc: d8411181     	BSTART.TMA	MGATHER, U8
+   11ec0: 20000043     	B.DIM	zero, 512, 	->lb0
+   11ec4: 407c         	C.B.DIMI	1, 	->lb1
+   11ec6: 030cd193     	B.IOT	[n#1], last	->n<8KB>
+   11eca: 00030013     	B.IOR	[a4],[]
+   11ece: 70631181     	BSTART.CUBE	TMATMULMX.ACC, HiF4x2
+   11ed2: 80004393     	B.IOT	[t#1, m#1]
+   11ed6: c10e4213     	B.IOT	[u#1, n#1], last	->acc<64KB>
+   11eda: 203c         	C.B.DIMI	128, 	->lb0
+   11edc: 603c         	C.B.DIMI	128, 	->lb1
+   11ede: 903c         	C.B.DIMI	64, 	->lb2
+   11ee0: 08831181     	BSTART.CUBE	ACCCVT, FP32
+   11ee4: 1a101da3     	B.DATR	NZ2ND.canon, FP32, Null
+   11ee8: 000e6013     	B.IOT	[], last	->t<64KB>
+   11eec: 203c         	C.B.DIMI	128, 	->lb0
+   11eee: 603c         	C.B.DIMI	128, 	->lb1
+   11ef0: 0800         	C.BSTART.STD	
+   11ef2: 00002217     	lui	2, 	->a2
+   11ef6: 08111181     	BSTART.TMA	TSTORE, FP32
+   11efa: 19f01023     	B.DATR	NORM.normal, Null
+   11efe: 00085393     	B.IOT	[t#1], last
+   11f02: 00498013     	B.IOR	[s8,a2],[]
+   11f06: 203c         	C.B.DIMI	128, 	->lb0
+   11f08: 603c         	C.B.DIMI	128, 	->lb1
+   11f0a: a03c         	C.B.DIMI	128, 	->lb2
+   11f0c: ae64         	C.BSTART.STD	COND, 0x114d8 <.LBB4_3>
+   11f0e: 00140415     	addi	a6, 1, 	->a6
+   11f12: 01041075     	setc.nei	a6, 16
+   11f16: 08038395     	addi	a5, 128, 	->a5
+   11f1a: 20098995     	addi	s8, 512, 	->s8
+   11f1e: a9a4         	C.BSTART.STD	COND, 0x11452 <.LBB4_2>
+   11f20: 0240bf99     	ldi	[sp, 288], 	->t
+   11f24: 001c2075     	setc.andi	t#1, 1
+   11f28: 1006         	c.movr	zero, 	->a0
+   11f2a: 1856         	c.movi	1, 	->a1
+   11f2c: 8135a041     	FRET.RA	[s0 ~ s8], sp!, 512
+   11f30: 0800         	C.BSTART.STD	
+
+0000000000011f32 <__cxx_global_var_init>:
+   11f32: 0184         	C.BSTART.STD	COND, 0x11f62 <.LBB5_2>
+   11f34: 00004f87     	addtpc	4, 	->t
+   11f38: 3d4c4f99     	lbui	[t#1, 980], 	->t
+   11f3c: 0636         	c.setc.ne	t#1, zero
+   11f3e: 0800         	C.BSTART.STD	
+   11f40: 00004f87     	addtpc	4, 	->t
+   11f44: f856         	c.movi	1, 	->t
+   11f46: b19c72d9     	sdi.u	t#1, [t#2, 728]
+   11f4a: 2d8c8f95     	addi	t#2, 728, 	->t
+   11f4e: 05802059     	swi	zero, [t#1, 8]
+   11f52: 07802059     	swi	zero, [t#1, 12]
+   11f56: 09802059     	swi	zero, [t#1, 16]
+   11f5a: 00004f87     	addtpc	4, 	->t
+   11f5e: 5d8d03d9     	sbi	t#3, [t#1, 942]
+
+0000000000011f62 <.LBB5_2>:
+   11f62: 3800         	C.BSTART.STD	RET
+   11f64: 029c         	c.setc.tgt	ra
+   11f66: 0800         	C.BSTART.STD	
+
+0000000000011f68 <__cxx_global_var_init.4>:
+   11f68: 0184         	C.BSTART.STD	COND, 0x11f98 <.LBB6_2>
+   11f6a: 00004f87     	addtpc	4, 	->t
+   11f6e: 3a6c4f99     	lbui	[t#1, 934], 	->t
+   11f72: 0636         	c.setc.ne	t#1, zero
+   11f74: 0800         	C.BSTART.STD	
+   11f76: 00004f87     	addtpc	4, 	->t
+   11f7a: f856         	c.movi	1, 	->t
+   11f7c: 759c72d9     	sdi.u	t#1, [t#2, 698]
+   11f80: 2bac8f95     	addi	t#2, 698, 	->t
+   11f84: 05802059     	swi	zero, [t#1, 8]
+   11f88: 07802059     	swi	zero, [t#1, 12]
+   11f8c: 09802059     	swi	zero, [t#1, 16]
+   11f90: 00004f87     	addtpc	4, 	->t
+   11f94: 018d03d9     	sbi	t#3, [t#1, 896]
+
+0000000000011f98 <.LBB6_2>:
+   11f98: 3800         	C.BSTART.STD	RET
+   11f9a: 029c         	c.setc.tgt	ra
+   11f9c: 0800         	C.BSTART.STD	
+
+0000000000011f9e <__cxx_global_var_init.5>:
+   11f9e: 0184         	C.BSTART.STD	COND, 0x11fce <.LBB7_2>
+   11fa0: 00004f87     	addtpc	4, 	->t
+   11fa4: 378c4f99     	lbui	[t#1, 888], 	->t
+   11fa8: 0636         	c.setc.ne	t#1, zero
+   11faa: 0800         	C.BSTART.STD	
+   11fac: 00004f87     	addtpc	4, 	->t
+   11fb0: f856         	c.movi	1, 	->t
+   11fb2: 399c72d9     	sdi.u	t#1, [t#2, 668]
+   11fb6: 29cc8f95     	addi	t#2, 668, 	->t
+   11fba: 05802059     	swi	zero, [t#1, 8]
+   11fbe: 07802059     	swi	zero, [t#1, 12]
+   11fc2: 09802059     	swi	zero, [t#1, 16]
+   11fc6: 00004f87     	addtpc	4, 	->t
+   11fca: a58d0359     	sbi	t#3, [t#1, 850]
+
+0000000000011fce <.LBB7_2>:
+   11fce: 3800         	C.BSTART.STD	RET
+   11fd0: 029c         	c.setc.tgt	ra
+   11fd2: 0800         	C.BSTART.STD	
+
+0000000000011fd4 <__cxx_global_var_init.6>:
+   11fd4: 0184         	C.BSTART.STD	COND, 0x12004 <.LBB8_2>
+   11fd6: 00004f87     	addtpc	4, 	->t
+   11fda: 34ac4f99     	lbui	[t#1, 842], 	->t
+   11fde: 0636         	c.setc.ne	t#1, zero
+   11fe0: 0800         	C.BSTART.STD	
+   11fe2: 00004f87     	addtpc	4, 	->t
+   11fe6: f856         	c.movi	1, 	->t
+   11fe8: fd9c7259     	sdi.u	t#1, [t#2, 638]
+   11fec: 27ec8f95     	addi	t#2, 638, 	->t
+   11ff0: 05802059     	swi	zero, [t#1, 8]
+   11ff4: 07802059     	swi	zero, [t#1, 12]
+   11ff8: 09802059     	swi	zero, [t#1, 16]
+   11ffc: 00004f87     	addtpc	4, 	->t
+   12000: 498d0359     	sbi	t#3, [t#1, 804]
+
+0000000000012004 <.LBB8_2>:
+   12004: 3800         	C.BSTART.STD	RET
+   12006: 029c         	c.setc.tgt	ra
+   12008: 0800         	C.BSTART.STD	
+
+000000000001200a <__cxx_global_var_init.7>:
+   1200a: 0184         	C.BSTART.STD	COND, 0x1203a <.LBB9_2>
+   1200c: 00004f87     	addtpc	4, 	->t
+   12010: 31cc4f99     	lbui	[t#1, 796], 	->t
+   12014: 0636         	c.setc.ne	t#1, zero
+   12016: 0800         	C.BSTART.STD	
+   12018: 00004f87     	addtpc	4, 	->t
+   1201c: f856         	c.movi	1, 	->t
+   1201e: c19c7259     	sdi.u	t#1, [t#2, 608]
+   12022: 260c8f95     	addi	t#2, 608, 	->t
+   12026: 05802059     	swi	zero, [t#1, 8]
+   1202a: 07802059     	swi	zero, [t#1, 12]
+   1202e: 09802059     	swi	zero, [t#1, 16]
+   12032: 00004f87     	addtpc	4, 	->t
+   12036: ed8d02d9     	sbi	t#3, [t#1, 758]
+
+000000000001203a <.LBB9_2>:
+   1203a: 3800         	C.BSTART.STD	RET
+   1203c: 029c         	c.setc.tgt	ra
+   1203e: 0800         	C.BSTART.STD	
+
+0000000000012040 <__cxx_global_var_init.8>:
+   12040: 0184         	C.BSTART.STD	COND, 0x12070 <.LBB10_2>
+   12042: 00004f87     	addtpc	4, 	->t
+   12046: 2eec4f99     	lbui	[t#1, 750], 	->t
+   1204a: 0636         	c.setc.ne	t#1, zero
+   1204c: 0800         	C.BSTART.STD	
+   1204e: 00004f87     	addtpc	4, 	->t
+   12052: f856         	c.movi	1, 	->t
+   12054: 859c7259     	sdi.u	t#1, [t#2, 578]
+   12058: 242c8f95     	addi	t#2, 578, 	->t
+   1205c: 05802059     	swi	zero, [t#1, 8]
+   12060: 07802059     	swi	zero, [t#1, 12]
+   12064: 09802059     	swi	zero, [t#1, 16]
+   12068: 00004f87     	addtpc	4, 	->t
+   1206c: 918d02d9     	sbi	t#3, [t#1, 712]
+
+0000000000012070 <.LBB10_2>:
+   12070: 3800         	C.BSTART.STD	RET
+   12072: 029c         	c.setc.tgt	ra
+   12074: 0800         	C.BSTART.STD	
+
+0000000000012076 <__cxx_global_var_init.9>:
+   12076: 0184         	C.BSTART.STD	COND, 0x120a6 <.LBB11_2>
+   12078: 00004f87     	addtpc	4, 	->t
+   1207c: 2c0c4f99     	lbui	[t#1, 704], 	->t
+   12080: 0636         	c.setc.ne	t#1, zero
+   12082: 0800         	C.BSTART.STD	
+   12084: 00004f87     	addtpc	4, 	->t
+   12088: f856         	c.movi	1, 	->t
+   1208a: 499c7259     	sdi.u	t#1, [t#2, 548]
+   1208e: 224c8f95     	addi	t#2, 548, 	->t
+   12092: 05802059     	swi	zero, [t#1, 8]
+   12096: 07802059     	swi	zero, [t#1, 12]
+   1209a: 09802059     	swi	zero, [t#1, 16]
+   1209e: 00004f87     	addtpc	4, 	->t
+   120a2: 358d02d9     	sbi	t#3, [t#1, 666]
+
+00000000000120a6 <.LBB11_2>:
+   120a6: 3800         	C.BSTART.STD	RET
+   120a8: 029c         	c.setc.tgt	ra
+   120aa: 0800         	C.BSTART.STD	
+
+00000000000120ac <__cxx_global_var_init.10>:
+   120ac: 0184         	C.BSTART.STD	COND, 0x120dc <.LBB12_2>
+   120ae: 00004f87     	addtpc	4, 	->t
+   120b2: 292c4f99     	lbui	[t#1, 658], 	->t
+   120b6: 0636         	c.setc.ne	t#1, zero
+   120b8: 0800         	C.BSTART.STD	
+   120ba: 00004f87     	addtpc	4, 	->t
+   120be: f856         	c.movi	1, 	->t
+   120c0: 0d9c7259     	sdi.u	t#1, [t#2, 518]
+   120c4: 206c8f95     	addi	t#2, 518, 	->t
+   120c8: 05802059     	swi	zero, [t#1, 8]
+   120cc: 07802059     	swi	zero, [t#1, 12]
+   120d0: 09802059     	swi	zero, [t#1, 16]
+   120d4: 00004f87     	addtpc	4, 	->t
+   120d8: d98d0259     	sbi	t#3, [t#1, 620]
+
+00000000000120dc <.LBB12_2>:
+   120dc: 3800         	C.BSTART.STD	RET
+   120de: 029c         	c.setc.tgt	ra
+   120e0: 0800         	C.BSTART.STD	
+
+00000000000120e2 <__cxx_global_var_init.11>:
+   120e2: 0184         	C.BSTART.STD	COND, 0x12112 <.LBB13_2>
+   120e4: 00004f87     	addtpc	4, 	->t
+   120e8: 264c4f99     	lbui	[t#1, 612], 	->t
+   120ec: 0636         	c.setc.ne	t#1, zero
+   120ee: 0800         	C.BSTART.STD	
+   120f0: 00004f87     	addtpc	4, 	->t
+   120f4: f856         	c.movi	1, 	->t
+   120f6: d19c71d9     	sdi.u	t#1, [t#2, 488]
+   120fa: 1e8c8f95     	addi	t#2, 488, 	->t
+   120fe: 05802059     	swi	zero, [t#1, 8]
+   12102: 07802059     	swi	zero, [t#1, 12]
+   12106: 09802059     	swi	zero, [t#1, 16]
+   1210a: 00004f87     	addtpc	4, 	->t
+   1210e: 7d8d0259     	sbi	t#3, [t#1, 574]
+
+0000000000012112 <.LBB13_2>:
+   12112: 3800         	C.BSTART.STD	RET
+   12114: 029c         	c.setc.tgt	ra
+   12116: 0800         	C.BSTART.STD	
+
+0000000000012118 <__cxx_global_var_init.12>:
+   12118: 0184         	C.BSTART.STD	COND, 0x12148 <.LBB14_2>
+   1211a: 00004f87     	addtpc	4, 	->t
+   1211e: 236c4f99     	lbui	[t#1, 566], 	->t
+   12122: 0636         	c.setc.ne	t#1, zero
+   12124: 0800         	C.BSTART.STD	
+   12126: 00004f87     	addtpc	4, 	->t
+   1212a: f856         	c.movi	1, 	->t
+   1212c: 959c71d9     	sdi.u	t#1, [t#2, 458]
+   12130: 1cac8f95     	addi	t#2, 458, 	->t
+   12134: 05802059     	swi	zero, [t#1, 8]
+   12138: 07802059     	swi	zero, [t#1, 12]
+   1213c: 09802059     	swi	zero, [t#1, 16]
+   12140: 00004f87     	addtpc	4, 	->t
+   12144: 218d0259     	sbi	t#3, [t#1, 528]
+
+0000000000012148 <.LBB14_2>:
+   12148: 3800         	C.BSTART.STD	RET
+   1214a: 029c         	c.setc.tgt	ra
+   1214c: 0800         	C.BSTART.STD	
+
+000000000001214e <_Z16gen_offset_ND2ZZIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>:
+   1214e: 015a82ff 00110fc7    	l.mul	ri2.sw, ri1.sw, 	->t.w
+   12156: 015a82ff 00328fc7    	l.mul	ri5.sw, ri3.sw, 	->t.w
+   1215e: a95a82ff c04cefc7    	l.madd	t#2.sw, ri4.sw, t#1.sw, 	->t.w
+   12166: 480a84ff 500c6feb    	l.icvt.s322s16	t#1.sw, 	->t.h, RNONE, nosat
+   1216e: 019d047f 01800005    	v.add	lc0.sh, t#1.sh, 	->vt.h, nosat
+   12176: c129507f 01fc1049    	v.sh.local	vt#1.sh, [to, lc0<<1, zero.sd<<1]
+   1217e: 0000000f 00000001    	L.BSTOP
+
+0000000000012186 <_Z20gen_offset_ND2NN_newIN3pto4TileILNS0_8LocationE0EtLi1ELi512ELNS0_7BLayoutE0ELi1ELi512ELNS0_7SLayoutE0ELi512ELNS0_8PadValueE3EEEEvNT_9TileDTypeEjjjjjj>:
+   12186: 500d027f 4800606b    	v.icvt.s162s32	lc0.sh, 	->vt.w, RNONE, nosat
+   1218e: a15a827f 00226047    	v.madd	ri4.sw, ri2.sw, vt#1.sw, 	->vt.w
+   12196: 015a82ff 00328fc7    	l.mul	ri5.sw, ri3.sw, 	->t.w
+   1219e: a95a027f c0106047    	v.madd	vt#1.sw, ri1.sw, t#1.sw, 	->vt.w
+   121a6: 480a047f 500060eb    	v.icvt.s322s16	vt#1.sw, 	->vu.h, RNONE, nosat
+   121ae: d929507f 41fc1049    	v.sh.local	vu#1.reuse.sh, [to, lc0<<1, zero.sd<<1]
+   121b6: 000d847f 00140015    	v.addi	vu#1.reuse.sh, 1, 	->vt.h
+   121be: 012c507f 03801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 2]
+   121c6: 000d847f 00240015    	v.addi	vu#1.reuse.sh, 2, 	->vt.h
+   121ce: 012c507f 05801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 4]
+   121d6: 000d847f 00340015    	v.addi	vu#1.reuse.sh, 3, 	->vt.h
+   121de: 012c507f 07801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 6]
+   121e6: 000d847f 00440015    	v.addi	vu#1.reuse.sh, 4, 	->vt.h
+   121ee: 012c507f 09801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 8]
+   121f6: 000d847f 00540015    	v.addi	vu#1.reuse.sh, 5, 	->vt.h
+   121fe: 012c507f 0b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 10]
+   12206: 000d847f 00640015    	v.addi	vu#1.reuse.sh, 6, 	->vt.h
+   1220e: 012c507f 0d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 12]
+   12216: 000d847f 00740015    	v.addi	vu#1.reuse.sh, 7, 	->vt.h
+   1221e: 012c507f 0f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 14]
+   12226: 000d847f 00840015    	v.addi	vu#1.reuse.sh, 8, 	->vt.h
+   1222e: 012c507f 11801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 16]
+   12236: 000d847f 00940015    	v.addi	vu#1.reuse.sh, 9, 	->vt.h
+   1223e: 012c507f 13801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 18]
+   12246: 000d847f 00a40015    	v.addi	vu#1.reuse.sh, 10, 	->vt.h
+   1224e: 012c507f 15801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 20]
+   12256: 000d847f 00b40015    	v.addi	vu#1.reuse.sh, 11, 	->vt.h
+   1225e: 012c507f 17801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 22]
+   12266: 000d847f 00c40015    	v.addi	vu#1.reuse.sh, 12, 	->vt.h
+   1226e: 012c507f 19801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 24]
+   12276: 000d847f 00d40015    	v.addi	vu#1.reuse.sh, 13, 	->vt.h
+   1227e: 012c507f 1b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 26]
+   12286: 000d847f 00e40015    	v.addi	vu#1.reuse.sh, 14, 	->vt.h
+   1228e: 012c507f 1d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 28]
+   12296: 000d847f 00f40015    	v.addi	vu#1.reuse.sh, 15, 	->vt.h
+   1229e: 012c507f 1f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 30]
+   122a6: 000d847f 01040015    	v.addi	vu#1.reuse.sh, 16, 	->vt.h
+   122ae: 012c507f 21801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 32]
+   122b6: 000d847f 01140015    	v.addi	vu#1.reuse.sh, 17, 	->vt.h
+   122be: 012c507f 23801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 34]
+   122c6: 000d847f 01240015    	v.addi	vu#1.reuse.sh, 18, 	->vt.h
+   122ce: 012c507f 25801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 36]
+   122d6: 000d847f 01340015    	v.addi	vu#1.reuse.sh, 19, 	->vt.h
+   122de: 012c507f 27801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 38]
+   122e6: 000d847f 01440015    	v.addi	vu#1.reuse.sh, 20, 	->vt.h
+   122ee: 012c507f 29801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 40]
+   122f6: 000d847f 01540015    	v.addi	vu#1.reuse.sh, 21, 	->vt.h
+   122fe: 012c507f 2b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 42]
+   12306: 000d847f 01640015    	v.addi	vu#1.reuse.sh, 22, 	->vt.h
+   1230e: 012c507f 2d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 44]
+   12316: 000d847f 01740015    	v.addi	vu#1.reuse.sh, 23, 	->vt.h
+   1231e: 012c507f 2f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 46]
+   12326: 000d847f 01840015    	v.addi	vu#1.reuse.sh, 24, 	->vt.h
+   1232e: 012c507f 31801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 48]
+   12336: 000d847f 01940015    	v.addi	vu#1.reuse.sh, 25, 	->vt.h
+   1233e: 012c507f 33801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 50]
+   12346: 000d847f 01a40015    	v.addi	vu#1.reuse.sh, 26, 	->vt.h
+   1234e: 012c507f 35801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 52]
+   12356: 000d847f 01b40015    	v.addi	vu#1.reuse.sh, 27, 	->vt.h
+   1235e: 012c507f 37801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 54]
+   12366: 000d847f 01c40015    	v.addi	vu#1.reuse.sh, 28, 	->vt.h
+   1236e: 012c507f 39801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 56]
+   12376: 000d847f 01d40015    	v.addi	vu#1.reuse.sh, 29, 	->vt.h
+   1237e: 012c507f 3b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 58]
+   12386: 000d847f 01e40015    	v.addi	vu#1.reuse.sh, 30, 	->vt.h
+   1238e: 012c507f 3d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 60]
+   12396: 000d847f 01f40015    	v.addi	vu#1.reuse.sh, 31, 	->vt.h
+   1239e: 012c507f 3f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 62]
+   123a6: 000d847f 02040015    	v.addi	vu#1.reuse.sh, 32, 	->vt.h
+   123ae: 012c507f 41801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 64]
+   123b6: 000d847f 02140015    	v.addi	vu#1.reuse.sh, 33, 	->vt.h
+   123be: 012c507f 43801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 66]
+   123c6: 000d847f 02240015    	v.addi	vu#1.reuse.sh, 34, 	->vt.h
+   123ce: 012c507f 45801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 68]
+   123d6: 000d847f 02340015    	v.addi	vu#1.reuse.sh, 35, 	->vt.h
+   123de: 012c507f 47801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 70]
+   123e6: 000d847f 02440015    	v.addi	vu#1.reuse.sh, 36, 	->vt.h
+   123ee: 012c507f 49801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 72]
+   123f6: 000d847f 02540015    	v.addi	vu#1.reuse.sh, 37, 	->vt.h
+   123fe: 012c507f 4b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 74]
+   12406: 000d847f 02640015    	v.addi	vu#1.reuse.sh, 38, 	->vt.h
+   1240e: 012c507f 4d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 76]
+   12416: 000d847f 02740015    	v.addi	vu#1.reuse.sh, 39, 	->vt.h
+   1241e: 012c507f 4f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 78]
+   12426: 000d847f 02840015    	v.addi	vu#1.reuse.sh, 40, 	->vt.h
+   1242e: 012c507f 51801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 80]
+   12436: 000d847f 02940015    	v.addi	vu#1.reuse.sh, 41, 	->vt.h
+   1243e: 012c507f 53801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 82]
+   12446: 000d847f 02a40015    	v.addi	vu#1.reuse.sh, 42, 	->vt.h
+   1244e: 012c507f 55801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 84]
+   12456: 000d847f 02b40015    	v.addi	vu#1.reuse.sh, 43, 	->vt.h
+   1245e: 012c507f 57801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 86]
+   12466: 000d847f 02c40015    	v.addi	vu#1.reuse.sh, 44, 	->vt.h
+   1246e: 012c507f 59801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 88]
+   12476: 000d847f 02d40015    	v.addi	vu#1.reuse.sh, 45, 	->vt.h
+   1247e: 012c507f 5b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 90]
+   12486: 000d847f 02e40015    	v.addi	vu#1.reuse.sh, 46, 	->vt.h
+   1248e: 012c507f 5d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 92]
+   12496: 000d847f 02f40015    	v.addi	vu#1.reuse.sh, 47, 	->vt.h
+   1249e: 012c507f 5f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 94]
+   124a6: 000d847f 03040015    	v.addi	vu#1.reuse.sh, 48, 	->vt.h
+   124ae: 012c507f 61801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 96]
+   124b6: 000d847f 03140015    	v.addi	vu#1.reuse.sh, 49, 	->vt.h
+   124be: 012c507f 63801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 98]
+   124c6: 000d847f 03240015    	v.addi	vu#1.reuse.sh, 50, 	->vt.h
+   124ce: 012c507f 65801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 100]
+   124d6: 000d847f 03340015    	v.addi	vu#1.reuse.sh, 51, 	->vt.h
+   124de: 012c507f 67801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 102]
+   124e6: 000d847f 03440015    	v.addi	vu#1.reuse.sh, 52, 	->vt.h
+   124ee: 012c507f 69801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 104]
+   124f6: 000d847f 03540015    	v.addi	vu#1.reuse.sh, 53, 	->vt.h
+   124fe: 012c507f 6b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 106]
+   12506: 000d847f 03640015    	v.addi	vu#1.reuse.sh, 54, 	->vt.h
+   1250e: 012c507f 6d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 108]
+   12516: 000d847f 03740015    	v.addi	vu#1.reuse.sh, 55, 	->vt.h
+   1251e: 012c507f 6f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 110]
+   12526: 000d847f 03840015    	v.addi	vu#1.reuse.sh, 56, 	->vt.h
+   1252e: 012c507f 71801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 112]
+   12536: 000d847f 03940015    	v.addi	vu#1.reuse.sh, 57, 	->vt.h
+   1253e: 012c507f 73801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 114]
+   12546: 000d847f 03a40015    	v.addi	vu#1.reuse.sh, 58, 	->vt.h
+   1254e: 012c507f 75801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 116]
+   12556: 000d847f 03b40015    	v.addi	vu#1.reuse.sh, 59, 	->vt.h
+   1255e: 012c507f 77801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 118]
+   12566: 000d847f 03c40015    	v.addi	vu#1.reuse.sh, 60, 	->vt.h
+   1256e: 012c507f 79801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 120]
+   12576: 000d847f 03d40015    	v.addi	vu#1.reuse.sh, 61, 	->vt.h
+   1257e: 012c507f 7b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 122]
+   12586: 000d847f 03e40015    	v.addi	vu#1.reuse.sh, 62, 	->vt.h
+   1258e: 012c507f 7d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 124]
+   12596: 000d847f 03f40015    	v.addi	vu#1.reuse.sh, 63, 	->vt.h
+   1259e: 012c507f 7f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 126]
+   125a6: 000d847f 04040015    	v.addi	vu#1.reuse.sh, 64, 	->vt.h
+   125ae: 012c507f 81801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 128]
+   125b6: 000d847f 04140015    	v.addi	vu#1.reuse.sh, 65, 	->vt.h
+   125be: 012c507f 83801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 130]
+   125c6: 000d847f 04240015    	v.addi	vu#1.reuse.sh, 66, 	->vt.h
+   125ce: 012c507f 85801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 132]
+   125d6: 000d847f 04340015    	v.addi	vu#1.reuse.sh, 67, 	->vt.h
+   125de: 012c507f 87801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 134]
+   125e6: 000d847f 04440015    	v.addi	vu#1.reuse.sh, 68, 	->vt.h
+   125ee: 012c507f 89801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 136]
+   125f6: 000d847f 04540015    	v.addi	vu#1.reuse.sh, 69, 	->vt.h
+   125fe: 012c507f 8b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 138]
+   12606: 000d847f 04640015    	v.addi	vu#1.reuse.sh, 70, 	->vt.h
+   1260e: 012c507f 8d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 140]
+   12616: 000d847f 04740015    	v.addi	vu#1.reuse.sh, 71, 	->vt.h
+   1261e: 012c507f 8f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 142]
+   12626: 000d847f 04840015    	v.addi	vu#1.reuse.sh, 72, 	->vt.h
+   1262e: 012c507f 91801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 144]
+   12636: 000d847f 04940015    	v.addi	vu#1.reuse.sh, 73, 	->vt.h
+   1263e: 012c507f 93801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 146]
+   12646: 000d847f 04a40015    	v.addi	vu#1.reuse.sh, 74, 	->vt.h
+   1264e: 012c507f 95801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 148]
+   12656: 000d847f 04b40015    	v.addi	vu#1.reuse.sh, 75, 	->vt.h
+   1265e: 012c507f 97801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 150]
+   12666: 000d847f 04c40015    	v.addi	vu#1.reuse.sh, 76, 	->vt.h
+   1266e: 012c507f 99801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 152]
+   12676: 000d847f 04d40015    	v.addi	vu#1.reuse.sh, 77, 	->vt.h
+   1267e: 012c507f 9b801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 154]
+   12686: 000d847f 04e40015    	v.addi	vu#1.reuse.sh, 78, 	->vt.h
+   1268e: 012c507f 9d801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 156]
+   12696: 000d847f 04f40015    	v.addi	vu#1.reuse.sh, 79, 	->vt.h
+   1269e: 012c507f 9f801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 158]
+   126a6: 000d847f 05040015    	v.addi	vu#1.reuse.sh, 80, 	->vt.h
+   126ae: 012c507f a1801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 160]
+   126b6: 000d847f 05140015    	v.addi	vu#1.reuse.sh, 81, 	->vt.h
+   126be: 012c507f a3801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 162]
+   126c6: 000d847f 05240015    	v.addi	vu#1.reuse.sh, 82, 	->vt.h
+   126ce: 012c507f a5801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 164]
+   126d6: 000d847f 05340015    	v.addi	vu#1.reuse.sh, 83, 	->vt.h
+   126de: 012c507f a7801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 166]
+   126e6: 000d847f 05440015    	v.addi	vu#1.reuse.sh, 84, 	->vt.h
+   126ee: 012c507f a9801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 168]
+   126f6: 000d847f 05540015    	v.addi	vu#1.reuse.sh, 85, 	->vt.h
+   126fe: 012c507f ab801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 170]
+   12706: 000d847f 05640015    	v.addi	vu#1.reuse.sh, 86, 	->vt.h
+   1270e: 012c507f ad801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 172]
+   12716: 000d847f 05740015    	v.addi	vu#1.reuse.sh, 87, 	->vt.h
+   1271e: 012c507f af801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 174]
+   12726: 000d847f 05840015    	v.addi	vu#1.reuse.sh, 88, 	->vt.h
+   1272e: 012c507f b1801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 176]
+   12736: 000d847f 05940015    	v.addi	vu#1.reuse.sh, 89, 	->vt.h
+   1273e: 012c507f b3801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 178]
+   12746: 000d847f 05a40015    	v.addi	vu#1.reuse.sh, 90, 	->vt.h
+   1274e: 012c507f b5801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 180]
+   12756: 000d847f 05b40015    	v.addi	vu#1.reuse.sh, 91, 	->vt.h
+   1275e: 012c507f b7801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 182]
+   12766: 000d847f 05c40015    	v.addi	vu#1.reuse.sh, 92, 	->vt.h
+   1276e: 012c507f b9801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 184]
+   12776: 000d847f 05d40015    	v.addi	vu#1.reuse.sh, 93, 	->vt.h
+   1277e: 012c507f bb801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 186]
+   12786: 000d847f 05e40015    	v.addi	vu#1.reuse.sh, 94, 	->vt.h
+   1278e: 012c507f bd801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 188]
+   12796: 000d847f 05f40015    	v.addi	vu#1.reuse.sh, 95, 	->vt.h
+   1279e: 012c507f bf801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 190]
+   127a6: 000d847f 06040015    	v.addi	vu#1.reuse.sh, 96, 	->vt.h
+   127ae: 012c507f c1801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 192]
+   127b6: 000d847f 06140015    	v.addi	vu#1.reuse.sh, 97, 	->vt.h
+   127be: 012c507f c3801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 194]
+   127c6: 000d847f 06240015    	v.addi	vu#1.reuse.sh, 98, 	->vt.h
+   127ce: 012c507f c5801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 196]
+   127d6: 000d847f 06340015    	v.addi	vu#1.reuse.sh, 99, 	->vt.h
+   127de: 012c507f c7801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 198]
+   127e6: 000d847f 06440015    	v.addi	vu#1.reuse.sh, 100, 	->vt.h
+   127ee: 012c507f c9801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 200]
+   127f6: 000d847f 06540015    	v.addi	vu#1.reuse.sh, 101, 	->vt.h
+   127fe: 012c507f cb801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 202]
+   12806: 000d847f 06640015    	v.addi	vu#1.reuse.sh, 102, 	->vt.h
+   1280e: 012c507f cd801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 204]
+   12816: 000d847f 06740015    	v.addi	vu#1.reuse.sh, 103, 	->vt.h
+   1281e: 012c507f cf801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 206]
+   12826: 000d847f 06840015    	v.addi	vu#1.reuse.sh, 104, 	->vt.h
+   1282e: 012c507f d1801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 208]
+   12836: 000d847f 06940015    	v.addi	vu#1.reuse.sh, 105, 	->vt.h
+   1283e: 012c507f d3801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 210]
+   12846: 000d847f 06a40015    	v.addi	vu#1.reuse.sh, 106, 	->vt.h
+   1284e: 012c507f d5801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 212]
+   12856: 000d847f 06b40015    	v.addi	vu#1.reuse.sh, 107, 	->vt.h
+   1285e: 012c507f d7801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 214]
+   12866: 000d847f 06c40015    	v.addi	vu#1.reuse.sh, 108, 	->vt.h
+   1286e: 012c507f d9801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 216]
+   12876: 000d847f 06d40015    	v.addi	vu#1.reuse.sh, 109, 	->vt.h
+   1287e: 012c507f db801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 218]
+   12886: 000d847f 06e40015    	v.addi	vu#1.reuse.sh, 110, 	->vt.h
+   1288e: 012c507f dd801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 220]
+   12896: 000d847f 06f40015    	v.addi	vu#1.reuse.sh, 111, 	->vt.h
+   1289e: 012c507f df801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 222]
+   128a6: 000d847f 07040015    	v.addi	vu#1.reuse.sh, 112, 	->vt.h
+   128ae: 012c507f e1801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 224]
+   128b6: 000d847f 07140015    	v.addi	vu#1.reuse.sh, 113, 	->vt.h
+   128be: 012c507f e3801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 226]
+   128c6: 000d847f 07240015    	v.addi	vu#1.reuse.sh, 114, 	->vt.h
+   128ce: 012c507f e5801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 228]
+   128d6: 000d847f 07340015    	v.addi	vu#1.reuse.sh, 115, 	->vt.h
+   128de: 012c507f e7801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 230]
+   128e6: 000d847f 07440015    	v.addi	vu#1.reuse.sh, 116, 	->vt.h
+   128ee: 012c507f e9801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 232]
+   128f6: 000d847f 07540015    	v.addi	vu#1.reuse.sh, 117, 	->vt.h
+   128fe: 012c507f eb801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 234]
+   12906: 000d847f 07640015    	v.addi	vu#1.reuse.sh, 118, 	->vt.h
+   1290e: 012c507f ed801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 236]
+   12916: 000d847f 07740015    	v.addi	vu#1.reuse.sh, 119, 	->vt.h
+   1291e: 012c507f ef801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 238]
+   12926: 000d847f 07840015    	v.addi	vu#1.reuse.sh, 120, 	->vt.h
+   1292e: 012c507f f1801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 240]
+   12936: 000d847f 07940015    	v.addi	vu#1.reuse.sh, 121, 	->vt.h
+   1293e: 012c507f f3801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 242]
+   12946: 000d847f 07a40015    	v.addi	vu#1.reuse.sh, 122, 	->vt.h
+   1294e: 012c507f f5801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 244]
+   12956: 000d847f 07b40015    	v.addi	vu#1.reuse.sh, 123, 	->vt.h
+   1295e: 012c507f f7801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 246]
+   12966: 000d847f 07c40015    	v.addi	vu#1.reuse.sh, 124, 	->vt.h
+   1296e: 012c507f f9801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 248]
+   12976: 000d847f 07d40015    	v.addi	vu#1.reuse.sh, 125, 	->vt.h
+   1297e: 012c507f fb801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 250]
+   12986: 000d847f 07e40015    	v.addi	vu#1.reuse.sh, 126, 	->vt.h
+   1298e: 012c507f fd801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 252]
+   12996: 000d847f 07f40015    	v.addi	vu#1.reuse.sh, 127, 	->vt.h
+   1299e: 012c507f ff801059    	v.shi.local	vt#1.sh, [to, lc0<<1, 254]
+   129a6: 000d847f 08040015    	v.addi	vu#1.reuse.sh, 128, 	->vt.h
+   129ae: 012c507f 018010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 256]
+   129b6: 000d847f 08140015    	v.addi	vu#1.reuse.sh, 129, 	->vt.h
+   129be: 012c507f 038010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 258]
+   129c6: 000d847f 08240015    	v.addi	vu#1.reuse.sh, 130, 	->vt.h
+   129ce: 012c507f 058010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 260]
+   129d6: 000d847f 08340015    	v.addi	vu#1.reuse.sh, 131, 	->vt.h
+   129de: 012c507f 078010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 262]
+   129e6: 000d847f 08440015    	v.addi	vu#1.reuse.sh, 132, 	->vt.h
+   129ee: 012c507f 098010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 264]
+   129f6: 000d847f 08540015    	v.addi	vu#1.reuse.sh, 133, 	->vt.h
+   129fe: 012c507f 0b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 266]
+   12a06: 000d847f 08640015    	v.addi	vu#1.reuse.sh, 134, 	->vt.h
+   12a0e: 012c507f 0d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 268]
+   12a16: 000d847f 08740015    	v.addi	vu#1.reuse.sh, 135, 	->vt.h
+   12a1e: 012c507f 0f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 270]
+   12a26: 000d847f 08840015    	v.addi	vu#1.reuse.sh, 136, 	->vt.h
+   12a2e: 012c507f 118010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 272]
+   12a36: 000d847f 08940015    	v.addi	vu#1.reuse.sh, 137, 	->vt.h
+   12a3e: 012c507f 138010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 274]
+   12a46: 000d847f 08a40015    	v.addi	vu#1.reuse.sh, 138, 	->vt.h
+   12a4e: 012c507f 158010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 276]
+   12a56: 000d847f 08b40015    	v.addi	vu#1.reuse.sh, 139, 	->vt.h
+   12a5e: 012c507f 178010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 278]
+   12a66: 000d847f 08c40015    	v.addi	vu#1.reuse.sh, 140, 	->vt.h
+   12a6e: 012c507f 198010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 280]
+   12a76: 000d847f 08d40015    	v.addi	vu#1.reuse.sh, 141, 	->vt.h
+   12a7e: 012c507f 1b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 282]
+   12a86: 000d847f 08e40015    	v.addi	vu#1.reuse.sh, 142, 	->vt.h
+   12a8e: 012c507f 1d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 284]
+   12a96: 000d847f 08f40015    	v.addi	vu#1.reuse.sh, 143, 	->vt.h
+   12a9e: 012c507f 1f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 286]
+   12aa6: 000d847f 09040015    	v.addi	vu#1.reuse.sh, 144, 	->vt.h
+   12aae: 012c507f 218010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 288]
+   12ab6: 000d847f 09140015    	v.addi	vu#1.reuse.sh, 145, 	->vt.h
+   12abe: 012c507f 238010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 290]
+   12ac6: 000d847f 09240015    	v.addi	vu#1.reuse.sh, 146, 	->vt.h
+   12ace: 012c507f 258010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 292]
+   12ad6: 000d847f 09340015    	v.addi	vu#1.reuse.sh, 147, 	->vt.h
+   12ade: 012c507f 278010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 294]
+   12ae6: 000d847f 09440015    	v.addi	vu#1.reuse.sh, 148, 	->vt.h
+   12aee: 012c507f 298010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 296]
+   12af6: 000d847f 09540015    	v.addi	vu#1.reuse.sh, 149, 	->vt.h
+   12afe: 012c507f 2b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 298]
+   12b06: 000d847f 09640015    	v.addi	vu#1.reuse.sh, 150, 	->vt.h
+   12b0e: 012c507f 2d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 300]
+   12b16: 000d847f 09740015    	v.addi	vu#1.reuse.sh, 151, 	->vt.h
+   12b1e: 012c507f 2f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 302]
+   12b26: 000d847f 09840015    	v.addi	vu#1.reuse.sh, 152, 	->vt.h
+   12b2e: 012c507f 318010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 304]
+   12b36: 000d847f 09940015    	v.addi	vu#1.reuse.sh, 153, 	->vt.h
+   12b3e: 012c507f 338010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 306]
+   12b46: 000d847f 09a40015    	v.addi	vu#1.reuse.sh, 154, 	->vt.h
+   12b4e: 012c507f 358010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 308]
+   12b56: 000d847f 09b40015    	v.addi	vu#1.reuse.sh, 155, 	->vt.h
+   12b5e: 012c507f 378010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 310]
+   12b66: 000d847f 09c40015    	v.addi	vu#1.reuse.sh, 156, 	->vt.h
+   12b6e: 012c507f 398010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 312]
+   12b76: 000d847f 09d40015    	v.addi	vu#1.reuse.sh, 157, 	->vt.h
+   12b7e: 012c507f 3b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 314]
+   12b86: 000d847f 09e40015    	v.addi	vu#1.reuse.sh, 158, 	->vt.h
+   12b8e: 012c507f 3d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 316]
+   12b96: 000d847f 09f40015    	v.addi	vu#1.reuse.sh, 159, 	->vt.h
+   12b9e: 012c507f 3f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 318]
+   12ba6: 000d847f 0a040015    	v.addi	vu#1.reuse.sh, 160, 	->vt.h
+   12bae: 012c507f 418010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 320]
+   12bb6: 000d847f 0a140015    	v.addi	vu#1.reuse.sh, 161, 	->vt.h
+   12bbe: 012c507f 438010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 322]
+   12bc6: 000d847f 0a240015    	v.addi	vu#1.reuse.sh, 162, 	->vt.h
+   12bce: 012c507f 458010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 324]
+   12bd6: 000d847f 0a340015    	v.addi	vu#1.reuse.sh, 163, 	->vt.h
+   12bde: 012c507f 478010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 326]
+   12be6: 000d847f 0a440015    	v.addi	vu#1.reuse.sh, 164, 	->vt.h
+   12bee: 012c507f 498010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 328]
+   12bf6: 000d847f 0a540015    	v.addi	vu#1.reuse.sh, 165, 	->vt.h
+   12bfe: 012c507f 4b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 330]
+   12c06: 000d847f 0a640015    	v.addi	vu#1.reuse.sh, 166, 	->vt.h
+   12c0e: 012c507f 4d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 332]
+   12c16: 000d847f 0a740015    	v.addi	vu#1.reuse.sh, 167, 	->vt.h
+   12c1e: 012c507f 4f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 334]
+   12c26: 000d847f 0a840015    	v.addi	vu#1.reuse.sh, 168, 	->vt.h
+   12c2e: 012c507f 518010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 336]
+   12c36: 000d847f 0a940015    	v.addi	vu#1.reuse.sh, 169, 	->vt.h
+   12c3e: 012c507f 538010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 338]
+   12c46: 000d847f 0aa40015    	v.addi	vu#1.reuse.sh, 170, 	->vt.h
+   12c4e: 012c507f 558010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 340]
+   12c56: 000d847f 0ab40015    	v.addi	vu#1.reuse.sh, 171, 	->vt.h
+   12c5e: 012c507f 578010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 342]
+   12c66: 000d847f 0ac40015    	v.addi	vu#1.reuse.sh, 172, 	->vt.h
+   12c6e: 012c507f 598010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 344]
+   12c76: 000d847f 0ad40015    	v.addi	vu#1.reuse.sh, 173, 	->vt.h
+   12c7e: 012c507f 5b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 346]
+   12c86: 000d847f 0ae40015    	v.addi	vu#1.reuse.sh, 174, 	->vt.h
+   12c8e: 012c507f 5d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 348]
+   12c96: 000d847f 0af40015    	v.addi	vu#1.reuse.sh, 175, 	->vt.h
+   12c9e: 012c507f 5f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 350]
+   12ca6: 000d847f 0b040015    	v.addi	vu#1.reuse.sh, 176, 	->vt.h
+   12cae: 012c507f 618010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 352]
+   12cb6: 000d847f 0b140015    	v.addi	vu#1.reuse.sh, 177, 	->vt.h
+   12cbe: 012c507f 638010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 354]
+   12cc6: 000d847f 0b240015    	v.addi	vu#1.reuse.sh, 178, 	->vt.h
+   12cce: 012c507f 658010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 356]
+   12cd6: 000d847f 0b340015    	v.addi	vu#1.reuse.sh, 179, 	->vt.h
+   12cde: 012c507f 678010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 358]
+   12ce6: 000d847f 0b440015    	v.addi	vu#1.reuse.sh, 180, 	->vt.h
+   12cee: 012c507f 698010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 360]
+   12cf6: 000d847f 0b540015    	v.addi	vu#1.reuse.sh, 181, 	->vt.h
+   12cfe: 012c507f 6b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 362]
+   12d06: 000d847f 0b640015    	v.addi	vu#1.reuse.sh, 182, 	->vt.h
+   12d0e: 012c507f 6d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 364]
+   12d16: 000d847f 0b740015    	v.addi	vu#1.reuse.sh, 183, 	->vt.h
+   12d1e: 012c507f 6f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 366]
+   12d26: 000d847f 0b840015    	v.addi	vu#1.reuse.sh, 184, 	->vt.h
+   12d2e: 012c507f 718010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 368]
+   12d36: 000d847f 0b940015    	v.addi	vu#1.reuse.sh, 185, 	->vt.h
+   12d3e: 012c507f 738010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 370]
+   12d46: 000d847f 0ba40015    	v.addi	vu#1.reuse.sh, 186, 	->vt.h
+   12d4e: 012c507f 758010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 372]
+   12d56: 000d847f 0bb40015    	v.addi	vu#1.reuse.sh, 187, 	->vt.h
+   12d5e: 012c507f 778010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 374]
+   12d66: 000d847f 0bc40015    	v.addi	vu#1.reuse.sh, 188, 	->vt.h
+   12d6e: 012c507f 798010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 376]
+   12d76: 000d847f 0bd40015    	v.addi	vu#1.reuse.sh, 189, 	->vt.h
+   12d7e: 012c507f 7b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 378]
+   12d86: 000d847f 0be40015    	v.addi	vu#1.reuse.sh, 190, 	->vt.h
+   12d8e: 012c507f 7d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 380]
+   12d96: 000d847f 0bf40015    	v.addi	vu#1.reuse.sh, 191, 	->vt.h
+   12d9e: 012c507f 7f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 382]
+   12da6: 000d847f 0c040015    	v.addi	vu#1.reuse.sh, 192, 	->vt.h
+   12dae: 012c507f 818010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 384]
+   12db6: 000d847f 0c140015    	v.addi	vu#1.reuse.sh, 193, 	->vt.h
+   12dbe: 012c507f 838010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 386]
+   12dc6: 000d847f 0c240015    	v.addi	vu#1.reuse.sh, 194, 	->vt.h
+   12dce: 012c507f 858010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 388]
+   12dd6: 000d847f 0c340015    	v.addi	vu#1.reuse.sh, 195, 	->vt.h
+   12dde: 012c507f 878010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 390]
+   12de6: 000d847f 0c440015    	v.addi	vu#1.reuse.sh, 196, 	->vt.h
+   12dee: 012c507f 898010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 392]
+   12df6: 000d847f 0c540015    	v.addi	vu#1.reuse.sh, 197, 	->vt.h
+   12dfe: 012c507f 8b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 394]
+   12e06: 000d847f 0c640015    	v.addi	vu#1.reuse.sh, 198, 	->vt.h
+   12e0e: 012c507f 8d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 396]
+   12e16: 000d847f 0c740015    	v.addi	vu#1.reuse.sh, 199, 	->vt.h
+   12e1e: 012c507f 8f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 398]
+   12e26: 000d847f 0c840015    	v.addi	vu#1.reuse.sh, 200, 	->vt.h
+   12e2e: 012c507f 918010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 400]
+   12e36: 000d847f 0c940015    	v.addi	vu#1.reuse.sh, 201, 	->vt.h
+   12e3e: 012c507f 938010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 402]
+   12e46: 000d847f 0ca40015    	v.addi	vu#1.reuse.sh, 202, 	->vt.h
+   12e4e: 012c507f 958010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 404]
+   12e56: 000d847f 0cb40015    	v.addi	vu#1.reuse.sh, 203, 	->vt.h
+   12e5e: 012c507f 978010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 406]
+   12e66: 000d847f 0cc40015    	v.addi	vu#1.reuse.sh, 204, 	->vt.h
+   12e6e: 012c507f 998010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 408]
+   12e76: 000d847f 0cd40015    	v.addi	vu#1.reuse.sh, 205, 	->vt.h
+   12e7e: 012c507f 9b8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 410]
+   12e86: 000d847f 0ce40015    	v.addi	vu#1.reuse.sh, 206, 	->vt.h
+   12e8e: 012c507f 9d8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 412]
+   12e96: 000d847f 0cf40015    	v.addi	vu#1.reuse.sh, 207, 	->vt.h
+   12e9e: 012c507f 9f8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 414]
+   12ea6: 000d847f 0d040015    	v.addi	vu#1.reuse.sh, 208, 	->vt.h
+   12eae: 012c507f a18010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 416]
+   12eb6: 000d847f 0d140015    	v.addi	vu#1.reuse.sh, 209, 	->vt.h
+   12ebe: 012c507f a38010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 418]
+   12ec6: 000d847f 0d240015    	v.addi	vu#1.reuse.sh, 210, 	->vt.h
+   12ece: 012c507f a58010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 420]
+   12ed6: 000d847f 0d340015    	v.addi	vu#1.reuse.sh, 211, 	->vt.h
+   12ede: 012c507f a78010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 422]
+   12ee6: 000d847f 0d440015    	v.addi	vu#1.reuse.sh, 212, 	->vt.h
+   12eee: 012c507f a98010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 424]
+   12ef6: 000d847f 0d540015    	v.addi	vu#1.reuse.sh, 213, 	->vt.h
+   12efe: 012c507f ab8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 426]
+   12f06: 000d847f 0d640015    	v.addi	vu#1.reuse.sh, 214, 	->vt.h
+   12f0e: 012c507f ad8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 428]
+   12f16: 000d847f 0d740015    	v.addi	vu#1.reuse.sh, 215, 	->vt.h
+   12f1e: 012c507f af8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 430]
+   12f26: 000d847f 0d840015    	v.addi	vu#1.reuse.sh, 216, 	->vt.h
+   12f2e: 012c507f b18010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 432]
+   12f36: 000d847f 0d940015    	v.addi	vu#1.reuse.sh, 217, 	->vt.h
+   12f3e: 012c507f b38010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 434]
+   12f46: 000d847f 0da40015    	v.addi	vu#1.reuse.sh, 218, 	->vt.h
+   12f4e: 012c507f b58010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 436]
+   12f56: 000d847f 0db40015    	v.addi	vu#1.reuse.sh, 219, 	->vt.h
+   12f5e: 012c507f b78010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 438]
+   12f66: 000d847f 0dc40015    	v.addi	vu#1.reuse.sh, 220, 	->vt.h
+   12f6e: 012c507f b98010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 440]
+   12f76: 000d847f 0dd40015    	v.addi	vu#1.reuse.sh, 221, 	->vt.h
+   12f7e: 012c507f bb8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 442]
+   12f86: 000d847f 0de40015    	v.addi	vu#1.reuse.sh, 222, 	->vt.h
+   12f8e: 012c507f bd8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 444]
+   12f96: 000d847f 0df40015    	v.addi	vu#1.reuse.sh, 223, 	->vt.h
+   12f9e: 012c507f bf8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 446]
+   12fa6: 000d847f 0e040015    	v.addi	vu#1.reuse.sh, 224, 	->vt.h
+   12fae: 012c507f c18010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 448]
+   12fb6: 000d847f 0e140015    	v.addi	vu#1.reuse.sh, 225, 	->vt.h
+   12fbe: 012c507f c38010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 450]
+   12fc6: 000d847f 0e240015    	v.addi	vu#1.reuse.sh, 226, 	->vt.h
+   12fce: 012c507f c58010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 452]
+   12fd6: 000d847f 0e340015    	v.addi	vu#1.reuse.sh, 227, 	->vt.h
+   12fde: 012c507f c78010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 454]
+   12fe6: 000d847f 0e440015    	v.addi	vu#1.reuse.sh, 228, 	->vt.h
+   12fee: 012c507f c98010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 456]
+   12ff6: 000d847f 0e540015    	v.addi	vu#1.reuse.sh, 229, 	->vt.h
+   12ffe: 012c507f cb8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 458]
+   13006: 000d847f 0e640015    	v.addi	vu#1.reuse.sh, 230, 	->vt.h
+   1300e: 012c507f cd8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 460]
+   13016: 000d847f 0e740015    	v.addi	vu#1.reuse.sh, 231, 	->vt.h
+   1301e: 012c507f cf8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 462]
+   13026: 000d847f 0e840015    	v.addi	vu#1.reuse.sh, 232, 	->vt.h
+   1302e: 012c507f d18010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 464]
+   13036: 000d847f 0e940015    	v.addi	vu#1.reuse.sh, 233, 	->vt.h
+   1303e: 012c507f d38010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 466]
+   13046: 000d847f 0ea40015    	v.addi	vu#1.reuse.sh, 234, 	->vt.h
+   1304e: 012c507f d58010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 468]
+   13056: 000d847f 0eb40015    	v.addi	vu#1.reuse.sh, 235, 	->vt.h
+   1305e: 012c507f d78010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 470]
+   13066: 000d847f 0ec40015    	v.addi	vu#1.reuse.sh, 236, 	->vt.h
+   1306e: 012c507f d98010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 472]
+   13076: 000d847f 0ed40015    	v.addi	vu#1.reuse.sh, 237, 	->vt.h
+   1307e: 012c507f db8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 474]
+   13086: 000d847f 0ee40015    	v.addi	vu#1.reuse.sh, 238, 	->vt.h
+   1308e: 012c507f dd8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 476]
+   13096: 000d847f 0ef40015    	v.addi	vu#1.reuse.sh, 239, 	->vt.h
+   1309e: 012c507f df8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 478]
+   130a6: 000d847f 0f040015    	v.addi	vu#1.reuse.sh, 240, 	->vt.h
+   130ae: 012c507f e18010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 480]
+   130b6: 000d847f 0f140015    	v.addi	vu#1.reuse.sh, 241, 	->vt.h
+   130be: 012c507f e38010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 482]
+   130c6: 000d847f 0f240015    	v.addi	vu#1.reuse.sh, 242, 	->vt.h
+   130ce: 012c507f e58010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 484]
+   130d6: 000d847f 0f340015    	v.addi	vu#1.reuse.sh, 243, 	->vt.h
+   130de: 012c507f e78010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 486]
+   130e6: 000d847f 0f440015    	v.addi	vu#1.reuse.sh, 244, 	->vt.h
+   130ee: 012c507f e98010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 488]
+   130f6: 000d847f 0f540015    	v.addi	vu#1.reuse.sh, 245, 	->vt.h
+   130fe: 012c507f eb8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 490]
+   13106: 000d847f 0f640015    	v.addi	vu#1.reuse.sh, 246, 	->vt.h
+   1310e: 012c507f ed8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 492]
+   13116: 000d847f 0f740015    	v.addi	vu#1.reuse.sh, 247, 	->vt.h
+   1311e: 012c507f ef8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 494]
+   13126: 000d847f 0f840015    	v.addi	vu#1.reuse.sh, 248, 	->vt.h
+   1312e: 012c507f f18010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 496]
+   13136: 000d847f 0f940015    	v.addi	vu#1.reuse.sh, 249, 	->vt.h
+   1313e: 012c507f f38010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 498]
+   13146: 000d847f 0fa40015    	v.addi	vu#1.reuse.sh, 250, 	->vt.h
+   1314e: 012c507f f58010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 500]
+   13156: 000d847f 0fb40015    	v.addi	vu#1.reuse.sh, 251, 	->vt.h
+   1315e: 012c507f f78010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 502]
+   13166: 000d847f 0fc40015    	v.addi	vu#1.reuse.sh, 252, 	->vt.h
+   1316e: 012c507f f98010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 504]
+   13176: 000d847f 0fd40015    	v.addi	vu#1.reuse.sh, 253, 	->vt.h
+   1317e: 012c507f fb8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 506]
+   13186: 000d847f 0fe40015    	v.addi	vu#1.reuse.sh, 254, 	->vt.h
+   1318e: 012c507f fd8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 508]
+   13196: 000d847f 0ff40015    	v.addi	vu#1.reuse.sh, 255, 	->vt.h
+   1319e: 012c507f ff8010d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 510]
+   131a6: 000d847f 10040015    	v.addi	vu#1.reuse.sh, 256, 	->vt.h
+   131ae: 012c507f 01801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 512]
+   131b6: 000d847f 10140015    	v.addi	vu#1.reuse.sh, 257, 	->vt.h
+   131be: 012c507f 03801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 514]
+   131c6: 000d847f 10240015    	v.addi	vu#1.reuse.sh, 258, 	->vt.h
+   131ce: 012c507f 05801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 516]
+   131d6: 000d847f 10340015    	v.addi	vu#1.reuse.sh, 259, 	->vt.h
+   131de: 012c507f 07801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 518]
+   131e6: 000d847f 10440015    	v.addi	vu#1.reuse.sh, 260, 	->vt.h
+   131ee: 012c507f 09801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 520]
+   131f6: 000d847f 10540015    	v.addi	vu#1.reuse.sh, 261, 	->vt.h
+   131fe: 012c507f 0b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 522]
+   13206: 000d847f 10640015    	v.addi	vu#1.reuse.sh, 262, 	->vt.h
+   1320e: 012c507f 0d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 524]
+   13216: 000d847f 10740015    	v.addi	vu#1.reuse.sh, 263, 	->vt.h
+   1321e: 012c507f 0f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 526]
+   13226: 000d847f 10840015    	v.addi	vu#1.reuse.sh, 264, 	->vt.h
+   1322e: 012c507f 11801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 528]
+   13236: 000d847f 10940015    	v.addi	vu#1.reuse.sh, 265, 	->vt.h
+   1323e: 012c507f 13801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 530]
+   13246: 000d847f 10a40015    	v.addi	vu#1.reuse.sh, 266, 	->vt.h
+   1324e: 012c507f 15801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 532]
+   13256: 000d847f 10b40015    	v.addi	vu#1.reuse.sh, 267, 	->vt.h
+   1325e: 012c507f 17801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 534]
+   13266: 000d847f 10c40015    	v.addi	vu#1.reuse.sh, 268, 	->vt.h
+   1326e: 012c507f 19801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 536]
+   13276: 000d847f 10d40015    	v.addi	vu#1.reuse.sh, 269, 	->vt.h
+   1327e: 012c507f 1b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 538]
+   13286: 000d847f 10e40015    	v.addi	vu#1.reuse.sh, 270, 	->vt.h
+   1328e: 012c507f 1d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 540]
+   13296: 000d847f 10f40015    	v.addi	vu#1.reuse.sh, 271, 	->vt.h
+   1329e: 012c507f 1f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 542]
+   132a6: 000d847f 11040015    	v.addi	vu#1.reuse.sh, 272, 	->vt.h
+   132ae: 012c507f 21801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 544]
+   132b6: 000d847f 11140015    	v.addi	vu#1.reuse.sh, 273, 	->vt.h
+   132be: 012c507f 23801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 546]
+   132c6: 000d847f 11240015    	v.addi	vu#1.reuse.sh, 274, 	->vt.h
+   132ce: 012c507f 25801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 548]
+   132d6: 000d847f 11340015    	v.addi	vu#1.reuse.sh, 275, 	->vt.h
+   132de: 012c507f 27801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 550]
+   132e6: 000d847f 11440015    	v.addi	vu#1.reuse.sh, 276, 	->vt.h
+   132ee: 012c507f 29801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 552]
+   132f6: 000d847f 11540015    	v.addi	vu#1.reuse.sh, 277, 	->vt.h
+   132fe: 012c507f 2b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 554]
+   13306: 000d847f 11640015    	v.addi	vu#1.reuse.sh, 278, 	->vt.h
+   1330e: 012c507f 2d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 556]
+   13316: 000d847f 11740015    	v.addi	vu#1.reuse.sh, 279, 	->vt.h
+   1331e: 012c507f 2f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 558]
+   13326: 000d847f 11840015    	v.addi	vu#1.reuse.sh, 280, 	->vt.h
+   1332e: 012c507f 31801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 560]
+   13336: 000d847f 11940015    	v.addi	vu#1.reuse.sh, 281, 	->vt.h
+   1333e: 012c507f 33801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 562]
+   13346: 000d847f 11a40015    	v.addi	vu#1.reuse.sh, 282, 	->vt.h
+   1334e: 012c507f 35801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 564]
+   13356: 000d847f 11b40015    	v.addi	vu#1.reuse.sh, 283, 	->vt.h
+   1335e: 012c507f 37801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 566]
+   13366: 000d847f 11c40015    	v.addi	vu#1.reuse.sh, 284, 	->vt.h
+   1336e: 012c507f 39801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 568]
+   13376: 000d847f 11d40015    	v.addi	vu#1.reuse.sh, 285, 	->vt.h
+   1337e: 012c507f 3b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 570]
+   13386: 000d847f 11e40015    	v.addi	vu#1.reuse.sh, 286, 	->vt.h
+   1338e: 012c507f 3d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 572]
+   13396: 000d847f 11f40015    	v.addi	vu#1.reuse.sh, 287, 	->vt.h
+   1339e: 012c507f 3f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 574]
+   133a6: 000d847f 12040015    	v.addi	vu#1.reuse.sh, 288, 	->vt.h
+   133ae: 012c507f 41801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 576]
+   133b6: 000d847f 12140015    	v.addi	vu#1.reuse.sh, 289, 	->vt.h
+   133be: 012c507f 43801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 578]
+   133c6: 000d847f 12240015    	v.addi	vu#1.reuse.sh, 290, 	->vt.h
+   133ce: 012c507f 45801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 580]
+   133d6: 000d847f 12340015    	v.addi	vu#1.reuse.sh, 291, 	->vt.h
+   133de: 012c507f 47801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 582]
+   133e6: 000d847f 12440015    	v.addi	vu#1.reuse.sh, 292, 	->vt.h
+   133ee: 012c507f 49801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 584]
+   133f6: 000d847f 12540015    	v.addi	vu#1.reuse.sh, 293, 	->vt.h
+   133fe: 012c507f 4b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 586]
+   13406: 000d847f 12640015    	v.addi	vu#1.reuse.sh, 294, 	->vt.h
+   1340e: 012c507f 4d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 588]
+   13416: 000d847f 12740015    	v.addi	vu#1.reuse.sh, 295, 	->vt.h
+   1341e: 012c507f 4f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 590]
+   13426: 000d847f 12840015    	v.addi	vu#1.reuse.sh, 296, 	->vt.h
+   1342e: 012c507f 51801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 592]
+   13436: 000d847f 12940015    	v.addi	vu#1.reuse.sh, 297, 	->vt.h
+   1343e: 012c507f 53801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 594]
+   13446: 000d847f 12a40015    	v.addi	vu#1.reuse.sh, 298, 	->vt.h
+   1344e: 012c507f 55801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 596]
+   13456: 000d847f 12b40015    	v.addi	vu#1.reuse.sh, 299, 	->vt.h
+   1345e: 012c507f 57801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 598]
+   13466: 000d847f 12c40015    	v.addi	vu#1.reuse.sh, 300, 	->vt.h
+   1346e: 012c507f 59801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 600]
+   13476: 000d847f 12d40015    	v.addi	vu#1.reuse.sh, 301, 	->vt.h
+   1347e: 012c507f 5b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 602]
+   13486: 000d847f 12e40015    	v.addi	vu#1.reuse.sh, 302, 	->vt.h
+   1348e: 012c507f 5d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 604]
+   13496: 000d847f 12f40015    	v.addi	vu#1.reuse.sh, 303, 	->vt.h
+   1349e: 012c507f 5f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 606]
+   134a6: 000d847f 13040015    	v.addi	vu#1.reuse.sh, 304, 	->vt.h
+   134ae: 012c507f 61801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 608]
+   134b6: 000d847f 13140015    	v.addi	vu#1.reuse.sh, 305, 	->vt.h
+   134be: 012c507f 63801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 610]
+   134c6: 000d847f 13240015    	v.addi	vu#1.reuse.sh, 306, 	->vt.h
+   134ce: 012c507f 65801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 612]
+   134d6: 000d847f 13340015    	v.addi	vu#1.reuse.sh, 307, 	->vt.h
+   134de: 012c507f 67801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 614]
+   134e6: 000d847f 13440015    	v.addi	vu#1.reuse.sh, 308, 	->vt.h
+   134ee: 012c507f 69801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 616]
+   134f6: 000d847f 13540015    	v.addi	vu#1.reuse.sh, 309, 	->vt.h
+   134fe: 012c507f 6b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 618]
+   13506: 000d847f 13640015    	v.addi	vu#1.reuse.sh, 310, 	->vt.h
+   1350e: 012c507f 6d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 620]
+   13516: 000d847f 13740015    	v.addi	vu#1.reuse.sh, 311, 	->vt.h
+   1351e: 012c507f 6f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 622]
+   13526: 000d847f 13840015    	v.addi	vu#1.reuse.sh, 312, 	->vt.h
+   1352e: 012c507f 71801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 624]
+   13536: 000d847f 13940015    	v.addi	vu#1.reuse.sh, 313, 	->vt.h
+   1353e: 012c507f 73801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 626]
+   13546: 000d847f 13a40015    	v.addi	vu#1.reuse.sh, 314, 	->vt.h
+   1354e: 012c507f 75801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 628]
+   13556: 000d847f 13b40015    	v.addi	vu#1.reuse.sh, 315, 	->vt.h
+   1355e: 012c507f 77801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 630]
+   13566: 000d847f 13c40015    	v.addi	vu#1.reuse.sh, 316, 	->vt.h
+   1356e: 012c507f 79801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 632]
+   13576: 000d847f 13d40015    	v.addi	vu#1.reuse.sh, 317, 	->vt.h
+   1357e: 012c507f 7b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 634]
+   13586: 000d847f 13e40015    	v.addi	vu#1.reuse.sh, 318, 	->vt.h
+   1358e: 012c507f 7d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 636]
+   13596: 000d847f 13f40015    	v.addi	vu#1.reuse.sh, 319, 	->vt.h
+   1359e: 012c507f 7f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 638]
+   135a6: 000d847f 14040015    	v.addi	vu#1.reuse.sh, 320, 	->vt.h
+   135ae: 012c507f 81801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 640]
+   135b6: 000d847f 14140015    	v.addi	vu#1.reuse.sh, 321, 	->vt.h
+   135be: 012c507f 83801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 642]
+   135c6: 000d847f 14240015    	v.addi	vu#1.reuse.sh, 322, 	->vt.h
+   135ce: 012c507f 85801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 644]
+   135d6: 000d847f 14340015    	v.addi	vu#1.reuse.sh, 323, 	->vt.h
+   135de: 012c507f 87801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 646]
+   135e6: 000d847f 14440015    	v.addi	vu#1.reuse.sh, 324, 	->vt.h
+   135ee: 012c507f 89801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 648]
+   135f6: 000d847f 14540015    	v.addi	vu#1.reuse.sh, 325, 	->vt.h
+   135fe: 012c507f 8b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 650]
+   13606: 000d847f 14640015    	v.addi	vu#1.reuse.sh, 326, 	->vt.h
+   1360e: 012c507f 8d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 652]
+   13616: 000d847f 14740015    	v.addi	vu#1.reuse.sh, 327, 	->vt.h
+   1361e: 012c507f 8f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 654]
+   13626: 000d847f 14840015    	v.addi	vu#1.reuse.sh, 328, 	->vt.h
+   1362e: 012c507f 91801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 656]
+   13636: 000d847f 14940015    	v.addi	vu#1.reuse.sh, 329, 	->vt.h
+   1363e: 012c507f 93801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 658]
+   13646: 000d847f 14a40015    	v.addi	vu#1.reuse.sh, 330, 	->vt.h
+   1364e: 012c507f 95801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 660]
+   13656: 000d847f 14b40015    	v.addi	vu#1.reuse.sh, 331, 	->vt.h
+   1365e: 012c507f 97801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 662]
+   13666: 000d847f 14c40015    	v.addi	vu#1.reuse.sh, 332, 	->vt.h
+   1366e: 012c507f 99801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 664]
+   13676: 000d847f 14d40015    	v.addi	vu#1.reuse.sh, 333, 	->vt.h
+   1367e: 012c507f 9b801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 666]
+   13686: 000d847f 14e40015    	v.addi	vu#1.reuse.sh, 334, 	->vt.h
+   1368e: 012c507f 9d801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 668]
+   13696: 000d847f 14f40015    	v.addi	vu#1.reuse.sh, 335, 	->vt.h
+   1369e: 012c507f 9f801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 670]
+   136a6: 000d847f 15040015    	v.addi	vu#1.reuse.sh, 336, 	->vt.h
+   136ae: 012c507f a1801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 672]
+   136b6: 000d847f 15140015    	v.addi	vu#1.reuse.sh, 337, 	->vt.h
+   136be: 012c507f a3801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 674]
+   136c6: 000d847f 15240015    	v.addi	vu#1.reuse.sh, 338, 	->vt.h
+   136ce: 012c507f a5801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 676]
+   136d6: 000d847f 15340015    	v.addi	vu#1.reuse.sh, 339, 	->vt.h
+   136de: 012c507f a7801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 678]
+   136e6: 000d847f 15440015    	v.addi	vu#1.reuse.sh, 340, 	->vt.h
+   136ee: 012c507f a9801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 680]
+   136f6: 000d847f 15540015    	v.addi	vu#1.reuse.sh, 341, 	->vt.h
+   136fe: 012c507f ab801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 682]
+   13706: 000d847f 15640015    	v.addi	vu#1.reuse.sh, 342, 	->vt.h
+   1370e: 012c507f ad801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 684]
+   13716: 000d847f 15740015    	v.addi	vu#1.reuse.sh, 343, 	->vt.h
+   1371e: 012c507f af801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 686]
+   13726: 000d847f 15840015    	v.addi	vu#1.reuse.sh, 344, 	->vt.h
+   1372e: 012c507f b1801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 688]
+   13736: 000d847f 15940015    	v.addi	vu#1.reuse.sh, 345, 	->vt.h
+   1373e: 012c507f b3801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 690]
+   13746: 000d847f 15a40015    	v.addi	vu#1.reuse.sh, 346, 	->vt.h
+   1374e: 012c507f b5801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 692]
+   13756: 000d847f 15b40015    	v.addi	vu#1.reuse.sh, 347, 	->vt.h
+   1375e: 012c507f b7801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 694]
+   13766: 000d847f 15c40015    	v.addi	vu#1.reuse.sh, 348, 	->vt.h
+   1376e: 012c507f b9801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 696]
+   13776: 000d847f 15d40015    	v.addi	vu#1.reuse.sh, 349, 	->vt.h
+   1377e: 012c507f bb801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 698]
+   13786: 000d847f 15e40015    	v.addi	vu#1.reuse.sh, 350, 	->vt.h
+   1378e: 012c507f bd801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 700]
+   13796: 000d847f 15f40015    	v.addi	vu#1.reuse.sh, 351, 	->vt.h
+   1379e: 012c507f bf801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 702]
+   137a6: 000d847f 16040015    	v.addi	vu#1.reuse.sh, 352, 	->vt.h
+   137ae: 012c507f c1801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 704]
+   137b6: 000d847f 16140015    	v.addi	vu#1.reuse.sh, 353, 	->vt.h
+   137be: 012c507f c3801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 706]
+   137c6: 000d847f 16240015    	v.addi	vu#1.reuse.sh, 354, 	->vt.h
+   137ce: 012c507f c5801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 708]
+   137d6: 000d847f 16340015    	v.addi	vu#1.reuse.sh, 355, 	->vt.h
+   137de: 012c507f c7801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 710]
+   137e6: 000d847f 16440015    	v.addi	vu#1.reuse.sh, 356, 	->vt.h
+   137ee: 012c507f c9801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 712]
+   137f6: 000d847f 16540015    	v.addi	vu#1.reuse.sh, 357, 	->vt.h
+   137fe: 012c507f cb801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 714]
+   13806: 000d847f 16640015    	v.addi	vu#1.reuse.sh, 358, 	->vt.h
+   1380e: 012c507f cd801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 716]
+   13816: 000d847f 16740015    	v.addi	vu#1.reuse.sh, 359, 	->vt.h
+   1381e: 012c507f cf801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 718]
+   13826: 000d847f 16840015    	v.addi	vu#1.reuse.sh, 360, 	->vt.h
+   1382e: 012c507f d1801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 720]
+   13836: 000d847f 16940015    	v.addi	vu#1.reuse.sh, 361, 	->vt.h
+   1383e: 012c507f d3801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 722]
+   13846: 000d847f 16a40015    	v.addi	vu#1.reuse.sh, 362, 	->vt.h
+   1384e: 012c507f d5801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 724]
+   13856: 000d847f 16b40015    	v.addi	vu#1.reuse.sh, 363, 	->vt.h
+   1385e: 012c507f d7801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 726]
+   13866: 000d847f 16c40015    	v.addi	vu#1.reuse.sh, 364, 	->vt.h
+   1386e: 012c507f d9801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 728]
+   13876: 000d847f 16d40015    	v.addi	vu#1.reuse.sh, 365, 	->vt.h
+   1387e: 012c507f db801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 730]
+   13886: 000d847f 16e40015    	v.addi	vu#1.reuse.sh, 366, 	->vt.h
+   1388e: 012c507f dd801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 732]
+   13896: 000d847f 16f40015    	v.addi	vu#1.reuse.sh, 367, 	->vt.h
+   1389e: 012c507f df801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 734]
+   138a6: 000d847f 17040015    	v.addi	vu#1.reuse.sh, 368, 	->vt.h
+   138ae: 012c507f e1801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 736]
+   138b6: 000d847f 17140015    	v.addi	vu#1.reuse.sh, 369, 	->vt.h
+   138be: 012c507f e3801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 738]
+   138c6: 000d847f 17240015    	v.addi	vu#1.reuse.sh, 370, 	->vt.h
+   138ce: 012c507f e5801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 740]
+   138d6: 000d847f 17340015    	v.addi	vu#1.reuse.sh, 371, 	->vt.h
+   138de: 012c507f e7801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 742]
+   138e6: 000d847f 17440015    	v.addi	vu#1.reuse.sh, 372, 	->vt.h
+   138ee: 012c507f e9801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 744]
+   138f6: 000d847f 17540015    	v.addi	vu#1.reuse.sh, 373, 	->vt.h
+   138fe: 012c507f eb801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 746]
+   13906: 000d847f 17640015    	v.addi	vu#1.reuse.sh, 374, 	->vt.h
+   1390e: 012c507f ed801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 748]
+   13916: 000d847f 17740015    	v.addi	vu#1.reuse.sh, 375, 	->vt.h
+   1391e: 012c507f ef801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 750]
+   13926: 000d847f 17840015    	v.addi	vu#1.reuse.sh, 376, 	->vt.h
+   1392e: 012c507f f1801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 752]
+   13936: 000d847f 17940015    	v.addi	vu#1.reuse.sh, 377, 	->vt.h
+   1393e: 012c507f f3801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 754]
+   13946: 000d847f 17a40015    	v.addi	vu#1.reuse.sh, 378, 	->vt.h
+   1394e: 012c507f f5801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 756]
+   13956: 000d847f 17b40015    	v.addi	vu#1.reuse.sh, 379, 	->vt.h
+   1395e: 012c507f f7801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 758]
+   13966: 000d847f 17c40015    	v.addi	vu#1.reuse.sh, 380, 	->vt.h
+   1396e: 012c507f f9801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 760]
+   13976: 000d847f 17d40015    	v.addi	vu#1.reuse.sh, 381, 	->vt.h
+   1397e: 012c507f fb801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 762]
+   13986: 000d847f 17e40015    	v.addi	vu#1.reuse.sh, 382, 	->vt.h
+   1398e: 012c507f fd801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 764]
+   13996: 000d847f 17f40015    	v.addi	vu#1.reuse.sh, 383, 	->vt.h
+   1399e: 012c507f ff801159    	v.shi.local	vt#1.sh, [to, lc0<<1, 766]
+   139a6: 000d847f 18040015    	v.addi	vu#1.reuse.sh, 384, 	->vt.h
+   139ae: 012c507f 018011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 768]
+   139b6: 000d847f 18140015    	v.addi	vu#1.reuse.sh, 385, 	->vt.h
+   139be: 012c507f 038011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 770]
+   139c6: 000d847f 18240015    	v.addi	vu#1.reuse.sh, 386, 	->vt.h
+   139ce: 012c507f 058011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 772]
+   139d6: 000d847f 18340015    	v.addi	vu#1.reuse.sh, 387, 	->vt.h
+   139de: 012c507f 078011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 774]
+   139e6: 000d847f 18440015    	v.addi	vu#1.reuse.sh, 388, 	->vt.h
+   139ee: 012c507f 098011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 776]
+   139f6: 000d847f 18540015    	v.addi	vu#1.reuse.sh, 389, 	->vt.h
+   139fe: 012c507f 0b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 778]
+   13a06: 000d847f 18640015    	v.addi	vu#1.reuse.sh, 390, 	->vt.h
+   13a0e: 012c507f 0d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 780]
+   13a16: 000d847f 18740015    	v.addi	vu#1.reuse.sh, 391, 	->vt.h
+   13a1e: 012c507f 0f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 782]
+   13a26: 000d847f 18840015    	v.addi	vu#1.reuse.sh, 392, 	->vt.h
+   13a2e: 012c507f 118011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 784]
+   13a36: 000d847f 18940015    	v.addi	vu#1.reuse.sh, 393, 	->vt.h
+   13a3e: 012c507f 138011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 786]
+   13a46: 000d847f 18a40015    	v.addi	vu#1.reuse.sh, 394, 	->vt.h
+   13a4e: 012c507f 158011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 788]
+   13a56: 000d847f 18b40015    	v.addi	vu#1.reuse.sh, 395, 	->vt.h
+   13a5e: 012c507f 178011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 790]
+   13a66: 000d847f 18c40015    	v.addi	vu#1.reuse.sh, 396, 	->vt.h
+   13a6e: 012c507f 198011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 792]
+   13a76: 000d847f 18d40015    	v.addi	vu#1.reuse.sh, 397, 	->vt.h
+   13a7e: 012c507f 1b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 794]
+   13a86: 000d847f 18e40015    	v.addi	vu#1.reuse.sh, 398, 	->vt.h
+   13a8e: 012c507f 1d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 796]
+   13a96: 000d847f 18f40015    	v.addi	vu#1.reuse.sh, 399, 	->vt.h
+   13a9e: 012c507f 1f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 798]
+   13aa6: 000d847f 19040015    	v.addi	vu#1.reuse.sh, 400, 	->vt.h
+   13aae: 012c507f 218011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 800]
+   13ab6: 000d847f 19140015    	v.addi	vu#1.reuse.sh, 401, 	->vt.h
+   13abe: 012c507f 238011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 802]
+   13ac6: 000d847f 19240015    	v.addi	vu#1.reuse.sh, 402, 	->vt.h
+   13ace: 012c507f 258011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 804]
+   13ad6: 000d847f 19340015    	v.addi	vu#1.reuse.sh, 403, 	->vt.h
+   13ade: 012c507f 278011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 806]
+   13ae6: 000d847f 19440015    	v.addi	vu#1.reuse.sh, 404, 	->vt.h
+   13aee: 012c507f 298011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 808]
+   13af6: 000d847f 19540015    	v.addi	vu#1.reuse.sh, 405, 	->vt.h
+   13afe: 012c507f 2b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 810]
+   13b06: 000d847f 19640015    	v.addi	vu#1.reuse.sh, 406, 	->vt.h
+   13b0e: 012c507f 2d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 812]
+   13b16: 000d847f 19740015    	v.addi	vu#1.reuse.sh, 407, 	->vt.h
+   13b1e: 012c507f 2f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 814]
+   13b26: 000d847f 19840015    	v.addi	vu#1.reuse.sh, 408, 	->vt.h
+   13b2e: 012c507f 318011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 816]
+   13b36: 000d847f 19940015    	v.addi	vu#1.reuse.sh, 409, 	->vt.h
+   13b3e: 012c507f 338011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 818]
+   13b46: 000d847f 19a40015    	v.addi	vu#1.reuse.sh, 410, 	->vt.h
+   13b4e: 012c507f 358011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 820]
+   13b56: 000d847f 19b40015    	v.addi	vu#1.reuse.sh, 411, 	->vt.h
+   13b5e: 012c507f 378011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 822]
+   13b66: 000d847f 19c40015    	v.addi	vu#1.reuse.sh, 412, 	->vt.h
+   13b6e: 012c507f 398011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 824]
+   13b76: 000d847f 19d40015    	v.addi	vu#1.reuse.sh, 413, 	->vt.h
+   13b7e: 012c507f 3b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 826]
+   13b86: 000d847f 19e40015    	v.addi	vu#1.reuse.sh, 414, 	->vt.h
+   13b8e: 012c507f 3d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 828]
+   13b96: 000d847f 19f40015    	v.addi	vu#1.reuse.sh, 415, 	->vt.h
+   13b9e: 012c507f 3f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 830]
+   13ba6: 000d847f 1a040015    	v.addi	vu#1.reuse.sh, 416, 	->vt.h
+   13bae: 012c507f 418011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 832]
+   13bb6: 000d847f 1a140015    	v.addi	vu#1.reuse.sh, 417, 	->vt.h
+   13bbe: 012c507f 438011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 834]
+   13bc6: 000d847f 1a240015    	v.addi	vu#1.reuse.sh, 418, 	->vt.h
+   13bce: 012c507f 458011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 836]
+   13bd6: 000d847f 1a340015    	v.addi	vu#1.reuse.sh, 419, 	->vt.h
+   13bde: 012c507f 478011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 838]
+   13be6: 000d847f 1a440015    	v.addi	vu#1.reuse.sh, 420, 	->vt.h
+   13bee: 012c507f 498011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 840]
+   13bf6: 000d847f 1a540015    	v.addi	vu#1.reuse.sh, 421, 	->vt.h
+   13bfe: 012c507f 4b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 842]
+   13c06: 000d847f 1a640015    	v.addi	vu#1.reuse.sh, 422, 	->vt.h
+   13c0e: 012c507f 4d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 844]
+   13c16: 000d847f 1a740015    	v.addi	vu#1.reuse.sh, 423, 	->vt.h
+   13c1e: 012c507f 4f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 846]
+   13c26: 000d847f 1a840015    	v.addi	vu#1.reuse.sh, 424, 	->vt.h
+   13c2e: 012c507f 518011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 848]
+   13c36: 000d847f 1a940015    	v.addi	vu#1.reuse.sh, 425, 	->vt.h
+   13c3e: 012c507f 538011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 850]
+   13c46: 000d847f 1aa40015    	v.addi	vu#1.reuse.sh, 426, 	->vt.h
+   13c4e: 012c507f 558011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 852]
+   13c56: 000d847f 1ab40015    	v.addi	vu#1.reuse.sh, 427, 	->vt.h
+   13c5e: 012c507f 578011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 854]
+   13c66: 000d847f 1ac40015    	v.addi	vu#1.reuse.sh, 428, 	->vt.h
+   13c6e: 012c507f 598011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 856]
+   13c76: 000d847f 1ad40015    	v.addi	vu#1.reuse.sh, 429, 	->vt.h
+   13c7e: 012c507f 5b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 858]
+   13c86: 000d847f 1ae40015    	v.addi	vu#1.reuse.sh, 430, 	->vt.h
+   13c8e: 012c507f 5d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 860]
+   13c96: 000d847f 1af40015    	v.addi	vu#1.reuse.sh, 431, 	->vt.h
+   13c9e: 012c507f 5f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 862]
+   13ca6: 000d847f 1b040015    	v.addi	vu#1.reuse.sh, 432, 	->vt.h
+   13cae: 012c507f 618011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 864]
+   13cb6: 000d847f 1b140015    	v.addi	vu#1.reuse.sh, 433, 	->vt.h
+   13cbe: 012c507f 638011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 866]
+   13cc6: 000d847f 1b240015    	v.addi	vu#1.reuse.sh, 434, 	->vt.h
+   13cce: 012c507f 658011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 868]
+   13cd6: 000d847f 1b340015    	v.addi	vu#1.reuse.sh, 435, 	->vt.h
+   13cde: 012c507f 678011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 870]
+   13ce6: 000d847f 1b440015    	v.addi	vu#1.reuse.sh, 436, 	->vt.h
+   13cee: 012c507f 698011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 872]
+   13cf6: 000d847f 1b540015    	v.addi	vu#1.reuse.sh, 437, 	->vt.h
+   13cfe: 012c507f 6b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 874]
+   13d06: 000d847f 1b640015    	v.addi	vu#1.reuse.sh, 438, 	->vt.h
+   13d0e: 012c507f 6d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 876]
+   13d16: 000d847f 1b740015    	v.addi	vu#1.reuse.sh, 439, 	->vt.h
+   13d1e: 012c507f 6f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 878]
+   13d26: 000d847f 1b840015    	v.addi	vu#1.reuse.sh, 440, 	->vt.h
+   13d2e: 012c507f 718011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 880]
+   13d36: 000d847f 1b940015    	v.addi	vu#1.reuse.sh, 441, 	->vt.h
+   13d3e: 012c507f 738011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 882]
+   13d46: 000d847f 1ba40015    	v.addi	vu#1.reuse.sh, 442, 	->vt.h
+   13d4e: 012c507f 758011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 884]
+   13d56: 000d847f 1bb40015    	v.addi	vu#1.reuse.sh, 443, 	->vt.h
+   13d5e: 012c507f 778011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 886]
+   13d66: 000d847f 1bc40015    	v.addi	vu#1.reuse.sh, 444, 	->vt.h
+   13d6e: 012c507f 798011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 888]
+   13d76: 000d847f 1bd40015    	v.addi	vu#1.reuse.sh, 445, 	->vt.h
+   13d7e: 012c507f 7b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 890]
+   13d86: 000d847f 1be40015    	v.addi	vu#1.reuse.sh, 446, 	->vt.h
+   13d8e: 012c507f 7d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 892]
+   13d96: 000d847f 1bf40015    	v.addi	vu#1.reuse.sh, 447, 	->vt.h
+   13d9e: 012c507f 7f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 894]
+   13da6: 000d847f 1c040015    	v.addi	vu#1.reuse.sh, 448, 	->vt.h
+   13dae: 012c507f 818011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 896]
+   13db6: 000d847f 1c140015    	v.addi	vu#1.reuse.sh, 449, 	->vt.h
+   13dbe: 012c507f 838011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 898]
+   13dc6: 000d847f 1c240015    	v.addi	vu#1.reuse.sh, 450, 	->vt.h
+   13dce: 012c507f 858011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 900]
+   13dd6: 000d847f 1c340015    	v.addi	vu#1.reuse.sh, 451, 	->vt.h
+   13dde: 012c507f 878011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 902]
+   13de6: 000d847f 1c440015    	v.addi	vu#1.reuse.sh, 452, 	->vt.h
+   13dee: 012c507f 898011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 904]
+   13df6: 000d847f 1c540015    	v.addi	vu#1.reuse.sh, 453, 	->vt.h
+   13dfe: 012c507f 8b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 906]
+   13e06: 000d847f 1c640015    	v.addi	vu#1.reuse.sh, 454, 	->vt.h
+   13e0e: 012c507f 8d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 908]
+   13e16: 000d847f 1c740015    	v.addi	vu#1.reuse.sh, 455, 	->vt.h
+   13e1e: 012c507f 8f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 910]
+   13e26: 000d847f 1c840015    	v.addi	vu#1.reuse.sh, 456, 	->vt.h
+   13e2e: 012c507f 918011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 912]
+   13e36: 000d847f 1c940015    	v.addi	vu#1.reuse.sh, 457, 	->vt.h
+   13e3e: 012c507f 938011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 914]
+   13e46: 000d847f 1ca40015    	v.addi	vu#1.reuse.sh, 458, 	->vt.h
+   13e4e: 012c507f 958011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 916]
+   13e56: 000d847f 1cb40015    	v.addi	vu#1.reuse.sh, 459, 	->vt.h
+   13e5e: 012c507f 978011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 918]
+   13e66: 000d847f 1cc40015    	v.addi	vu#1.reuse.sh, 460, 	->vt.h
+   13e6e: 012c507f 998011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 920]
+   13e76: 000d847f 1cd40015    	v.addi	vu#1.reuse.sh, 461, 	->vt.h
+   13e7e: 012c507f 9b8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 922]
+   13e86: 000d847f 1ce40015    	v.addi	vu#1.reuse.sh, 462, 	->vt.h
+   13e8e: 012c507f 9d8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 924]
+   13e96: 000d847f 1cf40015    	v.addi	vu#1.reuse.sh, 463, 	->vt.h
+   13e9e: 012c507f 9f8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 926]
+   13ea6: 000d847f 1d040015    	v.addi	vu#1.reuse.sh, 464, 	->vt.h
+   13eae: 012c507f a18011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 928]
+   13eb6: 000d847f 1d140015    	v.addi	vu#1.reuse.sh, 465, 	->vt.h
+   13ebe: 012c507f a38011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 930]
+   13ec6: 000d847f 1d240015    	v.addi	vu#1.reuse.sh, 466, 	->vt.h
+   13ece: 012c507f a58011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 932]
+   13ed6: 000d847f 1d340015    	v.addi	vu#1.reuse.sh, 467, 	->vt.h
+   13ede: 012c507f a78011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 934]
+   13ee6: 000d847f 1d440015    	v.addi	vu#1.reuse.sh, 468, 	->vt.h
+   13eee: 012c507f a98011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 936]
+   13ef6: 000d847f 1d540015    	v.addi	vu#1.reuse.sh, 469, 	->vt.h
+   13efe: 012c507f ab8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 938]
+   13f06: 000d847f 1d640015    	v.addi	vu#1.reuse.sh, 470, 	->vt.h
+   13f0e: 012c507f ad8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 940]
+   13f16: 000d847f 1d740015    	v.addi	vu#1.reuse.sh, 471, 	->vt.h
+   13f1e: 012c507f af8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 942]
+   13f26: 000d847f 1d840015    	v.addi	vu#1.reuse.sh, 472, 	->vt.h
+   13f2e: 012c507f b18011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 944]
+   13f36: 000d847f 1d940015    	v.addi	vu#1.reuse.sh, 473, 	->vt.h
+   13f3e: 012c507f b38011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 946]
+   13f46: 000d847f 1da40015    	v.addi	vu#1.reuse.sh, 474, 	->vt.h
+   13f4e: 012c507f b58011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 948]
+   13f56: 000d847f 1db40015    	v.addi	vu#1.reuse.sh, 475, 	->vt.h
+   13f5e: 012c507f b78011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 950]
+   13f66: 000d847f 1dc40015    	v.addi	vu#1.reuse.sh, 476, 	->vt.h
+   13f6e: 012c507f b98011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 952]
+   13f76: 000d847f 1dd40015    	v.addi	vu#1.reuse.sh, 477, 	->vt.h
+   13f7e: 012c507f bb8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 954]
+   13f86: 000d847f 1de40015    	v.addi	vu#1.reuse.sh, 478, 	->vt.h
+   13f8e: 012c507f bd8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 956]
+   13f96: 000d847f 1df40015    	v.addi	vu#1.reuse.sh, 479, 	->vt.h
+   13f9e: 012c507f bf8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 958]
+   13fa6: 000d847f 1e040015    	v.addi	vu#1.reuse.sh, 480, 	->vt.h
+   13fae: 012c507f c18011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 960]
+   13fb6: 000d847f 1e140015    	v.addi	vu#1.reuse.sh, 481, 	->vt.h
+   13fbe: 012c507f c38011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 962]
+   13fc6: 000d847f 1e240015    	v.addi	vu#1.reuse.sh, 482, 	->vt.h
+   13fce: 012c507f c58011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 964]
+   13fd6: 000d847f 1e340015    	v.addi	vu#1.reuse.sh, 483, 	->vt.h
+   13fde: 012c507f c78011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 966]
+   13fe6: 000d847f 1e440015    	v.addi	vu#1.reuse.sh, 484, 	->vt.h
+   13fee: 012c507f c98011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 968]
+   13ff6: 000d847f 1e540015    	v.addi	vu#1.reuse.sh, 485, 	->vt.h
+   13ffe: 012c507f cb8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 970]
+   14006: 000d847f 1e640015    	v.addi	vu#1.reuse.sh, 486, 	->vt.h
+   1400e: 012c507f cd8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 972]
+   14016: 000d847f 1e740015    	v.addi	vu#1.reuse.sh, 487, 	->vt.h
+   1401e: 012c507f cf8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 974]
+   14026: 000d847f 1e840015    	v.addi	vu#1.reuse.sh, 488, 	->vt.h
+   1402e: 012c507f d18011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 976]
+   14036: 000d847f 1e940015    	v.addi	vu#1.reuse.sh, 489, 	->vt.h
+   1403e: 012c507f d38011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 978]
+   14046: 000d847f 1ea40015    	v.addi	vu#1.reuse.sh, 490, 	->vt.h
+   1404e: 012c507f d58011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 980]
+   14056: 000d847f 1eb40015    	v.addi	vu#1.reuse.sh, 491, 	->vt.h
+   1405e: 012c507f d78011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 982]
+   14066: 000d847f 1ec40015    	v.addi	vu#1.reuse.sh, 492, 	->vt.h
+   1406e: 012c507f d98011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 984]
+   14076: 000d847f 1ed40015    	v.addi	vu#1.reuse.sh, 493, 	->vt.h
+   1407e: 012c507f db8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 986]
+   14086: 000d847f 1ee40015    	v.addi	vu#1.reuse.sh, 494, 	->vt.h
+   1408e: 012c507f dd8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 988]
+   14096: 000d847f 1ef40015    	v.addi	vu#1.reuse.sh, 495, 	->vt.h
+   1409e: 012c507f df8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 990]
+   140a6: 000d847f 1f040015    	v.addi	vu#1.reuse.sh, 496, 	->vt.h
+   140ae: 012c507f e18011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 992]
+   140b6: 000d847f 1f140015    	v.addi	vu#1.reuse.sh, 497, 	->vt.h
+   140be: 012c507f e38011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 994]
+   140c6: 000d847f 1f240015    	v.addi	vu#1.reuse.sh, 498, 	->vt.h
+   140ce: 012c507f e58011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 996]
+   140d6: 000d847f 1f340015    	v.addi	vu#1.reuse.sh, 499, 	->vt.h
+   140de: 012c507f e78011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 998]
+   140e6: 000d847f 1f440015    	v.addi	vu#1.reuse.sh, 500, 	->vt.h
+   140ee: 012c507f e98011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1000]
+   140f6: 000d847f 1f540015    	v.addi	vu#1.reuse.sh, 501, 	->vt.h
+   140fe: 012c507f eb8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1002]
+   14106: 000d847f 1f640015    	v.addi	vu#1.reuse.sh, 502, 	->vt.h
+   1410e: 012c507f ed8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1004]
+   14116: 000d847f 1f740015    	v.addi	vu#1.reuse.sh, 503, 	->vt.h
+   1411e: 012c507f ef8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1006]
+   14126: 000d847f 1f840015    	v.addi	vu#1.reuse.sh, 504, 	->vt.h
+   1412e: 012c507f f18011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1008]
+   14136: 000d847f 1f940015    	v.addi	vu#1.reuse.sh, 505, 	->vt.h
+   1413e: 012c507f f38011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1010]
+   14146: 000d847f 1fa40015    	v.addi	vu#1.reuse.sh, 506, 	->vt.h
+   1414e: 012c507f f58011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1012]
+   14156: 000d847f 1fb40015    	v.addi	vu#1.reuse.sh, 507, 	->vt.h
+   1415e: 012c507f f78011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1014]
+   14166: 000d847f 1fc40015    	v.addi	vu#1.reuse.sh, 508, 	->vt.h
+   1416e: 012c507f f98011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1016]
+   14176: 000d847f 1fd40015    	v.addi	vu#1.reuse.sh, 509, 	->vt.h
+   1417e: 012c507f fb8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1018]
+   14186: 000d847f 1fe40015    	v.addi	vu#1.reuse.sh, 510, 	->vt.h
+   1418e: 012c507f fd8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1020]
+   14196: 000c047f 1ff40015    	v.addi	vu#1.sh, 511, 	->vt.h
+   1419e: 012c507f ff8011d9    	v.shi.local	vt#1.sh, [to, lc0<<1, 1022]
+   141a6: 0000000f 00000001    	L.BSTOP
