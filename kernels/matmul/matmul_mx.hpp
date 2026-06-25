@@ -2,6 +2,7 @@
 #define MATMUL_MX_HPP
 
 #include <common/pto_tileop.hpp>
+#include <utils/layout_transform.hpp>
 #include "template_asm.h"
 #include <cstdint>
 #include <cstdio>
