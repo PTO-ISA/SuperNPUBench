@@ -1,4 +1,0 @@
-run_dir	/Users/liyi/Documents/GitHub/SuperNPUBench/output/run_logs/gfsim_matmul_try/run_20260626_001054_nondynamic_stopcycle1
-command	/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim -f /Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/matmul/elf/kernel_matmul/matmul_MASK_MASK_FP32_M256_N256_K256_tM64_tN64_tK64.elf --stop_cycle 1
-wall_timeout_sec	90
-note	non-dynamic matmul bounded trial

@@ -1,2 +1,0 @@
-run_dir=/Users/liyi/Documents/GitHub/SuperNPUBench/output/run_logs/gfsim_full_baremetal/run_20260625_194206
-elf_count=57 jobs=3 report_timeout_sec=600
