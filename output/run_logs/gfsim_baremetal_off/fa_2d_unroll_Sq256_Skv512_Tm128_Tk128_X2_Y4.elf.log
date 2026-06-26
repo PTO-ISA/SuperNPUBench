@@ -1,0 +1,2067 @@
+/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim -f /Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/fa/elf/kernel_fa/fa_2d_unroll_Sq256_Skv512_Tm128_Tk128_X2_Y4.elf --stop_cycle 1000000 
+Memory: 0x10200 - 0x10258 (Size=0KB) [.rodata]
+Memory: 0x10259 - 0x1026c (Size=0KB) [.stack_size]
+Memory: 0x10270 - 0x1028b (Size=0KB) [.eh_frame_hdr]
+Memory: 0x10290 - 0x102db (Size=0KB) [.eh_frame]
+Memory: 0x112dc - 0x16a55 (Size=21KB) [.text]
+Memory: 0x17a58 - 0x17a87 (Size=0KB) [.init_array]
+Memory: 0x17a88 - 0x17a9f (Size=0KB) [.data.rel.ro]
+Memory: 0x18aa0 - 0x18b2b (Size=0KB) [.bss]
+Memory: 0x18b30 - 0x18b5f (Size=0KB) [.sbss]
+Memory: 0x18b60 - 0x8019b60 (Size=131076KB) [stack mem]
+Memory: 0x4000802000 - 0x4008803000 (Size=131076KB) [map mem]
+Simulation time: 6s 
++-------------------------+--------------+
+| BCC Config Name         | Value        |
++-------------------------+--------------+
+| inst_decode_bw          | 4            |
+| block_rob_depth         | 256          |
+| BISQ:cube_isq_depth     | 32           |
+| BISQ:vector_isq_depth   | 32           |
+| BISQ:mtc_isq_depth      | 32           |
++-------------------------+--------------+
++----------------------------+--------------+
+| VECTOR Config Name         | Value        |
++----------------------------+--------------+
+| VALU ISQ Cnt               | 1            |
+| VALU ISQ Entry Num         | 32           |
+| VALU ISQ Picker            | 2            |
+| VALU ISQ WPort             | 4            |
+| VSTD ISQ Cnt               | 1            |
+| VSTD ISQ Entry Num         | 32           |
+| VSTD ISQ Picker            | 1            |
+| VSTD ISQ WPort             | 3            |
+| Scalar ISQ Cnt             | 1            |
+| Scalar ISQ Entry Num       | 32           |
+| Scalar ISQ Picker          | 2            |
+| Scalar ISQ Wport           | 4            |
+| AGU ISQ Cnt                | 1            |
+| AGU ISQ Entry Num          | 32           |
+| AGU ISQ Picker             | 2            |
+| AGU ISQ WPort              | 3            |
+| SRF: t_ptag_cnt            | 512          |
+| SRF: u_ptag_cnt            | 512          |
+| VRF: p_reg_size            | 512          |
+| vector_lane_number         | 64           |
+| logic_group_parallel_cnt   | 4            |
+| group_rob_entry_number     | 4            |
+| tile_lsu_cache_sets        | 8            |
+| tile_lsu_cache_ways        | 16           |
+| tile_lsu_ldq_entry         | 48           |
+| tile_lsu_stq_entry         | 16           |
+| tile_lsu_scb_entry         | 32           |
++----------------------------+--------------+
++-------------------+--------------+
+| CUBE Config Name  | Value        |
++-------------------+--------------+
+| uop_isq_depth     | 32           |
+| tcvt_isq_depth    | 32           |
+| L0A_size          | 64           |
+| L0B_size          | 64           |
+| L0C_size          | 128          |
++-------------------+--------------+
++----------------------+--------------+
+| TMU Config Name      | Value        |
++----------------------+--------------+
+| tile_register_size   | 2560         |
+| spb_size             | 2            |
+| mgb_size             | 4            |
++----------------------+--------------+
++-------------------+--------------+
+| TMA Config Name   | Value        |
++-------------------+--------------+
+| bpq_size          | 40           |
+| bdb_size          | 1280         |
+| srfb_size         | 384          |
+| swcb_size         | 256          |
+| nrfb_size         | 32           |
+| nwcb_size         | 64           |
++-------------------+--------------+
+=====================BlockISA CPU Stats=====================
+Total Cycles.....................................:     12688
+Sim Total Cycles.................................:     12688
+==================BlockISA first Top-down===================
+Retiring.........................................:      3.45%
+Frontend.........................................:      0.79%
+  |-- frontend...................................:      0.55%
+  |-- retiring...................................:      0.24%
+  |-- rob stall..................................:      0.00%
+  |-- reg stall..................................:      0.00%
+  |-- iq stall...................................:      0.00%
+  |-- mem bound..................................:      0.00%
+Backend..........................................:     95.83%
+  |-- cube Bound.................................:     42.58%
+    |-- brob stall...............................:     42.58%
+    |-- biq stall................................:      0.00%
+    |-- tile reg stall...........................:      0.00%
+  |-- vec Bound..................................:     47.79%
+    |-- brob stall...............................:     47.79%
+    |-- biq stall................................:      0.00%
+    |-- tile reg stall...........................:      0.00%
+  |-- tma Bound..................................:      5.38%
+    |-- brob stall...............................:      5.38%
+    |-- biq stall................................:      0.00%
+    |-- tile reg stall...........................:      0.00%
+  |-- tau Bound..................................:      0.02%
+    |-- brob stall...............................:      0.02%
+    |-- biq stall................................:      0.00%
+    |-- tile reg stall...........................:      0.00%
+======================JCore Key Stats=======================
+JCore Tileop Total Cycles........................:     12688
+  |--Cube Tileop Total Cycles....................:      5426
+  |--Vector Tileop Total Cycles..................:      6077
+  |--TMA Tileop Total Cycles.....................:      1145
+  |--MTC Tileop Total Cycles.....................:         0
+JCore Total Tileop Counter.......................:        60
+  |--Cube Execute Tileop Counter.................:        26
+  |--Vector Execute Tileop Counter...............:        14
+  |--TMA Execute Tileop Counter..................:        20
+  |--MTC Execute Tileop Counter..................:         0
+JCore Run Tileop Total Cycles....................:     12578
+  |--Cube Busy Cycles............................:      8741
+  |--Vector Busy Cycles..........................:      7689
+  |--TMA Busy Cycles.............................:      3439
+    |--Tload Busy Cycles.........................:      1446
+      |--write Blocked By Ring Cycles............:       416
+    |--Tstore Busy Cycles........................:       417
+    |--Tmov Busy Cycles..........................:      1571
+    |--Mgather Busy Cycles.......................:         0
+    |--Mscatter Busy Cycles......................:         0
+    |--Vgather Busy Cycles.......................:         0
+    |--Vscatter Busy Cycles......................:         0
+  |--MTC Busy Cycles.............................:         0
+  |--All Cores Idle Cycles.......................:       110
+  |--Vector-Cube Cocurrent Cycles................:      4416
+  |--Vector-Cube Active Cycles...................:     12014
+  |--Cube-TMA Cocurrent Cycles...................:      1882
+  |--Cube-TMA Active Cycles......................:     10298
+====================BCC Key Stats total=====================
+Average Outstanding Block Number.................:      4.53
+  |--Average Outstanding Cube Block Number.......:      2.82
+  |--Average Outstanding Vector Block Number.....:      1.14
+  |--Average Outstanding TLoad Number............:      0.54
+  |--Average Outstanding TStore Number...........:      0.03
+==================BCC Key Stats SThread 0===================
+Average Outstanding Block Number.................:      4.53
+  |--Average Outstanding Cube Block Number.......:      2.82
+  |--Average Outstanding Vector Block Number.....:      1.14
+  |--Average Outstanding TLoad Number............:      0.54
+  |--Average Outstanding TStore Number...........:      0.03
+===================CubeCore 0 Statistics====================
+Cube core TFLOPS(1.65GHz)........................:      0.00
+Cube core alu utilization........................:      8192   64.56%
+Cube core utilization(Run TileOp, header)........:      8738   68.87%
+Cube core L0CWR ratio............................:         0    0.00%
+Cube core load wait ratio........................:      8738  100.00%
+Cube core load port data channel utilization.....:      3200   41.30%
+Cube core uop load average used cycle............:       nan
+Cube core load req average used cycle............:     15.83
+Cube core exe tileop count.......................:        26
+Cube core average acc use........................:      1.45
+Cube core average l0a entry use..................:    123.76
+Cube core average l0b entry use..................:    116.77
+Cube core average l0c entry use..................:     73.90
+Cube core average l0a entry use busy.............:    124.96
+Cube core average l0b entry use busy.............:    119.92
+Cube core average l0c entry use busy.............:     74.43
+Cube core exe uop count..........................:      8192
+Cube core total load count.......................:      3200
+Cube core total store count......................:      2560
+Cube core cannot pick main chain uop ratio.......:         0    0.00%
+Cube core pick cub chain uop ratio...............:         0    inf%
+Cube busy cycle..................................:      8741
+Cube core mmad busy cycle........................:      8525   97.53%
+Cube core load busy cycle........................:      7856   89.88%
+Cube core store busy cycle.......................:      2960   33.86%
+Cube core tileop mmad cycle range................:      8525
+Cube core tileop load cycle range................:      7860
+Cube core tileop store cycle range...............:      4850
+Cube core load and mmad cycle overlap............:      7802   99.26%
+=====================Vector 0 Key Stats=====================
+Vector Busy Cycle................................:      7689
+Vector Retired Load Cnt..........................:      6172
+Vector Retired Store Cnt.........................:      2588
+Vector Retired ALU Cnt...........................:     12332
+  |--Vector Retired SALU Cnt.....................:       536
+  |--Vector Retired VALU Cnt.....................:     11796
+Vector ALU IPC...................................:      1.60
+Vector IPC.......................................:      2.74
+Vector SALU Utilization(Total Cycles)............:      0.00
+Vector SALU Utilization(Vector Busy Cycles)......:      0.00
+Vector SALU Extended Cycles (0 Cycle)............:         0
+Vector SALU Extended Cycles (1 Cycle)............:         0
+Vector SALU Extended Cycles (2 Cycle)............:         0
+Vector SALU Extended Cycles (3 Cycle)............:         0
+Vector SALU Extended Cycles (4 Cycle)............:         0
+Vector SALU Extended Cycles (5 Cycle)............:         0
+Vector VALU Utilization(Total Cycles)............:      0.93
+Vector VALU Utilization(Vector Busy Cycles)......:      1.53
+Vector VALU Extended Cycles (0 Cycle)............:      6628
+Vector VALU Extended Cycles (1 Cycle)............:      2499
+Vector VALU Extended Cycles (2 Cycle)............:      2669
+Vector VALU Extended Cycles (3 Cycle)............:         0
+Vector VALU Extended Cycles (4 Cycle)............:         0
+Vector VALU Extended Cycles (5 Cycle)............:         0
+Vector VALU Picker0 Issue (IALU).................:         0
+Vector VALU Picker0 Issue (FCVT).................:         0
+Vector VALU Picker0 Issue (FDIV).................:       512
+Vector VALU Picker0 Issue (FMLA).................:      4923
+Vector VALU Picker0 Issue (IMAC).................:         0
+Vector VALU Picker0 Issue (PERMUTE)..............:         0
+Vector VALU Picker1 Issue (IALU).................:         0
+Vector VALU Picker1 Issue (FCVT).................:      1916
+Vector VALU Picker1 Issue (FDIV).................:         0
+Vector VALU Picker1 Issue (FMLA).................:      3480
+Vector VALU Picker1 Issue (IMAC).................:         0
+Vector VALU Picker1 Issue (PERMUTE)..............:         0
+Vector VALU Picker2 Issue (IALU).................:         0
+Vector VALU Picker2 Issue (FCVT).................:       644
+Vector VALU Picker2 Issue (FDIV).................:         0
+Vector VALU Picker2 Issue (FMLA).................:       321
+Vector VALU Picker2 Issue (IMAC).................:         0
+Vector VALU Picker2 Issue (PERMUTE)..............:         0
+Vector Regfile read port conflict cycle(src1)....:       685
+Vector Regfile read port conflict cycle(src2)....:       264
+IssueBlockReason (IQ_EMPTY)......................:         0
+IssueBlockReason (CANT_ISSUE_NOT_READY)..........:     27103
+IssueBlockReason (CANT_ISSUE_BUT_READY)..........:       704
+IssueBlockReason (CMD_BIOT_NOT_SELECTED).........:         0
+IssueBlockReason (SSRSET_NOT_OLDEST).............:         0
+IssueBlockReason (SYS_STATE_STALL)...............:         0
+IssueBlockReason (LD_NOT_IN_WINDOW)..............:         0
+IssueBlockReason (ST_NOT_IN_WINDOW)..............:         0
+IssueBlockReason (AGE_QUEUE_LDQ_LIMIT)...........:         0
+IssueBlockReason (NOT_PREV_ISSUED)...............:         0
+IssueBlockReason (PIPE_STALL)....................:         0
+IssueBlockReason (CANT_ISSUE_EXEC_UNIT)..........:         0
+IssueBlockReason (CANCEL_ISSUE_EXEC_UNIT)........:      2604
+IssueBlockReason (CANCEL_ISSUE_ALU_RD_PORT)......:        18
+IssueBlockReason (CANCEL_ISSUE_AGU_RD_PORT)......:         0
+VRF read port 0 used cnt.........................:      3884
+VRF read port 1 used cnt.........................:      3560
+VRF read port 2 used cnt.........................:       137
+VRF read port 3 used cnt.........................:      1465
+VRF read port 4 used cnt.........................:         0
+VRF read port 5 used cnt.........................:         0
+VRF pipe ALU0_SRC0 read port 0 used cnt..........:      3271
+VRF pipe ALU0_SRC0 read port 1 used cnt..........:         0
+VRF pipe ALU0_SRC0 read port 2 used cnt..........:        60
+VRF pipe ALU0_SRC0 read port 3 used cnt..........:         0
+VRF pipe ALU0_SRC0 read port 4 used cnt..........:         0
+VRF pipe ALU0_SRC0 read port 5 used cnt..........:         0
+VRF pipe ALU0_SRC1 read port 0 used cnt..........:         0
+VRF pipe ALU0_SRC1 read port 1 used cnt..........:         0
+VRF pipe ALU0_SRC1 read port 2 used cnt..........:         0
+VRF pipe ALU0_SRC1 read port 3 used cnt..........:       646
+VRF pipe ALU0_SRC1 read port 4 used cnt..........:         0
+VRF pipe ALU0_SRC1 read port 5 used cnt..........:         0
+VRF pipe ALU0_SRC2 read port 0 used cnt..........:         0
+VRF pipe ALU0_SRC2 read port 1 used cnt..........:         0
+VRF pipe ALU0_SRC2 read port 2 used cnt..........:         0
+VRF pipe ALU0_SRC2 read port 3 used cnt..........:         0
+VRF pipe ALU0_SRC2 read port 4 used cnt..........:         0
+VRF pipe ALU0_SRC2 read port 5 used cnt..........:         0
+VRF pipe ALU1_SRC0 read port 0 used cnt..........:         0
+VRF pipe ALU1_SRC0 read port 1 used cnt..........:      3148
+VRF pipe ALU1_SRC0 read port 2 used cnt..........:         0
+VRF pipe ALU1_SRC0 read port 3 used cnt..........:         0
+VRF pipe ALU1_SRC0 read port 4 used cnt..........:         0
+VRF pipe ALU1_SRC0 read port 5 used cnt..........:         0
+VRF pipe ALU1_SRC1 read port 0 used cnt..........:       613
+VRF pipe ALU1_SRC1 read port 1 used cnt..........:        50
+VRF pipe ALU1_SRC1 read port 2 used cnt..........:         0
+VRF pipe ALU1_SRC1 read port 3 used cnt..........:         0
+VRF pipe ALU1_SRC1 read port 4 used cnt..........:         0
+VRF pipe ALU1_SRC1 read port 5 used cnt..........:         0
+VRF pipe ALU1_SRC2 read port 0 used cnt..........:         0
+VRF pipe ALU1_SRC2 read port 1 used cnt..........:         0
+VRF pipe ALU1_SRC2 read port 2 used cnt..........:         0
+VRF pipe ALU1_SRC2 read port 3 used cnt..........:         0
+VRF pipe ALU1_SRC2 read port 4 used cnt..........:         0
+VRF pipe ALU1_SRC2 read port 5 used cnt..........:         0
+VRF pipe ALU2_SRC0 read port 0 used cnt..........:         0
+VRF pipe ALU2_SRC0 read port 1 used cnt..........:        55
+VRF pipe ALU2_SRC0 read port 2 used cnt..........:         0
+VRF pipe ALU2_SRC0 read port 3 used cnt..........:       819
+VRF pipe ALU2_SRC0 read port 4 used cnt..........:         0
+VRF pipe ALU2_SRC0 read port 5 used cnt..........:         0
+VRF pipe ALU2_SRC1 read port 0 used cnt..........:         0
+VRF pipe ALU2_SRC1 read port 1 used cnt..........:       307
+VRF pipe ALU2_SRC1 read port 2 used cnt..........:        53
+VRF pipe ALU2_SRC1 read port 3 used cnt..........:         0
+VRF pipe ALU2_SRC1 read port 4 used cnt..........:         0
+VRF pipe ALU2_SRC1 read port 5 used cnt..........:         0
+VRF pipe ALU2_SRC2 read port 0 used cnt..........:         0
+VRF pipe ALU2_SRC2 read port 1 used cnt..........:         0
+VRF pipe ALU2_SRC2 read port 2 used cnt..........:         0
+VRF pipe ALU2_SRC2 read port 3 used cnt..........:         0
+VRF pipe ALU2_SRC2 read port 4 used cnt..........:         0
+VRF pipe ALU2_SRC2 read port 5 used cnt..........:         0
+VRF pipe AGU0_SRC0 read port 0 used cnt..........:         0
+VRF pipe AGU0_SRC0 read port 1 used cnt..........:         0
+VRF pipe AGU0_SRC0 read port 2 used cnt..........:        24
+VRF pipe AGU0_SRC0 read port 3 used cnt..........:         0
+VRF pipe AGU0_SRC0 read port 4 used cnt..........:         0
+VRF pipe AGU0_SRC0 read port 5 used cnt..........:         0
+VRF pipe AGU0_SRC1 read port 0 used cnt..........:         0
+VRF pipe AGU0_SRC1 read port 1 used cnt..........:         0
+VRF pipe AGU0_SRC1 read port 2 used cnt..........:         0
+VRF pipe AGU0_SRC1 read port 3 used cnt..........:         0
+VRF pipe AGU0_SRC1 read port 4 used cnt..........:         0
+VRF pipe AGU0_SRC1 read port 5 used cnt..........:         0
+VRF pipe AGU0_SRC2 read port 0 used cnt..........:         0
+VRF pipe AGU0_SRC2 read port 1 used cnt..........:         0
+VRF pipe AGU0_SRC2 read port 2 used cnt..........:         0
+VRF pipe AGU0_SRC2 read port 3 used cnt..........:         0
+VRF pipe AGU0_SRC2 read port 4 used cnt..........:         0
+VRF pipe AGU0_SRC2 read port 5 used cnt..........:         0
+VRF pipe AGU1_SRC0 read port 0 used cnt..........:         0
+VRF pipe AGU1_SRC0 read port 1 used cnt..........:         0
+VRF pipe AGU1_SRC0 read port 2 used cnt..........:         0
+VRF pipe AGU1_SRC0 read port 3 used cnt..........:         0
+VRF pipe AGU1_SRC0 read port 4 used cnt..........:         0
+VRF pipe AGU1_SRC0 read port 5 used cnt..........:         0
+VRF pipe AGU1_SRC1 read port 0 used cnt..........:         0
+VRF pipe AGU1_SRC1 read port 1 used cnt..........:         0
+VRF pipe AGU1_SRC1 read port 2 used cnt..........:         0
+VRF pipe AGU1_SRC1 read port 3 used cnt..........:         0
+VRF pipe AGU1_SRC1 read port 4 used cnt..........:         0
+VRF pipe AGU1_SRC1 read port 5 used cnt..........:         0
+VRF pipe AGU1_SRC2 read port 0 used cnt..........:         0
+VRF pipe AGU1_SRC2 read port 1 used cnt..........:         0
+VRF pipe AGU1_SRC2 read port 2 used cnt..........:         0
+VRF pipe AGU1_SRC2 read port 3 used cnt..........:         0
+VRF pipe AGU1_SRC2 read port 4 used cnt..........:         0
+VRF pipe AGU1_SRC2 read port 5 used cnt..........:         0
+VRF Bank 0 Rd 0..................................:     10856
+VRF Bank 0 Rd 1..................................:      1468
+VRF Bank 0 Rd 2..................................:       320
+VRF Bank 0 Rd 3..................................:        42
+VRF Bank 0 Rd 4..................................:         2
+VRF Bank 0 Rd 5..................................:         0
+VRF Bank 0 Rd 6..................................:         0
+VRF Bank 0 Rd 7..................................:         0
+VRF Bank 0 Rd 8..................................:         0
+VRF Bank 0 Rd 9..................................:         0
+VRF Bank 0 Rd 10.................................:         0
+VRF Bank 1 Rd 0..................................:     10801
+VRF Bank 1 Rd 1..................................:      1530
+VRF Bank 1 Rd 2..................................:       306
+VRF Bank 1 Rd 3..................................:        47
+VRF Bank 1 Rd 4..................................:         4
+VRF Bank 1 Rd 5..................................:         0
+VRF Bank 1 Rd 6..................................:         0
+VRF Bank 1 Rd 7..................................:         0
+VRF Bank 1 Rd 8..................................:         0
+VRF Bank 1 Rd 9..................................:         0
+VRF Bank 1 Rd 10.................................:         0
+VRF Bank 2 Rd 0..................................:     10850
+VRF Bank 2 Rd 1..................................:      1510
+VRF Bank 2 Rd 2..................................:       295
+VRF Bank 2 Rd 3..................................:        33
+VRF Bank 2 Rd 4..................................:         0
+VRF Bank 2 Rd 5..................................:         0
+VRF Bank 2 Rd 6..................................:         0
+VRF Bank 2 Rd 7..................................:         0
+VRF Bank 2 Rd 8..................................:         0
+VRF Bank 2 Rd 9..................................:         0
+VRF Bank 2 Rd 10.................................:         0
+VRF Bank 3 Rd 0..................................:     10773
+VRF Bank 3 Rd 1..................................:      1568
+VRF Bank 3 Rd 2..................................:       305
+VRF Bank 3 Rd 3..................................:        40
+VRF Bank 3 Rd 4..................................:         2
+VRF Bank 3 Rd 5..................................:         0
+VRF Bank 3 Rd 6..................................:         0
+VRF Bank 3 Rd 7..................................:         0
+VRF Bank 3 Rd 8..................................:         0
+VRF Bank 3 Rd 9..................................:         0
+VRF Bank 3 Rd 10.................................:         0
+Vector VRF Ptag Usage(Ptag Bussy Cycle)..........:         0    0.00%
+Vector VRF MAPQ Usage(MAPQ Bussy Cycle)..........:         0    0.00%
+Vector 0 ROB Usage(Vector ROB Busy Cycles).......:        23    4.49%
+  |--ROB[0]......................................:        26   20.31%
+  |--ROB[1]......................................:        26   20.31%
+  |--ROB[2]......................................:        20   15.62%
+  |--ROB[3]......................................:        21   16.41%
+Vector Load Port Utilization(Vector Busy Cycles).:      0.80
+Vector Load Request Average Used Cycles..........:      1.73
+  |--Vec load_lat_le_10_cycle....................:      6086
+  |--Vec load_lat_le_20_cycle....................:        68
+  |--Vec load_lat_le_30_cycle....................:        17
+  |--Vec load_lat_le_50_cycle....................:         1
+  |--Vec load_lat_ge_50_cycle....................:         0
+Vector Group Parallel(GBuffer Busy Cycles).......:      3.93
+======================Vector 0 TopDown======================
+Frontend.........................................:     29.37%
+PE bound.........................................:      0.00%
+  |-- rob stall..................................:      0.00%
+  |-- reg stall..................................:      0.00%
+  |-- iq stall...................................:      0.00%
+  |-- mem bound..................................:      0.00%
+Retiring.........................................:      0.00%
+Bad Speculation..................................:     70.63%
+===================(NODB) TMA 0 Key Stats===================
+TMA Tload........................................:        40
+  |--Read  uop num   (size 256)..................:      1280
+  |--Read  data size (size 256)..................:    327680
+  |--Write uop num...............................:      1280
+  |--Write data size.............................:    327680
+  |--Write valid data size.......................:    327680
+  |--Data utilization............................:      1.00
+TMA Tstore.......................................:        32
+  |--Read  uop num...............................:       256
+  |--Read  data size.............................:     65536
+  |--Write uop num   (size 256)..................:       256
+  |--Write data size (size 256)..................:     65536
+  |--Write valid data size.......................:     65536
+  |--Data utilization............................:      1.00
+TMA Tmov.........................................:        32
+  |--Read uop num................................:      1024
+  |--Write uop num...............................:      1024
+  |--Read Data size..............................:    262144
+TMA BPQ Active Cycles............................:      3439
+  |-- 75% occupancy ratio........................:         5
+  |--100% occupancy ratio........................:         0
+TMA TL BDB Active Cycles.........................:      1444
+  |-- 75% occupancy ratio........................:         0
+  |--100% occupancy ratio........................:         0
+TMA TS BDB Active Cycles.........................:      1980
+  |-- 75% occupancy ratio........................:        62
+  |--100% occupancy ratio........................:        16
+TMA SRFB Active Cycles...........................:      1312
+  |-- 75% occupancy ratio........................:         0
+  |--100% occupancy ratio........................:         0
+TMA NWCB Active Cycles...........................:      2831
+  |-- 75% occupancy ratio........................:        63
+  |--100% occupancy ratio........................:         0
+TMA SWCB Active Cycles...........................:       352
+  |-- 75% occupancy ratio........................:         0
+  |--100% occupancy ratio........................:         0
+Tag req duplicate send and hit cnt...............:         0
+Tag req duplicate sent and miss cnt..............:         0
+SRFB read soc avg latency........................:        32
+SWCB write soc avg latency.......................:        32
+=======================TMA 0 TopDown========================
+Idle.............................................:     11242   88.60%
+Efficient........................................:      1280   10.09%
+Unavailable......................................:        99    0.78%
+  |--Starting....................................:         0    0.00%
+  |--Fetching....................................:        87    0.69%
+    |--Latency Bounded...........................:        65    0.51%
+    |--Outstanding Bounded.......................:         0    0.00%
+    |--Variance Bounded..........................:        22    0.17%
+    |--Var & Ost Bounded.........................:         0    0.00%
+  |--Integrating.................................:        12    0.09%
+Egress Blocked...................................:        67    0.53%
+=====================Retired block Type=====================
+Retired Block Num................................:        79
+  |--Retired STD Block Num.......................:        19
+  |--Retired PARALLEL Block Num..................:        60
+    |--Retired CUBE Block Num....................:        26   43.33%
+    |--Retired VCALL Block Num...................:        14   23.33%
+    |--Retired MCALL Block Num...................:         0    0.00%
+    |--Retired TMA Block Num.....................:        20   33.33%
+  |--Retired SYS Block Num.......................:         0
+  |--Retired FP Block Num........................:         0
+  |--Retired TEMPLATE Block Num..................:         0
+    |--MEMSET TEMPLATE Block Num.................:         0
+    |--MEMCOPY TEMPLATE Block Num................:         0
+    |--FENTRY TEMPLATE Block Num.................:         0
+    |--FEXIT TEMPLATE Block Num..................:         0
+    |--FRET TEMPLATE Block Num...................:         0
+  |--Retired OTHER Block Num.....................:         0
+Retired Inst Number..............................:        26
+  |--Retired Cube Inst Number....................:        26
+  |--Retired Vec Inst Number.....................:         0
+  |--Retired Mtc Inst Number.....................:         0
+BPC..............................................:      0.01
+IPC..............................................:      0.00
+Average BROB depth...............................:     38.00
+Effective window size............................:     10.10
+MPKB.............................................:      0.00
+MPKI.............................................:      0.00
+Simulation speed (Kilo Insts Per Second).........:      0.00
+Discontinuous BPC Count..........................:         1
+Average Continuous BPC Length....................:     79.00
+Average fetch minsts/header per cycle............:     19.95
+===============BCC Detail Stats(Tile rename)================
+Tile register average tag num....................:     50.50
+  |--T...........................................:     17.32
+  |--U...........................................:     15.60
+  |--M...........................................:      8.79
+  |--N...........................................:      8.79
+  |--ACC.........................................:      0.00
+  |--STK.........................................:      0.00
+  |--DEP.........................................:      0.00
+  |--MCALL_GPR...................................:      0.00
+  |--MCALL_STK...................................:      0.00
+Tile register average utilization(B).............:1030704.75
+  |--T...........................................:    308841   29.96%
+  |--U...........................................:    296417   28.76%
+  |--M...........................................:    175056   16.98%
+  |--N...........................................:    250389   24.29%
+  |--ACC.........................................:         0    0.00%
+  |--STK.........................................:         0    0.00%
+  |--DEP.........................................:         0    0.00%
+  |--MCALL_GPR...................................:         0    0.00%
+  |--MCALL_STK...................................:         0    0.00%
+Tile register max size of T......................:    655360
+  |-- utilization................................:    487424   74.38%
+Tile register max size of U......................:    655360
+  |-- utilization................................:    475136   72.50%
+Tile register max size of M......................:    655360
+  |-- utilization................................:    303104   46.25%
+Tile register max size of N......................:    655360
+  |-- utilization................................:    364544   55.62%
+T MAPQ average occupied size.....................:      0.00
+U MAPQ average occupied size.....................:      0.00
+M MAPQ average occupied size.....................:      0.00
+N MAPQ average occupied size.....................:      0.00
+ACC MAPQ average occupied size...................:      0.00
+STK MAPQ average occupied size...................:      0.00
+DEP MAPQ average occupied size...................:      0.00
+MCALL_GPR MAPQ average occupied size.............:      0.00
+MCALL_STK MAPQ average occupied size.............:      0.00
+===================BCC Stall Stats Total====================
+BRob Full Stall..................................:         0
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:         0
+TileReg Full Stall ..............................:         0
+=================BCC Stall Stats SThread 0==================
+BRob Full Stall..................................:         0
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:         0
+TileReg Full Stall ..............................:         0
+==========BCC Detail Stats(Flush Statistics) Total==========
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:         0
+========BCC Detail Stats(Flush Statistics) SThread 0========
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:         0
+================Vector Core 0 OOO&IEX stats=================
+decode inst bubble...............................:         0
+average decode bundle............................:       nan
+Thread0 Pick Cnt.................................:       775
+Thread1 Pick Cnt.................................:       775
+Thread2 Pick Cnt.................................:       775
+Thread3 Pick Cnt.................................:       775
+Thread0 rob stall cnt............................:       112
+Thread1 rob stall cnt............................:        53
+Thread2 rob stall cnt............................:         0
+Thread3 rob stall cnt............................:         0
+decode pe rob stall..............................:         0
+decode local gpr stall...........................:         0
+inst buffer stall................................:         0
+predicate reg stall..............................:         0
+vector reg ptag stall............................:       341
+vector local scalar reg stall....................:         0
+retired ld inst..................................:      6172
+retired st inst..................................:      2588
+retired scalar inst..............................:       536
+retired vector inst..............................:     20556
+retired div/sqrt inst............................:       512
+MAPQ lg0 stall...................................:         0
+MAPQ lg1 stall...................................:         0
+MAPQ lg2 stall...................................:         0
+MAPQ lg3 stall...................................:         0
+ROB lg0 stall....................................:       112
+ROB lg1 stall....................................:        53
+ROB lg2 stall....................................:         0
+ROB lg3 stall....................................:         0
+VT average lifecycle/used times..................:     11.69
+VU average lifecycle/used times..................:     15.13
+VM average lifecycle/used times..................:     22.02
+VN average lifecycle/used times..................:      9.20
+VT recycled times................................:         0
+VU recycled times................................:         0
+VM recycled times................................:         0
+VN recycled times................................:         0
+VT pre-release times.............................:         0
+VU pre-release times.............................:         0
+VM pre-release times.............................:         0
+VN pre-release times.............................:         0
+=========Vector Core 0 Detail Statistics(Tile LSU)==========
+Vector tile load execute inst cnt................:      6172
+  |--Vec tile load gather inst cnt...............:         0
+  |--Vec tile load continious inst cnt...........:      6172
+Vector tile load req cnt.........................:      6172
+Vector tile store execute inst cnt...............:      2588
+  |--Vec tile store scatter inst cnt.............:         0
+  |--Vec tile store continious inst cnt..........:      2588
+Vector tile store req cnt........................:      2588
+Vector core load port0 req channel utilization...:      2405   18.95%
+Vector core load port1 req channel utilization...:      2425   19.11%
+Tile Total read req cnt..........................:      4830
+Tile Total Write req cnt.........................:      1605
+Vector tile load average latency.................:         1
+  |--Vec load_lat_le_10_cycle....................:      6086
+  |--Vec load_lat_le_20_cycle....................:        68
+  |--Vec load_lat_le_30_cycle....................:        17
+  |--Vec load_lat_le_50_cycle....................:         1
+  |--Vec load_lat_ge_50_cycle....................:         0
+Vector core store average latency................:         0
+Vec load miss cnt................................:       180    2.92%
+  |--Vec load merge missq cnt....................:         0    0.00%
+  |--Vec load merge prefetchq cnt................:       138    2.24%
+  |--Vec load miss req cnt.......................:        42    0.68%
+Vec load hit cnt.................................:      5992   97.08%
+  |--Vec load hit cache cnt......................:      5992   97.08%
+    |--Vec load hit stash cnt....................:      5736   92.94%
+    |--Vec load hit demand cnt...................:       256    4.15%
+  |--Vec load hit stq cnt........................:         0    0.00%
+Vec prefetch hit demand missq drop cnt...........:         0
+Vec prefetch hit cache drop cnt..................:         0
+Vec load train pf count..........................:      6172
+Vec head train pf count..........................:        38
+Vec load trigger pf count........................:      4534
+Vec head trigger pf count........................:       286
+Vector core stash count..........................:      4788
+  |--Vec load bad stash rate.....................:       324    5.25%
+  |--Vec load hit road rate......................:       138    2.24%
+  |--Vec load hit cache rate.....................:      5736   92.94%
+Vec load stash coverage..........................:      5874   95.17%
+Vector core stash avg cycle......................:         0    0.00%
+Vector core stash avg count......................:         0    0.00%
+Tile cache evict cnt.............................:      4702
+Prefetch table entry flush cnt(block resolve)....:         0
+Vec load hit to cache cnt........................:         0    0.00%
+Vec ldq avg occ..................................:      3.38
+Vec ldq avg lifetime.............................:      1.73
+Vec ldq full cnt.................................:        50
+Vec stq avg occ..................................:      2.32
+Vec stq avg lifetime.............................:     11.35
+Vec stq full cnt.................................:         0
+Vec stq thread0 full cnt.........................:         0
+Vec stq thread1 full cnt.........................:         0
+Vec stq thread2 full cnt.........................:         0
+Vec stq thread3 full cnt.........................:         0
+Vec scb allocate cnt.............................:      1583
+Vec scb merge cnt................................:      1005
+Vec scb deallocate cnt...........................:      1583
+Vec scb full cnt.................................:      1187
+To Cache data syncing cycle......................:       428
+Vec scb avg occ..................................:     12.39
+Vec scb avg lifetime.............................:     94.36
+Vector core BPC..................................:      0.00
+Vector core utilization..........................:         0    0.00%
+=========Vector Core 0 Detail Statistics(VALU ISQ)==========
+VALU issue0......................................:         0
+VALU issue1......................................:      1853
+VALU issue2......................................:      3584
+VALU issue3......................................:       925
+VALU issue4......................................:         0
+issue 1 VINT.....................................:      1866
+issue 2 VINT.....................................:      1117
+issue 3 VINT.....................................:         0
+issue 4 VINT.....................................:         0
+issue 1 VCVT.....................................:      2560
+issue 2 VCVT.....................................:         0
+issue 3 VCVT.....................................:         0
+issue 4 VCVT.....................................:         0
+issue 1 VFP......................................:      2760
+issue 2 VFP......................................:       932
+issue 3 VFP......................................:         0
+issue 4 VFP......................................:         0
+issue 1 SHF......................................:         0
+issue 2 SHF......................................:         0
+issue 3 SHF......................................:         0
+issue 4 SHF......................................:         0
+issue 1 DIVSQRT..................................:       512
+issue 2 DIVSQRT..................................:         0
+issue 3 DIVSQRT..................................:         0
+issue 4 DIVSQRT..................................:         0
+valu pick lat le 5cyc............................:     10961   92.92%
+valu pick lat le 10cyc...........................:       802    6.80%
+valu pick lat le 20cyc...........................:        33    0.28%
+valu pick lat le 30cyc...........................:         0    0.00%
+valu pick lat ge 30cyc...........................:         0    0.00%
+============Vector Core 0 Detail Statistics(IEX)============
+dispatch stall...................................:         8
+Total Tile Load Execute Insts....................:      6172
+|--Tile gather Load Execute insts................:         0
+|--Tile gather Load issue total cycle............:         0
+|--Tile gather Load stall total cycle............:         0
+|--Tile gather Load complete total cycle.........:         0
+|--Tile continious Load Execute insts............:         0
+Total Tile Store Execute Insts...................:      2588
+|--Tile scatter Store Execute insts..............:         0
+|--Tile continious Store Execute insts...........:      2588
+Total Memory Load Execute Insts..................:         0
+|--Memory gather Load Execute insts..............:         0
+|--Memory continious Load Execute Insts..........:         0
+Total Memory Store Execute Insts.................:         0
+|--Memory scatter Store Execute insts............:         0
+|--Memory continious Store Execute insts.........:         0
+Vector Core 0 Detail Statistics SCALAR 0 pick stall:         0    0.00%
+Vector Core 0 Detail Statistics SCALAR 0 insert stall:         0    0.00%
+Vector Core 0 Detail Statistics AGU 0 pick stall.:      8760   69.04%
+Vector Core 0 Detail Statistics AGU 0 insert stall:         0    0.00%
+Vector Core 0 Detail Statistics VALU 0 pick stall:     11796   92.97%
+Vector Core 0 Detail Statistics VALU 0 insert stall:        13    0.10%
+Vector Core 0 Detail Statistics VSTD 0 pick stall:         0    0.00%
+Vector Core 0 Detail Statistics VSTD 0 insert stall:         0    0.00%
+============Vector Lite Core 0 Detail Statistics============
+Vector-Lite Working Cycle........................:         0
+Vector-Lite Execute TEMP Block Cnt...............:         0
+Vector-Lite Execute TEMP Uop Cnt.................:         0
+Vector IPC.......................................:      0.00
+Vector-Lite Stash Stall Cycle....................:         0
+Vector-Lite ROB Stall Cycle......................:         0
+Vector-Lite SIQ Stall Cycle......................:         0
+Vector-Lite UIQ Stall Cycle......................:         0
+Vector-Lite TileReg Read Stall Cycle.............:         0
+Vector-Lite TileReg Write Stall Cycle............:         0
+Vector-Lite TileReg Write Data Not Ready Cycle...:         0
+Vector-Lite TileReg Read Cnt.....................:         0
+Vector-Lite TileReg Write Cnt....................:         0
+===============Cube0 Read: Node 0 Statistics================
+Average latency from request to response.........:     14.83
+SPB of ld request occupied cycles................:      3333   26.27%
+SPB of ld request full cycles....................:      3194   25.17%
+SPB of ld request average occupied size..........:      2.21
+MGB of ld request occupied cycles................:        24    0.19%
+MGB of ld request full cycles....................:         0    0.00%
+MGB of ld request average occupied size..........:      0.36
+SPB of ld data occupied cycles...................:      1622   12.78%
+SPB of ld data full cycles.......................:       224    1.77%
+SPB of ld data average occupied size.............:      1.76
+MGB of ld data occupied cycles...................:      1191    9.39%
+MGB of ld data full cycles.......................:       188    1.48%
+MGB of ld data average occupied size.............:      3.18
+SPB of st data occupied cycles...................:         0    0.00%
+SPB of st data full cycles.......................:         0    0.00%
+SPB of st data average occupied size.............:       nan
+MGB of st data occupied cycles...................:         7    0.06%
+MGB of st data full cycles.......................:         0    0.00%
+MGB of st data average occupied size.............:       nan
+Read FRQ occupuied cycle.........................:      4738
+Read FRQ full cycle..............................:         0    0.00%
+Read FRQ average occupied size...................:      1.25
+Write FRQ occupuied cycle........................:      4488
+Write FRQ full cycle.............................:         0    0.00%
+Write FRQ average occupied size..................:      1.28
+On ring cycles...................................:      5524   43.54%
+Off ring cycles..................................:      5524   43.54%
+Read Req Total Cnt...............................:      3200
+CW Req Channel Total Blocked Cycle...............:       114
+  |--CW Req Blocked By Vector From TileReg Cycle.:         0    0.00%
+  |--CW Req Blocked By Vector From Core Cycle....:       113   99.12%
+  |--CW Req Blocked By Cube From TileReg Cycle...:         0    0.00%
+  |--CW Req Blocked By Cube From Core Cycle......:         1    0.88%
+  |--CW Req Blocked By TMA From TileReg Cycle....:         0    0.00%
+  |--CW Req Blocked By TMA From Core Cycle.......:         0    0.00%
+CC Req Channel Total Blocked Cycle...............:        54
+  |--CC Req Blocked By Vector From TileReg Cycle.:         0    0.00%
+  |--CC Req Blocked By Vector From Core Cycle....:         0    0.00%
+  |--CC Req Blocked By Cube From TileReg Cycle...:         0    0.00%
+  |--CC Req Blocked By Cube From Core Cycle......:        18   33.33%
+  |--CC Req Blocked By TMA From TileReg Cycle....:         0    0.00%
+  |--CC Req Blocked By TMA From Core Cycle.......:        36   66.67%
+Request 0 channel ring busy(CW)..................:       653
+Request 0 channel ring busy(CC)..................:       262
+Request 0 channel on ring back-pressure(CW)......:        99    0.78%
+Request 0 channel off ring back-pressure(CW).....:        11    0.09%
+Request 0 channel on ring back-pressure(CC)......:        37    0.29%
+Request 0 channel off ring back-pressure(CC).....:         1    0.01%
+Write Req Total Cnt..............................:         0
+CW Data Channel Total Blocked Cycle..............:       158
+|--CW Data Blocked By Vector From TileReg Cycle..:         8    5.06%
+|--CW Ring Data By Vector From Core Cycle........:        16   10.13%
+|--CW Ring Data By Cube From TileReg Cycle.......:         0    0.00%
+|--CW Ring Data By Cube From Core Cycle..........:         0    0.00%
+|--CW Ring Data By TMA From TileReg Cycle........:       131   82.91%
+|--CW Ring Data By TMA From Core Cycle...........:         3    1.90%
+CC Data Channel Total Blocked Cycle..............:       292
+|--CC Data Blocked By Vector From TileReg Cycle..:       218   74.66%
+|--CC Data Blocked By Vector From Core Cycle.....:         1    0.34%
+|--CC Data Blocked By Cube From TileReg Cycle....:         1    0.34%
+|--CC Data Blocked By Cube From Core Cycle.......:        65   22.26%
+|--CC Data Blocked By TMA From TileReg Cycle.....:         0    0.00%
+|--CC Data Blocked By TMA From Core Cycle........:         7    2.40%
+Data channel ring busy(CW).......................:      1065
+Data channel ring busy(CC).......................:      1610
+Data channel on ring back-pressure(CW)...........:       155    1.22%
+Data channel off ring back-pressure(CW)..........:        96    0.76%
+Data channel on ring back-pressure(CC)...........:       288    2.27%
+Data channel off ring back-pressure(CC)..........:        45    0.35%
+Resp Not On CW Ring Total Blocked Cycle..........:        87
+Resp Not On CW Ring Blocked By Vector Cycle......:         2
+Resp Not On CW Ring Blocked By Cube Cycle........:        24
+Resp Not On CW Ring Blocked By TMA Cycle.........:        61
+Resp Not On CC Ring Total Blocked Cycle..........:        45
+Resp Not On CC Ring Blocked By Vector Cycle......:        45
+Resp Not On CC Ring Blocked By Cube Cycle........:         0
+Resp Not On CC Ring Blocked By TMA Cycle.........:         0
+Resp channel ring busy(CW).......................:      1065
+Resp channel ring busy(CC).......................:      1610
+Resp channel on ring back-pressure(CW)...........:        83    0.65%
+Resp channel off ring back-pressure(CW)..........:         0    0.00%
+Resp channel on ring back-pressure(CC)...........:        44    0.35%
+Resp channel off ring back-pressure(CC)..........:         0    0.00%
+===============Cube0 Write: Node 1 Statistics===============
+Average latency from request to response.........:     13.57
+SPB of ld request occupied cycles................:         0    0.00%
+SPB of ld request full cycles....................:         0    0.00%
+SPB of ld request average occupied size..........:       nan
+MGB of ld request occupied cycles................:        18    0.14%
+MGB of ld request full cycles....................:         0    0.00%
+MGB of ld request average occupied size..........:       nan
+SPB of ld data occupied cycles...................:      1453   11.45%
+SPB of ld data full cycles.......................:       206    1.62%
+SPB of ld data average occupied size.............:      1.85
+MGB of ld data occupied cycles...................:         0    0.00%
+MGB of ld data full cycles.......................:         0    0.00%
+MGB of ld data average occupied size.............:      0.00
+SPB of st data occupied cycles...................:      2907   22.91%
+SPB of st data full cycles.......................:      2812   22.16%
+SPB of st data average occupied size.............:      1.99
+MGB of st data occupied cycles...................:         4    0.03%
+MGB of st data full cycles.......................:         0    0.00%
+MGB of st data average occupied size.............:      0.17
+Read FRQ occupuied cycle.........................:      4720
+Read FRQ full cycle..............................:         0    0.00%
+Read FRQ average occupied size...................:      1.26
+Write FRQ occupuied cycle........................:      2004
+Write FRQ full cycle.............................:         0    0.00%
+Write FRQ average occupied size..................:      1.33
+On ring cycles...................................:      4244   33.45%
+Off ring cycles..................................:      4244   33.45%
+Read Req Total Cnt...............................:         0
+CW Req Channel Total Blocked Cycle...............:         0
+  |--CW Req Blocked By Vector From TileReg Cycle.:         0    inf%
+  |--CW Req Blocked By Vector From Core Cycle....:         0    inf%
+  |--CW Req Blocked By Cube From TileReg Cycle...:         0    inf%
+  |--CW Req Blocked By Cube From Core Cycle......:         0    inf%
+  |--CW Req Blocked By TMA From TileReg Cycle....:         0    inf%
+  |--CW Req Blocked By TMA From Core Cycle.......:         0    inf%
+CC Req Channel Total Blocked Cycle...............:         0
+  |--CC Req Blocked By Vector From TileReg Cycle.:         0    inf%
+  |--CC Req Blocked By Vector From Core Cycle....:         0    inf%
+  |--CC Req Blocked By Cube From TileReg Cycle...:         0    inf%
+  |--CC Req Blocked By Cube From Core Cycle......:         0    inf%
+  |--CC Req Blocked By TMA From TileReg Cycle....:         0    inf%
+  |--CC Req Blocked By TMA From Core Cycle.......:         0    inf%
+Request 0 channel ring busy(CW)..................:      1039
+Request 0 channel ring busy(CC)..................:       422
+Request 0 channel on ring back-pressure(CW)......:         0    0.00%
+Request 0 channel off ring back-pressure(CW).....:         0    0.00%
+Request 0 channel on ring back-pressure(CC)......:         0    0.00%
+Request 0 channel off ring back-pressure(CC).....:         0    0.00%
+Write Req Total Cnt..............................:      2560
+CW Data Channel Total Blocked Cycle..............:       149
+|--CW Data Blocked By Vector From TileReg Cycle..:        12    8.05%
+|--CW Ring Data By Vector From Core Cycle........:        53   35.57%
+|--CW Ring Data By Cube From TileReg Cycle.......:         2    1.34%
+|--CW Ring Data By Cube From Core Cycle..........:         0    0.00%
+|--CW Ring Data By TMA From TileReg Cycle........:        81   54.36%
+|--CW Ring Data By TMA From Core Cycle...........:         1    0.67%
+CC Data Channel Total Blocked Cycle..............:       451
+|--CC Data Blocked By Vector From TileReg Cycle..:        49   10.86%
+|--CC Data Blocked By Vector From Core Cycle.....:         3    0.67%
+|--CC Data Blocked By Cube From TileReg Cycle....:       242   53.66%
+|--CC Data Blocked By Cube From Core Cycle.......:         7    1.55%
+|--CC Data Blocked By TMA From TileReg Cycle.....:         0    0.00%
+|--CC Data Blocked By TMA From Core Cycle........:       150   33.26%
+Data channel ring busy(CW).......................:      1013
+Data channel ring busy(CC).......................:      1644
+Data channel on ring back-pressure(CW)...........:       135    1.06%
+Data channel off ring back-pressure(CW)..........:         0    0.00%
+Data channel on ring back-pressure(CC)...........:       391    3.08%
+Data channel off ring back-pressure(CC)..........:         0    0.00%
+Resp Not On CW Ring Total Blocked Cycle..........:       180
+Resp Not On CW Ring Blocked By Vector Cycle......:         0
+Resp Not On CW Ring Blocked By Cube Cycle........:         0
+Resp Not On CW Ring Blocked By TMA Cycle.........:       180
+Resp Not On CC Ring Total Blocked Cycle..........:        16
+Resp Not On CC Ring Blocked By Vector Cycle......:        16
+Resp Not On CC Ring Blocked By Cube Cycle........:         0
+Resp Not On CC Ring Blocked By TMA Cycle.........:         0
+Resp channel ring busy(CW).......................:      1013
+Resp channel ring busy(CC).......................:      1644
+Resp channel on ring back-pressure(CW)...........:       162    1.28%
+Resp channel off ring back-pressure(CW)..........:         0    0.00%
+Resp channel on ring back-pressure(CC)...........:        16    0.13%
+Resp channel off ring back-pressure(CC)..........:         0    0.00%
+================TMA0 Read: Node 2 Statistics================
+Average latency from request to response.........:     16.19
+SPB of ld request occupied cycles................:      1317   10.38%
+SPB of ld request full cycles....................:       505    3.98%
+SPB of ld request average occupied size..........:      1.38
+MGB of ld request occupied cycles................:        33    0.26%
+MGB of ld request full cycles....................:         0    0.00%
+MGB of ld request average occupied size..........:      0.90
+SPB of ld data occupied cycles...................:      1369   10.79%
+SPB of ld data full cycles.......................:       205    1.62%
+SPB of ld data average occupied size.............:      1.90
+MGB of ld data occupied cycles...................:       950    7.49%
+MGB of ld data full cycles.......................:       271    2.14%
+MGB of ld data average occupied size.............:      2.27
+SPB of st data occupied cycles...................:         0    0.00%
+SPB of st data full cycles.......................:         0    0.00%
+SPB of st data average occupied size.............:       nan
+MGB of st data occupied cycles...................:        20    0.16%
+MGB of st data full cycles.......................:         0    0.00%
+MGB of st data average occupied size.............:       nan
+Read FRQ occupuied cycle.........................:      4704
+Read FRQ full cycle..............................:         0    0.00%
+Read FRQ average occupied size...................:      1.24
+Write FRQ occupuied cycle........................:      4487
+Write FRQ full cycle.............................:         0    0.00%
+Write FRQ average occupied size..................:      1.32
+On ring cycles...................................:      3562   28.07%
+Off ring cycles..................................:      3562   28.07%
+Read Req Total Cnt...............................:      1280
+CW Req Channel Total Blocked Cycle...............:        55
+  |--CW Req Blocked By Vector From TileReg Cycle.:         0    0.00%
+  |--CW Req Blocked By Vector From Core Cycle....:         3    5.45%
+  |--CW Req Blocked By Cube From TileReg Cycle...:         0    0.00%
+  |--CW Req Blocked By Cube From Core Cycle......:        38   69.09%
+  |--CW Req Blocked By TMA From TileReg Cycle....:         0    0.00%
+  |--CW Req Blocked By TMA From Core Cycle.......:        14   25.45%
+CC Req Channel Total Blocked Cycle...............:        10
+  |--CC Req Blocked By Vector From TileReg Cycle.:         0    0.00%
+  |--CC Req Blocked By Vector From Core Cycle....:         0    0.00%
+  |--CC Req Blocked By Cube From TileReg Cycle...:         0    0.00%
+  |--CC Req Blocked By Cube From Core Cycle......:         1   10.00%
+  |--CC Req Blocked By TMA From TileReg Cycle....:         0    0.00%
+  |--CC Req Blocked By TMA From Core Cycle.......:         9   90.00%
+Request 0 channel ring busy(CW)..................:       639
+Request 0 channel ring busy(CC)..................:        24
+Request 0 channel on ring back-pressure(CW)......:        39    0.31%
+Request 0 channel off ring back-pressure(CW).....:         1    0.01%
+Request 0 channel on ring back-pressure(CC)......:         7    0.06%
+Request 0 channel off ring back-pressure(CC).....:         2    0.02%
+Write Req Total Cnt..............................:         0
+CW Data Channel Total Blocked Cycle..............:        58
+|--CW Data Blocked By Vector From TileReg Cycle..:        14   24.14%
+|--CW Ring Data By Vector From Core Cycle........:        10   17.24%
+|--CW Ring Data By Cube From TileReg Cycle.......:         1    1.72%
+|--CW Ring Data By Cube From Core Cycle..........:        22   37.93%
+|--CW Ring Data By TMA From TileReg Cycle........:         8   13.79%
+|--CW Ring Data By TMA From Core Cycle...........:         3    5.17%
+CC Data Channel Total Blocked Cycle..............:       207
+|--CC Data Blocked By Vector From TileReg Cycle..:         4    1.93%
+|--CC Data Blocked By Vector From Core Cycle.....:         0    0.00%
+|--CC Data Blocked By Cube From TileReg Cycle....:        60   28.99%
+|--CC Data Blocked By Cube From Core Cycle.......:         0    0.00%
+|--CC Data Blocked By TMA From TileReg Cycle.....:         0    0.00%
+|--CC Data Blocked By TMA From Core Cycle........:       143   69.08%
+Data channel ring busy(CW).......................:      1059
+Data channel ring busy(CC).......................:      1532
+Data channel on ring back-pressure(CW)...........:        58    0.46%
+Data channel off ring back-pressure(CW)..........:        72    0.57%
+Data channel on ring back-pressure(CC)...........:       154    1.21%
+Data channel off ring back-pressure(CC)..........:        25    0.20%
+Resp Not On CW Ring Total Blocked Cycle..........:       261
+Resp Not On CW Ring Blocked By Vector Cycle......:         2
+Resp Not On CW Ring Blocked By Cube Cycle........:         0
+Resp Not On CW Ring Blocked By TMA Cycle.........:       259
+Resp Not On CC Ring Total Blocked Cycle..........:       158
+Resp Not On CC Ring Blocked By Vector Cycle......:         9
+Resp Not On CC Ring Blocked By Cube Cycle........:       149
+Resp Not On CC Ring Blocked By TMA Cycle.........:         0
+Resp channel ring busy(CW).......................:      1059
+Resp channel ring busy(CC).......................:      1532
+Resp channel on ring back-pressure(CW)...........:       227    1.79%
+Resp channel off ring back-pressure(CW)..........:         0    0.00%
+Resp channel on ring back-pressure(CC)...........:       158    1.25%
+Resp channel off ring back-pressure(CC)..........:         0    0.00%
+===============TMA0 Write0: Node 3 Statistics===============
+Average latency from request to response.........:     16.60
+SPB of ld request occupied cycles................:         0    0.00%
+SPB of ld request full cycles....................:         0    0.00%
+SPB of ld request average occupied size..........:       nan
+MGB of ld request occupied cycles................:        29    0.23%
+MGB of ld request full cycles....................:         0    0.00%
+MGB of ld request average occupied size..........:       nan
+SPB of ld data occupied cycles...................:      1478   11.65%
+SPB of ld data full cycles.......................:       180    1.42%
+SPB of ld data average occupied size.............:      1.81
+MGB of ld data occupied cycles...................:         0    0.00%
+MGB of ld data full cycles.......................:         0    0.00%
+MGB of ld data average occupied size.............:      0.00
+SPB of st data occupied cycles...................:      2728   21.50%
+SPB of st data full cycles.......................:      2280   17.97%
+SPB of st data average occupied size.............:      1.84
+MGB of st data occupied cycles...................:         0    0.00%
+MGB of st data full cycles.......................:         0    0.00%
+MGB of st data average occupied size.............:      0.18
+Read FRQ occupuied cycle.........................:      4677
+Read FRQ full cycle..............................:         0    0.00%
+Read FRQ average occupied size...................:      1.24
+Write FRQ occupuied cycle........................:      1919
+Write FRQ full cycle.............................:         0    0.00%
+Write FRQ average occupied size..................:      1.28
+On ring cycles...................................:      3946   31.10%
+Off ring cycles..................................:      3946   31.10%
+Read Req Total Cnt...............................:         0
+CW Req Channel Total Blocked Cycle...............:         0
+  |--CW Req Blocked By Vector From TileReg Cycle.:         0    inf%
+  |--CW Req Blocked By Vector From Core Cycle....:         0    inf%
+  |--CW Req Blocked By Cube From TileReg Cycle...:         0    inf%
+  |--CW Req Blocked By Cube From Core Cycle......:         0    inf%
+  |--CW Req Blocked By TMA From TileReg Cycle....:         0    inf%
+  |--CW Req Blocked By TMA From Core Cycle.......:         0    inf%
+CC Req Channel Total Blocked Cycle...............:         0
+  |--CC Req Blocked By Vector From TileReg Cycle.:         0    inf%
+  |--CC Req Blocked By Vector From Core Cycle....:         0    inf%
+  |--CC Req Blocked By Cube From TileReg Cycle...:         0    inf%
+  |--CC Req Blocked By Cube From Core Cycle......:         0    inf%
+  |--CC Req Blocked By TMA From TileReg Cycle....:         0    inf%
+  |--CC Req Blocked By TMA From Core Cycle.......:         0    inf%
+Request 0 channel ring busy(CW)..................:       640
+Request 0 channel ring busy(CC)..................:       621
+Request 0 channel on ring back-pressure(CW)......:         0    0.00%
+Request 0 channel off ring back-pressure(CW).....:         0    0.00%
+Request 0 channel on ring back-pressure(CC)......:         0    0.00%
+Request 0 channel off ring back-pressure(CC).....:         0    0.00%
+Write Req Total Cnt..............................:      2304
+CW Data Channel Total Blocked Cycle..............:       562
+|--CW Data Blocked By Vector From TileReg Cycle..:       353   62.81%
+|--CW Ring Data By Vector From Core Cycle........:         0    0.00%
+|--CW Ring Data By Cube From TileReg Cycle.......:        22    3.91%
+|--CW Ring Data By Cube From Core Cycle..........:       112   19.93%
+|--CW Ring Data By TMA From TileReg Cycle........:        50    8.90%
+|--CW Ring Data By TMA From Core Cycle...........:        25    4.45%
+CC Data Channel Total Blocked Cycle..............:       471
+|--CC Data Blocked By Vector From TileReg Cycle..:        29    6.16%
+|--CC Data Blocked By Vector From Core Cycle.....:         0    0.00%
+|--CC Data Blocked By Cube From TileReg Cycle....:        84   17.83%
+|--CC Data Blocked By Cube From Core Cycle.......:         1    0.21%
+|--CC Data Blocked By TMA From TileReg Cycle.....:       344   73.04%
+|--CC Data Blocked By TMA From Core Cycle........:        13    2.76%
+Data channel ring busy(CW).......................:      1549
+Data channel ring busy(CC).......................:       810
+Data channel on ring back-pressure(CW)...........:       424    3.34%
+Data channel off ring back-pressure(CW)..........:         0    0.00%
+Data channel on ring back-pressure(CC)...........:       281    2.21%
+Data channel off ring back-pressure(CC)..........:         0    0.00%
+Resp Not On CW Ring Total Blocked Cycle..........:         9
+Resp Not On CW Ring Blocked By Vector Cycle......:         0
+Resp Not On CW Ring Blocked By Cube Cycle........:         0
+Resp Not On CW Ring Blocked By TMA Cycle.........:         9
+Resp Not On CC Ring Total Blocked Cycle..........:        11
+Resp Not On CC Ring Blocked By Vector Cycle......:         0
+Resp Not On CC Ring Blocked By Cube Cycle........:        11
+Resp Not On CC Ring Blocked By TMA Cycle.........:         0
+Resp channel ring busy(CW).......................:      1549
+Resp channel ring busy(CC).......................:       810
+Resp channel on ring back-pressure(CW)...........:         9    0.07%
+Resp channel off ring back-pressure(CW)..........:       112    0.88%
+Resp channel on ring back-pressure(CC)...........:        11    0.09%
+Resp channel off ring back-pressure(CC)..........:        27    0.21%
+====================: Node 4 Statistics=====================
+Average latency from request to response.........:       nan
+SPB of ld request occupied cycles................:         0    0.00%
+SPB of ld request full cycles....................:         0    0.00%
+SPB of ld request average occupied size..........:       nan
+MGB of ld request occupied cycles................:        17    0.13%
+MGB of ld request full cycles....................:         0    0.00%
+MGB of ld request average occupied size..........:       nan
+SPB of ld data occupied cycles...................:      1494   11.77%
+SPB of ld data full cycles.......................:       247    1.95%
+SPB of ld data average occupied size.............:      1.82
+MGB of ld data occupied cycles...................:         0    0.00%
+MGB of ld data full cycles.......................:         0    0.00%
+MGB of ld data average occupied size.............:      0.00
+SPB of st data occupied cycles...................:         0    0.00%
+SPB of st data full cycles.......................:         0    0.00%
+SPB of st data average occupied size.............:       nan
+MGB of st data occupied cycles...................:         9    0.07%
+MGB of st data full cycles.......................:         0    0.00%
+MGB of st data average occupied size.............:       nan
+Read FRQ occupuied cycle.........................:      4664
+Read FRQ full cycle..............................:         0    0.00%
+Read FRQ average occupied size...................:      1.24
+Write FRQ occupuied cycle........................:      4451
+Write FRQ full cycle.............................:         0    0.00%
+Write FRQ average occupied size..................:      1.26
+On ring cycles...................................:      2281   17.98%
+Off ring cycles..................................:      2281   17.98%
+Read Req Total Cnt...............................:         0
+CW Req Channel Total Blocked Cycle...............:         0
+  |--CW Req Blocked By Vector From TileReg Cycle.:         0    inf%
+  |--CW Req Blocked By Vector From Core Cycle....:         0    inf%
+  |--CW Req Blocked By Cube From TileReg Cycle...:         0    inf%
+  |--CW Req Blocked By Cube From Core Cycle......:         0    inf%
+  |--CW Req Blocked By TMA From TileReg Cycle....:         0    inf%
+  |--CW Req Blocked By TMA From Core Cycle.......:         0    inf%
+CC Req Channel Total Blocked Cycle...............:         0
+  |--CC Req Blocked By Vector From TileReg Cycle.:         0    inf%
+  |--CC Req Blocked By Vector From Core Cycle....:         0    inf%
+  |--CC Req Blocked By Cube From TileReg Cycle...:         0    inf%
+  |--CC Req Blocked By Cube From Core Cycle......:         0    inf%
+  |--CC Req Blocked By TMA From TileReg Cycle....:         0    inf%
+  |--CC Req Blocked By TMA From Core Cycle.......:         0    inf%
+Request 0 channel ring busy(CW)..................:       271
+Request 0 channel ring busy(CC)..................:      1218
+Request 0 channel on ring back-pressure(CW)......:         0    0.00%
+Request 0 channel off ring back-pressure(CW).....:         0    0.00%
+Request 0 channel on ring back-pressure(CC)......:         0    0.00%
+Request 0 channel off ring back-pressure(CC).....:         0    0.00%
+Write Req Total Cnt..............................:         0
+CW Data Channel Total Blocked Cycle..............:       347
+|--CW Data Blocked By Vector From TileReg Cycle..:       250   72.05%
+|--CW Ring Data By Vector From Core Cycle........:         0    0.00%
+|--CW Ring Data By Cube From TileReg Cycle.......:         3    0.86%
+|--CW Ring Data By Cube From Core Cycle..........:         0    0.00%
+|--CW Ring Data By TMA From TileReg Cycle........:         5    1.44%
+|--CW Ring Data By TMA From Core Cycle...........:        89   25.65%
+CC Data Channel Total Blocked Cycle..............:        21
+|--CC Data Blocked By Vector From TileReg Cycle..:         9   42.86%
+|--CC Data Blocked By Vector From Core Cycle.....:         3   14.29%
+|--CC Data Blocked By Cube From TileReg Cycle....:         0    0.00%
+|--CC Data Blocked By Cube From Core Cycle.......:         0    0.00%
+|--CC Data Blocked By TMA From TileReg Cycle.....:         9   42.86%
+|--CC Data Blocked By TMA From Core Cycle........:         0    0.00%
+Data channel ring busy(CW).......................:      2224
+Data channel ring busy(CC).......................:       533
+Data channel on ring back-pressure(CW)...........:       326    2.57%
+Data channel off ring back-pressure(CW)..........:         0    0.00%
+Data channel on ring back-pressure(CC)...........:        21    0.17%
+Data channel off ring back-pressure(CC)..........:         0    0.00%
+Resp Not On CW Ring Total Blocked Cycle..........:        28
+Resp Not On CW Ring Blocked By Vector Cycle......:        27
+Resp Not On CW Ring Blocked By Cube Cycle........:         0
+Resp Not On CW Ring Blocked By TMA Cycle.........:         1
+Resp Not On CC Ring Total Blocked Cycle..........:        70
+Resp Not On CC Ring Blocked By Vector Cycle......:         0
+Resp Not On CC Ring Blocked By Cube Cycle........:         0
+Resp Not On CC Ring Blocked By TMA Cycle.........:        70
+Resp channel ring busy(CW).......................:      2224
+Resp channel ring busy(CC).......................:       533
+Resp channel on ring back-pressure(CW)...........:        28    0.22%
+Resp channel off ring back-pressure(CW)..........:         0    0.00%
+Resp channel on ring back-pressure(CC)...........:        70    0.55%
+Resp channel off ring back-pressure(CC)..........:         0    0.00%
+==============Vector0 Read: Node 5 Statistics===============
+Average latency from request to response.........:     13.61
+SPB of ld request occupied cycles................:      2449   19.30%
+SPB of ld request full cycles....................:      1762   13.89%
+SPB of ld request average occupied size..........:      2.04
+MGB of ld request occupied cycles................:        17    0.13%
+MGB of ld request full cycles....................:         0    0.00%
+MGB of ld request average occupied size..........:      0.48
+SPB of ld data occupied cycles...................:      1274   10.04%
+SPB of ld data full cycles.......................:       133    1.05%
+SPB of ld data average occupied size.............:      1.92
+MGB of ld data occupied cycles...................:       473    3.73%
+MGB of ld data full cycles.......................:        10    0.08%
+MGB of ld data average occupied size.............:      2.34
+SPB of st data occupied cycles...................:         0    0.00%
+SPB of st data full cycles.......................:         0    0.00%
+SPB of st data average occupied size.............:       nan
+MGB of st data occupied cycles...................:         3    0.02%
+MGB of st data full cycles.......................:         0    0.00%
+MGB of st data average occupied size.............:       nan
+Read FRQ occupuied cycle.........................:      4645
+Read FRQ full cycle..............................:         0    0.00%
+Read FRQ average occupied size...................:      1.25
+Write FRQ occupuied cycle........................:      1967
+Write FRQ full cycle.............................:         0    0.00%
+Write FRQ average occupied size..................:      1.25
+On ring cycles...................................:      4046   31.89%
+Off ring cycles..................................:      4046   31.89%
+Read Req Total Cnt...............................:      2405
+CW Req Channel Total Blocked Cycle...............:         4
+  |--CW Req Blocked By Vector From TileReg Cycle.:         0    0.00%
+  |--CW Req Blocked By Vector From Core Cycle....:         2   50.00%
+  |--CW Req Blocked By Cube From TileReg Cycle...:         0    0.00%
+  |--CW Req Blocked By Cube From Core Cycle......:         0    0.00%
+  |--CW Req Blocked By TMA From TileReg Cycle....:         0    0.00%
+  |--CW Req Blocked By TMA From Core Cycle.......:         2   50.00%
+CC Req Channel Total Blocked Cycle...............:        41
+  |--CC Req Blocked By Vector From TileReg Cycle.:         0    0.00%
+  |--CC Req Blocked By Vector From Core Cycle....:         0    0.00%
+  |--CC Req Blocked By Cube From TileReg Cycle...:         0    0.00%
+  |--CC Req Blocked By Cube From Core Cycle......:        37   90.24%
+  |--CC Req Blocked By TMA From TileReg Cycle....:         0    0.00%
+  |--CC Req Blocked By TMA From Core Cycle.......:         4    9.76%
+Request 0 channel ring busy(CW)..................:       111
+Request 0 channel ring busy(CC)..................:       214
+Request 0 channel on ring back-pressure(CW)......:         4    0.03%
+Request 0 channel off ring back-pressure(CW).....:        11    0.09%
+Request 0 channel on ring back-pressure(CC)......:        40    0.32%
+Request 0 channel off ring back-pressure(CC).....:         4    0.03%
+Write Req Total Cnt..............................:         0
+CW Data Channel Total Blocked Cycle..............:        80
+|--CW Data Blocked By Vector From TileReg Cycle..:         6    7.50%
+|--CW Ring Data By Vector From Core Cycle........:         0    0.00%
+|--CW Ring Data By Cube From TileReg Cycle.......:        23   28.75%
+|--CW Ring Data By Cube From Core Cycle..........:         0    0.00%
+|--CW Ring Data By TMA From TileReg Cycle........:         6    7.50%
+|--CW Ring Data By TMA From Core Cycle...........:        45   56.25%
+CC Data Channel Total Blocked Cycle..............:        41
+|--CC Data Blocked By Vector From TileReg Cycle..:        20   48.78%
+|--CC Data Blocked By Vector From Core Cycle.....:        11   26.83%
+|--CC Data Blocked By Cube From TileReg Cycle....:         5   12.20%
+|--CC Data Blocked By Cube From Core Cycle.......:         2    4.88%
+|--CC Data Blocked By TMA From TileReg Cycle.....:         2    4.88%
+|--CC Data Blocked By TMA From Core Cycle........:         1    2.44%
+Data channel ring busy(CW).......................:       932
+Data channel ring busy(CC).......................:       569
+Data channel on ring back-pressure(CW)...........:        77    0.61%
+Data channel off ring back-pressure(CW)..........:       132    1.04%
+Data channel on ring back-pressure(CC)...........:        41    0.32%
+Data channel off ring back-pressure(CC)..........:         7    0.06%
+Resp Not On CW Ring Total Blocked Cycle..........:        83
+Resp Not On CW Ring Blocked By Vector Cycle......:        83
+Resp Not On CW Ring Blocked By Cube Cycle........:         0
+Resp Not On CW Ring Blocked By TMA Cycle.........:         0
+Resp Not On CC Ring Total Blocked Cycle..........:        13
+Resp Not On CC Ring Blocked By Vector Cycle......:         0
+Resp Not On CC Ring Blocked By Cube Cycle........:         0
+Resp Not On CC Ring Blocked By TMA Cycle.........:        13
+Resp channel ring busy(CW).......................:       932
+Resp channel ring busy(CC).......................:       569
+Resp channel on ring back-pressure(CW)...........:        76    0.60%
+Resp channel off ring back-pressure(CW)..........:         0    0.00%
+Resp channel on ring back-pressure(CC)...........:        13    0.10%
+Resp channel off ring back-pressure(CC)..........:         0    0.00%
+==============Vector1 Read: Node 6 Statistics===============
+Average latency from request to response.........:     13.52
+SPB of ld request occupied cycles................:      2457   19.36%
+SPB of ld request full cycles....................:      1182    9.32%
+SPB of ld request average occupied size..........:      2.04
+MGB of ld request occupied cycles................:        26    0.20%
+MGB of ld request full cycles....................:         0    0.00%
+MGB of ld request average occupied size..........:      0.48
+SPB of ld data occupied cycles...................:      1371   10.81%
+SPB of ld data full cycles.......................:       140    1.10%
+SPB of ld data average occupied size.............:      1.86
+MGB of ld data occupied cycles...................:       292    2.30%
+MGB of ld data full cycles.......................:         2    0.02%
+MGB of ld data average occupied size.............:      2.01
+SPB of st data occupied cycles...................:         0    0.00%
+SPB of st data full cycles.......................:         0    0.00%
+SPB of st data average occupied size.............:       nan
+MGB of st data occupied cycles...................:        22    0.17%
+MGB of st data full cycles.......................:         0    0.00%
+MGB of st data average occupied size.............:       nan
+Read FRQ occupuied cycle.........................:      4814
+Read FRQ full cycle..............................:         0    0.00%
+Read FRQ average occupied size...................:      1.20
+Write FRQ occupuied cycle........................:      4435
+Write FRQ full cycle.............................:         0    0.00%
+Write FRQ average occupied size..................:      1.27
+On ring cycles...................................:      4707   37.10%
+Off ring cycles..................................:      4707   37.10%
+Read Req Total Cnt...............................:      2425
+CW Req Channel Total Blocked Cycle...............:        27
+  |--CW Req Blocked By Vector From TileReg Cycle.:         0    0.00%
+  |--CW Req Blocked By Vector From Core Cycle....:        19   70.37%
+  |--CW Req Blocked By Cube From TileReg Cycle...:         0    0.00%
+  |--CW Req Blocked By Cube From Core Cycle......:         0    0.00%
+  |--CW Req Blocked By TMA From TileReg Cycle....:         0    0.00%
+  |--CW Req Blocked By TMA From Core Cycle.......:         8   29.63%
+CC Req Channel Total Blocked Cycle...............:         9
+  |--CC Req Blocked By Vector From TileReg Cycle.:         0    0.00%
+  |--CC Req Blocked By Vector From Core Cycle....:         0    0.00%
+  |--CC Req Blocked By Cube From TileReg Cycle...:         0    0.00%
+  |--CC Req Blocked By Cube From Core Cycle......:         9  100.00%
+  |--CC Req Blocked By TMA From TileReg Cycle....:         0    0.00%
+  |--CC Req Blocked By TMA From Core Cycle.......:         0    0.00%
+Request 0 channel ring busy(CW)..................:        42
+Request 0 channel ring busy(CC)..................:       614
+Request 0 channel on ring back-pressure(CW)......:        24    0.19%
+Request 0 channel off ring back-pressure(CW).....:         7    0.06%
+Request 0 channel on ring back-pressure(CC)......:         9    0.07%
+Request 0 channel off ring back-pressure(CC).....:        16    0.13%
+Write Req Total Cnt..............................:         0
+CW Data Channel Total Blocked Cycle..............:       186
+|--CW Data Blocked By Vector From TileReg Cycle..:        16    8.60%
+|--CW Ring Data By Vector From Core Cycle........:         0    0.00%
+|--CW Ring Data By Cube From TileReg Cycle.......:       144   77.42%
+|--CW Ring Data By Cube From Core Cycle..........:         0    0.00%
+|--CW Ring Data By TMA From TileReg Cycle........:         7    3.76%
+|--CW Ring Data By TMA From Core Cycle...........:        19   10.22%
+CC Data Channel Total Blocked Cycle..............:        34
+|--CC Data Blocked By Vector From TileReg Cycle..:         1    2.94%
+|--CC Data Blocked By Vector From Core Cycle.....:        27   79.41%
+|--CC Data Blocked By Cube From TileReg Cycle....:         0    0.00%
+|--CC Data Blocked By Cube From Core Cycle.......:         0    0.00%
+|--CC Data Blocked By TMA From TileReg Cycle.....:         5   14.71%
+|--CC Data Blocked By TMA From Core Cycle........:         1    2.94%
+Data channel ring busy(CW).......................:      1044
+Data channel ring busy(CC).......................:       695
+Data channel on ring back-pressure(CW)...........:       181    1.43%
+Data channel off ring back-pressure(CW)..........:         9    0.07%
+Data channel on ring back-pressure(CC)...........:        34    0.27%
+Data channel off ring back-pressure(CC)..........:       126    0.99%
+Resp Not On CW Ring Total Blocked Cycle..........:       205
+Resp Not On CW Ring Blocked By Vector Cycle......:       201
+Resp Not On CW Ring Blocked By Cube Cycle........:         0
+Resp Not On CW Ring Blocked By TMA Cycle.........:         4
+Resp Not On CC Ring Total Blocked Cycle..........:         2
+Resp Not On CC Ring Blocked By Vector Cycle......:         0
+Resp Not On CC Ring Blocked By Cube Cycle........:         0
+Resp Not On CC Ring Blocked By TMA Cycle.........:         2
+Resp channel ring busy(CW).......................:      1044
+Resp channel ring busy(CC).......................:       695
+Resp channel on ring back-pressure(CW)...........:       182    1.43%
+Resp channel off ring back-pressure(CW)..........:         0    0.00%
+Resp channel on ring back-pressure(CC)...........:         2    0.02%
+Resp channel off ring back-pressure(CC)..........:         0    0.00%
+==============Vector0 Write: Node 7 Statistics==============
+Average latency from request to response.........:     14.80
+SPB of ld request occupied cycles................:         0    0.00%
+SPB of ld request full cycles....................:         0    0.00%
+SPB of ld request average occupied size..........:       nan
+MGB of ld request occupied cycles................:        22    0.17%
+MGB of ld request full cycles....................:         0    0.00%
+MGB of ld request average occupied size..........:       nan
+SPB of ld data occupied cycles...................:      1700   13.40%
+SPB of ld data full cycles.......................:       330    2.60%
+SPB of ld data average occupied size.............:      1.76
+MGB of ld data occupied cycles...................:         0    0.00%
+MGB of ld data full cycles.......................:         0    0.00%
+MGB of ld data average occupied size.............:      0.00
+SPB of st data occupied cycles...................:      2018   15.90%
+SPB of st data full cycles.......................:      1857   14.64%
+SPB of st data average occupied size.............:      1.99
+MGB of st data occupied cycles...................:         1    0.01%
+MGB of st data full cycles.......................:         0    0.00%
+MGB of st data average occupied size.............:      0.24
+Read FRQ occupuied cycle.........................:      4827
+Read FRQ full cycle..............................:         0    0.00%
+Read FRQ average occupied size...................:      1.21
+Write FRQ occupuied cycle........................:      1939
+Write FRQ full cycle.............................:         0    0.00%
+Write FRQ average occupied size..................:      1.25
+On ring cycles...................................:      3248   25.60%
+Off ring cycles..................................:      3248   25.60%
+Read Req Total Cnt...............................:         0
+CW Req Channel Total Blocked Cycle...............:         0
+  |--CW Req Blocked By Vector From TileReg Cycle.:         0    inf%
+  |--CW Req Blocked By Vector From Core Cycle....:         0    inf%
+  |--CW Req Blocked By Cube From TileReg Cycle...:         0    inf%
+  |--CW Req Blocked By Cube From Core Cycle......:         0    inf%
+  |--CW Req Blocked By TMA From TileReg Cycle....:         0    inf%
+  |--CW Req Blocked By TMA From Core Cycle.......:         0    inf%
+CC Req Channel Total Blocked Cycle...............:         0
+  |--CC Req Blocked By Vector From TileReg Cycle.:         0    inf%
+  |--CC Req Blocked By Vector From Core Cycle....:         0    inf%
+  |--CC Req Blocked By Cube From TileReg Cycle...:         0    inf%
+  |--CC Req Blocked By Cube From Core Cycle......:         0    inf%
+  |--CC Req Blocked By TMA From TileReg Cycle....:         0    inf%
+  |--CC Req Blocked By TMA From Core Cycle.......:         0    inf%
+Request 0 channel ring busy(CW)..................:      1277
+Request 0 channel ring busy(CC)..................:      1093
+Request 0 channel on ring back-pressure(CW)......:         0    0.00%
+Request 0 channel off ring back-pressure(CW).....:         0    0.00%
+Request 0 channel on ring back-pressure(CC)......:         0    0.00%
+Request 0 channel off ring back-pressure(CC).....:         0    0.00%
+Write Req Total Cnt..............................:      1605
+CW Data Channel Total Blocked Cycle..............:       339
+|--CW Data Blocked By Vector From TileReg Cycle..:        22    6.49%
+|--CW Ring Data By Vector From Core Cycle........:         0    0.00%
+|--CW Ring Data By Cube From TileReg Cycle.......:       289   85.25%
+|--CW Ring Data By Cube From Core Cycle..........:         0    0.00%
+|--CW Ring Data By TMA From TileReg Cycle........:        26    7.67%
+|--CW Ring Data By TMA From Core Cycle...........:         2    0.59%
+CC Data Channel Total Blocked Cycle..............:       688
+|--CC Data Blocked By Vector From TileReg Cycle..:       546   79.36%
+|--CC Data Blocked By Vector From Core Cycle.....:         7    1.02%
+|--CC Data Blocked By Cube From TileReg Cycle....:         5    0.73%
+|--CC Data Blocked By Cube From Core Cycle.......:       128   18.60%
+|--CC Data Blocked By TMA From TileReg Cycle.....:         1    0.15%
+|--CC Data Blocked By TMA From Core Cycle........:         1    0.15%
+Data channel ring busy(CW).......................:      1382
+Data channel ring busy(CC).......................:      2088
+Data channel on ring back-pressure(CW)...........:       272    2.14%
+Data channel off ring back-pressure(CW)..........:         0    0.00%
+Data channel on ring back-pressure(CC)...........:       561    4.42%
+Data channel off ring back-pressure(CC)..........:         0    0.00%
+Resp Not On CW Ring Total Blocked Cycle..........:        20
+Resp Not On CW Ring Blocked By Vector Cycle......:         2
+Resp Not On CW Ring Blocked By Cube Cycle........:        17
+Resp Not On CW Ring Blocked By TMA Cycle.........:         1
+Resp Not On CC Ring Total Blocked Cycle..........:         0
+Resp Not On CC Ring Blocked By Vector Cycle......:         0
+Resp Not On CC Ring Blocked By Cube Cycle........:         0
+Resp Not On CC Ring Blocked By TMA Cycle.........:         0
+Resp channel ring busy(CW).......................:      1382
+Resp channel ring busy(CC).......................:      2088
+Resp channel on ring back-pressure(CW)...........:        20    0.16%
+Resp channel off ring back-pressure(CW)..........:        60    0.47%
+Resp channel on ring back-pressure(CC)...........:         0    0.00%
+Resp channel off ring back-pressure(CC)..........:         6    0.05%
+=============Total request and response counter=============
+Node 0...........................................:     11048
+  |--Node 0-->TileReg,load request counter.......:      3200   28.96%
+  |--Node 0-->TileReg,store request counter......:         0    0.00%
+  |---->Node 0,load request counter..............:      1184   10.72%
+  |---->Node 0,store request counter.............:      1140   10.32%
+  |-- TileReg-->Node 0,load response counter.....:      3200   28.96%
+  |-- TileReg-->Node 0,store response counter....:         0    0.00%
+  |--Node 0-->,load response counter.............:      2324   21.04%
+  |--Node 0-->,store response counter............:         0    0.00%
+Node 1...........................................:      8488
+  |--Node 1-->TileReg,load request counter.......:         0    0.00%
+  |--Node 1-->TileReg,store request counter......:      2560   30.16%
+  |---->Node 1,load request counter..............:      1184   13.95%
+  |---->Node 1,store request counter.............:       500    5.89%
+  |-- TileReg-->Node 1,load response counter.....:      2560   30.16%
+  |-- TileReg-->Node 1,store response counter....:         0    0.00%
+  |--Node 1-->,load response counter.............:      1684   19.84%
+  |--Node 1-->,store response counter............:         0    0.00%
+Node 2...........................................:      7124
+  |--Node 2-->TileReg,load request counter.......:      1280   17.97%
+  |--Node 2-->TileReg,store request counter......:         0    0.00%
+  |---->Node 2,load request counter..............:      1157   16.24%
+  |---->Node 2,store request counter.............:      1125   15.79%
+  |-- TileReg-->Node 2,load response counter.....:      1280   17.97%
+  |-- TileReg-->Node 2,store response counter....:         0    0.00%
+  |--Node 2-->,load response counter.............:      2282   32.03%
+  |--Node 2-->,store response counter............:         0    0.00%
+Node 3...........................................:      7892
+  |--Node 3-->TileReg,load request counter.......:         0    0.00%
+  |--Node 3-->TileReg,store request counter......:      2304   29.19%
+  |---->Node 3,load request counter..............:      1157   14.66%
+  |---->Node 3,store request counter.............:       485    6.15%
+  |-- TileReg-->Node 3,load response counter.....:      2304   29.19%
+  |-- TileReg-->Node 3,store response counter....:         0    0.00%
+  |--Node 3-->,load response counter.............:      1642   20.81%
+  |--Node 3-->,store response counter............:         0    0.00%
+Node 4...........................................:      4562
+  |--Node 4-->TileReg,load request counter.......:         0    0.00%
+  |--Node 4-->TileReg,store request counter......:         0    0.00%
+  |---->Node 4,load request counter..............:      1157   25.36%
+  |---->Node 4,store request counter.............:      1124   24.64%
+  |-- TileReg-->Node 4,load response counter.....:         0    0.00%
+  |-- TileReg-->Node 4,store response counter....:         0    0.00%
+  |--Node 4-->,load response counter.............:      2281   50.00%
+  |--Node 4-->,store response counter............:         0    0.00%
+Node 5...........................................:      8092
+  |--Node 5-->TileReg,load request counter.......:      2405   29.72%
+  |--Node 5-->TileReg,store request counter......:         0    0.00%
+  |---->Node 5,load request counter..............:      1157   14.30%
+  |---->Node 5,store request counter.............:       484    5.98%
+  |-- TileReg-->Node 5,load response counter.....:      2405   29.72%
+  |-- TileReg-->Node 5,store response counter....:         0    0.00%
+  |--Node 5-->,load response counter.............:      1641   20.28%
+  |--Node 5-->,store response counter............:         0    0.00%
+Node 6...........................................:      9414
+  |--Node 6-->TileReg,load request counter.......:      2425   25.76%
+  |--Node 6-->TileReg,store request counter......:         0    0.00%
+  |---->Node 6,load request counter..............:      1157   12.29%
+  |---->Node 6,store request counter.............:      1125   11.95%
+  |-- TileReg-->Node 6,load response counter.....:      2425   25.76%
+  |-- TileReg-->Node 6,store response counter....:         0    0.00%
+  |--Node 6-->,load response counter.............:      2282   24.24%
+  |--Node 6-->,store response counter............:         0    0.00%
+Node 7...........................................:      6496
+  |--Node 7-->TileReg,load request counter.......:         0    0.00%
+  |--Node 7-->TileReg,store request counter......:      1605   24.71%
+  |---->Node 7,load request counter..............:      1157   17.81%
+  |---->Node 7,store request counter.............:       486    7.48%
+  |-- TileReg-->Node 7,load response counter.....:      1605   24.71%
+  |-- TileReg-->Node 7,store response counter....:         0    0.00%
+  |--Node 7-->,load response counter.............:      1643   25.29%
+  |--Node 7-->,store response counter............:         0    0.00%
+================Max request 0 channel width=================
+Node 0...........................................:   6496256
+  |---->Node 0,load request size.................:    819200   12.61%
+  |--Node 0-->TileReg,load request size..........:    303104    4.67%
+Node 1...........................................:   6496256
+  |---->Node 1,load request size.................:         0    0.00%
+  |--Node 1-->TileReg,load request size..........:    303104    4.67%
+Node 2...........................................:   6496256
+  |---->Node 2,load request size.................:    327680    5.04%
+  |--Node 2-->TileReg,load request size..........:    296192    4.56%
+Node 3...........................................:   6496256
+  |---->Node 3,load request size.................:         0    0.00%
+  |--Node 3-->TileReg,load request size..........:    296192    4.56%
+Node 4...........................................:   6496256
+  |---->Node 4,load request size.................:         0    0.00%
+  |--Node 4-->TileReg,load request size..........:    296192    4.56%
+Node 5...........................................:   6496256
+  |---->Node 5,load request size.................:    615680    9.48%
+  |--Node 5-->TileReg,load request size..........:    296192    4.56%
+Node 6...........................................:   6496256
+  |---->Node 6,load request size.................:    620800    9.56%
+  |--Node 6-->TileReg,load request size..........:    296192    4.56%
+Node 7...........................................:   6496256
+  |---->Node 7,load request size.................:         0    0.00%
+  |--Node 7-->TileReg,load request size..........:    296192    4.56%
+===================Max data channel width===================
+Node 0...........................................:   6496256
+  |--TileReg-->Node 0,load response size.........:    594944    9.16%
+  |--Node 0-->,load response size................:    819200   12.61%
+  |---->Node 0,store request size................:         0    0.00%
+  |--Node 0-->TileReg,store request size.........:    291840    4.49%
+Node 1...........................................:   6496256
+  |--TileReg-->Node 1,load response size.........:    431104    6.64%
+  |--Node 1-->,load response size................:    655360   10.09%
+  |---->Node 1,store request size................:    655360   10.09%
+  |--Node 1-->TileReg,store request size.........:    128000    1.97%
+Node 2...........................................:   6496256
+  |--TileReg-->Node 2,load response size.........:    584192    8.99%
+  |--Node 2-->,load response size................:    327680    5.04%
+  |---->Node 2,store request size................:         0    0.00%
+  |--Node 2-->TileReg,store request size.........:    288000    4.43%
+Node 3...........................................:   6496256
+  |--TileReg-->Node 3,load response size.........:    420352    6.47%
+  |--Node 3-->,load response size................:    589824    9.08%
+  |---->Node 3,store request size................:    589824    9.08%
+  |--Node 3-->TileReg,store request size.........:    124160    1.91%
+Node 4...........................................:   6496256
+  |--TileReg-->Node 4,load response size.........:    583936    8.99%
+  |--Node 4-->,load response size................:         0    0.00%
+  |---->Node 4,store request size................:         0    0.00%
+  |--Node 4-->TileReg,store request size.........:    287744    4.43%
+Node 5...........................................:   6496256
+  |--TileReg-->Node 5,load response size.........:    420096    6.47%
+  |--Node 5-->,load response size................:    615680    9.48%
+  |---->Node 5,store request size................:         0    0.00%
+  |--Node 5-->TileReg,store request size.........:    123904    1.91%
+Node 6...........................................:   6496256
+  |--TileReg-->Node 6,load response size.........:    584192    8.99%
+  |--Node 6-->,load response size................:    620800    9.56%
+  |---->Node 6,store request size................:         0    0.00%
+  |--Node 6-->TileReg,store request size.........:    288000    4.43%
+Node 7...........................................:   6496256
+  |--TileReg-->Node 7,load response size.........:    420608    6.47%
+  |--Node 7-->,load response size................:    410880    6.32%
+  |---->Node 7,store request size................:    410880    6.32%
+  |--Node 7-->TileReg,store request size.........:    124416    1.92%
+=================Ring Load/Store Statistics=================
+Number of cube loads.............................:      3200
+  |--Cube0 Read loads............................:      3200
+Number of cube stores............................:      2560
+  |--Cube0 Write stores..........................:      2560
+Number of vector loads...........................:      4830
+  |--Vector0 Read loads..........................:      2405
+  |--Vector1 Read loads..........................:      2425
+Number of vector stores..........................:      1605
+  |--Vector0 Write stores........................:      1605
+Number of TMA loads..............................:      1280
+  |--TMA0 Read loads.............................:      1280
+Number of TMA stores.............................:      2304
+  |--TMA0 Write0 stores..........................:      2304
+=============Request 0 Channel Ring Statistics==============
+Number of packets................................:      9310
+  |--Average latency.............................:      3.18
+    |--Average on-ring latency...................:      1.20
+    |--Average ring-traversal latency............:      1.79
+    |--Average off-ring latency..................:      0.19
+  |--Average ideal hops..........................:      1.75
+  |--Average real hops...........................:      1.79
+Number of packets (CW)...........................:      4698
+  |--Average latency (CW)........................:      3.20
+    |--Average on-ring latency (CW)..............:      1.21
+    |--Average ring-traversal latency (CW).......:      1.81
+    |--Average off-ring latency (CW).............:      0.19
+  |--Average ideal hops (CW).....................:      1.76
+  |--Average real hops (CW)......................:      1.81
+Number of packets (CC)...........................:      4612
+  |--Average latency (CC)........................:      3.16
+    |--Average on-ring latency (CC)..............:      1.19
+    |--Average ring-traversal latency (CC).......:      1.78
+    |--Average off-ring latency (CC).............:      0.19
+  |--Average ideal hops (CC).....................:      1.74
+  |--Average real hops (CC)......................:      1.78
+==================Data Channel Statistics===================
+Number of packets................................:     15779
+  |--Average latency.............................:      3.71
+    |--Average on-ring latency...................:      1.45
+    |--Average ring-traversal latency............:      2.11
+    |--Average off-ring latency..................:      0.15
+  |--Average ideal hops..........................:      1.85
+  |--Average real hops...........................:      2.11
+Number of packets (CW)...........................:      7936
+  |--Average latency (CW)........................:      3.71
+    |--Average on-ring latency (CW)..............:      1.41
+    |--Average ring-traversal latency (CW).......:      2.15
+    |--Average off-ring latency (CW).............:      0.15
+  |--Average ideal hops (CW).....................:      1.83
+  |--Average real hops (CW)......................:      2.15
+Number of packets (CC)...........................:      7843
+  |--Average latency (CC)........................:      3.70
+    |--Average on-ring latency (CC)..............:      1.49
+    |--Average ring-traversal latency (CC).......:      2.07
+    |--Average off-ring latency (CC).............:      0.14
+  |--Average ideal hops (CC).....................:      1.87
+  |--Average real hops (CC)......................:      2.07
+Number of packets (Load-Data)....................:      9310
+  |--Average latency (Load-Data).................:      3.64
+    |--Average on-ring latency (Load-Data).......:      1.31
+    |--Average ring-traversal latency (Load-Data):      2.13
+    |--Average off-ring latency (Load-Data)......:      0.19
+  |--Average ideal hops (Load-Data)..............:      1.75
+  |--Average real hops (Load-Data)...............:      2.13
+Number of packets (Store-Data)...................:      6469
+  |--Average latency (Store-Data)................:      3.80
+    |--Average on-ring latency (Store-Data)......:      1.65
+    |--Average ring-traversal latency (Store-Data):      2.08
+    |--Average off-ring latency (Store-Data).....:      0.08
+  |--Average ideal hops (Load-Data)..............:      2.00
+  |--Average real hops (Load-Data)...............:      2.08
+==================Resp Channel Statistics===================
+Number of packets................................:      6469
+  |--Average latency.............................:      3.53
+    |--Average on-ring latency...................:      1.20
+    |--Average ring-traversal latency............:      2.25
+    |--Average off-ring latency..................:      0.08
+  |--Average ideal hops..........................:      2.00
+  |--Average real hops...........................:      2.25
+Number of packets (CW)...........................:      3235
+  |--Average latency (CW)........................:      3.79
+    |--Average on-ring latency (CW)..............:      1.29
+    |--Average ring-traversal latency (CW).......:      2.41
+    |--Average off-ring latency (CW).............:      0.08
+  |--Average ideal hops (CW).....................:      1.99
+  |--Average real hops (CW)......................:      2.41
+Number of packets (CC)...........................:      3234
+  |--Average latency (CC)........................:      3.28
+    |--Average on-ring latency (CC)..............:      1.11
+    |--Average ring-traversal latency (CC).......:      2.09
+    |--Average off-ring latency (CC).............:      0.08
+  |--Average ideal hops (CC).....................:      2.01
+  |--Average real hops (CC)......................:      2.09
+==============Clockwise Ring statistics(node)===============
+Average round cycle on ring of request or response:      2.10
+Node 0,request 0 channel work....................:       653    5.15%
+  |--stash request...............................:         0    0.00%
+Node 0,request 0 channel work(cube runtime)......:         0    inf%
+Node 0,request 0 channel work(mtc runtime).......:         0    inf%
+Node 0,request 0 channel work(vec runtime).......:         0    inf%
+Node 1,request 0 channel work....................:      1039    8.19%
+  |--stash request...............................:         0    0.00%
+Node 1,request 0 channel work(cube runtime)......:         0    inf%
+Node 1,request 0 channel work(mtc runtime).......:         0    inf%
+Node 1,request 0 channel work(vec runtime).......:         0    inf%
+Node 2,request 0 channel work....................:       639    5.04%
+  |--stash request...............................:         0    0.00%
+Node 2,request 0 channel work(cube runtime)......:         0    inf%
+Node 2,request 0 channel work(mtc runtime).......:         0    inf%
+Node 2,request 0 channel work(vec runtime).......:         0    inf%
+Node 3,request 0 channel work....................:       640    5.04%
+  |--stash request...............................:         0    0.00%
+Node 3,request 0 channel work(cube runtime)......:         0    inf%
+Node 3,request 0 channel work(mtc runtime).......:         0    inf%
+Node 3,request 0 channel work(vec runtime).......:         0    inf%
+Node 4,request 0 channel work....................:       271    2.14%
+  |--stash request...............................:         0    0.00%
+Node 4,request 0 channel work(cube runtime)......:         0    inf%
+Node 4,request 0 channel work(mtc runtime).......:         0    inf%
+Node 4,request 0 channel work(vec runtime).......:         0    inf%
+Node 5,request 0 channel work....................:       111    0.87%
+  |--stash request...............................:         0    0.00%
+Node 5,request 0 channel work(cube runtime)......:         0    inf%
+Node 5,request 0 channel work(mtc runtime).......:         0    inf%
+Node 5,request 0 channel work(vec runtime).......:         0    inf%
+Node 6,request 0 channel work....................:        42    0.33%
+  |--stash request...............................:         0    0.00%
+Node 6,request 0 channel work(cube runtime)......:         0    inf%
+Node 6,request 0 channel work(mtc runtime).......:         0    inf%
+Node 6,request 0 channel work(vec runtime).......:         0    inf%
+Node 7,request 0 channel work....................:      1277   10.06%
+  |--stash request...............................:         0    0.00%
+Node 7,request 0 channel work(cube runtime)......:         0    inf%
+Node 7,request 0 channel work(mtc runtime).......:         0    inf%
+Node 7,request 0 channel work(vec runtime).......:         0    inf%
+Node 0,data channel work.........................:      1065    8.39%
+  |--stash request...............................:         0    0.00%
+Node 0,data channel work(cube runtime)...........:         0    inf%
+Node 0,data channel work(mtc runtime)............:         0    inf%
+Node 0,data channel work(vec runtime)............:         0    inf%
+Node 1,data channel work.........................:      1013    7.98%
+  |--stash request...............................:         0    0.00%
+Node 1,data channel work(cube runtime)...........:         0    inf%
+Node 1,data channel work(mtc runtime)............:         0    inf%
+Node 1,data channel work(vec runtime)............:         0    inf%
+Node 2,data channel work.........................:      1059    8.35%
+  |--stash request...............................:         0    0.00%
+Node 2,data channel work(cube runtime)...........:         0    inf%
+Node 2,data channel work(mtc runtime)............:         0    inf%
+Node 2,data channel work(vec runtime)............:         0    inf%
+Node 3,data channel work.........................:      1549   12.21%
+  |--stash request...............................:         0    0.00%
+Node 3,data channel work(cube runtime)...........:         0    inf%
+Node 3,data channel work(mtc runtime)............:         0    inf%
+Node 3,data channel work(vec runtime)............:         0    inf%
+Node 4,data channel work.........................:      2224   17.53%
+  |--stash request...............................:         0    0.00%
+Node 4,data channel work(cube runtime)...........:         0    inf%
+Node 4,data channel work(mtc runtime)............:         0    inf%
+Node 4,data channel work(vec runtime)............:         0    inf%
+Node 5,data channel work.........................:       932    7.35%
+  |--stash request...............................:         0    0.00%
+Node 5,data channel work(cube runtime)...........:         0    inf%
+Node 5,data channel work(mtc runtime)............:         0    inf%
+Node 5,data channel work(vec runtime)............:         0    inf%
+Node 6,data channel work.........................:      1044    8.23%
+  |--stash request...............................:         0    0.00%
+Node 6,data channel work(cube runtime)...........:         0    inf%
+Node 6,data channel work(mtc runtime)............:         0    inf%
+Node 6,data channel work(vec runtime)............:         0    inf%
+Node 7,data channel work.........................:      1382   10.89%
+  |--stash request...............................:         0    0.00%
+Node 7,data channel work(cube runtime)...........:         0    inf%
+Node 7,data channel work(mtc runtime)............:         0    inf%
+Node 7,data channel work(vec runtime)............:         0    inf%
+==============Clockwise Ring statistics(link)===============
+Node 0->1,request 0 channel work.................:       653    5.15%
+  |--More than one round.........................:        22    3.37%
+Node 0->1,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,request 0 channel work.................:      1039    8.19%
+  |--More than one round.........................:        30    2.89%
+Node 1->2,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,request 0 channel work.................:       639    5.04%
+  |--More than one round.........................:        29    4.54%
+Node 2->3,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,request 0 channel work.................:       640    5.04%
+  |--More than one round.........................:        30    4.69%
+Node 3->4,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,request 0 channel work.................:       271    2.14%
+  |--More than one round.........................:        30   11.07%
+Node 4->5,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,request 0 channel work.................:       111    0.87%
+  |--More than one round.........................:        19   17.12%
+Node 5->6,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,request 0 channel work.................:        42    0.33%
+  |--More than one round.........................:        26   61.90%
+Node 6->7,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,request 0 channel work.................:      1277   10.06%
+  |--More than one round.........................:        30    2.35%
+Node 7->0,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,data channel work......................:      1065    8.39%
+  |--More than one round.........................:       223   20.94%
+Node 0->1,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,data channel work......................:      1013    7.98%
+  |--More than one round.........................:       309   30.50%
+Node 1->2,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,data channel work......................:      1059    8.35%
+  |--More than one round.........................:       256   24.17%
+Node 2->3,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,data channel work......................:      1549   12.21%
+  |--More than one round.........................:       309   19.95%
+Node 3->4,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,data channel work......................:      2224   17.53%
+  |--More than one round.........................:       309   13.89%
+Node 4->5,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,data channel work......................:       932    7.35%
+  |--More than one round.........................:       184   19.74%
+Node 5->6,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,data channel work......................:      1044    8.23%
+  |--More than one round.........................:       301   28.83%
+Node 6->7,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,data channel work......................:      1382   10.89%
+  |--More than one round.........................:       309   22.36%
+Node 7->0,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+===========Counterclockwise Ring statistics(node)===========
+Average round cycle on ring of request or response:      1.99
+Node 0,request 0 channel work....................:       262    2.06%
+  |--stash request...............................:         0    0.00%
+Node 0,request 0 channel work(cube runtime)......:         0    inf%
+Node 0,request 0 channel work(mtc runtime).......:         0    inf%
+Node 0,request 0 channel work(vec runtime).......:         0    inf%
+Node 1,request 0 channel work....................:       422    3.33%
+  |--stash request...............................:         0    0.00%
+Node 1,request 0 channel work(cube runtime)......:         0    inf%
+Node 1,request 0 channel work(mtc runtime).......:         0    inf%
+Node 1,request 0 channel work(vec runtime).......:         0    inf%
+Node 2,request 0 channel work....................:        24    0.19%
+  |--stash request...............................:         0    0.00%
+Node 2,request 0 channel work(cube runtime)......:         0    inf%
+Node 2,request 0 channel work(mtc runtime).......:         0    inf%
+Node 2,request 0 channel work(vec runtime).......:         0    inf%
+Node 3,request 0 channel work....................:       621    4.89%
+  |--stash request...............................:         0    0.00%
+Node 3,request 0 channel work(cube runtime)......:         0    inf%
+Node 3,request 0 channel work(mtc runtime).......:         0    inf%
+Node 3,request 0 channel work(vec runtime).......:         0    inf%
+Node 4,request 0 channel work....................:      1218    9.60%
+  |--stash request...............................:         0    0.00%
+Node 4,request 0 channel work(cube runtime)......:         0    inf%
+Node 4,request 0 channel work(mtc runtime).......:         0    inf%
+Node 4,request 0 channel work(vec runtime).......:         0    inf%
+Node 5,request 0 channel work....................:       214    1.69%
+  |--stash request...............................:         0    0.00%
+Node 5,request 0 channel work(cube runtime)......:         0    inf%
+Node 5,request 0 channel work(mtc runtime).......:         0    inf%
+Node 5,request 0 channel work(vec runtime).......:         0    inf%
+Node 6,request 0 channel work....................:       614    4.84%
+  |--stash request...............................:         0    0.00%
+Node 6,request 0 channel work(cube runtime)......:         0    inf%
+Node 6,request 0 channel work(mtc runtime).......:         0    inf%
+Node 6,request 0 channel work(vec runtime).......:         0    inf%
+Node 7,request 0 channel work....................:      1093    8.61%
+  |--stash request...............................:         0    0.00%
+Node 7,request 0 channel work(cube runtime)......:         0    inf%
+Node 7,request 0 channel work(mtc runtime).......:         0    inf%
+Node 7,request 0 channel work(vec runtime).......:         0    inf%
+Node 0,data channel work.........................:      1610   12.69%
+  |--stash request...............................:         0    0.00%
+Node 0,data channel work(cube runtime)...........:         0    inf%
+Node 0,data channel work(mtc runtime)............:         0    inf%
+Node 0,data channel work(vec runtime)............:         0    inf%
+Node 1,data channel work.........................:      1644   12.96%
+  |--stash request...............................:         0    0.00%
+Node 1,data channel work(cube runtime)...........:         0    inf%
+Node 1,data channel work(mtc runtime)............:         0    inf%
+Node 1,data channel work(vec runtime)............:         0    inf%
+Node 2,data channel work.........................:      1532   12.07%
+  |--stash request...............................:         0    0.00%
+Node 2,data channel work(cube runtime)...........:         0    inf%
+Node 2,data channel work(mtc runtime)............:         0    inf%
+Node 2,data channel work(vec runtime)............:         0    inf%
+Node 3,data channel work.........................:       810    6.38%
+  |--stash request...............................:         0    0.00%
+Node 3,data channel work(cube runtime)...........:         0    inf%
+Node 3,data channel work(mtc runtime)............:         0    inf%
+Node 3,data channel work(vec runtime)............:         0    inf%
+Node 4,data channel work.........................:       533    4.20%
+  |--stash request...............................:         0    0.00%
+Node 4,data channel work(cube runtime)...........:         0    inf%
+Node 4,data channel work(mtc runtime)............:         0    inf%
+Node 4,data channel work(vec runtime)............:         0    inf%
+Node 5,data channel work.........................:       569    4.48%
+  |--stash request...............................:         0    0.00%
+Node 5,data channel work(cube runtime)...........:         0    inf%
+Node 5,data channel work(mtc runtime)............:         0    inf%
+Node 5,data channel work(vec runtime)............:         0    inf%
+Node 6,data channel work.........................:       695    5.48%
+  |--stash request...............................:         0    0.00%
+Node 6,data channel work(cube runtime)...........:         0    inf%
+Node 6,data channel work(mtc runtime)............:         0    inf%
+Node 6,data channel work(vec runtime)............:         0    inf%
+Node 7,data channel work.........................:      2088   16.46%
+  |--stash request...............................:         0    0.00%
+Node 7,data channel work(cube runtime)...........:         0    inf%
+Node 7,data channel work(mtc runtime)............:         0    inf%
+Node 7,data channel work(vec runtime)............:         0    inf%
+===========Counterclockwise Ring statistics(link)===========
+Node 7->0,request 0 channel work.................:       262    2.06%
+  |--More than one round.........................:        22    8.40%
+Node 7->0,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,request 0 channel work.................:       422    3.33%
+  |--More than one round.........................:        23    5.45%
+Node 0->1,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,request 0 channel work.................:        24    0.19%
+  |--More than one round.........................:        21   87.50%
+Node 1->2,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,request 0 channel work.................:       621    4.89%
+  |--More than one round.........................:        23    3.70%
+Node 2->3,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,request 0 channel work.................:      1218    9.60%
+  |--More than one round.........................:        23    1.89%
+Node 3->4,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,request 0 channel work.................:       214    1.69%
+  |--More than one round.........................:        19    8.88%
+Node 4->5,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,request 0 channel work.................:       614    4.84%
+  |--More than one round.........................:        11    1.79%
+Node 5->6,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,request 0 channel work.................:      1093    8.61%
+  |--More than one round.........................:        23    2.10%
+Node 6->7,request 0 channel work(cube runtime)...:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,request 0 channel work(mtc runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,request 0 channel work(vec runtime)....:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,data channel work......................:      1610   12.69%
+  |--More than one round.........................:       163   10.12%
+Node 7->0,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 7->0,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,data channel work......................:      1644   12.96%
+  |--More than one round.........................:       203   12.35%
+Node 0->1,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 0->1,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,data channel work......................:      1532   12.07%
+  |--More than one round.........................:       181   11.81%
+Node 1->2,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 1->2,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,data channel work......................:       810    6.38%
+  |--More than one round.........................:       203   25.06%
+Node 2->3,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 2->3,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,data channel work......................:       533    4.20%
+  |--More than one round.........................:       203   38.09%
+Node 3->4,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 3->4,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,data channel work......................:       569    4.48%
+  |--More than one round.........................:       196   34.45%
+Node 4->5,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 4->5,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,data channel work......................:       695    5.48%
+  |--More than one round.........................:        95   13.67%
+Node 5->6,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 5->6,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,data channel work......................:      2088   16.46%
+  |--More than one round.........................:       203    9.72%
+Node 6->7,data channel work(cube runtime)........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,data channel work(mtc runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+Node 6->7,data channel work(vec runtime).........:         0    0.00%
+  |--More than one round.........................:         0    inf%
+==================Tile register Statistics==================
+Load request count...............................:      9310
+Store request count..............................:      6469
+Load request count of bank conflict..............:         0
+Store request count of bank conflict.............:         0
+Total load request size..........................:   2383360
+Total store request size.........................:   1656064
+Tile Tag aaccelss way cnt........................:         0
+TA use way cnt...................................:         0
+TO use way cnt...................................:         0
+Vec Load hit TA way..............................:         0
+Vec Load hit TO way..............................:         0
+Stash free way cnt...............................:         0
+  |--stash flush way cnt.........................:         0
+==================BlockISA CPU Report Stop==================

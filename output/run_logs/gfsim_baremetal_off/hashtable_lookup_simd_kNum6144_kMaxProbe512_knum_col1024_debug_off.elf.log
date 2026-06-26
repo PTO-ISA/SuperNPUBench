@@ -1,0 +1,262 @@
+/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim -f /Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/control/elf/hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col1024_debug_off.elf --stop_cycle 1000000 
+Memory: 0x10200 - 0x1020b (Size=0KB) [.stack_size]
+Memory: 0x10210 - 0x10258 (Size=0KB) [.rodata]
+Memory: 0x1025c - 0x1026f (Size=0KB) [.eh_frame_hdr]
+Memory: 0x10270 - 0x102ab (Size=0KB) [.eh_frame]
+Memory: 0x112ac - 0x1197f (Size=1KB) [.text]
+Memory: 0x12980 - 0x129cf (Size=0KB) [.init_array]
+Memory: 0x129d0 - 0x129e7 (Size=0KB) [.data.rel.ro]
+Memory: 0x139e8 - 0x270e8e7 (Size=39915KB) [.data]
+Memory: 0x270e8e8 - 0x27149d3 (Size=24KB) [.bss]
+Memory: 0x27149d8 - 0x2714a27 (Size=0KB) [.sbss]
+Memory: 0x2714a30 - 0xa715a30 (Size=131076KB) [stack mem]
+Memory: 0x4000802000 - 0x4008803000 (Size=131076KB) [map mem]
+res verify failed
+[C:19941  ][BCC.STAGE ]: ==================================================
+[C:19941  ][BCC.STAGE ]: size: 75
+[C:19941  ][BCC.STAGE ]: 	|--B65 STID0 BPC 0x113d8 [TMA FALL] rdy:1  TSTORE, lb0:16, lb1:1, lb2:16 stash ready:0 INT64 DR, NORM.normal, INVALID, none M#1 TileTag:5 addr:0x148000 size:128 way:0 ready:1 isZero: 0-> GMBase:0xa7159a8 stride:128 TMA issued<- oldest
+[C:19941  ][BCC.STAGE ]: 	|--B66 STID0 BPC 0x113ee [TMA FALL] rdy:1  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[T#1 TileTag:10 addr:0x8000 size:8192 way:0 ready:1 isZero: 0], -> T TileTag:13 addr:0x8000 size:8192 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B67 STID0 BPC 0x113f6 [TMA FALL] rdy:1  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[T#1 TileTag:12 addr:0xb000 size:4096 way:0 ready:1 isZero: 0], -> T TileTag:14 addr:0xb000 size:4096 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B68 STID0 BPC 0x113fe [TMA FALL] rdy:1  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[U#1 TileTag:7 addr:0xa5000 size:4096 way:0 ready:1 isZero: 0], -> U TileTag:8 addr:0xa5000 size:4096 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B69 STID0 BPC 0x11406 [STD COND] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B70 STID0 BPC 0x11474 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B71 STID0 BPC 0x11486 [TMA FALL] rdy:1  TSTORE, lb0:1024, lb1:1, lb2:1024 stash ready:0 INT32 DR, NORM.normal, INVALID, none U#1 TileTag:8 addr:0xa5000 size:4096 way:0 ready:1 isZero: 0-> GMBase:0x2710472 stride:4096 TMA issued
+[C:19941  ][BCC.STAGE ]: 	|--B72 STID0 BPC 0x114a0 [STD COND] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B73 STID0 BPC 0x11314 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B74 STID0 BPC 0x1132a [TMA FALL] rdy:1  TLOAD, lb0:1024, lb1:1, lb2:1024 stash ready:0 INT64 DR, NORM.normal, INVALID, none GMBase:0x27025ce stride:8192 -> T TileTag:15 addr:0xc000 size:8192 way:0 ready:0 isZero: 0 TMA completed
+[C:19941  ][BCC.STAGE ]: 	|--B75 STID0 BPC 0x11344 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B76 STID0 BPC 0x1134e [VPAR FALL] VS16 rdy:1 , lb0:1024, lb1:1, lb2:1 stash ready:0 INVALID  textPC:0x116d4 T0[T#1 TileTag:15 addr:0xc000 size:8192 way:0 ready:1 isZero: 0], -> T TileTag:16 addr:0xe000 size:4096 way:0 ready:0 isZero: 0 VEC completed
+[C:19941  ][BCC.STAGE ]: 	|--B77 STID0 BPC 0x11362 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B78 STID0 BPC 0x11366 [VPAR FALL] VS16 rdy:1 , lb0:1024, lb1:1, lb2:1 stash ready:0 INVALID  textPC:0x11834  -> U TileTag:9 addr:0xa6000 size:4096 way:0 ready:0 isZero: 0 VEC completed
+[C:19941  ][BCC.STAGE ]: 	|--B79 STID0 BPC 0x1137a [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B80 STID0 BPC 0x1137e [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B81 STID0 BPC 0x11388 [TMA FALL] rdy:1  MGATHER, lb0:1024, lb1:1, lb2:1 stash ready:0 INT64 T0[T#1 TileTag:16 addr:0xe000 size:4096 way:0 ready:1 isZero: 0], -> M TileTag:6 addr:0x149000 size:8192 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B82 STID0 BPC 0x1139a [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B83 STID0 BPC 0x113a0 [TMA FALL] rdy:1  MGATHER, lb0:1024, lb1:1, lb2:1 stash ready:0 INT32 T0[T#1 TileTag:16 addr:0xe000 size:4096 way:0 ready:1 isZero: 0], -> N TileTag:3 addr:0x1e3000 size:4096 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B84 STID0 BPC 0x113b2 [VPAR FALL] VS16 rdy:1 , lb0:1024, lb1:1, lb2:1 stash ready:0 INVALID  textPC:0x11844 T0[T#1 TileTag:15 addr:0xc000 size:8192 way:0 ready:1 isZero: 0],T1[M#1 TileTag:6 addr:0x149000 size:8192 way:0 ready:1 isZero: 0],T2[N#1 TileTag:3 addr:0x1e3000 size:4096 way:0 ready:1 isZero: 0],T3[T#1 TileTag:16 addr:0xe000 size:4096 way:0 ready:1 isZero: 0],T4[U#1 TileTag:9 addr:0xa6000 size:4096 way:0 ready:1 isZero: 0], -> T TileTag:17 addr:0xf000 size:4096 way:0 ready:0 isZero: 0 -> U TileTag:10 addr:0xa7000 size:4096 way:0 ready:0 isZero: 0 -> M TileTag:7 addr:0x14b000 size:128 way:0 ready:0 isZero: 0 VEC completed
+[C:19941  ][BCC.STAGE ]: 	|--B85 STID0 BPC 0x113ce [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B86 STID0 BPC 0x113d8 [TMA FALL] rdy:1  TSTORE, lb0:16, lb1:1, lb2:16 stash ready:0 INT64 DR, NORM.normal, INVALID, none M#1 TileTag:7 addr:0x14b000 size:128 way:0 ready:1 isZero: 0-> GMBase:0xa7159a8 stride:128 TMA issued
+[C:19941  ][BCC.STAGE ]: 	|--B87 STID0 BPC 0x113ee [TMA FALL] rdy:1  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[T#1 TileTag:15 addr:0xc000 size:8192 way:0 ready:1 isZero: 0], -> T TileTag:18 addr:0xc000 size:8192 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B88 STID0 BPC 0x113f6 [TMA FALL] rdy:1  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[T#1 TileTag:17 addr:0xf000 size:4096 way:0 ready:1 isZero: 0], -> T TileTag:19 addr:0xf000 size:4096 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B89 STID0 BPC 0x113fe [TMA FALL] rdy:1  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[U#1 TileTag:10 addr:0xa7000 size:4096 way:0 ready:1 isZero: 0], -> U TileTag:11 addr:0xa7000 size:4096 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B90 STID0 BPC 0x11406 [STD COND] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B91 STID0 BPC 0x11474 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B92 STID0 BPC 0x11486 [TMA FALL] rdy:1  TSTORE, lb0:1024, lb1:1, lb2:1024 stash ready:0 INT32 DR, NORM.normal, INVALID, none U#1 TileTag:11 addr:0xa7000 size:4096 way:0 ready:1 isZero: 0-> GMBase:0x2711472 stride:4096 TMA issued
+[C:19941  ][BCC.STAGE ]: 	|--B93 STID0 BPC 0x114a0 [STD COND] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B94 STID0 BPC 0x11314 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B95 STID0 BPC 0x1132a [TMA FALL] rdy:1  TLOAD, lb0:1024, lb1:1, lb2:1024 stash ready:0 INT64 DR, NORM.normal, INVALID, none GMBase:0x27045ce stride:8192 -> T TileTag:20 addr:0x10000 size:8192 way:0 ready:0 isZero: 0 TMA completed
+[C:19941  ][BCC.STAGE ]: 	|--B96 STID0 BPC 0x11344 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B97 STID0 BPC 0x1134e [VPAR FALL] VS16 rdy:1 , lb0:1024, lb1:1, lb2:1 stash ready:0 INVALID  textPC:0x116d4 T0[T#1 TileTag:20 addr:0x10000 size:8192 way:0 ready:1 isZero: 0], -> T TileTag:21 addr:0x12000 size:4096 way:0 ready:0 isZero: 0 VEC completed
+[C:19941  ][BCC.STAGE ]: 	|--B98 STID0 BPC 0x11362 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B99 STID0 BPC 0x11366 [VPAR FALL] VS16 rdy:1 , lb0:1024, lb1:1, lb2:1 stash ready:0 INVALID  textPC:0x11834  -> U TileTag:12 addr:0xa8000 size:4096 way:0 ready:0 isZero: 0 VEC completed
+[C:19941  ][BCC.STAGE ]: 	|--B100 STID0 BPC 0x1137a [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B101 STID0 BPC 0x1137e [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B102 STID0 BPC 0x11388 [TMA FALL] rdy:1  MGATHER, lb0:1024, lb1:1, lb2:1 stash ready:0 INT64 T0[T#1 TileTag:21 addr:0x12000 size:4096 way:0 ready:1 isZero: 0], -> M TileTag:8 addr:0x14c000 size:8192 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B103 STID0 BPC 0x1139a [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B104 STID0 BPC 0x113a0 [TMA FALL] rdy:1  MGATHER, lb0:1024, lb1:1, lb2:1 stash ready:0 INT32 T0[T#1 TileTag:21 addr:0x12000 size:4096 way:0 ready:1 isZero: 0], -> N TileTag:4 addr:0x1e4000 size:4096 way:0 ready:0 isZero: 0 TAU issued
+[C:19941  ][BCC.STAGE ]: 	|--B105 STID0 BPC 0x113b2 [VPAR FALL] VS16 rdy:0 , lb0:1024, lb1:1, lb2:1 stash ready:0 INVALID  textPC:0x11844 T0[T#1 TileTag:20 addr:0x10000 size:8192 way:0 ready:1 isZero: 0],T1[M#1 TileTag:8 addr:0x14c000 size:8192 way:0 ready:1 isZero: 0],T2[N#1 TileTag:4 addr:0x1e4000 size:4096 way:0 ready:0 isZero: 0],T3[T#1 TileTag:21 addr:0x12000 size:4096 way:0 ready:1 isZero: 0],T4[U#1 TileTag:12 addr:0xa8000 size:4096 way:0 ready:1 isZero: 0], -> T TileTag:22 addr:0x13000 size:4096 way:0 ready:0 isZero: 0 -> U TileTag:13 addr:0xa9000 size:4096 way:0 ready:0 isZero: 0 -> M TileTag:9 addr:0x14e000 size:128 way:0 ready:0 isZero: 0 VEC allocated
+[C:19941  ][BCC.STAGE ]: 	|--B106 STID0 BPC 0x113ce [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B107 STID0 BPC 0x113d8 [TMA FALL] rdy:0  TSTORE, lb0:16, lb1:1, lb2:16 stash ready:0 INT64 DR, NORM.normal, INVALID, none M#1 TileTag:9 addr:0x14e000 size:128 way:0 ready:0 isZero: 0-> GMBase:0xa7159a8 stride:128 TMA allocated
+[C:19941  ][BCC.STAGE ]: 	|--B108 STID0 BPC 0x113ee [TMA FALL] rdy:1  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[T#1 TileTag:20 addr:0x10000 size:8192 way:0 ready:1 isZero: 0], -> T TileTag:23 addr:0x10000 size:8192 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B109 STID0 BPC 0x113f6 [TMA FALL] rdy:0  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[T#1 TileTag:22 addr:0x13000 size:4096 way:0 ready:0 isZero: 0], -> T TileTag:24 addr:0x13000 size:4096 way:0 ready:0 isZero: 0 TAU allocated
+[C:19941  ][BCC.STAGE ]: 	|--B110 STID0 BPC 0x113fe [TMA FALL] rdy:0  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[U#1 TileTag:13 addr:0xa9000 size:4096 way:0 ready:0 isZero: 0], -> U TileTag:14 addr:0xa9000 size:4096 way:0 ready:0 isZero: 0 TAU allocated
+[C:19941  ][BCC.STAGE ]: 	|--B111 STID0 BPC 0x11406 [STD COND] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B112 STID0 BPC 0x11474 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B113 STID0 BPC 0x11486 [TMA FALL] rdy:0  TSTORE, lb0:1024, lb1:1, lb2:1024 stash ready:0 INT32 DR, NORM.normal, INVALID, none U#1 TileTag:14 addr:0xa9000 size:4096 way:0 ready:0 isZero: 0-> GMBase:0x2712472 stride:4096 TMA allocated
+[C:19941  ][BCC.STAGE ]: 	|--B114 STID0 BPC 0x114a0 [STD COND] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B115 STID0 BPC 0x11314 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B116 STID0 BPC 0x1132a [TMA FALL] rdy:1  TLOAD, lb0:1024, lb1:1, lb2:1024 stash ready:0 INT64 DR, NORM.normal, INVALID, none GMBase:0x27065ce stride:8192 -> T TileTag:25 addr:0x14000 size:8192 way:0 ready:0 isZero: 0 TMA completed
+[C:19941  ][BCC.STAGE ]: 	|--B117 STID0 BPC 0x11344 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B118 STID0 BPC 0x1134e [VPAR FALL] VS16 rdy:1 , lb0:1024, lb1:1, lb2:1 stash ready:0 INVALID  textPC:0x116d4 T0[T#1 TileTag:25 addr:0x14000 size:8192 way:0 ready:1 isZero: 0], -> T TileTag:26 addr:0x2000 size:4096 way:0 ready:0 isZero: 0 VEC completed
+[C:19941  ][BCC.STAGE ]: 	|--B119 STID0 BPC 0x11362 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B120 STID0 BPC 0x11366 [VPAR FALL] VS16 rdy:1 , lb0:1024, lb1:1, lb2:1 stash ready:0 INVALID  textPC:0x11834  -> U TileTag:15 addr:0xa0000 size:4096 way:0 ready:0 isZero: 0 VEC completed
+[C:19941  ][BCC.STAGE ]: 	|--B121 STID0 BPC 0x1137a [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B122 STID0 BPC 0x1137e [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B123 STID0 BPC 0x11388 [TMA FALL] rdy:1  MGATHER, lb0:1024, lb1:1, lb2:1 stash ready:0 INT64 T0[T#1 TileTag:26 addr:0x2000 size:4096 way:0 ready:1 isZero: 0], -> M TileTag:10 addr:0x140000 size:8192 way:0 ready:0 isZero: 0 TAU issued
+[C:19941  ][BCC.STAGE ]: 	|--B124 STID0 BPC 0x1139a [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B125 STID0 BPC 0x113a0 [TMA FALL] rdy:1  MGATHER, lb0:1024, lb1:1, lb2:1 stash ready:0 INT32 T0[T#1 TileTag:26 addr:0x2000 size:4096 way:0 ready:1 isZero: 0], -> N TileTag:5 addr:0x1e0000 size:4096 way:0 ready:0 isZero: 0 TAU issued
+[C:19941  ][BCC.STAGE ]: 	|--B126 STID0 BPC 0x113b2 [VPAR FALL] VS16 rdy:0 , lb0:1024, lb1:1, lb2:1 stash ready:0 INVALID  textPC:0x11844 T0[T#1 TileTag:25 addr:0x14000 size:8192 way:0 ready:1 isZero: 0],T1[M#1 TileTag:10 addr:0x140000 size:8192 way:0 ready:0 isZero: 0],T2[N#1 TileTag:5 addr:0x1e0000 size:4096 way:0 ready:0 isZero: 0],T3[T#1 TileTag:26 addr:0x2000 size:4096 way:0 ready:1 isZero: 0],T4[U#1 TileTag:15 addr:0xa0000 size:4096 way:0 ready:1 isZero: 0], -> T TileTag:27 addr:0x16000 size:4096 way:0 ready:0 isZero: 0 -> U TileTag:16 addr:0xaa000 size:4096 way:0 ready:0 isZero: 0 -> M TileTag:11 addr:0x14f000 size:128 way:0 ready:0 isZero: 0 VEC allocated
+[C:19941  ][BCC.STAGE ]: 	|--B127 STID0 BPC 0x113ce [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B128 STID0 BPC 0x113d8 [TMA FALL] rdy:0  TSTORE, lb0:16, lb1:1, lb2:16 stash ready:0 INT64 DR, NORM.normal, INVALID, none M#1 TileTag:11 addr:0x14f000 size:128 way:0 ready:0 isZero: 0-> GMBase:0xa7159a8 stride:128 TMA allocated
+[C:19941  ][BCC.STAGE ]: 	|--B129 STID0 BPC 0x113ee [TMA FALL] rdy:1  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[T#1 TileTag:25 addr:0x14000 size:8192 way:0 ready:1 isZero: 0], -> T TileTag:28 addr:0x14000 size:8192 way:0 ready:0 isZero: 0 TAU completed
+[C:19941  ][BCC.STAGE ]: 	|--B130 STID0 BPC 0x113f6 [TMA FALL] rdy:0  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[T#1 TileTag:27 addr:0x16000 size:4096 way:0 ready:0 isZero: 0], -> T TileTag:29 addr:0x16000 size:4096 way:0 ready:0 isZero: 0 TAU allocated
+[C:19941  ][BCC.STAGE ]: 	|--B131 STID0 BPC 0x113fe [TMA FALL] rdy:0  TMOV, lb0:1, lb1:1, lb2:1 stash ready:0 INVALID T0[U#1 TileTag:16 addr:0xaa000 size:4096 way:0 ready:0 isZero: 0], -> U TileTag:17 addr:0xaa000 size:4096 way:0 ready:0 isZero: 0 TAU allocated
+[C:19941  ][BCC.STAGE ]: 	|--B132 STID0 BPC 0x11406 [STD COND] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B133 STID0 BPC 0x11474 [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B134 STID0 BPC 0x11486 [TMA FALL] rdy:0  TSTORE, lb0:1024, lb1:1, lb2:1024 stash ready:0 INT32 DR, NORM.normal, INVALID, none U#1 TileTag:17 addr:0xaa000 size:4096 way:0 ready:0 isZero: 0-> GMBase:0x2713472 stride:4096 TMA allocated
+[C:19941  ][BCC.STAGE ]: 	|--B135 STID0 BPC 0x114a0 [STD COND] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B136 STID0 BPC 0x114aa [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B137 STID0 BPC 0x114ae [STD FALL] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B138 STID0 BPC 0x114b2 [STD RET FRET_STK] STD completed
+[C:19941  ][BCC.STAGE ]: 	|--B139 STID0 BPC 0x112b0 [SYS FALL] STD terminate
+[C:19941  ][BCC.STAGE ]: ==================================================
+B65 STID0 BPC 0x113d8 [TMA FALL] rdy:1  TSTORE, lb0:16, lb1:1, lb2:16 stash ready:0 INT64 DR, NORM.normal, INVALID, none M#1 TileTag:5 addr:0x148000 size:128 way:0 ready:1 isZero: 0-> GMBase:0xa7159a8 stride:128 TMA issued
+[C:19941  ][SPE.STAGE ]: ==================================================
+[C:19941  ][SPE.STAGE ]: PEID:0 tid:0, size 0 osdSize 0
+[C:19941  ][SPE.STAGE ]: ==================================================
+[C:19941  ][VECTOR.STAGE]: ==================================================
+[C:19941  ][VECTOR.STAGE]: PEID:1 tid:0, size 0 osdSize 0
+[C:19941  ][VECTOR.STAGE]: ==================================================
+[C:19941  ][VECTOR.STAGE]: PEID:1 tid:1, size 0 osdSize 0
+[C:19941  ][VECTOR.STAGE]: ==================================================
+[C:19941  ][VECTOR.STAGE]: PEID:1 tid:2, size 0 osdSize 0
+[C:19941  ][VECTOR.STAGE]: ==================================================
+[C:19941  ][VECTOR.STAGE]: PEID:1 tid:3, size 0 osdSize 0
+dump load queue
+==dump store queue at cycle 19942 ==
+  (no valid entries)
+==dump retireScbMap at cycle 19942 ==
+  Thread 0: (empty)
+  Thread 1: (empty)
+  Thread 2: (empty)
+  Thread 3: (empty)
+=dump scb=
+===== vec LM Dump start: =====
+
+m_blockCmdBufferIDPool is empty: 0
+===== vec LM Dump end: =====
+[C:19941  ][VECTOR.STAGE]: ==================================================
+[C:19941  ][VECTOR.STAGE]: PEID:1 tid:0, size 0 osdSize 0
+[C:19941  ][VECTOR.STAGE]: ==================================================
+[C:19941  ][VECTOR.STAGE]: PEID:1 tid:1, size 0 osdSize 0
+[C:19941  ][VECTOR.STAGE]: ==================================================
+[C:19941  ][VECTOR.STAGE]: PEID:1 tid:2, size 0 osdSize 0
+[C:19941  ][VECTOR.STAGE]: ==================================================
+[C:19941  ][VECTOR.STAGE]: PEID:1 tid:3, size 0 osdSize 0
+[C:19941  ][VECTOR.NA ]: ===== vec GS Dump start: =====
+[C:19941  ][VECTOR.NA ]: freeSlotsIdList:index:0 <1> index:1 <1> index:2 <1> index:3 <1> index:4 <1> index:5 <1> index:6 <1> index:7 <1> index:8 <1> index:9 <1> index:10 <1> index:11 <1> index:12 <1> index:13 <1> index:14 <1> index:15 <1> index:16 <1> index:17 <1> index:18 <1> index:19 <1> index:20 <1> index:21 <1> index:22 <1> index:23 <1> index:24 <1> index:25 <1> index:26 <1> index:27 <1> index:28 <1> index:29 <1> index:30 <1> index:31 <1> 
+
+[C:19941  ][VECTOR.NA ]: ===== vec GSDump end: =====
+hand T deallocPtr:0 retirePtr:13 lastAllocPtr:30 allocPtr:30 size 98
+ Index 0 Entry vtag:0 ptag:0 occuiped size:2 addr:0 size:8192 hand:T retired:1 ready:1 kill:0
+ Index 1 Entry vtag:1 ptag:2 occuiped size:1 addr:2000 size:4096 hand:T retired:1 ready:1 kill:1
+ Index 2 Entry vtag:2 ptag:3 occuiped size:1 addr:3000 size:4096 hand:T retired:1 ready:1 kill:0
+ Index 3 Entry vtag:3 ptag:0 occuiped size:2 addr:0 size:8192 hand:T retired:1 ready:1 kill:0
+ Index 4 Entry vtag:4 ptag:3 occuiped size:1 addr:3000 size:4096 hand:T retired:1 ready:1 kill:0
+ Index 5 Entry vtag:5 ptag:4 occuiped size:2 addr:4000 size:8192 hand:T retired:1 ready:1 kill:0
+ Index 6 Entry vtag:6 ptag:6 occuiped size:1 addr:6000 size:4096 hand:T retired:1 ready:1 kill:1
+ Index 7 Entry vtag:7 ptag:7 occuiped size:1 addr:7000 size:4096 hand:T retired:1 ready:1 kill:0
+ Index 8 Entry vtag:8 ptag:4 occuiped size:2 addr:4000 size:8192 hand:T retired:1 ready:1 kill:0
+ Index 9 Entry vtag:9 ptag:7 occuiped size:1 addr:7000 size:4096 hand:T retired:1 ready:1 kill:0
+ Index 10 Entry vtag:10 ptag:8 occuiped size:2 addr:8000 size:8192 hand:T retired:1 ready:1 kill:0
+ Index 11 Entry vtag:11 ptag:10 occuiped size:1 addr:a000 size:4096 hand:T retired:1 ready:1 kill:1
+ Index 12 Entry vtag:12 ptag:11 occuiped size:1 addr:b000 size:4096 hand:T retired:1 ready:1 kill:0
+ Index 13 Entry vtag:13 ptag:8 occuiped size:2 addr:8000 size:8192 hand:T retired:0 ready:1 kill:0
+ Index 14 Entry vtag:14 ptag:11 occuiped size:1 addr:b000 size:4096 hand:T retired:0 ready:1 kill:0
+ Index 15 Entry vtag:15 ptag:12 occuiped size:2 addr:c000 size:8192 hand:T retired:0 ready:1 kill:0
+ Index 16 Entry vtag:16 ptag:14 occuiped size:1 addr:e000 size:4096 hand:T retired:0 ready:1 kill:1
+ Index 17 Entry vtag:17 ptag:15 occuiped size:1 addr:f000 size:4096 hand:T retired:0 ready:1 kill:0
+ Index 18 Entry vtag:18 ptag:12 occuiped size:2 addr:c000 size:8192 hand:T retired:0 ready:1 kill:0
+ Index 19 Entry vtag:19 ptag:15 occuiped size:1 addr:f000 size:4096 hand:T retired:0 ready:1 kill:0
+ Index 20 Entry vtag:20 ptag:16 occuiped size:2 addr:10000 size:8192 hand:T retired:0 ready:1 kill:0
+ Index 21 Entry vtag:21 ptag:18 occuiped size:1 addr:12000 size:4096 hand:T retired:0 ready:1 kill:0
+ Index 22 Entry vtag:22 ptag:19 occuiped size:1 addr:13000 size:4096 hand:T retired:0 ready:0 kill:0
+ Index 23 Entry vtag:23 ptag:16 occuiped size:2 addr:10000 size:8192 hand:T retired:0 ready:1 kill:0
+ Index 24 Entry vtag:24 ptag:19 occuiped size:1 addr:13000 size:4096 hand:T retired:0 ready:0 kill:0
+ Index 25 Entry vtag:25 ptag:20 occuiped size:2 addr:14000 size:8192 hand:T retired:0 ready:1 kill:0
+ Index 26 Entry vtag:26 ptag:2 occuiped size:1 addr:2000 size:4096 hand:T retired:0 ready:1 kill:0
+ Index 27 Entry vtag:27 ptag:22 occuiped size:1 addr:16000 size:4096 hand:T retired:0 ready:0 kill:0
+ Index 28 Entry vtag:28 ptag:20 occuiped size:2 addr:14000 size:8192 hand:T retired:0 ready:1 kill:0
+ Index 29 Entry vtag:29 ptag:22 occuiped size:1 addr:16000 size:4096 hand:T retired:0 ready:0 kill:0
+hand U deallocPtr:0 retirePtr:8 lastAllocPtr:18 allocPtr:18 size 110
+ Index 0 Entry vtag:0 ptag:160 occuiped size:1 addr:a0000 size:4096 hand:U retired:1 ready:1 kill:1
+ Index 1 Entry vtag:1 ptag:161 occuiped size:1 addr:a1000 size:4096 hand:U retired:1 ready:1 kill:0
+ Index 2 Entry vtag:2 ptag:161 occuiped size:1 addr:a1000 size:4096 hand:U retired:1 ready:1 kill:1
+ Index 3 Entry vtag:3 ptag:162 occuiped size:1 addr:a2000 size:4096 hand:U retired:1 ready:1 kill:1
+ Index 4 Entry vtag:4 ptag:163 occuiped size:1 addr:a3000 size:4096 hand:U retired:1 ready:1 kill:0
+ Index 5 Entry vtag:5 ptag:163 occuiped size:1 addr:a3000 size:4096 hand:U retired:1 ready:1 kill:1
+ Index 6 Entry vtag:6 ptag:164 occuiped size:1 addr:a4000 size:4096 hand:U retired:1 ready:1 kill:1
+ Index 7 Entry vtag:7 ptag:165 occuiped size:1 addr:a5000 size:4096 hand:U retired:1 ready:1 kill:0
+ Index 8 Entry vtag:8 ptag:165 occuiped size:1 addr:a5000 size:4096 hand:U retired:0 ready:1 kill:0
+ Index 9 Entry vtag:9 ptag:166 occuiped size:1 addr:a6000 size:4096 hand:U retired:0 ready:1 kill:1
+ Index 10 Entry vtag:10 ptag:167 occuiped size:1 addr:a7000 size:4096 hand:U retired:0 ready:1 kill:0
+ Index 11 Entry vtag:11 ptag:167 occuiped size:1 addr:a7000 size:4096 hand:U retired:0 ready:1 kill:0
+ Index 12 Entry vtag:12 ptag:168 occuiped size:1 addr:a8000 size:4096 hand:U retired:0 ready:1 kill:0
+ Index 13 Entry vtag:13 ptag:169 occuiped size:1 addr:a9000 size:4096 hand:U retired:0 ready:0 kill:0
+ Index 14 Entry vtag:14 ptag:169 occuiped size:1 addr:a9000 size:4096 hand:U retired:0 ready:0 kill:0
+ Index 15 Entry vtag:15 ptag:160 occuiped size:1 addr:a0000 size:4096 hand:U retired:0 ready:1 kill:0
+ Index 16 Entry vtag:16 ptag:170 occuiped size:1 addr:aa000 size:4096 hand:U retired:0 ready:0 kill:0
+ Index 17 Entry vtag:17 ptag:170 occuiped size:1 addr:aa000 size:4096 hand:U retired:0 ready:0 kill:0
+hand M deallocPtr:0 retirePtr:6 lastAllocPtr:12 allocPtr:12 size 116
+ Index 0 Entry vtag:0 ptag:320 occuiped size:2 addr:140000 size:8192 hand:M retired:1 ready:1 kill:1
+ Index 1 Entry vtag:1 ptag:322 occuiped size:1 addr:142000 size:128 hand:M retired:1 ready:1 kill:1
+ Index 2 Entry vtag:2 ptag:323 occuiped size:2 addr:143000 size:8192 hand:M retired:1 ready:1 kill:1
+ Index 3 Entry vtag:3 ptag:325 occuiped size:1 addr:145000 size:128 hand:M retired:1 ready:1 kill:1
+ Index 4 Entry vtag:4 ptag:326 occuiped size:2 addr:146000 size:8192 hand:M retired:1 ready:1 kill:1
+ Index 5 Entry vtag:5 ptag:328 occuiped size:1 addr:148000 size:128 hand:M retired:1 ready:1 kill:0
+ Index 6 Entry vtag:6 ptag:329 occuiped size:2 addr:149000 size:8192 hand:M retired:0 ready:1 kill:1
+ Index 7 Entry vtag:7 ptag:331 occuiped size:1 addr:14b000 size:128 hand:M retired:0 ready:1 kill:0
+ Index 8 Entry vtag:8 ptag:332 occuiped size:2 addr:14c000 size:8192 hand:M retired:0 ready:1 kill:0
+ Index 9 Entry vtag:9 ptag:334 occuiped size:1 addr:14e000 size:128 hand:M retired:0 ready:0 kill:0
+ Index 10 Entry vtag:10 ptag:320 occuiped size:2 addr:140000 size:8192 hand:M retired:0 ready:0 kill:0
+ Index 11 Entry vtag:11 ptag:335 occuiped size:1 addr:14f000 size:128 hand:M retired:0 ready:0 kill:0
+hand N deallocPtr:0 retirePtr:3 lastAllocPtr:6 allocPtr:6 size 122
+ Index 0 Entry vtag:0 ptag:480 occuiped size:1 addr:1e0000 size:4096 hand:N retired:1 ready:1 kill:1
+ Index 1 Entry vtag:1 ptag:481 occuiped size:1 addr:1e1000 size:4096 hand:N retired:1 ready:1 kill:1
+ Index 2 Entry vtag:2 ptag:482 occuiped size:1 addr:1e2000 size:4096 hand:N retired:1 ready:1 kill:1
+ Index 3 Entry vtag:3 ptag:483 occuiped size:1 addr:1e3000 size:4096 hand:N retired:0 ready:1 kill:1
+ Index 4 Entry vtag:4 ptag:484 occuiped size:1 addr:1e4000 size:4096 hand:N retired:0 ready:0 kill:0
+ Index 5 Entry vtag:5 ptag:480 occuiped size:1 addr:1e0000 size:4096 hand:N retired:0 ready:0 kill:0
+hand STK deallocPtr:0 retirePtr:0 lastAllocPtr:0 allocPtr:0 size 128
+hand MCALL_GPR deallocPtr:0 retirePtr:0 lastAllocPtr:0 allocPtr:0 size 128
+hand MCALL_STK deallocPtr:0 retirePtr:0 lastAllocPtr:0 allocPtr:0 size 128
+tileRegSize: 2560
+totalTileSize: 2621440
+T used size: 81920
+U used size: 32768
+M used size: 32768
+N used size: 8192
+STK used size: 0
+MCALL_GPR used size: 0
+MCALL_STK used size: 0
+================ fetchThQ Dump ====================
+stid=0
+empty
+================ fetchThQ Dump End ================
+========================== DUMP BFU STATUS ==========================
+F0, state: STALL
+	fb[0] = { stid: 0, fbid: 85, va: 0x112f2 }
+	fb[1] = nullptr
+	fb[2] = nullptr
+	fb[3] = nullptr
+F1, state: STALL
+	fb[0] = nullptr
+	fb[1] = nullptr
+	fb[2] = nullptr
+	fb[3] = nullptr
+F2, state: STALL
+	fb[0] = { stid: 0, fbid: 84, va: 0x0 }
+	fb[1] = nullptr
+	fb[2] = nullptr
+	fb[3] = nullptr
+F3, state: INVALID
+F4, state: INVALID
+========================== DUMP BFU END =============================
+
+---------------------------------------------------------------------
+ERROR:Deadlock execution at:
+ thread: 0B65 STID0 BPC 0x113d8 [TMA FALL] rdy:1  TSTORE, lb0:16, lb1:1, lb2:16 stash ready:0 INT64 DR, NORM.normal, INVALID, none M#1 TileTag:5 addr:0x148000 size:128 way:0 ready:1 isZero: 0-> GMBase:0xa7159a8 stride:128 TMA issued
+    Cycle:19942
+    Error BlockID:65
+    Wait cycles:3999
+    Reference queue depth:141
+    Ref BPC: 0x113ce isPar: 0
+    Model BPC: 0x113d8 isPar: 1 completed: false
+    Model Execute Minst:
+         thread: 0BlockCmd:B65 STID0 BPC 0x113d8 [TMA FALL] rdy:1  TSTORE, lb0:16, lb1:1, lb2:16 stash ready:0 INT64 DR, NORM.normal, INVALID, none M#1 TileTag:5 addr:0x148000 size:128 way:0 ready:1 isZero: 0-> GMBase:0xa7159a8 stride:128
+        Total Group Num:0, completed:0
+            TPC 0x113d8, opcode: BSTART, data: 0x0
+    Reference Execute Minst:
+            TPC 0x113ce, opcode: BSTART, data: 0x0
+    Please check function model log at line: B65 M0
+    0 instructions correctly executed so far
+---------------------------------------------------------------------
+
+libc++abi: terminating due to uncaught exception of type JCore::Error: ASSERTION FAILED: false && "res verify failed"
+, func ResVerify, file /Users/liyi/Documents/GitHub/LinxCoreModel/model/SimSys.cpp:1113
+stack:
+0   gfsim                               0x0000000104cf6acc _ZN5JCore12GetBacktraceEmm + 36
+1   gfsim                               0x0000000104586d28 _ZN5JCore6SimSys9ResVerifyEv + 808
+2   gfsim                               0x00000001044b55c0 main + 11672
+3   dyld                                0x0000000185357e00 start + 6992
+

@@ -1,0 +1,1 @@
+/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim -f /Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/sort/elf/topk.elf --stop_cycle 1000000 
