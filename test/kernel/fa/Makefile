@@ -21,7 +21,7 @@ ifeq ($(TESTCASE), fa_HIF4_HIF4)
    DEFINES += -DXdim=$(X)
    DEFINES += -DYdim=$(Y)
    ifneq ($(MODE), )
-      DEFINES += -DMODE=\"$(MODE)\"
+      DEFINES += -D$(MODE)
    endif
    ifneq ($(NAME), )
       TARGET = $(ELF_HEAD)/$(NAME)_$(MODE)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk)_X$(X)_Y$(Y).elf

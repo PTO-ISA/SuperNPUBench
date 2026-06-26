@@ -81,13 +81,13 @@ int main(){
         for(int j=0;j<H;j++){
             #ifdef BF16
             // Sq256_Skv8192_
-                // flash_attention_2d_unroll_hif4<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
             #elif defined(BF16x2)
-                // flash_attention_2d_unroll_hif4<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
             #elif defined(BF16x2_NOGATHER)
-                // flash_attention_2d_unroll_hif4_nogather<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4_nogather<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
             #elif defined(BF16_NOGATHER)
-                // flash_attention_2d_unroll_hif4_nogather<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4_nogather<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
             #elif defined(OPT)
                 // support X1 Y4
                 flash_attention_2d_unroll_hif4_optsoftmax<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
