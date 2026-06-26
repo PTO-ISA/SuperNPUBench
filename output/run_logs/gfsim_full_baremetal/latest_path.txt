@@ -1,0 +1,1 @@
+/Users/liyi/Documents/GitHub/SuperNPUBench/output/run_logs/gfsim_full_baremetal/run_20260625_232108_serial

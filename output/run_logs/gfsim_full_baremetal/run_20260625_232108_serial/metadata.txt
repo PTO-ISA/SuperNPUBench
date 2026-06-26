@@ -1,0 +1,6 @@
+run_dir	/Users/liyi/Documents/GitHub/SuperNPUBench/output/run_logs/gfsim_full_baremetal/run_20260625_232108_serial
+sim	/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim
+elf_count	57
+jobs	1
+report_timeout_sec	300
+strategy	serial pty gfsim -f; category priority: reduction/sort/element_wise/concat/gather/transpose/matmul/fa/broadcast; terminate after report marker

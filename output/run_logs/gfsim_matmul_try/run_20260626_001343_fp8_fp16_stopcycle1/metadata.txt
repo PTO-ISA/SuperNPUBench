@@ -1,0 +1,4 @@
+run_dir	/Users/liyi/Documents/GitHub/SuperNPUBench/output/run_logs/gfsim_matmul_try/run_20260626_001343_fp8_fp16_stopcycle1
+stop_cycle	1
+wall_timeout_sec	90
+note	non-dynamic FP8 and FP16 matmul bounded trials, serial, no RLIMIT_AS

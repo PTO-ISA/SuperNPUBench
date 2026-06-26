@@ -1,0 +1,2 @@
+status	exit_code	total_cycles	sim_total_cycles	elapsed_sec	report_elapsed_sec	elf	log
+EXIT_-9	-9			44.3		/Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/matmul/elf/kernel_matmul/matmul_MASK_MASK_FP32_DYNAMIC_M256_N256_K256_tM64_tN64_tK64.elf	/Users/liyi/Documents/GitHub/SuperNPUBench/output/run_logs/gfsim_matmul_try/run_20260625_233552/matmul_MASK_MASK_FP32_DYNAMIC_M256_N256_K256_tM64_tN64_tK64.elf.log

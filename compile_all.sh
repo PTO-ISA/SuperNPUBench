@@ -29,14 +29,13 @@ compile_operator() {
     cd "$operator_path"
     
     if [ -f "compile.all" ]; then
-        echo "Running compile.all with baremetal=off..."
-        export baremetal=off
+        echo "Running compile.all with baremetal=${baremetal:-off}..."
+        export baremetal=${baremetal:-off}
         if bash compile.all 2>&1; then
             echo "✓ $operator_name compilation completed"
         else
             echo "✗ $operator_name compilation failed"
         fi
-        unset baremetal
     else
         echo "Warning: No compile.all found in $operator_path"
         return 1

@@ -1,0 +1,7 @@
+run_dir	/Users/liyi/Documents/GitHub/SuperNPUBench/output/run_logs/gfsim_matmul_try/run_20260625_233552
+sim	/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim
+elf	/Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/matmul/elf/kernel_matmul/matmul_MASK_MASK_FP32_DYNAMIC_M256_N256_K256_tM64_tN64_tK64.elf
+command	/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim -f /Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/matmul/elf/kernel_matmul/matmul_MASK_MASK_FP32_DYNAMIC_M256_N256_K256_tM64_tN64_tK64.elf
+report_timeout_sec	300
+mem_limit_gb	6
+strategy	pty gfsim -f single matmul; wait for BlockISA CPU Report Stop; terminate after report marker; RLIMIT_AS guard

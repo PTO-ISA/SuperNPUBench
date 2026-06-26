@@ -1,0 +1,6 @@
+run_dir=/Users/liyi/Documents/GitHub/SuperNPUBench/output/run_logs/gfsim_full_baremetal/run_20260625_232108_serial
+elf_count=57 jobs=1 report_timeout_sec=300
+[01/57] REPORT_CAPTURED cycles=1872 report_s=46.1 elapsed_s=47.3 reduction/reducemax_col/elf/kernel_reduction_reducemax_col_reducemax_col_DType__half_tM32_tN128_GM8192_GN1024.elf
+[02/57] REPORT_CAPTURED cycles=2244 report_s=44.9 elapsed_s=46.1 reduction/reducemax_col/elf/kernel_reduction_reducemax_col_reducemax_col_DTypeint32_t_tM32_tN128_GM8192_GN1024.elf
+[03/57] REPORT_CAPTURED cycles=323474 report_s=170.0 elapsed_s=171.1 reduction/reducemax_row/elf/kernel_reduction_reducemax_row_reducemax_row_DTypeint32_t_tM32_tN128_GM1024_GN8192.elf
+[04/57] EXIT_-9 cycles=- report_s=- elapsed_s=47.8 reduction/reducesum_col/elf/kernel_reduction_reducesum_col_reducesum_col_DType__half_tM32_tN128_GM8192_GN1024.elf
