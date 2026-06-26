@@ -89,31 +89,15 @@ int main() {
         }
     }
 
+    // NOTE: counts are printed in hex via linxi_put_hex (shift/mask based). The
+    // decimal helper linxi_put_i64 uses scalar unsigned divide (divu), which does
+    // not terminate on the current model, so it is avoided here.
     linxi_puts("=== hashtable_lookup_simd ===");
-    linxi_put("Match: ");
-    linxi_put_i64(match);
-    linxi_putc('/');
-    linxi_put_i64(kNum);
+    linxi_put("Match(hex): ");
+    linxi_put_hex((unsigned long long)(unsigned)match);
+    linxi_put(" / ");
+    linxi_put_hex((unsigned long long)(unsigned)kNum);
     linxi_putc('\n');
-
-    if (mismatch_count > 0) {
-        linxi_puts("=== First 20 mismatches (idx key got expected) ===");
-        int shown = 0;
-        for (int i = 0; i < kNum && shown < 20; i++) {
-            if (g_output[i] != g_lookup_values[i]) {
-                linxi_put("  idx=");
-                linxi_put_i64(i);
-                linxi_put(" key=");
-                linxi_put_i64((long long)g_query_keys[i]);
-                linxi_put(" got=");
-                linxi_put_i64((int)g_output[i]);
-                linxi_put(" exp=");
-                linxi_put_i64((int)g_lookup_values[i]);
-                linxi_putc('\n');
-                shown++;
-            }
-        }
-    }
 
     int ret = (match == kNum) ? 0 : 1;
     linxi_puts(ret == 0 ? "PASS" : "FAIL");
