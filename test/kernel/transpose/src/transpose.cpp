@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "transpose/transpose.hpp"
+#include "memory/transpose.hpp"
 
 
 #ifndef DType
@@ -94,8 +94,8 @@
 
 int main() {
     using dtype = DType;
-    size_t in_shape[MAX_DIMs] = {IN_SHAPEs};
-    size_t out_shape[MAX_DIMs] = {OUT_SHAPEs};
+    uint32_t in_shape[128] = {IN_SHAPEs};
+    uint32_t out_shape[128] = {OUT_SHAPEs};
     size_t in_dim = IN_DIMs;
     size_t out_dim = OUT_DIMs;
 //    size_t transpose_dim1 = TRANSPOSE_DIM1;
