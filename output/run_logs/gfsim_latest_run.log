@@ -1,0 +1,158 @@
+=== Running: kernel_broadcast_broadcast__DType__half_tM2048_IN_SHAPE1042_1_OUT_SHAPE1042_129.elf ===
+  OK (exit 0)
+=== Running: kernel_broadcast_broadcast__DType__half_tM2048_IN_SHAPE1280_1_49_OUT_SHAPE1280_8_49.elf ===
+  OK (exit 0)
+=== Running: kernel_broadcast_broadcast__DType__half_tM2048_IN_SHAPE1_1_1_65_128_OUT_SHAPE1_1_7_65_128.elf ===
+  OK (exit 0)
+=== Running: kernel_broadcast_broadcast_vec_019__DType__half_tM16_kInner49_IN_SHAPE1280_1_49_OUT_SHAPE1280_8_49.elf ===
+  OK (exit 0)
+=== Running: kernel_broadcast_broadcast_vec_07__DType__half_tM32_IN_SHAPE1443_1_OUT_SHAPE1443_129.elf ===
+  OK (exit 0)
+=== Running: kernel_concat_concat_gather_DType__half_tM512_IN_SHAPE256_8_OUT_SHAPE256_8000.elf ===
+/tmp/run_all_gfsim.sh: line 14: 48730 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: kernel_concat_concat_gather_DTypeint32_t_tM512_IN_SHAPE64_2_OUT_SHAPE64_2000.elf ===
+/tmp/run_all_gfsim.sh: line 14: 48735 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: kernel_concat_concat_scatter_DType__half_tM512_IN_SHAPE256_8_OUT_SHAPE256_8000.elf ===
+/tmp/run_all_gfsim.sh: line 14: 48739 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: kernel_concat_concat_scatter_DTypeint32_t_tM512_IN_SHAPE64_2_OUT_SHAPE64_2000.elf ===
+/tmp/run_all_gfsim.sh: line 14: 48751 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col1024_debug_off.elf ===
+/tmp/run_all_gfsim.sh: line 14: 48755 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col1024_debug_on.elf ===
+/tmp/run_all_gfsim.sh: line 14: 48763 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col256_debug_off.elf ===
+  OK (exit 0)
+=== Running: hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col256_debug_on.elf ===
+/tmp/run_all_gfsim.sh: line 14: 48924 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col512_debug_off.elf ===
+  OK (exit 0)
+=== Running: hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col512_debug_on.elf ===
+/tmp/run_all_gfsim.sh: line 14: 48938 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: hashtable_lookup_simt_kNum6144_kNumThreads6144_kMaxProbe512_break_debug_off.elf ===
+/tmp/run_all_gfsim.sh: line 14: 48943 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: hashtable_lookup_simt_kNum6144_kNumThreads6144_kMaxProbe512_break_debug_on.elf ===
+/tmp/run_all_gfsim.sh: line 14: 49008 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: kernel_element_wise_gelu_gelu_Approximate_false_DType__bf16_tM2048_SHAPE24_8_1024.elf ===
+  OK (exit 0)
+=== Running: fa_2d_unroll_Sq256_Skv512_Tm128_Tk128_X1_Y2.elf ===
+  OK (exit 0)
+=== Running: fa_2d_unroll_Sq256_Skv512_Tm128_Tk128_X1_Y4.elf ===
+  OK (exit 0)
+=== Running: fa_2d_unroll_Sq256_Skv512_Tm128_Tk128_X2_Y2.elf ===
+  OK (exit 0)
+=== Running: fa_2d_unroll_Sq256_Skv512_Tm128_Tk128_X2_Y4.elf ===
+  OK (exit 0)
+=== Running: fa_2d_unroll_Sq512_Skv512_Tm128_Tk128_X1_Y2.elf ===
+  OK (exit 0)
+=== Running: fa_2d_unroll_Sq512_Skv512_Tm128_Tk128_X1_Y4.elf ===
+  OK (exit 0)
+=== Running: fa_2d_unroll_Sq512_Skv512_Tm128_Tk128_X2_Y2.elf ===
+  OK (exit 0)
+=== Running: fa_2d_unroll_Sq512_Skv512_Tm128_Tk128_X2_Y4.elf ===
+  OK (exit 0)
+=== Running: fa_HIF4_HIF4_BF16_NOGATHER_Sq256_Skv512_Tm128_Tk128_X1_Y1.elf ===
+/tmp/run_all_gfsim.sh: line 14: 50699 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: kernel_gather_gather_DType__fp32_OTypeuint32_t_gKs131072_gMs32_gNs256_tMs32_tNs128.elf ===
+/tmp/run_all_gfsim.sh: line 14: 50703 Abort trap: 6           $GFSIM -f "$elf" --stop_cycle 1000000 > "$LOG_DIR/$name.log" 2>&1
+  FAILED (exit 134)
+=== Running: matmul_A16W4_B1_M256_N2048_K2048_tM128_tN128_tK128.elf ===
+  OK (exit 0)
+=== Running: matmul_A16W4_B1_M512_N1280_K2048_tM128_tN128_tK128.elf ===
+  OK (exit 0)
+=== Running: matmul_A16W4_B1_M512_N512_K4096_tM128_tN256_tK128.elf ===
+  OK (exit 0)
+=== Running: matmul_HIF4_HIF4_MX_NOGATHER_B1_M256_N2048_K2048_tM128_tN128_tK128.elf ===
+  OK (exit 0)
+=== Running: matmul_HIF4_HIF4_MX_NOGATHER_B1_M512_N1280_K4096_tM128_tN128_tK128.elf ===
+  OK (exit 0)
+=== Running: matmul_HIF4_HIF4_MX_NOGATHER_REUSEA_B1_M256_N2048_K2048_tM128_tN128_tK128.elf ===
+  OK (exit 0)
+=== Running: matmul_MASK_MASK_FP16_M256_N256_K256_tM64_tN64_tK64.elf ===
+  OK (exit 0)
+=== Running: matmul_MASK_MASK_FP16_REUSEA_M256_N256_K256_tM64_tN64_tK64.elf ===
+  OK (exit 0)
+=== Running: matmul_MASK_MASK_FP16_REUSEB_M256_N256_K256_tM64_tN64_tK64.elf ===
+  OK (exit 0)
+=== Running: matmul_MASK_MASK_FP32_M256_N256_K256_tM64_tN64_tK64.elf ===
+  OK (exit 0)
+=== Running: matmul_MASK_MASK_FP32_REUSEA_M256_N256_K256_tM64_tN64_tK64.elf ===
+  OK (exit 0)
+=== Running: matmul_MASK_MASK_FP32_REUSEB_M256_N256_K256_tM64_tN64_tK64.elf ===
+  OK (exit 0)
+=== Running: matmul_MASK_MASK_FP8_M256_N256_K256_tM64_tN64_tK64.elf ===
+  OK (exit 0)
+=== Running: matmul_MASK_MASK_FP8_REUSEA_M256_N256_K256_tM64_tN64_tK64.elf ===
+  OK (exit 0)
+=== Running: matmul_MASK_MASK_FP8_REUSEB_M256_N256_K256_tM64_tN64_tK64.elf ===
+  OK (exit 0)
+=== Running: kernel_reduction_reducemax_col_reducemax_col_DTypeint32_t_tM256_tN64_GM2048_GN64.elf ===
+  OK (exit 0)
+=== Running: kernel_reduction_reducesum_col_reducesum_col_DType__half_tM32_tN128_GM8192_GN1024.elf ===
+  OK (exit 0)
+=== Running: kernel_reduction_reducesum_col_reducesum_col_DTypeint32_t_tM32_tN128_GM8192_GN1024.elf ===
+  OK (exit 0)
+=== Running: kernel_reduction_reducesum_row_reducesum_row_DTypeint32_t_tM16_tN512_GM16_GN1024.elf ===
+  OK (exit 0)
+=== Running: topk.elf ===
+  TIMEOUT after 300s
+
+=== Summary ===
+fa_2d_unroll_Sq256_Skv512_Tm128_Tk128_X1_Y2.elf                                  OK
+fa_2d_unroll_Sq256_Skv512_Tm128_Tk128_X1_Y4.elf                                  OK
+fa_2d_unroll_Sq256_Skv512_Tm128_Tk128_X2_Y2.elf                                  OK
+fa_2d_unroll_Sq256_Skv512_Tm128_Tk128_X2_Y4.elf                                  OK
+fa_2d_unroll_Sq512_Skv512_Tm128_Tk128_X1_Y2.elf                                  OK
+fa_2d_unroll_Sq512_Skv512_Tm128_Tk128_X1_Y4.elf                                  OK
+fa_2d_unroll_Sq512_Skv512_Tm128_Tk128_X2_Y2.elf                                  OK
+fa_2d_unroll_Sq512_Skv512_Tm128_Tk128_X2_Y4.elf                                  OK
+fa_HIF4_HIF4_BF16_NOGATHER_Sq256_Skv512_Tm128_Tk128_X1_Y1.elf                    FAILED
+hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col1024_debug_off.elf           FAILED
+hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col1024_debug_on.elf            FAILED
+hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col256_debug_off.elf            OK
+hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col256_debug_on.elf             FAILED
+hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col512_debug_off.elf            OK
+hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col512_debug_on.elf             FAILED
+hashtable_lookup_simt_kNum6144_kNumThreads6144_kMaxProbe512_break_debug_off.elf  FAILED
+hashtable_lookup_simt_kNum6144_kNumThreads6144_kMaxProbe512_break_debug_on.elf   FAILED
+kernel_broadcast_broadcast__DType__half_tM2048_IN_SHAPE1042_1_OUT_SHAPE1042_129.elf OK
+kernel_broadcast_broadcast__DType__half_tM2048_IN_SHAPE1280_1_49_OUT_SHAPE1280_8_49.elf OK
+kernel_broadcast_broadcast__DType__half_tM2048_IN_SHAPE1_1_1_65_128_OUT_SHAPE1_1_7_65_128.elf OK
+kernel_broadcast_broadcast_vec_019__DType__half_tM16_kInner49_IN_SHAPE1280_1_49_OUT_SHAPE1280_8_49.elf OK
+kernel_broadcast_broadcast_vec_07__DType__half_tM32_IN_SHAPE1443_1_OUT_SHAPE1443_129.elf OK
+kernel_concat_concat_gather_DType__half_tM512_IN_SHAPE256_8_OUT_SHAPE256_8000.elf FAILED
+kernel_concat_concat_gather_DTypeint32_t_tM512_IN_SHAPE64_2_OUT_SHAPE64_2000.elf FAILED
+kernel_concat_concat_scatter_DType__half_tM512_IN_SHAPE256_8_OUT_SHAPE256_8000.elf FAILED
+kernel_concat_concat_scatter_DTypeint32_t_tM512_IN_SHAPE64_2_OUT_SHAPE64_2000.elf FAILED
+kernel_element_wise_gelu_gelu_Approximate_false_DType__bf16_tM2048_SHAPE24_8_1024.elf OK
+kernel_gather_gather_DType__fp32_OTypeuint32_t_gKs131072_gMs32_gNs256_tMs32_tNs128.elf FAILED
+kernel_reduction_reducemax_col_reducemax_col_DTypeint32_t_tM256_tN64_GM2048_GN64.elf OK
+kernel_reduction_reducesum_col_reducesum_col_DType__half_tM32_tN128_GM8192_GN1024.elf OK
+kernel_reduction_reducesum_col_reducesum_col_DTypeint32_t_tM32_tN128_GM8192_GN1024.elf OK
+kernel_reduction_reducesum_row_reducesum_row_DTypeint32_t_tM16_tN512_GM16_GN1024.elf OK
+matmul_A16W4_B1_M256_N2048_K2048_tM128_tN128_tK128.elf                           OK
+matmul_A16W4_B1_M512_N1280_K2048_tM128_tN128_tK128.elf                           OK
+matmul_A16W4_B1_M512_N512_K4096_tM128_tN256_tK128.elf                            OK
+matmul_HIF4_HIF4_MX_NOGATHER_B1_M256_N2048_K2048_tM128_tN128_tK128.elf           OK
+matmul_HIF4_HIF4_MX_NOGATHER_B1_M512_N1280_K4096_tM128_tN128_tK128.elf           OK
+matmul_HIF4_HIF4_MX_NOGATHER_REUSEA_B1_M256_N2048_K2048_tM128_tN128_tK128.elf    OK
+matmul_MASK_MASK_FP16_M256_N256_K256_tM64_tN64_tK64.elf                          OK
+matmul_MASK_MASK_FP16_REUSEA_M256_N256_K256_tM64_tN64_tK64.elf                   OK
+matmul_MASK_MASK_FP16_REUSEB_M256_N256_K256_tM64_tN64_tK64.elf                   OK
+matmul_MASK_MASK_FP32_M256_N256_K256_tM64_tN64_tK64.elf                          OK
+matmul_MASK_MASK_FP32_REUSEA_M256_N256_K256_tM64_tN64_tK64.elf                   OK
+matmul_MASK_MASK_FP32_REUSEB_M256_N256_K256_tM64_tN64_tK64.elf                   OK
+matmul_MASK_MASK_FP8_M256_N256_K256_tM64_tN64_tK64.elf                           OK
+matmul_MASK_MASK_FP8_REUSEA_M256_N256_K256_tM64_tN64_tK64.elf                    OK
+matmul_MASK_MASK_FP8_REUSEB_M256_N256_K256_tM64_tN64_tK64.elf                    OK
+topk.elf                                                                         TIMEOUT

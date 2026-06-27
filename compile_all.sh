@@ -3,7 +3,7 @@
 
 # Don't use set -e as some operators may fail to compile
 
-export COMPILER_DIR=${COMPILER_DIR:-/home/river/projects/jcore/SuperNPUBench/compiler/toolchain/2026-06-22/linx_blockisa_llvm_musl/bin}
+export COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/GitHub/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin}
 REPO_ROOT=${REPO_ROOT:-/home/river/projects/jcore/SuperNPUBench}
 
 echo "=========================================="

@@ -1,0 +1,28 @@
+/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim -f /Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/control/elf/hashtable_lookup_simd_kNum6144_kMaxProbe512_knum_col256_debug_on.elf --stop_cycle 1000000 
+Memory: 0x10200 - 0x10e1f (Size=3KB) [.rodata]
+Memory: 0x10e20 - 0x10e2b (Size=0KB) [.stack_size]
+Memory: 0x10e2c - 0x10e3f (Size=0KB) [.eh_frame_hdr]
+Memory: 0x10e40 - 0x10e83 (Size=0KB) [.eh_frame]
+Memory: 0x11e84 - 0x166bf (Size=18KB) [.text]
+Memory: 0x176c0 - 0x1770f (Size=0KB) [.init_array]
+Memory: 0x17710 - 0x17737 (Size=0KB) [.data.rel.ro]
+Memory: 0x18738 - 0x271371f (Size=39915KB) [.data]
+Memory: 0x2713720 - 0x2713727 (Size=0KB) [.sdata]
+Memory: 0x2713728 - 0x2719c87 (Size=25KB) [.bss]
+Memory: 0x2719c88 - 0x2719d17 (Size=0KB) [.sbss]
+Memory: 0x2719d20 - 0xa71ad20 (Size=131076KB) [stack mem]
+Memory: 0x4000802000 - 0x4008803000 (Size=131076KB) [map mem]
+[C:1296   ][TMA.STAGE ]: ReceiveTileData: receive addr:[0x1e2d59e, 0xd8ec5e, 0x1e2d59e, 0xd8ec5e, 0x163040e, 0x201f16e, 0x1e2d59e, 0xd8ec5e, 0x17d1cbe, 0x13487ee, 0x1e2d59e, 0xd8ec5e, 0x8164de, 0x1af68ce, 0x1e2d59e, 0xd8ec5e, 0x1e549e, 0xfdab3e, 0x22d79ee, 0x3172be, 0x24d76ce, 0x2780ee, 0x73921e, 0xc94ae, 0x1a3a7ae, 0x369dde, 0x123567e, 0x1e6823e, 0x1d8deee, 0x14ab0fe, ]
+
+libc++abi: terminating due to uncaught exception of type JCore::Error: ASSERTION FAILED: false && "Currently, cross-cacheline is not supported."
+, func operator(), file /Users/liyi/Documents/GitHub/LinxCoreModel/model/bridgetable/TileBridge.cpp:2427
+stack:
+0   gfsim                               0x0000000102b52acc _ZN5JCore12GetBacktraceEmm + 36
+1   gfsim                               0x0000000102551ddc _ZN5JCore5GFSIM10TileBridge11BridgePairQ15ReceiveTileDataEv + 4604
+2   gfsim                               0x000000010253c110 _ZN5JCore5GFSIM10TileBridge11BridgePairQ19HandleGatherReadSrcEv + 32
+3   gfsim                               0x000000010253ad9c _ZN5JCore5GFSIM10TileBridge11BridgePairQ4WorkEv + 204
+4   gfsim                               0x00000001025343a8 _ZN5JCore5GFSIM10TileBridge10TileBridge4WorkEv + 32
+5   gfsim                               0x00000001023dd488 _ZN5JCore6SimSys4stepEv + 148
+6   gfsim                               0x0000000102310ea0 main + 9848
+7   dyld                                0x0000000185357e00 start + 6992
+

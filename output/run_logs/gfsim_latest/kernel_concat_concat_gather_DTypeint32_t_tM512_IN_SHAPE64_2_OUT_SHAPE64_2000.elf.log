@@ -1,0 +1,26 @@
+/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim -f /Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/concat/elf/kernel_concat_concat_gather_DTypeint32_t_tM512_IN_SHAPE64_2_OUT_SHAPE64_2000.elf --stop_cycle 1000000 
+libc++abi: terminating due to uncaught exception of type JCore::Error: ASSERTION FAILED: false
+lane0vector VT RegBackToFrontIndex: out of index range, func BackToFrontIndex, file /Users/liyi/Documents/GitHub/LinxCoreModel/isa/../common/DataStruct/RingQ.h:81
+stack:
+0   gfsim                               0x0000000100a4aacc _ZN5JCore12GetBacktraceEmm + 36
+1   gfsim                               0x0000000100292a3c _ZN5JCore5RingQIyE16BackToFrontIndexEj + 388
+2   gfsim                               0x0000000100290840 _ZN5JCore8SoftCore17GetSrcOperandDataENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEEyNS2_INS_7OperandEEE + 260
+3   gfsim                               0x00000001002903b0 _ZN5JCore8SoftCore10GetSrcDataENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEEy + 160
+4   gfsim                               0x00000001002486f8 _ZN5JCore8SoftCore16ExecuteSIMTMinstENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEE + 332
+5   gfsim                               0x0000000100246054 _ZN5JCore8SoftCore12ExecuteMinstENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEE + 84
+6   gfsim                               0x0000000100245a84 _ZN5JCore8SoftCore13EmulatorBlockEy + 512
+7   gfsim                               0x00000001002d5958 _ZN5JCore6SimSys12RunReferenceEy + 104
+8   gfsim                               0x0000000100208e94 main + 9836
+9   dyld                                0x0000000185357e00 start + 6992
+
+Memory: 0x10200 - 0x10203 (Size=0KB) [.stack_size]
+Memory: 0x10208 - 0x10250 (Size=0KB) [.rodata]
+Memory: 0x10254 - 0x10267 (Size=0KB) [.eh_frame_hdr]
+Memory: 0x10268 - 0x102a3 (Size=0KB) [.eh_frame]
+Memory: 0x112a4 - 0x1167f (Size=0KB) [.text]
+Memory: 0x12680 - 0x1269f (Size=0KB) [.init_array]
+Memory: 0x126a0 - 0x126b7 (Size=0KB) [.data.rel.ro]
+Memory: 0x136b8 - 0x13713 (Size=0KB) [.bss]
+Memory: 0x13718 - 0x13737 (Size=0KB) [.sbss]
+Memory: 0x13740 - 0x8014740 (Size=131076KB) [stack mem]
+Memory: 0x4000802000 - 0x4008803000 (Size=131076KB) [map mem]

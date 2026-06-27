@@ -1,0 +1,23 @@
+/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim -f /Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/control/elf/hashtable_lookup_simt_kNum6144_kNumThreads6144_kMaxProbe512_break_debug_off.elf --stop_cycle 1000000 
+libc++abi: terminating due to uncaught exception of type JCore::Error: ASSERTION FAILED: false
+lane0vector VT RegBackToFrontIndex: out of index range, func BackToFrontIndex, file /Users/liyi/Documents/GitHub/LinxCoreModel/isa/../common/DataStruct/RingQ.h:81
+stack:
+0   gfsim                               0x0000000102a66acc _ZN5JCore12GetBacktraceEmm + 36
+1   gfsim                               0x00000001022aea3c _ZN5JCore5RingQIyE16BackToFrontIndexEj + 388
+2   gfsim                               0x00000001022ac840 _ZN5JCore8SoftCore17GetSrcOperandDataENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEEyNS2_INS_7OperandEEE + 260
+3   gfsim                               0x00000001022ac3b0 _ZN5JCore8SoftCore10GetSrcDataENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEEy + 160
+4   gfsim                               0x00000001022646f8 _ZN5JCore8SoftCore16ExecuteSIMTMinstENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEE + 332
+5   gfsim                               0x0000000102262054 _ZN5JCore8SoftCore12ExecuteMinstENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEE + 84
+6   gfsim                               0x0000000102261a84 _ZN5JCore8SoftCore13EmulatorBlockEy + 512
+7   gfsim                               0x00000001022f1958 _ZN5JCore6SimSys12RunReferenceEy + 104
+8   gfsim                               0x0000000102224e94 main + 9836
+9   dyld                                0x0000000185357e00 start + 6992
+
+Memory: 0x101c8 - 0x101cb (Size=0KB) [.stack_size]
+Memory: 0x101d0 - 0x10218 (Size=0KB) [.rodata]
+Memory: 0x1121c - 0x118b3 (Size=1KB) [.text]
+Memory: 0x128b8 - 0x128cf (Size=0KB) [.data.rel.ro]
+Memory: 0x138d0 - 0x270e7cf (Size=39915KB) [.data]
+Memory: 0x270e7d0 - 0x27147cf (Size=24KB) [.bss]
+Memory: 0x27147d0 - 0xa7157d0 (Size=131076KB) [stack mem]
+Memory: 0x4000802000 - 0x4008803000 (Size=131076KB) [map mem]

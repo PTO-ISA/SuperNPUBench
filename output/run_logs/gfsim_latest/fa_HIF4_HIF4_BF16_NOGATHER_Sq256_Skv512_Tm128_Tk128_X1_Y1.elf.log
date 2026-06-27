@@ -1,0 +1,26 @@
+/Users/liyi/Documents/GitHub/LinxCoreModel/bin/gfsim -f /Users/liyi/Documents/GitHub/SuperNPUBench/output/kernel/fa/elf/kernel_fa/fa_HIF4_HIF4_BF16_NOGATHER_Sq256_Skv512_Tm128_Tk128_X1_Y1.elf --stop_cycle 1000000 
+libc++abi: terminating due to uncaught exception of type JCore::Error: ASSERTION FAILED: false
+lane0vector VT RegBackToFrontIndex: out of index range, func BackToFrontIndex, file /Users/liyi/Documents/GitHub/LinxCoreModel/isa/../common/DataStruct/RingQ.h:81
+stack:
+0   gfsim                               0x00000001037e6acc _ZN5JCore12GetBacktraceEmm + 36
+1   gfsim                               0x000000010302ea3c _ZN5JCore5RingQIyE16BackToFrontIndexEj + 388
+2   gfsim                               0x000000010302c840 _ZN5JCore8SoftCore17GetSrcOperandDataENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEEyNS2_INS_7OperandEEE + 260
+3   gfsim                               0x000000010302c3b0 _ZN5JCore8SoftCore10GetSrcDataENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEEy + 160
+4   gfsim                               0x0000000102fe46f8 _ZN5JCore8SoftCore16ExecuteSIMTMinstENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEE + 332
+5   gfsim                               0x0000000102fe2054 _ZN5JCore8SoftCore12ExecuteMinstENSt3__110shared_ptrINS_9MInstFuncEEERNS2_INS_9BlockFuncEEE + 84
+6   gfsim                               0x0000000102fe1a84 _ZN5JCore8SoftCore13EmulatorBlockEy + 512
+7   gfsim                               0x0000000103071958 _ZN5JCore6SimSys12RunReferenceEy + 104
+8   gfsim                               0x0000000102fa4e94 main + 9836
+9   dyld                                0x0000000185357e00 start + 6992
+
+Memory: 0x10200 - 0x10250 (Size=0KB) [.rodata]
+Memory: 0x10251 - 0x10264 (Size=0KB) [.stack_size]
+Memory: 0x10268 - 0x10293 (Size=0KB) [.eh_frame_hdr]
+Memory: 0x10298 - 0x1032b (Size=0KB) [.eh_frame]
+Memory: 0x1132c - 0x16889 (Size=21KB) [.text]
+Memory: 0x17890 - 0x1790f (Size=0KB) [.init_array]
+Memory: 0x17910 - 0x17927 (Size=0KB) [.data.rel.ro]
+Memory: 0x18928 - 0x18aa3 (Size=0KB) [.bss]
+Memory: 0x18aa8 - 0x18b27 (Size=0KB) [.sbss]
+Memory: 0x18b30 - 0x8019b30 (Size=131076KB) [stack mem]
+Memory: 0x4000802000 - 0x4008803000 (Size=131076KB) [map mem]
