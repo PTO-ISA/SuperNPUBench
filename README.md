@@ -75,6 +75,36 @@ Use the `compile_all.sh` script in the root directory to compile all operators:
 
 Build artifacts are output to `output/kernel/<operator>/elf/` directory.
 
+## Running on the Models
+
+LinxCoreModel provides two simulators:
+
+- `gfrun` — functional model (verifies instruction correctness)
+- `gfsim` — cycle-accurate model (verifies timing behavior)
+
+```bash
+# functional run
+bin/gfrun -f output/kernel/<op>/elf/<name>.elf
+
+# cycle-accurate run
+bin/gfsim -f output/kernel/<op>/elf/<name>.elf
+```
+
+### Tile-op kernels: run gfsim in single-tier mode
+
+Kernels written purely with tile ops that use TEPL template instructions (e.g.
+`TCVT`, as in `control/hashtable_lookup_simd`) execute on the **VectorLite**
+tile/template engine. gfsim only steps that engine in **single-tier mode**, so these
+kernels must be run with:
+
+```bash
+bin/gfsim -f <elf> -s core.singleTierMode=true
+```
+
+Without this flag (gfsim's default multi-tier mode) the VectorLite engine is inert,
+TEPL blocks are dispatched but never consumed, and the run deadlocks (res-verify /
+deadlock abort). `gfrun` (functional) does not need the flag.
+
 ## Build System
 
 ### Makefile Parameters
@@ -140,7 +170,10 @@ Assertion failed: (Reg != 0 && "LinxV5 CallingConv Fail!")
 
 ### 2. Control/Sort Operators
 
-These operators require additional data files (`.data`) which are not currently included in the repository.
+`control/hashtable_lookup_simd` is implemented with **pure tile ops** (no SIMT lane
+programming; the SIMT variant has been removed). Its `.data` files are generated
+automatically by the Makefile (`gen_data.py`) on first build. Run it on **gfsim** with
+`-s core.singleTierMode=true` — see [Running on the Models](#running-on-the-models).
 
 ## Development Guide
 

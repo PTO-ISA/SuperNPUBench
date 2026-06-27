@@ -52,14 +52,6 @@ ninja -j 32
 ```bash
 cd {WORKSPACE}/JanusCoreBench/test/kernel/control
 
-# hashtable_lookup_simt
-make TESTCASE=hashtable_lookup_simt SUFFIX=_kNum409600 EXTRA_DEFINES="-DkNum=409600"
-make TESTCASE=hashtable_lookup_simt SUFFIX=_kNum256 EXTRA_DEFINES="-DkNum=256"
-
-# hashtable_lookup_simt_v2
-make TESTCASE=hashtable_lookup_simt_v2 SUFFIX=_kNum409600 EXTRA_DEFINES="-DkNum=409600"
-make TESTCASE=hashtable_lookup_simt_v2 SUFFIX=_kNum256 EXTRA_DEFINES="-DkNum=256"
-
 # hashtable_lookup_simd
 make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum409600 EXTRA_DEFINES="-DkNum=409600"
 make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum256 EXTRA_DEFINES="-DkNum=256"

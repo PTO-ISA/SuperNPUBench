@@ -2,7 +2,7 @@
 #include "benchmark.h"
 #include "fileop.h"
 #include "template_asm.h"
-#include <stdio.h>
+#include "linx_print.h"
 
 #include "control/hashtable_lookup_simd.hpp"
 
@@ -76,8 +76,9 @@ int main() {
     }
     BENCHEND;
 
-#ifndef FOR_GFSIM
-    // Verify results
+    // Verify results. Output goes through linxi_put (raw UART MMIO), which is
+    // visible on both qemu virt and gfsim ("linx_uart:" lines) without any
+    // libc/syscall dependency -- so this runs identically under both back-ends.
     int match = 0;
     int mismatch_count = 0;
     for (int i = 0; i < kNum; i++) {
@@ -88,34 +89,17 @@ int main() {
         }
     }
 
-    printf("=== hashtable_lookup_simd ===\n");
-    printf("Match: %d/%d (%.4f%%)\n", match, kNum, 100.0 * double(match) / double(kNum));
+    // NOTE: counts are printed in hex via linxi_put_hex (shift/mask based). The
+    // decimal helper linxi_put_i64 uses scalar unsigned divide (divu), which does
+    // not terminate on the current model, so it is avoided here.
+    linxi_puts("=== hashtable_lookup_simd ===");
+    linxi_put("Match(hex): ");
+    linxi_put_hex((unsigned long long)(unsigned)match);
+    linxi_put(" / ");
+    linxi_put_hex((unsigned long long)(unsigned)kNum);
+    linxi_putc('\n');
 
-    if (mismatch_count > 0) {
-        printf("\n=== First 20 mismatches ===\n");
-        printf("%7s  %22s  %10s  %10s\n", "Idx", "Key", "Got", "Expected");
-        int shown = 0;
-        for (int i = 0; i < kNum && shown < 20; i++) {
-            if (g_output[i] != g_lookup_values[i]) {
-                printf("%7d  %22lld  %10d  %10d\n",
-                       i, (long long)g_query_keys[i], (int)g_output[i], (int)g_lookup_values[i]);
-                shown++;
-            }
-        }
-    }
-    fflush(stdout);
-#endif
-
-#ifndef FOR_GFSIM
     int ret = (match == kNum) ? 0 : 1;
-    if (!ret) {
-        printf("PASS\n");
-    } else {
-        printf("FAIL\n");
-    }
-    fflush(stdout);
+    linxi_puts(ret == 0 ? "PASS" : "FAIL");
     return ret;
-#else
-    return 0;
-#endif
 }
