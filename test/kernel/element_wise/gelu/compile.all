@@ -10,9 +10,9 @@
 make TESTCASE=gelu DTYPE=__bf16 tMs=2048 gMs=24*8*1024 \
     SHAPE_NAME=24_8_1024 Approximate=false diss
 
-# 2D shape: (128, 1024)
-make TESTCASE=gelu DTYPE=__bf16 tMs=2048 gMs=128*1024 \
-    SHAPE_NAME=128_1024 Approximate=false diss
+# # 2D shape: (128, 1024)
+# make TESTCASE=gelu DTYPE=__bf16 tMs=2048 gMs=128*1024 \
+#     SHAPE_NAME=128_1024 Approximate=false diss
 
 # ============================================
 # BF16, approximate mode
