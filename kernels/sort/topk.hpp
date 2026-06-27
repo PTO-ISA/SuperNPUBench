@@ -25,49 +25,13 @@ using InputGM = GlobalTensor<uint16_t, Shape<1,1,1,1,kTileSize>, Stride<1,1,1,kT
 using HistGM  = GlobalTensor<uint32_t, Shape<1,1,1,1,kNumBuckets>, Stride<1,1,1,kNumBuckets,1>>;
 
 // ============================================================================
-// Corrected THISTOGRAM wrapper
-//
-// The toolchain's THISTOGRAM template (template_asm.hpp:198) has an off-by-one
-// operand numbering bug: after adding "i"(Cols) as operand %5, the B.IOT and
-// tile-size references still use the old numbers, causing parseSingleAsm to
-// interpret an immediate as a tile register (isImm() assertion crash).
-//
-// This wrapper re-numbers the operands correctly:
-//   B.IOT [%6, %7]  (src, idx as tile registers)
-//   ->%0<%c8>       (dst tile, TilesizeCode as immediate)
-//   B.DIM ->LB2 uses %c5 (Cols) instead of %c4 (ValidRow)
+// THISTOGRAM comes from the compiler's tileop-api (pulled in via pto_tileop.hpp):
+//   void THISTOGRAM(dst, src, Idx, ByteId)
+// This kernel depends on the upstream fix for the off-by-one operand numbering
+// in tileop-api's THISTOGRAM template (template_asm.hpp) — tracked upstream in
+// LinxISA/llvm-project. No self-contained copy is kept here on purpose; the
+// tileop-api is owned by the compiler.
 // ============================================================================
-
-template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
-void THISTOGRAM_FIXED(tile_shape_out &dst, tile_shape_in &src, tile_shape_in &Idx, int ByteId) {
-#define THISTOGRAM_FIXED_ASM(BYTE_NAME)                                    \
-  asm volatile(                                                            \
-    "BSTART.TEPL 0b1101000, %c1\n"                                        \
-    "B.DATR %c2," BYTE_NAME ",Null\n"                                      \
-    "B.DIM zero, %c3, ->LB0\n"                                             \
-    "B.DIM zero, %c4, ->LB1\n"                                             \
-    "B.DIM zero, %c5, ->LB2\n"                                             \
-    "B.IOT [%6, %7], last, ->%0<%c8>\n"                                   \
-    ""                                                                     \
-    : "=Tr"(dst.data())                                                    \
-    : "i"(type_traits<typename tile_shape_in::DType>::TypeCode),           \
-      "i"(type_traits<typename tile_shape_out::DType>::TypeCode),          \
-      "i"(tile_shape_in::ValidCol),                                        \
-      "i"(tile_shape_in::ValidRow),                                        \
-      "i"(tile_shape_in::Cols),                                            \
-      "Tr"(src.data()),                                                    \
-      "Tr"(Idx.data()),                                                    \
-      "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode))
-
-    switch (ByteId) {
-        case 0: THISTOGRAM_FIXED_ASM("Byte0"); break;
-        case 1: THISTOGRAM_FIXED_ASM("Byte1"); break;
-        case 2: THISTOGRAM_FIXED_ASM("Byte2"); break;
-        case 3: THISTOGRAM_FIXED_ASM("Byte3"); break;
-        default: return;
-    }
-#undef THISTOGRAM_FIXED_ASM
-}
 
 // ============================================================================
 // Phase 1: Build high8 cumulative histogram via THISTOGRAM (Byte1, no filter)
@@ -84,7 +48,7 @@ inline void build_high8_histogram(uint16_t* input, uint32_t hist[256]) {
     for (int t = 0; t < kNumTiles; t++) {
         InputGM gm(input + t * kTileSize);
         TCOPYIN(inputTile, gm);
-        THISTOGRAM_FIXED(histTile, inputTile, dummyIdx, 1);
+        THISTOGRAM(histTile, inputTile, dummyIdx, 1);
         TADD(accumTile, accumTile, histTile);
     }
 
@@ -106,7 +70,7 @@ inline void build_low8_histogram(uint16_t* input, uint16_t kth_bin, uint32_t his
     for (int t = 0; t < kNumTiles; t++) {
         InputGM gm(input + t * kTileSize);
         TCOPYIN(inputTile, gm);
-        THISTOGRAM_FIXED(histTile, inputTile, idxTile, 0);
+        THISTOGRAM(histTile, inputTile, idxTile, 0);
         TADD(accumTile, accumTile, histTile);
     }
 
