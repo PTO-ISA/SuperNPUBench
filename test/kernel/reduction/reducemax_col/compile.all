@@ -8,5 +8,5 @@ make TESTCASE=reducemax_col COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=256 tN
     gM_s=2048 gN_s=64
 
 # Large matrix, __half
-#make TESTCASE=reducemax_col COMPILER_DIR=$COMPILER_DIR DType=__half tM_s=32 tN_s=128 \
-#    gM_s=8192 gN_s=1024
+#make TESTCASE=reducemax_col COMPILER_DIR=$COMPILER_DIR DType=__half tM_s=256 tN_s=64 \
+#    gM_s=2048 gN_s=64
