@@ -48,7 +48,7 @@ void __vec__ gen_offset_trans(
     __vbuf__  typename  tile_Inshape::DType *in_shape_ptr = blkv_get_tile_ptr(in_shape);
     __vbuf__  typename  tile_Outshape::DType *out_shape_ptr = blkv_get_tile_ptr(out_shape);
     
-    if (index >= total_elements) return;
+//    if (index >= total_elements) return;
     idx = idx + base;   // todo idx是个向量，base是个标量，获得所有的基地址或者说基offset
 
     //转置维度交换stride。
