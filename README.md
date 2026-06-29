@@ -22,7 +22,7 @@ SuperNPUBench/
 │   ├── output/               # Build artifacts (ELF files, disassembly)
 │   └── compile_all.sh        # Batch compilation script
 │
-├── common/                   # Shared resources
+├── architecture/             # ISA documentation and architecture references
 │   ├── linxisa-reference/    # LinxISA programming guides & ISA reference
 │   ├── ptoisa-reference/     # PTO ISA programming guides & ISA reference
 │   ├── scripts/              # Utility scripts
@@ -38,13 +38,13 @@ SuperNPUBench/
 - **Architecture**: Block-structured instruction set with heterogeneous cores
 - **Core Types**: BCC (main core), Cube Core (matrix), Vector Core (vector), MTC/TMA (data transfer)
 - **Programming Model**: Block instructions (VPAR/VSEQ, CUBE, TMA, TEPL)
-- **Documentation**: See [`common/linxisa-reference/`](common/linxisa-reference/)
+- **Documentation**: See [`architecture/linxisa-reference/`](architecture/linxisa-reference/)
 
 ### PTO ISA
 - **Architecture**: Tile-centric instruction set with explicit memory hierarchy
 - **Tile Types**: Vec (UB), Mat (L1), Left (L0A), Right (L0B), Acc (L0C)
 - **Programming Model**: Tile operations with Auto/Manual modes
-- **Documentation**: See [`common/ptoisa-reference/`](common/ptoisa-reference/)
+- **Documentation**: See [`architecture/ptoisa-reference/`](architecture/ptoisa-reference/)
 
 ## Operator Overview
 
@@ -198,18 +198,15 @@ make clean_all                # Clean all
 
 ### Programming Guides
 
-- **LinxISA**: [`common/linxisa-reference/programming_guide.md`](common/linxisa-reference/programming_guide.md) (Chinese) | [`programming_guide_en.md`](common/linxisa-reference/programming_guide_en.md) (English)
-- **PTO ISA**: [`common/ptoisa-reference/programming_guide.md`](common/ptoisa-reference/programming_guide.md) (Chinese) | [`programming_guide_en.md`](common/ptoisa-reference/programming_guide_en.md) (English)
+- **LinxISA**: 
+  - [Chinese](architecture/linxisa-reference/programming_guide.md) | [English](architecture/linxisa-reference/programming_guide_en.md)
+- **PTO ISA**: 
+  - [Chinese](architecture/ptoisa-reference/programming_guide.md) | [English](architecture/ptoisa-reference/programming_guide_en.md)
 
 ### ISA Reference
 
-- **LinxISA**: [`common/linxisa-reference/isa_reference.md`](common/linxisa-reference/isa_reference.md)
-- **PTO ISA**: [`common/ptoisa-reference/isa_reference.md`](common/ptoisa-reference/isa_reference.md)
-
-### Architecture Reports
-
-- **LinxCoreModel Architecture**: [`~/Documents/LinxCoreModel_Architecture_Report.md`](~/Documents/LinxCoreModel_Architecture_Report.md) (local)
-- **ISA Migration Plan**: [`~/Documents/SuperNPUBench_ISA_Migration_Plan.md`](~/Documents/SuperNPUBench_ISA_Migration_Plan.md) (local)
+- **LinxISA**: [ISA Reference](architecture/linxisa-reference/isa_reference.md)
+- **PTO ISA**: [ISA Reference](architecture/ptoisa-reference/isa_reference.md)
 
 ## Directory Structure Details
 
@@ -232,7 +229,7 @@ Each benchmark directory contains:
   - `compile.all` defines typical scenario compilation configurations
   - Build artifacts output to `output/kernel/<operator>/elf/`
 
-### common/
+### architecture/
 
 Shared resources for both ISA implementations:
 
@@ -296,17 +293,14 @@ Current statistics (LinxISA):
 - **Operators**: 8 categories
 - **Status**: Most compiled successfully, some have known issues
 
-See [`common/COMPILATION_REPORT.md`](common/COMPILATION_REPORT.md) for detailed compilation statistics and operator descriptions.
-
 ## Related Links
 
 - [LinxISA Official Documentation](https://linxisa.github.io/linx-isa/)
 - [PTO ISA Official Documentation](https://pto-isa.github.io/docs/isa/tile/)
 - [LinxISA GitHub](https://github.com/LinxISA/linx-isa)
 - [PTO ISA GitHub](https://github.com/PTO-ISA/pto-isa)
-- [Compilation Report](common/COMPILATION_REPORT.md) - Detailed compilation statistics
-- [LinxISA Programming Guide](common/linxisa-reference/programming_guide_en.md) - LinxISA programming documentation
-- [PTO ISA Programming Guide](common/ptoisa-reference/programming_guide_en.md) - PTO ISA programming documentation
+- [LinxISA Programming Guide](architecture/linxisa-reference/programming_guide_en.md)
+- [PTO ISA Programming Guide](architecture/ptoisa-reference/programming_guide_en.md)
 
 ## License
 
