@@ -13,28 +13,28 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 compile_linx() {
     echo ""
     echo ">>> Compiling LinxISA backend..."
-    if [ -f "$SCRIPT_DIR/linx/compile_all.sh" ]; then
-        bash "$SCRIPT_DIR/linx/compile_all.sh"
+    if [ -f "$SCRIPT_DIR/benchmark-linxisa/compile_all.sh" ]; then
+        bash "$SCRIPT_DIR/benchmark-linxisa/compile_all.sh"
     else
-        echo "Warning: linx/compile_all.sh not found"
+        echo "Warning: benchmark-linxisa/compile_all.sh not found"
     fi
 }
 
 compile_pto() {
     echo ""
     echo ">>> Compiling PTO ISA backend..."
-    if [ -f "$SCRIPT_DIR/pto/compile_all.sh" ]; then
-        bash "$SCRIPT_DIR/pto/compile_all.sh"
+    if [ -f "$SCRIPT_DIR/benchmark-ptoisa/compile_all.sh" ]; then
+        bash "$SCRIPT_DIR/benchmark-ptoisa/compile_all.sh"
     else
-        echo "Warning: pto/compile_all.sh not found"
+        echo "Warning: benchmark-ptoisa/compile_all.sh not found"
     fi
 }
 
 case $ISA in
-    linx)
+    linx|benchmark-linxisa)
         compile_linx
         ;;
-    pto)
+    pto|benchmark-ptoisa)
         compile_pto
         ;;
     all)
@@ -43,8 +43,8 @@ case $ISA in
         ;;
     *)
         echo "Usage: $0 [linx|pto|all]"
-        echo "  linx  - Compile LinxISA backend only"
-        echo "  pto   - Compile PTO ISA backend only"
+        echo "  linx  - Compile LinxISA backend only (benchmark-linxisa)"
+        echo "  pto   - Compile PTO ISA backend only (benchmark-ptoisa)"
         echo "  all   - Compile all backends (default)"
         exit 1
         ;;

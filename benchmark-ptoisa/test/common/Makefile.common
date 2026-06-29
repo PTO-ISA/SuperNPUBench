@@ -1,6 +1,6 @@
-ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(linx|pto)/.*@\1/\2@')
-TEST_ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(linx|pto)/test/.*@\1/\2/test@')
-CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/(linx|pto)/test/(.*)@\2@')
+ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(benchmark-linxisa|benchmark-ptoisa)/.*@\1/\2@')
+TEST_ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(benchmark-linxisa|benchmark-ptoisa)/test/.*@\1/\2/test@')
+CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/(benchmark-linxisa|benchmark-ptoisa)/test/(.*)@\2@')
 CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')
 OBJ_ROOT := $(shell realpath $(TEST_ROOT)/../output)
 CASE_SRC_DIR := $(CATEGORY)/src
