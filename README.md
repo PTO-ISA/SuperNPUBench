@@ -24,10 +24,7 @@ SuperNPUBench/
 │
 ├── architecture/             # ISA documentation and architecture references
 │   ├── linxisa-reference/    # LinxISA programming guides & ISA reference
-│   ├── ptoisa-reference/     # PTO ISA programming guides & ISA reference
-│   ├── scripts/              # Utility scripts
-│   ├── tools/                # Analysis and comparison tools
-│   └── data/                 # Shared test data
+│   └── ptoisa-reference/     # PTO ISA programming guides & ISA reference
 │
 └── compile_all.sh            # Top-level build script (supports both ISAs)
 ```
