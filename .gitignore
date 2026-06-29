@@ -4,10 +4,12 @@
 # OS
 .DS_Store
 
-# Build outputs
-*/output/
+# Build outputs (but keep run_logs)
+*/output/*.elf
+*/output/*.diss
+*/output/*.o
+*/output/kernel/
+*/output/common/
 
 # Temporary files
-*.o
-*.diss
 *.log
