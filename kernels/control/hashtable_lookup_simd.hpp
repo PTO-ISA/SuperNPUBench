@@ -10,11 +10,13 @@
 //
 // Everything below is expressed with whole-tile operations from the tile-op API
 // (TMULS/TADDS/TXOR/TSLL/TSRL/TOR/TAND/TREM for the hash, MGATHER/TCMP/TSELECT for
-// the probe, TROWSUM for the early-break reduction). There are NO __vec__ SIMT
-// kernels, no <<<>>> launches, and no per-lane control flow (blkv_get_index /
-// blkv_rdadd / data-dependent branches). The probe loop is a host loop bounded by
-// kMaxProbe; an early break is driven by a tile column-sum of the "still-searching"
-// mask copied out to a host scalar -- so the kernel always terminates.
+// the probe). There are NO __vec__ SIMT kernels, no <<<>>> launches, and no per-lane
+// control flow (blkv_get_index / blkv_rdadd / data-dependent branches). The probe loop
+// is a host loop bounded by kMaxProbe with NO data-dependent early break: a tile-level
+// early exit would need to reduce the "still-searching" mask to a host scalar, and the
+// tile-op API has no tile->scalar-register reduction (only TROWSUM->tile and
+// TCOPYOUT->memory). Since TSELECT keeps already-found lanes immune to later probes,
+// running all kMaxProbe iterations is correct; the loop is pure tile ops + a host counter.
 // ============================================================================
 
 // MurmurHash3_x86_32 constants
@@ -164,12 +166,6 @@ void runHashFind(int32_t __out__ *out,
 
     TEXPANDSCALAR(outTile, kNotFound);
 
-    // Column-sum of the "still-searching" mask, broadcast to all columns (a 1x1
-    // tile is not a legal shape, so use the expand form and read column 0 per row).
-    using CountGT = OutGT;  // same 1 x kTileCols int32 layout
-    int32_t notFoundCount[kTileRows * kTileCols];
-    CountGT countGlobal(notFoundCount);
-
     // TCMP EQ supports int32 only, so compare the 64-bit keys as two int32 halves.
     TileI32 queryLo, queryHi;
     {
@@ -184,11 +180,7 @@ void runHashFind(int32_t __out__ *out,
     TileI32 tableLo, tableHi;
     TileI32 tableValTile;
     TileI32 matchLo, matchHi, matchMask;
-    TileI32 notFoundMask;
-    TileI32 notFoundCountTile;
-    TileI32 notFoundRef;
     TileI32 capBytesTile;
-    TEXPANDSCALAR(notFoundRef, kNotFound);
     TEXPANDSCALAR(capBytesTile, static_cast<int32_t>(kCap) * static_cast<int32_t>(sizeof(TableEntry)));
 
     for (int probe = 0; probe < kMaxProbe; probe++) {
@@ -203,15 +195,13 @@ void runHashFind(int32_t __out__ *out,
         TAND(matchMask, matchLo, matchHi);
         TSELECT(outTile, matchMask, tableValTile, outTile);   // match ? value : keep
 
-        // Early break: column-sum the still-searching mask, copy out, check on host.
-        TCMP(notFoundMask, outTile, notFoundRef, CmpMode::EQ);
-        TROWSUMEXPAND(notFoundCountTile, notFoundMask);
-        TCOPYOUT(countGlobal, notFoundCountTile);
-        bool all_found = true;
-        for (int r = 0; r < kTileRows; r++) {
-            if (notFoundCount[r * kTileCols] != 0) { all_found = false; break; }
-        }
-        if (all_found) break;
+        // NOTE: no early break. A data-dependent early exit would require reducing the
+        // "still-searching" mask to a host scalar (TROWSUMEXPAND -> TCOPYOUT -> scalar
+        // load), i.e. a tile->memory->scalar round-trip every iteration. The tile-op API
+        // has no tile->scalar-register reduction, so that round-trip is the only option
+        // and it is exactly the fragile path we avoid. TSELECT already makes already-found
+        // lanes immune to further probes, so running all kMaxProbe iterations is correct;
+        // we simply trade the early-exit speedup for a pure-tile loop body.
 
         // advance: probeOff = (probeOff + sizeof(TableEntry)) % (kCap * sizeof(TableEntry))
         TADDS(probeOffTile, probeOffTile, static_cast<int32_t>(sizeof(TableEntry)));
