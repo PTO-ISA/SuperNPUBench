@@ -1,21 +1,54 @@
 # SuperNPUBench
 
-SuperNPUBench is a high-performance operator library and benchmark platform for LinxISA/PTO-style tile programming. This repository contains reusable kernel implementations and make-driven test suites.
+SuperNPUBench is a high-performance operator library and benchmark platform supporting both **LinxISA** and **PTO ISA** tile programming paradigms. This repository contains reusable kernel implementations, test suites, and comprehensive documentation for both ISA architectures.
 
 ## Repository Structure
 
 ```
 SuperNPUBench/
-├── kernels/           # Operator implementations (header-only)
-├── test/
-│   ├── common/        # Common build system
-│   └── kernel/        # Operator test suites
-└── output/            # Build artifacts (not tracked)
+├── benchmark-linxisa/        # LinxISA benchmark suite
+│   ├── kernels/              # Operator implementations (header-only)
+│   ├── test/                 # Test suites and build system
+│   │   ├── common/           # Common build infrastructure
+│   │   └── kernel/           # Operator test cases
+│   ├── output/               # Build artifacts (ELF files, disassembly)
+│   └── compile_all.sh        # Batch compilation script
+│
+├── benchmark-ptoisa/         # PTO ISA benchmark suite
+│   ├── kernels/              # Operator implementations (header-only)
+│   ├── test/                 # Test suites and build system
+│   │   ├── common/           # Common build infrastructure
+│   │   └── kernel/           # Operator test cases
+│   ├── output/               # Build artifacts (ELF files, disassembly)
+│   └── compile_all.sh        # Batch compilation script
+│
+├── common/                   # Shared resources
+│   ├── linxisa-reference/    # LinxISA programming guides & ISA reference
+│   ├── ptoisa-reference/     # PTO ISA programming guides & ISA reference
+│   ├── scripts/              # Utility scripts
+│   ├── tools/                # Analysis and comparison tools
+│   └── data/                 # Shared test data
+│
+└── compile_all.sh            # Top-level build script (supports both ISAs)
 ```
+
+## Supported ISA Architectures
+
+### LinxISA
+- **Architecture**: Block-structured instruction set with heterogeneous cores
+- **Core Types**: BCC (main core), Cube Core (matrix), Vector Core (vector), MTC/TMA (data transfer)
+- **Programming Model**: Block instructions (VPAR/VSEQ, CUBE, TMA, TEPL)
+- **Documentation**: See [`common/linxisa-reference/`](common/linxisa-reference/)
+
+### PTO ISA
+- **Architecture**: Tile-centric instruction set with explicit memory hierarchy
+- **Tile Types**: Vec (UB), Mat (L1), Left (L0A), Right (L0B), Acc (L0C)
+- **Programming Model**: Tile operations with Auto/Manual modes
+- **Documentation**: See [`common/ptoisa-reference/`](common/ptoisa-reference/)
 
 ## Operator Overview
 
-This repository implements 8 core operator categories with 59 typical configurations:
+Both ISA implementations support 8 core operator categories with 59+ typical configurations:
 
 | Operator | Count | Typical Scenarios | Description |
 |----------|-------|-------------------|-------------|
@@ -28,8 +61,6 @@ This repository implements 8 core operator categories with 59 typical configurat
 | **gather** | 4 | Data gathering | Large-scale input, power-of-2 dimensions |
 | **concat** | 4 | Data concatenation | gather/scatter modes |
 
-See [`kernels/README.md`](kernels/README.md) for detailed operator implementation details.
-
 ## Quick Start
 
 ### 1. Environment Setup
@@ -40,10 +71,11 @@ Requires Linx toolchain (linx_blockisa_llvm_musl):
 export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
 ```
 
-### 2. Compile Single Operator
+### 2. Compile for LinxISA
 
 ```bash
-cd test/kernel/matmul
+# Navigate to LinxISA benchmark directory
+cd benchmark-linxisa/test/kernel/matmul
 
 # FP4 x FP4 matrix multiplication
 make TESTCASE=matmul TYPE=HIF4_HIF4 M=256 N=2048 K=2048 tM=128 tN=128 tK=128
@@ -55,25 +87,46 @@ make TESTCASE=matmul TYPE=A16W4 M=256 N=2048 K=2048 tM=128 tN=128 tK=128
 make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=64 tN=64 tK=64
 ```
 
-### 3. Batch Compilation
+### 3. Compile for PTO ISA
+
+```bash
+# Navigate to PTO ISA benchmark directory
+cd benchmark-ptoisa/test/kernel/matmul
+
+# Similar commands as LinxISA
+make TESTCASE=matmul TYPE=HIF4_HIF4 M=256 N=2048 K=2048 tM=128 tN=128 tK=128
+```
+
+### 4. Batch Compilation
 
 Each operator directory has a `compile.all` script for batch compiling typical configurations:
 
 ```bash
-cd test/kernel/matmul && bash compile.all
-cd test/kernel/fa && bash compile.all
-cd test/kernel/broadcast && bash compile.all
+# LinxISA
+cd benchmark-linxisa/test/kernel/matmul && bash compile.all
+
+# PTO ISA
+cd benchmark-ptoisa/test/kernel/matmul && bash compile.all
 ```
 
-### 4. Full Compilation
+### 5. Full Compilation
 
-Use the `compile_all.sh` script in the root directory to compile all operators:
+Use the top-level `compile_all.sh` script to compile all operators for both ISAs:
 
 ```bash
-./compile_all.sh
+# Compile all operators for both ISAs
+./compile_all.sh all
+
+# Compile only LinxISA operators
+./compile_all.sh linx
+
+# Compile only PTO ISA operators
+./compile_all.sh pto
 ```
 
-Build artifacts are output to `output/kernel/<operator>/elf/` directory.
+Build artifacts are output to:
+- LinxISA: `benchmark-linxisa/output/kernel/<operator>/elf/`
+- PTO ISA: `benchmark-ptoisa/output/kernel/<operator>/elf/`
 
 ## Running on the Models
 
@@ -82,12 +135,24 @@ LinxCoreModel provides two simulators:
 - `gfrun` — functional model (verifies instruction correctness)
 - `gfsim` — cycle-accurate model (verifies timing behavior)
 
-```bash
-# functional run
-bin/gfrun -f output/kernel/<op>/elf/<name>.elf
+### Running LinxISA Binaries
 
-# cycle-accurate run
-bin/gfsim -f output/kernel/<op>/elf/<name>.elf
+```bash
+# Functional run
+bin/gfrun -f benchmark-linxisa/output/kernel/<op>/elf/<name>.elf
+
+# Cycle-accurate run
+bin/gfsim -f benchmark-linxisa/output/kernel/<op>/elf/<name>.elf
+```
+
+### Running PTO ISA Binaries
+
+```bash
+# Functional run
+bin/gfrun -f benchmark-ptoisa/output/kernel/<op>/elf/<name>.elf
+
+# Cycle-accurate run
+bin/gfsim -f benchmark-ptoisa/output/kernel/<op>/elf/<name>.elf
 ```
 
 ### Tile-op kernels: run gfsim in single-tier mode
@@ -129,32 +194,53 @@ make clean                    # Clean current operator
 make clean_all                # Clean all
 ```
 
-See [`test/kernel/README.md`](test/kernel/README.md) for detailed build system documentation.
+## Documentation
 
-## Directory Structure
+### Programming Guides
 
-### kernels/ - Operator Implementations
+- **LinxISA**: [`common/linxisa-reference/programming_guide.md`](common/linxisa-reference/programming_guide.md) (Chinese) | [`programming_guide_en.md`](common/linxisa-reference/programming_guide_en.md) (English)
+- **PTO ISA**: [`common/ptoisa-reference/programming_guide.md`](common/ptoisa-reference/programming_guide.md) (Chinese) | [`programming_guide_en.md`](common/ptoisa-reference/programming_guide_en.md) (English)
 
-Contains header-only operator implementations organized by function:
+### ISA Reference
 
-- [`kernels/matmul/`](kernels/matmul/) - Matrix multiplication (general, quantized, mixed precision)
-- [`kernels/fa/`](kernels/fa/) - Flash Attention (2D unroll, quantized versions)
-- [`kernels/broadcast/`](kernels/broadcast/) - Broadcast operations (2D~5D)
-- [`kernels/reduction/`](kernels/reduction/) - Reduction operations (max/sum)
-- [`kernels/gather/`](kernels/gather/) - Data gathering
-- [`kernels/concat/`](kernels/concat/) - Data concatenation
-- [`kernels/transpose/`](kernels/transpose/) - Transpose operations (3D~6D)
-- [`kernels/element_wise/`](kernels/element_wise/) - Element-wise operations (GELU)
+- **LinxISA**: [`common/linxisa-reference/isa_reference.md`](common/linxisa-reference/isa_reference.md)
+- **PTO ISA**: [`common/ptoisa-reference/isa_reference.md`](common/ptoisa-reference/isa_reference.md)
 
-### test/kernel/ - Test Suites
+### Architecture Reports
 
-Contains test code and build scripts for each operator:
+- **LinxCoreModel Architecture**: [`~/Documents/LinxCoreModel_Architecture_Report.md`](~/Documents/LinxCoreModel_Architecture_Report.md) (local)
+- **ISA Migration Plan**: [`~/Documents/SuperNPUBench_ISA_Migration_Plan.md`](~/Documents/SuperNPUBench_ISA_Migration_Plan.md) (local)
 
-- Each operator directory contains `Makefile`, `compile.all`, `src/`
-- `compile.all` defines typical scenario compilation configurations
-- Build artifacts output to `output/kernel/<operator>/elf/`
+## Directory Structure Details
 
-See [`test/kernel/README.md`](test/kernel/README.md) for detailed test documentation.
+### benchmark-linxisa/ and benchmark-ptoisa/
+
+Each benchmark directory contains:
+
+- **kernels/**: Header-only operator implementations organized by function
+  - `matmul/` - Matrix multiplication (general, quantized, mixed precision)
+  - `fa/` - Flash Attention (2D unroll, quantized versions)
+  - `broadcast/` - Broadcast operations (2D~5D)
+  - `reduction/` - Reduction operations (max/sum)
+  - `gather/` - Data gathering
+  - `concat/` - Data concatenation
+  - `transpose/` - Transpose operations (3D~6D)
+  - `element_wise/` - Element-wise operations (GELU)
+
+- **test/kernel/**: Test code and build scripts for each operator
+  - Each operator directory contains `Makefile`, `compile.all`, `src/`
+  - `compile.all` defines typical scenario compilation configurations
+  - Build artifacts output to `output/kernel/<operator>/elf/`
+
+### common/
+
+Shared resources for both ISA implementations:
+
+- **linxisa-reference/**: LinxISA programming guides and ISA reference documentation
+- **ptoisa-reference/**: PTO ISA programming guides and ISA reference documentation
+- **scripts/**: Utility scripts for compilation, testing, and analysis
+- **tools/**: Analysis and comparison tools
+- **data/**: Shared test data and configurations
 
 ## Known Issues
 
@@ -179,8 +265,12 @@ automatically by the Makefile (`gen_data.py`) on first build. Run it on **gfsim*
 
 ### Adding New Operators
 
-1. Add header-only implementation in `kernels/<operator>/`
-2. Create test directory in `test/kernel/<operator>/`
+1. Add header-only implementation in both:
+   - `benchmark-linxisa/kernels/<operator>/`
+   - `benchmark-ptoisa/kernels/<operator>/`
+2. Create test directory in both:
+   - `benchmark-linxisa/test/kernel/<operator>/`
+   - `benchmark-ptoisa/test/kernel/<operator>/`
 3. Write `Makefile` (refer to existing operators)
 4. Write `compile.all` (define typical scenarios)
 5. Add test code in `test/kernel/<operator>/src/`
@@ -191,6 +281,7 @@ automatically by the Makefile (`gen_data.py`) on first build. Run it on **gfsim*
 - Use PTO tile programming paradigm
 - Follow existing directory structure and naming conventions
 - Build artifacts are not tracked (already in `.gitignore`)
+- Maintain both LinxISA and PTO ISA implementations in parallel
 
 ## Toolchain
 
@@ -198,17 +289,29 @@ automatically by the Makefile (`gen_data.py`) on first build. Run it on **gfsim*
 - **Compiler flags**: `-mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true -std=c++20`
 - **Target architecture**: Linx64 V5
 
-## Compilation Report
+## Compilation Statistics
 
-See [`COMPILATION_REPORT.md`](COMPILATION_REPORT.md) for detailed compilation statistics and operator descriptions.
-
-Current statistics:
-- **Total**: 59 ELF files
+Current statistics (LinxISA):
+- **Total**: 45+ ELF files
 - **Operators**: 8 categories
-- **Status**: All compiled successfully
+- **Status**: Most compiled successfully, some have known issues
+
+See [`common/COMPILATION_REPORT.md`](common/COMPILATION_REPORT.md) for detailed compilation statistics and operator descriptions.
 
 ## Related Links
 
-- [Compilation Report](COMPILATION_REPORT.md) - Detailed compilation statistics
-- [Operator Implementations](kernels/README.md) - Kernel implementation details
-- [Test Suites](test/kernel/README.md) - Test system documentation
+- [LinxISA Official Documentation](https://linxisa.github.io/linx-isa/)
+- [PTO ISA Official Documentation](https://pto-isa.github.io/docs/isa/tile/)
+- [LinxISA GitHub](https://github.com/LinxISA/linx-isa)
+- [PTO ISA GitHub](https://github.com/PTO-ISA/pto-isa)
+- [Compilation Report](common/COMPILATION_REPORT.md) - Detailed compilation statistics
+- [LinxISA Programming Guide](common/linxisa-reference/programming_guide_en.md) - LinxISA programming documentation
+- [PTO ISA Programming Guide](common/ptoisa-reference/programming_guide_en.md) - PTO ISA programming documentation
+
+## License
+
+See LICENSE file for details.
+
+## Contact
+
+For questions and support, please open an issue on GitHub.
