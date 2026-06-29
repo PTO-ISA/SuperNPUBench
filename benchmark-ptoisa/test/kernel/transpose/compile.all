@@ -1,0 +1,53 @@
+#!/bin/bash
+# Transpose operator test cases
+
+COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
+
+
+# ============================================
+# 2D transpose
+# ============================================
+# 2D: {1476,32} -> {32,1476}
+make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=1476,32 OUT_SHAPE=32,1476 \
+    IN_SHAPE_NAME=1476_32 OUT_SHAPE_NAME=32_1476 \
+    IN_DIM=2 OUT_DIM=2 \
+    TRANSPOSE_DIM1=0 TRANSPOSE_DIM0=1 \
+    gIM='1476*32' gOM='32*1476'
+
+
+
+# ============================================
+# 4D transpose
+# ============================================
+# 4D: {1, 8, 4096, 3} -> {1, 8, 3, 4096}
+make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=1,8,4096,3 OUT_SHAPE=1,8,3,4096 \
+    IN_SHAPE_NAME=1_8_4096_3 OUT_SHAPE_NAME=1_8_3_4096 \
+    IN_DIM=4 OUT_DIM=4 \
+    TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=3 \
+    gIM='1*8*4096*3' gOM='1*8*3*4096'
+    
+    
+# 4D: {1, 32, 8, 32} -> {1, 8, 32, 32}
+make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=1,32,8,32 OUT_SHAPE=1,8,32,32 \
+    IN_SHAPE_NAME=1_32_8_32 OUT_SHAPE_NAME=1_8_32_32 \
+    IN_DIM=4 OUT_DIM=4 \
+    TRANSPOSE_DIM1=1 TRANSPOSE_DIM0=2 \
+    gIM='1*32*8*32' gOM='1*8*32*32'
+    
+
+
+# ============================================
+# 6D transpose
+# ============================================
+# 6D: {1,8,64,4,16,7} -> {1,8,16,4,64,7}
+make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 \
+    IN_SHAPE=8,64,4,16,7 OUT_SHAPE=8,16,4,64,7 \
+    IN_SHAPE_NAME=1_8_64_4_16_7 OUT_SHAPE_NAME=1_8_16_4_64_7 \
+    IN_DIM=5 OUT_DIM=5 \
+    TRANSPOSE_DIM1=1 TRANSPOSE_DIM0=3 \
+    gIM='1*8*64*4*16*7' gOM='1*8*16*4*64*7'
+
+

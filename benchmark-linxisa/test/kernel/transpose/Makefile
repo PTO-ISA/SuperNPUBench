@@ -1,0 +1,7 @@
+ifeq ($(TESTCASE), transpose)
+DEFINES += -DDType=$(DType) -DMAX_DIMs=$(MAX_DIM) -DtMs=$(tM) -DIN_SHAPEs=$(IN_SHAPE) -DOUT_SHAPEs=$(OUT_SHAPE) -DIN_DIMs=$(IN_DIM) -DOUT_DIMs=$(OUT_DIM) -DTRANSPOSE_DIM1s=$(TRANSPOSE_DIM1) -DTRANSPOSE_DIM0s=$(TRANSPOSE_DIM0) -DgIMs=$(gIM) -DgOMs=$(gOM) 
+TARGET = $(ELF_HEAD)/$(TESTCASE)_DType$(DType)_tM$(tM)_IN$(IN_SHAPE_NAME)_OUT$(OUT_SHAPE_NAME).elf
+endif
+
+SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
+include ../../common/Makefile.common

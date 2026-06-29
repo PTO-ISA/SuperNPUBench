@@ -1,0 +1,101 @@
+#!/bin/bash
+# Broadcast operator test cases
+
+# # ===============================================================================
+# MGATHER 针对case单独优化实现
+# # ============================================
+# # broadcast_07: 2D broadcast (1334,1) -> (1334,129)
+# # ============================================
+# make TESTCASE=broadcast_07 DType=__half tMs=2048 MAX_DIMs=2 \
+#     IN_SHAPEs=1334,1 OUT_SHAPEs=1334,129 IN_DIMs=2 OUT_DIMs=2 \
+#     gIMs=1334*1 gOMs=1334*129 \
+#     IN_SHAPE_NAME=1334_1 OUT_SHAPE_NAME=1334_129 diss
+
+# # ============================================
+# # broadcast_019: 3D broadcast (1280,1,49) -> (1280,8,49)
+# # ============================================
+# make TESTCASE=broadcast_019 DType=__half tMs=2048 MAX_DIMs=3 \
+#     IN_SHAPEs=1280,1,49 OUT_SHAPEs=1280,8,49 IN_DIMs=3 OUT_DIMs=3 \
+#     gIMs=1280*1*49 gOMs=1280*8*49 \
+#     IN_SHAPE_NAME=1280_1_49 OUT_SHAPE_NAME=1280_8_49 diss
+
+# # ============================================
+# # broadcast_Hunyuan: 5D broadcast (1,1,1,65,128) -> (1,1,7,65,128)
+# # ============================================
+# make TESTCASE=broadcast_Hunyuan DType=__half tMs=2048 MAX_DIMs=5 \
+#     IN_SHAPEs=1,1,1,65,128 OUT_SHAPEs=1,1,7,65,128 IN_DIMs=5 OUT_DIMs=5 \
+#     gIMs=1*1*1*65*128 gOMs=1*1*7*65*128 \
+#     IN_SHAPE_NAME=1_1_1_65_128 OUT_SHAPE_NAME=1_1_7_65_128 diss
+
+# # ============================================
+# # broadcast_039: 4D broadcast variants
+# # ============================================
+# make TESTCASE=broadcast_039 DType=__half tMs=2048 MAX_DIMs=4 \
+#     IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#     gIMs=1*128*1*16 gOMs=64*128*8*16 \
+#     IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16 diss
+
+# make TESTCASE=broadcast_039 DType=__half tMs=2048 MAX_DIMs=4 \
+#     IN_SHAPEs=1,8192,1,16 OUT_SHAPEs=1,8192,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#     gIMs=1*8192*1*16 gOMs=1*8192*8*16 \
+#     IN_SHAPE_NAME=1_8192_1_16 OUT_SHAPE_NAME=1_8192_8_16 diss
+
+# # ===============================================================================
+# ============================================
+# broadcast_vec: Vectorized broadcast variants SIMD VEC内广播实现
+# ============================================
+make TESTCASE=broadcast_vec_07 DType=__half tMs=32 MAX_DIMs=2 \
+    IN_SHAPEs=1443,1 OUT_SHAPEs=1443,129 IN_DIMs=2 OUT_DIMs=2 \
+    gIMs=1443*1 gOMs=1443*129 \
+    IN_SHAPE_NAME=1443_1 OUT_SHAPE_NAME=1443_129 diss
+
+make TESTCASE=broadcast_vec_019 DType=__half tMs=16 kInners=49 MAX_DIMs=3 \
+    IN_SHAPEs=1280,1,49 OUT_SHAPEs=1280,8,49 IN_DIMs=3 OUT_DIMs=3 \
+    gIMs=1280*1*49 gOMs=1280*8*49 \
+    IN_SHAPE_NAME=1280_1_49 OUT_SHAPE_NAME=1280_8_49 diss
+
+# make TESTCASE=broadcast_vec_039 DType=__half tMs=16 kInners=16 MAX_DIMs=3 \
+#     IN_SHAPEs=8192,1,16 OUT_SHAPEs=8192,8,16 IN_DIMs=3 OUT_DIMs=3 \
+#     gIMs=8192*1*16 gOMs=8192*8*16 \
+#     IN_SHAPE_NAME=8192_1_16 OUT_SHAPE_NAME=8192_8_16 diss
+
+
+
+
+
+
+# # ===============================================================================
+# MGATHER 通用实现
+# 1\broadcast_to_07  fp16
+make    TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=2 \
+        IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 \
+        gIMs=1042*1 gOMs=1042*129 \
+        TESTNAME=broadcast_to_07 \
+        IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss 
+
+# 2\broadcast_to_ABA_019_new fp16
+make    TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=3 \
+        IN_SHAPEs=1280,1,49 OUT_SHAPEs=1280,8,49 IN_DIMs=3 OUT_DIMs=3 \
+        gIMs=1280*1*49 gOMs=1280*8*49 \
+        TESTNAME=broadcast_to_ABA_019_new \
+        IN_SHAPE_NAME=1280_1_49 OUT_SHAPE_NAME=1280_8_49 res_check=off diss 
+
+# 3\BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004  fp16
+make    TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=5 \
+        IN_SHAPEs=1,1,1,65,128 OUT_SHAPEs=1,1,7,65,128 IN_DIMs=5 OUT_DIMs=5 \
+        gIMs=1*1*1*65*128 gOMs=1*1*7*65*128 \
+        TESTNAME=BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004 \
+        IN_SHAPE_NAME=1_1_1_65_128 OUT_SHAPE_NAME=1_1_7_65_128  res_check=off diss 
+
+# # 4\Bbroadcast_to_BABA_039  fp16 int32
+# make    TESTCASE=broadcast DType=__half tMs=512 MAX_DIMs=4 \
+#         IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#         gIMs=1*128*1*16 gOMs=64*128*8*16 \
+#         TESTNAME=Bbroadcast_to_BABA_039 \
+#         IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16  res_check=off diss 
+
+# make    TESTCASE=broadcast DType=int32_t tMs=512 MAX_DIMs=4 \
+#         IN_SHAPEs=1,128,1,16 OUT_SHAPEs=64,128,8,16 IN_DIMs=4 OUT_DIMs=4 \
+#         gIMs=1*128*1*16 gOMs=64*128*8*16 \
+#         TESTNAME=Bbroadcast_to_BABA_039 \
+#         IN_SHAPE_NAME=1_128_1_16 OUT_SHAPE_NAME=64_128_8_16  res_check=off diss

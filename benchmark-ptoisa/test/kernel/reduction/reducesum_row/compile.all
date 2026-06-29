@@ -1,0 +1,12 @@
+#!/bin/bash
+# Reducesum row-wise reduction test cases
+
+COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
+
+# Large matrix, int32_t
+make TESTCASE=reducesum_row COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=16 tN_s=512 \
+    gM_s=16 gN_s=8192
+
+# Large matrix, __half (DISABLED: Tile alignment < 32 bytes for _Float16 with Cols=8)
+# make TESTCASE=reducesum_row COMPILER_DIR=$COMPILER_DIR DType=__half tM_s=16 tN_s=512 \
+#     gM_s=16 gN_s=8192
