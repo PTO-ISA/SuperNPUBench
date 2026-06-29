@@ -1,0 +1,175 @@
+ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(linx|pto)/.*@\1/\2@')
+TEST_ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(linx|pto)/test/.*@\1/\2/test@')
+CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/(linx|pto)/test/(.*)@\2@')
+CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')
+OBJ_ROOT := $(shell realpath $(TEST_ROOT)/../output)
+CASE_SRC_DIR := $(CATEGORY)/src
+ELF_DIR := $(OBJ_ROOT)/$(CATEGORY)/elf
+SRC_DIR := $(shell dirname $(SRC_FILE))
+OBJ_DIR := $(OBJ_ROOT)/$(CASE_SRC_DIR)
+ELF_HEAD := $(ELF_DIR)/$(CATEGORY_NAME)
+
+COMM_SRC_DIR := common/src
+
+COMM_OBJ += $(patsubst %.cpp, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.cpp)))
+COMM_OBJ += $(patsubst %.c, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.c)))
+COMM_OBJ += $(patsubst %.s, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.s)))
+
+OBJ := $(patsubst %.cpp, %.o, $(subst $(SRC_DIR), $(OBJ_DIR), $(SRC_FILE)))
+OBJ := $(patsubst %.c, %.o, $(OBJ))
+OBJ := $(patsubst %.s, %.o, $(OBJ))
+
+LINK_SCRIPT_SRC = $(TEST_ROOT)/$(COMM_SRC_DIR)/baremetal_linx.lds.S
+LINK_SCRIPT =  $(patsubst %.S, %, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(LINK_SCRIPT_SRC)))
+
+PLAT ?= linx
+baremetal ?= off
+
+ifeq ($(PLAT), cpu)
+DEFINES += -D__cpu_sim__
+COMPILER_DIR ?= /usr/bin
+AS = $(COMPILER_DIR)/gcc
+CC = $(COMPILER_DIR)/gcc
+CXX = $(COMPILER_DIR)/g++
+LINK = $(COMPILER_DIR)/g++
+DUMP = $(COMPILER_DIR)/objdump
+COPY = $(COMPILER_DIR)/objcopy
+CC_O = -g -c -O0
+CXX_VER ?= -std=c++20
+CC_LINK +=
+else ifeq ($(PLAT), arm_sme)
+DEFINES += -D__ARM_FEATURE_SME
+COMPILER_DIR ?= /usr/bin
+AS = $(COMPILER_DIR)/aarch64-linux-gnu-gcc
+CC = $(COMPILER_DIR)/aarch64-linux-gnu-gcc
+CXX = $(COMPILER_DIR)/aarch64-linux-gnu-g++
+LINK = $(COMPILER_DIR)/aarch64-linux-gnu-g++
+DUMP = $(COMPILER_DIR)/aarch64-linux-gnu-objdump
+COPY = $(COMPILER_DIR)/aarch64-linux-gnu-objcopy
+CC_O = -c -O3
+CXX_VER ?= -std=c++20
+else ifeq ($(PLAT), linx)
+DEFINES += -D__linx
+ifndef COMPILER_DIR
+$(error COMPILER_DIR is not set. Export COMPILER_DIR pointing to the linx_blockisa_llvm_musl toolchain bin directory, e.g. export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin)
+endif
+AS = $(COMPILER_DIR)/clang
+CC = $(COMPILER_DIR)/clang 
+CXX = $(COMPILER_DIR)/clang++
+LINK = $(COMPILER_DIR)/clang++
+DUMP = $(COMPILER_DIR)/llvm-objdump
+COPY = $(COMPILER_DIR)/llvm-objcopy
+CC_O = -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true $(CFLAGS)
+CXX_VER ?= -std=c++20
+	ifneq ($(CC_OPT), default)
+    CC_O += -mllvm -linxv5-enable-HL-Inst-Opt=true \
+			-mllvm -linxv5-enable-dim-opt=true \
+		-mllvm -linxv5-enable-ldst-bridge=false \
+		-mllvm -linxv5-enable-continuous-mem-opt=true \
+		-mllvm -linxv5-enable-tile-clock-hand=false \
+                -mllvm -linxv5-enable-simt-clock-hand=true \
+                -mllvm -enable-misched=false
+	endif
+
+	ifeq ($(baremetal), on)
+	CC_LINK += -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
+	else
+	CC_LINK += -nostartfiles $(ROOT)/test/common/_start.s
+	endif
+
+    DEFINES += -DENABLE_TENSOR_INSTR
+endif
+
+ifeq ($(PY_LIB), on)
+CC_O += -fPIC
+CC_LINK += -shared
+INCLUDE += -I/usr/include/python3.10 -I/usr/local/lib/python3.10/dist-packages/pybind11/include \
+           -I$(HOME)/.local/lib/python3.10/site-packages/pybind11/include
+endif
+
+ifeq ($(LIB), on)
+CC_O += -fPIC
+CC_LINK += -shared
+endif
+
+INCLUDE += -I$(ROOT)/include -I$(ROOT)/test/common -I$(ROOT)/test/common/src -I$(ROOT)/kernels -I$(ROOT)/models
+QEMU ?= /remote/lms60/c00622284/qemu/LinxBlockModel/build/qemu-linx
+
+CC_O_ALL = $(CC_O) $(CC_OPTS)
+CXX_O_ALL = $(CC_O) $(CXX_VER) $(CC_OPTS)
+
+ifneq ($(baremetal), on)
+COMM_OBJ = 
+LINK_SCRIPT_SRC = 
+LINK_SCRIPT = 
+else
+DEFINES += -D__baremetal
+endif
+
+ifeq ($(res_check), on)
+DEFINES += -DRES_CHECK -DENABLE_BINARY_OUTPUT
+DEFINES += -DCHK_DIR=\"$(ROOT)/compare/$(notdir $(basename $(TARGET)))\"
+CC_LINK = 
+endif
+
+.DEFAULT_GOAL := all
+
+all: pre_work $(TARGET)
+
+diss: pre_work $(TARGET)
+	$(DUMP) -dl $(TARGET) > $(TARGET).diss
+
+ifeq ($(PLAT), linx)
+sim: pre_work $(TARGET)
+	$(QEMU) -blk_optimize force_tb_chained -s 4096M $(TARGET)
+else ifeq ($(PLAT), cpu)
+sim: pre_work $(TARGET)
+	$(TARGET)
+endif
+
+ddebug: pre_work $(TARGET)
+	$(QEMU) --singlestep -plugin $(TEST_ROOT)/common/liblogbpc.so,out=logbpc.log -blk_optimize force_tb_chained -s 4096M -d cpu,in_asm,exec,nochain,linxmem -D run.log $(TARGET)
+
+debug: pre_work $(TARGET)
+	$(QEMU) -blk_optimize force_tb_chained -s 4096M -d cpu,in_asm,exec,nochain,linxmem -D run.log $(TARGET)
+
+$(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
+	@mkdir -p $(shell dirname $@)
+	$(CXX) $(CXX_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+
+$(OBJ_DIR)%.o: $(SRC_DIR)%.c
+	@mkdir -p $(shell dirname $@)
+	$(CC) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+
+$(OBJ_DIR)%.o: $(SRC_DIR)%.s
+	@mkdir -p $(shell dirname $@)
+	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+
+$(OBJ_ROOT)/$(COMM_SRC_DIR)%.o: $(TEST_ROOT)/$(COMM_SRC_DIR)%.c
+	@mkdir -p $(shell dirname $@)
+	$(CXX) -mlxbc -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
+
+$(OBJ_ROOT)/$(COMM_SRC_DIR)%.o: $(TEST_ROOT)/$(COMM_SRC_DIR)%.s
+	@mkdir -p $(shell dirname $@)
+	$(CXX) -mlxbc -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
+
+$(OBJ_ROOT)/$(COMM_SRC_DIR)%.lds : $(TEST_ROOT)/$(COMM_SRC_DIR)%.lds.S
+	$(CC) $(DEFINES) $(INCLUDE) -E -P -C -o $@ $<
+
+$(TARGET): clean $(LINK_SCRIPT) $(COMM_OBJ) $(OBJ) $(EXTRA_OBJ_FILES)
+	@mkdir -p $(shell dirname $@)
+	$(LINK) $(CC_LINK) $(OBJ) $(COMM_OBJ) $(EXTRA_OBJ_FILES) -o $@
+
+pre_work:
+	@mkdir -p $(OBJ_DIR)
+	@mkdir -p $(ELF_DIR)
+	@mkdir -p $(OBJ_ROOT)/$(COMM_SRC_DIR)
+
+clean:
+	@find $(OBJ_ROOT) -type f -name "${TESTCASE}.o" -exec rm -rf {} \;
+	@rm -rf $(COMM_OBJ) $(LINK_SCRIPT)
+
+clean_all:
+	@rm -rf $(OBJ_ROOT)
+
+.PHONY: all diss sim clean clean_all pre_work

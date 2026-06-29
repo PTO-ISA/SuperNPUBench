@@ -1,0 +1,28 @@
+#!/bin/bash
+# Gather operator test cases
+# Typical scenarios: different input/output scales and dimensions
+
+COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
+
+# ============================================
+# Typical gather scenarios
+# ============================================
+# # Embedding lookup: large vocab, small batch
+# make TESTCASE=gather COMPILER_DIR=$COMPILER_DIR DType=__fp32 OType=uint32_t \
+#     gKs=200000 gMs=202 gNs=97 \
+#     tMs=128 tNs=128
+
+# # Large-scale gather
+# make TESTCASE=gather COMPILER_DIR=$COMPILER_DIR DType=__fp32 OType=uint32_t \
+#     gKs=875000 gMs=8192 gNs=1 \
+#     tMs=128 tNs=128
+
+# # Medium-scale gather
+# make TESTCASE=gather COMPILER_DIR=$COMPILER_DIR DType=__fp32 OType=uint32_t \
+#     gKs=754 gMs=640 gNs=17 \
+#     tMs=128 tNs=128
+
+# Power-of-2 dimensions
+make TESTCASE=gather COMPILER_DIR=$COMPILER_DIR DType=__fp32 OType=uint32_t \
+    gKs=131072 gMs=32 gNs=256 \
+    tMs=32 tNs=128

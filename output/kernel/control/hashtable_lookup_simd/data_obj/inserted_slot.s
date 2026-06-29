@@ -1,8 +1,0 @@
-.section .data
-.global _binary_inserted_slot_data_start
-_binary_inserted_slot_data_start:
-.incbin "hashtable_lookup_simd/data_obj/inserted_slot.data"
-.global _binary_inserted_slot_data_end
-_binary_inserted_slot_data_end:
-.global _binary_inserted_slot_data_size
-.equ _binary_inserted_slot_data_size, .-_binary_inserted_slot_data_start
