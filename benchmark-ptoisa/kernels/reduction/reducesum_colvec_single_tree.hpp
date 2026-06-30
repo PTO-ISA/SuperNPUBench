@@ -25,6 +25,9 @@ void reducesum_colsum_rand(
     using tile_shapeData_col = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor, rmd_M, tN>;
     using tile_shapeSum = Tile<Location::Vec, dtype, 1, tN, BLayout::RowMajor>;
     using tile_shapeTmpSum = Tile<Location::Vec, dtype, Mb, tN, BLayout::RowMajor>;
+    using tile_shapeTmp = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor>;
+    using tile_shapeTmp_col = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor, rmd_M, tN>;
+    using tile_shapeTmp_final = Tile<Location::Vec, dtype, Mb, tN, BLayout::RowMajor>;
 
     gm_shapeIn inGm(in_ptr);
     gm_shapeOut outGm(out_ptr);
@@ -33,6 +36,10 @@ void reducesum_colsum_rand(
     tile_shapeData_col dataTile_col;
     tile_shapeSum SumTile;
     tile_shapeTmpSum tmpSumTile;
+
+    tile_shapeTmp tmpTile;
+    tile_shapeTmp_col tmpTile_col;
+    tile_shapeTmp_final tmpTile_final;
 
     using itIn = global_iterator<gm_shapeIn, tile_shapeData>;
     using itOut = global_iterator<gm_shapeOut, tile_shapeSum>;
@@ -46,7 +53,7 @@ void reducesum_colsum_rand(
         auto gI = gIIter(i, 0);
         TLOAD(dataTile, gI);
         tile_shapeSum partialSum;
-        TCOLSUM(partialSum, dataTile);
+        TCOLSUM(partialSum, dataTile, tmpTile, /*isBinary=*/true);
 
         using SingleRow = Tile<Location::Vec, dtype, 1, tN, BLayout::RowMajor>;
         SingleRow rowView;
@@ -61,11 +68,11 @@ void reducesum_colsum_rand(
         auto gI = gIIter(Mb, 0);
         TLOAD(dataTile_col, gI);
         tile_shapeSum partialSum;
-        TCOLSUM(partialSum, dataTile_col);
+        TCOLSUM(partialSum, dataTile_col, tmpTile_col, /*isBinary=*/true);
         TADD(tmpSumTile, tmpSumTile, partialSum);
     }
 
-    TCOLSUM(SumTile, tmpSumTile);
+    TCOLSUM(SumTile, tmpSumTile, tmpTile_final, /*isBinary=*/true);
     TSTORE(gO, SumTile);
 }
 

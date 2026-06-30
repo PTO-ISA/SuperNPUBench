@@ -28,6 +28,11 @@ void reducesum_colsum_rand(
     using tile_shapeData_cor = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor, rmd_M, rmd_N>;
     using tile_shapeSum_row = Tile<Location::Vec, dtype, 1, tN, BLayout::RowMajor, 1, rmd_N>;
 
+    using tile_shapeTmp = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor>;
+    using tile_shapeTmp_col = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor, rmd_M, tN>;
+    using tile_shapeTmp_row = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor, tM, rmd_N>;
+    using tile_shapeTmp_cor = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor, rmd_M, rmd_N>;
+
     gm_shapeIn inGm(in_ptr);
     gm_shapeOut outGm(out_ptr);
 
@@ -39,6 +44,11 @@ void reducesum_colsum_rand(
     tile_shapeData_cor dataTile_cor;
     tile_shapeSum_row SumTile_row;
     tile_shapeSum_row oldSumTile_row;
+
+    tile_shapeTmp tmpTile;
+    tile_shapeTmp_col tmpTile_col;
+    tile_shapeTmp_row tmpTile_row;
+    tile_shapeTmp_cor tmpTile_cor;
 
     using itIn = global_iterator<gm_shapeIn, tile_shapeData>;
     using itOut = global_iterator<gm_shapeOut, tile_shapeSum>;
@@ -53,13 +63,13 @@ void reducesum_colsum_rand(
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, j);
             TLOAD(dataTile, gI);
-            TCOLSUM(SumTile, dataTile);
+            TCOLSUM(SumTile, dataTile, tmpTile, /*isBinary=*/true);
             TADD(oldSumTile, oldSumTile, SumTile);
         }
         if constexpr (rmd_M > 0) {
             auto gI = gIIter(Mb, j);
             TLOAD(dataTile_col, gI);
-            TCOLSUM(SumTile, dataTile_col);
+            TCOLSUM(SumTile, dataTile_col, tmpTile_col, /*isBinary=*/true);
             TADD(oldSumTile, oldSumTile, SumTile);
         }
         TSTORE(gO, oldSumTile);
@@ -71,13 +81,13 @@ void reducesum_colsum_rand(
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, Nb);
             TLOAD(dataTile_row, gI);
-            TCOLSUM(SumTile_row, dataTile_row);
+            TCOLSUM(SumTile_row, dataTile_row, tmpTile_row, /*isBinary=*/true);
             TADD(oldSumTile_row, oldSumTile_row, SumTile_row);
         }
         if constexpr (rmd_M > 0) {
             auto gI = gIIter(Mb, Nb);
             TLOAD(dataTile_cor, gI);
-            TCOLSUM(SumTile_row, dataTile_cor);
+            TCOLSUM(SumTile_row, dataTile_cor, tmpTile_cor, /*isBinary=*/true);
             TADD(oldSumTile_row, oldSumTile_row, SumTile_row);
         }
         TSTORE(gO, oldSumTile_row);
