@@ -1,3 +1,9 @@
+#include <common/block_vector_compat.hpp>
+
+using namespace pto::blkv;
+using pto::is_global_data_v;
+using pto::is_tile_data_v;
+
 template<typename tile_shape>
 void __vec__ gen_offset_ND2ZZ(
     typename tile_shape::TileDType __out__ out,
@@ -98,8 +104,12 @@ void gen_ND2ZZ_offset_Impl(
     const uint32_t j) {
     static_assert(tile_shapeOffset::ValidRow != -1 && tile_shapeOffset::ValidCol != -1,
                   "Only static shape supported");
-    // gen_offset_ND2ZZ<tile_shapeOffset><<<tl_tensor::ValidRow, tl_tensor::ValidCol, 1>>>(offset.data(), glb_tensor::ColStride, glb_tensor::RowStride, tl_tensor::ValidRow, tl_tensor::ValidCol, i, j);
-    gen_offset_ND2ZZ<tile_shapeOffset><<<tl_tensor::ValidCol, 1, 1>>>(offset.data(), glb_tensor::ColStride, glb_tensor::RowStride, tl_tensor::ValidRow, tl_tensor::ValidCol, i, j);
+    pto::blkv::blkv_for_1d(tl_tensor::ValidCol, [&] {
+        gen_offset_ND2ZZ<tile_shapeOffset>(offset.data(), glb_tensor::ColStride,
+                                           glb_tensor::RowStride,
+                                           tl_tensor::ValidRow,
+                                           tl_tensor::ValidCol, i, j);
+    });
 }
 
 template<is_global_data_v glb_tensor, is_tile_data_v tl_tensor, typename tile_shapeOffset>
@@ -111,7 +121,9 @@ void gen_ND2NN_offset_Impl(
     const uint32_t j) {
     static_assert(tile_shapeOffset::ValidRow != -1 && tile_shapeOffset::ValidCol != -1,
                   "Only static shape supported");
-    // gen_offset_ND2NN<tile_shapeOffset><<<tl_tensor::ValidCol, tl_tensor::ValidRow, 1>>>(offset.data(), glb_tensor::ColStride, glb_tensor::RowStride, tl_tensor::ValidRow, tl_tensor::ValidCol, i, j);
-    // gen_offset_ND2NN<tile_shapeOffset><<<tl_tensor::ValidRow, tl_tensor::ValidCol, 1>>>(offset.data(), glb_tensor::ColStride, glb_tensor::RowStride, tl_tensor::ValidRow, tl_tensor::ValidCol, i, j);
-    gen_offset_ND2NN_new<tile_shapeOffset><<<tl_tensor::ValidRow, 1, 1>>>(offset.data(), glb_tensor::ColStride, glb_tensor::RowStride, tl_tensor::ValidRow, tl_tensor::ValidCol, i, j);
+    pto::blkv::blkv_for_1d(tl_tensor::ValidRow, [&] {
+        gen_offset_ND2NN_new<tile_shapeOffset>(
+            offset.data(), glb_tensor::ColStride, glb_tensor::RowStride,
+            tl_tensor::ValidRow, tl_tensor::ValidCol, i, j);
+    });
 }

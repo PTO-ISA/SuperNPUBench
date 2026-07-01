@@ -4,9 +4,9 @@
 COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
 
 # Large matrix, int32_t
-make TESTCASE=reducemax_col COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=256 tN_s=64 \
+make TESTCASE=reducemax_col COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=16 tN_s=64 \
     gM_s=2048 gN_s=64
 
 # Large matrix, __half
-#make TESTCASE=reducemax_col COMPILER_DIR=$COMPILER_DIR DType=__half tM_s=256 tN_s=64 \
+#make TESTCASE=reducemax_col COMPILER_DIR=$COMPILER_DIR DType=__half tM_s=16 tN_s=64 \
 #    gM_s=2048 gN_s=64

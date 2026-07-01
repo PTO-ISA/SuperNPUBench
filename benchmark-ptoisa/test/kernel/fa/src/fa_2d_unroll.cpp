@@ -18,8 +18,17 @@
 #define Skv Tskv
 #endif
 
+#ifndef TqD
 #define qD 128
+#else
+#define qD TqD
+#endif
+
+#ifndef TvD
 #define vD 128
+#else
+#define vD TvD
+#endif
 
 #ifndef Tm
 #define kTm 128

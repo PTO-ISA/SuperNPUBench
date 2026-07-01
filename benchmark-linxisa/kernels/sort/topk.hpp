@@ -1,8 +1,11 @@
 #ifndef TOPK_HPP
 #define TOPK_HPP
 
+#include <common/block_vector_compat.hpp>
 #include <common/pto_tileop.hpp>
 #include <cstdint>
+
+using namespace pto::blkv;
 
 // ============================================================================
 // Constants
@@ -82,15 +85,18 @@ void __vec__ ExtractLow8HistForKthBin_Vec_RowMajor(
 
 template <typename tile_shape_out>
 void ExtractHigh8Hist_Impl(tile_shape_out& dst, const uint16_t* src) {
-    ExtractHigh8Hist_Vec_RowMajor<tile_shape_out>
-        <<<1, 256, 1>>>(dst.data(), src);
+    pto::blkv::blkv_for_2d(1, 256, [&] {
+        ExtractHigh8Hist_Vec_RowMajor<tile_shape_out>(dst.data(), src);
+    });
 }
 
 template <typename tile_shape_out>
 void ExtractLow8HistForKthBin_Impl(tile_shape_out& dst, const uint16_t* src,
                                    uint16_t kth_bin) {
-    ExtractLow8HistForKthBin_Vec_RowMajor<tile_shape_out>
-        <<<1, 256, 1>>>(dst.data(), src, kth_bin);
+    pto::blkv::blkv_for_2d(1, 256, [&] {
+        ExtractLow8HistForKthBin_Vec_RowMajor<tile_shape_out>(dst.data(), src,
+                                                              kth_bin);
+    });
 }
 
 // ============================================================================

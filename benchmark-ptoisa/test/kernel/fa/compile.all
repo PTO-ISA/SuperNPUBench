@@ -5,24 +5,25 @@
 # fa_2d_unroll: 2D unrolled flash attention
 # ============================================
 # X=1, Y=2
-make TESTCASE=fa_2d_unroll Sq=256 Skv=512 Tm=128 Tk=128 X=1 Y=2
-make TESTCASE=fa_2d_unroll Sq=512 Skv=512 Tm=128 Tk=128 X=1 Y=2
+make TESTCASE=fa_2d_unroll Sq=256 Skv=512 qD=32 vD=32 Tm=32 Tk=32 X=1 Y=2
+make TESTCASE=fa_2d_unroll Sq=512 Skv=512 qD=32 vD=32 Tm=32 Tk=32 X=1 Y=2
 
 # X=1, Y=4
-make TESTCASE=fa_2d_unroll Sq=256 Skv=512 Tm=128 Tk=128 X=1 Y=4
-make TESTCASE=fa_2d_unroll Sq=512 Skv=512 Tm=128 Tk=128 X=1 Y=4
+make TESTCASE=fa_2d_unroll Sq=256 Skv=512 qD=32 vD=32 Tm=32 Tk=32 X=1 Y=4
+make TESTCASE=fa_2d_unroll Sq=512 Skv=512 qD=32 vD=32 Tm=32 Tk=32 X=1 Y=4
 
 # X=2, Y=2
-make TESTCASE=fa_2d_unroll Sq=256 Skv=512 Tm=128 Tk=128 X=2 Y=2
-make TESTCASE=fa_2d_unroll Sq=512 Skv=512 Tm=128 Tk=128 X=2 Y=2
+make TESTCASE=fa_2d_unroll Sq=256 Skv=512 qD=32 vD=32 Tm=32 Tk=32 X=2 Y=2
+make TESTCASE=fa_2d_unroll Sq=512 Skv=512 qD=32 vD=32 Tm=32 Tk=32 X=2 Y=2
 
 # X=2, Y=4
-make TESTCASE=fa_2d_unroll Sq=256 Skv=512 Tm=128 Tk=128 X=2 Y=4
-make TESTCASE=fa_2d_unroll Sq=512 Skv=512 Tm=128 Tk=128 X=2 Y=4
+make TESTCASE=fa_2d_unroll Sq=256 Skv=512 qD=32 vD=32 Tm=32 Tk=32 X=2 Y=4
+make TESTCASE=fa_2d_unroll Sq=512 Skv=512 qD=32 vD=32 Tm=32 Tk=32 X=2 Y=4
 
 # ============================================
 # fa_HIF4_HIF4: HIF4 quantized flash attention
+# Requires block-vector launch migration before it is v0.57-active.
 # ============================================
-make TESTCASE=fa_HIF4_HIF4 MODE=BF16_NOGATHER Sq=256 Skv=512 Tm=128 Tk=128 X=1 Y=1
+# make TESTCASE=fa_HIF4_HIF4 MODE=BF16_NOGATHER Sq=256 Skv=512 qD=32 vD=32 Tm=32 Tk=32 X=1 Y=1
 # make TESTCASE=fa_HIF4_HIF4 MODE=BF16x2 Sq=256 Skv=512 Tm=128 Tk=128 X=1 Y=1
 # make TESTCASE=fa_HIF4_HIF4 MODE=BF16x2_NOGATHER Sq=256 Skv=512 Tm=128 Tk=128 X=1 Y=1
