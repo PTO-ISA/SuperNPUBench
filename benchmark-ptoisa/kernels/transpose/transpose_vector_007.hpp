@@ -15,7 +15,6 @@
 #define TRANSPOSE_VECTOR_007_TILE_HPP
 
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 
 using namespace pto;

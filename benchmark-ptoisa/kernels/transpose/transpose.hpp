@@ -411,4 +411,18 @@ void tile_transpose_2d(DType *input, DType *output) {
 
 } // namespace supernpu::tile_isa
 
+template <typename DType, size_t MAX_DIM, const int gIM, const int gOM,
+          const int tM, size_t IN_DIM, size_t OUT_DIM,
+          size_t TRANSPOSE_DIM1, size_t TRANSPOSE_DIM0>
+void transpose(DType *input, DType *output, std::uint32_t *input_shape,
+               std::uint32_t *output_shape) {
+  static_assert(gIM == gOM, "transpose preserves element count");
+  static_assert(IN_DIM == OUT_DIM, "transpose rank must be preserved");
+  (void)MAX_DIM;
+  supernpu::tile_isa::tile_transpose_nd<
+      DType, static_cast<int>(IN_DIM), static_cast<int>(TRANSPOSE_DIM0),
+      static_cast<int>(TRANSPOSE_DIM1), gOM, tM>(input, output, input_shape,
+                                                 output_shape);
+}
+
 #endif

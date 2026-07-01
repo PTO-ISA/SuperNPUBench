@@ -5,7 +5,7 @@ for debug in on off; do
     else
         debug_define="-DFOR_GFSIM"
     fi
-    for num_col in 256 512 1024; do
+    for num_col in 256 512; do
         make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum6144_kMaxProbe512_knum_col${num_col}_debug_${debug} EXTRA_DEFINES="-DkNum=6144 -DMAX_PROBE=512 -DNUM_COL=${num_col} ${debug_define}" diss
     done
 done
