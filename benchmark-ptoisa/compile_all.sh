@@ -4,15 +4,19 @@
 # Don't use set -e as some operators may fail to compile
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export COMPILER_DIR=${COMPILER_DIR:-/path/to/pto-toolchain/bin}
+LINX_ISA_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+export COMPILER_DIR=${COMPILER_DIR:-$LINX_ISA_ROOT/compiler/llvm/build-linxisa-clang/bin}
 REPO_ROOT=${REPO_ROOT:-$SCRIPT_DIR}
 
 echo "=========================================="
 echo "[PTO ISA] Starting full compilation"
 echo "REPO_ROOT: $REPO_ROOT"
+echo "COMPILER_DIR: $COMPILER_DIR"
 echo "=========================================="
 
 # Function to compile an operator
+FAILURES=0
+
 compile_operator() {
     local operator_path=$1
     local operator_name=$2
@@ -25,10 +29,15 @@ compile_operator() {
     
     if [ ! -d "$operator_path" ]; then
         echo "Warning: Directory not found: $operator_path"
+        FAILURES=$((FAILURES + 1))
         return 1
     fi
     
-    cd "$operator_path"
+    if ! cd "$operator_path"; then
+        echo "✗ $operator_name compilation failed: cannot enter directory"
+        FAILURES=$((FAILURES + 1))
+        return 1
+    fi
     
     if [ -f "compile.all" ]; then
         echo "Running compile.all with baremetal=${baremetal:-off}..."
@@ -37,9 +46,12 @@ compile_operator() {
             echo "✓ $operator_name compilation completed"
         else
             echo "✗ $operator_name compilation failed"
+            FAILURES=$((FAILURES + 1))
+            return 1
         fi
     else
         echo "Warning: No compile.all found in $operator_path"
+        FAILURES=$((FAILURES + 1))
         return 1
     fi
 }
@@ -67,3 +79,8 @@ echo ""
 echo "Generated ELF files:"
 find "$REPO_ROOT/output" -name "*.elf" -type f | wc -l
 echo "ELF files are located in: $REPO_ROOT/output/"
+
+if [ "$FAILURES" -ne 0 ]; then
+    echo "Compilation failures: $FAILURES"
+    exit 1
+fi

@@ -1,6 +1,7 @@
 #ifndef HASHTABLE_LOOKUP_SIMD_HPP
 #define HASHTABLE_LOOKUP_SIMD_HPP
 
+#include <common/block_vector_compat.hpp>
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"   // MGATHER
 #include <cstdint>

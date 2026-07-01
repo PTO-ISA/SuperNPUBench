@@ -1,8 +1,11 @@
 ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(benchmark-linxisa|benchmark-ptoisa)/.*@\1/\2@')
+LINX_ISA_ROOT ?= $(shell cd $(ROOT)/../../.. && pwd)
+LINX_SYSROOT ?= $(LINX_ISA_ROOT)/out/libc/musl/install/phase-b
+PTO_KERNELS_INCLUDE ?= $(LINX_ISA_ROOT)/workloads/pto_kernels/include
 TEST_ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(benchmark-linxisa|benchmark-ptoisa)/test/.*@\1/\2/test@')
 CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/(benchmark-linxisa|benchmark-ptoisa)/test/(.*)@\2@')
 CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')
-OBJ_ROOT := $(shell realpath $(TEST_ROOT)/../output)
+OBJ_ROOT := $(abspath $(TEST_ROOT)/../output)
 CASE_SRC_DIR := $(CATEGORY)/src
 ELF_DIR := $(OBJ_ROOT)/$(CATEGORY)/elf
 SRC_DIR := $(shell dirname $(SRC_FILE))
@@ -51,7 +54,7 @@ CXX_VER ?= -std=c++20
 else ifeq ($(PLAT), linx)
 DEFINES += -D__linx
 ifndef COMPILER_DIR
-$(error COMPILER_DIR is not set. Export COMPILER_DIR pointing to the linx_blockisa_llvm_musl toolchain bin directory, e.g. export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin)
+$(error COMPILER_DIR is not set. Export COMPILER_DIR pointing to the Linx Clang bin directory)
 endif
 AS = $(COMPILER_DIR)/clang
 CC = $(COMPILER_DIR)/clang 
@@ -59,17 +62,16 @@ CXX = $(COMPILER_DIR)/clang++
 LINK = $(COMPILER_DIR)/clang++
 DUMP = $(COMPILER_DIR)/llvm-objdump
 COPY = $(COMPILER_DIR)/llvm-objcopy
-CC_O = -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true $(CFLAGS)
+LINX_TARGET ?= linx64-unknown-linux-musl
+LINX_CFLAGS ?= -mlxbc --target=$(LINX_TARGET) -fenable-matrix -O2
+LINX_LDFLAGS ?= -nostdlib++ -unwindlib=none
+ifneq ($(wildcard $(LINX_SYSROOT)/usr/include/bits/alltypes.h),)
+LINX_CFLAGS += --sysroot=$(LINX_SYSROOT) -idirafter $(LINX_SYSROOT)/usr/include -D_GNU_SOURCE
+CC_LINK += --sysroot=$(LINX_SYSROOT)
+endif
+CC_O = -c $(LINX_CFLAGS) $(CFLAGS)
+CC_LINK += $(LINX_CFLAGS) $(LINX_LDFLAGS)
 CXX_VER ?= -std=c++20
-	ifneq ($(CC_OPT), default)
-    CC_O += -mllvm -linxv5-enable-HL-Inst-Opt=true \
-			-mllvm -linxv5-enable-dim-opt=true \
-		-mllvm -linxv5-enable-ldst-bridge=false \
-		-mllvm -linxv5-enable-continuous-mem-opt=true \
-		-mllvm -linxv5-enable-tile-clock-hand=false \
-                -mllvm -linxv5-enable-simt-clock-hand=true \
-                -mllvm -enable-misched=false
-	endif
 
 	ifeq ($(baremetal), on)
 	CC_LINK += -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
@@ -92,7 +94,7 @@ CC_O += -fPIC
 CC_LINK += -shared
 endif
 
-INCLUDE += -I$(ROOT)/include -I$(ROOT)/test/common -I$(ROOT)/test/common/src -I$(ROOT)/kernels -I$(ROOT)/models
+INCLUDE += -I$(ROOT)/include -I$(ROOT)/test -I$(ROOT)/test/common -I$(ROOT)/test/common/src -I$(ROOT)/kernels -I$(ROOT)/models -I$(PTO_KERNELS_INCLUDE)
 QEMU ?= /remote/lms60/c00622284/qemu/LinxBlockModel/build/qemu-linx
 
 CC_O_ALL = $(CC_O) $(CC_OPTS)

@@ -1,5 +1,9 @@
 // FA utility functions shared across different implementations
 
+#include <common/block_vector_compat.hpp>
+
+using namespace pto::blkv;
+
 template<typename tileSrc, typename tileSrc_cast, typename tileMax, typename tileSum, typename tileScale>
 void __vec__ flashsoftmax_dn_mout_cast_kernel(
                         typename tileScale::TileDType __out__ rescale,

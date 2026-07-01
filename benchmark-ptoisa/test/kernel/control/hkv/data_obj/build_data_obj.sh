@@ -1,5 +1,5 @@
 #!/bin/bash
-COMPILER_DIR="${COMPILER_DIR:-/remote/lms01/j00827727/jcore/compilers/linx_blockisa_llvm_musl0.56.16/bin}"
+: "${COMPILER_DIR:?COMPILER_DIR must point to the Linx Clang bin directory}"
 DATA_OBJ_DIR="$1"
 OUTPUT_DIR="$2"
 
@@ -28,7 +28,7 @@ _binary_${sym_name}_end:
 .equ _binary_${sym_name}_size, .-_binary_${sym_name}_start
 EOF
 
-    $COMPILER_DIR/clang++ -target linx64v5 -c "$asm_file" -o "$obj_file"
+    "$COMPILER_DIR/clang++" -mlxbc -c "$asm_file" -o "$obj_file"
 }
 
 build_one "buckets.bin"

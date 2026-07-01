@@ -2,7 +2,6 @@
 #define REDUCESUMCOLVEC_KERNEL_HPP
 
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -58,7 +57,7 @@ void reducesum_colsum_rand(
 
     for (int j = 0; j < Nb; ++j) {
         auto gO = gOIter(0, j);
-        TEXPANDS(oldSumTile, static_cast<dtype>(0));
+        TEXPANDS(oldSumTile, static_cast<dtype>(0.0f));
 
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, j);

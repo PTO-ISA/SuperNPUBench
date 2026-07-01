@@ -39,7 +39,7 @@ void __vec__ vec_broadcast(
 
 
 // (N,1)->(N,129)
-template<typename dtype, size_t MAX_DIM = 8, size_t IN_DIM0, size_t IN_DIM1, size_t OUT_DIM0, size_t OUT_DIM1, size_t tI1, size_t tO0, size_t tO1>
+template<typename dtype, size_t MAX_DIM, size_t IN_DIM0, size_t IN_DIM1, size_t OUT_DIM0, size_t OUT_DIM1, size_t tI1, size_t tO0, size_t tO1>
 void broadcast(
     dtype *in_ptr,
     dtype *out_ptr,
