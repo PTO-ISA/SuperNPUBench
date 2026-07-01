@@ -1,7 +1,7 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "fileop.h"
-#include "fa/fa_2d_unroll.hpp"
+#include "fa/fa_2d_unroll_pto.hpp"
 
 #define B 1
 #define H 1
@@ -70,7 +70,7 @@ int main(){
     BENCHSTART;
     for(int i=0;i<B;i++){
         for(int j=0;j<H;j++){
-            flash_attention_2d_unroll<dtype, Sq, Skv, qD, vD, kTm, kTk>(
+            flash_attention_2d_unroll_pto<dtype, Sq, Skv, qD, vD, kTm, kTk>(
                 out + i*H*Sq*vD + j*Sq*vD,
                 q + i*H*Sq*qD + j*Sq*qD,
                 k + i*H*Skv*qD + j*Skv*qD,
