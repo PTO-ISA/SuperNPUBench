@@ -21,8 +21,8 @@
 // │          │ 二层实现         │ 当前编译器名 TCOPYIN；                    │
 // │          │                  │ jcore/TCopyIn.hpp 用 __vec__ 实现        │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TINSERT  │ v0.57 supported  │ TileOP API lowers to BSTART.FIXP         │
-// │          │                  │ with FIXP.Function.TINSERT               │
+// │ TINSERT  │ 完全缺失         │ pto_tileop.hpp 中无此 API；              │
+// │          │                  │ 当前编译器无 TINSERT 实现                │
 // │          │                  │ (仅有反向操作 TEXTRACT)                  │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
 // │ TSTORE   │ API 有(名不同)， │ PTO ISA 名 TSTORE；                      │
@@ -79,7 +79,7 @@
 //   kInner     - inner dimension K (e.g. 49, need not be power-of-2)
 // =====================================================================
 
-template<typename dtype, size_t MAX_DIM, size_t IN_DIM, size_t OUT_DIM,
+template<typename dtype, size_t MAX_DIM = 8, size_t IN_DIM, size_t OUT_DIM,
          size_t gIM, size_t gOM, size_t kTileBatch, size_t kInner>
 void broadcast(dtype *in_ptr, dtype *out_ptr,
                const size_t * /*in_shape*/, const size_t * /*out_shape*/) {
@@ -121,7 +121,7 @@ void broadcast(dtype *in_ptr, dtype *out_ptr,
 
         // TINSERT × kBCast: 将输入 tile 插入输出 tile 的 N 个列偏移
         // 每次 TINSERT 写入 kInner 列, N 次互不重叠, 合起来填满 N*kInner 列
-        // v0.57 lowers TINSERT through the FIXP tile block.
+        // [当前编译器] 完全缺失! pto_tileop.hpp 无 TINSERT API
         #pragma clang loop unroll(full)
         for (size_t c = 0; c < kBCast; c++) {
             TINSERT(outTile, inTile, /*indexRow=*/0, /*indexCol=*/(uint16_t)(c * kInner));

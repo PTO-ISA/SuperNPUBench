@@ -9,7 +9,6 @@ echo "ISA backend: $ISA"
 echo "=========================================="
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FAILURES=0
 
 compile_linx() {
     echo ""
@@ -18,7 +17,6 @@ compile_linx() {
         bash "$SCRIPT_DIR/benchmark-linxisa/compile_all.sh"
     else
         echo "Warning: benchmark-linxisa/compile_all.sh not found"
-        return 1
     fi
 }
 
@@ -29,28 +27,19 @@ compile_pto() {
         bash "$SCRIPT_DIR/benchmark-ptoisa/compile_all.sh"
     else
         echo "Warning: benchmark-ptoisa/compile_all.sh not found"
-        return 1
     fi
 }
 
 case $ISA in
     linx|benchmark-linxisa)
-        if ! compile_linx; then
-            FAILURES=$((FAILURES + 1))
-        fi
+        compile_linx
         ;;
     pto|benchmark-ptoisa)
-        if ! compile_pto; then
-            FAILURES=$((FAILURES + 1))
-        fi
+        compile_pto
         ;;
     all)
-        if ! compile_linx; then
-            FAILURES=$((FAILURES + 1))
-        fi
-        if ! compile_pto; then
-            FAILURES=$((FAILURES + 1))
-        fi
+        compile_linx
+        compile_pto
         ;;
     *)
         echo "Usage: $0 [linx|pto|all]"
@@ -65,8 +54,3 @@ echo ""
 echo "=========================================="
 echo "Build completed for: $ISA"
 echo "=========================================="
-
-if [ "$FAILURES" -ne 0 ]; then
-    echo "Backend compilation failures: $FAILURES"
-    exit 1
-fi

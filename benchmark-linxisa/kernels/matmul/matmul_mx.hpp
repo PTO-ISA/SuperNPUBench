@@ -1399,9 +1399,7 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
         MATMUL(tACC, tA, tB);
         TCVT(tACCin, tACC);//[tM, tN] 256->1 , 256 -> 2 scaling factor
         // static_assert(tile_shapeB::ValidCol % (width_factor*128) == 0); // TODO, 暂不考虑padding，假设形状是规整的, 方便处理, taccin*ts_adder=tc_dequant
-        pto::blkv::blkv_for_2d(tile_shapeACC::ValidRow, tile_shapeACC::ValidCol, [&] {
-          dequant_acc<tile_ACCin, tile_shape_scale, tile_shape_dequant>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
-        });
+        dequant_acc<tile_ACCin, tile_shape_scale, tile_shape_dequant><<<tile_shapeACC::ValidRow, tile_shapeACC::ValidCol, 1>>>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
         tAdder[(k+1)%2] = tC_dequant;
       }
       k++;
@@ -1421,9 +1419,7 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
 
         MATMUL(tACC, tA, tB);
         TCVT(tACCin, tACC);
-        pto::blkv::blkv_for_2d(tile_shapeACC::ValidRow, tile_shapeACC::ValidCol, [&] {
-          dequant_acc<tile_ACCin, tile_shape_scale, tile_shape_dequant>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
-        });
+        dequant_acc<tile_ACCin, tile_shape_scale, tile_shape_dequant><<<tile_shapeACC::ValidRow, tile_shapeACC::ValidCol, 1>>>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
         tAdder[(k+1)%2] = tC_dequant;
       }
       TCOPYOUT(gACC, tAdder[(k+1)%2]);
@@ -1453,9 +1449,7 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
         TCOPYIN(ts, gS);
         MATMUL(tACC, tA, tB);
         TCVT(tACCin, tACC);
-        pto::blkv::blkv_for_2d(tile_ACCin_tcols::ValidRow, tile_ACCin_tcols::ValidCol, [&] {
-          dequant_acc<tile_ACCin_tcols, tile_shape_scale, tile_shape_dequant_tcols>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
-        });
+        dequant_acc<tile_ACCin_tcols, tile_shape_scale, tile_shape_dequant_tcols><<<tile_ACCin_tcols::ValidRow, tile_ACCin_tcols::ValidCol, 1>>>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
         tAdder[(k+1)%2] = tC_dequant;
       }
       k++;
@@ -1473,9 +1467,7 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
         TCOPYIN(ts, gS);
         MATMUL(tACC, tA, tB);
         TCVT(tACCin, tACC);
-        pto::blkv::blkv_for_2d(tile_shapeACC::ValidRow, tile_shapeACC::ValidCol, [&] {
-          dequant_acc<tile_ACCin_tcols, tile_shape_scale_tcols, tile_shape_dequant_tcols>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
-        });
+        dequant_acc<tile_ACCin_tcols, tile_shape_scale_tcols, tile_shape_dequant_tcols><<<tile_shapeACC::ValidRow, tile_shapeACC::ValidCol, 1>>>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
         tAdder[(k+1)%2] = tC_dequant;
       }
       TCOPYOUT(gACC, tAdder[(k+1)%2]);

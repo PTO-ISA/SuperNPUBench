@@ -9,12 +9,7 @@
 
 using namespace pto;
 
-enum class PadValue { Null };
-enum class LayoutCvtEnum { ND2ZZ, ND2NN };
-template <typename... Args>
-void blk_tload(Args...);
-
-template <typename GmOut, is_tile_data_v TileAcc>
+template <is_global_data_v GmOut, is_tile_data_v TileAcc>
 void TCOPYOUT_ACC(GmOut &Gout, TileAcc &tAcc){
     using TileAccOut = Tile<Location::Vec, typename TileAcc::DType, TileAcc::Rows, TileAcc::Cols, BLayout::RowMajor, TileAcc::ValidRow, TileAcc::ValidCol>;
     TileAccOut tAccOut;
@@ -22,7 +17,7 @@ void TCOPYOUT_ACC(GmOut &Gout, TileAcc &tAcc){
     TCOPYOUT(Gout, tAccOut);
 }
 
-template <typename GmOut, is_tile_data_v TileAcc>
+template <is_global_data_v GmOut, is_tile_data_v TileAcc>
 void TCOPYOUT_ACC_DYNAMIC(GmOut &Gout, TileAcc &tAcc, size_t valid_row, size_t valid_col){
     using TileAccOut = Tile<Location::Vec, typename TileAcc::DType, TileAcc::Rows, TileAcc::Cols, BLayout::RowMajor, -1, -1>;
     TileAccOut tAccOut(valid_row, valid_col);

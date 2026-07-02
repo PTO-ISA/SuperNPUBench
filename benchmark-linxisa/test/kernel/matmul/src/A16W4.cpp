@@ -41,7 +41,7 @@
 int main() {
     // bf16*fp4
     using fp4_t = __fp4_e2m1x2;
-    using bf16_t = pto_bf16_t;
+    using bf16_t = __bf16;
     static_assert(tilM % 2 == 0); // 暂时假定tile是偶数的，方便取地址，奇数tile实现需要末尾padding 0对齐地址
     static_assert(tilN % 2 == 0);
     static_assert(tilK == (128));

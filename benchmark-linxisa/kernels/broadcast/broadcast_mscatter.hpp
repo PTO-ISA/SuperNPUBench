@@ -86,7 +86,7 @@ void gen_scatter_offset_impl(
 // 通用MSCATTER版 Broadcast
 // 自动识别任意广播维度
 // ==============================================
-template<typename dtype, size_t MAX_DIM, size_t IN_DIM, size_t OUT_DIM, size_t gIM, size_t gOM, size_t tM>
+template<typename dtype, size_t MAX_DIM = 8, size_t IN_DIM, size_t OUT_DIM, size_t gIM, size_t gOM, size_t tM>
 void broadcast_mscatter(
     dtype *in_ptr,
     dtype *out_ptr,

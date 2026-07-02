@@ -14,16 +14,12 @@ ifeq ($(TESTCASE), fa_HIF4_HIF4)
    Tk = 128
    X = 2
    Y = 4
-   qD = 128
-   vD = 128
    DEFINES += -DTsq=$(Sq)
    DEFINES += -DTskv=$(Skv)
    DEFINES += -DTm=$(Tm)
    DEFINES += -DTk=$(Tk)
    DEFINES += -DXdim=$(X)
    DEFINES += -DYdim=$(Y)
-   DEFINES += -DTqD=$(qD)
-   DEFINES += -DTvD=$(vD)
    ifneq ($(MODE), )
       DEFINES += -D$(MODE)
    endif
@@ -48,8 +44,6 @@ ifeq ($(TESTCASE), fa_2d_unroll)
    Tk = 128
    X = 1
    Y = 1
-   qD = 128
-   vD = 128
    ifneq ($(X), )
       X = $(X)
    endif
@@ -62,9 +56,7 @@ ifeq ($(TESTCASE), fa_2d_unroll)
    DEFINES += -DTk=$(Tk)
    DEFINES += -DXdim=$(X)
    DEFINES += -DYdim=$(Y)
-   DEFINES += -DTqD=$(qD)
-   DEFINES += -DTvD=$(vD)
-   TARGET = $(ELF_HEAD)/$(TESTCASE)_Sq$(Sq)_Skv$(Skv)_qD$(qD)_vD$(vD)_Tm$(Tm)_Tk$(Tk)_X$(X)_Y$(Y).elf
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk)_X$(X)_Y$(Y).elf
 endif
 
 include ../../common/Makefile.common

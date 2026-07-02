@@ -70,7 +70,7 @@
 //   kTileRows - rows per tile, must be power-of-2 (e.g. 1,2,4,..,64)
 // =====================================================================
 
-template<typename dtype, size_t MAX_DIM, size_t IN_DIM, size_t OUT_DIM,
+template<typename dtype, size_t MAX_DIM = 8, size_t IN_DIM, size_t OUT_DIM,
          size_t gIM, size_t gOM, size_t kTileRows>
 void broadcast(dtype *in_ptr, dtype *out_ptr,
                const size_t * /*in_shape*/, const size_t * /*out_shape*/) {

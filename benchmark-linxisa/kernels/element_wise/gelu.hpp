@@ -1,77 +1,128 @@
-#ifndef SUPERNPUBENCH_PTOISA_GELU_HPP
-#define SUPERNPUBENCH_PTOISA_GELU_HPP
-
 #include <common/pto_tileop.hpp>
 
-#include <cstddef>
+#include "template_asm.h"
+#include <cstdint>
+#include <cstdio>
+// 海思解决方案 新版多项式拟合
 
-using namespace pto;
+// ==============================================
+// ==============================================
 
-template <typename TileT>
-inline void gelu_tile(TileT &dst, TileT &src) {
-  TileT t;
-  TileT t2;
-  TileT p;
-  TileT tmp;
-  TileT denom;
-  TileT recip;
+template<typename tile_shape>
+void __vec__ gelu_simd(
+    typename tile_shape::TileDType __in__ in,
+    typename tile_shape::TileDType __out__ out
+    // bool approximate = false // false:none, true:tanh
+) {
+    size_t index = blkv_get_index_x();
+    typename tile_shape::DType indata;
+    indata.data = blkv_get_tile_ptr(in)[index].data; // 直接拷贝 short
 
-  TMAXS(t, src, -5.75f);
-  TMINS(t, t, 5.75f);
-  TMUL(t2, t, t);
+    // 数据格式转换 V.FCVT
+    float x = static_cast<float>(indata);
+    
+    constexpr uint32_t TOTAL_COUNT = 24*8*1024;
+    constexpr float SCALAR_A5 = -3.5123395303315874e-09f;
+    constexpr float SCALAR_A4 =  2.6452661927578447e-07f;
+    constexpr float SCALAR_A3 = -7.9294877650681883e-06f;
+    constexpr float SCALAR_A2 =  1.1061238183174282e-04f;
+    constexpr float SCALAR_A1 =  6.5189960878342390e-05f;
+    constexpr float SCALAR_A0 = -7.2666168212890625e-02f;
+    constexpr float SCALAR_AM1 = -1.5957698822021484e+00f;
+    constexpr float FP32_MAX = 5.75f;
+    
+    float t = blkv_max(x, -FP32_MAX);
+    t = blkv_min(t, FP32_MAX);
+    float t2 = t * t;
 
-  TMULS(p, t2, -3.5123395303315874e-09f);
-  TADDS(p, p, 2.6452661927578447e-07f);
-  TMUL(p, p, t2);
-  TADDS(p, p, -7.9294877650681883e-06f);
-  TMUL(p, p, t2);
-  TADDS(p, p, 1.1061238183174282e-04f);
-  TMUL(p, p, t2);
-  TADDS(p, p, 6.5189960878342390e-05f);
-  TMUL(p, p, t2);
-  TADDS(p, p, -7.2666168212890625e-02f);
-  TMUL(p, p, t2);
-  TADDS(p, p, -1.5957698822021484e+00f);
+    float p = SCALAR_A5 * t2 + SCALAR_A4;
+    p = p * t2 + SCALAR_A3;
+    p = p * t2 + SCALAR_A2;
+    p = p * t2 + SCALAR_A1;
+    p = p * t2 + SCALAR_A0;
+    p = p * t2 + SCALAR_AM1;
 
-  TMUL(tmp, t, p);
-  TEXP(tmp, tmp);
-  TADDS(denom, tmp, 1.0f);
-  TRECIP(recip, denom);
-  TMUL(dst, src, recip);
+    float exp_val = blkv_fexp(t * p);
+    float y = x / (1.0f + exp_val);
+    
+    BLKC_ASSIGN_CAST(out, index, y);
+    // blkv_get_tile_ptr(out)[index] = static_cast<typename tile_shape::DType>(result);
 }
 
-template <typename dtype, int gM, int tM>
-void gelu(dtype *in_ptr, dtype *out_ptr, bool = false) {
-  constexpr int kFullTiles = gM / tM;
-  constexpr int kTail = gM % tM;
-
-  using Global = global_tensor<dtype, RowMajor<1, gM>>;
-  using TileT = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor>;
-  using Iterator = global_iterator<Global, TileT>;
-
-  Iterator input_iter(in_ptr);
-  Iterator output_iter(out_ptr);
-
-  for (int tile = 0; tile < kFullTiles; ++tile) {
-    TileT input_tile;
-    TileT output_tile;
-    TLOAD(input_tile, input_iter(0, tile));
-    gelu_tile(output_tile, input_tile);
-    TSTORE(output_iter(0, tile), output_tile);
-  }
-
-  if constexpr (kTail != 0) {
-    using TailTile =
-        Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor, 1, kTail>;
-    using TailIterator = global_iterator<Global, TailTile>;
-    TailIterator tail_input_iter(in_ptr);
-    TailIterator tail_output_iter(out_ptr);
-    TailTile input_tile;
-    TailTile output_tile;
-    TLOAD(input_tile, tail_input_iter(0, kFullTiles));
-    gelu_tile(output_tile, input_tile);
-    TSTORE(tail_output_iter(0, kFullTiles), output_tile);
-  }
+template<typename tile_shapeData>
+void gelu_impl(
+    tile_shapeData &in,
+    tile_shapeData &out
+){
+    static_assert(tile_shapeData::ValidRow != -1 && tile_shapeData::ValidCol != -1,
+                  "Only static shape supported");
+    gelu_simd<tile_shapeData><<<tile_shapeData::ValidCol, tile_shapeData::ValidRow, 1>>>(in.data(), out.data());
 }
 
-#endif // SUPERNPUBENCH_PTOISA_GELU_HPP
+#define DUMP_TILE(label, TileVar, DumpBuf, Rows, Cols) \
+    do { \
+        GlobalTensor<typename decltype(TileVar)::DType, \
+                     Shape<1,1,1,Rows,Cols>, \
+                     Stride<1,1,1,Cols,1>> _g(DumpBuf); \
+        TCOPYOUT(_g, TileVar); \
+        printf("[DUMP] %s (shape=%dx%d):\n", label, Rows, Cols); \
+        for (int ri = 0; ri < Rows; ri++) { \
+            printf("  row%2d: ", ri); \
+            for (int ci = 0; ci < Cols; ci++) \
+                printf("%.4f ", DumpBuf[ri * Cols + ci]); \
+            printf("\n"); \
+        } \
+        fflush(stdout); \
+    } while (0)
+
+template<typename dtype, int gM, int tM>
+void gelu(
+    dtype *in_ptr,
+    dtype *out_ptr,
+    bool approximate = false // false:none, true:tanh
+    ) {
+    const int Mb = gM / tM;
+    
+    const int rmd_M = gM % tM;
+
+    using gm_shape = global_tensor<dtype, RowMajor<1, gM>>;
+    using tile_shapeData = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor>;
+    using tile_shapeData_rmd = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor, 1, rmd_M>;
+
+    gm_shape inGm(in_ptr);
+    gm_shape outGm(out_ptr);
+    tile_shapeData inTile;
+    tile_shapeData outTile;
+    tile_shapeData_rmd inTile_rmd;
+    tile_shapeData_rmd outTile_rmd;
+
+    using itIn = global_iterator<gm_shape, tile_shapeData>;
+    using itOut = global_iterator<gm_shape, tile_shapeData>;
+
+    itIn gIIter(in_ptr);
+    itOut gOIter(out_ptr);
+    // for test ///////////////////////////////////////
+    alignas(256) static dtype  g_dump_intTile[tM];
+    alignas(256) static dtype  g_dump_outTile[tM];
+    // ///////////////////////////////////////
+
+    // printf("MB = %d\n", Mb);
+    for (int i = 0; i < Mb; ++i) {
+        // printf("iter i %d\n",i);
+        auto gI = gIIter(0, i);
+        auto gO = gOIter(0, i);
+        TCOPYIN(inTile, gI);
+        // DUMP_TILE("inTile", inTile, g_dump_intTile, 1, tM);
+        gelu_impl<tile_shapeData>(inTile, outTile);
+        // DUMP_TILE("outTile", outTile, g_dump_outTile, 1, tM);
+        TCOPYOUT(gO, outTile);
+    }
+    if constexpr (rmd_M) {
+        auto gI = gIIter(0, Mb);
+        auto gO = gOIter(0, Mb);
+        TCOPYIN(inTile_rmd, gI);
+        gelu_impl<tile_shapeData_rmd>(inTile_rmd, outTile_rmd);
+        // DUMP_TILE("offsetTile", offsetTile, g_dump, 1, tM);
+        TCOPYOUT(gO, outTile_rmd);
+    }
+}

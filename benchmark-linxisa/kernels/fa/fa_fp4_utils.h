@@ -1,9 +1,4 @@
 
-#include <common/block_vector_compat.hpp>
-
-using namespace pto::blkv;
-using pto::type_traits;
-
 template <class T>
 concept is_fp4_tile = requires (T tile) {
   type_traits<typename T::DType>::bits == 4;

@@ -190,7 +190,7 @@ void gen_offset_pto(
 // ----------------------------------------------------------------------------
 // broadcast: 接口与原 broadcast.hpp 一致
 // ----------------------------------------------------------------------------
-template<typename dtype, size_t MAX_DIM, size_t IN_DIM, size_t OUT_DIM, size_t gIM, size_t gOM, size_t tM>
+template<typename dtype, size_t MAX_DIM = 8, size_t IN_DIM, size_t OUT_DIM, size_t gIM, size_t gOM, size_t tM>
 void broadcast(
     dtype *in_ptr,
     dtype *out_ptr,

@@ -11,30 +11,28 @@
 #endif
 
 
-#ifndef tMs
-#define tMs 32
+#ifndef tM
+#define tM 32
 #endif
 
-#ifndef tNs
-#define tNs 128
+#ifndef tN
+#define tN 128
 #endif
 
-#ifndef gIMs
-#define gIMs 256
-#endif
 
-#ifndef gINs
-#define gINs 256
-#endif
+
+
+#define gIM 256    
+#define gIN 256    
 // ============================================================================
 // main
 // ============================================================================
 int main() {
     using dtype = DType;
 
-    dtype input_buf[gIMs*gINs];
+    dtype input_buf[gIM*gIN];
 //    dtype zero_buf[1*gIN];    
-    dtype output_buf[1*gINs];
+    dtype output_buf[1*gIN];
 
     dtype* input=input_buf;
 //    dtype* zero=zero_buf;    
@@ -44,7 +42,8 @@ int main() {
 //    readBinaryFile("/remote/lms01/q50057645/jcore_project/JanusCoreBench/test/ascpp/reducemax_col/src/data_8192x1024.bin", (uint8_t*)input, gIM * gIN * sizeof(dtype));
 //    readBinaryFile("/remote/lms01/q50057645/jcore_project/JanusCoreBench/test/ascpp/reducemax_col/src/data1x256_zero.bin", (uint8_t*)zero, gIN * sizeof(dtype));    
 //    reducesum_colsum_rand<dtype, gIM, gIN, tN>(input, output);
-    reducemax_col_rand<dtype, gIMs, gINs, tMs, tNs>(input, output);
+    reducemax_col_rand<dtype, gIM, gIN, tM, tN>(input, output);
 //    writeBinaryFile("/remote/lms01/q50057645/jcore_project/JanusCoreBench/test/ascpp/reducemax_col/src/result_max.bin", (uint8_t*)output, gIN * sizeof(dtype));
 
 }
+

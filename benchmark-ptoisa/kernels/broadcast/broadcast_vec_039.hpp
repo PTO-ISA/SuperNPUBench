@@ -1,6 +1,0 @@
-#ifndef SUPERNPUBENCH_PTOISA_BROADCAST_VEC_039_HPP
-#define SUPERNPUBENCH_PTOISA_BROADCAST_VEC_039_HPP
-
-#include "broadcast_vec_019.hpp"
-
-#endif

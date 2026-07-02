@@ -42,15 +42,26 @@ int main() {
     fflush(stdout);
 #endif
 
+    // -------------------------------------------------------------------------
+    // Phase 1: SIMT high8 histogram (1 block × 256 lanes, each lane = 1 bucket)
+    // -------------------------------------------------------------------------
+    TileU32 high8HistTile;
+    TEXPANDSCALAR(high8HistTile, static_cast<uint32_t>(0));
+    ExtractHigh8Hist_Impl< TileU32 >(high8HistTile, g_input);
+
+    // Copy histogram results out and reduce to global 256-bin histogram
+    using HistGT = GlobalTensor<uint32_t, Shape<1,1,1,16,16>, Stride<1,1,1,16,1>>;
+    uint32_t histResult[256];
+    HistGT histGlobal(histResult);
+    TCOPYOUT(histGlobal, high8HistTile);
+
     uint32_t global_high8_hist[256] = {0};
-    for (int i = 0; i < kInputCount; i++) {
-        uint16_t val = g_input[i];
-        uint8_t high8 = static_cast<uint8_t>(val >> 8);
-        global_high8_hist[high8] += 1;
+    for (int b = 0; b < 256; b++) {
+        global_high8_hist[b] = histResult[b];
     }
 
 #ifndef FOR_GFSIM
-    printf("\nPhase 1: high8 histogram built.\n");
+    printf("\nPhase 1: high8 histograms built (1 SIMT launch, 256 lanes).\n");
     fflush(stdout);
 #endif
 
@@ -71,14 +82,21 @@ int main() {
     fflush(stdout);
 #endif
 
+    // -------------------------------------------------------------------------
+    // Phase 3: SIMT low8 histogram for kth_bin elements
+    // -------------------------------------------------------------------------
+    TileU32 low8HistTile;
+    TEXPANDSCALAR(low8HistTile, static_cast<uint32_t>(0));
+    ExtractLow8HistForKthBin_Impl< TileU32 >(low8HistTile, g_input,
+                                             static_cast<uint16_t>(kth_bin));
+
+    uint32_t low8HistResult[256];
+    HistGT low8HistGlobal(low8HistResult);
+    TCOPYOUT(low8HistGlobal, low8HistTile);
+
     uint32_t global_low8_hist_kth[256] = {0};
-    for (int i = 0; i < kInputCount; i++) {
-        uint16_t val = g_input[i];
-        uint8_t high8 = static_cast<uint8_t>(val >> 8);
-        if (high8 == static_cast<uint8_t>(kth_bin)) {
-            uint8_t low8 = static_cast<uint8_t>(val & 0xFF);
-            global_low8_hist_kth[low8] += 1;
-        }
+    for (int b = 0; b < 256; b++) {
+        global_low8_hist_kth[b] = low8HistResult[b];
     }
 
     // -------------------------------------------------------------------------

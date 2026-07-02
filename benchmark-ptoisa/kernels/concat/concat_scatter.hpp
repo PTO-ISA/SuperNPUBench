@@ -2,6 +2,7 @@
 #define CONCAT_SCATTER_KERNEL_HPP
 
 #include <common/pto_tileop.hpp>
+#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -24,7 +25,7 @@ using namespace pto;
  * @tparam DATA_DIM 数据维度数（编译期常量）
  * @tparam CONCAT_DIM 拼接维度索引（编译期常量）
  */
-template<typename DType, size_t MAX_DIM, const int gIM, const int gOM,
+template<typename DType, size_t MAX_DIM = 8, const int gIM, const int gOM,
          const int tM, size_t DATA_DIM, size_t CONCAT_DIM>
 void concat_scatter(
     DType *in_ptr,
