@@ -1,6 +1,7 @@
 #include "matmul_bench.hpp"
 #include <cstdio>
 #include <cstdlib>
+#include "benchmark.h"
 
 // Test configuration
 constexpr int M = 16;
@@ -10,7 +11,7 @@ constexpr int K = 16;
 int main() {
     printf("Matrix Multiplication Benchmark: FP32 %dx%d\n", M, N);
     
-    // Allocate memory
+    // Allocate memory with alignment
     float* a = (float*)malloc(M * K * sizeof(float));
     float* b = (float*)malloc(K * N * sizeof(float));
     float* c = (float*)malloc(M * N * sizeof(float));

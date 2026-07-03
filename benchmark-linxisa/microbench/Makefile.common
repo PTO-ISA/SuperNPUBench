@@ -2,6 +2,7 @@
 # Adapted from test/common/Makefile.common
 
 ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(benchmark-linxisa|benchmark-ptoisa)/.*@\1/\2@')
+TEST_ROOT := $(ROOT)/test
 MICROBENCH_ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(benchmark-linxisa|benchmark-ptoisa)/microbench/.*@\1/\2/microbench@')
 CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/(benchmark-linxisa|benchmark-ptoisa)/microbench/([^/]+).*@\2@')
 CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')
@@ -12,10 +13,22 @@ SRC_DIR := $(shell dirname $(SRC_FILE))
 OBJ_DIR := $(OBJ_ROOT)/$(CASE_SRC_DIR)
 ELF_HEAD := $(ELF_DIR)/$(CATEGORY_NAME)
 
+# Common source directory
+COMM_SRC_DIR := common/src
+
+# Common object files
+COMM_OBJ += $(patsubst %.cpp, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.cpp)))
+COMM_OBJ += $(patsubst %.c, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.c)))
+COMM_OBJ += $(patsubst %.s, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.s)))
+
 # Object files
 OBJ := $(patsubst %.cpp, %.o, $(subst $(SRC_DIR), $(OBJ_DIR), $(SRC_FILE)))
 OBJ := $(patsubst %.c, %.o, $(OBJ))
 OBJ := $(patsubst %.s, %.o, $(OBJ))
+
+# Link script
+LINK_SCRIPT_SRC = $(TEST_ROOT)/$(COMM_SRC_DIR)/baremetal_linx.lds.S
+LINK_SCRIPT = $(patsubst %.S, %, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(LINK_SCRIPT_SRC)))
 
 # Platform settings
 PLAT ?= linx
@@ -58,7 +71,7 @@ ifneq ($(CC_OPT), default)
 endif
 
 ifeq ($(baremetal), on)
-    CC_LINK += -static -lm -nostartfiles
+    CC_LINK += -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
 else
     CC_LINK += -nostartfiles $(ROOT)/test/common/_start.s
 endif
@@ -71,6 +84,15 @@ INCLUDE += -I$(ROOT)/include -I$(ROOT)/test/common -I$(ROOT)/test/common/src -I$
 
 CC_O_ALL = $(CC_O) $(CC_OPTS)
 CXX_O_ALL = $(CC_O) $(CXX_VER) $(CC_OPTS)
+
+# Handle baremetal mode
+ifneq ($(baremetal), on)
+COMM_OBJ =
+LINK_SCRIPT_SRC =
+LINK_SCRIPT =
+else
+DEFINES += -D__baremetal
+endif
 
 # Default goal
 .DEFAULT_GOAL := all
@@ -93,19 +115,34 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.s
 	@mkdir -p $(shell dirname $@)
 	$(AS) $(CC_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
 
-# Linking rule
-$(TARGET): $(OBJ)
+# Common source compilation rules
+$(OBJ_ROOT)/$(COMM_SRC_DIR)%.o: $(TEST_ROOT)/$(COMM_SRC_DIR)%.c
 	@mkdir -p $(shell dirname $@)
-	$(LINK) $(CC_LINK) $(OBJ) -o $@
+	$(CXX) -mlxbc -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
+
+$(OBJ_ROOT)/$(COMM_SRC_DIR)%.o: $(TEST_ROOT)/$(COMM_SRC_DIR)%.s
+	@mkdir -p $(shell dirname $@)
+	$(CXX) -mlxbc -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
+
+# Link script compilation
+$(OBJ_ROOT)/$(COMM_SRC_DIR)%.lds : $(TEST_ROOT)/$(COMM_SRC_DIR)%.lds.S
+	$(CC) $(DEFINES) $(INCLUDE) -E -P -C -o $@ $<
+
+# Linking rule
+$(TARGET): $(LINK_SCRIPT) $(COMM_OBJ) $(OBJ)
+	@mkdir -p $(shell dirname $@)
+	$(LINK) $(CC_LINK) $(OBJ) $(COMM_OBJ) -o $@
 
 # Create directories
 pre_work:
 	@mkdir -p $(OBJ_DIR)
 	@mkdir -p $(ELF_DIR)
+	@mkdir -p $(OBJ_ROOT)/$(COMM_SRC_DIR)
 
 # Clean rules
 clean:
 	@find $(OBJ_ROOT) -type f -name "*.o" -exec rm -rf {} \;
+	@rm -rf $(COMM_OBJ) $(LINK_SCRIPT)
 
 clean_all:
 	@rm -rf $(OBJ_ROOT)

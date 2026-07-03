@@ -4,6 +4,7 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
 #include <cstdio>
+#include "benchmark.h"
 
 using namespace pto;
 
@@ -56,6 +57,8 @@ void matmul_bench(float* c_ptr, dtype* a_ptr, dtype* b_ptr) {
     tile_shapeB tB;
     tile_shapeACC tACC;
     
+    BENCHSTART;
+    
     // 加载 A 和 B
     TCOPYIN(tA, gA);
     TCOPYIN(tB, gB);
@@ -65,6 +68,8 @@ void matmul_bench(float* c_ptr, dtype* a_ptr, dtype* b_ptr) {
     
     // 存储结果 C (需要先从 Acc 转换到 Vec)
     TCOPYOUT_ACC(gC, tACC);
+    
+    BENCHEND;
 }
 
 // ============================================================================
