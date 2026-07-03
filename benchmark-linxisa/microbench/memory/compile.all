@@ -1,0 +1,65 @@
+#!/bin/bash
+# Memory microbenchmarks compilation script
+
+echo "=========================================="
+echo "Compiling Memory Microbenchmarks"
+echo "=========================================="
+
+# Load/Store operations
+echo ""
+echo "--- Load/Store Operations ---"
+
+# FP32
+echo "Compiling tload_fp32_16x16..."
+make TESTCASE=tload_fp32_16x16
+
+echo "Compiling tstore_fp32_16x16..."
+make TESTCASE=tstore_fp32_16x16
+
+echo "Compiling tcopyin_fp32_16x16..."
+make TESTCASE=tcopyin_fp32_16x16
+
+echo "Compiling tcopyout_fp32_16x16..."
+make TESTCASE=tcopyout_fp32_16x16
+
+echo "Compiling tload_fp32_32x32..."
+make TESTCASE=tload_fp32_32x32
+
+echo "Compiling tstore_fp32_32x32..."
+make TESTCASE=tstore_fp32_32x32
+
+# FP16
+echo "Compiling tload_fp16_16x16..."
+make TESTCASE=tload_fp16_16x16
+
+echo "Compiling tstore_fp16_16x16..."
+make TESTCASE=tstore_fp16_16x16
+
+echo "Compiling tload_fp16_32x32..."
+make TESTCASE=tload_fp16_32x32
+
+# BF16
+echo "Compiling tload_bf16_16x16..."
+make TESTCASE=tload_bf16_16x16
+
+echo "Compiling tstore_bf16_16x16..."
+make TESTCASE=tstore_bf16_16x16
+
+# INT32
+echo "Compiling tload_int32_16x16..."
+make TESTCASE=tload_int32_16x16
+
+echo "Compiling tstore_int32_16x16..."
+make TESTCASE=tstore_int32_16x16
+
+# INT8
+echo "Compiling tload_int8_16x16..."
+make TESTCASE=tload_int8_16x16
+
+echo "Compiling tstore_int8_16x16..."
+make TESTCASE=tstore_int8_16x16
+
+echo ""
+echo "=========================================="
+echo "Memory microbenchmarks compilation completed!"
+echo "=========================================="

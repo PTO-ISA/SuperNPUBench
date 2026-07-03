@@ -1,0 +1,99 @@
+#!/bin/bash
+# Vector microbenchmarks compilation script
+
+echo "=========================================="
+echo "Compiling Vector Microbenchmarks"
+echo "=========================================="
+
+# Element-wise operations
+echo ""
+echo "--- Element-wise Operations ---"
+
+# FP32
+echo "Compiling tadd_fp32_16x16..."
+make TESTCASE=tadd_fp32_16x16
+
+echo "Compiling tsub_fp32_16x16..."
+make TESTCASE=tsub_fp32_16x16
+
+echo "Compiling tmul_fp32_16x16..."
+make TESTCASE=tmul_fp32_16x16
+
+echo "Compiling tdiv_fp32_16x16..."
+make TESTCASE=tdiv_fp32_16x16
+
+echo "Compiling tmax_fp32_16x16..."
+make TESTCASE=tmax_fp32_16x16
+
+echo "Compiling tmin_fp32_16x16..."
+make TESTCASE=tmin_fp32_16x16
+
+# FP16
+echo "Compiling tadd_fp16_16x16..."
+make TESTCASE=tadd_fp16_16x16
+
+echo "Compiling tmul_fp16_16x16..."
+make TESTCASE=tmul_fp16_16x16
+
+# BF16
+echo "Compiling tadd_bf16_16x16..."
+make TESTCASE=tadd_bf16_16x16
+
+echo "Compiling tmul_bf16_16x16..."
+make TESTCASE=tmul_bf16_16x16
+
+# INT32
+echo "Compiling tadd_int32_16x16..."
+make TESTCASE=tadd_int32_16x16
+
+echo "Compiling tmul_int32_16x16..."
+make TESTCASE=tmul_int32_16x16
+
+# Reduction operations
+echo ""
+echo "--- Reduction Operations ---"
+
+# FP32
+echo "Compiling trowmax_fp32_16x16..."
+make TESTCASE=trowmax_fp32_16x16
+
+echo "Compiling tcolmax_fp32_16x16..."
+make TESTCASE=tcolmax_fp32_16x16
+
+echo "Compiling trowmin_fp32_16x16..."
+make TESTCASE=trowmin_fp32_16x16
+
+echo "Compiling tcolmin_fp32_16x16..."
+make TESTCASE=tcolmin_fp32_16x16
+
+echo "Compiling trowsum_fp32_16x16..."
+make TESTCASE=trowsum_fp32_16x16
+
+echo "Compiling tcolsum_fp32_16x16..."
+make TESTCASE=tcolsum_fp32_16x16
+
+# FP16
+echo "Compiling trowmax_fp16_16x16..."
+make TESTCASE=trowmax_fp16_16x16
+
+echo "Compiling tcolmax_fp16_16x16..."
+make TESTCASE=tcolmax_fp16_16x16
+
+# BF16
+echo "Compiling trowmax_bf16_16x16..."
+make TESTCASE=trowmax_bf16_16x16
+
+echo "Compiling tcolmax_bf16_16x16..."
+make TESTCASE=tcolmax_bf16_16x16
+
+# INT32
+echo "Compiling trowmax_int32_16x16..."
+make TESTCASE=trowmax_int32_16x16
+
+echo "Compiling tcolmax_int32_16x16..."
+make TESTCASE=tcolmax_int32_16x16
+
+echo ""
+echo "=========================================="
+echo "Vector microbenchmarks compilation completed!"
+echo "=========================================="
