@@ -1,14 +1,14 @@
 # Microbench common Makefile
 # Adapted from test/common/Makefile.common
 
-ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(benchmark-linxisa|benchmark-ptoisa)/.*@\1/\2@')
-TEST_ROOT := $(ROOT)/test
-MICROBENCH_ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/(benchmark-linxisa|benchmark-ptoisa)/microbench/.*@\1/\2/microbench@')
-CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/(benchmark-linxisa|benchmark-ptoisa)/microbench/([^/]+).*@\2@')
+ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/microbench-linxisa/.*@\1@')
+TEST_ROOT := $(ROOT)/benchmark-linxisa/test
+MICROBENCH_ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/microbench-linxisa/.*@\1/microbench-linxisa@')
+CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/microbench-linxisa/([^/]+).*@\1@')
 CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')
-OBJ_ROOT := $(shell realpath $(MICROBENCH_ROOT)/../output 2>/dev/null || echo $(MICROBENCH_ROOT)/../output)
-CASE_SRC_DIR := microbench/$(CATEGORY)/src
-ELF_DIR := $(OBJ_ROOT)/microbench/$(CATEGORY)/elf
+OBJ_ROOT := $(shell realpath $(ROOT)/output 2>/dev/null || echo $(ROOT)/output)
+CASE_SRC_DIR := microbench-linxisa/$(CATEGORY)/src
+ELF_DIR := $(OBJ_ROOT)/microbench-linxisa/$(CATEGORY)/elf
 SRC_DIR := $(shell dirname $(SRC_FILE))
 OBJ_DIR := $(OBJ_ROOT)/$(CASE_SRC_DIR)
 ELF_HEAD := $(ELF_DIR)/$(CATEGORY_NAME)
@@ -73,14 +73,14 @@ endif
 ifeq ($(baremetal), on)
     CC_LINK += -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
 else
-    CC_LINK += -nostartfiles $(ROOT)/test/common/_start.s
+    CC_LINK += -nostartfiles $(TEST_ROOT)/common/_start.s
 endif
 
 DEFINES += -DENABLE_TENSOR_INSTR
 endif
 
 # Include paths
-INCLUDE += -I$(ROOT)/include -I$(ROOT)/test/common -I$(ROOT)/test/common/src -I$(ROOT)/kernels -I$(ROOT)/models -I$(MICROBENCH_ROOT)/$(CATEGORY)
+INCLUDE += -I$(ROOT)/include -I$(TEST_ROOT)/common -I$(TEST_ROOT)/common/src -I$(ROOT)/kernels -I$(ROOT)/models -I$(MICROBENCH_ROOT)/$(CATEGORY)
 
 CC_O_ALL = $(CC_O) $(CC_OPTS)
 CXX_O_ALL = $(CC_O) $(CXX_VER) $(CC_OPTS)
