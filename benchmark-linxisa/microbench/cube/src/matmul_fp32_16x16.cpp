@@ -1,6 +1,4 @@
 #include "matmul_bench.hpp"
-#include <cstdio>
-#include <cstdlib>
 #include "benchmark.h"
 
 // Test configuration
@@ -9,40 +7,26 @@ constexpr int N = 16;
 constexpr int K = 16;
 
 int main() {
-    printf("Matrix Multiplication Benchmark: FP32 %dx%d\n", M, N);
+    // Use stack-allocated arrays instead of malloc
+    float a[M * K];
+    float b[K * N];
+    float c[M * N];
     
-    // Allocate memory with alignment
-    float* a = (float*)malloc(M * K * sizeof(float));
-    float* b = (float*)malloc(K * N * sizeof(float));
-    float* c = (float*)malloc(M * N * sizeof(float));
-    
-    // Initialize with random data
+    // Initialize with simple pattern
     for (int i = 0; i < M * K; i++) {
-        a[i] = (float)rand() / RAND_MAX;
+        a[i] = (float)(i % 10) * 0.1f;
     }
     for (int i = 0; i < K * N; i++) {
-        b[i] = (float)rand() / RAND_MAX;
+        b[i] = (float)(i % 10) * 0.1f;
     }
     for (int i = 0; i < M * N; i++) {
         c[i] = 0.0f;
     }
     
     // Run benchmark
+    BENCHSTART;
     matmul_fp32_16x16(c, a, b);
-    
-    // Verify result (simple check)
-    float sum = 0.0f;
-    for (int i = 0; i < M * N; i++) {
-        sum += c[i];
-    }
-    
-    printf("Result sum: %f\n", sum);
-    printf("Benchmark completed successfully!\n");
-    
-    // Cleanup
-    free(a);
-    free(b);
-    free(c);
+    BENCHEND;
     
     return 0;
 }

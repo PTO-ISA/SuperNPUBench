@@ -1,39 +1,25 @@
 #include "load_store_bench.hpp"
-#include <cstdio>
-#include <cstdlib>
+#include "benchmark.h"
 
 // Test configuration
 constexpr int M = 16;
 constexpr int N = 16;
 
 int main() {
-    printf("Memory Load Benchmark: FP32 %dx%d\n", M, N);
+    // Use stack-allocated arrays instead of malloc
+    float global_mem[M * N];
+    float tile_mem[M * N];
     
-    // Allocate memory
-    float* global_mem = (float*)malloc(M * N * sizeof(float));
-    float* tile_mem = (float*)malloc(M * N * sizeof(float));
-    
-    // Initialize with random data
+    // Initialize with simple pattern
     for (int i = 0; i < M * N; i++) {
-        global_mem[i] = (float)rand() / RAND_MAX;
+        global_mem[i] = (float)(i % 10) * 0.1f;
         tile_mem[i] = 0.0f;
     }
     
     // Run benchmark
+    BENCHSTART;
     tload_fp32_16x16(tile_mem, global_mem);
-    
-    // Verify result
-    float sum = 0.0f;
-    for (int i = 0; i < M * N; i++) {
-        sum += global_mem[i];
-    }
-    
-    printf("Result sum: %f\n", sum);
-    printf("Benchmark completed successfully!\n");
-    
-    // Cleanup
-    free(global_mem);
-    free(tile_mem);
+    BENCHEND;
     
     return 0;
 }

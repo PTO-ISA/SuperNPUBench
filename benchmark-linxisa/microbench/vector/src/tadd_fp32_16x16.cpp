@@ -1,42 +1,27 @@
 #include "elem_bench.hpp"
-#include <cstdio>
-#include <cstdlib>
+#include "benchmark.h"
 
 // Test configuration
 constexpr int M = 16;
 constexpr int N = 16;
 
 int main() {
-    printf("Vector Element-wise Addition Benchmark: FP32 %dx%d\n", M, N);
+    // Use stack-allocated arrays instead of malloc
+    float a[M * N];
+    float b[M * N];
+    float c[M * N];
     
-    // Allocate memory
-    float* a = (float*)malloc(M * N * sizeof(float));
-    float* b = (float*)malloc(M * N * sizeof(float));
-    float* c = (float*)malloc(M * N * sizeof(float));
-    
-    // Initialize with random data
+    // Initialize with simple pattern
     for (int i = 0; i < M * N; i++) {
-        a[i] = (float)rand() / RAND_MAX;
-        b[i] = (float)rand() / RAND_MAX;
+        a[i] = (float)(i % 10) * 0.1f;
+        b[i] = (float)(i % 10) * 0.1f;
         c[i] = 0.0f;
     }
     
     // Run benchmark
+    BENCHSTART;
     tadd_fp32_16x16(c, a, b);
-    
-    // Verify result
-    float sum = 0.0f;
-    for (int i = 0; i < M * N; i++) {
-        sum += c[i];
-    }
-    
-    printf("Result sum: %f\n", sum);
-    printf("Benchmark completed successfully!\n");
-    
-    // Cleanup
-    free(a);
-    free(b);
-    free(c);
+    BENCHEND;
     
     return 0;
 }

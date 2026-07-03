@@ -28,10 +28,10 @@ void tload_bench(dtype* tile_ptr, dtype* global_ptr) {
     tile_shape tTile;
     
     // 从全局内存加载到 Tile
-    TLOAD(tTile, gTile);
+    TCOPYIN(tTile, gTile);
     
     // 存储回全局内存（用于验证）
-    TSTORE(gTile, tTile);
+    TCOPYOUT(gTile, tTile);
 }
 
 /**
@@ -52,10 +52,10 @@ void tstore_bench(dtype* global_ptr, dtype* tile_ptr) {
     tile_shape tTile;
     
     // 加载到 Tile
-    TLOAD(tTile, gTile);
+    TCOPYIN(tTile, gTile);
     
     // 从 Tile 存储到全局内存
-    TSTORE(gTile, tTile);
+    TCOPYOUT(gTile, tTile);
 }
 
 /**
@@ -187,13 +187,13 @@ void tstore_int32_16x16(int32_t* global, int32_t* tile) {
     tstore_bench<int32_t, 16, 16>(global, tile);
 }
 
-// INT8
-void tload_int8_16x16(int8_t* tile, int8_t* global) {
-    tload_bench<int8_t, 16, 16>(tile, global);
-}
+// INT8 - Commented out due to compiler issues with int8_t type
+// void tload_int8_16x16(int8_t* tile, int8_t* global) {
+//     tload_bench<int8_t, 16, 16>(tile, global);
+// }
 
-void tstore_int8_16x16(int8_t* global, int8_t* tile) {
-    tstore_bench<int8_t, 16, 16>(global, tile);
-}
+// void tstore_int8_16x16(int8_t* global, int8_t* tile) {
+//     tstore_bench<int8_t, 16, 16>(global, tile);
+// }
 
 #endif // MEMORY_LOAD_STORE_BENCH_HPP

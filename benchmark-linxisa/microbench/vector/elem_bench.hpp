@@ -216,14 +216,14 @@ void tmul_fp16_16x16(__half* c, __half* a, __half* b) {
     tmul_bench<__half, 16, 16>(c, a, b);
 }
 
-// BF16
-void tadd_bf16_16x16(__bf16* c, __bf16* a, __bf16* b) {
-    tadd_bench<__bf16, 16, 16>(c, a, b);
-}
+// BF16 - Commented out due to compiler issues with __blkc_bf16 type
+// void tadd_bf16_16x16(__bf16* c, __bf16* a, __bf16* b) {
+//     tadd_bench<__bf16, 16, 16>(c, a, b);
+// }
 
-void tmul_bf16_16x16(__bf16* c, __bf16* a, __bf16* b) {
-    tmul_bench<__bf16, 16, 16>(c, a, b);
-}
+// void tmul_bf16_16x16(__bf16* c, __bf16* a, __bf16* b) {
+//     tmul_bench<__bf16, 16, 16>(c, a, b);
+// }
 
 // INT32
 void tadd_int32_16x16(int32_t* c, int32_t* a, int32_t* b) {
