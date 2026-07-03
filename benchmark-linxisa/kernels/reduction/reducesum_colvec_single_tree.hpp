@@ -13,9 +13,27 @@ using namespace pto;
 #include <cstdio>
 
 
+// ============================================================
+// 文件说明：列方向求和归约（Column Reduction - Sum）优化版 single_tree
+// ------------------------------------------------------------
+// 作用：对 M×N 输入沿 M 轴做列求和归约，输出 1×N。
+// 分类：对应 README 中 "Column Reduction -> Optimized Single Tree"。
+// 优化策略（两阶段 Two-Phase）：
+//   阶段1 reducesum_col_kernel()：
+//       - 每个 tile 内做多级树形归约，结果存入中间 tile 的对应槽位；
+//       - 第一级 8 路归约，第二级 64 路(8×8)归约，
+//         最后用 __builtin_ctz 计算迭代次数做步长倍增的渐进式归约。
+//   阶段2 reducesum_col_final_kernel()：
+//       - 把所有 tile 的中间结果再做一次树形归约，得到最终 1×N 输出。
+// 相比基础版：把逐 tile 串行累加改为先各 tile 独立归约再统一合并，利于大归约维。
+// ============================================================
+
+
 // ==============================================
 // ==============================================
 //tile内进行reduce，所有tile的reduce结果统一存到一个tile中。
+// ---- 阶段1：单 tile 内多级树形归约 ----
+// 参数：new_sum 输出中间 tile；src 输入数据 tile；old_sum 历史 tile；tile_idx 当前 tile 编号
 template<typename tileSrc, typename tileTmpSum>
 void __vec__ reducesum_col_kernel(
     typename tileTmpSum::TileDType __out__ new_sum,
@@ -24,12 +42,14 @@ void __vec__ reducesum_col_kernel(
     const size_t tile_idx  
 )
 {
+    // 当前 lane 索引：每个 lane 负责一列
     size_t i = blkv_get_index_x();  
 
     __vbuf__ typename tileTmpSum::DType *new_sum_ptr = blkv_get_tile_ptr(new_sum);
     __vbuf__ typename tileSrc::DType *src_ptr = blkv_get_tile_ptr(src);
     __vbuf__ typename tileTmpSum::DType *old_sum_ptr = blkv_get_tile_ptr(old_sum);    
 
+    // 先把 old_sum 的内容拷到 new_sum（保留历史值，后续合并）
     #pragma clang loop unroll(full) 
     for(size_t j=0;j<tileTmpSum::ValidRow;j++){
         size_t old_sum_idx =  i * tileTmpSum::ColStride + j * tileTmpSum::RowStride;       
@@ -37,6 +57,7 @@ void __vec__ reducesum_col_kernel(
     }
 
 
+    // 第一级：8 路树形归约，每 8 行压缩为 1 个结果写回 src 起始位置
     #pragma clang loop unroll(full) 
     for(size_t j=0;j<tileSrc::ValidRow;j+=8){
         size_t src_idx_0 =  i * tileSrc::ColStride + (j + 0) * tileSrc::RowStride;
@@ -57,6 +78,7 @@ void __vec__ reducesum_col_kernel(
         src_ptr[src_idx_0] = sum_all;          
     }
 
+    // 第二级：64 路(8×8)归约，把上一步的 8 个间隔为 8 的结果再 8 路合并
     #pragma clang loop unroll(full)
     for(size_t j=0; j<tileSrc::ValidRow; j+=64){
         size_t src_idx_0 =  i * tileSrc::ColStride + (j + 0*8) * tileSrc::RowStride;
@@ -78,6 +100,8 @@ void __vec__ reducesum_col_kernel(
     };
 
 
+    // 第三级：步长倍增的渐进式树形归约，把 64 路结果逐层合并到 1 个
+    // iternum = ctz(ValidRow) - 6：因前两级已合并 2^6=64 倍，剩余层用 ctz 计算次数
     size_t stride = 64;
     size_t iternum = __builtin_ctz(tileSrc::ValidRow) - 6;
     #pragma clang loop unroll(full) 
@@ -93,6 +117,7 @@ void __vec__ reducesum_col_kernel(
     }
 
         
+    // 将本 tile 的最终归约结果写入中间 tile 的对应槽位 tile_idx
     size_t src_sum_idx = i * tileSrc::ColStride;
     size_t  sum_tile_idx = i * tileTmpSum::ColStride + tile_idx * tileTmpSum::RowStride;
     new_sum_ptr[sum_tile_idx] = src_ptr[src_sum_idx];
@@ -100,6 +125,7 @@ void __vec__ reducesum_col_kernel(
 
 
 //最后的tile做一次reduce
+// ---- 阶段2：对中间 tile 再做一次树形归约，产出最终 1 行 ----
 template<typename tileTmpSum, typename tileSum>
 void __vec__ reducesum_col_final_kernel(
     typename tileSum::TileDType __out__ new_sum,
@@ -109,6 +135,7 @@ void __vec__ reducesum_col_final_kernel(
     __vbuf__ typename tileSum::DType *new_sum_ptr = blkv_get_tile_ptr(new_sum);
     __vbuf__ typename tileTmpSum::DType *tmp_sum_ptr = blkv_get_tile_ptr(tmp_sum);
 
+    // 第一级：8 路归约
     #pragma clang loop unroll(full) 
     for(size_t j=0;j<tileTmpSum::ValidRow;j+=8){
         size_t src_idx_0 =  i * tileTmpSum::ColStride + (j + 0) * tileTmpSum::RowStride;
@@ -129,6 +156,7 @@ void __vec__ reducesum_col_final_kernel(
         tmp_sum_ptr[src_idx_0] = sum_all;          
     }   
 
+    // 第二级：步长倍增渐进式归约（iternum = ctz(ValidRow) - 3，因第一级已合并 2^3=8 倍）
     size_t stride = 8;
     size_t iternum = __builtin_ctz(tileTmpSum::ValidRow) - 3;    
     #pragma clang loop unroll(full) 
@@ -143,11 +171,16 @@ void __vec__ reducesum_col_final_kernel(
         stride = stride*2;
     }    
 
+    // 写出最终每列的和
     size_t sum_idx = i * tileTmpSum::ColStride;
     new_sum_ptr[i] = tmp_sum_ptr[sum_idx];
 }
 
 
+// ------------------------------------------------------------
+// 主机侧入口：列求和归约（single_tree 优化版）
+// 注意：此版本只处理对齐主区域（Mb 个 tile），未含 rmd 尾块分支（与基础版不同）
+// ------------------------------------------------------------
 template<typename dtype, int gIM, int gIN, int tM, int tN>
 void reducesum_colsum_rand(
     dtype *in_ptr,  
@@ -167,6 +200,7 @@ void reducesum_colsum_rand(
     using tile_shapeData = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor>; //
     using tile_shapeData_col = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor,rmd_M, tN>; //     
     using tile_shapeSum = Tile<Location::Vec, dtype, 1, tN, BLayout::RowMajor>; // 
+    // 中间 tile：行数=Mb（每个输入 tile 占一行槽位），用于两阶段合并
     using tile_shapeTmpSum = Tile<Location::Vec, dtype, Mb, tN, BLayout::RowMajor>; // 
 //    using tile_shapeTmpSum_l2 = Tile<Location::Vec, dtype, tM/64, tN, BLayout::RowMajor>; //     
 
@@ -209,6 +243,7 @@ void reducesum_colsum_rand(
     TEXPANDSCALAR(oldtmpSumTile, 0);//初始化为0
 //    TEXPANDSCALAR(tmpSumTile, 0);//初始化为0
 //    TEXPANDSCALAR(tmpSumTile_l2, 0);//初始化为0        
+    // 阶段1：逐 tile 拷入并做单 tile 树形归约，结果写入中间 tile 的对应槽位
     for (size_t i = 0; i < Mb; ++i){
         auto gI = gIIter(i, 0);
         TCOPYIN(dataTile, gI);
@@ -218,6 +253,7 @@ void reducesum_colsum_rand(
                                                                                                      i);
         oldtmpSumTile = tmpSumTile;
     }
+    // 阶段2：对中间 tile 做最终归约，写出结果
     reducesum_col_final_kernel<tile_shapeTmpSum, tile_shapeSum><<<tile_shapeSum::ValidCol, 1, 1>>>(SumTile.data(), 
                                                                                                    tmpSumTile.data());
     TCOPYOUT(gO, SumTile);

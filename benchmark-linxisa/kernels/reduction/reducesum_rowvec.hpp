@@ -13,6 +13,18 @@ using namespace pto;
 #include <cstdint>
 #include <cstdio>
 
+// ============================================================
+// 文件说明：行方向求和归约（Row Reduction - Sum）基础实现
+// ------------------------------------------------------------
+// 作用：对 M×N 输入沿 N 轴（行方向/水平方向）做求和归约，输出 M×1。
+// 分类：对应 README 中 "Row Reduction -> Basic Implementation"。
+// 关键特性：
+//   1) 8 路展开的树形水平归约，沿列方向逐列推进；
+//   2) 每个 lane 负责一行的累加，跨 tile 边界保持运行和（old_sum）；
+//   3) 处理 M、N 两方向尾块（非对齐）。
+// ============================================================
+
+// ---- 单 tile 行归约 kernel：每个 lane 处理一行 ----
 template<typename tileSrc, typename tileSum>
 void __vec__ reducesum_row_kernel(
     typename tileSum::TileDType __out__ new_sum,
@@ -21,6 +33,7 @@ void __vec__ reducesum_row_kernel(
 )
 {
 //    size_t i = blkv_get_index_x();  
+    // j 为行号（lane 索引），每个 lane 独立累加自己那一行
     size_t j = blkv_get_index_x();  
 //    size_t j = blkv_get_index_y();
     size_t idx = j * tileSum::RowStride;    
@@ -30,8 +43,10 @@ void __vec__ reducesum_row_kernel(
     __vbuf__ typename tileSum::DType *old_sum_ptr = blkv_get_tile_ptr(old_sum);   
 
 
+    // 取上一 tile 的行和作为初值，保证跨 tile 累加连续
     typename tileSum::DType upd_sum = old_sum_ptr[idx];
 
+    // 8 路展开树形归约：沿列方向每 8 列两两求和再合并
     #pragma clang loop unroll(full)
     for(size_t i=0;i<tileSrc::ValidCol;i+=8){
         size_t src_idx0 =  i * tileSrc::ColStride + j * tileSrc::RowStride;
@@ -68,6 +83,11 @@ void __vec__ reducesum_row_kernel(
 
 
 
+// ------------------------------------------------------------
+// 主机侧入口：行求和归约（基础版）
+// 流程：按 M 方向逐行块处理，每行块内沿 N 方向逐 tile 累加；
+//       并分别处理 N、M 两方向尾块（行尾/列尾/角块）。
+// ------------------------------------------------------------
 template<typename dtype, const int gIM, const int gIN, const int tM, const int tN>
 void reducesum_trowsum_rand(
     dtype *in_ptr,
@@ -121,10 +141,12 @@ void reducesum_trowsum_rand(
 //    printf("tile_shapeSum::ValidCol = %d\n",  tile_shapeSum::ValidCol);
 //    printf("tile_shapeSum::ValidRow = %d\n",  tile_shapeSum::ValidRow);    
 //    printf("before for\n");
+    // ---- 主区域：M 方向对齐的行块 ----
     for (int j = 0; j < Mb; ++j) {
         auto gO = gOIter(j, 0);
         TEXPANDSCALAR(oldSumTile, 0);//初始化为0
         //初始化old_sum的tile      
+        // 沿 N 方向逐 tile 拷入并累加
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(j, i);   
 //            printf("before copy in , %d\n", i);                
@@ -136,6 +158,7 @@ void reducesum_trowsum_rand(
         }
 //        printf("end for%d\n",j);
         //for row corner
+        // N 方向尾块
         if constexpr (rmd_N > 0){
             auto gI = gIIter(j, Nb);
             TCOPYIN(dataTile_row, gI);
@@ -148,6 +171,7 @@ void reducesum_trowsum_rand(
 //        printf("end tcopyout\n"); 
     }
     //for col cor
+    // ---- M 方向尾块（rmd_M>0）：使用列尾/角块形状 ----
     if constexpr (rmd_M > 0){
         auto gO = gOIter(Mb, 0);
         TEXPANDSCALAR(oldSumTile_col, 0);//初始化为0

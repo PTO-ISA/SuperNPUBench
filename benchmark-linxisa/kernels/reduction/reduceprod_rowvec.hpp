@@ -13,6 +13,17 @@ using namespace pto;
 #include <cstdint>
 #include <cstdio>
 
+// ============================================================
+// 文件说明：行方向求积归约（Row Reduction - Prod）基础实现
+// ------------------------------------------------------------
+// 作用：对 M×N 输入沿 N 轴（行方向）做求积归约，输出 M×1。
+// 分类：对应 README 中 "Row Reduction -> Basic Implementation"（prod 变体）。
+// 与 reducesum_rowvec.hpp 结构一致，仅把累加(+)替换为逐元素乘法(*)。
+// 每个 lane 负责一行连乘，跨 tile 保持运行积。
+// 注意：求积采用标量循环逐元素连乘（不使用 8 路树形）。
+// ============================================================
+
+// ---- 单 tile 行求积归约 kernel：每个 lane 处理一行 ----
 template<typename tileSrc, typename tileProd>
 void __vec__ reduceprod_row_kernel(
     typename tileProd::TileDType __out__ new_prod,
@@ -21,6 +32,7 @@ void __vec__ reduceprod_row_kernel(
 )
 {
 //    size_t i = blkv_get_index_x();  
+    // j 为行号（lane 索引），每个 lane 独立连乘自己那一行
     size_t j = blkv_get_index_x();  
 //    size_t j = blkv_get_index_y();
     size_t idx = j * tileProd::RowStride;    
@@ -30,8 +42,10 @@ void __vec__ reduceprod_row_kernel(
     __vbuf__ typename tileProd::DType *old_prod_ptr = blkv_get_tile_ptr(old_prod);   
 
 
+    // 取上一 tile 的行积作为初值，保证跨 tile 连乘连续
     typename tileProd::DType upd_prod = old_prod_ptr[idx];
 
+    // 逐元素连乘：沿列方向把每个元素乘到累乘器上
     #pragma clang loop unroll(full)
     for(size_t i=0;i<tileSrc::ValidCol;i++){
         size_t src_idx =  i * tileSrc::ColStride + j * tileSrc::RowStride;
@@ -42,6 +56,10 @@ void __vec__ reduceprod_row_kernel(
 
 
 
+// ------------------------------------------------------------
+// 主机侧入口：行求积归约（基础版）
+// 流程与 reducesum_trowsum_rand 相同，仅 kernel 换为 prod 版。
+// ------------------------------------------------------------
 template<typename dtype, const int gIM, const int gIN, const int tM, const int tN>
 void reduceprod_row_rand(
     dtype *in_ptr,
@@ -95,10 +113,12 @@ void reduceprod_row_rand(
 //    printf("tile_shapeSum::ValidCol = %d\n",  tile_shapeSum::ValidCol);
 //    printf("tile_shapeSum::ValidRow = %d\n",  tile_shapeSum::ValidRow);    
 //    printf("before for\n");
+    // ---- 主区域：M 方向对齐的行块 ----
     for (int j = 0; j < Mb; ++j) {
         auto gO = gOIter(j, 0);
         TEXPANDSCALAR(oldProdTile, 0);//初始化为0
         //初始化old_sum的tile      
+        // 沿 N 方向逐 tile 拷入并连乘
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(j, i);   
 //            printf("before copy in , %d\n", i);                
@@ -110,6 +130,7 @@ void reduceprod_row_rand(
         }
 //        printf("end for%d\n",j);
         //for row corner
+        // N 方向尾块
         if constexpr (rmd_N > 0){
             auto gI = gIIter(j, Nb);
             TCOPYIN(dataTile_row, gI);
@@ -122,6 +143,7 @@ void reduceprod_row_rand(
 //        printf("end tcopyout\n"); 
     }
     //for col cor
+    // ---- M 方向尾块（rmd_M>0）----
     if constexpr (rmd_M > 0){
         auto gO = gOIter(Mb, 0);
         TEXPANDSCALAR(oldProdTile_col, 0);//初始化为0

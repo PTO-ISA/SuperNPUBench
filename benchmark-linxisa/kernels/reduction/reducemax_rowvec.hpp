@@ -14,6 +14,16 @@ using namespace pto;
 #include <cstdint>
 #include <cstdio>
 
+// ============================================================
+// 文件说明：行方向求最大归约（Row Reduction - Max）基础实现
+// ------------------------------------------------------------
+// 作用：对 M×N 输入沿 N 轴（行方向）做求最大归约，输出 M×1。
+// 分类：对应 README 中 "Row Reduction -> Basic Implementation"。
+// 与 reducesum_rowvec.hpp 结构一致，仅把累加(+)替换为 blkv_max；
+// 每个 lane 负责一行，沿列方向 8 路树形取 max，跨 tile 保持运行最大值。
+// ============================================================
+
+// ---- 单 tile 行最大归约 kernel：每个 lane 处理一行 ----
 template<typename tileSrc, typename tileMax>
 void __vec__ reducemax_row_kernel(
     typename tileMax::TileDType __out__ new_max,
@@ -22,6 +32,7 @@ void __vec__ reducemax_row_kernel(
 )
 {
 //    size_t i = blkv_get_index_x();  
+    // j 为行号（lane 索引），每个 lane 独立取自己那一行的最大值
     size_t j = blkv_get_index_x();  
 //    size_t j = blkv_get_index_y();
     size_t idx = j * tileMax::RowStride;    
@@ -31,9 +42,11 @@ void __vec__ reducemax_row_kernel(
     __vbuf__ typename tileMax::DType *old_max_ptr = blkv_get_tile_ptr(old_max);   
 
 
+    // 取上一 tile 的行最大作为初值，保证跨 tile 连续
     typename tileMax::DType upd_max = old_max_ptr[idx];
 
 
+    // 8 路树形取 max：沿列方向每 8 列两两取 max 再合并
     #pragma clang loop unroll(full)
     for(size_t i=0;i<tileSrc::ValidCol;i+=8){
         size_t src_idx0 =  i * tileSrc::ColStride + j * tileSrc::RowStride;
@@ -55,6 +68,7 @@ void __vec__ reducemax_row_kernel(
 
         typename tileMax::DType max_tmp = blkv_max(max_0123, max_4567);
 
+        // 与历史最大值比较更新
         upd_max = blkv_max(upd_max, max_tmp);              
     }        
 
@@ -71,6 +85,10 @@ void __vec__ reducemax_row_kernel(
 
 
 
+// ------------------------------------------------------------
+// 主机侧入口：行求最大归约（基础版）
+// 流程与 reducesum_trowsum_rand 相同，仅 kernel 换为 max 版。
+// ------------------------------------------------------------
 template<typename dtype, const int gIM, const int gIN, const int tM, const int tN>
 void reducemax_row_rand(
     dtype *in_ptr,
@@ -86,7 +104,7 @@ void reducemax_row_rand(
 
 
     using gm_shapeIn = global_tensor<dtype, RowMajor<gIM, gIN>>;     //将gm中的Tensor先声明为一维数据 
-//    using gm_shapeSum = global_tensor<dtype, RowMajor<gIM, gIN>>;    
+//    using gm_shapeMax = global_tensor<dtype, RowMajor<gIM, gIN>>;    
     using gm_shapeOut = global_tensor<dtype, RowMajor<gIM, 1>>;
     using tile_shapeData = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor>; // todo 尾块怎么处理？是否要作为参数写在这
     using tile_shapeData_row = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor, tM, rmd_N>; // todo 尾块怎么处理？是否要作为参数写在这
@@ -124,10 +142,12 @@ void reducemax_row_rand(
 //    printf("tile_shapeSum::ValidCol = %d\n",  tile_shapeSum::ValidCol);
 //    printf("tile_shapeSum::ValidRow = %d\n",  tile_shapeSum::ValidRow);    
 //    printf("before for\n");
+    // ---- 主区域：M 方向对齐的行块 ----
     for (int j = 0; j < Mb; ++j) {
         auto gO = gOIter(j, 0);
         TEXPANDSCALAR(oldMaxTile, 0);//初始化为0
         //初始化old_sum的tile      
+        // 沿 N 方向逐 tile 拷入并取最大
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(j, i);   
 //            printf("before copy in , %d\n", i);                
@@ -139,6 +159,7 @@ void reducemax_row_rand(
         }
 //        printf("end for%d\n",j);
         //for row corner
+        // N 方向尾块
         if constexpr (rmd_N > 0){
             auto gI = gIIter(j, Nb);
             TCOPYIN(dataTile_row, gI);
@@ -151,6 +172,7 @@ void reducemax_row_rand(
 //        printf("end tcopyout\n"); 
     }
     //for col cor
+    // ---- M 方向尾块（rmd_M>0）----
     if constexpr (rmd_M > 0){
         auto gO = gOIter(Mb, 0);
         TEXPANDSCALAR(oldMaxTile_col, 0);//初始化为0
