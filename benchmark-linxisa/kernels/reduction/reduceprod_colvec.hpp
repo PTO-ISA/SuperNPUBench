@@ -13,8 +13,20 @@ using namespace pto;
 #include <cstdio>
 
 
+// ============================================================
+// 文件说明：列方向求积归约（Column Reduction - Prod）基础实现
+// ------------------------------------------------------------
+// 作用：对 M×N 输入沿 M 轴（列方向）做求积归约，输出 1×N。
+// 分类：对应 README 中 "Column Reduction -> Basic Implementation"（prod 变体）。
+// 与 reducesum_colvec.hpp 结构一致，仅把累加(+)替换为逐元素乘法(*)。
+// 注意：求积不适用 8 路树形展开（乘法不满足可加的树形加速收益结构），
+//       因此本 kernel 采用标量循环逐元素连乘。
+// ============================================================
+
+
 // ==============================================
 // ==============================================
+// ---- 单 tile 列求积归约 kernel：每个 lane 处理一列 ----
 template<typename tileSrc, typename timeProd>
 void __vec__ reduceprod_col_kernel(
     typename timeProd::TileDType __out__ new_prod,
@@ -22,6 +34,7 @@ void __vec__ reduceprod_col_kernel(
     const typename timeProd::TileDType __in__ old_prod    
 )
 {
+    // 当前 lane 索引：每个 lane 负责一列的连乘
     size_t i = blkv_get_index_x();  
 
     __vbuf__ typename timeProd::DType *new_prod_ptr = blkv_get_tile_ptr(new_prod);
@@ -29,8 +42,10 @@ void __vec__ reduceprod_col_kernel(
     __vbuf__ typename timeProd::DType *old_prod_ptr = blkv_get_tile_ptr(old_prod);   
 
 
+    // 取上一 tile 的列积作为初值，保证跨 tile 连乘连续
     typename timeProd::DType upd_prod = old_prod_ptr[i];
 
+    // 逐元素连乘：沿列方向把每个元素乘到累乘器上
     #pragma clang loop unroll(full)
     for(size_t j=0;j<tileSrc::ValidRow;j++){
         size_t src_idx =  i * tileSrc::ColStride + j * tileSrc::RowStride;
@@ -41,6 +56,10 @@ void __vec__ reduceprod_col_kernel(
 
 
 
+// ------------------------------------------------------------
+// 主机侧入口：列求积归约（基础版）
+// 流程与 reducesum_colsum_rand 相同，仅 kernel 换为 prod 版。
+// ------------------------------------------------------------
 template<typename dtype, int gIM, int gIN, int tM, int tN>
 void reduceprod_col_rand(
     dtype *in_ptr,
@@ -100,6 +119,7 @@ void reduceprod_col_rand(
 
 //    dtype zero = 0;
 
+    // ---- 主区域：N 方向对齐的列块 ----
     for (int j = 0; j < Nb; ++j) {
 //        auto gZero = gZeroIter(0, j);
         auto gO = gOIter(0, j);
@@ -107,12 +127,14 @@ void reduceprod_col_rand(
 //        TCOPYIN(oldSumTile, gZero);//初始化为0
         //初始化old_sum的tile      
         //need 
+        // 沿 M 方向逐 tile 拷入并连乘
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, j);
             TCOPYIN(dataTile, gI);
             reduceprod_col_kernel<tile_shapeData, tile_shapeProd><<<tile_shapeProd::ValidCol, tile_shapeProd::ValidRow, 1>>>(ProdTile.data(), dataTile.data(), oldProdTile.data());
             oldProdTile = ProdTile;
         }
+        // M 方向尾块
         if constexpr (rmd_M > 0){   
             auto gI = gIIter(Mb, j);
             TCOPYIN(dataTile_col, gI);
@@ -121,6 +143,7 @@ void reduceprod_col_rand(
         }
         TCOPYOUT(gO, ProdTile);
     }
+    // ---- N 方向尾块区域 ----
     if constexpr (rmd_N > 0){
 //        auto gZero = gZeroIter(0, Nb);         
         auto gO = gOIter(0, Nb);

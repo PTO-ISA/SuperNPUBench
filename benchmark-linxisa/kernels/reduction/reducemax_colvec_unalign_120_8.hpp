@@ -13,22 +13,40 @@ using namespace pto;
 #include <cstdio>
 
 
+// ============================================================
+// 文件说明：3D 列求最大归约（Column Reduction - Max）非对齐 120×8 专用版
+// ------------------------------------------------------------
+// 作用：对形状如 120×8 的 3D 张量做列求最大归约（沿 M 轴取每列最大值）。
+// 分类：对应 README 中 "3D Column Reduction Operators (Unalign Optimized)"。
+// 与 reducesum_colvec_unalign_120_8.hpp 结构一致，仅把求和(+)替换为 blkv_max。
+// 关键点：
+//   1) 布局变换 (gIM×gIN) -> (gIM/8 × gIN*8)，凑齐 8 元向量；
+//   2) 用补零让非 valid 区参与 8 路树形取 max（0 不影响 max 结果前提是数据非负，
+//      实际依赖 TCOPYIN 默认补 0）；
+//   3) 两阶段：reducemax_col_tmp() 每 tile 取临时最大；reducemax_col_final() 合并。
+// ============================================================
+
+
 // ==============================================
 // ==============================================
+// ---- 阶段1：单 tile 内 8 路树形列取最大，输出临时最大值 ----
 template<typename tileSrc, typename tileTmp>
 void __vec__ reducemax_col_tmp(
     typename tileTmp::TileDType __out__ tmp_max,
     const typename tileSrc::TileDType __in__ src    
 )
 {
+    // 当前 lane 负责一列
     size_t i = blkv_get_index_x();  
 
     __vbuf__ typename tileTmp::DType *tmp_max_ptr = blkv_get_tile_ptr(tmp_max);
     __vbuf__ typename tileSrc::DType *src_ptr = blkv_get_tile_ptr(src);
 //    __vbuf__ typename tileMax::DType *old_max_ptr = blkv_get_tile_ptr(old_max);   
 
+    // 局部最大值初值
     typename tileTmp::DType upd_tmp_max = 0;
    
+    // 用 Rows（非 valid 补零区也参与）凑齐 8 元树形取 max
     #pragma clang loop unroll(full) 
     for(size_t j=0;j<tileSrc::Rows;j+=8){//非valid处也参与计算补0，能凑出8元树形累加出来
         size_t src_idx_0 =  i * tileSrc::ColStride + j * tileSrc::RowStride;
@@ -39,6 +57,7 @@ void __vec__ reducemax_col_tmp(
         size_t src_idx_5 =  i * tileSrc::ColStride + (j + 5) * tileSrc::RowStride;
         size_t src_idx_6 =  i * tileSrc::ColStride + (j + 6) * tileSrc::RowStride;
         size_t src_idx_7 =  i * tileSrc::ColStride + (j + 7) * tileSrc::RowStride;        
+        // 8 路两两取 max -> 树形合并
         typename tileTmp::DType max_01 = blkv_max(src_ptr[src_idx_0], src_ptr[src_idx_1]);    
         typename tileTmp::DType max_23 = blkv_max(src_ptr[src_idx_2], src_ptr[src_idx_3]);
         typename tileTmp::DType max_45 = blkv_max(src_ptr[src_idx_4], src_ptr[src_idx_5]);    
@@ -52,6 +71,7 @@ void __vec__ reducemax_col_tmp(
     tmp_max_ptr[i] = upd_tmp_max;   
 }
 
+// ---- 阶段2：把临时最大值与历史累加器 old_max 合并，写出最终列最大 ----
 template<typename tileTmp, typename tileMax>
 void __vec__ reducemax_col_final(
     typename tileMax::TileDType __out__ new_max,
@@ -66,9 +86,11 @@ void __vec__ reducemax_col_final(
     __vbuf__ typename tileMax::DType *old_max_ptr = blkv_get_tile_ptr(old_max);   
 
 
+    // 取历史最大值
     typename tileMax::DType upd_max = old_max_ptr[i];
    
 
+    // 对临时 tile 中 8 个切片结果做 8 路树形取 max
     size_t src_idx_0 =  i * tileMax::ColStride + 0 * tileMax::ValidCol;
     size_t src_idx_1 =  i * tileMax::ColStride + 1 * tileMax::ValidCol;
     size_t src_idx_2 =  i * tileMax::ColStride + 2 * tileMax::ValidCol;
@@ -88,13 +110,17 @@ void __vec__ reducemax_col_final(
 //        upd_max = upd_max + max_tmp;              
 
 
+    // 合并临时结果与历史最大值
     new_max_ptr[i] = blkv_max(max_all, upd_max);   
 }
 
 
 
 
-
+// ------------------------------------------------------------
+// 主机侧入口：3D 非对齐列求最大归约（120×8 专用）
+// 布局变换与 reducesum 版一致。
+// ------------------------------------------------------------
 template<typename dtype, int gIM, int gIN, int tM, int tN, int tM_VLD>
 void reducemax_col_rand(
     dtype *in_ptr,
@@ -109,6 +135,7 @@ void reducemax_col_rand(
     const int rmd_N = gIN % tN;
 //    const int rmd_M = gOM % tM; // todo 尾块怎么处理？
 
+    // 布局变换：(gIM×gIN) -> (gIM/8 × gIN*8)
     using gm_shapeIn = global_tensor<dtype, RowMajor<gIM/8, gIN*8>>;     // 
 //    using gm_shapeMax = global_tensor<dtype, RowMajor<gIM, gIN>>;    
     using gm_shapeOut = global_tensor<dtype, RowMajor<1, gIN>>;
@@ -154,6 +181,7 @@ void reducemax_col_rand(
     itOut gOIter(out_ptr);
 
 
+    // 单 tile 流程：拷入(补零) -> 阶段1 tmp 取最大 -> 阶段2 final 合并 -> 拷出
     auto gO = gOIter(0, 0);
     TEXPANDSCALAR(oldMaxTile, 0);//初始化为0
     auto gI = gIIter(0, 0);

@@ -13,8 +13,19 @@ using namespace pto;
 #include <cstdio>
 
 
+// ============================================================
+// 文件说明：列方向求最大归约（Column Reduction - Max）基础实现
+// ------------------------------------------------------------
+// 作用：对 M×N 输入沿 M 轴（列方向）做求最大归约，输出 1×N。
+// 分类：对应 README 中 "Column Reduction -> Basic Implementation"。
+// 与 reducesum_colvec.hpp 结构一致，仅把累加(+)替换为 blkv_max；
+// 同样处理对齐主块与 M/N 尾块，使用 8 路树形归约。
+// ============================================================
+
+
 // ==============================================
 // ==============================================
+// ---- 单 tile 列最大归约 kernel：每个 lane 处理一列 ----
 template<typename tileSrc, typename tileMax>
 void __vec__ reducemax_col_kernel(
     typename tileMax::TileDType __out__ new_max,
@@ -22,6 +33,7 @@ void __vec__ reducemax_col_kernel(
     const typename tileMax::TileDType __in__ old_max    
 )
 {
+    // 当前 lane 索引：每个 lane 负责一列的最大值
     size_t i = blkv_get_index_x();  
 
     __vbuf__ typename tileMax::DType *new_max_ptr = blkv_get_tile_ptr(new_max);
@@ -29,6 +41,7 @@ void __vec__ reducemax_col_kernel(
     __vbuf__ typename tileMax::DType *old_max_ptr = blkv_get_tile_ptr(old_max);   
 
 
+    // 取历史最大值作为初值
     typename tileMax::DType upd_max = old_max_ptr[i];
 /*    
     for(size_t j=0;j<tileSrc::ValidRow;j+=4){
@@ -42,6 +55,7 @@ void __vec__ reducemax_col_kernel(
         upd_sum = upd_sum + sum_0123;              
     }
 */
+    // 8 路树形求最大：每 8 行两两取 max，再树形合并
     #pragma clang loop unroll(full) 
     for(size_t j=0;j<tileSrc::ValidRow;j+=8){
         size_t src_idx_0 =  i * tileSrc::ColStride + j * tileSrc::RowStride;
@@ -52,13 +66,17 @@ void __vec__ reducemax_col_kernel(
         size_t src_idx_5 =  i * tileSrc::ColStride + (j + 5) * tileSrc::RowStride;
         size_t src_idx_6 =  i * tileSrc::ColStride + (j + 6) * tileSrc::RowStride;
         size_t src_idx_7 =  i * tileSrc::ColStride + (j + 7) * tileSrc::RowStride;        
+        // 第一层：4 组两两取 max
         typename tileMax::DType max_01 = blkv_max(src_ptr[src_idx_0], src_ptr[src_idx_1]);    
         typename tileMax::DType max_23 = blkv_max(src_ptr[src_idx_2], src_ptr[src_idx_3]);
         typename tileMax::DType max_45 = blkv_max(src_ptr[src_idx_4], src_ptr[src_idx_5]);    
         typename tileMax::DType max_67 = blkv_max(src_ptr[src_idx_6], src_ptr[src_idx_7]);        
+        // 第二层：2 组两两取 max
         typename tileMax::DType max_0123 = blkv_max(max_01, max_23); 
         typename tileMax::DType max_4567 = blkv_max(max_45, max_67);
+        // 第三层：最终 8 元合并
         typename tileMax::DType max_tmp = blkv_max(max_0123, max_4567);         
+        // 与历史最大值比较更新
         upd_max = blkv_max(upd_max, max_tmp);              
     }
 
@@ -67,6 +85,10 @@ void __vec__ reducemax_col_kernel(
 
 
 
+// ------------------------------------------------------------
+// 主机侧入口：列求最大归约（基础版）
+// 流程与 reducesum_colsum_rand 相同，仅 kernel 换为 max 版。
+// ------------------------------------------------------------
 template<typename dtype, int gIM, int gIN, int tM, int tN>
 void reducemax_col_rand(
     dtype *in_ptr,
@@ -126,6 +148,7 @@ void reducemax_col_rand(
 
 //    dtype zero = 0;
 
+    // ---- 主区域：N 方向对齐的列块 ----
     for (int j = 0; j < Nb; ++j) {
 //        auto gZero = gZeroIter(0, j);
         auto gO = gOIter(0, j);
@@ -133,12 +156,14 @@ void reducemax_col_rand(
 //        TCOPYIN(oldSumTile, gZero);//初始化为0
         //初始化old_sum的tile      
         //need 
+        // 沿 M 方向逐 tile 拷入并取最大
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, j);
             TCOPYIN(dataTile, gI);
             reducemax_col_kernel<tile_shapeData, tile_shapeMax><<<tile_shapeMax::ValidCol, tile_shapeMax::ValidRow, 1>>>(MaxTile.data(), dataTile.data(), oldMaxTile.data());
             oldMaxTile = MaxTile;
         }
+        // M 方向尾块
         if constexpr (rmd_M > 0){   
             auto gI = gIIter(Mb, j);
             TCOPYIN(dataTile_col, gI);
@@ -147,6 +172,7 @@ void reducemax_col_rand(
         }
         TCOPYOUT(gO, MaxTile);
     }
+    // ---- N 方向尾块区域 ----
     if constexpr (rmd_N > 0){
 //        auto gZero = gZeroIter(0, Nb);         
         auto gO = gOIter(0, Nb);

@@ -13,6 +13,20 @@ using namespace pto;
 #include <cstdint>
 #include <cstdio>
 
+// ============================================================
+// 文件说明：行方向求最大归约（Row Reduction - Max）优化版 single_tree
+// ------------------------------------------------------------
+// 作用：对 M×N 输入沿 N 轴做行求最大归约，输出 M×1。
+// 分类：对应 README 中 "Row Reduction -> Optimized Single Tree"。
+// 与 reducesum_rowvec_single_tree.hpp 结构一致，仅把求和(+)替换为 blkv_max。
+// 优化策略：
+//   1) 列主序(ColMajor)中间存储，降低访存带宽；
+//   2) 4 路并行（z 维 blkv_get_index_y）把 tile 列分 4 段并行归约；
+//   3) 多级树形：8 路 -> 64 路(8×8) -> 步长倍增渐进式合并；
+//   4) 两阶段：reducemax_row_kernel() 写中间，reducemax_row_final_kernel() 最终合并。
+// ============================================================
+
+// ---- 阶段1：单 tile 行最大归约（4 路并行 + 多级树形）----
 template<typename tileSrc, typename tileSrcCol, typename tileTmpMax>
 void __vec__ reducemax_row_kernel(
     typename tileTmpMax::TileDType __out__ new_max,
@@ -23,8 +37,10 @@ void __vec__ reducemax_row_kernel(
 )
 {
 
+    // j 为行 lane，z 为 4 路并行的段索引
     size_t j = blkv_get_index_x();  
     size_t z = blkv_get_index_y();     
+    // 本段在 src / src_col 中的基地址偏移
     size_t stride_src = z * (tileSrc::ValidCol/4) * tileSrc::ColStride;
     size_t stride_src_col = z * (tileSrcCol::ValidCol/4) * tileSrcCol::ColStride;    
   
@@ -41,6 +57,7 @@ void __vec__ reducemax_row_kernel(
     }    
 */
 
+    // 第一级：8 路树形取 max，每 8 列合并为 1 个结果写入 src_col 缓冲
     #pragma clang loop unroll(full)
     for(size_t i=0;i<tileSrc::ValidCol/4;i+=8){
         size_t src_idx_0 =  stride_src + (i+0) * tileSrc::ColStride + j * tileSrc::RowStride;
@@ -62,11 +79,13 @@ void __vec__ reducemax_row_kernel(
 
         typename tileSrc::DType max_all = blkv_max(max_0123, max_4567);
 
+        // 写入列主序缓冲
         size_t src_col_idx_0 = stride_src_col + (i/8) * tileSrcCol::ColStride + j * tileSrcCol::RowStride;
         src_col_ptr[src_col_idx_0] = max_all;         
     }        
 
 
+    // 第二级：对 src_col 缓冲再做 8 路取 max（64 路 = 8×8）
     #pragma clang loop unroll(full)
     for(size_t i=0; i<tileSrcCol::ValidCol/4; i+=8){
         size_t tmp_idx_0 =  stride_src_col + (i+0) * tileSrcCol::ColStride + j * tileSrcCol::RowStride;
@@ -89,6 +108,7 @@ void __vec__ reducemax_row_kernel(
 
 
 
+    // 第三级：步长倍增渐进式归约（iternum = ctz(ValidCol/4) - 3）
     size_t stride = 8;
     size_t iternum = __builtin_ctz(tileSrcCol::ValidCol/4) - 3;
 
@@ -105,6 +125,7 @@ void __vec__ reducemax_row_kernel(
     }
 
 
+    // 把 old_max 原值拷到 new_max（保留历史值）
     #pragma clang loop unroll(full) 
     for(size_t i=0;i<tileTmpMax::ValidCol/4;i++){
         size_t old_max_idx =  z * tileTmpMax::ValidCol/4 * tileTmpMax::ColStride + i * tileTmpMax::ColStride + j * tileTmpMax::RowStride;       
@@ -112,12 +133,14 @@ void __vec__ reducemax_row_kernel(
     }    
 
 
+    // 将本段最终最大值写入中间 tile 的对应槽位 tile_idx
     size_t src_max_idx = stride_src_col + j * tileSrcCol::RowStride;
     size_t max_tile_idx = z * tileTmpMax::ValidCol/4 * tileTmpMax::ColStride + tile_idx * tileTmpMax::ColStride + j * tileTmpMax::RowStride;
     new_max_ptr[max_tile_idx] = src_col_ptr[src_max_idx];  
 }
 
 
+// ---- 阶段2：对中间 tile 做最终行最大归约，产出 M×1 ----
 template<typename tileTmpMax, typename tileMax>
 void __vec__ reducemax_row_final_kernel(
     typename tileMax::TileDType __out__ new_max,
@@ -129,6 +152,7 @@ void __vec__ reducemax_row_final_kernel(
     __vbuf__ typename tileMax::DType *new_max_ptr = blkv_get_tile_ptr(new_max);
     __vbuf__ typename tileTmpMax::DType *tmp_max_ptr = blkv_get_tile_ptr(tmp_max);
 
+    // 第一级：8 路取 max
     #pragma clang loop unroll(full) 
     for(size_t i=0;i<tileTmpMax::Cols;i+=8){
         size_t src_idx_0 =  (i+0) * tileTmpMax::ColStride + j * tileTmpMax::RowStride;
@@ -149,6 +173,7 @@ void __vec__ reducemax_row_final_kernel(
         tmp_max_ptr[src_idx_0] = max_all;          
     }   
 
+    // 第二级：步长倍增渐进式归约
     size_t stride = 8;
     size_t iternum = __builtin_ctz(tileTmpMax::Cols) - 3;    
     #pragma clang loop unroll(full) 
@@ -163,11 +188,16 @@ void __vec__ reducemax_row_final_kernel(
         stride = stride*2;
     }    
 
+    // 写出每行最终最大值
     size_t max_idx = j * tileTmpMax::RowStride;
     new_max_ptr[idx] = tmp_max_ptr[max_idx];
 }
 
 
+// ------------------------------------------------------------
+// 主机侧入口：行求最大归约（single_tree 优化版）
+// 注意：此版本只处理对齐主区域，未含 rmd 尾块分支。
+// ------------------------------------------------------------
 template<typename dtype, const int gIM, const int gIN, const int tM, const int tN>
 void reducemax_row_rand(
     dtype *in_ptr,
@@ -186,8 +216,10 @@ void reducemax_row_rand(
 //    using gm_shapeMax = global_tensor<dtype, RowMajor<gIM, gIN>>;    
     using gm_shapeOut = global_tensor<dtype, RowMajor<gIM, 1>>;
     using tile_shapeData = Tile<Location::Vec, dtype, tM, tN, BLayout::RowMajor>; // todo 尾块怎么处理？是否要作为参数写在这
+    // 列主序中间缓冲：tN/8 列
     using tile_shapeDataCol = Tile<Location::Vec, dtype, tM, tN/8, BLayout::ColMajor>; // todo 尾块怎么处理？是否要作为参数写在这    
     using tile_shapeMax = Tile<Location::Vec, dtype, tM, 8, BLayout::RowMajor, tM, 1>; // todo 这里的location，一定要是Vec吗？哪怕没有传入Vec
+    // 中间 tile：列主序，64 列、有效列=Nb*4（4 路并行 × Nb 个 tile）
     using tile_shapeTmpMax = Tile<Location::Vec, dtype, tM, 64, BLayout::ColMajor, tM, Nb*4>; // todo 这里的location，一定要是Vec吗？哪怕没有传入Vec
 
 
@@ -214,6 +246,7 @@ void reducemax_row_rand(
     auto gO = gOIter(0, 0);
     TEXPANDSCALAR(oldtmpMaxTile, 0);//初始化为0  
     TEXPANDSCALAR(dataTile_col, 0);//初始化为0     
+    // 阶段1：逐 tile 拷入并做 4 路并行多级树形取最大，写入中间 tile
     for (int i = 0; i < Nb; ++i) {
         auto gI = gIIter(0, i);                
         TCOPYIN(dataTile, gI);    
@@ -224,10 +257,10 @@ void reducemax_row_rand(
                                                                                                                         i);
         oldtmpMaxTile = tmpMaxTile;
     }
+    // 阶段2：最终归约并写出
     reducemax_row_final_kernel<tile_shapeTmpMax, tile_shapeMax><<<tile_shapeTmpMax::ValidRow, 1, 1>>>(MaxTile.data(), 
                                                                                                       tmpMaxTile.data());     
     TCOPYOUT(gO, MaxTile);
 }
 
 #endif
-

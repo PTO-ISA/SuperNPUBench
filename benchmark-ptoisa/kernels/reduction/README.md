@@ -8,7 +8,7 @@ The reduction operators are categorized into three main types based on their red
 
 - **Column Reduction (col)**: Reduces along the column dimension (M-axis)
 - **Row Reduction (row)**: Reduces along the row dimension (N-axis)  
-- **3D Column Reduction (3dcol)**: Batch column reduction for 3D tensors with layout transformation to maximize vector lane utilization
+- **3D Column Reduction (3dcol)**: Optimized for 3D tensor column reduction with unaligned dimensions
 
 ## Directory Structure
 
@@ -16,10 +16,10 @@ The reduction operators are categorized into three main types based on their red
 reduction/
 ├── reducesum_col/          # Column sum reduction (basic)
 ├── reducesum_row/          # Row sum reduction (optimized)
-├── reducesum_3dcol/        # 3D column sum reduction (layout-transformed for vector efficiency)
+├── reducesum_3dcol/        # 3D column sum reduction (unalign optimized)
 ├── reducemax_col/          # Column max reduction (basic)
 ├── reducemax_row/          # Row max reduction (optimized)
-└── reducemax_3dcol/        # 3D column max reduction (layout-transformed for vector efficiency)
+└── reducemax_3dcol/        # 3D column max reduction (unalign optimized)
 ```
 
 ## Operator Categories
@@ -120,98 +120,34 @@ for(size_t i=0; i<tileSrc::ValidCol; i+=8) {
 - Uses 4-way parallel processing with `blkv_get_index_y()` for z-dimension
 - Progressive tree reduction with stride doubling
 
-### 3. 3D Column Reduction Operators
+### 3. 3D Column Reduction Operators (Unalign Optimized)
 
-These operators perform column-wise reduction on batches of 3D tensor slices (`Nums × gIM × gIN`), producing `Nums × 1 × gIN` outputs. The typical target shape is **120×8** (e.g., 381 slices of 120×8 for `__half`).
+These operators are specifically optimized for 3D tensor reduction with unaligned dimensions, particularly for shapes like 120×8.
 
 #### Implementation: `reducesum_colvec_unalign_120_8.hpp` / `reducemax_colvec_unalign_120_8.hpp`
 
 **Header Location**: `kernels/reduction/reducesum_colvec_unalign_120_8.hpp`
 
-##### Why Layout Transformation Is Needed
+**Special Characteristics**:
+- Designed for batch processing of multiple 3D tensors (Nums×gIM×gIN)
+- Optimized for non-power-of-2 dimensions (e.g., 120 rows)
+- Uses zero-padding to enable efficient 8-way tree reduction
 
-NPU `__vec__` functions execute vector operations across **at most 64 lanes**. If the original data layout (120×8, RowMajor) were used directly, each vector row would contain only 8 elements, activating just 8 out of 64 lanes — a **lane utilization of only 12.5%**.
-
-To maximize vector efficiency, the data undergoes a **logical layout transformation** that reshapes each 2D slice from `gIM × gIN` (120×8) into `(gIM/8) × (gIN*8)` (15×64):
-
-```
-Original layout (120 × 8):            Transformed layout (15 × 64):
-┌──┬──┬──┬──┬──┬──┬──┬──┐            ┌────────────────── 64 elements ──────────────────┐
-│  │  │  │  │  │  │  │  │ row 0      │ row0: cols of orig_row0 | orig_row1 |...| orig_row7 │
-├──┼──┼──┼──┼──┼──┼──┼──┤            ├────────────────────────────────────────────────┤
-│  │  │  │  │  │  │  │  │ row 1      │ row1: cols of orig_row8 | orig_row9 |...| orig_r15 │
-├──┼──┼──┼──┼──┼──┼──┼──┤            ├────────────────────────────────────────────────┤
-│              ...                    │                     ...                        │
-├──┼──┼──┼──┼──┼──┼──┼──┤            ├────────────────────────────────────────────────┤
-│  │  │  │  │  │  │  │  │ row 119    │ row14: cols of orig_row112|...| orig_row119(+pad)│
-└──┴──┴──┴──┴──┴──┴──┴──┘            └────────────────────────────────────────────────┘
-      8 lanes used (12.5%)                  64 lanes used (100%)
-```
-
-Each original row's 8 elements are interleaved across 8 consecutive "virtual columns" in the transformed 64-wide row. This ensures **all 64 vector lanes are active**, achieving 100% lane utilization.
-
-##### Layout Transformation in Code
-
+**Data Layout Transformation**:
 ```cpp
 // Original: gIM × gIN (e.g., 120 × 8)
-// Transformed: (gIM/8) × (gIN*8) → 15 × 64
-using gm_shapeIn   = global_tensor<dtype, RowMajor<gIM/8, gIN*8>>;
+// Transformed: (gIM/8) × (gIN*8) for better vectorization
+using gm_shapeIn = global_tensor<dtype, RowMajor<gIM/8, gIN*8>>;
 using tile_shapeData = Tile<Location::Vec, dtype, tM/8, tN*8, BLayout::RowMajor, tM_VLD/8, tN*8>;
-//   tile shape: 16×64, valid rows=15, valid cols=64 (tM=128, tN=8, tM_VLD=120)
-using tile_shapeTmp = Tile<Location::Vec, dtype, 1, tN*8, BLayout::RowMajor>;          // 1×64
-using tile_shapeSum = Tile<Location::Vec, dtype, 1, tN*8, BLayout::RowMajor, 1, tN>;   // 1×64, valid=8
 ```
 
-Note: `tM/8 = 128/8 = 16` rows in the tile, but only `tM_VLD/8 = 120/8 = 15` are valid. The 16th row is zero-padded during DMA load (`TCOPYIN`) so that the row count remains a multiple of 8, enabling a complete 8-way tree reduction without remainder handling.
+**Two-Stage Reduction**:
+1. `reducesum_col_tmp()`: Reduces each column to temporary result
+2. `reducesum_col_final()`: Combines temporary results with running accumulator
 
-##### Two-Stage Reduction
-
-Because the layout transformation "spreads" each original column across 8 virtual columns, the reduction must be completed in two stages:
-
-**Stage 1 — `col_tmp` (per-column partial reduction):**
-- Launched with **64 lanes** (`tile_shapeTmp::ValidCol = 64`), one lane per virtual column.
-- Each lane processes one column of the 16×64 tile (15 valid rows + 1 zero-padded row), performing 8-way tree reduction along the row dimension.
-- Output: a `1×64` intermediate tile of partial results.
-
-**Stage 2 — `col_final` (merge virtual columns):**
-- Launched with **8 lanes** (`tile_shapeSum::ValidCol = tN = 8`), one lane per original column.
-- Lane `i` reads 8 values from the intermediate tile at stride `tN` (positions `i`, `i+8`, `i+16`, ..., `i+56`), which correspond to the 8 virtual columns belonging to original column `i`.
-- An 8-way tree reduction (sum or max) merges these into the final scalar result for column `i`.
-
-```
-Stage 1 (col_tmp, 64 lanes):          Stage 2 (col_final, 8 lanes):
-┌──────────── 64 cols ────────────┐   ┌──── 8 virtual cols per original col ────┐
-│ ↕ reduce 16 rows per column      │   │ lane 0: merge tmp[0,8,16,...,56] → out[0]│
-│ → 64 partial results (1×64)      │   │ lane 1: merge tmp[1,9,17,...,57] → out[1]│
-└──────────────────────────────────┘   │ ...                                       │
-                                        │ lane 7: merge tmp[7,15,23,...,63]→ out[7]│
-                                        └───────────────────────────────────────────┘
-```
-
-##### reducesum vs reducemax Differences
-
-Both operators share the same structure but differ in the reduction operation:
-- **reducesum**: Uses `+` for accumulation, zero-padding is semantically neutral.
-- **reducemax**: Uses `blkv_max()` for accumulation; zero-padding is valid under the assumption that all data values are ≥ 0.
-
-##### Template Parameters
-
-| Parameter | Description | Example Value |
-|-----------|-------------|---------------|
-| `dtype` | Data type | `__half` |
-| `gIM` | Original row count per slice | 120 |
-| `gIN` | Original column count per slice | 8 |
-| `tM` | Tile M dimension (pre-transform) | 128 |
-| `tN` | Tile N dimension (pre-transform) | 8 |
-| `tM_VLD` | Valid row count (≤ gIM, for unaligned dimensions) | 120 |
-
-The host code loops over `Nums` slices, invoking the kernel independently for each:
-```cpp
-for(int i = 0; i < Nums; i++){
-    reducesum_colsum_rand<dtype, gIMs, gINs, tMs, tNs, tM_VLDs>(
-        &input[i * gIMs * gINs], &output[i * gINs]);
-}
-```
+**Template Parameters**:
+- `tM_VLD`: Valid row count for the tile (important for unaligned dimensions)
+- Processes `Nums` independent 3D slices in a loop
 
 ## Common Optimization Techniques
 
@@ -322,19 +258,15 @@ for(int i = 0; i < 381; i++) {
   - Better for large reduction dimensions
 
 - **3D Unaligned**: `xxx_colvec_unalign_120_8.hpp`
-   - Batch column reduction for 3D tensors (Nums × gIM × gIN)
-   - Logical layout transformation (gIM×gIN → (gIM/8)×(gIN*8)) to maximize __vec__ lane utilization (8/64 → 64/64)
-   - Two-stage reduction: per-virtual-column partial reduction (64 lanes) + cross-virtual-column merge (8 lanes)
-   - Zero-padding to keep row count a multiple of 8 for clean 8-way tree reduction
+  - Specialized for 3D tensors with non-power-of-2 dimensions
+  - Uses zero-padding and layout transformation
 
 ## Performance Considerations
 
 1. **Tile Size Selection**: Choose `tM` and `tN` to balance parallelism and memory usage
 2. **Memory Alignment**: Aligned dimensions enable more efficient vectorization
 3. **Reduction Direction**: Column reduction is generally more efficient for tall matrices
-4. **Batch Processing**: 3D operators process multiple slices in a loop; kernel invocation overhead is amortized across `Nums` slices
-5. **Vector Lane Utilization (3dcol)**: The layout transformation reshapes `gIM×gIN` into `(gIM/8)×(gIN*8)` so that each vector row spans 64 elements, filling all 64 `__vec__` lanes. Without this, only `gIN` (e.g., 8) lanes would be active, wasting over 87% of vector capacity
-6. **Zero-Padding Trade-off (3dcol)**: Padding rows to a multiple of 8 enables clean 8-way tree reduction but introduces a small number of dummy operations; for 120→128 (padded to tM=128), the overhead is only 1/16 ≈ 6.25%
+4. **Batch Processing**: 3D operators amortize overhead across multiple slices
 
 ## Dependencies
 

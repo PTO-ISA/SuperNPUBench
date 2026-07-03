@@ -1,4 +1,4 @@
-template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk>
+template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk, int scaleD = qD>
 void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_ptr) {
     // 全局张量形状
     using gmQ = global_tensor<dtype, RowMajor<Sq, qD>>;  // Q: [S×qD]
@@ -33,7 +33,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
     itV gIterV(v_ptr);
     itO gIterO(out_ptr);
 
-    const float scale = 1.0f / sqrt((float)qD);
+    const float scale = 1.0f / sqrt((float)scaleD);
     const int Qb = (Sq + kTm - 1) / kTm;
     const int Kb = (Skv + kTk - 1) / kTk;
 
@@ -50,19 +50,19 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
         #pragma clang loop unroll(full)
         for(int x=0;x<Xdim;x++){
             auto gQ = gIterQ(i+x,0);
-            TCOPYIN(tQ[x], gQ);
+            TLOAD(tQ[x], gQ);
         }
 
         tileMax tMax[Xdim];
         #pragma clang loop unroll(full)
         for(int x=0;x<Xdim;x++){
-            TEXPANDSCALAR_TEPL(tMax[x], -1e30f);
+            TEXPANDS(tMax[x], -1e30f);
         }
 
         tileSum tSum[Xdim];
         #pragma clang loop unroll(full)
         for(int x=0;x<Xdim;x++){
-            TEXPANDSCALAR_TEPL(tSum[x], 0);
+            TEXPANDS(tSum[x], 0);
         }
 
         tileO_out tPV_out;
@@ -77,7 +77,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
                 auto gK = gIterK(0, j+y);
-                TCOPYIN(tK[y], gK);
+                TLOAD(tK[y], gK);
             }
 
             tileW tW[Xdim][Ydim];
@@ -86,10 +86,10 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
                 #pragma clang loop unroll(full)
                 for(int y=0;y<Ydim;y++){
                     tileW_out tW_out;
-                    MATMUL(tW_out, tQ[x], tK[y]);
+                    TMATMUL(tW_out, tQ[x], tK[y]);
                     // Nz -> ColMajor
                     TCVT(tW[x][y], tW_out);
-                    TMULS_TEPL(tW[x][y], tW[x][y], scale);
+                    TMULS(tW[x][y], tW[x][y], scale);
                 }
             }
 
@@ -101,7 +101,6 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             tileMax tLocalMax[Xdim][Ydim];
             tileSum tLocalSum[Xdim][Ydim];
             tileSum tScaledOldSum[Xdim];
-            tileW tNewMaxExpanded[Xdim];
 
             //softmax
             #pragma clang loop unroll(full)
@@ -109,57 +108,55 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
                 //new max
                 #pragma clang loop unroll(full)
                 for(int y=0;y<Ydim;y++){
-                    TCOLMAX_TEPL(tLocalMax[x][y], tW[x][y]);
+                    TCOLMAX(tLocalMax[x][y], tW[x][y]);
                 }
                 
                 #if Ydim == 1
-                    TMAX_TEPL(tNewMax[x], tMax[x], tLocalMax[x][0]);
+                    TMAX(tNewMax[x], tMax[x], tLocalMax[x][0]);
                 #elif Ydim == 2
                     tileMax tLocalMax01;
-                    TMAX_TEPL(tLocalMax01, tLocalMax[x][0], tLocalMax[x][1]);
-                    TMAX_TEPL(tNewMax[x], tMax[x], tLocalMax01);
+                    TMAX(tLocalMax01, tLocalMax[x][0], tLocalMax[x][1]);
+                    TMAX(tNewMax[x], tMax[x], tLocalMax01);
                 #elif Ydim == 4
                     tileMax tLocalMax01;
                     tileMax tLocalMax23;
                     tileMax tLocalMax0123;
-                    TMAX_TEPL(tLocalMax01, tLocalMax[x][0], tLocalMax[x][1]);
-                    TMAX_TEPL(tLocalMax23, tLocalMax[x][2], tLocalMax[x][3]);
-                    TMAX_TEPL(tLocalMax0123, tLocalMax01, tLocalMax23);
-                    TMAX_TEPL(tNewMax[x], tMax[x], tLocalMax0123);
+                    TMAX(tLocalMax01, tLocalMax[x][0], tLocalMax[x][1]);
+                    TMAX(tLocalMax23, tLocalMax[x][2], tLocalMax[x][3]);
+                    TMAX(tLocalMax0123, tLocalMax01, tLocalMax23);
+                    TMAX(tNewMax[x], tMax[x], tLocalMax0123);
                 #else
                     #error "Not Supprot Ydim != 1 or 2 or 4.";
                 #endif
 
                 //rescaling factor
-                TSUB_TEPL(tScale[x], tMax[x], tNewMax[x]);
-                TEXP_TEPL(tScale[x], tScale[x]);
+                TSUB(tScale[x], tMax[x], tNewMax[x]);
+                TEXP(tScale[x], tScale[x]);
 
                 //new sum
-                TMUL_TEPL(tScaledOldSum[x], tSum[x], tScale[x]);
+                TMUL(tScaledOldSum[x], tSum[x], tScale[x]);
 
-                //TEXPANDCOL(tNewMaxExpanded[x], tNewMax[x]);
                 #pragma clang loop unroll(full)
                 for(int y=0;y<Ydim;y++){
-                    //TSUB(tW[x][y], tW[x][y], tNewMaxExpanded[x]);
-                    TCOLEXPANDSUB_TEPL(tW[x][y], tW[x][y], tNewMax[x]);
-                    TEXP_TEPL(tW[x][y], tW[x][y]);
-                    TCOLSUM_TEPL(tLocalSum[x][y], tW[x][y]);
+                    TCOLEXPANDSUB(tW[x][y], tW[x][y], tNewMax[x]);
+                    TEXP(tW[x][y], tW[x][y]);
+                    TCOLSUM(tLocalSum[x][y], tW[x][y]);
                 }
 
                 #if Ydim == 1
-                    TADD_TEPL(tNewSum[x], tScaledOldSum[x], tLocalSum[x][0]);
+                    TADD(tNewSum[x], tScaledOldSum[x], tLocalSum[x][0]);
                 #elif Ydim == 2
                     tileSum tLocalSum01;
-                    TADD_TEPL(tLocalSum01, tLocalSum[x][0], tLocalSum[x][1]);
-                    TADD_TEPL(tNewSum[x], tScaledOldSum[x], tLocalSum01);
+                    TADD(tLocalSum01, tLocalSum[x][0], tLocalSum[x][1]);
+                    TADD(tNewSum[x], tScaledOldSum[x], tLocalSum01);
                 #elif Ydim == 4
                     tileSum tLocalSum01;
                     tileSum tLocalSum23;
                     tileSum tLocalSum0123;
-                    TADD_TEPL(tLocalSum01, tLocalSum[x][0], tLocalSum[x][1]);
-                    TADD_TEPL(tLocalSum23, tLocalSum[x][2], tLocalSum[x][3]);
-                    TADD_TEPL(tLocalSum0123, tLocalSum01, tLocalSum23);
-                    TADD_TEPL(tNewSum[x], tScaledOldSum[x], tLocalSum0123);
+                    TADD(tLocalSum01, tLocalSum[x][0], tLocalSum[x][1]);
+                    TADD(tLocalSum23, tLocalSum[x][2], tLocalSum[x][3]);
+                    TADD(tLocalSum0123, tLocalSum01, tLocalSum23);
+                    TADD(tNewSum[x], tScaledOldSum[x], tLocalSum0123);
                 #else
                     #error "Not Supprot Ydim != 1 or 2 or 4.";
                 #endif
@@ -167,7 +164,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
                 //src exp
                 #pragma clang loop unroll(full)
                 for(int y=0;y<Ydim;y++){
-                    TCAST_TEPL(tExpW[x][y], tW[x][y]);
+                    TCVT(tExpW[x][y], tW[x][y]);
                 }
             }
 
@@ -176,7 +173,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
                 auto gV = gIterV(j+y, 0);
-                TCOPYIN(tV[y], gV);
+                TLOAD(tV[y], gV);
             }
 
             // ColMajor -> Nz
@@ -186,11 +183,11 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             for(int x=0;x<Xdim;x++){
                 #pragma clang loop unroll(full)
                 for(int y=0;y<Ydim;y++){
-                    TMOV_DN2NZ(tW_left[x][y], tExpW[x][y]);
+                    TMOV(tW_left[x][y], tExpW[x][y]);
                     if(y==0){
-                        MATMUL(tPV_out, tW_left[x][y], tV[y]);
+                        TMATMUL(tPV_out, tW_left[x][y], tV[y]);
                     }else{
-                        MATMACC(tPV_out, tW_left[x][y], tV[y]);
+                        TMATMUL_ACC(tPV_out, tW_left[x][y], tV[y]);
                     }
                 }
                 TCVT(tPV[x], tPV_out);
@@ -203,14 +200,10 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
                     tO[x] = tPV[x];
                 }
             }else{
-                tileO tScaledOldOut[Xdim];
-                tileO tScaleExpanded[Xdim];
                 #pragma clang loop unroll(full)
                 for(int x=0;x<Xdim;x++){
-                    //TEXPANDCOL(tScaleExpanded[x], tScale[x]);
-                    //TMUL(tO[x], tO[x], tScaleExpanded[x]);
-                    TCOLEXPANDMUL_TEPL(tO[x], tO[x], tScale[x]);
-                    TADD_TEPL(tO[x], tO[x], tPV[x]);
+                    TCOLEXPANDMUL(tO[x], tO[x], tScale[x]);
+                    TADD(tO[x], tO[x], tPV[x]);
                 }
             }
 
@@ -222,18 +215,15 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
         }
 
         tileSum tInvSum[Xdim];
-        tileO tInvSumExpanded[Xdim];
         tileO_cast tO_cast[Xdim];
 
         #pragma clang loop unroll(full)
         for (int x = 0; x < Xdim; ++x) {
-            TRECIP_TEPL(tInvSum[x], tSum[x]);
-            //TEXPANDCOL(tInvSumExpanded[x], tInvSum[x]);
-            //TMUL(tO[x], tO[x], tInvSumExpanded[x]);
-            TCOLEXPANDMUL_TEPL(tO[x], tO[x], tInvSum[x]);
-            TCAST_TEPL(tO_cast[x], tO[x]);
+            TRECIP(tInvSum[x], tSum[x]);
+            TCOLEXPANDMUL(tO[x], tO[x], tInvSum[x]);
+            TCVT(tO_cast[x], tO[x]);
             auto dstO = gIterO(i+x, 0);
-            TCOPYOUT(dstO, tO_cast[x]);
+            TSTORE(dstO, tO_cast[x]);
         }
     }
 }

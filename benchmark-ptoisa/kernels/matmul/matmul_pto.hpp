@@ -9,25 +9,20 @@
 
 using namespace pto;
 
-enum class PadValue { Null };
-enum class LayoutCvtEnum { ND2ZZ, ND2NN };
-template <typename... Args>
-void blk_tload(Args...);
-
 template <is_global_data_v GmOut, is_tile_data_v TileAcc>
-void store_acc_tile(GmOut &Gout, TileAcc &tAcc){
+void TCOPYOUT_ACC(GmOut &Gout, TileAcc &tAcc){
     using TileAccOut = Tile<Location::Vec, typename TileAcc::DType, TileAcc::Rows, TileAcc::Cols, BLayout::RowMajor, TileAcc::ValidRow, TileAcc::ValidCol>;
     TileAccOut tAccOut;
     TCVT(tAccOut, tAcc);
-    TSTORE(Gout, tAccOut);
+    TCOPYOUT(Gout, tAccOut);
 }
 
 template <is_global_data_v GmOut, is_tile_data_v TileAcc>
-void store_acc_tile_dynamic(GmOut &Gout, TileAcc &tAcc, size_t valid_row, size_t valid_col){
+void TCOPYOUT_ACC_DYNAMIC(GmOut &Gout, TileAcc &tAcc, size_t valid_row, size_t valid_col){
     using TileAccOut = Tile<Location::Vec, typename TileAcc::DType, TileAcc::Rows, TileAcc::Cols, BLayout::RowMajor, -1, -1>;
     TileAccOut tAccOut(valid_row, valid_col);
     TCVT(tAccOut, tAcc);
-    TSTORE(Gout, tAccOut);
+    TCOPYOUT(Gout, tAccOut);
 }
 
 // A * B -> C with any shape
@@ -79,16 +74,16 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
         tile_shapeACC tACC;
         // tile_shapecast tcast;
-
+        
         if constexpr(Kb>0){
           auto gA = gAIter(i, 0);
           auto gB = gBIter(0, j);
 
           tile_shapeA tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA, tB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
+          MATMUL(tACC, tA, tB);        
         }
         #pragma clang loop unroll(full)
         for (int k = 1; k < Kb; ++k) {
@@ -97,9 +92,9 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL_ACC(tACC, tA, tB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
+          MATMACC(tACC, tA, tB);
         }
 
         if constexpr (rmd_K) {
@@ -108,17 +103,17 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_trows tA;
           tile_shapeB_tcols tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
           if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
         // TCVT(tCast, tACC);
-        // TSTORE(gC, tCast);
-        store_acc_tile(gC, tACC);
+        // TCOPYOUT(gC, tCast);
+        TCOPYOUT_ACC(gC, tACC);
       }
       if constexpr (rmd_N) {
         auto gC = gCIter(i, Nb);
@@ -130,9 +125,9 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA, tB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
+          MATMUL(tACC, tA, tB);        
         }
         #pragma clang loop unroll(full)
         for (int k = 1; k < Kb; ++k) {
@@ -141,9 +136,9 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL_ACC(tACC, tA, tB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
+          MATMACC(tACC, tA, tB);
         }
         if constexpr (rmd_K) {
           auto gA = gAIter(i, Kb);
@@ -151,15 +146,15 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_trows tA;
           tile_shapeB_tcorner tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
           if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
     }
     if constexpr (rmd_M) {
@@ -173,9 +168,9 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA, tB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
+          MATMUL(tACC, tA, tB);        
         }
         #pragma clang loop unroll(full)
         for (int k = 1; k < Kb; ++k) {
@@ -184,9 +179,9 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL_ACC(tACC, tA, tB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
+          MATMACC(tACC, tA, tB);
         }
         if constexpr (rmd_K) {
           auto gA = gAIter(Mb, Kb);
@@ -194,15 +189,15 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcorner tA;
           tile_shapeB_tcols tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
           if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
       if constexpr (rmd_N) {
         auto gC = gCIter(Mb, Nb);
@@ -214,9 +209,9 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA, tB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
+          MATMUL(tACC, tA, tB);        
         }
         #pragma clang loop unroll(full)
         for (int k = 1; k < Kb; ++k) {
@@ -225,9 +220,9 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL_ACC(tACC, tA, tB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
+          MATMACC(tACC, tA, tB);
         }
         if constexpr (rmd_K) {
           auto gA = gAIter(Mb, Kb);
@@ -235,15 +230,15 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcorner tA;
           tile_shapeB_tcorner tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
           if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
     }
   }
@@ -280,9 +275,9 @@ void matmul_frac(float* dst, dtype* src0, dtype* src1){
 
               tile_shapeA tA;
               tile_shapeB tB;
-              TLOAD(tA, gA);
-              TLOAD(tB, gB);
-              TMATMUL(tACC, tA, tB);
+              TCOPYIN(tA, gA);
+              TCOPYIN(tB, gB);
+              MATMUL(tACC, tA, tB);
             }
             #pragma clang loop unroll(full)
             for(int k=1;k<Kb;k++){
@@ -290,11 +285,11 @@ void matmul_frac(float* dst, dtype* src0, dtype* src1){
                 auto gB = gBIter(k,j);
                 tile_shapeA tA;
                 tile_shapeB tB;
-                TLOAD(tA, gA);
-                TLOAD(tB, gB);
-                TMATMUL_ACC(tACC, tA, tB);
+                TCOPYIN(tA, gA);
+                TCOPYIN(tB, gB);
+                MATMACC(tACC, tA, tB);
             }
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
         }
     }
 }
@@ -411,7 +406,7 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
         // #pragma clang loop unroll(full)
         // for(int k=0;k<R.k;k++){
         //   auto gA = gIterA(ii+i*R.m,k);
-        //   TLOAD(tA[ii][k], gA);
+        //   TCOPYIN(tA[ii][k], gA);
         // }
 
         #pragma clang loop unroll(full)
@@ -422,16 +417,16 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
           for(int k=0;k<R.k;k++){
             auto gB = gIterB(k,j);
             tile_shapeB tB;
-            TLOAD(tB, gB);
+            TCOPYIN(tB, gB);
             if(j==0){
               // eliminate head cost
               auto gA = gIterA(ii+i*R.m,k);
-              TLOAD(tA[ii][k], gA);
+              TCOPYIN(tA[ii][k], gA);
             }
             if(k==0){
-              TMATMUL(tACC, tA[ii][k], tB);
+              MATMUL(tACC, tA[ii][k], tB);
             }else{
-              TMATMUL_ACC(tACC, tA[ii][k], tB);
+              MATMACC(tACC, tA[ii][k], tB);
             }
           }
 
@@ -441,9 +436,9 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
               tile_shapeB tB;
               auto gA = gIterA(i*R.m+ii,k);
               auto gB = gIterB(k,j);
-              TLOAD(tA,gA);
-              TLOAD(tB,gB);
-              TMATMUL_ACC(tACC, tA, tB);
+              TCOPYIN(tA,gA);
+              TCOPYIN(tB,gB);
+              MATMACC(tACC, tA, tB);
             }
           }
 
@@ -455,17 +450,17 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
             tile_shapeA_trows tA;
             tile_shapeB_tcols tB;
 
-            TLOAD(tA, gA);
-            TLOAD(tB, gB);
+            TCOPYIN(tA, gA);
+            TCOPYIN(tB, gB);
             if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
             } else {
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             }
           }
 
           auto gC = gIterC(i*R.m+ii,j);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         // [m, rmd_N, k]
@@ -476,24 +471,24 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
           for(int k=0;k<R.k;k++){
             auto gB = gIterB(k,Nb);
             tile_shapeB_trows tB;
-            TLOAD(tB, gB);
+            TCOPYIN(tB, gB);
             if(k==0){
-              TMATMUL(tACC, tA[ii][k], tB);
+              MATMUL(tACC, tA[ii][k], tB);
             }else{
-              TMATMUL_ACC(tACC, tA[ii][k], tB);
+              MATMACC(tACC, tA[ii][k], tB);
             }
           }
           static_assert(R.k > Kb);
           if constexpr(R.k < Kb){
-
+            
             for(int k=R.k;k<Kb;k++){
               tile_shapeA tA;
               tile_shapeB_trows tB;
               auto gA = gIterA(i*R.m+ii,k);
               auto gB = gIterB(k,Nb);
-              TLOAD(tA,gA);
-              TLOAD(tB,gB);
-              TMATMUL_ACC(tACC, tA, tB);
+              TCOPYIN(tA,gA);
+              TCOPYIN(tB,gB);
+              MATMACC(tACC, tA, tB);
             }
           }
 
@@ -504,18 +499,18 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
 
             tile_shapeA_trows tA;
             tile_shapeB_tcorner tB;
-
-            TLOAD(tA, gA);
-            TLOAD(tB, gB);
+            
+            TCOPYIN(tA, gA);
+            TCOPYIN(tB, gB);
             if constexpr(Kb>0){
-              TMATMUL_ACC(tACC, tA, tB);
+              MATMACC(tACC, tA, tB);
             } else {
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             }
           }
 
           auto gC = gIterC(i*R.m+ii,Nb);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);       
         }
 
       }
@@ -523,7 +518,7 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
 
     if constexpr(rM>0){
       tile_shapeA tA[rM][R.k];
-
+      
       #pragma clang loop unroll(full)
       for(int i=0;i<rM;i++){
 
@@ -531,7 +526,7 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for(int k=0;k<R.k;k++){
           auto gA = gIterA(i+dM*R.m,k);
-          TLOAD(tA[i][k], gA);
+          TCOPYIN(tA[i][k], gA);
         }
 
         #pragma clang loop unroll(full)
@@ -542,11 +537,11 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
           for(int k=0;k<R.k;k++){
             auto gB = gIterB(k,j);
             tile_shapeB tB;
-            TLOAD(tB, gB);
+            TCOPYIN(tB, gB);
             if(k==0){
-              TMATMUL(tACC, tA[i][k], tB);
+              MATMUL(tACC, tA[i][k], tB);
             }else{
-              TMATMUL_ACC(tACC, tA[i][k], tB);
+              MATMACC(tACC, tA[i][k], tB);
             }
           }
 
@@ -556,9 +551,9 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
               tile_shapeB tB;
               auto gA = gIterA(i+dM*R.m,k);
               auto gB = gIterB(k,j);
-              TLOAD(tA,gA);
-              TLOAD(tB,gB);
-              TMATMUL_ACC(tACC, tA, tB);
+              TCOPYIN(tA,gA);
+              TCOPYIN(tB,gB);
+              MATMACC(tACC, tA, tB);
             }
           }
 
@@ -570,16 +565,16 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
             tile_shapeA_trows tA;
             tile_shapeB_tcols tB;
 
-            TLOAD(tA, gA);
-            TLOAD(tB, gB);
+            TCOPYIN(tA, gA);
+            TCOPYIN(tB, gB);
             if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
             } else {
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             }
           }
           auto gC = gIterC(i+dM*R.m,j);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         // [rM, rmd_N, k]
@@ -590,11 +585,11 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
           for(int k=0;k<R.k;k++){
             auto gB = gIterB(k,Nb);
             tile_shapeB_trows tB;
-            TLOAD(tB, gB);
+            TCOPYIN(tB, gB);
             if(k==0){
-              TMATMUL(tACC, tA[i][k], tB);
+              MATMUL(tACC, tA[i][k], tB);
             }else{
-              TMATMUL_ACC(tACC, tA[i][k], tB);
+              MATMACC(tACC, tA[i][k], tB);
             }
           }
 
@@ -604,9 +599,9 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
               tile_shapeB_trows tB;
               auto gA = gIterA(i+dM*R.m,k);
               auto gB = gIterB(k,Nb);
-              TLOAD(tA,gA);
-              TLOAD(tB,gB);
-              TMATMUL_ACC(tACC, tA, tB);
+              TCOPYIN(tA,gA);
+              TCOPYIN(tB,gB);
+              MATMACC(tACC, tA, tB);
             }
           }
 
@@ -618,16 +613,16 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
             tile_shapeA_trows tA;
             tile_shapeB_tcorner tB;
 
-            TLOAD(tA, gA);
-            TLOAD(tB, gB);
+            TCOPYIN(tA, gA);
+            TCOPYIN(tB, gB);
             if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
             } else {
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             }
           }
           auto gC = gIterC(i+dM*R.m,Nb);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);        
         }
       }
     }
@@ -635,11 +630,11 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
     // [rmd_M, n, k]
     if constexpr (rmd_M) {
       tile_shapeA_tcols tA[R.k];
-
+      
       #pragma clang loop unroll(full)
       for(int k=0;k<R.k;k++){
         auto gA = gIterA(Mb,k);
-        TLOAD(tA[k], gA);
+        TCOPYIN(tA[k], gA);
       }
 
       #pragma clang loop unroll(full)
@@ -650,11 +645,11 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
         for(int k=0;k<R.k;k++){
           auto gB = gIterB(k,j);
           tile_shapeB tB;
-          TLOAD(tB, gB);
+          TCOPYIN(tB, gB);
           if(k==0){
-            TMATMUL(tACC, tA[k], tB);
+            MATMUL(tACC, tA[k], tB);
           }else{
-            TMATMUL_ACC(tACC, tA[k], tB);
+            MATMACC(tACC, tA[k], tB);
           }
         }
 
@@ -664,9 +659,9 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
             tile_shapeB tB;
             auto gA = gIterA(Mb,k);
             auto gB = gIterB(k,j);
-            TLOAD(tA,gA);
-            TLOAD(tB,gB);
-            TMATMUL_ACC(tACC, tA, tB);
+            TCOPYIN(tA,gA);
+            TCOPYIN(tB,gB);
+            MATMACC(tACC, tA, tB);
           }
         }
 
@@ -678,16 +673,16 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
           tile_shapeA_tcorner tA;
           tile_shapeB_tcols tB;
 
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
           if constexpr(Kb>0){
-          TMATMUL_ACC(tACC, tA, tB);
+          MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
         auto gC = gIterC(Mb,j);
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
 
       // [rmd_M, rmd_N, k]
@@ -698,11 +693,11 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
         for(int k=0;k<R.k;k++){
           auto gB = gIterB(k,Nb);
           tile_shapeB_trows tB;
-          TLOAD(tB, gB);
+          TCOPYIN(tB, gB);
           if(k==0){
-            TMATMUL(tACC, tA[k], tB);
+            MATMUL(tACC, tA[k], tB);
           }else{
-            TMATMUL_ACC(tACC, tA[k], tB);
+            MATMACC(tACC, tA[k], tB);
           }
         }
 
@@ -712,9 +707,9 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
             tile_shapeB_trows tB;
             auto gA = gIterA(Mb,k);
             auto gB = gIterB(k,Nb);
-            TLOAD(tA,gA);
-            TLOAD(tB,gB);
-            TMATMUL_ACC(tACC, tA, tB);
+            TCOPYIN(tA,gA);
+            TCOPYIN(tB,gB);
+            MATMACC(tACC, tA, tB);
           }
         }
 
@@ -726,16 +721,16 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
           tile_shapeA_tcorner tA;
           tile_shapeB_tcorner tB;
 
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
           if constexpr(Kb>0){
-          TMATMUL_ACC(tACC, tA, tB);
+          MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
         auto gC = gIterC(Mb,Nb);
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);        
       }
     }
   }// Batch
@@ -807,7 +802,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for (int k = 0; k < R.k; k++) {
           auto gA = gIterA(row, k);
-          TLOAD(tA_phase0[k], gA);
+          TCOPYIN(tA_phase0[k], gA);
         }
 
         // --- N 主列 ---
@@ -818,12 +813,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < R.k; k++) {
             tile_shapeB tB;
             auto gB = gIterB(k, j);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA_phase0[k], tB);
-            else        TMATMUL_ACC(tACC, tA_phase0[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA_phase0[k], tB);
+            else        MATMACC(tACC, tA_phase0[k], tB);
           }
           auto gC = gIterC(row, j);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         // --- N 余列 (rmd_N) ---
@@ -833,12 +828,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < R.k; k++) {
             tile_shapeB_trows tB;
             auto gB = gIterB(k, Nb);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA_phase0[k], tB);
-            else        TMATMUL_ACC(tACC, tA_phase0[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA_phase0[k], tB);
+            else        MATMACC(tACC, tA_phase0[k], tB);
           }
           auto gC = gIterC(row, Nb);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         // Phase B-1: 剩余 K 轴 Full chunks (每块 MAX_TILE_NUM 个 k tile)
@@ -852,7 +847,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for (int k = 0; k < MAX_TILE_NUM; k++) {
               auto gA = gIterA(row, k_base + k);
-              TLOAD(tA_chunk[k], gA);
+              TCOPYIN(tA_chunk[k], gA);
             }
 
             // --- N 主列 ---
@@ -863,12 +858,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < MAX_TILE_NUM; k++) {
                 tile_shapeB tB;
                 auto gB = gIterB(k_base + k, j);
-                TLOAD(tB, gB);
-                if (k == 0) TMATMUL(tACC, tA_chunk[k], tB);
-                else        TMATMUL_ACC(tACC, tA_chunk[k], tB);
+                TCOPYIN(tB, gB);
+                if (k == 0) MATMUL (tACC, tA_chunk[k], tB);
+                else        MATMACC(tACC, tA_chunk[k], tB);
               }
               auto gC = gIterC(row, j);
-              store_acc_tile(gC, tACC);
+              TCOPYOUT_ACC(gC, tACC);
             }
 
             // --- N 余列 ---
@@ -878,12 +873,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < MAX_TILE_NUM; k++) {
                 tile_shapeB_trows tB;
                 auto gB = gIterB(k_base + k, Nb);
-                TLOAD(tB, gB);
-                if (k == 0) TMATMUL(tACC, tA_chunk[k], tB);
-                else        TMATMUL_ACC(tACC, tA_chunk[k], tB);
+                TCOPYIN(tB, gB);
+                if (k == 0) MATMUL (tACC, tA_chunk[k], tB);
+                else        MATMACC(tACC, tA_chunk[k], tB);
               }
               auto gC = gIterC(row, Nb);
-              store_acc_tile(gC, tACC);
+              TCOPYOUT_ACC(gC, tACC);
             }
           }
         }
@@ -896,7 +891,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for (int k = 0; k < K2_rem; k++) {
             auto gA = gIterA(row, k_base + k);
-            TLOAD(tA_tail[k], gA);
+            TCOPYIN(tA_tail[k], gA);
           }
 
           // --- N 主列 ---
@@ -907,12 +902,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < K2_rem; k++) {
               tile_shapeB tB;
               auto gB = gIterB(k_base + k, j);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA_tail[k], tB);
-              else        TMATMUL_ACC(tACC, tA_tail[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA_tail[k], tB);
+              else        MATMACC(tACC, tA_tail[k], tB);
             }
             auto gC = gIterC(row, j);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
 
           // --- N 余列 ---
@@ -922,12 +917,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < K2_rem; k++) {
               tile_shapeB_trows tB;
               auto gB = gIterB(k_base + k, Nb);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA_tail[k], tB);
-              else        TMATMUL_ACC(tACC, tA_tail[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA_tail[k], tB);
+              else        MATMACC(tACC, tA_tail[k], tB);
             }
             auto gC = gIterC(row, Nb);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
         }
 
@@ -935,7 +930,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
         if constexpr (rmd_K) {
           tile_shapeA_trows tA_rmdK;
           auto gA = gIterA(row, Kb);
-          TLOAD(tA_rmdK, gA);
+          TCOPYIN(tA_rmdK, gA);
 
           // --- N 主列 ---
           #pragma clang loop unroll(full)
@@ -943,11 +938,11 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             tile_shapeACC tACC;
             tile_shapeB_tcols tB;
             auto gB = gIterB(Kb, j);
-            TLOAD(tB, gB);
-            if constexpr (Kb > 0) TMATMUL_ACC(tACC, tA_rmdK, tB);
-            else                  TMATMUL(tACC, tA_rmdK, tB);
+            TCOPYIN(tB, gB);
+            if constexpr (Kb > 0) MATMACC(tACC, tA_rmdK, tB);
+            else                  MATMUL (tACC, tA_rmdK, tB);
             auto gC = gIterC(row, j);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
 
           // --- N 余列 ---
@@ -955,11 +950,11 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             tile_shapeC_trows tACC;
             tile_shapeB_tcorner tB;
             auto gB = gIterB(Kb, Nb);
-            TLOAD(tB, gB);
-            if constexpr (Kb > 0) TMATMUL_ACC(tACC, tA_rmdK, tB);
-            else                  TMATMUL(tACC, tA_rmdK, tB);
+            TCOPYIN(tB, gB);
+            if constexpr (Kb > 0) MATMACC(tACC, tA_rmdK, tB);
+            else                  MATMUL (tACC, tA_rmdK, tB);
             auto gC = gIterC(row, Nb);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
         }
 
@@ -979,7 +974,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for (int k = 0; k < R.k; k++) {
           auto gA = gIterA(row, k);
-          TLOAD(tA_phase0[k], gA);
+          TCOPYIN(tA_phase0[k], gA);
         }
 
         #pragma clang loop unroll(full)
@@ -989,12 +984,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < R.k; k++) {
             tile_shapeB tB;
             auto gB = gIterB(k, j);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA_phase0[k], tB);
-            else        TMATMUL_ACC(tACC, tA_phase0[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA_phase0[k], tB);
+            else        MATMACC(tACC, tA_phase0[k], tB);
           }
           auto gC = gIterC(row, j);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         if constexpr (rmd_N) {
@@ -1003,12 +998,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < R.k; k++) {
             tile_shapeB_trows tB;
             auto gB = gIterB(k, Nb);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA_phase0[k], tB);
-            else        TMATMUL_ACC(tACC, tA_phase0[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA_phase0[k], tB);
+            else        MATMACC(tACC, tA_phase0[k], tB);
           }
           auto gC = gIterC(row, Nb);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         // Phase B-1: Full chunks
@@ -1021,7 +1016,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for (int k = 0; k < MAX_TILE_NUM; k++) {
               auto gA = gIterA(row, k_base + k);
-              TLOAD(tA_chunk[k], gA);
+              TCOPYIN(tA_chunk[k], gA);
             }
 
             #pragma clang loop unroll(full)
@@ -1031,12 +1026,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < MAX_TILE_NUM; k++) {
                 tile_shapeB tB;
                 auto gB = gIterB(k_base + k, j);
-                TLOAD(tB, gB);
-                if (k == 0) TMATMUL(tACC, tA_chunk[k], tB);
-                else        TMATMUL_ACC(tACC, tA_chunk[k], tB);
+                TCOPYIN(tB, gB);
+                if (k == 0) MATMUL (tACC, tA_chunk[k], tB);
+                else        MATMACC(tACC, tA_chunk[k], tB);
               }
               auto gC = gIterC(row, j);
-              store_acc_tile(gC, tACC);
+              TCOPYOUT_ACC(gC, tACC);
             }
 
             if constexpr (rmd_N) {
@@ -1045,12 +1040,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < MAX_TILE_NUM; k++) {
                 tile_shapeB_trows tB;
                 auto gB = gIterB(k_base + k, Nb);
-                TLOAD(tB, gB);
-                if (k == 0) TMATMUL(tACC, tA_chunk[k], tB);
-                else        TMATMUL_ACC(tACC, tA_chunk[k], tB);
+                TCOPYIN(tB, gB);
+                if (k == 0) MATMUL (tACC, tA_chunk[k], tB);
+                else        MATMACC(tACC, tA_chunk[k], tB);
               }
               auto gC = gIterC(row, Nb);
-              store_acc_tile(gC, tACC);
+              TCOPYOUT_ACC(gC, tACC);
             }
           }
         }
@@ -1063,7 +1058,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for (int k = 0; k < K2_rem; k++) {
             auto gA = gIterA(row, k_base + k);
-            TLOAD(tA_tail[k], gA);
+            TCOPYIN(tA_tail[k], gA);
           }
 
           #pragma clang loop unroll(full)
@@ -1073,12 +1068,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < K2_rem; k++) {
               tile_shapeB tB;
               auto gB = gIterB(k_base + k, j);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA_tail[k], tB);
-              else        TMATMUL_ACC(tACC, tA_tail[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA_tail[k], tB);
+              else        MATMACC(tACC, tA_tail[k], tB);
             }
             auto gC = gIterC(row, j);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
 
           if constexpr (rmd_N) {
@@ -1087,12 +1082,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < K2_rem; k++) {
               tile_shapeB_trows tB;
               auto gB = gIterB(k_base + k, Nb);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA_tail[k], tB);
-              else        TMATMUL_ACC(tACC, tA_tail[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA_tail[k], tB);
+              else        MATMACC(tACC, tA_tail[k], tB);
             }
             auto gC = gIterC(row, Nb);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
         }
 
@@ -1100,29 +1095,29 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
         if constexpr (rmd_K) {
           tile_shapeA_trows tA_rmdK;
           auto gA = gIterA(row, Kb);
-          TLOAD(tA_rmdK, gA);
+          TCOPYIN(tA_rmdK, gA);
 
           #pragma clang loop unroll(full)
           for (int j = 0; j < Nb; j++) {
             tile_shapeACC tACC;
             tile_shapeB_tcols tB;
             auto gB = gIterB(Kb, j);
-            TLOAD(tB, gB);
-            if constexpr (Kb > 0) TMATMUL_ACC(tACC, tA_rmdK, tB);
-            else                  TMATMUL(tACC, tA_rmdK, tB);
+            TCOPYIN(tB, gB);
+            if constexpr (Kb > 0) MATMACC(tACC, tA_rmdK, tB);
+            else                  MATMUL (tACC, tA_rmdK, tB);
             auto gC = gIterC(row, j);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
 
           if constexpr (rmd_N) {
             tile_shapeC_trows tACC;
             tile_shapeB_tcorner tB;
             auto gB = gIterB(Kb, Nb);
-            TLOAD(tB, gB);
-            if constexpr (Kb > 0) TMATMUL_ACC(tACC, tA_rmdK, tB);
-            else                  TMATMUL(tACC, tA_rmdK, tB);
+            TCOPYIN(tB, gB);
+            if constexpr (Kb > 0) MATMACC(tACC, tA_rmdK, tB);
+            else                  MATMUL (tACC, tA_rmdK, tB);
             auto gC = gIterC(row, Nb);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
         }
 
@@ -1139,7 +1134,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
       #pragma clang loop unroll(full)
       for (int k = 0; k < R.k; k++) {
         auto gA = gIterA(Mb, k);
-        TLOAD(tA_phase0[k], gA);
+        TCOPYIN(tA_phase0[k], gA);
       }
 
       #pragma clang loop unroll(full)
@@ -1149,12 +1144,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
         for (int k = 0; k < R.k; k++) {
           tile_shapeB tB;
           auto gB = gIterB(k, j);
-          TLOAD(tB, gB);
-          if (k == 0) TMATMUL(tACC, tA_phase0[k], tB);
-          else        TMATMUL_ACC(tACC, tA_phase0[k], tB);
+          TCOPYIN(tB, gB);
+          if (k == 0) MATMUL (tACC, tA_phase0[k], tB);
+          else        MATMACC(tACC, tA_phase0[k], tB);
         }
         auto gC = gIterC(Mb, j);
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
 
       if constexpr (rmd_N) {
@@ -1163,12 +1158,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
         for (int k = 0; k < R.k; k++) {
           tile_shapeB_trows tB;
           auto gB = gIterB(k, Nb);
-          TLOAD(tB, gB);
-          if (k == 0) TMATMUL(tACC, tA_phase0[k], tB);
-          else        TMATMUL_ACC(tACC, tA_phase0[k], tB);
+          TCOPYIN(tB, gB);
+          if (k == 0) MATMUL (tACC, tA_phase0[k], tB);
+          else        MATMACC(tACC, tA_phase0[k], tB);
         }
         auto gC = gIterC(Mb, Nb);
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
 
       // Phase B-1: Full chunks (rmd_M 行，A 类型为 tcols)
@@ -1181,7 +1176,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for (int k = 0; k < MAX_TILE_NUM; k++) {
             auto gA = gIterA(Mb, k_base + k);
-            TLOAD(tA_chunk[k], gA);
+            TCOPYIN(tA_chunk[k], gA);
           }
 
           #pragma clang loop unroll(full)
@@ -1191,12 +1186,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < MAX_TILE_NUM; k++) {
               tile_shapeB tB;
               auto gB = gIterB(k_base + k, j);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA_chunk[k], tB);
-              else        TMATMUL_ACC(tACC, tA_chunk[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA_chunk[k], tB);
+              else        MATMACC(tACC, tA_chunk[k], tB);
             }
             auto gC = gIterC(Mb, j);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
 
           if constexpr (rmd_N) {
@@ -1205,12 +1200,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < MAX_TILE_NUM; k++) {
               tile_shapeB_trows tB;
               auto gB = gIterB(k_base + k, Nb);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA_chunk[k], tB);
-              else        TMATMUL_ACC(tACC, tA_chunk[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA_chunk[k], tB);
+              else        MATMACC(tACC, tA_chunk[k], tB);
             }
             auto gC = gIterC(Mb, Nb);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
         }
       }
@@ -1223,7 +1218,7 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for (int k = 0; k < K2_rem; k++) {
           auto gA = gIterA(Mb, k_base + k);
-          TLOAD(tA_tail[k], gA);
+          TCOPYIN(tA_tail[k], gA);
         }
 
         #pragma clang loop unroll(full)
@@ -1233,12 +1228,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < K2_rem; k++) {
             tile_shapeB tB;
             auto gB = gIterB(k_base + k, j);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA_tail[k], tB);
-            else        TMATMUL_ACC(tACC, tA_tail[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA_tail[k], tB);
+            else        MATMACC(tACC, tA_tail[k], tB);
           }
           auto gC = gIterC(Mb, j);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         if constexpr (rmd_N) {
@@ -1247,12 +1242,12 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < K2_rem; k++) {
             tile_shapeB_trows tB;
             auto gB = gIterB(k_base + k, Nb);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA_tail[k], tB);
-            else        TMATMUL_ACC(tACC, tA_tail[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA_tail[k], tB);
+            else        MATMACC(tACC, tA_tail[k], tB);
           }
           auto gC = gIterC(Mb, Nb);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
       }
 
@@ -1260,29 +1255,29 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
       if constexpr (rmd_K) {
         tile_shapeA_tcorner tA_rmdK;
         auto gA = gIterA(Mb, Kb);
-        TLOAD(tA_rmdK, gA);
+        TCOPYIN(tA_rmdK, gA);
 
         #pragma clang loop unroll(full)
         for (int j = 0; j < Nb; j++) {
           tile_shapeC_tcols tACC;
           tile_shapeB_tcols tB;
           auto gB = gIterB(Kb, j);
-          TLOAD(tB, gB);
-          if constexpr (Kb > 0) TMATMUL_ACC(tACC, tA_rmdK, tB);
-          else                  TMATMUL(tACC, tA_rmdK, tB);
+          TCOPYIN(tB, gB);
+          if constexpr (Kb > 0) MATMACC(tACC, tA_rmdK, tB);
+          else                  MATMUL (tACC, tA_rmdK, tB);
           auto gC = gIterC(Mb, j);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         if constexpr (rmd_N) {
           tile_shapeC_tcorner tACC;
           tile_shapeB_tcorner tB;
           auto gB = gIterB(Kb, Nb);
-          TLOAD(tB, gB);
-          if constexpr (Kb > 0) TMATMUL_ACC(tACC, tA_rmdK, tB);
-          else                  TMATMUL(tACC, tA_rmdK, tB);
+          TCOPYIN(tB, gB);
+          if constexpr (Kb > 0) MATMACC(tACC, tA_rmdK, tB);
+          else                  MATMUL (tACC, tA_rmdK, tB);
           auto gC = gIterC(Mb, Nb);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
       }
     } // rmd_M
@@ -1385,7 +1380,7 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for (int k = 0; k < LEN; k++) {
             auto gA = gIterA(row, k_base + k);
-            TLOAD(tA[k], gA);
+            TCOPYIN(tA[k], gA);
           }
 
           #pragma clang loop unroll(full)
@@ -1395,9 +1390,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < LEN; k++) {
               tile_shapeB tB;
               auto gB = gIterB(k_base + k, j);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA[k], tB);
-              else        TMATMUL_ACC(tACC, tA[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA[k], tB);
+              else        MATMACC(tACC, tA[k], tB);
             }
             TCVT(tC_main[row][j], tACC);   // is_first: 直接覆盖
           }
@@ -1408,9 +1403,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < LEN; k++) {
               tile_shapeB_trows tB;
               auto gB = gIterB(k_base + k, Nb);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA[k], tB);
-              else        TMATMUL_ACC(tACC, tA[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA[k], tB);
+              else        MATMACC(tACC, tA[k], tB);
             }
             TCVT(tC_rcol[row], tACC);
           }
@@ -1422,7 +1417,7 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for (int k = 0; k < LEN; k++) {
             auto gA = gIterA(Mb, k_base + k);
-            TLOAD(tA[k], gA);
+            TCOPYIN(tA[k], gA);
           }
 
           #pragma clang loop unroll(full)
@@ -1432,9 +1427,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < LEN; k++) {
               tile_shapeB tB;
               auto gB = gIterB(k_base + k, j);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA[k], tB);
-              else        TMATMUL_ACC(tACC, tA[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA[k], tB);
+              else        MATMACC(tACC, tA[k], tB);
             }
             TCVT(tC_rrow[j], tACC);
           }
@@ -1445,9 +1440,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < LEN; k++) {
               tile_shapeB_trows tB;
               auto gB = gIterB(k_base + k, Nb);
-              TLOAD(tB, gB);
-              if (k == 0) TMATMUL(tACC, tA[k], tB);
-              else        TMATMUL_ACC(tACC, tA[k], tB);
+              TCOPYIN(tB, gB);
+              if (k == 0) MATMUL (tACC, tA[k], tB);
+              else        MATMACC(tACC, tA[k], tB);
             }
             TCVT(tC_corner, tACC);
           }
@@ -1468,7 +1463,7 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for (int k = 0; k < LEN; k++) {
               auto gA = gIterA(row, k_base + k);
-              TLOAD(tA[k], gA);
+              TCOPYIN(tA[k], gA);
             }
 
             #pragma clang loop unroll(full)
@@ -1478,9 +1473,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < LEN; k++) {
                 tile_shapeB tB;
                 auto gB = gIterB(k_base + k, j);
-                TLOAD(tB, gB);
-                if (k == 0) TMATMUL(tACC, tA[k], tB);
-                else        TMATMUL_ACC(tACC, tA[k], tB);
+                TCOPYIN(tB, gB);
+                if (k == 0) MATMUL (tACC, tA[k], tB);
+                else        MATMACC(tACC, tA[k], tB);
               }
               tile_C_out tACC_vec;
               TCVT(tACC_vec, tACC);
@@ -1493,9 +1488,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < LEN; k++) {
                 tile_shapeB_trows tB;
                 auto gB = gIterB(k_base + k, Nb);
-                TLOAD(tB, gB);
-                if (k == 0) TMATMUL(tACC, tA[k], tB);
-                else        TMATMUL_ACC(tACC, tA[k], tB);
+                TCOPYIN(tB, gB);
+                if (k == 0) MATMUL (tACC, tA[k], tB);
+                else        MATMACC(tACC, tA[k], tB);
               }
               tile_C_out_trows tACC_vec;
               TCVT(tACC_vec, tACC);
@@ -1508,7 +1503,7 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for (int k = 0; k < LEN; k++) {
               auto gA = gIterA(Mb, k_base + k);
-              TLOAD(tA[k], gA);
+              TCOPYIN(tA[k], gA);
             }
 
             #pragma clang loop unroll(full)
@@ -1518,9 +1513,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < LEN; k++) {
                 tile_shapeB tB;
                 auto gB = gIterB(k_base + k, j);
-                TLOAD(tB, gB);
-                if (k == 0) TMATMUL(tACC, tA[k], tB);
-                else        TMATMUL_ACC(tACC, tA[k], tB);
+                TCOPYIN(tB, gB);
+                if (k == 0) MATMUL (tACC, tA[k], tB);
+                else        MATMACC(tACC, tA[k], tB);
               }
               tile_C_out_tcols tACC_vec;
               TCVT(tACC_vec, tACC);
@@ -1533,9 +1528,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < LEN; k++) {
                 tile_shapeB_trows tB;
                 auto gB = gIterB(k_base + k, Nb);
-                TLOAD(tB, gB);
-                if (k == 0) TMATMUL(tACC, tA[k], tB);
-                else        TMATMUL_ACC(tACC, tA[k], tB);
+                TCOPYIN(tB, gB);
+                if (k == 0) MATMUL (tACC, tA[k], tB);
+                else        MATMACC(tACC, tA[k], tB);
               }
               tile_C_out_tcorner tACC_vec;
               TCVT(tACC_vec, tACC);
@@ -1561,7 +1556,7 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for (int k = 0; k < LEN; k++) {
           auto gA = gIterA(row, k_base + k);
-          TLOAD(tA[k], gA);
+          TCOPYIN(tA[k], gA);
         }
 
         #pragma clang loop unroll(full)
@@ -1571,9 +1566,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < LEN; k++) {
             tile_shapeB tB;
             auto gB = gIterB(k_base + k, j);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA[k], tB);
-            else        TMATMUL_ACC(tACC, tA[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA[k], tB);
+            else        MATMACC(tACC, tA[k], tB);
           }
           if constexpr (is_first) {
             TCVT(tC_main[row][j], tACC);
@@ -1590,9 +1585,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < LEN; k++) {
             tile_shapeB_trows tB;
             auto gB = gIterB(k_base + k, Nb);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA[k], tB);
-            else        TMATMUL_ACC(tACC, tA[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA[k], tB);
+            else        MATMACC(tACC, tA[k], tB);
           }
           if constexpr (is_first) {
             TCVT(tC_rcol[row], tACC);
@@ -1609,7 +1604,7 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for (int k = 0; k < LEN; k++) {
           auto gA = gIterA(Mb, k_base + k);
-          TLOAD(tA[k], gA);
+          TCOPYIN(tA[k], gA);
         }
 
         #pragma clang loop unroll(full)
@@ -1619,9 +1614,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < LEN; k++) {
             tile_shapeB tB;
             auto gB = gIterB(k_base + k, j);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA[k], tB);
-            else        TMATMUL_ACC(tACC, tA[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA[k], tB);
+            else        MATMACC(tACC, tA[k], tB);
           }
           if constexpr (is_first) {
             TCVT(tC_rrow[j], tACC);
@@ -1638,9 +1633,9 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < LEN; k++) {
             tile_shapeB_trows tB;
             auto gB = gIterB(k_base + k, Nb);
-            TLOAD(tB, gB);
-            if (k == 0) TMATMUL(tACC, tA[k], tB);
-            else        TMATMUL_ACC(tACC, tA[k], tB);
+            TCOPYIN(tB, gB);
+            if (k == 0) MATMUL (tACC, tA[k], tB);
+            else        MATMACC(tACC, tA[k], tB);
           }
           if constexpr (is_first) {
             TCVT(tC_corner, tACC);
@@ -1664,15 +1659,15 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
       for (int row = 0; row < Mb; row++) {
         tile_shapeA_trows tA_rmdK;
         auto gA = gIterA(row, Kb);
-        TLOAD(tA_rmdK, gA);
+        TCOPYIN(tA_rmdK, gA);
 
         #pragma clang loop unroll(full)
         for (int j = 0; j < Nb; j++) {
           tile_shapeACC tACC;
           tile_shapeB_tcols tB;
           auto gB = gIterB(Kb, j);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA_rmdK, tB);
+          TCOPYIN(tB, gB);
+          MATMUL(tACC, tA_rmdK, tB);
 
           if constexpr (is_first) {
             TCVT(tC_main[row][j], tACC);
@@ -1687,8 +1682,8 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
           tile_shapeACC_trows tACC;
           tile_shapeB_tcorner tB;
           auto gB = gIterB(Kb, Nb);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA_rmdK, tB);
+          TCOPYIN(tB, gB);
+          MATMUL(tACC, tA_rmdK, tB);
 
           if constexpr (is_first) {
             TCVT(tC_rcol[row], tACC);
@@ -1703,15 +1698,15 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
       if constexpr (rmd_M) {
         tile_shapeA_tcorner tA_rmdK;
         auto gA = gIterA(Mb, Kb);
-        TLOAD(tA_rmdK, gA);
+        TCOPYIN(tA_rmdK, gA);
 
         #pragma clang loop unroll(full)
         for (int j = 0; j < Nb; j++) {
           tile_shapeACC_tcols tACC;
           tile_shapeB_tcols tB;
           auto gB = gIterB(Kb, j);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA_rmdK, tB);
+          TCOPYIN(tB, gB);
+          MATMUL(tACC, tA_rmdK, tB);
 
           if constexpr (is_first) {
             TCVT(tC_rrow[j], tACC);
@@ -1726,8 +1721,8 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
           tile_shapeACC_tcorner tACC;
           tile_shapeB_tcorner tB;
           auto gB = gIterB(Kb, Nb);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA_rmdK, tB);
+          TCOPYIN(tB, gB);
+          MATMUL(tACC, tA_rmdK, tB);
 
           if constexpr (is_first) {
             TCVT(tC_corner, tACC);
@@ -1747,23 +1742,35 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
     for (int m = 0; m < Mb; m++) {
       #pragma clang loop unroll(full)
       for (int n = 0; n < Nb; n++) {
+        tile_C_bf16 tC_b;
+        // TMOV_NZ2DN(tC_b, tC_main[m][n]);
         auto gC = gIterC(m, n);
-        TSTORE(gC, tC_main[m][n]);
+        // TCOPYOUT(gC, tC_b);
+        TCOPYOUT(gC, tC_main[m][n]);
       }
       if constexpr (rmd_N) {
+        tile_C_bf16_trows tC_b;
+        // TMOV_NZ2DN(tC_b, tC_rcol[m]);
         auto gC = gIterC(m, Nb);
-        TSTORE(gC, tC_rcol[m]);
+        TCOPYOUT(gC, tC_rcol[m]);
+        // TCOPYOUT(gC, tC_b);
       }
     }
     if constexpr (rmd_M) {
       #pragma clang loop unroll(full)
       for (int n = 0; n < Nb; n++) {
+        tile_C_bf16_tcols tC_b;
+        // TMOV_NZ2DN(tC_b, tC_rrow[n]);
         auto gC = gIterC(Mb, n);
-        TSTORE(gC,  tC_rrow[n]);
+        TCOPYOUT(gC,  tC_rrow[n]);
+        // TCOPYOUT(gC, tC_b);
       }
       if constexpr (rmd_N) {
+        tile_C_bf16_tcorner tC_b;
+        // TMOV_NZ2DN(tC_b, tC_corner);
         auto gC = gIterC(Mb, Nb);
-        TSTORE(gC, tC_corner);
+        TCOPYOUT(gC, tC_corner);
+        // TCOPYOUT(gC, tC_b);
       }
     }
 
@@ -1866,7 +1873,7 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for (int k = 0; k < LEN; k++) {
             auto gB = gIterB(k_base + k, col);
-            TLOAD(tB[k], gB);
+            TCOPYIN(tB[k], gB);
           }
 
           #pragma clang loop unroll(full)
@@ -1876,9 +1883,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < LEN; k++) {
               tile_shapeA tA;
               auto gA = gIterA(row, k_base + k);
-              TLOAD(tA, gA);
-              if (k == 0) TMATMUL(tACC, tA, tB[k]);
-              else        TMATMUL_ACC(tACC, tA, tB[k]);
+              TCOPYIN(tA, gA);
+              if (k == 0) MATMUL (tACC, tA, tB[k]);
+              else        MATMACC(tACC, tA, tB[k]);
             }
             TCVT(tC_main[row][col], tACC);   // is_first: 直接覆盖
           }
@@ -1889,9 +1896,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < LEN; k++) {
               tile_shapeA_tcols tA;
               auto gA = gIterA(Mb, k_base + k);
-              TLOAD(tA, gA);
-              if (k == 0) TMATMUL(tACC, tA, tB[k]);
-              else        TMATMUL_ACC(tACC, tA, tB[k]);
+              TCOPYIN(tA, gA);
+              if (k == 0) MATMUL (tACC, tA, tB[k]);
+              else        MATMACC(tACC, tA, tB[k]);
             }
             TCVT(tC_rrow[col], tACC);
           }
@@ -1903,7 +1910,7 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for (int k = 0; k < LEN; k++) {
             auto gB = gIterB(k_base + k, Nb);
-            TLOAD(tB[k], gB);
+            TCOPYIN(tB[k], gB);
           }
 
           #pragma clang loop unroll(full)
@@ -1913,9 +1920,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < LEN; k++) {
               tile_shapeA tA;
               auto gA = gIterA(row, k_base + k);
-              TLOAD(tA, gA);
-              if (k == 0) TMATMUL(tACC, tA, tB[k]);
-              else        TMATMUL_ACC(tACC, tA, tB[k]);
+              TCOPYIN(tA, gA);
+              if (k == 0) MATMUL (tACC, tA, tB[k]);
+              else        MATMACC(tACC, tA, tB[k]);
             }
             TCVT(tC_rcol[row], tACC);
           }
@@ -1926,9 +1933,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
             for (int k = 0; k < LEN; k++) {
               tile_shapeA_tcols tA;
               auto gA = gIterA(Mb, k_base + k);
-              TLOAD(tA, gA);
-              if (k == 0) TMATMUL(tACC, tA, tB[k]);
-              else        TMATMUL_ACC(tACC, tA, tB[k]);
+              TCOPYIN(tA, gA);
+              if (k == 0) MATMUL (tACC, tA, tB[k]);
+              else        MATMACC(tACC, tA, tB[k]);
             }
             TCVT(tC_corner, tACC);
           }
@@ -1949,7 +1956,7 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for (int k = 0; k < LEN; k++) {
               auto gB = gIterB(k_base + k, col);
-              TLOAD(tB[k], gB);
+              TCOPYIN(tB[k], gB);
             }
 
             #pragma clang loop unroll(full)
@@ -1959,9 +1966,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < LEN; k++) {
                 tile_shapeA tA;
                 auto gA = gIterA(row, k_base + k);
-                TLOAD(tA, gA);
-                if (k == 0) TMATMUL(tACC, tA, tB[k]);
-                else        TMATMUL_ACC(tACC, tA, tB[k]);
+                TCOPYIN(tA, gA);
+                if (k == 0) MATMUL (tACC, tA, tB[k]);
+                else        MATMACC(tACC, tA, tB[k]);
               }
               tile_C_out tACC_vec;
               TCVT(tACC_vec, tACC);
@@ -1974,9 +1981,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < LEN; k++) {
                 tile_shapeA_tcols tA;
                 auto gA = gIterA(Mb, k_base + k);
-                TLOAD(tA, gA);
-                if (k == 0) TMATMUL(tACC, tA, tB[k]);
-                else        TMATMUL_ACC(tACC, tA, tB[k]);
+                TCOPYIN(tA, gA);
+                if (k == 0) MATMUL (tACC, tA, tB[k]);
+                else        MATMACC(tACC, tA, tB[k]);
               }
               tile_C_out_tcols tACC_vec;
               TCVT(tACC_vec, tACC);
@@ -1989,7 +1996,7 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for (int k = 0; k < LEN; k++) {
               auto gB = gIterB(k_base + k, Nb);
-              TLOAD(tB[k], gB);
+              TCOPYIN(tB[k], gB);
             }
 
             #pragma clang loop unroll(full)
@@ -1999,9 +2006,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < LEN; k++) {
                 tile_shapeA tA;
                 auto gA = gIterA(row, k_base + k);
-                TLOAD(tA, gA);
-                if (k == 0) TMATMUL(tACC, tA, tB[k]);
-                else        TMATMUL_ACC(tACC, tA, tB[k]);
+                TCOPYIN(tA, gA);
+                if (k == 0) MATMUL (tACC, tA, tB[k]);
+                else        MATMACC(tACC, tA, tB[k]);
               }
               tile_C_out_trows tACC_vec;
               TCVT(tACC_vec, tACC);
@@ -2014,9 +2021,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
               for (int k = 0; k < LEN; k++) {
                 tile_shapeA_tcols tA;
                 auto gA = gIterA(Mb, k_base + k);
-                TLOAD(tA, gA);
-                if (k == 0) TMATMUL(tACC, tA, tB[k]);
-                else        TMATMUL_ACC(tACC, tA, tB[k]);
+                TCOPYIN(tA, gA);
+                if (k == 0) MATMUL (tACC, tA, tB[k]);
+                else        MATMACC(tACC, tA, tB[k]);
               }
               tile_C_out_tcorner tACC_vec;
               TCVT(tACC_vec, tACC);
@@ -2042,7 +2049,7 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for (int k = 0; k < LEN; k++) {
           auto gB = gIterB(k_base + k, col);
-          TLOAD(tB[k], gB);
+          TCOPYIN(tB[k], gB);
         }
 
         #pragma clang loop unroll(full)
@@ -2052,9 +2059,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < LEN; k++) {
             tile_shapeA tA;
             auto gA = gIterA(row, k_base + k);
-            TLOAD(tA, gA);
-            if (k == 0) TMATMUL(tACC, tA, tB[k]);
-            else        TMATMUL_ACC(tACC, tA, tB[k]);
+            TCOPYIN(tA, gA);
+            if (k == 0) MATMUL (tACC, tA, tB[k]);
+            else        MATMACC(tACC, tA, tB[k]);
           }
           if constexpr (is_first) {
             TCVT(tC_main[row][col], tACC);
@@ -2071,9 +2078,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < LEN; k++) {
             tile_shapeA_tcols tA;
             auto gA = gIterA(Mb, k_base + k);
-            TLOAD(tA, gA);
-            if (k == 0) TMATMUL(tACC, tA, tB[k]);
-            else        TMATMUL_ACC(tACC, tA, tB[k]);
+            TCOPYIN(tA, gA);
+            if (k == 0) MATMUL (tACC, tA, tB[k]);
+            else        MATMACC(tACC, tA, tB[k]);
           }
           if constexpr (is_first) {
             TCVT(tC_rrow[col], tACC);
@@ -2090,7 +2097,7 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for (int k = 0; k < LEN; k++) {
           auto gB = gIterB(k_base + k, Nb);
-          TLOAD(tB[k], gB);
+          TCOPYIN(tB[k], gB);
         }
 
         #pragma clang loop unroll(full)
@@ -2100,9 +2107,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < LEN; k++) {
             tile_shapeA tA;
             auto gA = gIterA(row, k_base + k);
-            TLOAD(tA, gA);
-            if (k == 0) TMATMUL(tACC, tA, tB[k]);
-            else        TMATMUL_ACC(tACC, tA, tB[k]);
+            TCOPYIN(tA, gA);
+            if (k == 0) MATMUL (tACC, tA, tB[k]);
+            else        MATMACC(tACC, tA, tB[k]);
           }
           if constexpr (is_first) {
             TCVT(tC_rcol[row], tACC);
@@ -2119,9 +2126,9 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
           for (int k = 0; k < LEN; k++) {
             tile_shapeA_tcols tA;
             auto gA = gIterA(Mb, k_base + k);
-            TLOAD(tA, gA);
-            if (k == 0) TMATMUL(tACC, tA, tB[k]);
-            else        TMATMUL_ACC(tACC, tA, tB[k]);
+            TCOPYIN(tA, gA);
+            if (k == 0) MATMUL (tACC, tA, tB[k]);
+            else        MATMACC(tACC, tA, tB[k]);
           }
           if constexpr (is_first) {
             TCVT(tC_corner, tACC);
@@ -2145,15 +2152,15 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
       for (int col = 0; col < Nb; col++) {
         tile_shapeB_tcols tB_rmdK;
         auto gB = gIterB(Kb, col);
-        TLOAD(tB_rmdK, gB);
+        TCOPYIN(tB_rmdK, gB);
 
         #pragma clang loop unroll(full)
         for (int row = 0; row < Mb; row++) {
           tile_shapeACC tACC;
           tile_shapeA_trows tA;
           auto gA = gIterA(row, Kb);
-          TLOAD(tA, gA);
-          TMATMUL(tACC, tA, tB_rmdK);
+          TCOPYIN(tA, gA);
+          MATMUL(tACC, tA, tB_rmdK);
 
           if constexpr (is_first) {
             TCVT(tC_main[row][col], tACC);
@@ -2168,8 +2175,8 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
           tile_shapeACC_tcols tACC;
           tile_shapeA_tcorner tA;
           auto gA = gIterA(Mb, Kb);
-          TLOAD(tA, gA);
-          TMATMUL(tACC, tA, tB_rmdK);
+          TCOPYIN(tA, gA);
+          MATMUL(tACC, tA, tB_rmdK);
 
           if constexpr (is_first) {
             TCVT(tC_rrow[col], tACC);
@@ -2184,15 +2191,15 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
       if constexpr (rmd_N) {
         tile_shapeB_tcorner tB_rmdK;
         auto gB = gIterB(Kb, Nb);
-        TLOAD(tB_rmdK, gB);
+        TCOPYIN(tB_rmdK, gB);
 
         #pragma clang loop unroll(full)
         for (int row = 0; row < Mb; row++) {
           tile_shapeACC_trows tACC;
           tile_shapeA_trows tA;
           auto gA = gIterA(row, Kb);
-          TLOAD(tA, gA);
-          TMATMUL(tACC, tA, tB_rmdK);
+          TCOPYIN(tA, gA);
+          MATMUL(tACC, tA, tB_rmdK);
 
           if constexpr (is_first) {
             TCVT(tC_rcol[row], tACC);
@@ -2207,8 +2214,8 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
           tile_shapeACC_tcorner tACC;
           tile_shapeA_tcorner tA;
           auto gA = gIterA(Mb, Kb);
-          TLOAD(tA, gA);
-          TMATMUL(tACC, tA, tB_rmdK);
+          TCOPYIN(tA, gA);
+          MATMUL(tACC, tA, tB_rmdK);
 
           if constexpr (is_first) {
             TCVT(tC_corner, tACC);
@@ -2228,23 +2235,35 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
     for (int m = 0; m < Mb; m++) {
       #pragma clang loop unroll(full)
       for (int n = 0; n < Nb; n++) {
+        tile_C_bf16 tC_b;
+        // TMOV_NZ2DN(tC_b, tC_main[m][n]);
         auto gC = gIterC(m, n);
-        TSTORE(gC, tC_main[m][n]);
+        // TCOPYOUT(gC, tC_b);
+        TCOPYOUT(gC, tC_main[m][n]);
       }
       if constexpr (rmd_N) {
+        tile_C_bf16_trows tC_b;
+        // TMOV_NZ2DN(tC_b, tC_rcol[m]);
         auto gC = gIterC(m, Nb);
-        TSTORE(gC, tC_rcol[m]);
+        TCOPYOUT(gC, tC_rcol[m]);
+        // TCOPYOUT(gC, tC_b);
       }
     }
     if constexpr (rmd_M) {
       #pragma clang loop unroll(full)
       for (int n = 0; n < Nb; n++) {
+        tile_C_bf16_tcols tC_b;
+        // TMOV_NZ2DN(tC_b, tC_rrow[n]);
         auto gC = gIterC(Mb, n);
-        TSTORE(gC,  tC_rrow[n]);
+        TCOPYOUT(gC,  tC_rrow[n]);
+        // TCOPYOUT(gC, tC_b);
       }
       if constexpr (rmd_N) {
+        tile_C_bf16_tcorner tC_b;
+        // TMOV_NZ2DN(tC_b, tC_corner);
         auto gC = gIterC(Mb, Nb);
-        TSTORE(gC, tC_corner);
+        TCOPYOUT(gC, tC_corner);
+        // TCOPYOUT(gC, tC_b);
       }
     }
 
@@ -2312,7 +2331,7 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
         // #pragma clang loop unroll(full)
         // for(int k=0;k<R.k;k++){
         //   auto gB = gIterB(k, ii+i*R.n);
-        //   TLOAD(tB[k][ii], gB);
+        //   TCOPYIN(tB[k][ii], gB);
         // }
 
         #pragma clang loop unroll(full)
@@ -2323,16 +2342,16 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
           for(int k=0;k<R.k;k++){
             auto gA = gIterA(j,k);
             tile_shapeA tA;
-            TLOAD(tA, gA);
+            TCOPYIN(tA, gA);
             if(j==0){
               // eliminate head cost
               auto gB = gIterB(k, ii+i*R.n);
-              TLOAD(tB[k][ii], gB);
+              TCOPYIN(tB[k][ii], gB);
             }
             if(k==0){
-              TMATMUL(tACC, tA, tB[k][ii]);
+              MATMUL(tACC, tA, tB[k][ii]);
             }else{
-              TMATMUL_ACC(tACC, tA, tB[k][ii]);
+              MATMACC(tACC, tA, tB[k][ii]);
             }
           }
 
@@ -2344,9 +2363,9 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
               auto gB = gIterB(k,i*R.n+ii);
               auto gA = gIterA(j,k);
 
-              TLOAD(tA,gA);
-              TLOAD(tB,gB);
-              TMATMUL_ACC(tACC, tA, tB);
+              TCOPYIN(tA,gA);
+              TCOPYIN(tB,gB);
+              MATMACC(tACC, tA, tB);
             }
           }
 
@@ -2358,17 +2377,17 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
             tile_shapeA_trows tA;
 
 
-            TLOAD(tA, gA);
-            TLOAD(tB, gB);
+            TCOPYIN(tA, gA);
+            TCOPYIN(tB, gB);
             if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
             } else {
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             }
           }
 
           auto gC = gIterC(j, i*R.n+ii);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         // [n, rmd_M, k]
@@ -2379,11 +2398,11 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
           for(int k=0;k<R.k;k++){
             auto gA = gIterA(Mb,k);
             tile_shapeA_tcols tA;
-            TLOAD(tA, gA);
+            TCOPYIN(tA, gA);
             if(k==0){
-              TMATMUL(tACC, tA, tB[k][ii]);
+              MATMUL(tACC, tA, tB[k][ii]);
             }else{
-              TMATMUL_ACC(tACC, tA, tB[k][ii]);
+              MATMACC(tACC, tA, tB[k][ii]);
             }
           }
 
@@ -2395,9 +2414,9 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
               auto gB = gIterB(k, i*R.n+ii);
               auto gA = gIterA(Mb,k);
 
-              TLOAD(tA,gA);
-              TLOAD(tB,gB);
-              TMATMUL_ACC(tACC, tA, tB);
+              TCOPYIN(tA,gA);
+              TCOPYIN(tB,gB);
+              MATMACC(tACC, tA, tB);
             }
           }
 
@@ -2409,17 +2428,17 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
             tile_shapeB_tcols tB;
             tile_shapeA_tcorner tA;
 
-            TLOAD(tA, gA);
-            TLOAD(tB, gB);
+            TCOPYIN(tA, gA);
+            TCOPYIN(tB, gB);
             if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
             } else {
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             }
           }
 
           auto gC = gIterC(Mb, i*R.n+ii);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);       
         }
 
       }
@@ -2428,7 +2447,7 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
     // [rN, m, k]
     if constexpr(rN>0){
       tile_shapeB tB[R.k][rN];
-
+      
       #pragma clang loop unroll(full)
       for(int i=0;i<rN;i++){
 
@@ -2436,7 +2455,7 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for(int k=0;k<R.k;k++){
           auto gB = gIterB(k, i+dN*R.n);
-          TLOAD(tB[k][i], gB);
+          TCOPYIN(tB[k][i], gB);
         }
 
         #pragma clang loop unroll(full)
@@ -2447,11 +2466,11 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
           for(int k=0;k<R.k;k++){
             auto gA = gIterA(j,k);
             tile_shapeA tA;
-            TLOAD(tA, gA);
+            TCOPYIN(tA, gA);
             if(k==0){
-              TMATMUL(tACC, tA, tB[k][i]);
+              MATMUL(tACC, tA, tB[k][i]);
             }else{
-              TMATMUL_ACC(tACC, tA, tB[k][i]);
+              MATMACC(tACC, tA, tB[k][i]);
             }
           }
 
@@ -2463,12 +2482,12 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
               auto gB = gIterB(k, i+dN*R.n);
               auto gA = gIterA(j, k);
 
-              TLOAD(tA,gA);
-              TLOAD(tB,gB);
+              TCOPYIN(tA,gA);
+              TCOPYIN(tB,gB);
               if constexpr (R.k == 0) {
-                TMATMUL(tACC, tA, tB);
+                MATMUL(tACC, tA, tB);
               } else
-                TMATMUL_ACC(tACC, tA, tB);
+                MATMACC(tACC, tA, tB);
             }
           }
 
@@ -2480,16 +2499,16 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
             tile_shapeB_tcols tB;
             tile_shapeA_trows tA;
 
-            TLOAD(tA, gA);
-            TLOAD(tB, gB);
+            TCOPYIN(tA, gA);
+            TCOPYIN(tB, gB);
             if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
             } else {
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             }
           }
           auto gC = gIterC(j, i+dN*R.n);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);
         }
 
         // [rN, rmd_M, k]
@@ -2500,11 +2519,11 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
           for(int k=0;k<R.k;k++){
             auto gA = gIterA(Mb,k);
             tile_shapeA_tcols tA;
-            TLOAD(tA, gA);
+            TCOPYIN(tA, gA);
             if(k==0){
-              TMATMUL(tACC, tA, tB[k][i]);
+              MATMUL(tACC, tA, tB[k][i]);
             }else{
-              TMATMUL_ACC(tACC, tA, tB[k][i]);
+              MATMACC(tACC, tA, tB[k][i]);
             }
           }
 
@@ -2515,12 +2534,12 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
               tile_shapeA_tcols tA;
               auto gB = gIterB(k, i+dN*R.n);
               auto gA = gIterA(Mb,k);
-              TLOAD(tA,gA);
-              TLOAD(tB,gB);
+              TCOPYIN(tA,gA);
+              TCOPYIN(tB,gB);
               if constexpr (R.k == 0)
-                TMATMUL(tACC, tA, tB);
+                MATMUL(tACC, tA, tB);
               else
-                TMATMUL_ACC(tACC, tA, tB);
+                MATMACC(tACC, tA, tB);
             }
           }
 
@@ -2532,16 +2551,16 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
             tile_shapeB_tcols tB;
             tile_shapeA_tcorner tA;
 
-            TLOAD(tA, gA);
-            TLOAD(tB, gB);
+            TCOPYIN(tA, gA);
+            TCOPYIN(tB, gB);
             if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
             } else {
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             }
           }
           auto gC = gIterC(Mb, i+dN*R.n);
-          store_acc_tile(gC, tACC);
+          TCOPYOUT_ACC(gC, tACC);        
         }
       }
     }
@@ -2549,11 +2568,11 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
     // [rmd_N, m, k]
     if constexpr (rmd_N) {
       tile_shapeB_trows tB[R.k];
-
+      
       #pragma clang loop unroll(full)
       for(int k=0;k<R.k;k++){
         auto gB = gIterB(k, Nb);
-        TLOAD(tB[k], gB);
+        TCOPYIN(tB[k], gB);
       }
 
       #pragma clang loop unroll(full)
@@ -2564,11 +2583,11 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
         for(int k=0;k<R.k;k++){
           auto gA = gIterA(j,k);
           tile_shapeA tA;
-          TLOAD(tA, gA);
+          TCOPYIN(tA, gA);
           if(k==0){
-            TMATMUL(tACC, tA, tB[k]);
+            MATMUL(tACC, tA, tB[k]);
           }else{
-            TMATMUL_ACC(tACC, tA, tB[k]);
+            MATMACC(tACC, tA, tB[k]);
           }
         }
 
@@ -2579,12 +2598,12 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
             tile_shapeA tA;
             auto gB = gIterB(k,Nb);
             auto gA = gIterA(j,k);
-            TLOAD(tA,gA);
-            TLOAD(tB,gB);
+            TCOPYIN(tA,gA);
+            TCOPYIN(tB,gB);
             if constexpr (R.k == 0)
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             else
-              TMATMUL_ACC(tACC, tA, tB);
+              MATMACC(tACC, tA, tB);
           }
         }
 
@@ -2596,16 +2615,16 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
           tile_shapeB_tcorner tB;
           tile_shapeA_trows tA;
 
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
           if constexpr(Kb>0){
-          TMATMUL_ACC(tACC, tA, tB);
+          MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
         auto gC = gIterC(j, Nb);
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
 
       // [rmd_N, rmd_M, k]
@@ -2616,11 +2635,11 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
         for(int k=0;k<R.k;k++){
           auto gA = gIterA(Mb,k);
           tile_shapeA_tcols tA;
-          TLOAD(tA, gA);
+          TCOPYIN(tA, gA);
           if(k==0){
-            TMATMUL(tACC, tA, tB[k]);
+            MATMUL(tACC, tA, tB[k]);
           }else{
-            TMATMUL_ACC(tACC, tA, tB[k]);
+            MATMACC(tACC, tA, tB[k]);
           }
         }
 
@@ -2631,12 +2650,12 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
             tile_shapeA_tcols tA;
             auto gB = gIterB(k,Nb);
             auto gA = gIterA(Mb,k);
-            TLOAD(tA,gA);
-            TLOAD(tB,gB);
+            TCOPYIN(tA,gA);
+            TCOPYIN(tB,gB);
             if constexpr (R.k == 0)
-              TMATMUL(tACC, tA, tB);
+              MATMUL(tACC, tA, tB);
             else
-              TMATMUL_ACC(tACC, tA, tB);
+              MATMACC(tACC, tA, tB);
           }
         }
 
@@ -2648,16 +2667,16 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
           tile_shapeB_tcorner tB;
           tile_shapeA_tcorner tA;
 
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
           if constexpr(Kb>0){
-          TMATMUL_ACC(tACC, tA, tB);
+          MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
         auto gC = gIterC(Mb,Nb);
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);        
       }
     }
 
@@ -2741,10 +2760,10 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for(int k=0;k<R.k;k++){
           auto gA = gIterA(m+i*R.m,k);
-          TLOAD(tA[m][k], gA);
+          TCOPYIN(tA[m][k], gA);
         }
       }
-
+      
       #pragma clang loop unroll(full)
       for(int j=0;j<dN;j++){
 
@@ -2754,7 +2773,7 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for(int k=0;k<R.k;k++){
             auto gB = gIterB(k, n+j*R.n);
-            TLOAD(tB[k][n], gB);
+            TCOPYIN(tB[k][n], gB);
           }
         }
 
@@ -2766,9 +2785,9 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for(int k=0;k<R.k;k++){
               if(k==0){
-                TMATMUL(tACC, tA[ii][k], tB[k][jj]);
+                MATMUL(tACC, tA[ii][k], tB[k][jj]);
               }else{
-                TMATMUL_ACC(tACC, tA[ii][k], tB[k][jj]);
+                MATMACC(tACC, tA[ii][k], tB[k][jj]);
               }
             }
 
@@ -2778,13 +2797,13 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
                 tile_shapeB tB;
                 auto gA = gIterA(i*R.m+ii,k);
                 auto gB = gIterB(k,j*R.n+jj);
-                TLOAD(tA,gA);
-                TLOAD(tB,gB);
-                TMATMUL_ACC(tACC, tA, tB);
+                TCOPYIN(tA,gA);
+                TCOPYIN(tB,gB);
+                MATMACC(tACC, tA, tB);
               }
             }
             auto gC = gIterC(i*R.m+ii,j*R.n+jj);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);    
           }
         }
       }
@@ -2797,7 +2816,7 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for(int k=0;k<R.k;k++){
             auto gB = gIterB(k, n+dN*R.n);
-            TLOAD(tB[k][n], gB);
+            TCOPYIN(tB[k][n], gB);
           }
         }
 
@@ -2810,9 +2829,9 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for(int k=0;k<R.k;k++){
               if(k==0){
-                TMATMUL(tACC, tA[ii][k], tB[k][jj]);
+                MATMUL(tACC, tA[ii][k], tB[k][jj]);
               }else{
-                TMATMUL_ACC(tACC, tA[ii][k], tB[k][jj]);
+                MATMACC(tACC, tA[ii][k], tB[k][jj]);
               }
             }
 
@@ -2822,18 +2841,18 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
                 tile_shapeB tB;
                 auto gA = gIterA(i*R.m+ii,k);
                 auto gB = gIterB(k,dN*R.n+jj);
-                TLOAD(tA,gA);
-                TLOAD(tB,gB);
-                TMATMUL_ACC(tACC, tA, tB);
+                TCOPYIN(tA,gA);
+                TCOPYIN(tB,gB);
+                MATMACC(tACC, tA, tB);
               }
             }
             auto gC = gIterC(i*R.m+ii,dN*R.n+jj);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);    
           }
         }
       }
     }
-
+    
     if constexpr(rM){
       tile_shapeA tA[rM][R.k];
       //copy in remaining M dimension A tile
@@ -2842,10 +2861,10 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
         #pragma clang loop unroll(full)
         for(int k=0;k<R.k;k++){
           auto gA = gIterA(m+dM*R.m,k);
-          TLOAD(tA[m][k], gA);
+          TCOPYIN(tA[m][k], gA);
         }
       }
-
+      
       #pragma clang loop unroll(full)
       for(int j=0;j<dN;j++){
 
@@ -2855,7 +2874,7 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for(int k=0;k<R.k;k++){
             auto gB = gIterB(k, n+j*R.n);
-            TLOAD(tB[k][n], gB);
+            TCOPYIN(tB[k][n], gB);
           }
         }
 
@@ -2867,9 +2886,9 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for(int k=0;k<R.k;k++){
               if(k==0){
-                TMATMUL(tACC, tA[ii][k], tB[k][jj]);
+                MATMUL(tACC, tA[ii][k], tB[k][jj]);
               }else{
-                TMATMUL_ACC(tACC, tA[ii][k], tB[k][jj]);
+                MATMACC(tACC, tA[ii][k], tB[k][jj]);
               }
             }
 
@@ -2879,13 +2898,13 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
                 tile_shapeB tB;
                 auto gA = gIterA(dM*R.m+ii,k);
                 auto gB = gIterB(k,j*R.n+jj);
-                TLOAD(tA,gA);
-                TLOAD(tB,gB);
-                TMATMUL_ACC(tACC, tA, tB);
+                TCOPYIN(tA,gA);
+                TCOPYIN(tB,gB);
+                MATMACC(tACC, tA, tB);
               }
             }
             auto gC = gIterC(dM*R.m+ii,j*R.n+jj);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);    
           }
         }
       }
@@ -2898,7 +2917,7 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for(int k=0;k<R.k;k++){
             auto gB = gIterB(k, n+dN*R.n);
-            TLOAD(tB[k][n], gB);
+            TCOPYIN(tB[k][n], gB);
           }
         }
 
@@ -2911,9 +2930,9 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
             #pragma clang loop unroll(full)
             for(int k=0;k<R.k;k++){
               if(k==0){
-                TMATMUL(tACC, tA[ii][k], tB[k][jj]);
+                MATMUL(tACC, tA[ii][k], tB[k][jj]);
               }else{
-                TMATMUL_ACC(tACC, tA[ii][k], tB[k][jj]);
+                MATMACC(tACC, tA[ii][k], tB[k][jj]);
               }
             }
 
@@ -2923,13 +2942,13 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
                 tile_shapeB tB;
                 auto gA = gIterA(dM*R.m+ii,k);
                 auto gB = gIterB(k,dN*R.n+jj);
-                TLOAD(tA,gA);
-                TLOAD(tB,gB);
-                TMATMUL_ACC(tACC, tA, tB);
+                TCOPYIN(tA,gA);
+                TCOPYIN(tB,gB);
+                MATMACC(tACC, tA, tB);
               }
             }
             auto gC = gIterC(dM*R.m+ii,dN*R.n+jj);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);    
           }
         }
       }
@@ -2968,11 +2987,8 @@ void matmul_mask_multi4_B(float *dst, dtype *src0, dtype *src1){
           tile_shapeB tB[Kb][4];
 
           for(int k=0;k<Kb;k++){
-            #pragma clang loop unroll(full)
-            for(int jj=0;jj<4;jj++){
-              auto gB = gIterB(k,j+jj);
-              TLOAD(tB[k][jj], gB);
-            }
+            auto gB = gIterB(k,j);
+            TLOAD4_ND2ZN(tB[k][3], tB[k][2], tB[k][1], tB[k][0], gB);
           }
 
           #pragma clang loop unroll(full)
@@ -2981,15 +2997,15 @@ void matmul_mask_multi4_B(float *dst, dtype *src0, dtype *src1){
             for(int k=0;k<Kb;k++){
               tile_shapeA tA;
               auto gA = gIterA(i,k);
-              TLOAD(tA, gA);
+              TCOPYIN(tA, gA);
               if(k==0){
-                TMATMUL(tACC, tA, tB[k][jj]);
+                MATMUL(tACC, tA, tB[k][jj]);
               }else{
-                TMATMUL_ACC(tACC, tA, tB[k][jj]);
+                MATMACC(tACC, tA, tB[k][jj]);
               }
             }
             auto gC = gIterC(i,j+jj);
-            store_acc_tile(gC, tACC);
+            TCOPYOUT_ACC(gC, tACC);
           }
         }
       }
@@ -3027,19 +3043,13 @@ void matmul_mask_multi4_AB(float *dst, dtype *src0, dtype *src1){
 
         #pragma clang loop unroll(full)
         for(int k=0;k<Kb;k+=4){
-          #pragma clang loop unroll(full)
-          for(int kk=0;kk<4;kk++){
-            auto gA = gIterA(i,k+kk);
-            TLOAD(tA[k+kk], gA);
-          }
+          auto gA = gIterA(i,k);
+          TLOAD4_ND2NZ(tA[k+3], tA[k+2], tA[k+1], tA[k], gA);
 
           #pragma clang loop unroll(full)
           for(int kk=0;kk<4;kk++){
-            #pragma clang loop unroll(full)
-            for(int jj=0;jj<4;jj++){
-              auto gB = gIterB(k+kk,j+jj);
-              TLOAD(tB[k+kk][jj], gB);
-            }
+          auto gB = gIterB(k+kk,j);
+          TLOAD4_ND2ZN(tB[k+kk][3], tB[k+kk][2], tB[k+kk][1], tB[k+kk][0], gB);
           }
         }
 
@@ -3048,16 +3058,16 @@ void matmul_mask_multi4_AB(float *dst, dtype *src0, dtype *src1){
           #pragma clang loop unroll(full)
           for(int k=0;k<Kb;k+=4){
             if(k==0){
-              TMATMUL(tACC, tA[k], tB[k][jj]);
+              MATMUL(tACC, tA[k], tB[k][jj]);
             }else{
-              TMATMUL_ACC(tACC, tA[k], tB[k][jj]);
+              MATMACC(tACC, tA[k], tB[k][jj]);
             }
-            TMATMUL_ACC(tACC, tA[k+1], tB[k+1][jj]);
-            TMATMUL_ACC(tACC, tA[k+2], tB[k+2][jj]);
-            TMATMUL_ACC(tACC, tA[k+3], tB[k+3][jj]);
+            MATMACC(tACC, tA[k+1], tB[k+1][jj]);
+            MATMACC(tACC, tA[k+2], tB[k+2][jj]);
+            MATMACC(tACC, tA[k+3], tB[k+3][jj]);
           }
-          auto gC = gIterC(i,j+jj);
-          store_acc_tile(gC, tACC);
+          auto gC = gIterC(i,j);
+          TCOPYOUT_ACC(gC, tACC);
         }
       }
     }
@@ -3092,15 +3102,15 @@ __attribute__((noinline)) void matmul_dynamic_new(float* dst, dtype* src0, dtype
                   int dyn_k = gK - k > tK ? tK : gK - k;
                   tile_shapeA tA(dyn_m, dyn_k);
                   tile_shapeB tB(dyn_k, dyn_n);
-                  TLOAD(tA, gA);
-                  TLOAD(tB, gB);
+                  TCOPYIN(tA, gA);
+                  TCOPYIN(tB, gB);
                   if(k==0){
-                    TMATMUL(tACC, tA, tB);
+                    MATMUL(tACC, tA, tB);
                   }else{
-                    TMATMUL_ACC(tACC, tA, tB);
+                    MATMACC(tACC, tA, tB);
                   }
               }
-              store_acc_tile_dynamic(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol());
+              TCOPYOUT_ACC_DYNAMIC(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol());
           }
       }
     }
@@ -3140,15 +3150,15 @@ __attribute__((noinline)) void matmul_dynamic(float* dst, dtype* src0, dtype* sr
                   int dyn_k = (k+1) * tK > gK ? rem_k:tK;
                   tile_shapeA tA(dyn_m, dyn_k);
                   tile_shapeB tB(dyn_k, dyn_n);
-                  TLOAD(tA, gA);
-                  TLOAD(tB, gB);
+                  TCOPYIN(tA, gA);
+                  TCOPYIN(tB, gB);
                   if(k==0){
-                    TMATMUL(tACC, tA, tB);
+                    MATMUL(tACC, tA, tB);
                   }else{
-                    TMATMUL_ACC(tACC, tA, tB);
+                    MATMACC(tACC, tA, tB);
                   }
               }
-              store_acc_tile_dynamic(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol());
+              TCOPYOUT_ACC_DYNAMIC(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol());
           }
       }
     }
@@ -3191,7 +3201,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
     int rem_k = gK % tK;
 
     ResA R = find_reuseA_dynamic(Mb, Kb, MAX_TILE_NUM);
-
+    
     int dM = R.m == 0? 0 : Mb / R.m;
     int rM = R.m == 0? 0 : Mb % R.m;
 
@@ -3213,7 +3223,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
         tile_shapeA tA[m_step][R.k];
 
         for (int mm=0;mm<m_step;mm++) {
-          for (int kk=0;kk<R.k;kk++) {
+          for (int kk=0;kk<R.k;kk++) { 
             if( (i+mm+1) * tM > gM ){
               tA[mm][kk]= tile_shapeA(rem_m, tK);
             }else{
@@ -3226,7 +3236,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
           for(int k=0;k<R.k;k++){
             size_t offset_A = (i+ii) * gK * tile_shapeA::Rows + k * tile_shapeA::Cols;
             gm_shapeA gA(src0+offset_A, gM, gK);
-            TLOAD(tA[ii][k], gA);
+            TCOPYIN(tA[ii][k], gA);
           }
 
           int dyn_m = (i+ii+1) * tM > gM? rem_m:tM;
@@ -3239,11 +3249,11 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
               size_t offset_B = k * gN * tile_shapeB::Rows + j * tile_shapeB::Cols;
               gm_shapeB gB(src1 + offset_B, gK, gN);
               tile_shapeB tB(tK, dyn_n);
-              TLOAD(tB, gB);
+              TCOPYIN(tB, gB);
               if(k==0){
-                TMATMUL(tACC, tA[ii][k], tB);
+                MATMUL(tACC, tA[ii][k], tB);
               }else{
-                TMATMUL_ACC(tACC, tA[ii][k], tB);
+                MATMACC(tACC, tA[ii][k], tB);
               }
             }
 
@@ -3258,19 +3268,19 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
                 tile_shapeA tA(dyn_m, dyn_k);
                 tile_shapeB tB(dyn_k, dyn_n);
 
-                TLOAD(tA, gA);
-                TLOAD(tB, gB);
+                TCOPYIN(tA, gA);
+                TCOPYIN(tB, gB);
                 if(k==0){
-                  TMATMUL(tACC, tA, tB);
+                  MATMUL(tACC, tA, tB);
                 }else{
-                  TMATMUL_ACC(tACC, tA, tB);
+                  MATMACC(tACC, tA, tB);
                 }
               }
             }
 
             size_t offset_C = (i+ii) * gN * tile_shapeACC::Rows + j * tile_shapeACC::Cols;
             gm_shapeC gC(dst + offset_C, gM, gN);
-            store_acc_tile_dynamic(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol());
+            TCOPYOUT_ACC_DYNAMIC(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol());
           }
         }
 
@@ -3303,7 +3313,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseB(float* dst, dtype* src0, dt
     R.n = Ra.m;
     R.k = Ra.k;
     R.val = Ra.val;
-
+    
     int dN = R.n == 0? 0 : Nb / R.n;
     int rN = R.n == 0? 0 : Nb % R.n;
 
@@ -3323,7 +3333,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseB(float* dst, dtype* src0, dt
         tile_shapeB tB[R.k][n_step];
 
         for (int nn=0;nn<n_step;nn++) {
-          for (int kk=0;kk<R.k;kk++) {
+          for (int kk=0;kk<R.k;kk++) { 
             if( (i+nn+1) * tN > gN ){
               tB[kk][nn]= tile_shapeB(tK, rem_n);
             }else{
@@ -3336,7 +3346,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseB(float* dst, dtype* src0, dt
           for(int k=0;k<R.k;k++){
             size_t offset_B = k * gN * tile_shapeB::Rows + (i+ii) * tile_shapeB::Cols;
             gm_shapeB gB(src1+offset_B, gK, gN);
-            TLOAD(tB[k][ii], gB);
+            TCOPYIN(tB[k][ii], gB);
           }
 
           int dyn_n = (i+ii+1) * tN > gN? rem_n:tN;
@@ -3349,11 +3359,11 @@ __attribute__((noinline)) void matmul_dynamic_reuseB(float* dst, dtype* src0, dt
               size_t offset_A = j * gK * tile_shapeA::Rows + k * tile_shapeA::Cols;
               gm_shapeA gA(src0 + offset_A, gM, gK);
               tile_shapeA tA(dyn_m, tK);
-              TLOAD(tA, gA);
+              TCOPYIN(tA, gA);
               if(k==0){
-                TMATMUL(tACC, tA, tB[k][ii]);
+                MATMUL(tACC, tA, tB[k][ii]);
               }else{
-                TMATMUL_ACC(tACC, tA, tB[k][ii]);
+                MATMACC(tACC, tA, tB[k][ii]);
               }
             }
 
@@ -3368,19 +3378,19 @@ __attribute__((noinline)) void matmul_dynamic_reuseB(float* dst, dtype* src0, dt
                 tile_shapeA tA(dyn_m, dyn_k);
                 tile_shapeB tB(dyn_k, dyn_n);
 
-                TLOAD(tA, gA);
-                TLOAD(tB, gB);
+                TCOPYIN(tA, gA);
+                TCOPYIN(tB, gB);
                 if(k==0){
-                  TMATMUL(tACC, tA, tB);
+                  MATMUL(tACC, tA, tB);
                 }else{
-                  TMATMUL_ACC(tACC, tA, tB);
+                  MATMACC(tACC, tA, tB);
                 }
               }
             }
 
             size_t offset_C =  j * gN * tile_shapeACC::Rows + (i+ii) * tile_shapeACC::Cols;
             gm_shapeC gC(dst + offset_C, gM, gN);
-            store_acc_tile_dynamic(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol());
+            TCOPYOUT_ACC_DYNAMIC(gC, tACC, tACC.GetValidRow(), tACC.GetValidCol());
           }
         }
 
@@ -3435,8 +3445,8 @@ void matmul_mx(float *dst, dtype *src0, dtype *src1, uint8_t *src0_mx, uint8_t *
           tile_shapeB tB;
           tile_shapeAMX tAMX;
           tile_shapeBMX tBMX;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN(tA, gA);
+          TCOPYIN(tB, gB);
 
           blk_tload(tAMX.GetValidCol(), tAMX.GetValidRow(), tile_shapeAMX::Cols,
           type_traits<typename tile_shapeAMX::DType>::TypeCode,
@@ -3455,12 +3465,12 @@ void matmul_mx(float *dst, dtype *src0, dtype *src1, uint8_t *src0_mx, uint8_t *
           (gBMX.GetStride(3) * type_traits<typename gm_shapeBMX::DType>::bits + 7) / 8);
 
           if(k==0){
-            TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
+            MATMULMX(tACC, tA, tAMX, tB, tBMX);
           }else{
-            TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+            MATMACCMX(tACC, tA, tAMX, tB, tBMX);
           }
         }
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
     }
   }
 }
@@ -3509,16 +3519,16 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
         auto gC = gCIter(i, j);
 
         tile_shapeACC tACC;
-
+        
         if constexpr(Kb>0){
           auto gA = gAIter(i, 0);
           auto gB = gBIter(0, j);
 
           tile_shapeA tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA, tB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
+          MATMUL(tACC, tA, tB);        
         }
         #pragma clang loop unroll(full)
         for (int k = 1; k < Kb; ++k) {
@@ -3527,9 +3537,9 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL_ACC(tACC, tA, tB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
+          MATMACC(tACC, tA, tB);
         }
 
         if constexpr (rmd_K) {
@@ -3538,15 +3548,15 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_trows tA;
           tile_shapeB_tcols tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
           if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
       if constexpr (rmd_N) {
         auto gC = gCIter(i, Nb);
@@ -3558,9 +3568,9 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA, tB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
+          MATMUL(tACC, tA, tB);        
         }
         #pragma clang loop unroll(full)
         for (int k = 1; k < Kb; ++k) {
@@ -3569,9 +3579,9 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL_ACC(tACC, tA, tB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
+          MATMACC(tACC, tA, tB);
         }
         if constexpr (rmd_K) {
           auto gA = gAIter(i, Kb);
@@ -3579,15 +3589,15 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_trows tA;
           tile_shapeB_tcorner tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
           if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
     }
     if constexpr (rmd_M) {
@@ -3601,9 +3611,9 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA, tB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
+          MATMUL(tACC, tA, tB);        
         }
         #pragma clang loop unroll(full)
         for (int k = 1; k < Kb; ++k) {
@@ -3612,9 +3622,9 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL_ACC(tACC, tA, tB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
+          MATMACC(tACC, tA, tB);
         }
         if constexpr (rmd_K) {
           auto gA = gAIter(Mb, Kb);
@@ -3622,15 +3632,15 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcorner tA;
           tile_shapeB_tcols tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
           if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
       if constexpr (rmd_N) {
         auto gC = gCIter(Mb, Nb);
@@ -3642,9 +3652,9 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL(tACC, tA, tB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
+          MATMUL(tACC, tA, tB);        
         }
         #pragma clang loop unroll(full)
         for (int k = 1; k < Kb; ++k) {
@@ -3653,9 +3663,9 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
-          TMATMUL_ACC(tACC, tA, tB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
+          MATMACC(tACC, tA, tB);
         }
         if constexpr (rmd_K) {
           auto gA = gAIter(Mb, Kb);
@@ -3663,15 +3673,15 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcorner tA;
           tile_shapeB_tcorner tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TCOPYIN_2LVL(tA, gA);
+          TCOPYIN_2LVL(tB, gB);
           if constexpr(Kb>0){
-            TMATMUL_ACC(tACC, tA, tB);
+            MATMACC(tACC, tA, tB);
           } else {
-            TMATMUL(tACC, tA, tB);
+            MATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TCOPYOUT_ACC(gC, tACC);
       }
     }
   }
@@ -3707,11 +3717,11 @@ void matmul_vec(float* dst, float* src0, float* src1){
                 auto gB = gBIter(k,j);
                 tile_shapeA tA;
                 tile_shapeB tB;
-                TLOAD(tA, gA);
-                TLOAD(tB, gB);
-                TMATMUL_ACC(tACC, tA, tB);
+                TCOPYIN(tA, gA);
+                TCOPYIN(tB, gB);
+                MATMACC(tACC, tA, tB);
             }
-            TSTORE(gC, tACC);
+            TCOPYOUT(gC, tACC);
         }
     }
 }
@@ -3734,10 +3744,10 @@ void matmul_tile_vec(float* dst, float* src0, float* src1) {
     tile_shape_B d1;
     tile_shape_C d2;
 
-    TLOAD(d0, s0);
-    TLOAD(d1, s1);
-    TMATMUL(d2, d0, d1);
-    TSTORE(res, d2);
+    TCOPYIN(d0, s0);
+    TCOPYIN(d1, s1);
+    MATMUL(d2, d0, d1);
+    TCOPYOUT(res, d2);
 }
 
 template <uint16_t M, uint16_t N, uint16_t K>
@@ -3758,10 +3768,10 @@ void matmul_tile_frac(float* dst, float* src0, float* src1) {
     tile_shape_B d1;
     tile_shape_C d2;
 
-    TLOAD(d0, s0);
-    TLOAD(d1, s1);
-    TMATMUL(d2, d0, d1);
-    store_acc_tile(res, d2);
+    TCOPYIN(d0, s0);
+    TCOPYIN(d1, s1);
+    MATMUL(d2, d0, d1);
+    TCOPYOUT_ACC(res, d2);
 }
 
 
