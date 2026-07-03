@@ -1,12 +1,13 @@
-# Microbench Makefile for Cube operations
+# Cube microbench Makefile
 
-TESTCASE ?= matmul_fp32_16x16
-
-# Include common build system
-include ../../test/common/Makefile.common
-
-# Source files
+# Set source file based on TESTCASE
 SRC_FILE = src/$(TESTCASE).cpp
 
-# Compiler flags
-CC_O += -I$(ROOT)/microbench/cube
+# Set target path
+TARGET = $(ELF_HEAD)/$(TESTCASE).elf
+
+# Include common build rules
+include ../Makefile.common
+
+clean:
+	@find $(OBJ_ROOT) -type f -name "*.o" -exec rm -rf {} \;

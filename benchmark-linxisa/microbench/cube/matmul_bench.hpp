@@ -7,6 +7,15 @@
 
 using namespace pto;
 
+// Helper function to copy Acc to Vec and then to global memory
+template <is_global_data_v GmOut, is_tile_data_v TileAcc>
+void TCOPYOUT_ACC(GmOut &Gout, TileAcc &tAcc){
+    using TileAccOut = Tile<Location::Vec, typename TileAcc::DType, TileAcc::Rows, TileAcc::Cols, BLayout::RowMajor, TileAcc::ValidRow, TileAcc::ValidCol>;
+    TileAccOut tAccOut;
+    TCVT(tAccOut, tAcc);
+    TCOPYOUT(Gout, tAccOut);
+}
+
 // ============================================================================
 // Matrix Multiplication Benchmark: C = A × B
 // ============================================================================
@@ -54,70 +63,8 @@ void matmul_bench(float* c_ptr, dtype* a_ptr, dtype* b_ptr) {
     // 执行矩阵乘法: C = A × B
     MATMUL(tACC, tA, tB);
     
-    // 存储结果 C
-    TCOPYOUT(gC, tACC);
-}
-
-/**
- * @brief 分块矩阵乘法 benchmark
- * 
- * 测试大矩阵的分块计算性能
- * 
- * @tparam dtype 数据类型
- * @tparam gM 全局矩阵行数
- * @tparam gN 全局矩阵列数
- * @tparam gK 全局矩阵内积维度
- * @tparam tM Tile 行数
- * @tparam tN Tile 列数
- * @tparam tK Tile 内积维度
- */
-template <typename dtype, int gM, int gN, int gK, int tM, int tN, int tK>
-void matmul_tiled_bench(float* c_ptr, dtype* a_ptr, dtype* b_ptr) {
-    using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
-    using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
-    using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-    
-    using tile_shapeA = TileLeft<dtype, tM, tK>;
-    using tile_shapeB = TileRight<dtype, tK, tN>;
-    using tile_shapeACC = TileAcc<float, tM, tN>;
-    
-    using itA = global_iterator<gm_shapeA, tile_shapeA>;
-    using itB = global_iterator<gm_shapeB, tile_shapeB>;
-    using itC = global_iterator<gm_shapeC, tile_shapeACC>;
-    
-    itA gAIter(a_ptr);
-    itB gBIter(b_ptr);
-    itC gCIter(c_ptr);
-    
-    const int Mb = gM / tM;
-    const int Nb = gN / tN;
-    const int Kb = gK / tK;
-    
-    for (int i = 0; i < Mb; ++i) {
-        for (int j = 0; j < Nb; ++j) {
-            auto gC = gCIter(i, j);
-            tile_shapeACC tACC;
-            
-            for (int k = 0; k < Kb; ++k) {
-                auto gA = gAIter(i, k);
-                auto gB = gBIter(k, j);
-                
-                tile_shapeA tA;
-                tile_shapeB tB;
-                
-                TCOPYIN(tA, gA);
-                TCOPYIN(tB, gB);
-                
-                if (k == 0) {
-                    MATMUL(tACC, tA, tB);
-                } else {
-                    MATMACC(tACC, tA, tB);
-                }
-            }
-            
-            TCOPYOUT(gC, tACC);
-        }
-    }
+    // 存储结果 C (需要先从 Acc 转换到 Vec)
+    TCOPYOUT_ACC(gC, tACC);
 }
 
 // ============================================================================
@@ -155,13 +102,7 @@ void matmul_bf16_32x32(float* c, __bf16* a, __bf16* b) {
     matmul_bench<__bf16, 32, 32, 32>(c, a, b);
 }
 
-// INT8 矩阵乘法
-void matmul_int8_16x16(float* c, int8_t* a, int8_t* b) {
-    matmul_bench<int8_t, 16, 16, 16>(c, a, b);
-}
-
-void matmul_int8_32x32(float* c, int8_t* a, int8_t* b) {
-    matmul_bench<int8_t, 32, 32, 32>(c, a, b);
-}
+// Note: INT8 matmul requires special tile sizes and is not included in basic benchmarks
+// Use kernels/matmul for INT8 matmul tests
 
 #endif // MATMUL_BENCH_HPP
