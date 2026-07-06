@@ -1,0 +1,12 @@
+#include "scalar_bench.hpp"
+#include "benchmark.h"
+
+int main() {
+    __half a[16*16], c[16*16];
+    for (int i = 0; i < 16*16; i++) a[i] = (__half)(i%10*0.1f);
+    for (int i = 0; i < 16*16; i++) c[i] = 0;
+    BENCHSTART;
+    tmaxs_fp16_16x16(c, a, (__half)2.0f);
+    BENCHEND;
+    return 0;
+}

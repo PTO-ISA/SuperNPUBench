@@ -1,59 +1,24 @@
 #!/bin/bash
-# Top-level microbench compilation script
-
 echo "=========================================="
 echo "LinxISA Microbenchmarks Compilation"
 echo "=========================================="
 
 CATEGORY=${1:-all}
 
-compile_cube() {
-    echo ""
-    echo ">>> Compiling Cube Microbenchmarks..."
-    cd cube
-    bash compile.all
-    cd ..
-}
-
-compile_vector() {
-    echo ""
-    echo ">>> Compiling Vector Microbenchmarks..."
-    cd vector
-    bash compile.all
-    cd ..
-}
-
-compile_memory() {
-    echo ""
-    echo ">>> Compiling Memory Microbenchmarks..."
-    cd memory
-    bash compile.all
-    cd ..
-}
+compile_elem()    { echo ""; echo ">>> Elem (Tile-Tile)";     cd elem;    bash compile.all; cd ..; }
+compile_scalar()  { echo ""; echo ">>> Scalar (Tile-Scalar)"; cd scalar;  bash compile.all; cd ..; }
+compile_memory()  { echo ""; echo ">>> Memory (Load/Store)";  cd memory;  bash compile.all; cd ..; }
+compile_layout()  { echo ""; echo ">>> Layout (Transpose)";   cd layout;  bash compile.all; cd ..; }
 
 case $CATEGORY in
-    cube)
-        compile_cube
-        ;;
-    vector)
-        compile_vector
-        ;;
-    memory)
-        compile_memory
-        ;;
+    elem)    compile_elem ;;
+    scalar)  compile_scalar ;;
+    memory)  compile_memory ;;
+    layout)  compile_layout ;;
     all)
-        compile_cube
-        compile_vector
-        compile_memory
+        compile_elem; compile_scalar; compile_memory; compile_layout
         ;;
-    *)
-        echo "Usage: $0 [cube|vector|memory|all]"
-        echo "  cube    - Compile cube microbenchmarks only"
-        echo "  vector  - Compile vector microbenchmarks only"
-        echo "  memory  - Compile memory microbenchmarks only"
-        echo "  all     - Compile all microbenchmarks (default)"
-        exit 1
-        ;;
+    *) echo "Usage: $0 [elem|scalar|memory|layout|all]"; exit 1 ;;
 esac
 
 echo ""
