@@ -1,0 +1,28 @@
+#!/bin/bash
+echo "=== memory ==="
+echo "  mgather_fp16_16x16"; make TESTCASE=mgather_fp16_16x16
+echo "  mgather_fp32_16x16"; make TESTCASE=mgather_fp32_16x16
+echo "  mgather_i32_16x16"; make TESTCASE=mgather_i32_16x16
+echo "  mgather_mask_fp16_16x16"; make TESTCASE=mgather_mask_fp16_16x16
+echo "  mgather_mask_fp32_16x16"; make TESTCASE=mgather_mask_fp32_16x16
+echo "  mscatter_fp16_16x16"; make TESTCASE=mscatter_fp16_16x16
+echo "  mscatter_fp32_16x16"; make TESTCASE=mscatter_fp32_16x16
+echo "  mscatter_i32_16x16"; make TESTCASE=mscatter_i32_16x16
+echo "  mscatter_mask_fp16_16x16"; make TESTCASE=mscatter_mask_fp16_16x16
+echo "  mscatter_mask_fp32_16x16"; make TESTCASE=mscatter_mask_fp32_16x16
+echo "  tload_fp16_16x16"; make TESTCASE=tload_fp16_16x16
+echo "  tload_fp16_32x32"; make TESTCASE=tload_fp16_32x32
+echo "  tload_fp32_16x16"; make TESTCASE=tload_fp32_16x16
+echo "  tload_fp32_32x32"; make TESTCASE=tload_fp32_32x32
+echo "  tload_i32_16x16"; make TESTCASE=tload_i32_16x16
+echo "  tload_nd2nz_fp16_16x16"; make TESTCASE=tload_nd2nz_fp16_16x16
+echo "  tload_nd2nz_fp32_16x16"; make TESTCASE=tload_nd2nz_fp32_16x16
+echo "  tmov_fp16_16x16"; make TESTCASE=tmov_fp16_16x16
+echo "  tmov_fp16_32x32"; make TESTCASE=tmov_fp16_32x32
+echo "  tmov_fp32_16x16"; make TESTCASE=tmov_fp32_16x16
+echo "  tmov_fp32_32x32"; make TESTCASE=tmov_fp32_32x32
+echo "  tmov_i32_16x16"; make TESTCASE=tmov_i32_16x16
+echo "  tstore_fp16_16x16"; make TESTCASE=tstore_fp16_16x16
+echo "  tstore_fp32_16x16"; make TESTCASE=tstore_fp32_16x16
+echo "  tstore_i32_16x16"; make TESTCASE=tstore_i32_16x16
+echo "=== Done ==="

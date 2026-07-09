@@ -1,0 +1,12 @@
+#include "scalar_bench.hpp"
+// auto-generated: abs (un) f32 lat
+int main() {
+    float a[16], b[16];
+    for (int i = 0; i < 16; ++i) { a[i] = (float)(i * 0.7 + 1); b[i] = (float)(i * 0.3 + 2); }
+    volatile float sink = (float)0;
+    BENCHSTART;
+    float r = bench_latency<float>(a, b, [](auto x,auto y){auto t=x+y; return t<0?-t:t;});
+    BENCHEND;
+    sink = r;
+    return 0;
+}

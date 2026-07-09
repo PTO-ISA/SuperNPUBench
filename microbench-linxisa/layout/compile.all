@@ -1,6 +1,0 @@
-#!/bin/bash
-echo "=== layout ==="
-echo "  trans_fp16_16x16"; make TESTCASE=trans_fp16_16x16
-echo "  trans_fp32_16x16"; make TESTCASE=trans_fp32_16x16
-echo "  trans_fp32_32x32"; make TESTCASE=trans_fp32_32x32
-echo "=== Done ==="

@@ -1,0 +1,12 @@
+#!/bin/bash
+echo "=== cube ==="
+echo "  acccvt_fp16_64x64x64"; make TESTCASE=acccvt_fp16_64x64x64
+echo "  acccvt_fp32_32x32x32"; make TESTCASE=acccvt_fp32_32x32x32
+echo "  acccvt_nz2nd_fp16_64x64x64"; make TESTCASE=acccvt_nz2nd_fp16_64x64x64
+echo "  tmatmul_bias_fp16_64x64x64"; make TESTCASE=tmatmul_bias_fp16_64x64x64
+echo "  tmatmul_bias_fp32_32x32x32"; make TESTCASE=tmatmul_bias_fp32_32x32x32
+echo "  tmatmul_fp16_64x64x64"; make TESTCASE=tmatmul_fp16_64x64x64
+echo "  tmatmul_fp32_32x32x32"; make TESTCASE=tmatmul_fp32_32x32x32
+echo "  tmatmul_i8_64x64x64"; make TESTCASE=tmatmul_i8_64x64x64
+echo "  tmatmul_mx_fp16_64x64x64"; make TESTCASE=tmatmul_mx_fp16_64x64x64
+echo "=== Done ==="

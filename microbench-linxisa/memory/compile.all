@@ -1,7 +1,0 @@
-#!/bin/bash
-echo "=== memory ==="
-echo "  tload_fp16_16x16"; make TESTCASE=tload_fp16_16x16
-echo "  tload_fp32_16x16"; make TESTCASE=tload_fp32_16x16
-echo "  tload_fp32_32x32"; make TESTCASE=tload_fp32_32x32
-echo "  tload_int32_16x16"; make TESTCASE=tload_int32_16x16
-echo "=== Done ==="

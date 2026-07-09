@@ -1,56 +1,58 @@
 #!/bin/bash
-# Top-level compilation script for all ISA backends
+# Top-level compilation script for all architecture backends
+#   benchmark/two-level-arch  (was benchmark-linxisa, Linx two-level block ISA)
+#   benchmark/one-level-arch  (was benchmark-ptoisa, PTO one-level tile ISA)
 
-ISA=${1:-all}  # Default: compile all
+ARCH=${1:-all}  # Default: compile all
 
 echo "=========================================="
 echo "SuperNPUBench Build System"
-echo "ISA backend: $ISA"
+echo "Architecture backend: $ARCH"
 echo "=========================================="
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-compile_linx() {
+compile_two_level() {
     echo ""
-    echo ">>> Compiling LinxISA backend..."
-    if [ -f "$SCRIPT_DIR/benchmark-linxisa/compile_all.sh" ]; then
-        bash "$SCRIPT_DIR/benchmark-linxisa/compile_all.sh"
+    echo ">>> Compiling two-level-arch backend..."
+    if [ -f "$SCRIPT_DIR/benchmark/two-level-arch/compile_all.sh" ]; then
+        bash "$SCRIPT_DIR/benchmark/two-level-arch/compile_all.sh"
     else
-        echo "Warning: benchmark-linxisa/compile_all.sh not found"
+        echo "Warning: benchmark/two-level-arch/compile_all.sh not found"
     fi
 }
 
-compile_pto() {
+compile_one_level() {
     echo ""
-    echo ">>> Compiling PTO ISA backend..."
-    if [ -f "$SCRIPT_DIR/benchmark-ptoisa/compile_all.sh" ]; then
-        bash "$SCRIPT_DIR/benchmark-ptoisa/compile_all.sh"
+    echo ">>> Compiling one-level-arch backend..."
+    if [ -f "$SCRIPT_DIR/benchmark/one-level-arch/compile_all.sh" ]; then
+        bash "$SCRIPT_DIR/benchmark/one-level-arch/compile_all.sh"
     else
-        echo "Warning: benchmark-ptoisa/compile_all.sh not found"
+        echo "Warning: benchmark/one-level-arch/compile_all.sh not found"
     fi
 }
 
-case $ISA in
-    linx|benchmark-linxisa)
-        compile_linx
+case $ARCH in
+    two-level|two-level-arch|linx)
+        compile_two_level
         ;;
-    pto|benchmark-ptoisa)
-        compile_pto
+    one-level|one-level-arch|pto)
+        compile_one_level
         ;;
     all)
-        compile_linx
-        compile_pto
+        compile_two_level
+        compile_one_level
         ;;
     *)
-        echo "Usage: $0 [linx|pto|all]"
-        echo "  linx  - Compile LinxISA backend only (benchmark-linxisa)"
-        echo "  pto   - Compile PTO ISA backend only (benchmark-ptoisa)"
-        echo "  all   - Compile all backends (default)"
+        echo "Usage: $0 [two-level|one-level|all]"
+        echo "  two-level  - Compile two-level-arch backend only (benchmark/two-level-arch)"
+        echo "  one-level  - Compile one-level-arch backend only (benchmark/one-level-arch)"
+        echo "  all        - Compile all backends (default)"
         exit 1
         ;;
 esac
 
 echo ""
 echo "=========================================="
-echo "Build completed for: $ISA"
+echo "Build completed for: $ARCH"
 echo "=========================================="

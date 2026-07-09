@@ -6,7 +6,7 @@
 
 # Build outputs
 output/
-*/output/
+**/output/
 
 # Temporary files
 *.log
