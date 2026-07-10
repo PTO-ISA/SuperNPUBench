@@ -43,7 +43,7 @@ for op in ["TADD", "TSUB", "TMUL", "TDIV", "TREm".replace("REm", "REM"), "TFMOD"
     if op in ("TAND", "TOR", "TXOR", "TSHL", "TSHR"):
         dt = ("i16", "i32")
     elif op in ("TREM", "TFMOD"):
-        dt = ("i16", "i32")  # TREM is integer remainder; TFMOD skipped anyway
+        dt = ("fp16", "fp32", "i32")  # re-test full dtype set
     elif op == "TCMP":
         dt = ("fp16", "fp32", "i32")
     elif op == "TPRELU":
@@ -54,14 +54,14 @@ for op in ["TADD", "TSUB", "TMUL", "TDIV", "TREm".replace("REm", "REM"), "TFMOD"
 
 # mode 0 unary
 for op, dt in [
-    ("TABS", ("fp16", "f32")),
+    ("TABS", ("fp16", "f32", "i16", "i32")),
     ("TNOT", ("i16", "i32")),
     ("TNEG", ("fp16", "fp32", "i16", "i32")),
     ("TEXP", ("fp16", "fp32")),
     ("TLOG", ("fp16", "fp32")),
     ("TRECIP", ("fp16", "fp32")),
     ("TSQRT", ("fp16", "fp32")),
-    ("TRSQRT", ("fp32",)),
+    ("TRSQRT", ("fp16", "f32")),
     ("TRELU", ("fp16", "fp32")),
     ("TCVT", ("fp16", "fp32")),
 ]:
@@ -76,22 +76,11 @@ for op in ["TPARTADD", "TPARTMUL", "TPARTMAX", "TPARTMIN"]:
     V.append(Case(op, "binary", ("fp16", "fp32"), M16))
 
 # mode 1 tile-scalar (1 tile + scalar)
+# tile-scalar ops only support float dtypes on current toolchain
 for op in ["TADDS", "TSUBS", "TMULS", "TDIVS", "TREMS", "TFMODS",
            "TANDS", "TORS", "TXORS", "TSHLS", "TSHRS",
            "TMAXS", "TMINS", "TCMPS", "TLRELU", "TAXPY"]:
-    if op in ("TANDS", "TORS", "TXORS", "TSHLS", "TSHRS"):
-        dt = ("i16", "i32")
-    elif op in ("TREMS", "TFMODS"):
-        dt = ("fp16", "fp32", "i32")
-    elif op == "TCMPS":
-        dt = ("fp16", "fp32", "i32")
-    elif op == "TLRELU":
-        dt = ("fp16", "fp32")
-    elif op == "TAXPY":
-        dt = ("fp16", "fp32")
-    else:
-        dt = ("fp16", "fp32", "i16", "i32")
-    V.append(Case(op, "scalar", dt, M16))
+    V.append(Case(op, "scalar", ("fp16", "f32"), M16))
 
 # mode 1 tile-scalar fused (2 tile + scalar)
 for op in ["TADDSC", "TSUBSC", "TSELS"]:
@@ -128,19 +117,13 @@ V.append(Case("THISTOGRAM", "hist", ("fp16", "fp32"), M16))
 # Opcodes the toolchain does not yet expose (or needs special layout like TCVT's
 # NZ requirement). Kept here as a skip list; re-enable when pto_tileop.hpp aligns.
 VECTOR_SKIP = {
-    "TFMOD", "TANDS", "TORS", "TXORS", "TSHL", "TSHR", "TSHLS", "TSHRS",
-    "TPRELU", "TADDC", "TSUBC", "TRELU", "TNEG", "TNOT", "TLOG", "TCVT",
-    "TPARTADD", "TPARTMUL", "TPARTMAX", "TPARTMIN",
-    "TROWARGMAX", "TROWARGMIN", "TROWMIN", "TROWPROD",
+    # need fractal/NZ layout (32-byte align) — plain RowMajor Mx1/Nx1 output fails:
+    "TROWMAX", "TROWMIN", "TROWPROD", "TROWSUM", "TROWARGMAX", "TROWARGMIN",
     "TCOLSUM", "TCOLMAX", "TCOLMIN", "TCOLPROD", "TCOLARGMAX", "TCOLARGMIN",
-    "TROWEXPANDADD", "TROWEXPANDSUB", "TROWEXPANDMUL", "TROWEXPANDDIV",
-    "TROWEXPANDMAX", "TROWEXPANDMIN", "TROWEXPANDEXPDIF",
-    "TCOLEXPANDADD", "TCOLEXPANDSUB", "TCOLEXPANDMUL", "TCOLEXPANDDIV",
-    "TCOLEXPANDMAX", "TCOLEXPANDMIN", "TCOLEXPANDEXPDIF",
-    "TCONCAT", "TGATHERB", "TAXPY", "TADDSC", "TSUBSC", "TSELS", "TLRELU",
-    "TREMS", "TFMODS",
-    # need special fractal/NZ layout or fail instruction selection:
-    "TCMP", "TRSQRT", "TROWMAX", "TROWSUM", "TCMPS",
+    # toolchain inline-asm syntax bug ("unknown token in expression"):
+    "TADDC", "TSUBC",
+    # signature mismatch (PTO arity != bench template); TODO align:
+    "TSEL", "TGATHERB",
 }
 V = [c for c in V if c.op not in VECTOR_SKIP]
 
@@ -187,7 +170,7 @@ for dt in ("fp16", "fp32", "i8"):
 cube("TMATMUL_BIAS", "matmul_bias", "fp16")
 cube("TMATMUL_BIAS", "matmul_bias", "fp32")
 cube("TMATMUL_MX", "matmul_mx", "fp16")        # e4m3 placeholder -> fp16
-# TODO: re-enable when toolchain fixes matmul.ac backend crash (SelectionDAG).
+# matmul.ac backend still crashes (llvm.linx.blk.matmul.ac SelectionDAG) on latest toolchain
 # cube("TMATMUL_ACC", "matmul_acc", "fp16")
 # cube("TMATMUL_ACC", "matmul_acc", "fp32")
 cube("ACCCVT", "acccvt", "fp16")
@@ -286,7 +269,9 @@ int main() {{
     elif c.kind == "scalar":
         body = f"    {ct} s = ({ct})0.5;\n    bench_scalar<{ct},M,N>(c,a,s,[](auto& dst,auto& s0,auto& sc){{ {op}(dst,s0,sc); }});\n"
     elif c.kind == "scalar3":
-        body = f"    {ct} s = ({ct})0.5;\n    bench_scalar3<{ct},M,N>(c,a,b,s,[](auto& dst,auto& s0,auto& s1,auto& sc){{ {op}(dst,s0,s1,sc); }});\n"
+        # TADDSC/TSUBSC/TSELS signature is (dst, src0, scalar, src1)
+        call = f"{op}(dst,s0,sc,s1)" if c.op in ("TADDSC", "TSUBSC", "TSELS") else f"{op}(dst,s0,s1,sc)"
+        body = f"    {ct} s = ({ct})0.5;\n    bench_scalar3<{ct},M,N>(c,a,b,s,[](auto& dst,auto& s0,auto& s1,auto& sc){{ {call}; }});\n"
     elif c.kind == "scalarbcast":
         body = f"    {ct} s = ({ct})0.5;\n    bench_scalar_bcast<{ct},M,N>(c,s,[](auto& dst,auto& sc){{ {op}(dst,sc); }});\n"
     elif c.kind == "gather":

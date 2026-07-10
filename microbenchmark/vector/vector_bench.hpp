@@ -14,17 +14,6 @@
 
 using namespace pto;
 
-// ---- PTO -> Linx name shims (toolchain exposes Linx names for these) ----
-#define TSEL TSELECT
-#define TEXPANDS TEXPANDSCALAR
-#define TROWEXPAND TEXPANDROW
-#define TCOLEXPAND TEXPANDCOL
-namespace pto {
-// TCMP PTO 3-arg -> Linx 4-arg with default CmpMode::EQ
-template <typename D, typename S0, typename S1>
-inline void TCMP(D &d, S0 &s0, S1 &s1) { TCMP(d, s0, s1, CmpMode::EQ); }
-}  // namespace pto
-
 // ---- common tile/global aliases ----
 template <typename D, int M, int N>
 using gm_t = global_tensor<D, RowMajor<M, N>>;
