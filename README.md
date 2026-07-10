@@ -62,11 +62,108 @@ Each backend implements 10 operator categories:
 | **control** | `hashtable_lookup_simd` (pure tile-op, single-tier gfsim) |
 | **sort** | `topk` |
 
+## Setup Environment
+
+SuperNPUBench compiles with the **Linx toolchain** (`linx_blockisa_llvm_musl`,
+clang-15, target `linx64v5-unknown-linux-musl`). Build it once from the
+[`linx-toolchain-build`](https://github.com/LinxISA/linx-toolchain-build) repo,
+which clones the matching ISA sources and produces the `linx_blockisa_llvm_musl`
+install tree that `COMPILER_DIR` points at.
+
+### 1. Clone the build repo
+
+```bash
+git clone https://github.com/LinxISA/linx-toolchain-build.git
+cd linx-toolchain-build
+```
+
+### 2. Install host build tools
+
+```bash
+sudo apt-get install -y git make cmake ninja-build gcc g++ python3 autoconf m4
+```
+
+### 3. Initialize component sources
+
+`make init-src` clones the five component repos under `src/` on their pinned
+branches (run it again any time to fetch updates):
+
+| Directory | Repository | Branch |
+| --- | --- | --- |
+| `src/llvm-project` | `LinxISA/llvm-project` | `dev-llvm15_56` |
+| `src/musl` | `LinxISA/linx-musl` | `linx` |
+| `src/jemalloc` | `LinxISA/jemalloc` | `linx` |
+| `src/linux-linxisa` | `LinxISA/linux` | `main` |
+| `src/Linx-TileOP-API` | `LinxISA/Linx-TileOP-API` | `linx` |
+
+```bash
+make init-src
+```
+
+### 4. Build the toolchain
+
+Only `linx64v5-linux-musl` is supported by the top-level Makefile:
+
+```bash
+make WITH_TARGET=linx64v5-linux-musl
+```
+
+This builds, in order: LLVM/clang/lld → kernel headers → musl → compiler-rt →
+libc++/libc++abi/libunwind → jemalloc → Linx-TileOP-API headers. Progress is
+tracked by stamp files under `stamps/`, so re-running `make` resumes from the
+last completed step; `make clean` rebuilds from scratch. The install tree is
+written to `output/linx_blockisa_llvm_musl/`:
+
+```
+output/linx_blockisa_llvm_musl/
+├── bin/        # clang, clang++, ld.lld, llvm-ar/nm/ranlib,
+│              # linx64v5-linux-musl-clang(++) symlinks
+├── lib/        # clang runtime, libc++, ...
+└── sysroot/    # musl + kernel headers + runtime libs
+```
+
+### 5. Point SuperNPUBench at the toolchain
+
+```bash
+export COMPILER_DIR=$(pwd)/output/linx_blockisa_llvm_musl/bin
+$COMPILER_DIR/clang --version
+# clang version 15.0.4 (linx64v5-musl-local ...)
+# Target: linx64v5-unknown-linux-musl
+```
+
+Then proceed to [Quick Start](#quick-start).
+
+### (Optional) Package
+
+```bash
+make package     # -> output/linx_blockisa_llvm_musl.tar.gz
+```
+
+### Platform notes (macOS)
+
+The build also works on Apple Silicon, but the system `make` (GNU 3.81) and
+`tar` (libarchive) differ from the Linux defaults, so two extra steps are
+needed:
+
+- **GNU make >= 4** is required by the kernel-headers step
+  (`GNU Make >= 4.0 is required`). `brew install make` (provides `gmake`) and
+  run the build with `gmake`, or put `gmake` on `PATH` ahead of `/usr/bin/make`
+  (the kernel Makefile invokes `make` literally).
+- **GNU tar** is required by `make package` (`tar --format=gnu`). `brew install
+  gnu-tar` and prepend `$(brew --prefix)/opt/gnu-tar/libexec/gnubin` to `PATH`.
+- **sancov host-compile fix**: Apple clang rejects an initializer-list in
+  `llvm/tools/sancov/sancov.cpp` (`chosen constructor is explicit in
+  copy-initialization`). If the LLVM build fails there, change the two
+  `SpecialCaseList::createOrDie({{...}}, ...)` call sites to pass an explicit
+  `std::vector<std::string>{...}`, then resume with
+  `ninja -C build/build-llvm-musl`.
+
 ## Quick Start
 
 ### 1. Environment
 
-Requires the Linx toolchain (`linx_blockisa_llvm_musl`, clang-15, linx64v5-musl):
+Build the Linx toolchain once (see [Setup Environment](#setup-environment)), then
+point `COMPILER_DIR` at it:
 
 ```bash
 export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
