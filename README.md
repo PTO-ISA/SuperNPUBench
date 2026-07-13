@@ -217,13 +217,17 @@ See [`microbenchmark/README.md`](microbenchmark/README.md) for details.
 
 ## Running on the Models
 
-LinxCoreModel provides two simulators:
+Compiled ELF binaries run on the **SuperScalarModel** simulator suite (no longer
+on LinxCoreModel). Build `gfrun`/`gfsim` from the
+[SuperScalarModel](../SuperScalarModel) repo, then point them at the ELF:
+
 - `gfrun` — functional model (correctness)
 - `gfsim` — cycle-accurate model (timing)
 
 ```bash
-bin/gfrun -f benchmark/two-level-arch/output/kernel/<op>/elf/<name>.elf
-bin/gfsim -f benchmark/two-level-arch/output/kernel/<op>/elf/<name>.elf
+# from the SuperScalarModel repo root (where bin/ lives)
+bin/gfrun -f /path/to/SuperNPUBench/benchmark/two-level-arch/output/kernel/<op>/elf/<name>.elf
+bin/gfsim -f /path/to/SuperNPUBench/benchmark/two-level-arch/output/kernel/<op>/elf/<name>.elf
 ```
 
 ### Tile-op kernels: single-tier gfsim mode

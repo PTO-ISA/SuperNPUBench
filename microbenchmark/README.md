@@ -65,6 +65,9 @@ Artifacts: `output/microbenchmark/<family>/elf/<family>/<case>.elf`.
 
 ## Run
 
+ELF binaries run on the **SuperScalarModel** `gfsim`/`gfrun` (build them from
+the SuperScalarModel repo, then point at the ELF path here):
+
 ```bash
 bin/gfsim -f output/microbenchmark/scalar/elf/scalar/add_i32_lat.elf
 bin/gfsim -f output/microbenchmark/cube/elf/cube/tmatmul_fp16_64x64x64.elf
