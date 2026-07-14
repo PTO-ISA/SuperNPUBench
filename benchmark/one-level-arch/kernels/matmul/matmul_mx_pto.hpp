@@ -132,7 +132,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         if(k==0){
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
       }
       if constexpr (rmd_K) {
@@ -152,7 +152,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         MGATHER(tBMX, gBMX, nd2nn_offset);  // ND2NN, tile masked
 
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
@@ -180,7 +180,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         if(k==0){
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
       }
 
@@ -200,7 +200,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         gen_ND2NN_offset_Impl<gm_shapeBMX, tile_shapeBMX_tcorner, tile_ND2NNOffset>(gBMX, tBMX, nd2nn_offset, Kb, Nb);
         MGATHER(tBMX, gBMX, nd2nn_offset);  // ND2NN, tile masked
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
@@ -233,7 +233,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         if(k==0){
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
       }
 
@@ -254,7 +254,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         MGATHER(tBMX, gBMX, nd2nn_offset);  // ND2NN, tile masked
 
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
@@ -285,7 +285,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         if(k==0){
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
       }
       if constexpr (rmd_K) {
@@ -304,7 +304,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         gen_ND2NN_offset_Impl<gm_shapeBMX, tile_shapeBMX_tcorner, tile_ND2NNOffset>(gBMX, tBMX, nd2nn_offset, Kb, Nb);
         MGATHER(tBMX, gBMX, nd2nn_offset);  // ND2NN, tile masked
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
@@ -397,7 +397,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         if(k==0){
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
       }
       if constexpr (rmd_K) {
@@ -415,7 +415,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         TLOAD(tBMX, gBMX);
 
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
@@ -443,7 +443,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         if(k==0){
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
       }
 
@@ -464,7 +464,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         TLOAD(tBMX, gBMX);
 
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
@@ -497,7 +497,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         if(k==0){
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
       }
 
@@ -518,7 +518,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         TLOAD(tBMX, gBMX);
 
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
@@ -549,7 +549,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         if(k==0){
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
       }
       if constexpr (rmd_K) {
@@ -568,7 +568,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         TLOAD(tAMX, gAMX);
         TLOAD(tBMX, gBMX);
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+          TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
         }
@@ -716,7 +716,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           if(k==0){
             TMATMUL_MX(tACC, tA[ii][k], tAMX[ii][k], tB, tBMX);
           }else{
-            TMATMUL_MX(tACC, tACC, tA[ii][k], tAMX[ii][k], tB, tBMX);
+            TMATMUL_MX(tACC, tA[ii][k], tAMX[ii][k], tB, tBMX);
           }
         }
 
@@ -734,7 +734,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
             TLOAD(tAMX_tmp, gAMX);
             TLOAD(tB, gB);
             TLOAD(tBMX, gBMX);
-            TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+            TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
         }
 
@@ -755,7 +755,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           TLOAD(tB, gB);
           TLOAD(tBMX, gBMX);
           if constexpr(Kb>0){
-            TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+            TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           } else {
             TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
@@ -780,7 +780,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           if(k==0){
             TMATMUL_MX(tACC, tA[ii][k], tAMX[ii][k], tB, tBMX);
           }else{
-            TMATMUL_MX(tACC, tACC, tA[ii][k], tAMX[ii][k], tB, tBMX);
+            TMATMUL_MX(tACC, tA[ii][k], tAMX[ii][k], tB, tBMX);
           }
         }
 
@@ -798,7 +798,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
             TLOAD(tAMX_tmp, gAMX);
             TLOAD(tB, gB);
             TLOAD(tBMX, gBMX);
-            TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+            TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
         }
 
@@ -819,7 +819,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           TLOAD(tB, gB);
           TLOAD(tBMX, gBMX);
           if constexpr(Kb>0){
-            TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+            TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           } else {
             TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
@@ -868,7 +868,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           if(k==0){
             TMATMUL_MX(tACC, tA[i][k], tAMX[i][k], tB, tBMX);
           }else{
-            TMATMUL_MX(tACC, tACC, tA[i][k], tAMX[i][k], tB, tBMX);
+            TMATMUL_MX(tACC, tA[i][k], tAMX[i][k], tB, tBMX);
           }
         }
 
@@ -886,7 +886,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
             TLOAD(tAMX_tmp, gAMX);
             TLOAD(tB, gB);
             TLOAD(tBMX, gBMX);
-            TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+            TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
         }
 
@@ -907,7 +907,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           TLOAD(tB, gB);
           TLOAD(tBMX, gBMX);
           if constexpr(Kb>0){
-            TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+            TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           } else {
             TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
@@ -931,7 +931,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           if(k==0){
             TMATMUL_MX(tACC, tA[i][k], tAMX[i][k], tB, tBMX);
           }else{
-            TMATMUL_MX(tACC, tACC, tA[i][k], tAMX[i][k], tB, tBMX);
+            TMATMUL_MX(tACC, tA[i][k], tAMX[i][k], tB, tBMX);
           }
         }
 
@@ -949,7 +949,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
             TLOAD(tAMX_tmp, gAMX);
             TLOAD(tB, gB);
             TLOAD(tBMX, gBMX);
-            TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+            TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
         }
 
@@ -970,7 +970,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           TLOAD(tB, gB);
           TLOAD(tBMX, gBMX);
           if constexpr(Kb>0){
-            TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+            TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           } else {
             TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
@@ -1009,7 +1009,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         if(k==0){
           TMATMUL_MX(tACC, tA[k], tAMX[k], tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA[k], tAMX[k], tB, tBMX);
+          TMATMUL_MX(tACC, tA[k], tAMX[k], tB, tBMX);
         }
       }
 
@@ -1027,7 +1027,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           TLOAD(tAMX_tmp, gAMX);
           TLOAD(tB, gB);
           TLOAD(tBMX, gBMX);
-          TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+          TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         }
       }
 
@@ -1048,7 +1048,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         TLOAD(tB, gB);
         TLOAD(tBMX, gBMX);
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+          TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         }
@@ -1072,7 +1072,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         if(k==0){
           TMATMUL_MX(tACC, tA[k], tAMX[k], tB, tBMX);
         }else{
-          TMATMUL_MX(tACC, tACC, tA[k], tAMX[k], tB, tBMX);
+          TMATMUL_MX(tACC, tA[k], tAMX[k], tB, tBMX);
         }
       }
 
@@ -1090,7 +1090,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           TLOAD(tAMX_tmp, gAMX);
           TLOAD(tB, gB);
           TLOAD(tBMX, gBMX);
-          TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+          TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         }
       }
 
@@ -1111,7 +1111,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         TLOAD(tB, gB);
         TLOAD(tBMX, gBMX);
         if constexpr(Kb>0){
-          TMATMUL_MX(tACC, tACC, tA_tmp, tAMX_tmp, tB, tBMX);
+          TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         } else {
           TMATMUL_MX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         }
@@ -1192,7 +1192,7 @@ void matmul_mxfp_notcvt_old(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src
               TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
               // TMATMUL(tACC, tA, tB);
             }else{
-              TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+              TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
               // TMATMUL_ACC(tACC, tA, tB);
             }
         }
@@ -1270,7 +1270,7 @@ void matmul_fp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, 
             if(k==0){
               TMATMUL(tACC, tA, tB);
             }else{
-              // TMATMUL_MX(tACC, tACC, tA, tAMX, tB, tBMX);
+              // TMATMUL_MX(tACC, tA, tAMX, tB, tBMX);
               TMATMUL_ACC(tACC, tA, tB);
             }
         }

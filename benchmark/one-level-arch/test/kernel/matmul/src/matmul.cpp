@@ -81,13 +81,13 @@ int main() {
 
     BENCHSTART;
     #if defined(MASK_FP32) 
-      matmul_mask<float, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_tileop<float, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP32_REUSEA)
-      matmul_mask_reuseA<float, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseA_tileop<float, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP32_REUSEB)
-      matmul_mask_reuseB<float, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseB_tileop<float, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP32_REUSEAB)
-      matmul_mask_reuseAB<float, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseAB_tileop<float, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP32_DYNAMIC)
       matmul_dynamic_new<float, tilM, tilN, tilK>(dst, src0, src1, globM, globN, globK);
     #elif defined(MASK_FP32_DYNAMIC_REUSE)
@@ -126,19 +126,19 @@ int main() {
 
     BENCHSTART;
     #if defined(MASK_FP16) 
-      matmul_mask<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_tileop<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP16_REUSEA)
-      matmul_mask_reuseA<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseA_tileop<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP16_REUSEA_OPT)
-      matmul_mask_reuseA_OPT<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseA_OPT_tileop<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP16_REUSEA_OPT2)
-      matmul_mask_reuseA_OPT2<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseA_OPT2_tileop<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP16_REUSEB_OPT2)
-      matmul_mask_reuseB_OPT2<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseB_OPT2_tileop<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP16_REUSEB)
-      matmul_mask_reuseB<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseB_tileop<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP16_REUSEAB)
-      matmul_mask_reuseAB<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseAB_tileop<datatype, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP16_DYNAMIC)
       matmul_dynamic_new<datatype, tilM, tilN, tilK>(dst, src0, src1, globM, globN, globK);
     #elif defined(MASK_FP16_DYNAMIC_REUSE)
@@ -169,19 +169,19 @@ int main() {
 
     BENCHSTART;
     #if defined(MASK_FP8) 
-      matmul_mask<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_tileop<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP8_2LVL)
-      matmul_mask_2lvl<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_2lvl_tileop<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP8_MULTI4_B)
-      matmul_mask_multi4_B<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_multi4_B_tileop<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP8_MULTI4_AB)
-      matmul_mask_multi4_AB<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_multi4_AB_tileop<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP8_REUSEA)
-      matmul_mask_reuseA<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseA_tileop<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP8_REUSEB)
-      matmul_mask_reuseB<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseB_tileop<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP8_REUSEAB)
-      matmul_mask_reuseAB<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
+      matmul_mask_reuseAB_tileop<__fp8_e4m3, globM, globN, globK, tilM, tilN, tilK>(dst, src0, src1);
     #elif defined(MASK_FP8_DYNAMIC)
       matmul_dynamic_new<__fp8_e4m3, tilM, tilN, tilK>(dst, src0, src1, globM, globN, globK);
     #elif defined(MASK_FP8_DYNAMIC_REUSE)

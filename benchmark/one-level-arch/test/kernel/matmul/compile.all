@@ -29,7 +29,7 @@ make TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER M=512 N=1280 K=4096 tM=128 t
 # ============================================
 # HIF4_HIF4: MX_NOGATHER_REUSEA variant - 2 configs
 # ============================================
-make TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER_REUSEA M=256 N=2048 K=2048 tM=128 tN=128 tK=128
+make TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER_REUSEA M=256 N=2048 K=2048 tM=64 tN=64 tK=64
 make TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER_REUSEA M=512 N=1280 K=4096 tM=128 tN=128
 
 # ============================================
@@ -37,13 +37,13 @@ make TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER_REUSEA M=512 N=1280 K=4096 t
 # ============================================
 make TESTCASE=matmul TYPE=A16W4 M=256 N=2048 K=2048 tM=128 tN=128 tK=128
 make TESTCASE=matmul TYPE=A16W4 M=512 N=1280 K=2048 tM=128 tN=128 tK=128
-make TESTCASE=matmul TYPE=A16W4 M=512 N=512 K=4096 tM=128 tN=256 tK=128
+make TESTCASE=matmul TYPE=A16W4 M=512 N=512 K=4096 tM=16 tN=16 tK=128
 
 # ============================================
 # MASK: Generic matmul variants - 8 configs
 # ============================================
 # FP32 variants
-make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=64 tN=64 tK=64
+make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=32 tN=32 tK=32
 make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32_REUSEA M=256 N=256 K=256 tM=64 tN=64 tK=64
 make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32_REUSEB M=256 N=256 K=256 tM=64 tN=64 tK=64
 # 黄区能过，蓝区过不了
