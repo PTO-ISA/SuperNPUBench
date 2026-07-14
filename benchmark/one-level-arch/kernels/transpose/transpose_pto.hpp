@@ -17,7 +17,6 @@
 #define SUPERNPU_TRANSPOSE_TILE_ISA_HPP
 
 #include <common/pto_tileop.hpp>
-#include "template_asm.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -114,7 +113,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
     OffsetTile contribution;   // 当前维度对 offset 的贡献
 
     // Step 1: 生成线性索引序列 [output_base, output_base+1, ..., output_base+TileElements-1]
-    TCI<OffsetTile, std::uint32_t, 0>(linear_index, output_base);
+    TCI(linear_index, output_base);
     
     // Step 2: 初始化 offset 累加器为 0
     TEXPANDS(offset_tile, static_cast<std::uint32_t>(0));
@@ -146,7 +145,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
       // quotient = linear_index / output_stride
       // 优化：如果 output_stride == 1，直接拷贝（避免除法）
       if (output_stride == 1) {
-        TMOV(quotient, linear_index);
+        TCVT(quotient, linear_index);
       } else {
         TDIVS(quotient, linear_index, output_stride);
       }
@@ -206,7 +205,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
     // 尾部 tile 的处理逻辑与完整 tile 完全一致
     // 区别仅在于 valid region 更小（kTailElements 而非 TileElements）
     // tile 操作以 valid region 为迭代域，因此自动只处理有效元素
-    TCI<TailOffsetTile, std::uint32_t, 0>(linear_index, output_base);
+    TCI(linear_index, output_base);
     TEXPANDS(offset_tile, static_cast<std::uint32_t>(0));
 
     std::uint32_t input_stride = 1;
@@ -224,7 +223,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
       }
 
       if (output_stride == 1) {
-        TMOV(quotient, linear_index);
+        TCVT(quotient, linear_index);
       } else {
         TDIVS(quotient, linear_index, output_stride);
       }
@@ -410,5 +409,16 @@ void tile_transpose_2d(DType *input, DType *output) {
 }
 
 } // namespace supernpu::tile_isa
+
+// Global adapter matching the test harness signature
+// transpose<DType, MAX_DIM, gIM, gOM, tM, IN_DIM, OUT_DIM, TRANSPOSE_DIM1, TRANSPOSE_DIM0>
+template<typename DType, int MAX_DIM, int gIM, int gOM, int tM,
+         int IN_DIM, int OUT_DIM, int TRANSPOSE_DIM1, int TRANSPOSE_DIM0>
+void transpose(DType *input, DType *output, std::uint32_t *in_shape,
+               std::uint32_t *out_shape) {
+    ::supernpu::tile_isa::tile_transpose_nd<DType, IN_DIM, TRANSPOSE_DIM1,
+                                            TRANSPOSE_DIM0, gIM, tM>(
+        input, output, in_shape, out_shape);
+}
 
 #endif

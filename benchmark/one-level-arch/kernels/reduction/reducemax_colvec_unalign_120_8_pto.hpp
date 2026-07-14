@@ -2,7 +2,6 @@
 #define REDUCEMAXCOLVEC_KERNEL_HPP
 
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -41,7 +40,7 @@ void reducemax_col_rand(
     // 中间结果 tile：1 × (tN*8)，如 1×64
     using tile_shapeTmp = Tile<Location::Vec, dtype, 1, tN * 8, BLayout::RowMajor>;
     // 重解释 tile：将 1×64 视为 8×8 RowMajor
-    using tile_shapeReshaped = Tile<Location::Vec, dtype, tN, tN * 8, BLayout::RowMajor>;
+    using tile_shapeReshaped = Tile<Location::Vec, dtype, tN, tN, BLayout::RowMajor>;
     // 最终结果 tile：1 × (tN*8)，有效区域 1×tN，如 1×8
     using tile_shapeMax = Tile<Location::Vec, dtype, 1, tN * 8,
                              BLayout::RowMajor, 1, tN>;

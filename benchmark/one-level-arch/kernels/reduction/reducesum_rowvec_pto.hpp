@@ -3,7 +3,6 @@
 
 #pragma once
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -62,13 +61,13 @@ void reducesum_trowsum_rand(
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(j, i);
             TLOAD(dataTile, gI);
-            TROWSUM(SumTile, dataTile, tmpTile);
+            TROWSUM(SumTile, dataTile);
             TADD(oldSumTile, oldSumTile, SumTile);
         }
         if constexpr (rmd_N > 0) {
             auto gI = gIIter(j, Nb);
             TLOAD(dataTile_row, gI);
-            TROWSUM(SumTile, dataTile_row, tmpTile_row);
+            TROWSUM(SumTile, dataTile_row);
             TADD(oldSumTile, oldSumTile, SumTile);
         }
         TSTORE(gO, oldSumTile);
@@ -80,13 +79,13 @@ void reducesum_trowsum_rand(
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(Mb, i);
             TLOAD(dataTile_col, gI);
-            TROWSUM(SumTile_col, dataTile_col, tmpTile_col);
+            TROWSUM(SumTile_col, dataTile_col);
             TADD(oldSumTile_col, oldSumTile_col, SumTile_col);
         }
         if constexpr (rmd_N > 0) {
             auto gI = gIIter(Mb, Nb);
             TLOAD(dataTile_cor, gI);
-            TROWSUM(SumTile_col, dataTile_cor, tmpTile_cor);
+            TROWSUM(SumTile_col, dataTile_cor);
             TADD(oldSumTile_col, oldSumTile_col, SumTile_col);
         }
         TSTORE(gO, oldSumTile_col);

@@ -2,7 +2,6 @@
 #define CONCAT_GATHER_KERNEL_HPP
 
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -56,7 +55,7 @@ void concat_gather(
         OffsetTile coordinate;
         OffsetTile contribution;
 
-        TCI<OffsetTile, uint32_t, 0>(linear_index, output_base);
+        TCI(linear_index, output_base);
         TEXPANDS(offset_tile, static_cast<uint32_t>(0));
 
         // 计算输入 stride（标量核心，运行时计算）
@@ -75,7 +74,7 @@ void concat_gather(
             }
 
             if (output_stride == 1) {
-                TMOV(quotient, linear_index);
+                TCVT(quotient, linear_index);
             } else {
                 TDIVS(quotient, linear_index, output_stride);
             }
@@ -132,7 +131,7 @@ void concat_gather(
         TailOffsetTile coordinate;
         TailOffsetTile contribution;
 
-        TCI<TailOffsetTile, uint32_t, 0>(linear_index, output_base);
+        TCI(linear_index, output_base);
         TEXPANDS(offset_tile, static_cast<uint32_t>(0));
 
         uint32_t input_stride[DATA_DIM];
@@ -149,7 +148,7 @@ void concat_gather(
             }
 
             if (output_stride == 1) {
-                TMOV(quotient, linear_index);
+                TCVT(quotient, linear_index);
             } else {
                 TDIVS(quotient, linear_index, output_stride);
             }

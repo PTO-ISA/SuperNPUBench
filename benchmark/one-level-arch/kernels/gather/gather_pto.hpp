@@ -151,7 +151,7 @@ void gather(
             // [当前编译器] template_asm.h 的 MGATHER 无 Coalesce 模板参数;
             //             且按字节偏移取数, 非行索引
             gm_shapeIn adjustedGm(in_data_ptr + n_base);
-            MGATHER<Coalesce::Row, GatherOOB::Undefined>(outTile, adjustedGm, inOffsetTile);
+            MGATHER(outTile, adjustedGm, inOffsetTile);
 
             // TSTORE: 写回输出 tile (tM, tN) to GM
             // [当前编译器] 名为 TCOPYOUT
@@ -166,7 +166,7 @@ void gather(
 
             TLOAD(inOffsetTile_rmd_n, gInOffset);
             gm_shapeIn adjustedGm(in_data_ptr + n_base);
-            MGATHER<Coalesce::Row, GatherOOB::Undefined>(outTile_rmd_n, adjustedGm, inOffsetTile_rmd_n);
+            MGATHER(outTile_rmd_n, adjustedGm, inOffsetTile_rmd_n);
             TSTORE(gO, outTile_rmd_n);
         }
     }
@@ -180,7 +180,7 @@ void gather(
 
             TLOAD(inOffsetTile_rmd_m, gInOffset);
             gm_shapeIn adjustedGm(in_data_ptr + n_base);
-            MGATHER<Coalesce::Row, GatherOOB::Undefined>(outTile_rmd_m, adjustedGm, inOffsetTile_rmd_m);
+            MGATHER(outTile_rmd_m, adjustedGm, inOffsetTile_rmd_m);
             TSTORE(gO, outTile_rmd_m);
         }
 
@@ -192,7 +192,7 @@ void gather(
 
             TLOAD(inOffsetTile_rmd_mn, gInOffset);
             gm_shapeIn adjustedGm(in_data_ptr + n_base);
-            MGATHER<Coalesce::Row, GatherOOB::Undefined>(outTile_rmd_mn, adjustedGm, inOffsetTile_rmd_mn);
+            MGATHER(outTile_rmd_mn, adjustedGm, inOffsetTile_rmd_mn);
             TSTORE(gO, outTile_rmd_mn);
         }
     }

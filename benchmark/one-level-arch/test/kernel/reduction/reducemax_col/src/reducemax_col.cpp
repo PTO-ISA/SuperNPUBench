@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "fileop.h"
-#include "reduction/reducemax_colvec.hpp"
+#include "reduction/reducemax_colvec_pto.hpp"
 
 
 #ifndef DType
@@ -16,7 +16,7 @@
 #endif
 
 #ifndef tN
-#define tN 128
+#define tN 64
 #endif
 
 

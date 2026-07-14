@@ -2,7 +2,6 @@
 #define REDUCESUMCOLVEC_KERNEL_HPP
 
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -53,13 +52,13 @@ void reducesum_colsum_rand(
         auto gI = gIIter(i, 0);
         TLOAD(dataTile, gI);
         tile_shapeSum partialSum;
-        TCOLSUM(partialSum, dataTile, tmpTile, /*isBinary=*/true);
+        TCOLSUM(partialSum, dataTile);
 
         using SingleRow = Tile<Location::Vec, dtype, 1, tN, BLayout::RowMajor>;
         SingleRow rowView;
-        TMOV(rowView, partialSum);
+        TCVT(rowView, partialSum);
         if (i == 0) {
-            TMOV(tmpSumTile, partialSum);
+            TCVT(tmpSumTile, partialSum);
         } else {
             TADD(tmpSumTile, tmpSumTile, partialSum);
         }
@@ -68,11 +67,11 @@ void reducesum_colsum_rand(
         auto gI = gIIter(Mb, 0);
         TLOAD(dataTile_col, gI);
         tile_shapeSum partialSum;
-        TCOLSUM(partialSum, dataTile_col, tmpTile_col, /*isBinary=*/true);
+        TCOLSUM(partialSum, dataTile_col);
         TADD(tmpSumTile, tmpSumTile, partialSum);
     }
 
-    TCOLSUM(SumTile, tmpSumTile, tmpTile_final, /*isBinary=*/true);
+    TCOLSUM(SumTile, tmpSumTile);
     TSTORE(gO, SumTile);
 }
 

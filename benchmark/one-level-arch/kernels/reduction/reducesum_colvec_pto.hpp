@@ -2,7 +2,6 @@
 #define REDUCESUMCOLVEC_KERNEL_HPP
 
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -63,13 +62,13 @@ void reducesum_colsum_rand(
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, j);
             TLOAD(dataTile, gI);
-            TCOLSUM(SumTile, dataTile, tmpTile, /*isBinary=*/true);
+            TCOLSUM(SumTile, dataTile);
             TADD(oldSumTile, oldSumTile, SumTile);
         }
         if constexpr (rmd_M > 0) {
             auto gI = gIIter(Mb, j);
             TLOAD(dataTile_col, gI);
-            TCOLSUM(SumTile, dataTile_col, tmpTile_col, /*isBinary=*/true);
+            TCOLSUM(SumTile, dataTile_col);
             TADD(oldSumTile, oldSumTile, SumTile);
         }
         TSTORE(gO, oldSumTile);
@@ -81,13 +80,13 @@ void reducesum_colsum_rand(
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, Nb);
             TLOAD(dataTile_row, gI);
-            TCOLSUM(SumTile_row, dataTile_row, tmpTile_row, /*isBinary=*/true);
+            TCOLSUM(SumTile_row, dataTile_row);
             TADD(oldSumTile_row, oldSumTile_row, SumTile_row);
         }
         if constexpr (rmd_M > 0) {
             auto gI = gIIter(Mb, Nb);
             TLOAD(dataTile_cor, gI);
-            TCOLSUM(SumTile_row, dataTile_cor, tmpTile_cor, /*isBinary=*/true);
+            TCOLSUM(SumTile_row, dataTile_cor);
             TADD(oldSumTile_row, oldSumTile_row, SumTile_row);
         }
         TSTORE(gO, oldSumTile_row);

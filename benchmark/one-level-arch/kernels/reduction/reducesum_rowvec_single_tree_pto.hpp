@@ -3,7 +3,6 @@
 
 #pragma once
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -49,12 +48,12 @@ void reducesum_trowsum_rand(
         auto gI = gIIter(0, i);
         TLOAD(dataTile, gI);
         tile_shapeSum partialSum;
-        TROWSUM(partialSum, dataTile, tmpTile);
+        TROWSUM(partialSum, dataTile);
         TADD(oldtmpSumTile, oldtmpSumTile, partialSum);
     }
-    TMOV(tmpSumTile, oldtmpSumTile);
+    TCVT(tmpSumTile, oldtmpSumTile);
 
-    TROWSUM(SumTile, tmpSumTile, tmpTile);
+    TROWSUM(SumTile, tmpSumTile);
     TSTORE(gO, SumTile);
 }
 

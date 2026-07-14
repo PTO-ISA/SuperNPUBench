@@ -144,7 +144,7 @@ void gen_offset_pto(
 
     // ---- Step 1: TCI 生成索引序列 [base, base+1, ..., base+N-1] ----
     // [当前编译器] TCI 在 pto_tileop.hpp 有声明，但 jcore 实现为 __vec__ (二层)
-    TCI<tile_shapeOffset, off_t, /*descending=*/0>(idxTile, (off_t)base);
+    TCI(idxTile, (off_t)base);
 
     // ---- Step 2: TEXPANDS 初始化 out = 0 ----
     // [当前编译器] PTO ISA 名 TEXPANDS，当前编译器名 TEXPANDSCALAR；jcore 为 __vec__
@@ -160,7 +160,7 @@ void gen_offset_pto(
         // TREMS: coord = idx % out_d
         // [当前编译器] 完全缺失！pto_tileop.hpp 无 TREMS API。
         //             退路: 用 TDIVS+TMULS+TSUB 三条拼出取余。
-        TREMS(coordTile, idxTile, out_d, tmpTile);
+        TREMS(coordTile, idxTile, out_d);
 
         // TDIVS: idx = idx / out_d (推进到下一维)
         // [当前编译器] API 有，jcore 为 __vec__
@@ -230,7 +230,7 @@ void broadcast(
         // [当前编译器] template_asm.h 的 MGATHER 已用 asm volatile (一层)，
         //             但不支持 Coalesce::Elem 模板参数；
         //             且旧实现按字节偏移取数，与 PTO ISA 的元素索引语义不同。
-        MGATHER<Coalesce::Elem, GatherOOB::Undefined>(outTile, inGm, offsetTile);
+        MGATHER(outTile, inGm, offsetTile);
 
         // TSTORE: 将 outTile 写回 global memory
         // [当前编译器] PTO ISA 名 TSTORE，当前编译器名 TCOPYOUT；jcore 为 __vec__
@@ -242,7 +242,7 @@ void broadcast(
         gen_offset_pto<dtype, tile_shapeOffset_rmd, MAX_DIM, IN_DIM, OUT_DIM>(
             offsetTile_rmd, in_shape, out_shape, base, total_elements);
         base += total_elements;
-        MGATHER<Coalesce::Elem, GatherOOB::Undefined>(outTile_rmd, inGm, offsetTile_rmd);
+        MGATHER(outTile_rmd, inGm, offsetTile_rmd);
         TSTORE(gO, outTile_rmd);
     }
 }

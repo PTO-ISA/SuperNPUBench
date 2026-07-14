@@ -2,7 +2,6 @@
 #define CONCAT_SCATTER_KERNEL_HPP
 
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -60,7 +59,7 @@ void concat_scatter(
         OffsetTile coordinate;
         OffsetTile contribution;
 
-        TCI<OffsetTile, uint16_t, 0>(linear_index, static_cast<uint16_t>(input_base));
+        TCI(linear_index, static_cast<uint16_t>(input_base));
         TEXPANDS(offset_tile, static_cast<uint16_t>(0));
 
         // 计算输出 stride（标量核心，运行时计算）
@@ -78,7 +77,7 @@ void concat_scatter(
             }
 
             if (input_stride_for_dim == 1) {
-                TMOV(quotient, linear_index);
+                TCVT(quotient, linear_index);
             } else {
                 TDIVS(quotient, linear_index, static_cast<uint16_t>(input_stride_for_dim));
             }
@@ -116,7 +115,7 @@ void concat_scatter(
         TailOffsetTile coordinate;
         TailOffsetTile contribution;
 
-        TCI<TailOffsetTile, uint16_t, 0>(linear_index, static_cast<uint16_t>(input_base));
+        TCI(linear_index, static_cast<uint16_t>(input_base));
         TEXPANDS(offset_tile, static_cast<uint16_t>(0));
 
         uint16_t output_stride[DATA_DIM];
@@ -132,7 +131,7 @@ void concat_scatter(
             }
 
             if (input_stride_for_dim == 1) {
-                TMOV(quotient, linear_index);
+                TCVT(quotient, linear_index);
             } else {
                 TDIVS(quotient, linear_index, static_cast<uint16_t>(input_stride_for_dim));
             }

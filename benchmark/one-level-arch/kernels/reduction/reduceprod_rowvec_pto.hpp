@@ -3,7 +3,6 @@
 
 #pragma once
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -62,13 +61,13 @@ void reduceprod_row_rand(
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(j, i);
             TLOAD(dataTile, gI);
-            TROWPROD(ProdTile, dataTile, tmpTile);
+            TROWPROD(ProdTile, dataTile);
             TMUL(oldProdTile, oldProdTile, ProdTile);
         }
         if constexpr (rmd_N > 0) {
             auto gI = gIIter(j, Nb);
             TLOAD(dataTile_row, gI);
-            TROWPROD(ProdTile, dataTile_row, tmpTile_row);
+            TROWPROD(ProdTile, dataTile_row);
             TMUL(oldProdTile, oldProdTile, ProdTile);
         }
         TSTORE(gO, oldProdTile);
@@ -80,13 +79,13 @@ void reduceprod_row_rand(
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(Mb, i);
             TLOAD(dataTile_col, gI);
-            TROWPROD(ProdTile_col, dataTile_col, tmpTile_col);
+            TROWPROD(ProdTile_col, dataTile_col);
             TMUL(oldProdTile_col, oldProdTile_col, ProdTile_col);
         }
         if constexpr (rmd_N > 0) {
             auto gI = gIIter(Mb, Nb);
             TLOAD(dataTile_cor, gI);
-            TROWPROD(ProdTile_col, dataTile_cor, tmpTile_cor);
+            TROWPROD(ProdTile_col, dataTile_cor);
             TMUL(oldProdTile_col, oldProdTile_col, ProdTile_col);
         }
         TSTORE(gO, oldProdTile_col);

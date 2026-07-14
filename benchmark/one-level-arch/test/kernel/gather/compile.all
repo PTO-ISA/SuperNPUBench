@@ -25,4 +25,4 @@ COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/outpu
 # Power-of-2 dimensions
 make TESTCASE=gather COMPILER_DIR=$COMPILER_DIR DType=__fp32 OType=uint32_t \
     gKs=131072 gMs=32 gNs=256 \
-    tMs=32 tNs=128
+    tMs=32 tNs=64

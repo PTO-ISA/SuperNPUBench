@@ -3,7 +3,6 @@
 
 #pragma once
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -62,13 +61,13 @@ void reducemax_row_rand(
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(j, i);
             TLOAD(dataTile, gI);
-            TROWMAX(MaxTile, dataTile, tmpTile);
+            TROWMAX(MaxTile, dataTile);
             TMAX(oldMaxTile, oldMaxTile, MaxTile);
         }
         if constexpr (rmd_N > 0) {
             auto gI = gIIter(j, Nb);
             TLOAD(dataTile_row, gI);
-            TROWMAX(MaxTile, dataTile_row, tmpTile_row);
+            TROWMAX(MaxTile, dataTile_row);
             TMAX(oldMaxTile, oldMaxTile, MaxTile);
         }
         TSTORE(gO, oldMaxTile);
@@ -80,13 +79,13 @@ void reducemax_row_rand(
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(Mb, i);
             TLOAD(dataTile_col, gI);
-            TROWMAX(MaxTile_col, dataTile_col, tmpTile_col);
+            TROWMAX(MaxTile_col, dataTile_col);
             TMAX(oldMaxTile_col, oldMaxTile_col, MaxTile_col);
         }
         if constexpr (rmd_N > 0) {
             auto gI = gIIter(Mb, Nb);
             TLOAD(dataTile_cor, gI);
-            TROWMAX(MaxTile_col, dataTile_cor, tmpTile_cor);
+            TROWMAX(MaxTile_col, dataTile_cor);
             TMAX(oldMaxTile_col, oldMaxTile_col, MaxTile_col);
         }
         TSTORE(gO, oldMaxTile_col);

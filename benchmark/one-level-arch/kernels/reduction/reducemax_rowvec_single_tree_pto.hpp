@@ -3,7 +3,6 @@
 
 #pragma once
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -49,12 +48,12 @@ void reducemax_row_rand(
         auto gI = gIIter(0, i);
         TLOAD(dataTile, gI);
         tile_shapeMax partialMax;
-        TROWMAX(partialMax, dataTile, tmpTile);
+        TROWMAX(partialMax, dataTile);
         TMAX(oldtmpMaxTile, oldtmpMaxTile, partialMax);
     }
-    TMOV(tmpMaxTile, oldtmpMaxTile);
+    TCVT(tmpMaxTile, oldtmpMaxTile);
 
-    TROWMAX(MaxTile, tmpMaxTile, tmpTile);
+    TROWMAX(MaxTile, tmpMaxTile);
     TSTORE(gO, MaxTile);
 }
 

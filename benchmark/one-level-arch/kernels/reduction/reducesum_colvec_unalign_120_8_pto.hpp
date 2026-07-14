@@ -2,7 +2,6 @@
 #define REDUCESUMCOLVEC_KERNEL_HPP
 
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -41,7 +40,7 @@ void reducesum_colsum_rand(
     // 中间结果 tile：1 × (tN*8)，如 1×64
     using tile_shapeTmp = Tile<Location::Vec, dtype, 1, tN * 8, BLayout::RowMajor>;
     // 重解释 tile：将 1×64 视为 8×8 RowMajor
-    using tile_shapeReshaped = Tile<Location::Vec, dtype, tN, tN * 8, BLayout::RowMajor>;
+    using tile_shapeReshaped = Tile<Location::Vec, dtype, tN, tN, BLayout::RowMajor>;
     // 最终结果 tile：1 × (tN*8)，有效区域 1×tN，如 1×8
     using tile_shapeSum = Tile<Location::Vec, dtype, 1, tN * 8,
                              BLayout::RowMajor, 1, tN>;
@@ -49,7 +48,7 @@ void reducesum_colsum_rand(
     // tmp tiles for TCOLSUM
     using tile_shapeTmpData = Tile<Location::Vec, dtype, tM / 8, tN * 8,
                                   BLayout::RowMajor, tM_VLD / 8, tN * 8>;
-    using tile_shapeTmpReshaped = Tile<Location::Vec, dtype, tN, tN * 8,
+    using tile_shapeTmpReshaped = Tile<Location::Vec, dtype, tN, tN,
                                       BLayout::RowMajor>;
 
     gm_shapeIn inGm(in_ptr);
@@ -77,13 +76,13 @@ void reducesum_colsum_rand(
     TLOAD(dataTile, gI);
 
     // Step 1: 第一次列归约 (tM/8 × tN*8) → (1 × tN*8)
-    TCOLSUM(TmpTile, dataTile, tmpTileData, /*isBinary=*/true);
+    TCOLSUM(TmpTile, dataTile);
 
     // Step 2: 重解释形状 (1 × tN*8) → (tN × tN*8)，即 1×64 → 8×8
     TRESHAPE(reshapedTile, TmpTile);
 
     // Step 3: 第二次列归约 (tN × tN*8) → (1 × tN*8)，即 8×8 → 1×8
-    TCOLSUM(SumTile, reshapedTile, tmpTileReshaped, /*isBinary=*/true);
+    TCOLSUM(SumTile, reshapedTile);
 
     // Step 4: 累加旧值
     TADD(SumTile, SumTile, oldSumTile);

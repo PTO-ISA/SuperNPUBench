@@ -163,7 +163,7 @@ void gelu_impl(
 
     // ---- Step 1: fp16 -> fp32 ----
     // [当前编译器] TCVT(dst, src) 无 tmp/mode/satMode 参数; jcore 为 __vec__
-    TCVT(xTile, inTile, tmpCvt, RoundMode::Nearest, SaturationMode::Default);
+    TCVT(xTile, inTile);
 
     // ---- Step 2: clamp x to [-5.75, 5.75] ----
     // [当前编译器] TMAXS/TMINS API 有, jcore 为 __vec__
@@ -219,7 +219,7 @@ void gelu_impl(
     TMUL(scratchTile, xTile, scratchTile);           // scratch = x * recip = y
 
     // ---- Step 7: fp32 -> fp16 ----
-    TCVT(outTile, scratchTile, tmpCvt, RoundMode::Nearest, SaturationMode::Default);
+    TCVT(outTile, scratchTile);
 }
 
 

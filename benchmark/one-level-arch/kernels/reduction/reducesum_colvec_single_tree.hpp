@@ -2,7 +2,6 @@
 #define REDUCESUMCOLVEC_KERNEL_HPP
 
 #include <common/pto_tileop.hpp>
-#include <pto/pto-inst.hpp>
 #include <cstdint>
 #include <cstdio>
 
@@ -68,18 +67,18 @@ void reducesum_colsum_rand(
     for (int i = 0; i < Mb; ++i) {
         auto gI = gIIter(i, 0);
         TLOAD(dataTile, gI);
-        TCOLSUM(partialSum, dataTile, tmpTile, /*isBinary=*/true);
+        TCOLSUM(partialSum, dataTile);
         TINSERT(tmpSumTile, partialSum, static_cast<uint16_t>(i), 0);
     }
     if constexpr (rmd_M > 0) {
         auto gI = gIIter(Mb, 0);
         TLOAD(dataTile_col, gI);
-        TCOLSUM(partialSum, dataTile_col, tmpTile_col, /*isBinary=*/true);
+        TCOLSUM(partialSum, dataTile_col);
         TINSERT(tmpSumTile, partialSum, static_cast<uint16_t>(Mb), 0);
     }
 
     // Phase 2: 对所有 partial sum 做最终树归约
-    TCOLSUM(SumTile, tmpSumTile, tmpTile_final, /*isBinary=*/true);
+    TCOLSUM(SumTile, tmpSumTile);
     TSTORE(gO, SumTile);
 }
 
