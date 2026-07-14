@@ -3,8 +3,8 @@
 // TFMODS (scalar) fp16 16x16
 int main() {
     constexpr int M = 16, N = 16;
-    __half a[M*N], b[M*N], d[M*N], c[M*N];
-    fill_seq(a, M*N); fill_seq(b, M*N); fill_seq(d, M*N); zero(c, M*N);
+    __half a[256], b[256], d[256], c[256];
+    fill_seq(a, 256); fill_seq(b, 256); fill_seq(d, 256); zero(c, 256);
     BENCHSTART;
     __half s = (__half)0.5;
     bench_scalar<__half,M,N>(c,a,s,[](auto& dst,auto& s0,auto& sc){ TFMODS(dst,s0,sc); });

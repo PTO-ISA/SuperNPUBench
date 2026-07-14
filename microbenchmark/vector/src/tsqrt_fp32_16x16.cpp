@@ -3,8 +3,8 @@
 // TSQRT (unary) fp32 16x16
 int main() {
     constexpr int M = 16, N = 16;
-    float a[M*N], b[M*N], d[M*N], c[M*N];
-    fill_seq(a, M*N); fill_seq(b, M*N); fill_seq(d, M*N); zero(c, M*N);
+    float a[256], b[256], d[256], c[256];
+    fill_seq(a, 256); fill_seq(b, 256); fill_seq(d, 256); zero(c, 256);
     BENCHSTART;
     bench_unary<float,M,N>(c,a,[](auto& dst,auto& s){ TSQRT(dst,s); });
     BENCHEND;

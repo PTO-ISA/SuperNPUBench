@@ -26,8 +26,71 @@ using iter_t = global_iterator<gm_t<D, M, N>, tile_t<D, M, N>>;
 template <typename D, int M, int N>
 void bench_binary(D *c, D *a, D *b, auto op) {
     iter_t<D, M, N> gA(a), gB(b), gC(c);
-    auto gA0 = gA(0, 0), gB0 = gB(0, 0), gC0 = gC(0, 0);
+    auto gA0 = gA(0, 0);
+    auto gB0 = gB(0, 0);
+    auto gC0 = gC(0, 0);
     tile_t<D, M, N> tA, tB, tC;
+    TLOAD(tA, gA0);
+    TLOAD(tB, gB0);
+    op(tC, tA, tB);
+    TSTORE(gC0, tC);
+}
+
+// row-broadcast arith: src0/dst = M×N, src1 = M×K per-row 32B scalar strip
+// (K = 32/sizeof(D): fp16->16, fp32->8), per tileop-usage "PTO Mode 2 每行 32B 数据条"
+template <typename D, int M, int N>
+void bench_expand_row(D *c, D *a, D *b, auto op) {
+    constexpr int K = 32 / sizeof(D);
+    using gmB = global_tensor<D, RowMajor<M, K>>;
+    using tileB = Tile<Location::Vec, D, M, K, BLayout::RowMajor>;
+    using itB = global_iterator<gmB, tileB>;
+    iter_t<D, M, N> gA(a), gC(c); itB gB(b);
+    auto gA0 = gA(0, 0);
+    auto gC0 = gC(0, 0);
+    auto gB0 = gB(0, 0);
+    tile_t<D, M, N> tA, tC; tileB tB;
+    TLOAD(tA, gA0);
+    TLOAD(tB, gB0);
+    op(tC, tA, tB);
+    TSTORE(gC0, tC);
+}
+
+// col-broadcast arith: src0/dst = M×N, src1 = K×N per-col 32B scalar strip
+template <typename D, int M, int N>
+void bench_expand_col(D *c, D *a, D *b, auto op) {
+    constexpr int K = 32 / sizeof(D);
+    using gmB = global_tensor<D, RowMajor<K, N>>;
+    using tileB = Tile<Location::Vec, D, K, N, BLayout::RowMajor>;
+    using itB = global_iterator<gmB, tileB>;
+    iter_t<D, M, N> gA(a), gC(c); itB gB(b);
+    auto gA0 = gA(0, 0);
+    auto gC0 = gC(0, 0);
+    auto gB0 = gB(0, 0);
+    tile_t<D, M, N> tA, tC; tileB tB;
+    TLOAD(tA, gA0);
+    TLOAD(tB, gB0);
+    op(tC, tA, tB);
+    TSTORE(gC0, tC);
+}
+
+// concat: src0 = M×K, src1 = M×K, dst = M×(2K); K = 32/sizeof(D) for 32B align
+template <typename D, int M>
+void bench_concat(D *c, D *a, D *b, auto op) {
+    constexpr int K = 32 / sizeof(D);
+    using gmA = global_tensor<D, RowMajor<M, K>>;
+    using gmB = global_tensor<D, RowMajor<M, K>>;
+    using gmC = global_tensor<D, RowMajor<M, 2 * K>>;
+    using tileA = Tile<Location::Vec, D, M, K, BLayout::RowMajor>;
+    using tileB = Tile<Location::Vec, D, M, K, BLayout::RowMajor>;
+    using tileC = Tile<Location::Vec, D, M, 2 * K, BLayout::RowMajor>;
+    using itA = global_iterator<gmA, tileA>;
+    using itB = global_iterator<gmB, tileB>;
+    using itC = global_iterator<gmC, tileC>;
+    itA gA(a); itB gB(b); itC gC(c);
+    auto gA0 = gA(0, 0);
+    auto gB0 = gB(0, 0);
+    auto gC0 = gC(0, 0);
+    tileA tA; tileB tB; tileC tC;
     TLOAD(tA, gA0);
     TLOAD(tB, gB0);
     op(tC, tA, tB);
@@ -88,7 +151,9 @@ void bench_scalar(D *c, D *a, D s, auto op) {
 template <typename D, int M, int N>
 void bench_scalar3(D *c, D *a, D *b, D s, auto op) {
     iter_t<D, M, N> gA(a), gB(b), gC(c);
-    auto gA0 = gA(0, 0), gB0 = gB(0, 0), gC0 = gC(0, 0);
+    auto gA0 = gA(0, 0);
+    auto gB0 = gB(0, 0);
+    auto gC0 = gC(0, 0);
     tile_t<D, M, N> tA, tB, tC;
     TLOAD(tA, gA0);
     TLOAD(tB, gB0);
