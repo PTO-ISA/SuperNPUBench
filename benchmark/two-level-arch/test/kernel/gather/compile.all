@@ -2,7 +2,7 @@
 # Gather operator test cases
 # Typical scenarios: different input/output scales and dimensions
 
-COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
 
 # ============================================
 # Typical gather scenarios

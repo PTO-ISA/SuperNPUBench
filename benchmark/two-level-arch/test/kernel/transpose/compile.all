@@ -1,7 +1,7 @@
 #!/bin/bash
 # Transpose operator test cases
 
-COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
 
 
 # ============================================
@@ -27,8 +27,8 @@ make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512
     IN_DIM=4 OUT_DIM=4 \
     TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=3 \
     gIM='1*8*4096*3' gOM='1*8*3*4096'
-    
-    
+
+
 # 4D: {1, 32, 8, 32} -> {1, 8, 32, 32}
 make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 \
     IN_SHAPE=1,32,8,32 OUT_SHAPE=1,8,32,32 \
@@ -36,7 +36,7 @@ make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512
     IN_DIM=4 OUT_DIM=4 \
     TRANSPOSE_DIM1=1 TRANSPOSE_DIM0=2 \
     gIM='1*32*8*32' gOM='1*8*32*32'
-    
+
 
 
 # ============================================
@@ -49,5 +49,4 @@ make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512
     IN_DIM=5 OUT_DIM=5 \
     TRANSPOSE_DIM1=1 TRANSPOSE_DIM0=3 \
     gIM='1*8*64*4*16*7' gOM='1*8*16*4*64*7'
-
 

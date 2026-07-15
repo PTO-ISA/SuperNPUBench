@@ -4,7 +4,8 @@
 # Don't use set -e as some operators may fail to compile
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export COMPILER_DIR=${COMPILER_DIR:-/path/to/pto-toolchain/bin}
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+export COMPILER_DIR
 REPO_ROOT=${REPO_ROOT:-$SCRIPT_DIR}
 
 echo "=========================================="
@@ -16,20 +17,20 @@ echo "=========================================="
 compile_operator() {
     local operator_path=$1
     local operator_name=$2
-    
+
     echo ""
     echo "------------------------------------------"
     echo "Compiling: $operator_name"
     echo "Path: $operator_path"
     echo "------------------------------------------"
-    
+
     if [ ! -d "$operator_path" ]; then
         echo "Warning: Directory not found: $operator_path"
         return 1
     fi
-    
+
     cd "$operator_path"
-    
+
     if [ -f "compile.all" ]; then
         echo "Running compile.all with baremetal=${baremetal:-off}..."
         export baremetal=${baremetal:-off}

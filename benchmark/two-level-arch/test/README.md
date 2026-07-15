@@ -9,6 +9,7 @@ The `test` tree contains kernel test suites. All make-driven suites reuse
 | Path | Use it for |
 | --- | --- |
 | [`common`](common) | Shared make rules, platform flags, output layout, simulator targets, `_start.s`, `benchmark.h`. |
+| [`tileop_api`](tileop_api) | Active bounded Linx direct-boot TileOP cases consumed by the superproject AI workload flow. |
 | [`kernel`](kernel) | Per-operator suites: broadcast, concat, control, element_wise, fa, gather, matmul, reduction, sort, transpose. |
 
 ## Kernel Test Suites
@@ -51,6 +52,7 @@ Build products are written under the arch-level `output/` directory
 Each suite ships a local `compile.all`; run it from the suite directory:
 
 ```sh
+cd test/tileop_api && bash compile.all
 cd test/kernel/matmul && bash compile.all
 cd test/kernel/broadcast && bash compile.all
 ```

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Reducesum column-wise reduction test cases
 
-COMPILER_DIR=${COMPILER_DIR:-/Users/liyi/Documents/SuperNPU编译器构建/output/linx_blockisa_llvm_musl/bin}
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
 
 # Large matrix, int32_t
 make TESTCASE=reducesum_col COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=256 tN_s=64 \
