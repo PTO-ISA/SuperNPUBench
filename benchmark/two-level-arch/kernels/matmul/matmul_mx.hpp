@@ -13,7 +13,7 @@
 //         GlobalTensor<typename decltype(TileVar)::DType, \
 //                      Shape<1,1,1,Rows,Cols>, \
 //                      Stride<1,1,1,Cols,1>> _g(DumpBuf); \
-//         TCOPYOUT(_g, TileVar); \
+//         TSTORE(_g, TileVar); \
 //         printf("[DUMP] %s (shape=%dx%d):\n", label, Rows, Cols); \
 //         for (int ri = 0; ri < Rows; ri++) { \
 //             printf("  row%2d: ", ri); \
@@ -32,20 +32,20 @@ using namespace pto;
 
 // TODO, move to utils.cpp
 template <is_global_data_v GmOut, is_tile_data_v TileAcc>
-void TCOPYOUT_ACC(GmOut &Gout, TileAcc &tAcc){
+void TSTORE_ACC(GmOut &Gout, TileAcc &tAcc){
     using TileAccOut = Tile<Location::Vec, typename TileAcc::DType, TileAcc::Rows, TileAcc::Cols, BLayout::RowMajor, TileAcc::ValidRow, TileAcc::ValidCol>;
     TileAccOut tAccOut;
     TCVT(tAccOut, tAcc);
-    TCOPYOUT(Gout, tAccOut);
+    TSTORE(Gout, tAccOut);
 }
 
 // typeb_wfactor 表明typeA和typeB的位宽比例，比如fp8是fp4x2的两倍，
 // smatrix_wfactor : scaling matrix 与计算matrix位宽比
-template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK, 
+template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK,
           typename dtypeB = dtypeA, const int typeb_wfactor = 1, const int smatrix_wfactor=1>
 void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8_t *src1_mx) {
   // only support regular shape now for this operator!
-  // static_assert(gM % tM == 0); 
+  // static_assert(gM % tM == 0);
   // static_assert(gN % tN == 0);
   // static_assert(gK % tK == 0);
   static const uint32_t valid_row = (tM > gM) ? gM : tM;
@@ -54,7 +54,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK, valid_row, tK>; 
+  using tile_shapeA = TileLeft<dtypeA, tM, tK, valid_row, tK>;
   using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN, tK/typeb_wfactor, valid_col>;
   using tile_shapeACC = TileAcc<float, tM, tN, valid_row, valid_col>;
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -65,7 +65,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
   itB gBIter(src1);
   itC gCIter(dst);
 
-  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>; 
+  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>;
   gm_shapeAMX gAMX(src0_mx);
   using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, valid_row, tK/smatrix_wfactor, SLayout::RowMajor>; // 实际tile尺寸<tM, tK/32>, 需初始化为0
   using itAMX = global_iterator<gm_shapeAMX, tile_shapeAMX>;
@@ -119,8 +119,8 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         auto gB = gBIter(k,j);
         tile_shapeA tA;
         tile_shapeB tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         // if (src0_mx != nullptr && src1_mx != nullptr) {
         tile_shapeAMX tAMX;
@@ -141,8 +141,8 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         auto gB = gBIter(Kb,j);
         tile_shapeA_trows tA;
         tile_shapeB_tcols tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         tile_shapeAMX_trows tAMX;
         gen_ND2ZZ_offset_Impl<gm_shapeAMX, tile_shapeAMX_trows, tile_ND2ZZOffset>(gAMX, tAMX, nd2zz_offset, i, Kb);
@@ -158,7 +158,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
         }
       }
-      TCOPYOUT_ACC(gC, tACC);
+      TSTORE_ACC(gC, tACC);
     }
     if constexpr (rmd_N) {
       auto gC = gCIter(i, Nb);
@@ -168,8 +168,8 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
         auto gB = gBIter(k, Nb);
         tile_shapeA tA;
         tile_shapeB_trows tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         tile_shapeAMX tAMX;
         gen_ND2ZZ_offset_Impl<gm_shapeAMX, tile_shapeAMX, tile_ND2ZZOffset>(gAMX, tAMX, nd2zz_offset, i, k);
@@ -191,8 +191,8 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
 
         tile_shapeA_trows tA;
         tile_shapeB_tcorner tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         tile_shapeAMX_trows tAMX;
         gen_ND2ZZ_offset_Impl<gm_shapeAMX, tile_shapeAMX_trows, tile_ND2ZZOffset>(gAMX, tAMX, nd2zz_offset, i, Kb);
@@ -206,7 +206,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
         }
       }
-      TCOPYOUT_ACC(gC, tACC);
+      TSTORE_ACC(gC, tACC);
     }
   }
   if constexpr (rmd_M) {
@@ -221,8 +221,8 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
 
         tile_shapeA_tcols tA;
         tile_shapeB tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         tile_shapeAMX_tcols tAMX;
         gen_ND2ZZ_offset_Impl<gm_shapeAMX, tile_shapeAMX_tcols, tile_ND2ZZOffset>(gAMX, tAMX, nd2zz_offset, Mb, k);
@@ -244,8 +244,8 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
 
         tile_shapeA_tcorner tA;
         tile_shapeB_tcols tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         tile_shapeAMX_tcorner tAMX;
         gen_ND2ZZ_offset_Impl<gm_shapeAMX, tile_shapeAMX_tcorner, tile_ND2ZZOffset>(gAMX, tAMX, nd2zz_offset, Mb, Kb);
@@ -260,7 +260,7 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
         }
       }
-      TCOPYOUT_ACC(gC, tACC);
+      TSTORE_ACC(gC, tACC);
     }
     if constexpr (rmd_N) {
       auto gC = gCIter(Mb, Nb);
@@ -273,8 +273,8 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
 
         tile_shapeA_tcols tA;
         tile_shapeB_trows tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         tile_shapeAMX_tcols tAMX;
         gen_ND2ZZ_offset_Impl<gm_shapeAMX, tile_shapeAMX_tcols, tile_ND2ZZOffset>(gAMX, tAMX, nd2zz_offset, Mb, k);
@@ -295,8 +295,8 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
 
         tile_shapeA_tcorner tA;
         tile_shapeB_tcorner tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         tile_shapeAMX_tcorner tAMX;
         gen_ND2ZZ_offset_Impl<gm_shapeAMX, tile_shapeAMX_tcorner, tile_ND2ZZOffset>(gAMX, tAMX, nd2zz_offset, Mb, Kb);
@@ -310,12 +310,12 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
         }
       }
-      TCOPYOUT_ACC(gC, tACC);
+      TSTORE_ACC(gC, tACC);
     }
   }
 }
 
-template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK, 
+template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK,
           typename dtypeB = dtypeA, const int typeb_wfactor = 1, const int smatrix_wfactor=1>
 void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8_t *src1_mx) {
   static_assert(typeb_wfactor == 1 );
@@ -325,7 +325,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK, valid_row, tK/typeb_wfactor>; 
+  using tile_shapeA = TileLeft<dtypeA, tM, tK, valid_row, tK/typeb_wfactor>;
   using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN, tK/typeb_wfactor, valid_col>;
   using tile_shapeACC = TileAcc<float, tM, tN, valid_row, valid_col>;
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -336,7 +336,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
   itB gBIter(src1);
   itC gCIter(dst);
 
-  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>; 
+  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>;
   using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, valid_row, tK/smatrix_wfactor>; // 实际tile尺寸<tM, tK/32>, 需初始化为0
   using itAMX = global_iterator<gm_shapeAMX, tile_shapeAMX>;
   itAMX gAMXIter(src0_mx);
@@ -390,10 +390,10 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         tile_shapeB tB;
         tile_shapeAMX tAMX;
         tile_shapeBMX tBMX;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
-        TCOPYIN(tAMX, gAMX);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
+        TLOAD(tAMX, gAMX);
+        TLOAD(tBMX, gBMX);
 
         if(k==0){
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
@@ -406,14 +406,14 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         auto gB = gBIter(Kb,j);
         tile_shapeA_trows tA;
         tile_shapeB_tcols tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
         auto gAMX = gAMXIter(i, Kb);
         auto gBMX = gBMXIter(Kb, j);
         tile_shapeAMX_trows tAMX;
         tile_shapeBMX_tcols tBMX;
-        TCOPYIN(tAMX, gAMX);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tAMX, gAMX);
+        TLOAD(tBMX, gBMX);
 
         if constexpr(Kb>0){
           MATMACCMX(tACC, tA, tAMX, tB, tBMX);
@@ -421,7 +421,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
         }
       }
-      TCOPYOUT_ACC(gC, tACC);
+      TSTORE_ACC(gC, tACC);
     }
     if constexpr (rmd_N) {
       auto gC = gCIter(i, Nb);
@@ -431,15 +431,15 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
         auto gB = gBIter(k, Nb);
         tile_shapeA tA;
         tile_shapeB_trows tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         auto gAMX = gAMXIter(i, k);
         auto gBMX = gBMXIter(k, Nb);
         tile_shapeAMX tAMX;
         tile_shapeBMX_trows tBMX;
-        TCOPYIN(tAMX, gAMX);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tAMX, gAMX);
+        TLOAD(tBMX, gBMX);
 
         if(k==0){
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
@@ -454,15 +454,15 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
 
         tile_shapeA_trows tA;
         tile_shapeB_tcorner tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         auto gAMX = gAMXIter(i, Kb);
         auto gBMX = gBMXIter(Kb, Nb);
         tile_shapeAMX_trows tAMX;
         tile_shapeBMX_tcorner tBMX;
-        TCOPYIN(tAMX, gAMX);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tAMX, gAMX);
+        TLOAD(tBMX, gBMX);
 
         if constexpr(Kb>0){
           MATMACCMX(tACC, tA, tAMX, tB, tBMX);
@@ -470,7 +470,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
         }
       }
-      TCOPYOUT_ACC(gC, tACC);
+      TSTORE_ACC(gC, tACC);
     }
   }
   if constexpr (rmd_M) {
@@ -485,15 +485,15 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
 
         tile_shapeA_tcols tA;
         tile_shapeB tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         auto gAMX = gAMXIter(Mb, k);
         auto gBMX = gBMXIter(k, j);
         tile_shapeAMX_tcols tAMX;
         tile_shapeBMX tBMX;
-        TCOPYIN(tAMX, gAMX);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tAMX, gAMX);
+        TLOAD(tBMX, gBMX);
 
         if(k==0){
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
@@ -508,15 +508,15 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
 
         tile_shapeA_tcorner tA;
         tile_shapeB_tcols tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         auto gAMX = gAMXIter(Mb, Kb);
         auto gBMX = gBMXIter(Kb, j);
         tile_shapeAMX_tcorner tAMX;
         tile_shapeBMX_tcols tBMX;
-        TCOPYIN(tAMX, gAMX);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tAMX, gAMX);
+        TLOAD(tBMX, gBMX);
 
         if constexpr(Kb>0){
           MATMACCMX(tACC, tA, tAMX, tB, tBMX);
@@ -524,7 +524,7 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
         }
       }
-      TCOPYOUT_ACC(gC, tACC);
+      TSTORE_ACC(gC, tACC);
     }
     if constexpr (rmd_N) {
       auto gC = gCIter(Mb, Nb);
@@ -537,15 +537,15 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
 
         tile_shapeA_tcols tA;
         tile_shapeB_trows tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         auto gAMX = gAMXIter(Mb, k);
         auto gBMX = gBMXIter(k, Nb);
         tile_shapeAMX_tcols tAMX;
         tile_shapeBMX_trows tBMX;
-        TCOPYIN(tAMX, gAMX);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tAMX, gAMX);
+        TLOAD(tBMX, gBMX);
 
         if(k==0){
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
@@ -559,22 +559,22 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
 
         tile_shapeA_tcorner tA;
         tile_shapeB_tcorner tB;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
 
         auto gAMX = gAMXIter(Mb, Kb);
         auto gBMX = gBMXIter(Kb, Nb);
         tile_shapeAMX_tcorner tAMX;
         tile_shapeBMX_tcorner tBMX;
-        TCOPYIN(tAMX, gAMX);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tAMX, gAMX);
+        TLOAD(tBMX, gBMX);
         if constexpr(Kb>0){
           MATMACCMX(tACC, tA, tAMX, tB, tBMX);
         } else {
           MATMULMX(tACC, tA, tAMX, tB, tBMX);
         }
       }
-      TCOPYOUT_ACC(gC, tACC);
+      TSTORE_ACC(gC, tACC);
     }
   }
 }
@@ -609,22 +609,22 @@ constexpr ResA find_reuseA(int Mb, int Kb, int MAX_TILE_NUM) {
     return {best_m, best_k, best_val};
 }
 
-template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK, 
+template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK,
           typename dtypeB = dtypeA, const int typeb_wfactor = 1, const int smatrix_wfactor=1>
 void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8_t *src1_mx) {
   static_assert(typeb_wfactor == 1 );
   static const uint32_t valid_row = (tM > gM) ? gM : tM;
   static const uint32_t valid_col = (tN > gN) ? gN : tN;
   static const uint32_t MAX_TILE_NUM = 24; // TODO, check this value
-  
+
   using gm_shapeA = global_tensor<dtypeA, RowMajor<gM, gK/typeb_wfactor>>;
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK, valid_row, tK/typeb_wfactor>; 
+  using tile_shapeA = TileLeft<dtypeA, tM, tK, valid_row, tK/typeb_wfactor>;
   using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN, tK/typeb_wfactor, valid_col>;
   using tile_shapeACC = TileAcc<float, tM, tN, valid_row, valid_col>;
-  
+
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
   using itB = global_iterator<gm_shapeB, tile_shapeB>;
   using itC = global_iterator<gm_shapeC, tile_shapeACC>;
@@ -633,8 +633,8 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
   itB gBIter(src1);
   itC gCIter(dst);
 
-  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>; 
-  using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, valid_row, tK/smatrix_wfactor>; 
+  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>;
+  using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, valid_row, tK/smatrix_wfactor>;
   using itAMX = global_iterator<gm_shapeAMX, tile_shapeAMX>;
   itAMX gAMXIter(src0_mx);
 
@@ -691,8 +691,8 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
       // for(int k=0; k<R.k; k++){
       //   auto gA = gAIter(ii+i*R.m, k);
       //   auto gAMX = gAMXIter(ii+i*R.m, k);
-      //   TCOPYIN(tA[ii][k], gA);
-      //   TCOPYIN(tAMX[ii][k], gAMX);
+      //   TLOAD(tA[ii][k], gA);
+      //   TLOAD(tAMX[ii][k], gAMX);
       // }
 
       #pragma clang loop unroll(full)
@@ -705,14 +705,14 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           auto gBMX = gBMXIter(k, j);
           tile_shapeB tB;
           tile_shapeBMX tBMX;
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           if(j==0){
             // eliminate head cost
             auto gA = gAIter(ii+i*R.m, k);
             auto gAMX = gAMXIter(ii+i*R.m, k);
-            TCOPYIN(tA[ii][k], gA);
-            TCOPYIN(tAMX[ii][k], gAMX);
+            TLOAD(tA[ii][k], gA);
+            TLOAD(tAMX[ii][k], gAMX);
           }
           if(k==0){
             MATMULMX(tACC, tA[ii][k], tAMX[ii][k], tB, tBMX);
@@ -731,10 +731,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
             auto gAMX = gAMXIter(i*R.m+ii, k);
             auto gB = gBIter(k, j);
             auto gBMX = gBMXIter(k, j);
-            TCOPYIN(tA_tmp, gA);
-            TCOPYIN(tAMX_tmp, gAMX);
-            TCOPYIN(tB, gB);
-            TCOPYIN(tBMX, gBMX);
+            TLOAD(tA_tmp, gA);
+            TLOAD(tAMX_tmp, gAMX);
+            TLOAD(tB, gB);
+            TLOAD(tBMX, gBMX);
             MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
         }
@@ -751,10 +751,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           tile_shapeB_tcols tB;
           tile_shapeBMX_tcols tBMX;
 
-          TCOPYIN(tA_tmp, gA);
-          TCOPYIN(tAMX_tmp, gAMX);
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tA_tmp, gA);
+          TLOAD(tAMX_tmp, gAMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           if constexpr(Kb>0){
             MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           } else {
@@ -763,7 +763,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         }
 
         auto gC = gCIter(i*R.m+ii, j);
-        TCOPYOUT_ACC(gC, tACC);
+        TSTORE_ACC(gC, tACC);
       }
 
       // [m, rmd_N, k]
@@ -776,8 +776,8 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           auto gBMX = gBMXIter(k, Nb);
           tile_shapeB_trows tB;
           tile_shapeBMX_trows tBMX;
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           if(k==0){
             MATMULMX(tACC, tA[ii][k], tAMX[ii][k], tB, tBMX);
           }else{
@@ -795,10 +795,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
             auto gAMX = gAMXIter(i*R.m+ii, k);
             auto gB = gBIter(k, Nb);
             auto gBMX = gBMXIter(k, Nb);
-            TCOPYIN(tA_tmp, gA);
-            TCOPYIN(tAMX_tmp, gAMX);
-            TCOPYIN(tB, gB);
-            TCOPYIN(tBMX, gBMX);
+            TLOAD(tA_tmp, gA);
+            TLOAD(tAMX_tmp, gAMX);
+            TLOAD(tB, gB);
+            TLOAD(tBMX, gBMX);
             MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
         }
@@ -814,11 +814,11 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           tile_shapeAMX_trows tAMX_tmp;
           tile_shapeB_tcorner tB;
           tile_shapeBMX_tcorner tBMX;
-          
-          TCOPYIN(tA_tmp, gA);
-          TCOPYIN(tAMX_tmp, gAMX);
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+
+          TLOAD(tA_tmp, gA);
+          TLOAD(tAMX_tmp, gAMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           if constexpr(Kb>0){
             MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           } else {
@@ -827,7 +827,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         }
 
         auto gC = gCIter(i*R.m+ii, Nb);
-        TCOPYOUT_ACC(gC, tACC);       
+        TSTORE_ACC(gC, tACC);
       }
     }
   }
@@ -835,7 +835,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
   if constexpr(rM>0){
     tile_shapeA tA[rM][R.k];
     tile_shapeAMX tAMX[rM][R.k];
-    
+
     #pragma clang loop unroll(full)
     for(int i=0; i<rM; i++){
 
@@ -844,8 +844,8 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
       for(int k=0; k<R.k; k++){
         auto gA = gAIter(i+dM*R.m, k);
         auto gAMX = gAMXIter(i+dM*R.m, k);
-        TCOPYIN(tA[i][k], gA);
-        TCOPYIN(tAMX[i][k], gAMX);
+        TLOAD(tA[i][k], gA);
+        TLOAD(tAMX[i][k], gAMX);
       }
 
       #pragma clang loop unroll(full)
@@ -858,13 +858,13 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           auto gBMX = gBMXIter(k, j);
           tile_shapeB tB;
           tile_shapeBMX tBMX;
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           if(j==0){
             auto gA = gAIter(i+dM*R.m, k);
             auto gAMX = gAMXIter(i+dM*R.m, k);
-            TCOPYIN(tA[i][k], gA);
-            TCOPYIN(tAMX[i][k], gAMX);
+            TLOAD(tA[i][k], gA);
+            TLOAD(tAMX[i][k], gAMX);
           }
           if(k==0){
             MATMULMX(tACC, tA[i][k], tAMX[i][k], tB, tBMX);
@@ -883,10 +883,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
             auto gAMX = gAMXIter(i+dM*R.m, k);
             auto gB = gBIter(k, j);
             auto gBMX = gBMXIter(k, j);
-            TCOPYIN(tA_tmp, gA);
-            TCOPYIN(tAMX_tmp, gAMX);
-            TCOPYIN(tB, gB);
-            TCOPYIN(tBMX, gBMX);
+            TLOAD(tA_tmp, gA);
+            TLOAD(tAMX_tmp, gAMX);
+            TLOAD(tB, gB);
+            TLOAD(tBMX, gBMX);
             MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
         }
@@ -903,10 +903,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           tile_shapeB_tcols tB;
           tile_shapeBMX_tcols tBMX;
 
-          TCOPYIN(tA_tmp, gA);
-          TCOPYIN(tAMX_tmp, gAMX);
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tA_tmp, gA);
+          TLOAD(tAMX_tmp, gAMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           if constexpr(Kb>0){
             MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           } else {
@@ -914,7 +914,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           }
         }
         auto gC = gCIter(i+dM*R.m, j);
-        TCOPYOUT_ACC(gC, tACC);
+        TSTORE_ACC(gC, tACC);
       }
 
       // [rM, rmd_N, k]
@@ -927,8 +927,8 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           auto gBMX = gBMXIter(k, Nb);
           tile_shapeB_trows tB;
           tile_shapeBMX_trows tBMX;
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           if(k==0){
             MATMULMX(tACC, tA[i][k], tAMX[i][k], tB, tBMX);
           }else{
@@ -946,10 +946,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
             auto gAMX = gAMXIter(i+dM*R.m, k);
             auto gB = gBIter(k, Nb);
             auto gBMX = gBMXIter(k, Nb);
-            TCOPYIN(tA_tmp, gA);
-            TCOPYIN(tAMX_tmp, gAMX);
-            TCOPYIN(tB, gB);
-            TCOPYIN(tBMX, gBMX);
+            TLOAD(tA_tmp, gA);
+            TLOAD(tAMX_tmp, gAMX);
+            TLOAD(tB, gB);
+            TLOAD(tBMX, gBMX);
             MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           }
         }
@@ -966,10 +966,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           tile_shapeB_tcorner tB;
           tile_shapeBMX_tcorner tBMX;
 
-          TCOPYIN(tA_tmp, gA);
-          TCOPYIN(tAMX_tmp, gAMX);
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tA_tmp, gA);
+          TLOAD(tAMX_tmp, gAMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           if constexpr(Kb>0){
             MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
           } else {
@@ -977,7 +977,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           }
         }
         auto gC = gCIter(i+dM*R.m, Nb);
-        TCOPYOUT_ACC(gC, tACC);        
+        TSTORE_ACC(gC, tACC);
       }
     }
   }
@@ -986,13 +986,13 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
   if constexpr (rmd_M) {
     tile_shapeA_tcols tA[R.k];
     tile_shapeAMX_tcols tAMX[R.k];
-    
+
     #pragma clang loop unroll(full)
     for(int k=0; k<R.k; k++){
       auto gA = gAIter(Mb, k);
       auto gAMX = gAMXIter(Mb, k);
-      TCOPYIN(tA[k], gA);
-      TCOPYIN(tAMX[k], gAMX);
+      TLOAD(tA[k], gA);
+      TLOAD(tAMX[k], gAMX);
     }
 
     #pragma clang loop unroll(full)
@@ -1005,8 +1005,8 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         auto gBMX = gBMXIter(k, j);
         tile_shapeB tB;
         tile_shapeBMX tBMX;
-        TCOPYIN(tB, gB);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tB, gB);
+        TLOAD(tBMX, gBMX);
         if(k==0){
           MATMULMX(tACC, tA[k], tAMX[k], tB, tBMX);
         }else{
@@ -1024,10 +1024,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           auto gAMX = gAMXIter(Mb, k);
           auto gB = gBIter(k, j);
           auto gBMX = gBMXIter(k, j);
-          TCOPYIN(tA_tmp, gA);
-          TCOPYIN(tAMX_tmp, gAMX);
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tA_tmp, gA);
+          TLOAD(tAMX_tmp, gAMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         }
       }
@@ -1044,10 +1044,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         tile_shapeB_tcols tB;
         tile_shapeBMX_tcols tBMX;
 
-        TCOPYIN(tA_tmp, gA);
-        TCOPYIN(tAMX_tmp, gAMX);
-        TCOPYIN(tB, gB);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tA_tmp, gA);
+        TLOAD(tAMX_tmp, gAMX);
+        TLOAD(tB, gB);
+        TLOAD(tBMX, gBMX);
         if constexpr(Kb>0){
           MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         } else {
@@ -1055,7 +1055,7 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         }
       }
       auto gC = gCIter(Mb, j);
-      TCOPYOUT_ACC(gC, tACC);
+      TSTORE_ACC(gC, tACC);
     }
 
     // [rmd_M, rmd_N, k]
@@ -1068,8 +1068,8 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         auto gBMX = gBMXIter(k, Nb);
         tile_shapeB_trows tB;
         tile_shapeBMX_trows tBMX;
-        TCOPYIN(tB, gB);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tB, gB);
+        TLOAD(tBMX, gBMX);
         if(k==0){
           MATMULMX(tACC, tA[k], tAMX[k], tB, tBMX);
         }else{
@@ -1087,10 +1087,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
           auto gAMX = gAMXIter(Mb, k);
           auto gB = gBIter(k, Nb);
           auto gBMX = gBMXIter(k, Nb);
-          TCOPYIN(tA_tmp, gA);
-          TCOPYIN(tAMX_tmp, gAMX);
-          TCOPYIN(tB, gB);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tA_tmp, gA);
+          TLOAD(tAMX_tmp, gAMX);
+          TLOAD(tB, gB);
+          TLOAD(tBMX, gBMX);
           MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         }
       }
@@ -1107,10 +1107,10 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         tile_shapeB_tcorner tB;
         tile_shapeBMX_tcorner tBMX;
 
-        TCOPYIN(tA_tmp, gA);
-        TCOPYIN(tAMX_tmp, gAMX);
-        TCOPYIN(tB, gB);
-        TCOPYIN(tBMX, gBMX);
+        TLOAD(tA_tmp, gA);
+        TLOAD(tAMX_tmp, gAMX);
+        TLOAD(tB, gB);
+        TLOAD(tBMX, gBMX);
         if constexpr(Kb>0){
           MATMACCMX(tACC, tA_tmp, tAMX_tmp, tB, tBMX);
         } else {
@@ -1118,25 +1118,25 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
         }
       }
       auto gC = gCIter(Mb, Nb);
-      TCOPYOUT_ACC(gC, tACC);        
+      TSTORE_ACC(gC, tACC);
     }
   }
 }
 
 // typeb_wfactor 表明typeA和typeB的位宽比例，比如fp8是fp4x2的两倍，
 // smatrix_wfactor : scaling matrix 与计算matrix位宽比
-template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK, 
+template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK,
           typename dtypeB = dtypeA, const int typeb_wfactor = 1, const int smatrix_wfactor=1>
 void matmul_mxfp_notcvt_old(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8_t *src1_mx) {
   // only support regular shape now for this operator!
-  static_assert(gM % tM == 0); 
+  static_assert(gM % tM == 0);
   static_assert(gN % tN == 0);
   static_assert(gK % tK == 0);
   using gm_shapeA = global_tensor<dtypeA, RowMajor<gM, gK/typeb_wfactor>>;
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK/typeb_wfactor>; 
+  using tile_shapeA = TileLeft<dtypeA, tM, tK/typeb_wfactor>;
   using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -1147,7 +1147,7 @@ void matmul_mxfp_notcvt_old(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src
   itB gBIter(src1);
   itC gCIter(dst);
 
-  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>; 
+  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>;
   // gm_shapeAMX gAMX(src0_mx);
   // using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK/smatrix_wfactor, BLayout::RowMajor, tM, tK/smatrix_wfactor>; // 实际tile尺寸<tM, tK/32>, 需初始化为0
   using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, tM, tK/smatrix_wfactor>; // 实际tile尺寸<tM, tK/32>, 需初始化为0
@@ -1184,10 +1184,10 @@ void matmul_mxfp_notcvt_old(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src
           tile_shapeB tB;
           tile_shapeAMX tAMX;
           tile_shapeBMX tBMX;
-          TCOPYIN(tA, gA);
-          TCOPYIN(tB, gB);
-          TCOPYIN(tAMX, gAMX);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tA, gA);
+          TLOAD(tB, gB);
+          TLOAD(tAMX, gAMX);
+          TLOAD(tBMX, gBMX);
 
             if(k==0){
               MATMULMX(tACC, tA, tAMX, tB, tBMX);
@@ -1197,25 +1197,25 @@ void matmul_mxfp_notcvt_old(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src
               // MATMACC(tACC, tA, tB);
             }
         }
-        TCOPYOUT_ACC(gC, tACC);
+        TSTORE_ACC(gC, tACC);
     }
   }
 }
 
 // typeb_wfactor 表明typeA和typeB的位宽比例，比如fp8是fp4x2的两倍，
 // smatrix_wfactor : scaling matrix 与计算matrix位宽比
-template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK, 
+template <typename dtypeA, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK,
           typename dtypeB = dtypeA, const int typeb_wfactor = 1, const int smatrix_wfactor=1>
 void matmul_fp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8_t *src1_mx) {
   // only support regular shape now for this operator!
-  static_assert(gM % tM == 0); 
+  static_assert(gM % tM == 0);
   static_assert(gN % tN == 0);
   static_assert(gK % tK == 0);
   using gm_shapeA = global_tensor<dtypeA, RowMajor<gM, gK/typeb_wfactor>>;
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK/typeb_wfactor>; 
+  using tile_shapeA = TileLeft<dtypeA, tM, tK/typeb_wfactor>;
   using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -1226,7 +1226,7 @@ void matmul_fp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, 
   itB gBIter(src1);
   itC gCIter(dst);
 
-  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>; 
+  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>;
   // gm_shapeAMX gAMX(src0_mx);
   // using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK/smatrix_wfactor, BLayout::RowMajor, tM, tK/smatrix_wfactor>; // 实际tile尺寸<tM, tK/32>, 需初始化为0
   using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, tM, tK/smatrix_wfactor>; // 实际tile尺寸<tM, tK/32>, 需初始化为0
@@ -1263,10 +1263,10 @@ void matmul_fp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, 
           tile_shapeB tB;
           tile_shapeAMX tAMX;
           tile_shapeBMX tBMX;
-          TCOPYIN(tA, gA);
-          TCOPYIN(tB, gB);
-          TCOPYIN(tAMX, gAMX);
-          TCOPYIN(tBMX, gBMX);
+          TLOAD(tA, gA);
+          TLOAD(tB, gB);
+          TLOAD(tAMX, gAMX);
+          TLOAD(tBMX, gBMX);
 
             if(k==0){
               MATMUL(tACC, tA, tB);
@@ -1275,7 +1275,7 @@ void matmul_fp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, 
               MATMACC(tACC, tA, tB);
             }
         }
-        TCOPYOUT_ACC(gC, tACC);
+        TSTORE_ACC(gC, tACC);
     }
   }
 }
@@ -1323,7 +1323,7 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
   using gm_shapeA = global_tensor<dtypeA, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/width_factor, gN>>;
   // 伪量化固定float, group 大小128， 128个fp4共享一个scaling factor, 128的partial sum* scale
-  using gm_shape_scale = global_tensor<float, RowMajor<gK/128, gN>>; 
+  using gm_shape_scale = global_tensor<float, RowMajor<gK/128, gN>>;
   using gm_shapeACC = global_tensor<float, RowMajor<gM, gN>>;
   using tile_shapeA = TileLeft<dtypeA, trow, tK, tM, tK>;
   using tile_shapeB = TileRight<dtypeB, tK/width_factor, tcol, tK/width_factor, tcol>;
@@ -1331,7 +1331,7 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
   using tile_shape_dequant = Tile<Location::Vec, float, trow, tcol, BLayout::RowMajor, tM, tN>;
   using tile_shapeACC = TileAcc<float, trow, tcol, tM, tN>;
   // copy of acc, input as vector
-  using tile_ACCin = Tile<Location::Vec, float, trow, tcol, BLayout::ColMajor, tM, tN>; 
+  using tile_ACCin = Tile<Location::Vec, float, trow, tcol, BLayout::ColMajor, tM, tN>;
 
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
   using itB = global_iterator<gm_shapeB, tile_shapeB>;
@@ -1367,9 +1367,9 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
   using tile_shape_scale_tcols = Tile<Location::Scaling, float, tK/128, tcol, BLayout::RowMajor, rmd_K/128, tN, SLayout::NoneBox>;
   using tile_shape_scale_tcorner = Tile<Location::Scaling, float, tK/128, tcol, BLayout::RowMajor, rmd_K/128, rmd_N, SLayout::NoneBox>;
 
-  using tile_ACCin_trows = Tile<Location::Vec, float, trow, tcol, BLayout::RowMajor, tM, rmd_N>; 
-  using tile_ACCin_tcols = Tile<Location::Vec, float, trow, tcol, BLayout::RowMajor, rmd_M, tN>; 
-  using tile_ACCin_tconer = Tile<Location::Vec, float, trow, tcol, BLayout::RowMajor, rmd_M, rmd_N>; 
+  using tile_ACCin_trows = Tile<Location::Vec, float, trow, tcol, BLayout::RowMajor, tM, rmd_N>;
+  using tile_ACCin_tcols = Tile<Location::Vec, float, trow, tcol, BLayout::RowMajor, rmd_M, tN>;
+  using tile_ACCin_tconer = Tile<Location::Vec, float, trow, tcol, BLayout::RowMajor, rmd_M, rmd_N>;
 
   using tile_shape_dequant_trows = Tile<Location::Vec, float, trow, tcol, BLayout::RowMajor, tM, rmd_N>;
   using tile_shape_dequant_tcols = Tile<Location::Vec, float, trow, tcol, BLayout::RowMajor, rmd_M, tN>;
@@ -1392,9 +1392,9 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
         tile_shapeB tB;
         tile_shape_scale ts;
         tile_shape_dequant tC_dequant;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
-        TCOPYIN(ts, gS); // [1, tN]
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
+        TLOAD(ts, gS); // [1, tN]
 
         MATMUL(tACC, tA, tB);
         TCVT(tACCin, tACC);//[tM, tN] 256->1 , 256 -> 2 scaling factor
@@ -1413,22 +1413,22 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
         tile_shape_scale_tcols ts;
         tile_shape_dequant tC_dequant;
 
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
-        TCOPYIN(ts, gS);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
+        TLOAD(ts, gS);
 
         MATMUL(tACC, tA, tB);
         TCVT(tACCin, tACC);
         dequant_acc<tile_ACCin, tile_shape_scale, tile_shape_dequant><<<tile_shapeACC::ValidRow, tile_shapeACC::ValidCol, 1>>>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
         tAdder[(k+1)%2] = tC_dequant;
       }
-      TCOPYOUT(gACC, tAdder[(k+1)%2]);
+      TSTORE(gACC, tAdder[(k+1)%2]);
     }
     // if constexpr (rmd_N) // TODO
   }
   if constexpr (rmd_M) {
     for (int j = 0; j < Nb; ++j) {
-      auto gACC = gACCIter(Mb, j); 
+      auto gACC = gACCIter(Mb, j);
       tile_shapeC_tcols tACC;
       tile_ACCin_tcols tACCin;
       tile_shape_dequant_tcols tAdder[2];
@@ -1444,9 +1444,9 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
         tile_shapeB tB;
         tile_shape_scale ts;
         tile_shape_dequant_tcols tC_dequant;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
-        TCOPYIN(ts, gS);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
+        TLOAD(ts, gS);
         MATMUL(tACC, tA, tB);
         TCVT(tACCin, tACC);
         dequant_acc<tile_ACCin_tcols, tile_shape_scale, tile_shape_dequant_tcols><<<tile_ACCin_tcols::ValidRow, tile_ACCin_tcols::ValidCol, 1>>>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
@@ -1462,15 +1462,15 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
         tile_shapeB_tcols tB;
         tile_shape_scale_tcols ts;
         tile_shape_dequant tC_dequant;
-        TCOPYIN(tA, gA);
-        TCOPYIN(tB, gB);
-        TCOPYIN(ts, gS);
+        TLOAD(tA, gA);
+        TLOAD(tB, gB);
+        TLOAD(ts, gS);
         MATMUL(tACC, tA, tB);
         TCVT(tACCin, tACC);
         dequant_acc<tile_ACCin_tcols, tile_shape_scale_tcols, tile_shape_dequant_tcols><<<tile_shapeACC::ValidRow, tile_shapeACC::ValidCol, 1>>>(tACCin.data(), ts.data(), tAdder[k%2].data(), tC_dequant.data());
         tAdder[(k+1)%2] = tC_dequant;
       }
-      TCOPYOUT(gACC, tAdder[(k+1)%2]);
+      TSTORE(gACC, tAdder[(k+1)%2]);
     }
     // todo
     // if constexpr (rmd_N) {
@@ -1483,9 +1483,9 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
 
     //     tile_shapeA_tcols tA;
     //     tile_shapeB_trows tB;
-    //     TCOPYIN(tA, gA);
-    //     TCOPYIN(tB, gB);
-    //     MATMUL(tACC, tA, tB);        
+    //     TLOAD(tA, gA);
+    //     TLOAD(tB, gB);
+    //     MATMUL(tACC, tA, tB);
     //   }
     //   #pragma clang loop unroll(full)
     //   for (int k = 1; k < Kb; ++k) {
@@ -1494,8 +1494,8 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
 
     //     tile_shapeA_tcols tA;
     //     tile_shapeB_trows tB;
-    //     TCOPYIN(tA, gA);
-    //     TCOPYIN(tB, gB);
+    //     TLOAD(tA, gA);
+    //     TLOAD(tB, gB);
     //     MATMACC(tACC, tA, tB);
     //   }
     //   if constexpr (rmd_K) {
@@ -1504,15 +1504,15 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
 
     //     tile_shapeA_tcorner tA;
     //     tile_shapeB_tcorner tB;
-    //     TCOPYIN(tA, gA);
-    //     TCOPYIN(tB, gB);
+    //     TLOAD(tA, gA);
+    //     TLOAD(tB, gB);
     //     if constexpr(Kb>0){
     //       MATMACC(tACC, tA, tB);
     //     } else {
     //       MATMUL(tACC, tA, tB);
     //     }
     //   }
-    //   TCOPYOUT_ACC(gC, tACC);
+    //   TSTORE_ACC(gC, tACC);
     // }
   }
 }

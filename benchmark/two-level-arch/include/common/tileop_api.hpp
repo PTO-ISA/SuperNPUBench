@@ -48,15 +48,27 @@ template <is_tile_data_v tile_shape> void TABS(tile_shape &dst, tile_shape &src)
 }
 template <is_tile_data_v tile_shape>
 void TADD(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+#ifdef __linx
+  TADD_V057(dst, src0, src1);
+#else
   TADD_Impl(dst, src0, src1);
+#endif
 }
 template <is_tile_data_v tile_shape>
 void TADDS(tile_shape &dst, tile_shape &src, typename tile_shape::DType s) {
+#ifdef __linx
+  TADDS_V057(dst, src, s);
+#else
   TADDS_Impl(dst, src, s);
+#endif
 }
 template <is_tile_data_v tile_shape>
 void TAND(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+#ifdef __linx
+  TAND_V057(dst, src0, src1);
+#else
   TAND_Impl(dst, src0, src1);
+#endif
 }
 template <is_tile_data_v tile_shape_in0, is_tile_data_v tile_shape_in1,
           is_tile_data_v tile_shape_in2, is_tile_data_v tile_shape_out>
@@ -66,7 +78,11 @@ void TASSEMBLE(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1,
 }
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TCAST(tile_shape_out &dst, tile_shape_in &src) {
-  TCAST_Impl(dst, src);
+#ifdef __linx
+  TCVT_V057(dst, src);
+#else
+  TCVT_Impl(dst, src);
+#endif
 }
 template <is_tile_data_v tile_shape, typename T, int descending>
 void TCI(tile_shape &dst, T s) {
@@ -74,23 +90,35 @@ void TCI(tile_shape &dst, T s) {
 }
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TCMP(tile_shape_out &dst, tile_shape_in &src0, tile_shape_in &src1, CmpMode cmpMode) {
+#ifdef __linx
+  TCMP_V057(dst, src0, src1, cmpMode);
+#else
   TCMP_Impl(dst, src0, src1, cmpMode);
-}
-template <is_tile_data_v tile_shape>
-void TCOPY(tile_shape &dst, tile_shape &src) {
-  TCOPY_Impl(dst, src);
+#endif
 }
 template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
 void TLOAD(tile_shape &dst, gm_shape &src) {
+#ifdef __linx
+  TLOAD_V057(dst, src);
+#else
   TLOAD_Impl(dst, src);
+#endif
 }
 template <is_global_data_v gm_shape, is_tile_data_v tile_shape>
 void TSTORE(gm_shape &dst, tile_shape &src) {
+#ifdef __linx
+  TSTORE_V057(dst, src);
+#else
   TSTORE_Impl(dst, src);
+#endif
 }
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TCVT(tile_shape_out &dst, tile_shape_in &src) {
+#ifdef __linx
+  TCVT_V057(dst, src);
+#else
   TCVT_Impl(dst, src);
+#endif
 }
 template <is_tile_data_v tile_shape>
 void TDIV(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
@@ -113,7 +141,11 @@ void TEXPANDROW(tile_shape_out &dst, tile_shape_in &src) {
 }
 template <is_tile_data_v tile_shape>
 void TEXPANDSCALAR(tile_shape &dst, typename tile_shape::DType s) {
+#ifdef __linx
+  TEXPANDS_V057(dst, s);
+#else
   TEXPANDSCALAR_Impl(dst, s);
+#endif
 }
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TEXTRACT(tile_shape_out &dst, tile_shape_in &src, uint16_t offset_i,
@@ -148,15 +180,27 @@ void TMINS(tile_shape &dst, tile_shape &src, typename tile_shape::DType s) {
 }
 template <is_tile_data_v tile_shape>
 void TMUL(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+#ifdef __linx
+  TMUL_V057(dst, src0, src1);
+#else
   TMUL_Impl(dst, src0, src1);
+#endif
 }
 template <is_tile_data_v tile_shape>
 void TMULS(tile_shape &dst, tile_shape &src, typename tile_shape::DType s) {
+#ifdef __linx
+  TMULS_V057(dst, src, s);
+#else
   TMULS_Impl(dst, src, s);
+#endif
 }
 template <is_tile_data_v tile_shape>
 void TOR(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+#ifdef __linx
+  TOR_V057(dst, src0, src1);
+#else
   TOR_Impl(dst, src0, src1);
+#endif
 }
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in, typename T>
 void TPAD(tile_shape_out &dst, const tile_shape_in &src, T pad_value,
@@ -169,7 +213,11 @@ void TRECIP(tile_shape &dst, tile_shape &src) {
 }
 template <is_tile_data_v tile_shape>
 void TREM(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+#ifdef __linx
+  TREM_V057(dst, src0, src1);
+#else
   TREM_Impl(dst, src0, src1);
+#endif
 }
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TRESHAPE(tile_shape_out &tile_out, tile_shape_in &tile_in) {
@@ -204,7 +252,11 @@ void TSCATTER(tile_shape_dst &dst, tile_shape_src &src,
 template <is_tile_data_v tile_shape, is_tile_data_v tile_shape_index>
 void TSELECT(tile_shape &dst, tile_shape_index &cond, tile_shape &src0,
              tile_shape &src1) {
+#ifdef __linx
+  TSELECT_V057(dst, cond, src0, src1);
+#else
   TSELECT_Impl(dst, cond, src0, src1);
+#endif
 }
 template <is_tile_data_v tile_shape>
 void TSQRT(tile_shape &dst, tile_shape &src) {
@@ -212,7 +264,11 @@ void TSQRT(tile_shape &dst, tile_shape &src) {
 }
 template <is_tile_data_v tile_shape>
 void TSUB(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+#ifdef __linx
+  TSUB_V057(dst, src0, src1);
+#else
   TSUB_Impl(dst, src0, src1);
+#endif
 }
 template <is_tile_data_v tile_shape>
 void TSUBS(tile_shape &dst, tile_shape &src, typename tile_shape::DType s) {

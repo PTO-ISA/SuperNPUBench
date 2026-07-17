@@ -42,7 +42,7 @@ void reducesum_trowsum_rand(
     itOut gOIter(out_ptr);
 
     auto gO = gOIter(0, 0);
-    TEXPANDS(oldtmpSumTile, static_cast<dtype>(0));
+    TEXPANDSCALAR(oldtmpSumTile, static_cast<dtype>(0));
 
     for (int i = 0; i < Nb; ++i) {
         auto gI = gIIter(0, i);

@@ -124,7 +124,7 @@ void flash_attention_dcore(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_
     using tileQ      = MultiTile<MULTI, TileLeft<dtype, kTm, (qD==192? 256:qD), kTm, qD>>;       // [kTm×qD]
     using tileK      = MultiTile<MULTI, TileRight<dtype, (qD==192? 256:qD), kTk, qD, kTk>>;      // [vD×kTk]
     // using tileW_out  = TileAcc<float, kTm, kTk>;      // [kTm×kTk]
-    using tileW      = MultiTile<MULTI, Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>>; 
+    using tileW      = MultiTile<MULTI, Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>>;
     using tileW_cast = MultiTile<MULTI, Tile<Location::Vec, dtype, kTm, kTk, BLayout::ColMajor>>;
     using tileW_left = MultiTile<MULTI, TileLeft<dtype, kTm, kTk>>;
 
@@ -151,7 +151,7 @@ void flash_attention_dcore(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_
     const float scale = 1.0f / sqrt((float)qD);
     const int Qb = (Sq + kTm - 1) / kTm;
     const int Kb = (Skv + kTk - 1) / kTk;
-    
+
     // 对每个 Q-block (i)
     for (int i = 0; i < Qb; i += MULTI) {
         // 加载当前Q块 (仅一次)
@@ -161,7 +161,7 @@ void flash_attention_dcore(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_
         auto gQ = gIterQ(i,0);
         TLOAD2_ND2NZ(tQ.Tiles[1], tQ.Tiles[0], gQ);
         #else
-        TCOPYIN(tQ, [&](int t) { return gIterQ(i + t, 0); });
+        TLOAD(tQ, [&](int t) { return gIterQ(i + t, 0); });
         #endif
 
         // 初始化状态: 最大值/指数和/输出累加
@@ -178,7 +178,7 @@ void flash_attention_dcore(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_
             // 加载K_j和V_j
             auto gK = gIterK(0, j);
             tileK tK;
-            TCOPYIN(tK, gK);
+            TLOAD(tK, gK);
 
             // 计算注意力分数块
             tileW tW;
@@ -207,7 +207,7 @@ void flash_attention_dcore(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_
             // 计算当前块的加权输出: O_j = W * V
             auto gV = gIterV(j, 0);
             tileV tV;
-            TCOPYIN(tV, gV);
+            TLOAD(tV, gV);
             MATMUL(tPV, tW_left, tV);
 
             if(j==0){
@@ -233,7 +233,7 @@ void flash_attention_dcore(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype* v_
         auto gO = gIterO(i, 0);
         TSTORE2_DN2DN(gO, tO_cast.Tiles[1], tO_cast.Tiles[0]);
         #else
-        TCOPYOUT([&](int t) { return gIterO(i + t, 0); }, tO_cast);
+        TSTORE([&](int t) { return gIterO(i + t, 0); }, tO_cast);
         #endif
     }
 }

@@ -30,12 +30,12 @@
 // │ TADD     │ API 有，二层实现 │ jcore/TAdd.hpp 用 __vec__ 实现           │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
 // │ MGATHER  │ 已支持(一层)     │ template_asm.h 用 asm volatile            │
-// │          │                  │ (BSTART.TMA) 实现；                      │
+// │          │                  │ (BSTART.MGATHER) 实现；                  │
 // │          │                  │ 但缺少 Coalesce::Elem 模板参数支持       │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
 // │ TSTORE   │ API 有(名不同)， │ Pto ISA 名 TSTORE；                      │
-// │          │ 二层实现         │ 当前编译器名 TCOPYOUT；                   │
-// │          │                  │ jcore/TCopyOut.hpp 用 __vec__ 实现       │
+// │          │ 二层实现         │ 当前编译器名 TSTORE；                   │
+// │          │                  │ jcore/TStore.hpp 用 __vec__ 实现       │
 // └──────────┴──────────────────┴──────────────────────────────────────────┘
 //
 // PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
@@ -46,7 +46,7 @@
 //
 //   TEXPANDS:
 //     template <typename TileData, typename... WaitEvents>
-//     PTO_INST RecordEvent TEXPANDS(TileData &dst, typename TileData::DType scalar,
+//     PTO_INST RecordEvent TEXPANDSCALAR(TileData &dst, typename TileData::DType scalar,
 //                                   WaitEvents &... events);
 //
 //   TREMS:
@@ -148,7 +148,7 @@ void gen_offset_pto(
 
     // ---- Step 2: TEXPANDS 初始化 out = 0 ----
     // [当前编译器] PTO ISA 名 TEXPANDS，当前编译器名 TEXPANDSCALAR；jcore 为 __vec__
-    TEXPANDS(out, (off_t)0);
+    TEXPANDSCALAR(out, (off_t)0);
 
     size_t stride = 1;
 
@@ -233,7 +233,7 @@ void broadcast(
         MGATHER(outTile, inGm, offsetTile);
 
         // TSTORE: 将 outTile 写回 global memory
-        // [当前编译器] PTO ISA 名 TSTORE，当前编译器名 TCOPYOUT；jcore 为 __vec__
+        // [当前编译器] PTO ISA 名 TSTORE，当前编译器名 TSTORE；jcore 为 __vec__
         TSTORE(gO, outTile);
     }
     if constexpr (rmd_M) {

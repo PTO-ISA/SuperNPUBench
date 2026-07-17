@@ -6,8 +6,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <iostream>
-#include <string>
 
 // #define ENABLE_BINARY_OUTPUT
 

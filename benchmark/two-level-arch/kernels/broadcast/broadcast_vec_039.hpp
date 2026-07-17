@@ -5,7 +5,7 @@
 using namespace pto;
 
 // =====================================================================
-// Broadcast (B,1,K) -> (B,N,K) via TCOPYIN + __vec__ broadcast + TCOPYOUT
+// Broadcast (B,1,K) -> (B,N,K) via TLOAD + __vec__ broadcast + TSTORE
 //
 // Optimized for: (8192,1,16) -> (8192,8,16), dtype=half
 //
@@ -17,7 +17,7 @@ using namespace pto;
 // Processing strategy:
 //   Divide B batches into tiles of kTileBatch batches each.
 //   Per tile:
-//     1. TCOPYIN  (kTileBatch, K)   from GlobalMem -> TileReg
+//     1. TLOAD  (kTileBatch, K)   from GlobalMem -> TileReg
 //        Reads kTileBatch * K contiguous elements.
 //     2. __vec__ broadcast within TileReg:
 //        For each batch, replicate its K elements N times (row-wise).
@@ -28,7 +28,7 @@ using namespace pto;
 //          col  = x % K (inner column   0..K-1)
 //          Read  src[y * RowStride + col]
 //          Write dst[y * RowStride + x]
-//     3. TCOPYOUT (kTileBatch, N*K)  from TileReg -> GlobalMem
+//     3. TSTORE (kTileBatch, N*K)  from TileReg -> GlobalMem
 //
 // TileReg layout:
 //   Physical tile cols = 256 (padded for 512B alignment).
@@ -113,23 +113,23 @@ void broadcast(dtype *in_ptr, dtype *out_ptr,
 
     for (size_t i = 0; i < Nb; i++) {
         gm_in gsrc(in_ptr + i * kTileBatch * kInner);
-        TCOPYIN(inTile, gsrc);
+        TLOAD(inTile, gsrc);
 
         vec_broadcast_3d<tile_out, tile_in, kInner>
             <<<kBCast * kInner, kTileBatch, 1>>>(outTile.data(), inTile.data());
 
         gm_out gdst(out_ptr + i * kTileBatch * kBCast * kInner);
-        TCOPYOUT(gdst, outTile);
+        TSTORE(gdst, outTile);
     }
 
     if constexpr (rmd > 0) {
         gm_in gsrc(in_ptr + Nb * kTileBatch * kInner);
-        TCOPYIN(inTile_rmd, gsrc);
+        TLOAD(inTile_rmd, gsrc);
 
         vec_broadcast_3d<tile_out_r, tile_in_r, kInner>
             <<<kBCast * kInner, rmd, 1>>>(outTile_rmd.data(), inTile_rmd.data());
 
         gm_out gdst(out_ptr + Nb * kTileBatch * kBCast * kInner);
-        TCOPYOUT(gdst, outTile_rmd);
+        TSTORE(gdst, outTile_rmd);
     }
 }

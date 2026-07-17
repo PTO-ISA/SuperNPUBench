@@ -16,7 +16,7 @@ using namespace pto;
         GlobalTensor<typename decltype(TileVar)::DType, \
                      Shape<1,1,1,Rows,Cols>, \
                      Stride<1,1,1,Cols,1>> _g(DumpBuf); \
-        TCOPYOUT(_g, TileVar); \
+        TSTORE(_g, TileVar); \
         printf("[DUMP] %s (shape=%dx%d):\n", label, Rows, Cols); \
         for (int ri = 0; ri < Rows; ri++) { \
             printf("  row%2d: ", ri); \
@@ -38,16 +38,16 @@ void __vec__ gen_offset_trans(
 //    const size_t in_dim,
 //    const size_t out_dim,
 //    const size_t transpose_dim1,
-//    const size_t transpose_dim0,    
+//    const size_t transpose_dim0,
     const size_t base,
     const size_t total_elements
 ) {
     size_t index = blkv_get_index_x();
     size_t idx = blkv_get_index_x();
-    
+
     __vbuf__  typename  tile_Inshape::DType *in_shape_ptr = blkv_get_tile_ptr(in_shape);
     __vbuf__  typename  tile_Outshape::DType *out_shape_ptr = blkv_get_tile_ptr(out_shape);
-    
+
 //    if (index >= total_elements) return;
     idx = idx + base;   // todo idx是个向量，base是个标量，获得所有的基地址或者说基offset
 
@@ -66,7 +66,7 @@ void __vec__ gen_offset_trans(
     // 输出一维索引 → 输出坐标
     size_t out_coord[MAX_DIM] = {0};    //
     size_t tmp = idx;   //
-    
+
     #pragma clang loop unroll(full)
     for (int d = OUT_DIM - 1; d >= 0; d--) {
         out_coord[d] = tmp % out_shape_ptr[d];
@@ -85,10 +85,10 @@ void __vec__ gen_offset_trans(
         }
     }
 */
-//    uint16_t in_offset = 0; 
-    uint32_t in_offset = 0;   
+//    uint16_t in_offset = 0;
+    uint32_t in_offset = 0;
 
-    #pragma clang loop unroll(full)    
+    #pragma clang loop unroll(full)
     for (int i = 0; i < IN_DIM; i++) {
         in_offset += out_coord[i] * stride[i] * sizeof(dtype);
     }
@@ -105,7 +105,7 @@ void gen_offset_Impl(
 //    const size_t in_dim,
 //   const size_t out_dim,
 //    const size_t transpose_dim1,
-//    const size_t transpose_dim0,   
+//    const size_t transpose_dim0,
     const size_t base,
     const size_t total_elements
     )
@@ -126,21 +126,21 @@ void transpose(
 //    const size_t in_dim,
 //    const size_t out_dim,
 //    const size_t transpose_dim1,
-//    const size_t transpose_dim0   
-) 
+//    const size_t transpose_dim0
+)
     {
 
     const int Mb = gOM / tM;
 
-    
+
     const int rmd_M = gOM % tM; // todo 尾块怎么处理？
 
-    using gm_shapeIn = global_tensor<dtype, RowMajor<1, gIM>>;     //将gm中的Tensor先声明为一维数据 
+    using gm_shapeIn = global_tensor<dtype, RowMajor<1, gIM>>;     //将gm中的Tensor先声明为一维数据
     using gm_shapeOut = global_tensor<dtype, RowMajor<1, gOM>>;
-    
-    using gm_InMatShape = global_tensor<uint32_t, RowMajor<1, 128>>;     //将gm中的Tensor先声明为一维数据 
+
+    using gm_InMatShape = global_tensor<uint32_t, RowMajor<1, 128>>;     //将gm中的Tensor先声明为一维数据
     using gm_OutMatShape = global_tensor<uint32_t, RowMajor<1, 128>>;
-    
+
     using tile_shapeData = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor>; // todo 尾块怎么处理？是否要作为参数写在这
     using tile_shapeOffset = Tile<Location::Vec, uint32_t, 1, tM, BLayout::RowMajor>; // todo 这里的location，一定要是Vec吗？哪怕没有传入Vec
 //    using tile_shapeOffset = Tile<Location::Vec, uint16_t, 1, tM, BLayout::RowMajor>; // todo 这里的location，一定要是Vec吗？哪怕没有传入Vec
@@ -150,19 +150,19 @@ void transpose(
     using tile_shapeOffset_rmd = Tile<Location::Vec, uint32_t, 1, tM, BLayout::RowMajor, 1, rmd_M>; // todo 这里的location，一定要是Vec吗？哪怕没有传入Vec
 
     using tile_Inshape = Tile<Location::Vec, uint32_t, 1, 128, BLayout::RowMajor>; // todo 尾块怎么处理？是否要作为参数写在这
-    using tile_Outshape = Tile<Location::Vec, uint32_t, 1, 128, BLayout::RowMajor>; // todo 这里的location，一定要是Vec吗？哪怕没有传入Vec    
-    
+    using tile_Outshape = Tile<Location::Vec, uint32_t, 1, 128, BLayout::RowMajor>; // todo 这里的location，一定要是Vec吗？哪怕没有传入Vec
+
     gm_shapeIn inGm(in_ptr);
-    
+
     gm_InMatShape InShapeGm(in_shape);
     gm_OutMatShape OutShapeGm(out_shape);
 
     tile_shapeData dataTile;
     tile_shapeOffset offsetTile;
-    
+
     tile_shapeData_rmd dataTile_rmd;
     tile_shapeOffset_rmd offsetTile_rmd;
-    
+
     tile_Inshape  InshapeTile;
     tile_Outshape   OutshapeTile;
 
@@ -172,8 +172,8 @@ void transpose(
     using itOut = global_iterator<gm_shapeOut, tile_shapeData>;
     itOut gOIter(out_ptr);
 
-    TCOPYIN(InshapeTile, InShapeGm);
-    TCOPYIN(OutshapeTile, OutShapeGm);
+    TLOAD(InshapeTile, InShapeGm);
+    TLOAD(OutshapeTile, OutShapeGm);
 
 
     int total_elements = tM;
@@ -184,9 +184,9 @@ void transpose(
         base += total_elements;
 //        DUMP_TILE("offsetTile", offsetTile, g_dump, 1, tM);
         MGATHER(dataTile, inGm, offsetTile);
-//        printf("end mgather\n");        
-        TCOPYOUT(gO, dataTile);
-//        TCOPYOUT(gO, dataTile);
+//        printf("end mgather\n");
+        TSTORE(gO, dataTile);
+//        TSTORE(gO, dataTile);
     }
     if constexpr (rmd_M) {
         auto gO = gOIter(0, Mb);
@@ -194,7 +194,7 @@ void transpose(
         gen_offset_Impl<dtype, tile_shapeOffset_rmd, tile_Inshape, tile_Outshape, MAX_DIM, IN_DIM, OUT_DIM, TRANSPOSE_DIM1, TRANSPOSE_DIM0>(offsetTile_rmd, InshapeTile, OutshapeTile, base, total_elements);
         base += total_elements;
         MGATHER(dataTile_rmd, inGm, offsetTile_rmd);
-        TCOPYOUT(gO, dataTile_rmd);
+        TSTORE(gO, dataTile_rmd);
     }
 }
 

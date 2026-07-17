@@ -116,7 +116,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
     TCI(linear_index, output_base);
     
     // Step 2: 初始化 offset 累加器为 0
-    TEXPANDS(offset_tile, static_cast<std::uint32_t>(0));
+    TEXPANDSCALAR(offset_tile, static_cast<std::uint32_t>(0));
 
     // Step 3: 对每个维度计算坐标并累加 offset
     // 关键：这个循环在标量核心上运行，由于 Rank 是模板参数，编译期完全展开
@@ -206,7 +206,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
     // 区别仅在于 valid region 更小（kTailElements 而非 TileElements）
     // tile 操作以 valid region 为迭代域，因此自动只处理有效元素
     TCI(linear_index, output_base);
-    TEXPANDS(offset_tile, static_cast<std::uint32_t>(0));
+    TEXPANDSCALAR(offset_tile, static_cast<std::uint32_t>(0));
 
     std::uint32_t input_stride = 1;
     for (int input_dim = Rank - 1; input_dim >= 0; --input_dim) {

@@ -129,19 +129,19 @@ void TCAST(tO &o, tA &a) {
 }
 
 template <is_multi_tile tile_shape, is_gm_iter itfn>
-void TCOPYIN(tile_shape &dst, itfn it) {
+void TLOAD(tile_shape &dst, itfn it) {
   #pragma clang loop unroll(full)
   for (int i = 0; i < tile_shape::NumTiles; ++i) {
     auto gm = it(i);
-    TCOPYIN(dst.Tiles[i], gm);
+    TLOAD(dst.Tiles[i], gm);
   }
 }
 
 template <is_multi_tile tile_shape, is_global_data_v gm_shape>
-void TCOPYIN(tile_shape &dst, gm_shape &src) {
+void TLOAD(tile_shape &dst, gm_shape &src) {
 #ifdef MULTI_REUSE
   typename tile_shape::TileType t;
-  TCOPYIN(t, src);
+  TLOAD(t, src);
   #pragma clang loop unroll(full)
   for (int i = 0; i < tile_shape::NumTiles; ++i) {
     dst.Tiles[i] = t;
@@ -149,17 +149,17 @@ void TCOPYIN(tile_shape &dst, gm_shape &src) {
 #else
   #pragma clang loop unroll(full)
   for (int i = 0; i < tile_shape::NumTiles; ++i) {
-    TCOPYIN(dst.Tiles[i], src);
+    TLOAD(dst.Tiles[i], src);
   }
 #endif
 }
 
 template <class itfn, is_multi_tile tile_shape>
-void TCOPYOUT(itfn it, tile_shape &src) {
+void TSTORE(itfn it, tile_shape &src) {
   #pragma clang loop unroll(full)
   for (int i = 0; i < tile_shape::NumTiles; ++i) {
     auto gm = it(i);
-    TCOPYOUT(gm, src.Tiles[i]);
+    TSTORE(gm, src.Tiles[i]);
   }
 }
 

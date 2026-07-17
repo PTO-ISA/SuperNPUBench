@@ -41,7 +41,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
     using tileW_out  = TileAcc<float, kTm, kTk>;      // [kTm×kTk]
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
     using tileW_cast = Tile<Location::Vec, dtype, kTm, kTk, BLayout::ColMajor>;
-    using tileW_left = TileLeft<dtype, kTm, kTk>; 
+    using tileW_left = TileLeft<dtype, kTm, kTk>;
 
     using tileO_out  = TileAcc<float, kTm, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::ColMajor>; // [kTm×vD]
@@ -100,7 +100,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
         #pragma clang loop unroll(full)
         for(int x=0;x<Xdim;x++){
             auto gQ = gIterQ(i+x,0);
-            TCOPYIN(tQ[x], gQ);
+            TLOAD(tQ[x], gQ);
         }
 
         tileMax tMax[Xdim];
@@ -127,7 +127,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
                 auto gK = gIterK(0, j+y);
-                TCOPYIN(tK[y], gK);
+                TLOAD(tK[y], gK);
             }
 
             tileW tW[Xdim][Ydim];
@@ -189,8 +189,8 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
                 #pragma clang loop unroll(full)
                 for(int x=0;x<Xdim;x++){
                     new_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(
-                                                                tScale[x].data(), 
-                                                                tNewMax[x].data(), 
+                                                                tScale[x].data(),
+                                                                tNewMax[x].data(),
                                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                                                                 tMax[x].data(),
                                                                 scale);
@@ -216,7 +216,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
                 auto gV = gIterV(j+y, 0);
-                TCOPYIN(tV[y], gV);
+                TLOAD(tV[y], gV);
             }
 
             // ColMajor -> Nz
@@ -261,7 +261,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
 
             tileK_tcols tK;
             auto gK = gIterK(0, Kb);
-            TCOPYIN(tK, gK);
+            TLOAD(tK, gK);
 
             tileW_tcols tW[Xdim];
             #pragma clang loop unroll(full)
@@ -291,7 +291,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
 
             tileV_trows tV;
             auto gV = gIterV(Kb, 0);
-            TCOPYIN(tV, gV);
+            TLOAD(tV, gV);
 
             // 计算当前块的加权输出: O_j = W * V
             tileW_left_tcols tW_left[Xdim];
@@ -325,7 +325,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
         #pragma clang loop unroll(full)
         for (int x = 0; x < Xdim; ++x) {
             auto dstO = gIterO(i+x, 0);
-            TCOPYOUT(dstO, tO_cast[x]);
+            TSTORE(dstO, tO_cast[x]);
         }
     }
 
@@ -334,7 +334,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
         tileQ_trows tQ;
 
         auto gQ = gIterQ(Qb,0);
-        TCOPYIN(tQ, gQ);
+        TLOAD(tQ, gQ);
 
         tileMax_trows tMax;
         TEXPANDSCALAR(tMax, -1e30f);
@@ -354,7 +354,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
                 auto gK = gIterK(0, j+y);
-                TCOPYIN(tK[y], gK);
+                TLOAD(tK[y], gK);
             }
 
             tileW_trows tW[Ydim];
@@ -405,8 +405,8 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
                                                             );
             #elif Ydim == 4
                 new_max_4src<tileW_trows, tileMax_trows><<<tileMax_trows::ValidRow, 1, 1>>>(
-                                                            tScale.data(), 
-                                                            tNewMax.data(), 
+                                                            tScale.data(),
+                                                            tNewMax.data(),
                                                             tW[0].data(), tW[1].data(), tW[2].data(), tW[3].data(),
                                                             tMax.data(),
                                                             scale);
@@ -432,7 +432,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
                 auto gV = gIterV(j+y, 0);
-                TCOPYIN(tV[y], gV);
+                TLOAD(tV[y], gV);
             }
 
             tileW_left_trows tW_left[Ydim];
@@ -462,7 +462,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
 
             tileK_tcols tK;
             auto gK = gIterK(0, Kb);
-            TCOPYIN(tK, gK);
+            TLOAD(tK, gK);
 
             tileW_tcorner tW;
             tileW_out_tcorner tW_out;
@@ -486,7 +486,7 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
 
             tileV_trows tV;
             auto gV = gIterV(Kb, 0);
-            TCOPYIN(tV, gV);
+            TLOAD(tV, gV);
 
             tileW_left_tcorner tW_left;
             TCVT_DN2NZ(tW_left, tExpW);
@@ -504,6 +504,6 @@ void flash_attention_unalign_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_pt
         normalize_no_last_update<tileO_cast_trows, tileO_trows, tileSum_trows><<<tileO_trows::ValidRow, tileO_trows::ValidCol, 1>>>(tO_cast.data(), tO.data(), tSum.data());
 
         auto dstO = gIterO(Qb, 0);
-        TCOPYOUT(dstO, tO_cast);
+        TSTORE(dstO, tO_cast);
     }
 }

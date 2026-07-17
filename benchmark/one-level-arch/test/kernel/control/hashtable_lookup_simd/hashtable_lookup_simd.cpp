@@ -1,6 +1,7 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "fileop.h"
+#include "template_asm.h"
 #include "linx_print.h"
 
 #include "control/hashtable_lookup_simd.hpp"

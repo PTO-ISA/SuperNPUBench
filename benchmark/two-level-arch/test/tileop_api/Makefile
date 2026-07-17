@@ -5,7 +5,7 @@ endif
 
 include ../common/Makefile.common
 
-# The v0.56 direct-boot lane uses the scalar Linx implementations.  The
+# The current direct-boot lane uses the scalar Linx implementations.  The
 # retired tile-register constraint path (`Tr`) is intentionally not enabled.
 DEFINES := $(filter-out -DENABLE_TENSOR_INSTR,$(DEFINES))
 

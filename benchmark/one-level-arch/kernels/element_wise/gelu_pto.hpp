@@ -2,7 +2,7 @@
 // GELU 算子 — PTO 一层编程模型
 //
 // 原始 gelu.hpp 策略:
-//   TCOPYIN (half) -> __vec__ gelu_simd (多项式拟合) -> TCOPYOUT (half)
+//   TLOAD (half) -> __vec__ gelu_simd (多项式拟合) -> TSTORE (half)
 //   __vec__ 块逐元素: fp16→fp32, clamp, Horner 多项式, exp, 除法, fp32→fp16
 //
 // PTO 一层策略:
@@ -15,8 +15,8 @@
 // │ Pto ISA  │ 当前编译器状态   │ 说明                                     │
 // │ 指令     │                  │                                          │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TLOAD    │ API 有(名不同)， │ PTO ISA 名 TLOAD；当前编译器名 TCOPYIN；  │
-// │          │ 二层实现         │ jcore/TCopyIn.hpp 用 __vec__ 实现        │
+// │ TLOAD    │ API 有(名不同)， │ PTO ISA 名 TLOAD；当前编译器名 TLOAD；  │
+// │          │ 二层实现         │ jcore/TLoad.hpp 用 __vec__ 实现        │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
 // │ TCVT     │ API 有(签名不同)，│ PTO ISA: TCVT(dst,src,tmp,mode,satMode) │
 // │          │ 二层实现         │ 当前编译器: TCVT(dst,src) 无 tmp/mode；  │
@@ -40,8 +40,8 @@
 // │          │                  │ (template_asm.h 有 TRECIP_TEPL 内联汇编,  │
 // │          │                  │  但不在 pto_tileop.hpp API 中)            │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TSTORE   │ API 有(名不同)， │ PTO ISA 名 TSTORE；当前编译器名 TCOPYOUT；│
-// │          │ 二层实现         │ jcore/TCopyOut.hpp 用 __vec__ 实现       │
+// │ TSTORE   │ API 有(名不同)， │ PTO ISA 名 TSTORE；当前编译器名 TSTORE；│
+// │          │ 二层实现         │ jcore/TStore.hpp 用 __vec__ 实现       │
 // └──────────┴──────────────────┴──────────────────────────────────────────┘
 //
 // PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
@@ -257,13 +257,13 @@ void gelu(
         auto gO = gOIter(0, i);
 
         // TLOAD: GM -> UB
-        // [当前编译器] 名为 TCOPYIN, jcore 为 __vec__
+        // [当前编译器] 名为 TLOAD, jcore 为 __vec__
         TLOAD(inTile, gI);
 
         gelu_impl<tile_shapeData, tile_shapeFP32>(inTile, outTile, tmpCvt);
 
         // TSTORE: UB -> GM
-        // [当前编译器] 名为 TCOPYOUT, jcore 为 __vec__
+        // [当前编译器] 名为 TSTORE, jcore 为 __vec__
         TSTORE(gO, outTile);
     }
     if constexpr (rmd_M) {

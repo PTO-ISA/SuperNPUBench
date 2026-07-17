@@ -7,7 +7,7 @@ int main() {
     fill_seq(a, 256); fill_seq(b, 256); fill_seq(d, 256); zero(c, 256);
     BENCHSTART;
     float s = (float)0.5;
-    bench_scalar_bcast<float,M,N>(c,s,[](auto& dst,auto& sc){ TEXPANDS(dst,sc); });
+    bench_scalar_bcast<float,M,N>(c,s,[](auto& dst,auto& sc){ TEXPANDSCALAR(dst,sc); });
     BENCHEND;
     return 0;
 }

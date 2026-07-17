@@ -4,11 +4,11 @@
 using namespace pto;
 
 //AI/IA = A, placeholder
-//like Ttrans 
+//like Ttrans
 template<typename dtype, typename tileInData, typename tileOutData>
 void __vec__ transpose_007_impl(
     typename tileOutData::TileDType __out__ out,
-    const typename tileInData::TileDType __in__ in    
+    const typename tileInData::TileDType __in__ in
 )
 {
     size_t i = blkv_get_index_x(); // 4096
@@ -27,13 +27,13 @@ void __vec__ transpose_007_impl(
 // in1[DimIn1, 1] in2 [DimIn2, 1] bias[DimOut, 1] weight [DimOut, DimIn1, DimIn2]
 template<typename dtype>
 void transpose_007(
-        dtype *out_ptr, 
+        dtype *out_ptr,
         dtype *in_ptr
 )
 {
-    const int Mb = 4096 / 4096;    
+    const int Mb = 4096 / 4096;
 
-    using gm_shapeIn = global_tensor<dtype, RowMajor<1, 4096*3>>;     //将gm中的Tensor先声明为一维数据 
+    using gm_shapeIn = global_tensor<dtype, RowMajor<1, 4096*3>>;     //将gm中的Tensor先声明为一维数据
     using gm_shapeOut = global_tensor<dtype, RowMajor<3, 4096>>;
     using tile_shapeInData = Tile<Location::Vec, dtype, 1, 4096*4, BLayout::RowMajor, 1, 4096*3>; // todo 尾块怎么处理？是否要作为参数写在这
     using tile_shapeOutData = Tile<Location::Vec, dtype, 4, 4096, BLayout::RowMajor, 3, 4096>; // todo 尾块怎么处理？是否要作为参数写在这
@@ -42,18 +42,18 @@ void transpose_007(
     using itOut = global_iterator<gm_shapeOut, tile_shapeOutData>;
 
     tile_shapeInData InDataTile;
-    tile_shapeOutData OutDataTile;  
+    tile_shapeOutData OutDataTile;
 
     itIn  gIIter(in_ptr);
-    itOut gOIter(out_ptr);  
+    itOut gOIter(out_ptr);
 
     for (int i = 0; i < Mb; ++i) {
         auto gI = gIIter(0, i);
         auto gO = gOIter(0, i);
-        TCOPYIN(InDataTile, gI);
+        TLOAD(InDataTile, gI);
         transpose_007_impl<dtype, tile_shapeInData, tile_shapeOutData><<<tile_shapeOutData::ValidCol, tile_shapeOutData::ValidRow, 1>>>(OutDataTile.data(), InDataTile.data());
-        TCOPYOUT(gO, OutDataTile);
-    }    
+        TSTORE(gO, OutDataTile);
+    }
 
 }
 

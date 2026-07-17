@@ -61,7 +61,7 @@ void reducemax_col_rand(
     itOut gOIter(out_ptr);
 
     auto gO = gOIter(0, 0);
-    TEXPANDS(oldMaxTile, static_cast<dtype>(0));
+    TEXPANDSCALAR(oldMaxTile, static_cast<dtype>(0));
 
     auto gI = gIIter(0, 0);
     TLOAD(dataTile, gI);

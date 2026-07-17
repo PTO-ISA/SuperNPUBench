@@ -416,8 +416,11 @@ public:
   static_assert(SFractalSize_ == 512 || SFractalSize_ == 1024,
                 "SFractalSize_ illegal");
 
-#if defined(__linx) && defined(SUPERNPUBENCH_LINX_TILE_SIZE)
-  using TileDType = DType tile_size(Rows *Cols / (sizeof(DType) * 8 / type_traits<DType>::bits));
+#if defined(__linx)
+  // Tile element interpretation is carried by PTO descriptors, not the C++
+  // value type. Keep every architectural tile on the backend's canonical
+  // opaque v1024i32 carrier.
+  using TileDType = int32_t __attribute__((vector_size(4096)));
 #else
   using TileDType = DType[Rows * Cols];
 #endif

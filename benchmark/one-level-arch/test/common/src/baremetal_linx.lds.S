@@ -1,4 +1,4 @@
-OUTPUT_ARCH(linxv5)
+OUTPUT_ARCH(linx)
 ENTRY(firmware_base)
 /*
 SEARCH_DIR("=/usr1/compiler_cpu/build/BiSheng_linx64be_elf/../../output/BiSheng_linx64be_elf/BiSheng_linx64be_elf/linx64-unknown-elf/lib"); SEARCH_DIR("=/usr/local/lib"); SEARCH_DIR("=/lib"); SEARCH_DIR("=/usr/lib");
@@ -13,15 +13,15 @@ MEMORY {
 
 SECTIONS
 {
-  mem_base = MEM_BASE; 
+  mem_base = MEM_BASE;
   .app_mem mem_base :
   {
-      KEEP(*(.app_text))        
+      KEEP(*(.app_text))
       KEEP(*(.app_data))
   } > RAM
 
   firmware_base = FIRMWARE_BASE;
-  .firmware firmware_base :    
+  .firmware firmware_base :
   {
       KEEP(*benchmark_boot_linx.o(linxboot_text))
       KEEP(*(boot_text))
@@ -75,7 +75,7 @@ SECTIONS
       *(.text .stub .text.* .gnu.linkonce.t.*)
       /* .gnu.warning sections are handled specially by elf.em.  */
       *(.gnu.warning)
-  } > RAM =0 
+  } > RAM =0
 
   .init           :
   {
@@ -288,7 +288,7 @@ SECTIONS
   .heap (NOLOAD):
   {
       /* . = ALIGN(8);*/
-      . = . + HEAP_SIZE;  // 4GB 
+      . = . + HEAP_SIZE;  // 4GB
   } > HEAP
   heap_end = .;
 

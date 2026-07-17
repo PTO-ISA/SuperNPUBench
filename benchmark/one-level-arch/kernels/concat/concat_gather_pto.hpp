@@ -56,7 +56,7 @@ void concat_gather(
         OffsetTile contribution;
 
         TCI(linear_index, output_base);
-        TEXPANDS(offset_tile, static_cast<uint32_t>(0));
+        TEXPANDSCALAR(offset_tile, static_cast<uint32_t>(0));
 
         // 计算输入 stride（标量核心，运行时计算）
         uint32_t input_stride[DATA_DIM];
@@ -132,7 +132,7 @@ void concat_gather(
         TailOffsetTile contribution;
 
         TCI(linear_index, output_base);
-        TEXPANDS(offset_tile, static_cast<uint32_t>(0));
+        TEXPANDSCALAR(offset_tile, static_cast<uint32_t>(0));
 
         uint32_t input_stride[DATA_DIM];
         input_stride[DATA_DIM - 1] = 1;

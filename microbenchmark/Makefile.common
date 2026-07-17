@@ -20,6 +20,8 @@ COMM_SRC_DIR := common/src
 COMM_OBJ += $(patsubst %.cpp, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.cpp)))
 COMM_OBJ += $(patsubst %.c, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.c)))
 COMM_OBJ += $(patsubst %.s, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(wildcard $(TEST_ROOT)/$(COMM_SRC_DIR)/*.s)))
+FREESTANDING_RUNTIME_SRC := $(TEST_ROOT)/$(COMM_SRC_DIR)/freestanding_runtime.c
+FREESTANDING_RUNTIME_OBJ := $(patsubst %.c, %.o, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(FREESTANDING_RUNTIME_SRC)))
 
 # Object files
 OBJ := $(patsubst %.cpp, %.o, $(subst $(SRC_DIR), $(OBJ_DIR), $(SRC_FILE)))
@@ -33,6 +35,9 @@ LINK_SCRIPT = $(patsubst %.S, %, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(LINK_SCRIP
 # Platform settings
 PLAT ?= linx
 baremetal ?= off
+CC_OPT ?= default
+LINX_SYSROOT ?= $(shell test -d "$(ROOT)/../../../out/libc/musl/install/phase-b" && realpath "$(ROOT)/../../../out/libc/musl/install/phase-b" || true)
+LINX_SYSROOT_FLAGS := $(if $(LINX_SYSROOT),--sysroot=$(LINX_SYSROOT) -idirafter $(LINX_SYSROOT)/usr/include,)
 
 ifeq ($(PLAT), cpu)
 DEFINES += -D__cpu_sim__
@@ -49,7 +54,7 @@ CC_LINK +=
 else ifeq ($(PLAT), linx)
 DEFINES += -D__linx
 ifndef COMPILER_DIR
-$(error COMPILER_DIR is not set. Export COMPILER_DIR pointing to the linx_blockisa_llvm_musl toolchain bin directory)
+$(error COMPILER_DIR is not set. Point it to compiler/llvm/build-linxisa-clang/bin in the LinxISA superproject)
 endif
 AS = $(COMPILER_DIR)/clang
 CC = $(COMPILER_DIR)/clang
@@ -57,23 +62,13 @@ CXX = $(COMPILER_DIR)/clang++
 LINK = $(COMPILER_DIR)/clang++
 DUMP = $(COMPILER_DIR)/llvm-objdump
 COPY = $(COMPILER_DIR)/llvm-objcopy
-CC_O = -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true $(CFLAGS)
+CC_O = -c -target linx64-linx-none-elf $(LINX_SYSROOT_FLAGS) -fenable-matrix -O2 $(CFLAGS)
 CXX_VER ?= -std=c++20
 
-ifneq ($(CC_OPT), default)
-    CC_O += -mllvm -linxv5-enable-HL-Inst-Opt=true \
-            -mllvm -linxv5-enable-dim-opt=true \
-            -mllvm -linxv5-enable-ldst-bridge=false \
-            -mllvm -linxv5-enable-continuous-mem-opt=true \
-            -mllvm -linxv5-enable-tile-clock-hand=false \
-            -mllvm -linxv5-enable-simt-clock-hand=true \
-            -mllvm -enable-misched=false
-endif
-
 ifeq ($(baremetal), on)
-    CC_LINK += -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
+    CC_LINK += $(LINX_SYSROOT_FLAGS) -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
 else
-    CC_LINK += -nostartfiles $(TEST_ROOT)/common/_start.s
+    CC_LINK += -target linx64-linx-none-elf $(LINX_SYSROOT_FLAGS) -nostdlib -Wl,-e,_start $(TEST_ROOT)/common/_start.s
 endif
 
 DEFINES += -DENABLE_TENSOR_INSTR
@@ -118,20 +113,20 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.s
 # Common source compilation rules
 $(OBJ_ROOT)/$(COMM_SRC_DIR)%.o: $(TEST_ROOT)/$(COMM_SRC_DIR)%.c
 	@mkdir -p $(shell dirname $@)
-	$(CXX) -mlxbc -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
+	$(CXX) -target linx64-linx-none-elf $(LINX_SYSROOT_FLAGS) -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
 
 $(OBJ_ROOT)/$(COMM_SRC_DIR)%.o: $(TEST_ROOT)/$(COMM_SRC_DIR)%.s
 	@mkdir -p $(shell dirname $@)
-	$(CXX) -mlxbc -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
+	$(CXX) -target linx64-linx-none-elf $(LINX_SYSROOT_FLAGS) -c -O2 -Wno-return-type -Wno-deprecated -Wno-unused-command-line-argument -Wno-invalid-noreturn $(INCLUDE) $(DEFINES) $< -o $@
 
 # Link script compilation
 $(OBJ_ROOT)/$(COMM_SRC_DIR)%.lds : $(TEST_ROOT)/$(COMM_SRC_DIR)%.lds.S
 	$(CC) $(DEFINES) $(INCLUDE) -E -P -C -o $@ $<
 
 # Linking rule
-$(TARGET): $(LINK_SCRIPT) $(COMM_OBJ) $(OBJ)
+$(TARGET): $(LINK_SCRIPT) $(COMM_OBJ) $(FREESTANDING_RUNTIME_OBJ) $(OBJ)
 	@mkdir -p $(shell dirname $@)
-	$(LINK) $(CC_LINK) $(OBJ) $(COMM_OBJ) -o $@
+	$(LINK) $(CC_LINK) $(OBJ) $(COMM_OBJ) $(FREESTANDING_RUNTIME_OBJ) -o $@
 
 # Create directories
 pre_work:
