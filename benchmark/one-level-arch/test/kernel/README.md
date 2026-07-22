@@ -11,7 +11,8 @@ test/kernel/
 ├── broadcast/        element_wise/    matmul/
 ├── concat/           fa/              reduction/{reducemax_col,row,...}
 ├── control/          gather/          sort/
-└── transpose/
+├── pto_kernels/      transpose/
+└── reduction/
 ```
 
 ## Operator Test Status
@@ -28,6 +29,7 @@ test/kernel/
 | concat | 4 | ✓ | gather/scatter |
 | control | 1 | △ | pure tile-op; run gfsim with `-s core.singleTierMode=true`; `.data` via `gen_data.py` |
 | sort | 1 | △ | topk |
+| pto_kernels | 9 | ✓ | Tile-only imports pinned to PTO-Kernel; strict 0.57 allowlist |
 
 (Configs reflect `compile.all` typical scenarios; `△` = compiles but needs special run flags / generated data.)
 

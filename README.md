@@ -130,7 +130,7 @@ details.
 <!-- BENCHMARK-CATALOG:START -->
 ## One-level benchmark catalog
 
-The one-level manifests contain **53 build variants**. Every name below
+The one-level manifests contain **62 build variants**. Every name below
 has a source-complete page with its build command and PTO intrinsic surface in
 the website's **Benchmarks** section.
 
@@ -173,6 +173,12 @@ the website's **Benchmarks** section.
 <details><summary><strong>One-level / matmul</strong> (1 name, 16 variants)</summary>
 
 `matmul`
+
+</details>
+
+<details><summary><strong>One-level / pto_kernels</strong> (9 names, 9 variants)</summary>
+
+`pto_add`, `pto_flash_attention`, `pto_gemm`, `pto_gemm_basic`, `pto_gemm_demo`, `pto_gemm_performance`, `pto_mamulb`, `pto_tload_store`, `pto_tmatmul_acc`
 
 </details>
 

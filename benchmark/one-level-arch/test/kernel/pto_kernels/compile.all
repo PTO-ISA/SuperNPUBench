@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+make TESTCASE=pto_tload_store COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=pto_add COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=pto_gemm COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=pto_gemm_basic COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=pto_gemm_demo COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=pto_gemm_performance COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=pto_mamulb COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=pto_tmatmul_acc COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=pto_flash_attention COMPILER_DIR="$COMPILER_DIR" diss

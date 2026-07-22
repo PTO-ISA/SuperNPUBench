@@ -7,8 +7,8 @@ implementation page presents the complete entry source, PTO-bearing local
 include implementations, the canonical PTO intrinsic surface, exact build
 commands, and required data objects.
 
-**Coverage:** 53 active build variants, 20 source-backed
-implementations, and 13 benchmark families.
+**Coverage:** 62 active build variants, 29 source-backed
+implementations, and 14 benchmark families.
 
 | Surface | Family | Implementations | Build variants | PTO source-union surface |
 | --- | --- | ---: | ---: | --- |
@@ -19,6 +19,7 @@ implementations, and 13 benchmark families.
 | One-level | [fa](catalog/one-level/fa/index.md) | 2 | 9 | 23 intrinsics |
 | One-level | [gather](catalog/one-level/gather/index.md) | 1 | 1 | 3 intrinsics |
 | One-level | [matmul](catalog/one-level/matmul/index.md) | 3 | 16 | 11 intrinsics |
+| One-level | [pto_kernels](catalog/one-level/pto-kernels/index.md) | 9 | 9 | 7 intrinsics |
 | One-level | [reduction/reducemax_col](catalog/one-level/reduction-reducemax-col/index.md) | 1 | 1 | 5 intrinsics |
 | One-level | [reduction/reducemax_row](catalog/one-level/reduction-reducemax-row/index.md) | 1 | 1 | 5 intrinsics |
 | One-level | [reduction/reducesum_col](catalog/one-level/reduction-reducesum-col/index.md) | 1 | 2 | 5 intrinsics |

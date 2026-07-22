@@ -61,6 +61,7 @@ compile_operator "$REPO_ROOT/test/kernel/reduction/reducesum_row" "reducesum_row
 compile_operator "$REPO_ROOT/test/kernel/control" "control" || failures+=("control")
 compile_operator "$REPO_ROOT/test/kernel/fa" "fa" || failures+=("fa")
 compile_operator "$REPO_ROOT/test/kernel/sort" "sort" || failures+=("sort")
+compile_operator "$REPO_ROOT/test/kernel/pto_kernels" "pto_kernels" || failures+=("pto_kernels")
 
 echo ""
 echo "=========================================="

@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "upstream": "https://github.com/LinxISA/PTO-Kernel",
+  "revision": "0eb72cb20b0de99326d984a9a27ddb815e6e4c24",
+  "policy": "PTO 0.57 allowlist only; scalar QEMU fallback paths removed",
+  "support_headers": [
+    {"source": "common/linx_lowp_types.hpp", "upstream_source": "include/common/linx_lowp_types.hpp", "sha256": "dddda37f13a8fd6c35659afbf2075359fb7218bb709ee81851a5e8d525b5888d"},
+    {"source": "common/pto_tileop.hpp", "upstream_source": "include/common/pto_tileop.hpp", "sha256": "5566c25f05e0a8c414b0cc34aa15b84356da6c6e3598c35a48a362c887b29229"},
+    {"source": "common/runtime/kernel_env.hpp", "upstream_source": "include/common/runtime/kernel_env.hpp", "sha256": "377544f7b177104295a93becfa34a5f4417d3b59e889ce18574642c907e26ec3"},
+    {"source": "common/runtime/kernel_shapes.hpp", "upstream_source": "include/common/runtime/kernel_shapes.hpp", "sha256": "5d8cfac46f16b06cff219dbf20aa51c536afc161389c19eea4396db2d196cda4"},
+    {"source": "common/runtime/kernel_tiling.hpp", "upstream_source": "include/common/runtime/kernel_tiling.hpp", "sha256": "ebfea19f799a8af114db33bed8232bac1c96dd88af80d00ee33093fcc3577450"},
+    {"source": "pto/linx/impl/backend.hpp", "upstream_source": "include/pto/linx/impl/backend.hpp", "sha256": "ae926652c0a706aedf2d30bd384570a090f72290d48a699ac269e1bb5912cc2c"}
+  ],
+  "kernels": [
+    {"benchmark": "pto_tload_store", "source": "memory/tload_store.cpp", "upstream_source": "kernels/memory/tload_store.cpp"},
+    {"benchmark": "pto_add", "source": "elementwise/add_custom.cpp", "upstream_source": "kernels/elementwise/add_custom.cpp"},
+    {"benchmark": "pto_gemm", "source": "matmul/gemm.cpp", "upstream_source": "kernels/matmul/gemm.cpp"},
+    {"benchmark": "pto_gemm_basic", "source": "matmul/gemm_basic.cpp", "upstream_source": "kernels/matmul/gemm_basic.cpp"},
+    {"benchmark": "pto_gemm_demo", "source": "matmul/gemm_demo.cpp", "upstream_source": "kernels/matmul/gemm_demo.cpp"},
+    {"benchmark": "pto_gemm_performance", "source": "matmul/gemm_performance.cpp", "upstream_source": "kernels/matmul/gemm_performance.cpp"},
+    {"benchmark": "pto_mamulb", "source": "matmul/mamulb.cpp", "upstream_source": "kernels/matmul/mamulb.cpp"},
+    {"benchmark": "pto_tmatmul_acc", "source": "matmul/tmatmul_acc.cpp", "upstream_source": "kernels/matmul/tmatmul_acc.cpp"},
+    {"benchmark": "pto_flash_attention", "source": "attention/flash_attention.cpp", "upstream_source": "kernels/attention/flash_attention.cpp"}
+  ]
+}

@@ -31,6 +31,10 @@ The exact implementation page in the [benchmark catalog](../benchmarks/index.md)
 shows the complete source closure and the 0.57 intrinsics reached by the active
 build.
 
+For additional source-backed examples covering memory movement, tile addition,
+six GEMM forms, and a two-stage attention kernel, see
+[Migrated PTO Tile Kernels](migrated-pto-kernels.md).
+
 ## Compile
 
 ```bash
