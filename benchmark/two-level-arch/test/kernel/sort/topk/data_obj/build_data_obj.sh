@@ -1,5 +1,10 @@
 #!/bin/bash
-COMPILER_DIR="${COMPILER_DIR:-/remote/lms01/j00827727/jcore/compilers/linx_blockisa_llvm_musl0.56.16/bin}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SUPERPROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-superproject-working-tree 2>/dev/null || true)"
+if [[ -z "$SUPERPROJECT_ROOT" ]]; then
+    SUPERPROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+fi
+COMPILER_DIR="${COMPILER_DIR:-${SUPERPROJECT_ROOT}/compiler/llvm/build-linxisa-clang/bin}"
 DATA_OBJ_DIR="$1"
 OUTPUT_DIR="$2"
 
@@ -25,7 +30,7 @@ _binary_${name}_data_end:
 .equ _binary_${name}_data_size, .-_binary_${name}_data_start
 EOF
 
-    $COMPILER_DIR/clang++ -target linx64v5 -c "$asm_file" -o "$obj_file"
+    $COMPILER_DIR/clang++ -target linx64-linx-none-elf -c "$asm_file" -o "$obj_file"
 }
 
 build_one "input_131072"

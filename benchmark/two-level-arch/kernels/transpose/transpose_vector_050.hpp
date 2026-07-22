@@ -7,7 +7,7 @@ using namespace pto;
 template<typename dtype, typename tileData>
 void __vec__ transpose_050_impl(
     typename tileData::TileDType __out__ out,
-    const typename tileData::TileDType __in__ in    
+    const typename tileData::TileDType __in__ in
 )
 {
     size_t i = blkv_get_index_x(); // y
@@ -26,33 +26,33 @@ void __vec__ transpose_050_impl(
 
 template<typename dtype>
 void transpose_050(
-        dtype *out_ptr, 
+        dtype *out_ptr,
         dtype *in_ptr
 )
-{   
+{
 
 
-    using gm_shapeIn = global_tensor<dtype, RowMajor<512, 64>>;     //将gm中的Tensor先声明为一维数据 
+    using gm_shapeIn = global_tensor<dtype, RowMajor<512, 64>>;     //将gm中的Tensor先声明为一维数据
     using gm_shapeOut = global_tensor<dtype, RowMajor<512, 64>>;
     using tile_shapeData = Tile<Location::Vec, dtype, 512, 64, BLayout::RowMajor, 512, 64>; // todo 尾块怎么处理？是否要作为参数写在这
 
     using itIn = global_iterator<gm_shapeIn, tile_shapeData>;
-    using itOut = global_iterator<gm_shapeOut, tile_shapeData>;    
+    using itOut = global_iterator<gm_shapeOut, tile_shapeData>;
 
     tile_shapeData InDataTile;
     tile_shapeData OutDataTile;
 
     itIn  gIIter(in_ptr);
-    itOut gOIter(out_ptr);  
+    itOut gOIter(out_ptr);
 
 
     auto gI = gIIter(0, 0);
     auto gO = gOIter(0, 0);
-    TCOPYIN(InDataTile, gI);
+    TLOAD(InDataTile, gI);
     transpose_050_impl<dtype, tile_shapeData><<<tile_shapeData::ValidCol, tile_shapeData::ValidRow, 1>>>(OutDataTile.data(), InDataTile.data());
-    TCOPYOUT(gO, OutDataTile);
-   
- 
+    TSTORE(gO, OutDataTile);
+
+
 }
 
 

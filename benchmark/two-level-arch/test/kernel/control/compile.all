@@ -1,4 +1,6 @@
-#! /bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+
 for debug in on off; do
     if [[ "$debug" == "on" ]]; then
         debug_define=""

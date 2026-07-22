@@ -109,9 +109,8 @@ make clean_all                # clean all
 
 ### Sort — `sort/topk`.
 
-## Known Issues
-- `fa_2d_unroll` `X=1,Y=1` / `X=2,Y=1` → `LinxV5 CallingConv Fail!` (Issue #6).
-- `control` needs `-s core.singleTierMode=true` on gfsim; `.data` from `gen_data.py`.
+## Runtime note
+- `control` needs `-s core.singleTierMode=true` on gfsim; `.data` comes from `gen_data.py`.
 
 ## Adding a Test
 1. Create `test/kernel/<operator>/` with `src/`, `Makefile`, `compile.all`.

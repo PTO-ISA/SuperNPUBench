@@ -1354,7 +1354,7 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
       tile_shapeACC tACC;
       tile_ACCin tACCin;
       tile_shape_dequant tAdder[2];
-      TEXPANDS(tAdder[0], 0.);
+      TEXPANDSCALAR(tAdder[0], 0.);
       int k=0;
       #pragma clang loop unroll(full)
       for(;k<Kb;k++){
@@ -1405,7 +1405,7 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
       tile_shapeC_tcols tACC;
       tile_ACCin_tcols tACCin;
       tile_shape_dequant_tcols tAdder[2];
-      TEXPANDS(tAdder[0], 0.);
+      TEXPANDSCALAR(tAdder[0], 0.);
       int k = 0;
       #pragma clang loop unroll(full)
       for (; k < Kb; ++k) {

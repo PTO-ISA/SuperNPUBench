@@ -109,7 +109,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
         // tMax[x]: [kTm, 1]，每行初值为 -inf 的近似值。
         #pragma clang loop unroll(full)
         for(int x=0;x<Xdim;x++){
-            TEXPANDS(tMax[x], -1e30f);
+            TEXPANDSCALAR(tMax[x], -1e30f);
         }
 
         tileSum tSum[Xdim];
@@ -117,7 +117,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
         // tSum[x]: [kTm, 1]，每行初值为 0。
         #pragma clang loop unroll(full)
         for(int x=0;x<Xdim;x++){
-            TEXPANDS(tSum[x], 0);
+            TEXPANDSCALAR(tSum[x], 0);
         }
 
         // tPV_out 是每个 Q block 计算 PV 时复用的 Acc tile。

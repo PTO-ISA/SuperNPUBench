@@ -3,11 +3,11 @@
 //
 // 原始 gather.hpp 策略:
 //   对每个输出 tile (tM, tN):
-//     1. TCOPYIN  加载 offset tile (行索引, 1×tM) from GM
+//     1. TLOAD  加载 offset tile (行索引, 1×tM) from GM
 //     2. __vec__ gen_offset 计算字节偏移:
 //          offset[row,col] = (in_offset[row] * gN + n_base + col) * sizeof(dtype)
 //     3. MGATHER  按字节偏移从数据表取数 (旧 MGATHER, 字节偏移语义)
-//     4. TCOPYOUT 写回输出
+//     4. TSTORE 写回输出
 //
 // PTO 一层策略:
 //   对每个输出 tile (tM, tN):
@@ -27,7 +27,7 @@
 // │ Pto ISA  │ 当前编译器状态   │ 说明                                     │
 // │ 指令     │                  │                                          │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TLOAD    │ API 有(名不同)， │ PTO ISA 名 TLOAD；当前编译器名 TCOPYIN；  │
+// │ TLOAD    │ API 有(名不同)， │ PTO ISA 名 TLOAD；当前编译器名 TLOAD；  │
 // │          │                  │ 核心参数 (dst, src) 和行为一致            │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
 // │ MGATHER  │ 部分支持         │ template_asm.h 有 MGATHER (asm volatile);│
@@ -35,38 +35,10 @@
 // │          │                  │ 且旧实现按字节偏移取数,                   │
 // │          │                  │ PTO ISA Coalesce::Row 按行索引取数        │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TSTORE   │ API 有(名不同)， │ PTO ISA 名 TSTORE；当前编译器名 TCOPYOUT；│
+// │ TSTORE   │ API 有(名不同)， │ PTO ISA 名 TSTORE；当前编译器名 TSTORE；│
 // │          │                  │ 核心参数 (dst, src) 和行为一致            │
 // └──────────┴──────────────────┴──────────────────────────────────────────┘
 //
-// PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
-//
-//   TLOAD:
-//     template <typename TileData, typename GlobalData, typename... WaitEvents>
-//     PTO_INST RecordEvent TLOAD(TileData &dst, GlobalData &src,
-//                                WaitEvents &... events);
-//
-//   MGATHER (Coalesce::Row 模式):
-//     template <Coalesce Mode = Coalesce::Row,
-//               GatherOOB Oob  = GatherOOB::Undefined,
-//               typename TileDst, typename GlobalData,
-//               typename TileInd, typename... WaitEvents>
-//     PTO_INST RecordEvent MGATHER(TileDst &dst, GlobalData &src,
-//                                  TileInd &indexes, WaitEvents &... events);
-//
-//     Row 模式语义: dst[r,:] = table[idx[r], :]
-//       - idx 为行索引 (非字节偏移)
-//       - tablePtr + idx * tableRowStride 定位到行起始
-//       - 读取 validCol 个元素到 dst 对应行
-//       - 约束 (A2A3): TileIdx::ValidRow==1, TileIdx::ValidCol==TileDst::ValidRow
-//       - 约束 (A5):   同上, 或 [R,1] ColMajor; 且 staticShape[4]==ValidCol
-//
-//   TSTORE:
-//     template <typename TileData, typename GlobalData,
-//               AtomicType atomicType = AtomicType::AtomicNone,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TSTORE(GlobalData &dst, TileData &src,
-//                                 WaitEvents &... events);
 // ============================================================================
 
 #include <common/pto_tile.hpp>
@@ -141,7 +113,7 @@ void gather(
             size_t n_base  = i * tN;
 
             // TLOAD: 加载行索引 tile (1, tM) from GM
-            // [当前编译器] 名为 TCOPYIN
+            // [当前编译器] 名为 TLOAD
             TLOAD(inOffsetTile, gInOffset);
 
             // MGATHER<Coalesce::Row>: 按行索引从数据表取数
@@ -154,7 +126,7 @@ void gather(
             MGATHER(outTile, adjustedGm, inOffsetTile);
 
             // TSTORE: 写回输出 tile (tM, tN) to GM
-            // [当前编译器] 名为 TCOPYOUT
+            // [当前编译器] 名为 TSTORE
             TSTORE(gO, outTile);
         }
 

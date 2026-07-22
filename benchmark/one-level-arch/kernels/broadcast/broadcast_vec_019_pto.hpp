@@ -2,7 +2,7 @@
 // Broadcast (B,1,K) -> (B,N,K) — PTO 一层编程模型
 //
 // 原始 broadcast_vec_019.hpp 策略:
-//   TCOPYIN (kTileBatch,K) -> __vec__ 行复制 (K 个元素复制 N 次) -> TCOPYOUT (kTileBatch,N*K)
+//   TLOAD (kTileBatch,K) -> __vec__ 行复制 (K 个元素复制 N 次) -> TSTORE (kTileBatch,N*K)
 //   __vec__ 块: dst[batch*RowStride + copy*K + x] = src[batch*RowStride + x]
 //
 // PTO 一层策略:
@@ -18,39 +18,18 @@
 // │ 指令     │                  │                                          │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
 // │ TLOAD    │ API 有(名不同)， │ PTO ISA 名 TLOAD；                      │
-// │          │ 二层实现         │ 当前编译器名 TCOPYIN；                    │
-// │          │                  │ jcore/TCopyIn.hpp 用 __vec__ 实现        │
+// │          │ 二层实现         │ 当前编译器名 TLOAD；                    │
+// │          │                  │ jcore/TLoad.hpp 用 __vec__ 实现        │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
 // │ TINSERT  │ 完全缺失         │ pto_tileop.hpp 中无此 API；              │
 // │          │                  │ 当前编译器无 TINSERT 实现                │
 // │          │                  │ (仅有反向操作 TEXTRACT)                  │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
 // │ TSTORE   │ API 有(名不同)， │ PTO ISA 名 TSTORE；                      │
-// │          │ 二层实现         │ 当前编译器名 TCOPYOUT；                   │
-// │          │                  │ jcore/TCopyOut.hpp 用 __vec__ 实现       │
+// │          │ 二层实现         │ 当前编译器名 TSTORE；                   │
+// │          │                  │ jcore/TStore.hpp 用 __vec__ 实现       │
 // └──────────┴──────────────────┴──────────────────────────────────────────┘
 //
-// PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
-//
-//   TLOAD:
-//     template <typename TileData, typename GlobalData, typename... WaitEvents>
-//     PTO_INST RecordEvent TLOAD(TileData &dst, GlobalData &src,
-//                                WaitEvents &... events);
-//
-//   TINSERT:
-//     template <typename DstTileData, typename SrcTileData, typename... WaitEvents>
-//     PTO_INST RecordEvent TINSERT(DstTileData &dst, SrcTileData &src,
-//                                  uint16_t indexRow, uint16_t indexCol,
-//                                  WaitEvents &... events);
-//     语义: dst[indexRow+i, indexCol+j] = src[i,j]
-//           for 0 <= i < src.ValidRow, 0 <= j < src.ValidCol
-//
-//   TSTORE:
-//     template <typename TileData, typename GlobalData,
-//               AtomicType atomicType = AtomicType::AtomicNone,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TSTORE(GlobalData &dst, TileData &src,
-//                                 WaitEvents &... events);
 // ============================================================================
 
 #include <common/pto_tile.hpp>
@@ -116,7 +95,7 @@ void broadcast(dtype *in_ptr, dtype *out_ptr,
         gm_out gdst(out_ptr + i * kTileBatch * kBCast * kInner);
 
         // TLOAD: GM -> UB, 加载 (kTileBatch, kInner) 输入 tile
-        // [当前编译器] 名为 TCOPYIN, jcore 为 __vec__
+        // [当前编译器] 名为 TLOAD, jcore 为 __vec__
         TLOAD(inTile, gsrc);
 
         // TINSERT × kBCast: 将输入 tile 插入输出 tile 的 N 个列偏移
@@ -128,7 +107,7 @@ void broadcast(dtype *in_ptr, dtype *out_ptr,
         }
 
         // TSTORE: UB -> GM, 写回 (kTileBatch, kBCast*kInner) 输出 tile
-        // [当前编译器] 名为 TCOPYOUT, jcore 为 __vec__
+        // [当前编译器] 名为 TSTORE, jcore 为 __vec__
         TSTORE(gdst, outTile);
     }
 

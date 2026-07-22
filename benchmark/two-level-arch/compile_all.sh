@@ -1,7 +1,7 @@
-#!/bin/bash
-# LinxISA compilation script for all kernel operators
+#!/usr/bin/env bash
+set -uo pipefail
 
-# Don't use set -e as some operators may fail to compile
+# LinxISA compilation script for all kernel operators
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
@@ -38,6 +38,7 @@ compile_operator() {
             echo "✓ $operator_name compilation completed"
         else
             echo "✗ $operator_name compilation failed"
+            return 1
         fi
     else
         echo "Warning: No compile.all found in $operator_path"
@@ -46,20 +47,21 @@ compile_operator() {
 }
 
 # Compile all operators
-compile_operator "$REPO_ROOT/test/tileop_api" "tileop_api"
-compile_operator "$REPO_ROOT/test/kernel/matmul" "matmul"
-compile_operator "$REPO_ROOT/test/kernel/broadcast" "broadcast"
-compile_operator "$REPO_ROOT/test/kernel/concat" "concat"
-compile_operator "$REPO_ROOT/test/kernel/gather" "gather"
-compile_operator "$REPO_ROOT/test/kernel/transpose" "transpose"
-compile_operator "$REPO_ROOT/test/kernel/element_wise/gelu" "gelu"
-compile_operator "$REPO_ROOT/test/kernel/reduction/reducemax_col" "reducemax_col"
-compile_operator "$REPO_ROOT/test/kernel/reduction/reducemax_row" "reducemax_row"
-compile_operator "$REPO_ROOT/test/kernel/reduction/reducesum_col" "reducesum_col"
-compile_operator "$REPO_ROOT/test/kernel/reduction/reducesum_row" "reducesum_row"
-compile_operator "$REPO_ROOT/test/kernel/control" "control"
-compile_operator "$REPO_ROOT/test/kernel/fa" "fa"
-compile_operator "$REPO_ROOT/test/kernel/sort" "sort"
+failures=()
+compile_operator "$REPO_ROOT/test/tileop_api" "tileop_api" || failures+=("tileop_api")
+compile_operator "$REPO_ROOT/test/kernel/matmul" "matmul" || failures+=("matmul")
+compile_operator "$REPO_ROOT/test/kernel/broadcast" "broadcast" || failures+=("broadcast")
+compile_operator "$REPO_ROOT/test/kernel/concat" "concat" || failures+=("concat")
+compile_operator "$REPO_ROOT/test/kernel/gather" "gather" || failures+=("gather")
+compile_operator "$REPO_ROOT/test/kernel/transpose" "transpose" || failures+=("transpose")
+compile_operator "$REPO_ROOT/test/kernel/element_wise/gelu" "gelu" || failures+=("gelu")
+compile_operator "$REPO_ROOT/test/kernel/reduction/reducemax_col" "reducemax_col" || failures+=("reducemax_col")
+compile_operator "$REPO_ROOT/test/kernel/reduction/reducemax_row" "reducemax_row" || failures+=("reducemax_row")
+compile_operator "$REPO_ROOT/test/kernel/reduction/reducesum_col" "reducesum_col" || failures+=("reducesum_col")
+compile_operator "$REPO_ROOT/test/kernel/reduction/reducesum_row" "reducesum_row" || failures+=("reducesum_row")
+compile_operator "$REPO_ROOT/test/kernel/control" "control" || failures+=("control")
+compile_operator "$REPO_ROOT/test/kernel/fa" "fa" || failures+=("fa")
+compile_operator "$REPO_ROOT/test/kernel/sort" "sort" || failures+=("sort")
 
 echo ""
 echo "=========================================="
@@ -69,3 +71,8 @@ echo ""
 echo "Generated ELF files:"
 find "$REPO_ROOT/output" -name "*.elf" -type f | wc -l
 echo "ELF files are located in: $REPO_ROOT/output/"
+
+if ((${#failures[@]})); then
+    echo "Failed operators: ${failures[*]}" >&2
+    exit 1
+fi

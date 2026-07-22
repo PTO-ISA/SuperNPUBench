@@ -47,7 +47,7 @@ void reduceprod_col_rand(
 
     for (int j = 0; j < Nb; ++j) {
         auto gO = gOIter(0, j);
-        TEXPANDS(oldProdTile, static_cast<dtype>(1));
+        TEXPANDSCALAR(oldProdTile, static_cast<dtype>(1));
 
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, j);
@@ -65,7 +65,7 @@ void reduceprod_col_rand(
     }
     if constexpr (rmd_N > 0) {
         auto gO = gOIter(0, Nb);
-        TEXPANDS(oldProdTile_row, static_cast<dtype>(1));
+        TEXPANDSCALAR(oldProdTile_row, static_cast<dtype>(1));
 
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, Nb);

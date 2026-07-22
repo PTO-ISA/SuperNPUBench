@@ -7,6 +7,9 @@
 # Build outputs
 output/
 **/output/
+/site/
+__pycache__/
+*.py[cod]
 
 # Temporary files
 *.log

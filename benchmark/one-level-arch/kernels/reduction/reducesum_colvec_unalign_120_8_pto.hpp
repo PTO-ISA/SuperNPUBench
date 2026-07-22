@@ -70,7 +70,7 @@ void reducesum_colsum_rand(
     itOut gOIter(out_ptr);
 
     auto gO = gOIter(0, 0);
-    TEXPANDS(oldSumTile, static_cast<dtype>(0));
+    TEXPANDSCALAR(oldSumTile, static_cast<dtype>(0));
 
     auto gI = gIIter(0, 0);
     TLOAD(dataTile, gI);

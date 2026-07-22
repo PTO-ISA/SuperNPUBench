@@ -57,7 +57,7 @@ void reducesum_colsum_rand(
 
     for (int j = 0; j < Nb; ++j) {
         auto gO = gOIter(0, j);
-        TEXPANDS(oldSumTile, static_cast<dtype>(0));
+        TEXPANDSCALAR(oldSumTile, static_cast<dtype>(0));
 
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, j);
@@ -75,7 +75,7 @@ void reducesum_colsum_rand(
     }
     if constexpr (rmd_N > 0) {
         auto gO = gOIter(0, Nb);
-        TEXPANDS(oldSumTile_row, static_cast<dtype>(0));
+        TEXPANDSCALAR(oldSumTile_row, static_cast<dtype>(0));
 
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, Nb);

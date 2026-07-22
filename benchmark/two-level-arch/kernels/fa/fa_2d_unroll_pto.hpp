@@ -11,7 +11,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
     using tileW_out  = TileAcc<float, kTm, kTk>;      // [kTm×kTk]
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
     using tileW_cast = Tile<Location::Vec, typename tileW_type<dtype>::DType, kTm, kTk, BLayout::ColMajor>;
-    using tileW_left = TileLeft<dtype, kTm, kTk>; 
+    using tileW_left = TileLeft<dtype, kTm, kTk>;
 
     using tileO_out  = TileAcc<float, kTm, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::ColMajor>; // [kTm×vD]
@@ -50,7 +50,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
         #pragma clang loop unroll(full)
         for(int x=0;x<Xdim;x++){
             auto gQ = gIterQ(i+x,0);
-            TCOPYIN(tQ[x], gQ);
+            TLOAD(tQ[x], gQ);
         }
 
         tileMax tMax[Xdim];
@@ -77,7 +77,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
                 auto gK = gIterK(0, j+y);
-                TCOPYIN(tK[y], gK);
+                TLOAD(tK[y], gK);
             }
 
             tileW tW[Xdim][Ydim];
@@ -97,7 +97,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             tileSum tNewSum[Xdim];
 
             tileW_cast tExpW[Xdim][Ydim];
-            
+
             tileMax tLocalMax[Xdim][Ydim];
             tileSum tLocalSum[Xdim][Ydim];
             tileSum tScaledOldSum[Xdim];
@@ -111,7 +111,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
                 for(int y=0;y<Ydim;y++){
                     TCOLMAX_TEPL(tLocalMax[x][y], tW[x][y]);
                 }
-                
+
                 #if Ydim == 1
                     TMAX_TEPL(tNewMax[x], tMax[x], tLocalMax[x][0]);
                 #elif Ydim == 2
@@ -176,7 +176,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
                 auto gV = gIterV(j+y, 0);
-                TCOPYIN(tV[y], gV);
+                TLOAD(tV[y], gV);
             }
 
             // ColMajor -> Nz
@@ -233,7 +233,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             TCOLEXPANDMUL_TEPL(tO[x], tO[x], tInvSum[x]);
             TCAST_TEPL(tO_cast[x], tO[x]);
             auto dstO = gIterO(i+x, 0);
-            TCOPYOUT(dstO, tO_cast[x]);
+            TSTORE(dstO, tO_cast[x]);
         }
     }
 }

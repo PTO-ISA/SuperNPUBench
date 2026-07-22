@@ -2,19 +2,20 @@
 #define HASHTABLE_LOOKUP_SIMD_HPP
 
 #include <common/pto_tileop.hpp>
+#include "template_asm.h"
 #include <cstdint>
 
 // ============================================================================
 // Pure-SIMD (tile-level) hashtable lookup.
 //
 // Everything below is expressed with whole-tile operations from the tile-op API
-// (TMULS/TADDS/TXOR/TSLL/TSRL/TOR/TAND/TREM for the hash, MGATHER/TCMP/TSELECT for
+// (TMULS/TADDS/TXOR/TSHLS/TSHRS/TOR/TAND/TREM for the hash, MGATHER/TCMP/TSELECT for
 // the probe). There are NO __vec__ SIMT kernels, no <<<>>> launches, and no per-lane
 // control flow (blkv_get_index / blkv_rdadd / data-dependent branches). The probe loop
 // is a host loop bounded by kMaxProbe with NO data-dependent early break: a tile-level
 // early exit would need to reduce the "still-searching" mask to a host scalar, and the
 // tile-op API has no tile->scalar-register reduction (only TROWSUM->tile and
-// TCOPYOUT->memory). Since TSELECT keeps already-found lanes immune to later probes,
+// TSTORE->memory). Since TSELECT keeps already-found lanes immune to later probes,
 // running all kMaxProbe iterations is correct; the loop is pure tile ops + a host counter.
 // ============================================================================
 
@@ -68,8 +69,9 @@ inline void murmurRound(TileU32& h, TileU32& block, TileU32& k, TileU32& tA, Til
 // (h>>1) < 2^31 so it is a non-negative int32; 2*(m-1)+1 < 2^31 so the second
 // operand stays non-negative -> signed TREM yields the correct unsigned result.
 template <int kTileRows, int kTileCols, uint32_t kMod>
-void uModU32(typename HashFindTypes<kTileRows, kTileCols>::TileI32& dst,
-             typename HashFindTypes<kTileRows, kTileCols>::TileU32& h)
+__attribute__((always_inline)) inline void
+uModU32(typename HashFindTypes<kTileRows, kTileCols>::TileI32& dst,
+        typename HashFindTypes<kTileRows, kTileCols>::TileU32& h)
 {
     using Types  = HashFindTypes<kTileRows, kTileCols>;
     using TileU32 = typename Types::TileU32;
@@ -79,12 +81,12 @@ void uModU32(typename HashFindTypes<kTileRows, kTileCols>::TileI32& dst,
     TileI32 halfI, bitI, capI, tmp;
 
     TSHRS(halfU, h, 1u);                 // h >> 1   (0 .. 2^31-1)
-    TEXPANDS(oneU, 1u);
+    TEXPANDSCALAR(oneU, 1u);
     TAND(bitU, h, oneU);                // h & 1
 
-    TCVT(halfI, halfU);               // -> non-negative int32
-    TCVT(bitI, bitU);
-    TEXPANDS(capI, static_cast<int32_t>(kMod));
+    TCAST(halfI, halfU);               // -> non-negative int32
+    TCAST(bitI, bitU);
+    TEXPANDSCALAR(capI, static_cast<int32_t>(kMod));
 
     TREM(tmp, halfI, capI);            // (h>>1) % m
     TMULS(tmp, tmp, 2);                // 2 * r1
@@ -94,8 +96,10 @@ void uModU32(typename HashFindTypes<kTileRows, kTileCols>::TileI32& dst,
 
 // Compute per-key probe byte-offset = (MurmurHash3(key) % kCap) * sizeof(TableEntry)
 template <int kTileRows, int kTileCols, int kCap>
-void computeProbeOffsets(typename HashFindTypes<kTileRows, kTileCols>::TileI32& probeOff,
-                         typename HashFindTypes<kTileRows, kTileCols>::TileI64& queryKeys)
+__attribute__((always_inline)) inline void
+computeProbeOffsets(
+    typename HashFindTypes<kTileRows, kTileCols>::TileI32& probeOff,
+    typename HashFindTypes<kTileRows, kTileCols>::TileI64& queryKeys)
 {
     using Types  = HashFindTypes<kTileRows, kTileCols>;
     using TileU32 = typename Types::TileU32;
@@ -106,11 +110,11 @@ void computeProbeOffsets(typename HashFindTypes<kTileRows, kTileCols>::TileI32& 
 
     // block0 = low 32 bits, block1 = high 32 bits of each 8-byte key
     TileU32 block0, block1;
-    TCVT(block0, queryKeys);          // static_cast<uint32_t> truncates to low 32
+    TCAST(block0, queryKeys);          // static_cast<uint32_t> truncates to low 32
     TSHRS(keyHi, queryKeys, 32u);       // logical >> 32 (unsigned), high 32 -> low
-    TCVT(block1, keyHi);
+    TCAST(block1, keyHi);
 
-    TEXPANDS(h, DEFAULT_HASH_SEED);
+    TEXPANDSCALAR(h, DEFAULT_HASH_SEED);
     TCVT(blk, block0);
     murmurRound(h, blk, k, tA, tB);
     TCVT(blk, block1);
@@ -118,7 +122,7 @@ void computeProbeOffsets(typename HashFindTypes<kTileRows, kTileCols>::TileI32& 
 
     // finalize: h ^= len(=8); h ^= h>>16; h *= ..; h ^= h>>13; h *= ..; h ^= h>>16
     TileU32 lenTile;
-    TEXPANDS(lenTile, 8u);
+    TEXPANDSCALAR(lenTile, 8u);
     TXOR(h, h, lenTile);
     TSHRS(tmp, h, 16u); TXOR(h, h, tmp);
     TMULS(h, h, 0x85ebca6bu);
@@ -163,15 +167,15 @@ void runHashFind(int32_t __out__ *out,
 
     computeProbeOffsets<kTileRows, kTileCols, kCap>(probeOffTile, queryKeyTile);
 
-    TEXPANDS(outTile, kNotFound);
+    TEXPANDSCALAR(outTile, kNotFound);
 
     // TCMP EQ supports int32 only, so compare the 64-bit keys as two int32 halves.
     TileI32 queryLo, queryHi;
     {
         TileI64 qHi;
-        TCVT(queryLo, queryKeyTile);          // low 32 bits
+        TCAST(queryLo, queryKeyTile);          // low 32 bits
         TSHRS(qHi, queryKeyTile, 32u);
-        TCVT(queryHi, qHi);                    // high 32 bits
+        TCAST(queryHi, qHi);                    // high 32 bits
     }
 
     TileI64 tableKeyTile;
@@ -180,22 +184,22 @@ void runHashFind(int32_t __out__ *out,
     TileI32 tableValTile;
     TileI32 matchLo, matchHi, matchMask;
     TileI32 capBytesTile;
-    TEXPANDS(capBytesTile, static_cast<int32_t>(kCap) * static_cast<int32_t>(sizeof(TableEntry)));
+    TEXPANDSCALAR(capBytesTile, static_cast<int32_t>(kCap) * static_cast<int32_t>(sizeof(TableEntry)));
 
     for (int probe = 0; probe < kMaxProbe; probe++) {
         MGATHER(tableKeyTile, tableKeyGlobal, probeOffTile);
         MGATHER(tableValTile, tableValGlobal, probeOffTile);
         // 64-bit key equality = (low32 == low32) && (high32 == high32)
-        TCVT(tableLo, tableKeyTile);
+        TCAST(tableLo, tableKeyTile);
         TSHRS(tableKeyHi, tableKeyTile, 32u);
-        TCVT(tableHi, tableKeyHi);
-        TCMP(matchLo, queryLo, tableLo);
-        TCMP(matchHi, queryHi, tableHi);
+        TCAST(tableHi, tableKeyHi);
+        TCMP(matchLo, queryLo, tableLo, CmpMode::EQ);
+        TCMP(matchHi, queryHi, tableHi, CmpMode::EQ);
         TAND(matchMask, matchLo, matchHi);
-        TSEL(outTile, matchMask, tableValTile);   // match ? value : keep
+        TSELECT(outTile, matchMask, tableValTile, outTile); // match ? value : keep
 
         // NOTE: no early break. A data-dependent early exit would require reducing the
-        // "still-searching" mask to a host scalar (TROWSUMEXPAND -> TCOPYOUT -> scalar
+        // "still-searching" mask to a host scalar (TROWSUMEXPAND -> TSTORE -> scalar
         // load), i.e. a tile->memory->scalar round-trip every iteration. The tile-op API
         // has no tile->scalar-register reduction, so that round-trip is the only option
         // and it is exactly the fragile path we avoid. TSELECT already makes already-found

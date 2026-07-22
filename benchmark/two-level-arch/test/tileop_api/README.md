@@ -19,4 +19,4 @@ make TESTCASE=TAdd PLAT=linx
 ```
 
 `TLoad` and `TStore` are the active memory-operation names. Legacy
-`TCopyIn`/`TCopyOut` aliases are not part of this manifest.
+`TLoad`/`TStore` aliases are not part of this manifest.

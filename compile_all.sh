@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -uo pipefail
+
 # Top-level compilation script for all architecture backends
 #   benchmark/two-level-arch  (was benchmark-linxisa, Linx two-level block ISA)
 #   benchmark/one-level-arch  (was benchmark-ptoisa, PTO one-level tile ISA)
@@ -18,7 +20,8 @@ compile_two_level() {
     if [ -f "$SCRIPT_DIR/benchmark/two-level-arch/compile_all.sh" ]; then
         bash "$SCRIPT_DIR/benchmark/two-level-arch/compile_all.sh"
     else
-        echo "Warning: benchmark/two-level-arch/compile_all.sh not found"
+        echo "Error: benchmark/two-level-arch/compile_all.sh not found" >&2
+        return 1
     fi
 }
 
@@ -28,7 +31,8 @@ compile_one_level() {
     if [ -f "$SCRIPT_DIR/benchmark/one-level-arch/compile_all.sh" ]; then
         bash "$SCRIPT_DIR/benchmark/one-level-arch/compile_all.sh"
     else
-        echo "Warning: benchmark/one-level-arch/compile_all.sh not found"
+        echo "Error: benchmark/one-level-arch/compile_all.sh not found" >&2
+        return 1
     fi
 }
 
@@ -40,8 +44,13 @@ case $ARCH in
         compile_one_level
         ;;
     all)
-        compile_two_level
-        compile_one_level
+        failures=()
+        compile_two_level || failures+=("two-level")
+        compile_one_level || failures+=("one-level")
+        if ((${#failures[@]})); then
+            echo "Failed architecture backends: ${failures[*]}" >&2
+            exit 1
+        fi
         ;;
     *)
         echo "Usage: $0 [two-level|one-level|all]"

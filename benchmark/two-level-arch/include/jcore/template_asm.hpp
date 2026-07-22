@@ -3,18 +3,357 @@
 
 #include "common/pto_tile.hpp"
 
+// This header defines the historical global PTO wrapper surface while its
+// type traits live in namespace pto. Keep it self-contained for compile-only
+// conformance tests instead of relying on include-order namespace imports.
+using namespace pto;
+
+#if !defined(__linx)
+
+namespace supernpubench_v057_fallback {
+template <typename T>
+constexpr int tile_numel_v = T::Rows * T::Cols;
+
+template <typename OutTile, typename InTile>
+inline void copy_tile(OutTile &dst, const InTile &src) {
+  constexpr int OutN = tile_numel_v<OutTile>;
+  constexpr int InN = tile_numel_v<InTile>;
+  constexpr int N = OutN < InN ? OutN : InN;
+  for (int i = 0; i < N; ++i)
+    dst.data()[i] = static_cast<typename OutTile::DType>(src.data()[i]);
+}
+
+template <typename OutTile>
+inline void fill_tile(OutTile &dst, typename OutTile::DType value) {
+  for (int i = 0; i < tile_numel_v<OutTile>; ++i)
+    dst.data()[i] = value;
+}
+
+template <typename OutTile, typename InTile>
+inline void gather_bytes(OutTile &dst, const auto &src, const InTile &offset) {
+  using DType = typename OutTile::DType;
+  constexpr int OutN = tile_numel_v<OutTile>;
+  constexpr int OffN = tile_numel_v<InTile>;
+  constexpr int N = OutN < OffN ? OutN : OffN;
+  const auto *base = src.data();
+  for (int i = 0; i < N; ++i) {
+    long long byte_off = static_cast<long long>(offset.data()[i]);
+    dst.data()[i] = static_cast<DType>(
+        *(reinterpret_cast<const DType *>(
+            reinterpret_cast<const char *>(base) + byte_off)));
+  }
+}
+
+template <typename InTile, typename OffTile>
+inline void scatter_bytes(auto &dst, const InTile &src, const OffTile &offset) {
+  using DType = typename InTile::DType;
+  constexpr int SrcN = tile_numel_v<InTile>;
+  constexpr int OffN = tile_numel_v<OffTile>;
+  constexpr int N = SrcN < OffN ? SrcN : OffN;
+  auto *base = dst.data();
+  for (int i = 0; i < N; ++i) {
+    long long byte_off = static_cast<long long>(offset.data()[i]);
+    *(reinterpret_cast<DType *>(reinterpret_cast<char *>(base) + byte_off)) =
+        src.data()[i];
+  }
+}
+
+template <typename Tile, typename Gm>
+inline void load_tile(Tile &dst, Gm &src) {
+  const int rows = dst.GetValidRow();
+  const int cols = dst.GetValidCol();
+  for (int row = 0; row < rows; ++row) {
+    for (int col = 0; col < cols; ++col) {
+      const int gm_index =
+          Gm::isRowMajor ? row * Gm::RowStride + col
+                         : col * Gm::ColStride + row;
+      const int tile_index =
+          Tile::isRowMajor ? row * Tile::RowStride + col
+                           : col * Tile::ColStride + row;
+      dst.data()[tile_index] = src.data()[gm_index];
+    }
+  }
+}
+
+template <typename Gm, typename Tile>
+inline void store_tile(Gm &dst, Tile &src) {
+  const int rows = src.GetValidRow();
+  const int cols = src.GetValidCol();
+  for (int row = 0; row < rows; ++row) {
+    for (int col = 0; col < cols; ++col) {
+      const int gm_index =
+          Gm::isRowMajor ? row * Gm::RowStride + col
+                         : col * Gm::ColStride + row;
+      const int tile_index =
+          Tile::isRowMajor ? row * Tile::RowStride + col
+                           : col * Tile::ColStride + row;
+      dst.data()[gm_index] = src.data()[tile_index];
+    }
+  }
+}
+} // namespace supernpubench_v057_fallback
+
+enum class TmaPadValue : int {
+  Zero = 0,
+  Max = 1,
+  Min = 2,
+  Null = 3,
+};
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void ACCSCALE_T(tile_shape_out &dst, tile_shape_in &src,
+                typename tile_shape_in::DType s) {
+  (void)s;
+  supernpubench_v057_fallback::copy_tile(dst, src);
+}
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void ACCSCALE_NZ2DN(tile_shape_out &dst, tile_shape_in &src,
+                    typename tile_shape_in::DType s) {
+  ACCSCALE_T(dst, src, s);
+}
+
+template <is_tile_data_v tile_shape_max, is_tile_data_v tile_shape_out,
+          is_tile_data_v tile_shape_in>
+void ACCCVT_RMAX_SCALE_NZ2DN(tile_shape_max &row_max, tile_shape_out &dst,
+                             tile_shape_in &src,
+                             typename tile_shape_in::DType s) {
+  (void)s;
+  supernpubench_v057_fallback::copy_tile(dst, src);
+  supernpubench_v057_fallback::fill_tile(row_max, typename tile_shape_max::DType{});
+}
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in0,
+          is_tile_data_v tile_shape_in1>
+void TMAX_T(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1) {
+  constexpr int N0 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in0>;
+  constexpr int N1 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in1>;
+  constexpr int NO = supernpubench_v057_fallback::tile_numel_v<tile_shape_out>;
+  constexpr int N = (NO < (N0 < N1 ? N0 : N1)) ? NO : (N0 < N1 ? N0 : N1);
+  for (int i = 0; i < N; ++i)
+    dst.data()[i] = src0.data()[i] > src1.data()[i]
+                        ? static_cast<typename tile_shape_out::DType>(src0.data()[i])
+                        : static_cast<typename tile_shape_out::DType>(src1.data()[i]);
+}
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in0,
+          is_tile_data_v tile_shape_in1>
+void TSUB_EXP_EXPAND_T(tile_shape_out &dst, tile_shape_in0 &src0,
+                       tile_shape_in1 &src1) {
+  constexpr int N0 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in0>;
+  constexpr int N1 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in1>;
+  constexpr int NO = supernpubench_v057_fallback::tile_numel_v<tile_shape_out>;
+  constexpr int N = (NO < (N0 < N1 ? N0 : N1)) ? NO : (N0 < N1 ? N0 : N1);
+  for (int i = 0; i < N; ++i)
+    dst.data()[i] = static_cast<typename tile_shape_out::DType>(src0.data()[i] - src1.data()[i]);
+}
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in0,
+          is_tile_data_v tile_shape_in1, is_tile_data_v tile_shape_in2>
+void TMUL_ADD_ROWSUM_T(tile_shape_out &dst, tile_shape_in0 &src0,
+                       tile_shape_in1 &src1, tile_shape_in2 &src2) {
+  constexpr int N0 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in0>;
+  constexpr int N1 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in1>;
+  constexpr int N2 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in2>;
+  constexpr int NO = supernpubench_v057_fallback::tile_numel_v<tile_shape_out>;
+  constexpr int NI = (N0 < N1 ? N0 : N1) < N2 ? (N0 < N1 ? N0 : N1) : N2;
+  constexpr int N = NO < NI ? NO : NI;
+  for (int i = 0; i < N; ++i)
+    dst.data()[i] = static_cast<typename tile_shape_out::DType>(src0.data()[i] * src1.data()[i] + src2.data()[i]);
+}
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in0,
+          is_tile_data_v tile_shape_in1, is_tile_data_v tile_shape_in2>
+void TADD_MUL_EXPAND_T(tile_shape_out &dst, tile_shape_in0 &src0,
+                       tile_shape_in1 &src1, tile_shape_in2 &src2) {
+  constexpr int N0 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in0>;
+  constexpr int N1 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in1>;
+  constexpr int N2 = supernpubench_v057_fallback::tile_numel_v<tile_shape_in2>;
+  constexpr int NO = supernpubench_v057_fallback::tile_numel_v<tile_shape_out>;
+  constexpr int NI = (N0 < N1 ? N0 : N1) < N2 ? (N0 < N1 ? N0 : N1) : N2;
+  constexpr int N = NO < NI ? NO : NI;
+  for (int i = 0; i < N; ++i)
+    dst.data()[i] = static_cast<typename tile_shape_out::DType>((src0.data()[i] + src1.data()[i]) * src2.data()[i]);
+}
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void TCVT_T(tile_shape_out &dst, tile_shape_in &src) {
+  supernpubench_v057_fallback::copy_tile(dst, src);
+}
+
+#define DEFINE_TMOV_LAYOUT(LAYOUT_NAME)                                          \
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>           \
+void TMOV_##LAYOUT_NAME(tile_shape_out &dst, tile_shape_in &src) {               \
+  supernpubench_v057_fallback::copy_tile(dst, src);                              \
+}
+
+DEFINE_TMOV_LAYOUT(ND2NZ)
+DEFINE_TMOV_LAYOUT(NZ2ND)
+DEFINE_TMOV_LAYOUT(ND2ZN)
+DEFINE_TMOV_LAYOUT(DN2ZN)
+DEFINE_TMOV_LAYOUT(DN2NZ)
+DEFINE_TMOV_LAYOUT(NZ2DN)
+DEFINE_TMOV_LAYOUT(NZ2ZN)
+DEFINE_TMOV_LAYOUT(ZN2NZ)
+DEFINE_TMOV_LAYOUT(NORM)
+#undef DEFINE_TMOV_LAYOUT
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void TMOV_DN2NZ_DYN(tile_shape_out &dst, tile_shape_in &src) {
+  supernpubench_v057_fallback::copy_tile(dst, src);
+}
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+void THISTOGRAM(tile_shape_out &dst, tile_shape_in &src, tile_shape_in &Idx,
+                int ByteId) {
+  (void)src;
+  (void)Idx;
+  (void)ByteId;
+  supernpubench_v057_fallback::fill_tile(dst, typename tile_shape_out::DType{});
+}
+
+template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
+void TLOAD2_ND2NZ(tile_shape &dst1, tile_shape &dst0, gm_shape &src) {
+  supernpubench_v057_fallback::load_tile(dst0, src);
+  supernpubench_v057_fallback::load_tile(dst1, src);
+}
+
+template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
+void TLOAD2_ND2ZN(tile_shape &dst1, tile_shape &dst0, gm_shape &src) {
+  TLOAD2_ND2NZ(dst1, dst0, src);
+}
+
+template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
+void TLOAD2_DN2ZN(tile_shape &dst1, tile_shape &dst0, gm_shape &src) {
+  TLOAD2_ND2NZ(dst1, dst0, src);
+}
+
+template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
+void TSTORE2_DN2DN(gm_shape &dst, tile_shape &src1, tile_shape &src0) {
+  supernpubench_v057_fallback::store_tile(dst, src0);
+  (void)src1;
+}
+
+template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
+void TLOAD4_ND2NZ(tile_shape &dst3, tile_shape &dst2, tile_shape &dst1,
+                  tile_shape &dst0, gm_shape &src) {
+  supernpubench_v057_fallback::load_tile(dst0, src);
+  supernpubench_v057_fallback::load_tile(dst1, src);
+  supernpubench_v057_fallback::load_tile(dst2, src);
+  supernpubench_v057_fallback::load_tile(dst3, src);
+}
+
+template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
+void TLOAD4_ND2ZN(tile_shape &dst3, tile_shape &dst2, tile_shape &dst1,
+                  tile_shape &dst0, gm_shape &src) {
+  TLOAD4_ND2NZ(dst3, dst2, dst1, dst0, src);
+}
+
+template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
+void TLOAD4_DN2ZN(tile_shape &dst3, tile_shape &dst2, tile_shape &dst1,
+                  tile_shape &dst0, gm_shape &src) {
+  TLOAD4_ND2NZ(dst3, dst2, dst1, dst0, src);
+}
+
+template <typename tile_shape_out, typename tile_shape_offset, typename gm_shape,
+          TmaPadValue Pad = TmaPadValue::Null>
+inline void MGATHER(tile_shape_out &dst, const gm_shape &src,
+                    const tile_shape_offset &offset) {
+  (void)Pad;
+  supernpubench_v057_fallback::gather_bytes(dst, src, offset);
+}
+
+template <typename tile_shape_in, typename tile_shape_offset, typename gm_shape>
+inline void MSCATTER(gm_shape &dst, const tile_shape_in &src,
+                     const tile_shape_offset &offset) {
+  supernpubench_v057_fallback::scatter_bytes(dst, src, offset);
+}
+
+template <typename tile_shape, typename gm_shape>
+inline void TPREFETCH(const gm_shape &src) {
+  (void)sizeof(tile_shape);
+  (void)src;
+}
+
+template <typename tile_shape_out, typename tile_shape_offset,
+          typename tile_shape_mask, typename gm_shape,
+          TmaPadValue Pad = TmaPadValue::Null>
+inline void MGATHER_MASK(tile_shape_out &dst, const gm_shape &src,
+                         const tile_shape_offset &offset,
+                         const tile_shape_mask &mask) {
+  (void)Pad;
+  supernpubench_v057_fallback::gather_bytes(dst, src, offset);
+  for (int i = 0; i < supernpubench_v057_fallback::tile_numel_v<tile_shape_out> &&
+                  i < supernpubench_v057_fallback::tile_numel_v<tile_shape_mask>; ++i)
+    if (!mask.data()[i])
+      dst.data()[i] = typename tile_shape_out::DType{};
+}
+
+template <typename tile_shape_out, typename tile_shape_offset,
+          typename tile_shape_expected, typename tile_shape_desired,
+          typename gm_shape, TmaPadValue Pad = TmaPadValue::Null>
+inline void MGATHER_CAS(tile_shape_out &dst, const gm_shape &src,
+                        const tile_shape_offset &offset,
+                        const tile_shape_expected &expected,
+                        const tile_shape_desired &desired) {
+  (void)Pad;
+  using DType = typename tile_shape_out::DType;
+  auto *base = const_cast<typename gm_shape::DType *>(src.data());
+  constexpr int DstN = supernpubench_v057_fallback::tile_numel_v<tile_shape_out>;
+  constexpr int OffN =
+      supernpubench_v057_fallback::tile_numel_v<tile_shape_offset>;
+  constexpr int ExpN =
+      supernpubench_v057_fallback::tile_numel_v<tile_shape_expected>;
+  constexpr int DesN =
+      supernpubench_v057_fallback::tile_numel_v<tile_shape_desired>;
+  constexpr int N0 = DstN < OffN ? DstN : OffN;
+  constexpr int N1 = ExpN < DesN ? ExpN : DesN;
+  constexpr int N = N0 < N1 ? N0 : N1;
+  for (int i = 0; i < N; ++i) {
+    const long long byte_off = static_cast<long long>(offset.data()[i]);
+    auto *ptr =
+        reinterpret_cast<DType *>(reinterpret_cast<char *>(base) + byte_off);
+    const DType old = *ptr;
+    if (old == expected.data()[i])
+      *ptr = desired.data()[i];
+    dst.data()[i] = old;
+  }
+}
+
+template <typename tile_shape_in, typename tile_shape_offset,
+          typename tile_shape_mask, typename gm_shape>
+inline void MSCATTER_MASK(gm_shape &dst, const tile_shape_in &src,
+                          const tile_shape_offset &offset,
+                          const tile_shape_mask &mask) {
+  using DType = typename tile_shape_in::DType;
+  auto *base = dst.data();
+  constexpr int SrcN = supernpubench_v057_fallback::tile_numel_v<tile_shape_in>;
+  constexpr int OffN = supernpubench_v057_fallback::tile_numel_v<tile_shape_offset>;
+  constexpr int MaskN = supernpubench_v057_fallback::tile_numel_v<tile_shape_mask>;
+  constexpr int N = (SrcN < OffN ? SrcN : OffN) < MaskN ? (SrcN < OffN ? SrcN : OffN) : MaskN;
+  for (int i = 0; i < N; ++i) {
+    if (!mask.data()[i])
+      continue;
+    long long byte_off = static_cast<long long>(offset.data()[i]);
+    *(reinterpret_cast<DType *>(reinterpret_cast<char *>(base) + byte_off)) =
+        src.data()[i];
+  }
+}
+
+#else
+
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void ACCSCALE_T(tile_shape_out &dst, tile_shape_in &src, typename tile_shape_in::DType s) {
   asm volatile(
     "BSTART.CUBE ACCCVT, %c1\n"
     "B.DATR NZ2ND.normal, %c1, Null\n"
-    "B.IOT [], last, ->%0<%c2>\n"
+    "B.IOT last, ->%q0<%c2>\n"
     "B.IOR [%3],[]\n"
     "C.B.DIMI %c4, ->lb0\n"
     "C.B.DIMI %c5, ->lb1\n"
 
     ""
-    : "=Tr"(dst.data())
+    : "=r"(dst.data())
     : "i"(type_traits<typename tile_shape_in::DType>::TypeCode),
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
       "r"(s), "i"(tile_shape_in::ValidCol), "i"(tile_shape_in::ValidRow)
@@ -26,13 +365,13 @@ void ACCSCALE_NZ2DN(tile_shape_out &dst, tile_shape_in &src, typename tile_shape
   asm volatile(
     "BSTART.CUBE ACCCVT, %c1\n"
     "B.DATR NZ2DN.normal, %c1, Null\n"
-    "B.IOT [], last, ->%0<%c2>\n"
+    "B.IOT last, ->%q0<%c2>\n"
     "B.IOR [%3],[]\n"
     "C.B.DIMI %c4, ->lb0\n"
     "C.B.DIMI %c5, ->lb1\n"
 
     ""
-    : "=Tr"(dst.data())
+    : "=r"(dst.data())
     : "i"(type_traits<typename tile_shape_in::DType>::TypeCode),
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
       "r"(s), "i"(tile_shape_in::ValidCol), "i"(tile_shape_in::ValidRow)
@@ -44,14 +383,14 @@ void ACCCVT_RMAX_SCALE_NZ2DN(tile_shape_max &row_max, tile_shape_out &dst, tile_
   asm volatile(
     "BSTART.CUBE ACCCVT, %c[__pto_SrcType]\n"
     "B.DATR NZ2DN.normal, %c[__pto_DstType], Null\n"
-    "B.IOT [], ->%[__pto_dout]<%c[__pto_DstTileSize]>\n"
-    "B.IOT [], last, ->%[__pto_rmax]<%c[__pto_RmaxTileSize]>\n"
+    "B.IOT , ->%q[__pto_dout]<%c[__pto_DstTileSize]>\n"
+    "B.IOT last, ->%q[__pto_rmax]<%c[__pto_RmaxTileSize]>\n"
     "B.IOR [%[__pto_scale]],[]\n"
     "C.B.DIMI %c[__pto_VCOL], ->lb0\n"
     "C.B.DIMI %c[__pto_VROW], ->lb1\n"
 
     ""
-    : [__pto_dout]"=Tr"(dst.data()),  [__pto_rmax]"=Tr"(row_max.data())
+    : [__pto_dout]"=r"(dst.data()),  [__pto_rmax]"=r"(row_max.data())
     : [__pto_SrcType]"i"(type_traits<typename tile_shape_in::DType>::TypeCode),
       [__pto_DstType]"i"(type_traits<typename tile_shape_out::DType>::TypeCode),
       [__pto_DstTileSize]"i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
@@ -64,13 +403,13 @@ template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in0, is_tile_
 void TMAX_T(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1) {
   asm volatile(
     "BSTART.VPAR 0b0000100011, %c3\n"
-    "B.IOT [%1,%2], last, ->%0<%c4>\n"
+    "B.IOT %1,%2, last, ->%q0<%c4>\n"
     "C.B.DIMI %c5, ->lb0\n"
     "C.B.DIMI %c6, ->lb1\n"
 
     ""
-    : "=Tr"(dst.data())
-    : "Tr"(src0.data()), "Tr"(src1.data()), \
+    : "=r"(dst.data())
+    : "r"(src0.data()), "r"(src1.data()), \
       "i"(type_traits<typename tile_shape_in0::DType>::TypeCode),
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
       "i"(tile_shape_in0::ValidCol), "i"(tile_shape_in0::ValidRow)
@@ -81,13 +420,13 @@ template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in0, is_tile_
 void TSUB_EXP_EXPAND_T(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1) {
   asm volatile(
     "BSTART.VPAR 0b0001000011, %c3\n"
-    "B.IOT [%1,%2], last, ->%0<%c4>\n"
+    "B.IOT %1,%2, last, ->%q0<%c4>\n"
     "C.B.DIMI %c5, ->lb0\n"
     "C.B.DIMI %c6, ->lb1\n"
 
     ""
-    : "=Tr"(dst.data())
-    : "Tr"(src0.data()), "Tr"(src1.data()), \
+    : "=r"(dst.data())
+    : "r"(src0.data()), "r"(src1.data()), \
       "i"(type_traits<typename tile_shape_in0::DType>::TypeCode),
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
       "i"(tile_shape_in0::ValidCol), "i"(tile_shape_in0::ValidRow)
@@ -98,14 +437,14 @@ template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in0, is_tile_
 void TMUL_ADD_ROWSUM_T(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1, tile_shape_in2 &src2) {
   asm volatile(
     "BSTART.VPAR 0b0001100011, %c4\n"
-    "B.IOT [%1,%2], last, ->%0<%c5>\n"
-    "B.IOT [%3], 1\n"
+    "B.IOT %1,%2, last, ->%q0<%c5>\n"
+    "B.IOT %3, 1\n"
     "C.B.DIMI %c6, ->lb0\n"
     "C.B.DIMI %c7, ->lb1\n"
 
     ""
-    : "=Tr"(dst.data())
-    : "Tr"(src0.data()), "Tr"(src1.data()), "Tr"(src2.data()),
+    : "=r"(dst.data())
+    : "r"(src0.data()), "r"(src1.data()), "r"(src2.data()),
       "i"(type_traits<typename tile_shape_in0::DType>::TypeCode),
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
       "i"(tile_shape_in0::ValidCol), "i"(tile_shape_in0::ValidRow)
@@ -116,14 +455,14 @@ template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in0, is_tile_
 void TADD_MUL_EXPAND_T(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1 &src1, tile_shape_in2 &src2) {
   asm volatile(
     "BSTART.VPAR 0b0010000011, %c4\n"
-    "B.IOT [%1,%2], last, ->%0<%c5>\n"
-    "B.IOT [%3], 1\n"
+    "B.IOT %1,%2, last, ->%q0<%c5>\n"
+    "B.IOT %3, 1\n"
     "C.B.DIMI %c6, ->lb0\n"
     "C.B.DIMI %c7, ->lb1\n"
 
     ""
-    : "=Tr"(dst.data())
-    : "Tr"(src0.data()), "Tr"(src1.data()), "Tr"(src2.data()),
+    : "=r"(dst.data())
+    : "r"(src0.data()), "r"(src1.data()), "r"(src2.data()),
       "i"(type_traits<typename tile_shape_in0::DType>::TypeCode),
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
       "i"(tile_shape_in0::ValidCol), "i"(tile_shape_in0::ValidRow)
@@ -133,15 +472,15 @@ void TADD_MUL_EXPAND_T(tile_shape_out &dst, tile_shape_in0 &src0, tile_shape_in1
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TCVT_T(tile_shape_out &dst,  tile_shape_in &src) {
   asm volatile(
-    "BSTART.TEPL 27, %c1\n"
+    "BSTART.TCVT %c1\n"
     "B.DATR %c2, RNone\n"
-    "B.IOT [%3], last, ->%0<%c4>\n"
+    "B.IOT %3, last, ->%q0<%c4>\n"
     "B.DIM zero, %c5, ->lb0\n"
     "B.DIM zero, %c6, ->lb1\n"
-    : "=Tr"(dst.data())
+    : "=r"(dst.data())
     : "i"(type_traits<typename tile_shape_in::DType>::TypeCode),
       "i"(type_traits<typename tile_shape_out::DType>::TypeCode),
-      "Tr"(src.data()),
+      "r"(src.data()),
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
       "i"(tile_shape_in::ValidCol),
       "i"(tile_shape_in::ValidRow)
@@ -152,13 +491,13 @@ void TCVT_T(tile_shape_out &dst,  tile_shape_in &src) {
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>           \
 void TMOV_##LAYOUT_NAME(tile_shape_out &dst, tile_shape_in &src) {               \
   asm volatile(                                                                  \
-    "BSTART.TMA 2, %c2\n"                                                        \
+    "BSTART.TMOV %c2\n"                                                          \
     "B.DATR " #LAYOUT_NAME ".normal, Null\n"                                     \
-    "B.IOT [%1], last, ->%0<%c3>\n"                                              \
+    "B.IOT %1, last, ->%q0<%c3>\n"                                              \
     "B.DIM zero, %c4, ->lb0\n"                                                   \
     "B.DIM zero, %c5, ->lb1\n"                                                   \
-    : "=Tr"(dst.data())                                                          \
-    : "Tr"(src.data()),                                                          \
+    : "=r"(dst.data())                                                          \
+    : "r"(src.data()),                                                          \
       "i"(type_traits<typename tile_shape_in::DType>::TypeCode),                 \
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),   \
       "i"(tile_shape_in::ValidCol),                                              \
@@ -179,14 +518,14 @@ DEFINE_TMOV_LAYOUT(NORM)
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void TMOV_DN2NZ_DYN(tile_shape_out &dst, tile_shape_in &src) {
   asm volatile(
-    "BSTART.TMA 2, %c2\n"
+    "BSTART.TMOV %c2\n"
     "B.DATR DN2NZ.normal, Null\n"
-    "B.IOT [%1], last, ->%0<%c3>\n"
+    "B.IOT %1, last, ->%q0<%c3>\n"
     "B.DIM %4, 0, ->lb0\n"
     "B.DIM %5, 0, ->lb1\n"
 
-    : "=Tr"(dst.data())
-    : "Tr"(src.data()),
+    : "=r"(dst.data())
+    : "r"(src.data()),
       "i"(type_traits<typename tile_shape_in::DType>::TypeCode),
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
       "r"(src.GetValidCol()),
@@ -198,21 +537,21 @@ template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
 void THISTOGRAM(tile_shape_out &dst, tile_shape_in &src, tile_shape_in &Idx, int ByteId) {
 #define THISTOGRAM_ASM(BYTE_NAME)                                      \
   asm volatile(                                                        \
-    "BSTART.TEPL 0b1101000, %c1\n"                                     \
+    "BSTART.THISTOGRAM %c1\n"                                     \
     "B.DATR %c2," BYTE_NAME ",Null\n"                                  \
     "B.DIM zero, %c3, ->LB0\n"                                         \
     "B.DIM zero, %c4, ->LB1\n"                                         \
     "B.DIM zero, %c4, ->LB2\n"                                         \
-    "B.IOT [%5, %6], last, ->%0<%c7>\n"                                \
+    "B.IOT %5, %6, last, ->%q0<%c7>\n"                                \
     ""                                                                 \
-    : "=Tr"(dst.data())                                                \
+    : "=r"(dst.data())                                                \
     : "i"(type_traits<typename tile_shape_in::DType>::TypeCode),       \
       "i"(type_traits<typename tile_shape_out::DType>::TypeCode),      \
       "i"(tile_shape_in::ValidCol),                                    \
       "i"(tile_shape_in::ValidRow),                                    \
       "i"(tile_shape_in::Cols),                                        \
-      "Tr"(src.data()),                                                \
-      "Tr"(Idx.data()),                                                \
+      "r"(src.data()),                                                \
+      "r"(Idx.data()),                                                \
       "i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode))
 
   switch (ByteId) {
@@ -241,15 +580,15 @@ void TLOAD2_ND2NZ(tile_shape &dst1, tile_shape &dst0, gm_shape &src) {
   static_assert(gm_shape::isRowMajor && is_Nz_layout<tile_shape>::value,
                     "GM_SHAPE should ND and TILE_SHAPE should be Nz ");
   asm volatile(
-    "BSTART.TMA TLOAD, %c[__pto_SrcType]\n"
+    "BSTART.TLOAD %c[__pto_SrcType]\n"
     "B.DATR ND2NZ.normal, %c[__pto_DstType], Null\n"
     "B.DIM zero, %[__pto_VCOL], ->lb0\n"
     "B.DIM zero, %[__pto_VROW], ->lb1\n"
     "B.DIM zero, %[__pto_COL], ->lb2\n"
-    "B.IOT [], ->%[__pto_d0]<%c[__pto_TileSize]>\n"
-    "B.IOT [], last, ->%[__pto_d1]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[__pto_d0]<%c[__pto_TileSize]>\n"
+    "B.IOT last, ->%q[__pto_d1]<%c[__pto_TileSize]>\n"
     "B.IOR [%[__pto_s0],%[__pto_GmStride]], []\n"
-    : [__pto_d0]"=Tr"(dst0.data()),[__pto_d1]"=Tr"(dst1.data())
+    : [__pto_d0]"=r"(dst0.data()),[__pto_d1]"=r"(dst1.data())
     : [__pto_s0]"r"(src.data()),
       [__pto_DstType]"i"(type_traits<typename tile_shape::DType>::TypeCode),
       [__pto_SrcType]"i"(type_traits<typename gm_shape::DType>::TypeCode),
@@ -264,15 +603,15 @@ void TLOAD2_ND2ZN(tile_shape &dst1, tile_shape &dst0, gm_shape &src) {
   static_assert(gm_shape::isRowMajor && is_Zn_layout<tile_shape>::value,
                     "GM_SHAPE should ND and TILE_SHAPE should be Zn ");
   asm volatile(
-    "BSTART.TMA TLOAD, %c[__pto_SrcType]\n"
+    "BSTART.TLOAD %c[__pto_SrcType]\n"
     "B.DATR ND2ZN.normal, %c[__pto_DstType], Null\n"
     "B.DIM zero, %[__pto_VCOL], ->lb0\n"
     "B.DIM zero, %[__pto_VROW], ->lb1\n"
     "B.DIM zero, %[__pto_COL], ->lb2\n"
-    "B.IOT [], ->%[__pto_d0]<%c[__pto_TileSize]>\n"
-    "B.IOT [], last, ->%[__pto_d1]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[__pto_d0]<%c[__pto_TileSize]>\n"
+    "B.IOT last, ->%q[__pto_d1]<%c[__pto_TileSize]>\n"
     "B.IOR [%[__pto_s0],%[__pto_GmStride]], []\n"
-    : [__pto_d0]"=Tr"(dst0.data()),[__pto_d1]"=Tr"(dst1.data())
+    : [__pto_d0]"=r"(dst0.data()),[__pto_d1]"=r"(dst1.data())
     : [__pto_s0]"r"(src.data()),
       [__pto_DstType]"i"(type_traits<typename tile_shape::DType>::TypeCode),
       [__pto_SrcType]"i"(type_traits<typename gm_shape::DType>::TypeCode),
@@ -287,15 +626,15 @@ void TLOAD2_DN2ZN(tile_shape &dst1, tile_shape &dst0, gm_shape &src) {
   static_assert(!gm_shape::isRowMajor && is_Nz_layout<tile_shape>::value,
                     "GM_SHAPE should DN and TILE_SHAPE should be Zn ");
   asm volatile(
-    "BSTART.TMA TLOAD, %c[__pto_SrcType]\n"
+    "BSTART.TLOAD %c[__pto_SrcType]\n"
     "B.DATR DN2ZN.normal, %c[__pto_DstType], Null\n"
     "B.DIM zero, %[__pto_VCOL], ->lb0\n"
     "B.DIM zero, %[__pto_VROW], ->lb1\n"
     "B.DIM zero, %[__pto_COL], ->lb2\n"
-    "B.IOT [], ->%[__pto_d0]<%c[__pto_TileSize]>\n"
-    "B.IOT [], last, ->%[__pto_d1]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[__pto_d0]<%c[__pto_TileSize]>\n"
+    "B.IOT last, ->%q[__pto_d1]<%c[__pto_TileSize]>\n"
     "B.IOR [%[__pto_s0],%[__pto_GmStride]], []\n"
-    : [__pto_d0]"=Tr"(dst0.data()),[__pto_d1]"=Tr"(dst1.data())
+    : [__pto_d0]"=r"(dst0.data()),[__pto_d1]"=r"(dst1.data())
     : [__pto_s0]"r"(src.data()),
       [__pto_DstType]"i"(type_traits<typename tile_shape::DType>::TypeCode),
       [__pto_SrcType]"i"(type_traits<typename gm_shape::DType>::TypeCode),
@@ -310,15 +649,15 @@ void TSTORE2_DN2DN(gm_shape &dst, tile_shape &src1, tile_shape &src0) {
   static_assert(!gm_shape::isRowMajor && !tile_shape::isRowMajor,
                     "GM_SHAPE should DN and TILE_SHAPE should be DN");
   asm volatile(
-    "BSTART.TMA TSTORE, %c[__pto_SrcType]\n"
+    "BSTART.TSTORE %c[__pto_SrcType]\n"
     "B.DATR NORM.normal, %c[__pto_DstType], Null\n"
     "B.DIM zero, %[__pto_VCOL], ->lb0\n"
     "B.DIM zero, %[__pto_VROW], ->lb1\n"
     "B.DIM zero, %[__pto_COL], ->lb2\n"
-    "B.IOT [%[__pto_s0], %[s1]], last\n"
+    "B.IOT %[__pto_s0], %[s1], last\n"
     "B.IOR [%[__pto_d0],%[__pto_GmStride]], []\n"
     :
-    : [__pto_d0]"r"(dst.data()), [__pto_s0]"Tr"(src0.data()), [s1]"Tr"(src1.data()),
+    : [__pto_d0]"r"(dst.data()), [__pto_s0]"r"(src0.data()), [s1]"r"(src1.data()),
       [__pto_DstType]"i"(type_traits<typename gm_shape::DType>::TypeCode),
       [__pto_SrcType]"i"(type_traits<typename tile_shape::DType>::TypeCode),
       [__pto_VCOL]"i"(tile_shape::ValidRow*2), [__pto_VROW]"i"(tile_shape::ValidCol), [__pto_COL]"i"(tile_shape::Rows*2),
@@ -331,17 +670,17 @@ void TLOAD4_ND2NZ(tile_shape &dst3, tile_shape &dst2, tile_shape &dst1, tile_sha
   static_assert(gm_shape::isRowMajor && is_Nz_layout<tile_shape>::value,
                     "GM_SHAPE should ND and TILE_SHAPE should be Nz ");
   asm volatile(
-    "BSTART.TMA TLOAD, %c[__pto_SrcType]\n"
+    "BSTART.TLOAD %c[__pto_SrcType]\n"
     "B.DATR ND2NZ.normal, %c[__pto_DstType], Null\n"
     "B.DIM zero, %[__pto_VCOL], ->lb0\n"
     "B.DIM zero, %[__pto_VROW], ->lb1\n"
     "B.DIM zero, %[__pto_COL], ->lb2\n"
-    "B.IOT [], ->%[__pto_d0]<%c[__pto_TileSize]>\n"
-    "B.IOT [], ->%[__pto_d1]<%c[__pto_TileSize]>\n"
-    "B.IOT [], ->%[d2]<%c[__pto_TileSize]>\n"
-    "B.IOT [], last, ->%[d3]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[__pto_d0]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[__pto_d1]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[d2]<%c[__pto_TileSize]>\n"
+    "B.IOT last, ->%q[d3]<%c[__pto_TileSize]>\n"
     "B.IOR [%[__pto_s0],%[__pto_GmStride]], []\n"
-    : [__pto_d0]"=Tr"(dst0.data()),[__pto_d1]"=Tr"(dst1.data()),[d2]"=Tr"(dst2.data()),[d3]"=Tr"(dst3.data())
+    : [__pto_d0]"=r"(dst0.data()),[__pto_d1]"=r"(dst1.data()),[d2]"=r"(dst2.data()),[d3]"=r"(dst3.data())
     : [__pto_s0]"r"(src.data()),
       [__pto_DstType]"i"(type_traits<typename tile_shape::DType>::TypeCode),
       [__pto_SrcType]"i"(type_traits<typename gm_shape::DType>::TypeCode),
@@ -356,17 +695,17 @@ void TLOAD4_ND2ZN(tile_shape &dst3, tile_shape &dst2, tile_shape &dst1, tile_sha
   static_assert(gm_shape::isRowMajor && is_Zn_layout<tile_shape>::value,
                     "GM_SHAPE should ND and TILE_SHAPE should be Nz ");
   asm volatile(
-    "BSTART.TMA TLOAD, %c[__pto_SrcType]\n"
+    "BSTART.TLOAD %c[__pto_SrcType]\n"
     "B.DATR ND2ZN.normal, %c[__pto_DstType], Null\n"
     "B.DIM zero, %[__pto_VCOL], ->lb0\n"
     "B.DIM zero, %[__pto_VROW], ->lb1\n"
     "B.DIM zero, %[__pto_COL], ->lb2\n"
-    "B.IOT [], ->%[__pto_d0]<%c[__pto_TileSize]>\n"
-    "B.IOT [], ->%[__pto_d1]<%c[__pto_TileSize]>\n"
-    "B.IOT [], ->%[d2]<%c[__pto_TileSize]>\n"
-    "B.IOT [], last, ->%[d3]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[__pto_d0]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[__pto_d1]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[d2]<%c[__pto_TileSize]>\n"
+    "B.IOT last, ->%q[d3]<%c[__pto_TileSize]>\n"
     "B.IOR [%[__pto_s0],%[__pto_GmStride]], []\n"
-    : [__pto_d0]"=Tr"(dst0.data()),[__pto_d1]"=Tr"(dst1.data()),[d2]"=Tr"(dst2.data()),[d3]"=Tr"(dst3.data())
+    : [__pto_d0]"=r"(dst0.data()),[__pto_d1]"=r"(dst1.data()),[d2]"=r"(dst2.data()),[d3]"=r"(dst3.data())
     : [__pto_s0]"r"(src.data()),
       [__pto_DstType]"i"(type_traits<typename tile_shape::DType>::TypeCode),
       [__pto_SrcType]"i"(type_traits<typename gm_shape::DType>::TypeCode),
@@ -381,17 +720,17 @@ void TLOAD4_DN2ZN(tile_shape &dst3, tile_shape &dst2, tile_shape &dst1, tile_sha
   static_assert(!gm_shape::isRowMajor && is_Zn_layout<tile_shape>::value,
                     "GM_SHAPE should DN and TILE_SHAPE should be Zn ");
   asm volatile(
-    "BSTART.TMA TLOAD, %c[__pto_SrcType]\n"
+    "BSTART.TLOAD %c[__pto_SrcType]\n"
     "B.DATR DN2ZN.normal, %c[__pto_DstType], Null\n"
     "B.DIM zero, %[__pto_VCOL], ->lb0\n"
     "B.DIM zero, %[__pto_VROW], ->lb1\n"
     "B.DIM zero, %[__pto_COL], ->lb2\n"
-    "B.IOT [], ->%[__pto_d0]<%c[__pto_TileSize]>\n"
-    "B.IOT [], ->%[__pto_d1]<%c[__pto_TileSize]>\n"
-    "B.IOT [], ->%[d2]<%c[__pto_TileSize]>\n"
-    "B.IOT [], last, ->%[d3]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[__pto_d0]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[__pto_d1]<%c[__pto_TileSize]>\n"
+    "B.IOT , ->%q[d2]<%c[__pto_TileSize]>\n"
+    "B.IOT last, ->%q[d3]<%c[__pto_TileSize]>\n"
     "B.IOR [%[__pto_s0],%[__pto_GmStride]], []\n"
-    : [__pto_d0]"=Tr"(dst0.data()),[__pto_d1]"=Tr"(dst1.data()),[d2]"=Tr"(dst2.data()),[d3]"=Tr"(dst3.data())
+    : [__pto_d0]"=r"(dst0.data()),[__pto_d1]"=r"(dst1.data()),[d2]"=r"(dst2.data()),[d3]"=r"(dst3.data())
     : [__pto_s0]"r"(src.data()),
       [__pto_DstType]"i"(type_traits<typename tile_shape::DType>::TypeCode),
       [__pto_SrcType]"i"(type_traits<typename gm_shape::DType>::TypeCode),
@@ -414,15 +753,15 @@ inline void MGATHER(tile_shape_out &dst, const gm_shape &src,
                     const tile_shape_offset &offset) {
   static_assert(tile_shape_offset::ValidCol <= tile_shape_offset::Cols, "");
   asm volatile(
-      "BSTART.TMA MGATHER, %c[DataType]\n"
+      "BSTART.MGATHER %c[DataType]\n"
       "B.DATR %c[PadValue]\n"
       "B.DIM zero, %c[ValidCol], ->LB0\n"
       "B.DIM zero, %c[ValidRow], ->LB1\n"
       "B.DIM zero, %c[Col], ->LB2\n"
-      "B.IOT [%[off]], last, ->%[dst]<%c[TileSize]>\n"
+      "B.IOT %[off], last, ->%q[dst]<%c[TileSize]>\n"
       "B.IOR [%[base]], []\n"
-      : [dst] "=Tr"(dst.data())
-      : [base] "r"(src.data()), [off] "Tr"(offset.data()),
+      : [dst] "=r"(dst.data())
+      : [base] "r"(src.data()), [off] "r"(offset.data()),
         [DataType] "i"(type_traits<typename tile_shape_out::DType>::TypeCode),
         [PadValue] "i"(static_cast<int>(Pad)),
         [TileSize] "i"(
@@ -438,19 +777,37 @@ inline void MSCATTER(gm_shape &dst, const tile_shape_in &src,
                      const tile_shape_offset &offset) {
   static_assert(tile_shape_offset::ValidCol <= tile_shape_offset::Cols, "");
   asm volatile(
-      "BSTART.TMA MSCATTER, %c[DataType]\n"
+      "BSTART.MSCATTER %c[DataType]\n"
       "B.DIM zero, %c[ValidCol], ->LB0\n"
       "B.DIM zero, %c[ValidRow], ->LB1\n"
       "B.DIM zero, %c[Col], ->LB2\n"
-      "B.IOT [%[src], %[off]], last\n"
+      "B.IOT %[src], %[off], last\n"
       "B.IOR [%[base]], []\n"
       :
-      : [base] "r"(dst.data()), [src] "Tr"(src.data()),
-        [off] "Tr"(offset.data()),
+      : [base] "r"(dst.data()), [src] "r"(src.data()),
+        [off] "r"(offset.data()),
         [DataType] "i"(type_traits<typename tile_shape_in::DType>::TypeCode),
         [ValidCol] "i"(tile_shape_offset::ValidCol),
         [ValidRow] "i"(tile_shape_offset::ValidRow),
         [Col] "i"(tile_shape_offset::Cols)
+      : "memory");
+}
+
+template <typename tile_shape, typename gm_shape>
+inline void TPREFETCH(const gm_shape &src) {
+  asm volatile(
+      "BSTART.TPREFETCH %c[DataType]\n"
+      "B.DATR NORM.normal, %c[DataType], Null\n"
+      "B.DIM zero, %c[ValidCol], ->LB0\n"
+      "B.DIM zero, %c[ValidRow], ->LB1\n"
+      "B.DIM zero, %c[Col], ->LB2\n"
+      "B.IOR [%[base]], []\n"
+      :
+      : [base] "r"(src.data()),
+        [DataType] "i"(type_traits<typename tile_shape::DType>::TypeCode),
+        [ValidCol] "i"(tile_shape::ValidCol),
+        [ValidRow] "i"(tile_shape::ValidRow),
+        [Col] "i"(tile_shape::Cols)
       : "memory");
 }
 
@@ -461,21 +818,53 @@ inline void MGATHER_MASK(tile_shape_out &dst, const gm_shape &src,
                          const tile_shape_offset &offset,
                          const tile_shape_mask &mask) {
   asm volatile(
-      "BSTART.TMA MGATHER.MASK, %c[DataType]\n"
+      "BSTART.MGATHER.MASK %c[DataType]\n"
       "B.DATR %c[PadValue]\n"
       "B.DIM zero, %c[Col], ->LB0\n"
       "B.DIM zero, %c[Row], ->LB1\n"
-      "B.IOT [%[off]], ->%[dst]<%c[TileSize]>\n"
-      "B.IOT [%[mask]], last\n"
+      "B.IOT %[off], ->%q[dst]<%c[TileSize]>\n"
+      "B.IOT %[mask], last\n"
       "B.IOR [%[base]], []\n"
-      : [dst] "=Tr"(dst.data())
-      : [base] "r"(src.data()), [off] "Tr"(offset.data()),
-        [mask] "Tr"(mask.data()),
+      : [dst] "=r"(dst.data())
+      : [base] "r"(src.data()), [off] "r"(offset.data()),
+        [mask] "r"(mask.data()),
         [DataType] "i"(type_traits<typename tile_shape_out::DType>::TypeCode),
         [PadValue] "i"(static_cast<int>(Pad)),
         [TileSize] "i"(
             tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
         [Col] "i"(tile_shape_offset::Cols), [Row] "i"(tile_shape_offset::Rows)
+      : "memory");
+}
+
+template <typename tile_shape_out, typename tile_shape_offset,
+          typename tile_shape_expected, typename tile_shape_desired,
+          typename gm_shape, TmaPadValue Pad = TmaPadValue::Null>
+inline void MGATHER_CAS(tile_shape_out &dst, const gm_shape &src,
+                        const tile_shape_offset &offset,
+                        const tile_shape_expected &expected,
+                        const tile_shape_desired &desired) {
+  static_assert(tile_shape_offset::ValidCol <= tile_shape_offset::Cols, "");
+  static_assert(tile_shape_expected::Rows == tile_shape_desired::Rows, "");
+  static_assert(tile_shape_expected::Cols == tile_shape_desired::Cols, "");
+  asm volatile(
+      "BSTART.MGATHER.CAS %c[DataType]\n"
+      "B.DATR %c[PadValue]\n"
+      "B.DIM zero, %c[ValidCol], ->LB0\n"
+      "B.DIM zero, %c[ValidRow], ->LB1\n"
+      "B.DIM zero, %c[Col], ->LB2\n"
+      "B.IOT %[off], %[expected]\n"
+      "B.IOT %[desired], last, ->%q[dst]<%c[TileSize]>\n"
+      "B.IOR [%[base]], []\n"
+      : [dst] "=r"(dst.data())
+      : [base] "r"(src.data()), [off] "r"(offset.data()),
+        [expected] "r"(expected.data()), [desired] "r"(desired.data()),
+        [DataType] "i"(type_traits<typename tile_shape_out::DType>::TypeCode),
+        [PadValue] "i"(static_cast<int>(Pad)),
+        [TileSize] "i"(
+            tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
+        [ValidCol] "i"(tile_shape_offset::ValidCol),
+        [ValidRow] "i"(tile_shape_offset::ValidRow),
+        [Col] "i"(tile_shape_offset::Cols)
       : "memory");
 }
 
@@ -485,19 +874,277 @@ inline void MSCATTER_MASK(gm_shape &dst, const tile_shape_in &src,
                           const tile_shape_offset &offset,
                           const tile_shape_mask &mask) {
   asm volatile(
-      "BSTART.TMA MSCATTER.MASK, %c[DataType]\n"
+      "BSTART.MSCATTER.MASK %c[DataType]\n"
       "B.DIM zero, %c[Col], ->LB0\n"
       "B.DIM zero, %c[Row], ->LB1\n"
-      "B.IOT [%[src], %[off]]\n"
-      "B.IOT [%[mask]], last\n"
+      "B.IOT %[src], %[off]\n"
+      "B.IOT %[mask], last\n"
       "B.IOR [%[base]], []\n"
       :
-      : [base] "r"(dst.data()), [src] "Tr"(src.data()),
-        [off] "Tr"(offset.data()), [mask] "Tr"(mask.data()),
+      : [base] "r"(dst.data()), [src] "r"(src.data()),
+        [off] "r"(offset.data()), [mask] "r"(mask.data()),
         [DataType] "i"(type_traits<typename tile_shape_in::DType>::TypeCode),
         [Col] "i"(tile_shape_offset::Cols), [Row] "i"(tile_shape_offset::Rows)
       : "memory");
 }
+
+template <is_tile_data_v tile_shape>
+inline void TXOR(tile_shape &dst, tile_shape &src0, tile_shape &src1) {
+  asm volatile(
+      "BSTART.TXOR %c[DataType]\n"
+      "B.DATR Null\n"
+      "C.B.DIMI %c[ValidCol], ->LB0\n"
+      "C.B.DIMI %c[ValidRow], ->LB1\n"
+      "C.B.DIMI %c[Cols], ->LB2\n"
+      "B.IOT %[src0], %[src1], last, ->%q[dst]<%c[TileSize]>\n"
+      : [dst] "=r"(dst.data())
+      : [src0] "r"(src0.data()), [src1] "r"(src1.data()),
+        [DataType] "i"(type_traits<typename tile_shape::DType>::TypeCode),
+        [ValidCol] "i"(tile_shape::ValidCol),
+        [ValidRow] "i"(tile_shape::ValidRow), [Cols] "i"(tile_shape::Cols),
+        [TileSize] "i"(
+            tile_type_traits<typename tile_shape::TileDType>::TilesizeCode));
+}
+
+template <is_tile_data_v tile_shape>
+inline void TSHLS(tile_shape &dst, tile_shape &src, unsigned shift) {
+  asm volatile(
+      "BSTART.TSHLS %c[DataType]\n"
+      "B.DATR Null\n"
+      "C.B.DIMI %c[ValidCol], ->LB0\n"
+      "C.B.DIMI %c[ValidRow], ->LB1\n"
+      "C.B.DIMI %c[Cols], ->LB2\n"
+      "B.IOT %[src], last, ->%q[dst]<%c[TileSize]>\n"
+      "B.IOR [%[shift]], []\n"
+      : [dst] "=r"(dst.data())
+      : [src] "r"(src.data()), [shift] "r"(shift),
+        [DataType] "i"(type_traits<typename tile_shape::DType>::TypeCode),
+        [ValidCol] "i"(tile_shape::ValidCol),
+        [ValidRow] "i"(tile_shape::ValidRow), [Cols] "i"(tile_shape::Cols),
+        [TileSize] "i"(
+            tile_type_traits<typename tile_shape::TileDType>::TilesizeCode));
+}
+
+template <is_tile_data_v tile_shape>
+inline void TSHRS(tile_shape &dst, tile_shape &src, unsigned shift) {
+  asm volatile(
+      "BSTART.TSHRS %c[DataType]\n"
+      "B.DATR Null\n"
+      "C.B.DIMI %c[ValidCol], ->LB0\n"
+      "C.B.DIMI %c[ValidRow], ->LB1\n"
+      "C.B.DIMI %c[Cols], ->LB2\n"
+      "B.IOT %[src], last, ->%q[dst]<%c[TileSize]>\n"
+      "B.IOR [%[shift]], []\n"
+      : [dst] "=r"(dst.data())
+      : [src] "r"(src.data()), [shift] "r"(shift),
+        [DataType] "i"(type_traits<typename tile_shape::DType>::TypeCode),
+        [ValidCol] "i"(tile_shape::ValidCol),
+        [ValidRow] "i"(tile_shape::ValidRow), [Cols] "i"(tile_shape::Cols),
+        [TileSize] "i"(
+            tile_type_traits<typename tile_shape::TileDType>::TilesizeCode));
+}
+
+template <is_tile_data_v tile_shape, is_tile_data_v tile_shape_index>
+inline void TSELECT_V057(tile_shape &dst, tile_shape_index &cond,
+                         tile_shape &src0, tile_shape &src1) {
+  typename tile_shape::TileDType tmp;
+  asm volatile(
+      "BSTART.TSEL %c[DataType]\n"
+      "B.DATR Null\n"
+      "C.B.DIMI %c[ValidCol], ->LB0\n"
+      "C.B.DIMI %c[ValidRow], ->LB1\n"
+      "C.B.DIMI %c[Cols], ->LB2\n"
+      "B.IOT %[cond], %[src0], ->%q[dst]<%c[TileSize]>\n"
+      "B.IOT %[src1], last, ->%q[tmp]<%c[TileSize]>\n"
+      : [dst] "=r"(dst.data()), [tmp] "=r"(tmp)
+      : [cond] "r"(cond.data()), [src0] "r"(src0.data()),
+        [src1] "r"(src1.data()),
+        [DataType] "i"(type_traits<typename tile_shape::DType>::TypeCode),
+        [ValidCol] "i"(tile_shape::ValidCol),
+        [ValidRow] "i"(tile_shape::ValidRow), [Cols] "i"(tile_shape::Cols),
+        [TileSize] "i"(
+            tile_type_traits<typename tile_shape::TileDType>::TilesizeCode));
+}
+
+// v0.57 named TEPL/TMA surface.  These wrappers replace the retired vendor
+// tile_size-based per-element implementation: tile values stay opaque and are
+// produced/consumed only by architectural tile blocks.
+#define SUPERNPUBENCH_V057_TEPL_BINARY(FUNCTION, WRAPPER)                       \
+  template <is_tile_data_v tile_shape>                                         \
+  inline void WRAPPER(tile_shape &dst, tile_shape &src0, tile_shape &src1) {    \
+    asm volatile(                                                               \
+        "BSTART." #FUNCTION " %c[DataType]\n"                            \
+        "B.DATR Null\n"                                                        \
+        "C.B.DIMI %c[ValidCol], ->LB0\n"                                       \
+        "C.B.DIMI %c[ValidRow], ->LB1\n"                                       \
+        "C.B.DIMI %c[Cols], ->LB2\n"                                           \
+        "B.IOT %[src0], %[src1], last, ->%q[dst]<%c[TileSize]>\n"             \
+        : [dst] "=r"(dst.data())                                                \
+        : [src0] "r"(src0.data()), [src1] "r"(src1.data()),                    \
+          [DataType] "i"(type_traits<typename tile_shape::DType>::TypeCode),   \
+          [ValidCol] "i"(tile_shape::ValidCol),                                \
+          [ValidRow] "i"(tile_shape::ValidRow), [Cols] "i"(tile_shape::Cols),  \
+          [TileSize] "i"(                                                      \
+              tile_type_traits<typename tile_shape::TileDType>::TilesizeCode));\
+  }
+
+SUPERNPUBENCH_V057_TEPL_BINARY(TADD, TADD_V057)
+SUPERNPUBENCH_V057_TEPL_BINARY(TSUB, TSUB_V057)
+SUPERNPUBENCH_V057_TEPL_BINARY(TMUL, TMUL_V057)
+SUPERNPUBENCH_V057_TEPL_BINARY(TAND, TAND_V057)
+SUPERNPUBENCH_V057_TEPL_BINARY(TOR, TOR_V057)
+SUPERNPUBENCH_V057_TEPL_BINARY(TREM, TREM_V057)
+#undef SUPERNPUBENCH_V057_TEPL_BINARY
+
+#define SUPERNPUBENCH_V057_TEPL_SCALAR(FUNCTION, WRAPPER)                       \
+  template <is_tile_data_v tile_shape>                                         \
+  inline void WRAPPER(tile_shape &dst, tile_shape &src,                         \
+                      typename tile_shape::DType scalar) {                      \
+    asm volatile(                                                               \
+        "BSTART." #FUNCTION " %c[DataType]\n"                            \
+        "B.DATR Null\n"                                                        \
+        "C.B.DIMI %c[ValidCol], ->LB0\n"                                       \
+        "C.B.DIMI %c[ValidRow], ->LB1\n"                                       \
+        "C.B.DIMI %c[Cols], ->LB2\n"                                           \
+        "B.IOT %[src], last, ->%q[dst]<%c[TileSize]>\n"                       \
+        "B.IOR [%[scalar]], []\n"                                              \
+        : [dst] "=r"(dst.data())                                                \
+        : [src] "r"(src.data()), [scalar] "r"(scalar),                         \
+          [DataType] "i"(type_traits<typename tile_shape::DType>::TypeCode),   \
+          [ValidCol] "i"(tile_shape::ValidCol),                                \
+          [ValidRow] "i"(tile_shape::ValidRow), [Cols] "i"(tile_shape::Cols),  \
+          [TileSize] "i"(                                                      \
+              tile_type_traits<typename tile_shape::TileDType>::TilesizeCode));\
+  }
+
+SUPERNPUBENCH_V057_TEPL_SCALAR(TADDS, TADDS_V057)
+SUPERNPUBENCH_V057_TEPL_SCALAR(TMULS, TMULS_V057)
+#undef SUPERNPUBENCH_V057_TEPL_SCALAR
+
+template <is_tile_data_v tile_shape>
+inline void TEXPANDS_V057(tile_shape &dst,
+                          typename tile_shape::DType scalar) {
+  asm volatile(
+      "BSTART.TEXPANDS %c[DataType]\n"
+      "B.DATR Null\n"
+      "C.B.DIMI %c[ValidCol], ->LB0\n"
+      "C.B.DIMI %c[ValidRow], ->LB1\n"
+      "C.B.DIMI %c[Cols], ->LB2\n"
+      "B.IOT last, ->%q[dst]<%c[TileSize]>\n"
+      "B.IOR [%[scalar]], []\n"
+      : [dst] "=r"(dst.data())
+      : [scalar] "r"(scalar),
+        [DataType] "i"(type_traits<typename tile_shape::DType>::TypeCode),
+        [ValidCol] "i"(tile_shape::ValidCol),
+        [ValidRow] "i"(tile_shape::ValidRow), [Cols] "i"(tile_shape::Cols),
+        [TileSize] "i"(
+            tile_type_traits<typename tile_shape::TileDType>::TilesizeCode));
+}
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+inline void TCVT_V057(tile_shape_out &dst, tile_shape_in &src) {
+  asm volatile(
+      "BSTART.TCVT %c[SrcType]\n"
+      "B.DATR %c[DstType], RNONE\n"
+      "C.B.DIMI %c[ValidCol], ->LB0\n"
+      "C.B.DIMI %c[ValidRow], ->LB1\n"
+      "C.B.DIMI %c[Cols], ->LB2\n"
+      "B.IOT %[src], last, ->%q[dst]<%c[TileSize]>\n"
+      : [dst] "=r"(dst.data())
+      : [src] "r"(src.data()),
+        [SrcType] "i"(type_traits<typename tile_shape_in::DType>::TypeCode),
+        [DstType] "i"(type_traits<typename tile_shape_out::DType>::TypeCode),
+        [ValidCol] "i"(tile_shape_in::ValidCol),
+        [ValidRow] "i"(tile_shape_in::ValidRow),
+        [Cols] "i"(tile_shape_in::Cols),
+        [TileSize] "i"(
+            tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode));
+}
+
+#define SUPERNPUBENCH_V057_TCMP_CASE(MODE, ASM_MODE, LEFT, RIGHT)               \
+  case CmpMode::MODE:                                                          \
+    asm volatile(                                                               \
+        "BSTART.TCMP %c[DataType]\n"                                    \
+        "B.DATR Null, " #ASM_MODE "\n"                                        \
+        "C.B.DIMI %c[ValidCol], ->LB0\n"                                       \
+        "C.B.DIMI %c[ValidRow], ->LB1\n"                                       \
+        "C.B.DIMI %c[Cols], ->LB2\n"                                           \
+        "B.IOT %[left], %[right], last, ->%q[dst]<%c[TileSize]>\n"            \
+        : [dst] "=r"(dst.data())                                                \
+        : [left] "r"(LEFT.data()), [right] "r"(RIGHT.data()),                  \
+          [DataType] "i"(type_traits<typename tile_shape_in::DType>::TypeCode),\
+          [ValidCol] "i"(tile_shape_in::ValidCol),                             \
+          [ValidRow] "i"(tile_shape_in::ValidRow),                             \
+          [Cols] "i"(tile_shape_in::Cols),                                     \
+          [TileSize] "i"(                                                      \
+              tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode));\
+    return
+
+template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
+inline void TCMP_V057(tile_shape_out &dst, tile_shape_in &src0,
+                      tile_shape_in &src1, CmpMode mode) {
+  switch (mode) {
+    SUPERNPUBENCH_V057_TCMP_CASE(EQ, EQ, src0, src1);
+    SUPERNPUBENCH_V057_TCMP_CASE(NE, NE, src0, src1);
+    SUPERNPUBENCH_V057_TCMP_CASE(LT, LT, src0, src1);
+    SUPERNPUBENCH_V057_TCMP_CASE(GE, GE, src0, src1);
+    SUPERNPUBENCH_V057_TCMP_CASE(GT, LT, src1, src0);
+    SUPERNPUBENCH_V057_TCMP_CASE(LE, GE, src1, src0);
+  }
+}
+#undef SUPERNPUBENCH_V057_TCMP_CASE
+
+template <is_tile_data_v tile_shape, is_global_data_v gm_shape>
+inline void TLOAD_V057(tile_shape &dst, gm_shape &src) {
+  static_assert(tile_shape::isRowMajor && gm_shape::isRowMajor,
+                "v0.57 direct TLOAD currently requires row-major tensors");
+  asm volatile(
+      "BSTART.TLOAD %c[SrcType]\n"
+      "B.DATR NORM.normal, %c[DstType], Null\n"
+      "C.B.DIMI %c[ValidCol], ->LB0\n"
+      "C.B.DIMI %c[ValidRow], ->LB1\n"
+      "C.B.DIMI %c[Cols], ->LB2\n"
+      "B.IOT last, ->%q[dst]<%c[TileSize]>\n"
+      "B.IOR [%[base], %[stride]], []\n"
+      : [dst] "=r"(dst.data())
+      : [base] "r"(src.data()),
+        [stride] "r"(gm_shape::RowStride * sizeof(typename gm_shape::DType)),
+        [SrcType] "i"(type_traits<typename gm_shape::DType>::TypeCode),
+        [DstType] "i"(type_traits<typename tile_shape::DType>::TypeCode),
+        [ValidCol] "i"(tile_shape::ValidCol),
+        [ValidRow] "i"(tile_shape::ValidRow), [Cols] "i"(tile_shape::Cols),
+        [TileSize] "i"(
+            tile_type_traits<typename tile_shape::TileDType>::TilesizeCode)
+      : "memory");
+}
+
+template <is_global_data_v gm_shape, is_tile_data_v tile_shape>
+inline void TSTORE_V057(gm_shape &dst, tile_shape &src) {
+  static_assert(tile_shape::isRowMajor && gm_shape::isRowMajor,
+                "v0.57 direct TSTORE currently requires row-major tensors");
+  asm volatile(
+      "BSTART.TSTORE %c[SrcType]\n"
+      "B.DATR NORM.normal, %c[DstType], Null\n"
+      "C.B.DIMI %c[ValidCol], ->LB0\n"
+      "C.B.DIMI %c[ValidRow], ->LB1\n"
+      "C.B.DIMI %c[Cols], ->LB2\n"
+      "B.IOT %[src], last, ->%q[src]<%c[TileSize]>\n"
+      "B.IOR [%[base], %[stride]], []\n"
+      :
+      : [base] "r"(dst.data()), [src] "r"(src.data()),
+        [stride] "r"(gm_shape::RowStride * sizeof(typename gm_shape::DType)),
+        [SrcType] "i"(type_traits<typename tile_shape::DType>::TypeCode),
+        [DstType] "i"(type_traits<typename gm_shape::DType>::TypeCode),
+        [ValidCol] "i"(tile_shape::ValidCol),
+        [ValidRow] "i"(tile_shape::ValidRow), [Cols] "i"(tile_shape::Cols),
+        [TileSize] "i"(
+            tile_type_traits<typename tile_shape::TileDType>::TilesizeCode)
+      : "memory");
+}
+
+#endif
+
+#if !defined(__linx)
 
 #ifndef LINX_CVT_INLINE
 #define LINX_CVT_INLINE __attribute__((always_inline)) inline
@@ -506,6 +1153,38 @@ inline void MSCATTER_MASK(gm_shape &dst, const tile_shape_in &src,
 #ifndef SIMPLE_STORAGE
 #define SIMPLE_STORAGE(d) (d)
 #endif
+
+// v0.57 exposes only architectural GPR inline-assembly operands.  The prior
+// toolchain supplied private *_STORAGE accessors alongside its vector-register
+// constraints; keep the public value types usable by mapping those accessors to
+// their scalar or packed value representation.
+#define __tf32_STORAGE(d) (d)
+#define __hf32_STORAGE(d) (d)
+#define __blkc_bf16_STORAGE(d) (d)
+#define __hif8_STORAGE(d) (d)
+#define __fp8_e4m3_STORAGE(d) (d)
+#define __fp8_e5m2_STORAGE(d) (d)
+#define __fp6_e3m2_STORAGE(d) (d)
+#define __fp6_e2m3_STORAGE(d) (d)
+#define __fp8_e8m0_STORAGE(d) (d)
+#define __fp8_e6m2_STORAGE(d) (d)
+#define __fp4_e2m1x2_STORAGE(d) (d)
+#define __fp4_e1m2x2_STORAGE(d) (d)
+#define __fp4_hif4x2_STORAGE(d) (d)
+#define __fp8_e6m2x2_STORAGE(d) (d)
+#define __fp8_e4m3x2_STORAGE(d) (d)
+#define __fp8_e5m2x2_STORAGE(d) (d)
+#define __fp16x2_STORAGE(d) (d)
+#define __bf16x2_STORAGE(d) (d)
+#define __blkc_bf16x2_STORAGE(d) (d)
+#define __uint4x2_STORAGE(d) (d)
+#define __uint16x2_STORAGE(d) (d)
+#define __int4x2_STORAGE(d) (d)
+#define __int16x2_STORAGE(d) (d)
+#define __fp8_e4m3x4_STORAGE(d) (d)
+#define __fp8_e5m2x4_STORAGE(d) (d)
+#define __uint8x4_STORAGE(d) (d)
+#define __int8x4_STORAGE(d) (d)
 
 // 默认生成：
 //   v.cvt.xxx2yyy %1.src, ->%0.dst, RMode, sat
@@ -563,17 +1242,17 @@ struct linx_valid_sat {
                              RMODE_STR, SAT_STR)                              \
   asm volatile(LINX_CVT_ASM(SRC_TYPE, DST_TYPE, SRC_REG, DST_REG,             \
                             RMODE_STR, SAT_STR)                               \
-               : "=vr"(DST_STORAGE(DST))                                      \
-               : "vr"(SRC_STORAGE(SRC)))
+               : "=r"(DST_STORAGE(DST))                                       \
+               : "r"(SRC_STORAGE(SRC)))
 
 #define LINX_CVT_EMIT_PACKED(SRC_TYPE, DST_TYPE, SRC_REG, DST_REG,            \
                              DST_STORAGE, SRC_STORAGE, DST, SRC0, SRC1,        \
                              RMODE_STR, SAT_STR)                              \
   asm volatile(LINX_CVT_PACKED_ASM(SRC_TYPE, DST_TYPE, SRC_REG, DST_REG,      \
                                    RMODE_STR, SAT_STR)                        \
-               : "=vr"(DST_STORAGE(DST))                                      \
-               : "vr"(SRC_STORAGE(SRC0)),                                     \
-                 "vr"(SRC_STORAGE(SRC1)))
+               : "=r"(DST_STORAGE(DST))                                       \
+               : "r"(SRC_STORAGE(SRC0)),                                      \
+                 "r"(SRC_STORAGE(SRC1)))
 
 #define LINX_CVT_DISPATCH_NORMAL(RMODE, SAT, SRC_TYPE, DST_TYPE, SRC_REG,     \
                                  DST_REG, DST_STORAGE, SRC_STORAGE, DST, SRC)  \
@@ -1242,30 +1921,30 @@ enum BlkvBf16Sat {
 #define BLKV_BF16_EMIT_UNARY(OP, DST, SRC, RMODE_STR, SAT_STR)               \
   asm volatile("v." OP " %1.bf" BLKV_BF16_DST_PREFIX ", " RMODE_STR           \
                ", " SAT_STR "\n"                                              \
-               : "=vr"(BLKV_BF16_STORAGE(DST))                               \
-               : "vr"(BLKV_BF16_STORAGE(SRC)))
+               : "=r"(BLKV_BF16_STORAGE(DST))                                \
+               : "r"(BLKV_BF16_STORAGE(SRC)))
 
 #define BLKV_BF16_EMIT_BINARY(OP, DST, SRC_L, SRC_R, RMODE_STR, SAT_STR)      \
   asm volatile("v." OP " %1.bf, %2.bf" BLKV_BF16_DST_PREFIX ", " RMODE_STR    \
                ", " SAT_STR "\n"                                              \
-               : "=vr"(BLKV_BF16_STORAGE(DST))                               \
-               : "vr"(BLKV_BF16_STORAGE(SRC_L)),                              \
-                 "vr"(BLKV_BF16_STORAGE(SRC_R)))
+               : "=r"(BLKV_BF16_STORAGE(DST))                                \
+               : "r"(BLKV_BF16_STORAGE(SRC_L)),                               \
+                 "r"(BLKV_BF16_STORAGE(SRC_R)))
 
 #define BLKV_BF16_EMIT_TERNARY(OP, DST, SRC_L, SRC_R, SRC_A,                 \
                                RMODE_STR, SAT_STR)                           \
   asm volatile("v." OP " %1.bf, %2.bf, %3.bf" BLKV_BF16_DST_PREFIX ", "       \
                RMODE_STR ", " SAT_STR "\n"                                    \
-               : "=vr"(BLKV_BF16_STORAGE(DST))                               \
-               : "vr"(BLKV_BF16_STORAGE(SRC_L)),                              \
-                 "vr"(BLKV_BF16_STORAGE(SRC_R)),                              \
-                 "vr"(BLKV_BF16_STORAGE(SRC_A)))
+               : "=r"(BLKV_BF16_STORAGE(DST))                                \
+               : "r"(BLKV_BF16_STORAGE(SRC_L)),                               \
+                 "r"(BLKV_BF16_STORAGE(SRC_R)),                               \
+                 "r"(BLKV_BF16_STORAGE(SRC_A)))
 
 #define BLKV_BF16_EMIT_FMAX(DST, SRC_L, SRC_R)                                \
   asm volatile("v.fmax %1.bf, %2.bf" BLKV_BF16_DST_PREFIX "\n"                \
-               : "=vr"(BLKV_BF16_STORAGE(DST))                               \
-               : "vr"(BLKV_BF16_STORAGE(SRC_L)),                              \
-                 "vr"(BLKV_BF16_STORAGE(SRC_R)))
+               : "=r"(BLKV_BF16_STORAGE(DST))                                \
+               : "r"(BLKV_BF16_STORAGE(SRC_L)),                               \
+                 "r"(BLKV_BF16_STORAGE(SRC_R)))
 
 #define BLKV_BF16_DISPATCH_RMODE_SAT(RMODE, SAT, EMIT, ...)                  \
   do {                                                                        \
@@ -1488,30 +2167,30 @@ BLKV_BF16_INLINE __bf16 blkv_bf16_max(const __bf16 &src_l,
 #define BLKV_BF16X2_EMIT_UNARY(OP, DST, SRC, RMODE_STR, SAT_STR)             \
   asm volatile("v." OP " %1.bfx2" BLKV_BF16X2_DST_PREFIX ", " RMODE_STR       \
                ", " SAT_STR "\n"                                              \
-               : "=vr"(BLKV_BF16X2_STORAGE(DST))                             \
-               : "vr"(BLKV_BF16X2_STORAGE(SRC)))
+               : "=r"(BLKV_BF16X2_STORAGE(DST))                              \
+               : "r"(BLKV_BF16X2_STORAGE(SRC)))
 
 #define BLKV_BF16X2_EMIT_BINARY(OP, DST, SRC_L, SRC_R, RMODE_STR, SAT_STR)    \
   asm volatile("v." OP " %1.bfx2, %2.bfx2" BLKV_BF16X2_DST_PREFIX ", "        \
                RMODE_STR ", " SAT_STR "\n"                                    \
-               : "=vr"(BLKV_BF16X2_STORAGE(DST))                             \
-               : "vr"(BLKV_BF16X2_STORAGE(SRC_L)),                            \
-                 "vr"(BLKV_BF16X2_STORAGE(SRC_R)))
+               : "=r"(BLKV_BF16X2_STORAGE(DST))                              \
+               : "r"(BLKV_BF16X2_STORAGE(SRC_L)),                             \
+                 "r"(BLKV_BF16X2_STORAGE(SRC_R)))
 
 #define BLKV_BF16X2_EMIT_TERNARY(OP, DST, SRC_L, SRC_R, SRC_A,               \
                                   RMODE_STR, SAT_STR)                       \
   asm volatile("v." OP " %1.bfx2, %2.bfx2, %3.bfx2"                          \
                BLKV_BF16X2_DST_PREFIX ", " RMODE_STR ", " SAT_STR "\n"       \
-               : "=vr"(BLKV_BF16X2_STORAGE(DST))                             \
-               : "vr"(BLKV_BF16X2_STORAGE(SRC_L)),                            \
-                 "vr"(BLKV_BF16X2_STORAGE(SRC_R)),                            \
-                 "vr"(BLKV_BF16X2_STORAGE(SRC_A)))
+               : "=r"(BLKV_BF16X2_STORAGE(DST))                              \
+               : "r"(BLKV_BF16X2_STORAGE(SRC_L)),                             \
+                 "r"(BLKV_BF16X2_STORAGE(SRC_R)),                             \
+                 "r"(BLKV_BF16X2_STORAGE(SRC_A)))
 
 #define BLKV_BF16X2_EMIT_FMAX(DST, SRC_L, SRC_R)                              \
   asm volatile("v.fmax %1.bfx2, %2.bfx2" BLKV_BF16X2_DST_PREFIX "\n"          \
-               : "=vr"(BLKV_BF16X2_STORAGE(DST))                             \
-               : "vr"(BLKV_BF16X2_STORAGE(SRC_L)),                            \
-                 "vr"(BLKV_BF16X2_STORAGE(SRC_R)))
+               : "=r"(BLKV_BF16X2_STORAGE(DST))                              \
+               : "r"(BLKV_BF16X2_STORAGE(SRC_L)),                             \
+                 "r"(BLKV_BF16X2_STORAGE(SRC_R)))
 
 #define BLKV_DEFINE_BF16X2_UNARY(NAME, OP)                                    \
   template <int RMode = BLKV_RNONE, int Sat = BLKV_NOSAT, class Src>         \
@@ -1674,4 +2353,5 @@ blkv_bf16x2_max(const BLKV_BF16X2_TYPE &src_l,
 #endif // BLKV_BF16_OPS_HPP
 
 
+#endif
 #endif

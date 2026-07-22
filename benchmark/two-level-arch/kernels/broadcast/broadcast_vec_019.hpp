@@ -5,7 +5,7 @@
 using namespace pto;
 
 // =====================================================================
-// Broadcast (B,1,K) -> (B,N,K) via TCOPYIN + __vec__ broadcast + TCOPYOUT
+// Broadcast (B,1,K) -> (B,N,K) via TLOAD + __vec__ broadcast + TSTORE
 //
 // Optimized for: (1280,1,49) -> (1280,8,49), dtype=half
 //
@@ -17,7 +17,7 @@ using namespace pto;
 // Processing strategy:
 //   Divide B batches into tiles of kTileBatch batches each.
 //   Per tile:
-//     1. TCOPYIN  (kTileBatch, K)   from GlobalMem -> TileReg
+//     1. TLOAD  (kTileBatch, K)   from GlobalMem -> TileReg
 //        Reads kTileBatch * K contiguous elements.
 //     2. __vec__ broadcast within TileReg:
 //        Launch <<<K, N*kTileBatch, 1>>> threads:
@@ -27,7 +27,7 @@ using namespace pto;
 //          batch_idx = y & (kTileBatch - 1)  (0..kTileBatch-1, bitwise)
 //          Read  src[batch_idx * RowStride + x]
 //          Write dst[batch_idx * RowStride + copy * K + x]
-//     3. TCOPYOUT (kTileBatch, N*K)  from TileReg -> GlobalMem
+//     3. TSTORE (kTileBatch, N*K)  from TileReg -> GlobalMem
 //
 // TileReg layout:
 //   Physical tile cols = 512 (padded for 512B alignment).
@@ -111,23 +111,23 @@ void broadcast(dtype *in_ptr, dtype *out_ptr,
 
     for (size_t i = 0; i < Nb; i++) {
         gm_in gsrc(in_ptr + i * kTileBatch * kInner);
-        TCOPYIN(inTile, gsrc);
+        TLOAD(inTile, gsrc);
 
         vec_broadcast_3d<tile_out, tile_in, kInner, kBCast, kTileBatch>
             <<<kInner, kBCast * kTileBatch, 1>>>(outTile.data(), inTile.data());
 
         gm_out gdst(out_ptr + i * kTileBatch * kBCast * kInner);
-        TCOPYOUT(gdst, outTile);
+        TSTORE(gdst, outTile);
     }
 
     if constexpr (rmd > 0) {
         gm_in gsrc(in_ptr + Nb * kTileBatch * kInner);
-        TCOPYIN(inTile_rmd, gsrc);
+        TLOAD(inTile_rmd, gsrc);
 
         vec_broadcast_3d<tile_out_r, tile_in_r, kInner, kBCast, rmd>
             <<<kInner, kBCast * rmd, 1>>>(outTile_rmd.data(), inTile_rmd.data());
 
         gm_out gdst(out_ptr + Nb * kTileBatch * kBCast * kInner);
-        TCOPYOUT(gdst, outTile_rmd);
+        TSTORE(gdst, outTile_rmd);
     }
 }

@@ -142,12 +142,9 @@ Data type combinations supported by CUBE block:
 
 The TMA (Tile Memory Access) block is used for efficient data transfer:
 
-```cpp
-// Load from global memory to Tile Register
-bstart.tma
-  // DMA transfer configuration
-  // Execute data transfer
-bstop
+```asm
+BSTART.TLOAD INT32
+  // B.ARG / B.DIM / B.IOR / B.IOT descriptors
 ```
 
 ### 5.2 Transfer Modes
@@ -229,5 +226,5 @@ result[j] = sum(C[:, j])
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 1.0
 **Last Updated**: 2026-01-08

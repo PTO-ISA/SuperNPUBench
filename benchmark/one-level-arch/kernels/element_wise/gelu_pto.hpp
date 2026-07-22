@@ -2,7 +2,7 @@
 // GELU 算子 — PTO 一层编程模型
 //
 // 原始 gelu.hpp 策略:
-//   TCOPYIN (half) -> __vec__ gelu_simd (多项式拟合) -> TCOPYOUT (half)
+//   TLOAD (half) -> __vec__ gelu_simd (多项式拟合) -> TSTORE (half)
 //   __vec__ 块逐元素: fp16→fp32, clamp, Horner 多项式, exp, 除法, fp32→fp16
 //
 // PTO 一层策略:
@@ -15,8 +15,8 @@
 // │ Pto ISA  │ 当前编译器状态   │ 说明                                     │
 // │ 指令     │                  │                                          │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TLOAD    │ API 有(名不同)， │ PTO ISA 名 TLOAD；当前编译器名 TCOPYIN；  │
-// │          │ 二层实现         │ jcore/TCopyIn.hpp 用 __vec__ 实现        │
+// │ TLOAD    │ API 有(名不同)， │ PTO ISA 名 TLOAD；当前编译器名 TLOAD；  │
+// │          │ 二层实现         │ jcore/TLoad.hpp 用 __vec__ 实现        │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
 // │ TCVT     │ API 有(签名不同)，│ PTO ISA: TCVT(dst,src,tmp,mode,satMode) │
 // │          │ 二层实现         │ 当前编译器: TCVT(dst,src) 无 tmp/mode；  │
@@ -40,71 +40,10 @@
 // │          │                  │ (template_asm.h 有 TRECIP_TEPL 内联汇编,  │
 // │          │                  │  但不在 pto_tileop.hpp API 中)            │
 // ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TSTORE   │ API 有(名不同)， │ PTO ISA 名 TSTORE；当前编译器名 TCOPYOUT；│
-// │          │ 二层实现         │ jcore/TCopyOut.hpp 用 __vec__ 实现       │
+// │ TSTORE   │ API 有(名不同)， │ PTO ISA 名 TSTORE；当前编译器名 TSTORE；│
+// │          │ 二层实现         │ jcore/TStore.hpp 用 __vec__ 实现       │
 // └──────────┴──────────────────┴──────────────────────────────────────────┘
 //
-// PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
-//
-//   TLOAD:
-//     template <typename TileData, typename GlobalData, typename... WaitEvents>
-//     PTO_INST RecordEvent TLOAD(TileData &dst, GlobalData &src, WaitEvents &... events);
-//
-//   TCVT:
-//     template <typename TileDataD, typename TileDataS, typename TmpTileData,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TCVT(TileDataD &dst, TileDataS &src, TmpTileData &tmp,
-//                               RoundMode mode, SaturationMode satMode,
-//                               WaitEvents &... events);
-//
-//   TMAXS:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TMAXS(TileDataDst &dst, TileDataSrc &src,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TMINS:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TMINS(TileDataDst &dst, TileDataSrc &src,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TMUL:
-//     template <typename TileDataDst, typename TileDataSrc0,
-//               typename TileDataSrc1, typename... WaitEvents>
-//     PTO_INST RecordEvent TMUL(TileDataDst &dst, TileDataSrc0 &src0,
-//                               TileDataSrc1 &src1, WaitEvents &... events);
-//
-//   TMULS:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TMULS(TileDataDst &dst, TileDataSrc &src0,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TADDS:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TADDS(TileDataDst &dst, TileDataSrc &src0,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TEXP:
-//     template <auto PrecisionType = ExpAlgorithm::DEFAULT,
-//               typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TEXP(TileDataDst &dst, TileDataSrc &src,
-//                               WaitEvents &... events);
-//
-//   TRECIP:
-//     template <auto PrecisionType = RecipAlgorithm::DEFAULT,
-//               typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TRECIP(TileDataDst &dst, TileDataSrc &src,
-//                                 WaitEvents &... events);
-//
-//   TSTORE:
-//     template <typename TileData, typename GlobalData,
-//               AtomicType atomicType = AtomicType::AtomicNone,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TSTORE(GlobalData &dst, TileData &src,
-//                                 WaitEvents &... events);
 // ============================================================================
 
 #include <common/pto_tile.hpp>
@@ -257,13 +196,13 @@ void gelu(
         auto gO = gOIter(0, i);
 
         // TLOAD: GM -> UB
-        // [当前编译器] 名为 TCOPYIN, jcore 为 __vec__
+        // [当前编译器] 名为 TLOAD, jcore 为 __vec__
         TLOAD(inTile, gI);
 
         gelu_impl<tile_shapeData, tile_shapeFP32>(inTile, outTile, tmpCvt);
 
         // TSTORE: UB -> GM
-        // [当前编译器] 名为 TCOPYOUT, jcore 为 __vec__
+        // [当前编译器] 名为 TSTORE, jcore 为 __vec__
         TSTORE(gO, outTile);
     }
     if constexpr (rmd_M) {

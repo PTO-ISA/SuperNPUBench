@@ -42,7 +42,7 @@ void reducemax_row_rand(
     itOut gOIter(out_ptr);
 
     auto gO = gOIter(0, 0);
-    TEXPANDS(oldtmpMaxTile, static_cast<dtype>(0));
+    TEXPANDSCALAR(oldtmpMaxTile, static_cast<dtype>(0));
 
     for (int i = 0; i < Nb; ++i) {
         auto gI = gIIter(0, i);

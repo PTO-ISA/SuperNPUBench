@@ -38,37 +38,37 @@ template <typename tile_shape_out>
 void ExtractHigh8Hist_PTO(tile_shape_out& dst, const uint16_t* src) {
     using DataTile = Tile<Location::Vec, uint16_t, 1, kTileSize, BLayout::RowMajor>;
     using HistTile = Tile<Location::Vec, uint32_t, 1, kNumBuckets, BLayout::RowMajor>;
-    
+
     DataTile data_tile;
     HistTile hist_tile;
-    
+
     // Initialize histogram to 0
-    TEXPANDS(hist_tile, static_cast<uint32_t>(0));
-    
+    TEXPANDSCALAR(hist_tile, static_cast<uint32_t>(0));
+
     // Process input in tiles
     for (int tile_idx = 0; tile_idx < kNumTiles; ++tile_idx) {
         // Load input tile
         TLOAD(data_tile, src + tile_idx * kTileSize);
-        
+
         // Extract high8 bits: high8 = val >> 8
         DataTile high8_tile;
         TSHRS(high8_tile, data_tile, static_cast<uint16_t>(8));
-        
+
         // For each bucket, count matches
         // This is a simplified version - full implementation would need
         // to use TCMP and conditional accumulation
         for (int bucket = 0; bucket < kNumBuckets; ++bucket) {
             HistTile bucket_tile;
-            TEXPANDS(bucket_tile, static_cast<uint32_t>(bucket));
-            
+            TEXPANDSCALAR(bucket_tile, static_cast<uint32_t>(bucket));
+
             // Compare high8 with bucket
             // Note: This requires more sophisticated tile operations
             // For now, we use a scalar fallback
         }
     }
-    
+
     // Store result
-    TCOPYOUT(dst, hist_tile);
+    TSTORE(dst, hist_tile);
 }
 
 // ============================================================================
@@ -80,32 +80,32 @@ void ExtractLow8HistForKthBin_PTO(tile_shape_out& dst, const uint16_t* src,
                                    uint16_t kth_bin) {
     using DataTile = Tile<Location::Vec, uint16_t, 1, kTileSize, BLayout::RowMajor>;
     using HistTile = Tile<Location::Vec, uint32_t, 1, kNumBuckets, BLayout::RowMajor>;
-    
+
     DataTile data_tile;
     HistTile hist_tile;
-    
+
     // Initialize histogram to 0
-    TEXPANDS(hist_tile, static_cast<uint32_t>(0));
-    
+    TEXPANDSCALAR(hist_tile, static_cast<uint32_t>(0));
+
     // Process input in tiles
     for (int tile_idx = 0; tile_idx < kNumTiles; ++tile_idx) {
         // Load input tile
         TLOAD(data_tile, src + tile_idx * kTileSize);
-        
+
         // Extract high8 bits
         DataTile high8_tile;
         TSHRS(high8_tile, data_tile, static_cast<uint16_t>(8));
-        
+
         // Extract low8 bits: low8 = val & 0xFF
         DataTile low8_tile;
         TANDS(low8_tile, data_tile, static_cast<uint16_t>(0xFF));
-        
+
         // Filter by kth_bin and accumulate
         // This requires conditional operations
     }
-    
+
     // Store result
-    TCOPYOUT(dst, hist_tile);
+    TSTORE(dst, hist_tile);
 }
 
 // ============================================================================

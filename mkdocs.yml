@@ -1,0 +1,152 @@
+site_name: SuperNPUBench Golden Manual
+site_description: Complete PTO programming, intrinsic, and benchmark manual for the superscalar Linx NPU
+site_url: https://pto-isa.github.io/SuperNPUBench/
+repo_url: https://github.com/PTO-ISA/SuperNPUBench
+repo_name: PTO-ISA/SuperNPUBench
+edit_uri: edit/main/docs/
+copyright: SuperNPUBench contributors
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/chip
+    repo: fontawesome/brands/github
+    annotation: material/arrow-right-circle
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.path
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Use dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Use light mode
+
+nav:
+  - Home: index.md
+  - Start:
+      - Orientation: start/overview.md
+      - Build the toolchain: start/toolchain.md
+      - First tile program: start/first-program.md
+      - Build, run, disassemble: start/build-run.md
+  - Programming Model:
+      - One-level overview: model/programming.md
+      - Four-PE group execution: model/group-execution.md
+      - Types and values: model/types-and-values.md
+      - Tiles and distribution: model/tiles-and-layouts.md
+      - Shared tile registers: model/shared-tile-registers.md
+      - Tile-ID superscalar execution: model/execution.md
+      - Global memory and movement: model/memory.md
+      - Dependency and consistency: model/consistency.md
+      - Complete memory semantics: model/memory-semantics.md
+      - Core indexing: model/core-indexing.md
+      - Errors and undefined behavior: model/errors.md
+  - PTO Intrinsic Manual:
+      - LinxISA PTO 0.57 (113 entries): intrinsics/index.md
+      - Common conventions: intrinsics/conventions.md
+      - PTO assembly: intrinsics/assembly.md
+      - PE identity: intrinsics/get_thread_idx.md
+      - Core identity: intrinsics/get_block_idx.md
+  - Benchmarks:
+      - Catalog overview: benchmarks/index.md
+      - Broadcast: benchmarks/catalog/one-level/broadcast/index.md
+      - Concat: benchmarks/catalog/one-level/concat/index.md
+      - Control: benchmarks/catalog/one-level/control/index.md
+      - GELU: benchmarks/catalog/one-level/element-wise-gelu/index.md
+      - FlashAttention: benchmarks/catalog/one-level/fa/index.md
+      - Gather: benchmarks/catalog/one-level/gather/index.md
+      - Matmul: benchmarks/catalog/one-level/matmul/index.md
+      - Reduce-max column: benchmarks/catalog/one-level/reduction-reducemax-col/index.md
+      - Reduce-max row: benchmarks/catalog/one-level/reduction-reducemax-row/index.md
+      - Reduce-sum column: benchmarks/catalog/one-level/reduction-reducesum-col/index.md
+      - Reduce-sum row: benchmarks/catalog/one-level/reduction-reducesum-row/index.md
+      - Sort: benchmarks/catalog/one-level/sort/index.md
+      - Transpose: benchmarks/catalog/one-level/transpose/index.md
+  - Tutorials:
+      - Group programming: tutorials/group-programming.md
+      - C++ language: tutorials/cpp-language.md
+      - Tile kernel: tutorials/tile-kernel.md
+      - GEMM: tutorials/gemm.md
+      - FlashAttention: tutorials/flash-attention.md
+  - Build and Debug:
+      - Compile-checked examples: examples/README.md
+      - Troubleshooting: start/troubleshooting.md
+      - Glossary: glossary.md
+
+plugins:
+  - search:
+      separator: '[\\s\\-\\.\\_]+'
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.snippets:
+      base_path:
+        - .
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - assets/stylesheets/supernpu.css
+
+extra_javascript:
+  - assets/javascripts/supernpu.js
+  - https://unpkg.com/mathjax@3.2.2/es5/tex-mml-chtml.js
+
+extra:
+  status:
+    verified: Compiled
+    source: Source-backed
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/PTO-ISA/SuperNPUBench
+      name: SuperNPUBench on GitHub
+
+strict: true

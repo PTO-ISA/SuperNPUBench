@@ -24,7 +24,7 @@ void cumsum_row_rand(
     // 对每一行独立计算累积和
     for (int i = 0; i < gIM; ++i) {
         ScalarTile running_sum;
-        TEXPANDS(running_sum, static_cast<dtype>(0));
+        TEXPANDSCALAR(running_sum, static_cast<dtype>(0));
 
         for (int j = 0; j < gIN; ++j) {
             auto gI = gIIter(i, j);

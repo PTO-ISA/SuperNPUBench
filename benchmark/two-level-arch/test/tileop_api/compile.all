@@ -12,7 +12,6 @@ make TESTCASE=TAdds
 make TESTCASE=TAnd
 make TESTCASE=TCI
 make TESTCASE=TCmp
-make TESTCASE=TCopy
 make TESTCASE=TLoad
 make TESTCASE=TStore
 make TESTCASE=TCvt

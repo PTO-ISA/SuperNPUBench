@@ -40,14 +40,14 @@ void bench_load_layout(D *c, D *a) {
 }
 
 // GM -> Tile -> TMOV -> Tile -> GM
-// NOTE: toolchain exposes Tile<->Tile move as TCOPY (not TMOV yet); using TCOPY.
+// NOTE: toolchain exposes Tile<->Tile move as TCVT(not TMOV yet); using TCTV.
 template <typename D, int M, int N>
 void bench_mov(D *c, D *a) {
     iter_t<D, M, N> gA(a), gC(c);
     auto gA0 = gA(0, 0), gC0 = gC(0, 0);
     tile_t<D, M, N> tA, tB;
     TLOAD(tA, gA0);
-    TCOPY(tB, tA);
+    TCVT(tB, tA);
     TSTORE(gC0, tB);
 }
 

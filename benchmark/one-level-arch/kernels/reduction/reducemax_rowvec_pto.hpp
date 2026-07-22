@@ -56,7 +56,7 @@ void reducemax_row_rand(
 
     for (int j = 0; j < Mb; ++j) {
         auto gO = gOIter(j, 0);
-        TEXPANDS(oldMaxTile, static_cast<dtype>(0));
+        TEXPANDSCALAR(oldMaxTile, static_cast<dtype>(0));
 
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(j, i);
@@ -74,7 +74,7 @@ void reducemax_row_rand(
     }
     if constexpr (rmd_M > 0) {
         auto gO = gOIter(Mb, 0);
-        TEXPANDS(oldMaxTile_col, static_cast<dtype>(0));
+        TEXPANDSCALAR(oldMaxTile_col, static_cast<dtype>(0));
 
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(Mb, i);

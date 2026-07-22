@@ -287,11 +287,9 @@ CUBE 块使用 L0 buffer 进行矩阵运算：
 
 TMA 块支持高效的数据搬运：
 
-```
-bstart.tma
-  // 配置 DMA 参数
-  // 执行数据传输
-bstop
+```asm
+BSTART.TLOAD INT32
+  // B.ARG / B.DIM / B.IOR / B.IOT descriptors
 ```
 
 ### 4.2 搬运模式
@@ -376,5 +374,5 @@ bstop
 
 ---
 
-**文档版本**: 1.0  
+**文档版本**: 1.0
 **最后更新**: 2026-01-08

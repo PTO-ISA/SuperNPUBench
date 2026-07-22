@@ -60,7 +60,7 @@ void concat_scatter(
         OffsetTile contribution;
 
         TCI(linear_index, static_cast<uint16_t>(input_base));
-        TEXPANDS(offset_tile, static_cast<uint16_t>(0));
+        TEXPANDSCALAR(offset_tile, static_cast<uint16_t>(0));
 
         // 计算输出 stride（标量核心，运行时计算）
         uint16_t output_stride[DATA_DIM];
@@ -116,7 +116,7 @@ void concat_scatter(
         TailOffsetTile contribution;
 
         TCI(linear_index, static_cast<uint16_t>(input_base));
-        TEXPANDS(offset_tile, static_cast<uint16_t>(0));
+        TEXPANDSCALAR(offset_tile, static_cast<uint16_t>(0));
 
         uint16_t output_stride[DATA_DIM];
         output_stride[DATA_DIM - 1] = 1;

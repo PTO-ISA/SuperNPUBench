@@ -10,18 +10,18 @@ import re
 import torch
 import torch.nn as nn
 import numpy as np
-import signal 
+import signal
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 #1 read elf list
-#2 分析elf name: matmul MNK 
+#2 分析elf name: matmul MNK
 #3 产生随机src0, src1 -> golden_dst 放到 kernel/golden/kernel_matmul_MASK_M128_N1024_K128_tM32_tK32_tN32/src0.bin, src1.bin golden.bin
 #4 跑gfrun 读取src0, src1 产生dst -> /remote/lms01/c00622284/janus/JanusCoreBench/compare/kernel_matmul_MASK_M128_N1024_K128_tM32_tK32_tN32/res.bin
 #5 跑res_compare.py
 #6 输出一个报告.
 
 MAX_WORKERS = 20  #parallel thread num depend on your machine
-gfrun = "/remote/lms01/l00948608/project/jcore_benchmark/BlockISA/BlockISA/bin/gfrun"
+gfrun = os.environ.get("GFRUN")
 gfrun_args = " -t 1 -f "
 
 cmp_root = os.path.abspath(os.path.dirname(__file__)+"/../../../compare")
@@ -72,7 +72,9 @@ def gen_input_and_golden(elf_name, path):
 
 def run_qemu(elf):
     print('Start to run gfrun----------')
-    try:  
+    if args.plat != "cpu" and not gfrun:
+        raise RuntimeError("set GFRUN to the functional-model executable")
+    try:
         if os.path.exists(elf):
             if args.plat == "cpu":
                 print('plat == "cpu"')
@@ -88,12 +90,12 @@ def run_qemu(elf):
         else:
             print('elf not exist')
             return (elf, "not exist", "")
-    
+
     except subprocess.TimeoutExpired:
         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
         proc.communicate()  # 确保进程资源被正确清理
         return (elf, "timeout", "Timeout expired")
-    
+
     except Exception as e:
         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
         proc.communicate()  # 确保进程资源被正确清理
@@ -103,7 +105,7 @@ def result_compare(cmp_data, golden_data):
     print("cmp data: ",cmp_data)
     if "accelerator_fusion_fa1" in cmp_data:
         res = np.fromfile(cmp_data, dtype=DType_np)
-        res_ref = np.fromfile(golden_data, dtype=DType_np)        
+        res_ref = np.fromfile(golden_data, dtype=DType_np)
     else:
         res = np.fromfile(cmp_data, dtype=DType_np)
         res_ref = np.fromfile(golden_data, dtype=DType_np)
@@ -177,6 +179,5 @@ if __name__ == '__main__':
             f.write(f"fail list:\n")
             for elf in statics["fail"]:
                 f.write(f"{elf}\n")
-
 
 

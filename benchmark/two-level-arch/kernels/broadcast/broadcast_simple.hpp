@@ -85,7 +85,7 @@ void gen_offset_impl(
     const size_t total_elements) {
     static_assert(tile_shapeOffset::ValidRow != -1 && tile_shapeOffset::ValidCol != -1,
                   "Only static shape supported");
-                  
+
     #if MAX_DIMs >= 1
     size_t in_shape0 = in_shape[0];
     size_t out_shape0 = out_shape[0];
@@ -159,11 +159,11 @@ void broadcast(
     const size_t *out_shape
     ) {
     const size_t Mb = gOM / tM;
-    const size_t rmd_M = gOM % tM; 
+    const size_t rmd_M = gOM % tM;
 
     using gm_shapeIn = global_tensor<dtype, RowMajor<1, gIM>>;
     using gm_shapeOut = global_tensor<dtype, RowMajor<1, gOM>>;
-    using tile_shapeData = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor>; 
+    using tile_shapeData = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor>;
     using tile_shapeOffset = Tile<Location::Vec, uint32_t, 1, tM, BLayout::RowMajor>;
     using tile_shapeData_rmd = Tile<Location::Vec, dtype, 1, tM, BLayout::RowMajor, 1, rmd_M>;
     using tile_shapeOffset_rmd = Tile<Location::Vec, uint32_t, 1, tM, BLayout::RowMajor, 1, rmd_M>;
@@ -199,18 +199,18 @@ void broadcast(
         // printf("total_elements = %d\n", total_elements);
         // printf("in_shape[0] = %d\n", in_shape[0]);
         // printf("inGm = %ld\n", inGm);
-        
-        // TCOPYIN(inTile, gI);
+
+        // TLOAD(inTile, gI);
         // DUMP_TILE("inTile", inTile, g_dump_inTile, 1, tM);
         gen_offset_impl<dtype, tile_shapeOffset, MAX_DIM, IN_DIM, OUT_DIM>(offsetTile, in_shape, out_shape, base, total_elements);
         base += total_elements;
-        
+
         // DUMP_TILE("offsetTile", offsetTile, g_dump, 1, tM);
 
         MGATHER(outTile, inGm, offsetTile);
 
         // DUMP_TILE("outTile", outTile, g_dump_outTile, 1, tM);
-        TCOPYOUT(gO, outTile);
+        TSTORE(gO, outTile);
     }
     if constexpr (rmd_M) {
         // printf("rmd_M = %d\n", rmd_M);
@@ -219,7 +219,7 @@ void broadcast(
         gen_offset_impl<dtype, tile_shapeOffset_rmd, MAX_DIM, IN_DIM, OUT_DIM>(offsetTile_rmd, in_shape, out_shape, base, total_elements);
         base += total_elements;
         MGATHER(outTile_rmd, inGm, offsetTile_rmd);
-        TCOPYOUT(gO, outTile_rmd);
+        TSTORE(gO, outTile_rmd);
     }
 
 }

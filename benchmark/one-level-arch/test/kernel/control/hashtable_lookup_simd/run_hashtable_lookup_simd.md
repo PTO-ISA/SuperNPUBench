@@ -83,7 +83,7 @@ COMPILER_DIR=<your_compiler_dir> bash data_obj/build_data_obj.sh data_obj ../../
 
 ```bash
 # 对每个 *.data 文件执行：
-$COMPILER_DIR/clang++ -target linx64v5 -c *.s -o output/.../*.o
+$COMPILER_DIR/clang++ -target linx64-linx-none-elf -c *.s -o output/.../*.o
 ```
 
 生成的 `.o` 文件：
@@ -101,7 +101,7 @@ output/kernel/control/hashtable_lookup_simd/data_obj/lookup_values.o    # 期望
 # 实际执行（make 自动推导）：
 cd {WORKSPACE}/JanusCoreBench/test/kernel/control
 $COMPILER_DIR/clang++ \
-  -c -mlxbc -fenable-matrix -O2 \
+  -c -target linx64-linx-none-elf -fenable-matrix -O2 \
   -std=c++20 \
   -I{WORKSPACE}/JanusCoreBench/include \
   -I{WORKSPACE}/JanusCoreBench/test/common \
@@ -156,7 +156,7 @@ cd {WORKSPACE}/LinxBlockModel
 编译器路径通过环境变量 `COMPILER_DIR` 传入，不在 Makefile 或 compile.all 中写死：
 
 ```bash
-export COMPILER_DIR=/remote/lms01/j00827727/jcore/compilers/linx_blockisa_llvm_musl0.56.18/bin
+export COMPILER_DIR=${WORKSPACE}/compiler/llvm/build-linxisa-clang/bin
 cd {WORKSPACE}/JanusCoreBench/test/kernel/control
 ./compile.all
 ```

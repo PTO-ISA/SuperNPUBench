@@ -7,7 +7,7 @@ This directory contains benchmark implementations for various reduction operatio
 The reduction operators are categorized into three main types based on their reduction direction and optimization strategy:
 
 - **Column Reduction (col)**: Reduces along the column dimension (M-axis)
-- **Row Reduction (row)**: Reduces along the row dimension (N-axis)  
+- **Row Reduction (row)**: Reduces along the row dimension (N-axis)
 - **3D Column Reduction (3dcol)**: Optimized for 3D tensor column reduction with unaligned dimensions
 
 ## Directory Structure
@@ -158,7 +158,7 @@ All operators use 8-way unrolled tree reduction to maximize instruction-level pa
 ```cpp
 // Level 1: 8 pairwise operations
 sum_01 = a + b;  sum_23 = c + d;  sum_45 = e + f;  sum_67 = g + h;
-// Level 2: 4 pairwise operations  
+// Level 2: 4 pairwise operations
 sum_0123 = sum_01 + sum_23;  sum_4567 = sum_45 + sum_67;
 // Level 3: Final reduction
 sum_tmp = sum_0123 + sum_4567;
@@ -170,7 +170,7 @@ Uses the PTO (Parallel Tile Operations) framework:
 - `global_tensor`: Defines global memory layout
 - `Tile`: Defines tile shape and memory location (Vec/Scalar)
 - `global_iterator`: Iterates over tiles in global memory
-- `TCOPYIN`/`TCOPYOUT`: DMA transfers between global and tile memory
+- `TLOAD`/`TSTORE`: DMA transfers between global and tile memory
 
 ### 3. Corner Case Handling
 
@@ -203,7 +203,7 @@ Uses built-in vector operations:
 // For reducesum_col (8192×1024 input)
 #define DType int32_t
 #define gIMs 8192    // Global M dimension
-#define gINs 1024    // Global N dimension  
+#define gINs 1024    // Global N dimension
 #define tMs 32       // Tile M dimension
 #define tNs 128      // Tile N dimension
 ```
@@ -242,7 +242,7 @@ dtype output[381 * 1 * 8];
 
 for(int i = 0; i < 381; i++) {
     reducesum_colsum_rand<dtype, 120, 8, 32, 128, 120>(
-        &input[i * 120 * 8], 
+        &input[i * 120 * 8],
         &output[i * 8]
     );
 }

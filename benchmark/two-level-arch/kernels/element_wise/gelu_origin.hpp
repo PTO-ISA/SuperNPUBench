@@ -90,7 +90,7 @@ void __vec__ gelu_simd(
     float result;
     // 数据格式转换 V.FCVT
     float x = static_cast<float>(indata);
-    
+
     // GELU(x)=x∗Φ(x), Φ(x)=负无穷~x积分 φ(exp(-0.5f*x*x) / sqrt(2π))
     // 等价于GELU(x)=0.5⋅x⋅(1+erf(x/sqrt(2))
     if (!approximate) {
@@ -125,7 +125,7 @@ void gelu_impl(
         GlobalTensor<typename decltype(TileVar)::DType, \
                      Shape<1,1,1,Rows,Cols>, \
                      Stride<1,1,1,Cols,1>> _g(DumpBuf); \
-        TCOPYOUT(_g, TileVar); \
+        TSTORE(_g, TileVar); \
         printf("[DUMP] %s (shape=%dx%d):\n", label, Rows, Cols); \
         for (int ri = 0; ri < Rows; ri++) { \
             printf("  row%2d: ", ri); \
@@ -143,7 +143,7 @@ void gelu(
     bool approximate = false // false:none, true:tanh
     ) {
     const int Mb = gM / tM;
-    
+
     const int rmd_M = gM % tM;
 
     using gm_shape = global_tensor<dtype, RowMajor<1, gM>>;
@@ -172,19 +172,19 @@ void gelu(
         // printf("iter i %d\n",i);
         auto gI = gIIter(0, i);
         auto gO = gOIter(0, i);
-        TCOPYIN(inTile, gI);
+        TLOAD(inTile, gI);
         // DUMP_TILE("inTile", inTile, g_dump_intTile, 1, tM);
         gelu_impl<tile_shapeData>(inTile, outTile, approximate);
         // DUMP_TILE("outTile", outTile, g_dump_outTile, 1, tM);
-        TCOPYOUT(gO, outTile);
+        TSTORE(gO, outTile);
     }
     if constexpr (rmd_M) {
         auto gI = gIIter(0, Mb);
         auto gO = gOIter(0, Mb);
-        TCOPYIN(inTile_rmd, gI);
+        TLOAD(inTile_rmd, gI);
         gelu_impl<tile_shapeData_rmd>(inTile_rmd, outTile_rmd, approximate);
         // DUMP_TILE("offsetTile", offsetTile, g_dump, 1, tM);
-        TCOPYOUT(gO, outTile_rmd);
+        TSTORE(gO, outTile_rmd);
     }
 
 }

@@ -12,7 +12,7 @@
         GlobalTensor<typename decltype(TileVar)::DType, \
                      Shape<1,1,1,Rows,Cols>, \
                      Stride<1,1,1,Cols,1>> _g(DumpBuf); \
-        TCOPYOUT(_g, TileVar); \
+        TSTORE(_g, TileVar); \
         printf("[DUMP] %s (shape=%dx%d):\n", label, Rows, Cols); \
         for (int ri = 0; ri < Rows; ri++) { \
             printf("  row%2d: ", ri); \
@@ -58,7 +58,7 @@ void broadcast(
     const size_t rmd_N = rmd_M;
     const size_t vld_N = N * 129;    // 实际一次写回数量
     const size_t rmd_vld_N = rmd_M * 129;    // 尾块，实际一次写回数量
-    
+
 
     Assert(tO0 > 129);
     Assert(tO0 % 128 == 0);
@@ -86,26 +86,26 @@ void broadcast(
         auto gI = gIIter(0, i);
         t_in_offset = 0;
         t_out_offset = 0;
-        TCOPYIN(inTile, gI);
+        TLOAD(inTile, gI);
         for (int j = 0; j < N; ++i) {
             vec_broadcast<dtype, tile_shapeIn, tile_shapeOut><<<129, 1, 1>>>(inTile, outTile, t_in_offset, t_out_offset);
             t_in_offset += 1;
             t_out_offset += 129;
         }
-        TCOPYOUT(outTile, out_ptr);
+        TSTORE(outTile, out_ptr);
         out_ptr += sizeof(dtype) * vld_N;
     }
     if constexpr (rmd_M) {
         auto gI = gIIter(0, Mb);
         t_in_offset = 0;
         t_out_offset = 0;
-        TCOPYIN(inTile, gI);
+        TLOAD(inTile, gI);
         for (int j = 0; j < rmd_N; ++i) {
             vec_broadcast<dtype, tile_shapeIn_rmd, tile_shapeOut_rmd><<<129, 1, 1>>>(inTile_rmd, outTile_rmd, t_in_offset, t_out_offset);
             t_in_offset += 1;
             t_out_offset += 129;
         }
-        TCOPYOUT(outTile, out_ptr);
+        TSTORE(outTile, out_ptr);
         out_ptr += sizeof(dtype) * rmd_vld_N;
     }
 }

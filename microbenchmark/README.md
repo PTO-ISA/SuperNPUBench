@@ -3,14 +3,14 @@
 Instruction-level benchmarks organized by ISA family. The tile families
 (cube/vector/memory) use DavinciOO/PTO intrinsic naming (`TLOAD/TSTORE/TMOV`,
 `TMATMUL/TGEMV/ACCCVT`, TEPL set) via `<common/pto_tileop.hpp>`; the scalar
-family uses plain C + volatile to drive the GPR micro-ISA. All 231 cases
-compile & link on the Linx toolchain (`linx_blockisa_llvm_musl`).
+family uses plain C + volatile to drive the GPR micro-ISA. The Linx lane uses
+the v0.57 compiler and musl sysroot built by the enclosing superproject.
 
 ## Directory Structure
 
 ```
 microbenchmark/
-├── Makefile.common          # shared build (PLAT=linx, linx_blockisa_llvm_musl)
+├── Makefile.common          # shared v0.57 build (PLAT=linx)
 ├── compile_all.sh           # top-level: cube / vector / memory / scalar
 ├── gen_cases.py             # table-driven case generator
 ├── common/
@@ -46,7 +46,8 @@ microbenchmark/
 ## Build
 
 ```bash
-export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
+export COMPILER_DIR=/path/to/linx-isa/compiler/llvm/build-linxisa-clang/bin
+export LINX_SYSROOT=/path/to/linx-isa/out/libc/musl/install/phase-b
 
 # single case
 cd scalar && make TESTCASE=add_i32_lat
@@ -97,7 +98,7 @@ adapted to the toolchain-exposed intrinsic surface:
   layout are skipped (`TPRELU/TADDC/TRELU/TNEG/TNOT/TLOG/TPART*/TCOL*/
   expand-arith/TCONCAT/TGATHERB/TCMP/TRSQRT/TROWMAX/TROWSUM/TCMPS/…`), with
   TODO comments — re-enable when `pto_tileop.hpp` fully aligns to PTO naming.
-- **memory**: `TMOV` is not yet exposed → `TCOPY` fallback.
+- **memory**: `TMOV` is not yet exposed → `TCTV` fallback.
 - **cube**: `tmatmul_acc` skipped (toolchain `matmul.ac` backend crash); `TGEMV*`
   not exposed (templates kept under `#if 0`).
 - scalar disassembly confirms lowering to scalar micro-ISA (e.g. `addw` chain).

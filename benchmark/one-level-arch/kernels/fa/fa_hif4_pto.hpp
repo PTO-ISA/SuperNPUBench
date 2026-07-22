@@ -137,8 +137,8 @@ void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr,
 
         #pragma clang loop unroll(full)
         for (int x = 0; x < Xdim; ++x) {
-            TEXPANDS(tMax[x], -1e30f);
-            TEXPANDS(tSum[x], 0.0f);
+            TEXPANDSCALAR(tMax[x], -1e30f);
+            TEXPANDSCALAR(tSum[x], 0.0f);
         }
 
         for (int j = 0; j < Kb; j += Ydim) {

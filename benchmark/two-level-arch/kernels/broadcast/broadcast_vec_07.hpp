@@ -5,20 +5,20 @@
 using namespace pto;
 
 // =====================================================================
-// Broadcast (N,1) -> (N,C) via TCOPYIN + __vec__ broadcast + TCOPYOUT
+// Broadcast (N,1) -> (N,C) via TLOAD + __vec__ broadcast + TSTORE
 //
 // Optimized for: (1443,1) -> (1443,129), dtype=half
 //
 // Processing strategy:
 //   Divide N rows into tiles of kTileRows rows each.
 //   Per tile:
-//     1. TCOPYIN   (kTileRows, 1)   from GlobalMem -> TileReg
+//     1. TLOAD   (kTileRows, 1)   from GlobalMem -> TileReg
 //     2. __vec__ broadcast (kTileRows, 1) -> (kTileRows, C) within TileReg
 //        Launch <<<kC, kTileRows, 1>>> threads:
 //          x = column index (0..kC-1), y = row index (0..kTileRows-1)
 //          Each thread reads src[j*src_RowStride] (col 0 of row j)
 //          and writes to dst[i + j*dst_RowStride] (col i of row j)
-//     3. TCOPYOUT  (kTileRows, C)   from TileReg  -> GlobalMem
+//     3. TSTORE  (kTileRows, C)   from TileReg  -> GlobalMem
 //
 // TileReg layout:
 //   Physical tile cols padded to 256 for 512B alignment.
@@ -77,13 +77,13 @@ void broadcast(dtype *in_ptr, dtype *out_ptr,
 
     for (size_t i = 0; i < Nb; i++) {
         gm_in gsrc(in_ptr + i * kTileRows);
-        TCOPYIN(inTile, gsrc);
+        TLOAD(inTile, gsrc);
 
         vec_broadcast_rowmajor<tile_out, tile_in>
             <<<kC, kTileRows, 1>>>(outTile.data(), inTile.data());
 
         gm_out gdst(out_ptr + i * kTileRows * kC);
-        TCOPYOUT(gdst, outTile);
+        TSTORE(gdst, outTile);
     }
 
     using tile_in_r  = Tile<Location::Vec, dtype, kTileRows, tileCols,
@@ -94,12 +94,12 @@ void broadcast(dtype *in_ptr, dtype *out_ptr,
     tile_out_r outTile_rmd;
     if constexpr (rmd > 0) {
         gm_in gsrc(in_ptr + Nb * kTileRows);
-        TCOPYIN(inTile_rmd, gsrc);
+        TLOAD(inTile_rmd, gsrc);
 
         vec_broadcast_rowmajor<tile_out_r, tile_in_r>
             <<<kC, rmd, 1>>>(outTile_rmd.data(), inTile_rmd.data());
 
         gm_out gdst(out_ptr + Nb * kTileRows * kC);
-        TCOPYOUT(gdst, outTile_rmd);
+        TSTORE(gdst, outTile_rmd);
     }
 }

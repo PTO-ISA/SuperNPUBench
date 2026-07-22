@@ -52,9 +52,9 @@ void __vec__ new_max_1src(
     #ifndef RES_CHECK
     upd_max = upd_max * src_scale;
     #endif
-    new_max_ptr[max_idx] = upd_max; 
+    new_max_ptr[max_idx] = upd_max;
 
-    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max); 
+    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max);
 }
 
 template<typename tileSrc, typename tileSrc_cast, typename tileMax>
@@ -103,7 +103,7 @@ void __vec__ new_sum_1src(
         typename tileSrc::DType exp_src_3 = src_ptr[src_idx_3];
         typename tileSrc::DType exp_src_01 = exp_src_0 + exp_src_1;
         typename tileSrc::DType exp_src_23 = exp_src_2 + exp_src_3;
-        typename tileSrc::DType exp_src_0123 = exp_src_01 + exp_src_23;        
+        typename tileSrc::DType exp_src_0123 = exp_src_01 + exp_src_23;
         upd_sum += exp_src_0123;
     }
     blkv_get_tile_ptr(new_sum)[sum_idx] = upd_sum;
@@ -335,9 +335,9 @@ void __vec__ new_max_4src(
         upd_max = blkv_max(upd_max, s3_max_0123);
     }
     upd_max = upd_max * src_scale;
-    new_max_ptr[max_idx] = upd_max; 
+    new_max_ptr[max_idx] = upd_max;
 
-    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max); 
+    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max);
 }
 
 template<typename tileSrc, typename tileSrc_cast, typename tileMax>
@@ -410,7 +410,7 @@ void __vec__ src_exp_2src_with_local_sum(
         BLKC_ASSIGN_CAST(src_exp1, idx_2, src1_exp2);
         BLKC_ASSIGN_CAST(src_exp1, idx_3, src1_exp3);
         typename tileSum::DType src1_exp_sum = src1_exp0 + src1_exp1 + src1_exp2 + src1_exp3;
-        
+
         upd_sum += src0_exp_sum + src1_exp_sum;
     }
     size_t idx_sum = i * tileSum::RowStride;
@@ -453,7 +453,7 @@ void __vec__ new_sum_4src(
         typename tileSrc::DType s0_exp_src_3 = src0_ptr[src_idx_3];
         typename tileSrc::DType s0_exp_src_01 = s0_exp_src_0 + s0_exp_src_1;
         typename tileSrc::DType s0_exp_src_23 = s0_exp_src_2 + s0_exp_src_3;
-        typename tileSrc::DType s0_exp_src_0123 = s0_exp_src_01 + s0_exp_src_23;  
+        typename tileSrc::DType s0_exp_src_0123 = s0_exp_src_01 + s0_exp_src_23;
 
         typename tileSrc::DType s1_exp_src_0 = src1_ptr[src_idx_0];
         typename tileSrc::DType s1_exp_src_1 = src1_ptr[src_idx_1];
@@ -461,7 +461,7 @@ void __vec__ new_sum_4src(
         typename tileSrc::DType s1_exp_src_3 = src1_ptr[src_idx_3];
         typename tileSrc::DType s1_exp_src_01 = s1_exp_src_0 + s1_exp_src_1;
         typename tileSrc::DType s1_exp_src_23 = s1_exp_src_2 + s1_exp_src_3;
-        typename tileSrc::DType s1_exp_src_0123 = s1_exp_src_01 + s1_exp_src_23;  
+        typename tileSrc::DType s1_exp_src_0123 = s1_exp_src_01 + s1_exp_src_23;
 
         typename tileSrc::DType s2_exp_src_0 = src2_ptr[src_idx_0];
         typename tileSrc::DType s2_exp_src_1 = src2_ptr[src_idx_1];
@@ -469,7 +469,7 @@ void __vec__ new_sum_4src(
         typename tileSrc::DType s2_exp_src_3 = src2_ptr[src_idx_3];
         typename tileSrc::DType s2_exp_src_01 = s2_exp_src_0 + s2_exp_src_1;
         typename tileSrc::DType s2_exp_src_23 = s2_exp_src_2 + s2_exp_src_3;
-        typename tileSrc::DType s2_exp_src_0123 = s2_exp_src_01 + s2_exp_src_23;  
+        typename tileSrc::DType s2_exp_src_0123 = s2_exp_src_01 + s2_exp_src_23;
 
         typename tileSrc::DType s3_exp_src_0 = src3_ptr[src_idx_0];
         typename tileSrc::DType s3_exp_src_1 = src3_ptr[src_idx_1];
@@ -535,7 +535,7 @@ void __vec__ local_max_4src(
         upd_max = blkv_max(upd_max, s0123_max);
     }
     upd_max = upd_max * src_scale;
-    local_max_ptr[max_idx] = upd_max;  
+    local_max_ptr[max_idx] = upd_max;
 }
 
 template<typename tileSrc, typename tileSum>
@@ -571,7 +571,7 @@ void __vec__ local_sum_4src(
         typename tileSrc::DType s0_exp_src_3 = src0_ptr[src_idx_3];
         typename tileSrc::DType s0_exp_src_01 = s0_exp_src_0 + s0_exp_src_1;
         typename tileSrc::DType s0_exp_src_23 = s0_exp_src_2 + s0_exp_src_3;
-        typename tileSrc::DType s0_exp_src_0123 = s0_exp_src_01 + s0_exp_src_23;  
+        typename tileSrc::DType s0_exp_src_0123 = s0_exp_src_01 + s0_exp_src_23;
 
         typename tileSrc::DType s1_exp_src_0 = src1_ptr[src_idx_0];
         typename tileSrc::DType s1_exp_src_1 = src1_ptr[src_idx_1];
@@ -579,7 +579,7 @@ void __vec__ local_sum_4src(
         typename tileSrc::DType s1_exp_src_3 = src1_ptr[src_idx_3];
         typename tileSrc::DType s1_exp_src_01 = s1_exp_src_0 + s1_exp_src_1;
         typename tileSrc::DType s1_exp_src_23 = s1_exp_src_2 + s1_exp_src_3;
-        typename tileSrc::DType s1_exp_src_0123 = s1_exp_src_01 + s1_exp_src_23;  
+        typename tileSrc::DType s1_exp_src_0123 = s1_exp_src_01 + s1_exp_src_23;
 
         typename tileSrc::DType s2_exp_src_0 = src2_ptr[src_idx_0];
         typename tileSrc::DType s2_exp_src_1 = src2_ptr[src_idx_1];
@@ -587,7 +587,7 @@ void __vec__ local_sum_4src(
         typename tileSrc::DType s2_exp_src_3 = src2_ptr[src_idx_3];
         typename tileSrc::DType s2_exp_src_01 = s2_exp_src_0 + s2_exp_src_1;
         typename tileSrc::DType s2_exp_src_23 = s2_exp_src_2 + s2_exp_src_3;
-        typename tileSrc::DType s2_exp_src_0123 = s2_exp_src_01 + s2_exp_src_23;  
+        typename tileSrc::DType s2_exp_src_0123 = s2_exp_src_01 + s2_exp_src_23;
 
         typename tileSrc::DType s3_exp_src_0 = src3_ptr[src_idx_0];
         typename tileSrc::DType s3_exp_src_1 = src3_ptr[src_idx_1];
@@ -625,7 +625,7 @@ void __vec__ new_max_of_2_loc_max(
     typename tileMax::DType local_max_01 = blkv_max(local_max_0_ptr[max_idx], local_max_1_ptr[max_idx]);
     upd_max = blkv_max(upd_max, local_max_01);
     new_max_ptr[max_idx] = upd_max;
-    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max); 
+    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max);
 }
 template<typename tileScale, typename tileSum>
 void __vec__ new_sum_of_2_loc_sum(
@@ -680,7 +680,7 @@ void __vec__ new_max_of_4_loc_max(
     typename tileMax::DType local_max_0123 = blkv_max(local_max_01, local_max_23);
     upd_max = blkv_max(upd_max, local_max_0123);
     new_max_ptr[max_idx] = upd_max;
-    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max); 
+    scale_ptr[max_idx] =  blkv_fexp(old_max_val - upd_max);
 }
 template<typename tileScale, typename tileSum>
 void __vec__ new_sum_of_4_loc_sum(
@@ -705,7 +705,7 @@ void __vec__ new_sum_of_4_loc_sum(
 
     size_t sum_idx = i*tileSum::RowStride;
 
-    new_sum_ptr[sum_idx] = old_sum_ptr[sum_idx] * scale_ptr[sum_idx] + 
+    new_sum_ptr[sum_idx] = old_sum_ptr[sum_idx] * scale_ptr[sum_idx] +
                            local_sum_0_ptr[sum_idx] + local_sum_1_ptr[sum_idx] +
                            local_sum_2_ptr[sum_idx] + local_sum_3_ptr[sum_idx];
 }
@@ -734,7 +734,7 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
     using tileW_out  = TileAcc<float, kTm, kTk>;      // [kTm×kTk]
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
     using tileW_cast = Tile<Location::Vec, typename tileW_type<dtype>::DType, kTm, kTk, BLayout::ColMajor>;
-    using tileW_left = TileLeft<dtype, kTm, kTk>; 
+    using tileW_left = TileLeft<dtype, kTm, kTk>;
 
     using tileO_out  = TileAcc<float, kTm, vD>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::ColMajor>; // [kTm×vD]
@@ -771,7 +771,7 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
 
         tileQ tQ[Xdim];
 
-        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore 
+        #ifdef MULTI_LDST // don't use, no need for multi tload/tstore
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x+=2){
                 auto gQ = gIterQ(i+x,0);
@@ -781,7 +781,7 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
             #pragma clang loop unroll(full)
             for(int x=0;x<Xdim;x++){
                 auto gQ = gIterQ(i+x,0);
-                TCOPYIN(tQ[x], gQ);
+                TLOAD(tQ[x], gQ);
             }
         #endif
 
@@ -816,7 +816,7 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
                 #pragma clang loop unroll(full)
                 for(int y=0;y<Ydim;y++){
                     auto gK = gIterK(0, j+y);
-                    TCOPYIN(tK[y], gK);
+                    TLOAD(tK[y], gK);
                 }
             #endif
 
@@ -881,8 +881,8 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
                 #pragma clang loop unroll(full)
                 for(int x=0;x<Xdim;x++){
                     new_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(
-                                                                tScale[x].data(), 
-                                                                tNewMax[x].data(), 
+                                                                tScale[x].data(),
+                                                                tNewMax[x].data(),
                                                                 tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                                                                 tMax[x].data(),
                                                                 scale);
@@ -891,7 +891,7 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
                     //                                             tW[x][0].data(), tW[x][1].data(), tW[x][2].data(), tW[x][3].data(),
                     //                                             tNewMax[x].data(),
                     //                                             scale);
-                    
+
                     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][0].data(), tExpW[x][0].data(), tExpW[x][1].data(),
                                                                                                    tW[x][0].data(), tW[x][1].data(), tNewMax[x].data(), scale);
                     src_exp_2src_with_local_sum<tileW, tileW_cast, tileMax, tileSum><<<tileW::ValidRow, 1, 1>>>(tLocalSum[x][1].data(), tExpW[x][2].data(), tExpW[x][3].data(),
@@ -909,7 +909,7 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){    
+                for(int x=0;x<Xdim;x++){
                     #pragma clang loop unroll(full)
                     for(int k=0;k<2;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
@@ -929,7 +929,7 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
                 tileSum tLocalSum[Xdim][4];
 
                 #pragma clang loop unroll(full)
-                for(int x=0;x<Xdim;x++){       
+                for(int x=0;x<Xdim;x++){
                     for(int k=0;k<4;k++){
                         local_max_4src<tileW, tileMax><<<tileMax::ValidRow, 1, 1>>>(tLocalMax[x][k].data(), tW[x][4*k].data(), tW[x][4*k+1].data(), tW[x][4*k+2].data(), tW[x][4*k+3].data(), scale);
                     }
@@ -969,7 +969,7 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
                 #pragma clang loop unroll(full)
                 for(int y=0;y<Ydim;y++){
                     auto gV = gIterV(j+y, 0);
-                    TCOPYIN(tV[y], gV);
+                    TLOAD(tV[y], gV);
                 }
             #endif
 
@@ -1039,7 +1039,7 @@ void flash_attention_2d_unroll(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, dtype
             #pragma clang loop unroll(full)
             for (int x = 0; x < Xdim; ++x) {
                 auto dstO = gIterO(i+x, 0);
-                TCOPYOUT(dstO, tO_cast[x]);
+                TSTORE(dstO, tO_cast[x]);
             }
         #endif
 

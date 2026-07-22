@@ -141,12 +141,9 @@ CUBE 块支持的数据类型组合：
 
 TMA（Tile Memory Access）块用于高效的数据搬运：
 
-```cpp
-// 从全局内存加载到 Tile Register
-bstart.tma
-  // DMA 传输配置
-  // 执行数据搬运
-bstop
+```asm
+BSTART.TLOAD INT32
+  // B.ARG / B.DIM / B.IOR / B.IOT 描述符
 ```
 
 ### 5.2 搬运模式
@@ -228,5 +225,5 @@ result[j] = sum(C[:, j])
 
 ---
 
-**文档版本**: 1.0  
+**文档版本**: 1.0
 **最后更新**: 2026-01-08
