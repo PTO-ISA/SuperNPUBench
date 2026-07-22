@@ -192,9 +192,9 @@ def check_catalog(root: Path, docs: Path, errors: list[str]) -> None:
     rows = catalog["builds"]
     sources = {item.source for item in actual}
     families = {item.family for item in actual}
-    if (len(actual), len(sources), len(families)) != (53, 20, 13):
+    if (len(actual), len(sources), len(families)) != (62, 29, 14):
         errors.append(
-            "one-level inventory changed: expected 53 builds/20 implementations/13 "
+            "one-level inventory changed: expected 62 builds/29 implementations/14 "
             f"families, found {len(actual)}/{len(sources)}/{len(families)}"
         )
     if catalog.get("schema") != 3:
@@ -360,6 +360,9 @@ def main() -> None:
     errors: list[str] = []
     check_intrinsics(root, docs, errors)
     check_model(docs, errors)
+    from verify_pto_kernel_migration import check_migration
+
+    check_migration(root, errors)
     check_catalog(root, docs, errors)
     check_removed_surfaces(root, docs, errors)
     check_site((args.site or root / "site").resolve(), errors)
@@ -367,8 +370,8 @@ def main() -> None:
         for error in errors:
             print(f"ERROR: {error}")
         raise SystemExit(f"golden manual verification failed with {len(errors)} errors")
-    print("Golden manual verified: 113 public intrinsics, 53 one-level builds, "
-          "20 implementations, links clean.")
+    print("Golden manual verified: 113 public intrinsics, 62 one-level builds, "
+          "29 implementations, links clean.")
 
 
 if __name__ == "__main__":

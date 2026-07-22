@@ -80,6 +80,7 @@ nav:
       - FlashAttention: benchmarks/catalog/one-level/fa/index.md
       - Gather: benchmarks/catalog/one-level/gather/index.md
       - Matmul: benchmarks/catalog/one-level/matmul/index.md
+      - PTO-Kernel imports: benchmarks/catalog/one-level/pto-kernels/index.md
       - Reduce-max column: benchmarks/catalog/one-level/reduction-reducemax-col/index.md
       - Reduce-max row: benchmarks/catalog/one-level/reduction-reducemax-row/index.md
       - Reduce-sum column: benchmarks/catalog/one-level/reduction-reducesum-col/index.md
@@ -90,6 +91,7 @@ nav:
       - Group programming: tutorials/group-programming.md
       - C++ language: tutorials/cpp-language.md
       - Tile kernel: tutorials/tile-kernel.md
+      - Migrated PTO kernels: tutorials/migrated-pto-kernels.md
       - GEMM: tutorials/gemm.md
       - FlashAttention: tutorials/flash-attention.md
   - Build and Debug:

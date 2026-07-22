@@ -1,7 +1,7 @@
 {
   "schema": 3,
-  "active_build_variants": 53,
-  "source_implementations": 20,
+  "active_build_variants": 62,
+  "source_implementations": 29,
   "families": [
     {
       "backend": "One-level",
@@ -148,6 +148,22 @@
         "TMATMUL_ACC",
         "TMATMUL_MX",
         "TMUL",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "page": "benchmarks/catalog/one-level/pto-kernels/index.md",
+      "implementations": 9,
+      "variants": 9,
+      "intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMULS",
         "TSTORE"
       ]
     },
@@ -2846,6 +2862,326 @@
         ],
         "TMATMUL_MX": [
           "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "manifest": "benchmark/one-level-arch/test/kernel/pto_kernels/compile.all",
+      "manifest_line": 6,
+      "command": "make TESTCASE=pto_tload_store COMPILER_DIR=\"$COMPILER_DIR\" diss",
+      "testcase": "pto_tload_store",
+      "source": "benchmark/one-level-arch/test/kernel/pto_kernels/src/pto_tload_store.cpp",
+      "page": "benchmarks/catalog/one-level/pto-kernels/pto-tload-store-1e107659.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TLOAD",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "manifest": "benchmark/one-level-arch/test/kernel/pto_kernels/compile.all",
+      "manifest_line": 7,
+      "command": "make TESTCASE=pto_add COMPILER_DIR=\"$COMPILER_DIR\" diss",
+      "testcase": "pto_add",
+      "source": "benchmark/one-level-arch/test/kernel/pto_kernels/src/pto_add.cpp",
+      "page": "benchmarks/catalog/one-level/pto-kernels/pto-add-6e2ae6dc.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TLOAD",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "manifest": "benchmark/one-level-arch/test/kernel/pto_kernels/compile.all",
+      "manifest_line": 8,
+      "command": "make TESTCASE=pto_gemm COMPILER_DIR=\"$COMPILER_DIR\" diss",
+      "testcase": "pto_gemm",
+      "source": "benchmark/one-level-arch/test/kernel/pto_kernels/src/pto_gemm.cpp",
+      "page": "benchmarks/catalog/one-level/pto-kernels/pto-gemm-eb591839.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "manifest": "benchmark/one-level-arch/test/kernel/pto_kernels/compile.all",
+      "manifest_line": 9,
+      "command": "make TESTCASE=pto_gemm_basic COMPILER_DIR=\"$COMPILER_DIR\" diss",
+      "testcase": "pto_gemm_basic",
+      "source": "benchmark/one-level-arch/test/kernel/pto_kernels/src/pto_gemm_basic.cpp",
+      "page": "benchmarks/catalog/one-level/pto-kernels/pto-gemm-basic-a2ba2c9c.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "manifest": "benchmark/one-level-arch/test/kernel/pto_kernels/compile.all",
+      "manifest_line": 10,
+      "command": "make TESTCASE=pto_gemm_demo COMPILER_DIR=\"$COMPILER_DIR\" diss",
+      "testcase": "pto_gemm_demo",
+      "source": "benchmark/one-level-arch/test/kernel/pto_kernels/src/pto_gemm_demo.cpp",
+      "page": "benchmarks/catalog/one-level/pto-kernels/pto-gemm-demo-85ba9afc.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMULS",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "manifest": "benchmark/one-level-arch/test/kernel/pto_kernels/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=pto_gemm_performance COMPILER_DIR=\"$COMPILER_DIR\" diss",
+      "testcase": "pto_gemm_performance",
+      "source": "benchmark/one-level-arch/test/kernel/pto_kernels/src/pto_gemm_performance.cpp",
+      "page": "benchmarks/catalog/one-level/pto-kernels/pto-gemm-performance-ffe72cfc.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "manifest": "benchmark/one-level-arch/test/kernel/pto_kernels/compile.all",
+      "manifest_line": 12,
+      "command": "make TESTCASE=pto_mamulb COMPILER_DIR=\"$COMPILER_DIR\" diss",
+      "testcase": "pto_mamulb",
+      "source": "benchmark/one-level-arch/test/kernel/pto_kernels/src/pto_mamulb.cpp",
+      "page": "benchmarks/catalog/one-level/pto-kernels/pto-mamulb-e9f16fd1.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "manifest": "benchmark/one-level-arch/test/kernel/pto_kernels/compile.all",
+      "manifest_line": 13,
+      "command": "make TESTCASE=pto_tmatmul_acc COMPILER_DIR=\"$COMPILER_DIR\" diss",
+      "testcase": "pto_tmatmul_acc",
+      "source": "benchmark/one-level-arch/test/kernel/pto_kernels/src/pto_tmatmul_acc.cpp",
+      "page": "benchmarks/catalog/one-level/pto-kernels/pto-tmatmul-acc-e3e7d902.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "pto_kernels",
+      "manifest": "benchmark/one-level-arch/test/kernel/pto_kernels/compile.all",
+      "manifest_line": 14,
+      "command": "make TESTCASE=pto_flash_attention COMPILER_DIR=\"$COMPILER_DIR\" diss",
+      "testcase": "pto_flash_attention",
+      "source": "benchmark/one-level-arch/test/kernel/pto_kernels/src/pto_flash_attention.cpp",
+      "page": "benchmarks/catalog/one-level/pto-kernels/pto-flash-attention-e05ac981.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TSTORE": [
+          "TSTORE"
         ]
       },
       "helpers": []

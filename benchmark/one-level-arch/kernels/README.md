@@ -10,6 +10,10 @@ for type/dimension parameterization.
 > tile 版算子（engram/mhc/moe/quant/transpose 五模块），已通过 linx 工具链编译+链接验证。
 > 详见 [`deepseek/TileKernels迁移说明.md`](deepseek/TileKernels迁移说明.md) 与各模块 README。
 
+> **PTO-Kernel imports**: `pto_kernels/` contains nine source-backed, tile-only
+> memory, elementwise, GEMM, and attention kernels imported at a pinned
+> `LinxISA/PTO-Kernel` revision. See [`pto_kernels/README.md`](pto_kernels/README.md).
+
 ### 1. Matmul — `matmul/`
 - `matmul.hpp` — general matrix multiply; FP32/FP16/FP8; mask, dynamic, vec variants; A/B tile reuse.
 - `matmul_mx.hpp` — MX quantized matmul; FP4×FP4, BF16×FP4 mixed precision; microscaling factors.
