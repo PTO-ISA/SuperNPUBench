@@ -6,6 +6,10 @@ for type/dimension parameterization.
 
 ## Operator List
 
+> **DeepSeek 迁移算子**：`deepseek/` 子目录收录从 TileKernels（TileLang DSL）迁移的 19 个
+> tile 版算子（engram/mhc/moe/quant/transpose 五模块），已通过 linx 工具链编译+链接验证。
+> 详见 [`deepseek/TileKernels迁移说明.md`](deepseek/TileKernels迁移说明.md) 与各模块 README。
+
 ### 1. Matmul — `matmul/`
 - `matmul.hpp` — general matrix multiply; FP32/FP16/FP8; mask, dynamic, vec variants; A/B tile reuse.
 - `matmul_mx.hpp` — MX quantized matmul; FP4×FP4, BF16×FP4 mixed precision; microscaling factors.
