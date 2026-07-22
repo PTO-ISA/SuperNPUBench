@@ -1,0 +1,104 @@
+﻿# TABS
+
+
+## Introduction
+
+Elementwise absolute value of a tile.
+
+## Math Interpretation
+
+For each element `(i, j)` in the valid region:
+
+$$ \mathrm{dst}_{i,j} = \left|\mathrm{src}_{i,j}\right| $$
+
+## Assembly Syntax
+
+PTO-AS form: see [PTO-AS Specification](assembly.md).
+
+Synchronous form:
+
+```text
+%dst = tabs %src : !pto.tile<...> -> !pto.tile<...>
+```
+
+### AS Level 1 (SSA)
+
+```text
+%dst = pto.tabs %src : !pto.tile<...> -> !pto.tile<...>
+```
+
+### AS Level 2 (DPS)
+
+```text
+pto.tabs ins(%src : !pto.tile_buf<...>) outs(%dst : !pto.tile_buf<...>)
+```
+
+### IR Level 1 (SSA)
+
+```text
+%dst = pto.tabs %src : !pto.tile<...> -> !pto.tile<...>
+```
+
+### IR Level 2 (DPS)
+
+```text
+pto.tabs ins(%src : !pto.tile_buf<...>) outs(%dst : !pto.tile_buf<...>)
+```
+## C++ Intrinsic
+
+C++ declaration:
+
+```cpp
+template <typename TileDataDst, typename TileDataSrc>
+PTO_INST void TABS(TileDataDst &dst, TileDataSrc &src);
+```
+
+## Constraints
+
+- **Implementation checks (CPU sim)**:
+    - `TileData::DType` must be one of: `int32_t`, `int`, `int16_t`, `half`, `float`.
+    - The implementation iterates over `dst.GetValidRow()` / `dst.GetValidCol()`.
+- **Implementation checks (Costmodel)**:
+    - `TileData::DType` must be one of: `int32_t`、`int16_t`、`int8_t`、`uint8_t`、`half`、`float`.
+- **Implementation checks (NPU)**:
+    - `TileData::DType` must be one of: `float` or `half`;
+    - Tile location must be vector (`TileData::Loc == TileType::Vec`);
+    - Static valid bounds: `TileData::ValidRow <= TileData::Rows` and `TileData::ValidCol <= TileData::Cols`;
+    - Runtime: `src.GetValidRow() == dst.GetValidRow()` and `src.GetValidCol() == dst.GetValidCol()`;
+    - Tile layout must be row-major (`TileData::isRowMajor`).
+- **Valid region**:
+    - The op uses `dst.GetValidRow()` / `dst.GetValidCol()` as the iteration domain.
+
+## Examples
+
+### Auto
+
+```cpp
+#include <pto/pto-inst.hpp>
+
+using namespace pto;
+void example_auto() {
+  using TileT = Tile<TileType::Vec, float, 16, 16>;
+  TileT src, dst;
+  TABS(dst, src);
+}
+```
+
+
+## ASM Form Examples
+
+### Auto Mode
+
+```text
+# Auto mode: compiler/runtime-managed placement and scheduling.
+%dst = pto.tabs %src : !pto.tile<...> -> !pto.tile<...>
+```
+
+
+### PTO Assembly Form
+
+```text
+%dst = tabs %src : !pto.tile<...> -> !pto.tile<...>
+# AS Level 2 (DPS)
+pto.tabs ins(%src : !pto.tile_buf<...>) outs(%dst : !pto.tile_buf<...>)
+```

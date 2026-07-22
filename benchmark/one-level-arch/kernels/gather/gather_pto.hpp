@@ -39,34 +39,6 @@
 // │          │                  │ 核心参数 (dst, src) 和行为一致            │
 // └──────────┴──────────────────┴──────────────────────────────────────────┘
 //
-// PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
-//
-//   TLOAD:
-//     template <typename TileData, typename GlobalData, typename... WaitEvents>
-//     PTO_INST RecordEvent TLOAD(TileData &dst, GlobalData &src,
-//                                WaitEvents &... events);
-//
-//   MGATHER (Coalesce::Row 模式):
-//     template <Coalesce Mode = Coalesce::Row,
-//               GatherOOB Oob  = GatherOOB::Undefined,
-//               typename TileDst, typename GlobalData,
-//               typename TileInd, typename... WaitEvents>
-//     PTO_INST RecordEvent MGATHER(TileDst &dst, GlobalData &src,
-//                                  TileInd &indexes, WaitEvents &... events);
-//
-//     Row 模式语义: dst[r,:] = table[idx[r], :]
-//       - idx 为行索引 (非字节偏移)
-//       - tablePtr + idx * tableRowStride 定位到行起始
-//       - 读取 validCol 个元素到 dst 对应行
-//       - 约束 (A2A3): TileIdx::ValidRow==1, TileIdx::ValidCol==TileDst::ValidRow
-//       - 约束 (A5):   同上, 或 [R,1] ColMajor; 且 staticShape[4]==ValidCol
-//
-//   TSTORE:
-//     template <typename TileData, typename GlobalData,
-//               AtomicType atomicType = AtomicType::AtomicNone,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TSTORE(GlobalData &dst, TileData &src,
-//                                 WaitEvents &... events);
 // ============================================================================
 
 #include <common/pto_tile.hpp>

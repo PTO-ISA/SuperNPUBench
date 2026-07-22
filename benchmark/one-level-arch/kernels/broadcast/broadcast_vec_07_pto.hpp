@@ -28,26 +28,6 @@
 // │          │                  │ jcore/TStore.hpp 用 __vec__ 实现       │
 // └──────────┴──────────────────┴──────────────────────────────────────────┘
 //
-// PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
-//
-//   TLOAD:
-//     template <typename TileData, typename GlobalData, typename... WaitEvents>
-//     PTO_INST RecordEvent TLOAD(TileData &dst, GlobalData &src,
-//                                WaitEvents &... events);
-//
-//   TROWEXPAND:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TROWEXPAND(TileDataDst &dst, TileDataSrc &src,
-//                                     WaitEvents &... events);
-//     约束: dst[i,j] = src[i,0]; dst 与 src 必须为 Vec tile, ND layout;
-//           A2A3: srcValidRow == dstValidRow; srcValidCol >= 1
-//
-//   TSTORE:
-//     template <typename TileData, typename GlobalData,
-//               AtomicType atomicType = AtomicType::AtomicNone,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TSTORE(GlobalData &dst, TileData &src,
-//                                 WaitEvents &... events);
 // ============================================================================
 
 #include <common/pto_tile.hpp>

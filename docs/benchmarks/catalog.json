@@ -1,0 +1,3298 @@
+{
+  "schema": 3,
+  "active_build_variants": 53,
+  "source_implementations": 20,
+  "families": [
+    {
+      "backend": "One-level",
+      "family": "broadcast",
+      "page": "benchmarks/catalog/one-level/broadcast/index.md",
+      "implementations": 4,
+      "variants": 6,
+      "intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TDIVS",
+        "TEXPANDS",
+        "TINSERT",
+        "TLOAD",
+        "TMULS",
+        "TREMS",
+        "TROWEXPAND",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "concat",
+      "page": "benchmarks/catalog/one-level/concat/index.md",
+      "implementations": 2,
+      "variants": 4,
+      "intrinsics": [
+        "MGATHER",
+        "MSCATTER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TSTORE",
+        "TSUB"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "control",
+      "page": "benchmarks/catalog/one-level/control/index.md",
+      "implementations": 1,
+      "variants": 6,
+      "intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TADDS",
+        "TAND",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TOR",
+        "TREM",
+        "TSEL",
+        "TSHLS",
+        "TSHRS",
+        "TSTORE",
+        "TXOR"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "element_wise/gelu",
+      "page": "benchmarks/catalog/one-level/element-wise-gelu/index.md",
+      "implementations": 1,
+      "variants": 1,
+      "intrinsics": [
+        "TADDS",
+        "TCVT",
+        "TEXP",
+        "TLOAD",
+        "TMAXS",
+        "TMINS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "page": "benchmarks/catalog/one-level/fa/index.md",
+      "implementations": 2,
+      "variants": 9,
+      "intrinsics": [
+        "TADD",
+        "TCOLEXPANDMUL",
+        "TCOLEXPANDSUB",
+        "TCOLMAX",
+        "TCOLSUM",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TQUANT",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE",
+        "TSUB"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "gather",
+      "page": "benchmarks/catalog/one-level/gather/index.md",
+      "implementations": 1,
+      "variants": 1,
+      "intrinsics": [
+        "MGATHER",
+        "TLOAD",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "page": "benchmarks/catalog/one-level/matmul/index.md",
+      "implementations": 3,
+      "variants": 16,
+      "intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCOLEXPAND",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TMUL",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "reduction/reducemax_col",
+      "page": "benchmarks/catalog/one-level/reduction-reducemax-col/index.md",
+      "implementations": 1,
+      "variants": 1,
+      "intrinsics": [
+        "TCOLMAX",
+        "TEXPANDS",
+        "TLOAD",
+        "TMAX",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "reduction/reducemax_row",
+      "page": "benchmarks/catalog/one-level/reduction-reducemax-row/index.md",
+      "implementations": 1,
+      "variants": 1,
+      "intrinsics": [
+        "TEXPANDS",
+        "TLOAD",
+        "TMAX",
+        "TROWMAX",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "reduction/reducesum_col",
+      "page": "benchmarks/catalog/one-level/reduction-reducesum-col/index.md",
+      "implementations": 1,
+      "variants": 2,
+      "intrinsics": [
+        "TADD",
+        "TCOLSUM",
+        "TEXPANDS",
+        "TLOAD",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "reduction/reducesum_row",
+      "page": "benchmarks/catalog/one-level/reduction-reducesum-row/index.md",
+      "implementations": 1,
+      "variants": 1,
+      "intrinsics": [
+        "TADD",
+        "TEXPANDS",
+        "TLOAD",
+        "TROWSUM",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "sort",
+      "page": "benchmarks/catalog/one-level/sort/index.md",
+      "implementations": 1,
+      "variants": 1,
+      "intrinsics": [
+        "TEXPANDS",
+        "TSTORE"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "transpose",
+      "page": "benchmarks/catalog/one-level/transpose/index.md",
+      "implementations": 1,
+      "variants": 4,
+      "intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TSTORE",
+        "TSUB",
+        "TTRANS"
+      ]
+    }
+  ],
+  "builds": [
+    {
+      "backend": "One-level",
+      "family": "broadcast",
+      "manifest": "benchmark/one-level-arch/test/kernel/broadcast/compile.all",
+      "manifest_line": 47,
+      "command": "make TESTCASE=broadcast_vec_07 DType=__half tMs=16 MAX_DIMs=2 IN_SHAPEs=1443,1 OUT_SHAPEs=1443,129 IN_DIMs=2 OUT_DIMs=2 gIMs=1443*1 gOMs=1443*129 IN_SHAPE_NAME=1443_1 OUT_SHAPE_NAME=1443_129 diss",
+      "testcase": "broadcast_vec_07",
+      "source": "benchmark/one-level-arch/test/kernel/broadcast/src/broadcast_vec_07.cpp",
+      "page": "benchmarks/catalog/one-level/broadcast/broadcast-vec-07-ba7002f4.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TLOAD",
+        "TROWEXPAND",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TROWEXPAND": [
+          "TROWEXPAND"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "broadcast",
+      "manifest": "benchmark/one-level-arch/test/kernel/broadcast/compile.all",
+      "manifest_line": 52,
+      "command": "make TESTCASE=broadcast_vec_019 DType=__half tMs=8 kInners=49 MAX_DIMs=3 IN_SHAPEs=1280,1,49 OUT_SHAPEs=1280,8,49 IN_DIMs=3 OUT_DIMs=3 gIMs=1280*1*49 gOMs=1280*8*49 IN_SHAPE_NAME=1280_1_49 OUT_SHAPE_NAME=1280_8_49 diss",
+      "testcase": "broadcast_vec_019",
+      "source": "benchmark/one-level-arch/test/kernel/broadcast/src/broadcast_vec_019.cpp",
+      "page": "benchmarks/catalog/one-level/broadcast/broadcast-vec-019-8713b1a8.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TINSERT",
+        "TLOAD",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TINSERT": [
+          "TINSERT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "broadcast",
+      "manifest": "benchmark/one-level-arch/test/kernel/broadcast/compile.all",
+      "manifest_line": 57,
+      "command": "make TESTCASE=broadcast_vec_039 DType=__half tMs=8 kInners=16 MAX_DIMs=3 IN_SHAPEs=8192,1,16 OUT_SHAPEs=8192,8,16 IN_DIMs=3 OUT_DIMs=3 gIMs=8192*1*16 gOMs=8192*8*16 IN_SHAPE_NAME=8192_1_16 OUT_SHAPE_NAME=8192_8_16 diss",
+      "testcase": "broadcast_vec_039",
+      "source": "benchmark/one-level-arch/test/kernel/broadcast/src/broadcast_vec_039.cpp",
+      "page": "benchmarks/catalog/one-level/broadcast/broadcast-vec-039-ac6775c3.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TINSERT",
+        "TLOAD",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TINSERT": [
+          "TINSERT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "broadcast",
+      "manifest": "benchmark/one-level-arch/test/kernel/broadcast/compile.all",
+      "manifest_line": 70,
+      "command": "make TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=2 IN_SHAPEs=1042,1 OUT_SHAPEs=1042,129 IN_DIMs=2 OUT_DIMs=2 gIMs=1042*1 gOMs=1042*129 TESTNAME=broadcast_to_07 IN_SHAPE_NAME=1042_1 OUT_SHAPE_NAME=1042_129 res_check=off diss",
+      "testcase": "broadcast",
+      "source": "benchmark/one-level-arch/test/kernel/broadcast/src/broadcast.cpp",
+      "page": "benchmarks/catalog/one-level/broadcast/broadcast-9f406253.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TDIVS",
+        "TEXPANDS",
+        "TMULS",
+        "TREMS",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TREMS": [
+          "TREMS"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "broadcast",
+      "manifest": "benchmark/one-level-arch/test/kernel/broadcast/compile.all",
+      "manifest_line": 77,
+      "command": "make TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=3 IN_SHAPEs=1280,1,49 OUT_SHAPEs=1280,8,49 IN_DIMs=3 OUT_DIMs=3 gIMs=1280*1*49 gOMs=1280*8*49 TESTNAME=broadcast_to_ABA_019_new IN_SHAPE_NAME=1280_1_49 OUT_SHAPE_NAME=1280_8_49 res_check=off diss",
+      "testcase": "broadcast",
+      "source": "benchmark/one-level-arch/test/kernel/broadcast/src/broadcast.cpp",
+      "page": "benchmarks/catalog/one-level/broadcast/broadcast-9f406253.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TDIVS",
+        "TEXPANDS",
+        "TMULS",
+        "TREMS",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TREMS": [
+          "TREMS"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "broadcast",
+      "manifest": "benchmark/one-level-arch/test/kernel/broadcast/compile.all",
+      "manifest_line": 84,
+      "command": "make TESTCASE=broadcast DType=__half tMs=2048 MAX_DIMs=5 IN_SHAPEs=1,1,1,65,128 OUT_SHAPEs=1,1,7,65,128 IN_DIMs=5 OUT_DIMs=5 gIMs=1*1*1*65*128 gOMs=1*1*7*65*128 TESTNAME=BroadcastTo_ND_NCDHW_float16_int64_HunyuanImage21_MLLM_1015_000004 IN_SHAPE_NAME=1_1_1_65_128 OUT_SHAPE_NAME=1_1_7_65_128 res_check=off diss",
+      "testcase": "broadcast",
+      "source": "benchmark/one-level-arch/test/kernel/broadcast/src/broadcast.cpp",
+      "page": "benchmarks/catalog/one-level/broadcast/broadcast-9f406253.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TDIVS",
+        "TEXPANDS",
+        "TMULS",
+        "TREMS",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TREMS": [
+          "TREMS"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "concat",
+      "manifest": "benchmark/one-level-arch/test/kernel/concat/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=concat_gather COMPILER_DIR=$COMPILER_DIR DType=int32_t MAX_DIM=8 tM=512 IN_SHAPE=64,2 OUT_SHAPE=64,2000 IN_SHAPE_NAME=64_2 OUT_SHAPE_NAME=64_2000 DATA_DIM=2 CONCAT_DIM=1 gIM='1000*64*2' gOM='64*2000'",
+      "testcase": "concat_gather",
+      "source": "benchmark/one-level-arch/test/kernel/concat/src/concat_gather.cpp",
+      "page": "benchmarks/catalog/one-level/concat/concat-gather-1c6990b2.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TMULS",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "concat",
+      "manifest": "benchmark/one-level-arch/test/kernel/concat/compile.all",
+      "manifest_line": 18,
+      "command": "make TESTCASE=concat_gather COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 IN_SHAPE=256,8 OUT_SHAPE=256,8000 IN_SHAPE_NAME=256_8 OUT_SHAPE_NAME=256_8000 DATA_DIM=2 CONCAT_DIM=1 gIM='4000*256*8' gOM='256*8000'",
+      "testcase": "concat_gather",
+      "source": "benchmark/one-level-arch/test/kernel/concat/src/concat_gather.cpp",
+      "page": "benchmarks/catalog/one-level/concat/concat-gather-1c6990b2.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TMULS",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "concat",
+      "manifest": "benchmark/one-level-arch/test/kernel/concat/compile.all",
+      "manifest_line": 28,
+      "command": "make TESTCASE=concat_scatter COMPILER_DIR=$COMPILER_DIR DType=int32_t MAX_DIM=8 tM=512 IN_SHAPE=64,2 OUT_SHAPE=64,2000 IN_SHAPE_NAME=64_2 OUT_SHAPE_NAME=64_2000 DATA_DIM=2 CONCAT_DIM=1 gIM='1000*64*2' gOM='64*2000'",
+      "testcase": "concat_scatter",
+      "source": "benchmark/one-level-arch/test/kernel/concat/src/concat_scatter.cpp",
+      "page": "benchmarks/catalog/one-level/concat/concat-scatter-29559c6c.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MSCATTER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MSCATTER": [
+          "MSCATTER"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "concat",
+      "manifest": "benchmark/one-level-arch/test/kernel/concat/compile.all",
+      "manifest_line": 35,
+      "command": "make TESTCASE=concat_scatter COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 IN_SHAPE=256,8 OUT_SHAPE=256,8000 IN_SHAPE_NAME=256_8 OUT_SHAPE_NAME=256_8000 DATA_DIM=2 CONCAT_DIM=1 gIM='4000*256*8' gOM='256*8000'",
+      "testcase": "concat_scatter",
+      "source": "benchmark/one-level-arch/test/kernel/concat/src/concat_scatter.cpp",
+      "page": "benchmarks/catalog/one-level/concat/concat-scatter-29559c6c.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MSCATTER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MSCATTER": [
+          "MSCATTER"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "control",
+      "manifest": "benchmark/one-level-arch/test/kernel/control/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum6144_kMaxProbe512_knum_col1024_debug_off EXTRA_DEFINES=\"-DkNum=6144 -DMAX_PROBE=512 -DNUM_COL=1024 -DFOR_GFSIM\" diss",
+      "testcase": "hashtable_lookup_simd",
+      "source": "benchmark/one-level-arch/test/kernel/control/hashtable_lookup_simd/hashtable_lookup_simd.cpp",
+      "page": "benchmarks/catalog/one-level/control/hashtable-lookup-simd-5bc02e85.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TADDS",
+        "TAND",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TOR",
+        "TREM",
+        "TSEL",
+        "TSHLS",
+        "TSHRS",
+        "TSTORE",
+        "TXOR"
+      ],
+      "intrinsic_forms": {
+        "TSHLS": [
+          "TSHLS"
+        ],
+        "TSHRS": [
+          "TSHRS"
+        ],
+        "TOR": [
+          "TOR"
+        ],
+        "TCVT": [
+          "TCAST",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TXOR": [
+          "TXOR"
+        ],
+        "TADDS": [
+          "TADDS"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TAND": [
+          "TAND"
+        ],
+        "TREM": [
+          "TREM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TCMP": [
+          "TCMP"
+        ],
+        "TSEL": [
+          "TSELECT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "control",
+      "manifest": "benchmark/one-level-arch/test/kernel/control/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum6144_kMaxProbe512_knum_col1024_debug_on EXTRA_DEFINES=\"-DkNum=6144 -DMAX_PROBE=512 -DNUM_COL=1024 \" diss",
+      "testcase": "hashtable_lookup_simd",
+      "source": "benchmark/one-level-arch/test/kernel/control/hashtable_lookup_simd/hashtable_lookup_simd.cpp",
+      "page": "benchmarks/catalog/one-level/control/hashtable-lookup-simd-5bc02e85.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TADDS",
+        "TAND",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TOR",
+        "TREM",
+        "TSEL",
+        "TSHLS",
+        "TSHRS",
+        "TSTORE",
+        "TXOR"
+      ],
+      "intrinsic_forms": {
+        "TSHLS": [
+          "TSHLS"
+        ],
+        "TSHRS": [
+          "TSHRS"
+        ],
+        "TOR": [
+          "TOR"
+        ],
+        "TCVT": [
+          "TCAST",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TXOR": [
+          "TXOR"
+        ],
+        "TADDS": [
+          "TADDS"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TAND": [
+          "TAND"
+        ],
+        "TREM": [
+          "TREM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TCMP": [
+          "TCMP"
+        ],
+        "TSEL": [
+          "TSELECT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "control",
+      "manifest": "benchmark/one-level-arch/test/kernel/control/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum6144_kMaxProbe512_knum_col256_debug_off EXTRA_DEFINES=\"-DkNum=6144 -DMAX_PROBE=512 -DNUM_COL=256 -DFOR_GFSIM\" diss",
+      "testcase": "hashtable_lookup_simd",
+      "source": "benchmark/one-level-arch/test/kernel/control/hashtable_lookup_simd/hashtable_lookup_simd.cpp",
+      "page": "benchmarks/catalog/one-level/control/hashtable-lookup-simd-5bc02e85.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TADDS",
+        "TAND",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TOR",
+        "TREM",
+        "TSEL",
+        "TSHLS",
+        "TSHRS",
+        "TSTORE",
+        "TXOR"
+      ],
+      "intrinsic_forms": {
+        "TSHLS": [
+          "TSHLS"
+        ],
+        "TSHRS": [
+          "TSHRS"
+        ],
+        "TOR": [
+          "TOR"
+        ],
+        "TCVT": [
+          "TCAST",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TXOR": [
+          "TXOR"
+        ],
+        "TADDS": [
+          "TADDS"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TAND": [
+          "TAND"
+        ],
+        "TREM": [
+          "TREM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TCMP": [
+          "TCMP"
+        ],
+        "TSEL": [
+          "TSELECT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "control",
+      "manifest": "benchmark/one-level-arch/test/kernel/control/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum6144_kMaxProbe512_knum_col256_debug_on EXTRA_DEFINES=\"-DkNum=6144 -DMAX_PROBE=512 -DNUM_COL=256 \" diss",
+      "testcase": "hashtable_lookup_simd",
+      "source": "benchmark/one-level-arch/test/kernel/control/hashtable_lookup_simd/hashtable_lookup_simd.cpp",
+      "page": "benchmarks/catalog/one-level/control/hashtable-lookup-simd-5bc02e85.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TADDS",
+        "TAND",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TOR",
+        "TREM",
+        "TSEL",
+        "TSHLS",
+        "TSHRS",
+        "TSTORE",
+        "TXOR"
+      ],
+      "intrinsic_forms": {
+        "TSHLS": [
+          "TSHLS"
+        ],
+        "TSHRS": [
+          "TSHRS"
+        ],
+        "TOR": [
+          "TOR"
+        ],
+        "TCVT": [
+          "TCAST",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TXOR": [
+          "TXOR"
+        ],
+        "TADDS": [
+          "TADDS"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TAND": [
+          "TAND"
+        ],
+        "TREM": [
+          "TREM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TCMP": [
+          "TCMP"
+        ],
+        "TSEL": [
+          "TSELECT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "control",
+      "manifest": "benchmark/one-level-arch/test/kernel/control/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum6144_kMaxProbe512_knum_col512_debug_off EXTRA_DEFINES=\"-DkNum=6144 -DMAX_PROBE=512 -DNUM_COL=512 -DFOR_GFSIM\" diss",
+      "testcase": "hashtable_lookup_simd",
+      "source": "benchmark/one-level-arch/test/kernel/control/hashtable_lookup_simd/hashtable_lookup_simd.cpp",
+      "page": "benchmarks/catalog/one-level/control/hashtable-lookup-simd-5bc02e85.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TADDS",
+        "TAND",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TOR",
+        "TREM",
+        "TSEL",
+        "TSHLS",
+        "TSHRS",
+        "TSTORE",
+        "TXOR"
+      ],
+      "intrinsic_forms": {
+        "TSHLS": [
+          "TSHLS"
+        ],
+        "TSHRS": [
+          "TSHRS"
+        ],
+        "TOR": [
+          "TOR"
+        ],
+        "TCVT": [
+          "TCAST",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TXOR": [
+          "TXOR"
+        ],
+        "TADDS": [
+          "TADDS"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TAND": [
+          "TAND"
+        ],
+        "TREM": [
+          "TREM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TCMP": [
+          "TCMP"
+        ],
+        "TSEL": [
+          "TSELECT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "control",
+      "manifest": "benchmark/one-level-arch/test/kernel/control/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=hashtable_lookup_simd SUFFIX=_kNum6144_kMaxProbe512_knum_col512_debug_on EXTRA_DEFINES=\"-DkNum=6144 -DMAX_PROBE=512 -DNUM_COL=512 \" diss",
+      "testcase": "hashtable_lookup_simd",
+      "source": "benchmark/one-level-arch/test/kernel/control/hashtable_lookup_simd/hashtable_lookup_simd.cpp",
+      "page": "benchmarks/catalog/one-level/control/hashtable-lookup-simd-5bc02e85.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TADDS",
+        "TAND",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TOR",
+        "TREM",
+        "TSEL",
+        "TSHLS",
+        "TSHRS",
+        "TSTORE",
+        "TXOR"
+      ],
+      "intrinsic_forms": {
+        "TSHLS": [
+          "TSHLS"
+        ],
+        "TSHRS": [
+          "TSHRS"
+        ],
+        "TOR": [
+          "TOR"
+        ],
+        "TCVT": [
+          "TCAST",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TXOR": [
+          "TXOR"
+        ],
+        "TADDS": [
+          "TADDS"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TAND": [
+          "TAND"
+        ],
+        "TREM": [
+          "TREM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TCMP": [
+          "TCMP"
+        ],
+        "TSEL": [
+          "TSELECT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "element_wise/gelu",
+      "manifest": "benchmark/one-level-arch/test/kernel/element_wise/gelu/compile.all",
+      "manifest_line": 10,
+      "command": "make TESTCASE=gelu DTYPE=__bf16 tMs=2048 gMs=24*8*1024 SHAPE_NAME=24_8_1024 Approximate=false diss",
+      "testcase": "gelu",
+      "source": "benchmark/one-level-arch/test/kernel/element_wise/gelu/src/gelu.cpp",
+      "page": "benchmarks/catalog/one-level/element-wise-gelu/gelu-fdf67353.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADDS",
+        "TCVT",
+        "TEXP",
+        "TLOAD",
+        "TMAXS",
+        "TMINS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "TCVT"
+        ],
+        "TMAXS": [
+          "TMAXS"
+        ],
+        "TMINS": [
+          "TMINS"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TADDS": [
+          "TADDS"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "manifest": "benchmark/one-level-arch/test/kernel/fa/compile.all",
+      "manifest_line": 8,
+      "command": "make TESTCASE=fa_2d_unroll Sq=256 Skv=512 Tm=16 Tk=32 X=1 Y=2",
+      "testcase": "fa_2d_unroll",
+      "source": "benchmark/one-level-arch/test/kernel/fa/src/fa_2d_unroll.cpp",
+      "page": "benchmarks/catalog/one-level/fa/fa-2d-unroll-b46797ec.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TROWMAX": [
+          "TROWMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TROWEXPANDSUB": [
+          "TROWEXPANDSUB"
+        ],
+        "TROWSUM": [
+          "TROWSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TROWEXPANDMUL": [
+          "TROWEXPANDMUL"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "manifest": "benchmark/one-level-arch/test/kernel/fa/compile.all",
+      "manifest_line": 9,
+      "command": "make TESTCASE=fa_2d_unroll Sq=512 Skv=512 Tm=16 Tk=32 X=1 Y=2",
+      "testcase": "fa_2d_unroll",
+      "source": "benchmark/one-level-arch/test/kernel/fa/src/fa_2d_unroll.cpp",
+      "page": "benchmarks/catalog/one-level/fa/fa-2d-unroll-b46797ec.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TROWMAX": [
+          "TROWMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TROWEXPANDSUB": [
+          "TROWEXPANDSUB"
+        ],
+        "TROWSUM": [
+          "TROWSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TROWEXPANDMUL": [
+          "TROWEXPANDMUL"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "manifest": "benchmark/one-level-arch/test/kernel/fa/compile.all",
+      "manifest_line": 12,
+      "command": "make TESTCASE=fa_2d_unroll Sq=256 Skv=512 Tm=16 Tk=32 X=1 Y=4",
+      "testcase": "fa_2d_unroll",
+      "source": "benchmark/one-level-arch/test/kernel/fa/src/fa_2d_unroll.cpp",
+      "page": "benchmarks/catalog/one-level/fa/fa-2d-unroll-b46797ec.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TROWMAX": [
+          "TROWMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TROWEXPANDSUB": [
+          "TROWEXPANDSUB"
+        ],
+        "TROWSUM": [
+          "TROWSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TROWEXPANDMUL": [
+          "TROWEXPANDMUL"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "manifest": "benchmark/one-level-arch/test/kernel/fa/compile.all",
+      "manifest_line": 13,
+      "command": "make TESTCASE=fa_2d_unroll Sq=512 Skv=512 Tm=16 Tk=32 X=1 Y=4",
+      "testcase": "fa_2d_unroll",
+      "source": "benchmark/one-level-arch/test/kernel/fa/src/fa_2d_unroll.cpp",
+      "page": "benchmarks/catalog/one-level/fa/fa-2d-unroll-b46797ec.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TROWMAX": [
+          "TROWMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TROWEXPANDSUB": [
+          "TROWEXPANDSUB"
+        ],
+        "TROWSUM": [
+          "TROWSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TROWEXPANDMUL": [
+          "TROWEXPANDMUL"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "manifest": "benchmark/one-level-arch/test/kernel/fa/compile.all",
+      "manifest_line": 16,
+      "command": "make TESTCASE=fa_2d_unroll Sq=256 Skv=512 Tm=16 Tk=32 X=2 Y=2",
+      "testcase": "fa_2d_unroll",
+      "source": "benchmark/one-level-arch/test/kernel/fa/src/fa_2d_unroll.cpp",
+      "page": "benchmarks/catalog/one-level/fa/fa-2d-unroll-b46797ec.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TROWMAX": [
+          "TROWMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TROWEXPANDSUB": [
+          "TROWEXPANDSUB"
+        ],
+        "TROWSUM": [
+          "TROWSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TROWEXPANDMUL": [
+          "TROWEXPANDMUL"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "manifest": "benchmark/one-level-arch/test/kernel/fa/compile.all",
+      "manifest_line": 17,
+      "command": "make TESTCASE=fa_2d_unroll Sq=512 Skv=512 Tm=16 Tk=32 X=2 Y=2",
+      "testcase": "fa_2d_unroll",
+      "source": "benchmark/one-level-arch/test/kernel/fa/src/fa_2d_unroll.cpp",
+      "page": "benchmarks/catalog/one-level/fa/fa-2d-unroll-b46797ec.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TROWMAX": [
+          "TROWMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TROWEXPANDSUB": [
+          "TROWEXPANDSUB"
+        ],
+        "TROWSUM": [
+          "TROWSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TROWEXPANDMUL": [
+          "TROWEXPANDMUL"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "manifest": "benchmark/one-level-arch/test/kernel/fa/compile.all",
+      "manifest_line": 20,
+      "command": "make TESTCASE=fa_2d_unroll Sq=256 Skv=512 Tm=16 Tk=32 X=2 Y=4",
+      "testcase": "fa_2d_unroll",
+      "source": "benchmark/one-level-arch/test/kernel/fa/src/fa_2d_unroll.cpp",
+      "page": "benchmarks/catalog/one-level/fa/fa-2d-unroll-b46797ec.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TROWMAX": [
+          "TROWMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TROWEXPANDSUB": [
+          "TROWEXPANDSUB"
+        ],
+        "TROWSUM": [
+          "TROWSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TROWEXPANDMUL": [
+          "TROWEXPANDMUL"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "manifest": "benchmark/one-level-arch/test/kernel/fa/compile.all",
+      "manifest_line": 21,
+      "command": "make TESTCASE=fa_2d_unroll Sq=512 Skv=512 Tm=16 Tk=32 X=2 Y=4",
+      "testcase": "fa_2d_unroll",
+      "source": "benchmark/one-level-arch/test/kernel/fa/src/fa_2d_unroll.cpp",
+      "page": "benchmarks/catalog/one-level/fa/fa-2d-unroll-b46797ec.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TROWMAX": [
+          "TROWMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TROWEXPANDSUB": [
+          "TROWEXPANDSUB"
+        ],
+        "TROWSUM": [
+          "TROWSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TROWEXPANDMUL": [
+          "TROWEXPANDMUL"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "fa",
+      "manifest": "benchmark/one-level-arch/test/kernel/fa/compile.all",
+      "manifest_line": 26,
+      "command": "make TESTCASE=fa_HIF4_HIF4 MODE=BF16_NOGATHER Sq=256 Skv=512 Tm=16 Tk=32 X=1 Y=1",
+      "testcase": "fa_HIF4_HIF4",
+      "source": "benchmark/one-level-arch/test/kernel/fa/src/fa_hif4.cpp",
+      "page": "benchmarks/catalog/one-level/fa/fa-hif4-86b1f297.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCOLEXPANDMUL",
+        "TCOLEXPANDSUB",
+        "TCOLMAX",
+        "TCOLSUM",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL_MX",
+        "TMAX",
+        "TMUL",
+        "TMULS",
+        "TQUANT",
+        "TRECIP",
+        "TSTORE",
+        "TSUB"
+      ],
+      "intrinsic_forms": {
+        "TMULS": [
+          "TMULS"
+        ],
+        "TCOLMAX": [
+          "TCOLMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TEXP": [
+          "TEXP"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TCOLEXPANDSUB": [
+          "TCOLEXPANDSUB"
+        ],
+        "TCOLSUM": [
+          "TCOLSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TCOLEXPANDMUL": [
+          "TCOLEXPANDMUL"
+        ],
+        "TRECIP": [
+          "TRECIP"
+        ],
+        "TQUANT": [
+          "TQUANT"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "gather",
+      "manifest": "benchmark/one-level-arch/test/kernel/gather/compile.all",
+      "manifest_line": 26,
+      "command": "make TESTCASE=gather COMPILER_DIR=$COMPILER_DIR DType=__fp32 OType=uint32_t gKs=131072 gMs=32 gNs=256 tMs=32 tNs=64",
+      "testcase": "gather",
+      "source": "benchmark/one-level-arch/test/kernel/gather/src/gather.cpp",
+      "page": "benchmarks/catalog/one-level/gather/gather-4948597c.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TLOAD",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 26,
+      "command": "make TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER M=256 N=2048 K=2048 tM=64 tN=64 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/HiF4_HiF4.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/hif4-hif4-f0fd84bb.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCOLEXPAND",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMUL",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TSTORE": [
+          "TSTORE",
+          "TSTORE_ACC"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TMATMUL": [
+          "MATMUL",
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "MATMACC"
+        ],
+        "TCOLEXPAND": [
+          "TCOLEXPAND"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ]
+      },
+      "helpers": [
+        "MATMACCMX",
+        "MATMULMX"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 27,
+      "command": "make TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER M=512 N=1280 K=4096 tM=64 tN=64 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/HiF4_HiF4.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/hif4-hif4-f0fd84bb.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCOLEXPAND",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMUL",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TSTORE": [
+          "TSTORE",
+          "TSTORE_ACC"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TMATMUL": [
+          "MATMUL",
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "MATMACC"
+        ],
+        "TCOLEXPAND": [
+          "TCOLEXPAND"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ]
+      },
+      "helpers": [
+        "MATMACCMX",
+        "MATMULMX"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 32,
+      "command": "make TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER_REUSEA M=256 N=2048 K=2048 tM=64 tN=64 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/HiF4_HiF4.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/hif4-hif4-f0fd84bb.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCOLEXPAND",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMUL",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TSTORE": [
+          "TSTORE",
+          "TSTORE_ACC"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TMATMUL": [
+          "MATMUL",
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "MATMACC"
+        ],
+        "TCOLEXPAND": [
+          "TCOLEXPAND"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ]
+      },
+      "helpers": [
+        "MATMACCMX",
+        "MATMULMX"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 33,
+      "command": "make TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER_REUSEA M=512 N=1280 K=4096 tM=64 tN=64 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/HiF4_HiF4.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/hif4-hif4-f0fd84bb.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCOLEXPAND",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMUL",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TSTORE": [
+          "TSTORE",
+          "TSTORE_ACC"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TMATMUL": [
+          "MATMUL",
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "MATMACC"
+        ],
+        "TCOLEXPAND": [
+          "TCOLEXPAND"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ]
+      },
+      "helpers": [
+        "MATMACCMX",
+        "MATMULMX"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 38,
+      "command": "make TESTCASE=matmul TYPE=A16W4 M=256 N=2048 K=2048 tM=16 tN=16 tK=128",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/A16W4.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/a16w4-f1f175ff.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCOLEXPAND",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMUL",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TSTORE": [
+          "TSTORE",
+          "TSTORE_ACC"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TMATMUL": [
+          "MATMUL",
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "MATMACC"
+        ],
+        "TCOLEXPAND": [
+          "TCOLEXPAND"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ]
+      },
+      "helpers": [
+        "MATMACCMX",
+        "MATMULMX"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 39,
+      "command": "make TESTCASE=matmul TYPE=A16W4 M=512 N=1280 K=2048 tM=16 tN=16 tK=128",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/A16W4.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/a16w4-f1f175ff.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCOLEXPAND",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMUL",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TSTORE": [
+          "TSTORE",
+          "TSTORE_ACC"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TMATMUL": [
+          "MATMUL",
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "MATMACC"
+        ],
+        "TCOLEXPAND": [
+          "TCOLEXPAND"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ]
+      },
+      "helpers": [
+        "MATMACCMX",
+        "MATMULMX"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 40,
+      "command": "make TESTCASE=matmul TYPE=A16W4 M=512 N=512 K=4096 tM=16 tN=16 tK=128",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/A16W4.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/a16w4-f1f175ff.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCOLEXPAND",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMUL",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TSTORE": [
+          "TSTORE",
+          "TSTORE_ACC"
+        ],
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TMATMUL": [
+          "MATMUL",
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "MATMACC"
+        ],
+        "TCOLEXPAND": [
+          "TCOLEXPAND"
+        ],
+        "TMUL": [
+          "TMUL"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ]
+      },
+      "helpers": [
+        "MATMACCMX",
+        "MATMULMX"
+      ]
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 46,
+      "command": "make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32 M=256 N=256 K=256 tM=32 tN=32 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/matmul.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/matmul-a008ac76.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 47,
+      "command": "make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32_REUSEA M=256 N=256 K=256 tM=32 tN=32 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/matmul.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/matmul-a008ac76.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 48,
+      "command": "make TESTCASE=matmul TYPE=MASK MODE=MASK_FP32_REUSEB M=256 N=256 K=256 tM=32 tN=32 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/matmul.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/matmul-a008ac76.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 53,
+      "command": "make TESTCASE=matmul TYPE=MASK MODE=MASK_FP16 M=256 N=256 K=256 tM=64 tN=32 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/matmul.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/matmul-a008ac76.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 54,
+      "command": "make TESTCASE=matmul TYPE=MASK MODE=MASK_FP16_REUSEA M=256 N=256 K=256 tM=64 tN=32 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/matmul.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/matmul-a008ac76.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 55,
+      "command": "make TESTCASE=matmul TYPE=MASK MODE=MASK_FP16_REUSEB M=256 N=256 K=256 tM=64 tN=32 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/matmul.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/matmul-a008ac76.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 58,
+      "command": "make TESTCASE=matmul TYPE=MASK MODE=MASK_FP8 M=256 N=256 K=256 tM=64 tN=32 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/matmul.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/matmul-a008ac76.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 59,
+      "command": "make TESTCASE=matmul TYPE=MASK MODE=MASK_FP8_REUSEA M=256 N=256 K=256 tM=64 tN=32 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/matmul.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/matmul-a008ac76.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "matmul",
+      "manifest": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+      "manifest_line": 60,
+      "command": "make TESTCASE=matmul TYPE=MASK MODE=MASK_FP8_REUSEB M=256 N=256 K=256 tM=64 tN=32 tK=64",
+      "testcase": "matmul",
+      "source": "benchmark/one-level-arch/test/kernel/matmul/src/matmul.cpp",
+      "page": "benchmarks/catalog/one-level/matmul/matmul-a008ac76.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCVT",
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TMATMUL_MX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TCVT": [
+          "ACCCVT",
+          "TCVT"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TMATMUL": [
+          "TMATMUL"
+        ],
+        "TMATMUL_ACC": [
+          "TMATMUL_ACC"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TMATMUL_MX": [
+          "TMATMUL_MX"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "reduction/reducemax_col",
+      "manifest": "benchmark/one-level-arch/test/kernel/reduction/reducemax_col/compile.all",
+      "manifest_line": 7,
+      "command": "make TESTCASE=reducemax_col COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=32 tN_s=64 gM_s=2048 gN_s=64",
+      "testcase": "reducemax_col",
+      "source": "benchmark/one-level-arch/test/kernel/reduction/reducemax_col/src/reducemax_col.cpp",
+      "page": "benchmarks/catalog/one-level/reduction-reducemax-col/reducemax-col-1c7de9cb.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TCOLMAX",
+        "TEXPANDS",
+        "TLOAD",
+        "TMAX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TCOLMAX": [
+          "TCOLMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "reduction/reducemax_row",
+      "manifest": "benchmark/one-level-arch/test/kernel/reduction/reducemax_row/compile.all",
+      "manifest_line": 7,
+      "command": "make TESTCASE=reducemax_row COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=16 tN_s=128 gM_s=16 gN_s=8192",
+      "testcase": "reducemax_row",
+      "source": "benchmark/one-level-arch/test/kernel/reduction/reducemax_row/src/reducemax_row.cpp",
+      "page": "benchmarks/catalog/one-level/reduction-reducemax-row/reducemax-row-6e95758c.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TEXPANDS",
+        "TLOAD",
+        "TMAX",
+        "TROWMAX",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TROWMAX": [
+          "TROWMAX"
+        ],
+        "TMAX": [
+          "TMAX"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "reduction/reducesum_col",
+      "manifest": "benchmark/one-level-arch/test/kernel/reduction/reducesum_col/compile.all",
+      "manifest_line": 7,
+      "command": "make TESTCASE=reducesum_col COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=32 tN_s=64 gM_s=2048 gN_s=64",
+      "testcase": "reducesum_col",
+      "source": "benchmark/one-level-arch/test/kernel/reduction/reducesum_col/src/reducesum_col.cpp",
+      "page": "benchmarks/catalog/one-level/reduction-reducesum-col/reducesum-col-d8b6df3d.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCOLSUM",
+        "TEXPANDS",
+        "TLOAD",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TCOLSUM": [
+          "TCOLSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "reduction/reducesum_col",
+      "manifest": "benchmark/one-level-arch/test/kernel/reduction/reducesum_col/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=reducesum_col COMPILER_DIR=$COMPILER_DIR DType=__half tM_s=32 tN_s=64 gM_s=2048 gN_s=64",
+      "testcase": "reducesum_col",
+      "source": "benchmark/one-level-arch/test/kernel/reduction/reducesum_col/src/reducesum_col.cpp",
+      "page": "benchmarks/catalog/one-level/reduction-reducesum-col/reducesum-col-d8b6df3d.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TCOLSUM",
+        "TEXPANDS",
+        "TLOAD",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TCOLSUM": [
+          "TCOLSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "reduction/reducesum_row",
+      "manifest": "benchmark/one-level-arch/test/kernel/reduction/reducesum_row/compile.all",
+      "manifest_line": 7,
+      "command": "make TESTCASE=reducesum_row COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=16 tN_s=128 gM_s=16 gN_s=8192",
+      "testcase": "reducesum_row",
+      "source": "benchmark/one-level-arch/test/kernel/reduction/reducesum_row/src/reducesum_row.cpp",
+      "page": "benchmarks/catalog/one-level/reduction-reducesum-row/reducesum-row-f79bc562.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TADD",
+        "TEXPANDS",
+        "TLOAD",
+        "TROWSUM",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TROWSUM": [
+          "TROWSUM"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "sort",
+      "manifest": "benchmark/one-level-arch/test/kernel/sort/compile.all",
+      "manifest_line": 2,
+      "command": "make TESTCASE=topk",
+      "testcase": "topk",
+      "source": "benchmark/one-level-arch/test/kernel/sort/topk/topk.cpp",
+      "page": "benchmarks/catalog/one-level/sort/topk-0a98c8a8.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "TEXPANDS",
+        "TSTORE"
+      ],
+      "intrinsic_forms": {
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "transpose",
+      "manifest": "benchmark/one-level-arch/test/kernel/transpose/compile.all",
+      "manifest_line": 11,
+      "command": "make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 IN_SHAPE=1476,32 OUT_SHAPE=32,1476 IN_SHAPE_NAME=1476_32 OUT_SHAPE_NAME=32_1476 IN_DIM=2 OUT_DIM=2 TRANSPOSE_DIM1=0 TRANSPOSE_DIM0=1 gIM='1476*32' gOM='32*1476'",
+      "testcase": "transpose",
+      "source": "benchmark/one-level-arch/test/kernel/transpose/src/transpose.cpp",
+      "page": "benchmarks/catalog/one-level/transpose/transpose-dece711d.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TSTORE",
+        "TSUB",
+        "TTRANS"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TTRANS": [
+          "TTRANS"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "transpose",
+      "manifest": "benchmark/one-level-arch/test/kernel/transpose/compile.all",
+      "manifest_line": 24,
+      "command": "make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 IN_SHAPE=1,8,4096,3 OUT_SHAPE=1,8,3,4096 IN_SHAPE_NAME=1_8_4096_3 OUT_SHAPE_NAME=1_8_3_4096 IN_DIM=4 OUT_DIM=4 TRANSPOSE_DIM1=2 TRANSPOSE_DIM0=3 gIM='1*8*4096*3' gOM='1*8*3*4096'",
+      "testcase": "transpose",
+      "source": "benchmark/one-level-arch/test/kernel/transpose/src/transpose.cpp",
+      "page": "benchmarks/catalog/one-level/transpose/transpose-dece711d.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TSTORE",
+        "TSUB",
+        "TTRANS"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TTRANS": [
+          "TTRANS"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "transpose",
+      "manifest": "benchmark/one-level-arch/test/kernel/transpose/compile.all",
+      "manifest_line": 33,
+      "command": "make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 IN_SHAPE=1,32,8,32 OUT_SHAPE=1,8,32,32 IN_SHAPE_NAME=1_32_8_32 OUT_SHAPE_NAME=1_8_32_32 IN_DIM=4 OUT_DIM=4 TRANSPOSE_DIM1=1 TRANSPOSE_DIM0=2 gIM='1*32*8*32' gOM='1*8*32*32'",
+      "testcase": "transpose",
+      "source": "benchmark/one-level-arch/test/kernel/transpose/src/transpose.cpp",
+      "page": "benchmarks/catalog/one-level/transpose/transpose-dece711d.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TSTORE",
+        "TSUB",
+        "TTRANS"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TTRANS": [
+          "TTRANS"
+        ]
+      },
+      "helpers": []
+    },
+    {
+      "backend": "One-level",
+      "family": "transpose",
+      "manifest": "benchmark/one-level-arch/test/kernel/transpose/compile.all",
+      "manifest_line": 46,
+      "command": "make TESTCASE=transpose COMPILER_DIR=$COMPILER_DIR DType=__half MAX_DIM=8 tM=512 IN_SHAPE=8,64,4,16,7 OUT_SHAPE=8,16,4,64,7 IN_SHAPE_NAME=1_8_64_4_16_7 OUT_SHAPE_NAME=1_8_16_4_64_7 IN_DIM=5 OUT_DIM=5 TRANSPOSE_DIM1=1 TRANSPOSE_DIM0=3 gIM='1*8*64*4*16*7' gOM='1*8*16*4*64*7'",
+      "testcase": "transpose",
+      "source": "benchmark/one-level-arch/test/kernel/transpose/src/transpose.cpp",
+      "page": "benchmarks/catalog/one-level/transpose/transpose-dece711d.md",
+      "intrinsic_surface_scope": "source-union",
+      "source_intrinsics": [
+        "MGATHER",
+        "TADD",
+        "TCI",
+        "TCVT",
+        "TDIVS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TSTORE",
+        "TSUB",
+        "TTRANS"
+      ],
+      "intrinsic_forms": {
+        "TCI": [
+          "TCI"
+        ],
+        "TEXPANDS": [
+          "TEXPANDSCALAR"
+        ],
+        "TCVT": [
+          "TCVT"
+        ],
+        "TDIVS": [
+          "TDIVS"
+        ],
+        "TMULS": [
+          "TMULS"
+        ],
+        "TSUB": [
+          "TSUB"
+        ],
+        "TADD": [
+          "TADD"
+        ],
+        "MGATHER": [
+          "MGATHER"
+        ],
+        "TSTORE": [
+          "TSTORE"
+        ],
+        "TLOAD": [
+          "TLOAD"
+        ],
+        "TTRANS": [
+          "TTRANS"
+        ]
+      },
+      "helpers": []
+    }
+  ]
+}

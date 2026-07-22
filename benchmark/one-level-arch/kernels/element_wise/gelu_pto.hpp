@@ -44,67 +44,6 @@
 // │          │ 二层实现         │ jcore/TStore.hpp 用 __vec__ 实现       │
 // └──────────┴──────────────────┴──────────────────────────────────────────┘
 //
-// PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
-//
-//   TLOAD:
-//     template <typename TileData, typename GlobalData, typename... WaitEvents>
-//     PTO_INST RecordEvent TLOAD(TileData &dst, GlobalData &src, WaitEvents &... events);
-//
-//   TCVT:
-//     template <typename TileDataD, typename TileDataS, typename TmpTileData,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TCVT(TileDataD &dst, TileDataS &src, TmpTileData &tmp,
-//                               RoundMode mode, SaturationMode satMode,
-//                               WaitEvents &... events);
-//
-//   TMAXS:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TMAXS(TileDataDst &dst, TileDataSrc &src,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TMINS:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TMINS(TileDataDst &dst, TileDataSrc &src,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TMUL:
-//     template <typename TileDataDst, typename TileDataSrc0,
-//               typename TileDataSrc1, typename... WaitEvents>
-//     PTO_INST RecordEvent TMUL(TileDataDst &dst, TileDataSrc0 &src0,
-//                               TileDataSrc1 &src1, WaitEvents &... events);
-//
-//   TMULS:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TMULS(TileDataDst &dst, TileDataSrc &src0,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TADDS:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TADDS(TileDataDst &dst, TileDataSrc &src0,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TEXP:
-//     template <auto PrecisionType = ExpAlgorithm::DEFAULT,
-//               typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TEXP(TileDataDst &dst, TileDataSrc &src,
-//                               WaitEvents &... events);
-//
-//   TRECIP:
-//     template <auto PrecisionType = RecipAlgorithm::DEFAULT,
-//               typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TRECIP(TileDataDst &dst, TileDataSrc &src,
-//                                 WaitEvents &... events);
-//
-//   TSTORE:
-//     template <typename TileData, typename GlobalData,
-//               AtomicType atomicType = AtomicType::AtomicNone,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TSTORE(GlobalData &dst, TileData &src,
-//                                 WaitEvents &... events);
 // ============================================================================
 
 #include <common/pto_tile.hpp>

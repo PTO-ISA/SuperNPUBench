@@ -30,27 +30,6 @@
 // │          │                  │ jcore/TStore.hpp 用 __vec__ 实现       │
 // └──────────┴──────────────────┴──────────────────────────────────────────┘
 //
-// PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
-//
-//   TLOAD:
-//     template <typename TileData, typename GlobalData, typename... WaitEvents>
-//     PTO_INST RecordEvent TLOAD(TileData &dst, GlobalData &src,
-//                                WaitEvents &... events);
-//
-//   TINSERT:
-//     template <typename DstTileData, typename SrcTileData, typename... WaitEvents>
-//     PTO_INST RecordEvent TINSERT(DstTileData &dst, SrcTileData &src,
-//                                  uint16_t indexRow, uint16_t indexCol,
-//                                  WaitEvents &... events);
-//     语义: dst[indexRow+i, indexCol+j] = src[i,j]
-//           for 0 <= i < src.ValidRow, 0 <= j < src.ValidCol
-//
-//   TSTORE:
-//     template <typename TileData, typename GlobalData,
-//               AtomicType atomicType = AtomicType::AtomicNone,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TSTORE(GlobalData &dst, TileData &src,
-//                                 WaitEvents &... events);
 // ============================================================================
 
 #include <common/pto_tile.hpp>

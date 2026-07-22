@@ -33,7 +33,7 @@ from the superproject root, then export their locations:
 
 ```bash
 cmake --build compiler/llvm/build-linxisa-clang \
-  --target clang clang++ llvm-objdump llvm-objcopy -j8
+  --target clang lld llvm-objdump llvm-objcopy -j8
 
 export COMPILER_DIR="$PWD/compiler/llvm/build-linxisa-clang/bin"
 export LINX_SYSROOT="$PWD/out/libc/musl/install/phase-b"
@@ -127,6 +127,93 @@ bash compile_all.sh all
 See [microbenchmark/README.md](microbenchmark/README.md) for case-generation
 details.
 
+<!-- BENCHMARK-CATALOG:START -->
+## One-level benchmark catalog
+
+The one-level manifests contain **53 build variants**. Every name below
+has a source-complete page with its build command and PTO intrinsic surface in
+the website's **Benchmarks** section.
+
+<details><summary><strong>One-level / broadcast</strong> (4 names, 6 variants)</summary>
+
+`broadcast`, `broadcast_vec_019`, `broadcast_vec_039`, `broadcast_vec_07`
+
+</details>
+
+<details><summary><strong>One-level / concat</strong> (2 names, 4 variants)</summary>
+
+`concat_gather`, `concat_scatter`
+
+</details>
+
+<details><summary><strong>One-level / control</strong> (1 name, 6 variants)</summary>
+
+`hashtable_lookup_simd`
+
+</details>
+
+<details><summary><strong>One-level / element_wise/gelu</strong> (1 name, 1 variant)</summary>
+
+`gelu`
+
+</details>
+
+<details><summary><strong>One-level / fa</strong> (2 names, 9 variants)</summary>
+
+`fa_2d_unroll`, `fa_HIF4_HIF4`
+
+</details>
+
+<details><summary><strong>One-level / gather</strong> (1 name, 1 variant)</summary>
+
+`gather`
+
+</details>
+
+<details><summary><strong>One-level / matmul</strong> (1 name, 16 variants)</summary>
+
+`matmul`
+
+</details>
+
+<details><summary><strong>One-level / reduction/reducemax_col</strong> (1 name, 1 variant)</summary>
+
+`reducemax_col`
+
+</details>
+
+<details><summary><strong>One-level / reduction/reducemax_row</strong> (1 name, 1 variant)</summary>
+
+`reducemax_row`
+
+</details>
+
+<details><summary><strong>One-level / reduction/reducesum_col</strong> (1 name, 2 variants)</summary>
+
+`reducesum_col`
+
+</details>
+
+<details><summary><strong>One-level / reduction/reducesum_row</strong> (1 name, 1 variant)</summary>
+
+`reducesum_row`
+
+</details>
+
+<details><summary><strong>One-level / sort</strong> (1 name, 1 variant)</summary>
+
+`topk`
+
+</details>
+
+<details><summary><strong>One-level / transpose</strong> (1 name, 4 variants)</summary>
+
+`transpose`
+
+</details>
+
+<!-- BENCHMARK-CATALOG:END -->
+
 ## Models
 
 ELF files can be passed to the superproject model or emulator appropriate for
@@ -146,9 +233,9 @@ the test lane. Do not hard-code developer-local simulator paths in scripts.
 
 ## Documentation
 
-- [LinxISA workload reference](architecture/linxisa-reference/)
-- [PTO workload reference](architecture/ptoisa-reference/)
-- [Canonical LinxISA v0.57 manual](../../docs/isa/)
+- [Superscalar NPU programming guide](https://pto-isa.github.io/SuperNPUBench/)
+- Install site dependencies with `python3 -m pip install -r requirements-docs.txt`
+- Build the site locally with `python3 -m mkdocs serve`
 
 ## License
 
