@@ -1,0 +1,4246 @@
+{
+  "schema": 1,
+  "workbook": {
+    "name": "PTO-ISA-LinxISA 0.57.numbers",
+    "sha256": "0387b39f108599f2469c2e2374a46ea4b832a96fee7bf7aa5d7cc575fdc7864a",
+    "sheet": "Sheet1",
+    "operation_count": 111
+  },
+  "operations": [
+    {
+      "name": "TADD",
+      "slug": "tadd",
+      "category": "Element-wise binary operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TADD - Add two tiles",
+      "summary": "Elementwise add of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "U32",
+        "F32",
+        "S16",
+        "U16",
+        "F16",
+        "BF16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TADD(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 2
+      }
+    },
+    {
+      "name": "TSUB",
+      "slug": "tsub",
+      "category": "Element-wise binary operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TSUB - Subtract one tile from another",
+      "summary": "Elementwise subtract of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8",
+        "F32",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TSUB(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 3
+      }
+    },
+    {
+      "name": "TMUL",
+      "slug": "tmul",
+      "category": "Element-wise binary operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TMUL - Multiply two tiles",
+      "summary": "Elementwise multiply of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "U32",
+        "F32",
+        "S16",
+        "U16",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TMUL(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 4
+      }
+    },
+    {
+      "name": "TMAX",
+      "slug": "tmax",
+      "category": "Element-wise binary operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TMAX - Take the maximum of two tiles",
+      "summary": "Elementwise maximum of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8",
+        "F32",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TMAX(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 5
+      }
+    },
+    {
+      "name": "TMIN",
+      "slug": "tmin",
+      "category": "Element-wise binary operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TMIN - Take the minimum of two tiles",
+      "summary": "Elementwise minimum of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8",
+        "F32",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TMIN(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 6
+      }
+    },
+    {
+      "name": "TAND",
+      "slug": "tand",
+      "category": "Element-wise binary operations",
+      "subcategory": "Bitwise and comparison",
+      "display_title": "TAND - Bitwise-AND two tiles",
+      "summary": "Elementwise bitwise AND of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData>\nPTO_INST void TAND(TileData &dst, TileData &src0, TileData &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 7
+      }
+    },
+    {
+      "name": "TOR",
+      "slug": "tor",
+      "category": "Element-wise binary operations",
+      "subcategory": "Bitwise and comparison",
+      "display_title": "TOR - Bitwise-OR two tiles",
+      "summary": "Elementwise bitwise OR of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData>\nPTO_INST void TOR(TileData &dst, TileData &src0, TileData &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 8
+      }
+    },
+    {
+      "name": "TXOR",
+      "slug": "txor",
+      "category": "Element-wise binary operations",
+      "subcategory": "Bitwise and comparison",
+      "display_title": "TXOR - Bitwise-XOR two tiles",
+      "summary": "Elementwise bitwise XOR of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile; PTOAS form also declares tmp tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1, typename TileDataTmp>\nPTO_INST void TXOR(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 9
+      }
+    },
+    {
+      "name": "TSHL",
+      "slug": "tshl",
+      "category": "Element-wise binary operations",
+      "subcategory": "Bitwise and comparison",
+      "display_title": "TSHL - Shift a tile left by per-element counts",
+      "summary": "Elementwise shift-left of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TSHL(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 10
+      }
+    },
+    {
+      "name": "TSHR",
+      "slug": "tshr",
+      "category": "Element-wise binary operations",
+      "subcategory": "Bitwise and comparison",
+      "display_title": "TSHR - Shift a tile right by per-element counts",
+      "summary": "Elementwise shift-right of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TSHR(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 11
+      }
+    },
+    {
+      "name": "TCMP",
+      "slug": "tcmp",
+      "category": "Element-wise binary operations",
+      "subcategory": "Bitwise and comparison",
+      "display_title": "TCMP - Compare two tiles into a predicate mask",
+      "summary": "Compare two tiles and write a packed predicate mask.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst predicate/mask tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile + CmpMode attr"
+        }
+      ],
+      "data_types": [
+        "Input: U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8",
+        "F32",
+        "F16; output mask: U32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TCMP(TileDataDst &dst, TileDataSrc &src0, TileDataSrc &src1, CmpMode cmpMode);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 12
+      }
+    },
+    {
+      "name": "TSEL",
+      "slug": "tsel",
+      "category": "Element-wise binary operations",
+      "subcategory": "Bitwise and comparison",
+      "display_title": "TSEL - Select between two tiles with a predicate mask",
+      "summary": "Select between two tiles using a mask tile (per-element selection).",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst (output; TileData)"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "selMask (arg; MaskTile)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src0 (input; TileData)"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "src1 (input; TileData); tmp (tmp; TmpTile)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent; see public signature"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData, typename MaskTile, typename TmpTile>\nPTO_INST void TSEL(TileData &dst, MaskTile &selMask, TileData &src0, TileData &src1, TmpTile &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 13
+      }
+    },
+    {
+      "name": "TABS",
+      "slug": "tabs",
+      "category": "Element-wise unary operations",
+      "subcategory": "Logical and activation operations",
+      "display_title": "TABS - Take the absolute value of a tile",
+      "summary": "Elementwise absolute value of a tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "F32",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TABS(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 14
+      }
+    },
+    {
+      "name": "TNOT",
+      "slug": "tnot",
+      "category": "Element-wise unary operations",
+      "subcategory": "Logical and activation operations",
+      "display_title": "TNOT - Invert all bits in a tile",
+      "summary": "Elementwise bitwise NOT of a tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TNOT(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 15
+      }
+    },
+    {
+      "name": "TNEG",
+      "slug": "tneg",
+      "category": "Element-wise unary operations",
+      "subcategory": "Logical and activation operations",
+      "display_title": "TNEG - Negate a tile",
+      "summary": "Elementwise negation of a tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "S16",
+        "F32",
+        "F16",
+        "BF16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TNEG(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 16
+      }
+    },
+    {
+      "name": "TRELU",
+      "slug": "trelu",
+      "category": "Element-wise unary operations",
+      "subcategory": "Logical and activation operations",
+      "display_title": "TRELU - Apply ReLU to a tile",
+      "summary": "Elementwise ReLU of a tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32",
+        "S32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TRELU(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 17
+      }
+    },
+    {
+      "name": "TDIV",
+      "slug": "tdiv",
+      "category": "Mathematical functions",
+      "subcategory": "Mathematical functions",
+      "display_title": "TDIV - Divide one tile by another",
+      "summary": "Elementwise division of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "U32",
+        "F32",
+        "S16",
+        "U16",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TDIV(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 18
+      }
+    },
+    {
+      "name": "TREM",
+      "slug": "trem",
+      "category": "Mathematical functions",
+      "subcategory": "Mathematical functions",
+      "display_title": "TREM - Compute the remainder of two tiles",
+      "summary": "Elementwise remainder of two tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile; PTOAS form also declares tmp tile"
+        }
+      ],
+      "data_types": [
+        "F32",
+        "S32",
+        "U32",
+        "F16",
+        "S16",
+        "U16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1, typename TileDataTmp>\nPTO_INST void TREM(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 19
+      }
+    },
+    {
+      "name": "TSQRT",
+      "slug": "tsqrt",
+      "category": "Mathematical functions",
+      "subcategory": "Mathematical functions",
+      "display_title": "TSQRT - Compute square root of a tile",
+      "summary": "Elementwise square root.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "F32",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TSQRT(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 20
+      }
+    },
+    {
+      "name": "TLOG",
+      "slug": "tlog",
+      "category": "Mathematical functions",
+      "subcategory": "Mathematical functions",
+      "display_title": "TLOG - Compute natural log of a tile",
+      "summary": "Elementwise natural logarithm of a tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "F32",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TLOG(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 21
+      }
+    },
+    {
+      "name": "TRECIP",
+      "slug": "trecip",
+      "category": "Mathematical functions",
+      "subcategory": "Mathematical functions",
+      "display_title": "TRECIP - Compute reciprocal of a tile",
+      "summary": "Elementwise reciprocal of a tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "F32",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TRECIP(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 22
+      }
+    },
+    {
+      "name": "TEXP",
+      "slug": "texp",
+      "category": "Mathematical functions",
+      "subcategory": "Mathematical functions",
+      "display_title": "TEXP - Compute exponential of a tile",
+      "summary": "Elementwise exponential.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "F32",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TEXP(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 23
+      }
+    },
+    {
+      "name": "TRSQRT",
+      "slug": "trsqrt",
+      "category": "Mathematical functions",
+      "subcategory": "Mathematical functions",
+      "display_title": "TRSQRT - Compute reciprocal square root of a tile",
+      "summary": "Elementwise reciprocal square root.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "F32",
+        "F16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TRSQRT(TileDataDst &dst, TileDataSrc &src);\ntemplate <typename TileDataDst, typename TileDataSrc, typename TileDataTmp>\nPTO_INST void TRSQRT(TileDataDst &dst, TileDataSrc &src, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 24
+      }
+    },
+    {
+      "name": "TADDS",
+      "slug": "tadds",
+      "category": "Tile-scalar operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TADDS - Add a scalar to a tile",
+      "summary": "Elementwise add a scalar to a tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar GPR/immediate (via B.IOR)"
+        }
+      ],
+      "data_types": [
+        "U8",
+        "S8",
+        "U16",
+        "S16",
+        "U32",
+        "S32",
+        "F16",
+        "F32",
+        "BF16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TADDS(TileDataDst &dst, TileDataSrc &src0, typename TileDataSrc::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 25
+      }
+    },
+    {
+      "name": "TAXPY",
+      "slug": "taxpy",
+      "category": "Tile-scalar operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TAXPY - Accumulate a scaled tile into the destination",
+      "summary": "AXPY-style fused update: multiply a tile by a scalar and accumulate into the destination tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst (output; TileDataDst)"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 (input; TileDataSrc)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar (attr; typename TileDataSrc::DType)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent; see public signature"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TAXPY(TileDataDst &dst, TileDataSrc &src0, typename TileDataSrc::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 26
+      }
+    },
+    {
+      "name": "TSUBS",
+      "slug": "tsubs",
+      "category": "Tile-scalar operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TSUBS - Subtract a scalar from a tile",
+      "summary": "Elementwise subtract a scalar from a tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "S16",
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TSUBS(TileDataDst &dst, TileDataSrc &src0, typename TileDataSrc::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 27
+      }
+    },
+    {
+      "name": "TMULS",
+      "slug": "tmuls",
+      "category": "Tile-scalar operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TMULS - Multiply a tile by a scalar",
+      "summary": "Elementwise multiply a tile by a scalar.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value"
+        }
+      ],
+      "data_types": [
+        "U8",
+        "S8",
+        "U16",
+        "S16",
+        "U32",
+        "S32",
+        "F16",
+        "F32",
+        "BF16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TMULS(TileDataDst &dst, TileDataSrc &src0, typename TileDataSrc::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 28
+      }
+    },
+    {
+      "name": "TDIVS",
+      "slug": "tdivs",
+      "category": "Tile-scalar operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TDIVS - Divide with a tile and a scalar",
+      "summary": "Elementwise division with a scalar (tile/scalar or scalar/tile).",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value"
+        }
+      ],
+      "data_types": [
+        "U8",
+        "S8",
+        "U16",
+        "S16",
+        "U32",
+        "S32",
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TDIVS(TileDataDst &dst, TileDataSrc &src0, typename TileDataSrc::DType scalar);\ntemplate <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TDIVS(TileDataDst &dst, typename TileDataDst::DType scalar, TileDataSrc &src0);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 29
+      }
+    },
+    {
+      "name": "TMINS",
+      "slug": "tmins",
+      "category": "Tile-scalar operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TMINS - Take the minimum of a tile and a scalar",
+      "summary": "Elementwise minimum of a tile and a scalar.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value"
+        }
+      ],
+      "data_types": [
+        "U8",
+        "S8",
+        "U16",
+        "S16",
+        "U32",
+        "S32",
+        "F16",
+        "F32",
+        "BF16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TMINS(TileDataDst &dst, TileDataSrc &src, typename TileDataSrc::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 30
+      }
+    },
+    {
+      "name": "TMAXS",
+      "slug": "tmaxs",
+      "category": "Tile-scalar operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TMAXS - Take the maximum of a tile and a scalar",
+      "summary": "Elementwise max of a tile and a scalar: `max(src, scalar)`.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "U32",
+        "F32",
+        "S16",
+        "U16",
+        "F16",
+        "BF16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TMAXS(TileDataDst& dst, TileDataSrc& src, typename TileDataSrc::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 31
+      }
+    },
+    {
+      "name": "TREMS",
+      "slug": "trems",
+      "category": "Tile-scalar operations",
+      "subcategory": "Arithmetic",
+      "display_title": "TREMS - Compute the remainder of a tile and a scalar",
+      "summary": "Elementwise remainder with a scalar: `remainder(src, scalar)`.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value; PTOAS form also declares tmp tile"
+        }
+      ],
+      "data_types": [
+        "F32",
+        "S32",
+        "U32",
+        "F16",
+        "S16",
+        "U16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc, typename TileDataTmp>\nPTO_INST void TREMS(TileDataDst &dst, TileDataSrc &src, typename TileDataSrc::DType scalar,\n                           TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 32
+      }
+    },
+    {
+      "name": "TANDS",
+      "slug": "tands",
+      "category": "Tile-scalar operations",
+      "subcategory": "Bitwise, comparison, and shifts",
+      "display_title": "TANDS - Bitwise-AND a tile with a scalar",
+      "summary": "Elementwise bitwise AND of a tile and a scalar.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TANDS(TileDataDst &dst, TileDataSrc &src, typename TileDataDst::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 33
+      }
+    },
+    {
+      "name": "TORS",
+      "slug": "tors",
+      "category": "Tile-scalar operations",
+      "subcategory": "Bitwise, comparison, and shifts",
+      "display_title": "TORS - Bitwise-OR a tile with a scalar",
+      "summary": "Elementwise bitwise OR of a tile and a scalar.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TORS(TileDataDst &dst, TileDataSrc &src, typename TileDataDst::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 34
+      }
+    },
+    {
+      "name": "TXORS",
+      "slug": "txors",
+      "category": "Tile-scalar operations",
+      "subcategory": "Bitwise, comparison, and shifts",
+      "display_title": "TXORS - Bitwise-XOR a tile with a scalar",
+      "summary": "Elementwise bitwise XOR of a tile and a scalar.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value; PTOAS form also declares tmp tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "U16",
+        "S16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc, typename TileDataTmp>\nPTO_INST void TXORS(TileDataDst &dst, TileDataSrc &src0, typename TileDataSrc::DType scalar, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 35
+      }
+    },
+    {
+      "name": "TCMPS",
+      "slug": "tcmps",
+      "category": "Tile-scalar operations",
+      "subcategory": "Bitwise, comparison, and shifts",
+      "display_title": "TCMPS - Compare a tile with a scalar into a predicate mask",
+      "summary": "Compare a tile against a scalar and write per-element comparison results.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst predicate/mask tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar + CmpMode attr"
+        }
+      ],
+      "data_types": [
+        "Input: S32",
+        "F32",
+        "F16",
+        "U16",
+        "S16; output mask: U32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename T>\nPTO_INST void TCMPS(TileDataDst& dst, TileDataSrc0& src0, T src1, CmpMode cmpMode);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 36
+      }
+    },
+    {
+      "name": "TSELS",
+      "slug": "tsels",
+      "category": "Tile-scalar operations",
+      "subcategory": "Bitwise, comparison, and shifts",
+      "display_title": "TSELS - Select between a tile and a scalar with a predicate mask",
+      "summary": "Select between source tile and scalar using a mask tile (per-element selection for source tile).",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst (output; TileDataDst)"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "mask (arg; TileDataMask)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src (input; TileDataSrc)"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "tmp (tmp; TileDataTmp); scalar (attr; typename TileDataSrc::DType)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent; see public signature"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataMask, typename TileDataSrc, typename TileDataTmp>\nPTO_INST void TSELS(TileDataDst &dst, TileDataMask &mask, TileDataSrc &src, TileDataTmp &tmp, typename TileDataSrc::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 37
+      }
+    },
+    {
+      "name": "TSHLS",
+      "slug": "tshls",
+      "category": "Tile-scalar operations",
+      "subcategory": "Bitwise, comparison, and shifts",
+      "display_title": "TSHLS - Shift a tile left by a scalar count",
+      "summary": "Elementwise shift-left a tile by a scalar.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "S16",
+        "S8",
+        "U32",
+        "U16",
+        "U8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TSHLS(TileDataDst &dst, TileDataSrc &src, typename TileDataDst::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 38
+      }
+    },
+    {
+      "name": "TSHRS",
+      "slug": "tshrs",
+      "category": "Tile-scalar operations",
+      "subcategory": "Bitwise, comparison, and shifts",
+      "display_title": "TSHRS - Shift a tile right by a scalar count",
+      "summary": "Elementwise shift-right a tile by a scalar.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scalar value"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "S16",
+        "S8",
+        "U32",
+        "U16",
+        "U8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TSHRS(TileDataDst &dst, TileDataSrc &src, typename TileDataDst::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 39
+      }
+    },
+    {
+      "name": "TROWSUM",
+      "slug": "trowsum",
+      "category": "Reductions",
+      "subcategory": "Reduce rows to a column",
+      "display_title": "TROWSUM Row Sum Reduction",
+      "summary": "Reduce each row by summing across columns.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 1D tile, one value per row"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn, typename TileDataTmp>\nPTO_INST void TROWSUM(TileDataOut &dst, TileDataIn &src, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 40
+      }
+    },
+    {
+      "name": "TROWPROD",
+      "slug": "trowprod",
+      "category": "Reductions",
+      "subcategory": "Reduce rows to a column",
+      "display_title": "TROWPROD Row Product Reduction",
+      "summary": "Reduce each row by multiplying across columns.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst column/vector tile, one value per row"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tmp tile for accumulation/index tracking"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32",
+        "S32",
+        "S16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn, typename TileDataTmp>\nPTO_INST void TROWPROD(TileDataOut &dst, TileDataIn &src, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 41
+      }
+    },
+    {
+      "name": "TROWMAX",
+      "slug": "trowmax",
+      "category": "Reductions",
+      "subcategory": "Reduce rows to a column",
+      "display_title": "TROWMAX Row Maximum Reduction",
+      "summary": "Reduce each row by taking the maximum across columns.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst column/vector tile, one value per row"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tmp tile for accumulation/index tracking"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn, typename TileDataTmp>\nPTO_INST void TROWMAX(TileDataOut &dst, TileDataIn &src, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 42
+      }
+    },
+    {
+      "name": "TROWMIN",
+      "slug": "trowmin",
+      "category": "Reductions",
+      "subcategory": "Reduce rows to a column",
+      "display_title": "TROWMIN Row Minimum Reduction",
+      "summary": "Reduce each row by taking the minimum across columns.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst column/vector tile, one value per row"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tmp tile for accumulation/index tracking"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn, typename TileDataTmp>\nPTO_INST void TROWMIN(TileDataOut &dst, TileDataIn &src, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 43
+      }
+    },
+    {
+      "name": "TROWARGMAX",
+      "slug": "trowargmax",
+      "category": "Reductions",
+      "subcategory": "Reduce rows to a column",
+      "display_title": "TROWARGMAX Row Argmax Reduction",
+      "summary": "Get the column index of the maximum element for each row.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst column-index vector tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tmp tile for accumulation/index tracking"
+        }
+      ],
+      "data_types": [
+        "src: F16",
+        "F32; dst index: U32",
+        "S32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn, typename TileDataTmp>\nPTO_INST void TROWARGMAX(TileDataOut& dst, TileDataIn& src, TileDataTmp& tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 44
+      }
+    },
+    {
+      "name": "TROWARGMIN",
+      "slug": "trowargmin",
+      "category": "Reductions",
+      "subcategory": "Reduce rows to a column",
+      "display_title": "TROWARGMIN Row Argmin Reduction",
+      "summary": "Get the column index of the minimum element for each row.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst column-index vector tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tmp tile for accumulation/index tracking"
+        }
+      ],
+      "data_types": [
+        "src: F16",
+        "F32; dst index: U32",
+        "S32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn, typename TileDataTmp>\nPTO_INST void TROWARGMIN(TileDataOut& dst, TileDataIn& src, TileDataTmp& tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 45
+      }
+    },
+    {
+      "name": "TCOLSUM",
+      "slug": "tcolsum",
+      "category": "Reductions",
+      "subcategory": "Reduce columns to a row",
+      "display_title": "TCOLSUM Column Sum Reduction",
+      "summary": "Reduce each column by summing across rows.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst row/vector tile, one value per column"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tmp tile for accumulation/index tracking"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32",
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "BF16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn>\nPTO_INST void TCOLSUM(TileDataOut &dst, TileDataIn &src);\ntemplate <typename TileDataOut, typename TileDataIn, typename TileDataTmp>\nPTO_INST void TCOLSUM(TileDataOut &dst, TileDataIn &src, TileDataTmp &tmp, bool isBinary);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 46
+      }
+    },
+    {
+      "name": "TCOLPROD",
+      "slug": "tcolprod",
+      "category": "Reductions",
+      "subcategory": "Reduce columns to a row",
+      "display_title": "TCOLPROD Column Product Reduction",
+      "summary": "Reduce each column by multiplying across rows.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst row/vector tile, one value per column"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "optional tmp/dependency attrs"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32",
+        "BF16",
+        "S16",
+        "U16",
+        "S32",
+        "U32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn>\nPTO_INST void TCOLPROD(TileDataOut &dst, TileDataIn &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 47
+      }
+    },
+    {
+      "name": "TCOLMAX",
+      "slug": "tcolmax",
+      "category": "Reductions",
+      "subcategory": "Reduce columns to a row",
+      "display_title": "TCOLMAX Column Maximum Reduction",
+      "summary": "Reduce each column by taking the maximum across rows.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst row/vector tile, one value per column"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "optional tmp/dependency attrs"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32",
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "BF16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn>\nPTO_INST void TCOLMAX(TileDataOut &dst, TileDataIn &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 48
+      }
+    },
+    {
+      "name": "TCOLMIN",
+      "slug": "tcolmin",
+      "category": "Reductions",
+      "subcategory": "Reduce columns to a row",
+      "display_title": "TCOLMIN Column Minimum Reduction",
+      "summary": "Reduce each column by taking the minimum across rows.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst row/vector tile, one value per column"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "optional tmp/dependency attrs"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32",
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "BF16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn>\nPTO_INST void TCOLMIN(TileDataOut &dst, TileDataIn &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 49
+      }
+    },
+    {
+      "name": "TCOLARGMAX",
+      "slug": "tcolargmax",
+      "category": "Reductions",
+      "subcategory": "Reduce columns to a row",
+      "display_title": "TCOLARGMAX Column Argmax Reduction",
+      "summary": "Get the row index of the maximum element for each column.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst row-index vector tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tmp tile for accumulation/index tracking"
+        }
+      ],
+      "data_types": [
+        "src: S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "F16",
+        "F32; dst index: U32",
+        "S32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn, typename TileDataTmp>\nPTO_INST void TCOLARGMAX(TileDataOut& dst, TileDataIn& src, TileDataTmp& tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 50
+      }
+    },
+    {
+      "name": "TCOLARGMIN",
+      "slug": "tcolargmin",
+      "category": "Reductions",
+      "subcategory": "Reduce columns to a row",
+      "display_title": "TCOLARGMIN Column Argmin Reduction",
+      "summary": "Get the row index of the minimum element for each column.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst row-index vector tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tmp tile for accumulation/index tracking"
+        }
+      ],
+      "data_types": [
+        "src: S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "F16",
+        "F32; dst index: U32",
+        "S32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn, typename TileDataTmp>\nPTO_INST void TCOLARGMIN(TileDataOut& dst, TileDataIn& src, TileDataTmp& tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 51
+      }
+    },
+    {
+      "name": "TROWEXPAND",
+      "slug": "trowexpand",
+      "category": "Broadcast operations",
+      "subcategory": "Row-wise broadcast",
+      "display_title": "TROWEXPAND Row Broadcast",
+      "summary": "Broadcast the first element of each source row across the destination row.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "row vector/source tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "F16",
+        "BF16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TROWEXPAND(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 52
+      }
+    },
+    {
+      "name": "TROWEXPANDADD",
+      "slug": "trowexpandadd",
+      "category": "Broadcast operations",
+      "subcategory": "Row-wise broadcast",
+      "display_title": "TROWEXPANDADD Row Broadcast Add",
+      "summary": "Row-wise broadcast add: add a per-row scalar vector.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "row vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TROWEXPANDADD(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);\ntemplate <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1, typename TileDataTmp>\nPTO_INST void TROWEXPANDADD(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 53
+      }
+    },
+    {
+      "name": "TROWEXPANDSUB",
+      "slug": "trowexpandsub",
+      "category": "Broadcast operations",
+      "subcategory": "Row-wise broadcast",
+      "display_title": "TROWEXPANDSUB Row Broadcast Subtract",
+      "summary": "Row-wise broadcast subtract: subtract a per-row scalar vector `src1` from each row of `src0`.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "row vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TROWEXPANDSUB(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);\ntemplate <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1, typename TileDataTmp>\nPTO_INST void TROWEXPANDSUB(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 54
+      }
+    },
+    {
+      "name": "TROWEXPANDMUL",
+      "slug": "trowexpandmul",
+      "category": "Broadcast operations",
+      "subcategory": "Row-wise broadcast",
+      "display_title": "TROWEXPANDMUL Row Broadcast Multiply",
+      "summary": "Row-wise broadcast multiply: multiply each row of `src0` by a per-row scalar vector `src1`.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "row vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TROWEXPANDMUL(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);\ntemplate <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1, typename TileDataTmp>\nPTO_INST void TROWEXPANDMUL(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 55
+      }
+    },
+    {
+      "name": "TROWEXPANDDIV",
+      "slug": "trowexpanddiv",
+      "category": "Broadcast operations",
+      "subcategory": "Row-wise broadcast",
+      "display_title": "TROWEXPANDDIV Row Broadcast Divide",
+      "summary": "Row-wise broadcast divide: divide each row of `src0` by a per-row scalar vector `src1`.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "row vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TROWEXPANDDIV(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);\ntemplate <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1, typename TileDataTmp>\nPTO_INST void TROWEXPANDDIV(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 56
+      }
+    },
+    {
+      "name": "TROWEXPANDMAX",
+      "slug": "trowexpandmax",
+      "category": "Broadcast operations",
+      "subcategory": "Row-wise broadcast",
+      "display_title": "TROWEXPANDMAX Row Broadcast Maximum",
+      "summary": "Row-wise broadcast max with a per-row scalar vector.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "row vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TROWEXPANDMAX(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);\ntemplate <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1, typename TileDataTmp>\nPTO_INST void TROWEXPANDMAX(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 57
+      }
+    },
+    {
+      "name": "TROWEXPANDMIN",
+      "slug": "trowexpandmin",
+      "category": "Broadcast operations",
+      "subcategory": "Row-wise broadcast",
+      "display_title": "TROWEXPANDMIN Row Broadcast Minimum",
+      "summary": "Row-wise broadcast min with a per-row scalar vector.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "row vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TROWEXPANDMIN(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);\ntemplate <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1, typename TileDataTmp>\nPTO_INST void TROWEXPANDMIN(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 58
+      }
+    },
+    {
+      "name": "TROWEXPANDEXPDIF",
+      "slug": "trowexpandexpdif",
+      "category": "Broadcast operations",
+      "subcategory": "Row-wise broadcast",
+      "display_title": "TROWEXPANDEXPDIF Row Broadcast Exponential Difference",
+      "summary": "Row-wise exp-diff: compute exp(src0 - src1) with per-row scalars.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "row vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TROWEXPANDEXPDIF(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);\ntemplate <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1, typename TileDataTmp>\nPTO_INST void TROWEXPANDEXPDIF(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 59
+      }
+    },
+    {
+      "name": "TCOLEXPAND",
+      "slug": "tcolexpand",
+      "category": "Broadcast operations",
+      "subcategory": "Column-wise broadcast",
+      "display_title": "TCOLEXPAND Column Broadcast",
+      "summary": "Broadcast the first element of each source column across the destination column.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "column vector/source tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "-"
+        }
+      ],
+      "data_types": [
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "F16",
+        "BF16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc>\nPTO_INST void TCOLEXPAND(TileDataDst &dst, TileDataSrc &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 60
+      }
+    },
+    {
+      "name": "TCOLEXPANDADD",
+      "slug": "tcolexpandadd",
+      "category": "Broadcast operations",
+      "subcategory": "Column-wise broadcast",
+      "display_title": "TCOLEXPANDADD Column Broadcast Add",
+      "summary": "Column-wise broadcast add with per-column scalar vector.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "column vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TCOLEXPANDADD(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 61
+      }
+    },
+    {
+      "name": "TCOLEXPANDSUB",
+      "slug": "tcolexpandsub",
+      "category": "Broadcast operations",
+      "subcategory": "Column-wise broadcast",
+      "display_title": "TCOLEXPANDSUB Column Broadcast Subtract",
+      "summary": "Column-wise broadcast subtract: subtract a per-column scalar vector from each column.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "column vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TCOLEXPANDSUB(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 62
+      }
+    },
+    {
+      "name": "TCOLEXPANDMUL",
+      "slug": "tcolexpandmul",
+      "category": "Broadcast operations",
+      "subcategory": "Column-wise broadcast",
+      "display_title": "TCOLEXPANDMUL Column Broadcast Multiply",
+      "summary": "Column-wise broadcast multiply: multiply each column by a per-column scalar vector.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "column vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TCOLEXPANDMUL(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 63
+      }
+    },
+    {
+      "name": "TCOLEXPANDDIV",
+      "slug": "tcolexpanddiv",
+      "category": "Broadcast operations",
+      "subcategory": "Column-wise broadcast",
+      "display_title": "TCOLEXPANDDIV Column Broadcast Divide",
+      "summary": "Column-wise broadcast divide: divide each column by a per-column scalar vector.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "column vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TCOLEXPANDDIV(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 64
+      }
+    },
+    {
+      "name": "TCOLEXPANDMAX",
+      "slug": "tcolexpandmax",
+      "category": "Broadcast operations",
+      "subcategory": "Column-wise broadcast",
+      "display_title": "TCOLEXPANDMAX Column Broadcast Maximum",
+      "summary": "Column-wise broadcast max with per-column scalar vector.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "column vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TCOLEXPANDMAX(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 65
+      }
+    },
+    {
+      "name": "TCOLEXPANDMIN",
+      "slug": "tcolexpandmin",
+      "category": "Broadcast operations",
+      "subcategory": "Column-wise broadcast",
+      "display_title": "TCOLEXPANDMIN Column Broadcast Minimum",
+      "summary": "Column-wise broadcast min with per-column scalar vector.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "column vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TCOLEXPANDMIN(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 66
+      }
+    },
+    {
+      "name": "TCOLEXPANDEXPDIF",
+      "slug": "tcolexpandexpdif",
+      "category": "Broadcast operations",
+      "subcategory": "Column-wise broadcast",
+      "display_title": "TCOLEXPANDEXPDIF Column Broadcast Exponential Difference",
+      "summary": "Column-wise exp-diff: compute exp(src0 - src1) with per-column scalars.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "column vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TCOLEXPANDEXPDIF(TileDataDst &dst, TileDataSrc0 &src0, TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 67
+      }
+    },
+    {
+      "name": "TMATMUL",
+      "slug": "tmatmul",
+      "category": "Matrix operations",
+      "subcategory": "Matrix-matrix operations",
+      "display_title": "TMATMUL Matrix Multiply",
+      "summary": "Matrix multiply (GEMM) producing an accumulator/output tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "ACC destination"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "A matrix tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "B matrix tile"
+        }
+      ],
+      "data_types": [
+        "ACC S32 = S8xS8; ACC F32 = F16/BF16/F32 and selected FP8 pairs"
+      ],
+      "cxx_signatures": [
+        "template <typename TileRes, typename TileLeft, typename SharedTileRight>\nPTO_INST void TMATMUL(TileRes &cMatrix, TileLeft &aMatrix, SharedTileRight &bMatrix);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename SharedTileRight>\nPTO_INST void TMATMUL(TileRes &cMatrix, TileLeft &aMatrix, SharedTileRight &bMatrix);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 68
+      }
+    },
+    {
+      "name": "TMATMUL_BIAS",
+      "slug": "tmatmul_bias",
+      "category": "Matrix operations",
+      "subcategory": "Matrix-matrix operations",
+      "display_title": "TMATMUL_BIAS Matrix Multiply With Bias",
+      "summary": "Matrix multiply with bias add.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst C/acc tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "A/lhs tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "B/rhs tile + bias tile"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "optional ExtraTile (input ACC/bias/scale per opcode profile)"
+        }
+      ],
+      "data_types": [
+        "Same as TMATMUL; bias dtype matches ACC/result dtype"
+      ],
+      "cxx_signatures": [
+        "template <typename TileRes, typename TileLeft, typename SharedTileRight, typename TileBias>\nPTO_INST void TMATMUL_BIAS(TileRes &cMatrix, TileLeft &aMatrix, SharedTileRight &bMatrix, TileBias &biasData);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename SharedTileRight, typename TileBias>\nPTO_INST void TMATMUL_BIAS(TileRes &cMatrix, TileLeft &aMatrix, SharedTileRight &bMatrix, TileBias &biasData);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 69
+      }
+    },
+    {
+      "name": "TMATMUL_ACC",
+      "slug": "tmatmul_acc",
+      "category": "Matrix operations",
+      "subcategory": "Matrix-matrix operations",
+      "display_title": "TMATMUL_ACC Matrix Multiply With Accumulation",
+      "summary": "Matrix multiply with accumulator input (fused accumulate).",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "ACC destination"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "A/source tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "B/source tile"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "optional ExtraTile (input ACC/bias/scale per opcode profile)"
+        }
+      ],
+      "data_types": [
+        "Same as TMATMUL; input/output ACC dtype follows CUBE profile"
+      ],
+      "cxx_signatures": [
+        "template <typename TileRes, typename TileLeft, typename SharedTileRight>\nPTO_INST void TMATMUL_ACC(TileRes &cOutMatrix, TileRes &cInMatrix, TileLeft &aMatrix, SharedTileRight &bMatrix);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename SharedTileRight>\nPTO_INST void TMATMUL_ACC(TileRes &cOutMatrix, TileRes &cInMatrix, TileLeft &aMatrix, SharedTileRight &bMatrix);\ntemplate <AccPhase Phase = AccPhase::Unspecified, typename TileRes, typename TileLeft, typename SharedTileRight>\nPTO_INST void TMATMUL_ACC(TileRes &cMatrix, TileLeft &aMatrix, SharedTileRight &bMatrix);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 70
+      }
+    },
+    {
+      "name": "TMATMUL_MX",
+      "slug": "tmatmul_mx",
+      "category": "Matrix operations",
+      "subcategory": "Matrix-matrix operations",
+      "display_title": "TMATMUL_MX Mixed-Precision Matrix Multiply",
+      "summary": "Matrix multiply (GEMM) with additional scaling tiles for mixed-precision / quantized matmul on supported targets.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst C/acc tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "A/lhs tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "A scale tile + B/rhs tile + B scale tile"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "optional ExtraTile (input ACC/bias/scale per opcode profile)"
+        }
+      ],
+      "data_types": [
+        "MX profile-defined: source F16/BF16/F32 or FP8/FP4; scale/bias/ACC follow MX profile"
+      ],
+      "cxx_signatures": [
+        "template <typename TileRes, typename TileLeft, typename TileLeftScale, typename SharedTileRight, typename TileRightScale>\nPTO_INST void TMATMUL_MX(TileRes &cMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, SharedTileRight &bMatrix, TileRightScale &bScaleMatrix);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename TileLeftScale, typename SharedTileRight,\n          typename TileRightScale>\nPTO_INST void TMATMUL_MX(TileRes &cMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, SharedTileRight &bMatrix, TileRightScale &bScaleMatrix);\ntemplate <typename TileRes, typename TileLeft, typename TileLeftScale, typename SharedTileRight, typename TileRightScale>\nPTO_INST void TMATMUL_MX(TileRes &cOutMatrix, TileRes &cInMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, SharedTileRight &bMatrix, TileRightScale &bScaleMatrix);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename TileLeftScale, typename SharedTileRight,\n          typename TileRightScale>\nPTO_INST void TMATMUL_MX(TileRes &cOutMatrix, TileRes &cInMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, SharedTileRight &bMatrix, TileRightScale &bScaleMatrix);\ntemplate <typename TileRes, typename TileLeft, typename TileLeftScale, typename SharedTileRight, typename TileRightScale,\n          typename TileBias>\nPTO_INST void TMATMUL_MX(TileRes &cMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, SharedTileRight &bMatrix, TileRightScale &bScaleMatrix, TileBias &biasData);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename TileLeftScale, typename SharedTileRight,\n          typename TileRightScale, typename TileBias>\nPTO_INST void TMATMUL_MX(TileRes &cMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, SharedTileRight &bMatrix, TileRightScale &bScaleMatrix, TileBias &biasData);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 71
+      }
+    },
+    {
+      "name": "TGEMV",
+      "slug": "tgemv",
+      "category": "Matrix operations",
+      "subcategory": "Matrix-vector operations",
+      "display_title": "TGEMV General Matrix-Vector Multiply",
+      "summary": "General Matrix-Vector multiplication producing an accumulator/output tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst C/acc tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "A/lhs tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "B/rhs tile"
+        }
+      ],
+      "data_types": [
+        "ACC S32 = S8xS8; ACC F32 = F16/BF16/F32 and selected FP8 pairs"
+      ],
+      "cxx_signatures": [
+        "template <typename TileRes, typename TileLeft, typename TileRight>\nPTO_INST void TGEMV(TileRes &cMatrix, TileLeft &aMatrix, TileRight &bMatrix);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 72
+      }
+    },
+    {
+      "name": "TGEMV_BIAS",
+      "slug": "tgemv_bias",
+      "category": "Matrix operations",
+      "subcategory": "Matrix-vector operations",
+      "display_title": "TGEMV_BIAS GEMV With Bias",
+      "summary": "GEMV with bias add.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst C/acc tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "A/lhs tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "B/rhs tile + bias tile"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "optional ExtraTile (input ACC/bias/scale per opcode profile)"
+        }
+      ],
+      "data_types": [
+        "Same as TGEMV; bias dtype matches ACC/result dtype"
+      ],
+      "cxx_signatures": [
+        "template <typename TileRes, typename TileLeft, typename TileRight, typename TileBias>\nPTO_INST void TGEMV_BIAS(TileRes &cMatrix, TileLeft &aMatrix, TileRight &bMatrix, TileBias &biasData);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename TileRight, typename TileBias>\nPTO_INST void TGEMV_BIAS(TileRes &cMatrix, TileLeft &aMatrix, TileRight &bMatrix, TileBias &biasData);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 73
+      }
+    },
+    {
+      "name": "TGEMV_ACC",
+      "slug": "tgemv_acc",
+      "category": "Matrix operations",
+      "subcategory": "Matrix-vector operations",
+      "display_title": "TGEMV_ACC GEMV With Accumulation",
+      "summary": "GEMV with explicit accumulator input/output tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst C/acc tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "acc_in tile + A/lhs tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "B/rhs tile"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "optional ExtraTile (input ACC/bias/scale per opcode profile)"
+        }
+      ],
+      "data_types": [
+        "Same as TGEMV; input/output ACC dtype follows CUBE profile"
+      ],
+      "cxx_signatures": [
+        "template <typename TileRes, typename TileLeft, typename TileRight>\nPTO_INST void TGEMV_ACC(TileRes &cOutMatrix, TileRes &cInMatrix, TileLeft &aMatrix, TileRight &bMatrix);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename TileRight>\nPTO_INST void TGEMV_ACC(TileRes &cOutMatrix, TileRes &cInMatrix, TileLeft &aMatrix, TileRight &bMatrix);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 74
+      }
+    },
+    {
+      "name": "TGEMV_MX",
+      "slug": "tgemv_mx",
+      "category": "Matrix operations",
+      "subcategory": "Matrix-vector operations",
+      "display_title": "TGEMV_MX Mixed-Precision GEMV",
+      "summary": "GEMV with additional scaling tiles for mixed-precision / quantized matrix-vector compute.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst C/acc tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "A/lhs tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "A scale tile + B/rhs tile + B scale tile"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "optional ExtraTile (input ACC/bias/scale per opcode profile)"
+        }
+      ],
+      "data_types": [
+        "MX profile-defined: source F16/BF16/F32 or FP8/FP4; scale/bias/ACC follow MX profile"
+      ],
+      "cxx_signatures": [
+        "template <typename TileRes, typename TileLeft, typename TileLeftScale, typename TileRight, typename TileRightScale>\nPTO_INST void TGEMV_MX(TileRes &cMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, TileRight &bMatrix, TileRightScale &bScaleMatrix);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename TileLeftScale, typename TileRight,\n          typename TileRightScale>\nPTO_INST void TGEMV_MX(TileRes &cMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, TileRight &bMatrix, TileRightScale &bScaleMatrix);\ntemplate <typename TileRes, typename TileLeft, typename TileLeftScale, typename TileRight, typename TileRightScale>\nPTO_INST void TGEMV_MX(TileRes &cOutMatrix, TileRes &cInMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, TileRight &bMatrix, TileRightScale &bScaleMatrix);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename TileLeftScale, typename TileRight,\n          typename TileRightScale>\nPTO_INST void TGEMV_MX(TileRes &cOutMatrix, TileRes &cInMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, TileRight &bMatrix, TileRightScale &bScaleMatrix);\ntemplate <typename TileRes, typename TileLeft, typename TileLeftScale, typename TileRight, typename TileRightScale,\n          typename TileBias>\nPTO_INST void TGEMV_MX(TileRes &cMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, TileRight &bMatrix, TileRightScale &bScaleMatrix, TileBias &biasData);\ntemplate <AccPhase Phase, typename TileRes, typename TileLeft, typename TileLeftScale, typename TileRight,\n          typename TileRightScale, typename TileBias>\nPTO_INST void TGEMV_MX(TileRes &cMatrix, TileLeft &aMatrix, TileLeftScale &aScaleMatrix, TileRight &bMatrix, TileRightScale &bScaleMatrix, TileBias &biasData);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 75
+      }
+    },
+    {
+      "name": "TLOAD",
+      "slug": "tload",
+      "category": "Memory access",
+      "subcategory": "Regular memory access",
+      "display_title": "TLOAD: Load a global tensor view into a tile",
+      "summary": "Load data from a GlobalTensor (GM) into a Tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "global/partition-view src"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "base, stride, pad mode/value, init attrs"
+        }
+      ],
+      "data_types": [
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "S64",
+        "U64",
+        "F16",
+        "BF16",
+        "F32; selected FP8/FP4/e8m0 layout profiles"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData, typename GlobalData>\nPTO_INST void TLOAD(TileData &dst, GlobalData &src);\n\ntemplate <typename SharedTileData, typename GlobalData>\nPTO_INST void TLOAD(SharedTileData &shared_dst, GlobalData &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 76
+      }
+    },
+    {
+      "name": "TSTORE",
+      "slug": "tstore",
+      "category": "Memory access",
+      "subcategory": "Regular memory access",
+      "display_title": "TSTORE: Store a tile into a global tensor view",
+      "summary": "Store data from a Tile into a GlobalTensor (GM), optionally using atomic write or quantization parameters.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "global/partition-view dst"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "base, stride, optional preQuant scalar"
+        }
+      ],
+      "data_types": [
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "S64",
+        "U64",
+        "F16",
+        "BF16",
+        "F32; selected FP8/FP4/HiF8 layout profiles"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData, typename GlobalData,\n          AtomicType atomicType = AtomicType::AtomicNone>\nPTO_INST void TSTORE(GlobalData &dst, TileData &src);\n\ntemplate <typename TileData, typename GlobalData,\n          AtomicType atomicType = AtomicType::AtomicNone>\nPTO_INST void TSTORE(GlobalData &dst, TileData &src, uint64_t preQuantScalar);\n\ntemplate <typename GlobalData, typename SharedTileData>\nPTO_INST void TSTORE(GlobalData &dst, const SharedTileData &shared_src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 77
+      }
+    },
+    {
+      "name": "TPREFETCH",
+      "slug": "tprefetch",
+      "category": "Memory access",
+      "subcategory": "Regular memory access",
+      "display_title": "TPREFETCH: Hint a future global-to-tile load",
+      "summary": "Prefetch data from global memory into a tile-local cache/buffer (hint).",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile/cache target"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "GM source address"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "address/layout attrs"
+        }
+      ],
+      "data_types": [
+        "Same element dtype set as TLOAD profile; src/dst element size must match"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData, typename GlobalData>\nPTO_INST void TPREFETCH(TileData &dst, GlobalData &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 78
+      }
+    },
+    {
+      "name": "MGATHER",
+      "slug": "mgather",
+      "category": "Memory access",
+      "subcategory": "Indexed memory access",
+      "display_title": "MGATHER: Gather global memory elements into a tile",
+      "summary": "Gather-load elements from global memory into a tile using per-element indices.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "global memory/partition-view src"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "indexes tile"
+        }
+      ],
+      "data_types": [
+        "data: U8",
+        "S8",
+        "U16",
+        "S16",
+        "U32",
+        "S32",
+        "F16",
+        "BF16",
+        "F32; index: S32",
+        "U32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDst, typename GlobalData, typename TileInd>\nPTO_INST void MGATHER(TileDst &dst, GlobalData &src, TileInd &indexes);\n\ntemplate <typename TileDst, typename GlobalData, typename TileInd, typename TileMask>\nPTO_INST void MGATHER_MASK(TileDst &dst, GlobalData &src, TileInd &indexes, TileMask &mask);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 79
+      }
+    },
+    {
+      "name": "MSCATTER",
+      "slug": "mscatter",
+      "category": "Memory access",
+      "subcategory": "Indexed memory access",
+      "display_title": "MSCATTER: Scatter tile elements into global memory",
+      "summary": "Scatter-store elements from a tile into global memory using per-element indices.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "global memory/partition-view dst"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "indexes tile"
+        }
+      ],
+      "data_types": [
+        "data: S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "F16",
+        "BF16",
+        "F32; index: S32",
+        "U32"
+      ],
+      "cxx_signatures": [
+        "template <typename GlobalData, typename TileSrc, typename TileInd>\nPTO_INST void MSCATTER(GlobalData &dst, TileSrc &src, TileInd &indexes);\n\ntemplate <typename GlobalData, typename TileSrc, typename TileInd, typename TileMask>\nPTO_INST void MSCATTER_MASK(GlobalData &dst, TileSrc &src, TileInd &indexes, TileMask &mask);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 80
+      }
+    },
+    {
+      "name": "TEXPANDS",
+      "slug": "texpands",
+      "category": "Transform and utility operations",
+      "subcategory": "Initialization",
+      "display_title": "TEXPANDS: Broadcast a scalar into a tile",
+      "summary": "Broadcast a scalar into a destination tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst 2D tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 2D tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "column vector src1 tile"
+        }
+      ],
+      "data_types": [
+        "U8",
+        "S8",
+        "U16",
+        "S16",
+        "U32",
+        "S32",
+        "F16",
+        "BF16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData>\nPTO_INST void TEXPANDS(TileData &dst, typename TileData::DType scalar);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 81
+      }
+    },
+    {
+      "name": "TCI",
+      "slug": "tci",
+      "category": "Transform and utility operations",
+      "subcategory": "Initialization",
+      "display_title": "TCI: Create a contiguous index tile",
+      "summary": "Generate a contiguous integer sequence into a destination tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst sequence tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "start scalar via B.IOR"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "descending attr"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "U32",
+        "S16",
+        "U16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData, typename T, int descending>\nPTO_INST void TCI(TileData &dst, T start);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 82
+      }
+    },
+    {
+      "name": "TTRI",
+      "slug": "ttri",
+      "category": "Transform and utility operations",
+      "subcategory": "Initialization",
+      "display_title": "TTRI: Build a triangular mask tile",
+      "summary": "Generate a triangular (lower/upper) mask tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst triangular mask tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "diagonal scalar via B.IOR"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "upper/lower attr"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "U32",
+        "S16",
+        "U16",
+        "S8",
+        "U8",
+        "F16",
+        "BF16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData, int isUpperOrLower>\nPTO_INST void TTRI(TileData &dst, int diagonal);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 83
+      }
+    },
+    {
+      "name": "TFILLPAD",
+      "slug": "tfillpad",
+      "category": "Transform and utility operations",
+      "subcategory": "Initialization",
+      "display_title": "TFILLPAD: Fill invalid tile padding",
+      "summary": "Copy+pad a tile outside the valid region with a compile-time pad value.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst padded tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "PadValue attr via B.DATR"
+        }
+      ],
+      "data_types": [
+        "1/2/4-byte element types; src/dst same size (S/U8",
+        "S/U16",
+        "F16/BF16",
+        "S/U32/F32)"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData, PadValue PadVal = PadValue::Zero>\nPTO_INST void TFILLPAD(TileData &dst, TileData &src);\n\ntemplate <typename DstTileData, typename SrcTileData>\nPTO_INST void TFILLPAD(DstTileData &dst, SrcTileData &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 84
+      }
+    },
+    {
+      "name": "TCVT",
+      "slug": "tcvt",
+      "category": "Transform and utility operations",
+      "subcategory": "Data conversion",
+      "display_title": "TCVT: Convert tile element type",
+      "summary": "Elementwise type conversion with a specified rounding mode.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile (converted dtype)"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "round/sat attrs via B.DATR"
+        }
+      ],
+      "data_types": [
+        "Conversions among S8/U8/S16/U16/S32/U32/S64",
+        "F16/BF16/F32",
+        "FP8/FP4/e8m0; exact pair depends on RoundMode/SaturationMode"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataD, typename TileDataS>\nPTO_INST void TCVT(TileDataD &dst, TileDataS &src, RoundMode mode,\n                   SaturationMode satMode);\n\ntemplate <typename TileDataD, typename TileDataS>\nPTO_INST void TCVT(TileDataD &dst, TileDataS &src, RoundMode mode);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 85
+      }
+    },
+    {
+      "name": "TQUANT",
+      "slug": "tquant",
+      "category": "Transform and utility operations",
+      "subcategory": "Data conversion",
+      "display_title": "TQUANT: Quantize tile values",
+      "summary": "Quantize a tile (e.g. FP32 to FP8) producing exponent/scaling/max outputs.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst quantized tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scale/exp/max metadata tile(s)"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "optional offset/scaling/index tile per quant profile"
+        }
+      ],
+      "data_types": [
+        "INT8: F32 -> S8/U8; MXFP8: F32/BF16/F16 -> FP8(e4m3); MXFP4: BF16/F16 -> FP4(e2m1x2)"
+      ],
+      "cxx_signatures": [
+        "template <auto quant_type, typename TileDataOut, typename TileDataSrc,\n          typename TileDataExp, typename TileDataMax>\nPTO_INST void TQUANT(TileDataOut &dst, TileDataSrc &src, TileDataExp *exp,\n                     TileDataMax *max, TileDataSrc *scaling);\n\ntemplate <auto quant_type, auto store_mode, typename TileDataOut,\n          typename TileDataSrc, typename TileDataExp, typename TileDataMax,\n          typename TileDataIdx>\nPTO_INST void TQUANT(TileDataOut &dst, TileDataSrc &src, TileDataExp *exp,\n                     TileDataMax *max, TileDataSrc *scaling,\n                     TileDataExp *exp_zz, TileDataIdx *vgather_idx);\n\ntemplate <auto quant_type, typename TileDataOut, typename TileDataSrc,\n          typename TileDataPara>\nPTO_INST void TQUANT(TileDataOut &dst, TileDataSrc &src, TileDataPara &scale,\n                     TileDataPara *offset = nullptr);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 86
+      }
+    },
+    {
+      "name": "TDEQUANT",
+      "slug": "tdequant",
+      "category": "Transform and utility operations",
+      "subcategory": "Data conversion",
+      "display_title": "TDEQUANT: Dequantize tile values",
+      "summary": "Dequantize an integer tile into a floating-point tile using scale and offset tiles.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst dequantized tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src quantized tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "scale tile"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "offset tile"
+        }
+      ],
+      "data_types": [
+        "src: S8 or S16; dst/scale/offset: F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataSrc, typename TileDataScale>\nPTO_INST void TDEQUANT(TileDataOut &dst, TileDataSrc &src,\n                       TileDataScale &scale, TileDataScale *offset = nullptr);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 87
+      }
+    },
+    {
+      "name": "TEXTRACT",
+      "slug": "textract",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TEXTRACT: Extract a sub-tile region",
+      "summary": "Extract a sub-tile from a source tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst sub-tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "indexRow/indexCol attrs via B.IOR"
+        }
+      ],
+      "data_types": [
+        "src/dst same dtype: S8",
+        "HiF8",
+        "FP8(e5m2/e4m3/e8m0)",
+        "F16",
+        "BF16",
+        "F32",
+        "FP4(e2m1x2/e1m2x2)"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTileData, typename SrcTileData>\nPTO_INST void TEXTRACT(DstTileData &dst, SrcTileData &src,\n                       uint16_t indexRow = 0, uint16_t indexCol = 0);\n\ntemplate <typename DstTileData, typename SrcTileData, ReluPreMode reluMode>\nPTO_INST void TEXTRACT(DstTileData &dst, SrcTileData &src,\n                       uint16_t indexRow, uint16_t indexCol);\n\ntemplate <typename DstTileData, typename SrcTileData,\n          ReluPreMode reluMode = ReluPreMode::NoRelu>\nPTO_INST void TEXTRACT(DstTileData &dst, SrcTileData &src,\n                       uint64_t preQuantScalar,\n                       uint16_t indexRow, uint16_t indexCol);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 88
+      }
+    },
+    {
+      "name": "TINSERT",
+      "slug": "tinsert",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TINSERT: Insert a sub-tile region",
+      "summary": "Insert a sub-tile into a destination tile at an (indexRow, indexCol) offset.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src sub-tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "indexRow/indexCol attrs via B.IOR"
+        }
+      ],
+      "data_types": [
+        "src/dst same dtype: S8",
+        "HiF8",
+        "FP8(e5m2/e4m3/e8m0)",
+        "F16",
+        "BF16",
+        "F32",
+        "S32",
+        "FP4(e2m1x2/e1m2x2)"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTileData, typename SrcTileData>\nPTO_INST void TINSERT(DstTileData &dst, SrcTileData &src,\n                      uint16_t indexRow, uint16_t indexCol);\n\ntemplate <typename DstTileData, typename SrcTileData, ReluPreMode reluMode>\nPTO_INST void TINSERT(DstTileData &dst, SrcTileData &src,\n                      uint16_t indexRow, uint16_t indexCol);\n\ntemplate <typename DstTileData, typename SrcTileData,\n          ReluPreMode reluMode = ReluPreMode::NoRelu>\nPTO_INST void TINSERT(DstTileData &dst, SrcTileData &src,\n                      uint64_t preQuantScalar,\n                      uint16_t indexRow, uint16_t indexCol);\n\ntemplate <TInsertMode mode, typename DstTileData, typename SrcTileData>\nPTO_INST void TINSERT(DstTileData &dst, SrcTileData &src,\n                      uint32_t indexRow = 0, uint32_t indexCol = 0);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 89
+      }
+    },
+    {
+      "name": "TGATHER",
+      "slug": "tgather",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TGATHER: Gather elements within a tile",
+      "summary": "Gather/select elements using either an index tile or a compile-time mask pattern.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst gathered tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "index/mask tile"
+        }
+      ],
+      "data_types": [
+        "index gather data: S16",
+        "U16",
+        "S32",
+        "U32",
+        "F16",
+        "F32; index: S16",
+        "U16",
+        "S32",
+        "U32; mask gather also S8",
+        "U8",
+        "BF16",
+        "FP8(e4m3/e5m2)",
+        "HiF8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataD, typename TileDataS0,\n          typename TileDataS1, typename TileDataTmp>\nPTO_INST void TGATHER(TileDataD &dst, TileDataS0 &src0,\n                      TileDataS1 &src1, TileDataTmp &tmp);\n\ntemplate <typename DstTileData, typename SrcTileData, MaskPattern maskPattern>\nPTO_INST void TGATHER(DstTileData &dst, SrcTileData &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 90
+      }
+    },
+    {
+      "name": "TSCATTER",
+      "slug": "tscatter",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TSCATTER: Scatter elements within a tile",
+      "summary": "Scatter rows of a source tile into a destination tile using per-element row indices.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst scattered tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "index tile"
+        }
+      ],
+      "data_types": [
+        "data: S32",
+        "S16",
+        "S8",
+        "F16",
+        "F32",
+        "U32",
+        "U16",
+        "U8",
+        "BF16; index: S16",
+        "S32",
+        "U16",
+        "U32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataD, typename TileDataS, typename TileDataI>\nPTO_INST void TSCATTER(TileDataD &dst, TileDataS &src, TileDataI &indexes);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 91
+      }
+    },
+    {
+      "name": "TCONCAT",
+      "slug": "tconcat",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TCONCAT: Concatenate tiles by columns",
+      "summary": "Concatenate two source tiles along the column dimension into a destination tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile; concat axis attrs"
+        }
+      ],
+      "data_types": [
+        "data: S32",
+        "U32",
+        "F32",
+        "S16",
+        "U16",
+        "F16",
+        "BF16",
+        "U8",
+        "S8; index variant idx: S/U8",
+        "S/U16",
+        "S/U32"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTileData, typename Src0TileData, typename Src1TileData>\nPTO_INST void TCONCAT(DstTileData &dst, Src0TileData &src0, Src1TileData &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 92
+      }
+    },
+    {
+      "name": "TTRANS",
+      "slug": "ttrans",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TTRANS: Transpose a tile",
+      "summary": "Transpose with an implementation-defined temporary tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst transposed tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tmp tile"
+        }
+      ],
+      "data_types": [
+        "U32",
+        "S32",
+        "F32",
+        "U16",
+        "S16",
+        "F16",
+        "BF16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc, typename TileDataTmp>\nPTO_INST void TTRANS(TileDataDst &dst, TileDataSrc &src, TileDataTmp &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 93
+      }
+    },
+    {
+      "name": "TIMG2COL",
+      "slug": "timg2col",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TIMG2COL: Materialize image windows as columns",
+      "summary": "Image-to-column transform for convolution-like workloads.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst im2col/Left tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src ConvTile/feature tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "posM/posK attrs via B.IOR"
+        }
+      ],
+      "data_types": [
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "F16",
+        "BF16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData, typename ConvTileData>\nPTO_INST void TIMG2COL(TileData &dst, ConvTileData &src,\n                       uint16_t posM = 0, uint16_t posK = 0);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 94
+      }
+    },
+    {
+      "name": "TMOV",
+      "slug": "tmov",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TMOV: Move data between tile registers",
+      "summary": "Move/copy between tiles, optionally applying implementation-defined conversion modes.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst (output; DstTileData)"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src (input; SrcTileData)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent; see public signature"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTileData, typename SrcTileData>\nPTO_INST void TMOV(DstTileData &dst, SrcTileData &src);\n\ntemplate <typename DstTileData, typename SrcTileData, ReluPreMode reluMode>\nPTO_INST void TMOV(DstTileData &dst, SrcTileData &src);\n\ntemplate <typename DstTileData, typename SrcTileData, AccToVecMode mode,\n          ReluPreMode reluMode = ReluPreMode::NoRelu>\nPTO_INST void TMOV(DstTileData &dst, SrcTileData &src);\n\ntemplate <typename DstTileData, typename SrcTileData, typename FpTileData,\n          AccToVecMode mode, ReluPreMode reluMode = ReluPreMode::NoRelu>\nPTO_INST void TMOV(DstTileData &dst, SrcTileData &src, FpTileData &fp);\n\ntemplate <typename DstTileData, typename SrcTileData,\n          ReluPreMode reluMode = ReluPreMode::NoRelu>\nPTO_INST void TMOV(DstTileData &dst, SrcTileData &src, uint64_t preQuantScalar);\n\ntemplate <typename DstTileData, typename SrcTileData, AccToVecMode mode,\n          ReluPreMode reluMode = ReluPreMode::NoRelu>\nPTO_INST void TMOV(DstTileData &dst, SrcTileData &src, uint64_t preQuantScalar);\n\nTMOV<SharedMove::Insert>(shared, local_fragment);\nTMOV<SharedMove::Publish>(shared, full_local_value);\nTMOV<SharedMove::Extract>(local_fragment, shared);\nTMOV<SharedMove::Broadcast>(full_local_copy, shared);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 95
+      }
+    },
+    {
+      "name": "TGATHERB",
+      "slug": "tgatherb",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TGATHERB: Gather tile elements by offsets",
+      "summary": "Gather elements using byte offsets.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst (output; TileDataDst)"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src (input; TileDataSrc)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "offset (attr; TileDataOffset)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent; see public signature"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc, typename TileDataOffset>\nPTO_INST void TGATHERB(TileDataDst &dst, TileDataSrc &src, TileDataOffset &offset);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 96
+      }
+    },
+    {
+      "name": "TDEINTERLEAVE",
+      "slug": "tdeinterleave",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TDEINTERLEAVE: Split interleaved tile columns",
+      "summary": "De-interleave one or two source tiles into an even-position destination and an odd-position destination. This is the inverse of TINTERLEAVE.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst1, dst0 tiles"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src1 tile (two-src) / src tile (single-src)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src0 tile (two-src form; None single-src)"
+        }
+      ],
+      "data_types": [
+        "DType ∈ {int32",
+        "uint32",
+        "float",
+        "int16",
+        "uint16",
+        "half",
+        "bfloat16_t",
+        "uint8",
+        "int8}; all tiles same DType; row-major; validCols even"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTile, typename SrcTile>\nPTO_INST void TDEINTERLEAVE(DstTile &even_dst, DstTile &odd_dst,\n                            SrcTile &packed_src);\n\ntemplate <typename DstTile, typename SrcTile>\nPTO_INST void TDEINTERLEAVE(DstTile &even_dst, DstTile &odd_dst,\n                            SrcTile &packed_src0, SrcTile &packed_src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 97
+      }
+    },
+    {
+      "name": "TINTERLEAVE",
+      "slug": "tinterleave",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TINTERLEAVE: Pack two tiles into interleaved columns",
+      "summary": "Interleave even and odd source sequences into two destination tiles. This is the inverse of TDEINTERLEAVE.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst1, dst0 tiles"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src1 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src0 tile"
+        }
+      ],
+      "data_types": [
+        "src0/src1/dst0/dst1 same DType; row-major; validCols even"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTile, typename SrcTile>\nPTO_INST void TINTERLEAVE(DstTile &packed_dst0, DstTile &packed_dst1,\n                          SrcTile &even_src, SrcTile &odd_src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 98
+      }
+    },
+    {
+      "name": "TRESHAPE",
+      "slug": "treshape",
+      "category": "Transform and utility operations",
+      "subcategory": "Layout transformation",
+      "display_title": "TRESHAPE: Reinterpret tile shape with equal storage size",
+      "summary": "Reinterpret a tile as another tile type/shape while preserving the underlying bytes.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        }
+      ],
+      "data_types": [
+        "bitwise reinterpret (any dtype): sizeof(InElem)·InNumel == sizeof(OutElem)·OutNumel; Loc must match; no NoneBox<->boxed"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataOut, typename TileDataIn>\nPTO_INST void TRESHAPE(TileDataOut &dst, TileDataIn &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 99
+      }
+    },
+    {
+      "name": "TSORT",
+      "slug": "tsort",
+      "category": "Transform and utility operations",
+      "subcategory": "Sorting and histogram",
+      "display_title": "TSORT: Sort tile values with indexes",
+      "summary": "Sort each 32-element block of src together with the corresponding indices from idx, and write the sorted value-index pairs into dst.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst sorted value/index pairs"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src value tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "idx tile"
+        }
+      ],
+      "data_types": [
+        "values: F16",
+        "F32; idx: U32"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTileData, typename SrcTileData, typename IdxTileData>\nPTO_INST void TSORT(DstTileData &dst, SrcTileData &src, IdxTileData &idx);\n\ntemplate <typename DstTileData, typename SrcTileData, typename IdxTileData,\n          typename TmpTileData>\nPTO_INST void TSORT(DstTileData &dst, SrcTileData &src, IdxTileData &idx,\n                    TmpTileData &tmp);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 100
+      }
+    },
+    {
+      "name": "TMRGSORT",
+      "slug": "tmrgsort",
+      "category": "Transform and utility operations",
+      "subcategory": "Sorting and histogram",
+      "display_title": "TMRGSORT: Merge sorted tile streams",
+      "summary": "Merge sort for multiple sorted lists (implementation-defined element format and layout).",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst merged sorted list"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src list tile(s)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "blockLen or executed-count attrs"
+        }
+      ],
+      "data_types": [
+        "F16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTileData, typename TmpTileData, typename Src0TileData,\n          typename Src1TileData, typename Src2TileData, typename Src3TileData>\nPTO_INST void TMRGSORT(DstTileData &dst,\n                       MrgSortExecutedNumList &executedNumList,\n                       TmpTileData &tmp, Src0TileData &src0,\n                       Src1TileData &src1, Src2TileData &src2,\n                       Src3TileData &src3);\n\ntemplate <typename DstTileData, typename TmpTileData, typename Src0TileData,\n          typename Src1TileData, typename Src2TileData>\nPTO_INST void TMRGSORT(DstTileData &dst,\n                       MrgSortExecutedNumList &executedNumList,\n                       TmpTileData &tmp, Src0TileData &src0,\n                       Src1TileData &src1, Src2TileData &src2);\n\ntemplate <typename DstTileData, typename TmpTileData, typename Src0TileData,\n          typename Src1TileData, bool exhausted>\nPTO_INST void TMRGSORT(DstTileData &dst,\n                       MrgSortExecutedNumList &executedNumList,\n                       TmpTileData &tmp, Src0TileData &src0,\n                       Src1TileData &src1);\n\ntemplate <typename DstTileData, typename SrcTileData>\nPTO_INST void TMRGSORT(DstTileData &dst, SrcTileData &src, uint32_t blockLen);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 101
+      }
+    },
+    {
+      "name": "THISTOGRAM",
+      "slug": "thistogram",
+      "category": "Transform and utility operations",
+      "subcategory": "Sorting and histogram",
+      "display_title": "THISTOGRAM: Count values into bins",
+      "summary": "Accumulate histogram bin counts from source values using an index tile.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst histogram tile (uint32, R×256, 256 bins/row)"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "idx tile (uint8 cascaded filter)"
+        }
+      ],
+      "data_types": [
+        "src ∈ {uint16",
+        "uint32}; dst=uint32 (256 bins/row); idx=uint8; byte=k∈{0",
+        "1",
+        "2",
+        "3} (uint16 only 0/1)"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTileData, typename SrcTileData, typename IdxTileData>\nPTO_INST void THISTOGRAM(DstTileData &dst, SrcTileData &src,\n                         IdxTileData &idx, int byteId);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 102
+      }
+    },
+    {
+      "name": "TPARTADD",
+      "slug": "tpartadd",
+      "category": "Transform and utility operations",
+      "subcategory": "Partial-tile operations",
+      "display_title": "TPARTADD: Add partial tiles",
+      "summary": "Partial elementwise add with implementation-defined handling of mismatched valid regions.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "U8",
+        "S8",
+        "U16",
+        "S16",
+        "U32",
+        "S32",
+        "F16",
+        "F32",
+        "BF16"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TPARTADD(TileDataDst &dst, TileDataSrc0 &src0,\n                       TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 103
+      }
+    },
+    {
+      "name": "TPARTMUL",
+      "slug": "tpartmul",
+      "category": "Transform and utility operations",
+      "subcategory": "Partial-tile operations",
+      "display_title": "TPARTMUL: Multiply partial tiles",
+      "summary": "Partial elementwise multiply with implementation-defined handling of mismatched valid regions.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "S32",
+        "U32",
+        "F32",
+        "S16",
+        "U16",
+        "F16",
+        "BF16",
+        "U8",
+        "S8"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TPARTMUL(TileDataDst &dst, TileDataSrc0 &src0,\n                       TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 104
+      }
+    },
+    {
+      "name": "TPARTMAX",
+      "slug": "tpartmax",
+      "category": "Transform and utility operations",
+      "subcategory": "Partial-tile operations",
+      "display_title": "TPARTMAX: Select partial maxima",
+      "summary": "Partial elementwise max with implementation-defined handling of mismatched valid regions.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "F16",
+        "BF16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TPARTMAX(TileDataDst &dst, TileDataSrc0 &src0,\n                       TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 105
+      }
+    },
+    {
+      "name": "TPARTMIN",
+      "slug": "tpartmin",
+      "category": "Transform and utility operations",
+      "subcategory": "Partial-tile operations",
+      "display_title": "TPARTMIN: Select partial minima",
+      "summary": "Partial elementwise min with implementation-defined handling of mismatched valid regions.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst tile"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 tile"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 tile"
+        }
+      ],
+      "data_types": [
+        "S8",
+        "U8",
+        "S16",
+        "U16",
+        "S32",
+        "U32",
+        "F16",
+        "BF16",
+        "F32"
+      ],
+      "cxx_signatures": [
+        "template <typename TileDataDst, typename TileDataSrc0, typename TileDataSrc1>\nPTO_INST void TPARTMIN(TileDataDst &dst, TileDataSrc0 &src0,\n                       TileDataSrc1 &src1);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 106
+      }
+    },
+    {
+      "name": "TPARTARGMAX",
+      "slug": "tpartargmax",
+      "category": "Transform and utility operations",
+      "subcategory": "Partial-tile operations",
+      "display_title": "TPARTARGMAX: Select partial maxima and indexes",
+      "summary": "Select the maximum values and their indices across two partial tile inputs.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst (output; TileDataDst); dstIdx (output; TileDataDstIdx)"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 (input; TileDataSrc0)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 (input; TileDataSrc1)"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "src0Idx (input; TileDataSrc0Idx); src1Idx (input; TileDataSrc1Idx)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent; see public signature"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTile, typename SrcTile, typename DstIndexTile,\n          typename SrcIndexTile>\nPTO_INST void TPARTARGMAX(DstTile &values, SrcTile &lhs, SrcTile &rhs,\n                          DstIndexTile &indices, SrcIndexTile &lhs_indices,\n                          SrcIndexTile &rhs_indices);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 107
+      }
+    },
+    {
+      "name": "TPARTARGMIN",
+      "slug": "tpartargmin",
+      "category": "Transform and utility operations",
+      "subcategory": "Partial-tile operations",
+      "display_title": "TPARTARGMIN: Select partial minima and indexes",
+      "summary": "Select the minimum values and their indices across two partial tile inputs.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "dst (output; TileDataDst); dstIdx (output; TileDataDstIdx)"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "src0 (input; TileDataSrc0)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "src1 (input; TileDataSrc1)"
+        },
+        {
+          "role": "src2_or_attributes",
+          "description": "src0Idx (input; TileDataSrc0Idx); src1Idx (input; TileDataSrc1Idx)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent; see public signature"
+      ],
+      "cxx_signatures": [
+        "template <typename DstTile, typename SrcTile, typename DstIndexTile,\n          typename SrcIndexTile>\nPTO_INST void TPARTARGMIN(DstTile &values, SrcTile &lhs, SrcTile &rhs,\n                          DstIndexTile &indices, SrcIndexTile &lhs_indices,\n                          SrcIndexTile &rhs_indices);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 108
+      }
+    },
+    {
+      "name": "TPUSH",
+      "slug": "tpush",
+      "category": "Coordination and resources",
+      "subcategory": "Coordination and resources",
+      "display_title": "TPUSH: Push a tile into a pipe",
+      "summary": "Push a tile into a pipe or FIFO producer endpoint.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "pipe enqueue side effect"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "pipe (handle; Pipe)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tile/gmTensor (input object)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent control/interface API"
+      ],
+      "cxx_signatures": [
+        "template <typename Pipe, typename TileData>\nPTO_INST void TPUSH(Pipe &pipe, TileData &src);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 109
+      }
+    },
+    {
+      "name": "TPOP",
+      "slug": "tpop",
+      "category": "Coordination and resources",
+      "subcategory": "Coordination and resources",
+      "display_title": "TPOP: Pop a tile from a pipe",
+      "summary": "Pop a tile from a pipe or FIFO consumer endpoint.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "tile/gmTensor output from pipe"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "pipe (handle; Pipe)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "tile/gmTensor (output object)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent control/interface API"
+      ],
+      "cxx_signatures": [
+        "template <typename TileData, typename Pipe>\nPTO_INST void TPOP(TileData &dst, Pipe &pipe);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 110
+      }
+    },
+    {
+      "name": "TALLOC",
+      "slug": "talloc",
+      "category": "Coordination and resources",
+      "subcategory": "Coordination and resources",
+      "display_title": "TALLOC: Bind a pipe to global tensor storage",
+      "summary": "Associate a pipeline object with a global-tensor resource for the lifetime managed by the corresponding TFREE operation.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "pipe allocation side effect"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "pipe (handle; Pipe)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "gmTensor (backing storage; GlobalData)"
+        }
+      ],
+      "data_types": [
+        "Template-dependent control/interface API"
+      ],
+      "cxx_signatures": [
+        "template <typename Pipe, typename GlobalData>\nPTO_INST void TALLOC(Pipe &pipe, GlobalData &global_tensor);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 111
+      }
+    },
+    {
+      "name": "TFREE",
+      "slug": "tfree",
+      "category": "Coordination and resources",
+      "subcategory": "Coordination and resources",
+      "display_title": "TFREE: Release a pipe resource",
+      "summary": "Release the currently held pipe or FIFO slot back to the producer.",
+      "outputs": [
+        {
+          "role": "destination",
+          "description": "pipe free side effect"
+        }
+      ],
+      "inputs": [
+        {
+          "role": "src0",
+          "description": "pipe (handle; Pipe)"
+        },
+        {
+          "role": "src1_or_attributes",
+          "description": "gmTensor optional backing storage"
+        }
+      ],
+      "data_types": [
+        "Template-dependent control/interface API"
+      ],
+      "cxx_signatures": [
+        "template <typename Pipe>\nPTO_INST void TFREE(Pipe &pipe);"
+      ],
+      "provenance": {
+        "sheet": "Sheet1",
+        "row": 112
+      }
+    }
+  ]
+}

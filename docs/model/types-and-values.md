@@ -1,14 +1,29 @@
 # Types and Values
 
+The C++ model has scalar values, global tensor views, local tiles, and shared
+tiles. Treat all tiles as typed values. Do not treat tile IDs as pointers or
+physical register numbers.
+
+## Named Constants
+
+Examples use these names for profile-shaped quantities:
+
+```cpp
+static constexpr uint32_t kThreadsPerBlock = /* profile value */;
+static constexpr uint32_t kMinimumThreadFragmentBytes = /* profile value */;
+```
+
+The mapping page defines why those values hold for the current profile.
+
 ## Scalars
 
-Scalars include integer, floating-point, pointer, shape, stride, and mode
-values. Scalars are PE-local unless they are compile-time constants. The two
-identity intrinsics return `uint32_t` values.
+Scalars include integers, floating-point values, pointers, shapes, strides,
+layout tags, and mode tags. Scalars follow ordinary C++ control flow. When a
+scalar is derived from `get_thread_idx()`, its value may differ by thread.
 
 ## Global Tensors
 
-A global tensor carries:
+A global tensor is a typed view of external memory. Its descriptor carries:
 
 - base address;
 - element type;
@@ -17,64 +32,74 @@ A global tensor carries:
 - layout and padding rules;
 - valid region.
 
-`get_block_idx()` commonly selects a disjoint tensor slice before `TLOAD`.
+`TLOAD` reads a global tensor view and defines a tile. `TSTORE` consumes a tile
+and writes through a global tensor view. The view must describe the intended
+logical elements; padding bytes are not valid output unless the operation
+explicitly says so.
 
-## PE-Local Tiles
+## Local Tiles
 
-A PE-local tile is directly visible only to its owning PE. Its static type
-includes element type, logical shape, layout, location, and distribution.
+A local tile is visible only to the current thread. Its static type carries
+element type, shape, layout, location, and distribution.
 
 ```cpp
-using AQuarter = PETile<half, M / 4, K, Layout::RowMajor>;
+using AFragment = LocalTile<half, kRowsPerThread, kK, Layout::RowMajor>;
 ```
 
-The name denotes a logical value. The compiler assigns a tile ID and creates a
-new version for each definition.
+The C++ variable denotes a logical tile value. The compiler assigns a tile ID
+and creates a new version each time an operation defines that value.
 
 ## Shared Tiles
 
-A shared tile register is visible to all four PEs in one core and has four
-fixed regions. Its descriptor includes:
+A shared tile is a block-local tile value visible to participating threads.
+Its descriptor carries:
 
-- 8-bit architectural shared tile ID;
+- architectural shared tile ID;
 - logical byte size;
 - element type, shape, and layout;
 - defined-region mask;
-- physical version tag and readiness state.
+- physical version tag and readiness state managed by the implementation.
 
 ```cpp
-using SharedB = SharedTile<half, K, N, Layout::ColMajor>;
+using SharedRight = SharedTile<half, kK, kN, Layout::ColMajor>;
 ```
 
-Shared tiles are not pointers. They cannot be indexed by address, cast to a
-global tensor, or manually freed.
+Shared tiles are not addressable memory. They cannot be indexed by pointer,
+cast to global tensors, or manually freed.
 
-## Tile Sizes
+## Tile Sizes and Fragments
 
-The group model supports logical tile sizes:
+A full logical tile may be distributed into per-thread fragments or held as one
+shared tile value. The current minimum local fragment is
+`kMinimumThreadFragmentBytes`. If a distributed tile has one fragment per
+thread, its minimum block-wide payload is:
 
-```text
-512 B, 1 KB, 2 KB, 4 KB, 8 KB, 16 KB, 32 KB
+```cpp
+static constexpr uint32_t kMinimumBlockTileBytes =
+    kThreadsPerBlock * kMinimumThreadFragmentBytes;
 ```
 
-A distributed logical tile uses one quarter of its payload in each PE. A
-shared tile version retains the full logical size and fixed four-region
-mapping.
+The implementation may support larger tile sizes such as `512 B`, `1 KB`,
+`2 KB`, `4 KB`, `8 KB`, `16 KB`, and `32 KB`. Element type, shape, and layout
+still decide whether two operands are compatible; equal byte size alone is not
+enough.
 
 ## Definedness
 
-Definedness is tracked per PE region. A value with only PE0 and PE1 regions
-defined has mask `1100` using the manual's `{PE0, PE1, PE2, PE3}` display
-order. A consumer that requires a complete tile may read only mask `1111`.
+Definedness is tracked per shared-tile region. A partial shared tile may have
+only a subset of regions defined. A consumer that requires a complete shared
+tile, such as shared-right matrix multiplication, may read only a fully defined
+shared version.
+
+Published shared tile versions are immutable. To change the defined-region
+mask or payload, define a new version.
 
 ## Type Compatibility
 
-Two tile operands are compatible only when the intrinsic permits their:
+Two tile operands are compatible only when the operation permits their:
 
 - element types and accumulator promotion;
-- shapes and valid regions;
-- layouts and locations;
-- PE distributions;
-- local/shared register classes.
-
-Equal byte size alone does not make two tile types interchangeable.
+- full shape and valid region;
+- layout and location;
+- local or shared tile class;
+- distribution across participating threads.

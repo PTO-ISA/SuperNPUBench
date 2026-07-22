@@ -1,81 +1,88 @@
-# Global Memory and Tile Movement
+# Memory and Tile Movement
 
-## Memory Spaces
+The model has three tile-related storage spaces: global tensor views, local
+tiles, and shared tiles. Movement operations define or consume versions across
+those spaces.
 
-The one-level profile has three programmer-visible value locations:
+## Global Tensor Views
 
-1. global memory through `GlobalTensor` descriptors;
-2. PE-local tile registers;
-3. versioned shared tile registers within one core.
-
-Shared tile registers are not a memory space. They have no address and cannot
-alias global memory.
-
-## PE-Local `TLOAD` and `TSTORE`
+A global tensor view names external memory plus element type, shape, stride,
+layout, and valid region. A view is not loaded until a tile operation consumes
+it.
 
 ```cpp
-TLOAD(local_tile, global_slice);
-TSTORE(global_slice, local_tile);
+auto rows = partition_rows(total_rows, block, block_count,
+                           thread, kThreadsPerBlock);
+auto input_slice = input.slice_rows(rows.begin, rows.count);
 ```
 
-The transfer uses the calling PE's global pointer and local tile version.
-`get_block_idx()` and `get_thread_idx()` may select disjoint tensor offsets.
+Views used by different blocks or threads should be non-overlapping unless the
+kernel deliberately implements a reduction or scatter pattern with defined
+conflict behavior.
 
-## Shared-Destination `TLOAD`
+## `TLOAD`
+
+`TLOAD` reads a global tensor view and defines a tile version.
 
 ```cpp
-if (get_thread_idx() == 0) {
-  TLOAD(shared_tile, global_full_tile);
-}
+TLOAD(local_tile, input_slice);   // global -> local
+TLOAD(shared_tile, rhs_view);     // global -> shared, selected thread
 ```
 
-The issuing PE transfers the full logical shared payload. The compiler must
-prove exactly one issuer for that dynamic definition. The new shared version is
-fully defined.
+A local load defines one local version. A shared load defines one shared
+version. Padding bytes are not valid inputs unless the operation defines a
+padding behavior.
 
-## Shared-Source `TSTORE`
+## `TSTORE`
+
+`TSTORE` consumes a tile version and writes a global tensor view.
 
 ```cpp
-if (get_thread_idx() == 0) {
-  TSTORE(global_full_tile, shared_tile);
-}
+TSTORE(output_slice, local_tile);
+TSTORE(rhs_copy, shared_tile);
 ```
 
-For a partial shared value, each defined PE region may be stored to a
-non-overlapping global range. The source version itself is not modified.
+A store proves that the source payload has been accepted by the target memory
+contract. It does not by itself create a general cross-block synchronization
+point.
 
 ## `TMOV`
 
-`TMOV` moves bytes among compatible tile-register classes. Local-to-shared
-movement defines a new shared version. Shared-to-local movement defines a new
-local version. It does not change datatype or layout.
-
-## Tensor Partitioning by Core and PE
-
-For a tensor split along rows:
+`TMOV` moves bytes among compatible local and shared tile classes:
 
 ```cpp
-const uint32_t core = get_block_idx();
-const uint32_t pe = get_thread_idx();
-
-const uint32_t core_row = core * rows_per_core;
-const uint32_t pe_row = core_row + pe * rows_per_pe;
-auto slice = input.slice_rows(pe_row, rows_per_pe);
-TLOAD(local_input, slice);
+TMOV<SharedMove::Insert>(shared_parts, local_part);
+TMOV<SharedMove::Broadcast>(local_full, shared_full);
 ```
 
-The launch configuration supplies the number of cores and per-core work size.
-The identity intrinsics do not infer tensor geometry.
+`TMOV` preserves bytes. It does not reinterpret element type, convert layout,
+or resize a tile.
 
-## Global-Memory Conflicts
+## Partitioning
 
-Two operations conflict when their byte ranges overlap and at least one writes.
-The compiler may reorder non-conflicting operations subject to tile-version
-dependencies. Programs must avoid data races between PEs and cores.
+Use `get_block_idx()` for the block slice and `get_thread_idx()` for the
+thread fragment:
 
-## Cross-PE Data
+```cpp
+const uint32_t block = get_block_idx();
+const uint32_t thread = get_thread_idx();
 
-Use shared tile versions for register-sized cross-PE data. Global memory may be
-used for larger or persistent data, but visibility across independently
-executing cores requires a launch/runtime protocol outside the current PTO
-intrinsic set.
+RowSlice rows = partition_rows(total_rows, block, block_count, thread);
+TLOAD(local_input, input.slice_rows(rows.begin, rows.count));
+```
+
+The launch configuration supplies `block_count` and global shape. The kernel
+must keep computed ranges inside the tensor's valid region.
+
+## Reordering
+
+The compiler may reorder non-conflicting operations when tile-version,
+global-memory, and grouped-operation rules permit it. Programs must avoid data
+races between blocks and overlapping writes between threads unless the selected
+operation defines the conflict behavior.
+
+## Cross-Thread and Cross-Block Data
+
+Use shared tile versions for register-sized data exchange inside one block.
+Use global memory for persistent inputs and outputs. Communication between
+blocks belongs to the runtime or launch protocol rather than the tile dataflow.

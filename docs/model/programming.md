@@ -1,101 +1,93 @@
-# One-Level PTO Programming Model
+# C++ Programming Model
 
-The LinxISA PTO 0.57 programming model runs one program image on a group of
-four processing elements (PEs) inside each core. All four PEs begin at the same
-entry and initial program counter. After launch, each PE has its own program
-counter, frontend, reorder buffer, scalar state, and PE-local tile registers.
+Write kernels as ordinary C++ functions specialized by templates and launch
+metadata. Use block/thread identity to select data, tile types to describe
+storage, and tile operations to express movement and compute.
 
-## Execution Hierarchy
-
-```text
-launch
-  core 0 -> PE 0, PE 1, PE 2, PE 3
-  core 1 -> PE 0, PE 1, PE 2, PE 3
-  ...
-```
-
-`get_block_idx()` identifies the core. `get_thread_idx()` identifies the PE
-within that core. A PE-ID branch may send the four PEs down different control
-paths.
+## Kernel Skeleton
 
 ```cpp
-const uint32_t core = get_block_idx();
-const uint32_t pe = get_thread_idx();
+template <uint32_t kRows, uint32_t kCols>
+void kernel(GlobalTensor<float> input,
+            GlobalTensor<float> output,
+            uint32_t block_count) {
+  const uint32_t block = get_block_idx();
+  const uint32_t thread = get_thread_idx();
 
-if (pe == 0) {
-  load_group_metadata(core);
-} else {
-  compute_partition(core, pe);
+  RowSlice rows = partition_rows(kRows, block, block_count, thread);
+
+  LocalTile<float, kRowsPerThread, kCols> in;
+  LocalTile<float, kRowsPerThread, kCols> out;
+
+  TLOAD(in, input.slice_rows(rows.begin, rows.count));
+  compute(out, in);
+  TSTORE(output.slice_rows(rows.begin, rows.count), out);
 }
 ```
 
-This is not a lockstep warp. Divergent PEs may fetch, issue, and commit
-different instructions in the same cycle.
+The kernel is still C++. Use templates for static shapes, `if constexpr` for
+compile-time selection, and normal branches for runtime choices.
 
-## Architectural Values
+## Shape Rules
 
-| Value | Visibility | Lifetime |
-| --- | --- | --- |
-| Scalar register | One PE | PE instruction stream |
-| PE-local tile register | One PE | Tile-version lifetime |
-| Shared tile register | Four PEs in one core | Shared tile-version lifetime |
-| Global tensor | Addressable by the program | Memory allocation lifetime |
+Prefer compile-time tile shapes. A static shape lets the compiler assign tile
+storage, validate layout compatibility, and form named operation blocks.
 
-A logical tile may be distributed across four PE-local quarter fragments or
-materialized as one versioned shared tile register. Shared tile registers are
-register values, not addressable scratchpad storage.
+Runtime extents are still useful for tensor bounds and tails. Keep runtime
+extents in scalar variables and keep tile payload shapes in named constants:
 
-## Intrinsic Surface
-
-The public instruction set is the 111-operation allowlist in
-`PTO-ISA-LinxISA 0.57.numbers`, plus:
-
-- [`get_thread_idx()`](../intrinsics/get_thread_idx.md)
-- [`get_block_idx()`](../intrinsics/get_block_idx.md)
-
-The complete set is in the [PTO 0.57 intrinsic manual](../intrinsics/index.md).
-Operations outside that set are not part of this programming profile.
-
-## Dependency Model
-
-The compiler assigns logical tile IDs. Every destination defines a new tile
-version, and every source binds to a specific version. The superscalar machine
-may issue independent operations out of program order, but a consumer cannot
-issue until all bound source versions are ready.
-
-```text
-T#4.v1 = TLOAD(global_a)
-T#7.v2 = TLOAD(global_b)
-T#9.v1 = TADD(T#4.v1, T#7.v2)
-TSTORE(global_c, T#9.v1)
+```cpp
+static constexpr uint32_t kTileRows = 16;
+static constexpr uint32_t kTileCols = 16;
+static constexpr uint32_t kTileBytes =
+    kTileRows * kTileCols * sizeof(float);
 ```
 
-The source language does not wire completion tokens. Ordering follows tile
-versions, memory conflicts, and the intrinsic's group-participation contract.
+If a thread fragment would be smaller than
+`kMinimumThreadFragmentBytes`, pad the tile storage or choose a scalar/tail
+path. Do not read or store padded elements as if they were valid data.
 
-## Group Operations
+## Value Definitions
 
-Most elementwise operations execute independently on each PE's quarter. A
-group operation has a convergent dynamic instance: all four PEs eventually
-reach the same operation in the same dynamic order, although they need not
-arrive in the same cycle.
+Every tile destination defines a new version:
 
-The `TMATMUL` family is the primary group operation. Its left operand and
-destination are PE-local M-axis quarters; its right operand is a fully defined
-shared tile version.
+```cpp
+TLOAD(a0, a_global);
+TLOAD(b0, b_global);
+TADD(sum0, a0, b0);
+TMUL(scale0, sum0, alpha);
+TSTORE(out_global, scale0);
+```
 
-## Compiler Status
+The compiler may schedule `TLOAD(a0, ...)` and `TLOAD(b0, ...)` in either order
+because neither consumes the other. `TADD` must wait for both load versions,
+and `TMUL` must wait for the `TADD` version.
 
-The four-PE execution model and identity intrinsics are normative. Versioned
-shared tile registers and their `TLOAD`, `TSTORE`, `TMOV`, and `TMATMUL` forms
-are also normative architecture contracts, but current compilers are not yet
-required to lower them. Examples clearly distinguish architecture-level code
-from compile-checked one-level benchmark code.
+## Branches
 
-## Next Reading
+Branches may define different tile versions on different thread paths:
 
-1. [Group execution](group-execution.md)
-2. [Tiles and distribution](tiles-and-layouts.md)
-3. [Shared tile registers](shared-tile-registers.md)
-4. [Tile-ID superscalar execution](execution.md)
-5. [Group programming examples](../tutorials/group-programming.md)
+```cpp
+if (thread == 0) {
+  TLOAD(metadata, metadata_view);
+} else {
+  TLOAD(payload, payload_view);
+}
+```
+
+A later operation must consume only versions that are defined on the paths that
+reach it. When a grouped operation requires all participating threads, every
+participant must reach the same dynamic operation instance with compatible
+source versions.
+
+## Dependency Ordering
+
+Express ordering through tile values:
+
+- pass the produced tile to the consumer that needs it;
+- use a shared tile version when threads must exchange tile payload;
+- store to global memory only after the producing tile version exists;
+- rely on the runtime only for launch-level ordering outside the kernel.
+
+Do not write code whose correctness depends on instruction spacing, assumed
+latency, or physical tile-register reuse.

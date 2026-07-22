@@ -2,8 +2,8 @@
 
 ## Compiler Directory Is Rejected
 
-`COMPILER_DIR` must point to the directory containing the Linx binaries, not the
-LLVM build root:
+`COMPILER_DIR` must point to the directory containing the target binaries, not
+the LLVM build root:
 
 ```bash
 export COMPILER_DIR="$LINXISA_ROOT/compiler/llvm/build-linxisa-clang/bin"
@@ -25,8 +25,7 @@ make -n TESTCASE=<case> PLAT=linx COMPILER_DIR="$COMPILER_DIR"
 
 ## Sysroot or Runtime Symbols Are Missing
 
-Export the phase-b musl sysroot and confirm it contains target headers and
-libraries:
+Export the target sysroot and confirm it contains target headers and libraries:
 
 ```bash
 export LINX_SYSROOT="$LINXISA_ROOT/out/libc/musl/install/phase-b"
@@ -39,45 +38,45 @@ instead. Follow the exact benchmark command.
 
 ## Unsupported Tile Type or Layout
 
-Read the selected intrinsic page. Compare all source and destination element
-types, location roles, full/valid shapes, and layouts. An element count match is
-not sufficient for layout compatibility.
+Read the selected intrinsic page. Compare every source and destination element
+type, location role, full shape, valid shape, and layout. Equal element count
+does not imply compatibility.
 
-## Expected Block Is Missing
+## Expected Operation Block Is Missing
 
-Disassemble the object or ELF and search for the named block:
+Disassemble the object or ELF and search for the named operation block:
 
 ```bash
 "$COMPILER_DIR/llvm-objdump" -d output.elf | less
 ```
 
-Check that the build targets `linx64-linx-none-elf`, that `__linx` is defined by
-the target compiler, and that the intended compatibility/current PTO path was
-selected.
+Check the target triple, preprocessor defines, selected compatibility path, and
+compiler revision. A missing block often means the source took a scalar path or
+the target-specific overload was not selected.
 
-## QEMU Fails Before the Kernel
+## Simulator Fails Before the Kernel
 
-Confirm the QEMU executable, machine/CPU selection, target ELF ABI, and runtime
-image are from compatible LinxISA revisions. A userspace ELF and a bare-metal
-ELF require different launch paths.
+Confirm the simulator executable, machine selection, target ELF ABI, and
+runtime image come from compatible revisions. Userspace and bare-metal ELFs
+use different launch paths.
 
 ## Wrong Numeric Result
 
 Work outward from the first mismatching tile:
 
-1. tensor shape/stride and iterator offset;
-2. load layout and valid region;
-3. matrix left/right role or vector layout;
-4. reduction axis and expand direction;
-5. conversion rounding/packing/scaling;
-6. store layout and output extent;
-7. ownership, overlap, and synchronization.
+1. tensor shape, stride, and iterator offset;
+2. block and thread partition;
+3. load layout and valid region;
+4. matrix left/right role or vector layout;
+5. reduction axis and expand direction;
+6. conversion rounding, packing, or scaling;
+7. store layout, output extent, and overlapping writes.
 
 ## Data-Object Link Failure
 
-Control and sort cases generate or assemble data objects before linking. Run the
-manifest command from its own directory and do not bypass `pre_work`. The
-benchmark page lists every checked-in generator/data input.
+Control and sort cases generate or assemble data objects before linking. Run
+the manifest command from its own directory and do not bypass `pre_work`. The
+benchmark page lists every checked-in generator and data input.
 
 ## Catalog Looks Stale
 

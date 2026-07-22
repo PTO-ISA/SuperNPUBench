@@ -1,74 +1,86 @@
 # Tiles, Layouts, and Distribution
 
-## One Logical Tile
+Source code describes logical tiles. A distribution states how a logical tile
+maps to local thread fragments or to a shared tile value.
 
-Source code describes complete logical tiles. A distribution states how a
-logical value maps to the four PEs or to a shared tile register.
+## Logical and Local Shape
 
-```cpp
-Tile<half, 64, 64> logical_a;
+The full shape is the logical shape used by the operation. The local shape is
+the fragment shape visible to one thread when the tile is distributed.
+
+```text
+full_shape(A)  = [kM, kK]
+distribution  = RowShard<kThreadsPerBlock>
+local_shape(A) = [kM / kThreadsPerBlock, kK]
 ```
 
-With M-axis sharding, each PE owns a `16 x 64` local quarter.
+Runtime activity does not change the full shape or the per-thread fragment
+shape. Tail handling belongs in the valid region or in explicit scalar code.
 
 ## Distribution Kinds
 
 | Distribution | Meaning |
 | --- | --- |
-| `LinearShard4` | Four equal linear element ranges |
-| `AxisShard4<D>` | Four equal slices along dimension `D` |
-| `MShard4` | Matrix rows split across four PEs |
-| `Replicated4` | Same value in every PE-local tile |
-| `Partial<Mask>` | Only the selected PE regions are defined |
-| `Shared` | One core-local shared tile version |
+| `LinearShard<kThreadsPerBlock>` | Equal linear element ranges |
+| `AxisShard<Dim, kThreadsPerBlock>` | Equal slices along one dimension |
+| `RowShard<kThreadsPerBlock>` | Matrix rows split across threads |
+| `Replicated<kThreadsPerBlock>` | Same value in each local tile |
+| `Partial<Mask>` | Only selected shared regions are defined |
+| `Shared` | One block-local shared tile version |
 
 Elementwise operations normally preserve distribution. Reshape and transpose
-preserve ownership only when the mapping does not move elements between PE
-regions.
+preserve ownership only when the element mapping does not move data between
+thread fragments.
 
-## Full and Local Shapes
+## Minimum Fragment Bytes
 
-The type's full shape describes the logical tile. The local shape is derived
-from distribution:
+Each local fragment must carry at least
+`kMinimumThreadFragmentBytes` for the current profile. For distributed tiles,
+check the fragment size, not only the full tile size:
 
-```text
-full_shape(A)  = [64, 64]
-distribution  = MShard4
-local_shape(A) = [16, 64]
+```cpp
+static_assert(kLocalRows * kCols * sizeof(Element) >=
+              kMinimumThreadFragmentBytes);
 ```
 
-Runtime PE activity never changes the full shape or quarter size.
+When a tail has fewer valid elements, keep the tile storage padded and describe
+the valid subset separately.
 
-## Valid Regions
+## Layout
 
-The valid region identifies logical elements for the current operation. Padded
-storage may be larger. Unless an intrinsic defines padding behavior, an
-implementation must not treat padding as valid input or visible output.
+Layout describes how logical elements map to bytes. Common forms include
+row-major, column-major, and target-specific matrix layouts. Movement between
+local and shared tiles is byte preserving unless an operation explicitly
+converts layout.
 
-## Layouts
+## Global, Local, and Shared Tiles
 
-Layout describes element-to-byte mapping. Common forms include row-major,
-column-major, and target matrix fractal layouts. A movement between local and
-shared tile registers is byte preserving; it does not silently convert layout.
+Global tensors are memory views. Local tiles are per-thread values. Shared
+tiles are block-local values used for exchange and grouped operations.
+
+```cpp
+TLOAD(local_a, global_a_slice);       // global -> local
+TMOV<SharedMove::Insert>(shared_x, local_a);
+TMOV<SharedMove::Extract>(local_b, shared_x);
+TSTORE(global_out_slice, local_b);    // local -> global
+```
+
+Use shared tiles for register-sized exchange. Use global memory for persistent
+kernel inputs and outputs.
 
 ## Matrix Distribution
 
-For group matrix multiplication:
+For shared-right matrix multiplication:
 
-- `A` is `MShard4` in PE-local tile registers;
-- `B` is one fully defined shared tile register;
-- `C` is `MShard4` in PE-local accumulator or destination registers.
+- left operand: row-sharded local tile;
+- right operand: fully defined shared tile;
+- result operand: row-sharded local tile.
 
-Each PE computes:
+Each thread computes its own result fragment:
 
 ```text
-C.quarter[pe] = A.quarter[pe] x SharedB
+C.fragment[thread] = A.fragment[thread] x SharedB
 ```
 
-The model does not use split-K for this operation.
-
-## Partial Values
-
-A partial shared value may be moved or stored by defined region. It cannot be
-used as the right operand of group matrix multiplication. A new definition is
-required to change the defined-region mask; a published version is immutable.
+The operation does not imply split-K accumulation. Use an explicit reduction
+pattern when multiple fragments contribute to the same output element.

@@ -61,7 +61,7 @@ def check_migration(root: Path, errors: list[str]) -> None:
         path.relative_to(support_root).as_posix()
         for path in support_root.rglob("*.hpp")
     }
-    if len(support_headers) != 6 or actual_headers != declared_headers:
+    if len(support_headers) != 7 or actual_headers != declared_headers:
         errors.append(
             "PTO support-header set differs from migration.json: "
             f"missing={sorted(declared_headers - actual_headers)}, "

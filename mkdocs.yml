@@ -1,5 +1,5 @@
-site_name: SuperNPUBench Golden Manual
-site_description: Complete PTO programming, intrinsic, and benchmark manual for the superscalar Linx NPU
+site_name: SuperNPUBench C++ Programming Manual
+site_description: C++ programming, tile intrinsic, and kernel manual for a superscalar NPU
 site_url: https://pto-isa.github.io/SuperNPUBench/
 repo_url: https://github.com/PTO-ISA/SuperNPUBench
 repo_name: PTO-ISA/SuperNPUBench
@@ -48,53 +48,300 @@ theme:
 
 nav:
   - Home: index.md
-  - Start:
-      - Orientation: start/overview.md
-      - Build the toolchain: start/toolchain.md
-      - First tile program: start/first-program.md
-      - Build, run, disassemble: start/build-run.md
-  - Programming Model:
-      - One-level overview: model/programming.md
-      - Four-PE group execution: model/group-execution.md
-      - Types and values: model/types-and-values.md
-      - Tiles and distribution: model/tiles-and-layouts.md
+  - Getting Started:
+      - What you write: start/overview.md
+      - Set up the toolchain: start/toolchain.md
+      - Write your first tile kernel: start/first-program.md
+      - Build, run, and inspect code: start/build-run.md
+  - C++ Kernel Programming:
+      - C++ language patterns: tutorials/cpp-language.md
+      - Kernel functions and entry points: cpp/kernel-functions.md
+      - Compile-time shapes and templates: cpp/static-programming.md
+      - Loops, branches, and scalar control: cpp/control-flow.md
+      - Multidimensional tiling: tutorials/multidimensional-tiling.md
+      - Global tensor views: cpp/global-tensors.md
+      - Tile values and valid regions: cpp/tile-values.md
+      - Supported C++ patterns: cpp/supported-cpp.md
+  - Execution Model:
+      - Blocks and threads: model/programming.md
+      - Mapping to cores and PEs: model/group-execution.md
+      - Thread and block indexing: model/core-indexing.md
+      - Divergent and convergent control: model/control-flow.md
+      - Superscalar tile dependencies: model/execution.md
+      - Group operations: tutorials/group-programming.md
+  - Memory and Tile Model:
+      - Storage hierarchy: model/types-and-values.md
+      - Shape, layout, and valid regions: model/tiles-and-layouts.md
+      - Loading, storing, and moving tiles: model/memory.md
       - Shared tile registers: model/shared-tile-registers.md
-      - Tile-ID superscalar execution: model/execution.md
-      - Global memory and movement: model/memory.md
-      - Dependency and consistency: model/consistency.md
+      - Visibility and data races: model/consistency.md
       - Complete memory semantics: model/memory-semantics.md
-      - Core indexing: model/core-indexing.md
-      - Errors and undefined behavior: model/errors.md
-  - PTO Intrinsic Manual:
-      - LinxISA PTO 0.57 (113 entries): intrinsics/index.md
-      - Common conventions: intrinsics/conventions.md
-      - PTO assembly: intrinsics/assembly.md
-      - PE identity: intrinsics/get_thread_idx.md
-      - Core identity: intrinsics/get_block_idx.md
-  - Benchmarks:
-      - Catalog overview: benchmarks/index.md
-      - Broadcast: benchmarks/catalog/one-level/broadcast/index.md
-      - Concat: benchmarks/catalog/one-level/concat/index.md
-      - Control: benchmarks/catalog/one-level/control/index.md
-      - GELU: benchmarks/catalog/one-level/element-wise-gelu/index.md
-      - FlashAttention: benchmarks/catalog/one-level/fa/index.md
-      - Gather: benchmarks/catalog/one-level/gather/index.md
-      - Matmul: benchmarks/catalog/one-level/matmul/index.md
-      - PTO-Kernel imports: benchmarks/catalog/one-level/pto-kernels/index.md
-      - Reduce-max column: benchmarks/catalog/one-level/reduction-reducemax-col/index.md
-      - Reduce-max row: benchmarks/catalog/one-level/reduction-reducemax-row/index.md
-      - Reduce-sum column: benchmarks/catalog/one-level/reduction-reducesum-col/index.md
-      - Reduce-sum row: benchmarks/catalog/one-level/reduction-reducesum-row/index.md
-      - Sort: benchmarks/catalog/one-level/sort/index.md
-      - Transpose: benchmarks/catalog/one-level/transpose/index.md
-  - Tutorials:
-      - Group programming: tutorials/group-programming.md
-      - C++ language: tutorials/cpp-language.md
-      - Tile kernel: tutorials/tile-kernel.md
-      - Migrated PTO kernels: tutorials/migrated-pto-kernels.md
+      - Errors and diagnostics: model/errors.md
+  # INTRINSIC-NAV:START
+  - Intrinsic Reference:
+      - Start here: intrinsics/index.md
+      - Operand and tile conventions: intrinsics/conventions.md
+      - Execution identity:
+          - get_thread_idx: intrinsics/get_thread_idx.md
+          - get_block_idx: intrinsics/get_block_idx.md
+      - Element-wise binary operations:
+          - Arithmetic:
+              - TADD: intrinsics/tadd.md
+              - TSUB: intrinsics/tsub.md
+              - TMUL: intrinsics/tmul.md
+              - TMAX: intrinsics/tmax.md
+              - TMIN: intrinsics/tmin.md
+          - Bitwise and comparison:
+              - TAND: intrinsics/tand.md
+              - TOR: intrinsics/tor.md
+              - TXOR: intrinsics/txor.md
+              - TSHL: intrinsics/tshl.md
+              - TSHR: intrinsics/tshr.md
+              - TCMP: intrinsics/tcmp.md
+              - TSEL: intrinsics/tsel.md
+      - Element-wise unary operations:
+          - Logical and activation operations:
+              - TABS: intrinsics/tabs.md
+              - TNOT: intrinsics/tnot.md
+              - TNEG: intrinsics/tneg.md
+              - TRELU: intrinsics/trelu.md
+      - Mathematical functions:
+          - Mathematical functions:
+              - TDIV: intrinsics/tdiv.md
+              - TREM: intrinsics/trem.md
+              - TSQRT: intrinsics/tsqrt.md
+              - TLOG: intrinsics/tlog.md
+              - TRECIP: intrinsics/trecip.md
+              - TEXP: intrinsics/texp.md
+              - TRSQRT: intrinsics/trsqrt.md
+      - Tile-scalar operations:
+          - Arithmetic:
+              - TADDS: intrinsics/tadds.md
+              - TAXPY: intrinsics/taxpy.md
+              - TSUBS: intrinsics/tsubs.md
+              - TMULS: intrinsics/tmuls.md
+              - TDIVS: intrinsics/tdivs.md
+              - TMINS: intrinsics/tmins.md
+              - TMAXS: intrinsics/tmaxs.md
+              - TREMS: intrinsics/trems.md
+          - Bitwise, comparison, and shifts:
+              - TANDS: intrinsics/tands.md
+              - TORS: intrinsics/tors.md
+              - TXORS: intrinsics/txors.md
+              - TCMPS: intrinsics/tcmps.md
+              - TSELS: intrinsics/tsels.md
+              - TSHLS: intrinsics/tshls.md
+              - TSHRS: intrinsics/tshrs.md
+      - Reductions:
+          - Reduce rows to a column:
+              - TROWSUM: intrinsics/trowsum.md
+              - TROWPROD: intrinsics/trowprod.md
+              - TROWMAX: intrinsics/trowmax.md
+              - TROWMIN: intrinsics/trowmin.md
+              - TROWARGMAX: intrinsics/trowargmax.md
+              - TROWARGMIN: intrinsics/trowargmin.md
+          - Reduce columns to a row:
+              - TCOLSUM: intrinsics/tcolsum.md
+              - TCOLPROD: intrinsics/tcolprod.md
+              - TCOLMAX: intrinsics/tcolmax.md
+              - TCOLMIN: intrinsics/tcolmin.md
+              - TCOLARGMAX: intrinsics/tcolargmax.md
+              - TCOLARGMIN: intrinsics/tcolargmin.md
+      - Broadcast operations:
+          - Row-wise broadcast:
+              - TROWEXPAND: intrinsics/trowexpand.md
+              - TROWEXPANDADD: intrinsics/trowexpandadd.md
+              - TROWEXPANDSUB: intrinsics/trowexpandsub.md
+              - TROWEXPANDMUL: intrinsics/trowexpandmul.md
+              - TROWEXPANDDIV: intrinsics/trowexpanddiv.md
+              - TROWEXPANDMAX: intrinsics/trowexpandmax.md
+              - TROWEXPANDMIN: intrinsics/trowexpandmin.md
+              - TROWEXPANDEXPDIF: intrinsics/trowexpandexpdif.md
+          - Column-wise broadcast:
+              - TCOLEXPAND: intrinsics/tcolexpand.md
+              - TCOLEXPANDADD: intrinsics/tcolexpandadd.md
+              - TCOLEXPANDSUB: intrinsics/tcolexpandsub.md
+              - TCOLEXPANDMUL: intrinsics/tcolexpandmul.md
+              - TCOLEXPANDDIV: intrinsics/tcolexpanddiv.md
+              - TCOLEXPANDMAX: intrinsics/tcolexpandmax.md
+              - TCOLEXPANDMIN: intrinsics/tcolexpandmin.md
+              - TCOLEXPANDEXPDIF: intrinsics/tcolexpandexpdif.md
+      - Matrix operations:
+          - Matrix-matrix operations:
+              - TMATMUL: intrinsics/tmatmul.md
+              - TMATMUL_BIAS: intrinsics/tmatmul_bias.md
+              - TMATMUL_ACC: intrinsics/tmatmul_acc.md
+              - TMATMUL_MX: intrinsics/tmatmul_mx.md
+          - Matrix-vector operations:
+              - TGEMV: intrinsics/tgemv.md
+              - TGEMV_BIAS: intrinsics/tgemv_bias.md
+              - TGEMV_ACC: intrinsics/tgemv_acc.md
+              - TGEMV_MX: intrinsics/tgemv_mx.md
+      - Memory access:
+          - Regular memory access:
+              - TLOAD: intrinsics/tload.md
+              - TSTORE: intrinsics/tstore.md
+              - TPREFETCH: intrinsics/tprefetch.md
+          - Indexed memory access:
+              - MGATHER: intrinsics/mgather.md
+              - MSCATTER: intrinsics/mscatter.md
+      - Transform and utility operations:
+          - Initialization:
+              - TEXPANDS: intrinsics/texpands.md
+              - TCI: intrinsics/tci.md
+              - TTRI: intrinsics/ttri.md
+              - TFILLPAD: intrinsics/tfillpad.md
+          - Data conversion:
+              - TCVT: intrinsics/tcvt.md
+              - TQUANT: intrinsics/tquant.md
+              - TDEQUANT: intrinsics/tdequant.md
+          - Layout transformation:
+              - TEXTRACT: intrinsics/textract.md
+              - TINSERT: intrinsics/tinsert.md
+              - TGATHER: intrinsics/tgather.md
+              - TSCATTER: intrinsics/tscatter.md
+              - TCONCAT: intrinsics/tconcat.md
+              - TTRANS: intrinsics/ttrans.md
+              - TIMG2COL: intrinsics/timg2col.md
+              - TMOV: intrinsics/tmov.md
+              - TGATHERB: intrinsics/tgatherb.md
+              - TDEINTERLEAVE: intrinsics/tdeinterleave.md
+              - TINTERLEAVE: intrinsics/tinterleave.md
+              - TRESHAPE: intrinsics/treshape.md
+          - Sorting and histogram:
+              - TSORT: intrinsics/tsort.md
+              - TMRGSORT: intrinsics/tmrgsort.md
+              - THISTOGRAM: intrinsics/thistogram.md
+          - Partial-tile operations:
+              - TPARTADD: intrinsics/tpartadd.md
+              - TPARTMUL: intrinsics/tpartmul.md
+              - TPARTMAX: intrinsics/tpartmax.md
+              - TPARTMIN: intrinsics/tpartmin.md
+              - TPARTARGMAX: intrinsics/tpartargmax.md
+              - TPARTARGMIN: intrinsics/tpartargmin.md
+      - Coordination and resources:
+          - Coordination and resources:
+              - TPUSH: intrinsics/tpush.md
+              - TPOP: intrinsics/tpop.md
+              - TALLOC: intrinsics/talloc.md
+              - TFREE: intrinsics/tfree.md
+  # INTRINSIC-NAV:END
+  - Kernel Programming Guide:
+      - Element-wise kernels: tutorials/tile-kernel.md
+      - Reductions and broadcasts: tutorials/reductions-and-broadcasts.md
+      - Layout transformations: tutorials/layout-transformations.md
       - GEMM: tutorials/gemm.md
       - FlashAttention: tutorials/flash-attention.md
-  - Build and Debug:
+      - DeepSeek kernel families: tutorials/deepseek-kernels.md
+  - Benchmark Reference:
+      # BENCHMARK-CATALOG-NAV:START
+      - Catalog: benchmarks/index.md
+      - Broadcast:
+          - Overview: benchmarks/catalog/one-level/broadcast/index.md
+          - Broadcast: benchmarks/catalog/one-level/broadcast/broadcast-9f406253.md
+          - Broadcast vec 019: benchmarks/catalog/one-level/broadcast/broadcast-vec-019-8713b1a8.md
+          - Broadcast vec 039: benchmarks/catalog/one-level/broadcast/broadcast-vec-039-ac6775c3.md
+          - Broadcast vec 07: benchmarks/catalog/one-level/broadcast/broadcast-vec-07-ba7002f4.md
+      - Concat:
+          - Overview: benchmarks/catalog/one-level/concat/index.md
+          - Concat gather: benchmarks/catalog/one-level/concat/concat-gather-1c6990b2.md
+          - Concat scatter: benchmarks/catalog/one-level/concat/concat-scatter-29559c6c.md
+      - Control:
+          - Overview: benchmarks/catalog/one-level/control/index.md
+          - Tile-parallel hash-table lookup: benchmarks/catalog/one-level/control/hashtable-lookup-simd-5bc02e85.md
+      - Element Wise / Gelu:
+          - Overview: benchmarks/catalog/one-level/element-wise-gelu/index.md
+          - GELU from tile arithmetic: benchmarks/catalog/one-level/element-wise-gelu/gelu-fdf67353.md
+      - Fa:
+          - Overview: benchmarks/catalog/one-level/fa/index.md
+          - Online softmax for tiled FlashAttention: benchmarks/catalog/one-level/fa/fa-2d-unroll-b46797ec.md
+          - Fa HIF4 HIF4: benchmarks/catalog/one-level/fa/fa-hif4-86b1f297.md
+      - Gather:
+          - Overview: benchmarks/catalog/one-level/gather/index.md
+          - Gather: benchmarks/catalog/one-level/gather/gather-4948597c.md
+      - Matmul:
+          - Overview: benchmarks/catalog/one-level/matmul/index.md
+          - Tiled matrix multiplication: benchmarks/catalog/one-level/matmul/a16w4-f1f175ff.md
+          - Tiled matrix multiplication: benchmarks/catalog/one-level/matmul/hif4-hif4-f0fd84bb.md
+          - Tiled matrix multiplication: benchmarks/catalog/one-level/matmul/matmul-a008ac76.md
+      - Pto Kernels:
+          - Overview: benchmarks/catalog/one-level/pto-kernels/index.md
+          - Load-add-store tile pipeline: benchmarks/catalog/one-level/pto-kernels/pto-add-6e2ae6dc.md
+          - Two-stage tiled FlashAttention: benchmarks/catalog/one-level/pto-kernels/pto-flash-attention-e05ac981.md
+          - Gemm basic: benchmarks/catalog/one-level/pto-kernels/pto-gemm-basic-a2ba2c9c.md
+          - Gemm demo: benchmarks/catalog/one-level/pto-kernels/pto-gemm-demo-85ba9afc.md
+          - Gemm: benchmarks/catalog/one-level/pto-kernels/pto-gemm-eb591839.md
+          - Gemm performance: benchmarks/catalog/one-level/pto-kernels/pto-gemm-performance-ffe72cfc.md
+          - Mamulb: benchmarks/catalog/one-level/pto-kernels/pto-mamulb-e9f16fd1.md
+          - Tile load and store data path: benchmarks/catalog/one-level/pto-kernels/pto-tload-store-1e107659.md
+          - Matrix multiplication with accumulation: benchmarks/catalog/one-level/pto-kernels/pto-tmatmul-acc-e3e7d902.md
+      - Reduction / Reducemax Col:
+          - Overview: benchmarks/catalog/one-level/reduction-reducemax-col/index.md
+          - Reducemax col: benchmarks/catalog/one-level/reduction-reducemax-col/reducemax-col-1c7de9cb.md
+      - Reduction / Reducemax Row:
+          - Overview: benchmarks/catalog/one-level/reduction-reducemax-row/index.md
+          - Reducemax row: benchmarks/catalog/one-level/reduction-reducemax-row/reducemax-row-6e95758c.md
+      - Reduction / Reducesum Col:
+          - Overview: benchmarks/catalog/one-level/reduction-reducesum-col/index.md
+          - Reducesum col: benchmarks/catalog/one-level/reduction-reducesum-col/reducesum-col-d8b6df3d.md
+      - Reduction / Reducesum Row:
+          - Overview: benchmarks/catalog/one-level/reduction-reducesum-row/index.md
+          - Reducesum row: benchmarks/catalog/one-level/reduction-reducesum-row/reducesum-row-f79bc562.md
+      - Sort:
+          - Overview: benchmarks/catalog/one-level/sort/index.md
+          - Block-wise top-k selection: benchmarks/catalog/one-level/sort/topk-0a98c8a8.md
+      - Transpose:
+          - Overview: benchmarks/catalog/one-level/transpose/index.md
+          - Tiled tensor transpose: benchmarks/catalog/one-level/transpose/transpose-dece711d.md
+      # BENCHMARK-CATALOG-NAV:END
+      - DeepSeek kernels:
+          # DEEPSEEK-NAV:START
+          - Overview: benchmarks/deepseek/index.md
+          - Engram:
+              - Apply and differentiate the Engram gate: benchmarks/deepseek/engram/engram-gate.md
+              - Compute tiled n-gram hash indices: benchmarks/deepseek/engram/engram-hash.md
+              - Fuse Engram embedding weights tile by tile: benchmarks/deepseek/engram/engram-fused-weight.md
+              - Reduce Engram weight gradients across tokens: benchmarks/deepseek/engram/engram-grad-w-reduce.md
+          - Mhc:
+              - Apply the post-composition transform: benchmarks/deepseek/mhc/post.md
+              - Apply the pre-composition mixing matrix: benchmarks/deepseek/mhc/pre-apply-mix.md
+              - Expand hidden states for multi-head composition: benchmarks/deepseek/mhc/expand.md
+              - Fuse normalization, mixing, and residual preparation: benchmarks/deepseek/mhc/pre-big-fuse.md
+              - Mix per-head activations and gradients: benchmarks/deepseek/mhc/head-compute-mix.md
+              - Normalize and merge multi-head features: benchmarks/deepseek/mhc/norm-fn.md
+              - Normalize routing weights with Sinkhorn iterations: benchmarks/deepseek/mhc/sinkhorn.md
+              - Recompute multi-layer hidden-state products: benchmarks/deepseek/mhc/multilayer-recompute.md
+              - Split pre-composition mixing coefficients: benchmarks/deepseek/mhc/pre-split-mixes.md
+          - Moe:
+              - Build token-to-expert routing maps: benchmarks/deepseek/moe/get-fused-mapping.md
+              - Compute auxiliary-loss-free expert statistics: benchmarks/deepseek/moe/aux-fi.md
+              - Compute top-two group sums and gates: benchmarks/deepseek/moe/top2-sum-gate.md
+              - Count routed tokens per expert group: benchmarks/deepseek/moe/group-count.md
+              - Expand token activations into expert-major storage: benchmarks/deepseek/moe/expand-to-fused.md
+              - Make expert-group indices unique in place: benchmarks/deepseek/moe/inplace-unique-group-indices.md
+              - Mask and localize tensor-parallel expert indices: benchmarks/deepseek/moe/mask-indices-by-tp.md
+              - Normalize top-k routing weights: benchmarks/deepseek/moe/normalize-weight.md
+              - Reduce expert outputs back to token order: benchmarks/deepseek/moe/reduce-fused.md
+              - Reduce group scores and select top-k groups: benchmarks/deepseek/moe/topk-sum-and-topk-group-idx.md
+              - Select and gate top-k expert groups: benchmarks/deepseek/moe/topk-gate.md
+          - Quant:
+              - Differentiate SwiGLU and quantize token gradients: benchmarks/deepseek/quant/swiglu-backward-and-per-token-cast.md
+              - Encode per-token scales in E5M6 form: benchmarks/deepseek/quant/per-token-cast-to-e5m6.md
+              - Fuse SwiGLU with per-token quantization: benchmarks/deepseek/quant/swiglu-forward-and-per-token-cast.md
+              - Fuse SwiGLU, channel quantization, and transpose: benchmarks/deepseek/quant/swiglu-forward-and-per-channel-cast-and-transpose.md
+              - Fuse per-channel quantization stages: benchmarks/deepseek/quant/per-channel-cast-fused.md
+              - Pack lossless per-block quantization data: benchmarks/deepseek/quant/per-block-cast-lossless.md
+              - Quantize activations with per-block scales: benchmarks/deepseek/quant/per-block-cast.md
+              - Quantize activations with per-channel scales: benchmarks/deepseek/quant/per-channel-cast.md
+              - Quantize activations with per-token scales: benchmarks/deepseek/quant/per-token-cast.md
+              - Quantize per channel while transposing tiles: benchmarks/deepseek/quant/per-channel-cast-and-transpose.md
+              - Restore E5M6-encoded activations with tile scaling: benchmarks/deepseek/quant/cast-back-e5m6.md
+              - Restore quantized activations from scaling factors: benchmarks/deepseek/quant/cast-back.md
+          - Transpose:
+              - Transpose a batch of tiled matrices: benchmarks/deepseek/transpose/batched-transpose.md
+          # DEEPSEEK-NAV:END
+  - Toolchain and Debugging:
+      - Generated block disassembly: intrinsics/assembly.md
       - Compile-checked examples: examples/README.md
       - Troubleshooting: start/troubleshooting.md
       - Glossary: glossary.md
@@ -102,6 +349,9 @@ nav:
 plugins:
   - search:
       separator: '[\\s\\-\\.\\_]+'
+
+not_in_nav: |
+  tutorials/migrated-pto-kernels.md
 
 markdown_extensions:
   - abbr

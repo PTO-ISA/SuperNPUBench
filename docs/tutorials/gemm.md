@@ -1,4 +1,7 @@
-# GEMM on the One-Level Architecture
+# GEMM Tutorial
+
+GEMM combines row partitioning, shared right-hand tiles, matrix tile versions,
+and stores back to global memory.
 
 ## Current Benchmark Sources
 
@@ -11,8 +14,7 @@
 | Build matrix | `benchmark/one-level-arch/test/kernel/matmul/compile.all` |
 
 The generated [matmul catalog](../benchmarks/catalog/one-level/matmul/index.md)
-shows each active source implementation, exact build commands, and PTO 0.57
-surface.
+shows each active source implementation and exact build command.
 
 ## Build a Current Case
 
@@ -22,39 +24,79 @@ PLAT=linx COMPILER_DIR=/path/to/linx-isa/compiler/llvm/build-linxisa-clang/bin \
   make TESTCASE=matmul TYPE=MASK MODE=VEC M=64 N=64 K=64 tM=64 tN=64 tK=64
 ```
 
-## Group-Level Matrix Contract
+## Compile-Checked Tiled Baseline
 
-The architecture-level four-PE form uses a shared right matrix:
+This complete example walks output tile rows, output tile columns, and the
+matrix reduction dimension. Its code uses only the public tile header and tile
+operations:
 
-```cpp
-const uint32_t pe = get_thread_idx();
-
-PETile<half, M / 4, K> a_quarter;
-PETile<float, M / 4, N> c_quarter;
-SharedTile<half, K, N> shared_b;
-
-TLOAD(a_quarter, global_a.slice_rows(pe * (M / 4), M / 4));
-if (pe == 0) {
-  TLOAD(shared_b, global_b);
-}
-TMATMUL(c_quarter, a_quarter, shared_b);
-TSTORE(global_c.slice_rows(pe * (M / 4), M / 4), c_quarter);
+```cpp title="docs/examples/gemm_tile.cpp" linenums="1"
+--8<-- "docs/examples/gemm_tile.cpp"
 ```
 
-The shared RHS and four-PE group formation are not yet required compiler
-features. The current benchmark remains the compile gate while the shared
-lowering is developed.
+The `(m, n)` loops select independent output tiles. The `k` loop contributes
+successive products to one `AccumulatorTile`, so it is the only loop-carried
+tile dependency.
 
-## Tile-ID Dataflow
+## Grouped Source Contract
 
-The compiler assigns versions for A, shared B, accumulator C, and stored C.
-Each PE's local A and C versions are independent; all four group participants
-bind the same shared B version.
+The grouped source form keeps the left matrix and accumulator local while the
+right matrix is shared:
 
-## Correctness Checks
+```cpp
+const uint32_t thread = get_thread_idx();
+static constexpr uint32_t kRowsPerThread = kM / kThreadsPerBlock;
 
-- M is partitioned across cores and then four PEs without overlap.
-- B is fully defined before use as matrix RHS.
-- All four PEs reach the same dynamic matrix operation.
-- Accumulator and input type combinations satisfy the selected intrinsic page.
-- Tail rows use a valid-region form rather than reading padding as data.
+MatrixLeftTile<half, kRowsPerThread, kK> a_fragment;
+AccumulatorTile<float, kRowsPerThread, kN> c_fragment;
+SharedTile<half, kK, kN> shared_b;
+
+TLOAD(a_fragment, global_a.slice_rows(thread * kRowsPerThread,
+                                      kRowsPerThread));
+if (thread == 0) {
+  TLOAD(shared_b, global_b);
+}
+
+TMATMUL(c_fragment, a_fragment, shared_b);
+LocalTile<float, kRowsPerThread, kN> result;
+TCVT(result, c_fragment);
+TSTORE(global_c.slice_rows(thread * kRowsPerThread, kRowsPerThread), result);
+```
+
+The shared right operand must be fully defined. Each participant computes and
+stores a disjoint row fragment.
+
+## Tile Versions
+
+The value graph has four important definitions:
+
+1. `a_fragment` from the global left matrix;
+2. `shared_b` from the global right matrix;
+3. `c_fragment` from `TMATMUL`;
+4. the global store that consumes `c_fragment`.
+
+The local left and result fragments are independent per thread. All
+participants bind the same shared right version.
+
+## Fragment Size
+
+Check the local fragment size before selecting a tile shape:
+
+```cpp
+static_assert(kRowsPerThread * kK * sizeof(half) >=
+              kMinimumThreadFragmentBytes);
+static_assert(kRowsPerThread * kN * sizeof(float) >=
+              kMinimumThreadFragmentBytes);
+```
+
+When `kM` is not divisible by `kThreadsPerBlock`, use valid regions or a tail
+path rather than overlapping rows.
+
+## Correctness Checklist
+
+- Block slices are disjoint.
+- Thread fragments are disjoint and cover the intended block rows.
+- The right matrix shared tile is fully defined before `TMATMUL`.
+- Matrix operand element types, layouts, and accumulator types match the
+  selected intrinsic.
+- Stores write only valid output rows.

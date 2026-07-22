@@ -1,12 +1,14 @@
-# Build the toolchain
+# Build the Toolchain
 
-The supported setup uses SuperNPUBench inside the LinxISA superproject. Build
-the in-tree LLVM fork, musl sysroot, and QEMU so their revisions stay aligned.
+The supported setup uses this repository inside its parent source tree so the
+compiler, sysroot, simulator, headers, and benchmark harness stay on matching
+revisions.
 
 ## Prerequisites
 
 Install Git, CMake, Ninja, Python 3, a host C/C++ compiler, and the build
-dependencies required by LLVM and QEMU. Then clone every submodule:
+dependencies required by LLVM and QEMU. Then clone the parent tree with
+submodules:
 
 ```bash
 git clone --recurse-submodules https://github.com/LinxISA/linx-isa.git
@@ -17,11 +19,12 @@ export LINXISA_ROOT="$PWD"
 export SUPERNPU_ROOT="$LINXISA_ROOT/workloads/SuperNPUBench"
 ```
 
-All remaining commands on this page run from `$LINXISA_ROOT`.
+The names above are literal repository and environment names. The programming
+model pages use generic block/thread and NPU terminology.
 
-## Build Linx LLVM
+## Build the Target Compiler
 
-Configure only the projects and target needed by the benchmark lane:
+Configure the in-tree LLVM fork for the target backend used by the benchmarks:
 
 ```bash
 cmake -S compiler/llvm/llvm \
@@ -38,10 +41,10 @@ export COMPILER_DIR="$LINXISA_ROOT/compiler/llvm/build-linxisa-clang/bin"
 "$COMPILER_DIR/clang++" --version
 ```
 
-The compiler directory must contain `clang`, `clang++`, `ld.lld`,
-`llvm-objdump`, and `llvm-objcopy`.
+`COMPILER_DIR` must contain `clang`, `clang++`, `ld.lld`, `llvm-objdump`, and
+`llvm-objcopy`.
 
-## Build the musl sysroot
+## Build the Sysroot
 
 ```bash
 MODE=phase-b bash lib/musl/tools/linx/build_linx64_musl.sh
@@ -49,13 +52,10 @@ export LINX_SYSROOT="$LINXISA_ROOT/out/libc/musl/install/phase-b"
 test -d "$LINX_SYSROOT/usr/include"
 ```
 
-The benchmark Makefiles read `LINX_SYSROOT`. Keeping it explicit prevents an
-unrelated host sysroot from entering the build.
+Benchmark Makefiles read `LINX_SYSROOT`. Keeping it explicit prevents a host
+sysroot from entering target builds.
 
-## Build QEMU
-
-The superproject clean-build helper checks out the pinned QEMU revision in a
-detached worktree, configures `linx64-softmmu`, and builds the system emulator:
+## Build the Simulator
 
 ```bash
 export LINX_QEMU_BUILD="$LINXISA_ROOT/out/qemu-linx"
@@ -68,7 +68,7 @@ export QEMU="$LINX_QEMU_BUILD/qemu-system-linx64"
 "$QEMU" --version
 ```
 
-## Verify the environment
+## Verify the Environment
 
 ```bash
 test -x "$COMPILER_DIR/clang++"
@@ -80,9 +80,9 @@ cd "$SUPERNPU_ROOT"
 bash docs/examples/check.sh
 ```
 
-The final command compiles the documentation's C++ and PTO examples. It does
-not launch QEMU.
+The final command compiles the documentation examples. It does not launch the
+simulator.
 
-!!! warning "Keep paths external to source"
+!!! warning "Keep Paths External"
     Export tool paths in your shell or CI job. Do not commit workstation paths
-    to benchmark Makefiles, examples, or documentation.
+    to Makefiles, examples, or documentation.

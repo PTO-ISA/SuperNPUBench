@@ -1,47 +1,66 @@
-# First tile program
+# First Tile Program
 
-This kernel loads two 16 × 16 global tensor views, adds their tiles, and stores
-the result. It is intentionally small enough to expose the complete programming
-shape without hiding the PTO calls behind a framework.
+This kernel adds two `64 x 64` matrices as four `32 x 32` tiles. It is small
+enough to show the complete C++ shape without exposing the compiler backend.
+The public `pto_kernel/tile.hpp` header provides typed tiles and tile
+operations; target-specific namespaces stay behind that header.
 
-```cpp title="docs/examples/tile_add.cpp" linenums="1" hl_lines="10-12 14-16 18-20"
+```cpp title="docs/examples/tile_add.cpp" linenums="1" hl_lines="14-16 26-40"
 --8<-- "docs/examples/tile_add.cpp"
 ```
 
-## Read the types first
+## Define the Tensor and Tile
 
-`global_tensor<__fp32, RowMajor<Rows, Cols>>` describes a global-memory view.
-`Tile<Location::Vec, ...>` describes tile-local vector storage. `Rows`, `Cols`,
-element type, and layout are compile-time properties.
+`global_tensor<int, RowMajor<Rows, Cols>>` describes the complete matrix in
+global memory. `LocalTile<int, TileRows, TileCols>` describes one thread-local
+working value. Element type, physical shape, and layout are compile-time
+properties.
 
-`__fp32` is the current direct-v0.57 PTO storage wrapper for a 32-bit floating
-element. Unlike the C++ `float` type, it carries the tile descriptor's
-compile-time `TypeCode` in the checked-in `jcore/type.hpp` specialization.
+| Name | Meaning |
+| --- | --- |
+| `Matrix` | Global `64 x 64` row-major tensor type |
+| `ValueTile` | Local `32 x 32` tile type |
+| `MatrixTiles` | Iterator mapping `(tile_row, tile_col)` to a tensor region |
+| `TLOAD` | Define a local tile from a global tensor region |
+| `TADD` | Define a local tile from two compatible sources |
+| `TSTORE` | Store a local tile through a global tensor region |
 
-<dl class="snpu-contract">
-  <dt>G</dt><dd>Global tensor view with row-major element addressing.</dd>
-  <dt>T</dt><dd>Vector tile with a static 16 × 16 shape in this instantiation.</dd>
-  <dt>TLOAD</dt><dd>Move each global view into its tile representation.</dd>
-  <dt>TADD</dt><dd>Produce a new tile from two shape-compatible input tiles.</dd>
-  <dt>TSTORE</dt><dd>Write the result tile through the output global view.</dd>
-</dl>
+## Read the Two-Dimensional Loop
 
-## Compile it
+The loop variables count **tiles**, not elements. Each loop has two iterations,
+so the body executes four times:
+
+```text
+(tile_row, tile_col) = (0,0) (0,1) (1,0) (1,1)
+global origin        = (0,0) (0,32) (32,0) (32,32)
+```
+
+The intrinsic sequence in each iteration is a small value graph:
+
+```text
+lhs region -> TLOAD -> left  --\
+                              TADD -> sum -> TSTORE -> output region
+rhs region -> TLOAD -> right --/
+```
+
+No C++ element loop performs the calculation. C++ chooses tensor regions;
+tile operations process every valid element in those regions.
+
+## Compile It
 
 ```bash
 cd "$SUPERNPU_ROOT"
 bash docs/examples/check.sh tile-add
 ```
 
-The gate invokes Linx `clang++` with C++20, `-fenable-matrix`, the PTO include
-root, the active target triple, and `__linx`/tensor-instruction defines.
+The check invokes the target `clang++` with C++20, matrix support, the public
+tile include root, and the active target triple.
 
-## Why the template is explicit
+## Connect the Entry Point
 
-The explicit instantiation at the bottom forces LLVM to compile one concrete
-kernel even though this example has no host `main`. Production benchmarks use
-the same specialization mechanism at larger shapes and connect it to test
-entrypoints and generated data.
+The `extern "C"` entry gives the harness a stable symbol. Production kernels
+usually template the matrix and tile dimensions, then instantiate concrete
+shapes in their benchmark entry points.
 
-Next, [inspect the object](build-run.md) or move directly to the
-[GEMM tutorial](../tutorials/gemm.md).
+Next, [iterate over multidimensional tensors](../tutorials/multidimensional-tiling.md),
+[inspect the object](build-run.md), or move to the [GEMM tutorial](../tutorials/gemm.md).

@@ -1,133 +1,162 @@
-# Group Programming Examples
+# Group Programming Patterns
 
-These examples define the architecture-level four-PE source model. Shared tile
-register lowering is not required from the current compiler yet.
+Grouped kernels use block/thread identity, shared tile versions, and
+convergent grouped operations. These examples show the source contract. Check
+the benchmark catalog for the source forms that compile in the current tree.
 
-## PE-Specific Control Paths
+## Thread-Specific Control Paths
 
-All four PEs start at the same entry, then branch using their immutable PE ID.
+All threads start at the same entry, then branch using immutable thread
+identity.
 
 ```cpp
-void group_kernel(GlobalTensor input, GlobalTensor output) {
-  const uint32_t pe = get_thread_idx();
+void grouped_kernel(GlobalTensor input, GlobalTensor output) {
+  const uint32_t thread = get_thread_idx();
 
-  if (pe == 0) {
+  if (thread == 0) {
     metadata_path(input);
-  } else if (pe == 1) {
+  } else if (thread == 1) {
     transform_path(input);
   } else {
-    compute_path(input, output, pe);
+    compute_path(input, output, thread);
   }
 }
 ```
 
-Each branch may define different PE-local tile versions. The paths must
-reconverge with compatible state before a later four-PE group operation.
+Each branch may define different local tile versions. Paths must reconverge
+with compatible state before a later grouped operation.
 
-## Tensor Split by Core and PE
+## Tensor Split by Block and Thread
 
 ```cpp
-const uint32_t core = get_block_idx();
-const uint32_t pe = get_thread_idx();
+const uint32_t block = get_block_idx();
+const uint32_t thread = get_thread_idx();
 
-const uint32_t core_begin = rows * core / core_count;
-const uint32_t core_end = rows * (core + 1) / core_count;
-const uint32_t core_rows = core_end - core_begin;
+RowSlice rows = partition_rows(total_rows, block, block_count, thread);
+auto input_rows = input.slice_rows(rows.begin, rows.count);
 
-const uint32_t pe_begin = core_begin + core_rows * pe / 4;
-const uint32_t pe_end = core_begin + core_rows * (pe + 1) / 4;
-auto input_rows = input.slice_rows(pe_begin, pe_end - pe_begin);
 TLOAD(local_input, input_rows);
 ```
 
-The quotient split handles tails without overlapping core or PE slices.
+The quotient split handles tails without overlapping global slices.
 
-## Four-PE Grouped Matrix Multiply
+## Multidimensional Group Partition
 
-The B tile is loaded once into a shared tile version. A and C are PE-local
-M-axis quarters.
+Flatten independent batch/head planes, distribute them across the execution
+grid, and tile each plane locally:
 
 ```cpp
-template <int M, int N, int K>
+const uint32_t worker =
+    get_block_idx() * kThreadsPerBlock + get_thread_idx();
+const uint32_t worker_count = block_count * kThreadsPerBlock;
+
+for (uint32_t plane = worker; plane < kBatch * kHeads;
+     plane += worker_count) {
+  const uint32_t batch = plane / kHeads;
+  const uint32_t head = plane % kHeads;
+
+  for (int tile_row = 0; tile_row < kRowTiles; ++tile_row) {
+    for (int tile_col = 0; tile_col < kColTiles; ++tile_col) {
+      TLOAD(local_input, input(batch, head, tile_row, tile_col));
+      TRELU(local_output, local_input);
+      TSTORE(output(batch, head, tile_row, tile_col), local_output);
+    }
+  }
+}
+```
+
+Each worker owns complete output planes in this example, so no shared value is
+needed. Use shared tiles only when several threads collaborate on one plane.
+
+## Grouped Matrix Multiply
+
+Load the right matrix once into a shared tile version. Keep the left matrix
+and result as local row fragments.
+
+```cpp
+template <uint32_t kM, uint32_t kN, uint32_t kK>
 void grouped_matmul(GlobalTensor a, GlobalTensor b, GlobalTensor c) {
-  const uint32_t pe = get_thread_idx();
+  const uint32_t thread = get_thread_idx();
 
-  PETile<half, M / 4, K> local_a;
-  PETile<float, M / 4, N> local_c;
-  SharedTile<half, K, N> shared_b;
+  static constexpr uint32_t kRowsPerThread = kM / kThreadsPerBlock;
 
-  TLOAD(local_a, a.slice_rows(pe * (M / 4), M / 4));
+  LocalTile<half, kRowsPerThread, kK> local_a;
+  LocalTile<float, kRowsPerThread, kN> local_c;
+  SharedTile<half, kK, kN> shared_b;
 
-  if (pe == 0) {
+  TLOAD(local_a, a.slice_rows(thread * kRowsPerThread, kRowsPerThread));
+
+  if (thread == 0) {
     TLOAD(shared_b, b);
   }
 
   TMATMUL(local_c, local_a, shared_b);
-  TSTORE(c.slice_rows(pe * (M / 4), M / 4), local_c);
+  TSTORE(c.slice_rows(thread * kRowsPerThread, kRowsPerThread), local_c);
 }
 ```
 
-All four PEs reach the same dynamic `TMATMUL`. Readiness of `shared_b` is a
-tile-version dependency, so PE arrival does not need to be cycle aligned.
+Every participant reaches the same dynamic `TMATMUL`. The shared right operand
+is a tile-version dependency, so participants do not need cycle-aligned
+arrival.
 
-## Four-PE Reduce-to-One
+## Reduce to One
 
-Each PE reduces its local input, inserts the result into its fixed shared
-region, and PE0 performs the final reduction.
+Each thread reduces its local input, inserts the scalar into its fixed shared
+region, and one selected thread performs the final reduction.
 
 ```cpp
-PETile<float, 1, LocalWidth> local_input;
-PETile<float, 1, 1> local_partial;
-SharedTile<float, 4, 1> shared_partials;
+LocalTile<float, 1, kLocalWidth> local_input;
+LocalTile<float, 1, 1> local_partial;
+SharedTile<float, kThreadsPerBlock, 1> shared_partials;
 
 TROWSUM(local_partial, local_input);
 TMOV<SharedMove::Insert>(shared_partials, local_partial);
 
-if (get_thread_idx() == 0) {
-  PETile<float, 4, 1> all_partials;
-  PETile<float, 1, 1> total;
+if (thread == 0) {
+  LocalTile<float, kThreadsPerBlock, 1> all_partials;
+  LocalTile<float, 1, 1> total;
   TMOV<SharedMove::Broadcast>(all_partials, shared_partials);
   TCOLSUM(total, all_partials);
   TSTORE(global_total, total);
 }
 ```
 
-The shared definition publishes only after all four inserted regions are
-ready. PE0 therefore reads one coherent version.
+The shared definition publishes only after all defined regions are ready. The
+selected thread reads one coherent shared version.
 
-## Four-PE All-Reduce
+## All-Reduce
 
-Extend reduce-to-one by publishing the final scalar and broadcasting it back
-to every PE.
+Extend reduce-to-one by publishing the final scalar and broadcasting it back to
+every thread.
 
 ```cpp
 SharedTile<float, 1, 1> shared_total;
 
-if (get_thread_idx() == 0) {
+if (thread == 0) {
   TMOV<SharedMove::Publish>(shared_total, total);
 }
 
-PETile<float, 1, 1> local_total;
+LocalTile<float, 1, 1> local_total;
 TMOV<SharedMove::Broadcast>(local_total, shared_total);
 ```
 
-Every PE receives the same shared version.
+Every participant receives the same shared version.
 
 ## Neighbor Exchange
 
-PE-local physical registers are never addressed directly. Publish all four
-quarters, broadcast the complete shared value locally, then extract the desired
-neighbor quarter.
+Local physical registers are never addressed directly. Publish fragments,
+broadcast the complete shared value locally, then extract the desired neighbor
+fragment.
 
 ```cpp
-const uint32_t pe = get_thread_idx();
-const uint32_t peer = (pe + 1) & 3;
+const uint32_t thread = get_thread_idx();
+const uint32_t peer = (thread + 1) % kThreadsPerBlock;
 
-SharedTile<float, 4, Width> shared_rows;
+SharedTile<float, kThreadsPerBlock, kWidth> shared_rows;
 TMOV<SharedMove::Insert>(shared_rows, local_row);
 
-PETile<float, 4, Width> all_rows;
-PETile<float, 1, Width> peer_row;
+LocalTile<float, kThreadsPerBlock, kWidth> all_rows;
+LocalTile<float, 1, kWidth> peer_row;
 TMOV<SharedMove::Broadcast>(all_rows, shared_rows);
 TEXTRACT(peer_row, all_rows, peer, 0);
 ```
@@ -137,11 +166,11 @@ This pattern supports ring shifts, halo exchange, and small permutations.
 ## Partial Producer Set
 
 ```cpp
-if (get_thread_idx() < 2) {
+if (thread < kActiveProducerCount) {
   TMOV<SharedMove::Insert>(shared_partial, local_value);
 }
 ```
 
-The resulting shared version has only PE0 and PE1 regions defined. It may be
-stored by partition or extracted by those owners. It cannot be used as a
-matrix RHS.
+The resulting shared version has only the selected regions defined. It may be
+stored by partition or extracted by defined owners. It cannot be used as a
+complete shared right matrix.

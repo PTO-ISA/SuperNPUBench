@@ -1,4 +1,4 @@
-# Linx LLVM v0.57 excerpt generated from docs/examples/gemm_tile.cpp.
+# Compiler v0.57 excerpt generated from docs/examples/gemm_tile.cpp.
 BSTART.TLOAD    INT32
 B.ARG           NORM.normal
 B.IOR           [a1,a3],[]

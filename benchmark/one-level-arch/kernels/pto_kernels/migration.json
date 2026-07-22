@@ -4,6 +4,7 @@
   "revision": "0eb72cb20b0de99326d984a9a27ddb815e6e4c24",
   "policy": "PTO 0.57 allowlist only; scalar QEMU fallback paths removed",
   "support_headers": [
+    {"source": "tile.hpp", "origin": "local public kernel-authoring facade", "sha256": "13fce4311c36586200014af0aa2f9eb11581b70cd7fa30d827550a03320f2f11"},
     {"source": "common/linx_lowp_types.hpp", "upstream_source": "include/common/linx_lowp_types.hpp", "sha256": "dddda37f13a8fd6c35659afbf2075359fb7218bb709ee81851a5e8d525b5888d"},
     {"source": "common/pto_tileop.hpp", "upstream_source": "include/common/pto_tileop.hpp", "sha256": "5566c25f05e0a8c414b0cc34aa15b84356da6c6e3598c35a48a362c887b29229"},
     {"source": "common/runtime/kernel_env.hpp", "upstream_source": "include/common/runtime/kernel_env.hpp", "sha256": "377544f7b177104295a93becfa34a5f4417d3b59e889ce18574642c907e26ec3"},

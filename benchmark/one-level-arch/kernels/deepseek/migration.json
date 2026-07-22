@@ -1,0 +1,1101 @@
+{
+  "schema": 1,
+  "upstream": {
+    "repository": "https://github.com/deepseek-ai/TileKernels",
+    "revision": "36d9e45d38e204ebb87e6f6e833821eee0482fe5"
+  },
+  "minimum_thread_fragment_bytes": 128,
+  "source_inventory": [
+    "tile_kernels/engram/engram_fused_weight_kernel.py",
+    "tile_kernels/engram/engram_gate_kernel.py",
+    "tile_kernels/engram/engram_grad_w_reduce_kernel.py",
+    "tile_kernels/engram/engram_hash_kernel.py",
+    "tile_kernels/mhc/expand_kernel.py",
+    "tile_kernels/mhc/head_compute_mix_kernel.py",
+    "tile_kernels/mhc/multilayer_recompute_kernel.py",
+    "tile_kernels/mhc/norm_fn_kernel.py",
+    "tile_kernels/mhc/post_kernel.py",
+    "tile_kernels/mhc/pre_apply_mix_kernel.py",
+    "tile_kernels/mhc/pre_big_fuse_kernel.py",
+    "tile_kernels/mhc/pre_split_mixes_kernel.py",
+    "tile_kernels/mhc/sinkhorn_kernel.py",
+    "tile_kernels/moe/aux_fi_kernel.py",
+    "tile_kernels/moe/expand_to_fused_kernel.py",
+    "tile_kernels/moe/get_fused_mapping_kernel.py",
+    "tile_kernels/moe/group_count_kernel.py",
+    "tile_kernels/moe/inplace_unique_group_indices_kernel.py",
+    "tile_kernels/moe/mask_indices_by_tp_kernel.py",
+    "tile_kernels/moe/normalize_weight_kernel.py",
+    "tile_kernels/moe/reduce_fused_kernel.py",
+    "tile_kernels/moe/top2_sum_gate_kernel.py",
+    "tile_kernels/moe/topk_gate_kernel.py",
+    "tile_kernels/moe/topk_sum_and_topk_group_idx_kernel.py",
+    "tile_kernels/quant/cast_back_e5m6_kernel.py",
+    "tile_kernels/quant/cast_back_kernel.py",
+    "tile_kernels/quant/per_block_cast_kernel.py",
+    "tile_kernels/quant/per_block_cast_lossless_kernel.py",
+    "tile_kernels/quant/per_channel_cast_and_transpose_kernel.py",
+    "tile_kernels/quant/per_channel_cast_fused_kernel.py",
+    "tile_kernels/quant/per_channel_cast_kernel.py",
+    "tile_kernels/quant/per_token_cast_kernel.py",
+    "tile_kernels/quant/per_token_cast_to_e5m6_kernel.py",
+    "tile_kernels/quant/swiglu_backward_and_per_token_cast_kernel.py",
+    "tile_kernels/quant/swiglu_forward_and_per_channel_cast_and_transpose_kernel.py",
+    "tile_kernels/quant/swiglu_forward_and_per_token_cast_kernel.py",
+    "tile_kernels/transpose/batched_transpose_kernel.py"
+  ],
+  "kernel_modules": [
+    {
+      "source": "tile_kernels/engram/engram_fused_weight_kernel.py",
+      "family": "engram",
+      "title": "Fuse Engram embedding weights tile by tile",
+      "summary": "This Engram translation keeps lookup, gating, or gradient work in typed tiles.",
+      "algorithm": "Load the thread-owned token and weight fragments, apply the documented gate, hash, or reduction stages, then store the valid result region.",
+      "partition": "The block partitions tokens across threads. Each active thread owns contiguous, non-overlapping token rows with at least 128 bytes of valid tile data.",
+      "tile_flow": "Global tensor views feed thread-local tiles. Arithmetic and reductions create new tile versions before the final result is stored.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/engram/fused_weight_pto.hpp"
+      ],
+      "functions": [
+        "fused_weight"
+      ],
+      "intrinsics": [
+        "TCVT",
+        "TLOAD",
+        "TMUL",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/engram/engram_gate_kernel.py",
+      "family": "engram",
+      "title": "Apply and differentiate the Engram gate",
+      "summary": "This Engram translation keeps lookup, gating, or gradient work in typed tiles.",
+      "algorithm": "Load the thread-owned token and weight fragments, apply the documented gate, hash, or reduction stages, then store the valid result region.",
+      "partition": "The block partitions tokens across threads. Each active thread owns contiguous, non-overlapping token rows with at least 128 bytes of valid tile data.",
+      "tile_flow": "Global tensor views feed thread-local tiles. Arithmetic and reductions create new tile versions before the final result is stored.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/engram/engram_gate_pto.hpp"
+      ],
+      "functions": [
+        "sigmoid",
+        "signed_sqrt_gate",
+        "row_broadcast_mul",
+        "engram_gate_fwd",
+        "engram_gate_bwd"
+      ],
+      "intrinsics": [
+        "TABS",
+        "TADD",
+        "TADDS",
+        "TCVT",
+        "TDIV",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMAXS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPAND",
+        "TROWSUM",
+        "TRSQRT",
+        "TSQRT",
+        "TSTORE",
+        "TSUB",
+        "TSUBS"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/engram/engram_grad_w_reduce_kernel.py",
+      "family": "engram",
+      "title": "Reduce Engram weight gradients across tokens",
+      "summary": "This Engram translation keeps lookup, gating, or gradient work in typed tiles.",
+      "algorithm": "Load the thread-owned token and weight fragments, apply the documented gate, hash, or reduction stages, then store the valid result region.",
+      "partition": "The block partitions tokens across threads. Each active thread owns contiguous, non-overlapping token rows with at least 128 bytes of valid tile data.",
+      "tile_flow": "Global tensor views feed thread-local tiles. Arithmetic and reductions create new tile versions before the final result is stored.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/engram/engram_grad_w_reduce_pto.hpp"
+      ],
+      "functions": [
+        "engram_grad_w_reduce"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMUL",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/engram/engram_hash_kernel.py",
+      "family": "engram",
+      "title": "Compute tiled n-gram hash indices",
+      "summary": "This Engram translation keeps lookup, gating, or gradient work in typed tiles.",
+      "algorithm": "Load the thread-owned token and weight fragments, apply the documented gate, hash, or reduction stages, then store the valid result region.",
+      "partition": "The block partitions tokens across threads. Each active thread owns contiguous, non-overlapping token rows with at least 128 bytes of valid tile data.",
+      "tile_flow": "Global tensor views feed thread-local tiles. Arithmetic and reductions create new tile versions before the final result is stored.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/engram/engram_hash_pto.hpp"
+      ],
+      "functions": [
+        "engram_hash_layer"
+      ],
+      "intrinsics": [
+        "TADDS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TREMS",
+        "TSTORE",
+        "TXOR"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/mhc/expand_kernel.py",
+      "family": "mhc",
+      "title": "Expand hidden states for multi-head composition",
+      "summary": "This multi-head composition translation expresses mixing, normalization, and recompute stages as tile dataflow.",
+      "algorithm": "Load hidden-state and coefficient panels, compose matrix, reduction, and pointwise operations, and write the resulting head or gradient panel.",
+      "partition": "Blocks partition the outer token range; threads partition head or hidden dimensions into disjoint fragments of at least 128 bytes.",
+      "tile_flow": "Global panels enter local tiles, matrix and reduction stages produce typed intermediates, and block-shared tiles are used when a value must be visible across the group.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/mhc/expand_to_mhc_pto.hpp",
+        "benchmark/one-level-arch/kernels/deepseek/mhc/expand_to_mhc_bwd_pto.hpp"
+      ],
+      "functions": [
+        "expand_to_mhc_fwd",
+        "expand_to_mhc_bwd"
+      ],
+      "intrinsics": [
+        "TCOLSUM",
+        "TCVT",
+        "TLOAD",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/mhc/head_compute_mix_kernel.py",
+      "family": "mhc",
+      "title": "Mix per-head activations and gradients",
+      "summary": "This multi-head composition translation expresses mixing, normalization, and recompute stages as tile dataflow.",
+      "algorithm": "Load hidden-state and coefficient panels, compose matrix, reduction, and pointwise operations, and write the resulting head or gradient panel.",
+      "partition": "Blocks partition the outer token range; threads partition head or hidden dimensions into disjoint fragments of at least 128 bytes.",
+      "tile_flow": "Global panels enter local tiles, matrix and reduction stages produce typed intermediates, and block-shared tiles are used when a value must be visible across the group.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/mhc/head_compute_mix_pto.hpp"
+      ],
+      "functions": [
+        "sigmoid",
+        "mhc_head_compute_mix_fwd",
+        "mhc_head_compute_mix_bwd"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TADDS",
+        "TCOLEXPAND",
+        "TCOLSUM",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPAND",
+        "TROWSUM",
+        "TSTORE",
+        "TSUBS"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/mhc/multilayer_recompute_kernel.py",
+      "family": "mhc",
+      "title": "Recompute multi-layer hidden-state products",
+      "summary": "This multi-head composition translation expresses mixing, normalization, and recompute stages as tile dataflow.",
+      "algorithm": "Load hidden-state and coefficient panels, compose matrix, reduction, and pointwise operations, and write the resulting head or gradient panel.",
+      "partition": "Blocks partition the outer token range; threads partition head or hidden dimensions into disjoint fragments of at least 128 bytes.",
+      "tile_flow": "Global panels enter local tiles, matrix and reduction stages produce typed intermediates, and block-shared tiles are used when a value must be visible across the group.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/mhc/multilayer_recompute_pto.hpp"
+      ],
+      "functions": [
+        "multilayer_recompute"
+      ],
+      "intrinsics": [
+        "TLOAD",
+        "TMATMUL",
+        "TMATMUL_ACC",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/mhc/norm_fn_kernel.py",
+      "family": "mhc",
+      "title": "Normalize and merge multi-head features",
+      "summary": "This multi-head composition translation expresses mixing, normalization, and recompute stages as tile dataflow.",
+      "algorithm": "Load hidden-state and coefficient panels, compose matrix, reduction, and pointwise operations, and write the resulting head or gradient panel.",
+      "partition": "Blocks partition the outer token range; threads partition head or hidden dimensions into disjoint fragments of at least 128 bytes.",
+      "tile_flow": "Global panels enter local tiles, matrix and reduction stages produce typed intermediates, and block-shared tiles are used when a value must be visible across the group.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/mhc/norm_fn_pto.hpp"
+      ],
+      "functions": [
+        "rsqrt_newton",
+        "rms_norm",
+        "fn_normw_merge_fwd"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TADDS",
+        "TCOLEXPANDMUL",
+        "TLOAD",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWSUM",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/mhc/post_kernel.py",
+      "family": "mhc",
+      "title": "Apply the post-composition transform",
+      "summary": "This multi-head composition translation expresses mixing, normalization, and recompute stages as tile dataflow.",
+      "algorithm": "Load hidden-state and coefficient panels, compose matrix, reduction, and pointwise operations, and write the resulting head or gradient panel.",
+      "partition": "Blocks partition the outer token range; threads partition head or hidden dimensions into disjoint fragments of at least 128 bytes.",
+      "tile_flow": "Global panels enter local tiles, matrix and reduction stages produce typed intermediates, and block-shared tiles are used when a value must be visible across the group.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/mhc/post_pto.hpp"
+      ],
+      "functions": [
+        "mhc_post_fwd",
+        "mhc_post_bwd"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMUL",
+        "TROWEXPAND",
+        "TROWSUM",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/mhc/pre_apply_mix_kernel.py",
+      "family": "mhc",
+      "title": "Apply the pre-composition mixing matrix",
+      "summary": "This multi-head composition translation expresses mixing, normalization, and recompute stages as tile dataflow.",
+      "algorithm": "Load hidden-state and coefficient panels, compose matrix, reduction, and pointwise operations, and write the resulting head or gradient panel.",
+      "partition": "Blocks partition the outer token range; threads partition head or hidden dimensions into disjoint fragments of at least 128 bytes.",
+      "tile_flow": "Global panels enter local tiles, matrix and reduction stages produce typed intermediates, and block-shared tiles are used when a value must be visible across the group.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/mhc/pre_apply_mix_pto.hpp"
+      ],
+      "functions": [
+        "mhc_pre_apply_mix_fwd",
+        "mhc_pre_apply_mix_bwd"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TCOLEXPAND",
+        "TCOLSUM",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMUL",
+        "TROWEXPAND",
+        "TROWSUM",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/mhc/pre_big_fuse_kernel.py",
+      "family": "mhc",
+      "title": "Fuse normalization, mixing, and residual preparation",
+      "summary": "This multi-head composition translation expresses mixing, normalization, and recompute stages as tile dataflow.",
+      "algorithm": "Load hidden-state and coefficient panels, compose matrix, reduction, and pointwise operations, and write the resulting head or gradient panel.",
+      "partition": "Blocks partition the outer token range; threads partition head or hidden dimensions into disjoint fragments of at least 128 bytes.",
+      "tile_flow": "Global panels enter local tiles, matrix and reduction stages produce typed intermediates, and block-shared tiles are used when a value must be visible across the group.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/mhc/pre_big_fuse_pto.hpp"
+      ],
+      "functions": [
+        "sigmoid",
+        "sinkhorn",
+        "mhc_pre_big_fuse"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TADDS",
+        "TCOLEXPAND",
+        "TCOLSUM",
+        "TCVT",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPAND",
+        "TROWMAX",
+        "TROWSUM",
+        "TRSQRT",
+        "TSTORE",
+        "TSUB"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/mhc/pre_split_mixes_kernel.py",
+      "family": "mhc",
+      "title": "Split pre-composition mixing coefficients",
+      "summary": "This multi-head composition translation expresses mixing, normalization, and recompute stages as tile dataflow.",
+      "algorithm": "Load hidden-state and coefficient panels, compose matrix, reduction, and pointwise operations, and write the resulting head or gradient panel.",
+      "partition": "Blocks partition the outer token range; threads partition head or hidden dimensions into disjoint fragments of at least 128 bytes.",
+      "tile_flow": "Global panels enter local tiles, matrix and reduction stages produce typed intermediates, and block-shared tiles are used when a value must be visible across the group.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/mhc/pre_split_mixes_pto.hpp"
+      ],
+      "functions": [
+        "sigmoid",
+        "mhc_pre_split_mixes_fwd",
+        "mhc_pre_split_mixes_bwd"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TADDS",
+        "TCOLEXPAND",
+        "TEXP",
+        "TEXPANDS",
+        "TLOAD",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPAND",
+        "TSTORE",
+        "TSUBS"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/mhc/sinkhorn_kernel.py",
+      "family": "mhc",
+      "title": "Normalize routing weights with Sinkhorn iterations",
+      "summary": "This multi-head composition translation expresses mixing, normalization, and recompute stages as tile dataflow.",
+      "algorithm": "Load hidden-state and coefficient panels, compose matrix, reduction, and pointwise operations, and write the resulting head or gradient panel.",
+      "partition": "Blocks partition the outer token range; threads partition head or hidden dimensions into disjoint fragments of at least 128 bytes.",
+      "tile_flow": "Global panels enter local tiles, matrix and reduction stages produce typed intermediates, and block-shared tiles are used when a value must be visible across the group.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/mhc/sinkhorn_pto.hpp"
+      ],
+      "functions": [
+        "sinkhorn_fwd"
+      ],
+      "intrinsics": [
+        "TADDS",
+        "TCOLEXPANDMUL",
+        "TCOLSUM",
+        "TEXP",
+        "TLOAD",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/aux_fi_kernel.py",
+      "family": "moe",
+      "title": "Compute auxiliary-loss-free expert statistics",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/group_count_aux_fi_pto.hpp"
+      ],
+      "functions": [
+        "group_count",
+        "aux_fi"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TINSERT",
+        "TLOAD",
+        "TMULS",
+        "TROWSUM",
+        "TSEL",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/expand_to_fused_kernel.py",
+      "family": "moe",
+      "title": "Expand token activations into expert-major storage",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/expand_to_fused_pto.hpp"
+      ],
+      "functions": [
+        "expand_to_fused"
+      ],
+      "intrinsics": [
+        "TEXPANDS",
+        "TLOAD",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/get_fused_mapping_kernel.py",
+      "family": "moe",
+      "title": "Build token-to-expert routing maps",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/get_fused_mapping_pto.hpp"
+      ],
+      "functions": [
+        "get_fused_mapping"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TADDS",
+        "TCI",
+        "TCMP",
+        "TDIVS",
+        "TEXPANDS",
+        "TGATHER",
+        "TINSERT",
+        "TLOAD",
+        "TMAXS",
+        "TMOV",
+        "TMULS",
+        "TROWMAX",
+        "TROWMIN",
+        "TSCATTER",
+        "TSEL",
+        "TSORT",
+        "TSTORE",
+        "TSUB"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/group_count_kernel.py",
+      "family": "moe",
+      "title": "Count routed tokens per expert group",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/group_count_aux_fi_pto.hpp"
+      ],
+      "functions": [
+        "group_count",
+        "aux_fi"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TINSERT",
+        "TLOAD",
+        "TMULS",
+        "TROWSUM",
+        "TSEL",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/inplace_unique_group_indices_kernel.py",
+      "family": "moe",
+      "title": "Make expert-group indices unique in place",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/inplace_unique_group_indices_pto.hpp"
+      ],
+      "functions": [
+        "inplace_unique_group_indices"
+      ],
+      "intrinsics": [
+        "TCMP",
+        "TEXPANDS",
+        "TEXTRACT",
+        "TINSERT",
+        "TLOAD",
+        "TSEL",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/mask_indices_by_tp_kernel.py",
+      "family": "moe",
+      "title": "Mask and localize tensor-parallel expert indices",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/mask_indices_by_tp_pto.hpp"
+      ],
+      "functions": [
+        "mask_indices_by_tp"
+      ],
+      "intrinsics": [
+        "TAND",
+        "TCMP",
+        "TDIVS",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TREMS",
+        "TSEL",
+        "TSTORE",
+        "TSUB",
+        "TSUBS"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/normalize_weight_kernel.py",
+      "family": "moe",
+      "title": "Normalize top-k routing weights",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/normalize_weight_pto.hpp"
+      ],
+      "functions": [
+        "normalize_weight"
+      ],
+      "intrinsics": [
+        "TADDS",
+        "TLOAD",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWSUM",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/reduce_fused_kernel.py",
+      "family": "moe",
+      "title": "Reduce expert outputs back to token order",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/reduce_fused_pto.hpp"
+      ],
+      "functions": [
+        "reduce_fused"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TMULS",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/top2_sum_gate_kernel.py",
+      "family": "moe",
+      "title": "Compute top-two group sums and gates",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/top2_sum_gate_pto.hpp"
+      ],
+      "functions": [
+        "top2_sum_gate"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TADDS",
+        "TCI",
+        "TCMP",
+        "TCOLEXPAND",
+        "TCVT",
+        "TDIVS",
+        "TEXP",
+        "TEXPANDS",
+        "TEXTRACT",
+        "TINSERT",
+        "TLOAD",
+        "TLOG",
+        "TMULS",
+        "TOR",
+        "TRECIP",
+        "TREMS",
+        "TROWEXPAND",
+        "TROWEXPANDMUL",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TROWSUM",
+        "TSEL",
+        "TSQRT",
+        "TSTORE",
+        "TSUB"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/topk_gate_kernel.py",
+      "family": "moe",
+      "title": "Select and gate top-k expert groups",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/topk_gate_pto.hpp"
+      ],
+      "functions": [
+        "topk_gate"
+      ],
+      "intrinsics": [
+        "TCI",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TLOAD",
+        "TREMS",
+        "TROWEXPAND",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TSEL",
+        "TSTORE",
+        "TSUB"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/moe/topk_sum_and_topk_group_idx_kernel.py",
+      "family": "moe",
+      "title": "Reduce group scores and select top-k groups",
+      "summary": "This mixture-of-experts translation keeps routing scores, indices, counts, and expert values in tile operations.",
+      "algorithm": "Load a routing fragment, apply selection, counting, normalization, gather, or reduction stages, and store the fragment in token-major or expert-major order.",
+      "partition": "Blocks partition tokens or experts; threads own disjoint routing fragments of at least 128 bytes and derive their coordinates from execution identity.",
+      "tile_flow": "Scores and indices are loaded into typed tiles, transformed through the routing pipeline, and committed through regular or indexed tile memory operations.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/moe/topk_sum_and_topk_group_idx_pto.hpp"
+      ],
+      "functions": [
+        "topk_sum_and_topk_group_idx"
+      ],
+      "intrinsics": [
+        "TADD",
+        "TCI",
+        "TCMP",
+        "TCVT",
+        "TEXPANDS",
+        "TINSERT",
+        "TLOAD",
+        "TREMS",
+        "TROWEXPAND",
+        "TROWEXPANDSUB",
+        "TROWMAX",
+        "TSEL",
+        "TSTORE",
+        "TSUB"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/cast_back_e5m6_kernel.py",
+      "family": "quant",
+      "title": "Restore E5M6-encoded activations with tile scaling",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/cast_back_e5m6_pto.hpp"
+      ],
+      "functions": [
+        "cast_back_e5m6"
+      ],
+      "intrinsics": [
+        "TCVT",
+        "TLOAD",
+        "TMUL",
+        "TROWEXPAND",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/cast_back_kernel.py",
+      "family": "quant",
+      "title": "Restore quantized activations from scaling factors",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/cast_back_pto.hpp"
+      ],
+      "functions": [
+        "cast_back_per_token",
+        "cast_back_per_channel"
+      ],
+      "intrinsics": [
+        "TCOLEXPANDMUL",
+        "TCVT",
+        "TLOAD",
+        "TROWEXPANDMUL",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/per_block_cast_kernel.py",
+      "family": "quant",
+      "title": "Quantize activations with per-block scales",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/per_block_cast_pto.hpp"
+      ],
+      "functions": [
+        "per_block_absmax_tile",
+        "per_block_expand_scalar",
+        "per_block_cast",
+        "per_block_cast_sf_only",
+        "per_block_cast_with_precomputed_sf"
+      ],
+      "intrinsics": [
+        "TCOLEXPAND",
+        "TCOLMAX",
+        "TCVT",
+        "TLOAD",
+        "TMAX",
+        "TMAXS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPAND",
+        "TROWMAX",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/per_block_cast_lossless_kernel.py",
+      "family": "quant",
+      "title": "Pack lossless per-block quantization data",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/per_block_cast_lossless_pto.hpp"
+      ],
+      "functions": [
+        "per_block_cast_lossless"
+      ],
+      "intrinsics": [
+        "TCVT",
+        "TLOAD",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/per_channel_cast_and_transpose_kernel.py",
+      "family": "quant",
+      "title": "Quantize per channel while transposing tiles",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/per_channel_cast_and_transpose_pto.hpp"
+      ],
+      "functions": [
+        "per_channel_cast_and_transpose"
+      ],
+      "intrinsics": [
+        "TCVT",
+        "TLOAD",
+        "TMAX",
+        "TMAXS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPAND",
+        "TROWMAX",
+        "TSTORE",
+        "TTRANS"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/per_channel_cast_fused_kernel.py",
+      "family": "quant",
+      "title": "Fuse per-channel quantization stages",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/per_channel_cast_fused_pto.hpp"
+      ],
+      "functions": [
+        "per_channel_cast_fused"
+      ],
+      "intrinsics": [
+        "TCOLEXPAND",
+        "TCOLMAX",
+        "TCVT",
+        "TLOAD",
+        "TMAX",
+        "TMAXS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/per_channel_cast_kernel.py",
+      "family": "quant",
+      "title": "Quantize activations with per-channel scales",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/per_channel_cast_kernel_pto.hpp"
+      ],
+      "functions": [
+        "per_channel_cast_kernel"
+      ],
+      "intrinsics": [],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/per_token_cast_kernel.py",
+      "family": "quant",
+      "title": "Quantize activations with per-token scales",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/per_token_cast_pto.hpp"
+      ],
+      "functions": [
+        "per_token_cast",
+        "per_channel_cast"
+      ],
+      "intrinsics": [
+        "TCOLEXPANDMUL",
+        "TCOLMAX",
+        "TCVT",
+        "TLOAD",
+        "TMAX",
+        "TMAXS",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWMAX",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/per_token_cast_to_e5m6_kernel.py",
+      "family": "quant",
+      "title": "Encode per-token scales in E5M6 form",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/per_token_cast_to_e5m6_pto.hpp"
+      ],
+      "functions": [
+        "per_token_cast_to_e5m6"
+      ],
+      "intrinsics": [
+        "TCVT",
+        "TLOAD",
+        "TMAX",
+        "TMAXS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPAND",
+        "TROWMAX",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/swiglu_backward_and_per_token_cast_kernel.py",
+      "family": "quant",
+      "title": "Differentiate SwiGLU and quantize token gradients",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/swiglu_backward_and_per_token_cast_pto.hpp"
+      ],
+      "functions": [
+        "swiglu_backward_and_per_token_cast"
+      ],
+      "intrinsics": [
+        "TADDS",
+        "TCVT",
+        "TEXP",
+        "TLOAD",
+        "TMAX",
+        "TMAXS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPAND",
+        "TROWMAX",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/swiglu_forward_and_per_channel_cast_and_transpose_kernel.py",
+      "family": "quant",
+      "title": "Fuse SwiGLU, channel quantization, and transpose",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/swiglu_forward_and_per_channel_cast_and_transpose_pto.hpp"
+      ],
+      "functions": [
+        "swiglu_forward_and_per_channel_cast_and_transpose",
+        "swiglu_forward_and_per_channel_cast_without_transpose"
+      ],
+      "intrinsics": [
+        "TADDS",
+        "TCOLEXPAND",
+        "TCOLMAX",
+        "TCVT",
+        "TEXP",
+        "TLOAD",
+        "TMAX",
+        "TMAXS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPAND",
+        "TROWMAX",
+        "TSTORE",
+        "TTRANS"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/quant/swiglu_forward_and_per_token_cast_kernel.py",
+      "family": "quant",
+      "title": "Fuse SwiGLU with per-token quantization",
+      "summary": "This quantization translation derives scaling factors and converted values without scalar tensor loops.",
+      "algorithm": "Load an activation fragment, compute an absolute maximum with tile reductions, derive the scale, convert the valid values, and store data and scale tiles.",
+      "partition": "Blocks partition outer rows; threads own non-overlapping token, channel, or block fragments whose valid payload is at least 128 bytes.",
+      "tile_flow": "Activation tiles are converted to the accumulation type, reduced for scale calculation, transformed, converted to the output type, and stored with their scale tiles.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/quant/swiglu_fused_cast_pto.hpp"
+      ],
+      "functions": [
+        "swiglu_forward_and_per_token_cast"
+      ],
+      "intrinsics": [
+        "TADDS",
+        "TCVT",
+        "TEXP",
+        "TLOAD",
+        "TMAX",
+        "TMAXS",
+        "TMUL",
+        "TMULS",
+        "TRECIP",
+        "TROWEXPANDMUL",
+        "TROWMAX",
+        "TSTORE"
+      ],
+      "verification": "source-validated"
+    },
+    {
+      "source": "tile_kernels/transpose/batched_transpose_kernel.py",
+      "family": "transpose",
+      "title": "Transpose a batch of tiled matrices",
+      "summary": "This layout translation transposes batched matrices entirely through typed tiles.",
+      "algorithm": "Load one thread-owned matrix panel, transpose its tile axes, and store the corresponding output panel.",
+      "partition": "Blocks partition batch elements and tile rows; threads own disjoint source and destination panels of at least 128 bytes.",
+      "tile_flow": "A global source view produces a local tile, the layout operation creates the transposed tile version, and a global destination view receives the valid region.",
+      "implementations": [
+        "benchmark/one-level-arch/kernels/deepseek/transpose/batched_transpose_pto.hpp"
+      ],
+      "functions": [
+        "batched_transpose"
+      ],
+      "intrinsics": [
+        "TLOAD",
+        "TSTORE",
+        "TTRANS"
+      ],
+      "verification": "source-validated"
+    }
+  ]
+}

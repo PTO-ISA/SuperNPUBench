@@ -1,54 +1,84 @@
-# Core Indexing and Tensor Partitioning
+# Block and Thread Mapping
 
-## Core Identity
+This is the only page that maps the generic C++ programming terms in this
+manual to the current implementation profile.
 
-`get_block_idx()` returns the launch-defined core ID. All four PEs in one core
-observe the same value.
+## Generic Source Terms
 
-```cpp
-const uint32_t core = get_block_idx();
-```
+| Generic C++ term | Intrinsic | Meaning |
+| --- | --- | --- |
+| Block | `get_block_idx()` | Work-unit ID used to select a global tensor slice |
+| Thread | `get_thread_idx()` | Lane ID inside the block used to select a fragment |
 
-The intrinsic does not return the number of cores. Launch parameters or kernel
-arguments provide the global work geometry.
-
-## One-Dimensional Split
-
-For `rows` divided across `core_count` cores:
+Kernel prose should use **block** and **thread**. The implementation currently
+maps a block to one NPU core and maps each thread to one processing element.
+The current profile has exactly four threads per block:
 
 ```cpp
-const uint32_t core = get_block_idx();
-const uint32_t begin = rows * core / core_count;
-const uint32_t end = rows * (core + 1) / core_count;
-auto block_rows = input.slice_rows(begin, end - begin);
+static constexpr uint32_t kThreadsPerBlock = 4;
+static constexpr uint32_t kThreadIndexMax = kThreadsPerBlock - 1;
+static constexpr uint32_t kMinimumThreadFragmentBytes = 128;
 ```
 
-This quotient-based split handles non-divisible row counts without overlap.
+Use these constants in examples outside this page instead of restating the
+profile.
 
-## Core and PE Split
+## Stable Identity
 
-The core first selects a coarse slice. The PE then selects one quarter inside
-that slice:
+`get_block_idx()` returns the block identity for the current kernel instance.
+`get_thread_idx()` returns the thread identity inside that block. Both values
+are immutable for the lifetime of the kernel instance.
+
+All threads in the block start at the same program entry and initial program
+counter. C++ branches may then select different paths by thread identity. A
+later grouped operation is valid only when every required participant reaches
+the same dynamic operation instance with compatible tile versions.
+
+## Partition Global Rows
+
+Partition in two steps: first by block, then by thread.
 
 ```cpp
-const uint32_t core = get_block_idx();
-const uint32_t pe = get_thread_idx();
+struct RowSlice {
+  uint32_t begin;
+  uint32_t count;
+};
 
-const uint32_t core_begin = core * rows_per_core;
-const uint32_t pe_begin = core_begin + pe * rows_per_pe;
-auto local_rows = input.slice_rows(pe_begin, rows_per_pe);
-TLOAD(local_tile, local_rows);
+RowSlice partition_rows(uint32_t rows,
+                        uint32_t block,
+                        uint32_t block_count,
+                        uint32_t thread) {
+  const uint32_t block_begin = rows * block / block_count;
+  const uint32_t block_end = rows * (block + 1) / block_count;
+  const uint32_t block_rows = block_end - block_begin;
+
+  const uint32_t thread_begin =
+      block_begin + block_rows * thread / kThreadsPerBlock;
+  const uint32_t thread_end =
+      block_begin + block_rows * (thread + 1) / kThreadsPerBlock;
+
+  return {thread_begin, thread_end - thread_begin};
+}
 ```
 
-## Matrix Split
+This quotient split handles tails without overlap. It also keeps every global
+element owned by exactly one block/thread pair when `block_count` covers the
+whole tensor.
 
-Grouped matrix multiplication normally partitions output M across cores, then
-partitions each core's M slice across its four PEs. The right-hand B tile is
-loaded once into a core-local shared tile version.
+## Minimum Fragment Size
 
-## Restrictions
+A per-thread tile fragment must represent at least
+`kMinimumThreadFragmentBytes` of payload for the current profile. Smaller
+logical work should be padded, packed with multiple elements, or handled by a
+scalar path before forming a tile operation.
 
-- Different cores do not share tile-register IDs or versions.
-- `get_block_idx()` does not establish memory visibility.
-- Core slices must be disjoint unless atomic updates are intentional.
-- Cross-core collective operations are outside the current one-level model.
+The minimum applies to the thread-local fragment. A block-wide logical tile
+therefore has at least:
+
+```cpp
+static constexpr uint32_t kMinimumBlockTileBytes =
+    kThreadsPerBlock * kMinimumThreadFragmentBytes;
+```
+
+Padding does not make padded elements valid data. Use valid-region metadata or
+explicit tail logic so stores write only the intended output range.

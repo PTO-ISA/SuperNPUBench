@@ -1,4 +1,4 @@
-# Linx LLVM v0.57 block-template excerpt based on docs/examples/flash_attention.cpp.
+# Compiler v0.57 block-template excerpt based on docs/examples/flash_attention.cpp.
 # Repeated Q/K/V loads and QK/PV products are condensed to representative blocks.
 # C.B.IOS shows the required shared-RHS lowering; compiler support is pending.
 BSTART.TLOAD    INT32

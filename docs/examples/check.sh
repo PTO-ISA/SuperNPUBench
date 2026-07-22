@@ -30,10 +30,10 @@ COMMON_FLAGS=(
   -c
 )
 
-CANONICAL_PTO_ROOT="${PTO_KERNELS_ROOT:-$REPO_ROOT/../pto_kernels}"
-CANONICAL_PTO_FLAGS=(
+TILE_API_ROOT="$REPO_ROOT/benchmark/one-level-arch"
+TILE_API_FLAGS=(
   -fenable-matrix
-  -I"$CANONICAL_PTO_ROOT/include"
+  -I"$TILE_API_ROOT/include"
 )
 
 if [[ -n "${LINX_SYSROOT:-}" ]]; then
@@ -49,25 +49,22 @@ compile_cpp_language() {
 }
 
 compile_tile_add() {
-  "$COMPILER_DIR/clang++" "${COMMON_FLAGS[@]}" "${CANONICAL_PTO_FLAGS[@]}" \
+  "$COMPILER_DIR/clang++" "${COMMON_FLAGS[@]}" "${TILE_API_FLAGS[@]}" \
     "$SCRIPT_DIR/tile_add.cpp" -o "$OUT_DIR/tile_add.o"
 }
 
+compile_shared_tile_types() {
+  "$COMPILER_DIR/clang++" "${COMMON_FLAGS[@]}" "${TILE_API_FLAGS[@]}" \
+    "$SCRIPT_DIR/shared_tile_types.cpp" -o "$OUT_DIR/shared_tile_types.o"
+}
+
 compile_gemm_tile() {
-  if [[ ! -f "$CANONICAL_PTO_ROOT/include/pto/linx/TileOps.hpp" ]]; then
-    echo "error: PTO_KERNELS_ROOT does not contain include/pto/linx/TileOps.hpp" >&2
-    exit 2
-  fi
-  "$COMPILER_DIR/clang++" "${COMMON_FLAGS[@]}" "${CANONICAL_PTO_FLAGS[@]}" \
+  "$COMPILER_DIR/clang++" "${COMMON_FLAGS[@]}" "${TILE_API_FLAGS[@]}" \
     "$SCRIPT_DIR/gemm_tile.cpp" -o "$OUT_DIR/gemm_tile.o"
 }
 
 compile_flash_attention() {
-  if [[ ! -f "$CANONICAL_PTO_ROOT/include/pto/linx/AutoModeKernels.hpp" ]]; then
-    echo "error: PTO_KERNELS_ROOT does not contain include/pto/linx/AutoModeKernels.hpp" >&2
-    exit 2
-  fi
-  "$COMPILER_DIR/clang++" "${COMMON_FLAGS[@]}" "${CANONICAL_PTO_FLAGS[@]}" \
+  "$COMPILER_DIR/clang++" "${COMMON_FLAGS[@]}" "${TILE_API_FLAGS[@]}" \
     "$SCRIPT_DIR/flash_attention.cpp" -o "$OUT_DIR/flash_attention.o"
 }
 
@@ -75,15 +72,17 @@ case "$CASE" in
   all)
     compile_cpp_language
     compile_tile_add
+    compile_shared_tile_types
     compile_gemm_tile
     compile_flash_attention
     ;;
   cpp-language) compile_cpp_language ;;
   tile-add) compile_tile_add ;;
+  shared-tile-types) compile_shared_tile_types ;;
   gemm-tile) compile_gemm_tile ;;
   flash-attention) compile_flash_attention ;;
   *)
-    echo "error: unknown case '$CASE' (expected all, cpp-language, tile-add, gemm-tile, or flash-attention)" >&2
+    echo "error: unknown case '$CASE' (expected all, cpp-language, tile-add, shared-tile-types, gemm-tile, or flash-attention)" >&2
     exit 2
     ;;
 esac

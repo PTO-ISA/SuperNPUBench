@@ -1,95 +1,87 @@
-# Four-PE Group Execution
+# Grouped Execution
 
-## Program Instance
+Grouped operations are dynamic operation instances reached by all required
+participating threads. They combine per-thread local operands with shared tile
+operands and define per-thread or shared results.
 
-A core program instance contains one program image, four PE execution
-contexts, and one core-local shared tile-register namespace. Shared IDs in two
-different cores denote unrelated values.
+## Entry and Divergence
 
-At launch:
-
-```text
-PC(PE0) = PC(PE1) = PC(PE2) = PC(PE3) = entry
-```
-
-After launch, each PE advances its own PC. The architecture does not require
-cycle-by-cycle lockstep.
-
-## Identity Intrinsics
+All threads start at the same program entry. A branch may select paths by
+thread identity:
 
 ```cpp
-const uint32_t pe = get_thread_idx();  // 0, 1, 2, or 3
-const uint32_t core = get_block_idx(); // launch-defined core ID
-```
+const uint32_t thread = get_thread_idx();
 
-All four PEs in a core observe the same core ID. Each PE observes a distinct,
-immutable PE ID.
-
-## Independent Regions
-
-An independent region may execute on one PE, a static subset, or all PEs.
-
-```cpp
-if (get_thread_idx() < 2) {
-  TADD(local_out, local_lhs, local_rhs);
+if (thread == 0) {
+  load_metadata();
+} else {
+  compute_payload(thread);
 }
 ```
 
-Only PE0 and PE1 define `local_out` on this path. PE2 and PE3 retain their
-previous local versions or an undefined value if no previous definition
-exists.
+Different paths may define different local tile versions. Before a grouped
+operation, the paths must reconverge with compatible versions for every source
+the operation reads.
 
-## Convergent Regions
+## Dynamic Operation Order
 
-A convergent operation requires all four PEs to reach the same dynamic
-instance with compatible operands. Arrival may be staggered. The group begins
-execution only after all participants and source tile versions are ready.
+Grouped operations are matched by dynamic order, not by physical arrival time.
+Every participant must reach the same grouped operation instance in the same
+relative order.
 
 ```cpp
+TMATMUL(c0, a0, shared_b0);  // grouped instance 0
+TMATMUL(c1, a1, shared_b1);  // grouped instance 1
+```
+
+A program is invalid if one participant reaches instance 1 while another
+participant is still expecting instance 0.
+
+## Shared Operand Readiness
+
+A grouped operation that reads a shared operand waits for the bound shared
+version. The producing thread does not need to arrive in the same cycle as the
+consuming threads. The data dependency is the shared tile version.
+
+```cpp
+if (thread == 0) {
+  TLOAD(shared_b, global_b);
+}
+
 TMATMUL(local_c, local_a, shared_b);
 ```
 
-This operation is legal only when:
+The shared right operand must be fully defined before `TMATMUL` can consume it.
 
-- `shared_b` is one fully defined shared tile version;
-- every PE reaches this dynamic `TMATMUL` in the same group order;
-- `local_a` and `local_c` describe compatible M-axis quarters;
-- all four PEs agree on shape, datatype, and layout.
+## Local Result Ownership
 
-The following is invalid because only two PEs reach the group operation:
+Grouped matrix operations define local result fragments. Each thread owns its
+own result fragment and stores only its assigned global range:
 
 ```cpp
-if (get_thread_idx() < 2) {
-  TMATMUL(local_c, local_a, shared_b); // invalid group participation
+TSTORE(global_c.slice_rows(rows.begin, rows.count), local_c);
+```
+
+Avoid overlapping stores unless the selected operation and runtime explicitly
+define the conflict behavior.
+
+## Partial Groups
+
+Some movement patterns intentionally publish only a subset of shared regions:
+
+```cpp
+if (thread < kActiveProducerCount) {
+  TMOV<SharedMove::Insert>(shared_partial, local_value);
 }
 ```
 
-## Static and Dynamic Divergence
+The resulting shared version may be consumed only by operations that accept the
+defined-region mask. It cannot be used as a complete shared right matrix.
 
-Branches on `get_thread_idx()` are statically analyzable and may be lowered to
-PE masks. Data-dependent branches are legal for PE-local work, but the compiler
-must prove that control paths reconverge with compatible tile-version state
-before the next group operation.
+## Common Mistakes
 
-## Logical Tile Distribution
-
-A logical tile has four fixed PE regions. A common M-axis distribution is:
-
-```text
-PE0 owns rows [0, M/4)
-PE1 owns rows [M/4, M/2)
-PE2 owns rows [M/2, 3M/4)
-PE3 owns rows [3M/4, M)
-```
-
-The PE ID does not act as a tile-register address. A PE cannot directly name a
-peer's local tile payload. Cross-PE tile data must pass through a shared tile
-version.
-
-## Group Progress Rules
-
-- Independent operations do not wait for other PEs.
-- A shared definition publishes when all defined regions are ready.
-- A group consumer waits for its exact shared source version.
-- A convergent instance must have the same dynamic order on all four PEs.
-- Leaving one PE behind a never-taken path can prevent group progress.
+- Letting one participant skip a required grouped operation.
+- Reaching grouped operations in different dynamic orders.
+- Treating shared tile readiness as a cycle-timing property.
+- Reading a shared region that no participating thread defined.
+- Storing thread fragments to overlapping global ranges.

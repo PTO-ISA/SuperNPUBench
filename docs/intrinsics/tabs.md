@@ -1,77 +1,34 @@
-﻿# TABS
+# TABS - Take the absolute value of a tile
 
+## Purpose / When to use
 
-## Introduction
+Elementwise absolute value of a tile. Use it inside vector-tile kernels when the operation should run element by element over the destination tile valid region.
 
-Elementwise absolute value of a tile.
-
-## Math Interpretation
-
-For each element `(i, j)` in the valid region:
-
-$$ \mathrm{dst}_{i,j} = \left|\mathrm{src}_{i,j}\right| $$
-
-## Assembly Syntax
-
-PTO-AS form: see [PTO-AS Specification](assembly.md).
-
-Synchronous form:
-
-```text
-%dst = tabs %src : !pto.tile<...> -> !pto.tile<...>
-```
-
-### AS Level 1 (SSA)
-
-```text
-%dst = pto.tabs %src : !pto.tile<...> -> !pto.tile<...>
-```
-
-### AS Level 2 (DPS)
-
-```text
-pto.tabs ins(%src : !pto.tile_buf<...>) outs(%dst : !pto.tile_buf<...>)
-```
-
-### IR Level 1 (SSA)
-
-```text
-%dst = pto.tabs %src : !pto.tile<...> -> !pto.tile<...>
-```
-
-### IR Level 2 (DPS)
-
-```text
-pto.tabs ins(%src : !pto.tile_buf<...>) outs(%dst : !pto.tile_buf<...>)
-```
-## C++ Intrinsic
-
-C++ declaration:
+## C++ declaration
 
 ```cpp
 template <typename TileDataDst, typename TileDataSrc>
 PTO_INST void TABS(TileDataDst &dst, TileDataSrc &src);
 ```
 
+## Parameters table
+
+| Parameter | Description |
+| --- | --- |
+| `dst` | Output tile. The operation writes only the destination valid region. |
+| `src` | Input tile. It must be shape-compatible with `dst`. |
+
+## Operation / Semantics
+
+For every element in the destination valid region, `dst(i, j) = abs(src(i, j))`.
+
 ## Constraints
 
-- **Implementation checks (CPU sim)**:
-    - `TileData::DType` must be one of: `int32_t`, `int`, `int16_t`, `half`, `float`.
-    - The implementation iterates over `dst.GetValidRow()` / `dst.GetValidCol()`.
-- **Implementation checks (Costmodel)**:
-    - `TileData::DType` must be one of: `int32_t`、`int16_t`、`int8_t`、`uint8_t`、`half`、`float`.
-- **Implementation checks (NPU)**:
-    - `TileData::DType` must be one of: `float` or `half`;
-    - Tile location must be vector (`TileData::Loc == TileType::Vec`);
-    - Static valid bounds: `TileData::ValidRow <= TileData::Rows` and `TileData::ValidCol <= TileData::Cols`;
-    - Runtime: `src.GetValidRow() == dst.GetValidRow()` and `src.GetValidCol() == dst.GetValidCol()`;
-    - Tile layout must be row-major (`TileData::isRowMajor`).
-- **Valid region**:
-    - The op uses `dst.GetValidRow()` / `dst.GetValidCol()` as the iteration domain.
+- Supported element types from the catalog/current page: `F32`, `F16`.
+- Tiles should be vector tiles, row-major, and valid-shape compatible unless a narrower page-specific note says otherwise.
+- The operation iterates over `dst.GetValidRow()` and `dst.GetValidCol()`; values outside the destination valid region are not part of the operation.
 
-## Examples
-
-### Auto
+## Example
 
 ```cpp
 #include <pto/pto-inst.hpp>
@@ -84,21 +41,10 @@ void example_auto() {
 }
 ```
 
+## Common mistakes
 
-## ASM Form Examples
+- Do not assume the operation changes elements outside the destination valid region.
 
-### Auto Mode
+## Used by kernels
 
-```text
-# Auto mode: compiler/runtime-managed placement and scheduling.
-%dst = pto.tabs %src : !pto.tile<...> -> !pto.tile<...>
-```
-
-
-### PTO Assembly Form
-
-```text
-%dst = tabs %src : !pto.tile<...> -> !pto.tile<...>
-# AS Level 2 (DPS)
-pto.tabs ins(%src : !pto.tile_buf<...>) outs(%dst : !pto.tile_buf<...>)
-```
+Used by the vector microbenchmark kernels for this intrinsic, including `microbenchmark/vector/src/tabs_fp16_16x16.cpp`, `microbenchmark/vector/src/tabs_i16_16x16.cpp`, `microbenchmark/vector/src/tabs_i32_16x16.cpp`.
