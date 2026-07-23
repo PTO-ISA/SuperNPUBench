@@ -59,6 +59,7 @@ nav:
       - Compile-time shapes and templates: cpp/static-programming.md
       - Loops, branches, and scalar control: cpp/control-flow.md
       - Multidimensional tiling: tutorials/multidimensional-tiling.md
+      - Fine-grained 128-byte tiles: tutorials/fine-grained-tiles.md
       - Global tensor views: cpp/global-tensors.md
       - Tile values and valid regions: cpp/tile-values.md
       - Supported C++ patterns: cpp/supported-cpp.md

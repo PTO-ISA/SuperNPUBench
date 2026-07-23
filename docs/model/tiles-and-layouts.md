@@ -46,6 +46,10 @@ static_assert(kLocalRows * kCols * sizeof(Element) >=
 When a tail has fewer valid elements, keep the tile storage padded and describe
 the valid subset separately.
 
+The [fine-grained tile guide](../tutorials/fine-grained-tiles.md) shows exact
+128-byte `1 x 32` and `4 x 8` FP32 fragments, including compile-time payload
+checks and runtime valid-region tails.
+
 ## Layout
 
 Layout describes how logical elements map to bytes. Common forms include

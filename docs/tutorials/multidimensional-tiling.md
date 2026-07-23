@@ -5,6 +5,10 @@ more dimensions: batch, sequence, head, channel, row, and column. Kernel C++
 selects the outer coordinates and walks a two-dimensional tile grid; tile
 operations perform the calculation inside each selected region.
 
+The same loop structure applies to compact `4 x 8` FP32 regions. The
+[fine-grained tile guide](fine-grained-tiles.md) develops that 128-byte case
+and compares it with one-dimensional vector-style tiles.
+
 ```text
 scalar C++ loops:  batch -> head -> tile row -> tile column
 tile data path:                         TLOAD -> compute -> TSTORE

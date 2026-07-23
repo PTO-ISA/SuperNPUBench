@@ -96,3 +96,8 @@ Scalar C++ loops select outer batch, head, or channel indices. Read
 Local tile fragments must satisfy `kMinimumThreadFragmentBytes` in the current
 profile. Use padding, packing, or valid-region tails when the logical fragment
 is smaller than the minimum allocation.
+
+For vector-style arithmetic and compact 2D regions, an exact 128-byte logical
+tile is a useful starting point. See [Fine-grained 128-byte tile
+kernels](../tutorials/fine-grained-tiles.md) for shape selection, tails,
+reductions, and independent dependency chains.

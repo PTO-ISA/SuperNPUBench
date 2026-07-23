@@ -19,9 +19,11 @@ define tile values, and let tile-version dependencies order the work.
    local tiles, shared tiles, and named constants.
 4. [Multidimensional tiling](tutorials/multidimensional-tiling.md) shows how
    C++ loops walk 2D, 3D, and batched tensor regions.
-5. [Tile execution](model/execution.md) explains tile IDs, versions, and
+5. [Fine-grained tiles](tutorials/fine-grained-tiles.md) show how exact
+   128-byte fragments express vector-style and compact 2D kernels.
+6. [Tile execution](model/execution.md) explains tile IDs, versions, and
    superscalar issue.
-6. [Shared tile operations](model/shared-tile-registers.md) covers shared
+7. [Shared tile operations](model/shared-tile-registers.md) covers shared
    `TLOAD`, `TSTORE`, `TMOV`, and shared-right `TMATMUL`.
 
 ## Kernel Shape

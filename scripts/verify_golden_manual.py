@@ -130,6 +130,7 @@ def check_model(docs: Path, errors: list[str]) -> None:
         "model/shared-tile-registers.md": ("TLOAD", "TSTORE", "TMOV", "TMATMUL"),
         "tutorials/group-programming.md": ("get_thread_idx()", "get_block_idx()"),
         "tutorials/multidimensional-tiling.md": ("LocalTile", "SharedTile", "tile row", "tile column"),
+        "tutorials/fine-grained-tiles.md": ("128 bytes", "LocalTile", "TLOAD", "TSTORE"),
     }
     for relative, markers in required.items():
         path = docs / relative
@@ -214,6 +215,15 @@ def check_public_surface(root: Path, docs: Path, errors: list[str]) -> None:
             errors.append(
                 f"{path.relative_to(root)}: uses an implementation tile spelling instead of LocalTile"
             )
+
+    fine_example = docs / "examples/fine_grained_tiles.cpp"
+    if not fine_example.is_file():
+        errors.append("missing compile-checked fine-grained tile example")
+    else:
+        text = fine_example.read_text(encoding="utf-8")
+        for marker in ("kFineTileBytes = 128", "F32VectorTile", "F32MatrixTile", "TROWSUM"):
+            if marker not in text:
+                errors.append(f"fine-grained tile example is missing {marker!r}")
 
 
 def resolve_site_target(site: Path, page: Path, link: str) -> Path | None:

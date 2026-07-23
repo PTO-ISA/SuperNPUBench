@@ -68,6 +68,11 @@ compile_flash_attention() {
     "$SCRIPT_DIR/flash_attention.cpp" -o "$OUT_DIR/flash_attention.o"
 }
 
+compile_fine_grained_tiles() {
+  "$COMPILER_DIR/clang++" "${COMMON_FLAGS[@]}" "${TILE_API_FLAGS[@]}" \
+    "$SCRIPT_DIR/fine_grained_tiles.cpp" -o "$OUT_DIR/fine_grained_tiles.o"
+}
+
 case "$CASE" in
   all)
     compile_cpp_language
@@ -75,14 +80,16 @@ case "$CASE" in
     compile_shared_tile_types
     compile_gemm_tile
     compile_flash_attention
+    compile_fine_grained_tiles
     ;;
   cpp-language) compile_cpp_language ;;
   tile-add) compile_tile_add ;;
   shared-tile-types) compile_shared_tile_types ;;
   gemm-tile) compile_gemm_tile ;;
   flash-attention) compile_flash_attention ;;
+  fine-grained-tiles) compile_fine_grained_tiles ;;
   *)
-    echo "error: unknown case '$CASE' (expected all, cpp-language, tile-add, shared-tile-types, gemm-tile, or flash-attention)" >&2
+    echo "error: unknown case '$CASE' (expected all, cpp-language, tile-add, shared-tile-types, gemm-tile, flash-attention, or fine-grained-tiles)" >&2
     exit 2
     ;;
 esac

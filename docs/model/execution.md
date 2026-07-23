@@ -31,6 +31,12 @@ when this preserves:
 Correct code therefore expresses ordering through values and memory effects,
 not through spacing between instructions.
 
+Fine-grained kernels often expose several short, independent chains at once.
+See [Fine-grained 128-byte tile
+kernels](../tutorials/fine-grained-tiles.md#expose-independent-tile-chains) for
+an unrolled example whose loads and arithmetic are related only by tile
+versions.
+
 ## Local Versions
 
 Each thread tracks local tile versions independently. A branch may define a
