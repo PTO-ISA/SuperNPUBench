@@ -233,6 +233,22 @@ def check_public_surface(root: Path, docs: Path, errors: list[str]) -> None:
                 errors.append(f"fine-grained tile example is missing {marker!r}")
 
 
+def check_visual_theme(root: Path, errors: list[str]) -> None:
+    config = (root / "mkdocs.yml").read_text(encoding="utf-8")
+    styles = (root / "docs/assets/stylesheets/supernpu.css").read_text(encoding="utf-8")
+    if "scheme: slate" in config or '[data-md-color-scheme="slate"]' in styles:
+        errors.append("manual must publish a single light color scheme")
+    for marker in (
+        "--snpu-paper: #ffffff",
+        "--snpu-code: #ffffff",
+        "--md-code-hl-keyword-color",
+        "--md-code-hl-string-color",
+        "--md-code-hl-comment-color",
+    ):
+        if marker not in styles:
+            errors.append(f"light documentation theme is missing {marker!r}")
+
+
 def resolve_site_target(site: Path, page: Path, link: str) -> Path | None:
     parsed = urlsplit(link)
     if parsed.scheme or parsed.netloc or link.startswith(("#", "mailto:", "javascript:")):
@@ -279,6 +295,7 @@ def main() -> None:
     check_model(docs, errors)
     check_benchmarks(root, docs, errors)
     check_public_surface(root, docs, errors)
+    check_visual_theme(root, errors)
     from verify_pto_kernel_migration import check_migration as check_foundation_migration
     from verify_deepseek_migration import check_migration as check_deepseek_migration
 

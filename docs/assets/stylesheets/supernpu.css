@@ -1,14 +1,14 @@
 :root {
   --snpu-ink: #172026;
   --snpu-muted: #53616a;
-  --snpu-paper: #f7f9fa;
+  --snpu-paper: #ffffff;
   --snpu-panel: #ffffff;
   --snpu-line: #d9e0e4;
   --snpu-cyan: #006b78;
   --snpu-green: #176f3e;
   --snpu-amber: #b86c00;
   --snpu-red: #b13a37;
-  --snpu-code: #111a20;
+  --snpu-code: #ffffff;
 }
 
 [data-md-color-scheme="default"] {
@@ -21,30 +21,20 @@
   --md-accent-fg-color: var(--snpu-cyan);
   --md-code-bg-color: #edf2f4;
   --md-code-fg-color: #172026;
+  --md-code-hl-color: #e6f0f4;
+  --md-code-hl-number-color: #9a3412;
+  --md-code-hl-special-color: #6d28d9;
+  --md-code-hl-function-color: #075985;
+  --md-code-hl-constant-color: #6d28d9;
+  --md-code-hl-keyword-color: #9f1239;
+  --md-code-hl-string-color: #166534;
+  --md-code-hl-name-color: #1f2937;
+  --md-code-hl-operator-color: #334155;
+  --md-code-hl-punctuation-color: #475569;
+  --md-code-hl-comment-color: #64748b;
+  --md-code-hl-generic-color: #334155;
+  --md-code-hl-variable-color: #0369a1;
   --md-typeset-a-color: #007489;
-}
-
-[data-md-color-scheme="slate"] {
-  --snpu-ink: #e7edf0;
-  --snpu-muted: #aebbc2;
-  --snpu-paper: #11181c;
-  --snpu-panel: #172126;
-  --snpu-line: #344047;
-  --snpu-cyan: #40c4d5;
-  --snpu-green: #62cc8b;
-  --snpu-amber: #f0ae54;
-  --snpu-red: #f07b76;
-  --snpu-code: #0b1013;
-  --md-default-fg-color: var(--snpu-ink);
-  --md-default-fg-color--light: var(--snpu-muted);
-  --md-default-bg-color: var(--snpu-paper);
-  --md-primary-fg-color: #0b1114;
-  --md-primary-fg-color--light: #172126;
-  --md-primary-fg-color--dark: #080d0f;
-  --md-accent-fg-color: var(--snpu-cyan);
-  --md-code-bg-color: #0d1519;
-  --md-code-fg-color: #dce7eb;
-  --md-typeset-a-color: #52c7d6;
 }
 
 .md-grid {
@@ -101,7 +91,24 @@
 .md-typeset .highlight > pre,
 .md-typeset pre > code {
   background: var(--snpu-code);
-  color: #dce7eb;
+  color: var(--md-code-fg-color);
+}
+
+.md-typeset div.highlight {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--snpu-line);
+  border-radius: 4px;
+  background: var(--snpu-code);
+  box-shadow: none;
+}
+
+.md-typeset div.highlight > pre {
+  margin: 0;
+}
+
+.md-typeset :not(pre) > code {
+  border: 1px solid #dfe5e8;
 }
 
 .snpu-masthead {
