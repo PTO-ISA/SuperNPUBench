@@ -307,6 +307,33 @@
   color: var(--snpu-ink);
 }
 
+.md-content,
+.md-content__inner {
+  min-width: 0;
+}
+
+.md-typeset .mermaid {
+  contain: inline-size;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.snpu-diagram-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.snpu-diagram-scroll .mermaid {
+  contain: none;
+  overflow: visible;
+}
+
 .md-typeset .admonition,
 .md-typeset details {
   border-radius: 4px;
@@ -344,6 +371,7 @@
   .snpu-flow > li:nth-child(-n + 2) { border-bottom: 1px solid var(--snpu-line); }
   .snpu-contract { grid-template-columns: 1fr; }
   .snpu-contract dt { border-bottom: 0; }
+  .snpu-diagram-scroll .mermaid { min-width: 54rem; }
   .snpu-model__panel { min-height: 12rem; }
   .snpu-model__tabs button {
     flex: 1 0 5.2rem;

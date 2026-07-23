@@ -8,6 +8,7 @@ copyright: SuperNPUBench contributors
 
 theme:
   name: material
+  custom_dir: docs/overrides
   language: en
   icon:
     logo: material/chip
@@ -348,11 +349,18 @@ nav:
       - Glossary: glossary.md
 
 plugins:
+  - privacy:
+      assets_include:
+        - unpkg.com/mermaid@10.9.4/dist/mermaid.min.js
+      links: false
   - search:
       separator: '[\\s\\-\\.\\_]+'
 
 not_in_nav: |
   tutorials/migrated-pto-kernels.md
+
+exclude_docs: |
+  overrides/**
 
 markdown_extensions:
   - abbr
