@@ -1,0 +1,29 @@
+#!/bin/bash
+# gather_v2 operator compile cases
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+# Generic path: one-dimensional gather with a real tail tile.
+make TESTCASE=gather_v2 COMPILER_DIR="$COMPILER_DIR" \
+    DType=float IType=uint32_t RANK=1 GATHER_DIM=0 \
+    INPUT_ELEMENTS=19 OUTPUT_ELEMENTS=37 INDEX_ELEMENTS=37 \
+    INPUT_SHAPE=19 INPUT_SHAPE_NAME=19 \
+    OUTPUT_SHAPE=37 OUTPUT_SHAPE_NAME=37 \
+    TILE_ELEMENTS=32 ABS_TOL=0.001f REL_TOL=0.001f
+
+# Generic path: gather columns from a rank-2 tensor.
+make TESTCASE=gather_v2 COMPILER_DIR="$COMPILER_DIR" \
+    DType=int32_t IType=int32_t RANK=2 GATHER_DIM=1 \
+    INPUT_ELEMENTS=55 OUTPUT_ELEMENTS=35 INDEX_ELEMENTS=7 \
+    INPUT_SHAPE=5,11 INPUT_SHAPE_NAME=5_11 \
+    OUTPUT_SHAPE=5,7 OUTPUT_SHAPE_NAME=5_7 \
+    TILE_ELEMENTS=32 ABS_TOL=0.0f REL_TOL=0.0f
+
+# Coalesce::Row path: gather complete rows. The 17-element runtime row width
+# fits in the 64-element physical half tile and exercises dynamic validCols.
+make TESTCASE=gather_v2 COMPILER_DIR="$COMPILER_DIR" \
+    DType=__half IType=uint32_t RANK=2 GATHER_DIM=0 \
+    INPUT_ELEMENTS=187 OUTPUT_ELEMENTS=136 INDEX_ELEMENTS=8 \
+    INPUT_SHAPE=11,17 INPUT_SHAPE_NAME=11_17 \
+    OUTPUT_SHAPE=8,17 OUTPUT_SHAPE_NAME=8_17 \
+    TILE_ELEMENTS=64 ABS_TOL=0.001f REL_TOL=0.001f
