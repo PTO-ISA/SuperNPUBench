@@ -64,6 +64,8 @@ compile_operator "$REPO_ROOT/test/solution/normalization/rms_norm" "solution/nor
 compile_operator "$REPO_ROOT/test/solution/normalization/rms_norm_binary" "solution/normalization/rms_norm_binary"
 compile_operator "$REPO_ROOT/test/solution/normalization/group_norm_grad" "solution/normalization/group_norm_grad"
 compile_operator "$REPO_ROOT/test/solution/normalization/group_norm_grad_1d" "solution/normalization/group_norm_grad_1d"
+compile_operator "$REPO_ROOT/test/solution/view_copy" "solution/view_copy"
+compile_operator "$REPO_ROOT/test/solution/gather_v2" "solution/gather_v2"
 compile_operator "$REPO_ROOT/test/kernel/multi_thread/vec" "multi_thread/vec"
 compile_operator "$REPO_ROOT/test/kernel/multi_thread/broadcast" "multi_thread/broadcast"
 compile_operator "$REPO_ROOT/test/kernel/multi_thread/concat" "multi_thread/concat"
