@@ -22,8 +22,8 @@ int main() {
     const int64_t g_m = tiling_info[0];
     const int64_t g_n = tiling_info[1];
 
-    dtype input_buf[16 * 512];
-    dtype output_buf[16 * 512];
+    dtype input_buf[g_m * g_n];
+    dtype output_buf[g_m * g_n];
     dtype *input = input_buf;
     dtype *output = output_buf;
 
