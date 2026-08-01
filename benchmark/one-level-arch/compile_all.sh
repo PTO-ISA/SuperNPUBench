@@ -60,6 +60,7 @@ compile_operator "$REPO_ROOT/test/kernel/control" "control"
 compile_operator "$REPO_ROOT/test/kernel/fa" "fa"
 compile_operator "$REPO_ROOT/test/kernel/sort" "sort"
 compile_operator "$REPO_ROOT/test/kernel/deepseek" "deepseek"
+compile_operator "$REPO_ROOT/test/kernel/quant/dynamic_mx_quant" "dynamic_mx_quant"
 
 echo ""
 echo "=========================================="

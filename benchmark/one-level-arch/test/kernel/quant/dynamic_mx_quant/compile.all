@@ -1,0 +1,12 @@
+#!/bin/bash
+# DynamicMxQuant — 6 configurations: 3 scale algorithms × 2 axis modes
+
+# tail axis (axis=-1)
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP diss
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS diss
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_DYNAMIC_RANGE diss
+
+# non-tail axis
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_CUBLAS diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_DYNAMIC_RANGE diss
