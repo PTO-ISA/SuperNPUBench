@@ -182,13 +182,12 @@ d_i     = DType(d_fp32_i * R_fp32)
 ### 文件结构
 
 ```
-kernels/quant/
-├── dynamic_mx_quant_pto.hpp              # 简化版（min-max 量化，单文件）
-└── dynamic_mx_quant/
-    ├── DESIGN.md                         # 设计文档
-    ├── dynamic_mx_quant_common.hpp       # 公共模块：类型、常量、scale 算法
-    ├── dynamic_mx_quant_tail.hpp         # 尾轴入口：2D 循环 [M, K/blockSize]
-    └── dynamic_mx_quant_nontail.hpp      # 非尾轴入口：3D 循环 [pre, axis/blockSize, post]
+kernels/quant/dynamic_mx_quant/
+├── DESIGN.md                             # 设计文档
+├── RECORD.md                             # 问题记录（TileSize 约束等）
+├── dynamic_mx_quant_common.hpp           # 公共模块：类型、常量、scale 算法
+├── dynamic_mx_quant_tail.hpp             # 尾轴入口：2D 循环 [M, K/blockSize]
+└── dynamic_mx_quant_nontail.hpp          # 非尾轴入口：2D 循环 [Pre*Post, Axis/blockSize]
 ```
 
 ### 覆盖场景
@@ -198,16 +197,17 @@ kernels/quant/
 | 输入类型 | BF16 |
 | 输出类型 | FP8_E4M3FN |
 | axis | 尾轴 + 非尾轴 |
-| blockSize | 32 |
+| blockSize | 32（TileM=8 时上限 512，TileM=4 时上限 1024） |
 | scaleAlg | 0（OCP）、1（cuBLAS）、2（DynamicRange） |
 | round_mode | rint |
-| scale 输出类型 | uint16（E8M0 格式，stride=32 padded） |
-| 尾块处理 | 不支持（K 必须为 32 的倍数） |
-| M 维度 | 必须为 TileM 的倍数 |
+| scale 输出类型 | uint16（E8M0 格式，stride=BlockSize padded） |
+| M 维度尾块 | 支持（递归模板实例化，M % TileM != 0 时自动处理） |
+| K 维度 | 必须为 BlockSize 的倍数 |
+| 量化缩放 | `y = x × 2^(-E)`（精确 2 的幂次，与 Ascend C 数学等价） |
 
 ### 三种 Scale 算法实现
 
-#### 1. OCP（scaleAlg=0）— `compute_ocp_scale_byte`
+#### 1. OCP（scaleAlg=0）— `compute_ocp_scale`
 
 **核心思路**：提取 BF16 指数位，取块内最大指数，计算 `shared_exp = max_exp - emax`，右移得到 scale byte。
 
@@ -217,36 +217,37 @@ TANDS(exp_bits, x_u16, BF16_EXP_MASK);        // 提取指数位
 TROWMAX(max_exp, exp_bits);                    // 块内最大指数
 TCMPS(eq_nan, max_exp, BF16_EXP_MASK);         // NaN/Inf 检测
 TMAXS(max_exp, max_exp, FP8_E4M3_EMAX);        // 下限钳位 emax
-TSUB(shared_exp, max_exp, emax_tile);          // shared_exp = max_exp - emax
-TSHRS(scale_byte, shared_exp, BF16_SHR_NUM);   // scale_byte = shared_exp >> 7
+TSUB(shared_exp_out, max_exp, emax_tile);      // shared_exp = max_exp - emax
+TSHRS(scale_byte, shared_exp_out, BF16_SHR_NUM); // scale_byte = shared_exp >> 7
 TSEL(scale_byte, eq_nan, nan_byte);            // NaN/Inf → 0xFF
 ```
 
-**指令数**：~10 条  
+**指令数**：~10 条
 **特点**：纯位操作，无浮点运算
 
-#### 2. cuBLAS（scaleAlg=1）— `compute_cublas_scale_byte`
+#### 2. cuBLAS（scaleAlg=1）— `compute_cublas_scale`
 
 **核心思路**：计算 `S = amax * inv_dst_max`，提取 FP32 指数，尾数非零时指数 +1（向上取整）。
 
 **PTO-ISA 实现**：
 ```cpp
 TABS(abs_x, x_f32);                            // 取绝对值
-TROWMAX(max_abs, abs_x);                       // 块内最大绝对值
-TMULS(s_fp32, max_abs, FP8_E4M3_INV_DST_MAX);  // S = amax / dst_max
-TCAST(s_bits, s_fp32);                         // 重新解释为 uint32
+TROWMAX(max_abs, abs_x);                       // 块内最大绝对值（FP32）
+TMULS(max_abs, max_abs, FP8_E4M3_INV_DST_MAX); // S = amax / dst_max
+TCAST(s_bits, max_abs);                        // 重新解释为 uint32
 TSHRS(exp_bits, s_bits, FP32_SHR_NUM);         // 提取指数位
 TANDS(man_bits, s_bits, FP32_MANTISSA_MASK);   // 提取尾数位
 TCMP(man_nz, man_bits, zero_u32);              // 尾数非零检测
-TADDS(exp_plus1, exp_bits, 1);                 // exp + 1
-TSEL(exp_bits, man_nz, exp_plus1);             // 尾数非零 → exp += 1
-TCAST(scale_u16, exp_bits);                    // 转换为 uint16
+TADDS(s_bits, exp_bits, 1);                    // exp + 1
+TSEL(exp_bits, man_nz, s_bits);                // 尾数非零 → exp += 1
+TCAST(scale_byte, exp_bits);                   // 转换为 uint8（E8M0）
+TSHLS(shared_exp_out, scale_byte, 7);          // shared_exp = E << 7
 ```
 
-**指令数**：~15 条  
+**指令数**：~12 条
 **特点**：浮点运算 + 位操作，尾数感知舍入
 
-#### 3. DynamicRange（scaleAlg=2）— `compute_dynamic_range_scale_byte`
+#### 3. DynamicRange（scaleAlg=2）— `compute_dynamic_range_scale`
 
 **核心思路**：对最大绝对值加尾数修正值（0x003F），加法进位到指数位实现向上取整。
 
@@ -254,16 +255,16 @@ TCAST(scale_u16, exp_bits);                    // 转换为 uint16
 ```cpp
 TANDS(abs_x, x_u16, BF16_ABS_MASK);            // 取绝对值（位操作）
 TROWMAX(max_abs, abs_x);                       // 块内最大绝对值
-TADDS(max_abs_rounded, max_abs, ADD_VALUE);    // 加修正值（0x003F）
-TANDS(exp_bits, max_abs_rounded, BF16_EXP_MASK); // 提取进位后的指数
+TADDS(max_abs, max_abs, ADD_VALUE);            // 加修正值（0x003F）
+TANDS(exp_bits, max_abs, BF16_EXP_MASK);       // 提取进位后的指数
 TCMPS(eq_nan, exp_bits, BF16_EXP_MASK);        // NaN/Inf 检测
 TMAXS(exp_bits, exp_bits, FP8_E4M3_EMAX);      // 下限钳位 emax
-TSUB(shared_exp, exp_bits, emax_tile);         // shared_exp = exp - emax
-TSHRS(scale_byte, shared_exp, BF16_SHR_NUM);   // scale_byte = shared_exp >> 7
+TSUB(shared_exp_out, exp_bits, emax_tile);     // shared_exp = exp - emax
+TSHRS(scale_byte, shared_exp_out, BF16_SHR_NUM); // scale_byte = shared_exp >> 7
 TSEL(scale_byte, eq_nan, nan_byte);            // NaN/Inf → 0xFF
 ```
 
-**指令数**：~12 条  
+**指令数**：~11 条
 **特点**：纯位操作，加法进位隐式实现指数向上取整
 
 ### 两种 Axis 模式
@@ -305,65 +306,63 @@ for (int m = 0; m < kTM; ++m) {
 
 ```
 对每个 [TileM, BlockSize] 的 tile:
-  1. TLOAD x(bf16) 和 x_u16（位模式）
-  2. compute_*_scale_byte(x_u16, scale_byte)  → 计算 E8M0 scale
-  3. TCVT xf(fp32) ← x(bf16)
-  4. TABS(absx, xf) → 取绝对值
-  5. TROWMAX(amax, absx) → amax = max|x|（浮点值，用于 inv_scale）
-  6. TMAXS(amax, clamp_min) 防除零
-  7. TRECIP(inv, amax) ; TMULS(sfinv, inv, dst_max) → inv_scale = dst_max / amax
-  8. TROWEXPANDMUL(outf, xf, sfinv) → 行广播缩放
-  9. TCAST(oq, outf) → fp32→fp8_e4m3fn
+  1. TLOAD xq(bf16)
+  2. compute_scale<Alg>(xq, scale_byte, shared_exp)  → 计算 E8M0 scale + shared_exp
+  3. TCVT xf(fp32) ← xq(bf16)
+  4. TXORS(neg_exp, shared_exp, 0xFFFF)              → 位翻转
+  5. TADDS(inv_scale, neg_exp, 0x3F81)               → inv_scale = 2^(-E) 的 BF16 位模式
+  6. TCAST(inv_bf16, inv_scale)                       → uint16 → bf16（位模式不变）
+  7. TCVT(inv_scale_f, inv_bf16)                      → bf16 → fp32（浮点值转换）
+  8. TMUL(xf, xf, inv_scale_f)                        → 逐元素乘：y = x × 2^(-E)
+  9. TCAST(oq, xf)                                    → fp32 → fp8_e4m3fn
   10. TSTORE scale_byte 和量化结果
 ```
 
-**注意**：当前实现同时输出两种 scale：
-- `scale_byte`（E8M0 格式）：由 `compute_*_scale_byte` 计算，符合 OCP/cuBLAS/DynamicRange 标准
-- `inv_scale`（浮点值）：由 `amax / dst_max` 计算，用于实际量化（min-max 风格）
-
-两者在功能上等价（都是 `2^shared_exp` 的倒数），但 `inv_scale` 是浮点近似值。
+**量化缩放公式**：`y = x × 2^(-E)`，其中 E 由 scale 算法确定。这是精确的 2 的幂次缩放，与 Ascend C 参考实现数学等价。
 
 ### 模板参数
 
 #### 尾轴 kernel
 
 ```cpp
-template <int M, int K, int TileM = 8, int BlockSize = 32>
+template <int M, int K, ScaleAlg Alg = ScaleAlg::OCP, int TileM = 8, int BlockSize = 32>
 void dynamic_mx_quant_tail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale);
 ```
 
-- `M`: 行数，须为 TileM 的倍数
+- `M`: 行数（支持 M % TileM != 0，尾块自动递归处理）
 - `K`: 列数（量化轴），须为 BlockSize 的倍数
+- `Alg`: scale 算法枚举（OCP / CUBLAS / DYNAMIC_RANGE）
 - `TileM`: 每次处理的行数，默认 8
-- `BlockSize`: 量化块大小，仅支持 32
+- `BlockSize`: 量化块大小，默认 32
 
 #### 非尾轴 kernel
 
 ```cpp
-template <int Pre, int Axis, int Post, int TileM = 8, int BlockSize = 32>
-void dynamic_mx_quant_nontail(__bf16 *x, __fp8_e4m3 *y, float *scale);
+template <int Pre, int Axis, int Post, ScaleAlg Alg = ScaleAlg::OCP, int TileM = 8, int BlockSize = 32>
+void dynamic_mx_quant_nontail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale);
 ```
 
 - `Pre`: 量化轴之前的维度乘积
 - `Axis`: 量化轴大小，须为 BlockSize 的倍数
 - `Post`: 量化轴之后的维度乘积
+- `Alg`: scale 算法枚举
 - `TileM`: 每次处理的行数（Pre*Post 维度），默认 8
-- `BlockSize`: 量化块大小，仅支持 32
+- `BlockSize`: 量化块大小，默认 32
 
 ### 与 OCP MX 标准的差异
 
-| 项目 | OCP 标准 | 当前实现 | 原因 |
+| 项目 | OCP 标准 | 当前实现 | 状态 |
 |------|---------|---------|------|
 | scale 计算 | `2^(max_exp - emax)`（基于指数位） | 已实现（OCP/cuBLAS/DynamicRange 三种算法） | ✅ 已对齐 |
-| scale 类型 | FLOAT8_E8M0 | uint16（stride=32 padded） | 简化输出布局，实际存储 E8M0 字节 |
-| scale shape | `[M, ceil(K/32)/2, 2]`（偶数对齐+交织） | `[M, K/32]`（stride=32 padded） | 简化输出布局 |
-| inv_scale 计算 | `1 / 2^shared_exp`（精确 2 的幂次） | `dst_max / amax`（min-max 近似） | 简化实现，功能等价但精度略有差异 |
+| 量化缩放 | `y = x × 2^(-E)`（精确 2 的幂次） | `TMUL(xf, xf, inv_scale_f)` 其中 inv_scale_f = 2^(-E) | ✅ 已对齐 |
+| scale 类型 | FLOAT8_E8M0 | uint16（stride=BlockSize padded） | 简化输出布局 |
+| scale shape | `[M, ceil(K/32)/2, 2]`（偶数对齐+交织） | `[M, K/BlockSize]`（stride=BlockSize padded） | 简化输出布局 |
 
 ### 待扩展
 
 - [ ] FP4 输出（`__fp4_e1m2x2`）
 - [ ] FP16 / FP32 输入支持
-- [ ] 尾块处理（K 非 blockSize 倍数时的 padding）
+- [ ] K 维度尾块处理（K 非 BlockSize 倍数时的 padding）
 - [ ] 多 round_mode 支持（round / floor）
 - [ ] 非尾轴 stride 访问优化（批量 post 元素处理）
 - [ ] scale 输出偶数对齐+交织布局（完全对齐 OCP 标准）
