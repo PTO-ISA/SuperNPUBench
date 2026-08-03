@@ -120,3 +120,117 @@ TSTORE oq:      8 × BS × 4 = 32 × BS ≤ 32768  →  BS ≤ 1024
 - 约束来自 TLOAD/TSTORE 的 `IsValidActiveSize` static_assert
 - 约束公式：`TileM × BlockSize × sizeof(DType) × 4 ≤ 32768`
 - 中间计算 tile（float 类型）虽然 logicalTileBytes 更大，但不触发检查
+
+---
+
+## 问题2：32 字节对齐约束分析
+
+### 硬件约束来源
+
+#### 1. Tile 构造时的对齐检查
+
+文件：`tileop-api/common/pto_tile.hpp:414`
+
+```cpp
+static_assert(
+    ((pto::BLayout)0 == BLayout::RowMajor && (pto::SLayout)0 == SLayout::NoneBox && 
+     Cols * type_traits<DType>::bits % (32 * 8) == 0) ||
+    ((pto::BLayout)0 == BLayout::ColMajor && (pto::SLayout)0 == SLayout::NoneBox && 
+     Rows * type_traits<DType>::bits % (32 * 8) == 0) ||
+    ((pto::SLayout)0 != SLayout::NoneBox) && 
+     (Rows % InnerRows == 0 && Cols % InnerCols == 0),
+    "BFractal_ is RowMajor and SFractal_ is NoneBox: Rows must be 32 bytes align, ..."
+);
+```
+
+**关键公式**（RowMajor + NoneBox）：
+```
+Cols × sizeof(DType) % 32 == 0
+```
+
+即：行优先存储下，Tile 的列数 × 元素字节数必须是 32 的倍数（32 字节 = 256 位）。
+
+#### 2. 不同数据类型的约束
+
+| DType | sizeof | Cols 最小倍数 | 示例 |
+|-------|--------|--------------|------|
+| bf16 | 2 | 16 | Cols ∈ {16, 32, 48, 64, ...} |
+| fp8_e4m3 | 1 | 32 | Cols ∈ {32, 64, 96, 128, ...} |
+| float | 4 | 8 | Cols ∈ {8, 16, 24, 32, ...} |
+| uint16 | 2 | 16 | Cols ∈ {16, 32, 48, 64, ...} |
+
+#### 3. 触发场景
+
+**与问题1的关键区别**：此约束在 **Tile 构造时** 检查，适用于 **所有 tile**（包括中间计算 tile），而不仅限于 TLOAD/TSTORE。
+
+触发错误示例（nontail.hpp 中 TileN=4）：
+```
+Tile<bf16, 32, 4, RowMajor>  →  4 × 2 = 8 bytes  ✗ (不满足 32 字节对齐)
+Tile<fp8, 32, 4, RowMajor>   →  4 × 1 = 4 bytes  ✗
+Tile<uint16, 1, 4, RowMajor> →  4 × 2 = 8 bytes  ✗
+```
+
+### DynamicMxQuant 中的约束分析
+
+#### tail.hpp（尾轴量化）
+
+Tile shape: `[TileM, BlockSize]`，RowMajor 布局
+
+| Tile | DType | 约束 | 最小 BlockSize |
+|------|-------|------|---------------|
+| `tile_x` | bf16 | BlockSize × 2 % 32 == 0 | 16 |
+| `tile_o` | fp8 | BlockSize × 1 % 32 == 0 | 32 |
+| `tile_scale` | uint16 | BlockSize × 2 % 32 == 0 | 16 |
+
+**约束**：BlockSize 必须是 32 的倍数（由 fp8 输出决定）。
+
+#### nontail.hpp（非尾轴量化）
+
+Tile shape: `[BlockSize, TileN]`，RowMajor 布局
+
+| Tile | DType | 约束 | 最小 TileN |
+|------|-------|------|-----------|
+| `tile_x` | bf16 | TileN × 2 % 32 == 0 | 16 |
+| `tile_o` | fp8 | TileN × 1 % 32 == 0 | 32 |
+| `tile_scale` | uint16 | TileN × 2 % 32 == 0 | 16 |
+| `tile_f` | float | TileN × 4 % 32 == 0 | 8 |
+
+**约束**：TileN 必须是 32 的倍数（由 fp8 输出决定）。
+
+### 与 TileSize 约束的交互
+
+两个约束共同作用，严重限制 tile 切分方式：
+
+#### tail.hpp 示例（TileM=8）
+
+| BlockSize | 32B 对齐 | TileSize (≤32KB) | 可行 |
+|-----------|---------|------------------|------|
+| 32 | ✓ | ✓ (2KB) | ✓ |
+| 64 | ✓ | ✓ (4KB) | ✓ |
+| 128 | ✓ | ✓ (8KB) | ✓ |
+| 256 | ✓ | ✓ (16KB) | ✓ |
+| 512 | ✓ | ✓ (32KB) | ✓ |
+| 1024 | ✓ | ✗ (64KB) | ✗ |
+
+#### nontail.hpp 示例（BlockSize=32）
+
+| TileN | 32B 对齐 | TileSize (≤32KB) | 可行 |
+|-------|---------|------------------|------|
+| 4 | ✗ | ✓ (1KB) | ✗ |
+| 8 | ✗ | ✓ (2KB) | ✗ |
+| 16 | ✗ | ✓ (4KB) | ✗ |
+| 32 | ✓ | ✓ (8KB) | ✓ |
+| 64 | ✓ | ✓ (16KB) | ✓ |
+| 128 | ✓ | ✓ (32KB) | ✓ |
+| 256 | ✓ | ✗ (64KB) | ✗ |
+
+### 结论
+
+- **32 字节对齐约束**适用于 **所有 tile**（包括中间计算 tile），比 TileSize 约束更严格
+- 约束公式（RowMajor）：`Cols × sizeof(DType) % 32 == 0`
+- 对于 DynamicMxQuant：
+  - 尾轴：BlockSize 必须是 32 的倍数
+  - 非尾轴：TileN 必须是 32 的倍数
+- **两个约束共同作用**，有效 tile 切分组合非常有限：
+  - tail：BlockSize ∈ {32, 64, 128, 256, 512}（TileM=8）
+  - nontail：TileN ∈ {32, 64, 128}（BlockSize=32）

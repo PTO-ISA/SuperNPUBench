@@ -89,7 +89,7 @@ void dynamic_mx_quant_nontail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale);
 | `BF16_SHR_NUM` | `7` | 提取原始指数的右移位数 |
 | `BF16_NAN_PATTERN` | `0x7F81` | 自定义 NaN 哨兵（BF16 位模式） |
 | `BF16_SPECIAL_EXP` | `0x0040` | sharedExp=127 时的 inv_scale（最小 BF16 次正规数） |
-| `BF16_SCALE_BIAS` | `0x3F80` | 构造 inv_scale 的偏置值（= 0x7F00/2） |
+| `BF16_SCALE_BIAS` | `0x7F00` | 构造 inv_scale 的偏置值（= BF16_EXP_BIAS，即 `0x7F00 - sharedExp` 得到 `2^(-shared_exp)` 的 BF16 位模式） |
 
 #### 3.2.2 FP8 E4M3 相关常量
 
@@ -233,7 +233,7 @@ TSEL(scale_byte, eq_nan, nan_byte)             // NaN/Inf → 0xFF
   TCVT(xf, xq)                                // BF16 → FP32
 
 步骤 3: 构造 inv_scale = 2^(-E)
-  // inv_scale = BF16_SCALE_BIAS - shared_exp = 0x3F80 - shared_exp
+   // inv_scale = BF16_SCALE_BIAS - shared_exp = 0x7F00 - shared_exp
   // 等价变换：0x3F80 - x = ~x + 0x3F81 = TXORS(x, 0xFFFF) + TADDS(0x3F81)
   TXORS(neg_exp, shared_exp, 0xFFFF)           // neg_exp = ~shared_exp
   TADDS(inv_scale, neg_exp, 0x3F81)            // inv_scale = 2^(-E) 的 BF16 位模式

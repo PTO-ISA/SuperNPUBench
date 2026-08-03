@@ -44,7 +44,7 @@ void dynamic_mx_quant_tail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale) {
 
             tile_scale scale_byte;
             tile_scale shared_exp;
-            compute_scale<Alg, TileM, BlockSize>(xq, scale_byte, shared_exp);
+            compute_scale_tail<Alg, TileM, BlockSize>(xq, scale_byte, shared_exp);
 
             tile_f xf;
             TCVT(xf, xq);

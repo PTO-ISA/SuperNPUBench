@@ -71,34 +71,81 @@ mxscale.shape[-1] = 2
 
 ### 计算公式
 
-所有 scaleAlg 的核心流程相同：在 axis 维度上按 blocksize 分组，计算每组的 mxscale，然后对组内元素缩放并转换到目标类型。差异在于 mxscale 的计算方式。
+> 以下公式以 `aclnnDynamicMxQuantV3.md` 官方文档为准，已通过 Python 参考实现（dtypes.py `mx_quantize`）和 AscendC kernel 代码交叉验证。
+
+所有 scaleAlg 的核心流程相同：在 axis 维度上按 blocksize 分组，计算每组的 mxscale，然后对组内元素**除以 mxscale**，按 round_mode 转换到目标类型。差异在于 mxscale 的计算方式。
+
+#### emax（目标类型最大正则数的指数位）
+
+| dst_type       | emax | max_norm（最大正则数） |
+|----------------|------|----------------------|
+| FLOAT4_E2M1    | 2    | 6.0                  |
+| FLOAT4_E1M2    | 0    | 1.75                 |
+| FLOAT8_E4M3FN  | 8    | 448.0                |
+| FLOAT8_E5M2    | 15   | 57344.0              |
+
+---
 
 #### scaleAlg = 0（OCP MxFP8/MxFP4）
 
+将输入 x 在 axis 维度上按 k = blocksize 个数分组，一组 k 个数 `{V_i}` 动态量化为 `{mxscale, {P_i}}`：
+
 ```
-max_exp    = max_i(exponent_bits(V_i))                     // 提取每个元素的指数位，取最大值
-shared_exp = max(max_exp, emax) - emax                     // 下限钳位 emax，保证 shared_exp ≥ 0
-mxscale    = 2^shared_exp                                  // E8M0 格式
+shared_exp = floor(log2(max_i(|V_i|))) - emax
+mxscale    = 2^shared_exp
 P_i        = cast_to_dst_type(V_i / mxscale, round_mode)
 ```
 
-通过位操作提取 BF16/FP32 的指数位（`x & 0x7f80`），取块内最大指数，减去 emax 得到 shared_exp。
+- `max_i(|V_i|)`：块内最大绝对值
+- `floor(log2(...))`：取以 2 为底的对数并向下取整（等价于提取浮点数的偏置指数位）
+- `shared_exp`：共享指数，保证 `mxscale` 是 2 的整数次幂
+- `V_i / mxscale`：每个元素除以 scale 后归一化到目标类型可表示范围
+- `cast_to_dst_type`：按 round_mode 舍入并转换到目标低精度类型
+
+**边界处理**（kernel 实现细节，文档未显式描述）：
+- `max_i(|V_i|) == 0` 时：`shared_exp = -inf`，`mxscale = 0`，量化结果全零
+- `max_i(|V_i|)` 为 NaN/Inf 时：`scale = 0xFF`（E8M0 NaN），量化结果传播 NaN
+
+---
 
 #### scaleAlg = 1（NVIDIA cuBLAS MxFP8，仅 FP8）
 
+将长向量按块分，每块长度为 k，对每块单独计算块缩放因子 `S^b`，再把块内所有元素用同一个 `S^b` 映射到目标低精度类型 FP8。
+
+**Step 1**: 找到块内最大绝对值：
 ```
-Amax    = max(|block_values|)
-Amax    = max(Amax, maxLowBound)                           // V3 新增，maxLowBound > 0 时生效
-S_fp32  = Amax * (1 / Amax(DType))                         // 浮点乘法
-E_int   = floor(log2(S_fp32))                              // 提取 FP32 指数位
-若 S_fp32 为正规数（0 < E_int < 254）且 mantissa(S_fp32) > 0，则 E_int += 1
-若 S_fp32 为非正规数（E_int == 0）且 mantissa(S_fp32) > 0.5，则 E_int += 1
-S_ue8m0 = 2^E_int
-R_fp32  = 1 / fp32(S_ue8m0)
-d_i     = DType(d_fp32_i * R_fp32)
+Amax = max({|d_i|})
 ```
 
-对 `S_fp32` 的指数向上取整（尾数非零时），确保量化不溢出。非正规数处理仅在 FP8 输出路径中实现。
+**Step 2**: 当 maxLowBound > 0 时，下界钳位（V3 新增）：
+```
+Amax = max(Amax, maxLowBound)
+```
+
+**Step 3**: 映射到目标类型范围，其中 `Amax(DType)` 是目标精度能表示的最大值：
+```
+S_fp32 = Amax / Amax(DType)
+```
+
+**Step 4**: 从 `S_fp32` 中提取无偏指数 `E_int` 和尾数 `M_fixp`，为保证量化时不溢出，对指数向上取整：
+```
+         ⎧ E_int + 1,  如果 S_fp32 为正规数，且 E_int < 254 且 M_fixp > 0
+E_int  = ⎨ E_int + 1,  如果 S_fp32 为非正规数，且 M_fixp > 0.5
+         ⎩ E_int,      否则
+```
+
+**Step 5**: 计算块缩放因子和转换因子：
+```
+S_ue8m0 = 2^E_int
+R_fp32  = 1 / fp32(S_ue8m0)
+```
+
+**Step 6**: 量化：
+```
+d_i = DType(d_fp32_i × R_fp32)
+```
+
+---
 
 #### scaleAlg = 2（Dynamic Dtype Range MxFP4，仅 FP4_E2M1，blockSize=32）
 
@@ -107,36 +154,58 @@ d_i     = DType(d_fp32_i * R_fp32)
 **当 dstTypeMax = 0.0 / 6.0 / 7.0 时**（OCP 风格 + 尾数修正）：
 
 ```
-Amax_abs   = max_i(|V_i|)                                  // 绝对值最大值（含尾数位）
-addValue   = dstTypeMax∈{0.0, 6.0} ? 0x003f : 0x001f      // 尾数修正值
-corrected  = (Amax_abs + addValue) & expMask               // 加法进位到指数位，等效 ceil
-shared_exp = max(corrected, FP4_E2M1_max_exp) - FP4_E2M1_max_exp
-mxscale    = 2^shared_exp
-P_i        = cast_to_dst_type(V_i / mxscale, round_mode)
+         ⎧ ceil(log2(max_i(|V_i|))) - emax,   如果尾数位的高比特前一/两位为1，且尾数不全为0
+shared_exp = ⎨
+         ⎩ floor(log2(max_i(|V_i|))) - emax,  其它
+
+mxscale = 2^shared_exp
+P_i     = cast_to_dst_type(V_i / mxscale, round_mode)
 ```
 
-修正值加到尾数上，若尾数足够大则进位到指数位，实现指数向上取整。
+- 修正值加到尾数上，若尾数足够大则进位到指数位，实现 `ceil(log2(...))`
+- `dstTypeMax ∈ {0.0, 6.0}` 时修正值为 `0x003F`，`dstTypeMax = 7.0` 时为 `0x001F`
 
-**当 dstTypeMax 为其他值（6.0~12.0 范围内，≠0/6/7）时**（cuBLAS 风格）：
+**当 dstTypeMax ≠ 0.0/6.0/7.0 时**（cuBLAS 风格）：
 
 ```
-Amax    = max(|block_values|)
-S_fp32  = Amax / dstTypeMax                                // 使用用户指定的最大值
-E_int   = floor(log2(S_fp32))
-若 S_fp32 为正规数（0 < E_int < 254）且 mantissa(S_fp32) > 0，则 E_int += 1
+Amax    = max({|d_i|})
+S_fp32  = Amax / Amax(DType)
+         ⎧ E_int + 1,  如果 S_fp32 为正规数，且 E_int < 254 且 M_fixp > 0
+E_int  = ⎨
+         ⎩ E_int,      否则
 S_ue8m0 = 2^E_int
 R_fp32  = 1 / fp32(S_ue8m0)
-d_i     = DType(d_fp32_i * R_fp32)
+d_i     = DType(d_fp32_i × R_fp32)
 ```
 
-#### emax（目标类型最大正则数的指数位）
+---
 
-| dst_type       | emax |
-|----------------|------|
-| FLOAT4_E2M1    | 2    |
-| FLOAT4_E1M2    | 0    |
-| FLOAT8_E4M3FN  | 8    |
-| FLOAT8_E5M2    | 15   |
+#### Kernel 实现与文档公式的对应关系
+
+文档公式在数学层面描述算法，kernel 在位模式层面实现。以下是两者的对应关系：
+
+| 文档公式 | Kernel 位操作实现 | 数学等价性 |
+|---------|------------------|-----------|
+| `floor(log2(max\|Vi\|))` | `maxExp = max(x_i & 0x7F80)`，提取 BF16 指数位 | BF16 指数位 = `floor(log2(\|V\|)) + 127` |
+| `shared_exp = ... - emax` | `sharedExp = maxExp - (emax << 7)` | 偏置域减法等价 |
+| `mxscale = 2^shared_exp` | `scale_byte = sharedExp >> 7`（E8M0 格式） | E8M0 值 = `2^(byte - 127)` |
+| `V_i / mxscale` | `x × recipScale`，其中 `recipScale = 0x7F00 - sharedExp` | `recipScale` 的 BF16 值 = `2^(-shared_exp)` |
+| `cast_to_dst_type(...)` | `Cast<FP8/FP4>(x_fp32, SAT + roundMode)` | 硬件饱和 + 舍入 |
+| `S_fp32 = Amax / Amax(DType)` | `S = maxAbs_fp32 × inv_dtype_max`（预计算倒数） | 乘法代替除法 |
+| `E_int` 提取 | `exp = S_bits >> 23`（FP32 指数位） | IEEE 754 偏置指数 |
+| `M_fixp > 0` | `mantissa = S_bits & 0x007FFFFF`，比较非零 | 尾数位直接检测 |
+
+**recipScale 构造公式**：
+```
+recipScale = BF16_EXP_BIAS - sharedExp = 0x7F00 - sharedExp
+```
+其 BF16 浮点值 = `2^(127 - (sharedExp >> 7))` = `2^(-actual_shared_exp)` = `1 / mxscale`。
+这是精确的 2 的幂次，无浮点除法误差。
+
+**Kernel 特殊值处理**（文档未显式描述，但 kernel 实现中存在）：
+- `sharedExp == 0`（全零块）→ `recipScale = 0`，输出全零
+- `sharedExp == 0x7F00`（极端指数）→ `recipScale = 0x0040`
+- NaN/Inf → `scale = 0xFF`，`recipScale = 0x7F81`（BF16 NaN）
 
 ### 场景矩阵
 
@@ -203,7 +272,7 @@ kernels/quant/dynamic_mx_quant/
 | scale 输出类型 | uint16（E8M0 格式，stride=BlockSize padded） |
 | M 维度尾块 | 支持（递归模板实例化，M % TileM != 0 时自动处理） |
 | K 维度 | 必须为 BlockSize 的倍数 |
-| 量化缩放 | `y = x × 2^(-E)`（精确 2 的幂次，与 Ascend C 数学等价） |
+| 量化缩放 | `y = x × recipScale`，recipScale = `2^(-shared_exp)` = `1/mxscale` |
 
 ### 三种 Scale 算法实现
 
@@ -269,6 +338,14 @@ TSEL(scale_byte, eq_nan, nan_byte);            // NaN/Inf → 0xFF
 
 ### 两种 Axis 模式
 
+#### 公式一致性
+
+**尾轴和非尾轴的数学公式完全相同**，仅规约轴（reduction axis）不同：
+- 尾轴：沿最后一维取 `max(|V_i|)`
+- 非尾轴：沿中间某维取 `max(|V_i|)`
+
+所有 scale 计算、recipScale 构造、量化缩放步骤均一致。
+
 #### 1. 尾轴（axis=-1）— `dynamic_mx_quant_tail`
 
 **输入形状**：`[M, K]`，量化轴为最后一维  
@@ -287,17 +364,34 @@ for (int m = 0; m < kTM; ++m) {
 
 #### 2. 非尾轴（axis≠-1）— `dynamic_mx_quant_nontail`
 
-**输入形状**：`[Pre, Axis, Post]`，量化轴为中间维度  
-**循环结构**：3D 循环 `[Pre*Post/TileM, Axis/BlockSize]`（将 Pre*Post 视为行）  
-**内存访问**：stride 访问（同一量化块内的元素间隔 Post 个元素）
+**输入形状**：上层按 Pre 维度循环，每次传入 `[Axis, Post]` 的 2D 切片  
+**Tile shape**：`[BlockSize, TileN]`，量化轴为 -2 轴（行方向），非量化轴为 -1 轴（列方向）  
+**循环结构**：`[Axis/BlockSize, Post/TileN]`  
+**内存访问**：Tile 二维语义天然包含 stride（Post 维度的间隔由 global_tensor 的 RowMajor 布局处理）
 
+**AscendC kernel 实现**（`not_tail_axis_fp8.h`）：
 ```cpp
-// 将 [Pre, Axis, Post] 视为 [Pre*Post, Axis] 的 2D 矩阵
-for (int m = 0; m < kTM; ++m) {
-    for (int kb = 0; kb < numKb; ++kb) {
-        // 加载 [TileM, BlockSize] 数据（stride 访问）
-        // 计算 scale 和量化
-        // 存储结果
+// 沿量化轴循环加载后续 blocks（带 stride）
+for (uint16_t j = 1; j < blockCount; j++) {
+    LoadData(xAddr, j * dataLen + i * vfNum16, x, p0);  // stride = dataLen（包含 Post 维度）
+    Reg::Max(expMax, expMax, exp);  // 累积最大值
+}
+```
+
+**PTO-ISA 实现**：
+```cpp
+// Tile shape: [BlockSize, TileN]
+// TCOLMAX 沿 -2 轴（量化轴）规约 → valid region [1, TileN]
+// TCOLEXPANDMUL 列广播乘：xf[BlockSize, TileN] × inv_scale_f[BlockSize, TileN]
+for (int kb = 0; kb < numKb; ++kb) {
+    for (int n = 0; n < numN; ++n) {
+        TLOAD(xq, gx);                                    // [BlockSize, TileN]
+        compute_scale_col(xq, scale_byte, shared_exp);    // TCOLMAX → valid [1, TileN]
+        TCVT(xf, xq);                                    // [BlockSize, TileN]
+        // 构造 recipScale（valid [1, TileN]）
+        TCOLEXPANDMUL(xf, xf, inv_scale_f);              // 列广播乘
+        TCAST(oq, xf);                                   // → FP8
+        TSTORE(gs, scale_byte); TSTORE(gy, oq);
     }
 }
 ```
@@ -310,15 +404,20 @@ for (int m = 0; m < kTM; ++m) {
   2. compute_scale<Alg>(xq, scale_byte, shared_exp)  → 计算 E8M0 scale + shared_exp
   3. TCVT xf(fp32) ← xq(bf16)
   4. TXORS(neg_exp, shared_exp, 0xFFFF)              → 位翻转
-  5. TADDS(inv_scale, neg_exp, 0x3F81)               → inv_scale = 2^(-E) 的 BF16 位模式
+  5. TADDS(inv_scale, neg_exp, 0x7F01)               → recipScale = 0x7F00 - shared_exp = 2^(-shared_exp) 的 BF16 位模式
   6. TCAST(inv_bf16, inv_scale)                       → uint16 → bf16（位模式不变）
   7. TCVT(inv_scale_f, inv_bf16)                      → bf16 → fp32（浮点值转换）
-  8. TMUL(xf, xf, inv_scale_f)                        → 逐元素乘：y = x × 2^(-E)
+  8. TMUL(xf, xf, inv_scale_f)                        → 逐元素乘：y = x × recipScale = x / mxscale
   9. TCAST(oq, xf)                                    → fp32 → fp8_e4m3fn
   10. TSTORE scale_byte 和量化结果
 ```
 
-**量化缩放公式**：`y = x × 2^(-E)`，其中 E 由 scale 算法确定。这是精确的 2 的幂次缩放，与 Ascend C 参考实现数学等价。
+**量化缩放公式**：`y = x × recipScale`，其中 `recipScale = 0x7F00 - sharedExp`（BF16 位模式），数学值 = `2^(-shared_exp)` = `1/mxscale`。与文档公式 `V_i / mxscale` 数学等价。
+
+**注意**：当前 PTO-ISA 实现缺少以下 AscendC kernel 中的特殊值处理：
+- `sharedExp == 0`（全零块）→ recipScale 应为 0（当前未处理，会产生 `0x7F00` = 2^127）
+- `sharedExp == 0x7F00`（极端指数）→ recipScale 应为 `0x0040`（当前未处理）
+- NaN/Inf → recipScale 应为 `0x7F81`（当前未处理）
 
 ### 模板参数
 
@@ -338,25 +437,26 @@ void dynamic_mx_quant_tail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale);
 #### 非尾轴 kernel
 
 ```cpp
-template <int Pre, int Axis, int Post, ScaleAlg Alg = ScaleAlg::OCP, int TileM = 8, int BlockSize = 32>
+template <int Axis, int Post, ScaleAlg Alg = ScaleAlg::OCP, int BlockSize = 32, int TileN = 32>
 void dynamic_mx_quant_nontail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale);
 ```
 
-- `Pre`: 量化轴之前的维度乘积
-- `Axis`: 量化轴大小，须为 BlockSize 的倍数
-- `Post`: 量化轴之后的维度乘积
-- `Alg`: scale 算法枚举
-- `TileM`: 每次处理的行数（Pre*Post 维度），默认 8
+- `Axis`: 量化轴大小（-2 轴），须为 BlockSize 的倍数
+- `Post`: 量化轴之后的维度乘积（-1 轴），须为 TileN 的倍数
+- `Alg`: scale 算法枚举（OCP / CUBLAS / DYNAMIC_RANGE）
 - `BlockSize`: 量化块大小，默认 32
+- `TileN`: 非量化轴方向每次处理的列数，默认 32
+- Pre 维度由上层调用者循环处理，每次传入 `[Axis, Post]` 的 2D 切片
 
 ### 与 OCP MX 标准的差异
 
-| 项目 | OCP 标准 | 当前实现 | 状态 |
-|------|---------|---------|------|
-| scale 计算 | `2^(max_exp - emax)`（基于指数位） | 已实现（OCP/cuBLAS/DynamicRange 三种算法） | ✅ 已对齐 |
-| 量化缩放 | `y = x × 2^(-E)`（精确 2 的幂次） | `TMUL(xf, xf, inv_scale_f)` 其中 inv_scale_f = 2^(-E) | ✅ 已对齐 |
+| 项目 | OCP 标准 / 文档公式 | 当前 PTO-ISA 实现 | 状态 |
+|------|-------------------|------------------|------|
+| scale 计算 | `shared_exp = floor(log2(amax)) - emax` | 位操作：`(maxExp & 0x7F80) - emax_shifted` | ✅ 数学等价 |
+| 量化缩放 | `V_i / mxscale`（即 `V_i × 2^(-shared_exp)`） | 尾轴：`TMUL`；非尾轴：`TCOLEXPANDMUL`（列广播乘） | ✅ 数学等价 |
 | scale 类型 | FLOAT8_E8M0 | uint16（stride=BlockSize padded） | 简化输出布局 |
 | scale shape | `[M, ceil(K/32)/2, 2]`（偶数对齐+交织） | `[M, K/BlockSize]`（stride=BlockSize padded） | 简化输出布局 |
+| 特殊值处理 | 文档未详述 | 缺少全零块/NaN/极端指数的 recipScale 处理 | ⚠️ 待补充 |
 
 ### 待扩展
 
@@ -364,5 +464,5 @@ void dynamic_mx_quant_nontail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale);
 - [ ] FP16 / FP32 输入支持
 - [ ] K 维度尾块处理（K 非 BlockSize 倍数时的 padding）
 - [ ] 多 round_mode 支持（round / floor）
-- [ ] 非尾轴 stride 访问优化（批量 post 元素处理）
+- [ ] 特殊值处理（全零块、NaN/Inf、极端指数的 recipScale）
 - [ ] scale 输出偶数对齐+交织布局（完全对齐 OCP 标准）
