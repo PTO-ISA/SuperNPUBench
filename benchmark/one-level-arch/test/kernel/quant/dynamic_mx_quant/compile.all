@@ -10,3 +10,11 @@ make TESTCASE=dynamic_mx_quant TYPE=TAIL_DYNAMIC_RANGE diss
 make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP diss
 make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_CUBLAS diss
 make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_DYNAMIC_RANGE diss
+
+# res_check builds (for precision verification)
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_DYNAMIC_RANGE res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_CUBLAS res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_DYNAMIC_RANGE res_check=on diss

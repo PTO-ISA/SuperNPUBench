@@ -9,10 +9,9 @@ template <int M, int K, ScaleAlg Alg = ScaleAlg::OCP, int TileM = 8, int BlockSi
 void dynamic_mx_quant_tail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale) {
     static_assert(M > 0 && K > 0, "dim must be positive");
     static_assert(K % BlockSize == 0, "K must be multiple of BlockSize");
-    static_assert(M % TileM == 0, "M must be multiple of TileM");
-    static_assert(BlockSize == 32, "only BlockSize=32 supported");
 
-    constexpr int kTM = M / TileM;
+    constexpr int full_m = M / TileM;
+    constexpr int M_tail = M % TileM;
     constexpr int numKb = K / BlockSize;
 
     using namespace pto;
@@ -20,7 +19,6 @@ void dynamic_mx_quant_tail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale) {
     using tile_x     = Tile<Location::Vec, __bf16,     TileM, BlockSize, BLayout::RowMajor>;
     using tile_f     = Tile<Location::Vec, float,       TileM, BlockSize, BLayout::RowMajor>;
     using tile_o     = Tile<Location::Vec, __fp8_e4m3,  TileM, BlockSize, BLayout::RowMajor>;
-    using tile_amax_f = Tile<Location::Vec, float,      TileM, kScaleStride, BLayout::RowMajor, TileM, 1>;
     using tile_scale  = Tile<Location::Vec, uint16_t,   TileM, BlockSize, BLayout::RowMajor>;
 
     using gm_x     = global_tensor<__bf16,    RowMajor<M, K>>;
@@ -35,7 +33,7 @@ void dynamic_mx_quant_tail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale) {
     it_y y_iter(reinterpret_cast<uint8_t *>(y));
     it_s s_iter(scale);
 
-    for (int m = 0; m < kTM; ++m) {
+    for (int m = 0; m < full_m; ++m) {
         for (int kb = 0; kb < numKb; ++kb) {
             auto gx     = x_iter(m, kb);
             auto gy     = y_iter(m, kb);
@@ -45,33 +43,39 @@ void dynamic_mx_quant_tail(__bf16 *x, __fp8_e4m3 *y, uint16_t *scale) {
             TLOAD(xq, gx);
 
             tile_scale scale_byte;
-            compute_scale_byte<Alg, TileM, BlockSize>(xq, scale_byte);
+            tile_scale shared_exp;
+            compute_scale<Alg, TileM, BlockSize>(xq, scale_byte, shared_exp);
 
             tile_f xf;
             TCVT(xf, xq);
 
-            tile_f absx;
-            TABS(absx, xf);
+            tile_scale neg_exp;
+            TXORS(neg_exp, shared_exp, static_cast<uint16_t>(0xFFFF));
 
-            tile_amax_f amax_f;
-            TROWMAX(amax_f, absx);
-            TMAXS(amax_f, amax_f, CLAMP_MIN);
+            tile_scale inv_scale;
+            TADDS(inv_scale, neg_exp, static_cast<uint16_t>(BF16_SCALE_BIAS + 1));
 
-            tile_amax_f inv;
-            TRECIP(inv, amax_f);
+            tile_x inv_bf16;
+            TCAST(inv_bf16, inv_scale);
 
-            tile_amax_f sfinv;
-            TMULS(sfinv, inv, FP8_E4M3_DST_MAX);
+            tile_f inv_scale_f;
+            TCVT(inv_scale_f, inv_bf16);
 
-            tile_f outf;
-            TROWEXPANDMUL(outf, xf, sfinv);
+            TMUL(xf, xf, inv_scale_f);
 
             tile_o oq;
-            TCAST(oq, outf);
+            TCAST(oq, xf);
 
             TSTORE(gs, scale_byte);
             TSTORE(gy, oq);
         }
+    }
+
+    if constexpr (M_tail > 0) {
+        dynamic_mx_quant_tail<M_tail, K, Alg, TileM, BlockSize>(
+            x + full_m * K,
+            reinterpret_cast<__fp8_e4m3*>(reinterpret_cast<uint8_t*>(y) + full_m * K),
+            scale + full_m * numKb * BlockSize);
     }
 }
 
