@@ -1,0 +1,103 @@
+#ifndef SUPERNPU_DYNAMIC_MX_QUANT_NONTAIL_OCP_FP4_HPP
+#define SUPERNPU_DYNAMIC_MX_QUANT_NONTAIL_OCP_FP4_HPP
+
+#include "quant/dynamic_mx_quant/dynamic_mx_quant_common.hpp"
+
+namespace supernpu::tile_isa::mxquant {
+
+// Non-tail-axis, OCP scale (scaleAlg=0), FP4 output (E2M1 default, E1M2 valid).
+// Quantize axis is rows (TCOLMAX); fp4 packs 2/byte along the contiguous Post
+// axis, so the output tile is [BlockSize, TileN/2] and gm_y is
+// RowMajor<Axis, Post/2>. emax derived from OutT.
+//
+// fp4 output tile [BlockSize, TileN/2] is plain RowMajor NoneBox; the 32B column
+// alignment (pto_tile.hpp:649, RECORD problem 3) requires (TileN/2)*8 % 256 == 0
+// -> TileN % 64 == 0, i.e. one tile spans >=2 MX blocks along Post. The packed
+// axis (Post) is orthogonal to the reduce axis (rows), so this widening does not
+// touch the per-column TCOLMAX reduce. Default TileN=64 = 2 blocks.
+//
+// scale: E8M0 1 byte/block, compact planar [scaleRows, Post] with
+// scaleRows = evenAlign(numKb) (reduce-axis collapsed by BlockSize + even-aligned)
+// — same as dynamic_mx_quant_nontail_cublas_fp8. NOTE: this is NOT the final
+// AscendC interleaved layout [ceil(numKb/2), Post, 2]; the parity zip is a
+// documented gap (PTO Tile-ISA has no interleave/zip intrinsic, only TCONCAT +
+// reduce-internal butterfly shuffle). See DESIGN §5.3 / README.
+template <int Axis, int Post, int BlockSize = 32, int TileN = 64, typename OutT = __fp4_e2m1x2>
+void dynamic_mx_quant_nontail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
+    static_assert(Axis > 0 && Post > 0, "dims must be positive");
+    static_assert(Axis % BlockSize == 0, "Axis must be multiple of BlockSize");
+    static_assert(Post % TileN == 0, "Post must be multiple of TileN");
+    static_assert(TileN % 64 == 0,
+                  "fp4 output tile is plain RowMajor NoneBox: (TileN/2)*8 % 256 == 0 "
+                  "requires TileN a multiple of 64 (>=2 MX blocks along Post)");
+
+    constexpr int numKb = Axis / BlockSize;
+    constexpr int numN  = Post / TileN;
+    // reduce-axis block count, even-aligned (padding block-row left zero).
+    constexpr int scaleRows = ((numKb + 1) / 2) * 2;
+
+    using namespace pto;
+
+    using tile_x  = Tile<Location::Vec, __bf16, BlockSize, TileN,     BLayout::RowMajor>;
+    using tile_f  = Tile<Location::Vec, float,  BlockSize, TileN,     BLayout::RowMajor>;
+    using tile_o  = Tile<Location::Vec, OutT,   BlockSize, TileN / 2, BLayout::RowMajor>;
+    // Full uint16 input view (bit-reinterpret of bf16) for the boxed OCP reduce.
+    using tile_xu = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor>;
+    // Boxed (valid row=1) per-block scale/recip: one scalar per Post column.
+    using tile_sred      = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_sstore    = Tile<Location::Vec, uint8_t,  BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_recip_bf1 = Tile<Location::Vec, __bf16,   BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_recip_f1  = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+
+    using gm_x  = global_tensor<__bf16,   RowMajor<Axis, Post>>;
+    using gm_xu = global_tensor<uint16_t, RowMajor<Axis, Post>>;
+    using gm_y  = global_tensor<uint8_t,  RowMajor<Axis, Post / 2>>;
+    // scale: uint8 E8M0, compact planar [scaleRows, Post], one byte per block.
+    using gm_s  = global_tensor<uint8_t,  RowMajor<scaleRows, Post>>;
+
+    global_iterator<gm_x,  tile_x>  x_iter(x);
+    global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x));
+    global_iterator<gm_y,  tile_o>  y_iter(reinterpret_cast<uint8_t *>(y));
+
+    for (int kb = 0; kb < numKb; ++kb) {
+        for (int n = 0; n < numN; ++n) {
+            auto gx  = x_iter(kb, n);
+            auto gxu = xu_iter(kb, n);
+            auto gy  = y_iter(kb, n);
+            // Compact scale: fold block-row index (kb) into the base pointer since
+            // the iterator's i-stride is the PHYSICAL tile height, not 1. Each
+            // block-row writes TileN bytes at scale + kb*Post.
+            global_iterator<gm_s, tile_sstore> s_iter(scale + kb * Post);
+            auto gs = s_iter(0, n);
+
+            tile_sred scale_byte;
+            tile_sred recip;
+            tile_xu x_u16;
+            TLOAD(x_u16, gxu);
+            compute_ocp_scale_not_tail_boxed<OutT, BlockSize, TileN>(x_u16, scale_byte, recip);
+            // scale_byte boxed valid row=1; narrow to uint8, store 1 byte/block.
+            tile_sstore scale_u8;
+            TCVT(scale_u8, scale_byte);
+            TSTORE(gs, scale_u8);
+
+            tile_recip_bf1 inv_bf16;
+            // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题5
+            reinterpret_u16_to_bf16<2, BlockSize, TileN, 1, TileN>(recip, inv_bf16);
+            tile_recip_f1 inv_scale_f;
+            TCVT(inv_scale_f, inv_bf16);
+
+            tile_x xq;
+            TLOAD(xq, gx);
+            tile_f xf;
+            TCVT(xf, xq);
+            TCOLEXPANDMUL(xf, xf, inv_scale_f); // per-column scalar broadcast-mul
+            tile_o oq;
+            TCVT(oq, xf); // fp32 -> packed fp4_e2m1x2 (Post halved)
+            TSTORE(gy, oq);
+        }
+    }
+}
+
+} // namespace supernpu::tile_isa::mxquant
+
+#endif
