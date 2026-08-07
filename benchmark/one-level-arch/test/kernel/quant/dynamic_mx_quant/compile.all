@@ -1,20 +1,24 @@
 #!/bin/bash
-# DynamicMxQuant — 6 configurations: 3 scale algorithms × 2 axis modes
+# DynamicMxQuant — build entries for DEBUGGED configs only (op-aligned to AscendC,
+# all known issues recorded in RECORD.md). UNDEBUGGED kernels (tail/nontail
+# OCP-FP8, tail/nontail DynRange-FP4) have had their drivers + TYPE blocks removed
+# on purpose; see README.md「状态总览」.
+#
+# Debugged set (4): cuBLAS-FP8 {tail,nontail} (no open items) and OCP-FP4
+# {tail,nontail} (scale faithful; data path fp32->fp4 direct cast pending ISA
+# confirmation, RECORD 问题6). fp4 emit itself is verified (RECORD 问题2).
 
-# tail axis (axis=-1)
-make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP diss
-make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS diss
-make TESTCASE=dynamic_mx_quant TYPE=TAIL_DYNAMIC_RANGE diss
+# --- plain builds ---
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8 diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_CUBLAS_FP8 diss
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4 diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP_FP4 diss
 
-# non-tail axis
-make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP diss
-make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_CUBLAS diss
-make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_DYNAMIC_RANGE diss
+# --- res_check builds (for precision verification) ---
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8 res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_CUBLAS_FP8 res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4 res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP_FP4 res_check=on diss
 
-# res_check builds (for precision verification)
-make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP res_check=on diss
-make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS res_check=on diss
-make TESTCASE=dynamic_mx_quant TYPE=TAIL_DYNAMIC_RANGE res_check=on diss
-make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP res_check=on diss
-make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_CUBLAS res_check=on diss
-make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_DYNAMIC_RANGE res_check=on diss
+# --- fp4 emit probe (tooling) ---
+make TESTCASE=dynamic_mx_quant TYPE=FP4_PROBE diss

@@ -26,13 +26,21 @@ COMPARE_ROOT = BENCH_ROOT / "compare"
 QEMU = os.environ.get("QEMU", "/remote/lms60/c00622284/qemu/LinxBlockModel/build/qemu-linx")
 QEMU_ARGS = ["-blk_optimize", "force_tb_chained", "-s", "4096M"]
 
+# M/K are the full matrix dims of the driver (rows, cols). For tail the block
+# reduces along cols; for nontail it reduces along rows (see driver .cpp dims).
+# `driver` is the specialized kernel/driver basename; the ELF is
+# dynamic_mx_quant_<driver>.elf and its compare dir shares that basename.
+# Only DEBUGGED configs are registered (op-aligned to AscendC, all known issues in
+# RECORD.md). UNDEBUGGED kernels (tail/nontail OCP-FP8, tail/nontail DynRange-FP4)
+# had their drivers + TYPE blocks removed — see README.md「状态总览」.
+# `blocked` = True would skip a config end-to-end; nothing is alignment-blocked now
+# (fp4 emit is verified, RECORD 问题2). NOTE: end-to-end QEMU is still globally
+# unreliable due to toolchain<->emulator skew; that is a separate documented caveat.
 CONFIGS = {
-    "TAIL_OCP":              {"M": 8, "K": 32, "algo": "OCP",           "kernel": "tail"},
-    "TAIL_CUBLAS":           {"M": 8, "K": 32, "algo": "CUBLAS",        "kernel": "tail"},
-    "TAIL_DYNAMIC_RANGE":    {"M": 8, "K": 32, "algo": "DYNAMIC_RANGE", "kernel": "tail"},
-    "NONTAIL_OCP":           {"M": 8, "K": 32, "algo": "OCP",           "kernel": "nontail"},
-    "NONTAIL_CUBLAS":        {"M": 8, "K": 32, "algo": "CUBLAS",        "kernel": "nontail"},
-    "NONTAIL_DYNAMIC_RANGE": {"M": 8, "K": 32, "algo": "DYNAMIC_RANGE", "kernel": "nontail"},
+    "TAIL_CUBLAS_FP8":      {"M": 8,  "K": 32, "algo": "CUBLAS",        "kernel": "tail",    "dtype": "FP8", "driver": "tail_cublas_fp8",     "blocked": False, "scale_layout": "compact"},
+    "TAIL_OCP_FP4":         {"M": 8,  "K": 64, "algo": "OCP",           "kernel": "tail",    "dtype": "FP4", "driver": "tail_ocp_fp4",        "blocked": False, "scale_layout": "compact"},
+    "NONTAIL_CUBLAS_FP8":   {"M": 32, "K": 32, "algo": "CUBLAS",        "kernel": "nontail", "dtype": "FP8", "driver": "nontail_cublas_fp8",  "blocked": False, "scale_layout": "compact"},
+    "NONTAIL_OCP_FP4":      {"M": 32, "K": 64, "algo": "OCP",           "kernel": "nontail", "dtype": "FP4", "driver": "nontail_ocp_fp4",     "blocked": False, "scale_layout": "compact"},
 }
 
 
@@ -46,7 +54,8 @@ def run(cmd, cwd=None, check=True):
 
 
 def gen_data(type_name: str, cfg: dict):
-    elf_name = f"kernel_quant_dynamic_mx_quant_dynamic_mx_quant_{type_name}"
+    # Compare dir shares the ELF basename: dynamic_mx_quant_<driver>.
+    elf_name = f"dynamic_mx_quant_{cfg['driver']}"
     cmp_dir = COMPARE_ROOT / elf_name
     cmp_dir.mkdir(parents=True, exist_ok=True)
     gen_script = SCRIPT_DIR / "gen_dynamic_mx_quant_data.py"
@@ -55,6 +64,9 @@ def gen_data(type_name: str, cfg: dict):
         "--M", str(cfg["M"]),
         "--K", str(cfg["K"]),
         "--algo", cfg["algo"],
+        "--kernel", cfg["kernel"],
+        "--dtype", cfg["dtype"],
+        "--scale-layout", cfg.get("scale_layout", "broadcast"),
         "-o", str(cmp_dir),
     ])
     return cmp_dir
@@ -72,9 +84,9 @@ def compile_elf(type_name: str, compiler_dir: str):
     ], cwd=str(TEST_DIR), check=True)
 
 
-def find_elf(type_name: str) -> Path:
+def find_elf(cfg: dict) -> Path:
     elf_dir = BENCH_ROOT / "output" / "kernel" / "quant" / "dynamic_mx_quant" / "elf" / "kernel_quant_dynamic_mx_quant"
-    pattern = f"*_{type_name}.elf"
+    pattern = f"dynamic_mx_quant_{cfg['driver']}.elf"
     matches = list(elf_dir.glob(pattern))
     if not matches:
         raise FileNotFoundError(f"no ELF matching {pattern} in {elf_dir}")
@@ -85,12 +97,14 @@ def run_qemu(elf_path: Path):
     run([QEMU] + QEMU_ARGS + [str(elf_path)])
 
 
-def compare_results(type_name: str):
+def compare_results(cfg: dict):
     cmp_script = SCRIPT_DIR / "dynamic_mx_quant_data_compare.py"
-    elf_path = find_elf(type_name)
+    elf_path = find_elf(cfg)
     result = run([
         sys.executable, str(cmp_script),
         "-d", str(elf_path),
+        "--dtype", cfg["dtype"],
+        "--scale-layout", cfg.get("scale_layout", "broadcast"),
         "--cmp-root", str(COMPARE_ROOT),
     ], check=False)
     return result.stdout
@@ -121,8 +135,14 @@ def main():
     for type_name in types_to_run:
         cfg = CONFIGS[type_name]
         print(f"\n{'='*60}")
-        print(f"Testing: {type_name} (M={cfg['M']}, K={cfg['K']}, algo={cfg['algo']})")
+        print(f"Testing: {type_name} (M={cfg['M']}, K={cfg['K']}, algo={cfg['algo']}, dtype={cfg['dtype']})")
         print(f"{'='*60}")
+
+        if cfg.get("blocked"):
+            msg = "SKIPPED (FP4 toolchain-blocked: pto_tile.hpp:649 Cols*4%256)"
+            print(f"  {msg}")
+            results.append((type_name, msg))
+            continue
 
         try:
             if not args.skip_gen:
@@ -134,11 +154,11 @@ def main():
                 compile_elf(type_name, args.compiler_dir)
 
             print("[3/4] Running QEMU...")
-            elf_path = find_elf(type_name)
+            elf_path = find_elf(cfg)
             run_qemu(elf_path)
 
             print("[4/4] Comparing results...")
-            output = compare_results(type_name)
+            output = compare_results(cfg)
             results.append((type_name, output))
             print(output)
 
