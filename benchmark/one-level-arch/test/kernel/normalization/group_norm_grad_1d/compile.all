@@ -1,0 +1,9 @@
+#!/bin/bash
+# GroupNorm Grad HxW==1: fp16; shape N=8 C=64 G=8 (D=8)
+
+set -euo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the linx_blockisa_llvm_musl bin directory}"
+
+make TESTCASE=group_norm_grad_1d COMPILER_DIR="$COMPILER_DIR" \
+  DType=__half N_BATCH=8 C_CH=64 G_GRP=8 TILE_D=-1 diss

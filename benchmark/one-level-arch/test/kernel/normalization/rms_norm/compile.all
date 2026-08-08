@@ -1,0 +1,8 @@
+#!/bin/bash
+# RMSNorm one-level: fp16; tiling_info in rms_norm.cpp = {16,512,1,-1} (g_a,g_r,tile_a,tile_r)
+
+set -euo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the linx_blockisa_llvm_musl bin directory}"
+
+make TESTCASE=rms_norm COMPILER_DIR="$COMPILER_DIR" DType=__half diss

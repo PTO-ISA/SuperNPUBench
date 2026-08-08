@@ -11,7 +11,7 @@
 
 bool writeBinaryFile(const char * filename, const uint8_t* data, size_t size) {
 #ifdef ENABLE_BINARY_OUTPUT
-    int fd = open(filename, O_CREAT | O_RDWR, 0644);
+    int fd = open(filename, O_CREAT | O_RDWR | O_TRUNC, 0644);
     if (fd <0) {
         fprintf(stderr, "faild\n");
         return false;
