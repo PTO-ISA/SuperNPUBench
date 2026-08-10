@@ -24,6 +24,16 @@ ifeq ($(TYPE), NONTAIL_OCP_FP4)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_ocp_fp4.elf
 endif
 
+ifeq ($(TYPE), NONTAIL_OCP_FP4_BIGBS)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_ocp_fp4_bigbs.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_ocp_fp4_bigbs.elf
+endif
+
+ifeq ($(TYPE), NONTAIL_CUBLAS_FP8_BIGBS)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8_bigbs.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_cublas_fp8_bigbs.elf
+endif
+
 ifeq ($(TYPE), FP4_PROBE)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/fp4_probe.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_fp4_probe.elf

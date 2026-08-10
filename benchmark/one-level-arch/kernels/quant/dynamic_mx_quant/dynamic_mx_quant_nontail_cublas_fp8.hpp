@@ -8,6 +8,26 @@ namespace supernpu::tile_isa::mxquant {
 // Non-tail-axis, cuBLAS scale (scaleAlg=1), FP8 output (E4M3 default, E5M2).
 // cuBLAS consumes the bf16 VALUE view (abs -> TCOLMAX -> fp32 amax, guarded
 // exponent extract). Two-pass structure keeps peak live tiles low.
+//
+// Supported BlockSize range (plain single-load path). The whole
+// [BlockSize, TileN] block is loaded in one tile, so the contiguous axis TileN
+// carries BOTH the fp8 32B alignment LOWER bound (TileN % 32 == 0, i.e.
+// TileN >= 32) and the TileSize UPPER bound. A legal TileN exists iff
+// lower <= upper. The upper bound has TWO values because cuBLAS extracts the
+// exponent in the fp32 domain via a scratch-HBM reinterpret roundtrip
+// (compute_cublas_core -> reinterpret_f32_to_u32, RECORD 问题4):
+//   - FORMAL (post-bitcast) model — the assert below encodes THIS: once the
+//     compiler exposes a register-level reinterpret, the 32b roundtrip
+//     disappears and the binding tile falls back to the 16b bf16 input, so the
+//     budget is BlockSize*TileN <= 4096 -> BlockSize <= 128 (BS=128 -> TileN=32).
+//   - CURRENT (workaround) model — the fp32 32b roundtrip tile binds a tighter
+//     IsValidActiveSize budget BlockSize*TileN <= 2048 -> effective BlockSize <= 64
+//     (BS=32 -> TileN in {32,64}; BS=64 -> only 32). For 64 < BlockSize <= 128 the
+//     assert passes but the build still stops at the toolchain IsValidActiveSize
+//     check until 问题4 is fixed. This tighter current limit is the documented gap.
+// For BlockSize >= 160 (formal) there is NO legal TileN even after the fix; that
+// large-BS range needs the 方案A split-reduce kernel (see
+// dynamic_mx_quant_nontail_ocp_fp4_bigbs for the analogous structure).
 template <int Axis, int Post, int BlockSize = 32, int TileN = 32, typename OutT = __fp8_e4m3,
           uint32_t MaxLowBoundBits = 0x2b8cbcccu>
 void dynamic_mx_quant_nontail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
@@ -15,6 +35,15 @@ void dynamic_mx_quant_nontail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
     // Axis must be whole blocks (a block is exactly BlockSize along the quant
     // axis); Post need NOT be a multiple of TileN: full column tiles + N_tail.
     static_assert(Axis % BlockSize == 0, "Axis must be multiple of BlockSize");
+    // FORMAL (post-bitcast) TileSize bound: 16b bf16 input tile BlockSize*TileN
+    // <= 4096, and TileN >= 32 forces BlockSize <= 128. The CURRENT fp32 32b
+    // reinterpret roundtrip (问题4 workaround) further caps the toolchain at
+    // BlockSize <= 64; that tighter effective limit is documented above, not
+    // asserted, so the code already targets the fixed-compiler model.
+    static_assert(BlockSize * TileN <= 4096,
+                  "plain non-tail cuBLAS-FP8 supports BlockSize <= 128 (formal: 16b "
+                  "input tile BlockSize*TileN <= 4096, TileN >= 32). For BlockSize >= 160 "
+                  "use a 方案A split-reduce kernel (see nontail_ocp_fp4_bigbs).");
 
     constexpr int numKb  = Axis / BlockSize;
     constexpr int numN   = Post / TileN;   // full column tiles
@@ -66,6 +95,13 @@ void dynamic_mx_quant_nontail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
             // scale_byte already boxed valid row=1; narrow to uint8, store 1 byte/block.
             tile_sstore scale_u8;
             TCVT(scale_u8, scale_byte);
+            // MISSING INTERLEAVE: this stores scale as a COMPACT planar [scaleRows,
+            // Post] layout (block-rows in order). AscendC's mxScale is PARITY-
+            // INTERLEAVED [ceil(numKb/2), Post, 2] -- even/odd block-rows zipped via
+            // Reg::Interleave (..._not_tail_axis_optimize_high_perf_large_tail.h:511).
+            // The zip needs TINTERLEAVE/TDEINTERLEAVE, which LinxISA 0.57 defines but
+            // the -D__linx header does not expose (RECORD 问题5). Once exposed, insert
+            // a TINTERLEAVE of even/odd block-rows right here before the store.
             TSTORE(gs, scale_u8); // store scale early; scale_byte now dead
 
             tile_recip_bf1 inv_bf16;

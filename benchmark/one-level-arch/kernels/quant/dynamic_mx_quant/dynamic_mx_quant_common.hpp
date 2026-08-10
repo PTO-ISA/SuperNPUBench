@@ -378,12 +378,50 @@ void compute_ocp_scale_tail(
     finalize_scale_recip_u16<TileM, BlockSize>(shared_exp, eq_inf, scale_byte, recip_out);
 }
 
+// Padded-physical, column-boxed OCP tail scale (used by the col-box fp4 tail).
+// Same math as compute_ocp_scale_tail_boxed but the PHYSICAL tile width PW is
+// decoupled from the valid BlockSize: value tiles are physical PW / valid
+// BlockSize, so TROWMAX reduces over ValidCol=BlockSize only (cpu_sim
+// TRowMax.hpp:13 loops j<ValidCol), keeping per-block reduction independent
+// while PW pads the register width so the downstream fp4 output tile (PW/2
+// bytes) is 32B-column-aligned. When PW == BlockSize this is identical to the
+// boxed variant below. ValidM carries the live-row count.
+template <typename OutT, int TileM, int PW, int BlockSize, int ValidM = TileM>
+void compute_ocp_scale_tail_boxed_pw(
+    Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, BlockSize> &x_u16,
+    Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, 1> &scale_byte,
+    Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, 1> &recip_out) {
+    using namespace pto;
+    using tile_full = Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, BlockSize>;
+    using tile_box  = Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, 1>;
+    constexpr uint16_t EMAX = emax_bits<OutT>();
+
+    tile_full exp_bits;
+    TANDS(exp_bits, x_u16, BF16_EXP_MASK);
+    tile_box max_exp;
+    TROWMAX(max_exp, exp_bits);            // reduce ValidCol=BlockSize -> valid col=1
+
+    tile_box eq_inf;
+    TCMPS(eq_inf, max_exp, BF16_EXP_MASK);
+
+    TMAXS(max_exp, max_exp, EMAX);
+    tile_box emax_tile;
+    TEXPANDS(emax_tile, EMAX);
+    tile_box shared_exp;
+    TSUB(shared_exp, max_exp, emax_tile);
+
+    finalize_scale_recip_u16<TileM, PW, ValidM, 1>(shared_exp, eq_inf, scale_byte, recip_out);
+}
+
 // Boxed (valid col=1) OCP tail scale. Same math as compute_ocp_scale_tail but
 // the col reduction (TROWMAX) collapses into a valid-col=1 tile so scale_byte
 // and recip stay boxed (one per-row scalar per block) — mirrors the boxed cuBLAS
 // tail so the caller stores one E8M0 byte per block (compact) and fuses the recip
 // via TROWEXPANDMUL in the data pass. ValidM carries the live-row count (tail
 // blocks pass M_tail; full tiles use the default -> box collapses to NoneBox).
+// NOTE: superseded by compute_ocp_scale_tail_boxed_pw above (the col-box fp4
+// tail now uses padded-physical tiles). Kept for reference / rollback.
+#if 0
 template <typename OutT, int TileM, int BlockSize, int ValidM = TileM>
 void compute_ocp_scale_tail_boxed(
     Tile<Location::Vec, uint16_t, TileM, BlockSize, BLayout::RowMajor, ValidM, BlockSize> &x_u16,
@@ -410,6 +448,7 @@ void compute_ocp_scale_tail_boxed(
 
     finalize_scale_recip_u16<TileM, BlockSize, ValidM, 1>(shared_exp, eq_inf, scale_byte, recip_out);
 }
+#endif
 
 // ValidM (defaulted to TileM) carries the valid row count. Full tiles use the
 // default (boxed type collapses to NoneBox); a tail invocation passes ValidM =
@@ -547,10 +586,23 @@ void compute_cublas_scale_not_tail(
     using tile_bf16   = Tile<Location::Vec, __bf16, BlockSize, TileN, BLayout::RowMajor, BlockSize, ValidN>;
     using tile_bf16_1 = Tile<Location::Vec, __bf16, BlockSize, TileN, BLayout::RowMajor, 1, ValidN>;
     using tile_f32_1  = Tile<Location::Vec, float,  BlockSize, TileN, BLayout::RowMajor, 1, ValidN>;
-    // Reduce block amax in the INPUT dtype (bf16) and cast ONLY the reduced
-    // per-column amax to fp32, mirroring AscendC ComputeScaleCublas. The reduced
-    // result stays boxed valid row=1 through the whole cuBLAS core: no TCOLEXPAND,
-    // the per-column scalar drives the bit-math and the fused TCOLEXPANDMUL.
+    // Reduce block amax in the bf16 VALUE domain (TABS + bf16 TCOLMAX), then cast
+    // ONLY the reduced per-column amax to fp32. The reduced result stays boxed
+    // valid row=1 through the whole cuBLAS core: no TCOLEXPAND, the per-column
+    // scalar drives the bit-math and the fused TCOLEXPANDMUL.
+    //
+    // DOMAIN NOTE vs AscendC: AscendC's ComputeScaleCublas reduces in the uint16
+    // ABS-BIT domain (And(x, BF16_ABS_MASK) + uint16 Max). This bf16 value-domain
+    // reduce is byte-identical to AscendC for all FINITE inputs: for non-negative
+    // bf16 the abs-bit order is monotonic in magnitude, so value-max == bit-max.
+    // The single-pass plain kernel can use bf16 TCOLMAX directly (no cross-chunk
+    // seed, so no bf16 TEXPANDS -- which would crash the LinxV5 backend, see the
+    // bigbs kernel). The ONE unverified edge is a block containing NaN: AscendC's
+    // bit-max deterministically selects the NaN bits -> compute_cublas_core's
+    // `finite` mask -> 0xff scale; this bf16 TCOLMAX depends on the hardware's
+    // NaN-propagation semantics for max (untestable under the current skew). If
+    // strict NaN-parity is ever required, switch this reduce to the uint16 abs-bit
+    // domain (as the bigbs kernel does) at the cost of one reinterpret roundtrip.
     tile_bf16 abs_x;
     TABS(abs_x, x_bf16);
     tile_bf16_1 max_r;
