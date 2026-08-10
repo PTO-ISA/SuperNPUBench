@@ -32,6 +32,16 @@ namespace supernpu::tile_isa::mxquant {
 // No scratch-HBM concat, no 2-block pairing. When BlockSize % 64 == 0, PW ==
 // BlockSize and the col-box collapses to a full tile. Needs only N % BlockSize == 0.
 //
+// ALTERNATIVE (kept, not deleted): the SAME tile-splitting problem also has a
+// 2-block scratch-HBM concat solution — reduce two [TileM,BlockSize] blocks
+// independently, TSTORE both fp32 halves into a scratch cat_buf, TLOAD the
+// [TileM,2*BlockSize] tile and emit ONE fp32->fp4 TCVT of width BlockSize; an odd
+// trailing block is a synthesized zero block. That version lives in
+// dynamic_mx_quant_tail_ocp_fp4.hpp.bak. The two schemes are behaviorally
+// equivalent but mutually exclusive; which one to keep is DEFERRED until the
+// toolchain<->emulator skew is resolved and both can be runtime-compared. This
+// file (padded-physical column-box) is the current default.
+//
 // ODD numKb (scale even-pad): the AscendC scale layout is even-block-aligned
 // (golden _pad_to_even pads with 2^-127, whose E8M0 byte is 0x00). We process
 // only the numKb real blocks, so when numKb is odd we explicitly write one 0x00
