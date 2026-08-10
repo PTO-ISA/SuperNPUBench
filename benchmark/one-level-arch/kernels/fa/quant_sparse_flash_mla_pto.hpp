@@ -10,8 +10,8 @@
 //   Q: [s1, D], KV: [s2, D] (MLA shared K=V=ori_kv), O: [s1, D]
 //
 // 【SWA 滑动窗口 — kernel 内部 token 级 mask, 使用 TSEL】
-//   mask 为 UINT32 位打包格式 (每 32 列 1 个 uint32, bit=1 表示无效/被 mask)
-//   TSEL(dst, mask, neg_inf): mask bit=1 → dst=-1e30 (无效), bit=0 → 保持原 score
+//   mask 为 UINT32 条件矩阵 (1 表示无效/被 mask, 0 表示有效)
+//   TSELECT_Impl(dst, mask, neg_inf, score): mask=1 → dst=-1e30
 //   窗口范围 (对第 q 个 Q token, 0-indexed):
 //     diagonal = (s2 - s1) + q
 //     valid kv: [diagonal - win_left, diagonal + win_right]  (闭区间)
@@ -26,19 +26,15 @@
 //
 // 【D=512 分块】
 //   D 超出单 tile 上限, 沿 D 维切分为 Db 块 (kTd)
-//   QK^T: 沿 D 累加 (TMATMUL + TMATMUL_ACC)
+//   QK^T: 每个 D 块独立 TMATMUL, 转为 Vec 后用 TADD 累加
 //   PV: 每个 D 分块独立计算并存储
 //
 // 【两遍式】
 //   Pass 1: online softmax 归约 (m, l), 含 mask
 //   Pass 2: 归一化 P, 计算 P@V, 含 mask
 //
-// 【mask tile 格式】
-//   TSEL 的 mask 必须是 UINT32 位打包格式:
-//     maskWordsPerRow = ceil(kTk / 32)
-//     mask tile shape: [kTm, maskWordsPerRow], dtype=uint32_t, RowMajor
-//     bit (1<<j) = 1 表示第 j 列被 mask (无效), 0 表示有效
-//   TCMP 输出天然为此格式; 手动构建的 mask 也需按此格式打包
+// 当前 template_asm.hpp 的 packed TSEL 包装与模型三输入契约不一致，
+// 因此使用类型安全的四参数 TSELECT_Impl 和完整 UINT32 条件矩阵。
 // =============================================================================
 
 #include <common/pto_tileop.hpp>
@@ -47,26 +43,18 @@
 using namespace pto;
 
 // CPU 侧 mask 预计算 (在 kernel 内部调用, 放在 stack 上)
-// 生成 UINT32 位打包格式的 mask:
-//   对 [s1, s2] 的每个 (q, kv), 如果 kv 在窗口外则对应 bit=1
-//   每 32 个 kv 列打包成 1 个 uint32
-//   maskBuf 行大小 = ceil(s2 / 32) 个 uint32
-static inline void build_swa_mask_bitpacked(
+// 生成 UINT32 条件矩阵：窗口外为 1，窗口内为 0。
+static inline void build_swa_mask_select(
     uint32_t* maskBuf, int s1, int s2, int win_left, int win_right)
 {
-    const int wordsPerRow = (s2 + 31) / 32;
     const int causal_offset = s2 - s1;
     for (int q = 0; q < s1; ++q) {
         int diagonal = causal_offset + q;
         int lo = diagonal - win_left;
         int hi = diagonal + win_right;
-        uint32_t* row = maskBuf + q * wordsPerRow;
-        for (int w = 0; w < wordsPerRow; ++w) row[w] = 0;
         for (int kv = 0; kv < s2; ++kv) {
             bool valid = (kv >= lo) && (kv <= hi);
-            if (!valid) {
-                row[kv / 32] |= (uint32_t{1} << (kv % 32));
-            }
+            maskBuf[q * s2 + kv] = valid ? 0u : 1u;
         }
     }
 }
@@ -95,33 +83,25 @@ void quant_sparse_flash_mla_swa_pto(
 {
     constexpr int Db = D / kTd;
 
-    // === mask 预计算 (UINT32 位打包) ===
-    // 全局 mask: [s1, ceil(s2/32)] uint32
-    constexpr int maskWordsPerRowGlobal = (s2 + 31) / 32;
-    uint32_t maskBuf[s1 * maskWordsPerRowGlobal]; //[64 * 4]
-    build_swa_mask_bitpacked(maskBuf, s1, s2, ori_win_left, ori_win_right);
-
-    // 每个 [kTm, kTk] block 对应的 mask tile:
-    //   maskWordsPerRowBlock = ceil(kTk / 32)
-    //   mask tile: [kTm, maskWordsPerRowBlock], uint32, RowMajor
-    constexpr int maskWordsPerRowBlock = (kTk + 31) / 32; // 1
+    uint32_t maskBuf[s1 * s2];
+    build_swa_mask_select(maskBuf, s1, s2, ori_win_left, ori_win_right);
 
     using gmQ    = global_tensor<qdtype,  RowMajor<s1, D>>;
     using gmKV   = global_tensor<kvdtype, RowMajor<s2, D>>;
+    // 与 gmKV 共用同一块内存，逻辑上表示 K^T；TCOPYIN 将 DN 转为 ZN。
+    using gmKT   = global_tensor<kvdtype, ColMajor<D, s2>>;
     using gmO    = global_tensor<odttype, RowMajor<s1, D>>;
+    using gmMask = global_tensor<uint32_t, RowMajor<s1, s2>>;
 
     using tileQ      = TileLeft<qdtype,  kTm, kTd>;
-    using tileKV     = TileRight<kvdtype, kTk, kTd>;
+    using tileK      = TileRight<kvdtype, kTd, kTk>;
     using tileW_out  = TileAcc<float, kTm, kTk>;
 
     // score tile: RowMajor float
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
 
-    // mask tile: RowMajor uint32, shape [kTm, maskWordsPerRowBlock]
-    // TSEL 要求 dst/mask/src 同 tile_shape, 但模拟器内部 mask 按 uint32 位打包读
-    // 这里用 float 类型满足编译器约束, 实际数据是 uint32 位掩码
-    // tile Cols 设为 kTk (与 score tile 同形状), 模拟器只读前 maskWordsPerRowBlock 个 uint32
-    using tileMask   = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
+    using tileMask   = Tile<Location::Vec, uint32_t, kTm, kTk,
+                            BLayout::RowMajor>;
 
     using tileW_cast = Tile<Location::Vec, qdtype, kTm, kTk, BLayout::RowMajor>;
     using tileW_left = TileLeft<qdtype, kTm, kTk>;
@@ -135,14 +115,16 @@ void quant_sparse_flash_mla_swa_pto(
     using tileSum    = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
 
     using itQ    = global_iterator<gmQ,  tileQ>;
-    using itKV   = global_iterator<gmKV, tileKV>;
+    using itK    = global_iterator<gmKT, tileK>;
     using itV    = global_iterator<gmKV, tileV>;
     using itO    = global_iterator<gmO,  tileO_cast>;
+    using itMask = global_iterator<gmMask, tileMask>;
 
     itQ  gIterQ(q_ptr);
-    itKV gIterKV(ori_kv_ptr);
+    itK  gIterK(ori_kv_ptr);
     itV  gIterV(ori_kv_ptr);
     itO  gIterO(out_ptr);
+    itMask gIterMask(maskBuf);
 
     const int Qb = (s1 + kTm - 1) / kTm;
     const int Kb = (s2 + kTk - 1) / kTk;
@@ -164,62 +146,35 @@ void quant_sparse_flash_mla_swa_pto(
         for (int j = 0; j < Kb; ++j) {
 
             // QK^T 沿 D 维累加
-            tileW_out tW_out;
-            bool first_d = true;
+            tileW tW;
+            TEXPANDS(tW, 0.0f);
             #pragma clang loop unroll(full)
             for (int dd = 0; dd < Db; ++dd) {
                 tileQ tQ;
                 auto gQ = gIterQ(i, dd);
-                TLOAD(tQ, gQ);
+                TCOPYIN(tQ, gQ);
 
-                tileKV tK;
-                auto gK = gIterKV(j, dd);
-                TLOAD(tK, gK);
+                tileK tK;
+                auto gK = gIterK(dd, j);
+                TCOPYIN(tK, gK);
 
-                if (first_d) {
-                    TMATMUL(tW_out, tQ, tK);
-                    first_d = false;
-                } else {
-                    TMATMUL_ACC(tW_out, tQ, tK);
-                }
+                tileW_out tW_out;
+                TMATMUL(tW_out, tQ, tK);
+                tileW tW_partial;
+                TCVT_Impl(tW_partial, tW_out);
+                TADD(tW, tW, tW_partial);
             }
 
-            tileW tW;
-            ACCCVT(tW, tW_out);
             TMULS(tW, tW, scale);
 
-            // 应用 token 级 mask: TSEL(score, mask, neg_inf)
-            // mask bit=1 → score=-1e30 (无效), bit=0 → 保持原 score
-            // mask 数据从全局 maskBuf 中提取当前 [kTm, kTk] block 对应的位打包数据
-            // 构建局部 mask tile: 从全局 [s1, maskWordsPerRowGlobal] 中提取
-            //   [kTm 行, kTk 列] 对应的 bit, 重新打包为 [kTm, maskWordsPerRowBlock]
+            // mask=1 选择 neg_inf，mask=0 保留 score。
             {
-                // 构建 block mask: [kTm, maskWordsPerRowBlock] uint32
-                // 从全局 mask 中提取列 [j*kTk, (j+1)*kTk) 的 bits
-                uint32_t blockMask[kTm * maskWordsPerRowBlock]; // [32 * 1]
-                for (int r = 0; r < kTm; ++r) {
-                    int q_idx = i * kTm + r;
-                    const uint32_t* globalRow = maskBuf + q_idx * maskWordsPerRowGlobal;
-                    uint32_t* blockRow = blockMask + r * maskWordsPerRowBlock;
-                    for (int w = 0; w < maskWordsPerRowBlock; ++w) blockRow[w] = 0;
-                    for (int c = 0; c < kTk; ++c) {
-                        int global_col = j * kTk + c;
-                        if (global_col >= s2) {
-                            blockRow[c / 32] |= (uint32_t{1} << (c % 32));
-                            continue;
-                        }
-                        bool masked = (globalRow[global_col / 32] >> (global_col % 32)) & 1;
-                        if (masked) {
-                            blockRow[c / 32] |= (uint32_t{1} << (c % 32));
-                        }
-                    }
-                }
-                // TLOAD mask tile from blockMask (stack buffer)
-                using gmBlockMask = global_tensor<uint32_t, RowMajor<kTm, kTk>>;
-                gmBlockMask gBlockMask(blockMask);
                 tileMask tMask;
-                TLOAD(tMask, gBlockMask);
-                TSEL(tW, tMask, tNegInf);
+                auto gMask = gIterMask(i, j);
+                TLOAD(tMask, gMask);
+                tileW tMasked;
+                TSELECT_Impl(tMasked, tMask, tNegInf, tW);
+                tW = tMasked;
             }
 
             // m_new = max(m_old, rowmax(score))
@@ -263,55 +218,35 @@ void quant_sparse_flash_mla_swa_pto(
             for (int j = 0; j < Kb; ++j) {
 
                 // 计算完整 QK^T (沿 D 累加, 与 Pass 1 一致)
-                tileW_out tW_out;
-                bool first_d = true;
+                tileW tW;
+                TEXPANDS(tW, 0.0f);
                 #pragma clang loop unroll(full)
                 for (int dd2 = 0; dd2 < Db; ++dd2) {
                     tileQ tQ;
                     auto gQ = gIterQ(i, dd2);
-                    TLOAD(tQ, gQ);
+                    TCOPYIN(tQ, gQ);
 
-                    tileKV tK;
-                    auto gK = gIterKV(j, dd2);
-                    TLOAD(tK, gK);
+                    tileK tK;
+                    auto gK = gIterK(dd2, j);
+                    TCOPYIN(tK, gK);
 
-                    if (first_d) {
-                        TMATMUL(tW_out, tQ, tK);
-                        first_d = false;
-                    } else {
-                        TMATMUL_ACC(tW_out, tQ, tK);
-                    }
+                    tileW_out tW_out;
+                    TMATMUL(tW_out, tQ, tK);
+                    tileW tW_partial;
+                    TCVT_Impl(tW_partial, tW_out);
+                    TADD(tW, tW, tW_partial);
                 }
 
-                tileW tW;
-                ACCCVT(tW, tW_out);
                 TMULS(tW, tW, scale);
 
                 // 应用 token 级 mask: TSEL(score, mask, neg_inf)
                 {
-                    uint32_t blockMask[kTm * maskWordsPerRowBlock];
-                    for (int r = 0; r < kTm; ++r) {
-                        int q_idx = i * kTm + r;
-                        const uint32_t* globalRow = maskBuf + q_idx * maskWordsPerRowGlobal;
-                        uint32_t* blockRow = blockMask + r * maskWordsPerRowBlock;
-                        for (int w = 0; w < maskWordsPerRowBlock; ++w) blockRow[w] = 0;
-                        for (int c = 0; c < kTk; ++c) {
-                            int global_col = j * kTk + c;
-                            if (global_col >= s2) {
-                                blockRow[c / 32] |= (uint32_t{1} << (c % 32));
-                                continue;
-                            }
-                            bool masked = (globalRow[global_col / 32] >> (global_col % 32)) & 1;
-                            if (masked) {
-                                blockRow[c / 32] |= (uint32_t{1} << (c % 32));
-                            }
-                        }
-                    }
-                    using gmBlockMask = global_tensor<uint32_t, RowMajor<kTm, kTk>>;
-                    gmBlockMask gBlockMask(blockMask);
                     tileMask tMask;
-                    TLOAD(tMask, gBlockMask);
-                    TSEL(tW, tMask, tNegInf);
+                    auto gMask = gIterMask(i, j);
+                    TLOAD(tMask, gMask);
+                    tileW tMasked;
+                    TSELECT_Impl(tMasked, tMask, tNegInf, tW);
+                    tW = tMasked;
                 }
 
                 // p = exp(score - m) / l
@@ -323,17 +258,17 @@ void quant_sparse_flash_mla_swa_pto(
                 tileW_cast tExpW;
                 TCVT(tExpW, tW);
                 tileW_left tW_left;
-                TCVT(tW_left, tExpW);
+                TMOV_ND2NZ(tW_left, tExpW);
 
                 // PV = p * V (当前 D 分块)
                 tileV tV;
                 auto gV = gIterV(j, dd);
-                TLOAD(tV, gV);
+                TCOPYIN(tV, gV);
 
                 tileO_out tPV_out;
                 TMATMUL(tPV_out, tW_left, tV);
                 tileO tPV;
-                ACCCVT(tPV, tPV_out);
+                TCVT_Impl(tPV, tPV_out);
 
                 TADD(tO, tO, tPV);
             }
@@ -342,7 +277,7 @@ void quant_sparse_flash_mla_swa_pto(
             tileO_cast tO_cast;
             TCVT(tO_cast, tO);
             auto gO = gIterO(i, dd);
-            TSTORE(gO, tO_cast);
+            TCOPYOUT(gO, tO_cast);
         }
     }
 }
