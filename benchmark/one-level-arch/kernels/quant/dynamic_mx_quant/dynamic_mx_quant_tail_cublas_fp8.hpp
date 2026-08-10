@@ -8,6 +8,16 @@ namespace supernpu::tile_isa::mxquant {
 // Tail-axis, cuBLAS scale (scaleAlg=1), FP8 output (E4M3 default, E5M2 valid).
 // cuBLAS consumes the fp32 VALUE view (amax via TABS+TROWMAX, guarded exponent
 // extract). Two-pass structure keeps peak live tiles low.
+//
+// BlockSize range: UNBOUNDED. Unlike the non-tail kernels, the tail contiguous
+// axis is BlockSize (the quant axis, always a multiple of 32 -> naturally 32B
+// aligned), and the free axis is M rows tiled by the tunable TileM. There is no
+// alignment-vs-TileSize conflict on a single axis: the binding tile budget
+// (TileM*BlockSize) is met by shrinking TileM, so ANY BlockSize is legal. The
+// budget itself has two values from the fp32 reinterpret roundtrip (问题4):
+// CURRENT (fp32 32b roundtrip) TileM*BlockSize <= 2048; FORMAL (post-bitcast,
+// 16b) TileM*BlockSize <= 4096. Either way BlockSize is free — only TileM shrinks
+// — so no static_assert on BlockSize is needed here.
 template <int M, int K, int TileM = 8, int BlockSize = 32, typename OutT = __fp8_e4m3,
           uint32_t MaxLowBoundBits = 0x2b8cbcccu>
 void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {

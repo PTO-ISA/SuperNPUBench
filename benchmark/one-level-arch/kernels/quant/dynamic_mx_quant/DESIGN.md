@@ -423,10 +423,10 @@ test/kernel/quant/dynamic_mx_quant/
 
 约束落在 **fp4 输出 tile 的切分**：`type_traits<__fp4_e2m1x2>::bits == 8`，RowMajor+NoneBox 的 `Cols_packed × 8 % 256 == 0` 要求每行 ≥ 32 打包列 = **64 个 fp4 值 = 2 个 MX block**（`pto_tile.hpp:649`）。BlockSize=32 的单 block fp4 输出仅 16 打包列，不满足。两轴按打包轴与 reduce 轴是否重合分别处理（详见 RECORD 问题3）：
 
-- **非尾轴**：打包轴（Post）与 reduce 轴（行/`TCOLMAX`）正交，`TileN=64` 走 plain RowMajor NoneBox（`tile_o=[32,32]`），归约零改动。上界与 TileSize 约束（问题1）叠加为 `TileN ≤ 64`。
-- **尾轴**：打包轴与 reduce 轴重合，须解耦「归约粒度 32」与「落盘粒度 64」——每 block 子归约（`[TileM,32]` `TROWMAX`）→ `TCONCAT` 到 `[TileM,64]` fp32 → 单次 `TCVT` → `[TileM,32]` fp4 → `TSTORE`。**中间 `[TileM,16]` 单 block fp4 tile 不构造**（非法）。
+- **非尾轴**：打包轴（Post）与 reduce 轴（行/`TCOLMAX`）正交，`TileN=64` 走 plain RowMajor NoneBox（`tile_o=[32,32]`），归约零改动。
+- **尾轴**：打包轴与 reduce 轴重合。**不 2-block 打包**，改用**列装箱补齐物理宽**：物理列宽补齐到 `PW = ⌈BlockSize/64⌉×64`（BS=32→64），每 op 列装箱到有效 BlockSize（value/scale tile 物理 PW、有效 BlockSize）。`TROWMAX` 按 **ValidCol** 归约（cpu_sim `TRowMax.hpp:13` 循环 `j<ValidCol`），物理补齐**不合并** block、每块归约独立正确；fp4 输出 tile 物理 `PW/2` 字节（`PW%64==0` 故 32B 对齐）、有效 `BlockSize/2` 字节；boxed `TLOAD`/`TSTORE` 只搬 ValidCol 列（`blk_tload` 计数取 `GetValidCol()`），尾块不越界读过 N；因物理 PW≠每块步长，基址折叠定位每 block（输入 `x+kb*BlockSize`、输出 `y+kb*(BlockSize/2)`）。**无 concat、无配对、无零块**，仅需 `N % BlockSize == 0`（单 block/tile 亦可）。奇数 numKb 时显式往偶数对齐的 padding scale 列补 0x00 E8M0（golden `_pad_to_even` 用 `2^-127`==0x00）。scale 路径复用 `compute_ocp_scale_tail_boxed_pw`（物理宽 PW 参数化的 boxed OCP scale）。
 
-boxed ColMajor fractal（`fa_hif4.hpp` 先例）发射已验证，但其寄存器侧 fractal 落盘字节序需运行期核实（当前 emulator skew 下不可测），作为备选而非首选。
+列装箱是 plain RowMajor（有效列 < 物理列），非 fractal。boxed ColMajor fractal（`fa_hif4.hpp` 先例）发射已验证，但其寄存器侧 fractal 落盘字节序需运行期核实（当前 emulator skew 下不可测），作为更次备选。
 
 ---
 

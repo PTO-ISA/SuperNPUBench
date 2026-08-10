@@ -50,9 +50,9 @@
 
 - **通用**：尺寸上限是硬件档位，无法绕过；只能**按预算切分 tile**——选 TileM/TileN 使每个
   穿过 load/store 的 tile 满足 `R × C × sizeof(elem) ≤ 8192`（按其 dtype 位宽取档）。
-- **cuBLAS 的 2048 可解除**：它并非算法固有，而是问题4 的位重解释缺寄存器 bitcast、退而用
+- **cuBLAS 的 2048 元素限制可解除**：它并非算法固有，而是问题4 的位重解释缺寄存器 bitcast、退而用
   HBM 往返所引入的 32b load/store tile。一旦补齐寄存器级 bitcast（见问题4 解除路径），该 32b
-  tile 消失，cuBLAS 的绑定 tile 回落到 16-bit 输入 → 上限升到 4096，与 OCP 一致。
+  tile 消失，cuBLAS 的绑定 tile 回落到 16-bit 输入 → 上限升到 4096 元素，与 OCP 一致。
 
 ---
 
@@ -164,13 +164,64 @@ static_assert(
 - **fp8**：TileN 取满足「下界 32 ≤ 问题1 上界」的值。上界随 BlockSize 收窄——只走 16b tile（bf16 入 /
   fp8 出 / uint16 scale）→ 上界 4096/BS → **BS ≤ 128**；若引入 32b 位重解释往返 tile（问题4）→ 上界
   2048/BS → **BS ≤ 64**。大 BlockSize 无合法 TileN。
-- **fp4**：打包轴 ⊥ reduce 轴，`TileN=64` 走 plain RowMajor NoneBox（`tile_o=[BlockSize,32]` packed），
-  **归约零改动，优先落地**；上界内可更大（BS=32 → ≤128）。
+- **fp4**：打包轴 ⊥ reduce 轴（打包沿 -1=TileN，归约沿 -2=行=BlockSize），`TileN=64` 走 plain RowMajor
+  NoneBox（`tile_o=[BlockSize,32]` packed），**归约零改动、已落地**（`dynamic_mx_quant_nontail_ocp_fp4.hpp`）。
+  但 fp4 对齐下界 = 64 值（`(TileN/2)*8 % 256 == 0` → `TileN % 64 == 0`），问题1 上界 = 4096/BS
+  （16b 输入 tile 绑定）→ 交点在 **BS > 64**：BS=32 → TileN≤128（64 可）、BS=64 → 恰 TileN=64、
+  **BS≥128 上界<64 → plain 方案无合法 TileN**。大 BlockSize 的两解见下（方案 A/B）。
 
-**通用备选（尾/非尾皆可）——fractal 布局整体豁免**：改用 SLayout::Box/fractal（:649 分支3）**完全绕开
-32B 字节约束**（只需 `Rows%InnerRows==0 && Cols%InnerCols==0`），`fa_hif4.hpp:85-92` 发射已验证；但为
-寄存器侧 fractal 布局（`SFractalSize_==512/1024`，`pto_tile.hpp:658`），落盘 plain global 的字节序需
-运行期核实（当前 skew 不可测），作备选而非首选。
+#### 非尾轴大 BlockSize（BS≥128）冲突的两个解
+
+冲突根因：当前一次性载入满 `[BlockSize, TileN]`，`Rows×Cols = BlockSize×TileN` 被顶满，对齐下界（TileN）
+与 TileSize 上界（乘积）压在同一根轴上对撞。两条解都从**拆开这个乘积**或**豁免下界**入手。
+
+**方案 A（推荐，通用解）——切分归约轴 + 累积归约**：非尾轴归约轴是 -2 行轴（长 BlockSize）。把
+BlockSize 行切成 `R_sub` 行子块（`R_sub | BlockSize`），载入 `[R_sub, TileN]` 子 tile，用 running-`TMAX`
+把每列 max 累积到 `[1,TileN]`（每子块 `TCOLMAX` → 累积），跨 `numSub = BlockSize/R_sub` 子块。累积完算
+一次 scale/recip，再第二遍重载子块做 `TCOLEXPANDMUL` 广播乘 + fp4 `TCVT` + 落盘。
+- **为何总可行**：TileSize 现在约束 `R_sub×TileN ≤ 4096`，`R_sub` 是自由旋钮（可缩到 1，`1×64=64≤4096`
+  恒成立）→ TileN 永远能满足 64 对齐下界，**与 BlockSize 无关**。max 结合律保证跨子块归约正确，每列
+  scale 对所有子块广播一致。典型取 `R_sub = min(BlockSize, 64)`、`TileN = 64`（BS=128 → 4 子块、
+  `[32,64]` 子 tile、budget 4096 ≤ 8192、对齐 64 ✓）。
+- **代价**：两遍结构、重读输入（HBM 流量↑）、代码变多；结构与尾轴两遍同构。保持 plain RowMajor，
+  无 fractal 落盘风险。**已落地（两个 kernel，同结构）**：
+  - `dynamic_mx_quant_nontail_ocp_fp4_bigbs.hpp`（`TYPE=NONTAIL_OCP_FP4_BIGBS`）——pass1 每子块
+    `TANDS`（exp 位）→`TCOLMAX`→跨子块 `TMAX` 累积到 `[R_sub,TileN]` valid=1、finalize 用
+    **kernel 文件内 static 局部** helper `ocp_scale_from_maxexp_not_tail_boxed_bigbs`（应要求未放入
+    common.hpp、未改既有函数）；pass2 `reinterpret`→fp32 inv_scale + 每子块 `TCOLEXPANDMUL`→fp4。
+    BS=128 编译/链接/反汇编通过（4×累积链 + fp4 cast 发射，无对齐/TileSize 断言）。
+  - `dynamic_mx_quant_nontail_cublas_fp8_bigbs.hpp`（`TYPE=NONTAIL_CUBLAS_FP8_BIGBS`）——pass1 在
+    **uint16 abs-bit 域**累积（`TANDS` 0x7FFF→`TCOLMAX`→跨子块 `TMAX`；非负 bf16 位序与幅值单调故
+    等价 bf16 amax，inf/NaN 由 `compute_cublas_core` 的 `finite` 掩码兜住）——**改用位域首要是为精确匹配
+    AscendC 归约域,附带规避 bf16 `TEXPANDS` seed 崩溃 LinxV5 后端**（`getCopyToParts` illegal-type，与
+    `tail_ocp_fp4` .bak 记录同因；改用 uint16 `TEXPANDS(0)` seed 合法）。**注:bf16 逐元素 `TMAX` 本身
+    不崩——已探针实测编译通过——故 bf16 值域 + peeled-first-sub-chunk `TCOLMAX` seed 亦可编译,选 uint16
+    位域是为对齐 AscendC,非因 bf16 `TMAX` 不可用**；累积后 `reinterpret_u16_to_bf16`→`TCVT`→fp32 amax，直接复用既有
+    `compute_cublas_core`（**零新增 common.hpp 函数**）；pass2 `reinterpret`→fp32 inv_scale + 每子块
+    `TCOLEXPANDMUL`→fp32→fp8。BS=128（`R_sub=32`/`numSub=4`/`TileN=32`）编译/链接/反汇编通过。
+  - **两者 `static_assert` 均按正式（补齐 reinterpret 后）预算 `R_sub*TileN≤4096` 编写**（见问题4 政策）；
+    ocp 走 16b、正式即当前；cublas 当前 fp32 往返实际 `≤2048`，故当前 `TileN=32`/`R_sub=32` 可编，
+    正式后可放宽 `R_sub=64`/`TileN=64`。**两者 runtime 因 skew 未验**。**两个 bigbs 均已逐 op 对齐 AscendC**：
+    - **cublas-fp8-bigbs 对齐 `ComputeScaleCuBlas`**：归约域与 AscendC 一致（uint16 abs-bit——AscendC 非尾轴
+      cuBLAS bf16 分支即 `And(BF16_ABS_MASK)`+`uint16 Reg::Max` 累积，`..._not_tail_axis_optimize_high_perf_large_tail.h:426-440`）、
+      守卫+recip 走 `compute_cublas_core`（AscendC guard 忠实移植，`TOR`≡`MaskXor` 因 p0/p1 互斥）、pass2 同
+      plain `compute_cublas_scale_not_tail` → 与 plain 同结果，唯残缺口 = 问题5 parity 交织。
+    - **ocp-fp4-bigbs 对齐 `ComputeScaleOcp`**（`..._not_tail_axis_optimize_high_perf_large_tail.h:663-777`）：
+      pass1 拆子块 `TMAX` 累积因 max 结合律 == 单遍全行 max，与 AscendC 同为 **uint16 指数位域**（`And(0x7F80 exp
+      mask)`+`uint16 Reg::Max` 累积，种子 0）；finalize 的 kernel 内局部 helper `ocp_scale_from_maxexp_not_tail_boxed_bigbs`
+      与已 review 的 plain `compute_ocp_scale_not_tail_boxed` 尾段**字节一致**，而 plain 的 `clamp-up 到 emax 再减
+      emax` ≡ AscendC `762-764` 的 `减 subNum 再对 <emax 置 0`（代数恒等），`finalize_scale_recip_u16` 对应
+      AscendC `765-776`、常量全核对（0x7F00/0x7F81/0x0040/0x00FF）。**残留**：仍缺问题5 parity 交织（compact
+      平铺）；data 路径 fp32→fp4 直转 cast 语义待确认（问题6）。
+    两个 plain kernel 本身仍是各自可用范围（ocp BS≤64 / cublas 当前 BS≤64）的单遍。
+
+**方案 B（备选）——fractal/Box 布局整体豁免对齐（尾/非尾皆可）**：改用 `SLayout::Box`/fractal（:649
+分支3）**完全绕开 32B 字节下界**（只需 `Rows%InnerRows==0 && Cols%InnerCols==0`），TileN 可任意小、只剩
+TileSize 上界。`fa_hif4.hpp:85-92` 发射已验证；但为寄存器侧 fractal 布局（`SFractalSize_==512/1024`，
+`pto_tile.hpp:658`），落盘 plain global 的字节序需运行期核实（当前 skew 不可测）→ 作 fallback 而非首选。
+
+（附：**方案 C 不适用于 fp4 大 BS**——上界由最宽 16b 输入 tile 决定，fp4 输入无法窄于 16b，拉不动上界；
+它只对 cuBLAS 有效：补寄存器 bitcast 去掉 32b 往返 → 2048→4096，属工具链侧修复、与 fp4 对齐冲突无关。）
 
 ---
 
@@ -277,6 +328,15 @@ tile 都宽 → 上限压到 **2048**；OCP/DynRange 在 bf16 域（`reinterpret
 输入 tile 同宽、不加宽绑定 → 上限仍 **4096**。故 cuBLAS 的 2048 是此 workaround 的产物，非算法
 预算；补齐寄存器级 bitcast 后往返消失，cuBLAS 也回到 4096。
 
+### 政策：assert 编码正式（补齐后）边界，当前缺口以注释记录
+
+kernel 的 `static_assert` 尺寸/BlockSize 边界一律**按编译器补齐寄存器 reinterpret 后的正式模型**编写
+（cuBLAS 非尾轴 = `BlockSize*TileN ≤ 4096` → BS ≤ 128），**不**按当前 fp32 往返的收紧值（2048 → BS ≤ 64）。
+理由：数据路径的 scratch-HBM 往返是**临时 workaround**（本问题），一旦补齐即消失；把临时值烧进 assert 会在
+修复后反而误报。当前工具链的更严实际上界（`64 < BS ≤ 128` 仍停在 `IsValidActiveSize`）作为**已记录缺口**
+写在 kernel 头注释与 README「已知限制」中，而非 assert。**对不走 fp32 往返的路径（OCP 在 16b 域）正式与
+当前同界，assert 即真实界**（见问题1 的 OCP/cuBLAS 上界区分）。
+
 ---
 
 ## 问题5：linx `-D__linx` 头未暴露 TINTERLEAVE/TDEINTERLEAVE（需 linx 侧解决）
@@ -331,8 +391,8 @@ host tiling :415-416 / swiglu `axis_last.h:585-592`），故本缺口只影响�
 
 **两个 OCP-fp4 kernel 同构**，数据路径都在 **fp32 域**乘 inv_scale 后**直接 `TCVT`
 fp32→`__fp4_e2m1x2`**：
-- `dynamic_mx_quant_tail_ocp_fp4.hpp`：`ocp_fp4_block` line 57-58 `TCVT(xf_out, xq)`（bf16→fp32）+
-  `TROWEXPANDMUL`（fp32 域）；`ocp_fp4_pair` line 90-92 `TLOAD(xcat) → TCVT(oq, xcat)`（fp32→fp4）。
+- `dynamic_mx_quant_tail_ocp_fp4.hpp`：每块 `TCVT(xf, xq)`（bf16→fp32）+ `TROWEXPANDMUL`（fp32 域），
+  两块经 scratch-HBM concat 后 `TLOAD(xcat) → TCVT(oq, xcat)`（fp32→fp4）。
 - `dynamic_mx_quant_nontail_ocp_fp4.hpp`：line 92-95 `TCVT(xf, xq)`（bf16→fp32）+ `TCOLEXPANDMUL`（fp32 域）
   + `TCVT(oq, xf)`（fp32→fp4）。
 

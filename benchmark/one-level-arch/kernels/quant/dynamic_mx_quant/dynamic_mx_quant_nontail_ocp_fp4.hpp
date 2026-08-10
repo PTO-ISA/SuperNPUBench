@@ -22,6 +22,14 @@ namespace supernpu::tile_isa::mxquant {
 // AscendC interleaved layout [ceil(numKb/2), Post, 2]; the parity zip is a
 // documented gap (PTO Tile-ISA has no interleave/zip intrinsic, only TCONCAT +
 // reduce-internal butterfly shuffle). See DESIGN §5.3 / README.
+// Supported BlockSize range (plain single-load path): BlockSize ∈ {32, 64}.
+// The whole [BlockSize, TileN] block is loaded in ONE tile, so the contiguous
+// axis TileN carries BOTH the fp4 32B alignment LOWER bound (TileN % 64 == 0,
+// i.e. TileN ≥ 64) and the TileSize UPPER bound (16b input tile:
+// BlockSize*TileN*2 ≤ 8192 → TileN ≤ 4096/BlockSize). A legal TileN exists iff
+// 64 ≤ 4096/BlockSize → BlockSize ≤ 64. BlockSize ≥ 96 (next multiple of 32:
+// 96*64=6144 > 4096) has NO legal TileN here → use
+// dynamic_mx_quant_nontail_ocp_fp4_bigbs (方案A, splits the reduce axis).
 template <int Axis, int Post, int BlockSize = 32, int TileN = 64, typename OutT = __fp4_e2m1x2>
 void dynamic_mx_quant_nontail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
     static_assert(Axis > 0 && Post > 0, "dims must be positive");
@@ -30,6 +38,19 @@ void dynamic_mx_quant_nontail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
     static_assert(TileN % 64 == 0,
                   "fp4 output tile is plain RowMajor NoneBox: (TileN/2)*8 % 256 == 0 "
                   "requires TileN a multiple of 64 (>=2 MX blocks along Post)");
+    // BlockSize range: single-load path is capped at BlockSize ≤ 64. With
+    // TileN ≥ 64, the 16b input tile budget BlockSize*TileN ≤ 4096 forces
+    // BlockSize ≤ 64. BlockSize ≥ 96 -> no legal TileN; use the _bigbs kernel.
+    // NOTE: unlike nontail_cublas_fp8, this BS ≤ 64 bound is FORMAL AND
+    // PERMANENT — OCP extracts the exponent in the bf16/uint16 (16b) domain
+    // (reinterpret_u16_to_bf16), never a fp32 32b roundtrip, so the binding tile
+    // is already the 16b input. The 4096 budget does NOT relax when the compiler
+    // gains a register-level reinterpret (问题4); large BS still needs _bigbs.
+    static_assert(BlockSize * TileN <= 4096,
+                  "plain non-tail OCP-FP4 supports BlockSize ∈ {32,64} only (16b input "
+                  "tile BlockSize*TileN <= 4096, and TileN >= 64 forces BlockSize <= 64). "
+                  "For BlockSize >= 96 use dynamic_mx_quant_nontail_ocp_fp4_bigbs "
+                  "(方案A, split reduce axis).");
 
     constexpr int numKb = Axis / BlockSize;
     constexpr int numN  = Post / TileN;
@@ -78,6 +99,12 @@ void dynamic_mx_quant_nontail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
             // scale_byte boxed valid row=1; narrow to uint8, store 1 byte/block.
             tile_sstore scale_u8;
             TCVT(scale_u8, scale_byte);
+            // MISSING INTERLEAVE: stored as COMPACT planar [scaleRows, Post]
+            // (block-rows in order). AscendC's mxScale is PARITY-INTERLEAVED
+            // [ceil(numKb/2), Post, 2] -- even/odd block-rows zipped via
+            // Reg::Interleave. Blocked on TINTERLEAVE/TDEINTERLEAVE not being
+            // exposed in the -D__linx header (RECORD 问题5); insert the even/odd
+            // zip here once available.
             TSTORE(gs, scale_u8);
 
             tile_recip_bf1 inv_bf16;
