@@ -43,7 +43,7 @@
 //
 // 【D=512 分块】
 //   D 超出单 tile 上限, 沿 D 维切分为 Db 块 (kTd)
-//   QK^T: 沿 D 累加 (TMATMUL + TMATMUL_ACC)
+//   QK^T: 每个 D 块独立 TMATMUL, 转为 Vec 后用 TADD 累加
 //   PV: 每个 D 分块独立计算并存储
 //
 // 【两遍式】
@@ -107,11 +107,13 @@ void quant_sparse_flash_mla_swa_tadd_pto(
 
     using gmQ    = global_tensor<qdtype,  RowMajor<s1, D>>;
     using gmKV   = global_tensor<kvdtype, RowMajor<s2, D>>;
+    // 与 gmKV 共用同一块内存，逻辑上表示 K^T；TCOPYIN 将 DN 转为 ZN。
+    using gmKT   = global_tensor<kvdtype, ColMajor<D, s2>>;
     using gmO    = global_tensor<odttype, RowMajor<s1, D>>;
     using gmMask = global_tensor<float,   RowMajor<s1, s2>>;
 
     using tileQ      = TileLeft<qdtype,  kTm, kTd>;
-    using tileKV     = TileRight<kvdtype, kTk, kTd>;
+    using tileK      = TileRight<kvdtype, kTd, kTk>;
     using tileW_out  = TileAcc<float, kTm, kTk>;
 
     // score tile 与 mask tile 都用 RowMajor, 保证 TADD 类型一致
@@ -129,13 +131,13 @@ void quant_sparse_flash_mla_swa_tadd_pto(
     using tileSum    = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
 
     using itQ    = global_iterator<gmQ,  tileQ>;
-    using itKV   = global_iterator<gmKV, tileKV>;
+    using itK    = global_iterator<gmKT, tileK>;
     using itV    = global_iterator<gmKV, tileV>;
     using itO    = global_iterator<gmO,  tileO_cast>;
     using itMask = global_iterator<gmMask, tileMask>;
 
     itQ    gIterQ(q_ptr);
-    itKV   gIterKV(ori_kv_ptr);
+    itK    gIterK(ori_kv_ptr);
     itV    gIterV(ori_kv_ptr);
     itO    gIterO(out_ptr);
     itMask gIterMask(mask_buf);
@@ -157,28 +159,25 @@ void quant_sparse_flash_mla_swa_tadd_pto(
         for (int j = 0; j < Kb; ++j) {
 
             // QK^T 沿 D 维累加
-            tileW_out tW_out;
-            bool first_d = true;
+            tileW tW;
+            TEXPANDS(tW, 0.0f);
             #pragma clang loop unroll(full)
             for (int dd = 0; dd < Db; ++dd) {
                 tileQ tQ;
                 auto gQ = gIterQ(i, dd);
-                TLOAD(tQ, gQ);
+                TCOPYIN(tQ, gQ);
 
-                tileKV tK;
-                auto gK = gIterKV(j, dd);
-                TLOAD(tK, gK);
+                tileK tK;
+                auto gK = gIterK(dd, j);
+                TCOPYIN(tK, gK);
 
-                if (first_d) {
-                    TMATMUL(tW_out, tQ, tK);
-                    first_d = false;
-                } else {
-                    TMATMUL_ACC(tW_out, tQ, tK);
-                }
+                tileW_out tW_out;
+                TMATMUL(tW_out, tQ, tK);
+                tileW tW_partial;
+                TCVT_Impl(tW_partial, tW_out);
+                TADD(tW, tW, tW_partial);
             }
 
-            tileW tW;
-            ACCCVT(tW, tW_out);
             TMULS(tW, tW, scale);
 
             // 应用 token 级 mask: score += mask (0 保持原值, -1e30 屏蔽)
@@ -228,28 +227,25 @@ void quant_sparse_flash_mla_swa_tadd_pto(
             for (int j = 0; j < Kb; ++j) {
 
                 // 计算完整 QK^T (沿 D 累加, 与 Pass 1 一致)
-                tileW_out tW_out;
-                bool first_d = true;
+                tileW tW;
+                TEXPANDS(tW, 0.0f);
                 #pragma clang loop unroll(full)
                 for (int dd2 = 0; dd2 < Db; ++dd2) {
                     tileQ tQ;
                     auto gQ = gIterQ(i, dd2);
-                    TLOAD(tQ, gQ);
+                    TCOPYIN(tQ, gQ);
 
-                    tileKV tK;
-                    auto gK = gIterKV(j, dd2);
-                    TLOAD(tK, gK);
+                    tileK tK;
+                    auto gK = gIterK(dd2, j);
+                    TCOPYIN(tK, gK);
 
-                    if (first_d) {
-                        TMATMUL(tW_out, tQ, tK);
-                        first_d = false;
-                    } else {
-                        TMATMUL_ACC(tW_out, tQ, tK);
-                    }
+                    tileW_out tW_out;
+                    TMATMUL(tW_out, tQ, tK);
+                    tileW tW_partial;
+                    TCVT_Impl(tW_partial, tW_out);
+                    TADD(tW, tW, tW_partial);
                 }
 
-                tileW tW;
-                ACCCVT(tW, tW_out);
                 TMULS(tW, tW, scale);
 
                 // 应用 token 级 mask: score += mask (0 保持原值, -1e30 屏蔽)
@@ -267,17 +263,17 @@ void quant_sparse_flash_mla_swa_tadd_pto(
                 tileW_cast tExpW;
                 TCVT(tExpW, tW);
                 tileW_left tW_left;
-                TCVT(tW_left, tExpW);
+                TMOV_ND2NZ(tW_left, tExpW);
 
                 // PV = p * V (当前 D 分块)
                 tileV tV;
                 auto gV = gIterV(j, dd);
-                TLOAD(tV, gV);
+                TCOPYIN(tV, gV);
 
                 tileO_out tPV_out;
                 TMATMUL(tPV_out, tW_left, tV);
                 tileO tPV;
-                ACCCVT(tPV, tPV_out);
+                TCVT_Impl(tPV, tPV_out);
 
                 TADD(tO, tO, tPV);
             }
@@ -286,7 +282,7 @@ void quant_sparse_flash_mla_swa_tadd_pto(
             tileO_cast tO_cast;
             TCVT(tO_cast, tO);
             auto gO = gIterO(i, dd);
-            TSTORE(gO, tO_cast);
+            TCOPYOUT(gO, tO_cast);
         }
     }
 }

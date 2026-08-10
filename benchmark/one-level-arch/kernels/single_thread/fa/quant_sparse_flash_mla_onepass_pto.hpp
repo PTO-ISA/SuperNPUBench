@@ -78,11 +78,16 @@ void quant_sparse_flash_mla_swa_onepass_pto(
 
     using gmQ    = global_tensor<qdtype,  RowMajor<s1, D>>;
     using gmKV   = global_tensor<kvdtype, RowMajor<s2, D>>;
+    // Same storage as gmKV, viewed as K^T.  RowMajor<s2, D> and
+    // ColMajor<D, s2> have the same address formula, so this view performs
+    // the logical transpose without moving data.  TCOPYIN below then
+    // performs the physical DN -> ZN conversion required by Cube SrcR.
+    using gmKT   = global_tensor<kvdtype, ColMajor<D, s2>>;
     using gmO    = global_tensor<odttype, RowMajor<s1, D>>;
     using gmMask = global_tensor<float,   RowMajor<s1, s2>>;
 
-    using tileQ      = TileLeft<qdtype,  kTm, kTd>;
-    using tileKV     = TileRight<kvdtype, kTk, kTd>;
+    using tileQ      = TileLeft<qdtype, kTm, kTd>;
+    using tileKRight = TileRight<kvdtype, kTd, kTk>;
     using tileW_out  = TileAcc<float, kTm, kTk>;
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
     using tileMask   = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
@@ -98,13 +103,13 @@ void quant_sparse_flash_mla_swa_onepass_pto(
     using tileSum    = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
 
     using itQ    = global_iterator<gmQ,  tileQ>;
-    using itKV   = global_iterator<gmKV, tileKV>;
+    using itK    = global_iterator<gmKT, tileKRight>;
     using itV    = global_iterator<gmKV, tileV>;
     using itO    = global_iterator<gmO,  tileO_cast>;
     using itMask = global_iterator<gmMask, tileMask>;
 
     itQ    gIterQ(q_ptr);
-    itKV   gIterKV(ori_kv_ptr);
+    itK    gIterK(ori_kv_ptr);
     itV    gIterV(ori_kv_ptr);
     itO    gIterO(out_ptr);
     itMask gIterMask(mask_buf);
@@ -148,29 +153,29 @@ void quant_sparse_flash_mla_swa_onepass_pto(
         for (int j = 0; j < Kb; ++j) {
 
             // --- Step 1: QK^T 沿全 D 累加 ---
-            tileW_out tW_out;
-            bool first_d = true;
+            // SuperScalarModel main does not preserve the input ACC correctly
+            // across TMATMUL_ACC calls.  Convert each independent partial from
+            // ACC NZ to Vec ND immediately and accumulate in the Vec tile.
+            tileW tW;
+            TEXPANDS(tW, 0.0f);
             #pragma clang loop unroll(full)
             for (int dd = 0; dd < Db; ++dd) {
                 tileQ tQ;
                 auto gQ = gIterQ(i, dd);
-                TLOAD(tQ, gQ);
+                TCOPYIN(tQ, gQ);  // RowMajor Q: ND -> NZ (Cube SrcL)
 
-                tileKV tK;
-                auto gK = gIterKV(j, dd);
-                TLOAD(tK, gK);
+                tileKRight tK;
+                auto gK = gIterK(dd, j);
+                TCOPYIN(tK, gK);  // ColumnMajor K^T: DN -> ZN (Cube SrcR)
 
-                if (first_d) {
-                    TMATMUL(tW_out, tQ, tK);
-                    first_d = false;
-                } else {
-                    TMATMUL_ACC(tW_out, tQ, tK);
-                }
+                tileW_out tW_out;
+                TMATMUL(tW_out, tQ, tK);
+                tileW tW_partial;
+                TCVT_Impl(tW_partial, tW_out);  // ACC NZ -> Vec ND
+                TADD(tW, tW, tW_partial);
             }
 
             // --- Step 2: scale + mask ---
-            tileW tW;
-            ACCCVT(tW, tW_out);
             TMULS(tW, tW, scale);
 
             tileMask tMask;
@@ -215,18 +220,18 @@ void quant_sparse_flash_mla_swa_onepass_pto(
             tileW_cast tExpW;
             TCVT(tExpW, tW);
             tileW_left tW_left;
-            TCVT(tW_left, tExpW);
+            TMOV_ND2NZ(tW_left, tExpW);  // Vec ND -> Cube SrcL NZ
 
             #pragma clang loop unroll(full)
             for (int dd = 0; dd < Db; ++dd) {
                 tileV tV;
                 auto gV = gIterV(j, dd);
-                TLOAD(tV, gV);
+                TCOPYIN(tV, gV);  // RowMajor V: ND -> ZN (Cube SrcR)
 
                 tileO_out tPV_out;
                 TMATMUL(tPV_out, tW_left, tV);
                 tileO tPV;
-                ACCCVT(tPV, tPV_out);
+                TCVT_Impl(tPV, tPV_out);  // ACC NZ -> Vec ND
 
                 TADD(tO[dd], tO[dd], tPV);
             }
@@ -247,7 +252,7 @@ void quant_sparse_flash_mla_swa_onepass_pto(
             tileO_cast tO_cast;
             TCVT(tO_cast, tO[dd]);
             auto gO = gIterO(i, dd);
-            TSTORE(gO, tO_cast);
+            TCOPYOUT(gO, tO_cast);
         }
     }
 }
