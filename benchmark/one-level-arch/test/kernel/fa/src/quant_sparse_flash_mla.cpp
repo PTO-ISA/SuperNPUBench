@@ -2,8 +2,8 @@
 #include "benchmark.h"
 #include "fileop.h"
 // #include "fa/quant_sparse_flash_mla_pto.hpp"
-// #include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
-#include "fa/quant_sparse_flash_mla_onepass_pto.hpp"
+#include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
+// #include "fa/quant_sparse_flash_mla_onepass_pto.hpp"
 
 #define B 1
 #define H 1
@@ -92,7 +92,7 @@ int main(){
     BENCHSTART;
     for(int i=0;i<B;i++){
         for(int j=0;j<H;j++){
-            quant_sparse_flash_mla_swa_onepass_pto<qdtype, kvdtype, odttype,
+            quant_sparse_flash_mla_swa_tadd_pto<qdtype, kvdtype, odttype,
                 s1, s2, D, kTm, kTk, kTd>(
                 out + i*H*s1*D + j*s1*D,
                 q   + i*H*s1*D + j*s1*D,
