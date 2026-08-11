@@ -380,7 +380,7 @@ AscendC 实现两种等价形态：
 - **TSEL 语义**：`TSEL(dst, mask, src)` = `mask ? src : dst`。
 - **tile 溢出下限 512B**：LinxV5 对 tile 溢出槽断言 `RegSize ∈ [512B, 64KB]`（`LinxV5RegisterInfo.cpp:403`）→ 两遍结构压低峰值活 tile。
 - **32B 列对齐 / TileSize 约束**：详见 RECORD.md 问题1、2。
-- **FP4 输出 tile 切分**：`pto_tile.hpp:649` 断言 RowMajor NoneBox 需 `Cols * bits % 256 == 0`；fp4（bits=8）单 block Cols=16 不满足，须每 tile ≥ 2 MX block（Cols=32=64 值）。fp4 发射本身可用，详见 RECORD.md 问题3。
+- **FP4 输出 tile 切分**：`pto_tile.hpp:649` 断言 RowMajor NoneBox 需 `Cols * bits % 256 == 0`；fp4（bits=8）单 block Cols=16 不满足，须每 tile ≥ 2 MX block（Cols=32=64 值）。fp4 发射本身可用，详见 RECORD.md 问题2。
 
 ---
 
@@ -394,7 +394,7 @@ AscendC 实现两种等价形态：
 |------|------|----------|---------|------|
 | TAIL_OCP_FP8 | 尾轴 | OCP | FP8_E4M3 | — |
 | TAIL_CUBLAS_FP8 | 尾轴 | cuBLAS | FP8_E4M3 | — |
-| TAIL_OCP_FP4 | 尾轴 | OCP | FP4_E2M1 | 每 block 子归约 + TCONCAT 到 64 宽（RECORD 问题3） |
+| TAIL_OCP_FP4 | 尾轴 | OCP | FP4_E2M1 | 每 block 子归约 + TCONCAT 到 64 宽（RECORD 问题2） |
 | TAIL_DYNRANGE_FP4 | 尾轴 | DynRange | FP4_E2M1 | 同尾轴 fp4 方案 |
 | NONTAIL_OCP_FP8 | 非尾轴 | OCP | FP8_E4M3 | — |
 | NONTAIL_CUBLAS_FP8 | 非尾轴 | cuBLAS | FP8_E4M3 | — |
@@ -425,7 +425,7 @@ test/kernel/quant/dynamic_mx_quant/
 
 **fp4 发射本身可用**：fp32→`__fp4_e2m1x2` 单步 `TCVT` + `TSTORE` 发射真实指令，由探针 `test/kernel/quant/dynamic_mx_quant/src/fp4_probe.cpp`（`make TESTCASE=dynamic_mx_quant TYPE=FP4_PROBE diss`）反汇编验证（`BSTART.TEPL TCVT, FP32` + `B.DATR e2m1x2, byte0`；`BSTART.TLSU TSTORE, e2m1x2`），无 Match-Instruction-Error、无对齐断言。
 
-约束落在 **fp4 输出 tile 的切分**：`type_traits<__fp4_e2m1x2>::bits == 8`，RowMajor+NoneBox 的 `Cols_packed × 8 % 256 == 0` 要求每行 ≥ 32 打包列 = **64 个 fp4 值 = 2 个 MX block**（`pto_tile.hpp:649`）。BlockSize=32 的单 block fp4 输出仅 16 打包列，不满足。两轴按打包轴与 reduce 轴是否重合分别处理（详见 RECORD 问题3）：
+约束落在 **fp4 输出 tile 的切分**：`type_traits<__fp4_e2m1x2>::bits == 8`，RowMajor+NoneBox 的 `Cols_packed × 8 % 256 == 0` 要求每行 ≥ 32 打包列 = **64 个 fp4 值 = 2 个 MX block**（`pto_tile.hpp:649`）。BlockSize=32 的单 block fp4 输出仅 16 打包列，不满足。两轴按打包轴与 reduce 轴是否重合分别处理（详见 RECORD 问题2）：
 
 - **非尾轴**：打包轴（Post）与 reduce 轴（行/`TCOLMAX`）正交，`TileN=64` 走 plain RowMajor NoneBox（`tile_o=[32,32]`），归约零改动。
 - **尾轴**：打包轴与 reduce 轴重合。**不 2-block 打包**，改用**列装箱补齐物理宽**：物理列宽补齐到 `PW = ⌈BlockSize/64⌉×64`（BS=32→64），每 op 列装箱到有效 BlockSize（value/scale tile 物理 PW、有效 BlockSize）。`TROWMAX` 按 **ValidCol** 归约（cpu_sim `TRowMax.hpp:13` 循环 `j<ValidCol`），物理补齐**不合并** block、每块归约独立正确；fp4 输出 tile 物理 `PW/2` 字节（`PW%64==0` 故 32B 对齐）、有效 `BlockSize/2` 字节；boxed `TLOAD`/`TSTORE` 只搬 ValidCol 列（`blk_tload` 计数取 `GetValidCol()`），尾块不越界读过 N；因物理 PW≠每块步长，基址折叠定位每 block（输入 `x+kb*BlockSize`、输出 `y+kb*(BlockSize/2)`）。**无 concat、无配对、无零块**，仅需 `N % BlockSize == 0`（单 block/tile 亦可）。奇数 numKb 时显式往偶数对齐的 padding scale 列补 0x00 E8M0（golden `_pad_to_even` 用 `2^-127`==0x00）。scale 路径复用 `compute_ocp_scale_tail_boxed_pw`（物理宽 PW 参数化的 boxed OCP scale）。

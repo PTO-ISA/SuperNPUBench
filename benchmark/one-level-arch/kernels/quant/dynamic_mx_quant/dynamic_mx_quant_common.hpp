@@ -77,8 +77,8 @@ constexpr float inv_dst_max() {
 // 理想写法是用寄存器级 reinterpret / bitcast 语法（不经内存、不做数值转换）把
 // float tile 的位型当整数用、或反过来。但当前编译器工具链**尚未支持**该语法形式
 // （TCAST 在 -D__linx 下未声明，且它是数值转换非位重解释）——这是编译器侧待解决项，
-// 与问题4（linx 缺 4-参 CmpMode）同类。详见 RECORD.md「问题5：编译器尚未支持
-// reinterpret 语法形式」。此处以 scratch-HBM 字节别名往返作为等价规避，代价是每次
+// 与问题3（linx 缺 4-参 CmpMode）同类。详见 RECORD.md「问题4：编译器尚未支持
+// reinterpret（位重解释）语法形式」。此处以 scratch-HBM 字节别名往返作为等价规避，代价是每次
 // 多一次 HBM store+load 与一块静态 buffer；编译器补齐后可替换为寄存器级写法。
 // ----------------------------------------------------------
 // Bit reinterpret via scratch-HBM byte-aliasing. linx (-D__linx) has no
@@ -195,7 +195,7 @@ inline void compute_cublas_core(
     // ComputeScaleCublas（见文件末尾注释保留的 IDEAL 版本），但 -D__linx 构建
     // 下随附头文件 jcore/template_asm.hpp 只提供 3-参 mode-less 的 TCMP/TCMPS，
     // 带 CmpMode 的 4-参重载仅存在于 jcore/TCmp.hpp（linx 未包含）。
-    // 详见 RECORD.md「问题4：linx 缺失带 CmpMode 的 TCMP/TCMPS」。
+    // 详见 RECORD.md「问题3：linx 缺失带 CmpMode 的 TCMP/TCMPS」。
     // 这是 linx 工具链侧需要补齐的能力；补齐后可切换到 IDEAL 版本。
     // 语义等价映射：
     //   a<b  == TMINS(t,a,b-1); TCMP(m,t,a)   （默认 EQ：t==a 即 a<=b-1 即 a<b）
@@ -286,7 +286,7 @@ inline void compute_cublas_core(
    documented in docs/intrinsics/tcmps.md. Does NOT compile on -D__linx today —
    jcore/template_asm.hpp only ships the 3-arg mode-less TCMP/TCMPS; the 4-arg
    CmpMode overloads live in jcore/TCmp.hpp which is not included under __linx.
-   Switch to this once linx exposes the 4-arg overload (see RECORD.md 问题4).
+   Switch to this once linx exposes the 4-arg overload (see RECORD.md 问题3).
 
     tile_u32 raw;
     reinterpret_f32_to_u32<0, R, C, ValidR>(max_abs, raw);
