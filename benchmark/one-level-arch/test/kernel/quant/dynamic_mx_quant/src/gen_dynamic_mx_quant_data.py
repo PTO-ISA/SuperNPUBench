@@ -95,12 +95,14 @@ def f32_to_fp8_e4m3(x: float) -> int:
     exp = math.floor(math.log2(x))
     biased_exp = exp + 7
     if biased_exp <= 0:
-        mant = int(x / (2 ** -6) + 0.5)
+        # round-half-to-even (numpy.rint) to match ttk _mx_round_mantissa rint
+        mant = round(x / (2 ** -6))
         if mant >= 8:
             return (sign << 7) | (1 << 3)
         return (sign << 7) | max(0, min(7, mant))
     biased_exp = max(1, min(15, biased_exp))
-    mant = int((x / (2 ** exp) - 1.0) * 8 + 0.5)
+    # round-half-to-even (numpy.rint) to match ttk _mx_round_mantissa rint
+    mant = round((x / (2 ** exp) - 1.0) * 8)
     if mant >= 8:
         mant = 0
         biased_exp += 1
@@ -124,10 +126,13 @@ def f32_to_fp4_e2m1(x: float) -> int:
     if ax >= 6.0:
         code = 7
     else:
+        # round-half-to-even: on an exact tie prefer the even code. For E2M1 the
+        # code LSB == mantissa LSB (code = exp<<1 | mant), so even code == even
+        # mantissa, matching ttk's numpy.rint on the normalized 1-bit mantissa.
         best, code = 1e30, 0
         for c, m in enumerate(FP4_E2M1_MAG):
             d = abs(ax - m)
-            if d < best:
+            if d < best or (d == best and c % 2 == 0):
                 best, code = d, c
     return (sign << 3) | code
 
@@ -249,16 +254,24 @@ def compute_golden(x_bf16, rows: int, cols: int, algo: str, kernel: str, dtype: 
 
 
 def compact_scale_bytes(block_scales, rows: int, cols: int, kernel: str) -> bytes:
-    """Pack per-block E8M0 scale bytes into the kernel's compact planar layout:
-    one uint8 per block, reduce-axis block count even-aligned, padding left zero.
-    NOTE: this is the compact-planar layout the Bench kernels emit, NOT AscendC's
-    final interleaved mxScale (the parity zip [ceil(numKb/2),.,2] is a documented
-    gap: PTO Tile-ISA has no interleave/zip intrinsic). See DESIGN §4.3 / §5.3.
+    """Pack per-block E8M0 scale bytes into the GROUND-TRUTH mxScale layout
+    (ttk ttk/utilities/dtypes.py mx_quantize): pad the reduce-axis block count to
+    even, then — only when the reduce axis is NOT the last axis — parity-interleave
+    the block rows. Padding blocks are 2**-127 whose E8M0 byte is 0x00.
 
-    tail:    reduce axis = cols -> [rows, scaleCols], scaleCols = evenAlign(K/32).
-             Mirrors dynamic_mx_quant_tail_axis_fp8.h:168.
-    nontail: reduce axis = rows -> [scaleRows, cols], scaleRows = evenAlign(M/32).
-             Mirrors dynamic_mx_quant_nontail_cublas_fp8.hpp / _ocp_fp4.hpp."""
+    tail (reduce axis = cols = LAST axis): ttk applies pad_to_even but NO
+        interleave -> planar [rows, scaleCols], scaleCols = evenAlign(K/32).
+    nontail (reduce axis = rows, NOT last): ttk applies pad_to_even THEN
+        interleave(axis=reduce, n_group=2) -> [scaleRows/2, cols, 2] whose byte
+        order is  for g: for c: for p in (0,1): scale[block_row = 2*g + p][c],
+        i.e. even/odd block-rows of each pair zipped adjacently per column.
+
+    NOTE (kernel gap, RECORD 问题5): the current PTO-ISA nontail kernels still
+    emit COMPACT PLANAR [scaleRows, cols] (no interleave) because -D__linx does
+    not expose TINTERLEAVE/TDEINTERLEAVE. This golden is the ground truth, so the
+    nontail scale compare will legitimately DIVERGE from those kernels until the
+    interleave intrinsic lands; that divergence is the real defect, not a golden
+    bug. Tail is unaffected (ground truth has no interleave there)."""
     if kernel == "tail":
         numKb = cols // BLOCK_SIZE
         scaleCols = ((numKb + 1) // 2) * 2
@@ -269,16 +282,24 @@ def compact_scale_bytes(block_scales, rows: int, cols: int, kernel: str) -> byte
                 out[m * scaleCols + kb] = block_scales[gi]
                 gi += 1
         return bytes(out)
-    # nontail: block_scales already in (kb, c) order (see reduction_groups),
-    # which is exactly the [scaleRows, cols] planar layout; padding row stays 0.
+    # nontail: block_scales are in (kb, c) order (see reduction_groups). Build the
+    # even-padded planar [scaleRows, cols] first (padding block-row stays 0x00),
+    # then parity-interleave the block-row axis to match ttk ground truth.
     numKb = rows // BLOCK_SIZE
     scaleRows = ((numKb + 1) // 2) * 2
-    out = bytearray(scaleRows * cols)  # zero-initialized -> padding row stays 0
+    planar = [[0] * cols for _ in range(scaleRows)]  # padding rows stay 0x00
     gi = 0
     for kb in range(numKb):
         for c in range(cols):
-            out[kb * cols + c] = block_scales[gi]
+            planar[kb][c] = block_scales[gi]
             gi += 1
+    out = bytearray(scaleRows * cols)
+    oi = 0
+    for g in range(scaleRows // 2):
+        for c in range(cols):
+            for p in range(2):
+                out[oi] = planar[2 * g + p][c]
+                oi += 1
     return bytes(out)
 
 

@@ -95,6 +95,8 @@ template <typename OutT> constexpr float inv_dst_max();     // cuBLAS 专用（F
 
 > fp16 自身的 5 位指数 / bias15 布局**从不使用**——upcast 到 fp32（精确，fp16⊂fp32）后复用 32bit 路径，避免第三套常量。bf16 因指数域与 fp32 完全相同，可直接在 16bit 位域算而不必 upcast。
 
+> **上表的域宽按算法区分（关键点）**：**cuBLAS** 的 scale 计算**恒在 32bit 域**（fp32 输入时 maxExp 用 uint32；bf16/fp16 输入时 16bit maxExp 也一律上转到 32bit 再算），最后缩回 uint16 存 scale/recip。**OCP / DynRange** 的 scale finalize **恒在 16bit 域**（emax 用 16bit 值）——32bit 那一行仅作用于 **fp32 输入时的 max-exp 抽取**（读 `0x7f800000`、uint32 `ReduceMax`），随即 `ShiftRights(16)+Pack` 缩回 bf16 域 uint16，finalize 不进 32bit。两算法的 **ComputeData 都提升到 fp32**。
+
 ### 3.2 常量表
 
 #### 3.2.1 BF16 相关常量
@@ -157,7 +159,9 @@ recip      = 0x7F00 - shared_exp
 
 #### 3.3.1 scaleAlg=0（OCP MxFP8/MxFP4）
 
-提取每个元素指数位，取块内最大指数，`shared_exp = max(max_exp, emax) - emax`。emax 由 `emax_field<OutT, Domain>()` 给出——**这正是 OCP 同时支持 FP8 与 FP4 的关键**：唯一区别是 emax（16bit 域 FP8=0x0400 / FP4=0x0100）。下面代码以 16bit（bf16 输入）域为代表；32bit 域（fp16→fp32 / fp32 输入）整套换成 `EXP_MASK=0x7f800000`、`SHR=23`、`emax_field<OutT,32>()`（见 §3.1 表），逻辑不变。
+提取每个元素指数位，取块内最大指数，`shared_exp = max(max_exp, emax) - emax`。emax 由 `emax_field<OutT, Domain>()` 给出——**这正是 OCP 同时支持 FP8 与 FP4 的关键**：唯一区别是 emax（16bit 域 FP8=0x0400 / FP4=0x0100）。
+
+> **精度位宽关键点（对齐 AscendC）——OCP 的 scale 计算恒为 16bit**。无论输入 dtype 如何，`ComputeScaleOcp` 与 `finalize_scale_recip_u16` **全程 uint16**（emax 用 16bit 值 0x0100/0x0400），scale/recip 也是 uint16。**只有 fp32 输入的 max-exp 抽取**这一步临时走 32bit（`And(0x7f800000)`、uint32 域 `ReduceMax`），随后立刻 `ShiftRights(FP32_PACK_SHR_NUM=16)` + `Pack<uint16_t>` **缩窄回 bf16 域 uint16 指数**（<<7 形式，掩码 0x7f80）再交给 finalize——**不是** SHR=23、**也不是** emax_field<OutT,32>，scale finalize 从不在 32bit 域进行（见 AscendC `ComputeMaxExpOcpFp32` :516-554，narrow shift=16；`ComputeScaleOcp` 全 uint16）。这与 **cuBLAS 恒在 32bit 域算 scale**（`intCalcType = fp32 输入时 uint32`，把 16bit maxExp 上转到 32bit，最后缩回 uint16）形成对照；两算法的 **ComputeData 都提升到 fp32** 计算。下面代码以 bf16 输入的 16bit 域为代表——OCP 唯一随输入变化的是 max-exp 抽取的读宽（fp32 用 `0x7f800000`/uint32 后缩回 uint16），scale finalize 逻辑与位宽不变。
 
 ```
 TANDS(exp_bits, x_bits, EXP_MASK<Domain>)       // 16bit:0x7f80 / 32bit:0x7f800000
