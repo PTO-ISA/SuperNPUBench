@@ -18,7 +18,7 @@
 #define Skv Tskv
 #endif
 
-#define qD 16
+#define qD 128
 #define vD 128
 
 #ifndef Tm
