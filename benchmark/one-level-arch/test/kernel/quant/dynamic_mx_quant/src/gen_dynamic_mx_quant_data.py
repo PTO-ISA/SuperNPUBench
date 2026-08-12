@@ -74,6 +74,15 @@ def bf16_to_f32(h: int) -> float:
     return struct.unpack("<f", struct.pack("<I", (h & 0xFFFF) << 16))[0]
 
 
+# --- fp16 (E5M10) domain: kernel input dtype option --------------------------
+def f32_to_fp16_bits(x: float) -> int:
+    return struct.unpack("<H", struct.pack("<e", float(x)))[0]
+
+
+def fp16_bits_to_f32(h: int) -> float:
+    return struct.unpack("<e", struct.pack("<H", h & 0xFFFF))[0]
+
+
 def f32_bits(x: float) -> int:
     return struct.unpack("<I", struct.pack("<f", float(x)))[0]
 
@@ -154,8 +163,13 @@ def finalize(shared_exp: int, eq_inf: bool) -> tuple:
     return scale_byte, recip
 
 
-def scale_recip_ocp(group_bits, emax: int) -> tuple:
-    exp = [(b & BF16_EXP_MASK) for b in group_bits]
+# scale_recip_* take the per-block fp32 VALUES actually seen by the kernel after
+# it loads the input dtype. OCP / DYNAMIC_RANGE regularize each value to bf16
+# exponent bits (the kernel's uint16 bf16-exp domain: bf16 = direct bits, half =
+# TCVT half->bf16 TRUNC, fp32 = exp>>16 -- all collapse to f32_to_bf16_bits of the
+# value for exponent purposes). cuBLAS keeps the full-precision fp32 value amax.
+def scale_recip_ocp(group_vals, emax: int) -> tuple:
+    exp = [(f32_to_bf16_bits(v) & BF16_EXP_MASK) for v in group_vals]
     max_exp = max(exp)
     eq_inf = (max_exp == BF16_EXP_MASK)
     max_exp = max(max_exp, emax)
@@ -163,8 +177,8 @@ def scale_recip_ocp(group_bits, emax: int) -> tuple:
     return finalize(shared, eq_inf)
 
 
-def scale_recip_dynamic_range(group_bits, emax: int) -> tuple:
-    absb = [(b & BF16_ABS_MASK) for b in group_bits]
+def scale_recip_dynamic_range(group_vals, emax: int) -> tuple:
+    absb = [(f32_to_bf16_bits(v) & BF16_ABS_MASK) for v in group_vals]
     max_abs = max(absb)
     xexp = max_abs & BF16_EXP_MASK
     eq_inf = (xexp == BF16_EXP_MASK)
@@ -176,10 +190,9 @@ def scale_recip_dynamic_range(group_bits, emax: int) -> tuple:
     return finalize(shared, eq_inf)
 
 
-def scale_recip_cublas(group_bits, emax: int) -> tuple:
+def scale_recip_cublas(group_vals, emax: int) -> tuple:
     # cuBLAS is FP8-only; emax unused (dstMax folded into inv_dst_max).
-    vals = [bf16_to_f32(b) for b in group_bits]
-    max_abs = max(abs(v) for v in vals)
+    max_abs = max(abs(v) for v in group_vals)
 
     raw = f32_bits(max_abs)
     finite = raw < FP32_EXP_MASK
@@ -234,7 +247,10 @@ def reduction_groups(rows: int, cols: int, kernel: str):
     return groups
 
 
-def compute_golden(x_bf16, rows: int, cols: int, algo: str, kernel: str, dtype: str):
+def compute_golden(x_val, rows: int, cols: int, algo: str, kernel: str, dtype: str):
+    # x_val: per-element fp32 value the kernel actually operates on (already
+    # round-tripped through the input dtype). The data path multiplies this value
+    # by recip; the scale path regularizes it per-algo (see scale_recip_*).
     quant = [0] * (rows * cols)   # per-element quantized code (fp8 byte or fp4 nibble)
     scale = [0] * (rows * cols)   # broadcast per-element scale byte (legacy layout)
     block_scales = []             # one scale byte per reduction block, in group order
@@ -242,13 +258,12 @@ def compute_golden(x_bf16, rows: int, cols: int, algo: str, kernel: str, dtype: 
     emax = EMAX_BY_DTYPE[dtype]
     enc = f32_to_fp8_e4m3 if dtype == "FP8" else f32_to_fp4_e2m1
     for idx in reduction_groups(rows, cols, kernel):
-        group_bits = [x_bf16[i] for i in idx]
-        scale_byte, recip_bits = fn(group_bits, emax)
+        group_vals = [x_val[i] for i in idx]
+        scale_byte, recip_bits = fn(group_vals, emax)
         block_scales.append(scale_byte & 0xFF)
         factor = bf16_to_f32(recip_bits)
         for i in idx:
-            v = bf16_to_f32(x_bf16[i])
-            quant[i] = enc(v * factor)
+            quant[i] = enc(x_val[i] * factor)
             scale[i] = scale_byte
     return quant, scale, block_scales
 
@@ -315,8 +330,25 @@ def pack_output(quant, dtype: str) -> bytes:
     return bytes(out)
 
 
+# Per input-dtype: round-trip the true fp32 value through the input dtype (what
+# the kernel sees after TLOAD) and pack input.bin in that dtype's byte layout.
+def input_encode(x_f32, in_dtype: str):
+    if in_dtype == "bf16":
+        bits = [f32_to_bf16_bits(v) for v in x_f32]
+        x_val = [bf16_to_f32(b) for b in bits]
+        raw = b"".join(struct.pack("<H", b) for b in bits)
+    elif in_dtype == "fp16":
+        bits = [f32_to_fp16_bits(v) for v in x_f32]
+        x_val = [fp16_bits_to_f32(b) for b in bits]
+        raw = b"".join(struct.pack("<H", b) for b in bits)
+    else:  # fp32
+        x_val = [struct.unpack("<f", struct.pack("<f", float(v)))[0] for v in x_f32]
+        raw = b"".join(struct.pack("<f", v) for v in x_val)
+    return x_val, raw
+
+
 def gen_all(out_dir: Path, rows: int, cols: int, algo: str, kernel: str,
-            dtype: str, seed: int, scale_layout: str) -> None:
+            dtype: str, seed: int, scale_layout: str, in_dtype: str) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     rng = random.Random(seed)
     x_f32 = []
@@ -325,13 +357,13 @@ def gen_all(out_dir: Path, rows: int, cols: int, algo: str, kernel: str,
         u2 = rng.random()
         z = math.sqrt(-2.0 * math.log(u1)) * math.cos(2.0 * math.pi * u2)
         x_f32.append(max(min(z, 8.0), -8.0))
-    x_bf16 = [f32_to_bf16_bits(v) for v in x_f32]
-    quant, scale, block_scales = compute_golden(x_bf16, rows, cols, algo, kernel, dtype)
+    x_val, input_raw = input_encode(x_f32, in_dtype)
+    quant, scale, block_scales = compute_golden(x_val, rows, cols, algo, kernel, dtype)
     golden = pack_output(quant, dtype)
 
-    (out_dir / "input.bin").write_bytes(b"".join(struct.pack("<H", v) for v in x_bf16))
+    (out_dir / "input.bin").write_bytes(input_raw)
     (out_dir / "golden.bin").write_bytes(golden)
-    print(f"wrote {out_dir}/input.bin  elems={rows*cols} bytes={rows*cols*2}")
+    print(f"wrote {out_dir}/input.bin  in_dtype={in_dtype} elems={rows*cols} bytes={len(input_raw)}")
     print(f"wrote {out_dir}/golden.bin dtype={dtype} bytes={len(golden)}")
     if scale_layout == "compact":
         sbytes = compact_scale_bytes(block_scales, rows, cols, kernel)
@@ -358,10 +390,13 @@ def main():
     parser.add_argument("--scale-layout", type=str, default="broadcast",
                         choices=["broadcast", "compact"],
                         help="broadcast=legacy uint16 per-elem; compact=AscendC uint8 [M,scaleCols]")
+    parser.add_argument("--in-dtype", type=str, default="bf16",
+                        choices=["bf16", "fp16", "fp32"],
+                        help="input.bin dtype: bf16 (2B) | fp16/E5M10 (2B) | fp32 (4B)")
     parser.add_argument("-o", "--out-dir", type=Path, required=True)
     args = parser.parse_args()
     gen_all(args.out_dir, args.M, args.K, args.algo, args.kernel, args.dtype,
-            args.seed, args.scale_layout)
+            args.seed, args.scale_layout, args.in_dtype)
 
 
 if __name__ == "__main__":

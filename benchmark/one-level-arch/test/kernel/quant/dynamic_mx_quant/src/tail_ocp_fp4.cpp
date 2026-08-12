@@ -13,12 +13,27 @@ static __bf16 x[8 * 64] __attribute__((aligned(4096))) = {};
 static uint8_t y[8 * 32] __attribute__((aligned(4096))) = {};
 static uint8_t scale[8 * 2] __attribute__((aligned(4096))) = {};
 
+// Compile-only throwaway buffers for the fp16/fp32 input dispatch branches
+// (InT if constexpr). Instantiates the half / fp32 OCP regularizers + data paths.
+static __half xh16[8 * 64] __attribute__((aligned(4096))) = {};
+static float  xf32[8 * 64] __attribute__((aligned(4096))) = {};
+static uint8_t y_h16[8 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t y_f32[8 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t scale_h16[8 * 2] __attribute__((aligned(4096))) = {};
+static uint8_t scale_f32[8 * 2] __attribute__((aligned(4096))) = {};
+
 int main() {
 #ifdef RES_CHECK
     readBinaryFile(CHK_DIR "/input.bin", (uint8_t*)x, sizeof(x));
 #endif
 
     dynamic_mx_quant_tail_ocp_fp4<8, 64>(x, reinterpret_cast<__fp4_e2m1x2*>(y), scale);
+
+    // Compile-only: exercise the half / fp32 input branches (not res-checked).
+    dynamic_mx_quant_tail_ocp_fp4<8, 64, 32, __fp4_e2m1x2, __half>(
+        xh16, reinterpret_cast<__fp4_e2m1x2*>(y_h16), scale_h16);
+    dynamic_mx_quant_tail_ocp_fp4<8, 64, 32, __fp4_e2m1x2, float>(
+        xf32, reinterpret_cast<__fp4_e2m1x2*>(y_f32), scale_f32);
 
 #ifdef RES_CHECK
     writeBinaryFile(CHK_DIR "/output.bin", (uint8_t*)y, sizeof(y));

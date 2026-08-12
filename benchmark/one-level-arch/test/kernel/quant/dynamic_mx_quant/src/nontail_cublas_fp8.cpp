@@ -19,6 +19,21 @@ static __bf16 x_bs128[128 * 32] __attribute__((aligned(4096))) = {};
 static uint8_t y_bs128[128 * 32] __attribute__((aligned(4096))) = {};
 static uint8_t scale_bs128[2 * 32] __attribute__((aligned(4096))) = {};
 
+// Compile-only throwaway buffers for the fp16/fp32 input dispatch branches
+// (InT if constexpr), covering both the plain (BS=32) and bigbs (BS=128) routes.
+static __half xh16[32 * 32] __attribute__((aligned(4096))) = {};
+static float  xf32[32 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t y_h16[32 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t y_f32[32 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t scale_h16[2 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t scale_f32[2 * 32] __attribute__((aligned(4096))) = {};
+static __half xh16_bs128[128 * 32] __attribute__((aligned(4096))) = {};
+static float  xf32_bs128[128 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t y_h16_bs128[128 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t y_f32_bs128[128 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t scale_h16_bs128[2 * 32] __attribute__((aligned(4096))) = {};
+static uint8_t scale_f32_bs128[2 * 32] __attribute__((aligned(4096))) = {};
+
 int main() {
 #ifdef RES_CHECK
     readBinaryFile(CHK_DIR "/input.bin", (uint8_t*)x, sizeof(x));
@@ -29,6 +44,16 @@ int main() {
     // Compile-only: instantiate the bigbs auto-route at BS=128 (not res-checked).
     dynamic_mx_quant_nontail_cublas_fp8<128, 32, 128>(
         x_bs128, reinterpret_cast<__fp8_e4m3*>(y_bs128), scale_bs128);
+
+    // Compile-only: half / fp32 input branches on both routes (not res-checked).
+    dynamic_mx_quant_nontail_cublas_fp8<32, 32, 32, __fp8_e4m3, __half>(
+        xh16, reinterpret_cast<__fp8_e4m3*>(y_h16), scale_h16);
+    dynamic_mx_quant_nontail_cublas_fp8<32, 32, 32, __fp8_e4m3, float>(
+        xf32, reinterpret_cast<__fp8_e4m3*>(y_f32), scale_f32);
+    dynamic_mx_quant_nontail_cublas_fp8<128, 32, 128, __fp8_e4m3, __half>(
+        xh16_bs128, reinterpret_cast<__fp8_e4m3*>(y_h16_bs128), scale_h16_bs128);
+    dynamic_mx_quant_nontail_cublas_fp8<128, 32, 128, __fp8_e4m3, float>(
+        xf32_bs128, reinterpret_cast<__fp8_e4m3*>(y_f32_bs128), scale_f32_bs128);
 
 #ifdef RES_CHECK
     writeBinaryFile(CHK_DIR "/output.bin", (uint8_t*)y, sizeof(y));

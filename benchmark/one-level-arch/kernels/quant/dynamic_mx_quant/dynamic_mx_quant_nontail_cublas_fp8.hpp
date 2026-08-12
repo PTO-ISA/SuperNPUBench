@@ -37,8 +37,8 @@ namespace supernpu::tile_isa::mxquant {
 // not (large BlockSize). TileN stays an explicit param here so the dispatcher can
 // feed the derived value.
 template <int Axis, int Post, int BlockSize = 32, int TileN = 32, typename OutT = __fp8_e4m3,
-          uint32_t MaxLowBoundBits = 0x2b8cbcccu>
-static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
+          typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
+static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
     static_assert(Axis > 0 && Post > 0, "dims must be positive");
     // Axis must be whole blocks (a block is exactly BlockSize along the quant
     // axis); Post need NOT be a multiple of TileN: full column tiles + N_tail.
@@ -62,7 +62,7 @@ static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
 
     using namespace pto;
 
-    using tile_x     = Tile<Location::Vec, __bf16,   BlockSize, TileN, BLayout::RowMajor>;
+    using tile_x     = Tile<Location::Vec, InT,      BlockSize, TileN, BLayout::RowMajor>;
     using tile_f     = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor>;
     using tile_o     = Tile<Location::Vec, OutT,     BlockSize, TileN, BLayout::RowMajor>;
     // Compact scale store (transposed): the cuBLAS core emits scale_byte/recip
@@ -75,7 +75,7 @@ static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
     using tile_recip_bf1 = Tile<Location::Vec, __bf16, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_f1  = Tile<Location::Vec, float,  BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
 
-    using gm_x = global_tensor<__bf16,   RowMajor<Axis, Post>>;
+    using gm_x = global_tensor<InT,      RowMajor<Axis, Post>>;
     using gm_y = global_tensor<uint8_t,  RowMajor<Axis, Post>>;
     // AscendC scale layout: uint8 E8M0, one byte per block. Transposed (quant axis
     // is rows): compact [scaleRows, Post] with scaleRows = evenAlign(numKb); the
@@ -99,7 +99,7 @@ static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
             tile_sred recip;
             tile_x xq_s;
             TLOAD(xq_s, gx);
-            compute_cublas_scale_not_tail<OutT, BlockSize, TileN, MaxLowBoundBits>(xq_s, scale_byte, recip);
+            compute_cublas_scale_not_tail<OutT, InT, BlockSize, TileN, MaxLowBoundBits>(xq_s, scale_byte, recip);
             // scale_byte already boxed valid row=1; narrow to uint8, store 1 byte/block.
             tile_sstore scale_u8;
             TCVT(scale_u8, scale_byte);
@@ -120,11 +120,16 @@ static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
 
             tile_x xq;
             TLOAD(xq, gx);
-            tile_f xf;
-            TCVT(xf, xq);
-            TCOLEXPANDMUL(xf, xf, inv_scale_f); // per-column scalar broadcast-mul
             tile_o oq;
-            TCVT(oq, xf);
+            if constexpr (std::is_same_v<InT, float>) {
+                TCOLEXPANDMUL(xq, xq, inv_scale_f);
+                TCVT(oq, xq);
+            } else {
+                tile_f xf;
+                TCVT(xf, xq); // bf16/half -> fp32
+                TCOLEXPANDMUL(xf, xf, inv_scale_f); // per-column scalar broadcast-mul
+                TCVT(oq, xf);
+            }
             TSTORE(gy, oq);
         }
     }
@@ -136,7 +141,7 @@ static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
     // columns are touched. The column tile is addressed at index numN (iterator
     // j-stride uses PHYSICAL TileN).
     if constexpr (N_tail > 0) {
-        using tile_x_r      = Tile<Location::Vec, __bf16,   BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
+        using tile_x_r      = Tile<Location::Vec, InT,      BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
         using tile_f_r      = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
         using tile_o_r      = Tile<Location::Vec, OutT,     BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
         using tile_sred_r   = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
@@ -157,7 +162,7 @@ static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
             tile_sred_r recip;
             tile_x_r xq_s;
             TLOAD(xq_s, gx);
-            compute_cublas_scale_not_tail<OutT, BlockSize, TileN, MaxLowBoundBits, N_tail>(xq_s, scale_byte, recip);
+            compute_cublas_scale_not_tail<OutT, InT, BlockSize, TileN, MaxLowBoundBits, N_tail>(xq_s, scale_byte, recip);
             tile_sstore_r scale_u8;
             TCVT(scale_u8, scale_byte);
             TSTORE(gs, scale_u8);
@@ -170,11 +175,16 @@ static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
 
             tile_x_r xq;
             TLOAD(xq, gx);
-            tile_f_r xf;
-            TCVT(xf, xq);
-            TCOLEXPANDMUL(xf, xf, inv_scale_f); // per-column scalar broadcast-mul
             tile_o_r oq;
-            TCVT(oq, xf);
+            if constexpr (std::is_same_v<InT, float>) {
+                TCOLEXPANDMUL(xq, xq, inv_scale_f);
+                TCVT(oq, xq);
+            } else {
+                tile_f_r xf;
+                TCVT(xf, xq); // bf16/half -> fp32
+                TCOLEXPANDMUL(xf, xf, inv_scale_f); // per-column scalar broadcast-mul
+                TCVT(oq, xf);
+            }
             TSTORE(gy, oq);
         }
     }
@@ -190,18 +200,18 @@ static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
 // bf16-only (static_assert).
 template <int Axis, int Post, int BlockSize = 32, typename OutT = __fp8_e4m3,
           typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
-void dynamic_mx_quant_nontail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
-    static_assert(std::is_same_v<InT, __bf16>,
-                  "InT is budget-aware only; the data path is bf16-only for now "
-                  "(fp32/fp16 input data paths are deferred)");
+void dynamic_mx_quant_nontail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
+    static_assert(std::is_same_v<InT, __bf16> || std::is_same_v<InT, __half> ||
+                      std::is_same_v<InT, float>,
+                  "InT must be one of {__bf16, __half, float}");
     constexpr int TileN = pick_tilen<BlockSize, Post, OutT, InT, /*IsCublas=*/true>();
     if constexpr (TileN >= nontail_align_lower<OutT>()) {
-        nontail_cublas_fp8_plain<Axis, Post, BlockSize, TileN, OutT, MaxLowBoundBits>(x, y, scale);
+        nontail_cublas_fp8_plain<Axis, Post, BlockSize, TileN, OutT, InT, MaxLowBoundBits>(x, y, scale);
     } else {
         constexpr int BigTileN = nontail_align_lower<OutT>();
         constexpr int Rsub = max_rsub<BlockSize, BigTileN, InT, /*IsCublas=*/true>();
         dynamic_mx_quant_nontail_cublas_fp8_bigbs<Axis, Post, BlockSize, BigTileN, Rsub, OutT,
-                                                  MaxLowBoundBits>(x, y, scale);
+                                                  InT, MaxLowBoundBits>(x, y, scale);
     }
 }
 
