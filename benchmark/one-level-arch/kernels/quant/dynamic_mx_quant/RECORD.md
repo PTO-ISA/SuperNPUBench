@@ -426,3 +426,55 @@ Bench 直转能否成立，取决于两个 linx ISA/编译器事实（**尚未�
 
 **验证阻塞**：端到端精度当前因工具链↔仿真器 skew 不可测，无法直接观测直转 round 结果，
 故此项须由 ISA 规格 / 编译器 cvt 语义静态确认。
+
+---
+
+## 问题7：OCP 新算法（bf16 乘 + 直转 e8m0）替代移位法的两个边界
+
+### 背景
+
+AscendC 因**无法直转 fp8_e8m0**，OCP scale 用「clamp 到 emax → 减 emax → 右移 7 位（`>>BF16_SHR_NUM`）
+→ inf-Select」的移位法（见 `bak/AscendC_dynamic_mx_quant_tail_axis_fp8.h:620-683`）。已确认 **PTO-ISA
+可直转 bf16→e8m0**（`TCVT`，见问题2/type 表），故有更简的等价算法（示例见
+`bak/AscendC_dynamic_mx_quant_tail_axis_fp8_ocp_new.h:79-98`）：
+
+```
+sharedExp(bf16) = xMaxExp(bf16, 即 2^E_max) × 2^(-emax)      // Reg::Mul，bf16 域
+scaleByte(e8m0) = Cast<bf16→e8m0, TRUNC>(sharedExp)          // 直转，替代 clamp+减+移位+inf-Select
+recip           = 0x7f00 − reinterpret_u16(sharedExp) + 三 Select（inf→nan / zero / special）
+```
+
+**主体等价性已证**（代数 + 实例）：有限 normal 区间内，新 `sharedExp` 的 bf16 位型
+`(E_max−emax+127)<<7` 与旧 `shared_exp` 字段**逐位相同**，故直转产出的 E8M0 字节 == 旧右移产出的字节，
+recip 的 `0x7f00−bits` 也逐位一致；bf16 乘为**精确 2 幂相乘**（两操作数尾数皆 0、有限区间不溢出），无
+round 误差。**仅两处边界发散**，因 skew 无法运行期验证，记录如下。
+
+### 边界1：inf/nan 的 scale 字节改依赖硬件 `Cast(inf/nan)==0xFF`
+
+- **旧法**：显式 `Select(cmpResult=(maxExp==0x7F80), scaleValue, fp8NanU16=0x00FF)` 把 inf/nan block
+  的 scale 字节强制置 `0xFF`。
+- **新法**：**去掉这条 inf-Select**，inf/nan 的 `sharedExp` 会是 inf/nan（`0x7F80 × 有限 = inf`），
+  scale 字节完全由 `Cast<bf16→e8m0, TRUNC>(inf/nan)` 的硬件语义决定。**期望**其产出 E8M0 全 1
+  `0xFF`（E8M0 的 NaN/最大编码），从而与旧法一致。
+- **风险**：`Cast(inf/nan)→0xFF` 是**假设**，PTO-ISA/仿真器对 bf16→e8m0 溢出/非有限输入的饱和语义
+  **未经运行期确认**。若硬件 clamp 到 `0xFE` 或其它值，inf/nan block 的 scale 字节将与 AscendC 不符。
+- **影响面**：仅 inf/nan block 的 **scale 字节**（recip 路径仍保留显式 inf→nan Select，不受影响）。
+
+### 边界2：极小非零下溢 `|x| < 2^(emax−127)` 的 recip 发散
+
+- **旧法**：`sharedExp` 先 **clamp 到 ≥emax**（`Select(maxExp<=emax, maxExp=emax)`），故 E_max<emax 时
+  `sharedExp` 被顶到 emax → 减 emax 后为 0 → **recip=0**（scale 也为最小档）。
+- **新法**：**去掉 clamp**，E_max<emax 时 `sharedExp = 2^(E_max−emax)` 为**真·denormal 小值**（指数域
+  负），reinterpret 后 `0x7f00 − 小正值 ≈ 0x7f00`，得到一个**接近 1 的 recip**而非 0。
+- **影响面**：**仅 recip 路径**，且**仅当** block 的 `E_max < emax`（即整块 |x| 都 `< 2^(emax−127)`：
+  e4m3 为 `<2^-119`、e5m2 为 `<2^-112`、fp4_e2m1 为 `<2^-125`）——极端下溢区。**精确零**仍由 `zeroMask`
+  单独置 0，不受影响；scale 字节两法一致（直转对 denormal 也 TRUNC 到最小档）。
+- **性质**：这是 AscendC clamp 的**保守截断** vs 新法**保留真实缩放**之别。数学上新法给出的
+  `recip=2^(emax−E_max)`（放大到 dtype 可表示范围）**更贴近 MX 定义本意**，旧法的 recip=0 是
+  clamp 的副作用。孰为「正确」取决于 golden 参考，**待 skew 解除后按 AscendC golden 比对确认**。
+
+### 决策
+
+**先落地新算法**（主体等价、去掉 clamp/移位/inf-Select，代码更简、少一次 `TSHRS`）；两个边界作为
+**已记录缺口**，待 skew 解除后运行期比对 AscendC golden：边界1 验 `Cast(inf/nan)==0xFF`，边界2 验
+下溢 block 的 recip 是否需补回 clamp 对齐 AscendC。**验证阻塞同问题6**（skew）。
