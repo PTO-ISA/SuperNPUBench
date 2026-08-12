@@ -88,14 +88,14 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
     using gm_x  = global_tensor<InT,      RowMajor<M, N>>;
     using gm_xu = global_tensor<uint16_t, RowMajor<M, N>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<M, N / 2>>;
-    using gm_s  = global_tensor<uint8_t,  RowMajor<M, scaleCols>>;
+    using gm_s  = global_tensor<__fp8_e8m0, RowMajor<M, scaleCols>>;
 
     // Full-tile pass (ValidRow == TileM; boxed row collapses to NoneBox).
     {
         using tile_x         = Tile<Location::Vec, InT,      TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
         using tile_xu        = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
-        using tile_sred      = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, TileM, 1>;
-        using tile_sstore    = Tile<Location::Vec, uint8_t,  TileM, PW,     BLayout::RowMajor, TileM, 1>;
+        using tile_sred      = Tile<Location::Vec, uint16_t,   TileM, PW,     BLayout::RowMajor, TileM, 1>;
+        using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, TileM, PW,     BLayout::RowMajor, TileM, 1>;
         using tile_recip_bf1 = Tile<Location::Vec, __bf16,   TileM, PW,     BLayout::RowMajor, TileM, 1>;
         using tile_recip_f1  = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, TileM, 1>;
         using tile_f         = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
@@ -125,14 +125,12 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
                     }
                 }
 
-                tile_sred scale_byte;
+                tile_se8m0 scale_e8m0;
                 tile_sred recip;
-                compute_ocp_scale_tail_boxed_pw<OutT, TileM, PW, BlockSize>(x_u16, scale_byte, recip);
-                tile_sstore scale_u8;
-                TCVT(scale_u8, scale_byte);
-                global_iterator<gm_s, tile_sstore> s_iter(scale + kb);
+                compute_ocp_scale_tail_boxed_pw<OutT, TileM, PW, BlockSize>(x_u16, scale_e8m0, recip);
+                global_iterator<gm_s, tile_se8m0> s_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + kb);
                 auto gs = s_iter(m, 0);
-                TSTORE(gs, scale_u8);
+                TSTORE(gs, scale_e8m0); // E8M0 byte produced directly by Cast<bf16->e8m0>
 
                 tile_recip_bf1 inv_bf16;
                 // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题4
@@ -162,11 +160,9 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
             // Even-pad the odd trailing scale column with a 0x00 E8M0 byte
             // (golden _pad_to_even uses 2^-127 == E8M0 0x00).
             if constexpr (oddTail) {
-                tile_sred zpad16;
-                TEXPANDS(zpad16, static_cast<uint16_t>(0));
-                tile_sstore zpad;
-                TCVT(zpad, zpad16);
-                global_iterator<gm_s, tile_sstore> zs_iter(scale + numKb);
+                tile_se8m0 zpad;
+                TEXPANDS(zpad, __builtin_bit_cast(__fp8_e8m0, static_cast<uint8_t>(0)));
+                global_iterator<gm_s, tile_se8m0> zs_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + numKb);
                 auto gzs = zs_iter(m, 0);
                 TSTORE(gzs, zpad);
             }
@@ -177,8 +173,8 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
     if constexpr (M_tail > 0) {
         using tile_x         = Tile<Location::Vec, InT,      TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
         using tile_xu        = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
-        using tile_sred      = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, M_tail, 1>;
-        using tile_sstore    = Tile<Location::Vec, uint8_t,  TileM, PW,     BLayout::RowMajor, M_tail, 1>;
+        using tile_sred      = Tile<Location::Vec, uint16_t,   TileM, PW,     BLayout::RowMajor, M_tail, 1>;
+        using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, TileM, PW,     BLayout::RowMajor, M_tail, 1>;
         using tile_recip_bf1 = Tile<Location::Vec, __bf16,   TileM, PW,     BLayout::RowMajor, M_tail, 1>;
         using tile_recip_f1  = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, M_tail, 1>;
         using tile_f         = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
@@ -202,14 +198,12 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
                 }
             }
 
-            tile_sred scale_byte;
+            tile_se8m0 scale_e8m0;
             tile_sred recip;
-            compute_ocp_scale_tail_boxed_pw<OutT, TileM, PW, BlockSize, M_tail>(x_u16, scale_byte, recip);
-            tile_sstore scale_u8;
-            TCVT(scale_u8, scale_byte);
-            global_iterator<gm_s, tile_sstore> s_iter(scale + kb);
+            compute_ocp_scale_tail_boxed_pw<OutT, TileM, PW, BlockSize, M_tail>(x_u16, scale_e8m0, recip);
+            global_iterator<gm_s, tile_se8m0> s_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + kb);
             auto gs = s_iter(full_m, 0);
-            TSTORE(gs, scale_u8);
+            TSTORE(gs, scale_e8m0); // E8M0 byte produced directly by Cast<bf16->e8m0>
 
             tile_recip_bf1 inv_bf16;
             // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题4
@@ -236,11 +230,9 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
             TSTORE(gy, oq);
         }
         if constexpr (oddTail) {
-            tile_sred zpad16;
-            TEXPANDS(zpad16, static_cast<uint16_t>(0));
-            tile_sstore zpad;
-            TCVT(zpad, zpad16);
-            global_iterator<gm_s, tile_sstore> zs_iter(scale + numKb);
+            tile_se8m0 zpad;
+            TEXPANDS(zpad, __builtin_bit_cast(__fp8_e8m0, static_cast<uint8_t>(0)));
+            global_iterator<gm_s, tile_se8m0> zs_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + numKb);
             auto gzs = zs_iter(full_m, 0);
             TSTORE(gzs, zpad);
         }

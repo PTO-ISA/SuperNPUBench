@@ -35,32 +35,20 @@ namespace supernpu::tile_isa::mxquant {
 // dynamic_mx_quant_nontail_ocp_fp4. NOT the AscendC parity-interleaved layout
 // (interleave intrinsic is a header gap; see RECORD 问题5 / README).
 
-// OCP not-tail finalize from an ALREADY-reduced per-column max exponent (boxed
+// OCP not-tail scale from an ALREADY-reduced per-column max exponent (boxed
 // valid row=1). Local to this kernel (方案A-only): pass1 reduces the BlockSize
 // rows ACROSS sub-chunks (running TMAX into a [R_sub, TileN] valid=1 tile), then
-// this finalizes once. eq_inf / clamp-to-emax / sub-emax / finalize is identical
-// to compute_ocp_scale_not_tail_boxed's tail; kept here (not in common.hpp) since
-// only the split-reduce path needs a maxexp-first finalize. max_exp is consumed
-// in-place (TMAXS clamps to EMAX). R is the sub-chunk height R_sub, NOT BlockSize.
+// this finalizes once. Uses the new bf16-multiply + Cast<e8m0> scale (mirrors
+// compute_ocp_scale_not_tail_boxed's mul+cast core); kept here (not in
+// common.hpp) since only the split-reduce path needs a maxexp-first finalize.
+// R is the sub-chunk height R_sub, NOT BlockSize.
 template <typename OutT, int R, int TileN, int ValidN = TileN>
 static void ocp_scale_from_maxexp_not_tail_boxed_bigbs(
-    pto::Tile<pto::Location::Vec, uint16_t, R, TileN, pto::BLayout::RowMajor, 1, ValidN> &max_exp,
-    pto::Tile<pto::Location::Vec, uint16_t, R, TileN, pto::BLayout::RowMajor, 1, ValidN> &scale_byte,
-    pto::Tile<pto::Location::Vec, uint16_t, R, TileN, pto::BLayout::RowMajor, 1, ValidN> &recip_out) {
+    pto::Tile<pto::Location::Vec, uint16_t,   R, TileN, pto::BLayout::RowMajor, 1, ValidN> &max_exp,
+    pto::Tile<pto::Location::Vec, __fp8_e8m0, R, TileN, pto::BLayout::RowMajor, 1, ValidN> &scale_e8m0,
+    pto::Tile<pto::Location::Vec, uint16_t,   R, TileN, pto::BLayout::RowMajor, 1, ValidN> &recip_out) {
     using namespace pto;
-    using tile_box = Tile<Location::Vec, uint16_t, R, TileN, BLayout::RowMajor, 1, ValidN>;
-    constexpr uint16_t EMAX = emax_bits<OutT>();
-
-    tile_box eq_inf;
-    TCMPS(eq_inf, max_exp, BF16_EXP_MASK);
-
-    TMAXS(max_exp, max_exp, EMAX);
-    tile_box emax_tile;
-    TEXPANDS(emax_tile, EMAX);
-    tile_box shared_exp;
-    TSUB(shared_exp, max_exp, emax_tile);
-
-    finalize_scale_recip_u16<R, TileN, 1, ValidN>(shared_exp, eq_inf, scale_byte, recip_out);
+    ocp_scale_mulcast_from_maxexp<OutT, 3, R, TileN, 1, ValidN>(max_exp, scale_e8m0, recip_out);
 }
 
 // Supported BlockSize range (方案A, split reduce axis):
@@ -103,8 +91,8 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
     using tile_f  = Tile<Location::Vec, float,    R_sub, TileN,     BLayout::RowMajor>;
     using tile_o  = Tile<Location::Vec, OutT,     R_sub, TileN / 2, BLayout::RowMajor>;
     // Boxed (valid row=1) accumulator / scale / recip: one scalar per Post column.
-    using tile_box       = Tile<Location::Vec, uint16_t, R_sub, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_sstore    = Tile<Location::Vec, uint8_t,  R_sub, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_box       = Tile<Location::Vec, uint16_t,   R_sub, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_bf1 = Tile<Location::Vec, __bf16,   R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_f1  = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
 
@@ -112,7 +100,7 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
     using gm_xu = global_tensor<uint16_t, RowMajor<Axis, Post>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<Axis, Post / 2>>;
     // scale: uint8 E8M0, compact planar [scaleRows, Post], one byte per block.
-    using gm_s  = global_tensor<uint8_t,  RowMajor<scaleRows, Post>>;
+    using gm_s  = global_tensor<__fp8_e8m0, RowMajor<scaleRows, Post>>;
 
     global_iterator<gm_x,  tile_x>  x_iter(x);
     global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x));
@@ -149,25 +137,26 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
                 TMAX(max_exp_acc, max_exp_acc, partial); // cross-sub-chunk accum
             }
 
-            tile_box scale_byte;
+            tile_se8m0 scale_e8m0;
             tile_box recip;
             ocp_scale_from_maxexp_not_tail_boxed_bigbs<OutT, R_sub, TileN>(
-                max_exp_acc, scale_byte, recip);
+                max_exp_acc, scale_e8m0, recip);
 
             // Compact scale store: fold block-row index (kb) into the base
             // pointer (iterator i-stride is physical tile height, not 1). Each
-            // block-row writes TileN bytes at scale + kb*Post.
-            global_iterator<gm_s, tile_sstore> s_iter(scale + kb * Post);
+            // block-row writes TileN bytes at scale + kb*Post. The new OCP path
+            // produces the E8M0 byte directly (Cast<bf16->e8m0>), so it stores
+            // with no narrowing TCVT.
+            global_iterator<gm_s, tile_se8m0> s_iter(
+                reinterpret_cast<__fp8_e8m0 *>(scale) + kb * Post);
             auto gs = s_iter(0, n);
-            tile_sstore scale_u8;
-            TCVT(scale_u8, scale_byte);
             // MISSING INTERLEAVE: stored as COMPACT planar [scaleRows, Post]
             // (block-rows in order). AscendC's mxScale is PARITY-INTERLEAVED
             // [ceil(numKb/2), Post, 2] -- even/odd block-rows zipped via
             // Reg::Interleave. Blocked on TINTERLEAVE/TDEINTERLEAVE not being
             // exposed in the -D__linx header (RECORD 问题5); insert the even/odd
             // zip here once available.
-            TSTORE(gs, scale_u8);
+            TSTORE(gs, scale_e8m0);
 
             // ---- Pass 2: apply per-column inv_scale, cast to fp4 ----
             tile_recip_bf1 inv_bf16;

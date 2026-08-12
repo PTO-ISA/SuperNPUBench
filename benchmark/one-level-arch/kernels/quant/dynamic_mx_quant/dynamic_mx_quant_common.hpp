@@ -15,6 +15,7 @@ constexpr uint16_t BF16_SHR_NUM = 7;
 constexpr uint16_t BF16_NAN_PATTERN = 0x7F81; // BF16_NAN_CUSTOM (recip NaN)
 constexpr uint16_t BF16_SPECIAL_EXP = 0x0040; // BF16_SPECIAL_EXP_THRESHOLD
 constexpr uint16_t BF16_ADD_VALUE_MAN1 = 0x003F; // DynRange rounding add-value
+constexpr uint16_t BF16_ONE = 0x3f80; // bf16 bits of 1.0 (exp 127<<7, zero mantissa)
 
 // --- fp16 (E5M10) domain, half input path -----------------------------------
 // half exponent field; all-ones (0x7C00) marks inf/nan. Only used for the half
@@ -64,6 +65,17 @@ constexpr uint16_t emax_bits() {
                       "emax_bits: unsupported output dtype");
         return FP4_E1M2_EMAX;
     }
+}
+
+// bf16 bits of 2^-emax = 1.0 - emax (both zero-mantissa powers of two, so the
+// subtraction on the biased exponent field is exact). The new OCP algorithm
+// multiplies the per-block max_exp (as bf16 = 2^E_max) by this to get the shared
+// scale 2^(E_max-emax) directly, then casts bf16->e8m0 (mirrors AscendC ocp_new
+// fp8MaxExpRecip = BF16_ONE - f8Emax). e4m3->0x3b80, e5m2->0x3800,
+// fp4_e2m1->0x3e80, fp4_e1m2->0x3f80.
+template <typename OutT>
+constexpr uint16_t recip_emax_bits() {
+    return static_cast<uint16_t>(BF16_ONE - emax_bits<OutT>());
 }
 
 // cuBLAS 1/dstMax, keyed on output dtype (cuBLAS is FP8-only).
@@ -324,6 +336,77 @@ inline void finalize_scale_recip_u16(
     TSEL(recip_out, eq_special, special_t); // (sharedExp==0x7f00)? 0x0040 : half
 }
 
+// ---------------------------------------------------------------------------
+// NEW OCP scale (bf16-multiply + direct e8m0 cast). Mirrors AscendC ocp_new
+// ComputeScaleOcp (bak/..._ocp_new.h): the scale byte is produced by a single
+// bf16 multiply and a Cast<bf16->e8m0>, dropping the old clamp/shift/inf-Select.
+//   sharedExp(bf16) = xMaxExp(bf16 = 2^E_max) * fp8MaxExpRecip(bf16 = 2^-emax)
+//   scaleByte       = Cast<e8m0>(sharedExp)          // hardware maps inf/nan->0xFF
+// The recip is finalized in the uint16 domain from sharedExp's bits, keeping the
+// exact same inf/zero/special selects as finalize_scale_recip_u16 minus the
+// scale-byte TSHRS. Two boundaries vs the old path are recorded in RECORD 问题7:
+//   边界1 inf/nan scale byte now relies on Cast<e8m0>(inf)==0xFF (no Select).
+//   边界2 tiny-nonzero underflow: old clamp->recip 0 vs new bf16 denormal recip.
+// eq_zero / eq_inf are taken from the ORIGINAL max_exp (pre-multiply), mirroring
+// ocp_new's Compare(xMaxExp,0) / Compare(xMaxExp,expMask); eq_special from
+// sharedExp's bits. Recip == 0x7f00 - sharedExpBits (bf16 of 2^(emax-E_max)).
+template <int R, int C, int ValidR = R, int ValidC = C>
+inline void finalize_recip_u16(
+    pto::Tile<pto::Location::Vec, uint16_t, R, C, pto::BLayout::RowMajor, ValidR, ValidC> &max_exp,
+    pto::Tile<pto::Location::Vec, uint16_t, R, C, pto::BLayout::RowMajor, ValidR, ValidC> &shared_u16,
+    pto::Tile<pto::Location::Vec, uint16_t, R, C, pto::BLayout::RowMajor, ValidR, ValidC> &recip_out) {
+    using namespace pto;
+    using tile_u16 = Tile<Location::Vec, uint16_t, R, C, BLayout::RowMajor, ValidR, ValidC>;
+
+    tile_u16 eq_inf;
+    TCMPS(eq_inf, max_exp, BF16_EXP_MASK);   // NOT finite (xMaxExp == expMask)
+    tile_u16 eq_zero;
+    TCMPS(eq_zero, max_exp, static_cast<uint16_t>(0)); // all-zero block (xMaxExp == 0)
+    tile_u16 eq_special;
+    TCMPS(eq_special, shared_u16, BF16_EXP_BIAS);      // sharedExp == 0x7f00
+
+    tile_u16 bias_t;
+    TEXPANDS(bias_t, BF16_EXP_BIAS);
+    TSUB(recip_out, bias_t, shared_u16);     // 0x7f00 - sharedExp
+
+    tile_u16 nan16;
+    TEXPANDS(nan16, BF16_NAN_PATTERN);
+    TSEL(recip_out, eq_inf, nan16);          // finite? half : 0x7f81
+
+    tile_u16 zero_t;
+    TEXPANDS(zero_t, static_cast<uint16_t>(0));
+    TSEL(recip_out, eq_zero, zero_t);        // (xMaxExp!=0)? half : 0
+
+    tile_u16 special_t;
+    TEXPANDS(special_t, BF16_SPECIAL_EXP);
+    TSEL(recip_out, eq_special, special_t);  // (sharedExp==0x7f00)? 0x0040 : half
+}
+
+// Core of the new OCP scale: from a per-block reduced max_exp (boxed bf16-exp
+// bits) produce the E8M0 scale byte (direct cast) and the bf16 recip multiplier.
+// Slot picks a distinct scratch buffer for the u16<->bf16 reinterprets.
+template <typename OutT, int Slot, int R, int C, int ValidR = R, int ValidC = C>
+inline void ocp_scale_mulcast_from_maxexp(
+    pto::Tile<pto::Location::Vec, uint16_t,      R, C, pto::BLayout::RowMajor, ValidR, ValidC> &max_exp,
+    pto::Tile<pto::Location::Vec, __fp8_e8m0,    R, C, pto::BLayout::RowMajor, ValidR, ValidC> &scale_e8m0,
+    pto::Tile<pto::Location::Vec, uint16_t,      R, C, pto::BLayout::RowMajor, ValidR, ValidC> &recip_out) {
+    using namespace pto;
+    using tile_u16  = Tile<Location::Vec, uint16_t, R, C, BLayout::RowMajor, ValidR, ValidC>;
+    using tile_bf16 = Tile<Location::Vec, __bf16,   R, C, BLayout::RowMajor, ValidR, ValidC>;
+
+    tile_bf16 max_bf;
+    reinterpret_u16_to_bf16<Slot, R, C, ValidR, ValidC>(max_exp, max_bf); // 2^E_max
+
+    constexpr uint16_t RECIP_EMAX = recip_emax_bits<OutT>();
+    tile_bf16 shared_bf;
+    TMULS(shared_bf, max_bf, __builtin_bit_cast(__bf16, RECIP_EMAX)); // 2^(E_max-emax)
+    TCVT(scale_e8m0, shared_bf); // bf16 -> e8m0 (inf/nan -> 0xFF by hardware)
+
+    tile_u16 shared_u16;
+    reinterpret_bf16_to_u16<Slot, R, C, ValidR, ValidC>(shared_bf, shared_u16);
+    finalize_recip_u16<R, C, ValidR, ValidC>(max_exp, shared_u16, recip_out);
+}
+
 // cuBLAS scale-byte + recip from an already-reduced fp32 amax. Mirrors AscendC
 // ComputeScaleCublas (dynamic_mx_quant_tail_axis_fp8.h:685-782). GT/LT are
 // EQ-emulated (TCMP/TCMPS are EQ-only on linx): a<K == min(a,K-1)==a,
@@ -543,29 +626,19 @@ void compute_ocp_scale_tail(
 // boxed variant below. ValidM carries the live-row count.
 template <typename OutT, int TileM, int PW, int BlockSize, int ValidM = TileM>
 void compute_ocp_scale_tail_boxed_pw(
-    Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, BlockSize> &x_u16,
-    Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, 1> &scale_byte,
-    Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, 1> &recip_out) {
+    Tile<Location::Vec, uint16_t,   TileM, PW, BLayout::RowMajor, ValidM, BlockSize> &x_u16,
+    Tile<Location::Vec, __fp8_e8m0, TileM, PW, BLayout::RowMajor, ValidM, 1> &scale_e8m0,
+    Tile<Location::Vec, uint16_t,   TileM, PW, BLayout::RowMajor, ValidM, 1> &recip_out) {
     using namespace pto;
     using tile_full = Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, BlockSize>;
     using tile_box  = Tile<Location::Vec, uint16_t, TileM, PW, BLayout::RowMajor, ValidM, 1>;
-    constexpr uint16_t EMAX = emax_bits<OutT>();
 
     tile_full exp_bits;
     TANDS(exp_bits, x_u16, BF16_EXP_MASK);
     tile_box max_exp;
     TROWMAX(max_exp, exp_bits);            // reduce ValidCol=BlockSize -> valid col=1
 
-    tile_box eq_inf;
-    TCMPS(eq_inf, max_exp, BF16_EXP_MASK);
-
-    TMAXS(max_exp, max_exp, EMAX);
-    tile_box emax_tile;
-    TEXPANDS(emax_tile, EMAX);
-    tile_box shared_exp;
-    TSUB(shared_exp, max_exp, emax_tile);
-
-    finalize_scale_recip_u16<TileM, PW, ValidM, 1>(shared_exp, eq_inf, scale_byte, recip_out);
+    ocp_scale_mulcast_from_maxexp<OutT, 1, TileM, PW, ValidM, 1>(max_exp, scale_e8m0, recip_out);
 }
 
 // Boxed (valid col=1) OCP tail scale. Same math as compute_ocp_scale_tail but
@@ -714,29 +787,19 @@ void compute_ocp_scale_not_tail(
 // collapsed + even-aligned) instead of a broadcast tile.
 template <typename OutT, int BlockSize, int TileN, int ValidN = TileN>
 void compute_ocp_scale_not_tail_boxed(
-    Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, BlockSize, ValidN> &x_u16,
-    Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, ValidN> &scale_byte,
-    Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, ValidN> &recip_out) {
+    Tile<Location::Vec, uint16_t,   BlockSize, TileN, BLayout::RowMajor, BlockSize, ValidN> &x_u16,
+    Tile<Location::Vec, __fp8_e8m0, BlockSize, TileN, BLayout::RowMajor, 1, ValidN> &scale_e8m0,
+    Tile<Location::Vec, uint16_t,   BlockSize, TileN, BLayout::RowMajor, 1, ValidN> &recip_out) {
     using namespace pto;
     using tile_full = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, BlockSize, ValidN>;
     using tile_box  = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, ValidN>;
-    constexpr uint16_t EMAX = emax_bits<OutT>();
 
     tile_full exp_bits;
     TANDS(exp_bits, x_u16, BF16_EXP_MASK);
     tile_box max_exp;
     TCOLMAX(max_exp, exp_bits);            // reduce rows -> valid row=1
 
-    tile_box eq_inf;
-    TCMPS(eq_inf, max_exp, BF16_EXP_MASK);
-
-    TMAXS(max_exp, max_exp, EMAX);
-    tile_box emax_tile;
-    TEXPANDS(emax_tile, EMAX);
-    tile_box shared_exp;
-    TSUB(shared_exp, max_exp, emax_tile);
-
-    finalize_scale_recip_u16<BlockSize, TileN, 1, ValidN>(shared_exp, eq_inf, scale_byte, recip_out);
+    ocp_scale_mulcast_from_maxexp<OutT, 2, BlockSize, TileN, 1, ValidN>(max_exp, scale_e8m0, recip_out);
 }
 
 // InT ∈ {__bf16, __half, float}. Reduce block amax in the INPUT dtype's VALUE

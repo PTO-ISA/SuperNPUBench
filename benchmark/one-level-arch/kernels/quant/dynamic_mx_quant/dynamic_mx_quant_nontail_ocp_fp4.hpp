@@ -74,16 +74,16 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
     // Full uint16 input view (bit-reinterpret of bf16) for the boxed OCP reduce.
     using tile_xu = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor>;
     // Boxed (valid row=1) per-block scale/recip: one scalar per Post column.
-    using tile_sred      = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_sstore    = Tile<Location::Vec, uint8_t,  BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_sred      = Tile<Location::Vec, uint16_t,   BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_bf1 = Tile<Location::Vec, __bf16,   BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_f1  = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
 
     using gm_x  = global_tensor<InT,      RowMajor<Axis, Post>>;
     using gm_xu = global_tensor<uint16_t, RowMajor<Axis, Post>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<Axis, Post / 2>>;
-    // scale: uint8 E8M0, compact planar [scaleRows, Post], one byte per block.
-    using gm_s  = global_tensor<uint8_t,  RowMajor<scaleRows, Post>>;
+    // scale: E8M0, compact planar [scaleRows, Post], one byte per block.
+    using gm_s  = global_tensor<__fp8_e8m0, RowMajor<scaleRows, Post>>;
 
     global_iterator<gm_x,  tile_x>  x_iter(x);
     global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x));
@@ -96,10 +96,10 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
             // Compact scale: fold block-row index (kb) into the base pointer since
             // the iterator's i-stride is the PHYSICAL tile height, not 1. Each
             // block-row writes TileN bytes at scale + kb*Post.
-            global_iterator<gm_s, tile_sstore> s_iter(scale + kb * Post);
+            global_iterator<gm_s, tile_se8m0> s_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + kb * Post);
             auto gs = s_iter(0, n);
 
-            tile_sred scale_byte;
+            tile_se8m0 scale_e8m0;
             tile_sred recip;
             // Regularize InT -> uint16 bf16-exponent bits for the shared OCP reduce.
             tile_xu x_u16;
@@ -115,17 +115,16 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
                     f32_to_bf16expbits<4, BlockSize, TileN>(xin, x_u16);
                 }
             }
-            compute_ocp_scale_not_tail_boxed<OutT, BlockSize, TileN>(x_u16, scale_byte, recip);
-            // scale_byte boxed valid row=1; narrow to uint8, store 1 byte/block.
-            tile_sstore scale_u8;
-            TCVT(scale_u8, scale_byte);
+            compute_ocp_scale_not_tail_boxed<OutT, BlockSize, TileN>(x_u16, scale_e8m0, recip);
+            // scale_e8m0 boxed valid row=1: E8M0 byte produced directly by
+            // Cast<bf16->e8m0>, store 1 byte/block (no narrowing TCVT).
             // MISSING INTERLEAVE: stored as COMPACT planar [scaleRows, Post]
             // (block-rows in order). AscendC's mxScale is PARITY-INTERLEAVED
             // [ceil(numKb/2), Post, 2] -- even/odd block-rows zipped via
             // Reg::Interleave. Blocked on TINTERLEAVE/TDEINTERLEAVE not being
             // exposed in the -D__linx header (RECORD 问题5); insert the even/odd
             // zip here once available.
-            TSTORE(gs, scale_u8);
+            TSTORE(gs, scale_e8m0);
 
             tile_recip_bf1 inv_bf16;
             // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题5
