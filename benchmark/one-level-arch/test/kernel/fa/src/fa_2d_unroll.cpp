@@ -18,7 +18,7 @@
 #define Skv Tskv
 #endif
 
-#define qD 128
+#define qD 16
 #define vD 128
 
 #ifndef Tm
@@ -37,7 +37,7 @@
 #define ALIGN 4*1024
 
 int main(){
-    using dtype = __half;
+    using dtype = float;
     
     dtype qp[B*H*Sq*qD + 2*ALIGN];
     dtype kp[B*H*Skv*qD + 2*ALIGN];
