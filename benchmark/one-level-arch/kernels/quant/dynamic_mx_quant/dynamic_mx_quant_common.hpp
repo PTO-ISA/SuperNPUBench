@@ -73,6 +73,93 @@ constexpr float inv_dst_max() {
 }
 
 // ---------------------------------------------------------------------------
+// Compile-time tile-size derivation (TileM / TileN / R_sub) from operator inputs
+// and the INPUT dtype's binding-tile budget. Mirrors the budget model documented
+// in README「验证边界」/ DESIGN §7.5: a fixed 8192-byte binding-tile budget bound by
+// the WIDEST tile that crosses LOAD/STORE. OCP stays in the input/uint16 (≤ input
+// width) domain, so its binding width is sizeof(InT). cuBLAS currently pushes an
+// fp32 (4B) tile through a scratch-HBM reinterpret roundtrip (问题4), so its binding
+// width is 4B until the compiler exposes a register-level reinterpret (kRegBitcast),
+// after which it falls back to sizeof(InT).
+// NOTE: InT here only sizes/validates the tile budget; the kernels' DATA PATH is
+// still bf16-only (each kernel static_asserts InT == __bf16). fp32/fp16 input data
+// paths (32b-domain handling) are a separate, not-yet-landed item.
+constexpr int  kTileBudgetBytes = 8192;
+constexpr bool kRegBitcast = false; // flip true once 问题4 (reg reinterpret) lands
+
+template <typename InT, bool IsCublas>
+constexpr int binding_tile_bytes() {
+    if constexpr (IsCublas && !kRegBitcast) {
+        return 4; // fp32 scratch-HBM roundtrip binds a 32b tile
+    } else {
+        return static_cast<int>(sizeof(InT)); // bf16/fp16 = 2, fp32 = 4
+    }
+}
+
+template <typename InT, bool IsCublas>
+constexpr int tile_elem_budget() {
+    return kTileBudgetBytes / binding_tile_bytes<InT, IsCublas>();
+}
+
+// Non-tail contiguous-axis (TileN) 32B-column-alignment lower bound on the packed
+// output: fp8 -> TileN % 32; fp4 packs 2/byte -> TileN % 64.
+template <typename OutT>
+constexpr int nontail_align_lower() {
+    if constexpr (std::is_same_v<OutT, __fp4_e2m1x2> || std::is_same_v<OutT, __fp4_e1m2x2>) {
+        return 64;
+    } else {
+        return 32;
+    }
+}
+
+// Tail-axis: largest PHYSICAL TileM whose tile [TileM, Contig] (input-width) fits
+// the budget, clamped to [tilem_min, M]. Contig is the physical contiguous width
+// per one-block-per-tile iteration: BlockSize for the cublas/plain tail, PW =
+// ceil(BlockSize/64)*64 for the padded-physical fp4 tail. tilem_min keeps the
+// physical tile >= 512B (LinxV5 sub-512B spill crash); the full/tail split already
+// boxes the valid rows, so a physical TileM > M is safe (valid rows = min(M, TileM)).
+template <int M, int Contig, typename InT, bool IsCublas>
+constexpr int max_tilem() {
+    constexpr int budget = tile_elem_budget<InT, IsCublas>();
+    constexpr int min_elems = 512 / static_cast<int>(sizeof(InT)); // >= 512B floor
+    constexpr int tilem_min = (min_elems + Contig - 1) / Contig;    // ceil
+    constexpr int tilem_max = budget / Contig;
+    int t = M;
+    if (t > tilem_max) t = tilem_max;
+    if (t < tilem_min) t = tilem_min;
+    if (t < 1) t = 1;
+    return t;
+}
+
+// Non-tail: largest align-multiple TileN with BlockSize*TileN <= budget, further
+// capped at align-rounded Post so a small Post doesn't inflate TileN (N_tail covers
+// the remainder). Returns 0 when no legal TileN exists (< align lower bound) ->
+// caller routes to the bigbs split-reduce kernel.
+template <int BlockSize, int Post, typename OutT, typename InT, bool IsCublas>
+constexpr int pick_tilen() {
+    constexpr int align  = nontail_align_lower<OutT>();
+    constexpr int budget = tile_elem_budget<InT, IsCublas>();
+    int cap = budget / BlockSize;                       // TileSize upper on TileN
+    int postcap = ((Post + align - 1) / align) * align; // no need to exceed Post
+    if (postcap < cap) cap = postcap;
+    return (cap / align) * align;                       // floor to align (0 if cap < align)
+}
+
+// bigbs: largest divisor of BlockSize with R_sub*TileN <= budget (the CURRENT
+// budget, not the formal 4096 the bigbs kernel static_asserts against). R_sub |
+// BlockSize is required by 方案A (splits the reduce axis into R_sub-row sub-chunks).
+template <int BlockSize, int TileN, typename InT, bool IsCublas>
+constexpr int max_rsub() {
+    constexpr int budget = tile_elem_budget<InT, IsCublas>();
+    int cap = budget / TileN;
+    if (cap > BlockSize) cap = BlockSize;
+    for (int r = cap; r >= 1; --r) {
+        if (BlockSize % r == 0) return r;
+    }
+    return 1;
+}
+
+// ---------------------------------------------------------------------------
 // ================== 规避方案 (WORKAROUND) ==================
 // 理想写法是用寄存器级 reinterpret / bitcast 语法（不经内存、不做数值转换）把
 // float tile 的位型当整数用、或反过来。但当前编译器工具链**尚未支持**该语法形式

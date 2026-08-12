@@ -47,7 +47,15 @@ namespace supernpu::tile_isa::mxquant {
 // only the numKb real blocks, so when numKb is odd we explicitly write one 0x00
 // E8M0 byte to the padding scale column scale[numKb]. The data output is
 // naturally N/2 real bytes/row (no padding data emitted).
-template <int M, int N, int TileM = 8, int BlockSize = 32, typename OutT = __fp4_e2m1x2>
+//
+// TileM is NOT a caller knob: it is DERIVED at compile time from M + the InT
+// binding-tile budget. CRITICAL: this kernel binds ONE MX block per tile at the
+// PADDED physical width PW (not BlockSize), so the budget contig axis passed to
+// max_tilem is PW, not BlockSize (max_tilem<M, PW, InT, /*IsCublas=*/false>()).
+// InT is BUDGET-ONLY (a wider input dtype shrinks TileM); the data path stays
+// bf16 (static_assert below).
+template <int M, int N, int BlockSize = 32, typename OutT = __fp4_e2m1x2,
+          typename InT = __bf16>
 void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
     static_assert(M > 0 && N > 0, "dim must be positive");
     static_assert(N % BlockSize == 0, "N must be multiple of BlockSize");
@@ -55,9 +63,18 @@ void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
                   "fp4 output block is BlockSize/2 packed bytes; BlockSize must be "
                   "a multiple of 32 so the padded physical fp4 width PW/2 is "
                   "32B-column-aligned (pto_tile.hpp:408)");
+    static_assert(std::is_same_v<InT, __bf16>,
+                  "InT is budget-aware only; the data path is bf16-only for now "
+                  "(fp32/fp16 input data paths are deferred)");
 
     using namespace pto;
 
+    // Physical tile width padded to the next multiple of 64 so the packed fp4
+    // output tile (physical PW/2 bytes) is 32B-column-aligned. BlockSize % 64 == 0
+    // -> PW == BlockSize (col-box collapses to a full tile).
+    constexpr int PW = ((BlockSize + 63) / 64) * 64;
+    // Contig axis for the budget is PW (one padded block per tile), NOT BlockSize.
+    constexpr int TileM  = max_tilem<M, PW, InT, /*IsCublas=*/false>();
     constexpr int full_m = M / TileM;
     constexpr int M_tail = M % TileM;
     constexpr int numKb  = N / BlockSize;
@@ -65,10 +82,6 @@ void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
     // with the block count even-aligned. Mirrors dynamic_mx_quant_tail_axis.h:217.
     constexpr int scaleCols = ((numKb + 1) / 2) * 2;
     constexpr bool oddTail  = (numKb % 2) != 0;   // padding scale col must be 0x00
-    // Physical tile width padded to the next multiple of 64 so the packed fp4
-    // output tile (physical PW/2 bytes) is 32B-column-aligned. BlockSize % 64 == 0
-    // -> PW == BlockSize (col-box collapses to a full tile).
-    constexpr int PW = ((BlockSize + 63) / 64) * 64;
 
     uint8_t *y_u8 = reinterpret_cast<uint8_t *>(y);
 

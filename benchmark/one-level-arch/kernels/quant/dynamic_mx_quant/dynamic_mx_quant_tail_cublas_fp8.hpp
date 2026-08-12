@@ -18,12 +18,21 @@ namespace supernpu::tile_isa::mxquant {
 // CURRENT (fp32 32b roundtrip) TileM*BlockSize <= 2048; FORMAL (post-bitcast,
 // 16b) TileM*BlockSize <= 4096. Either way BlockSize is free — only TileM shrinks
 // — so no static_assert on BlockSize is needed here.
-template <int M, int K, int TileM = 8, int BlockSize = 32, typename OutT = __fp8_e4m3,
-          uint32_t MaxLowBoundBits = 0x2b8cbcccu>
+//
+// TileM is NOT a caller knob: it is DERIVED at compile time from M + the InT
+// binding-tile budget (max_tilem<M, BlockSize, InT, /*IsCublas=*/true>()), clamped
+// to [tilem_min(>=512B tile), budget/BlockSize] and to M. InT is BUDGET-ONLY (a
+// wider input dtype shrinks TileM); the data path stays bf16 (static_assert below).
+template <int M, int K, int BlockSize = 32, typename OutT = __fp8_e4m3,
+          typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
 void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
     static_assert(M > 0 && K > 0, "dim must be positive");
     static_assert(K % BlockSize == 0, "K must be multiple of BlockSize");
+    static_assert(std::is_same_v<InT, __bf16>,
+                  "InT is budget-aware only; the data path is bf16-only for now "
+                  "(fp32/fp16 input data paths are deferred)");
 
+    constexpr int TileM  = max_tilem<M, BlockSize, InT, /*IsCublas=*/true>();
     constexpr int full_m = M / TileM;
     constexpr int M_tail = M % TileM;
     constexpr int numKb  = K / BlockSize;

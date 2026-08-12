@@ -2,6 +2,7 @@
 #define SUPERNPU_DYNAMIC_MX_QUANT_NONTAIL_CUBLAS_FP8_HPP
 
 #include "quant/dynamic_mx_quant/dynamic_mx_quant_common.hpp"
+#include "quant/dynamic_mx_quant/dynamic_mx_quant_nontail_cublas_fp8_bigbs.hpp"
 
 namespace supernpu::tile_isa::mxquant {
 
@@ -28,9 +29,16 @@ namespace supernpu::tile_isa::mxquant {
 // For BlockSize >= 160 (formal) there is NO legal TileN even after the fix; that
 // large-BS range needs the 方案A split-reduce kernel (see
 // dynamic_mx_quant_nontail_ocp_fp4_bigbs for the analogous structure).
+//
+// This is the PLAIN single-load implementation, kept behind an internal name.
+// The public entry `dynamic_mx_quant_nontail_cublas_fp8` (below) DERIVES TileN at
+// compile time from Post + the InT budget and AUTO-ROUTES to this plain path when
+// a legal TileN exists, or to the 方案A split-reduce `_bigbs` kernel when it does
+// not (large BlockSize). TileN stays an explicit param here so the dispatcher can
+// feed the derived value.
 template <int Axis, int Post, int BlockSize = 32, int TileN = 32, typename OutT = __fp8_e4m3,
           uint32_t MaxLowBoundBits = 0x2b8cbcccu>
-void dynamic_mx_quant_nontail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
+static void nontail_cublas_fp8_plain(__bf16 *x, OutT *y, uint8_t *scale) {
     static_assert(Axis > 0 && Post > 0, "dims must be positive");
     // Axis must be whole blocks (a block is exactly BlockSize along the quant
     // axis); Post need NOT be a multiple of TileN: full column tiles + N_tail.
@@ -169,6 +177,31 @@ void dynamic_mx_quant_nontail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
             TCVT(oq, xf);
             TSTORE(gy, oq);
         }
+    }
+}
+
+// Public entry: TileN is NOT a caller knob. It is DERIVED at compile time from
+// Post + the InT budget (pick_tilen). If a legal TileN >= the fp8 32B lower bound
+// exists, route to the plain single-load path; otherwise (large BlockSize leaves
+// no legal TileN) auto-route to the 方案A split-reduce `_bigbs` kernel with a
+// budget-derived R_sub. `if constexpr` guarantees the untaken branch is not
+// instantiated, so plain's TileN=0 / bigbs's illegal R_sub never fire an assert.
+// InT is BUDGET-ONLY (a wider input dtype shrinks the budget); the data path is
+// bf16-only (static_assert).
+template <int Axis, int Post, int BlockSize = 32, typename OutT = __fp8_e4m3,
+          typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
+void dynamic_mx_quant_nontail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
+    static_assert(std::is_same_v<InT, __bf16>,
+                  "InT is budget-aware only; the data path is bf16-only for now "
+                  "(fp32/fp16 input data paths are deferred)");
+    constexpr int TileN = pick_tilen<BlockSize, Post, OutT, InT, /*IsCublas=*/true>();
+    if constexpr (TileN >= nontail_align_lower<OutT>()) {
+        nontail_cublas_fp8_plain<Axis, Post, BlockSize, TileN, OutT, MaxLowBoundBits>(x, y, scale);
+    } else {
+        constexpr int BigTileN = nontail_align_lower<OutT>();
+        constexpr int Rsub = max_rsub<BlockSize, BigTileN, InT, /*IsCublas=*/true>();
+        dynamic_mx_quant_nontail_cublas_fp8_bigbs<Axis, Post, BlockSize, BigTileN, Rsub, OutT,
+                                                  MaxLowBoundBits>(x, y, scale);
     }
 }
 
