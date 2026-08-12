@@ -16,6 +16,12 @@ constexpr uint16_t BF16_NAN_PATTERN = 0x7F81; // BF16_NAN_CUSTOM (recip NaN)
 constexpr uint16_t BF16_SPECIAL_EXP = 0x0040; // BF16_SPECIAL_EXP_THRESHOLD
 constexpr uint16_t BF16_ADD_VALUE_MAN1 = 0x003F; // DynRange rounding add-value
 
+// --- fp16 (E5M10) domain, half input path -----------------------------------
+// half exponent field; all-ones (0x7C00) marks inf/nan. Only used for the half
+// OCP regularizer's inf/nan reasoning (the reduce runs after a half->bf16 cast,
+// whose exp all-ones == BF16_EXP_MASK is caught by the shared eq_inf test).
+constexpr uint16_t FP16_EXP_MASK = 0x7C00;
+
 // emax = biased-domain exponent (BF16 E8M7, i.e. <<7) of the output dtype's
 // max normal value. Mirrors AscendC dynamic_mx_quant_common.h:81-90.
 constexpr uint16_t FP8_E4M3_EMAX = 0x0400; // 448  = 1.75 * 2^8  -> exp 8
@@ -209,6 +215,68 @@ inline void reinterpret_f32_to_u32(
     TSTORE(gw, src);
     auto gr = ri(0, 0);
     TLOAD(dst, gr);
+}
+
+// bf16 -> uint16 bit reinterpret (reverse of reinterpret_u16_to_bf16). Used by
+// the half OCP regularizer to view a half->bf16 cast result as raw uint16 exp
+// bits for the shared uint16 reduce. Same scratch-HBM byte-alias mechanism.
+template <int Slot, int R, int C, int ValidR = R, int ValidC = C>
+inline void reinterpret_bf16_to_u16(
+    pto::Tile<pto::Location::Vec, __bf16,   R, C, pto::BLayout::RowMajor, ValidR, ValidC> &src,
+    pto::Tile<pto::Location::Vec, uint16_t, R, C, pto::BLayout::RowMajor, ValidR, ValidC> &dst) {
+    using namespace pto;
+    static uint8_t buf[R * C * sizeof(uint16_t)] __attribute__((aligned(4096)));
+    using gm_b = global_tensor<__bf16,   RowMajor<R, C>>;
+    using gm_u = global_tensor<uint16_t, RowMajor<R, C>>;
+    global_iterator<gm_b, Tile<Location::Vec, __bf16,   R, C, BLayout::RowMajor, ValidR, ValidC>> wi(reinterpret_cast<__bf16 *>(buf));
+    global_iterator<gm_u, Tile<Location::Vec, uint16_t, R, C, BLayout::RowMajor, ValidR, ValidC>> ri(reinterpret_cast<uint16_t *>(buf));
+    auto gw = wi(0, 0);
+    TSTORE(gw, src);
+    auto gr = ri(0, 0);
+    TLOAD(dst, gr);
+}
+
+// ---------------------------------------------------------------------------
+// Input regularizers: extract a per-element uint16 "bf16-bits" tile from the
+// non-bf16 input dtypes so the shared OCP/DynRange uint16 reduce+finalize path
+// runs UNCHANGED. Mirrors AscendC ComputeMaxExpOcp{Half,Fp32} funneling all input
+// dtypes into the bf16 exponent domain before ComputeScaleOcp.
+//
+// half (E5M10): Cast half->bf16 then view the bits as uint16. AscendC uses TRUNC
+// (RTZ) rounding here so mantissa truncation never bumps the exponent; the
+// high-level TCVT wrapper on -D__linx has no round-mode arg (default LINX_RNONE),
+// so a rare mantissa round-up could bump one exponent — a documented round-mode
+// gap of the same class as the fp32->fp4 data cast (RECORD 问题6), verified at the
+// op-review level, not runtime (skew). inf/nan: half exp all-ones -> bf16 exp
+// all-ones (0x7F80) under a standard IEEE cast, so the downstream eq_inf test
+// (max_exp == BF16_EXP_MASK) catches it with NO separate Select — the probe
+// confirmed emit; propagation is the standard cast semantics.
+template <int Slot, int R, int C, int ValidR = R, int ValidC = C>
+inline void half_to_bf16bits(
+    pto::Tile<pto::Location::Vec, __half,    R, C, pto::BLayout::RowMajor, ValidR, ValidC> &xh,
+    pto::Tile<pto::Location::Vec, uint16_t,  R, C, pto::BLayout::RowMajor, ValidR, ValidC> &out) {
+    using namespace pto;
+    Tile<Location::Vec, __bf16, R, C, BLayout::RowMajor, ValidR, ValidC> xb;
+    TCVT(xb, xh); // half -> bf16 (default RMode; TRUNC gap documented above)
+    reinterpret_bf16_to_u16<Slot, R, C, ValidR, ValidC>(xb, out);
+}
+
+// fp32 (E8M23): AND the fp32 exponent field, >>16 to land it in the bf16 exp
+// field [14:7], then narrow uint32->uint16. Per-element exponent extraction
+// commutes with the downstream Max reduce (max is monotonic in exponent), so
+// reduce-of-narrowed == AscendC's narrow-of-reduced (ComputeMaxExpOcpFp32:
+// And(FP32_MX_MAX_EXP) -> uint32 Max -> ShiftRights(16)). fp32 inf/nan exp 0xFF
+// -> (0x7F800000>>16)=0x7F80 = BF16_EXP_MASK, caught by the shared eq_inf test.
+template <int Slot, int R, int C, int ValidR = R, int ValidC = C>
+inline void f32_to_bf16expbits(
+    pto::Tile<pto::Location::Vec, float,    R, C, pto::BLayout::RowMajor, ValidR, ValidC> &xf,
+    pto::Tile<pto::Location::Vec, uint16_t, R, C, pto::BLayout::RowMajor, ValidR, ValidC> &out) {
+    using namespace pto;
+    Tile<Location::Vec, uint32_t, R, C, BLayout::RowMajor, ValidR, ValidC> u32;
+    reinterpret_f32_to_u32<Slot, R, C, ValidR, ValidC>(xf, u32);
+    TANDS(u32, u32, FP32_EXP_MASK);
+    TSHRS(u32, u32, static_cast<uint32_t>(16));
+    TCVT(out, u32); // narrow low16 (exp bits <= 0x7F80)
 }
 
 // ---------------------------------------------------------------------------
@@ -541,27 +609,34 @@ void compute_ocp_scale_tail_boxed(
 // default (boxed type collapses to NoneBox); a tail invocation passes ValidM =
 // M_tail so every intermediate operates only on the live rows, while the
 // PHYSICAL tile shape stays TileM x BlockSize (keeps the 512B/32B store legal).
-template <typename OutT, int TileM, int BlockSize, uint32_t MaxLowBoundBits = CLAMP_MIN_BITS, int ValidM = TileM>
+// InT ∈ {__bf16, __half, float}. Reduce the block amax in the INPUT dtype's own
+// VALUE domain (TABS + TROWMAX), then cast ONLY the reduced per-row amax to fp32,
+// mirroring AscendC ComputeScaleCublas{Bf16,Half,Fp32} (reduce max in T, Cast<float>
+// the reduced max, tail_axis_fp8.h:736-739). fp32 needs no cast — the reduced
+// amax is already fp32 and flows straight into the core. For non-negative finite
+// inputs the value-domain max equals AscendC's abs-bit max (bit order monotonic
+// in magnitude). The reduced result stays boxed valid col=1: no TROWEXPAND, the
+// per-row scalar drives the bit-math and the fused data-pass TROWEXPANDMUL.
+template <typename OutT, typename InT, int TileM, int BlockSize, uint32_t MaxLowBoundBits = CLAMP_MIN_BITS, int ValidM = TileM>
 void compute_cublas_scale_tail(
-    Tile<Location::Vec, __bf16,   TileM, BlockSize, BLayout::RowMajor, ValidM, BlockSize> &x_bf16,
+    Tile<Location::Vec, InT,      TileM, BlockSize, BLayout::RowMajor, ValidM, BlockSize> &x_in,
     Tile<Location::Vec, uint16_t, TileM, BlockSize, BLayout::RowMajor, ValidM, 1> &scale_byte,
     Tile<Location::Vec, uint16_t, TileM, BlockSize, BLayout::RowMajor, ValidM, 1> &recip_out) {
     using namespace pto;
-    using tile_bf16   = Tile<Location::Vec, __bf16, TileM, BlockSize, BLayout::RowMajor, ValidM, BlockSize>;
-    using tile_bf16_1 = Tile<Location::Vec, __bf16, TileM, BlockSize, BLayout::RowMajor, ValidM, 1>;
-    using tile_f32_1  = Tile<Location::Vec, float,  TileM, BlockSize, BLayout::RowMajor, ValidM, 1>;
-    // Reduce the block amax in the INPUT dtype (bf16) and cast ONLY the reduced
-    // per-row amax to fp32, mirroring AscendC ComputeScaleCublas (reduce max in
-    // T, Cast<float> the reduced max, tail_axis_fp8.h:736-739). The reduced result
-    // stays boxed valid col=1 through the whole cuBLAS core: no TROWEXPAND, the
-    // per-row scalar drives the bit-math and the fused data-pass TROWEXPANDMUL.
-    tile_bf16 abs_x;
-    TABS(abs_x, x_bf16);
-    tile_bf16_1 max_r;
-    TROWMAX(max_r, abs_x);          // reduce cols -> ValidCol == 1 (bf16)
-    tile_f32_1 max_f;
-    TCVT(max_f, max_r);             // cast only the reduced per-row amax
-    compute_cublas_core<OutT, TileM, BlockSize, MaxLowBoundBits, ValidM, 1>(max_f, scale_byte, recip_out);
+    using tile_in   = Tile<Location::Vec, InT, TileM, BlockSize, BLayout::RowMajor, ValidM, BlockSize>;
+    using tile_in_1 = Tile<Location::Vec, InT, TileM, BlockSize, BLayout::RowMajor, ValidM, 1>;
+    tile_in abs_x;
+    TABS(abs_x, x_in);
+    tile_in_1 max_r;
+    TROWMAX(max_r, abs_x);          // reduce cols -> ValidCol == 1 (InT domain)
+    if constexpr (std::is_same_v<InT, float>) {
+        compute_cublas_core<OutT, TileM, BlockSize, MaxLowBoundBits, ValidM, 1>(max_r, scale_byte, recip_out);
+    } else {
+        using tile_f32_1 = Tile<Location::Vec, float, TileM, BlockSize, BLayout::RowMajor, ValidM, 1>;
+        tile_f32_1 max_f;
+        TCVT(max_f, max_r);         // cast only the reduced per-row amax to fp32
+        compute_cublas_core<OutT, TileM, BlockSize, MaxLowBoundBits, ValidM, 1>(max_f, scale_byte, recip_out);
+    }
 }
 
 template <typename OutT, int TileM, int BlockSize>
@@ -664,39 +739,42 @@ void compute_ocp_scale_not_tail_boxed(
     finalize_scale_recip_u16<BlockSize, TileN, 1, ValidN>(shared_exp, eq_inf, scale_byte, recip_out);
 }
 
-template <typename OutT, int BlockSize, int TileN, uint32_t MaxLowBoundBits = CLAMP_MIN_BITS, int ValidN = TileN>
+// InT ∈ {__bf16, __half, float}. Reduce block amax in the INPUT dtype's VALUE
+// domain (TABS + TCOLMAX), then cast ONLY the reduced per-column amax to fp32.
+// fp32 skips the cast (already fp32). Mirrors AscendC ComputeScaleCublas{Bf16,
+// Half,Fp32}. The reduced result stays boxed valid row=1: no TCOLEXPAND, the
+// per-column scalar drives the bit-math and the fused TCOLEXPANDMUL.
+//
+// DOMAIN NOTE vs AscendC: AscendC's ComputeScaleCublas reduces in the uint16/uint32
+// ABS-BIT domain (And(ABS_MASK) + Max). This value-domain reduce is byte-identical
+// for all FINITE inputs: for non-negative values the abs-bit order is monotonic in
+// magnitude, so value-max == bit-max. The single-pass plain kernel can use TCOLMAX
+// directly (no cross-chunk seed, so no InT TEXPANDS -- which would crash the LinxV5
+// backend for bf16, see the bigbs kernel). The ONE unverified edge is a block with
+// NaN: AscendC's bit-max selects the NaN bits -> compute_cublas_core's `finite`
+// mask -> 0xff scale; this value-domain TCOLMAX depends on the hardware's NaN-max
+// propagation (untestable under the current skew). If strict NaN-parity is required,
+// switch this reduce to the abs-bit domain (as the bigbs kernel does).
+template <typename OutT, typename InT, int BlockSize, int TileN, uint32_t MaxLowBoundBits = CLAMP_MIN_BITS, int ValidN = TileN>
 void compute_cublas_scale_not_tail(
-    Tile<Location::Vec, __bf16,   BlockSize, TileN, BLayout::RowMajor, BlockSize, ValidN> &x_bf16,
+    Tile<Location::Vec, InT,      BlockSize, TileN, BLayout::RowMajor, BlockSize, ValidN> &x_in,
     Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, ValidN> &scale_byte,
     Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, ValidN> &recip_out) {
     using namespace pto;
-    using tile_bf16   = Tile<Location::Vec, __bf16, BlockSize, TileN, BLayout::RowMajor, BlockSize, ValidN>;
-    using tile_bf16_1 = Tile<Location::Vec, __bf16, BlockSize, TileN, BLayout::RowMajor, 1, ValidN>;
-    using tile_f32_1  = Tile<Location::Vec, float,  BlockSize, TileN, BLayout::RowMajor, 1, ValidN>;
-    // Reduce block amax in the bf16 VALUE domain (TABS + bf16 TCOLMAX), then cast
-    // ONLY the reduced per-column amax to fp32. The reduced result stays boxed
-    // valid row=1 through the whole cuBLAS core: no TCOLEXPAND, the per-column
-    // scalar drives the bit-math and the fused TCOLEXPANDMUL.
-    //
-    // DOMAIN NOTE vs AscendC: AscendC's ComputeScaleCublas reduces in the uint16
-    // ABS-BIT domain (And(x, BF16_ABS_MASK) + uint16 Max). This bf16 value-domain
-    // reduce is byte-identical to AscendC for all FINITE inputs: for non-negative
-    // bf16 the abs-bit order is monotonic in magnitude, so value-max == bit-max.
-    // The single-pass plain kernel can use bf16 TCOLMAX directly (no cross-chunk
-    // seed, so no bf16 TEXPANDS -- which would crash the LinxV5 backend, see the
-    // bigbs kernel). The ONE unverified edge is a block containing NaN: AscendC's
-    // bit-max deterministically selects the NaN bits -> compute_cublas_core's
-    // `finite` mask -> 0xff scale; this bf16 TCOLMAX depends on the hardware's
-    // NaN-propagation semantics for max (untestable under the current skew). If
-    // strict NaN-parity is ever required, switch this reduce to the uint16 abs-bit
-    // domain (as the bigbs kernel does) at the cost of one reinterpret roundtrip.
-    tile_bf16 abs_x;
-    TABS(abs_x, x_bf16);
-    tile_bf16_1 max_r;
-    TCOLMAX(max_r, abs_x);          // reduce rows -> ValidRow == 1 (bf16)
-    tile_f32_1 max_f;
-    TCVT(max_f, max_r);             // cast only the reduced per-column amax
-    compute_cublas_core<OutT, BlockSize, TileN, MaxLowBoundBits, 1, ValidN>(max_f, scale_byte, recip_out);
+    using tile_in   = Tile<Location::Vec, InT, BlockSize, TileN, BLayout::RowMajor, BlockSize, ValidN>;
+    using tile_in_1 = Tile<Location::Vec, InT, BlockSize, TileN, BLayout::RowMajor, 1, ValidN>;
+    tile_in abs_x;
+    TABS(abs_x, x_in);
+    tile_in_1 max_r;
+    TCOLMAX(max_r, abs_x);          // reduce rows -> ValidRow == 1 (InT domain)
+    if constexpr (std::is_same_v<InT, float>) {
+        compute_cublas_core<OutT, BlockSize, TileN, MaxLowBoundBits, 1, ValidN>(max_r, scale_byte, recip_out);
+    } else {
+        using tile_f32_1 = Tile<Location::Vec, float, BlockSize, TileN, BLayout::RowMajor, 1, ValidN>;
+        tile_f32_1 max_f;
+        TCVT(max_f, max_r);         // cast only the reduced per-column amax to fp32
+        compute_cublas_core<OutT, BlockSize, TileN, MaxLowBoundBits, 1, ValidN>(max_f, scale_byte, recip_out);
+    }
 }
 
 template <typename OutT, int BlockSize, int TileN>

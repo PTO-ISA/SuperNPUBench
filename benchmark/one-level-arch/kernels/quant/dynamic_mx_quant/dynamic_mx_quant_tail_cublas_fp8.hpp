@@ -25,12 +25,12 @@ namespace supernpu::tile_isa::mxquant {
 // wider input dtype shrinks TileM); the data path stays bf16 (static_assert below).
 template <int M, int K, int BlockSize = 32, typename OutT = __fp8_e4m3,
           typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
-void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
+void dynamic_mx_quant_tail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
     static_assert(M > 0 && K > 0, "dim must be positive");
     static_assert(K % BlockSize == 0, "K must be multiple of BlockSize");
-    static_assert(std::is_same_v<InT, __bf16>,
-                  "InT is budget-aware only; the data path is bf16-only for now "
-                  "(fp32/fp16 input data paths are deferred)");
+    static_assert(std::is_same_v<InT, __bf16> || std::is_same_v<InT, __half> ||
+                      std::is_same_v<InT, float>,
+                  "InT must be one of {__bf16, __half, float}");
 
     constexpr int TileM  = max_tilem<M, BlockSize, InT, /*IsCublas=*/true>();
     constexpr int full_m = M / TileM;
@@ -43,7 +43,7 @@ void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
 
     using namespace pto;
 
-    using tile_x     = Tile<Location::Vec, __bf16,   TileM, BlockSize, BLayout::RowMajor>;
+    using tile_x     = Tile<Location::Vec, InT,      TileM, BlockSize, BLayout::RowMajor>;
     using tile_f     = Tile<Location::Vec, float,    TileM, BlockSize, BLayout::RowMajor>;
     using tile_o     = Tile<Location::Vec, OutT,     TileM, BlockSize, BLayout::RowMajor>;
     using tile_scale = Tile<Location::Vec, uint16_t, TileM, BlockSize, BLayout::RowMajor>;
@@ -57,7 +57,7 @@ void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
     using tile_recip_bf1 = Tile<Location::Vec, __bf16, TileM, BlockSize, BLayout::RowMajor, TileM, 1>;
     using tile_recip_f1  = Tile<Location::Vec, float,  TileM, BlockSize, BLayout::RowMajor, TileM, 1>;
 
-    using gm_x = global_tensor<__bf16,   RowMajor<M, K>>;
+    using gm_x = global_tensor<InT,      RowMajor<M, K>>;
     using gm_y = global_tensor<uint8_t,  RowMajor<M, K>>;
     using gm_s = global_tensor<uint8_t,  RowMajor<M, scaleCols>>;
 
@@ -80,7 +80,7 @@ void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
             tile_sred recip;
             tile_x xq_s;
             TLOAD(xq_s, gx);
-            compute_cublas_scale_tail<OutT, TileM, BlockSize, MaxLowBoundBits>(xq_s, scale_byte, recip);
+            compute_cublas_scale_tail<OutT, InT, TileM, BlockSize, MaxLowBoundBits>(xq_s, scale_byte, recip);
             // scale_byte already boxed valid col=1; narrow to uint8, store 1 byte/block.
             tile_sstore scale_u8;
             TCVT(scale_u8, scale_byte);
@@ -92,14 +92,21 @@ void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
             tile_recip_f1 inv_scale_f;
             TCVT(inv_scale_f, inv_bf16);
 
-            // ComputeData pass: reload the bf16 value view now.
+            // ComputeData pass: reload the value view now.
             tile_x xq;
             TLOAD(xq, gx);
-            tile_f xf;
-            TCVT(xf, xq);
-            TROWEXPANDMUL(xf, xf, inv_scale_f); // per-row scalar broadcast-mul
             tile_o oq;
-            TCVT(oq, xf);
+            if constexpr (std::is_same_v<InT, float>) {
+                // fp32 input already in the compute domain: mul in fp32 directly
+                // (mirrors AscendC ComputeData fp32 branch, no pre-cast).
+                TROWEXPANDMUL(xq, xq, inv_scale_f);
+                TCVT(oq, xq);
+            } else {
+                tile_f xf;
+                TCVT(xf, xq); // bf16/half -> fp32
+                TROWEXPANDMUL(xf, xf, inv_scale_f); // per-row scalar broadcast-mul
+                TCVT(oq, xf);
+            }
             TSTORE(gy, oq);
         }
     }
@@ -110,7 +117,7 @@ void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
     // every tile to ValidRow = M_tail so only the live rows are touched. The row
     // block is addressed at index full_m (iterator i-stride uses PHYSICAL Rows).
     if constexpr (M_tail > 0) {
-        using tile_x_r      = Tile<Location::Vec, __bf16,   TileM, BlockSize, BLayout::RowMajor, M_tail, BlockSize>;
+        using tile_x_r      = Tile<Location::Vec, InT,      TileM, BlockSize, BLayout::RowMajor, M_tail, BlockSize>;
         using tile_f_r      = Tile<Location::Vec, float,    TileM, BlockSize, BLayout::RowMajor, M_tail, BlockSize>;
         using tile_o_r      = Tile<Location::Vec, OutT,     TileM, BlockSize, BLayout::RowMajor, M_tail, BlockSize>;
         using tile_scale_r  = Tile<Location::Vec, uint16_t, TileM, BlockSize, BLayout::RowMajor, M_tail, BlockSize>;
@@ -132,7 +139,7 @@ void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
             tile_sred_r recip;
             tile_x_r xq_s;
             TLOAD(xq_s, gx);
-            compute_cublas_scale_tail<OutT, TileM, BlockSize, MaxLowBoundBits, M_tail>(xq_s, scale_byte, recip);
+            compute_cublas_scale_tail<OutT, InT, TileM, BlockSize, MaxLowBoundBits, M_tail>(xq_s, scale_byte, recip);
             tile_sstore_r scale_u8;
             TCVT(scale_u8, scale_byte);
             TSTORE(gs, scale_u8);
@@ -145,11 +152,16 @@ void dynamic_mx_quant_tail_cublas_fp8(__bf16 *x, OutT *y, uint8_t *scale) {
 
             tile_x_r xq;
             TLOAD(xq, gx);
-            tile_f_r xf;
-            TCVT(xf, xq);
-            TROWEXPANDMUL(xf, xf, inv_scale_f); // per-row scalar broadcast-mul
             tile_o_r oq;
-            TCVT(oq, xf);
+            if constexpr (std::is_same_v<InT, float>) {
+                TROWEXPANDMUL(xq, xq, inv_scale_f);
+                TCVT(oq, xq);
+            } else {
+                tile_f_r xf;
+                TCVT(xf, xq); // bf16/half -> fp32
+                TROWEXPANDMUL(xf, xf, inv_scale_f); // per-row scalar broadcast-mul
+                TCVT(oq, xf);
+            }
             TSTORE(gy, oq);
         }
     }

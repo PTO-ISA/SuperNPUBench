@@ -73,8 +73,8 @@ static void ocp_scale_from_maxexp_not_tail_boxed_bigbs(
 // the plain kernel cannot cover; small BS also works but the plain kernel is
 // cheaper there (no split/re-read). Default R_sub=32, TileN=64.
 template <int Axis, int Post, int BlockSize, int TileN = 64, int R_sub = 32,
-          typename OutT = __fp4_e2m1x2>
-void dynamic_mx_quant_nontail_ocp_fp4_bigbs(__bf16 *x, OutT *y, uint8_t *scale) {
+          typename OutT = __fp4_e2m1x2, typename InT = __bf16>
+void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
     static_assert(Axis > 0 && Post > 0, "dims must be positive");
     static_assert(Axis % BlockSize == 0, "Axis must be multiple of BlockSize");
     static_assert(Post % TileN == 0, "Post must be multiple of TileN");
@@ -98,7 +98,7 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(__bf16 *x, OutT *y, uint8_t *scale) 
     using namespace pto;
 
     // Sub-chunk data/input tiles: physical [R_sub, TileN].
-    using tile_x  = Tile<Location::Vec, __bf16,   R_sub, TileN,     BLayout::RowMajor>;
+    using tile_x  = Tile<Location::Vec, InT,      R_sub, TileN,     BLayout::RowMajor>;
     using tile_xu = Tile<Location::Vec, uint16_t, R_sub, TileN,     BLayout::RowMajor>;
     using tile_f  = Tile<Location::Vec, float,    R_sub, TileN,     BLayout::RowMajor>;
     using tile_o  = Tile<Location::Vec, OutT,     R_sub, TileN / 2, BLayout::RowMajor>;
@@ -108,7 +108,7 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(__bf16 *x, OutT *y, uint8_t *scale) 
     using tile_recip_bf1 = Tile<Location::Vec, __bf16,   R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_f1  = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
 
-    using gm_x  = global_tensor<__bf16,   RowMajor<Axis, Post>>;
+    using gm_x  = global_tensor<InT,      RowMajor<Axis, Post>>;
     using gm_xu = global_tensor<uint16_t, RowMajor<Axis, Post>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<Axis, Post / 2>>;
     // scale: uint8 E8M0, compact planar [scaleRows, Post], one byte per block.
@@ -127,9 +127,21 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(__bf16 *x, OutT *y, uint8_t *scale) 
                 // absolute sub-chunk row-block index; R_sub == tile height ==
                 // iterator i-stride, so no base-pointer fold needed for x.
                 const int rb = kb * numSub + s;
-                auto gxu = xu_iter(rb, n);
+                // Regularize InT input -> uint16 bf16-exponent bits (shared reduce).
                 tile_xu x_u16;
-                TLOAD(x_u16, gxu);
+                if constexpr (std::is_same_v<InT, __bf16>) {
+                    auto gxu = xu_iter(rb, n);
+                    TLOAD(x_u16, gxu);
+                } else {
+                    auto gx = x_iter(rb, n);
+                    tile_x xin;
+                    TLOAD(xin, gx);
+                    if constexpr (std::is_same_v<InT, __half>) {
+                        half_to_bf16bits<4, R_sub, TileN>(xin, x_u16);
+                    } else {
+                        f32_to_bf16expbits<4, R_sub, TileN>(xin, x_u16);
+                    }
+                }
                 tile_xu exp_bits;
                 TANDS(exp_bits, x_u16, BF16_EXP_MASK);
                 tile_box partial;
@@ -170,11 +182,16 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(__bf16 *x, OutT *y, uint8_t *scale) 
                 auto gy = y_iter(rb, n);
                 tile_x xq;
                 TLOAD(xq, gx);
-                tile_f xf;
-                TCVT(xf, xq);
-                TCOLEXPANDMUL(xf, xf, inv_scale_f); // per-column scalar broadcast
                 tile_o oq;
-                TCVT(oq, xf); // fp32 -> packed fp4_e2m1x2 (Post halved)
+                if constexpr (std::is_same_v<InT, float>) {
+                    TCOLEXPANDMUL(xq, xq, inv_scale_f); // fp32 domain mul (no pre-cast)
+                    TCVT(oq, xq); // fp32 -> packed fp4_e2m1x2 (Post halved)
+                } else {
+                    tile_f xf;
+                    TCVT(xf, xq); // bf16/half -> fp32
+                    TCOLEXPANDMUL(xf, xf, inv_scale_f); // per-column scalar broadcast
+                    TCVT(oq, xf); // fp32 -> packed fp4_e2m1x2 (Post halved)
+                }
                 TSTORE(gy, oq);
             }
         }

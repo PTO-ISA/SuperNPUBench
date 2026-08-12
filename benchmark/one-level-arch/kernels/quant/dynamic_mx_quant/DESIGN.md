@@ -244,26 +244,33 @@ finalize_scale_recip_u16(shared_exp, eq_inf, scale_byte, recip_out)
 
 ### 3.4 量化主计算（各 kernel 入口中）
 
-各 kernel 采用 **ComputeScale → ComputeData 两遍结构**：先只让本算法所需视图存活算出 scale/recip 并立即存储 scale，再在数据遍加载 bf16 值。因专门化，**无 `if(Alg)` 分支**：
+各 kernel 采用 **ComputeScale → ComputeData 两遍结构**：先只让本算法所需视图存活算出 scale/recip 并立即存储 scale，再在数据遍加载输入值。因专门化，**无 `if(Alg)` 分支**：
 
 ```
-// ---- ComputeScale 遍 ----
-[OCP/DynRange]  TLOAD(x_u16, gxu) ; compute_{ocp,dynamic_range}_scale_*(x_u16, scale_byte, recip)
-[cuBLAS-tail]   TLOAD(xq_s, gx) ; TCVT(x_f32, xq_s) ; compute_cublas_scale_tail(x_f32, ...)
-[cuBLAS-nontail] TLOAD(xq_s, gx) ; compute_cublas_scale_not_tail(xq_s, ...)   // 取 bf16 视图
+// ---- ComputeScale 遍（按 InT if constexpr 正则化，镜像 AscendC ComputeMaxExp{Ocp,Cublas}{Bf16,Half,Fp32}）----
+[OCP/DynRange -> 统一 uint16 bf16-指数域 x_u16]
+    InT==__bf16 : TLOAD(x_u16, gxu)                              // 指针 reinterpret，原路径不变（零回归）
+    InT==__half : TLOAD(xin, gx) ; half_to_bf16bits(xin→x_u16)   // TCVT half→bf16(TRUNC)+取指数位；inf/nan 靠下游 eq_inf==0x7F80
+    InT==float  : TLOAD(xin, gx) ; f32_to_bf16expbits(xin→x_u16) // f32→u32 + TANDS(0x7F800000) + TSHRS(16) + narrow uint16
+    compute_{ocp,dynamic_range}_scale_*(x_u16, scale_byte, recip)
+[cuBLAS -> 统一 fp32 amax]  TLOAD(xq_s, gx) ; compute_cublas_scale_{tail,not_tail}<OutT, InT, ...>(xq_s, ...)
+    //  内部：TABS + TROWMAX/TCOLMAX 在 InT 值域；if constexpr(InT==float) 免 fp32-cast，否则 TCVT InT→fp32；compute_cublas_core 不变
 TSTORE(gs, scale_byte)
 
 // 由 recip 位模式构造 fp32 乘子（无 TCAST，走内存别名）
 reinterpret_u16_to_bf16(recip → inv_bf16) ; TCVT(inv_scale_f, inv_bf16)
 
-// ---- ComputeData 遍 ----
-TLOAD(xq, gx) ; TCVT(xf, xq)
-[tail]    TMUL(xf, xf, inv_scale_f)             // 逐元素
-[nontail] TCOLEXPANDMUL(xf, xf, inv_scale_f)    // 沿列广播
-preserve_neg_zero(xf)                           // -0 保号，对齐 AscendC common.h:224-254
-TCVT(oq, xf)                                    // fp32 → OutT（FP8 或 FP4 打包），rint 单步舍入
+// ---- ComputeData 遍（按 InT if constexpr 三分支，镜像 AscendC ComputeData line 785）----
+TLOAD(xq, gx)
+    InT==float          : TMUL/TExpandMul(xq, xq, inv_scale_f)   // 直接 fp32 域乘，免前置 cast
+    InT∈{__bf16,__half} : TCVT(xf, xq) ; TMUL/TExpandMul(xf, xf, inv_scale_f)  // 先升 fp32 再乘
+    // tail 用 TROWEXPANDMUL/TMUL（逐元素/沿行），nontail 用 TCOLEXPANDMUL（沿列广播）
+preserve_neg_zero(...)                          // -0 保号，对齐 AscendC common.h:224-254
+TCVT(oq, ...)                                   // fp32 → OutT（FP8 或 FP4 打包），rint 单步舍入
 TSTORE(gy, oq)
 ```
+
+> **类型分派集中于「输入正则化」一处**（对齐 AscendC 把类型差异收敛到 `Compute()` line 920-940）：scale 域后半段（`compute_*_scale_*` 的 clamp/finalize）与整条 ComputeData 结构三类型共享。发射能力经 `dtype_probe.cpp` 反汇编确认。bigbs cuBLAS pass1 的 bf16 分支保持 uint16 abs-bit 域（精确匹配 AscendC 且 `TEXPANDS(0)` uint16 种子合法），half/fp32 用值域归约 + peeled-首子块种子 + running-`TMAX`。
 
 **输出落 dtype（fp8 与 fp4）一律用裸 `TCVT` 单步直转即正确，不照搬 AscendC 的 fp32→bf16→窄类型两步 + 显式栅格舍入。** PTO-ISA 的 `TCVT` 原生支持 `fp32 → fp8` 与 `fp32 → fp4` 的单步直转；AscendC 的 `Reg::Cast` 缺这两个组合，被迫 `fp32 → bf16 → 窄类型` 两步。二者是不同的封装机制，不是同一条硬件约束——本次实现 kernel 全部直转，不移植 AscendC 的两步绕行。
 
@@ -273,7 +280,7 @@ TSTORE(gy, oq)
 
 ### 4.1 入口签名（4 个专门化 tail kernel）
 
-> **落地差异（当前实现，见 README「Tile 旋钮编译期推导」）**：`TileM`/`TileN`/`R_sub` **已从公开签名移除**，改由算子输入 + `InT` 预算 constexpr 推导（`max_tilem`/`pick_tilen`/`max_rsub`）；`InT` 作模板参数只做预算感知、数据路径仍 bf16（`static_assert(InT==__bf16)`）。非尾轴入口 `if constexpr` 无合法 `TileN` 时**自动路由**到 `_bigbs` 方案 A（独立 bigbs TYPE 已删）。下方签名保留 `TileM`/`TileN` 仅作**结构示意**。
+> **落地差异（当前实现，见 README「Tile 旋钮编译期推导」）**：`TileM`/`TileN`/`R_sub` **已从公开签名移除**，改由算子输入 + `InT` 预算 constexpr 推导（`max_tilem`/`pick_tilen`/`max_rsub`）；`InT` 既做预算感知，**又是真实数据路径**（`fp16(__half)`/`bf16(__bf16)`/`fp32(float)`，`if constexpr` 分派，`static_assert(InT ∈ {__bf16,__half,float})`，见 §3.4）。非尾轴入口 `if constexpr` 无合法 `TileN` 时**自动路由**到 `_bigbs` 方案 A（独立 bigbs TYPE 已删）。下方签名 `__bf16 *x` 是默认实参，实际形参为 `InT *x`；`TileM`/`TileN` 保留仅作**结构示意**。
 
 ```cpp
 template <int M, int K, int TileM=8, int BlockSize=32, typename OutT=__fp8_e4m3>

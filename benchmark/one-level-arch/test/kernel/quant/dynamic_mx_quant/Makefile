@@ -29,9 +29,19 @@ ifeq ($(TYPE), FP4_PROBE)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_fp4_probe.elf
 endif
 
+ifeq ($(TYPE), DTYPE_PROBE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/dtype_probe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_dtype_probe.elf
+endif
+
 ifeq ($(TYPE), BS512_CUBLAS)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/bs512_cublas.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_bs512_cublas.elf
+endif
+
+ifeq ($(TYPE), ALIGN32_PROBE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/align32_probe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_align32_probe.elf
 endif
 
 include ../../../common/Makefile.common

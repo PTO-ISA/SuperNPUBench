@@ -54,8 +54,9 @@ namespace supernpu::tile_isa::mxquant {
 // for the BS>=96 range the plain kernel cannot cover; small BS also works but the
 // plain kernel is cheaper there (no split/re-read). Default R_sub=32, TileN=32.
 template <int Axis, int Post, int BlockSize, int TileN = 32, int R_sub = 32,
-          typename OutT = __fp8_e4m3, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
-void dynamic_mx_quant_nontail_cublas_fp8_bigbs(__bf16 *x, OutT *y, uint8_t *scale) {
+          typename OutT = __fp8_e4m3, typename InT = __bf16,
+          uint32_t MaxLowBoundBits = 0x2b8cbcccu>
+void dynamic_mx_quant_nontail_cublas_fp8_bigbs(InT *x, OutT *y, uint8_t *scale) {
     static_assert(Axis > 0 && Post > 0, "dims must be positive");
     static_assert(Axis % BlockSize == 0, "Axis must be multiple of BlockSize");
     static_assert(Post % TileN == 0, "Post must be multiple of TileN");
@@ -82,19 +83,20 @@ void dynamic_mx_quant_nontail_cublas_fp8_bigbs(__bf16 *x, OutT *y, uint8_t *scal
     using namespace pto;
 
     // Sub-chunk data/input tiles: physical [R_sub, TileN].
-    using tile_x  = Tile<Location::Vec, __bf16,   R_sub, TileN, BLayout::RowMajor>;
+    using tile_x  = Tile<Location::Vec, InT,      R_sub, TileN, BLayout::RowMajor>;
     using tile_xu = Tile<Location::Vec, uint16_t, R_sub, TileN, BLayout::RowMajor>;
     using tile_f  = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor>;
     using tile_o  = Tile<Location::Vec, OutT,     R_sub, TileN, BLayout::RowMajor>;
     // Boxed (valid row=1) accumulator / scale / recip: one scalar per Post column.
     using tile_box       = Tile<Location::Vec, uint16_t, R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_amax_bf1  = Tile<Location::Vec, __bf16,   R_sub, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_amax_in   = Tile<Location::Vec, InT,      R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_f32_1     = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_sstore    = Tile<Location::Vec, uint8_t,  R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_bf1 = Tile<Location::Vec, __bf16,   R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_f1  = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
 
-    using gm_x  = global_tensor<__bf16,   RowMajor<Axis, Post>>;
+    using gm_x  = global_tensor<InT,      RowMajor<Axis, Post>>;
     using gm_xu = global_tensor<uint16_t, RowMajor<Axis, Post>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<Axis, Post>>;
     // scale: uint8 E8M0, compact planar [scaleRows, Post], one byte per block.
@@ -125,27 +127,70 @@ void dynamic_mx_quant_nontail_cublas_fp8_bigbs(__bf16 *x, OutT *y, uint8_t *scal
             // plain nontail_cublas_fp8 uses a bf16 value-domain reduce (TABS + bf16
             // TCOLMAX, single-pass so no cross-chunk seed) which is numerically
             // equivalent for finite non-negative values.
-            tile_box max_abs_acc;
-            TEXPANDS(max_abs_acc, static_cast<uint16_t>(0)); // running max seed
-            for (int s = 0; s < numSub; ++s) {
-                // absolute sub-chunk row-block index; R_sub == tile height ==
-                // iterator i-stride, so no base-pointer fold needed for x.
-                const int rb = kb * numSub + s;
-                auto gxu = xu_iter(rb, n);
-                tile_xu x_u16;
-                TLOAD(x_u16, gxu);
-                tile_xu abs_bits;
-                TANDS(abs_bits, x_u16, BF16_ABS_MASK);   // drop sign bit
-                tile_box partial;
-                TCOLMAX(partial, abs_bits);              // rows -> valid row=1
-                TMAX(max_abs_acc, max_abs_acc, partial); // cross-sub-chunk accum
-            }
-            // reinterpret accumulated abs bits -> bf16 -> fp32 amax for the core.
-            tile_amax_bf1 amax_bf16;
-            // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题4
-            reinterpret_u16_to_bf16<2, R_sub, TileN, 1, TileN>(max_abs_acc, amax_bf16);
             tile_f32_1 max_f;
-            TCVT(max_f, amax_bf16);                  // cast reduced amax to fp32
+            if constexpr (std::is_same_v<InT, __bf16>) {
+                // bf16: uint16 abs-BIT domain reduce (OP-FAITHFUL to AscendC bf16
+                // branch; uint16 TEXPANDS(0) seed legal where a bf16 seed crashes).
+                tile_box max_abs_acc;
+                TEXPANDS(max_abs_acc, static_cast<uint16_t>(0)); // running max seed
+                for (int s = 0; s < numSub; ++s) {
+                    // absolute sub-chunk row-block index; R_sub == tile height ==
+                    // iterator i-stride, so no base-pointer fold needed for x.
+                    const int rb = kb * numSub + s;
+                    auto gxu = xu_iter(rb, n);
+                    tile_xu x_u16;
+                    TLOAD(x_u16, gxu);
+                    tile_xu abs_bits;
+                    TANDS(abs_bits, x_u16, BF16_ABS_MASK);   // drop sign bit
+                    tile_box partial;
+                    TCOLMAX(partial, abs_bits);              // rows -> valid row=1
+                    TMAX(max_abs_acc, max_abs_acc, partial); // cross-sub-chunk accum
+                }
+                // reinterpret accumulated abs bits -> bf16 -> fp32 amax for the core.
+                tile_amax_bf1 amax_bf16;
+                // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题4
+                reinterpret_u16_to_bf16<2, R_sub, TileN, 1, TileN>(max_abs_acc, amax_bf16);
+                TCVT(max_f, amax_bf16);                  // cast reduced amax to fp32
+            } else if constexpr (std::is_same_v<InT, float>) {
+                // fp32: reduce amax in the fp32 VALUE domain (full precision, no
+                // reinterpret). Peel sub-chunk 0 to seed the running max (avoids any
+                // seed immediate); accumulate the rest via elementwise TMAX. The
+                // reduced amax is already fp32 -> flows straight into the core.
+                {
+                    auto gx0 = x_iter(kb * numSub + 0, n);
+                    tile_x xq0; TLOAD(xq0, gx0);
+                    tile_x abs0; TABS(abs0, xq0);
+                    TCOLMAX(max_f, abs0);                // seed = sub-chunk 0 col-max
+                }
+                for (int s = 1; s < numSub; ++s) {
+                    const int rb = kb * numSub + s;
+                    auto gx = x_iter(rb, n);
+                    tile_x xq; TLOAD(xq, gx);
+                    tile_x abs_x; TABS(abs_x, xq);
+                    tile_f32_1 partial; TCOLMAX(partial, abs_x);
+                    TMAX(max_f, max_f, partial);
+                }
+            } else {
+                // half: reduce amax in the half VALUE domain (keeps full mantissa; no
+                // half->bf16 pre-cast). Peeled seed + elementwise TMAX, then TCVT the
+                // reduced half amax to fp32. Mirrors generic compute_cublas_scale.
+                tile_amax_in acc;
+                {
+                    auto gx0 = x_iter(kb * numSub + 0, n);
+                    tile_x xq0; TLOAD(xq0, gx0);
+                    tile_x abs0; TABS(abs0, xq0);
+                    TCOLMAX(acc, abs0);                  // seed = sub-chunk 0 col-max
+                }
+                for (int s = 1; s < numSub; ++s) {
+                    const int rb = kb * numSub + s;
+                    auto gx = x_iter(rb, n);
+                    tile_x xq; TLOAD(xq, gx);
+                    tile_x abs_x; TABS(abs_x, xq);
+                    tile_amax_in partial; TCOLMAX(partial, abs_x);
+                    TMAX(acc, acc, partial);
+                }
+                TCVT(max_f, acc);                        // half amax -> fp32
+            }
 
             tile_box scale_byte;
             tile_box recip;
@@ -182,11 +227,16 @@ void dynamic_mx_quant_nontail_cublas_fp8_bigbs(__bf16 *x, OutT *y, uint8_t *scal
                 auto gy = y_iter(rb, n);
                 tile_x xq;
                 TLOAD(xq, gx);
-                tile_f xf;
-                TCVT(xf, xq);
-                TCOLEXPANDMUL(xf, xf, inv_scale_f); // per-column scalar broadcast
                 tile_o oq;
-                TCVT(oq, xf); // fp32 -> fp8
+                if constexpr (std::is_same_v<InT, float>) {
+                    TCOLEXPANDMUL(xq, xq, inv_scale_f); // per-column scalar broadcast
+                    TCVT(oq, xq); // fp32 -> fp8
+                } else {
+                    tile_f xf;
+                    TCVT(xf, xq); // bf16/half -> fp32
+                    TCOLEXPANDMUL(xf, xf, inv_scale_f); // per-column scalar broadcast
+                    TCVT(oq, xf); // fp32 -> fp8
+                }
                 TSTORE(gy, oq);
             }
         }

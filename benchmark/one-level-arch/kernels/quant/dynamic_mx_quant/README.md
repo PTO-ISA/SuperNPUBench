@@ -33,7 +33,11 @@
 **`TileM`/`TileN`/`R_sub` 不再是调用方模板参数**，改由算子输入 + 输入 dtype 预算**编译期推导**（`dynamic_mx_quant_common.hpp` 的 constexpr helper：`max_tilem` / `pick_tilen` / `max_rsub`）：
 - **尾轴**：函数顶部 `TileM = max_tilem<M, Contig, InT, IsCublas>()`——`cublas` Contig=`BlockSize`、`ocp-fp4` Contig=`PW=⌈BlockSize/64⌉×64`（每 tile 一个补齐块，绑定 `TileM*PW`），夹在 `[tilem_min(≥512B tile), budget/Contig]` 与 `M`。
 - **非尾轴**：入口先 `TileN = pick_tilen<BlockSize, Post, OutT, InT, IsCublas>()`；`if constexpr (TileN >= 对齐下界)` 则走 plain 单遍路径，**否则（大 BS 无合法 TileN）自动路由到 `_bigbs` 方案 A**（`R_sub = max_rsub<...>()`）。`if constexpr` 保证未取分支不实例化，故 plain 的 `TileN=0` / bigbs 非法 `R_sub` 不触发 static_assert。
-- **`InT` 仅用于预算推导**（更宽输入 dtype 缩小 tile），**数据路径仍 bf16**——`InT` 作模板参数贯通 + `static_assert(InT==__bf16)` 守住，fp32/fp16 完整数据路径留后续。
+- **`InT` 现为真实数据路径**（`fp16(__half)` / `bf16(__bf16)` / `fp32(float)`，`if constexpr` 分派，镜像 AscendC `Compute()` line 920-940 的 `ComputeMaxExp{Ocp,Cublas}{Bf16,Half,Fp32}`）：`InT` 既作预算推导（更宽输入 dtype 缩小 tile），又贯通到 scale-归约与 data 两条路径。`static_assert(InT ∈ {__bf16,__half,float})`。类型差异集中在**输入正则化**一处（对齐 AscendC）：
+  - **OCP**（归约统一到 uint16 bf16-指数域）：bf16 = 指针 reinterpret→uint16 直取指数位（**原路径不变，零回归**）；half = `TCVT half→bf16`(TRUNC)→取指数位（`half_to_bf16bits`，inf/nan 经下游 `eq_inf==0x7F80` 自然命中，免 Select）；fp32 = `reinterpret f32→u32`→`TANDS(FP32_EXP_MASK)`→`TSHRS(16)`→narrow uint16（`f32_to_bf16expbits`；逐元素指数提取与 Max 归约可交换，故归约后即得 bf16 指数域 max_exp）。
+  - **cuBLAS**（归约统一到 fp32 amax）：三类型均在 InT 值域 `TABS`+`TROWMAX/TCOLMAX`；`if constexpr(InT==float)` 跳过 fp32 cast（已是 fp32），否则 `TCVT InT→fp32`。`compute_cublas_core` 不变。half 全程值域归约、无 half→bf16 前置 cast。
+  - **data 路径三分支**（镜像 `ComputeData` line 785）：fp32 直接 fp32 域乘 recip（免前置 cast）；half/bf16 先 `TCVT→fp32` 再乘再 `TCVT→out`。
+  - bigbs cuBLAS pass1：bf16 保持 uint16 abs-bit 域归约（对齐 AscendC、零回归、`TEXPANDS(0)` uint16 种子合法而 bf16 种子会 crash LinxV5）；half/fp32 用值域归约 + **剥离首子块做种子**（避免立即数种子）+ running-`TMAX`。
 - 预算模型：绑定 tile 8192B；OCP 绑定宽 `sizeof(InT)`、cuBLAS 当前经 fp32 scratch-HBM 往返（问题4）绑定宽 4B（`kRegBitcast` 置 true 后回落 `sizeof(InT)`）。elem 预算：bf16-OCP=4096、bf16-cuBLAS(当前)=2048。对齐下界：fp8 `TileN%32`、fp4 `TileN%64`。
 - **默认 `BS=32` 推导值与改造前一致**（tail-cublas TileM=8、tail-ocp-fp4 PW=64→TileM=8、nontail-cublas TileN=32、nontail-ocp-fp4 TileN=64），零行为回归。
 
@@ -66,7 +70,7 @@ DESIGN 附录 A 是 AscendC 全量有效场景；下表是**当前代码实际�
 
 | 维度 | 当前落地 | 全量目标（见 DESIGN 附录 A） |
 |------|---------|------|
-| 输入类型 | BF16（16bit 域） | + FP16 / FP32（32bit 域，DESIGN §3.1 已设计路径，代码未落地） |
+| 输入类型 | **FP16（`__half`）/ BF16（`__bf16`）/ FP32（`float`）** — `if constexpr` 分派，镜像 AscendC `ComputeMaxExp{Ocp,Cublas}{Bf16,Half,Fp32}`（6 个 kernel 全覆盖，三类型编译+反汇编通过；runtime 待 skew 解除）| （已全量落地） |
 | 输出 dtype | FP8_E4M3、FP4_E2M1 | + FP4_E1M2、FP8_E5M2 |
 | round_mode | rint | + round、floor（仅 FP4 合法） |
 | blockSize | 32 | 32 的倍数、≤1024 |
@@ -89,7 +93,7 @@ DESIGN 附录 A 是 AscendC 全量有效场景；下表是**当前代码实际�
 - [ ] **尾块统一 boxed**：`tail_ocp_fp8` / `tail_dynrange_fp4` 仍是递归尾块——`M%TileM≠0` 时会无限模板递归导致编译失败；默认 `M=8` 时 `M_tail=0` 未触发，属潜在 bug，待统一改为 boxed 部分 tile（参照 `tail_cublas_fp8`）。（`tail_ocp_fp4` 已用 boxed M_tail，不在此列。）
 - [ ] **linx 4 参带 CmpMode 的 TCMP/TCMPS**：cuBLAS 现用 min/max + 默认-EQ 比较模拟 GT/LT/NE；补齐后可切 `compute_cublas_core` 末尾保留的 IDEAL 版（RECORD 问题3，已提 issue）。
 - [ ] **FP4_E1M2 / FP8_E5M2** 输出 dtype（`emax_field` trait 已覆盖，仅缺 kernel/driver）。
-- [ ] **FP16 / FP32 输入**（DESIGN §3.1 32bit 域路径已设计，代码未落地）。
+- [x] **FP16 / FP32 输入**（已落地，`if constexpr` 分派镜像 AscendC `Compute()` 920-940）：6 个 kernel（4 debugged + 2 bigbs）放开 `static_assert(InT ∈ {__bf16,__half,float})`、`InT` 贯通 scale-归约与 data 两路径。正则化域映射：**OCP** half=`TCVT half→bf16`(TRUNC)+取指数位（inf/nan 靠下游 `eq_inf==0x7F80` 命中）、fp32=`f32→u32`+`TANDS(0x7F800000)`+`TSHRS(16)`+narrow（逐元素提取与 Max 归约可交换）；**cuBLAS** 三类型 InT 值域 `TABS`+归约，fp32 免 fp32-cast、half 全程值域无 half→bf16 前置 cast。**data 三分支**：fp32 直接 fp32 域乘、half/bf16 先 `TCVT→fp32`。bf16 走原指针-reinterpret 路径**零回归**。发射能力经 `dtype_probe.cpp` 反汇编确认（`TCVT half→bf16`/`half→fp32`/`fp32→uint16` narrow、uint32 `TANDS`/`TSHRS`/`TROWMAX`/`TCOLMAX`、fp32 `TABS` 均发射真实指令、无对齐/round 断言）。golden 生成器加 `--in-dtype {bf16,fp16,fp32}`（fp16 经 Python `struct 'e'`；scale 域三类型一致、data 域按输入精度）。**runtime 待 skew 解除**（现仅编译+反汇编+逐 op 复核）。
 - [ ] **K 维度尾块** padding（K 非 BlockSize 倍数）。
 - [ ] **多 round_mode**（round / floor，仅 FP4 合法）。
 - [ ] **非尾轴 scale 交织 `[ceil(Axis/32/2), Post, 2]`**：当前 3 个已调试 kernel 输出 **compact 平铺**（归约轴 ÷BlockSize + 偶数对齐，每块 1 字节），但缺 AscendC 最终 mxScale 的 **parity 交织**（even/odd 块行按列 zip）。**阻塞在 linx 头封装缺口（非 ISA 能力缺口）**：`TINTERLEAVE`/`TDEINTERLEAVE` 在 LinxISA 0.57 有定义（`linxisa-0.57-intrinsics.txt:101-102`、`docs/content/intrinsics/{tinterleave,tdeinterleave}.md`），语义即所需 parity zip，但 `-D__linx` 头（仅 `template_asm.hpp`）未暴露其 lowering（详见 RECORD 问题5）——对应 AscendC `DataCopy<DIST_INTLV_B8>` / `Reg::Interleave`（standalone `dynamic_mx_quant_post.h` / swiglu `axis_not_last.h`）。**尾轴无需交织**（块行在行内已连续，平铺即等价，见 host tiling :415-416 / swiglu `axis_last.h:585-592`）。

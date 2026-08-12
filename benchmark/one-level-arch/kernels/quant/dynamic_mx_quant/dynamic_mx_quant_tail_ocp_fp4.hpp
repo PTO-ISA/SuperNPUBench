@@ -56,16 +56,16 @@ namespace supernpu::tile_isa::mxquant {
 // bf16 (static_assert below).
 template <int M, int N, int BlockSize = 32, typename OutT = __fp4_e2m1x2,
           typename InT = __bf16>
-void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
+void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
     static_assert(M > 0 && N > 0, "dim must be positive");
     static_assert(N % BlockSize == 0, "N must be multiple of BlockSize");
     static_assert(BlockSize % 32 == 0,
                   "fp4 output block is BlockSize/2 packed bytes; BlockSize must be "
                   "a multiple of 32 so the padded physical fp4 width PW/2 is "
                   "32B-column-aligned (pto_tile.hpp:408)");
-    static_assert(std::is_same_v<InT, __bf16>,
-                  "InT is budget-aware only; the data path is bf16-only for now "
-                  "(fp32/fp16 input data paths are deferred)");
+    static_assert(std::is_same_v<InT, __bf16> || std::is_same_v<InT, __half> ||
+                      std::is_same_v<InT, float>,
+                  "InT must be one of {__bf16, __half, float}");
 
     using namespace pto;
 
@@ -85,14 +85,14 @@ void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
 
     uint8_t *y_u8 = reinterpret_cast<uint8_t *>(y);
 
-    using gm_x  = global_tensor<__bf16,   RowMajor<M, N>>;
+    using gm_x  = global_tensor<InT,      RowMajor<M, N>>;
     using gm_xu = global_tensor<uint16_t, RowMajor<M, N>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<M, N / 2>>;
     using gm_s  = global_tensor<uint8_t,  RowMajor<M, scaleCols>>;
 
     // Full-tile pass (ValidRow == TileM; boxed row collapses to NoneBox).
     {
-        using tile_x         = Tile<Location::Vec, __bf16,   TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
+        using tile_x         = Tile<Location::Vec, InT,      TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
         using tile_xu        = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
         using tile_sred      = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, TileM, 1>;
         using tile_sstore    = Tile<Location::Vec, uint8_t,  TileM, PW,     BLayout::RowMajor, TileM, 1>;
@@ -104,10 +104,26 @@ void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
         for (int m = 0; m < full_m; ++m) {
             for (int kb = 0; kb < numKb; ++kb) {
                 // --- scale path: col-boxed load + reduce, compact scale store ---
-                global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x) + kb * BlockSize);
-                auto gxu = xu_iter(m, 0);
+                // Regularize the InT input to a uint16 "bf16-exponent-bits" tile so
+                // the shared OCP reduce runs unchanged: bf16 is a free pointer
+                // reinterpret; half casts half->bf16 then views bits; fp32 extracts
+                // the exponent field, >>16, narrows to uint16.
                 tile_xu x_u16;
-                TLOAD(x_u16, gxu);
+                if constexpr (std::is_same_v<InT, __bf16>) {
+                    global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x) + kb * BlockSize);
+                    auto gxu = xu_iter(m, 0);
+                    TLOAD(x_u16, gxu);
+                } else {
+                    global_iterator<gm_x, tile_x> xin_iter(x + kb * BlockSize);
+                    auto gxin = xin_iter(m, 0);
+                    tile_x xin;
+                    TLOAD(xin, gxin);
+                    if constexpr (std::is_same_v<InT, __half>) {
+                        half_to_bf16bits<4, TileM, PW, TileM, BlockSize>(xin, x_u16);
+                    } else {
+                        f32_to_bf16expbits<4, TileM, PW, TileM, BlockSize>(xin, x_u16);
+                    }
+                }
 
                 tile_sred scale_byte;
                 tile_sred recip;
@@ -129,11 +145,16 @@ void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
                 auto gx = x_iter(m, 0);
                 tile_x xq;
                 TLOAD(xq, gx);
-                tile_f xf;
-                TCVT(xf, xq);
-                TROWEXPANDMUL(xf, xf, inv_scale_f); // per-row scalar broadcast-mul
                 tile_o oq;
-                TCVT(oq, xf);                        // fp32 (valid BlockSize) -> fp4 (valid BlockSize/2 bytes)
+                if constexpr (std::is_same_v<InT, float>) {
+                    TROWEXPANDMUL(xq, xq, inv_scale_f); // fp32 domain mul (no pre-cast)
+                    TCVT(oq, xq);                       // fp32 -> fp4
+                } else {
+                    tile_f xf;
+                    TCVT(xf, xq);                       // bf16/half -> fp32
+                    TROWEXPANDMUL(xf, xf, inv_scale_f); // per-row scalar broadcast-mul
+                    TCVT(oq, xf);                       // fp32 (valid BlockSize) -> fp4 (valid BlockSize/2 bytes)
+                }
                 global_iterator<gm_y, tile_o> y_iter(y_u8 + kb * (BlockSize / 2));
                 auto gy = y_iter(m, 0);
                 TSTORE(gy, oq);                       // narrowed store at byte kb*(BlockSize/2)
@@ -154,7 +175,7 @@ void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
 
     // Tail rows: M_tail (< TileM), boxed to ValidRow = M_tail; row block full_m.
     if constexpr (M_tail > 0) {
-        using tile_x         = Tile<Location::Vec, __bf16,   TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
+        using tile_x         = Tile<Location::Vec, InT,      TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
         using tile_xu        = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
         using tile_sred      = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, M_tail, 1>;
         using tile_sstore    = Tile<Location::Vec, uint8_t,  TileM, PW,     BLayout::RowMajor, M_tail, 1>;
@@ -164,10 +185,22 @@ void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
         using tile_o         = Tile<Location::Vec, OutT,     TileM, PW / 2, BLayout::RowMajor, M_tail, BlockSize / 2>;
 
         for (int kb = 0; kb < numKb; ++kb) {
-            global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x) + kb * BlockSize);
-            auto gxu = xu_iter(full_m, 0);
             tile_xu x_u16;
-            TLOAD(x_u16, gxu);
+            if constexpr (std::is_same_v<InT, __bf16>) {
+                global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x) + kb * BlockSize);
+                auto gxu = xu_iter(full_m, 0);
+                TLOAD(x_u16, gxu);
+            } else {
+                global_iterator<gm_x, tile_x> xin_iter(x + kb * BlockSize);
+                auto gxin = xin_iter(full_m, 0);
+                tile_x xin;
+                TLOAD(xin, gxin);
+                if constexpr (std::is_same_v<InT, __half>) {
+                    half_to_bf16bits<4, TileM, PW, M_tail, BlockSize>(xin, x_u16);
+                } else {
+                    f32_to_bf16expbits<4, TileM, PW, M_tail, BlockSize>(xin, x_u16);
+                }
+            }
 
             tile_sred scale_byte;
             tile_sred recip;
@@ -188,11 +221,16 @@ void dynamic_mx_quant_tail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
             auto gx = x_iter(full_m, 0);
             tile_x xq;
             TLOAD(xq, gx);
-            tile_f xf;
-            TCVT(xf, xq);
-            TROWEXPANDMUL(xf, xf, inv_scale_f);
             tile_o oq;
-            TCVT(oq, xf);
+            if constexpr (std::is_same_v<InT, float>) {
+                TROWEXPANDMUL(xq, xq, inv_scale_f); // fp32 domain mul (no pre-cast)
+                TCVT(oq, xq);                       // fp32 -> fp4
+            } else {
+                tile_f xf;
+                TCVT(xf, xq);                       // bf16/half -> fp32
+                TROWEXPANDMUL(xf, xf, inv_scale_f);
+                TCVT(oq, xf);
+            }
             global_iterator<gm_y, tile_o> y_iter(y_u8 + kb * (BlockSize / 2));
             auto gy = y_iter(full_m, 0);
             TSTORE(gy, oq);
