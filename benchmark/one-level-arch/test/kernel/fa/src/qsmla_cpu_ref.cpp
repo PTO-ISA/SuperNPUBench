@@ -1,270 +1,225 @@
-// CPU reference implementation for quant_sparse_flash_mla SWA mode
-// Computes: O = softmax(Q @ K^T * softmax_scale + mask) @ V
-// Where K=V=ori_kv (MLA shared KV), with token-level sliding window mask
+// Stage-0 CPU reference for contiguous FP16 QSMLA SWA.
+// Inputs are rounded to IEEE FP16, while dot products, softmax and output use FP32.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
-#include <stdint.h>
-#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <filesystem>
+#include <limits>
+#include <string>
+#include <vector>
 
-#ifndef S1
-#define S1 64
+#ifndef QB
+#define QB 1
 #endif
-#ifndef S2
-#define S2 128
+#ifndef QS1
+#define QS1 64
 #endif
-#ifndef D
-#define D 512
+#ifndef QS2
+#define QS2 128
 #endif
-#ifndef KTM
-#define KTM 32
+#ifndef QN1
+#define QN1 1
 #endif
-#ifndef KTK
-#define KTK 32
+#ifndef QN2
+#define QN2 1
 #endif
-#ifndef WIN_LEFT
-#define WIN_LEFT 1
+#ifndef QD
+#define QD 512
 #endif
-#ifndef WIN_RIGHT
-#define WIN_RIGHT 1
+#ifndef QK
+#define QK 128
 #endif
-#ifndef SOFTMAX_SCALE
-#define SOFTMAX_SCALE 0.125f
+#ifndef QTM
+#define QTM 32
+#endif
+#ifndef QTK
+#define QTK 32
+#endif
+#ifndef QTD
+#define QTD 64
+#endif
+#ifndef QWIN_LEFT
+#define QWIN_LEFT 1
+#endif
+#ifndef QWIN_RIGHT
+#define QWIN_RIGHT 1
+#endif
+#ifndef QSOFTMAX_SCALE
+#define QSOFTMAX_SCALE 0.125f
+#endif
+#ifndef QCASE_NAME
+#define QCASE_NAME "baseline_swa"
+#endif
+#ifndef QOUTPUT_ROOT
+#define QOUTPUT_ROOT "."
 #endif
 
-typedef float f32_t;
+static_assert(QB > 0, "B must be positive");
+static_assert(QS1 >= 0 && QS2 >= 0, "S1/S2 must be non-negative");
+static_assert(QN1 > 0 && QN2 > 0 && QN1 % QN2 == 0, "N1 must be divisible by N2");
+static_assert(QD > 0 && QK >= 0, "D must be positive and K non-negative");
+static_assert(QTM > 0 && QTK > 0 && QTD > 0, "tile sizes must be positive");
+static_assert(QWIN_LEFT >= -1 && QWIN_RIGHT >= -1, "window bounds must be -1 or non-negative");
 
-static void init_deterministic_f32(f32_t* data, int count, int seed) {
-    for (int i = 0; i < count; ++i) {
-        float val = ((float)((i * 31 + seed * 17) % 100)) / 100.0f - 0.5f;
-        data[i] = val;
+static uint16_t float_to_half(float value) {
+    uint32_t bits;
+    std::memcpy(&bits, &value, sizeof(bits));
+    const uint32_t sign = (bits >> 16) & 0x8000u;
+    uint32_t mantissa = bits & 0x007fffffu;
+    int exponent = static_cast<int>((bits >> 23) & 0xffu) - 127 + 15;
+
+    if (exponent <= 0) {
+        if (exponent < -10) return static_cast<uint16_t>(sign);
+        mantissa = (mantissa | 0x00800000u) >> (1 - exponent);
+        mantissa += 0x00000fffu + ((mantissa >> 13) & 1u);
+        return static_cast<uint16_t>(sign | (mantissa >> 13));
+    }
+    if (exponent >= 31) {
+        return static_cast<uint16_t>(sign | 0x7c00u);
+    }
+    mantissa += 0x00000fffu + ((mantissa >> 13) & 1u);
+    if (mantissa & 0x00800000u) {
+        mantissa = 0;
+        ++exponent;
+        if (exponent >= 31) return static_cast<uint16_t>(sign | 0x7c00u);
+    }
+    return static_cast<uint16_t>(sign | (static_cast<uint32_t>(exponent) << 10) | (mantissa >> 13));
+}
+
+static float half_to_float(uint16_t value) {
+    const uint32_t sign = static_cast<uint32_t>(value & 0x8000u) << 16;
+    uint32_t exponent = (value >> 10) & 0x1fu;
+    uint32_t mantissa = value & 0x03ffu;
+    uint32_t bits;
+    if (exponent == 0) {
+        if (mantissa == 0) {
+            bits = sign;
+        } else {
+            int shift = 0;
+            while ((mantissa & 0x0400u) == 0) {
+                mantissa <<= 1;
+                ++shift;
+            }
+            mantissa &= 0x03ffu;
+            bits = sign | (static_cast<uint32_t>(127 - 15 - shift) << 23) | (mantissa << 13);
+        }
+    } else if (exponent == 31) {
+        bits = sign | 0x7f800000u | (mantissa << 13);
+    } else {
+        bits = sign | ((exponent + 127 - 15) << 23) | (mantissa << 13);
+    }
+    float result;
+    std::memcpy(&result, &bits, sizeof(result));
+    return result;
+}
+
+static void init_deterministic_fp16(std::vector<uint16_t>& storage, std::vector<float>& values, int seed) {
+    for (size_t i = 0; i < storage.size(); ++i) {
+        const float source = static_cast<float>((static_cast<int64_t>(i) * 31 + seed * 17) % 100) / 100.0f - 0.5f;
+        storage[i] = float_to_half(source);
+        values[i] = half_to_float(storage[i]);
     }
 }
 
-// Build token-level SWA mask (SEL semantics)
-// mask[q * s2 + kv] = true  if kv 在窗口外 (被 mask, score 置 -1e30)
-//                   = false if kv 在窗口内 (有效, 保持原 score)
-// valid: diagonal - win_left <= kv <= diagonal + win_right
-//   where diagonal = (s2 - s1) + q
-// Apply: score = mask ? -1e30 : score  (TSEL semantics)
-static void build_swa_mask(bool* mask, int s1, int s2, int win_left, int win_right) {
-    const int causal_offset = s2 - s1;
-    for (int q = 0; q < s1; ++q) {
-        int diagonal = causal_offset + q;
-        int lo = diagonal - win_left;
-        int hi = diagonal + win_right;
-        for (int kv = 0; kv < s2; ++kv) {
-            bool valid = (kv >= lo) && (kv <= hi);
-            mask[q * s2 + kv] = !valid;
-        }
-    }
+static bool swa_valid(int q_pos, int kv_pos) {
+    const int threshold = QS2 - QS1 + q_pos + 1;
+    const int lo = QWIN_LEFT == -1 ? 0 : threshold - QWIN_LEFT - 1;
+    const int hi = QWIN_RIGHT == -1 ? QS2 : threshold + QWIN_RIGHT;
+    return kv_pos >= std::max(0, lo) && kv_pos < std::min(QS2, hi);
 }
 
-// CPU reference: SWA MLA attention with token-level mask (TSEL semantics)
-// Q: [s1, D], KV: [s2, D] (K=V), O: [s1, D]
-void cpu_quant_sparse_flash_mla_swa(
-    f32_t* out, const f32_t* q, const f32_t* kv,
-    const bool* mask,
-    int s1, int s2, int d, int kTm, int kTk,
-    float softmax_scale, int win_left, int win_right)
-{
-    const int Qb = (s1 + kTm - 1) / kTm;
-    const int Kb = (s2 + kTk - 1) / kTk;
+static size_t q_offset(int b, int head, int token, int dim) {
+    return (((static_cast<size_t>(b) * QN1 + head) * QS1 + token) * QD + dim);
+}
 
-    f32_t* score = (f32_t*)malloc(kTm * kTk * sizeof(f32_t));
-    f32_t* p = (f32_t*)malloc(kTm * kTk * sizeof(f32_t));
-    f32_t* pv = (f32_t*)malloc(kTm * d * sizeof(f32_t));
+static size_t kv_offset(int b, int head, int token, int dim) {
+    return (((static_cast<size_t>(b) * QN2 + head) * QS2 + token) * QD + dim);
+}
 
-    for (int qi = 0; qi < Qb; ++qi) {
-
-        // Pass 1: online softmax with mask
-        f32_t row_max[kTm];
-        f32_t row_sum[kTm];
-        for (int r = 0; r < kTm; ++r) {
-            row_max[r] = -1e30f;
-            row_sum[r] = 0.0f;
-        }
-
-        for (int j = 0; j < Kb; ++j) {
-            for (int r = 0; r < kTm; ++r) {
-                int q_row = qi * kTm + r;
-                if (q_row >= s1) continue;
-                for (int c = 0; c < kTk; ++c) {
-                    int kv_row = j * kTk + c;
-                    if (kv_row >= s2) { score[r * kTk + c] = -1e30f; continue; }
-                    f32_t dot = 0.0f;
-                    for (int dd = 0; dd < d; ++dd) {
-                        dot += q[q_row * d + dd] * kv[kv_row * d + dd];
-                    }
-                    // Apply mask: TSEL semantics (mask=true → -1e30, mask=false → keep score)
-                    f32_t raw_score = dot * softmax_scale;
-                    score[r * kTk + c] = mask[q_row * s2 + kv_row] ? -1e30f : raw_score;
-                }
-            }
-
-            for (int r = 0; r < kTm; ++r) {
-                int q_row = qi * kTm + r;
-                if (q_row >= s1) continue;
-
-                f32_t local_max = -1e30f;
-                for (int c = 0; c < kTk; ++c) {
-                    int kv_row = j * kTk + c;
-                    if (kv_row >= s2) continue;
-                    if (score[r * kTk + c] > local_max)
-                        local_max = score[r * kTk + c];
-                }
-
-                f32_t new_max = (row_max[r] > local_max) ? row_max[r] : local_max;
-                f32_t scale_old = expf(row_max[r] - new_max);
-                row_sum[r] *= scale_old;
-
-                for (int c = 0; c < kTk; ++c) {
-                    int kv_row = j * kTk + c;
-                    if (kv_row >= s2) continue;
-                    row_sum[r] += expf(score[r * kTk + c] - new_max);
-                }
-
-                row_max[r] = new_max;
-            }
-        }
-
-        // Pass 2: compute P @ V with mask
-        for (int dd = 0; dd < d; ++dd) {
-            for (int r = 0; r < kTm; ++r) {
-                pv[r * d + dd] = 0.0f;
-            }
-        }
-
-        for (int j = 0; j < Kb; ++j) {
-            for (int r = 0; r < kTm; ++r) {
-                int q_row = qi * kTm + r;
-                if (q_row >= s1) continue;
-                for (int c = 0; c < kTk; ++c) {
-                    int kv_row = j * kTk + c;
-                    if (kv_row >= s2) { p[r * kTk + c] = 0.0f; continue; }
-                    f32_t dot = 0.0f;
-                    for (int dd = 0; dd < d; ++dd) {
-                        dot += q[q_row * d + dd] * kv[kv_row * d + dd];
-                    }
-                    // Apply mask: TSEL semantics (mask=true → -1e30, mask=false → keep score)
-                    f32_t raw_score = dot * softmax_scale;
-                    f32_t s = mask[q_row * s2 + kv_row] ? -1e30f : raw_score;
-                    p[r * kTk + c] = expf(s - row_max[r]) / row_sum[r];
-                }
-            }
-
-            for (int r = 0; r < kTm; ++r) {
-                int q_row = qi * kTm + r;
-                if (q_row >= s1) continue;
-                for (int dd = 0; dd < d; ++dd) {
-                    for (int c = 0; c < kTk; ++c) {
-                        int kv_row = j * kTk + c;
-                        if (kv_row >= s2) continue;
-                        pv[r * d + dd] += p[r * kTk + c] * kv[kv_row * d + dd];
-                    }
-                }
-            }
-        }
-
-        for (int r = 0; r < kTm; ++r) {
-            int q_row = qi * kTm + r;
-            if (q_row >= s1) continue;
-            for (int dd = 0; dd < d; ++dd) {
-                out[q_row * d + dd] = pv[r * d + dd];
-            }
-        }
-    }
-
-    free(score);
-    free(p);
-    free(pv);
+static bool write_binary(const std::filesystem::path& path, const void* data, size_t bytes) {
+    FILE* file = std::fopen(path.string().c_str(), "wb");
+    if (file == nullptr) return false;
+    const bool ok = std::fwrite(data, 1, bytes, file) == bytes;
+    std::fclose(file);
+    return ok;
 }
 
 int main() {
-    int q_count = S1 * D;
-    int kv_count = S2 * D;
-    int out_count = S1 * D;
-    int mask_count = S1 * S2;
+    const size_t q_count = static_cast<size_t>(QB) * QN1 * QS1 * QD;
+    const size_t kv_count = static_cast<size_t>(QB) * QN2 * QS2 * QD;
+    const size_t out_count = q_count;
+    std::vector<uint16_t> q_storage(q_count), kv_storage(kv_count);
+    std::vector<float> q(q_count), kv(kv_count), out(out_count, 0.0f);
+    std::vector<float> scores(QS2);
 
-    f32_t* q = (f32_t*)malloc(q_count * sizeof(f32_t));
-    f32_t* kv = (f32_t*)malloc(kv_count * sizeof(f32_t));
-    f32_t* out = (f32_t*)malloc(out_count * sizeof(f32_t));
-    bool* mask = (bool*)malloc(mask_count * sizeof(bool));
+    init_deterministic_fp16(q_storage, q, 1);
+    init_deterministic_fp16(kv_storage, kv, 2);
 
-    init_deterministic_f32(q, q_count, 1);
-    init_deterministic_f32(kv, kv_count, 2);
+    constexpr int group_size = QN1 / QN2;
+    for (int b = 0; b < QB; ++b) {
+        for (int q_head = 0; q_head < QN1; ++q_head) {
+            const int kv_head = q_head / group_size;
+            for (int q_pos = 0; q_pos < QS1; ++q_pos) {
+                float row_max = -std::numeric_limits<float>::infinity();
+                for (int kv_pos = 0; kv_pos < QS2; ++kv_pos) {
+                    if (!swa_valid(q_pos, kv_pos)) {
+                        scores[kv_pos] = -std::numeric_limits<float>::infinity();
+                        continue;
+                    }
+                    float dot = 0.0f;
+                    for (int d = 0; d < QD; ++d) {
+                        dot += q[q_offset(b, q_head, q_pos, d)] * kv[kv_offset(b, kv_head, kv_pos, d)];
+                    }
+                    scores[kv_pos] = dot * QSOFTMAX_SCALE;
+                    row_max = std::max(row_max, scores[kv_pos]);
+                }
+                if (!std::isfinite(row_max)) continue;
 
-    // for (int i = 0; i < 100; i++){
-    //     std::cout << q[i] << ", ";
-    // }
+                float denominator = 0.0f;
+                for (int kv_pos = 0; kv_pos < QS2; ++kv_pos) {
+                    if (std::isfinite(scores[kv_pos])) denominator += std::exp(scores[kv_pos] - row_max);
+                }
+                for (int d = 0; d < QD; ++d) {
+                    float numerator = 0.0f;
+                    for (int kv_pos = 0; kv_pos < QS2; ++kv_pos) {
+                        if (!std::isfinite(scores[kv_pos])) continue;
+                        const float probability = std::exp(scores[kv_pos] - row_max) / denominator;
+                        numerator += probability * kv[kv_offset(b, kv_head, kv_pos, d)];
+                    }
+                    out[q_offset(b, q_head, q_pos, d)] = numerator;
+                }
+            }
+        }
+    }
 
-    // std::cout << std::endl;
-
-    // for (int i = 0; i < 100; i++){
-    //     std::cout << kv[i] << ", ";
-    // }
-
-    // return 0;
-
-    memset(out, 0, out_count * sizeof(f32_t));
-
-    // f32_t mask1[5][10];
-
-    // build_swa_mask(&mask1[0][0], 5, 10, 2, 2);
-
-    // for(int i = 0; i < 5; i++){
-    //     for(int j = 0; j < 10; j++){
-    //         std::cout << mask1[i][j] << ",       \t";
-    //     }
-    //     std::cout << std::endl;
-    // }
-
-    // return 0;
-
-
-    build_swa_mask(mask, S1, S2, WIN_LEFT, WIN_RIGHT);
-
-    printf("QSMLA_CPU: s1=%d s2=%d D=%d win_left=%d win_right=%d\n",
-           S1, S2, D, WIN_LEFT, WIN_RIGHT);
-    printf("QSMLA_CPU: computing reference with token-level mask...\n");
-    fflush(stdout);
-
-    cpu_quant_sparse_flash_mla_swa(out, q, kv, mask,
-        S1, S2, D, KTM, KTK,
-        SOFTMAX_SCALE, WIN_LEFT, WIN_RIGHT);
-
-    const char* golden_path = "qsmla_golden.bin";
-    FILE* f = fopen(golden_path, "wb");
-    if (!f) {
-        fprintf(stderr, "Failed to open %s\n", golden_path);
+    const std::filesystem::path output_dir = std::filesystem::path(QOUTPUT_ROOT) / QCASE_NAME;
+    std::error_code error;
+    std::filesystem::create_directories(output_dir, error);
+    if (error) {
+        std::fprintf(stderr, "Failed to create %s: %s\n", output_dir.string().c_str(), error.message().c_str());
         return 1;
     }
-    fwrite(out, sizeof(f32_t), out_count, f);
-    fclose(f);
-
-    printf("QSMLA_CPU: golden output written to %s (%d floats, %d bytes)\n",
-           golden_path, out_count, (int)(out_count * sizeof(f32_t)));
-
-    printf("QSMLA_CPU: first 8 output values:\n");
-    for (int i = 0; i < 8 && i < out_count; ++i) {
-        printf("  out[%d] = %.6f\n", i, out[i]);
+    if (!write_binary(output_dir / "q.fp16.bin", q_storage.data(), q_storage.size() * sizeof(uint16_t)) ||
+        !write_binary(output_dir / "kv.fp16.bin", kv_storage.data(), kv_storage.size() * sizeof(uint16_t)) ||
+        !write_binary(output_dir / "out.fp32.bin", out.data(), out.size() * sizeof(float))) {
+        std::fprintf(stderr, "Failed to write reference data under %s\n", output_dir.string().c_str());
+        return 1;
     }
 
-    FILE* fq = fopen("qsmla_input_q.bin", "wb");
-    fwrite(q, sizeof(f32_t), q_count, fq);
-    fclose(fq);
+    FILE* manifest = std::fopen((output_dir / "manifest.txt").string().c_str(), "w");
+    if (manifest == nullptr) return 1;
+    std::fprintf(manifest,
+        "case=%s\nB=%d S1=%d S2=%d N1=%d N2=%d D=%d K=%d\n"
+        "Tm=%d Tk=%d Td=%d win_left=%d win_right=%d softmax_scale=%.9g\n"
+        "q_dtype=fp16 kv_dtype=fp16 accumulation=fp32 out_dtype=fp32\n",
+        QCASE_NAME, QB, QS1, QS2, QN1, QN2, QD, QK,
+        QTM, QTK, QTD, QWIN_LEFT, QWIN_RIGHT, static_cast<double>(QSOFTMAX_SCALE));
+    std::fclose(manifest);
 
-    FILE* fkv = fopen("qsmla_input_kv.bin", "wb");
-    fwrite(kv, sizeof(f32_t), kv_count, fkv);
-    fclose(fkv);
-
-    printf("QSMLA_CPU: input data written to qsmla_input_q.bin and qsmla_input_kv.bin\n");
-
-    free(q);
-    free(kv);
-    free(out);
-    free(mask);
+    std::printf("QSMLA_STAGE0 case=%s output=%s elements=%zu\n",
+        QCASE_NAME, output_dir.string().c_str(), out.size());
     return 0;
 }
