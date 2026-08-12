@@ -18,7 +18,8 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
 
     // 全局张量形状和内存布局。
     // gmK/gmO 都使用 RowMajor，和测试侧线性 buffer 的 [Skv,qD]/[Sq,vD] 布局一致。
-    // K load 成 [kTk,qD] 的 Right tile，作为 TMATMUL 右操作数时等价参与 Q * K^T。
+    // K load 成 [qD, kTk] 的 Right tile（K^T 形状，Rows=qD=K, Cols=kTk=N），
+    // 作为 TMATMUL 右操作数直接参与 Q * K^T。
     using gmQ = global_tensor<dtype, RowMajor<Sq, qD>>;   // Q global: [Sq, qD]
     using gmK = global_tensor<dtype, RowMajor<Skv, qD>>;  // K global: [Skv, qD]
     using gmV = global_tensor<dtype, RowMajor<Skv, vD>>;  // V global: [Skv, vD]
@@ -28,7 +29,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
     //
     // Q/K:
     //   tileQ: L0A/Left tile, logical shape [kTm, qD]。
-    //   tileK: L0B/Right tile, logical loaded shape [kTk, qD] from row-major K.
+    //   tileK: L0B/Right tile, logical loaded shape [qD, kTk] (K^T from row-major K).
     //          It is consumed as the transposed right operand for Q * K^T.
     //   qD==192 时物理 qD 维 pad 到 256，逻辑有效列仍然是 qD。
     //
@@ -50,7 +51,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
     //   tileMax/tileSum/tileScale 的逻辑 shape 都是 [kTm, 1]。
     //   这里第二维物理写成 8，valid col 为 1，用于满足 Vec tile 对齐/active size 要求。
     using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD), kTm, qD>;
-    using tileK      = TileRight<dtype, kTk, (qD==192? 256:qD), kTk, qD>;
+    using tileK      = TileRight<dtype, (qD==192? 256:qD), kTk, qD, kTk>;
     using tileW_out  = TileAcc<float, kTm, kTk>;
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
     using tileW_cast = Tile<Location::Vec, typename tileW_type<dtype>::DType, kTm, kTk, BLayout::ColMajor>;
