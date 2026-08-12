@@ -2,6 +2,7 @@
 #define SUPERNPU_DYNAMIC_MX_QUANT_NONTAIL_OCP_FP4_HPP
 
 #include "quant/dynamic_mx_quant/dynamic_mx_quant_common.hpp"
+#include "quant/dynamic_mx_quant/dynamic_mx_quant_nontail_ocp_fp4_bigbs.hpp"
 
 namespace supernpu::tile_isa::mxquant {
 
@@ -30,8 +31,15 @@ namespace supernpu::tile_isa::mxquant {
 // 64 ≤ 4096/BlockSize → BlockSize ≤ 64. BlockSize ≥ 96 (next multiple of 32:
 // 96*64=6144 > 4096) has NO legal TileN here → use
 // dynamic_mx_quant_nontail_ocp_fp4_bigbs (方案A, splits the reduce axis).
+//
+// This is the PLAIN single-load implementation, kept behind an internal name.
+// The public entry `dynamic_mx_quant_nontail_ocp_fp4` (below) DERIVES TileN at
+// compile time from Post + the InT budget and AUTO-ROUTES to this plain path when
+// a legal TileN exists, or to the 方案A split-reduce `_bigbs` kernel when it does
+// not (large BlockSize). TileN stays an explicit param here so the dispatcher can
+// feed the derived value.
 template <int Axis, int Post, int BlockSize = 32, int TileN = 64, typename OutT = __fp4_e2m1x2>
-void dynamic_mx_quant_nontail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
+static void nontail_ocp_fp4_plain(__bf16 *x, OutT *y, uint8_t *scale) {
     static_assert(Axis > 0 && Post > 0, "dims must be positive");
     static_assert(Axis % BlockSize == 0, "Axis must be multiple of BlockSize");
     static_assert(Post % TileN == 0, "Post must be multiple of TileN");
@@ -122,6 +130,28 @@ void dynamic_mx_quant_nontail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
             TCVT(oq, xf); // fp32 -> packed fp4_e2m1x2 (Post halved)
             TSTORE(gy, oq);
         }
+    }
+}
+
+// Public entry: TileN is NOT a caller knob. It is DERIVED at compile time from
+// Post + the InT budget (pick_tilen). If a legal TileN >= the fp4 64B lower bound
+// exists, route to the plain single-load path; otherwise (large BlockSize leaves
+// no legal TileN) auto-route to the 方案A split-reduce `_bigbs` kernel with a
+// budget-derived R_sub. `if constexpr` guarantees the untaken branch is not
+// instantiated. InT is BUDGET-ONLY; the data path is bf16-only (static_assert).
+template <int Axis, int Post, int BlockSize = 32, typename OutT = __fp4_e2m1x2,
+          typename InT = __bf16>
+void dynamic_mx_quant_nontail_ocp_fp4(__bf16 *x, OutT *y, uint8_t *scale) {
+    static_assert(std::is_same_v<InT, __bf16>,
+                  "InT is budget-aware only; the data path is bf16-only for now "
+                  "(fp32/fp16 input data paths are deferred)");
+    constexpr int TileN = pick_tilen<BlockSize, Post, OutT, InT, /*IsCublas=*/false>();
+    if constexpr (TileN >= nontail_align_lower<OutT>()) {
+        nontail_ocp_fp4_plain<Axis, Post, BlockSize, TileN, OutT>(x, y, scale);
+    } else {
+        constexpr int BigTileN = nontail_align_lower<OutT>();
+        constexpr int Rsub = max_rsub<BlockSize, BigTileN, InT, /*IsCublas=*/false>();
+        dynamic_mx_quant_nontail_ocp_fp4_bigbs<Axis, Post, BlockSize, BigTileN, Rsub, OutT>(x, y, scale);
     }
 }
 

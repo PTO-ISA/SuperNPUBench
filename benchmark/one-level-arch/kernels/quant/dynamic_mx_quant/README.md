@@ -28,16 +28,25 @@
 
 **fp4 发射能力已验证**：探针 `test/kernel/quant/dynamic_mx_quant/src/fp4_probe.cpp`（`TYPE=FP4_PROBE`）证实 fp32→`__fp4_e2m1x2` 单步 `TCVT` + `TSTORE` 发射真实指令、无对齐断言。尾轴 fp4 的**输出 tile 切分**问题（RowMajor 每行需 ≥ 32 打包字节）已在 `TAIL_OCP_FP4` 落地解决（**列装箱补齐物理宽到 `PW=⌈BlockSize/64⌉×64` + 每 op 列装箱到有效 BlockSize**，`TROWMAX` 按 ValidCol 归约、不合并 block，无 concat/配对/零块）；待改的 2 个 DynRange-FP4 配置可复用同一方案；详见 DESIGN §7.4 与 RECORD 问题2。
 
+## Tile 旋钮编译期推导 + 非尾轴 plain↔bigbs 自动路由
+
+**`TileM`/`TileN`/`R_sub` 不再是调用方模板参数**，改由算子输入 + 输入 dtype 预算**编译期推导**（`dynamic_mx_quant_common.hpp` 的 constexpr helper：`max_tilem` / `pick_tilen` / `max_rsub`）：
+- **尾轴**：函数顶部 `TileM = max_tilem<M, Contig, InT, IsCublas>()`——`cublas` Contig=`BlockSize`、`ocp-fp4` Contig=`PW=⌈BlockSize/64⌉×64`（每 tile 一个补齐块，绑定 `TileM*PW`），夹在 `[tilem_min(≥512B tile), budget/Contig]` 与 `M`。
+- **非尾轴**：入口先 `TileN = pick_tilen<BlockSize, Post, OutT, InT, IsCublas>()`；`if constexpr (TileN >= 对齐下界)` 则走 plain 单遍路径，**否则（大 BS 无合法 TileN）自动路由到 `_bigbs` 方案 A**（`R_sub = max_rsub<...>()`）。`if constexpr` 保证未取分支不实例化，故 plain 的 `TileN=0` / bigbs 非法 `R_sub` 不触发 static_assert。
+- **`InT` 仅用于预算推导**（更宽输入 dtype 缩小 tile），**数据路径仍 bf16**——`InT` 作模板参数贯通 + `static_assert(InT==__bf16)` 守住，fp32/fp16 完整数据路径留后续。
+- 预算模型：绑定 tile 8192B；OCP 绑定宽 `sizeof(InT)`、cuBLAS 当前经 fp32 scratch-HBM 往返（问题4）绑定宽 4B（`kRegBitcast` 置 true 后回落 `sizeof(InT)`）。elem 预算：bf16-OCP=4096、bf16-cuBLAS(当前)=2048。对齐下界：fp8 `TileN%32`、fp4 `TileN%64`。
+- **默认 `BS=32` 推导值与改造前一致**（tail-cublas TileM=8、tail-ocp-fp4 PW=64→TileM=8、nontail-cublas TileN=32、nontail-ocp-fp4 TileN=64），零行为回归。
+
 ## 大 BlockSize 变体（方案 A：切分归约轴）
 
-除上表 8 个配置外，**新增 2 个大 BlockSize 专用 kernel 模板**，作为两个非尾轴配置的大 BS 变体单独落地。
+大 BlockSize 覆盖由上述**非尾轴统一入口自动路由**到下面 2 个 `_bigbs` impl（**已删除独立 driver / Makefile TYPE**，改为在统一 nontail driver 里额外发一个大 BS 调用做编译期实例化）。两个 `_bigbs.hpp` 作为路由目标保留，模板签名仍带 `TileN`/`R_sub`（由 dispatcher 按当前预算算出后传入）。
 
 **动因（代码结构变化）**：非尾轴 plain kernel 单遍载入整块 `[BlockSize, TileN]`，连续轴 TileN 同时背负**双重约束**——对齐**下界**（fp4 `TileN%64==0`、fp8 `TileN%32==0`）与 TileSize **上界**（`Rows*Cols*sizeof ≤ 8192` → `TileN ≤ 元素上限/BlockSize`），大 BlockSize 时「下界 > 上界」无合法 TileN（ocp-fp4 BS≥96、cublas-fp8 当前 BS≥96 / 正式 BS≥160 失效）。**方案 A** 把归约行（长 BlockSize）切成 `R_sub` 行子块（`R_sub | BlockSize`）、running-`TMAX` 跨子块累积，使 TileSize 改绑 `R_sub*TileN`（`R_sub` 为自由旋钮）而非 `BlockSize*TileN`，两约束就此**解耦**——任意 BlockSize 下 TileN 都能满足对齐。
 
-| 模板 | 源文件 | TYPE | scaleAlg / dstType | 状态 |
+| 模板 | 源文件 | 入口 | scaleAlg / dstType | 状态 |
 |------|--------|------|--------------------|------|
-| `dynamic_mx_quant_nontail_ocp_fp4_bigbs` | `dynamic_mx_quant_nontail_ocp_fp4_bigbs.hpp` | `NONTAIL_OCP_FP4_BIGBS` | OCP / FP4_E2M1 | ✅ 已调试：逐 op 对齐 AscendC `ComputeScaleOcp` |
-| `dynamic_mx_quant_nontail_cublas_fp8_bigbs` | `dynamic_mx_quant_nontail_cublas_fp8_bigbs.hpp` | `NONTAIL_CUBLAS_FP8_BIGBS` | cuBLAS / FP8_E4M3 | ✅ 已调试：逐 op 对齐 AscendC `ComputeScaleCuBlas` |
+| `dynamic_mx_quant_nontail_ocp_fp4_bigbs` | `dynamic_mx_quant_nontail_ocp_fp4_bigbs.hpp` | 由 `NONTAIL_OCP_FP4` 统一入口自动路由 | OCP / FP4_E2M1 | ✅ 已调试：逐 op 对齐 AscendC `ComputeScaleOcp` |
+| `dynamic_mx_quant_nontail_cublas_fp8_bigbs` | `dynamic_mx_quant_nontail_cublas_fp8_bigbs.hpp` | 由 `NONTAIL_CUBLAS_FP8` 统一入口自动路由 | cuBLAS / FP8_E4M3 | ✅ 已调试：逐 op 对齐 AscendC `ComputeScaleCuBlas` |
 
 - **pass1 归约**：拆 `R_sub` 子块 + `TMAX` 累积，因 max 满足结合律故 `max-of-(子块 max) == 全行 max`，与 AscendC 单遍归约**等价**；累加器种子 `TEXPANDS(uint16 0)` 合法（bf16 seed 会崩 LinxV5 后端 `getCopyToParts`，但 bf16 逐元素 `TMAX` 本身不崩，已探针实测）。ocp 走 uint16 **指数位域**、cublas 走 uint16 **abs-bit 域**——后者与 AscendC `ComputeScaleCuBlas` bf16 输入分支**同域**（`And(BF16_ABS_MASK)` + `uint16 Reg::Max` 累积，`...large_tail.h:426-440`）。
 - **finalize**：ocp-bigbs 的 `ocp_scale_from_maxexp_not_tail_boxed_bigbs` 与已 review 的 plain `compute_ocp_scale_not_tail_boxed` 尾段**逐字节一致**（`clamp-up 到 emax 再减 emax` ≡ AscendC `减 emax 再对 <emax 置 0`）；cublas-bigbs 复用 `compute_cublas_core`（guard 的 `TOR` ≡ AscendC `MaskXor`）。pass2 数据路径与对应 plain kernel 一致。

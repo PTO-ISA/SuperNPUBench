@@ -273,6 +273,8 @@ TSTORE(gy, oq)
 
 ### 4.1 入口签名（4 个专门化 tail kernel）
 
+> **落地差异（当前实现，见 README「Tile 旋钮编译期推导」）**：`TileM`/`TileN`/`R_sub` **已从公开签名移除**，改由算子输入 + `InT` 预算 constexpr 推导（`max_tilem`/`pick_tilen`/`max_rsub`）；`InT` 作模板参数只做预算感知、数据路径仍 bf16（`static_assert(InT==__bf16)`）。非尾轴入口 `if constexpr` 无合法 `TileN` 时**自动路由**到 `_bigbs` 方案 A（独立 bigbs TYPE 已删）。下方签名保留 `TileM`/`TileN` 仅作**结构示意**。
+
 ```cpp
 template <int M, int K, int TileM=8, int BlockSize=32, typename OutT=__fp8_e4m3>
 void dynamic_mx_quant_tail_ocp_fp8(__bf16 *x, OutT *y, uint16_t *scale);
