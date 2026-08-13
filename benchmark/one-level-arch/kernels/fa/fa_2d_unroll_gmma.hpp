@@ -8,9 +8,19 @@ using namespace pto;
 // The current tileop API exposes the right/shared TMATMUL operand as TileRight.
 // Keep the local name explicit in this TMATMUL example to show that K/V are loaded
 // to shared tile registers instead of PE-private left tiles.
-template <typename dtype, int Rows, int Cols, int ValidRows = Rows,
-          int ValidCols = Cols>
-using SharedRightTile = TileRight<dtype, Rows, Cols, ValidRows, ValidCols>;
+namespace fa_detail {
+
+template <typename LocalTile, bool UseSharedTile>
+struct RightTileStorage {
+    using type = LocalTile;
+};
+
+template <typename LocalTile>
+struct RightTileStorage<LocalTile, true> {
+    using type = SharedTile<LocalTile>;
+};
+
+}  // namespace fa_detail
 // 遗留
 // 1.高性能上是否存在表达问题？例如，软件pingping流水是否需要暴露(性能)
 // 2.layout转换是否需要对程序员可见，数据类型cube-vec之间layout转换
@@ -67,10 +77,10 @@ using SharedRightTile = TileRight<dtype, Rows, Cols, ValidRows, ValidCols>;
 //     step. It intentionally omits the extra array dimensions and merge logic
 //     used by multi-block unrolling.
 
-template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk,
-          int scaleD = qD>
-void flash_attention_2d_unroll_tmatmul_pto(dtype *out_ptr, dtype *q_ptr,
-                                        dtype *k_ptr, dtype *v_ptr) {
+template <bool UseSharedTile, typename dtype, int Sq, int Skv, int qD, int vD,
+          int kTm, int kTk, int scaleD = qD>
+void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
+                                            dtype *k_ptr, dtype *v_ptr) {
     const uint32_t tid = get_thread_idx();
     q_ptr += tid * Sq * qD;
     out_ptr += tid * Sq * vD;
@@ -115,8 +125,12 @@ void flash_attention_2d_unroll_tmatmul_pto(dtype *out_ptr, dtype *q_ptr,
     //   tileV: V_shared, physical/logical [kTk, vD], Zn-layout
     // The tmatmul intrinsic must read the shared K tile as Zn.
     using tileQ = TileLeft<dtype, kTm, kPaddedQ, kTm, qD>;
-    using tileK = SharedRightTile<dtype, kPaddedQ, kTk, qD, kTk>;
-    using tileV = SharedRightTile<dtype, kTk, vD>;
+    using tileKLocal = TileRight<dtype, kPaddedQ, kTk, qD, kTk>;
+    using tileVLocal = TileRight<dtype, kTk, vD>;
+    using tileK = typename fa_detail::RightTileStorage<
+        tileKLocal, UseSharedTile>::type;
+    using tileV = typename fa_detail::RightTileStorage<
+        tileVLocal, UseSharedTile>::type;
 
     // QK score tiles:
     //   tmatmul input in each PE:
@@ -157,8 +171,11 @@ void flash_attention_2d_unroll_tmatmul_pto(dtype *out_ptr, dtype *q_ptr,
                            kTm, 1>;
 
     using itQ = global_iterator<gmQ, tileQ>;
-    using itK = global_iterator<gmK, tileK>;
-    using itV = global_iterator<gmV, tileV>;
+    // global_iterator describes the GM window with the underlying local tile
+    // shape. TLOAD may then target either that local tile or its SharedTile
+    // wrapper; SharedTile itself is intentionally not an iterator tile type.
+    using itK = global_iterator<gmK, tileKLocal>;
+    using itV = global_iterator<gmV, tileVLocal>;
     using itO = global_iterator<gmO, tileOCast>;
 
     itQ gIterQ(q_ptr);
@@ -347,4 +364,13 @@ void flash_attention_2d_unroll_tmatmul_pto(dtype *out_ptr, dtype *q_ptr,
         auto dstO = gIterO(i, 0);
         TSTORE(dstO, tOCast);
     }
+}
+
+template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk,
+          int scaleD = qD>
+void flash_attention_2d_unroll_tmatmul_pto(dtype *out_ptr, dtype *q_ptr,
+                                           dtype *k_ptr, dtype *v_ptr) {
+    flash_attention_2d_unroll_shared_impl<
+        false, dtype, Sq, Skv, qD, vD, kTm, kTk, scaleD>(
+        out_ptr, q_ptr, k_ptr, v_ptr);
 }
