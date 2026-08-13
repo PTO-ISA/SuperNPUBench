@@ -478,3 +478,288 @@ round 误差。**仅两处边界发散**，因 skew 无法运行期验证，记�
 **先落地新算法**（主体等价、去掉 clamp/移位/inf-Select，代码更简、少一次 `TSHRS`）；两个边界作为
 **已记录缺口**，待 skew 解除后运行期比对 AscendC golden：边界1 验 `Cast(inf/nan)==0xFF`，边界2 验
 下溢 block 的 recip 是否需补回 clamp 对齐 AscendC。**验证阻塞同问题6**（skew）。
+
+---
+
+## 问题8：非内联 helper 的 tile 参数经 `TSTORE/TLOAD, S64` 栈传参，被 emulator `ValidateLocalTlsu` 拒绝（需 emulator / linx 后端侧解决）
+
+### 结论
+
+当一个收/发 tile 的 helper（如 `compute_cublas_core` / `compute_cublas_scale_tail`）**未被内联**时，
+LinxV5 后端用 **`TSTORE, S64` / `TLOAD, S64`（把 tile 当 64-bit 通用字节块 memcpy）在栈上传递
+tile 实参**；而 emulator 的 `ValidateLocalTlsu`（`SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp:60`）
+要求 Local TSTORE 的**源 tile dtype 精确等于 store block 的 dtype**
+（`IsCompatibleDataTile` :270 `source->tileInfo->dataType == dataType`），S64 块 ≠ 源 tile 的真实 dtype，
+故触发断言：
+
+```
+AccumulateBlockInfo.cpp:60 ValidateLocalTlsu
+ASSERT(... IsCompatibleDataTile(inst->srcs[1], block->dataType, ...)
+       && "Local TSTORE requires one compatible source Tile")
+```
+
+这**不是 kernel 逻辑缺陷、也与位重解释（问题4）无关**——反汇编与诊断实测的证据链：
+
+- **反汇编**（`dynamic_mx_quant_tail_cublas_fp8_fp16.elf.diss`）出现源码里从未写过的 `BSTART.TLSU
+  TSTORE, S64`：源码只写了 `TSTORE` scale（U8）与 output（e4m3）两种，diss 却有 **5 条 `TSTORE, S64`**。
+  首条 PC `0x113d8`：`max_f`（`TCVT FP16→FP32` 的 per-row amax tile，1KB）被 store 到栈 `sp+1152`，
+  紧接 `C.BSTART.STD DIRECT <compute_cublas_core>`；进入 core 后 `0x1140c: BSTART.TLSU TLOAD, S64`
+  把它取回。→ 这是**跨函数传 tile 参数的 caller-save spill**，后端统一用 S64 块搬运。
+- **emulator 诊断**（在 :60 断言前打印）：`block.dtype=16`（`DataType::INT64`/S64，`elemB=8`）、
+  维度被解成 `1/1/1`；而 `src.dtype=1`（FP32）、`[validRow=8, col=32]`、`size=1024`。block 的 S64 与
+  源 tile 的 FP32 不匹配 → 断言必然失败。
+- **与 dtype 无关**：cuBLAS tail/not_tail 对**所有输入类型都走** `compute_cublas_core`；bf16 只是先在
+  `TABS(BF16)`（见问题9，emulator TABS 白名单缺 BF16）崩溃、根本走不到
+  这条 store，所以此障碍被前置断言**掩盖**。fp16 越过 TABS 白名单后才第一个撞上它。
+
+**缺陷所在仓（交互问题）**：
+- **`SuperScalarModel`（emulator）**：`ValidateLocalTlsu` 对编译器合成的 tile-块搬运（S64）按 dtype
+  精确匹配过严——tile 参数的栈往返是**等宽字节 memcpy**，按字节宽度匹配即可，不应要求 block dtype
+  逐一等于源 tile dtype。
+- **`linx-toolchain-build`（llvm-project / LinxV5 后端）**：传 tile 实参时统一 lower 成 S64 通用块，
+  而非与 tile 真实 dtype 一致的块类型；若后端按源 tile dtype 发 store/load block，则天然满足 emulator 校验。
+
+**解除路径**：emulator 侧放宽 `ValidateLocalTlsu` 对通用块搬运的 dtype 匹配（按字节宽度）；或 linx 后端
+传 tile 参数时保持 block dtype 与 tile dtype 一致。二者任一即可。
+
+### 影响场景
+
+任何在 kernel 主体外**以独立（非内联）函数**收/发 tile 的调用链都会命中——本 kernel 的 cuBLAS scale
+路径 `compute_cublas_scale_{tail,not_tail}` → `compute_cublas_core`。runtime 在 fp16/fp32 输入下（越过
+问题1 的 TABS 白名单后）首个障碍即此断言。bf16 输入被问题1 掩盖、未暴露。
+
+### 规避方案
+
+**把整条调用链全内联**，消除跨函数栈传参，S64 块 store/load 随之消失：给 `compute_cublas_core` 与
+`compute_cublas_scale_tail`（及对称的 `_not_tail`）加 `__attribute__((always_inline))`。实测 S64 store
+计数 **5 → 3 → 0**，`ValidateLocalTlsu` 断言被完全越过。此规避**不破坏正确性**（只改调用约定/内联决策，
+不改数值语义），可作为长期规避保留；根治仍需 emulator 或 linx 后端按上「解除路径」修复。
+
+> 越过本断言后，runtime 推进到**问题3**（`compute_cublas_core` 的 3-参 mode-less `TCMP`/`TCMPS` 被
+> emulator `ValidateCompareSelectTepl` 要求显式非保留 CMode 而拒绝，`AccumulateBlockInfo.cpp:301`）——
+> 即 fp16 cuBLAS 路径的下一个障碍，性质同问题3（linx 缺 4-参 CmpMode）。
+
+---
+
+## 问题9：TABS 作用于 BF16 被 emulator 拒绝（需 emulator 侧解决）
+
+> release_ver0812 未收录的报错。缺陷所在仓 **`SuperScalarModel`（emulator）**，复现入口在本仓
+> cuBLAS scale 路径。
+
+### 结论
+
+cuBLAS scale（`dynamic_mx_quant_common.hpp:702` `compute_cublas_scale_tail`）对 **BF16** tile
+执行 `TABS(abs_x, x_in)` 时，被 emulator 拒绝：
+
+```
+SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp:393
+ASSERT(IsBasicUnaryTeplDataType(...) &&
+       "TEPL opcode/data-type tuple is not defined by PTO ISA v0.2")
+```
+
+根因：白名单 `IsBasicUnaryTeplDataType`（`AccumulateBlockInfo.cpp:229-230`）把 TABS 限为
+`FP16 || FP32`，不含 BF16：
+
+```cpp
+case TileOp::TABS:
+    return dataType == DataType::FP16 || dataType == DataType::FP32;
+```
+
+规范 ASL 中 TABS 的 legality handler `TileOperandsLegal_ExecuteTileUnary`
+（`pto-spec: asl/tile/model/legality/operand-schema.asl:20`）**不含任何 dtype 白名单**，仅要求
+`TileShapeAndTypeMatch(dst,src)`；BF16 是合法 tile dtype。故 BF16-TABS 为 **spec-legal**，
+emulator 白名单过窄；同函数 `TNEG`（:233-236）已允许 BF16，可见白名单本身支持 BF16 表达。
+
+**解除路径（SuperScalarModel）**：`AccumulateBlockInfo.cpp:229` TABS 分支加入 `DataType::BF16`
+（对齐 `TNEG:233-236`）。
+
+> **前提说明**：结论以规范 ASL 为权威（`TileOperandsLegal_ExecuteTileUnary` 无 dtype 白名单，
+> BF16 为合法 tile dtype）。若最终以硬件实际支持为准、且硬件确不支持 BF16-TABS，则结论回到
+> 「合法但不受支持」，仍需在 emulator 或规范侧明确对齐。
+
+### 影响场景
+
+cuBLAS 路径（tail/not_tail）对 **bf16 输入的首个障碍**——bf16 输入在此崩溃、走不到后续，故
+问题8（S64 栈传参）在 bf16 下被本断言**前置掩盖**，只有换 fp16 越过本报错后才暴露。
+
+### 规避方案 / 验证过程链
+
+把**输入 dtype 从 bf16 改为 fp16（`__half`）**规避：`TABS(abs_x, x_in)` 随之作用于 **FP16** tile，
+落入白名单 `FP16` 分支，不再触发本报错。**这是规避而非修复**——问题9 作为 emulator 白名单缺陷仍在。
+
+- **改动**：新增 driver `test/kernel/quant/dynamic_mx_quant/src/{tail,nontail}_cublas_fp8_fp16.cpp`
+  （`InT=__half`）与 Makefile `TYPE={TAIL,NONTAIL}_CUBLAS_FP8_FP16`；kernel/common 逻辑未改。
+- **越过本报错后 fp16 cuBLAS 路径的后续链条**（逐一均在 emulator/toolchain 侧，非 kernel）：
+  1. → **问题8**（非内联 helper 的 tile 参数 `TSTORE/TLOAD, S64` 栈传参被 `ValidateLocalTlsu` 拒）
+     ——给调用链加 `__attribute__((always_inline))` 越过（S64 store 5→3→0）。
+  2. → **问题3**（3-参 mode-less `TCMP`/`TCMPS` 被 `ValidateCompareSelectTepl` 要求显式 CMode）
+     ——临时把该断言缓和为 warning 探路。
+  3. → 最终停在 **README「失败分类」第 2 类 Text-store 被拒绝**（`AssertNotTextStore`，
+     `emulator/engine/AaccelssMemoryEngine.cpp:12`）。触发点在 libc 启动例程 `__init_libc`
+     （`addtpc`+`sdi.u` 存 text 相对地址），属新鲜 ELF startup 阶段、与 kernel 无关，是已归档的
+     toolchain↔emulator 版本 skew。
+- **代码状态**：探路用的 emulator 断言缓和、`common.hpp` 的 `always_inline` 均已 `git checkout`
+  还原；保留 fp16 driver 与 Makefile TYPE 作复现入口。
+
+---
+
+## 问题10：TROWMAX 作用于 UINT16 被 emulator 拒绝（与 TCOLMAX 不对称，需 emulator 侧解决）
+
+> release_ver0812 未收录的报错。缺陷所在仓 **`SuperScalarModel`（emulator）**，复现入口在本仓
+> OCP tail scale 路径。
+
+### 结论
+
+OCP tail scale（`dynamic_mx_quant_common.hpp:639` `compute_ocp_scale_tail_boxed_pw`）对 **UINT16**
+指数位 tile 执行 `TROWMAX(max_exp, exp_bits)` 时，被 emulator 拒绝：
+
+```
+SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp:607
+ASSERT(IsReduceAndExpandTeplDataType(...) &&
+       "reduce/expand TEPL tuple is not defined by PTO ISA v0.58")
+```
+
+根因：白名单 `IsReduceAndExpandTeplDataType`（`AccumulateBlockInfo.cpp:525-528`）给 **TROWMAX**
+的 dtype 集为 `FP16||FP32||INT32`，不含 U16/BF16；而同函数 **TCOLMAX**（:539-547）含
+`INT8/UINT8/INT16/UINT16/INT32/UINT32/BF16`：
+
+```cpp
+case TileOp::TROWMAX:  return FP16 || FP32 || INT32;                        // 无 U16/BF16
+case TileOp::TCOLMAX:  return FP16||FP32||INT8||UINT8||INT16||UINT16||INT32||UINT32||BF16;
+```
+
+但规范 ASL 中 TROWMAX 与 TCOLMAX **共用同一** legality handler
+`TileOperandsLegal_ExecuteTileReduction`（`pto-spec: asl/tile/reduce-and-expand/row-reduction/TROWMAX.asl`
+与 `.../column-reduction/TCOLMAX.asl` 的 `legality_handler` 字段一致），该 handler
+（`operand-schema.asl:70`）不含 dtype 限制（axis 只影响 destination shape 检查）。故 U16-TROWMAX
+为 **spec-legal**；emulator 给 TROWMAX 配了比 TCOLMAX 窄、且与共用 handler 不符的 dtype 集。
+
+**旁证**：not-tail 变体用 TCOLMAX（`dynamic_mx_quant_common.hpp:800/832`），落在已放行集合内，故
+nontail scale pass 不触发此断言——差异纯在 emulator 的 TROWMAX/TCOLMAX 不对称。
+
+**解除路径（SuperScalarModel）**：`AccumulateBlockInfo.cpp:525` TROWMAX 分支 dtype 集扩到与
+TCOLMAX（:539-547）一致（或按共用 handler 语义去掉 dtype 白名单）。前提说明同问题9。
+
+### 影响场景
+
+OCP tail 路径（`TAIL_OCP_FP4`）的 scale pass 首个障碍。
+
+### 规避方案 / 验证过程链
+
+按解除路径**临时**在 emulator `:525` TROWMAX 分支加入 `UINT16||BF16`（与 TCOLMAX 对齐）探路，重编
+gfrun 后跑 `TAIL_OCP_FP4`（res_check=on）：
+
+- **越过本报错后直达同一堵墙**：OCP tail 路径**没有**再撞新的 kernel/TEPL 障碍，直接收敛到
+  **README「失败分类」第 2 类 Text-store 被拒绝**（`AssertNotTextStore`，
+  `AaccelssMemoryEngine.cpp:12`）。faulting 指令与问题9 的 fp16 cuBLAS 路径**完全相同**：libc
+  `__init_libc` 的 `sdi.u s1,[t#1,-1616]`（指令 bin `0x618679d9`，存 text 相对地址）——同一 startup skew。
+- **比 cuBLAS 路径更干净**：问题9 的 fp16 cuBLAS 越过后还需经问题8（S64 栈传参）、问题3（CMode）两道；
+  OCP tail 路径**不经这两道**（OCP 不走 `compute_cublas_core`、无 `TCMP`），越过本报错一道即达 skew 墙。
+- **代码状态**：探路用的 emulator TROWMAX 白名单放行已 `git checkout` 还原。
+
+---
+
+## 问题11：`B.IOT ... ->u<>` unknown operand（nontail_ocp_fp4 -O1/-O2 编译失败，需 toolchain 侧解决）
+
+> release_ver0812 未收录的报错。缺陷所在仓 **`linx-toolchain-build`（`llvm-project` LinxV5 后端）**，
+> 复现入口在本仓 `NONTAIL_OCP_FP4` 编译。
+
+### 结论
+
+编译 `nontail_ocp_fp4.cpp`（Axis=32/Post=64/BS=32，fp4 输出 tile `[32,32]` RowMajor NoneBox）于
+**`-O1`/`-O2`** 时，vendor 头内联汇编报错：
+
+```
+tileop-api/jcore/template_asm.hpp:115   (TCVT_T)        "B.IOT %3, mask=15, last, ->%0<%Z4>\n"
+tileop-api/jcore/template_asm.hpp:5106  (TCOLEXPANDMUL) "B.IOT %5, %6, mask=15, last, ->%0<%Z7>\n"
+→ instantiated:  B.IOT u#1, mask=15, last, ->u<>          // box 为空 <>
+error: unknown operand
+```
+
+根因：`%Z` 是 LinxV5 后端自定义操作数修饰符，打印 B.IOT 的 TileSize 文本。打印器
+`LinxV5AsmPrinter.cpp:176-183` 在 `%Z` 对应操作数**不是立即数**（`!MO.isImm()`）时 `return true`
+→ clang 报 "unknown operand"，且提前返回、box 未写入 → 空 `<>`：
+
+```cpp
+if (ExtraCode[0]=='Z' ...) {
+    if (!MO.isImm()) return true;              // 返回 true = "unknown operand"
+    static const char* TileSizes[] = {"0B","128B",...,"8KB"};
+    if ((unsigned)MO.getImm() < 8) OS << TileSizes[MO.getImm()];
+    return false;
+}
+```
+
+证据链，指向**优化 pass** 而非 kernel：
+1. C++ 层该 fp4 `[32,32]` 输出 tile 的 `TilesizeCode = 4`（=1KB，合法枚举），与 fp8 输出 tile 取值
+   相同（static_assert 实测 fp4→4、fp8→4）；同套 TCVT_T/TCOLEXPANDMUL 模板对 fp8 输出、tail-fp4
+   输出均编译干净。
+2. 最小复现（单独对 `Tile<Vec,__fp4_e2m1x2,32,32,RowMajor>` 做 TCVT）operand 保持立即数、打印
+   `<1KB>`、编译干净；仅在整 kernel 上下文失败。
+3. 失败随优化等级出现：同一 `nontail_ocp_fp4.cpp` — `-O0`→**0** 处、`-O1`→**6** 处、`-O2`→**10** 处。
+
+→ `-O1/-O2` 的某个 LinxV5 优化 pass 把经 INLINEASM `"i"` 约束传入的 `%Z` 立即数降级为非立即数
+（vreg），触发打印器 `!MO.isImm()` 分支。源码合法、仅 -O 变化即触发，是后端优化 pass miscompile
+的签名。
+
+**解除路径（linx-toolchain-build）**：保证经 INLINEASM 传入、`"i"` 约束的 `%Z` 操作数在优化后仍以
+立即数抵达 AsmPrinter（或相关 pass 对 INLINEASM imm 操作数做保守处理）。
+
+### 影响场景
+
+编译 `nontail_ocp_fp4` 于 `-O1`/`-O2`（`diss` 默认 `-O2`）。
+
+### 规避方案 / 验证过程链
+
+尝试**降 `-O0` 规避 `%Z`** → **规避不成立**：`-O0` 不再触发 `%Z`，但在更早的编译期撞上
+**问题12**（`-O0` spill/reload 寄存器类不对称）。故 `nontail_ocp_fp4` 在**任一优化等级都无法编译**
+——`-O1/-O2` 撞本问题、`-O0` 撞问题12。二者是 LinxV5 后端两个独立缺陷。
+
+---
+
+## 问题12：`-O0` 溢出/重载寄存器类不对称，`layout_type_to_str` 崩溃（需 toolchain 侧解决）
+
+> 由问题11 的「降 -O0 规避」尝试触发。缺陷所在仓 **`linx-toolchain-build`（`llvm-project` LinxV5
+> 后端）**，与具体 kernel 无关（通用）。
+
+### 结论
+
+以 **`-O0`** 编译任一含 `pto::layout_type_to_str`（`two-level-arch/include/common/layout.hpp:59`，
+返回字符串字面量的平凡 helper，各 kernel 都链入）的翻译单元时崩溃：
+
+```
+llvm_unreachable("Can't load this register from stack slot")
+llvm-project/llvm/lib/Target/LinxV5/LinxV5InstrInfo.cpp:670
+```
+
+`tail_ocp_fp4`、`tail_cublas_fp8_fp16` 在 `-O0` 下都崩在同一处、faulting 函数均为
+`layout_type_to_str`，证明**与本 kernel 无关**。
+
+根因：物化字符串字面量地址的 `PseudoADDTPC_HI` 产出寄存器类 **`mixedgprnora`**（MIR，
+`-print-before=regallocfast`，`layout_type_to_str` 的 `sw.bb`）：
+
+```
+%8:mixedgprnora = PseudoADDTPC_HI <mcsymbol>, target-flags(linx-tpcrel-hi) @.str
+%9:mixedgpr    = ADDI killed %8, target-flags(linx-tpcrel-lo) ...
+SDI killed %9, %stack.0.retval, 0
+```
+
+store 与 load 处理**不对称**：
+- `storeRegToStackSlot`（`LinxV5InstrInfo.cpp:607-648`）**无**寄存器类白名单——非 `Tile_ABS` 一律
+  `SDI` 无条件溢出，**接受** `mixedgprnora`。
+- `loadRegFromStackSlot`（`:650-670`）有白名单 `{GR, LTR, LUR, Tile_ABS, SIMTCGV}`，
+  `hasSubClassEq(mixedgprnora)==false` → 落到 `:670` `llvm_unreachable`。
+
+`-O0` 用 Fast RegAlloc，激进溢出/重载短活跃期虚寄存器，故命中 load 路径；`-O2` 的 Greedy 把
+`mixedgprnora` 保留在寄存器、不经栈往返，故不触发（但 `-O2` 会命中问题11）。
+
+**解除路径（linx-toolchain-build）**：`loadRegFromStackSlot:665` 白名单加入 `mixedgprnora`
+（或 `PseudoADDTPC_HI` 结果对应的正确寄存器类），与 `storeRegToStackSlot` 对齐。
+
+### 影响场景
+
+任一 kernel 降 `-O0` 编译（本 kernel 中由问题11 的规避尝试触发）。
+
+### 规避方案
+
+**无有效规避**——`-O0` 撞本问题、`-O1/-O2` 撞问题11，`nontail_ocp_fp4` 任一优化等级均无法编译。
+需按解除路径在 toolchain 侧修复（问题11、问题12 各修一处）。
