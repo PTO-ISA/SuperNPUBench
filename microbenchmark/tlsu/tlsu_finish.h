@@ -28,9 +28,10 @@ static inline void tlsu_finish(unsigned int ok)
 #define TLSU_STR_(x) #x
 #define TLSU_STR(x) TLSU_STR_(x)
 
-#define TLSU_RESULT_BUFFER(sz)                           \
-    extern "C" { unsigned char cross_model_result[sz]; } \
-    __asm__(".globl cross_model_result_size\n"           \
+// alignas(256) 是 tile 访存的基址要求，不能靠链接器碰巧对齐。
+#define TLSU_RESULT_BUFFER(sz)                                     \
+    extern "C" { alignas(256) unsigned char cross_model_result[sz]; } \
+    __asm__(".globl cross_model_result_size\n"                     \
             ".set cross_model_result_size, " TLSU_STR(sz) "\n")
 
 #endif
