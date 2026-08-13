@@ -37,7 +37,7 @@
 #define ALIGN 4*1024
 
 int main(){
-    using dtype = float;
+    using dtype = __half;
     
     dtype qp[B*H*Sq*qD + 2*ALIGN];
     dtype kp[B*H*Skv*qD + 2*ALIGN];
