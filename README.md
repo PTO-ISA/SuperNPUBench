@@ -435,3 +435,39 @@ ASSERTION FAILED: (inst->dsts.empty() || sharedLocalToShared) &&
 位置：`emulator/engine/AccumulateBlockInfo.cpp:711`
 
 影响：multi_thread matmul
+
+---
+
+## multi-thread cooperative TMATMUL 补充验证（shared-tload 分支）
+
+在 `feat/shared-tload-single-issuer-whole-tile` 分支上对两个 multi-thread cooperative TMATMUL 算子进行补充验证。
+
+### 验证仓库版本
+
+| 组件 | 仓库 | 分支 | Commit |
+|---|---|---|---|
+| gfrun 模型 | https://github.com/LinxISA/SuperScalarModel | `feat/shared-tload-single-issuer-whole-tile` | `790f92b73f7df5d0e54c872be2a11dc03e3695df` |
+| llvm-project | https://github.com/LinxISA/llvm-project | `temp/shared-tload-integration-20260811` | `eb64de8afcbda043aec7e56dae346905dc982039` |
+| Linx-TileOP-API | https://github.com/LinxISA/Linx-TileOP-API | `temp/shared-tload-integration-20260811` | `72f8255ca610eae1542dfb633709ce2b18b49955` |
+
+工具链：`llvm-project temp/shared-tload-integration-20260811 @ eb64de8af` + `Linx-TileOP-API temp/shared-tload-integration-20260811 @ 72f8255c`
+
+### 执行配置
+
+```bash
+./bin/gfrun -f <elf> -s softcore.multiThreadNum=4 --test-finisher true
+```
+
+- gfrun 构建方式：`python3 build.py all -j16`（O3，macOS arm64，clang）
+- 多线程配置：`-s softcore.multiThreadNum=4`（4 PE cooperative 模式）
+- 终止机制：`--test-finisher true`（test-finisher MMIO，核心级终止）
+- 执行方式：串行单独执行，每配置 120s 超时上限
+
+### 验证结果
+
+| 算子 | 结果 | blocks/线程 | 总 blocks | 总 insts | R2 |
+|---|---|---|---|---|---|
+| multi_thread fa (Sq128 Skv64 Tm16 Tk16) | **PASS** | 702 / 3847 | 2808 | 15388 | 0 |
+| multi_thread matmul_shared (B1 M256 N256 K256 tM32 tN32 tK32) | **PASS** | 2263 / 13253 | 9052 | 53012 | 0 |
+
+两个 shared 版 cooperative TMATMUL 算子均通过验证，4 线程完整执行，`R2 = 0`。
