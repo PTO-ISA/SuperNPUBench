@@ -5,22 +5,9 @@
 
 using namespace pto;
 
-// The current tileop API exposes the right/shared TMATMUL operand as TileRight.
-// Keep the local name explicit in this TMATMUL example to show that K/V are loaded
-// to shared tile registers instead of PE-private left tiles.
-namespace fa_detail {
-
-template <typename LocalTile, bool UseSharedTile>
-struct RightTileStorage {
-    using type = LocalTile;
-};
-
-template <typename LocalTile>
-struct RightTileStorage<LocalTile, true> {
-    using type = SharedTile<LocalTile>;
-};
-
-}  // namespace fa_detail
+// The tileop API exposes shared TMATMUL operands as SharedTile wrapping a
+// TileLeft/TileRight local shape. Q/K/V are all staged into shared tile
+// storage via TLOAD, matching kernels/matmul/matmul_shared.hpp.
 // 遗留
 // 1.高性能上是否存在表达问题？例如，软件pingping流水是否需要暴露(性能)
 // 2.layout转换是否需要对程序员可见，数据类型cube-vec之间layout转换
@@ -44,16 +31,17 @@ struct RightTileStorage<LocalTile, true> {
 //       V_big: [kTk, vD]
 //       O_big/PV_big: [4*kTm, vD]
 //   - Small tile is the PE-local storage unit:
-//       Q_pe: [kTm, qD]
 //       W_pe: [kTm, kTk]
 //       O_pe/PV_pe: [kTm, vD]
-//   - K/V are shared full tiles:
+//   - Q/K/V are shared staging tiles, matching the
+//     matmul_shared pattern where both TMATMUL operands live in SharedTile:
+//       Q_shared: [kTm, qD]
 //       K_shared: [kTk, qD]
 //       V_shared: [kTk, vD]
-//   - Each PE only names its own Q/P/O tiles. Other PE-local tiles are not
-//     visible in this SPMD pseudo model. TMATMUL collectively observes the four
-//     PE-local lhs tiles plus the shared K/V tile as one logical big tile.
-//     Vector tileOPs are still applied PE-locally.
+//   - There is no per-PE Q/O row slicing. TLOAD uses PEMask=1 so only PE0
+//     issues the shared-tile load; all four PEs then read the same full shared
+//     Q/K/V tiles and each produces the full output O (mirrors matmul_shared,
+//     where the tid offset is disabled and globM is passed whole).
 //
 // Memory/layout contract:
 //   - TLOAD/TSTORE are pure ND DMA copies. They do not transpose, swizzle, or
@@ -77,16 +65,18 @@ struct RightTileStorage<LocalTile, true> {
 //     step. It intentionally omits the extra array dimensions and merge logic
 //     used by multi-block unrolling.
 
-template <bool UseSharedTile, typename dtype, int Sq, int Skv, int qD, int vD,
+template <typename dtype, int Sq, int Skv, int qD, int vD,
           int kTm, int kTk, int scaleD = qD>
 void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
                                             dtype *k_ptr, dtype *v_ptr) {
     const uint32_t tid = get_thread_idx();
-    q_ptr += tid * Sq * qD;
-    out_ptr += tid * Sq * vD;
+    // No per-PE Q/O row slicing: all four PEs load the same full shared
+    // Q/K/V tiles (TLOAD uses PEMask=1, only PE0 issues the load) and the
+    // caller passes the full global Sq. Mirrors matmul_shared.
+    // q_ptr += tid * Sq * qD;
+    // out_ptr += tid * Sq * vD;
 
-    // This function receives the full Q/O base pointer. get_thread_idx() selects
-    // the current PE's local Q/O row range before any tile iterator is built.
+    // This function receives the full Q/O base pointer.
     //   current PE M slice: kTm
     //   collective big M  : 4 * kTm
     constexpr int kPaddedQ = (qD == 192 ? 256 : qD);
@@ -119,18 +109,17 @@ void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
     using gmV = global_tensor<dtype, RowMajor<Skv, vD>>;
     using gmO = global_tensor<dtype, RowMajor<Sq, vD>>;
 
-    // Q is PE-local; K/V are full shared tiles loaded by TLOAD:
-    //   tileQ: Q_pe, physical [kTm, kPaddedQ], valid [kTm, qD], NZ-layout
+    // Q/K/V are shared staging tiles loaded by TLOAD:
+    //   tileQ: Q_shared, physical [kTm, kPaddedQ], valid [kTm, qD], NZ-layout
     //   tileK: K^T_shared, physical [kPaddedQ, kTk], valid [qD, kTk], Zn-layout
     //   tileV: V_shared, physical/logical [kTk, vD], Zn-layout
     // The tmatmul intrinsic must read the shared K tile as Zn.
-    using tileQ = TileLeft<dtype, kTm, kPaddedQ, kTm, qD>;
+    using tileQLocal = TileLeft<dtype, kTm, kPaddedQ, kTm, qD>;
+    using tileQ = SharedTile<tileQLocal>;
     using tileKLocal = TileRight<dtype, kPaddedQ, kTk, qD, kTk>;
     using tileVLocal = TileRight<dtype, kTk, vD>;
-    using tileK = typename fa_detail::RightTileStorage<
-        tileKLocal, UseSharedTile>::type;
-    using tileV = typename fa_detail::RightTileStorage<
-        tileVLocal, UseSharedTile>::type;
+    using tileK = SharedTile<tileKLocal>;
+    using tileV = SharedTile<tileVLocal>;
 
     // QK score tiles:
     //   tmatmul input in each PE:
@@ -170,7 +159,7 @@ void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
     using tileScale = Tile<Location::Vec, float, kTm, 8, BLayout::ColMajor,
                            kTm, 1>;
 
-    using itQ = global_iterator<gmQ, tileQ>;
+    using itQ = global_iterator<gmQ, tileQLocal>;
     // global_iterator describes the GM window with the underlying local tile
     // shape. TLOAD may then target either that local tile or its SharedTile
     // wrapper; SharedTile itself is intentionally not an iterator tile type.
@@ -193,22 +182,15 @@ void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
     for (int i = 0; i < Qb; ++i) {
         tileQ tQ;
 
-        // Each PE loads only its own row slice. The caller has already passed
-        // a PE-local Q pointer/range, so the local iterator uses i directly:
-        //   before TLOAD:
-        //     Q_pe[i*kTm : (i+1)*kTm, 0:qD]
-        //   after TLOAD:
-        //     tQ = current PE's Q_pe, valid shape [kTm, qD]
-        //
-        // Across the four independent PE programs, the four tQ instances
-        // logically form Q_big [4*kTm, qD]. No PE can directly see another PE's
-        // tQ; the collective tmatmul observes them as a group.
+        // Q is staged into shared storage. Only PE0 issues the load
+        // (TLOAD<tileQLocal, 1>, PEMask=1); all PEs consume the same shared
+        // tile, mirroring how matmul_shared stages A. Q is loaded once per row
+        // block and reused across all K/V blocks below.
         //
         // TLOAD remains a direct row-major ND copy and does not change layout.
         auto gQ = gIterQ(i, 0);
         // ND->Nz
-        // 4 PE 发送4条tload treg指令
-        TLOAD(tQ, gQ);
+        TLOAD<tileQLocal, 1>(tQ, gQ);
 
         tileMax tMax;
         tileSum tSum;
@@ -241,13 +223,13 @@ void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
             auto gK = gIterK(0, j);
             // map to TMATMUL.LD, load tile to staging B
             // 加载到shared tile reg, 只有tid=0会执行加载指令，tid=1，2，3不执行
-            TLOAD(tK, gK);
+            TLOAD<tileKLocal, 1>(tK, gK);
 
             tileW tW;
 
             // QK group GEMM:
             //   Inputs:
-            //     tQ            -> current PE's Q_pe [kTm, qD]
+            //     tQ            -> current PE's Q_pe [kTm, qD] (SharedTile)
             //     tK            -> shared K tile [kTk, qD], consumed as K^T
             //   Logical output:
             //     W_big = Q_big * K_big^T, shape [kTm, kTk]
@@ -256,11 +238,8 @@ void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
             //
             // Then the current PE scales its own W_pe:
             //   tW = FIXP(Q*K^T) / sqrt(scaleD), shape [kTm, kTk].
-            // Each PE program only passes its private tQ/tW. The collective
-            // tmatmul observes all PE-local lhs/output tiles plus shared tK as one
-            // logical big-tile GEMM.
-            // 对应指令gmma，4-PE发送4条gmma指令，
-            TMATMUL_FIXP(tW, tQ, tK);
+            // 对应指令gmma
+            TMATMUL(tW, tQ, tK);
             TMULS(tW, tW, scale);
 
             tileMax tNewMax;
@@ -306,7 +285,7 @@ void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
             //   after TLOAD:
             //     tV = V_shared, valid shape [kTk, vD].
             auto gV = gIterV(j, 0);
-            TLOAD(tV, gV);
+            TLOAD<tileVLocal, 1>(tV, gV);
             // P/probability tile preparation:
             //   tExpW : current PE's Vec probability tile [kTm,kTk]
             //   tPLeft: current PE's Left/tmatmul lhs tile [kTm,kTk]
@@ -325,7 +304,7 @@ void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
             //   Physical output:
             //     tPV is the current PE's ordinary PV_pe [kTm, vD].
             TCVT(tPLeft, tExpW);
-            TMATMUL_FIXP(tPV, tPLeft, tV);
+            TMATMUL(tPV, tPLeft, tV);
 
             // Consume the current PV contribution as an ordinary Vec tile.
             //
@@ -364,13 +343,4 @@ void flash_attention_2d_unroll_shared_impl(dtype *out_ptr, dtype *q_ptr,
         auto dstO = gIterO(i, 0);
         TSTORE(dstO, tOCast);
     }
-}
-
-template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk,
-          int scaleD = qD>
-void flash_attention_2d_unroll_tmatmul_pto(dtype *out_ptr, dtype *q_ptr,
-                                           dtype *k_ptr, dtype *v_ptr) {
-    flash_attention_2d_unroll_shared_impl<
-        false, dtype, Sq, Skv, qD, vD, kTm, kTk, scaleD>(
-        out_ptr, q_ptr, k_ptr, v_ptr);
 }

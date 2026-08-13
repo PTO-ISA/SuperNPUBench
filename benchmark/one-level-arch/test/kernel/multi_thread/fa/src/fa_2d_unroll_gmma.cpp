@@ -9,19 +9,24 @@
 #define H 1
 
 #ifndef Tsq
-#define Sq 512
+#define globSq 512
 #else
-#define Sq Tsq
+#define globSq Tsq
 #endif
 
 #ifndef Tskv
-#define Skv 512
+#define globSkv 512
 #else
-#define Skv Tskv
+#define globSkv Tskv
 #endif
 
+#ifndef qD
 #define qD 128
+#endif
+
+#ifndef vD
 #define vD 128
+#endif
 
 #ifndef Tm
 #define kTm 16
@@ -40,11 +45,15 @@
 
 int main() {
     using dtype = float;
+    constexpr int kPeNum = 4;
 
-    dtype qp[B * H * Sq * qD + 2 * ALIGN];
-    dtype kp[B * H * Skv * qD + 2 * ALIGN];
-    dtype vp[B * H * Skv * vD + 2 * ALIGN];
-    dtype outp[B * H * Sq * vD + 2 * ALIGN];
+    static_assert(globSq % kPeNum == 0,
+                  "global Sq must be divisible by the PE count");
+
+    dtype qp[B * H * globSq * qD + 2 * ALIGN];
+    dtype kp[B * H * globSkv * qD + 2 * ALIGN];
+    dtype vp[B * H * globSkv * vD + 2 * ALIGN];
+    dtype outp[B * H * globSq * vD + 2 * ALIGN];
 
     dtype *q = (dtype *)(((uint64_t)qp & ALIGN_MASK) + ALIGN);
     dtype *k = (dtype *)(((uint64_t)kp & ALIGN_MASK) + ALIGN);
@@ -55,20 +64,23 @@ int main() {
 #define SRCQ_PATH CHK_DIR "/srcq.bin"
 #define SRCK_PATH CHK_DIR "/srck.bin"
 #define SRCV_PATH CHK_DIR "/srcv.bin"
-    readBinaryFile(SRCQ_PATH, (uint8_t *)q, B * H * Sq * qD * sizeof(dtype));
-    readBinaryFile(SRCK_PATH, (uint8_t *)k, B * H * Skv * qD * sizeof(dtype));
-    readBinaryFile(SRCV_PATH, (uint8_t *)v, B * H * Skv * vD * sizeof(dtype));
+    readBinaryFile(SRCQ_PATH, (uint8_t *)q, B * H * globSq * qD * sizeof(dtype));
+    readBinaryFile(SRCK_PATH, (uint8_t *)k, B * H * globSkv * qD * sizeof(dtype));
+    readBinaryFile(SRCV_PATH, (uint8_t *)v, B * H * globSkv * vD * sizeof(dtype));
 #endif
 
     BENCHSTART;
     for (int i = 0; i < B; ++i) {
         for (int j = 0; j < H; ++j) {
-            flash_attention_2d_unroll_tmatmul_pto<
-                dtype, Sq / 4, Skv, qD, vD, kTm, kTk>(
-                out + i * H * Sq * vD + j * Sq * vD,
-                q + i * H * Sq * qD + j * Sq * qD,
-                k + i * H * Skv * qD + j * Skv * qD,
-                v + i * H * Skv * vD + j * Skv * vD);
+            // All four PEs load the same full shared Q/K/V tiles (PEMask=1),
+            // so the kernel receives the full globSq / globSkv (mirrors
+            // matmul_shared passing the full globM).
+            flash_attention_2d_unroll_shared_impl<
+                dtype, globSq, globSkv, qD, vD, kTm, kTk>(
+                out + i * H * globSq * vD + j * globSq * vD,
+                q + i * H * globSq * qD + j * globSq * qD,
+                k + i * H * globSkv * qD + j * globSkv * qD,
+                v + i * H * globSkv * vD + j * globSkv * vD);
         }
     }
     BENCHEND;
@@ -76,7 +88,7 @@ int main() {
 #ifdef RES_CHECK
 #define RES_PATH CHK_DIR "/res.bin"
     writeBinaryFile(RES_PATH, (uint8_t *)out,
-                    B * H * Sq * vD * sizeof(dtype));
+                    B * H * globSq * vD * sizeof(dtype));
 #endif
 
     return 0;

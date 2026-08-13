@@ -38,8 +38,8 @@ void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
     const uint32_t tid = get_thread_idx();
 
-    a_ptr += tid * gM * gK;
-    c_ptr += tid * gM * gN;
+    // a_ptr += tid * gM * gK;
+    // c_ptr += tid * gM * gN;
 
     using gmA = global_tensor<dtype, RowMajor<gM, gK>>;
     using gmB = global_tensor<dtype, RowMajor<gK, gN>>;
@@ -73,8 +73,8 @@ void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
                 auto gB = gIterB(0, j);
                 tileAShared tAShared;
                 tileBShared tBShared;
-                TLOAD(tAShared, gA);
-                TLOAD(tBShared, gB);
+                TLOAD<tileALocal, 1>(tAShared, gA);
+                TLOAD<tileBLocal, 1>(tBShared, gB);
                 TMATMUL(tC, tAShared, tBShared);
             } else {
                 {
@@ -82,8 +82,8 @@ void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
                     auto gB = gIterB(0, j);
                     tileAShared tAShared;
                     tileBShared tBShared;
-                    TLOAD(tAShared, gA);
-                    TLOAD(tBShared, gB);
+                    TLOAD<tileALocal, 1>(tAShared, gA);
+                    TLOAD<tileBLocal, 1>(tBShared, gB);
                     TMATMUL(tC, tAShared, tBShared);
                 }
 
@@ -93,8 +93,8 @@ void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
                     auto gB = gIterB(k, j);
                     tileAShared tAShared;
                     tileBShared tBShared;
-                    TLOAD(tAShared, gA);
-                    TLOAD(tBShared, gB);
+                    TLOAD<tileALocal, 1>(tAShared, gA);
+                    TLOAD<tileBLocal, 1>(tBShared, gB);
                     TMATMUL_ACC(tC, tC, tAShared, tBShared);
                 }
             }

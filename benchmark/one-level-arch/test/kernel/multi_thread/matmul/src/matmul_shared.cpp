@@ -62,7 +62,7 @@ int main() {
 
     BENCHSTART;
     for (int b = 0; b < Batch; ++b) {
-        matmul_shared<dtype, globM / kPeNum, globN, globK,
+        matmul_shared<dtype, globM, globN, globK,
                       tilM, tilN, tilK>(
             dst + b * globM * globN,
             src0 + b * globM * globK,
