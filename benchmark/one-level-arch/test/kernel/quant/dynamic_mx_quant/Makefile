@@ -9,6 +9,16 @@ ifeq ($(TYPE), TAIL_CUBLAS_FP8)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_tail_cublas_fp8.elf
 endif
 
+ifeq ($(TYPE), TAIL_CUBLAS_FP8_FP16)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_cublas_fp8_fp16.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_tail_cublas_fp8_fp16.elf
+endif
+
+ifeq ($(TYPE), NONTAIL_CUBLAS_FP8_FP16)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8_fp16.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_cublas_fp8_fp16.elf
+endif
+
 ifeq ($(TYPE), TAIL_OCP_FP4)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp4.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_tail_ocp_fp4.elf
