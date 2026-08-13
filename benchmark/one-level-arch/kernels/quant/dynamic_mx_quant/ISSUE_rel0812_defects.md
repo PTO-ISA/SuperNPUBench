@@ -1,6 +1,6 @@
-# [Issue] dynamic_mx_quant（release_ver0812）：4 处 model/toolchain 缺陷
+# [Issue] dynamic_mx_quant（release_ver0812）：5 处 model/toolchain 缺陷
 
-在 `dynamic_mx_quant` kernel 的构建 + gfrun 过程中，命中 4 处不在 release_ver0812 已知问题
+在 `dynamic_mx_quant` kernel 的构建 + gfrun 过程中，命中 5 处不在 release_ver0812 已知问题
 清单内的报错。逐一定位后，**根因均在 SuperScalarModel（emulator）或 linx-toolchain-build
 （LinxV5 后端），非 SuperNPUBench 侧 kernel 逻辑**。
 
@@ -26,6 +26,7 @@
 | 2 | SuperScalarModel (emulator) | gfrun `TAIL_OCP_FP4` | `AccumulateBlockInfo.cpp:607` TROWMAX/U16 | `AccumulateBlockInfo.cpp:525` 对齐 TCOLMAX(:539) |
 | 3 | linx-toolchain-build (LinxV5) | 编译 `NONTAIL_OCP_FP4`，`-O1/-O2` | `B.IOT ->u<>` unknown operand | `LinxV5AsmPrinter.cpp:176` + 优化 pass 保留 `%Z` 立即数 |
 | 4 | linx-toolchain-build (LinxV5) | 任一含 `layout_type_to_str` 的 TU，`-O0` | `LinxV5InstrInfo.cpp:670` Can't load register from stack slot | `loadRegFromStackSlot:665` 白名单加 `mixedgprnora` |
+| 5 | emulator ↔ LinxV5（交互） | gfrun 到达非内联、跨函数收发 tile 的调用链 | `AccumulateBlockInfo.cpp:60` S64 块 dtype 不匹配 | `ValidateLocalTlsu` 按字节宽度匹配，或后端按源 tile dtype 发块 |
 
 ---
 
@@ -186,6 +187,43 @@ store 与 load 处理不对称：
 
 **修复建议**：`loadRegFromStackSlot:665` 白名单加入 `mixedgprnora`（或 `PseudoADDTPC_HI` 结果
 对应的正确寄存器类），与 `storeRegToStackSlot` 对齐。
+
+---
+
+## 缺陷 5：非内联 helper 的 tile 参数经 `TSTORE/TLOAD, S64` 栈传参，被 emulator `ValidateLocalTlsu` 拒绝
+
+- **缺陷所在仓**：`SuperScalarModel`（emulator）↔ `linx-toolchain-build`（LinxV5 后端）**交互缺陷**，
+  任一侧修复即可。
+- **触发条件**：gfrun 执行到「未内联、跨函数收/发 tile」的调用链——本 kernel 为 cuBLAS scale 路径
+  `compute_cublas_scale_{tail,not_tail}` → `compute_cublas_core`。默认 bf16 构建下被**缺陷 1**
+  （`TABS(bf16)`）前置掩盖、走不到；经 fp16/fp32 输入越过缺陷 1 后**首个命中**。
+- **复现命令**：
+  ```bash
+  make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8_FP16 diss   # fp16 越过缺陷1 后命中
+  ```
+
+**报错信息**（gfrun）：
+```
+SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp:60  ValidateLocalTlsu
+ASSERT(... IsCompatibleDataTile(inst->srcs[1], block->dataType, ...)
+       && "Local TSTORE requires one compatible source Tile")
+```
+
+**原因分析**：LinxV5 后端传 tile 实参时，把 tile 当 **64-bit 通用字节块**（`TSTORE/TLOAD, S64`）在栈上
+memcpy（caller-save spill）——源码从未写过 S64 store，反汇编实测源码仅 U8 scale + e4m3 output 两种
+TSTORE，diss 却出现 **5 条 `TSTORE, S64`**。而 emulator `ValidateLocalTlsu`（`AccumulateBlockInfo.cpp:60`）
+要求 Local TSTORE 的**源 tile dtype 精确等于 store block 的 dtype**（`IsCompatibleDataTile:270`
+`source->tileInfo->dataType == dataType`）。emulator 诊断打印：`block.dtype=INT64`（S64，`elemB=8`）、
+维度解成 `1/1/1`，而源 `src.dtype=FP32`、`[validRow=8, col=32]`、`size=1024` → S64 块 ≠ 源 tile FP32，
+断言必失败。
+
+tile 参数的栈往返本质是**等宽字节 memcpy**，按字节宽度匹配即可；后端发 S64 通用块、emulator 又按 dtype
+精确匹配，两边口径不一致——**交互缺陷，非 kernel 逻辑**。
+
+**修复建议**（任一侧即可）：
+- **emulator**：`ValidateLocalTlsu` 对编译器合成的通用块搬运放宽为按字节宽度匹配，不要求 block dtype
+  逐一等于源 tile dtype。
+- **LinxV5 后端**：传 tile 实参时按源 tile 真实 dtype 发 store/load block，而非统一 S64。
 
 ---
 
