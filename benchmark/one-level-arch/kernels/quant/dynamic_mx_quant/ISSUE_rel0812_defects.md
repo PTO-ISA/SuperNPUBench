@@ -9,14 +9,18 @@
 
 ## 环境
 
+复现**跨两个仓库**：kernel 在 **SuperNPUBench** 编译，产出的 elf 由 **SuperScalarModel** 的
+`bin/gfrun` 执行。两仓缺一不可。
+
 | 项 | 值 |
 |---|---|
-| 复现仓 | SuperNPUBench `benchmark/one-level-arch`，commit `2b41a9c` |
-| 分支 | `feat/dmxq-rel0812` |
-| 工具链 | `linx_blockisa_llvm_musl`，clang-15，target `linx64v5-unknown-linux-musl`；llvm-project commit `eb64de8` |
-| 执行器 | SuperScalarModel `gfrun`，commit `319294f` |
-| 复现根目录 | `benchmark/one-level-arch/test/kernel/quant/dynamic_mx_quant` |
+| 编译仓 | SuperNPUBench `benchmark/one-level-arch`，分支 `feat/dmxq-rel0812`，commit `fb96b28` |
+| 执行仓 | SuperScalarModel（`bin/gfrun` 执行 elf），分支 `feat/pto-v058-adaptation`，commit `319294f` |
+| 工具链 | `linx_blockisa_llvm_musl`，clang-15，target `linx64v5-unknown-linux-musl`；llvm-project commit `eb64de8` + Linx-TileOP-API commit `72f8255` |
+| 复现根目录（编译） | `benchmark/one-level-arch/test/kernel/quant/dynamic_mx_quant` |
 | 环境变量 | `export COMPILER_DIR=.../linx_blockisa_llvm_musl/bin`；`export LINX_SYSROOT=.../sysroot/usr` |
+
+> 上述三仓 commit 与 `SuperNPUBench/README.md` release_ver0812「验证仓库版本」一致。
 
 ## 缺陷一览
 
@@ -28,6 +32,18 @@
 | 4 | linx-toolchain-build (LinxV5) | 任一含 `layout_type_to_str` 的 TU，`-O0` | `LinxV5InstrInfo.cpp:670` Can't load register from stack slot | `loadRegFromStackSlot:665` 白名单加 `mixedgprnora` |
 | 5 | emulator ↔ LinxV5（交互） | gfrun 到达非内联、跨函数收发 tile 的调用链 | `AccumulateBlockInfo.cpp:60` S64 块 dtype 不匹配 | `ValidateLocalTlsu` 按字节宽度匹配，或后端按源 tile dtype 发块 |
 
+## 复现方式（两类缺陷命令不同）
+
+- **编译**：在复现根目录执行 `make TESTCASE=dynamic_mx_quant TYPE=<TYPE> diss`。
+  `diss` 只做「编译 + 反汇编（`llvm-objdump -dl`）」，**不执行 gfrun**；产物 elf 位于
+  `output/kernel/quant/dynamic_mx_quant/elf/kernel_quant_dynamic_mx_quant/dynamic_mx_quant_<variant>.elf`。
+- **编译期缺陷（3、4）**：报错在上述 `make` 阶段即出现，一条命令即复现，无需 gfrun。
+- **运行时缺陷（1、2、5）**：`make ... diss` 会**编译成功**，须再在**仓库根**用 gfrun 执行 elf 才触发断言：
+  ```bash
+  SuperScalarModel/bin/gfrun -t 1 -f "$PWD/SuperNPUBench/benchmark/one-level-arch/output/kernel/quant/dynamic_mx_quant/elf/kernel_quant_dynamic_mx_quant/dynamic_mx_quant_<variant>.elf"
+  ```
+  每个缺陷的 `<TYPE>` 与 `<variant>` 见其小节的「复现命令」。
+
 ---
 
 ## 缺陷 1：TABS 作用于 BF16 被 emulator 拒绝
@@ -35,9 +51,12 @@
 - **缺陷所在仓**：`SuperScalarModel`（emulator）
 - **触发条件**：kernel 对 **BF16** tile 执行 `TABS`。入口 `dynamic_mx_quant_common.hpp:702`
   `compute_cublas_scale_tail` 中 `TABS(abs_x, x_in)`，`x_in` 为 BF16。
-- **复现命令**：
+- **复现命令**（运行时：编译 + gfrun 两步）：
   ```bash
+  # ① 编译（复现根目录；diss 只编译+反汇编，不跑 gfrun）
   make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8 diss
+  # ② gfrun 执行（仓库根）
+  SuperScalarModel/bin/gfrun -t 1 -f "$PWD/SuperNPUBench/benchmark/one-level-arch/output/kernel/quant/dynamic_mx_quant/elf/kernel_quant_dynamic_mx_quant/dynamic_mx_quant_tail_cublas_fp8.elf"
   ```
 
 **报错信息**（gfrun）：
@@ -68,9 +87,12 @@ emulator 白名单过窄。同函数 `TNEG`（:233-236）已允许 BF16，可见
 - **缺陷所在仓**：`SuperScalarModel`（emulator）
 - **触发条件**：kernel 对 **UINT16** tile 执行 `TROWMAX`。入口 `dynamic_mx_quant_common.hpp:639`
   `compute_ocp_scale_tail_boxed_pw` 中 `TROWMAX(max_exp, exp_bits)`，`exp_bits` 为 UINT16 指数位。
-- **复现命令**：
+- **复现命令**（运行时：编译 + gfrun 两步）：
   ```bash
+  # ① 编译（复现根目录）
   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4 diss
+  # ② gfrun 执行（仓库根）
+  SuperScalarModel/bin/gfrun -t 1 -f "$PWD/SuperNPUBench/benchmark/one-level-arch/output/kernel/quant/dynamic_mx_quant/elf/kernel_quant_dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp4.elf"
   ```
 
 **报错信息**（gfrun）：
@@ -108,9 +130,9 @@ handler 不符的 dtype 集。
 - **缺陷所在仓**：`linx-toolchain-build`（`llvm-project` LinxV5 后端）
 - **触发条件**：编译 `nontail_ocp_fp4.cpp`（Axis=32/Post=64/BS=32，fp4 输出 tile `[32,32]`
   RowMajor NoneBox）于 **`-O1` 或 `-O2`**。
-- **复现命令**：
+- **复现命令**（编译期：一条命令即报错，无需 gfrun）：
   ```bash
-  make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP_FP4 diss     # 默认 -O2
+  make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP_FP4 diss     # 默认 -O2；报错在编译阶段
   ```
 
 **报错信息**（编译期，报在 vendor 头内联汇编）：
@@ -158,9 +180,11 @@ AsmPrinter（或相关 pass 对 INLINEASM imm 操作数做保守处理）。
 - **触发条件**：以 **`-O0`** 编译任一含 `pto::layout_type_to_str`
   （`two-level-arch/include/common/layout.hpp:59`，返回字符串字面量的 helper，各 kernel 都链入）
   的翻译单元。与具体 kernel 无关。
-- **复现命令**（任一 kernel 降 -O0 即可，例）：
+- **复现命令**（编译期：一条命令即报错，无需 gfrun。任一 kernel 降 -O0 即可，例）：
   ```bash
-  make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4 EXTRA_CXXFLAGS=-O0 diss
+  # -O0 经 Makefile.common 的 $(CFLAGS) 注入（追加在硬编码 -O2 之后、覆盖之）；
+  # 注意变量名是 CFLAGS，Makefile 无 EXTRA_CXXFLAGS 变量
+  make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4 CFLAGS=-O0 diss
   ```
 
 **报错信息**（编译期）：
@@ -197,9 +221,12 @@ store 与 load 处理不对称：
 - **触发条件**：gfrun 执行到「未内联、跨函数收/发 tile」的调用链——本 kernel 为 cuBLAS scale 路径
   `compute_cublas_scale_{tail,not_tail}` → `compute_cublas_core`。默认 bf16 构建下被**缺陷 1**
   （`TABS(bf16)`）前置掩盖、走不到；经 fp16/fp32 输入越过缺陷 1 后**首个命中**。
-- **复现命令**：
+- **复现命令**（运行时：编译 + gfrun 两步；fp16 越过缺陷1 后命中）：
   ```bash
-  make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8_FP16 diss   # fp16 越过缺陷1 后命中
+  # ① 编译（复现根目录）
+  make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8_FP16 diss
+  # ② gfrun 执行（仓库根）；默认 -O2 下 compute_cublas_core 非内联，天然 5 条 TSTORE S64
+  SuperScalarModel/bin/gfrun -t 1 -f "$PWD/SuperNPUBench/benchmark/one-level-arch/output/kernel/quant/dynamic_mx_quant/elf/kernel_quant_dynamic_mx_quant/dynamic_mx_quant_tail_cublas_fp8_fp16.elf"
   ```
 
 **报错信息**（gfrun）：
