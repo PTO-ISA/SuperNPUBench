@@ -16,6 +16,12 @@
 //
 //   3. 不要用 M=1 的退化形状。编译器会发出 dstTile 为空的 TLOAD，gfrun 和
 //      gfsim 都报 "TLOAD with empty dstTile!" 并 abort。
+//
+//   4. GM 行距一律按**逻辑元素数**计，不是字节。RowMajor 的第三个模板参数、
+//      MakeTlsuPattern 的 STRIDE 都是元素数，B.IOR src1 编码的也是元素数
+//      （PTO-TILE-MODEL-MEMORY-STRIDE）。TileOP-API 曾经在绑定处乘过
+//      sizeof(DType)，Linx-TileOP-API@f35d3aa 已去掉；用例侧不需要、也不
+//      允许再自己折算字节。
 #ifndef TLSU_BENCH_HPP
 #define TLSU_BENCH_HPP
 
