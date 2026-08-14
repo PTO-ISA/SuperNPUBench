@@ -35,6 +35,8 @@ def compile_defines(case: QsmlaCase, output_root: Path):
         "QSOFTMAX_SCALE": f"{case.softmax_scale:.9g}f",
         "QCASE_NAME": f'\"{case.name}\"',
         "QOUTPUT_ROOT": f'\"{output_root.resolve()}\"',
+        "QLAYOUT_BSND": 1 if case.q_layout == "BSND" else 0,
+        "QKV_LAYOUT_BSND": 1 if case.kv_layout == "BSND" else 0,
     }
     return [f"-D{name}={value}" for name, value in values.items()]
 
