@@ -24,8 +24,8 @@ class QsmlaCase:
     softmax_scale: float = 0.125
     source: str = "supernpubench:stage0-smoke"
     mode: str = "SWA"
-    q_layout: str = "CONTIGUOUS_2D"
-    kv_layout: str = "CONTIGUOUS_2D"
+    q_layout: str = "BNSD"
+    kv_layout: str = "BNSD"
     logical_dtype: str = "fp16"
     source_storage_dtype: str = "fp16"
     stage0_compute_dtype: str = "fp16"
@@ -133,6 +133,22 @@ QSMLA_STAGE0_CASES: Tuple[QsmlaCase, ...] = (
         b=1, s1=5, s2=7, n1=2, n2=1, d=10, k=512,
         tm=4, tk=4, td=6,
         coverage=frozenset({"batch_gqa", "q_tail", "kv_tail", "d_tail", "k512", "s1_ne_s2"}),
+    ),
+    QsmlaCase(
+        name="smoke_bsnd_g64",
+        b=1, s1=2, s2=3, n1=64, n2=1, d=8, k=128,
+        tm=64, tk=2, td=4,
+        q_layout="BSND", kv_layout="BSND",
+        coverage=frozenset({"bsnd_layout", "g64", "kv_tail", "k128", "s1_ne_s2"}),
+        note="Stage 1 direct [G,D] MM1 smoke with G=64.",
+    ),
+    QsmlaCase(
+        name="smoke_bsnd_g128",
+        b=1, s1=1, s2=3, n1=128, n2=1, d=8, k=512,
+        tm=64, tk=2, td=4,
+        q_layout="BSND", kv_layout="BSND",
+        coverage=frozenset({"bsnd_layout", "g128_split", "q_tail", "kv_tail", "k512", "s1_ne_s2"}),
+        note="Stage 1 split-G smoke: G=128 must be processed as two M=64 slices.",
     ),
 )
 

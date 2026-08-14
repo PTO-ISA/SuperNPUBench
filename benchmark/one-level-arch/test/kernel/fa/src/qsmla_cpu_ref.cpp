@@ -56,6 +56,12 @@
 #ifndef QOUTPUT_ROOT
 #define QOUTPUT_ROOT "."
 #endif
+#ifndef QLAYOUT_BSND
+#define QLAYOUT_BSND 0
+#endif
+#ifndef QKV_LAYOUT_BSND
+#define QKV_LAYOUT_BSND 0
+#endif
 
 static_assert(QB > 0, "B must be positive");
 static_assert(QS1 >= 0 && QS2 >= 0, "S1/S2 must be non-negative");
@@ -132,10 +138,16 @@ static bool swa_valid(int q_pos, int kv_pos) {
 }
 
 static size_t q_offset(int b, int head, int token, int dim) {
+    if constexpr (QLAYOUT_BSND != 0) {
+        return (((static_cast<size_t>(b) * QS1 + token) * QN1 + head) * QD + dim);
+    }
     return (((static_cast<size_t>(b) * QN1 + head) * QS1 + token) * QD + dim);
 }
 
 static size_t kv_offset(int b, int head, int token, int dim) {
+    if constexpr (QKV_LAYOUT_BSND != 0) {
+        return (((static_cast<size_t>(b) * QS2 + token) * QN2 + head) * QD + dim);
+    }
     return (((static_cast<size_t>(b) * QN2 + head) * QS2 + token) * QD + dim);
 }
 
@@ -214,9 +226,11 @@ int main() {
     std::fprintf(manifest,
         "case=%s\nB=%d S1=%d S2=%d N1=%d N2=%d D=%d K=%d\n"
         "Tm=%d Tk=%d Td=%d win_left=%d win_right=%d softmax_scale=%.9g\n"
+        "q_layout=%s kv_layout=%s\n"
         "q_dtype=fp16 kv_dtype=fp16 accumulation=fp32 out_dtype=fp32\n",
         QCASE_NAME, QB, QS1, QS2, QN1, QN2, QD, QK,
-        QTM, QTK, QTD, QWIN_LEFT, QWIN_RIGHT, static_cast<double>(QSOFTMAX_SCALE));
+        QTM, QTK, QTD, QWIN_LEFT, QWIN_RIGHT, static_cast<double>(QSOFTMAX_SCALE),
+        QLAYOUT_BSND ? "BSND" : "BNSD", QKV_LAYOUT_BSND ? "BSND" : "BNSD");
     std::fclose(manifest);
 
     std::printf("QSMLA_STAGE0 case=%s output=%s elements=%zu\n",
