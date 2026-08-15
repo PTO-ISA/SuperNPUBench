@@ -23,7 +23,7 @@ op（`TABS`/`TEXP`/`TRECIP`/`TADDS`/`TMULS`/`TANDS`/`TMAX`/`TROWMAX` …）不�
 
 | 仓库 | 分支 / HEAD | commit |
 |---|---|---|
-| SuperNPUBench | `feat/dmxq-rel0812` | `7814f19` |
+| SuperNPUBench | `feat/dmxq-rel0812` | `1bd945a` |
 | SuperScalarModel | detached HEAD（基于 `feat/pto-v058-adaptation`） | `319294ff` |
 | linx-toolchain-build | `main` | `e6a31ef` |
 | └ Linx-TileOP-API（组件源，缺陷根仓） | `temp/shared-tload-integration-20260811` | `abe8411` |
