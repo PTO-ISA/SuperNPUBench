@@ -763,3 +763,95 @@ store 与 load 处理**不对称**：
 
 **无有效规避**——`-O0` 撞本问题、`-O1/-O2` 撞问题11，`nontail_ocp_fp4` 任一优化等级均无法编译。
 需按解除路径在 toolchain 侧修复（问题11、问题12 各修一处）。
+
+---
+
+## 问题13：TCVT 不发 lb2，valid-col-1 的 TCVT 输出直接 TSTORE 被 emulator 拒绝（需 toolchain 侧解决）
+
+> release_ver0812 未收录的报错。缺陷所在仓 **`linx-toolchain-build`（Linx-TileOP-API `-D__linx`
+> intrinsic header `template_asm.hpp`）**，复现入口在本仓 probe 探针
+> `probe_dynamic_mx_quant_tail_ocp_fp8.hpp` 的 OCP e8m0/bf16 直转 scale 落盘。
+
+### 结论
+
+一个 **boxed valid-col-1**（物理 `Cols>1`、`validCol=1`）的 tile，若其**最后一个 producer 是
+`TCVT`** 并随即 `TSTORE`，gfrun 运行期挂：
+
+```
+SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp:60
+ValidateLocalTlsu "Local TSTORE requires one compatible source Tile"  (EXIT=1)
+```
+
+probe 中命中点（full + tail pass 各一对，共 4 处）：
+- `TSTORE(gw, max_bf)`，`max_bf = TCVT(max_h)`（half→bf16），boxed `[TileM,1] / 物理 Cols=32`。
+- `TSTORE(gs, scale_e8m0)`，`scale_e8m0 = TCVT(shared_bf)`（bf16→e8m0），boxed `[TileM,1] / 物理 Cols=32`。
+
+### 根因（工具链 header 侧不一致）
+
+tile 形状经内联汇编 `B.DIM ..,->lb0/lb1/lb2` 传给 emulator：`lb0=validCol`、`lb1=validRow`、
+**`lb2=物理列宽 tile::Cols`**。`template_asm.hpp` 里几乎所有产 tile 的 TEPL elementwise op
+（`TABS`:3401 / `TEXP`:3461 / `TRECIP`:3501 / `TADDS`:3646 / `TMULS` / `TANDS` / `TMAX` /
+`TROWMAX`:4586 …）都发 `B.DIM zero,%c4,->lb2`；**唯独逐元素的 `TCVT_T`（TEPL 27，:109）与
+`TMOV` 不发 lb2**（TMOV 是 layout move、dst 形状另有来源，可理解；TCVT dst 与 src 逐元素同形、
+无理由区别对待）。
+
+emulator 对「缺 lb2」兜底（`isa/Block.cpp:1074`）：
+
+```cpp
+physicalCol = (lb2 <= 1) ? validCol : lb2;   // TCVT lb2=0 → 塌成 validCol
+```
+
+于是 TCVT 产出的 boxed tile 被记 `col = validCol = 1`（本应是物理的 32）。而 `TSTORE`（:1806）
+固定声明 `lb2 = tile::Cols`（=32）。校验 `IsCompatibleDataTile`（:265）要求
+`源tile.col == store.physicalCol` → `1 != 32` → 断言。
+
+**关键澄清**：并非「physical≠valid 就非法」。部分列 store（valid=1, physical=32）**是合法的**
+（`kernels/reduction/reducemax_rowvec_pto.hpp` 正常这么干），前提是 store 的 tile 由**发 lb2 的
+op** 产出、`col` 记成物理宽即可。症结**只**在 `TCVT` 塌了 `col`。数据满宽 store
+（`TSTORE(gy, oq)`，`oq=TCVT(...)` 但 `validCol==Cols==32`）**不中招**——塌陷后 `col` 仍等于
+`Cols`。经 `TANDS`/`TLOAD` 中转的 store 也不中招（那些 op 发 lb2）。
+
+**定性**：疑似工具链 header 缺陷（`TCVT_T` 与同类 TEPL elementwise op 在 lb2 上不一致），
+非 LLVM codegen、非 emulator（兜底合理）。100% 坐实还需核对 PTO ISA 规范 TEPL-27(CVT) 编码
+`lb2` 是否为产 tile 指令的必填/合法字段。详见 `ISSUE_tcvt_no_lb2.md`。
+
+**解除路径（linx-toolchain-build）**：`template_asm.hpp` 的 `TCVT_T`（:109）汇编体补一行
+`"B.DIM zero, %cN, ->lb2\n"`（`N` 绑定 `tile_shape_out::Cols`），与 `TABS` 等对齐。
+
+### 影响场景
+
+任何「boxed valid-col-1 tile 由 TCVT 直接产出并落盘」的路径。OCP scale 直转
+（bf16→e8m0）尤其命中——e8m0 只能由 `TCVT` 产出（无 e8m0 域算术 op 可作替代 producer）。
+
+### 当前提交状态：复现版（未应用任何规避）
+
+**本仓提交的 `probe_dynamic_mx_quant_tail_ocp_fp8.hpp` 是未加盖章的复现版**——按
+`ISSUE_tcvt_no_lb2.md` 的复现命令编译并 `gfrun` 执行，会**直接在 `TSTORE(gw, max_bf)` 处挂
+M47 `ValidateLocalTlsu` 断言**。这样保证按 ISSUE 可原样复现缺陷。下面两条解法均已实测验证，但
+**均未写入提交代码**（避免掩盖问题）。
+
+### 解法 A（kernel 侧盖章，gfrun 实测越过 M47）
+
+「让喂 store 的 tile 最后由发 lb2 的 op 重新盖章 `col=Cols`」，两处均经 gfrun 验证越过：
+- **`max_bf`（bf16）**：TCVT 后插一元恒等发-lb2 op 盖章。**不能用 `TABS`**（问题9：emulator 拒
+  BF16 TABS）；改用 `TMULS(max_bf, max_bf, __builtin_bit_cast(__bf16,(uint16_t)0x3f80))`（×1.0，
+  发 lb2、bf16 合法；立即数经 `__builtin_bit_cast` bits 规避问题11 后端崩溃）。
+- **`scale_e8m0`（e8m0）**：e8m0 无 elementwise 算术，但**二元 `TMAX(t,t,t)` 恒等盖章发 lb2 且被
+  emulator 接受**（`TMAX(scale_e8m0, scale_e8m0, scale_e8m0)`）。此前判断的「e8m0 无 producer 死结」
+  被 gfrun 推翻——TMAX 可作 in-place 重盖 op。
+
+### 解法 B（toolchain 侧根本修复，汇编实测越过 M47）
+
+`template_asm.hpp` 的 `TCVT_T`（:109）汇编体在 `->lb1` 后补一行 `"B.DIM zero, %c7, ->lb2\n"`，
+并追加输入操作数 `"i"(tile_shape_out::Cols)`（第 7 个输入，`%c7`），与 `TABS`(:3401) 等对齐。
+**已实测**：改后重编 probe（**无需 kernel 盖章**），反汇编确认每个 `BSTART.TEPL TCVT` 块后紧跟
+`C.B.DIMI 32, ->lb2`；`gfrun` **越过原 M47 断言**。零回归：满宽 tile 旧兜底 `col=validCol==Cols`
+与新显式 `lb2=Cols` 一致；boxed valid-col-1 旧 `col=1`（错）→ 新 `col=Cols`（对）。缺陷根仓在
+Linx-TileOP-API 组件源（`src/Linx-TileOP-API/include/jcore/template_asm.hpp`），改 build artifact
+会被 `make build-tileopapi` 覆盖，故根本修复须落组件源——**本次未改，保留复现**。
+
+### 两解法共同的收敛点
+
+A、B 任一应用后，probe 全部 tile 指令链跑通，均收敛到与问题9/10 相同的 **startup skew 墙**——
+libc `__init_libc` 的 text 相对 store `sdi.u s1,t#1,-12xx`（`AssertNotTextStore`，
+`AaccelssMemoryEngine.cpp:12`），非 kernel 缺陷，是三仓版本 skew 的已知阻塞。

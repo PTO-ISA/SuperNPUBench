@@ -49,6 +49,11 @@ ifeq ($(TYPE), BS512_CUBLAS)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_bs512_cublas.elf
 endif
 
+ifeq ($(TYPE), PROBE_OCP_FP8)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/probe_ocp_fp8.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_probe_ocp_fp8.elf
+endif
+
 ifeq ($(TYPE), ALIGN32_PROBE)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/align32_probe.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_align32_probe.elf
