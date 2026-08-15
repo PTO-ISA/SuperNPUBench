@@ -12,7 +12,7 @@
 - **对齐 AscendC 为唯一基准**：三种 scale 算法逐 op 对齐 AscendC `ComputeScale{Ocp,Cublas,DynamicDtypeRange}`，golden 亦为其 Python 移植。
 - **scaleAlg↔dstType 合法性对齐 AscendC**：合法组合来自 `op_host/arch35/dynamic_mx_quant_tiling_arch35.cpp`——非法组合（cuBLAS-FP4、DynRange-FP8）不生成 kernel。
 - **emax 由输出 dtype 派生**：`emax` 是输出 dtype 最大正则数的（<<7）指数域位模式，通过 `constexpr` trait `emax_bits<OutT>()`（对应 AscendC `GetFp8MaxExp<T>()` / `GetFp4MaxExp<T>()`）从输出类型推导，**不作为调用方自由参数**。FP8_E4M3=`0x0400`，FP4_E2M1=`0x0100`。
-- **公式一致性**：量化缩放使用 `y = x × 2^(-E)`（精确 2 的幂次），reciprocal 由 `finalize_scale_recip_u16` / `compute_cublas_core` 的 bf16 位模式给出。
+- **公式一致性**：量化缩放使用 `y = x × 2^(-E)`（精确 2 的幂次），reciprocal 由 `finalize_recip_u16`（OCP 新算法）/ `finalize_scale_recip_u16`（DynRange） / `compute_cublas_core`（cuBLAS）的 bf16 位模式给出。
 - **无寄存器 bitcast**：linx（`-D__linx`）无 `TCAST`（`#ifndef __linx`）。float↔int 的位重解释只能经 scratch-HBM 同宽度别名（`TSTORE` 后以另一 dtype `TLOAD`），见 `reinterpret_u16_to_bf16` / `reinterpret_f32_to_u32`。
 - **两遍结构降低寄存器压力**：镜像 AscendC 的 ComputeScale→ComputeData 分离——先算 scale/recip 并立即 `TSTORE` scale_byte，再在数据遍加载 bf16 值。避免同时存活过多 tile 触发 LinxV5 对 <512B tile 的溢出断言（`LinxV5RegisterInfo.cpp:403`）。
 
@@ -148,7 +148,13 @@ void compute_dynamic_range_scale_tail(x_u16, scale_byte, recip_out); // 位视�
 // _not_tail 三个同构（TROWMAX→TCOLMAX；cuBLAS not_tail 取 bf16 值视图 + TCVT→fp32）
 ```
 
-`recip_out` 与 `scale_byte` 由公共 `finalize_scale_recip_u16(shared_exp, eq_inf, ...)`（OCP/DynRange）或 `compute_cublas_core`（cuBLAS）生成，镜像 AscendC 收尾：
+`recip_out` 与 `scale_byte` 的收尾按算法分三条路径：
+
+- **当前 OCP（scaleAlg=0）**：已改为 **bf16→e8m0 直转**——scale 字节由 `Cast<bf16→e8m0>` 直接产出（**不再走**下面的 `>>7` + `eq_inf` select），recip 由 `finalize_recip_u16` 产出，详见 §3.3.1。
+- **DynRange（scaleAlg=2）及已过时的旧版 OCP**：走公共 `finalize_scale_recip_u16(shared_exp, eq_inf, ...)`（下面的收尾）。
+- **cuBLAS（scaleAlg=1）**：走 `compute_cublas_core`。
+
+`finalize_scale_recip_u16` 收尾（DynRange / 旧 OCP，镜像 AscendC）：
 ```
 scale_byte = shared_exp >> 7 ; select(eq_inf ? 0x00FF : scale_byte)
 recip      = 0x7F00 - shared_exp
@@ -157,7 +163,52 @@ recip      = 0x7F00 - shared_exp
              select(shared_exp==0x7F00 ? 0x0040 : recip)
 ```
 
-#### 3.3.1 scaleAlg=0（OCP MxFP8/MxFP4）
+#### 3.3.1 scaleAlg=0（OCP MxFP8/MxFP4）— bf16→e8m0 直转（当前算法）
+
+> 本节以「0 代码」为基准、以**预期实现**为目标描述当前 OCP scale 的设计。对应实现见
+> `common.hpp` `ocp_scale_mulcast_from_maxexp` / `finalize_recip_u16`，镜像 AscendC
+> `dynamic_mx_quant_tail_axis_fp8_ocp_new.h` 的 `ComputeScaleOcp`（`Mul` + `Cast<e8m0>`）。
+> 旧的「clamp 到 emax 再减 emax + `>>7`」路径见 §3.3.1-旧（已过时）。
+
+**核心思路**：硬件支持 bf16→e8m0 的 `Cast` 直转（e8m0 存的就是 bf16 值的有偏指数字段），
+且 OCP 的 shared scale 恒为 2 的幂（零尾数）——故不必再在整数指数域手工 `clamp`/减法/移位：
+一次 bf16 乘法得到 `2^(E_max-emax)`，一次 `Cast<bf16→e8m0>` 直接落成 scale 字节。emax 仍由
+`emax_bits<OutT>()` 派生（FP8=0x0400 / FP4=0x0100），是 OCP 同时支持 FP8 与 FP4 的唯一区别。
+
+```
+提取指数位并归约得每块 max_exp        // TANDS(0x7F80) + TROWMAX/TCOLMAX（有偏 bf16 指数域，2^E_max 位型）
+max_bf     = reinterpret<bf16>(max_exp)   // 位重解释：2^E_max 的 bf16 值
+shared_bf  = max_bf × 2^(-emax)           // TMULS，乘数 recip_emax_bits<OutT>() = 0x3F80 - emax_bits<OutT>()
+scale_e8m0 = Cast<bf16→e8m0>(shared_bf)   // TCVT 直转；硬件把 inf/nan 映射到 0xFF
+```
+
+**为什么乘数 `0x3F80 - emax_bits<OutT>()` 就是 `2^(-emax)` 的 bf16 位型**：`0x3F80` 是 bf16 的
+`1.0`（指数域 127<<7、零尾数），`emax_bits<OutT>()` 是 `emax<<7`（同为零尾数 2 的幂），两者
+指数域整数相减即得 `(127-emax)<<7`、尾数仍零 → bf16 值 `2^(-emax)`。故
+`2^E_max × 2^(-emax) = 2^(E_max-emax)`，`Cast` 取其指数字段即 E8M0 字节 `E_max-emax`
+（**与旧算法逐比特同值**）。e4m3→`0x3B80`(2⁻⁸)、e5m2→`0x3800`(2⁻¹⁵)、fp4_e2m1→`0x3E80`(2⁻²)、
+fp4_e1m2→`0x3F80`(2⁰)。
+
+**recip 收尾**（`finalize_recip_u16`，仍在 uint16 位域，逻辑同旧算法、仅少 scale 的 `>>7`）：
+```
+shared_u16 = reinterpret<uint16>(shared_bf)
+recip      = 0x7F00 - shared_u16
+             select(max_exp==0x7F80   ? 0x7F81 : recip)   // inf/nan（取自乘前 max_exp）
+             select(max_exp==0        ? 0      : recip)   // 整块全 0（取自乘前 max_exp）
+             select(shared_u16==0x7F00? 0x0040 : recip)   // special（取自 shared 位型）
+```
+`eq_inf`/`eq_zero` 取自**乘之前**的 `max_exp`（镜像 ocp_new 的 `Compare(xMaxExp,expMask)` /
+`Compare(xMaxExp,0)`），`eq_special` 取自 `shared` 的位型。
+
+**两处相对旧算法的边界**（详见 RECORD 问题7）：
+- **边界1（inf/nan）**：scale 字节现依赖 `Cast<e8m0>(inf/nan)==0xFF`（无显式 Select），而非旧路径的 `eq_inf→0x00FF`。
+- **边界2（极小非零下溢）**：旧路径 `clamp` 后 recip 归 0；新路径给出 bf16 denormal recip。
+
+#### 3.3.1-旧 scaleAlg=0（OCP）— clamp + 减 emax（已过时）
+
+> ⚠️ **已过时**：当前代码已改为 §3.3.1 的 bf16→e8m0 直转。本节仅描述旧的整数指数域
+> clamp/减法/移位算法，保留供对照。旧算法目前仅 `bak/` 下**未调试**的 fp8 kernel
+> （`compute_ocp_scale_{tail,not_tail}`）仍在使用。
 
 提取每个元素指数位，取块内最大指数，`shared_exp = max(max_exp, emax) - emax`。emax 由 `emax_field<OutT, Domain>()` 给出——**这正是 OCP 同时支持 FP8 与 FP4 的关键**：唯一区别是 emax（16bit 域 FP8=0x0400 / FP4=0x0100）。
 
