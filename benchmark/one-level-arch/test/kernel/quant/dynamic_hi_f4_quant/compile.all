@@ -1,0 +1,16 @@
+#!/bin/bash
+# DynamicHiF4Quant — build entries. The operator's route-A encode FRAMEWORK is
+# landed (dynamic_hi_f4_quant_tail.h) with PLACEHOLDER gaps (RECORD 问题3/4/10);
+# emit-capability PROBES document the individual gaps. All are EMIT/diss checks
+# (runtime blocked by toolchain<->emulator skew).
+
+# --- route-A framework emit witness (bf16 + half paths, full+tail, multi-block) ---
+# Compiles clean + emits real BSTART.TEPL blocks. Numerics NOT trusted (placeholders).
+make TESTCASE=dynamic_hi_f4_quant TYPE=FRAMEWORK diss
+
+# --- e6m2 (L1 base) cast emit probe ---
+# Stage 1: honest one-level path — EXPECTED TO FAIL COMPILE (type_traits<__fp8_e6m2>
+#          unregistered; __type_code has no e6m2 entry). See RECORD 问题3.
+make TESTCASE=dynamic_hi_f4_quant TYPE=E6M2_PROBE diss
+# Stage 2: placeholder type_traits injected — compiles but dst mis-tagged as e8m0.
+make TESTCASE=dynamic_hi_f4_quant TYPE=E6M2_PROBE_S2 diss

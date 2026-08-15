@@ -1,8 +1,8 @@
-# [Issue] dynamic_mx_quant（release_ver0812）：5 处 model/toolchain 缺陷
+# [Issue] dynamic_mx_quant（release_ver0812）：3 处 toolchain/emulator 缺陷
 
-在 `dynamic_mx_quant` kernel 的构建 + gfrun 过程中，命中 5 处不在 release_ver0812 已知问题
-清单内的报错。逐一定位后，**根因均在 SuperScalarModel（emulator）或 linx-toolchain-build
-（LinxV5 后端），非 SuperNPUBench 侧 kernel 逻辑**。
+在 `dynamic_mx_quant` kernel 的构建 + gfrun 过程中，命中 3 处不在 release_ver0812 已知问题
+清单内的报错，**根因均在 SuperScalarModel（emulator）或 linx-toolchain-build（LinxV5 后端）的
+实现，非 ISA 规范/硬件支持面问题**（后者见 `ISSUE_rel0812_isa_dtype_support.md` 的缺陷 1/2）。
 
 本文以**独立缺陷为单位**记录，每条给出触发条件、报错信息、原因分析、修复建议，互不依赖。
 （规避某问题时链式触发的其它已知问题不在此文范围——本文只列可独立复现、可独立修复的缺陷。）
@@ -26,8 +26,6 @@
 
 | # | 缺陷所在仓 | 触发条件 | 报错 | 修复位置 |
 |---|---|---|---|---|
-| 1 | SuperScalarModel (emulator) | gfrun `TAIL_CUBLAS_FP8`（bf16 输入） | `AccumulateBlockInfo.cpp:393` TABS/BF16 | `AccumulateBlockInfo.cpp:229` 加 BF16 |
-| 2 | SuperScalarModel (emulator) | gfrun `TAIL_OCP_FP4` | `AccumulateBlockInfo.cpp:607` TROWMAX/U16 | `AccumulateBlockInfo.cpp:525` 对齐 TCOLMAX(:539) |
 | 3 | linx-toolchain-build (LinxV5) | 编译 `NONTAIL_OCP_FP4`，`-O1/-O2` | `B.IOT ->u<>` unknown operand | `LinxV5AsmPrinter.cpp:176` + 优化 pass 保留 `%Z` 立即数 |
 | 4 | linx-toolchain-build (LinxV5) | 任一含 `layout_type_to_str` 的 TU，`-O0` | `LinxV5InstrInfo.cpp:670` Can't load register from stack slot | `loadRegFromStackSlot:665` 白名单加 `mixedgprnora` |
 | 5 | emulator ↔ LinxV5（交互） | gfrun 到达非内联、跨函数收发 tile 的调用链 | `AccumulateBlockInfo.cpp:60` S64 块 dtype 不匹配 | `ValidateLocalTlsu` 按字节宽度匹配，或后端按源 tile dtype 发块 |
@@ -38,90 +36,11 @@
   `diss` 只做「编译 + 反汇编（`llvm-objdump -dl`）」，**不执行 gfrun**；产物 elf 位于
   `output/kernel/quant/dynamic_mx_quant/elf/kernel_quant_dynamic_mx_quant/dynamic_mx_quant_<variant>.elf`。
 - **编译期缺陷（3、4）**：报错在上述 `make` 阶段即出现，一条命令即复现，无需 gfrun。
-- **运行时缺陷（1、2、5）**：`make ... diss` 会**编译成功**，须再在**仓库根**用 gfrun 执行 elf 才触发断言：
+- **运行时缺陷（5）**：`make ... diss` 会**编译成功**，须再在**仓库根**用 gfrun 执行 elf 才触发断言：
   ```bash
   SuperScalarModel/bin/gfrun -t 1 -f "$PWD/SuperNPUBench/benchmark/one-level-arch/output/kernel/quant/dynamic_mx_quant/elf/kernel_quant_dynamic_mx_quant/dynamic_mx_quant_<variant>.elf"
   ```
   每个缺陷的 `<TYPE>` 与 `<variant>` 见其小节的「复现命令」。
-
----
-
-## 缺陷 1：TABS 作用于 BF16 被 emulator 拒绝
-
-- **缺陷所在仓**：`SuperScalarModel`（emulator）
-- **触发条件**：kernel 对 **BF16** tile 执行 `TABS`。入口 `dynamic_mx_quant_common.hpp:702`
-  `compute_cublas_scale_tail` 中 `TABS(abs_x, x_in)`，`x_in` 为 BF16。
-- **复现命令**（运行时：编译 + gfrun 两步）：
-  ```bash
-  # ① 编译（复现根目录；diss 只编译+反汇编，不跑 gfrun）
-  make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8 diss
-  # ② gfrun 执行（仓库根）
-  SuperScalarModel/bin/gfrun -t 1 -f "$PWD/SuperNPUBench/benchmark/one-level-arch/output/kernel/quant/dynamic_mx_quant/elf/kernel_quant_dynamic_mx_quant/dynamic_mx_quant_tail_cublas_fp8.elf"
-  ```
-
-**报错信息**（gfrun）：
-```
-SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp:393
-ASSERT(IsBasicUnaryTeplDataType(...) &&
-       "TEPL opcode/data-type tuple is not defined by PTO ISA v0.2")
-```
-
-**原因分析**：emulator 白名单 `IsBasicUnaryTeplDataType`
-（`AccumulateBlockInfo.cpp:229-230`）把 TABS 限为 `FP16 || FP32`，不含 BF16：
-```cpp
-case TileOp::TABS:
-    return dataType == DataType::FP16 || dataType == DataType::FP32;
-```
-而规范 ASL 中 TABS 的 legality handler `TileOperandsLegal_ExecuteTileUnary`
-（`pto-spec: asl/tile/model/legality/operand-schema.asl:20`）**不含任何 dtype 白名单**，仅要求
-`TileShapeAndTypeMatch(dst,src)`；BF16 是合法 tile dtype
-（`pto-spec: asl/tile/model/legality/dtype-layout.asl`）。故 BF16-TABS 为 spec-legal，
-emulator 白名单过窄。同函数 `TNEG`（:233-236）已允许 BF16，可见白名单本身支持 BF16 表达。
-
-**修复建议**：`AccumulateBlockInfo.cpp:229` TABS 分支加入 `DataType::BF16`（对齐 `TNEG:233-236`）。
-
----
-
-## 缺陷 2：TROWMAX 作用于 UINT16 被 emulator 拒绝（与 TCOLMAX 不对称）
-
-- **缺陷所在仓**：`SuperScalarModel`（emulator）
-- **触发条件**：kernel 对 **UINT16** tile 执行 `TROWMAX`。入口 `dynamic_mx_quant_common.hpp:639`
-  `compute_ocp_scale_tail_boxed_pw` 中 `TROWMAX(max_exp, exp_bits)`，`exp_bits` 为 UINT16 指数位。
-- **复现命令**（运行时：编译 + gfrun 两步）：
-  ```bash
-  # ① 编译（复现根目录）
-  make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4 diss
-  # ② gfrun 执行（仓库根）
-  SuperScalarModel/bin/gfrun -t 1 -f "$PWD/SuperNPUBench/benchmark/one-level-arch/output/kernel/quant/dynamic_mx_quant/elf/kernel_quant_dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp4.elf"
-  ```
-
-**报错信息**（gfrun）：
-```
-SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp:607
-ASSERT(IsReduceAndExpandTeplDataType(...) &&
-       "reduce/expand TEPL tuple is not defined by PTO ISA v0.58")
-```
-
-**原因分析**：白名单 `IsReduceAndExpandTeplDataType`（`AccumulateBlockInfo.cpp:525-528`）给
-**TROWMAX** 的 dtype 集为 `FP16||FP32||INT32`，不含 U16/BF16；而同函数 **TCOLMAX**
-（:539-547）含 `INT8/UINT8/INT16/UINT16/INT32/UINT32/BF16`：
-```cpp
-case TileOp::TROWMAX:  return FP16 || FP32 || INT32;                        // 无 U16/BF16
-case TileOp::TCOLMAX:  return FP16||FP32||INT8||UINT8||INT16||UINT16||INT32||UINT32||BF16;
-```
-但规范 ASL 中 TROWMAX 与 TCOLMAX **共用同一** legality handler
-`TileOperandsLegal_ExecuteTileReduction`
-（`pto-spec: asl/tile/reduce-and-expand/row-reduction/TROWMAX.asl` 与
-`.../column-reduction/TCOLMAX.asl` 的 `legality_handler` 字段一致），该 handler
-（`operand-schema.asl:70`）不含 dtype 限制（axis 只影响 destination shape 检查），U16 是合法
-tile dtype。故 U16-TROWMAX 为 spec-legal；emulator 给 TROWMAX 配了比 TCOLMAX 窄、且与共用
-handler 不符的 dtype 集。
-
-**旁证**：not-tail 变体用 TCOLMAX（`dynamic_mx_quant_common.hpp:800/832`），落在已放行集合内，
-故 nontail scale pass 不触发此断言——差异纯在 emulator 的 TROWMAX/TCOLMAX 不对称。
-
-**修复建议**：`AccumulateBlockInfo.cpp:525` TROWMAX 分支 dtype 集扩到与 TCOLMAX（:539-547）一致
-（或按共用 handler 语义去掉 dtype 白名单）。
 
 ---
 
@@ -219,9 +138,10 @@ store 与 load 处理不对称：
 - **缺陷所在仓**：`SuperScalarModel`（emulator）↔ `linx-toolchain-build`（LinxV5 后端）**交互缺陷**，
   任一侧修复即可。
 - **触发条件**：gfrun 执行到「未内联、跨函数收/发 tile」的调用链——本 kernel 为 cuBLAS scale 路径
-  `compute_cublas_scale_{tail,not_tail}` → `compute_cublas_core`。默认 bf16 构建下被**缺陷 1**
-  （`TABS(bf16)`）前置掩盖、走不到；经 fp16/fp32 输入越过缺陷 1 后**首个命中**。
-- **复现命令**（运行时：编译 + gfrun 两步；fp16 越过缺陷1 后命中）：
+  `compute_cublas_scale_{tail,not_tail}` → `compute_cublas_core`。默认 bf16 构建下被
+  **`ISSUE_rel0812_isa_dtype_support.md` 的缺陷 1**（`TABS(bf16)`）前置掩盖、走不到；经
+  fp16/fp32 输入越过该缺陷后**首个命中**。
+- **复现命令**（运行时：编译 + gfrun 两步；fp16 越过 ISA 支持缺陷 1 后命中）：
   ```bash
   # ① 编译（复现根目录）
   make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8_FP16 diss
@@ -251,12 +171,3 @@ tile 参数的栈往返本质是**等宽字节 memcpy**，按字节宽度匹配�
 - **emulator**：`ValidateLocalTlsu` 对编译器合成的通用块搬运放宽为按字节宽度匹配，不要求 block dtype
   逐一等于源 tile dtype。
 - **LinxV5 后端**：传 tile 实参时按源 tile 真实 dtype 发 store/load block，而非统一 S64。
-
----
-
-## 前提说明（针对缺陷 1/2）
-
-结论以规范 ASL 为权威：`TileOperandsLegal_ExecuteTileUnary` /
-`TileOperandsLegal_ExecuteTileReduction` 均无 dtype 白名单，BF16/U16 为合法 tile dtype。
-emulator 白名单注释引用的是生成的 `.md` 文档；若最终以硬件实际支持为准、且硬件确不支持
-BF16-TABS / U16-TROWMAX，则结论回到「合法但不受支持」，仍需在 emulator 或规范侧明确对齐。
