@@ -24,8 +24,8 @@ class QsmlaCase:
     softmax_scale: float = 0.125
     source: str = "supernpubench:stage0-smoke"
     mode: str = "SWA"
-    q_layout: str = "BNSD"
-    kv_layout: str = "BNSD"
+    q_layout: str = "BSND"
+    kv_layout: str = "BSND"
     logical_dtype: str = "fp16"
     source_storage_dtype: str = "fp16"
     stage0_compute_dtype: str = "fp16"
@@ -121,6 +121,66 @@ QSMLA_STAGE0_CASES: Tuple[QsmlaCase, ...] = (
         coverage=frozenset({"batch_gqa", "q_tail", "k128", "k512", "s1_ne_s2"}),
         reference_feasible=False,
         note="Same numeric shape as TND variant but a distinct BSND semantic case.",
+    ),
+    QsmlaCase(
+        name="typical_bsnd_swa_1",
+        b=8, s1=4, s2=131072, n1=128, n2=1, d=512, k=0,
+        tm=64, win_left=128, win_right=576,
+        source="user:typical_case_1",
+        enable_stage="stage1_compile",
+        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_large_s2"}),
+        reference_feasible=False,
+        note="User-provided production BSND SWA shape; compile-only because S2 is 131072.",
+    ),
+    QsmlaCase(
+        name="typical_bsnd_swa_2",
+        b=8, s1=4, s2=131072, n1=128, n2=1, d=512, k=0,
+        tm=64, win_left=128, win_right=576,
+        source="user:typical_case_2",
+        enable_stage="stage1_compile",
+        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_large_s2"}),
+        reference_feasible=False,
+        note="User-provided production BSND SWA shape; compile-only because S2 is 131072.",
+    ),
+    QsmlaCase(
+        name="typical_bsnd_swa_3",
+        b=8, s1=4, s2=131072, n1=128, n2=1, d=512, k=0,
+        tm=64, win_left=128, win_right=576,
+        source="user:typical_case_3",
+        enable_stage="stage1_compile",
+        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_large_s2"}),
+        reference_feasible=False,
+        note="User-provided production BSND SWA shape; compile-only because S2 is 131072.",
+    ),
+    QsmlaCase(
+        name="typical_bsnd_swa_s2_128",
+        b=8, s1=4, s2=128, n1=128, n2=1, d=512, k=0,
+        tm=64, win_left=128, win_right=576,
+        source="user:typical_reduced_s2",
+        enable_stage="stage1_compile",
+        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
+        reference_feasible=False,
+        note="Production-like BSND SWA shape with S2 reduced to 128.",
+    ),
+    QsmlaCase(
+        name="typical_bsnd_swa_s2_1024",
+        b=8, s1=4, s2=1024, n1=128, n2=1, d=512, k=0,
+        tm=64, win_left=128, win_right=576,
+        source="user:typical_reduced_s2",
+        enable_stage="stage1_compile",
+        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
+        reference_feasible=False,
+        note="Production-like BSND SWA shape with S2 reduced to 1024.",
+    ),
+    QsmlaCase(
+        name="typical_bsnd_swa_s2_4096",
+        b=8, s1=4, s2=4096, n1=128, n2=1, d=512, k=0,
+        tm=64, win_left=128, win_right=576,
+        source="user:typical_reduced_s2",
+        enable_stage="stage1_compile",
+        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
+        reference_feasible=False,
+        note="Production-like BSND SWA shape with S2 reduced to 4096.",
     ),
     QsmlaCase(
         name="smoke_batch_gqa",
