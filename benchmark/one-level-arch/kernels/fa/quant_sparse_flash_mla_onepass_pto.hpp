@@ -31,6 +31,7 @@
 
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
+#include "qsmla_config_pto.hpp"
 
 using namespace pto;
 
@@ -49,10 +50,8 @@ static inline void build_swa_mask_onepass(
     }
 }
 
-template <typename qdtype, typename kvdtype, typename odttype,
-          int s1, int s2, int D, int kTm, int kTk, int kTd,
-          int scaleD = D>
-void quant_sparse_flash_mla_swa_onepass_pto(
+template <typename qdtype, typename kvdtype, typename odttype, typename Config>
+void quant_sparse_flash_mla_swa_onepass_config_pto(
     odttype* out_ptr,
     qdtype* q_ptr,
     kvdtype* ori_kv_ptr,
@@ -71,6 +70,14 @@ void quant_sparse_flash_mla_swa_onepass_pto(
     int* metadata,
     float* softmax_lse)
 {
+    constexpr int s1 = Config::S1;
+    constexpr int s2 = Config::S2;
+    constexpr int D = Config::D;
+    constexpr int kTm = Config::TileM;
+    constexpr int kTk = Config::TileK;
+    constexpr int kTd = Config::TileD;
+    static_assert(D % kTd == 0,
+                  "one-pass D-tail support is implemented in the next shape-generalization step");
     constexpr int Db = D / kTd;
 
     float mask_buf[s1 * s2];
@@ -255,6 +262,39 @@ void quant_sparse_flash_mla_swa_onepass_pto(
             TCOPYOUT(gO, tO_cast);
         }
     }
+}
+
+// Compatibility entry for the existing fixed two-dimensional smoke. New BSND
+// dispatch code should instantiate QsmlaConfig explicitly and call the Config
+// entry above.
+template <typename qdtype, typename kvdtype, typename odttype,
+          int s1, int s2, int D, int kTm, int kTk, int kTd,
+          int scaleD = D>
+void quant_sparse_flash_mla_swa_onepass_pto(
+    odttype* out_ptr,
+    qdtype* q_ptr,
+    kvdtype* ori_kv_ptr,
+    float softmax_scale,
+    int ori_win_left,
+    int ori_win_right,
+    float* q_descale,
+    float* ori_kv_descale,
+    int* ori_sparse_indices,
+    int* ori_block_table,
+    int* cu_seqlens_q,
+    int* cu_seqlens_ori_kv,
+    int* seqused_q,
+    int* seqused_ori_kv,
+    float* sinks,
+    int* metadata,
+    float* softmax_lse)
+{
+    using Config = QsmlaConfig<1, s1, s2, 1, 1, D, 0, kTm, kTk, kTd>;
+    quant_sparse_flash_mla_swa_onepass_config_pto<qdtype, kvdtype, odttype, Config>(
+        out_ptr, q_ptr, ori_kv_ptr, softmax_scale, ori_win_left, ori_win_right,
+        q_descale, ori_kv_descale, ori_sparse_indices, ori_block_table,
+        cu_seqlens_q, cu_seqlens_ori_kv, seqused_q, seqused_ori_kv,
+        sinks, metadata, softmax_lse);
 }
 
 #endif
