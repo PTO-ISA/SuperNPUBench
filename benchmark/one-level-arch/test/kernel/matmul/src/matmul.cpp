@@ -146,6 +146,11 @@ int main() {
     #endif
     BENCHEND;
 
+    #ifdef RES_CHECK
+    #define RES_PATH CHK_DIR "/res.bin"
+    writeBinaryFile(RES_PATH, (uint8_t*)dst, globM*globN*sizeof(float));
+    #endif
+
   #elif defined(MASK_FP8) || defined(MASK_FP8_2LVL) || defined(MASK_FP8_MULTI4_B) || defined(MASK_FP8_MULTI4_AB) || defined(MASK_FP8_REUSEA) || \
         defined(MASK_FP8_REUSEB) || defined(MASK_FP8_REUSEAB) || defined(MASK_FP8_DYNAMIC) || defined(MASK_FP8_DYNAMIC_REUSE)
     __fp8_e4m3 *src0;
