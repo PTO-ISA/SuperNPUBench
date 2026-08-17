@@ -54,6 +54,11 @@ ifeq ($(TYPE), PROBE_OCP_FP8)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_probe_ocp_fp8.elf
 endif
 
+ifeq ($(TYPE), PROBE_OCP_FP8_NEWCALC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/probe_ocp_fp8_newcalc.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_probe_ocp_fp8_newcalc.elf
+endif
+
 ifeq ($(TYPE), ALIGN32_PROBE)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/align32_probe.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_align32_probe.elf
