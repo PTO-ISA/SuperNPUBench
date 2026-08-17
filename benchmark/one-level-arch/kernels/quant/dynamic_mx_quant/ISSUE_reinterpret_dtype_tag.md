@@ -31,7 +31,7 @@ AccumulateBlockInfo.cpp:440  ValidateScalarLogicalTepl
 
 | 仓库 | 分支 / HEAD | commit |
 |---|---|---|
-| SuperNPUBench（我的 fork，含探针） | `feat/dmxq-rel0812` | `79d9140` |
+| SuperNPUBench（我的 fork，含探针） | `feat/dmxq-rel0812` (`github.com:ziyang-cheng/SuperNPUBench.git`)| `79d9140` |
 | SuperScalarModel | `feat/pto-v058-adaptation` | `c3051e3a` |
 | linx-toolchain-build | `main` | `e6a31ef` |
 | └ Linx-TileOP-API | `feat/v058-reinterpret-cmpmode-backfill`（`github.com/ziyang-cheng/Linx-TileOP-API`） | `cb47f6d` |

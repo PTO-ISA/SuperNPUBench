@@ -31,7 +31,7 @@ CubeEngine.cpp:374  DataFormatCvt::OpCvtType
 
 | 仓库 | 分支 / HEAD | commit |
 |---|---|---|
-| SuperNPUBench（我的 fork，含探针） | `feat/dmxq-rel0812` | `79d9140` |
+| SuperNPUBench（我的 fork，含探针） | `feat/dmxq-rel0812`  (`github.com:ziyang-cheng/SuperNPUBench.git`)| `79d9140` |
 | SuperScalarModel（README 要求的分支，取**最新** tip；另需下方「复现前置」一处补丁） | `feat/pto-v058-adaptation` | `c3051e3a` |
 | linx-toolchain-build | `main` | `e6a31ef` |
 | └ Linx-TileOP-API | `feat/v058-reinterpret-cmpmode-backfill`（`github.com/ziyang-cheng/Linx-TileOP-API`） | `cb47f6d` |
