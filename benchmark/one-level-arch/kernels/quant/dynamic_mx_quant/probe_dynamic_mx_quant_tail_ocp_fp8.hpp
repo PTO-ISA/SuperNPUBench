@@ -101,6 +101,11 @@ void probe_dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scal
                 TCVT(max_bf, max_h);                  // half -> bf16 (仅每 block 的 max 标量)
 
                 // 清尾数, 只留指数位 (2^E_max): 经 u16 boxed 域 TANDS (U16-TANDS 合法)
+                // [reinterpret 验证 2026-08-17] 用 v0.58 register 级 reinterpret_tile
+                // 取代下面注释掉的 scratch-HBM 位重解释往返 (bf16->u16)。零指令、
+                // 无 HBM 往返;TANDS 就地清尾数,写回 max_bf 底层存储。
+                auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
+                /* [reinterpret 验证] 原 scratch-HBM 位重解释 (bf16->u16),暂注释便于恢复:
                 tile_u16b max_u16;
                 {
                     using gb = global_tensor<__bf16,   RowMajor<TileM, BlockSize>>;
@@ -110,7 +115,13 @@ void probe_dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scal
                     auto gw = wi(0, 0); TSTORE(gw, max_bf);
                     auto gr = ri(0, 0); TLOAD(max_u16, gr);
                 }
+                */
                 TANDS(max_u16, max_u16, BF16_EXP_MASK);
+                // [reinterpret 验证] max_u16 是 max_bf 存储的 u16 视图,上一步 TANDS 已就地
+                // 清尾数;回到 bf16 域即 max_bf 本身 (同类型,无需再 reinterpret),位型即
+                // 2^E_max。取引用别名保持零指令、无 HBM 往返 (TMULS 要求 dst/src 同实体类型)。
+                tile_bfb &max_expbf = max_bf;
+                /* [reinterpret 验证] 原 scratch-HBM 位重解释 (u16->bf16),暂注释便于恢复:
                 tile_bfb max_expbf;
                 {
                     using gu = global_tensor<uint16_t, RowMajor<TileM, BlockSize>>;
@@ -120,6 +131,7 @@ void probe_dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scal
                     auto gw = wi(0, 0); TSTORE(gw, max_u16);
                     auto gr = ri(0, 0); TLOAD(max_expbf, gr);
                 }
+                */
                 tile_bfb shared_bf;
                 TMULS(shared_bf, max_expbf, __builtin_bit_cast(__bf16, RECIP_EMAX)); // 2^(E_max-8)
                 tile_e8b scale_e8m0;
@@ -173,6 +185,9 @@ void probe_dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scal
             tile_bfb max_bf;
             TCVT(max_bf, max_h);
 
+            // [reinterpret 验证] register 级 reinterpret 取代 scratch-HBM 往返 (bf16->u16)
+            auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
+            /* [reinterpret 验证] 原 scratch-HBM 位重解释 (bf16->u16),暂注释便于恢复:
             tile_u16b max_u16;
             {
                 using gb = global_tensor<__bf16,   RowMajor<TileM, BlockSize>>;
@@ -182,7 +197,12 @@ void probe_dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scal
                 auto gw = wi(0, 0); TSTORE(gw, max_bf);
                 auto gr = ri(0, 0); TLOAD(max_u16, gr);
             }
+            */
             TANDS(max_u16, max_u16, BF16_EXP_MASK);
+            // [reinterpret 验证] max_u16 是 max_bf 存储的 u16 视图,TANDS 已就地清尾数;
+            // 回到 bf16 域即 max_bf 本身 (同类型,无需再 reinterpret)。取引用别名零指令。
+            tile_bfb &max_expbf = max_bf;
+            /* [reinterpret 验证] 原 scratch-HBM 位重解释 (u16->bf16),暂注释便于恢复:
             tile_bfb max_expbf;
             {
                 using gu = global_tensor<uint16_t, RowMajor<TileM, BlockSize>>;
@@ -192,6 +212,7 @@ void probe_dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scal
                 auto gw = wi(0, 0); TSTORE(gw, max_u16);
                 auto gr = ri(0, 0); TLOAD(max_expbf, gr);
             }
+            */
             tile_bfb shared_bf;
             TMULS(shared_bf, max_expbf, __builtin_bit_cast(__bf16, RECIP_EMAX));
             tile_e8b scale_e8m0;
