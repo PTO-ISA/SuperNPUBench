@@ -225,27 +225,32 @@ TileSize 上界。`fa_hif4.hpp:85-92` 发射已验证；但为寄存器侧 fract
 
 ---
 
-## 问题3：linx 缺失带 CmpMode 的 4-参 TCMP/TCMPS（需 linx 侧解决）
+## 问题3：带 CmpMode 的 4-参 TCMP/TCMPS（工具链已原生支持；业务 kernel 待迁移）
 
-### 结论
+> **状态（当前工具链）**：`template_asm.hpp` 已在 `-D__linx` 下原生提供带 CmpMode 的
+> `TCMP`/`TCMPS`——`template <CmpMode Mode, ...>` 覆盖全 6 模式（EQ/NE/LT/GT/LE/GE，
+> `template_asm.hpp:3341` / `:4076` 以 `if constexpr` 分派），并保留 3-参 EQ-default 重载
+> （`:3461`）向后兼容。故下文所述「4-参重载仅存在于 `jcore/TCmp.hpp`、linx 未包含」的缺口
+> **已闭合**。剩余工作纯在**业务 kernel 侧**：`compute_cublas_core`
+> （`dynamic_mx_quant_common.hpp:432`）仍用 min/max + 默认-EQ 的规避写法，末尾保留了
+> `IDEAL VERSION (blocked)`（`:522`），待切换到原生 `TCMPS(dst,src,s,CmpMode::…)`。
 
-`-D__linx` 构建下**只有 3-参 mode-less（语义固定 EQ）的 `TCMP`/`TCMPS`**，没有带 CmpMode 的
+### 结论（缺口闭合前的历史记录）
+
+`-D__linx` 构建下曾**只有 3-参 mode-less（语义固定 EQ）的 `TCMP`/`TCMPS`**，没有带 CmpMode 的
 4-参重载，故 `>` / `<` / `!=` / `<=` / `>=` 无法直接发射。这是 **linx intrinsic 头文件封装的
 缺口，不是硬件/仿真器能力问题**：
 
 - 根因：`-D__linx` 分发链（`common/tileop_api_impl.hpp:4-5`）只包含 `jcore/template_asm.hpp`；
-  带 CmpMode 的 4-参 `TCMP`/`TCMPS` 只定义在 `jcore/TCmp.hpp` / `aarch64/TCmp.hpp` /
-  `cpu_sim/TCmp.hpp`——这三个在 linx 构建里都没被包含。
-- linx 实际可用的是 `template_asm.hpp` 的 3-参版（TCMP `:3190` `TEPL 13`；TCMPS `:3819`
-  `TEPL 45`），无 CMode 操作数，解码固定为 EQ（`CMode::EQ=0`，
+  带 CmpMode 的 4-参 `TCMP`/`TCMPS` 当时只定义在 `jcore/TCmp.hpp` / `aarch64/TCmp.hpp` /
+  `cpu_sim/TCmp.hpp`——这三个在 linx 构建里都没被包含。（现已在 `template_asm.hpp` 原生补齐，见上方状态。）
+- linx 当时可用的是 `template_asm.hpp` 的 3-参版，无 CMode 操作数，解码固定为 EQ（`CMode::EQ=0`，
   `SuperScalarModel/isa/ISACommon/BlockAttribute.h:25`）。`CmpMode` 枚举本身可见
   （`common/pto_tile.hpp:19`），故报错停在「4 参无匹配重载」而非「未定义标识符」。
 - 底层 ISA/仿真器**支持全部 6 种模式**（`isa/calculate/CubeCalculate.cpp` `EleCmp`，
   `isa/Block.cpp:535` 从 `srcs[SRC6_IDX]` 解 cMode）——缺口纯在头文件封装。
 
-**解除路径（linx 工具链侧）**：在 `-D__linx` 下暴露带 CMode 操作数的 4-参 `TCMP`/`TCMPS`
-（在 `template_asm.hpp` 增加发 cMode 操作数的 4-参重载，或让 `tileop_api_impl.hpp` 的
-`#ifdef __linx` 分支也包含 `jcore/TCmp.hpp`）。补齐后切换到下述 IDEAL 版本即可。
+**解除路径**：已由 `template_asm.hpp` 原生 4-参重载实现；业务 kernel 切换到下述 IDEAL 版本即可。
 
 ### 影响场景
 
@@ -282,23 +287,29 @@ a!=b == TNOT(TCMPS(m,a,b))
 
 ---
 
-## 问题4：编译器尚未支持 reinterpret（位重解释）语法形式（需编译器侧解决）
+## 问题4：寄存器级 reinterpret（位重解释）（工具链已原生支持；业务 kernel 待迁移）
 
-### 结论
+> **状态（当前工具链）**：主线已提供零指令寄存器级 bitcast `reinterpret_tile<>`
+> （`common/pto_tile.hpp`），把 tile 元素按位重解释为等宽 dtype、不经 HBM、不做数值转换。
+> 探针 kernel（`probe_dynamic_mx_quant_tail_ocp_fp8.hpp`）已改用它。故下文所述「没有任何寄存器级
+> reinterpret/bitcast」的缺口**已闭合**。剩余工作纯在**业务 kernel 侧**：`dynamic_mx_quant_common.hpp`
+> 仍用 `reinterpret_u16_to_bf16` / `reinterpret_f32_to_u32`（`:201`/`:217`）的 scratch-HBM 往返，
+> 待迁移到 `reinterpret_tile<>`。迁移后 cuBLAS 非尾轴的 32b 往返消失、绑定回落 bf16 输入宽度，
+> TileSize 上界从 2048 回到 4096（见下方「代价2」与问题1）。
 
-`-D__linx` 构建下**没有任何寄存器级 reinterpret/bitcast**——float tile 与等宽 int tile 之间
+### 结论（缺口闭合前的历史记录）
+
+`-D__linx` 构建下曾**没有任何寄存器级 reinterpret/bitcast**——float tile 与等宽 int tile 之间
 不能在寄存器内按位重解释：
 
 - `TCAST` 在 `-D__linx` 下未声明（`common/tileop_api.hpp` 的 `#ifndef __linx` 块内）；且即便
   可用，它 lower 成单条 `TCVT`，是**数值转换**（`static_cast`，`0.001f → 0`），不保留
   IEEE-754 位型——用它抽 exponent 位在任何后端都语义错误。
-- 没有 tile 级 `__builtin_bit_cast` / reinterpret intrinsic 能在寄存器内把 tile 元素按位
-  重解释为等宽的另一 dtype。
+- 当时没有 tile 级 `__builtin_bit_cast` / reinterpret intrinsic 能在寄存器内把 tile 元素按位
+  重解释为等宽的另一 dtype。（现已由 `reinterpret_tile<>` 补齐，见上方状态。）
 
-这是**编译器工具链的缺口，待补齐**（同问题3 的性质）。**解除路径（编译器侧）**：在 `-D__linx`
-下提供寄存器级 reinterpret（一条把 tile 元素按位重解释为等宽 dtype、不经 HBM、不做数值转换
-的 tile-op，或让 `__builtin_bit_cast` 作用于 tile 类型）。补齐后可把下述 `reinterpret_*` 的
-scratch-HBM 往返替换为寄存器写法，省去多余 store/load 与 scratch buffer。
+**解除路径**：已由主线 `reinterpret_tile<>` 实现；业务 kernel 把下述 `reinterpret_*` 的
+scratch-HBM 往返替换为寄存器写法，即可省去多余 store/load 与 scratch buffer。
 
 ### 影响场景
 
@@ -855,3 +866,100 @@ Linx-TileOP-API 组件源（`src/Linx-TileOP-API/include/jcore/template_asm.hpp`
 A、B 任一应用后，probe 全部 tile 指令链跑通，均收敛到与问题9/10 相同的 **startup skew 墙**——
 libc `__init_libc` 的 text 相对 store `sdi.u s1,t#1,-12xx`（`AssertNotTextStore`，
 `AaccelssMemoryEngine.cpp:12`），非 kernel 缺陷，是三仓版本 skew 的已知阻塞。
+
+## 问题14：零指令 `reinterpret_tile` 的位重解释运行期不可见，emulator dtype 相等断言误杀（需 emulator 侧解决）
+
+> 详见 `ISSUE_reinterpret_dtype_tag.md`。缺陷所在仓 **`SuperScalarModel`（emulator 建模层
+> `AccumulateBlockInfo.cpp:440` `ValidateScalarLogicalTepl`）**，复现入口在 probe 的 OCP 清尾数链
+> `reinterpret_tile<uint16_t>(max_bf) → TANDS → 读回 bf16`。**这是问题4「无寄存器 bitcast」被 v0.58
+> `reinterpret_tile` 解除后，暴露出的下一道墙**（HBM 往返时被 TLOAD 重打标签掩盖，零指令 bitcast 才显形）。
+
+### 结论
+
+v0.58 `reinterpret_tile<uint16_t>(max_bf)` 把 bf16 tile **零指令**重解释成 u16 喂 `TANDS`（清尾数
+留指数位），随后仍按 bf16 读回 `TMULS`。编译+反汇编正确，gfrun 挂：
+
+```
+gfrun: ASSERTION FAILED: ... source->tileInfo->dataType == block->dataType ...
+  "scalar logical TEPL source dtype/shape/stride is incompatible"
+  func ValidateScalarLogicalTepl, AccumulateBlockInfo.cpp:440   (EXIT=1)
+faulting = BSTART.TEPL TANDS UINT16 (B8, M38, TPC 0x1134e)
+```
+
+### 根因（编译期/运行期不一致）
+
+- **反汇编证明 kernel 数据流正确**：TCVT(BF16)→TANDS(U16)→TMULS(BF16) 三块在**同一个 512B 的 `t`
+  寄存器**就地读写（中间无 copy）。`-D__linx` intrinsic 经 `"=Tr"(dst.data())`/`"Tr"(src.data())`
+  绑定操作数，reinterpret view 的 `.data()` 转发到源 tile 同一 `data_`（`pto_tile.hpp:1352`），掩码
+  就地写进 max_bf 寄存器、被 TMULS 读到。「对象身份 SSA」抽象模型在 linx 后端不适用。
+- **缺陷在 emulator per-tile 运行期 dtype 标签**：`tileInfo->dataType` 由**产出该 tile 的指令**
+  设置（TCVT→BF16），reinterpret 零指令不改它。断言 440-445 要求源 tile 运行期标签 `== block->dataType`
+  （U16，reinterpret 编译期设的）→ `BF16 == U16` 失败。位重解释信息只活在编译期指令 datatype 字段，
+  emulator 物理 tile 运行期标签收不到。
+
+### 关键澄清
+
+- **424「逻辑op datatype 必须整数」是对的、必须保留**：这正是须 reinterpret 到 u16 的原因——把
+  datatype 合法化成整数、同时保 bit。故**不能直接 `TANDS(max_bf, max_bf, mask)` 跳过 reinterpret**
+  （会先挂 424；且 bf16 标量立即数数值转换掉掩码 bit 并崩后端，见问题11）。
+- **HBM 往返「能过」纯属副作用**：`TSTORE(bf16)→TLOAD(u16)` 的 TLOAD 是真指令，会重打标签成 U16。
+  零指令 reinterpret 只干位重解释，才暴露此断言没建模 bitcast。
+
+### 定性
+
+emulator 建模缺陷（过严校验），非 ISA/工具链/kernel。reinterpret 是 v0.58 合法特性、工具链发的 bit
+正确、真实硬件按 datatype 字段当场解释 bit 即可跑。断言把「本op如何解释 bit」与「上一条产出此 tile 的
+dtype」强行划等号，禁掉一切「零指令 bitcast 后被异类型op消费」。
+
+### 解除路径（emulator 侧，本次采用）
+
+`AccumulateBlockInfo.cpp:441` 的 `source->tileInfo->dataType == block->dataType` 放松为**位宽相等**
+`BytesOf(source->tileInfo->dataType) == BytesOf(block->dataType)`，保留 424 整数约束 +
+全部 shape/stride/valid 校验。同族相等断言（270/410/475）**本次暂不动**——probe 只撞 441。
+
+---
+
+## 问题15：emulator 未实现 TCVT bf16→e8m0(SF8)，MX 共享 scale 转换缺失（需 emulator 侧解决）
+
+### 现象
+
+放松 441 + 补发 TCVT lb2 后，probe 越过 TANDS/TMULS，撞到 OCP scale 产出的
+`TCVT bf16 → e8m0`（`B.DATR e8m0/SF8`）：
+
+```
+CubeEngine.cpp:374  DataFormatCvt lambda OpCvtType
+assert(0 && "Not support such type convert yet")   // SF8 在不支持列表
+```
+
+### 根因
+
+`OpCvtType`（CubeEngine.cpp）把 `DataType::SF8` 归到「尚未支持」assert 分支，根本没走到
+`ConvertAggre`；且 `FloatPointUtils.cpp` 的 funcMap 也无 `{BF16, SF8}` 条目。即 emulator
+功能模型从未实现「浮点→e8m0」这条 MX 共享 scale 转换。其**逆向**已存在：
+`CubeCalculate.cpp:416-419 EleMulScale` 用 `value = 2^(E-127)` 反解 e8m0（bias 127）。
+
+### 解除路径（emulator 侧，本次采用）
+
+e8m0 与 bf16 同为 8-bit 指数、同 bias 127，故 bf16→e8m0 = 丢符号、把 7 位尾数 RNE 舍入进指数：
+
+1. `CubeEngine.cpp` `OpCvtType`：`DataType::SF8 → OPConvertType::OPCVT_SF8`（移出 assert 分支）。
+2. `FloatPointUtils.cpp` `InitConvertMapFp`：新增 `{OPCVT_BF16, OPCVT_SF8}` lambda——
+   `exp=(bits>>7)&0xFF; mant=bits&0x7F; if(exp==0xFF)→0xFF(NaN); RNE(mant>0x40||(==0x40&&exp&1))→exp++;
+   clamp[0,0xFE]`。对 OCP 的 max_exp 输入（尾数已被 TANDS 清零、恒为 2 的幂）**精确等于指数抽取**。
+
+### 结果
+
+probe **gfrun 跑到底**：23 blocks / 120 insts，`R2 = 0`（Success to Reach End of Benchmark）。
+完整 OCP 链 `TCVT→TANDS(u16)→TMULS→TCVT bf16→e8m0→TSTORE(e8m0)` + data 路径
+（TRECIP/TROWEXPANDMUL/TCVT→e4m3/TSTORE）全部执行无断言。
+
+> probe 为**全零输入的执行 smoke test**（无 golden 对比）：x=0 → scale E=0、y=0，确定性无崩。
+> 数值正确性需另接 golden harness（gen_dynamic_mx_quant_data.py），属独立更大任务。
+
+### 三处修复汇总（打通 probe 执行）
+
+| # | 文件 | 改动 |
+|---|---|---|
+| 1 | `SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp:441` | dtype 相等 → `BytesOf` 位宽相等（支持零指令 reinterpret） |
+| 2 | `Linx-TileOP-API/include/jcore/template_asm.hpp` TCVT_T | 补发 `B.DIM zero, %c7, ->lb2`（+`tile_shape_out::Cols` 操作数） |
+| 3 | `SuperScalarModel` `CubeEngine.cpp` + `FloatPointUtils.cpp` | 实现 TCVT bf16→e8m0(SF8) |
