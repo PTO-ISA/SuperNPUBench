@@ -57,10 +57,10 @@
 #define QOUTPUT_ROOT "."
 #endif
 #ifndef QLAYOUT_BSND
-#define QLAYOUT_BSND 0
+#define QLAYOUT_BSND 1
 #endif
 #ifndef QKV_LAYOUT_BSND
-#define QKV_LAYOUT_BSND 0
+#define QKV_LAYOUT_BSND 1
 #endif
 
 static_assert(QB > 0, "B must be positive");
@@ -138,17 +138,11 @@ static bool swa_valid(int q_pos, int kv_pos) {
 }
 
 static size_t q_offset(int b, int head, int token, int dim) {
-    if constexpr (QLAYOUT_BSND != 0) {
-        return (((static_cast<size_t>(b) * QS1 + token) * QN1 + head) * QD + dim);
-    }
-    return (((static_cast<size_t>(b) * QN1 + head) * QS1 + token) * QD + dim);
+    return (((static_cast<size_t>(b) * QS1 + token) * QN1 + head) * QD + dim);
 }
 
 static size_t kv_offset(int b, int head, int token, int dim) {
-    if constexpr (QKV_LAYOUT_BSND != 0) {
-        return (((static_cast<size_t>(b) * QS2 + token) * QN2 + head) * QD + dim);
-    }
-    return (((static_cast<size_t>(b) * QN2 + head) * QS2 + token) * QD + dim);
+    return (((static_cast<size_t>(b) * QS2 + token) * QN2 + head) * QD + dim);
 }
 
 static bool write_binary(const std::filesystem::path& path, const void* data, size_t bytes) {
@@ -230,7 +224,7 @@ int main() {
         "q_dtype=fp16 kv_dtype=fp16 accumulation=fp32 out_dtype=fp32\n",
         QCASE_NAME, QB, QS1, QS2, QN1, QN2, QD, QK,
         QTM, QTK, QTD, QWIN_LEFT, QWIN_RIGHT, static_cast<double>(QSOFTMAX_SCALE),
-        QLAYOUT_BSND ? "BSND" : "BNSD", QKV_LAYOUT_BSND ? "BSND" : "BNSD");
+        "BSND", "BSND");
     std::fclose(manifest);
 
     std::printf("QSMLA_STAGE0 case=%s output=%s elements=%zu\n",
