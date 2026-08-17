@@ -2,8 +2,8 @@
 #include "benchmark.h"
 #include "fileop.h"
 // #include "fa/quant_sparse_flash_mla_pto.hpp"
-#include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
-// #include "fa/quant_sparse_flash_mla_onepass_pto.hpp"
+// #include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
+#include "fa/quant_sparse_flash_mla_onepass_pto.hpp"
 
 #define B 1
 #define H 1
@@ -77,6 +77,7 @@ int main(){
     using qdtype = __half;
     using kvdtype = __half;
     using odttype = __half;
+    using Config = QsmlaConfig<B, s1, s2, H, H, D, 0, kTm, kTk, kTd>;
 
     qdtype qp[B*H*s1*D + 2*ALIGN];
     kvdtype kvp[B*H*s2*D + 2*ALIGN];
@@ -92,8 +93,8 @@ int main(){
     BENCHSTART;
     for(int i=0;i<B;i++){
         for(int j=0;j<H;j++){
-            quant_sparse_flash_mla_swa_tadd_pto<qdtype, kvdtype, odttype,
-                s1, s2, D, kTm, kTk, kTd>(
+            quant_sparse_flash_mla_swa_onepass_config_pto<
+                qdtype, kvdtype, odttype, Config>(
                 out + i*H*s1*D + j*s1*D,
                 q   + i*H*s1*D + j*s1*D,
                 kv  + i*H*s2*D + j*s2*D,
