@@ -1,24 +1,33 @@
 # TLSU 功能验证用例
 
-**这不是 benchmark。** 本目录下的用例只做 TLSU（`BSTART.TLSU`）搬运语义的
-正确性验证：把结果 dump 出来，用独立判据（不依赖被测模型）判对错，并在不同
-模型/工具链之间做差分对比。它们不测 cycle，不参与 benchmark 的用例统计，也
-不被 `microbenchmark/compile_all.sh` 编译。
+**这不是 benchmark。** 本目录下的用例只做 TLSU（`BSTART.TLSU`）搬运语义的正确性
+验证：产生激励、把结果区 dump 出来、用**不依赖被测模型**的判据判对错，并在不同
+模型/工具链之间做差分。它们不测 cycle，不计入 microbench 的用例统计，也不被
+`microbenchmark/compile_all.sh` 编译。
 
-指令级的 TLSU **性能**微基准在 `microbenchmark/memory/`（25 个用例），与本目录
-无关，不要混淆。
+指令级的 TLSU **性能**微基准在 `microbenchmark/memory/`（25 个用例），与本目录无关。
 
 ## 用例分组
 
 | 组 | 用例 | 考察点 |
 | --- | --- | --- |
 | S | `s1_copy_i32_32x32` / `s2_strided_i32_8x128` / `s2b_stride_elem_i32_8x128` / `s3_two_dst_i32` | 单条搬运的形状、stride（按元素表达）、多目的地 |
-| C | `c1_store_load_i32` / `c2_load_store_i32` / `c3_load_store_load_i32` | 组合序列下的 RAW/WAR 可见性 |
-| R | `r1_random_seq_i32` | 200 块随机 TLOAD/TSTORE 序列，覆盖交叉重叠 |
+| C | `c1_store_load_i32` / `c2_load_store_i32` / `c3_load_store_load_i32` | 短序列下的 RAW / WAR 可见性 |
+| R | `r1_random_seq_i32` | 200 块随机 TLOAD/TSTORE 序列，填满 LIQ/STQ/SCB |
 | — | `copy_i32_8x128` | 最初的端到端 copy 骨架 |
 
-公共骨架：`tlsu_bench.hpp`（pattern 生成、结果缓冲区、区域划分）、
-`tlsu_finish.h`（收尾与 dump）。
+公共骨架：`tlsu_bench.hpp`（自识别图样、区域划分）、`tlsu_finish.h`（结果缓冲符号
+与收尾 store）。
+
+自识别编码贯穿全部用例与工具：
+
+```
+元素值 = (tag << 28) | ((row + 1) << 16) | (col + 1)
+```
+
+行列都从 1 起，所以整个 32 位为 0 恒表示"从未被写"。hex dump 里一眼能读出某一格
+来自哪份图样的第几行第几列。tag：`A` 主图样 / `B` 覆写 / `C` 预置 / `D` witness 预填 /
+`F` 越界填充（出现在结果里即为过读）。
 
 ## 构建
 
@@ -30,17 +39,120 @@ make TESTCASE=s1_copy_i32_32x32
 
 产物：`output/microbenchmark/verification/elf/verification/<case>.elf`。
 
+本目录嵌在 `verification/` 下一层，`Makefile.common` 由路径推导出的 `CATEGORY` 是
+`verification`，`-I$(MICROBENCH_ROOT)/$(CATEGORY)` 只到上一级，所以本地 `Makefile`
+补了一条 `INCLUDE += -I$(CURDIR)`，否则 `src/*.cpp` 找不到 `tlsu_bench.hpp`。
+
 ## 运行与判定
 
-ELF 跑在 SuperScalarModel 的 `gfsim`/`gfrun` 上，把结果缓冲区 dump 成二进制，
-再用判据脚本独立核对：
+ELF 跑在 SuperScalarModel 的 `gfrun`/`gfsim` 上。结果缓冲是 `cross_model_result`，
+尺寸由绝对符号 `cross_model_result_size` 给出（`run_diff.py` 取的是符号的 `st_value`
+而非内容）。跨模型比对由 SuperScalarModel 的 `scripts/run_tlsu_compare.sh` 驱动，
+dump 出的就是这块区域的架构内存。
+
+R 组另有一套**脱离模型**的判据，见下面的 `--check`。
+
+---
+
+## R 组生成器：`gen_random_case.py`
+
+随机的只有**序列**——多少个块、load/store 怎么交错、每一步碰哪个 tile 寄存器和哪块
+内存。形状、dtype、行距、对齐一律固定，失败时唯一的变量就是定序与交错，不必再去
+排除形状或寻址的嫌疑。
+
+### 命令行参数
+
+| 参数 | 默认值 | 含义 |
+| --- | --- | --- |
+| `--seed` | `20260814` | 随机种子；换种子即换一条序列 |
+| `--blocks` | `200` | tile op 总块数（TLOAD + TSTORE 之和） |
+| `-o, --output` | 必填 | 输出的 .cpp 路径；文件名同时用于文件头里的"重新生成"命令 |
+
+### 仓库里这份用例实际用的参数
 
 ```bash
-# 随机用例：生成 / 可视化 / 校验 dump
-python3 gen_random_case.py -o src/r1_random_seq_i32.cpp
-python3 viz_random_case.py src/r1_random_seq_i32.cpp -o r1_flow.html
-python3 viz_random_case.py src/r1_random_seq_i32.cpp --check dump.bin
+python3 gen_random_case.py --seed 20260814 --blocks 200 -o src/r1_random_seq_i32.cpp
+# r1_random_seq_i32: seed=20260814 blocks=200 (91 TLOAD + 109 TSTORE) -> src/r1_random_seq_i32.cpp
 ```
 
-`--check` 由用例源码重新推导期望结果，不读被测模型的任何中间状态，因此可以
-用同一份判据比对不同模型的 dump。生成的 `*.html` 已 gitignore，随时可重新生成。
+即 `src/r1_random_seq_i32.cpp` = 种子 `20260814` + 200 块，展开成 **91 个 TLOAD +
+109 个 TSTORE**。同样的参数复跑必然得到逐字节相同的文件（`random.Random(seed)` 固定
+序列），这几个数字也原样写在生成文件的文件头里。
+
+### 脚本内写死、命令行不暴露的量
+
+改这些要直接改 `gen_random_case.py` 顶部的常量：
+
+| 常量 | 值 | 说明 |
+| --- | --- | --- |
+| `ROWS` × `COLS` | 8 × 128 | tile 形状 |
+| `ELEM_BYTES` | 4 | int32 |
+| `TILE_BYTES` | 4096 | `8×128×4`，是 256 的整数倍，所以按 tile 紧排的区域基址天然满足 256 字节对齐 |
+| `NUM_REGIONS` | 16 | 结果缓冲切成 16 块 → `RESULT_SIZE = 16 × 4096 = 65536` 字节 |
+| `NUM_TILES` | 8 | 源码里可用的 tile 寄存器变量 `t0..t7` |
+| `SRC_TAGS` | A/B/C/D | 4 份只读源图样 `gSrc0..gSrc3` |
+
+### 序列的随机策略
+
+- 头几步没有可搬的数据，只能先 TLOAD；之后 TSTORE 与 TLOAD 各 50% 概率。
+- TLOAD 时若已有区域被写过，则 50% 概率**读回写过的区域**而不是读只读图样 —— 这一支
+  才制造 RAW，是 R 组的重点。
+- 序列里因此天然长出 RAW（store 后读同址）、WAR、WAW 和长距离 in-flight 交错。C 组
+  每个用例只有两三个 tile op，队列压力浅；这里一次 200 块，LIQ/STQ/SCB 会被真正填满。
+
+### 提交约定
+
+生成的 `.cpp` **要提交进仓库**：种子固定、谁都能重现，而且构建不依赖 Python。改序列
+就换种子重新生成，把新文件一并提交；文件头带 `不要手改` 标记，别手工编辑它。
+
+---
+
+## 可视化与独立判据：`viz_random_case.py`
+
+同一套"重放序列 → 推导每个区最终装什么"的逻辑，两种出口：`-o` 出可视化，`--check`
+出判定。两者读的都只是用例 `.cpp` 源码，不碰任何模型。
+
+### 生成可视化
+
+```bash
+python3 viz_random_case.py src/r1_random_seq_i32.cpp -o r1_flow.html
+# src/r1_random_seq_i32.cpp: 200 步 / 45 个 RAW / 49 次区域→区域搬运 -> r1_flow.html
+```
+
+参数：位置参数是生成的用例 `.cpp`，`-o/--output` 是输出 html。`-o` 与 `--check` 至少
+给一个。
+
+统计行的三个数：总步数、RAW 次数（TLOAD 读的是已被写过的区域）、区域→区域搬运次数
+（数据上一跳来自另一个区域，而非只读图样）。
+
+用浏览器打开 html，逐步看数据从哪搬到哪、GM 各区当前应装什么：
+
+| 控件 | 作用 |
+| --- | --- |
+| `⏮ ◀ ▶ ⏭` | 首步 / 上一步 / 下一步 / 末步 |
+| `▶ 播放` | 自动播放，`速度` 按钮在 1× / 2× / 4× 之间循环 |
+| `下一次 GM 变化` | 跳到下一条改写 GM 的 TSTORE |
+| `下一个 RAW` | 跳到下一处读回已写区域 |
+| 键盘 | `←` `→` 单步，空格播放/暂停 |
+
+页面按主题自适应明暗，颜色区分 TLOAD / TSTORE 与数据的搬运深度；未被写过的区域显示
+为全零底色。生成的 `*.html` 已 gitignore —— 随时可重新生成，不必提交。
+
+### 独立判据校验 dump
+
+```bash
+python3 viz_random_case.py src/r1_random_seq_i32.cpp --check dump.bin
+# PASS  dump.bin 与独立推导的期望值逐字节一致（65536 字节）
+# FAIL  首处不一致 @字节 12344（R3 第 0 行 第 14 列）期望 d001000f 实际 d001ff0f
+```
+
+`dump.bin` 必须正好是 `cross_model_result` 这 **65536 字节**（16 区 × 4096），长度不符
+会直接报错退出。退出码：一致 `0`，不一致或长度不符 `1`，可以直接接进 CI。
+
+**为什么要有它**：端到端比对一直以 gfrun 为黄金参考，而 gfrun 与 gfsim **共用 `isa/`
+解码器** —— 共用层错了两边一起错，逐字节比对照样报 IDENTICAL（2026-08-14 的 ADDTPC
+回归就是这么把整套用例伪装成全绿的）。`--check` 的期望值只依赖用例源码与自识别编码，
+因此能独立判死。
+
+推导之所以成立：每次搬运都是整块 8×128 的 1:1 拷贝，所以一个区最终装什么，完全由
+"最后写入的数据源自哪份图样"决定 —— 只要跟踪 tag 的流向，就能把 65536 字节全部算出来。
