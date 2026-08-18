@@ -5,8 +5,8 @@
 
 # Large matrix, int32_t
 make TESTCASE=reducesum_col COMPILER_DIR=$COMPILER_DIR DType=int32_t tM_s=32 tN_s=64 \
-    gM_s=2048 gN_s=64
+    gM_s=2048 gN_s=64 diss
 
 # Large matrix, __half
 make TESTCASE=reducesum_col COMPILER_DIR=$COMPILER_DIR DType=__half tM_s=32 tN_s=64 \
-    gM_s=2048 gN_s=64
+    gM_s=2048 gN_s=64 diss
