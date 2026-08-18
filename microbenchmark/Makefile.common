@@ -2,7 +2,7 @@
 # Adapted from test/common/Makefile.common
 
 ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/microbenchmark/.*@\1@')
-TEST_ROOT := $(ROOT)/benchmark/two-level-arch/test
+TEST_ROOT := $(ROOT)/benchmark/one-level-arch/test
 MICROBENCH_ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/microbenchmark/.*@\1/microbenchmark@')
 CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/microbenchmark/([^/]+).*@\1@')
 CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')

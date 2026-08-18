@@ -89,6 +89,11 @@ for op in ["TSELS"]:
 # mode 1 scalar broadcast
 V.append(Case("TEXPANDS", "scalarbcast", ("fp16", "fp32"), M16))
 
+# mode 3 contiguous integer sequence generation
+# TCI supports signed/unsigned 16-bit and 32-bit integer tiles. The generator's
+# current dtype table exposes the two signed variants.
+V.append(Case("TCI", "sequence", ("i16", "i32"), M16))
+
 # mode 2 reduce
 for op in ["TROWSUM", "TROWMAX", "TROWMIN", "TROWPROD",
            "TCOLSUM", "TCOLMAX", "TCOLMIN", "TCOLPROD"]:
@@ -281,6 +286,8 @@ int main() {{
         body = f"    {ct} s = ({ct})0.5;\n    bench_scalar3<{ct},M,N>(c,a,b,s,[](auto& dst,auto& s0,auto& s1,auto& sc){{ {call}; }});\n"
     elif c.kind == "scalarbcast":
         body = f"    {ct} s = ({ct})0.5;\n    bench_scalar_bcast<{ct},M,N>(c,s,[](auto& dst,auto& sc){{ {op}(dst,sc); }});\n"
+    elif c.kind == "sequence":
+        body = f"    {ct} s = ({ct})7;\n    bench_scalar_bcast<{ct},M,N>(c,s,[](auto& dst,auto& sc){{ {op}(dst,sc); }});\n"
     elif c.kind == "gather":
         body = f"    bench_gather<{ct},M,N>(c,a,b,[](auto& dst,auto& s,auto& idx){{ {op}(dst,s,idx); }});\n"
     elif c.kind == "hist":

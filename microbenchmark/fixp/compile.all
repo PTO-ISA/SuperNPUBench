@@ -1,0 +1,67 @@
+#!/bin/bash
+# Build + disassemble every TMATMUL fixp microbench variant.
+# Per-mode result (PASS/FAIL) is printed; a run always completes all modes so
+# the fixp coverage table can be assembled even with toolchain-limited modes.
+# Usage: bash compile.all [EXTRA_MAKE_ARGS...]
+
+cd "$(dirname "$0")"
+
+MAKE_ARGS="$*"
+LOG="$(pwd)/compile.fixp.log"
+: > "$LOG"
+
+MODES=(
+  # parameter-free conversion (+ plain ReLU)
+  keep_acc keep_acc_relu f16 f16_relu bf16 bf16_relu
+  # scalar quant descriptor
+  s_reqs8 s_deqf16 s_shifts16 s_qf_s4 s_qf_s16 s_qf_s8 s_qf_hif8 s_qf_fp8
+  s_qf_f32 s_qf_f16 s_qf_bf16 s_qs_bf16
+  # vector quant parameter tile
+  v_reqs8 v_deqf16 v_shifts16 v_qf_s4 v_qf_s16 v_qf_s8 v_qf_hif8
+  v_qf_f16 v_qf_bf16 v_qf_fp8 v_qf_f32 v_qs_bf16
+  # ReLU / quant combinations
+  s8_relu s8_lrelu v_s8_relu f16_prelu s8_prelu
+  # RowMax / GroupMax / MaxAbs
+  rowmax rowmax_init groupmax_8 groupmax_16 groupmax_128 rowgroup_maxabs
+  f16_groupmax s8_rowmax
+  # operation-family coverage (param-free keep_acc) — 11 ops beyond plain TMATMUL
+  bias acc mx mxbias mxacc
+  gemv gemv_bias gemv_acc gemv_mx gemv_mx_bias gemv_mx_acc
+  # full-options spot-check (s8 scalar quant on non-TMATMUL ops)
+  bias_s8 acc_s8 mx_s8 gemv_s8 gemv_mx_s8
+  # Shared-Right B (B.IOS)
+  shared s8_shared
+  # edge-case FPATR / operand-stream features
+  lrelu_only vqf_s8_prelu legacy3
+)
+
+PASS=0
+FAIL=0
+
+make_mode() {
+  local mode=$1
+  local upper
+  upper=$(echo "$mode" | tr 'a-z' 'A-Z')
+  rm -f "${mode}_res"
+  make TESTCASE=fixp_tmatmul FIXP_MODE="$upper" $MAKE_ARGS diss \
+      >> "$LOG" 2>&1
+  if [ $? -eq 0 ]; then
+    PASS=$((PASS + 1))
+    printf 'PASS  %-18s %s\n' "$mode" "$upper"
+  else
+    FAIL=$((FAIL + 1))
+    printf 'FAIL  %-18s %s\n' "$mode" "$upper"
+  fi
+}
+
+for mode in "${MODES[@]}"; do
+  make_mode "$mode"
+done
+
+echo ""
+echo "=========================================="
+echo "fixp microbench: PASS=$PASS FAIL=$FAIL (modes=${#MODES[@]})"
+echo "log: $LOG"
+echo "=========================================="
+
+exit 0
