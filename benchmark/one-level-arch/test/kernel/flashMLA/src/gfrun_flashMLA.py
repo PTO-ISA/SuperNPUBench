@@ -92,14 +92,22 @@ def gen_input_and_golden(elf_name, path, args):
     shape = parse_flashmla_shape(elf_name, args)
     print("shape:", shape)
 
-    rng = np.random.default_rng(args.seed)
     q_seq_per_hk = shape["Sq"] * shape["QHeadPerHK"]
     kv_tokens = shape["NumBlocks"] * shape["PageBlockSize"]
 
-    q_kernel = (rng.standard_normal((q_seq_per_hk, shape["Dk"]), dtype=np.float32) / 10.0)
-    q_kernel = np.clip(q_kernel, -1.0, 1.0).astype(np.float16)
-    kv_flat = (rng.standard_normal((kv_tokens, shape["Dk"]), dtype=np.float32) / 10.0)
-    kv_flat = np.clip(kv_flat, -1.0, 1.0).astype(np.float16)
+    if getattr(args, "ones", False):
+        # Deterministic all-ones smoke input: every Q/KV element == 1.0 (fp16).
+        # With uniform inputs attention collapses to O = 1.0 and denom = Sk,
+        # the documented flashMLA all-ones check (see
+        # flashMLA_all_ones_validation_report.md).
+        q_kernel = np.ones((q_seq_per_hk, shape["Dk"]), dtype=np.float16)
+        kv_flat = np.ones((kv_tokens, shape["Dk"]), dtype=np.float16)
+    else:
+        rng = np.random.default_rng(args.seed)
+        q_kernel = (rng.standard_normal((q_seq_per_hk, shape["Dk"]), dtype=np.float32) / 10.0)
+        q_kernel = np.clip(q_kernel, -1.0, 1.0).astype(np.float16)
+        kv_flat = (rng.standard_normal((kv_tokens, shape["Dk"]), dtype=np.float32) / 10.0)
+        kv_flat = np.clip(kv_flat, -1.0, 1.0).astype(np.float16)
     golden_out, golden_denom = flashmla_reference(q_kernel, kv_flat, shape)
 
     q_kernel.tofile(os.path.join(path, "srcq.bin"))
@@ -439,6 +447,8 @@ if __name__ == "__main__":
     parser.add_argument("--gfrun", default=DEFAULT_GFRUN, type=str)
     parser.add_argument("--gfrun-args", default=DEFAULT_GFRUN_ARGS, type=str)
     parser.add_argument("--timeout", default=1200, type=int)
+    parser.add_argument("--ones", action="store_true",
+                        help="use all-ones fp16 input instead of random (deterministic smoke check)")
     parser.add_argument("--seed", default=123, type=int)
     parser.add_argument("--page-block-size", default=64, type=int)
     parser.add_argument("--out-atol", default=2e-2, type=float)

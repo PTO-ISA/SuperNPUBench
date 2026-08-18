@@ -3,7 +3,9 @@
 
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 
-make TESTCASE=matmul \
+# Makefile only defines the `matmul_shared` testcase (SharedTile B +
+# Shared-right TMATMUL); `TESTCASE=matmul` is rejected. Use matmul_shared.
+make TESTCASE=matmul_shared \
     COMPILER_DIR="$COMPILER_DIR" \
     B=1 M=256 N=256 K=256 \
     tM=32 tN=32 tK=32

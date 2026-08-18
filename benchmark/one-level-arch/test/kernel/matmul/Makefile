@@ -4,6 +4,7 @@
 #   - HIF4_HIF4: FP4 x FP4 matmul with microscaling (uses HiF4_HiF4.cpp)
 #   - A16W4: BF16 x FP4 mixed precision (uses A16W4.cpp)
 #   - MASK: Generic matmul with mask (uses matmul.cpp)
+#   - MATMUL_VALIDATE: Numerical-precision check, all-1 inputs, golden == K (uses matmul_validate.cpp)
 #   - GMMA: GMMA matmul model with PE-sliced lhs and shared rhs (uses matmul_gmma.cpp)
 #
 # For TYPE=MASK, use MODE to select variant:
@@ -46,6 +47,16 @@ ifeq ($(TYPE), A16W4)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_$(TYPE)_B$(Batch)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
 endif
 
+ifeq ($(TYPE), MATMUL_VEC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_vec.cpp
+   DEFINES += -DglobM=$(M) -DglobN=$(N) -DglobK=$(K) -DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK)
+   ifneq ($(NAME), )
+      TARGET = $(ELF_HEAD)/$(NAME)_MATMUL_VEC_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
+   else
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_MATMUL_VEC_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
+   endif
+endif
+
 ifeq ($(TYPE), MASK)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul.cpp
    DEFINES += -DglobM=$(M) -DglobN=$(N) -DglobK=$(K) -DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK)
@@ -56,6 +67,16 @@ ifeq ($(TYPE), MASK)
       TARGET = $(ELF_HEAD)/$(NAME)_$(MODE)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
    else
       TARGET = $(ELF_HEAD)/$(TESTCASE)_$(TYPE)_$(MODE)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
+   endif
+endif
+
+ifeq ($(TYPE), MATMUL_VALIDATE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_validate.cpp
+   DEFINES += -DglobM=$(M) -DglobN=$(N) -DglobK=$(K) -DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK)
+   ifneq ($(NAME), )
+      TARGET = $(ELF_HEAD)/$(NAME)_MATMUL_VALIDATE_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
+   else
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_MATMUL_VALIDATE_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
    endif
 endif
 

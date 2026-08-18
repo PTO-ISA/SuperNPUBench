@@ -54,10 +54,12 @@ void reducemax_row_rand(
     itIn gIIter(in_ptr);
     itOut gOIter(out_ptr);
 
+    #pragma clang loop unroll(full)
     for (int j = 0; j < Mb; ++j) {
         auto gO = gOIter(j, 0);
         TEXPANDS(oldMaxTile, static_cast<dtype>(0));
 
+        #pragma clang loop unroll(full)
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(j, i);
             TLOAD(dataTile, gI);
@@ -76,6 +78,7 @@ void reducemax_row_rand(
         auto gO = gOIter(Mb, 0);
         TEXPANDS(oldMaxTile_col, static_cast<dtype>(0));
 
+        #pragma clang loop unroll(full)
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(Mb, i);
             TLOAD(dataTile_col, gI);

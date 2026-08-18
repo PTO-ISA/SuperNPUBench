@@ -99,6 +99,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
 
   // ========== 处理完整 tile ==========
   std::uint32_t output_base = 0;  // 当前 tile 在输出中的起始线性索引
+  #pragma clang loop unroll(full)
   for (int tile_index = 0; tile_index < kFullTiles; ++tile_index) {
     auto output_global = output_iter(0, tile_index);
     DataTile output_tile;      // 存储 gather 回来的数据
@@ -122,6 +123,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
     // 关键：这个循环在标量核心上运行，由于 Rank 是模板参数，编译期完全展开
     // 每次迭代用 tile 操作并行处理 tile 内所有元素的当前维度
     std::uint32_t input_stride = 1;  // 输入张量当前维度的 stride（从内层开始）
+    #pragma clang loop unroll(full)
     for (int input_dim = Rank - 1; input_dim >= 0; --input_dim) {
       // 轴映射：交换 Axis0 和 Axis1
       // 例如：如果 input_dim == Axis0，则对应的 output_dim == Axis1
@@ -135,6 +137,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
       // 计算 output_dim 维度的 stride（标量计算，在标量核心上完成）
       // output_stride = output_shape[output_dim+1] * output_shape[output_dim+2] * ... * output_shape[Rank-1]
       std::uint32_t output_stride = 1;
+      #pragma clang loop unroll(full)
       for (int dim = output_dim + 1; dim < Rank; ++dim) {
         output_stride *= output_shape[dim];
       }
@@ -209,6 +212,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
     TEXPANDS(offset_tile, static_cast<std::uint32_t>(0));
 
     std::uint32_t input_stride = 1;
+    #pragma clang loop unroll(full)
     for (int input_dim = Rank - 1; input_dim >= 0; --input_dim) {
       int output_dim = input_dim;
       if (input_dim == Axis0) {
@@ -218,6 +222,7 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
       }
 
       std::uint32_t output_stride = 1;
+      #pragma clang loop unroll(full)
       for (int dim = output_dim + 1; dim < Rank; ++dim) {
         output_stride *= output_shape[dim];
       }
@@ -298,7 +303,9 @@ void tile_transpose_2d(DType *input, DType *output) {
   OutputIterator output_iter(output);
 
   // ========== 处理完整 tile 块 ==========
+  #pragma clang loop unroll(full)
   for (int row_tile = 0; row_tile < kRowTiles; ++row_tile) {
+    #pragma clang loop unroll(full)
     for (int col_tile = 0; col_tile < kColTiles; ++col_tile) {
       // 输入位置：(row_tile, col_tile)
       auto input_global = input_iter(row_tile, col_tile);
@@ -353,6 +360,7 @@ void tile_transpose_2d(DType *input, DType *output) {
 
   // ========== 处理底部尾部 tile（行方向） ==========
   if constexpr (kTailRows != 0) {
+    #pragma clang loop unroll(full)
     for (int col_tile = 0; col_tile < kColTiles; ++col_tile) {
       // 输入 tile：kTailRows × TileCols（valid region）
       using SrcBottomTile =

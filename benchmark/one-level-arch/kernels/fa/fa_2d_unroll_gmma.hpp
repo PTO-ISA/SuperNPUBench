@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/pto_tileop.hpp>
+#include <cmath>
 #include <cstdint>
 
 using namespace pto;

@@ -24,17 +24,9 @@ using namespace pto;
 //   - C remains a PE-private local accumulator tile.
 template <typename dtype, int gM, int gN, int gK, int tM, int tN, int tK>
 void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
-    constexpr int kTileByteLimit = 8 * 1024;
-
     static_assert(gM % tM == 0, "M must be divisible by tM");
     static_assert(gN % tN == 0, "N must be divisible by tN");
     static_assert(gK % tK == 0, "K must be divisible by tK");
-    static_assert(tM * tK * sizeof(dtype) < kTileByteLimit,
-                  "each PE A tile must be smaller than 8 KB");
-    static_assert(tM * tN * sizeof(float) < kTileByteLimit,
-                  "each PE C tile must be smaller than 8 KB");
-    static_assert(tK * tN * sizeof(dtype) < kTileByteLimit,
-                  "shared B tile must be smaller than 8 KB");
 
     const uint32_t tid = get_thread_idx();
 

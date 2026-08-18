@@ -251,7 +251,7 @@ void gelu(
     tile_shapeFP32 tmpCvt;                          // TCVT 临时 tile
     tile_shapeData_rmd inTile_rmd, outTile_rmd;
     tile_shapeFP32_rmd tmpCvt_rmd;
-
+        
     for (int i = 0; i < Mb; ++i) {
         auto gI = gIIter(0, i);
         auto gO = gOIter(0, i);

@@ -53,17 +53,18 @@ void reducesum_trowsum_rand(
 
     itIn gIIter(in_ptr);
     itOut gOIter(out_ptr);
-
+    #pragma clang loop unroll(full)
     for (int j = 0; j < Mb; ++j) {
         auto gO = gOIter(j, 0);
         TEXPANDS(oldSumTile, static_cast<dtype>(0));
-
+        #pragma clang loop unroll(full)
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(j, i);
             TLOAD(dataTile, gI);
             TROWSUM(SumTile, dataTile);
             TADD(oldSumTile, oldSumTile, SumTile);
         }
+        
         if constexpr (rmd_N > 0) {
             auto gI = gIIter(j, Nb);
             TLOAD(dataTile_row, gI);
@@ -75,7 +76,7 @@ void reducesum_trowsum_rand(
     if constexpr (rmd_M > 0) {
         auto gO = gOIter(Mb, 0);
         TEXPANDS(oldSumTile_col, static_cast<dtype>(0));
-
+        #pragma clang loop unroll(full)
         for (int i = 0; i < Nb; ++i) {
             auto gI = gIIter(Mb, i);
             TLOAD(dataTile_col, gI);

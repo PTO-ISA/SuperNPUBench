@@ -55,10 +55,12 @@ void reducesum_colsum_rand(
     itIn gIIter(in_ptr);
     itOut gOIter(out_ptr);
 
+    #pragma clang loop unroll(full)
     for (int j = 0; j < Nb; ++j) {
         auto gO = gOIter(0, j);
         TEXPANDS(oldSumTile, static_cast<dtype>(0));
 
+        #pragma clang loop unroll(full)
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, j);
             TLOAD(dataTile, gI);
@@ -77,6 +79,7 @@ void reducesum_colsum_rand(
         auto gO = gOIter(0, Nb);
         TEXPANDS(oldSumTile_row, static_cast<dtype>(0));
 
+        #pragma clang loop unroll(full)
         for (int i = 0; i < Mb; ++i) {
             auto gI = gIIter(i, Nb);
             TLOAD(dataTile_row, gI);

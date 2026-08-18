@@ -1,0 +1,11 @@
+#!/bin/bash
+# RMSNorm: y = x * rsqrt(mean(x^2) + epsilon) * weight.
+
+set -euo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+
+make TESTCASE=rms_norm \
+    COMPILER_DIR="$COMPILER_DIR" \
+    M=16 N=256 \
+    tM=8 tN=128
