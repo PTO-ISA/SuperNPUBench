@@ -51,6 +51,27 @@ constexpr int TlsuTag(int tag, int r, int c)
     return (tag << 28) | ((r + 1) << 16) | (c + 1);
 }
 
+// workspace 初始图样。R 组把结果缓冲当工作区用：先给每个区装一份初始内容，
+// 之后整条随机序列只在区与区之间搬运，不再读只读图样 —— 这样每次 TLOAD 读到
+// 的都是可能刚被写过的地址，冲突（RAW/WAR/WAW）的密度显著高于混读只读图样。
+//
+// 前提是**每个区的初始内容互不相同**：若 16 个区只有 4 种内容，"错读了别的区"
+// 这类 bug 有 1/4 概率被同内容掩盖。区号占用编码里空闲的 [27:24] —— 有效行
+// r+1 <= 8，即便 pad 行也只到 32，占到 [21:16] 为止，不会与区号相碰。
+//
+//   [31:28] TLSU_TAG_W  固定 1，表示"workspace 初始图样"
+//   [27:24] rid         区号 0..15
+//   [23:16] r+1         行号，从 1 起
+//   [15:0]  c+1         列号，从 1 起
+//
+// hex dump 按 nibble 直读：0x15010001 = 图样 W、区 5、第 1 行、第 1 列。
+constexpr int TLSU_TAG_W = 0x1;
+
+constexpr int TlsuWsTag(int rid, int r, int c)
+{
+    return (TLSU_TAG_W << 28) | (rid << 24) | ((r + 1) << 16) | (c + 1);
+}
+
 // tile 的物理容量可能大于有效区。gfrun 的 TLOAD 行数上界是
 //   totalRow = tileTotalSize / (totalCol * eleSize)      (TMAEngine.cpp:157)
 // 由 tile 物理大小反推，validRow 只用于一个断言、不限制搬运范围。源对象只
@@ -76,6 +97,22 @@ static constexpr TlsuPattern<T, VALID_ROWS, COLS, STRIDE> MakeTlsuPattern(int ta
         for (int c = 0; c < STRIDE; ++c) {
             bool valid = (r < VALID_ROWS) && (c < COLS);
             d.v[r * STRIDE + c] = (T)TlsuTag(valid ? tag : TLSU_TAG_PAD, r, c);
+        }
+    }
+    return d;
+}
+
+// 与 MakeTlsuPattern 同构，只是有效区带区号。越界填充仍用 TLSU_TAG_PAD，所以
+// "过读"与"错读了别的区"在 dump 里是两种互不混淆的签名。
+template <typename T, int VALID_ROWS, int COLS, int STRIDE = COLS>
+static constexpr TlsuPattern<T, VALID_ROWS, COLS, STRIDE> MakeTlsuWsPattern(int rid)
+{
+    TlsuPattern<T, VALID_ROWS, COLS, STRIDE> d{};
+    for (int r = 0; r < d.kPhysRows; ++r) {
+        for (int c = 0; c < STRIDE; ++c) {
+            bool valid = (r < VALID_ROWS) && (c < COLS);
+            d.v[r * STRIDE + c] = (T)(valid ? TlsuWsTag(rid, r, c)
+                                            : TlsuTag(TLSU_TAG_PAD, r, c));
         }
     }
     return d;
