@@ -19,4 +19,4 @@ __pycache__/
 *.log
 
 # 生成物：viz_random_case.py 重新生成即可
-microbenchmark/tlsu/*.html
+microbenchmark/verification/tlsu/*.html

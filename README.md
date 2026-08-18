@@ -28,6 +28,7 @@ SuperNPUBench/
 │   │   │   └── kernel/      # per-operator test cases
 │   │   └── compile_all.sh
 ├── microbenchmark/          # instruction-level micro-bench (cube/vector/memory/scalar)
+│   └── verification/        # correctness cases (TLSU), not part of the bench suite
 ├── docs/                    # documentation
 │   ├── programming/        # PTO C++ Programming Guide
 │   └── workflow/           # end-to-end workflow docs

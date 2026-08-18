@@ -24,9 +24,11 @@ microbenchmark/
 ├── memory/                  # TLSU family (BSTART.TLSU)
 │   ├── memory_bench.hpp     # bench_load / mov / gather / scatter (+mask)
 │   ├── Makefile / compile.all / src/*.cpp
-└── scalar/                  # GPR scalar family (BSTART.STD / FP)
-    ├── scalar_bench.hpp     # bench_latency / bench_throughput / bench_store / bench_cv
-    ├── Makefile / compile.all / src/*.cpp
+├── scalar/                  # GPR scalar family (BSTART.STD / FP)
+│   ├── scalar_bench.hpp     # bench_latency / bench_throughput / bench_store / bench_cv
+│   ├── Makefile / compile.all / src/*.cpp
+└── verification/            # NOT a benchmark family — correctness cases (see below)
+    └── tlsu/                # TLSU end-to-end functional / cross-model diff cases
 ```
 
 ## Coverage
@@ -42,6 +44,13 @@ microbenchmark/
 - tile dtypes: `fp16 / fp32 / i8 / i16 / i32`; scalar dtypes: `i32 / i64 / f32 / f64`.
 - tile sizes: vector/memory 16×16 (some 32×32); matrix 64³ (fp32 32³, with an 8 KiB benchmark working-set choice).
 - scalar: 1024-iter loop; throughput = 8 independent accumulators, latency = chain dependency.
+
+`verification/` is **not** counted above and is **not** part of the benchmark
+suite: it holds correctness cases (result dumps + independent checkers +
+cross-model diffing), not cycle measurements. `compile_all.sh` deliberately
+skips it — build those cases by hand, e.g.
+`cd verification/tlsu && make TESTCASE=s1_copy_i32_32x32`. See
+[`verification/tlsu/README.md`](verification/tlsu/README.md).
 
 ## Build
 
