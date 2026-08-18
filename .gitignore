@@ -17,3 +17,6 @@ __pycache__/
 
 # Temporary files
 *.log
+
+# 生成物：viz_random_case.py 重新生成即可
+microbenchmark/verification/tlsu/*.html
