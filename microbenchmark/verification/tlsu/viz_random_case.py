@@ -14,11 +14,11 @@ isa/ 解码器 —— 共用层错了两边一起错，比对照样 IDENTICAL（
     python3 viz_random_case.py src/r1_random_seq_i32.cpp -o r1_flow.html
     python3 viz_random_case.py src/r1_random_seq_i32.cpp --check dump.bin
 
-编码（见 tlsu_bench.hpp）：workspace 初始图样的元素值 =
-(TLSU_TAG_W<<28) | (rid<<24) | ((row+1)<<16) | (col+1)，rid 是"这份图样最初装进
-哪个区"。每次搬运都是整块 8x128 的 1:1 拷贝，所以一个区装什么完全由"最后写入的
-数据源自哪份图样"决定 —— 期望值因此可以只用一个 rid 表示，再展开成 1024 个字。
-16 份图样两两不同，搬错源在期望值里一定现形。
+编码（见 tlsu_bench.hpp）：编号图样的元素值 =
+(TLSU_TAG_ID<<28) | (pid<<24) | ((row+1)<<16) | (col+1)。每次搬运都是整块 8x128 的
+1:1 拷贝，所以一个区装什么完全由"最后写入的数据源自哪份图样"决定 —— 期望值因此
+可以只用一个 pid 表示，再展开成 1024 个字。16 份只读图样两两不同，搬错源在期望值
+里一定现形。
 """
 import argparse
 import json
@@ -29,11 +29,11 @@ import sys
 # 与 tlsu_bench.hpp / gen_random_case.py 保持一致
 ROWS, COLS = 8, 128
 TILE_WORDS = ROWS * COLS            # 1024
-TAG_W = 0x1                         # workspace 初始图样的 tag
+TAG_ID = 0x1                        # 编号图样的 tag
 DEFAULT_REGIONS = 16
-# 初始化之后每个区都有内容，"读回写过的区"恒真、不再有区分度。真正值得盯的是
-# 距离：上一次写这个区之后隔了几块就读回来。窗口取 16，约等于队列还压得住的
-# 深度 —— 只是个看图用的启发式，不是判据的一部分。
+# "读回写过的区"只说明有依赖，不说明压力。真正值得盯的是距离：上一次写这个区
+# 之后隔了几块就读回来。窗口取 16，约等于队列还压得住的深度 —— 只是个看图用的
+# 启发式，不是判据的一部分。
 RAW_WINDOW = 16
 
 
@@ -62,7 +62,7 @@ def replay(ops):
     for i, op in enumerate(ops):
         if op["k"] == "load":
             m = op["m"]
-            if m.startswith("w"):
+            if m.startswith("s"):
                 st = {"tag": int(m[1:]), "depth": 0, "src": m}
             else:
                 r = regions.get(m)
@@ -97,7 +97,7 @@ def expected_bytes(regions, nreg=DEFAULT_REGIONS):
         if pid is None:
             words += [0] * TILE_WORDS
         else:
-            words += [(TAG_W << 28) | (pid << 24) | ((r + 1) << 16) | (c + 1)
+            words += [(TAG_ID << 28) | (pid << 24) | ((r + 1) << 16) | (c + 1)
                       for r in range(ROWS) for c in range(COLS)]
     return struct.pack("<%dI" % len(words), *words)
 
@@ -233,7 +233,7 @@ code{font:12.5px ui-monospace,monospace;background:var(--paper);padding:1px 5px;
 <div class="say" id="say"></div>
 
 <div class="stage scroll"><svg id="flow" viewBox="0 0 1000 560" role="img"
-  aria-label="初始图样、tile 暂存与各 GM 区域的当前内容"></svg></div>
+  aria-label="只读图样、tile 暂存与各 GM 区域的当前内容"></svg></div>
 
 <div class="legend">
   <span><i class="ln" style="background:var(--load)"></i>来源</span>
@@ -250,12 +250,12 @@ code{font:12.5px ui-monospace,monospace;background:var(--paper);padding:1px 5px;
 <section>
   <p class="eyebrow">这张图同时是一个独立判据</p>
   <div class="oracle">
-    <p>元素值 = <code>(1&lt;&lt;28) | (rid&lt;&lt;24) | ((row+1)&lt;&lt;16) | (col+1)</code>，每次搬运
+    <p>元素值 = <code>(1&lt;&lt;28) | (pid&lt;&lt;24) | ((row+1)&lt;&lt;16) | (col+1)</code>，每次搬运
     都是整块 8×128 的 1:1 拷贝 —— 所以一个区最终装什么，<strong>完全由"最后写入的数据源自
     哪份图样"决定</strong>，可以脱离模型直接算出全部 __NBYTES__ 字节。</p>
-    <p>初始化时 __NREG__ 份图样两两不同（<code>rid</code> 就是它最初所在的区号），随机体
-    之后<strong>只在区与区之间搬运</strong>：每次 TLOAD 读的都是可能刚被写过的地址，
-    冲突密度因此比混读只读图样高得多，而"搬错了源区"也不会被同内容掩盖。</p>
+    <p>16 份只读图样<strong>两两不同</strong>，所以"搬错了源"不会被同内容掩盖。这一点在
+    长序列里尤其要紧：TSTORE 只复制不创造，区与区之间搬得越久、存活的图样种类越少，
+    而 src 装载不断把新编号注回工作区，序列再长也不塌缩成少数几种内容。</p>
     <p>这一点很要紧：端到端比对一直以 gfrun 为黄金参考，而 gfrun 与 gfsim
     <strong>共用 <code>isa/</code> 解码器</strong> —— 共用层错了两边一起错，逐字节比对照样
     IDENTICAL。2026-08-14 的 ADDTPC 回归正是这样把整套用例伪装成全绿的。</p>
@@ -267,19 +267,19 @@ code{font:12.5px ui-monospace,monospace;background:var(--paper);padding:1px 5px;
 <script>
 const OPS = __OPS__, N = OPS.length;
 const SRC = __SRC__, REG = __REG__, TIL = __TIL__;
-const NREG = __NREG__, TAG_W = 0x1;
-const PL = pid => pid==null ? "零" : "W"+pid;   /* 图样标签就是它最初所在的区号 */
+const NREG = __NREG__, TAG_ID = 0x1;
+const PL = pid => pid==null ? "零" : "#"+pid;   /* 图样标签就是只读源的编号 */
 const SVG = "http://www.w3.org/2000/svg";
 const el = (t,a)=>{const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
 const up = s => s.toUpperCase();
 
 /* 期望的首字与末字：row0col0 与 row7col127 */
 const wd = (pid,r,c) => pid==null ? "00000000"
-  : (((TAG_W<<28)>>>0 | (pid<<24) | (r<<16) | c)>>>0).toString(16).padStart(8,"0");
+  : (((TAG_ID<<28)>>>0 | (pid<<24) | (r<<16) | c)>>>0).toString(16).padStart(8,"0");
 const w0 = pid => wd(pid,1,1);
 const wN = pid => wd(pid,8,128);
 
-/* ── 几何：初始图样一行（每区一份，故与区数同）、tile 暂存一行、GM 区域 4x4 ── */
+/* ── 几何：只读图样一行、tile 暂存一行、GM 区域 4x4 ── */
 const pos = {};
 const sw = Math.min(120, (940-(SRC.length-1)*6)/Math.max(SRC.length,1));
 SRC.forEach((n,i)=>pos[n]={x:36+i*(sw+6), y:52, w:sw, h:34, kind:"s"});
@@ -305,7 +305,7 @@ function box(a,b){ // 两个节点中心之间的曲线
 function draw(step){
   const S=stateAt(step), cur=(step>=0&&step<N)?OPS[step]:null;
   flow.textContent="";
-  [["初始图样 只读，每区一份且两两不同",30,30],
+  [["只读图样 16 份，两两不同",30,30],
    ["tile 暂存 源码级 t0–t7",30,116],["GM 工作区 判据",30,220]]
     .forEach(([t,x,y])=>flow.appendChild(Object.assign(
       el("text",{x,y,class:"collab"}),{textContent:t})));
@@ -344,8 +344,8 @@ function narrate(step,S){
   let s=`<div class="mv"><b>块 ${step}</b>　`;
   if(o.k==="load"){
     s+=`<b>${up(o.frm)} → ${up(o.to)}</b>　<span class="dim">TLOAD</span></div>`;
-    s+=o.frm[0]==="w"
-      ? `初始化：把图样 ${PL(c.tag)} 取进 tile（第一手）`
+    s+=o.frm[0]==="s"
+      ? `从只读图样 ${PL(c.tag)} 取一块（第一手）`
       : (c.tag!=null
           ? `读回 ${up(o.frm)}，里面是图样 ${PL(c.tag)}，已转手 ${c.depth} 次`
             +(o.raw?`　<b>← RAW：隔 ${o.gap} 块就读回，必须看见那次写</b>`
@@ -413,7 +413,7 @@ go(0);
 def build(path, out):
     ops, seed, nreg = parse(path)
     ops, regions = replay(ops)
-    srcs = sorted({o["m"] for o in ops if o["m"].startswith("w")}, key=lambda s: int(s[1:]))
+    srcs = sorted({o["m"] for o in ops if o["m"].startswith("s")}, key=lambda s: int(s[1:]))
     regs = sorted({o["m"] for o in ops if o["m"].startswith("r")}, key=lambda s: int(s[1:]))
     tils = sorted({o["t"] for o in ops}, key=lambda s: int(s[1:]))
     case = path.split("/")[-1].rsplit(".", 1)[0]

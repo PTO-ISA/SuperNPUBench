@@ -51,25 +51,23 @@ constexpr int TlsuTag(int tag, int r, int c)
     return (tag << 28) | ((r + 1) << 16) | (c + 1);
 }
 
-// workspace 初始图样。R 组把结果缓冲当工作区用：先给每个区装一份初始内容，
-// 之后整条随机序列只在区与区之间搬运，不再读只读图样 —— 这样每次 TLOAD 读到
-// 的都是可能刚被写过的地址，冲突（RAW/WAR/WAW）的密度显著高于混读只读图样。
+// 编号图样。R 组要的不是 4 份只读源，而是 16 份两两不同的 —— 只有 4 种内容时，
+// "搬错了源"这类 bug 有 1/4 概率被同内容掩盖，判据看不见。
 //
-// 前提是**每个区的初始内容互不相同**：若 16 个区只有 4 种内容，"错读了别的区"
-// 这类 bug 有 1/4 概率被同内容掩盖。区号占用编码里空闲的 [27:24] —— 有效行
-// r+1 <= 8，即便 pad 行也只到 32，占到 [21:16] 为止，不会与区号相碰。
+// 图样编号占用编码里空闲的 [27:24]：有效行 r+1 <= 8，即便 pad 行也只到 32，占到
+// [21:16] 为止，不会与编号相碰。
 //
-//   [31:28] TLSU_TAG_W  固定 1，表示"workspace 初始图样"
-//   [27:24] rid         区号 0..15
-//   [23:16] r+1         行号，从 1 起
-//   [15:0]  c+1         列号，从 1 起
+//   [31:28] TLSU_TAG_ID  固定 1，表示"编号图样"
+//   [27:24] pid          图样编号 0..15
+//   [23:16] r+1          行号，从 1 起
+//   [15:0]  c+1          列号，从 1 起
 //
-// hex dump 按 nibble 直读：0x15010001 = 图样 W、区 5、第 1 行、第 1 列。
-constexpr int TLSU_TAG_W = 0x1;
+// hex dump 按 nibble 直读：0x15010001 = 编号图样 5、第 1 行、第 1 列。
+constexpr int TLSU_TAG_ID = 0x1;
 
-constexpr int TlsuWsTag(int rid, int r, int c)
+constexpr int TlsuIdTag(int pid, int r, int c)
 {
-    return (TLSU_TAG_W << 28) | (rid << 24) | ((r + 1) << 16) | (c + 1);
+    return (TLSU_TAG_ID << 28) | (pid << 24) | ((r + 1) << 16) | (c + 1);
 }
 
 // tile 的物理容量可能大于有效区。gfrun 的 TLOAD 行数上界是
@@ -102,16 +100,16 @@ static constexpr TlsuPattern<T, VALID_ROWS, COLS, STRIDE> MakeTlsuPattern(int ta
     return d;
 }
 
-// 与 MakeTlsuPattern 同构，只是有效区带区号。越界填充仍用 TLSU_TAG_PAD，所以
-// "过读"与"错读了别的区"在 dump 里是两种互不混淆的签名。
+// 与 MakeTlsuPattern 同构，只是有效区带图样编号。越界填充仍用 TLSU_TAG_PAD，所以
+// "过读"与"搬错了源"在 dump 里是两种互不混淆的签名。
 template <typename T, int VALID_ROWS, int COLS, int STRIDE = COLS>
-static constexpr TlsuPattern<T, VALID_ROWS, COLS, STRIDE> MakeTlsuWsPattern(int rid)
+static constexpr TlsuPattern<T, VALID_ROWS, COLS, STRIDE> MakeTlsuIdPattern(int pid)
 {
     TlsuPattern<T, VALID_ROWS, COLS, STRIDE> d{};
     for (int r = 0; r < d.kPhysRows; ++r) {
         for (int c = 0; c < STRIDE; ++c) {
             bool valid = (r < VALID_ROWS) && (c < COLS);
-            d.v[r * STRIDE + c] = (T)(valid ? TlsuWsTag(rid, r, c)
+            d.v[r * STRIDE + c] = (T)(valid ? TlsuIdTag(pid, r, c)
                                             : TlsuTag(TLSU_TAG_PAD, r, c));
         }
     }

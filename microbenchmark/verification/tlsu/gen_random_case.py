@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 """R 组用例生成器：随机长度、随机交错的 TLOAD/TSTORE 序列。
 
-序列分两段：
+TLOAD 一半概率从只读图样装载，一半概率把写过的区读回来 —— 后者制造 RAW，是这
+组用例的重点；前者则不断把新图样注入工作区。
 
-  1. 初始化   把 16 份**互不相同**的图样各装进一个区，工作区从此自带身份
-  2. 随机体   只在区与区之间搬运，不再读只读图样
+只读图样有 16 份且**两两不同**。这一点很要紧：图样只有 4 份时，"搬错了源"这类
+bug 有 1/4 概率被同内容掩盖，判据看不见。更关键的是，TSTORE 只复制不创造，区与
+区之间搬得越久、存活的图样种类越少（遗传漂变），16 份源正好靠 src 装载持续把
+新编号注回来，序列再长也不塌缩。
 
-第 2 点是这版的关键。早先随机体有一半概率去读只读图样，那一半 TLOAD 读的是
-永远不会被写的地址，天然不会与任何 store 冲突。现在每次 TLOAD 读的都是可能刚
-被写过的区，RAW/WAR/WAW 的密度显著上来了。
+图样编号编进元素值的 [27:24]，见 tlsu_bench.hpp 的 TlsuIdTag。
 
-代价是"错读了别的区"必须靠内容区分，所以初始化时每个区装的图样都不一样（区号
-编进元素值的 [27:24]，见 tlsu_bench.hpp 的 TlsuWsTag）——16 个区两两不同，错读
-任何一个区都会在 dump 里现形，不会被同内容掩盖。
-
-随机的只有**序列**——load/store 怎么交错、每一步碰哪个 tile 寄存器和哪块内存。
-形状、dtype、行距一律固定（8x128 int32，稠密行距），地址一律 256 字节对齐。这样
-失败时唯一的变量就是定序与交错，不必再去排除形状或寻址。
+随机的只有**序列**——多少个块、load/store 怎么交错、每一步碰哪个 tile 寄存器和
+哪块内存。形状、dtype、行距一律固定（8x128 int32，稠密行距），地址一律 256 字节
+对齐。这样失败时唯一的变量就是定序与交错，不必再去排除形状或寻址。
 
 判据有两条：gfrun 三方比对（由 SuperScalarModel 的 run_tlsu_compare.sh 驱动），
 以及 viz_random_case.py --check 的独立推导（不碰任何模型）。
@@ -38,31 +35,31 @@ COLS = 128
 ELEM_BYTES = 4
 TILE_BYTES = ROWS * COLS * ELEM_BYTES      # 4096
 
-NUM_REGIONS = 16       # 工作区切成几块；区号编进图样，上限 16（编码 [27:24]）
+NUM_REGIONS = 16       # 结果缓冲切成几块
 NUM_TILES = 8          # 可用的 tile 寄存器变量
+NUM_SRCS = 16          # 只读图样份数，两两不同；上限 16（编号只有 [27:24] 四位）
 
 HEADER = '''// R 组 —— 随机 TLOAD/TSTORE 序列。**本文件由 gen_random_case.py 生成，不要手改。**
 //
 //   种子   : {seed}
-//   初始化 : {init_blocks} 块（{regions} 个 TLOAD + {regions} 个 TSTORE），每个区装一份唯一图样
-//   随机体 : {blocks} 块（{loads} 个 TLOAD + {stores} 个 TSTORE），只在区与区之间搬运
+//   块数   : {blocks}（{loads} 个 TLOAD + {stores} 个 TSTORE）
+//   只读源 : {srcs} 份，两两不同（编号在元素值的 [27:24]）
 //   形状   : {rows}x{cols} int32，稠密行距，基址 256 字节对齐
 //   重新生成: python3 gen_random_case.py --seed {seed} --blocks {blocks} \\
 //                 -o src/{name}.cpp
 //
-// 随机的只有序列本身：load/store 的交错、每一步用哪个 tile 寄存器、读写哪一块
-// 内存。形状、dtype、行距全部固定 —— 失败时唯一的变量就是定序与交错，不必再
-// 排除形状或寻址的嫌疑。
+// 随机的只有序列本身：块数、load/store 的交错、每一步用哪个 tile 寄存器、读写
+// 哪一块内存。形状、dtype、行距全部固定 —— 失败时唯一的变量就是定序与交错，
+// 不必再排除形状或寻址的嫌疑。
 //
-// 随机体不读只读图样：初始化之后 {regions} 个区全部有内容，之后每一次 TLOAD 读的
-// 都是可能刚被写过的区。序列里因此密集地长出 RAW（store 后读同址）、WAR、WAW
-// 和长距离 in-flight 交错 —— 这正是 S/C 两组用固定小序列够不到的地方：C 组每个
-// 用例只有两三个 tile op，队列压力浅；这里一次 {blocks} 个块，LIQ/STQ/SCB 会被真正
-// 填满。
+// 序列里天然会长出 RAW（store 后读同址）、WAR、WAW 和长距离 in-flight 交错，
+// 这正是 S/C 两组用固定小序列够不到的地方：C 组每个用例只有两三个 tile op，
+// 队列压力浅；这里一次 {blocks} 个块，LIQ/STQ/SCB 会被真正填满。
 //
-// 每个区的初始图样互不相同（区号在元素值的 [27:24]），所以"错读了别的区"不会被
-// 同内容掩盖 —— 任何一次搬错源都在 dump 里可见。元素编码见 tlsu_bench.hpp：
-//   0xT_R_rr_cccc = 图样 tag、区号、行号、列号，hex dump 按 nibble 直读。
+// {srcs} 份只读图样两两不同，所以"搬错了源"不会被同内容掩盖，任何一次都在 dump 里
+// 可见；而 TSTORE 只复制不创造，靠这些 src 装载持续注入新编号，序列再长也不会
+// 塌缩成少数几种内容。元素编码见 tlsu_bench.hpp：
+//   0x1_P_rr_cccc = 编号图样 P、第 rr 行、第 cccc 列，hex dump 按 nibble 直读。
 #include "tlsu_bench.hpp"
 
 #define RESULT_SIZE ({regions} * {tile_bytes})
@@ -77,30 +74,42 @@ constexpr int N = {cols};
 def gen(seed, blocks, name):
     rng = random.Random(seed)
 
-    # 初始化：区 r 装图样 W{r}。tile 变量轮着用，用完这一段 t0..t7 都已定义，
-    # 随机体因此第一步就可以是 store。
-    init = [(r % NUM_TILES, r) for r in range(NUM_REGIONS)]
-
-    # 随机体：load 与 store 各半，两侧都只碰工作区。
+    # 先规划序列，再落成源码 —— 这样统计量（load/store 各多少）能写进文件头。
     ops = []
-    for _ in range(blocks):
-        if rng.random() < 0.5:
-            ops.append(("store", rng.randrange(NUM_TILES), rng.randrange(NUM_REGIONS)))
-        else:
-            ops.append(("load", rng.randrange(NUM_TILES), rng.randrange(NUM_REGIONS)))
+    defined = set()          # 已经装载过、可以用作 TSTORE 数据源的 tile
+    written = set()          # 已经被写过的区域，可以再被读回来
 
-    loads = sum(1 for o in ops if o[0] == "load")
+    for _ in range(blocks):
+        # 头几步没有可搬的数据，只能先 load。之后 load/store 各半。
+        want_store = bool(defined) and rng.random() < 0.5
+        if want_store:
+            ti = rng.choice(sorted(defined))
+            rj = rng.randrange(NUM_REGIONS)
+            ops.append(("store", ti, rj))
+            written.add(rj)
+        else:
+            ti = rng.randrange(NUM_TILES)
+            # 一半概率从只读图样装载，一半概率把写过的区域读回来 —— 后者才
+            # 制造 RAW，是这组用例的重点；前者把新图样注入工作区。
+            if written and rng.random() < 0.5:
+                ops.append(("load_region", ti, rng.choice(sorted(written))))
+            else:
+                ops.append(("load_src", ti, rng.randrange(NUM_SRCS)))
+            defined.add(ti)
+
+    loads = sum(1 for o in ops if o[0] != "store")
     stores = blocks - loads
 
     out = [HEADER.format(seed=seed, blocks=blocks, loads=loads, stores=stores,
                          rows=ROWS, cols=COLS, regions=NUM_REGIONS,
-                         init_blocks=2 * NUM_REGIONS,
+                         srcs=NUM_SRCS,
                          tile_bytes=TILE_BYTES, name=name)]
 
-    out.append("// 每个区一份唯一的初始图样：区号编进元素值，错读别的区在 dump 里可见。\n")
-    for r in range(NUM_REGIONS):
-        out.append("alignas(256) constinit auto gWs{0} = "
-                   "MakeTlsuWsPattern<int32_t, M, N>({0});\n".format(r))
+    out.append("// {} 份两两不同的只读图样：编号编进元素值，搬错源在 dump 里可见。\n"
+               .format(NUM_SRCS))
+    for i in range(NUM_SRCS):
+        out.append("alignas(256) constinit auto gSrc{0} = "
+                   "MakeTlsuIdPattern<int32_t, M, N>({0});\n".format(i))
 
     out.append("""
 int main()
@@ -118,24 +127,21 @@ int main()
                    .format(r, r, TILE_BYTES))
     out.append("\n")
 
-    for r in range(NUM_REGIONS):
-        out.append("    iter_t gw{0}(gWs{0}.v);  auto w{0} = gw{0}(0, 0);\n".format(r))
+    for i in range(NUM_SRCS):
+        out.append("    iter_t gs{0}(gSrc{0}.v);  auto s{0} = gs{0}(0, 0);\n".format(i))
     for r in range(NUM_REGIONS):
         out.append("    iter_t gr{0}(R{0});  auto r{0} = gr{0}(0, 0);\n".format(r))
     out.append("\n")
     out.append("    tile_t " + ", ".join("t{}".format(i) for i in range(NUM_TILES)) + ";\n\n")
 
     out.append("    BENCHSTART;\n")
-    out.append("    // ── 初始化：每个区装入自己的那份图样 ──\n")
-    for ti, r in init:
-        out.append("    TLOAD(t{}, w{});\n".format(ti, r))
-        out.append("    TSTORE(r{}, t{});\n".format(r, ti))
-    out.append("\n    // ── 随机体：只在区与区之间搬运 ──\n")
-    for kind, ti, rj in ops:
+    for kind, ti, x in ops:
         if kind == "store":
-            out.append("    TSTORE(r{}, t{});\n".format(rj, ti))
+            out.append("    TSTORE(r{}, t{});\n".format(x, ti))
+        elif kind == "load_region":
+            out.append("    TLOAD(t{}, r{});\n".format(ti, x))
         else:
-            out.append("    TLOAD(t{}, r{});\n".format(ti, rj))
+            out.append("    TLOAD(t{}, s{});\n".format(ti, x))
     out.append("    BENCHEND;\n\n")
 
     out.append("    TlsuDrain();\n    tlsu_finish(1);\n    return 0;\n}\n")
@@ -146,7 +152,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=20260818)
     ap.add_argument("--blocks", type=int, default=200,
-                    help="随机体的块数；初始化的 2*NUM_REGIONS 块不计在内")
+                    help="tile op 总块数（TLOAD + TSTORE 之和）")
     ap.add_argument("-o", "--output", required=True)
     args = ap.parse_args()
 
@@ -154,9 +160,9 @@ def main():
     text, loads, stores = gen(args.seed, args.blocks, name)
     with open(args.output, "w") as f:
         f.write(text)
-    print("{}: seed={} init={} blocks={} ({} TLOAD + {} TSTORE) -> {}"
-          .format(name, args.seed, 2 * NUM_REGIONS, args.blocks,
-                  loads, stores, args.output))
+    print("{}: seed={} blocks={} ({} TLOAD + {} TSTORE) srcs={} -> {}"
+          .format(name, args.seed, args.blocks, loads, stores,
+                  NUM_SRCS, args.output))
 
 
 if __name__ == "__main__":
