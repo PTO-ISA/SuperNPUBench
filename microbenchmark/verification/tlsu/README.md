@@ -54,6 +54,24 @@ make TESTCASE=s1_copy_i32_32x32
 `verification`，`-I$(MICROBENCH_ROOT)/$(CATEGORY)` 只到上一级，所以本地 `Makefile`
 补了一条 `INCLUDE += -I$(CURDIR)`，否则 `src/*.cpp` 找不到 `tlsu_bench.hpp`。
 
+## 移动本目录前先看这里
+
+**SuperScalarModel 的 `scripts/run_tlsu_suite.sh` 硬编码了本目录的路径**，共四处：
+
+| 变量 / 位置 | 值 |
+| --- | --- |
+| `ELFDIR` | `$BENCH/output/microbenchmark/verification/elf/verification` |
+| `CASEDIR` | `$BENCH/microbenchmark/verification/tlsu/src` |
+| 编译时 `cd` | `$BENCH/microbenchmark/verification/tlsu` |
+| `VIZ` | `$BENCH/microbenchmark/verification/tlsu/viz_random_case.py` |
+
+改了目录名却不同步那个脚本，**失败是静默的**：脚本不会报错，只会在表格里整列打印
+"无 ELF"，看起来像用例没编出来。2026-08-18 把本目录从 `microbenchmark/tlsu/` 移到
+`verification/` 下时就踩了一次，修复在 SuperScalarModel@16291b68。
+
+目录名、`NUM_REGIONS`（决定 `RESULT_SIZE`）、用例文件名都属于跨仓契约，动之前先
+grep 一遍那个脚本。
+
 ## 运行与判定
 
 ELF 跑在 SuperScalarModel 的 `gfrun`/`gfsim` 上。结果缓冲是 `cross_model_result`，
