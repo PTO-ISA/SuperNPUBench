@@ -196,8 +196,8 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
 // no legal TileN) auto-route to the 方案A split-reduce `_bigbs` kernel with a
 // budget-derived R_sub. `if constexpr` guarantees the untaken branch is not
 // instantiated, so plain's TileN=0 / bigbs's illegal R_sub never fire an assert.
-// InT is BUDGET-ONLY (a wider input dtype shrinks the budget); the data path is
-// bf16-only (static_assert).
+// InT drives BOTH the budget (a wider input dtype shrinks it) AND the compute domain:
+// scale-reduce and data paths are InT-dispatched (bf16/half/fp32) via `if constexpr`.
 template <int Axis, int Post, int BlockSize = 32, typename OutT = __fp8_e4m3,
           typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
 void dynamic_mx_quant_nontail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {

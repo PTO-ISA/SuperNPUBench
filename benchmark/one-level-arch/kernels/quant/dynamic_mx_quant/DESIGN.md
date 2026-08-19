@@ -465,7 +465,8 @@ AscendC 实现两种等价形态：
 
 - **编译验证**：4 个 FP8 配置通过 `make TESTCASE=dynamic_mx_quant TYPE=<...> diss`（含 `res_check=on`）编译+链接成功。
 - **精度验证**：`run_precision_check.py` 编排 gen→compile→QEMU→compare；`--dtype FP8|FP4` 选择 golden 与解码路径。尚未落地的配置在编排中跳过（当前落地范围见 README.md）。
-- **运行时说明**：因工具链↔仿真器版本 skew，新编 ELF 当前无法在 gfrun/gfsim 稳定运行，端到端精度比对暂不可信；正确性由 AscendC 代码级对齐 + 干净编译建立，精度 harness 已就绪待 skew 解除。
+
+> 编译/运行时实际遇到的问题（skew、emulator 断言等）均记录在 RECORD.md，不在本设计文档范围内。
 
 ### 7.3 测试文件结构
 
@@ -490,7 +491,7 @@ test/kernel/quant/dynamic_mx_quant/
 - **非尾轴**：打包轴（Post）与 reduce 轴（行/`TCOLMAX`）正交，`TileN=64` 走 plain RowMajor NoneBox（`tile_o=[32,32]`），归约零改动。
 - **尾轴**：打包轴与 reduce 轴重合。**不 2-block 打包**，改用**列装箱补齐物理宽**：物理列宽补齐到 `PW = ⌈BlockSize/64⌉×64`（BS=32→64），每 op 列装箱到有效 BlockSize（value/scale tile 物理 PW、有效 BlockSize）。`TROWMAX` 按 **ValidCol** 归约（cpu_sim `TRowMax.hpp:13` 循环 `j<ValidCol`），物理补齐**不合并** block、每块归约独立正确；fp4 输出 tile 物理 `PW/2` 字节（`PW%64==0` 故 32B 对齐）、有效 `BlockSize/2` 字节；boxed `TLOAD`/`TSTORE` 只搬 ValidCol 列（`blk_tload` 计数取 `GetValidCol()`），尾块不越界读过 N；因物理 PW≠每块步长，基址折叠定位每 block（输入 `x+kb*BlockSize`、输出 `y+kb*(BlockSize/2)`）。**无 concat、无配对、无零块**，仅需 `N % BlockSize == 0`（单 block/tile 亦可）。奇数 numKb 时显式往偶数对齐的 padding scale 列补 0x00 E8M0（golden `_pad_to_even` 用 `2^-127`==0x00）。scale 路径复用 `compute_ocp_scale_tail_boxed_pw`（物理宽 PW 参数化的 boxed OCP scale）。
 
-列装箱是 plain RowMajor（有效列 < 物理列），非 fractal。boxed ColMajor fractal（`fa_hif4.hpp` 先例）发射已验证，但其寄存器侧 fractal 落盘字节序需运行期核实（当前 emulator skew 下不可测），作为更次备选。
+列装箱是 plain RowMajor（有效列 < 物理列），非 fractal。boxed ColMajor fractal（`fa_hif4.hpp` 先例）作为更次备选，其寄存器侧 fractal 落盘字节序需运行期核实。
 
 ---
 

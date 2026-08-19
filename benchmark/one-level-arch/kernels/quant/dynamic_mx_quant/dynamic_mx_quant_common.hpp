@@ -99,9 +99,9 @@ constexpr float inv_dst_max() {
 // fp32 (4B) tile through a scratch-HBM reinterpret roundtrip (问题4), so its binding
 // width is 4B until the compiler exposes a register-level reinterpret (kRegBitcast),
 // after which it falls back to sizeof(InT).
-// NOTE: InT here only sizes/validates the tile budget; the kernels' DATA PATH is
-// still bf16-only (each kernel static_asserts InT == __bf16). fp32/fp16 input data
-// paths (32b-domain handling) are a separate, not-yet-landed item.
+// NOTE: InT drives BOTH the tile budget AND the compute domain: every kernel now
+// dispatches its scale-reduce and data paths on InT via `if constexpr`
+// (bf16/half/fp32), mirroring AscendC ComputeMaxExp{Ocp,Cublas}{Bf16,Half,Fp32}.
 constexpr int  kTileBudgetBytes = 8192;
 constexpr bool kRegBitcast = false; // flip true once 问题4 (reg reinterpret) lands
 
