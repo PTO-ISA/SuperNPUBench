@@ -963,3 +963,110 @@ probe **gfrun 跑到底**：23 blocks / 120 insts，`R2 = 0`（Success to Reach 
 | 1 | `SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp:441` | dtype 相等 → `BytesOf` 位宽相等（支持零指令 reinterpret） |
 | 2 | `Linx-TileOP-API/include/jcore/template_asm.hpp` TCVT_T | 补发 `B.DIM zero, %c7, ->lb2`（+`tile_shape_out::Cols` 操作数） |
 | 3 | `SuperScalarModel` `CubeEngine.cpp` + `FloatPointUtils.cpp` | 实现 TCVT bf16→e8m0(SF8) |
+
+---
+
+## 问题16：emulator TCVT 形状契约逐 conjunct 比 physical row/col，打包 fp4 与源无法同时满足 → gfrun 结构性必崩（需 emulator 侧解决）
+
+> 缺陷所在仓 **`SuperScalarModel`（`isa/Block.cpp` `Block::ValidateOperandContract()` 的 TCVT 分支）**。
+> 触发 kernel `dynamic_mx_quant_tail_ocp_fp4.hpp`（`TYPE=TAIL_OCP_FP4`）。**scale 路径已由问题15 打通、
+> gfrun 可跑，本问题卡在最后 data 路径的 `fp32 → fp4` 输出转换块。** 与问题13/15 的「TCVT lb2」是
+> **两回事**——那是让正常 TCVT dst.col 取对的必需件（见下「排除法」），本问题是 emulator 校验本身对
+> 打包类型过严。
+>
+> **2026-08-19 实证更正**：用 instrumented gfrun（在断言前打印实际 tileInfo）实测，崩点是
+> **`row==row` conjunct（src.row=8 ≠ dst.row=4）**，**不是** `col==col`。此前「崩在 col==col、dst.col=32、
+> inherit 未生效」的结论被推翻——见「根因」「排除法」。
+
+### 现象
+
+`tail_ocp_fp4` 编译+反汇编通过，gfrun 在**块解码组装阶段**（任何 Execute 之前）崩：
+
+```
+gfrun: illegal instruction: ASSERTION FAILED:
+  srcTile[0]->tileInfo->row == dstTile[0]->tileInfo->row && ...
+  "PTO 0.58 TCVT requires matching source/destination logical shapes"
+  func ValidateOperandContract, file isa/Block.cpp:1039   (EXIT=1)
+```
+
+调用点：`SetBlockIsComplete()`（Block.cpp:1136）在**块解码完成时**调用 `ValidateOperandContract()`。
+TCVT 分支逐 conjunct 断言 `src.row==dst.row && src.col==dst.col && src.validRow==dst.validRow &&
+src.validCol==dst.validCol && src.layout==dst.layout`，其中 `row`/`col` 是 **physical**（含 padding/打包）。
+
+### 根因（打包类型的结构性半宽，instrumented gfrun 实证）
+
+instrumented gfrun 打印的实际 tileInfo（当前 fresh build，fp4 TCVT **不发 lb2**）：
+
+| conjunct | src（上游 fp32 tile） | dst（fp4） | 结果 |
+|---|---|---|---|
+| physical col | 64 | 64（inherit） | ✓ 相等 |
+| validCol | 32 | 32 | ✓ 相等 |
+| validRow | 8 | 8 | ✓ 相等 |
+| **physical row** | **8** | **4** | **✗ 崩** |
+
+- `__fp4_e2m1x2` 是**打包类型**（`BytesOf(FP4)=HF4_DATA_WIDTH=1`，`DataType.h:203`；1 字节 = 2 个 fp4）。
+- physical `row` 由 `row = size / (col × BytesOf(elem))`（Block.cpp:1380-1386）算：
+  - src（fp32，elemBytes=4）：`2048 / (64 × 4) = 8`。
+  - dst（fp4，BytesOf=1）：`256 / (64 × 1) = 4`。dst 继承了 src 的 col=64，但 fp4 每元素只占 1 字节 →
+    同 size 下 row 减半 → **8 ≠ 4** → 断言失败。
+- **col 单位（源码实证）**：emulator 的 physical `col` 对打包 fp4 = **fp4x2 打包单元（字节）数**，不是单个
+  fp4 元素数。依据：(1) `BytesOf(FP4)=1`；(2) `col=physicalCol` 直接取自 lb2 或 inherit；(3) `row=size/(col×elemBytes)`
+  自洽要求 col 按打包单元计。故 kernel 的 `tile_o Cols` 应保持 `PW/2=32`，**不能改成 64**。
+- **两种 emit 变体都崩，只是崩不同 conjunct**——宽→打包-fp4 的 TCVT **无法同时**满足 col==col 和 row==row：
+  - **不发 lb2**（当前 build）：`UpdateDstTileInfo` inherit 分支生效 → dst.col=64 → **row 崩**（8≠4）。
+  - **发 lb2=32**（旧 build 另一变体）：`explicitPhysicalCol=true` → dst.col=lb2=32 → **col 崩**（64≠32）。
+  选哪个 col 都有一个 physical 维度 != src。这是打包类型的**结构性**特征，与 BlockSize、具体数值、哪个 fp4
+  kernel 无关。**validRow/validCol 两边恒相等**（8/8、32/32），只比 valid 维度即可放过。
+
+### 排除法：`TCVT lb2`（问题15 修复 #2）不是元凶，反而必需
+
+曾怀疑「问题13/15 给 `TCVT_T` 补发 lb2（`template_asm.hpp:118` `B.DIM zero,%c7,->lb2` +
+`tile_shape_out::Cols` 操作数）」是否导致 fp4 崩。实证否定：
+
+- **当前 build fp4 TCVT 已不发 lb2**（反汇编：块内只有 `B.DIM a6->lb0` / `B.DIM a7->lb1`）。无-lb2 →
+  `UpdateDstTileInfo` 的 inherit 分支（`inheritTcvtShape && !explicitPhysicalCol`，Block.cpp:1260-1262）
+  **确实生效**，`physicalCol = shapeSource->col = 64`，dst.col 继承 src.col。**这一点推翻了上一版「inherit
+  未生效、回退 validCol=32」的推断**——inherit 生效了，只是继承来的 col=64 让 row 崩。
+- 若发 lb2=32（正常 TCVT 如 bf16→fp32 需要它把 dst.col 取对），fp4 会走 `explicitPhysicalCol` → dst.col=32
+  → 改崩 col==col。故问题15 的 lb2 补发是让正常 TCVT dst.col 取对的**必需件**；**fp4 崩纯属 emulator 对打包
+  类型逐 physical 维度比对的缺陷，与 lb2 无关**（发不发 lb2 都崩，只换崩 row 还是 col）。
+
+### 定性
+
+emulator 建模缺陷（过严校验），非 ISA/工具链/kernel。TCVT 到打包类型时，dst 的 physical col/row 与 src 天然
+不同（打包改变了 col↔row↔size 关系），这是**正确**的描述符；断言把 physical row/col 都强行要求相等，等于
+禁掉一切「宽类型 → 打包窄类型」的 TCVT。
+
+### 解除路径（emulator 侧）
+
+放宽 `ValidateOperandContract()` TCVT 分支：**删掉 `row==row` / `col==col`，只保留
+`validRow==validRow` + `validCol==validCol` + `layout` + physical≥valid 的健全性检查**。因 fp4 两边
+validRow/validCol 都相等（8/8、32/32），放宽后 fp4 TCVT 过校验且不影响正确性。
+
+- 对症提交：**`eaa3dfe7` "fix(tile): relax TCVT legality to valid shape only"**（作者 jialewang，2026-08-14），
+  正是删掉 `row==row`/`col==col` 只留 valid 维度 + 在 `UpdateDstTileInfo` 给 TCVT 加 dstPhysicalCol 继承/
+  dense-pack 逻辑——**仍是对症的正确修复**（它删的是 row 和 col 两个 physical 检查，同时覆盖上面两种崩法）。
+- **该提交游离于当前分支之外**：它曾是 `origin/feat/pto-v058-adaptation` 的 tip，后远程被 force-push 重写
+  到 `b3227fe5`（不含此提交），现仅存在于本地分支 `feat/pto-v058-adaptation` 的 tip，**不可作依据**。当前
+  工作区 `local_test`（tip `0e213a2c`）的 Block.cpp 仍是严格版。已并入 origin/main 与 origin/feat 的 TCVT
+  提交（PR#175 组：`d5a088f5`/`4a8c4f86`/`5a4d2774`）**没动 row==row/col==col**。
+- **落地方式（二选一）**：(A) 把 `eaa3dfe7` 的 Block.cpp 放宽 patch 摘到 `local_test`（含问题15 的 e8m0
+  修复）上，重编 gfrun → 直接实测 fp4 精度；(B) fp4 data 路径维持 compile-only，等 emulator 放宽 PR 并入。
+  **修复方向明确在 emulator，kernel 无需改**（tile_o Cols 保持 PW/2=32 是对的）。
+
+### 反证：kernel 侧「加宽 dst tile 骗过断言」产出错误数据（2026-08-19 实测）
+
+为确认「不改 emulator、只在 kernel 侧规避」是否可行，做过对照实验：把 fp4 输出 tile 的 physical 列
+`PW/2 → PW`、valid 列 `BlockSize/2 → BlockSize`（声明成未打包宽）。此时 dst size=`8×64×1=512B`、继承
+col=64 → `row=512/64=8==src.row` → **断言过、gfrun 跑到底 R2=0**。但**输出数据错**（M=8,N=64,BS=32，
+env_test 工具链 + gfrun `5689b3e7`）：`scale_output` 逐字节对，**`output` vs golden 不同**——golden 每字节
+打包 2 个 fp4（byte0=`0x26`=nibble 2,6），加宽输出把每 fp4 摊进一整字节高半字节恒 0（byte0=`0x06`
+byte1=`0x02`），32 个 fp4 被解包成 32 字节、宽度翻倍越界。**证实：加宽 tile 只是让 physical row 恰好
+等于 src 而绕过断言，代价是 fp4 打包布局被破坏；kernel 侧无损规避不可行，修复只能在 emulator。** 亦见
+`ISSUE_tcvt_fp4_shape_contract.md`「反证」子节。
+
+### 与问题2 / `ISSUE_32B_align` 的分层区别
+
+问题2 是**编译期** emit + tile 声明（`pto_tile.hpp:408` 32B 列对齐，窄 fp4 tile 声明）——emit 能过、
+用 padded-physical col-box 方案规避。本问题是**gfrun 运行时**解码校验（Block.cpp col==col）——即使编译过、
+emit 正确，gfrun 解码 fp4 TCVT 块时按 physical col 严格比对而崩。两层独立。

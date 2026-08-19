@@ -52,8 +52,10 @@ namespace supernpu::tile_isa::mxquant {
 // binding-tile budget. CRITICAL: this kernel binds ONE MX block per tile at the
 // PADDED physical width PW (not BlockSize), so the budget contig axis passed to
 // max_tilem is PW, not BlockSize (max_tilem<M, PW, InT, /*IsCublas=*/false>()).
-// InT is BUDGET-ONLY (a wider input dtype shrinks TileM); the data path stays
-// bf16 (static_assert below).
+// InT drives BOTH the budget (a wider input dtype shrinks TileM) AND the compute
+// domain: the scale-pass reduce and data-pass mul are InT-dispatched (half in
+// half domain, fp32 in fp32 domain, bf16 pre-cast to fp32), mirroring the
+// newcalc probe. See the scale-path comment for the TROWMAX/TABS whitelist.
 template <int M, int N, int BlockSize = 32, typename OutT = __fp4_e2m1x2,
           typename InT = __bf16>
 void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
@@ -86,71 +88,93 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
     uint8_t *y_u8 = reinterpret_cast<uint8_t *>(y);
 
     using gm_x  = global_tensor<InT,      RowMajor<M, N>>;
-    using gm_xu = global_tensor<uint16_t, RowMajor<M, N>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<M, N / 2>>;
     using gm_s  = global_tensor<__fp8_e8m0, RowMajor<M, scaleCols>>;
 
     // Full-tile pass (ValidRow == TileM; boxed row collapses to NoneBox).
     {
         using tile_x         = Tile<Location::Vec, InT,      TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
-        using tile_xu        = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
-        using tile_sred      = Tile<Location::Vec, uint16_t,   TileM, PW,     BLayout::RowMajor, TileM, 1>;
-        using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, TileM, PW,     BLayout::RowMajor, TileM, 1>;
+        using tile_f         = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
+        using tile_maxh      = Tile<Location::Vec, __half,   TileM, PW,     BLayout::RowMajor, TileM, 1>;
+        using tile_maxf      = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, TileM, 1>;
         using tile_recip_bf1 = Tile<Location::Vec, __bf16,   TileM, PW,     BLayout::RowMajor, TileM, 1>;
         using tile_recip_f1  = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, TileM, 1>;
-        using tile_f         = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
+        using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, TileM, PW,     BLayout::RowMajor, TileM, 1>;
         using tile_o         = Tile<Location::Vec, OutT,     TileM, PW / 2, BLayout::RowMajor, TileM, BlockSize / 2>;
 
         for (int m = 0; m < full_m; ++m) {
             for (int kb = 0; kb < numKb; ++kb) {
-                // --- scale path: col-boxed load + reduce, compact scale store ---
-                // Regularize the InT input to a uint16 "bf16-exponent-bits" tile so
-                // the shared OCP reduce runs unchanged: bf16 is a free pointer
-                // reinterpret; half casts half->bf16 then views bits; fp32 extracts
-                // the exponent field, >>16, narrows to uint16.
-                tile_xu x_u16;
-                if constexpr (std::is_same_v<InT, __bf16>) {
-                    global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x) + kb * BlockSize);
-                    auto gxu = xu_iter(m, 0);
-                    TLOAD(x_u16, gxu);
-                } else {
-                    global_iterator<gm_x, tile_x> xin_iter(x + kb * BlockSize);
-                    auto gxin = xin_iter(m, 0);
-                    tile_x xin;
-                    TLOAD(xin, gxin);
-                    if constexpr (std::is_same_v<InT, __half>) {
-                        half_to_bf16bits<4, TileM, PW, TileM, BlockSize>(xin, x_u16);
-                    } else {
-                        f32_to_bf16expbits<4, TileM, PW, TileM, BlockSize>(xin, x_u16);
-                    }
-                }
-
-                tile_se8m0 scale_e8m0;
-                tile_sred recip;
-                compute_ocp_scale_tail_boxed_pw<OutT, TileM, PW, BlockSize>(x_u16, scale_e8m0, recip);
-                global_iterator<gm_s, tile_se8m0> s_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + kb);
-                auto gs = s_iter(m, 0);
-                TSTORE(gs, scale_e8m0); // E8M0 byte produced directly by Cast<bf16->e8m0>
-
-                tile_recip_bf1 inv_bf16;
-                // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题4
-                reinterpret_u16_to_bf16<2, TileM, PW, TileM, 1>(recip, inv_bf16);
-                tile_recip_f1 inv_scale_f;
-                TCVT(inv_scale_f, inv_bf16);
-
-                // --- data path: col-boxed load, fp32 scale, narrowed fp4 store ---
+                // --- scale path: value-domain reduce (mirrors newcalc probe) ---
+                // TROWMAX 的 emulator 白名单只含 FP16/FP32/INT32
+                // (AccumulateBlockInfo.cpp:550)，拒绝 BF16/UINT16；TABS 白名单同样
+                // 只含 FP16/FP32(:229)。故按 InT 分派归约域：
+                //   half -> half 域 TABS+TROWMAX;
+                //   fp32 -> fp32 域 TABS+TROWMAX;
+                //   bf16 -> 先 TCVT bf16->fp32，再在 fp32 域归约（bf16 同时被
+                //           TROWMAX 与 TABS 拒绝，转 fp32 一并规避）。
+                // 归约得每 block 的 |max|，TCVT 到 bf16 后取指数位得 2^E_max。
                 global_iterator<gm_x, tile_x> x_iter(x + kb * BlockSize);
                 auto gx = x_iter(m, 0);
+                tile_x xin;
+                TLOAD(xin, gx);
+
+                tile_recip_bf1 max_bf;
+                if constexpr (std::is_same_v<InT, __half>) {
+                    tile_x abs_h;
+                    TABS(abs_h, xin);
+                    tile_maxh max_h;
+                    TROWMAX(max_h, abs_h);
+                    TCVT(max_bf, max_h);                  // half -> bf16
+                } else if constexpr (std::is_same_v<InT, float>) {
+                    tile_x abs_f;
+                    TABS(abs_f, xin);
+                    tile_maxf max_f;
+                    TROWMAX(max_f, abs_f);
+                    TCVT(max_bf, max_f);                  // fp32 -> bf16
+                } else {
+                    tile_f xf32;
+                    TCVT(xf32, xin);                      // bf16 -> fp32（规避 TROWMAX/TABS 拒 bf16）
+                    tile_f abs_f;
+                    TABS(abs_f, xf32);
+                    tile_maxf max_f;
+                    TROWMAX(max_f, abs_f);
+                    TCVT(max_bf, max_f);                  // fp32 -> bf16
+                }
+
+                // 清尾数只留 2^E_max，乘 2^-emax -> shared = 2^(E_max-emax)。
+                // emax 由 OutT 派生（recip_emax_bits<OutT>()），不硬编码探针的 e4m3 值。
+                auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
+                TANDS(max_u16, max_u16, BF16_EXP_MASK);
+                tile_recip_bf1 shared_bf;
+                TMULS(shared_bf, max_bf,
+                      __builtin_bit_cast(__bf16, recip_emax_bits<OutT>()));
+                tile_se8m0 scale_e8m0;
+                TCVT(scale_e8m0, shared_bf);              // bf16 -> e8m0 直转
+                global_iterator<gm_s, tile_se8m0> s_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + kb);
+                auto gs = s_iter(m, 0);
+                TSTORE(gs, scale_e8m0);
+
+                // --- recip via bit-complement (mirrors newcalc probe) ---
+                // shared = 2^(E_max-emax) 恒为 2 的幂；倒数 bits = 0x7F00 - bits，
+                // 就地在 int16 视图上 TXORS(0xFFFF)+TSUBS(0x80FF) 求补。
+                // 用 int16（非 uint16）：TSUBS 的 ISA profile 仅允许 INT16/INT32/FP16/FP32。
+                auto sh_i16 = reinterpret_tile<int16_t>(shared_bf);
+                TXORS(sh_i16, sh_i16, static_cast<uint16_t>(0xFFFF));
+                TSUBS(sh_i16, sh_i16, static_cast<uint16_t>(0x80FF));
+                tile_recip_f1 recip_f;
+                TCVT(recip_f, shared_bf);                 // bf16 -> fp32
+
+                // --- data path: col-boxed load, fp32 scale, narrowed fp4 store ---
                 tile_x xq;
                 TLOAD(xq, gx);
                 tile_o oq;
                 if constexpr (std::is_same_v<InT, float>) {
-                    TROWEXPANDMUL(xq, xq, inv_scale_f); // fp32 domain mul (no pre-cast)
+                    TROWEXPANDMUL(xq, xq, recip_f);     // fp32 domain mul (no pre-cast)
                     TCVT(oq, xq);                       // fp32 -> fp4
                 } else {
                     tile_f xf;
                     TCVT(xf, xq);                       // bf16/half -> fp32
-                    TROWEXPANDMUL(xf, xf, inv_scale_f); // per-row scalar broadcast-mul
+                    TROWEXPANDMUL(xf, xf, recip_f);     // per-row scalar broadcast-mul
                     TCVT(oq, xf);                       // fp32 (valid BlockSize) -> fp4 (valid BlockSize/2 bytes)
                 }
                 global_iterator<gm_y, tile_o> y_iter(y_u8 + kb * (BlockSize / 2));
@@ -172,57 +196,73 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
     // Tail rows: M_tail (< TileM), boxed to ValidRow = M_tail; row block full_m.
     if constexpr (M_tail > 0) {
         using tile_x         = Tile<Location::Vec, InT,      TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
-        using tile_xu        = Tile<Location::Vec, uint16_t, TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
-        using tile_sred      = Tile<Location::Vec, uint16_t,   TileM, PW,     BLayout::RowMajor, M_tail, 1>;
-        using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, TileM, PW,     BLayout::RowMajor, M_tail, 1>;
+        using tile_f         = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
+        using tile_maxh      = Tile<Location::Vec, __half,   TileM, PW,     BLayout::RowMajor, M_tail, 1>;
+        using tile_maxf      = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, M_tail, 1>;
         using tile_recip_bf1 = Tile<Location::Vec, __bf16,   TileM, PW,     BLayout::RowMajor, M_tail, 1>;
         using tile_recip_f1  = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, M_tail, 1>;
-        using tile_f         = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
+        using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, TileM, PW,     BLayout::RowMajor, M_tail, 1>;
         using tile_o         = Tile<Location::Vec, OutT,     TileM, PW / 2, BLayout::RowMajor, M_tail, BlockSize / 2>;
 
         for (int kb = 0; kb < numKb; ++kb) {
-            tile_xu x_u16;
-            if constexpr (std::is_same_v<InT, __bf16>) {
-                global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x) + kb * BlockSize);
-                auto gxu = xu_iter(full_m, 0);
-                TLOAD(x_u16, gxu);
-            } else {
-                global_iterator<gm_x, tile_x> xin_iter(x + kb * BlockSize);
-                auto gxin = xin_iter(full_m, 0);
-                tile_x xin;
-                TLOAD(xin, gxin);
-                if constexpr (std::is_same_v<InT, __half>) {
-                    half_to_bf16bits<4, TileM, PW, M_tail, BlockSize>(xin, x_u16);
-                } else {
-                    f32_to_bf16expbits<4, TileM, PW, M_tail, BlockSize>(xin, x_u16);
-                }
-            }
-
-            tile_se8m0 scale_e8m0;
-            tile_sred recip;
-            compute_ocp_scale_tail_boxed_pw<OutT, TileM, PW, BlockSize, M_tail>(x_u16, scale_e8m0, recip);
-            global_iterator<gm_s, tile_se8m0> s_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + kb);
-            auto gs = s_iter(full_m, 0);
-            TSTORE(gs, scale_e8m0); // E8M0 byte produced directly by Cast<bf16->e8m0>
-
-            tile_recip_bf1 inv_bf16;
-            // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题4
-            reinterpret_u16_to_bf16<2, TileM, PW, M_tail, 1>(recip, inv_bf16);
-            tile_recip_f1 inv_scale_f;
-            TCVT(inv_scale_f, inv_bf16);
-
+            // scale path: value-domain reduce (mirrors newcalc probe; TROWMAX/TABS
+            // 白名单只含 FP16/FP32 -> half 走 half 域, fp32 走 fp32 域, bf16 先转 fp32)。
             global_iterator<gm_x, tile_x> x_iter(x + kb * BlockSize);
             auto gx = x_iter(full_m, 0);
+            tile_x xin;
+            TLOAD(xin, gx);
+
+            tile_recip_bf1 max_bf;
+            if constexpr (std::is_same_v<InT, __half>) {
+                tile_x abs_h;
+                TABS(abs_h, xin);
+                tile_maxh max_h;
+                TROWMAX(max_h, abs_h);
+                TCVT(max_bf, max_h);                  // half -> bf16
+            } else if constexpr (std::is_same_v<InT, float>) {
+                tile_x abs_f;
+                TABS(abs_f, xin);
+                tile_maxf max_f;
+                TROWMAX(max_f, abs_f);
+                TCVT(max_bf, max_f);                  // fp32 -> bf16
+            } else {
+                tile_f xf32;
+                TCVT(xf32, xin);                      // bf16 -> fp32（规避 TROWMAX/TABS 拒 bf16）
+                tile_f abs_f;
+                TABS(abs_f, xf32);
+                tile_maxf max_f;
+                TROWMAX(max_f, abs_f);
+                TCVT(max_bf, max_f);                  // fp32 -> bf16
+            }
+
+            auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
+            TANDS(max_u16, max_u16, BF16_EXP_MASK);
+            tile_recip_bf1 shared_bf;
+            TMULS(shared_bf, max_bf,
+                  __builtin_bit_cast(__bf16, recip_emax_bits<OutT>()));
+            tile_se8m0 scale_e8m0;
+            TCVT(scale_e8m0, shared_bf);              // bf16 -> e8m0 直转
+            global_iterator<gm_s, tile_se8m0> s_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + kb);
+            auto gs = s_iter(full_m, 0);
+            TSTORE(gs, scale_e8m0);
+
+            // recip via bit-complement (mirrors newcalc probe)
+            auto sh_i16 = reinterpret_tile<int16_t>(shared_bf);
+            TXORS(sh_i16, sh_i16, static_cast<uint16_t>(0xFFFF));
+            TSUBS(sh_i16, sh_i16, static_cast<uint16_t>(0x80FF));
+            tile_recip_f1 recip_f;
+            TCVT(recip_f, shared_bf);                 // bf16 -> fp32
+
             tile_x xq;
             TLOAD(xq, gx);
             tile_o oq;
             if constexpr (std::is_same_v<InT, float>) {
-                TROWEXPANDMUL(xq, xq, inv_scale_f); // fp32 domain mul (no pre-cast)
+                TROWEXPANDMUL(xq, xq, recip_f);     // fp32 domain mul (no pre-cast)
                 TCVT(oq, xq);                       // fp32 -> fp4
             } else {
                 tile_f xf;
                 TCVT(xf, xq);                       // bf16/half -> fp32
-                TROWEXPANDMUL(xf, xf, inv_scale_f);
+                TROWEXPANDMUL(xf, xf, recip_f);
                 TCVT(oq, xf);
             }
             global_iterator<gm_y, tile_o> y_iter(y_u8 + kb * (BlockSize / 2));

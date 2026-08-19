@@ -154,7 +154,8 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
 // exists, route to the plain single-load path; otherwise (large BlockSize leaves
 // no legal TileN) auto-route to the 方案A split-reduce `_bigbs` kernel with a
 // budget-derived R_sub. `if constexpr` guarantees the untaken branch is not
-// instantiated. InT is BUDGET-ONLY; the data path is bf16-only (static_assert).
+// instantiated. InT drives BOTH the budget AND the compute domain: scale-reduce and
+// data paths are InT-dispatched (bf16/half/fp32) via `if constexpr`.
 template <int Axis, int Post, int BlockSize = 32, typename OutT = __fp4_e2m1x2,
           typename InT = __bf16>
 void dynamic_mx_quant_nontail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {

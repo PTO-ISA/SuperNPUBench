@@ -21,8 +21,9 @@ namespace supernpu::tile_isa::mxquant {
 //
 // TileM is NOT a caller knob: it is DERIVED at compile time from M + the InT
 // binding-tile budget (max_tilem<M, BlockSize, InT, /*IsCublas=*/true>()), clamped
-// to [tilem_min(>=512B tile), budget/BlockSize] and to M. InT is BUDGET-ONLY (a
-// wider input dtype shrinks TileM); the data path stays bf16 (static_assert below).
+// to [tilem_min(>=512B tile), budget/BlockSize] and to M. InT drives BOTH the budget
+// (a wider input dtype shrinks TileM) AND the compute domain: scale-reduce and data
+// paths are InT-dispatched (bf16/half/fp32) via `if constexpr` (static_assert below).
 template <int M, int K, int BlockSize = 32, typename OutT = __fp8_e4m3,
           typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
 void dynamic_mx_quant_tail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
