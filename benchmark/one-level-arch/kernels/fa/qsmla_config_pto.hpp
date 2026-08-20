@@ -62,6 +62,18 @@ struct QsmlaConfig {
         return q_offset(batch, token, q_head, dim);
     }
 
+    static constexpr std::size_t q_work_offset(const QsmlaWorkItem& work) {
+        return q_offset(work.batch, work.q_token, work.q_head_begin, 0);
+    }
+
+    static constexpr std::size_t kv_work_offset(const QsmlaWorkItem& work) {
+        return kv_offset(work.batch, 0, work.kv_head, 0);
+    }
+
+    static constexpr std::size_t out_work_offset(const QsmlaWorkItem& work) {
+        return out_offset(work.batch, work.q_token, work.q_head_begin, 0);
+    }
+
     static constexpr QsmlaWorkItem decode_work(int work_id) {
         const int g_slice = work_id % GSliceCount;
         work_id /= GSliceCount;
