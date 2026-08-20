@@ -41,6 +41,7 @@ int main() {
 
     dynamic_mx_quant_nontail_cublas_fp8<32, 32>(x, reinterpret_cast<__fp8_e4m3*>(y), scale);
 
+#ifndef RES_CHECK
     // Compile-only: instantiate the bigbs auto-route at BS=128 (not res-checked).
     dynamic_mx_quant_nontail_cublas_fp8<128, 32, 128>(
         x_bs128, reinterpret_cast<__fp8_e4m3*>(y_bs128), scale_bs128);
@@ -54,6 +55,7 @@ int main() {
         xh16_bs128, reinterpret_cast<__fp8_e4m3*>(y_h16_bs128), scale_h16_bs128);
     dynamic_mx_quant_nontail_cublas_fp8<128, 32, 128, __fp8_e4m3, float>(
         xf32_bs128, reinterpret_cast<__fp8_e4m3*>(y_f32_bs128), scale_f32_bs128);
+#endif
 
 #ifdef RES_CHECK
     writeBinaryFile(CHK_DIR "/output.bin", (uint8_t*)y, sizeof(y));

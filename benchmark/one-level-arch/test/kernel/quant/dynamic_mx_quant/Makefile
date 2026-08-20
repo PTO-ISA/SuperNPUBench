@@ -29,6 +29,11 @@ ifeq ($(TYPE), NONTAIL_CUBLAS_FP8)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_cublas_fp8.elf
 endif
 
+ifeq ($(TYPE), NONTAIL_CUBLAS_FP8_BIGBS)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8_bigbs.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_cublas_fp8_bigbs.elf
+endif
+
 ifeq ($(TYPE), NONTAIL_OCP_FP4)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_ocp_fp4.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_ocp_fp4.elf
@@ -62,6 +67,11 @@ endif
 ifeq ($(TYPE), ALIGN32_PROBE)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/align32_probe.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_align32_probe.elf
+endif
+
+ifeq ($(TYPE), ROW32_PROBE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/row32_probe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_row32_probe.elf
 endif
 
 include ../../../common/Makefile.common
