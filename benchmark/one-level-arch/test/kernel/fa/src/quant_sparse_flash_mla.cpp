@@ -5,8 +5,23 @@
 // #include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
 #include "fa/quant_sparse_flash_mla_onepass_pto.hpp"
 
+#ifndef Tbatch
 #define B 1
-#define H 1
+#else
+#define B Tbatch
+#endif
+
+#ifndef Tn1
+#define N1 1
+#else
+#define N1 Tn1
+#endif
+
+#ifndef Tn2
+#define N2 1
+#else
+#define N2 Tn2
+#endif
 
 #ifndef Ts1
 #define s1 64
@@ -77,27 +92,27 @@ int main(){
     using qdtype = __half;
     using kvdtype = __half;
     using odttype = __half;
-    using Config = QsmlaConfig<B, s1, s2, H, H, D, 0, kTm, kTk, kTd>;
+    constexpr int group_size = N1 / N2;
+    constexpr int g_slice_max = group_size < 64 ? group_size : 64;
+    using Config = QsmlaConfig<
+        B, s1, s2, N1, N2, D, 0, kTm, kTk, kTd, g_slice_max>;
 
-    qdtype qp[B*H*s1*D + 2*ALIGN];
-    kvdtype kvp[B*H*s2*D + 2*ALIGN];
+    qdtype qp[B*s1*N1*D + 2*ALIGN];
+    kvdtype kvp[B*s2*N2*D + 2*ALIGN];
 
     qdtype* q = (qdtype*)(((uint64_t)qp & ALIGN_MASK) + ALIGN);
     kvdtype* kv = (kvdtype*)(((uint64_t)kvp & ALIGN_MASK) + ALIGN);
 
     odttype* out = (odttype*)MAP_MEM_BASE;
 
-    init_deterministic(q, B*H*s1*D, 1);
-    init_deterministic(kv, B*H*s2*D, 2);
+    init_deterministic(q, B*s1*N1*D, 1);
+    init_deterministic(kv, B*s2*N2*D, 2);
 
     BENCHSTART;
-    for(int i=0;i<B;i++){
-        for(int j=0;j<H;j++){
-            quant_sparse_flash_mla_swa_onepass_config_pto<
-                qdtype, kvdtype, odttype, Config>(
-                out + i*H*s1*D + j*s1*D,
-                q   + i*H*s1*D + j*s1*D,
-                kv  + i*H*s2*D + j*s2*D,
+    if constexpr (N1 == 1 && N2 == 1) {
+        quant_sparse_flash_mla_swa_onepass_config_pto<
+            qdtype, kvdtype, odttype, Config>(
+                out, q, kv,
                 softmax_scale_val,
                 win_left,
                 win_right,
@@ -113,7 +128,25 @@ int main(){
                 (int*)nullptr,     // metadata
                 (float*)nullptr    // softmax_lse
             );
-        }
+    } else {
+        quant_sparse_flash_mla_swa_onepass_bsnd_pto<
+            qdtype, kvdtype, odttype, Config>(
+                out, q, kv,
+                softmax_scale_val,
+                win_left,
+                win_right,
+                (float*)nullptr,   // q_descale
+                (float*)nullptr,   // ori_kv_descale
+                (int*)nullptr,     // ori_sparse_indices
+                (int*)nullptr,     // ori_block_table
+                (int*)nullptr,     // cu_seqlens_q
+                (int*)nullptr,     // cu_seqlens_ori_kv
+                (int*)nullptr,     // seqused_q
+                (int*)nullptr,     // seqused_ori_kv
+                (float*)nullptr,   // sinks
+                (int*)nullptr,     // metadata
+                (float*)nullptr    // softmax_lse
+            );
     }
     BENCHEND;
 

@@ -36,11 +36,13 @@
 using namespace pto;
 
 static inline void build_swa_mask_onepass(
-    float* mask, int s1, int s2, int win_left, int win_right)
+    float* mask, int s1, int s2, int win_left, int win_right,
+    int q_position = -1, int q_sequence_length = -1)
 {
-    const int causal_offset = s2 - s1;
     for (int q = 0; q < s1; ++q) {
-        int diagonal = causal_offset + q;
+        const int logical_q = q_position >= 0 ? q_position : q;
+        const int logical_s1 = q_position >= 0 ? q_sequence_length : s1;
+        int diagonal = s2 - logical_s1 + logical_q;
         int lo = diagonal - win_left;
         int hi = diagonal + win_right;
         for (int kv = 0; kv < s2; ++kv) {
@@ -68,7 +70,9 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
     int* seqused_ori_kv,
     float* sinks,
     int* metadata,
-    float* softmax_lse)
+    float* softmax_lse,
+    int q_position = -1,
+    int q_sequence_length = -1)
 {
     constexpr int s1 = Config::S1;
     constexpr int s2 = Config::S2;
@@ -81,27 +85,22 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
     constexpr int Db = D / kTd;
 
     float mask_buf[s1 * s2];
-    build_swa_mask_onepass(mask_buf, s1, s2, ori_win_left, ori_win_right);
+    build_swa_mask_onepass(
+        mask_buf, s1, s2, ori_win_left, ori_win_right,
+        q_position, q_sequence_length);
 
     using gmQ    = global_tensor<qdtype,  RowMajor<s1, D>>;
     using gmKV   = global_tensor<kvdtype, RowMajor<s2, D>>;
-    // Same storage as gmKV, viewed as K^T.  RowMajor<s2, D> and
-    // ColMajor<D, s2> have the same address formula, so this view performs
-    // the logical transpose without moving data.  TCOPYIN below then
-    // performs the physical DN -> ZN conversion required by Cube SrcR.
-    using gmKT   = global_tensor<kvdtype, ColMajor<D, s2>>;
     using gmO    = global_tensor<odttype, RowMajor<s1, D>>;
     using gmMask = global_tensor<float,   RowMajor<s1, s2>>;
 
     using tileQ      = TileLeft<qdtype, kTm, kTd>;
+    using tileKSrc   = Tile<Location::Vec, kvdtype, kTk, kTd, BLayout::RowMajor>;
     using tileKRight = TileRight<kvdtype, kTd, kTk>;
-    using tileW_out  = TileAcc<float, kTm, kTk>;
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
     using tileMask   = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
-    using tileW_cast = Tile<Location::Vec, qdtype, kTm, kTk, BLayout::RowMajor>;
     using tileW_left = TileLeft<qdtype, kTm, kTk>;
 
-    using tileO_out  = TileAcc<float, kTm, kTd>;
     using tileO      = Tile<Location::Vec, float, kTm, kTd, BLayout::RowMajor>;
     using tileO_cast = Tile<Location::Vec, odttype, kTm, kTd, BLayout::RowMajor>;
 
@@ -110,13 +109,13 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
     using tileSum    = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
 
     using itQ    = global_iterator<gmQ,  tileQ>;
-    using itK    = global_iterator<gmKT, tileKRight>;
+    using itKSrc = global_iterator<gmKV, tileKSrc>;
     using itV    = global_iterator<gmKV, tileV>;
     using itO    = global_iterator<gmO,  tileO_cast>;
     using itMask = global_iterator<gmMask, tileMask>;
 
     itQ    gIterQ(q_ptr);
-    itK    gIterK(ori_kv_ptr);
+    itKSrc gIterKSrc(ori_kv_ptr);
     itV    gIterV(ori_kv_ptr);
     itO    gIterO(out_ptr);
     itMask gIterMask(mask_buf);
@@ -169,16 +168,17 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
             for (int dd = 0; dd < Db; ++dd) {
                 tileQ tQ;
                 auto gQ = gIterQ(i, dd);
-                TCOPYIN(tQ, gQ);  // RowMajor Q: ND -> NZ (Cube SrcL)
+                TLOAD(tQ, gQ);  // RowMajor Q -> Left tile
+
+                tileKSrc tKSrc;
+                auto gK = gIterKSrc(j, dd);
+                TLOAD(tKSrc, gK);  // Original K block [Tk, Td]
 
                 tileKRight tK;
-                auto gK = gIterK(dd, j);
-                TCOPYIN(tK, gK);  // ColumnMajor K^T: DN -> ZN (Cube SrcR)
+                TTRANS(tK, tKSrc);  // [Tk, Td] -> [Td, Tk] for MM1 SrcR
 
-                tileW_out tW_out;
-                TMATMUL(tW_out, tQ, tK);
                 tileW tW_partial;
-                TCVT_Impl(tW_partial, tW_out);  // ACC NZ -> Vec ND
+                TMATMUL(tW_partial, tQ, tK);
                 TADD(tW, tW, tW_partial);
             }
 
@@ -224,21 +224,20 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
             }
 
             // --- Step 5: P@V for each D block ---
-            tileW_cast tExpW;
-            TCVT(tExpW, tW);
             tileW_left tW_left;
-            TMOV_ND2NZ(tW_left, tExpW);  // Vec ND -> Cube SrcL NZ
+            // PTO v0.58 Local CUBE reads Left payloads as NORM row-major and
+            // has no NZ dependency, so convert/copy FP32 probabilities directly
+            // into the qdtype Left tile without an intermediate Vec tile.
+            TCVT(tW_left, tW);
 
             #pragma clang loop unroll(full)
             for (int dd = 0; dd < Db; ++dd) {
                 tileV tV;
                 auto gV = gIterV(j, dd);
-                TCOPYIN(tV, gV);  // RowMajor V: ND -> ZN (Cube SrcR)
+                TLOAD(tV, gV);  // RowMajor V -> Right tile
 
-                tileO_out tPV_out;
-                TMATMUL(tPV_out, tW_left, tV);
                 tileO tPV;
-                TCVT_Impl(tPV, tPV_out);  // ACC NZ -> Vec ND
+                TMATMUL(tPV, tW_left, tV);
 
                 TADD(tO[dd], tO[dd], tPV);
             }
@@ -259,7 +258,7 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
             tileO_cast tO_cast;
             TCVT(tO_cast, tO[dd]);
             auto gO = gIterO(i, dd);
-            TCOPYOUT(gO, tO_cast);
+            TSTORE(gO, tO_cast);
         }
     }
 }
@@ -294,7 +293,117 @@ void quant_sparse_flash_mla_swa_onepass_pto(
         out_ptr, q_ptr, ori_kv_ptr, softmax_scale, ori_win_left, ori_win_right,
         q_descale, ori_kv_descale, ori_sparse_indices, ori_block_table,
         cu_seqlens_q, cu_seqlens_ori_kv, seqused_q, seqused_ori_kv,
-        sinks, metadata, softmax_lse);
+        sinks, metadata, softmax_lse, -1, -1);
+}
+
+// Stage-1 BSND dispatcher. A work item owns all G rows for one
+// (batch, qToken, kvHead, gSlice), so its online-softmax state never crosses
+// work-item boundaries. Each slice is further divided into full TileM chunks.
+// The final short chunk is zero-padded in a kernel-local buffer because the
+// current Local TEPL reduction chain cannot consistently consume a partial-M
+// ValidRow tile; only its valid rows are copied back. N2>1 needs a strided KV
+// view and is intentionally deferred instead of treating non-contiguous
+// [S2,N2,D] storage as [S2,D].
+template <typename qdtype, typename kvdtype, typename odttype, typename Config>
+void quant_sparse_flash_mla_swa_onepass_bsnd_pto(
+    odttype* out_ptr,
+    qdtype* q_ptr,
+    kvdtype* ori_kv_ptr,
+    float softmax_scale,
+    int ori_win_left,
+    int ori_win_right,
+    float* q_descale,
+    float* ori_kv_descale,
+    int* ori_sparse_indices,
+    int* ori_block_table,
+    int* cu_seqlens_q,
+    int* cu_seqlens_ori_kv,
+    int* seqused_q,
+    int* seqused_ori_kv,
+    float* sinks,
+    int* metadata,
+    float* softmax_lse)
+{
+    static_assert(Config::N2 == 1,
+                  "Stage-1 BSND dispatcher currently requires contiguous N2=1 KV");
+
+    auto run_full_rows = [&](int row_offset, const QsmlaWorkItem& work) {
+        using WorkConfig = QsmlaConfig<
+            1, Config::TileM, Config::S2, 1, 1, Config::D, Config::K,
+            Config::TileM, Config::TileK, Config::TileD, Config::TileM>;
+
+        quant_sparse_flash_mla_swa_onepass_config_pto<
+            qdtype, kvdtype, odttype, WorkConfig>(
+            out_ptr + Config::out_work_offset(work) + row_offset * Config::D,
+            q_ptr + Config::q_work_offset(work) + row_offset * Config::D,
+            ori_kv_ptr + Config::kv_work_offset(work),
+            softmax_scale, ori_win_left, ori_win_right,
+            q_descale, ori_kv_descale, ori_sparse_indices, ori_block_table,
+            cu_seqlens_q, cu_seqlens_ori_kv, seqused_q, seqused_ori_kv,
+            sinks, metadata, softmax_lse, work.q_token, Config::S1);
+    };
+
+    auto run_tail_rows = [&]<int Rows>(int row_offset, const QsmlaWorkItem& work) {
+        static_assert(Rows > 0 && Rows < Config::TileM);
+        qdtype padded_q[Config::TileM * Config::D];
+        odttype padded_out[Config::TileM * Config::D];
+        qdtype* work_q = q_ptr + Config::q_work_offset(work) + row_offset * Config::D;
+        odttype* work_out = out_ptr + Config::out_work_offset(work) + row_offset * Config::D;
+
+        for (int row = 0; row < Config::TileM; ++row) {
+            for (int dim = 0; dim < Config::D; ++dim) {
+                padded_q[row * Config::D + dim] =
+                    row < Rows ? work_q[row * Config::D + dim]
+                               : static_cast<qdtype>(0.0f);
+            }
+        }
+
+        using TailConfig = QsmlaConfig<
+            1, Config::TileM, Config::S2, 1, 1, Config::D, Config::K,
+            Config::TileM, Config::TileK, Config::TileD, Config::TileM>;
+        quant_sparse_flash_mla_swa_onepass_config_pto<
+            qdtype, kvdtype, odttype, TailConfig>(
+            padded_out, padded_q,
+            ori_kv_ptr + Config::kv_work_offset(work),
+            softmax_scale, ori_win_left, ori_win_right,
+            q_descale, ori_kv_descale, ori_sparse_indices, ori_block_table,
+            cu_seqlens_q, cu_seqlens_ori_kv, seqused_q, seqused_ori_kv,
+            sinks, metadata, softmax_lse, work.q_token, Config::S1);
+
+        for (int row = 0; row < Rows; ++row) {
+            for (int dim = 0; dim < Config::D; ++dim) {
+                work_out[row * Config::D + dim] =
+                    padded_out[row * Config::D + dim];
+            }
+        }
+    };
+
+    constexpr int kFullSliceChunks = Config::GSliceMax / Config::TileM;
+    constexpr int kFullSliceTail = Config::GSliceMax % Config::TileM;
+    constexpr int kLastSliceRows = Config::G % Config::GSliceMax;
+    constexpr int kLastSliceChunks = kLastSliceRows / Config::TileM;
+    constexpr int kLastSliceTail = kLastSliceRows % Config::TileM;
+
+    for (int work_id = 0; work_id < Config::WorkCount; ++work_id) {
+        const QsmlaWorkItem work = Config::decode_work(work_id);
+        if (work.m_real == Config::GSliceMax) {
+            for (int chunk = 0; chunk < kFullSliceChunks; ++chunk) {
+                run_full_rows(chunk * Config::TileM, work);
+            }
+            if constexpr (kFullSliceTail != 0) {
+                run_tail_rows.template operator()<kFullSliceTail>(
+                    kFullSliceChunks * Config::TileM, work);
+            }
+        } else {
+            for (int chunk = 0; chunk < kLastSliceChunks; ++chunk) {
+                run_full_rows(chunk * Config::TileM, work);
+            }
+            if constexpr (kLastSliceTail != 0) {
+                run_tail_rows.template operator()<kLastSliceTail>(
+                    kLastSliceChunks * Config::TileM, work);
+            }
+        }
+    }
 }
 
 #endif
