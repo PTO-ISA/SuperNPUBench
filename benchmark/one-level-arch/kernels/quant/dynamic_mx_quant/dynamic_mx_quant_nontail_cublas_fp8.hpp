@@ -74,6 +74,10 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
     // fused into the data pass via TCOLEXPANDMUL (col broadcast mul).
     using tile_recip_bf1 = Tile<Location::Vec, __bf16, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_f1  = Tile<Location::Vec, float,  BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    // Inlined scale-compute intermediates (boxed valid row=1): InT-domain reduced
+    // amax and the uint32 bit-math working set for the expanded compute_cublas_core.
+    using tile_in1   = Tile<Location::Vec, InT,      BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_u32_1 = Tile<Location::Vec, uint32_t, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
 
     using gm_x = global_tensor<InT,      RowMajor<Axis, Post>>;
     using gm_y = global_tensor<uint8_t,  RowMajor<Axis, Post>>;
@@ -99,7 +103,86 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
             tile_sred recip;
             tile_x xq_s;
             TLOAD(xq_s, gx);
-            compute_cublas_scale_not_tail<OutT, InT, BlockSize, TileN, MaxLowBoundBits>(xq_s, scale_byte, recip);
+            // ================================================================
+            // 内联展开：等价于 common::compute_cublas_scale_not_tail<OutT,InT,
+            // BlockSize,TileN,MaxLowBoundBits> + common::compute_cublas_core（含其
+            // 末尾保留的 IDEAL CmpMode 版）。就地展开以规避 RECORD 问题8（tile 作真实
+            // 函数入参 → S64 栈往返 → gfrun 拒）。两处规避已换正式方案：
+            //   · reinterpret_f32_to_u32（scratch-HBM，问题4）→ reinterpret_tile<>（零指令视图）
+            //   · GT/LT/NE 的 min/max+默认-EQ 模拟（问题3）→ 带 CmpMode 的原生 TCMPS
+            // scale 交织（问题5）仍无正式方案，保持 planar（见下方 MISSING INTERLEAVE）。
+            // -- compute_cublas_scale_not_tail：InT 域 TABS+TCOLMAX，仅把归约量转 fp32 --
+            tile_x abs_x;
+            TABS(abs_x, xq_s);
+            tile_recip_f1 max_f;
+            if constexpr (std::is_same_v<InT, float>) {
+                TCOLMAX(max_f, abs_x);      // fp32：直接归约到 fp32（免前置 cast）
+            } else {
+                tile_in1 max_r;
+                TCOLMAX(max_r, abs_x);      // reduce rows -> valid row=1（InT 域）
+                TCVT(max_f, max_r);         // bf16/half -> fp32（仅归约后的 per-col 标量）
+            }
+            // -- compute_cublas_core（IDEAL CmpMode 版，对照 AscendC ComputeScaleCublas）--
+            // finite/nonzero 掩码须在原地 clamp 前从 raw 视图算完（视图与 max_f 同寄存器）。
+            auto raw = reinterpret_tile<uint32_t>(max_f);        // 问题4 正式方案：零指令
+            tile_u32_1 finite;
+            TCMPS<CmpMode::LT>(finite, raw, FP32_EXP_MASK);      // raw < 0x7f800000
+            tile_u32_1 nonzero;
+            TCMPS<CmpMode::NE>(nonzero, raw, static_cast<uint32_t>(0));
+            TMAXS(max_f, max_f, __builtin_bit_cast(float, MaxLowBoundBits)); // 原地 clamp
+            TMULS(max_f, max_f, inv_dst_max<OutT>());
+            // clamp 后再开视图（零指令），再用 u32->u32 恒等 TCVT 把位型物化到真实
+            // uint32 tile：后续 TSHRS/TANDS/TAND/TOR/TSEL 都是单模板参（dst/src 必须同类型），
+            // 视图类型 ≠ 真实 tile，故须先物化一次；相比 scratch-HBM 往返，这里只一条寄存器级 TCVT。
+            auto s32v = reinterpret_tile<uint32_t>(max_f);
+            tile_u32_1 s32;
+            TCVT(s32, s32v);
+            tile_u32_1 exp32;
+            TSHRS(exp32, s32, FP32_SHR_NUM);
+            tile_u32_1 man32;
+            TANDS(man32, s32, FP32_MANTISSA_MASK);
+            // p0 = (exp>0) && (exp<254) && (man>0)
+            tile_u32_1 p0a; TCMPS<CmpMode::GT>(p0a, exp32, static_cast<uint32_t>(0));
+            tile_u32_1 p0b; TCMPS<CmpMode::LT>(p0b, exp32, FP32_NUMBER_254);
+            tile_u32_1 p0c; TCMPS<CmpMode::GT>(p0c, man32, static_cast<uint32_t>(0));
+            tile_u32_1 pa;
+            TAND(pa, p0a, p0b);
+            TAND(pa, pa, p0c);
+            // p1 = (exp==0) && (man>0x400000)
+            tile_u32_1 p1a; TCMPS<CmpMode::EQ>(p1a, exp32, static_cast<uint32_t>(0));
+            tile_u32_1 p1b; TCMPS<CmpMode::GT>(p1b, man32, FP32_NUMBER_HALF);
+            tile_u32_1 pb;
+            TAND(pb, p1a, p1b);
+            tile_u32_1 roundup;
+            TOR(roundup, pa, pb);
+            // extractExp = roundup? exp+1 : exp ; finite? .. : 0xff ; nonzero? .. : 0
+            tile_u32_1 exp_p1;
+            TADDS(exp_p1, exp32, static_cast<uint32_t>(1));
+            tile_u32_1 sel;
+            TADDS(sel, exp32, static_cast<uint32_t>(0));
+            TSEL(sel, roundup, exp_p1);
+            tile_u32_1 nanb;
+            TEXPANDS(nanb, FP32_FP8_NAN);
+            TSEL(nanb, finite, sel);        // finite? sel : 0xff
+            tile_u32_1 extract;
+            TEXPANDS(extract, static_cast<uint32_t>(0));
+            TSEL(extract, nonzero, nanb);   // nonzero? .. : 0
+            TCVT(scale_byte, extract);      // narrow low16
+            // recip = 0x7f00 - (extractExp<<7) ; finite? .. : 0x7f81 ; nonzero? .. : 0
+            tile_u32_1 sh;
+            TSHLS(sh, extract, static_cast<uint32_t>(BF16_SHR_NUM));
+            tile_u32_1 bias;
+            TEXPANDS(bias, FP32_EXP_BIAS_CUBLAS);
+            tile_u32_1 half;
+            TSUB(half, bias, sh);
+            tile_u32_1 rnan;
+            TEXPANDS(rnan, FP32_NAN_PACK);
+            TSEL(rnan, finite, half);       // finite? half : 0x7f81
+            tile_u32_1 rsel;
+            TEXPANDS(rsel, static_cast<uint32_t>(0));
+            TSEL(rsel, nonzero, rnan);      // nonzero? .. : 0
+            TCVT(recip, rsel);
+            // ================================================================
             // scale_byte already boxed valid row=1; narrow to uint8, store 1 byte/block.
             tile_sstore scale_u8;
             TCVT(scale_u8, scale_byte);
@@ -112,9 +195,9 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
             // a TINTERLEAVE of even/odd block-rows right here before the store.
             TSTORE(gs, scale_u8); // store scale early; scale_byte now dead
 
-            tile_recip_bf1 inv_bf16;
-            // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题5
-            reinterpret_u16_to_bf16<2, BlockSize, TileN, 1, TileN>(recip, inv_bf16);
+            // 问题4 正式方案：reinterpret_tile 零指令把 recip(uint16) 视为 bf16，替代
+            // scratch-HBM 的 reinterpret_u16_to_bf16。recip 为具名 uint16 lvalue，满足视图约束。
+            auto inv_bf16 = reinterpret_tile<__bf16>(recip);
             tile_recip_f1 inv_scale_f;
             TCVT(inv_scale_f, inv_bf16);
 
@@ -148,6 +231,9 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
         using tile_sstore_r = Tile<Location::Vec, uint8_t,  BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
         using tile_recip_bf1_r = Tile<Location::Vec, __bf16, BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
         using tile_recip_f1_r  = Tile<Location::Vec, float,  BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
+        // Inlined scale-compute intermediates (boxed valid row=1, valid col=N_tail).
+        using tile_in1_r   = Tile<Location::Vec, InT,      BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
+        using tile_u32_1_r = Tile<Location::Vec, uint32_t, BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
 
         global_iterator<gm_x, tile_x_r> x_iter_r(x);
         global_iterator<gm_y, tile_o_r> y_iter_r(reinterpret_cast<uint8_t *>(y));
@@ -162,14 +248,79 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
             tile_sred_r recip;
             tile_x_r xq_s;
             TLOAD(xq_s, gx);
-            compute_cublas_scale_not_tail<OutT, InT, BlockSize, TileN, MaxLowBoundBits, N_tail>(xq_s, scale_byte, recip);
+            // 内联展开：等价于 common::compute_cublas_scale_not_tail<...,N_tail> +
+            // compute_cublas_core（IDEAL CmpMode 版），就地展开规避问题8；两处规避
+            // 换正式方案（问题4 reinterpret_tile / 问题3 CmpMode）。详见 full loop 注释。
+            tile_x_r abs_x;
+            TABS(abs_x, xq_s);
+            tile_recip_f1_r max_f;
+            if constexpr (std::is_same_v<InT, float>) {
+                TCOLMAX(max_f, abs_x);      // fp32：直接归约到 fp32（免前置 cast）
+            } else {
+                tile_in1_r max_r;
+                TCOLMAX(max_r, abs_x);      // reduce rows -> valid row=1（InT 域）
+                TCVT(max_f, max_r);         // bf16/half -> fp32（仅归约后的 per-col 标量）
+            }
+            auto raw = reinterpret_tile<uint32_t>(max_f);        // 问题4 正式方案
+            tile_u32_1_r finite;
+            TCMPS<CmpMode::LT>(finite, raw, FP32_EXP_MASK);      // raw < 0x7f800000
+            tile_u32_1_r nonzero;
+            TCMPS<CmpMode::NE>(nonzero, raw, static_cast<uint32_t>(0));
+            TMAXS(max_f, max_f, __builtin_bit_cast(float, MaxLowBoundBits)); // 原地 clamp
+            TMULS(max_f, max_f, inv_dst_max<OutT>());
+            // clamp 后再开视图（零指令）+ u32->u32 恒等 TCVT 物化到真实 uint32 tile（见 full loop 注释）。
+            auto s32v = reinterpret_tile<uint32_t>(max_f);
+            tile_u32_1_r s32;
+            TCVT(s32, s32v);
+            tile_u32_1_r exp32;
+            TSHRS(exp32, s32, FP32_SHR_NUM);
+            tile_u32_1_r man32;
+            TANDS(man32, s32, FP32_MANTISSA_MASK);
+            // p0 = (exp>0) && (exp<254) && (man>0)
+            tile_u32_1_r p0a; TCMPS<CmpMode::GT>(p0a, exp32, static_cast<uint32_t>(0));
+            tile_u32_1_r p0b; TCMPS<CmpMode::LT>(p0b, exp32, FP32_NUMBER_254);
+            tile_u32_1_r p0c; TCMPS<CmpMode::GT>(p0c, man32, static_cast<uint32_t>(0));
+            tile_u32_1_r pa;
+            TAND(pa, p0a, p0b);
+            TAND(pa, pa, p0c);
+            // p1 = (exp==0) && (man>0x400000)
+            tile_u32_1_r p1a; TCMPS<CmpMode::EQ>(p1a, exp32, static_cast<uint32_t>(0));
+            tile_u32_1_r p1b; TCMPS<CmpMode::GT>(p1b, man32, FP32_NUMBER_HALF);
+            tile_u32_1_r pb;
+            TAND(pb, p1a, p1b);
+            tile_u32_1_r roundup;
+            TOR(roundup, pa, pb);
+            tile_u32_1_r exp_p1;
+            TADDS(exp_p1, exp32, static_cast<uint32_t>(1));
+            tile_u32_1_r sel;
+            TADDS(sel, exp32, static_cast<uint32_t>(0));
+            TSEL(sel, roundup, exp_p1);
+            tile_u32_1_r nanb;
+            TEXPANDS(nanb, FP32_FP8_NAN);
+            TSEL(nanb, finite, sel);        // finite? sel : 0xff
+            tile_u32_1_r extract;
+            TEXPANDS(extract, static_cast<uint32_t>(0));
+            TSEL(extract, nonzero, nanb);   // nonzero? .. : 0
+            TCVT(scale_byte, extract);      // narrow low16
+            tile_u32_1_r sh;
+            TSHLS(sh, extract, static_cast<uint32_t>(BF16_SHR_NUM));
+            tile_u32_1_r bias;
+            TEXPANDS(bias, FP32_EXP_BIAS_CUBLAS);
+            tile_u32_1_r half;
+            TSUB(half, bias, sh);
+            tile_u32_1_r rnan;
+            TEXPANDS(rnan, FP32_NAN_PACK);
+            TSEL(rnan, finite, half);       // finite? half : 0x7f81
+            tile_u32_1_r rsel;
+            TEXPANDS(rsel, static_cast<uint32_t>(0));
+            TSEL(rsel, nonzero, rnan);      // nonzero? .. : 0
+            TCVT(recip, rsel);
             tile_sstore_r scale_u8;
             TCVT(scale_u8, scale_byte);
             TSTORE(gs, scale_u8);
 
-            tile_recip_bf1_r inv_bf16;
-            // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题5
-            reinterpret_u16_to_bf16<2, BlockSize, TileN, 1, N_tail>(recip, inv_bf16);
+            // 问题4 正式方案：reinterpret_tile 零指令把 recip(uint16) 视为 bf16。
+            auto inv_bf16 = reinterpret_tile<__bf16>(recip);
             tile_recip_f1_r inv_scale_f;
             TCVT(inv_scale_f, inv_bf16);
 

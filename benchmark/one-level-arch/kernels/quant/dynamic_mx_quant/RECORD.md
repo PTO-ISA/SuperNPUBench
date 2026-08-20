@@ -196,16 +196,21 @@ BlockSize 行切成 `R_sub` 行子块（`R_sub | BlockSize`），载入 `[R_sub,
     AscendC 归约域,附带规避 bf16 `TEXPANDS` seed 崩溃 LinxV5 后端**（`getCopyToParts` illegal-type，与
     `tail_ocp_fp4` .bak 记录同因；改用 uint16 `TEXPANDS(0)` seed 合法）。**注:bf16 逐元素 `TMAX` 本身
     不崩——已探针实测编译通过——故 bf16 值域 + peeled-first-sub-chunk `TCOLMAX` seed 亦可编译,选 uint16
-    位域是为对齐 AscendC,非因 bf16 `TMAX` 不可用**；累积后 `reinterpret_u16_to_bf16`→`TCVT`→fp32 amax，直接复用既有
-    `compute_cublas_core`（**零新增 common.hpp 函数**）；pass2 `reinterpret`→fp32 inv_scale + 每子块
-    `TCOLEXPANDMUL`→fp32→fp8。BS=128（`R_sub=32`/`numSub=4`/`TileN=32`）编译/链接/反汇编通过。
-  - **两者 `static_assert` 均按正式（补齐 reinterpret 后）预算 `R_sub*TileN≤4096` 编写**（见问题4 政策）；
-    ocp 走 16b、正式即当前；cublas 当前 fp32 往返实际 `≤2048`，故当前 `TileN=32`/`R_sub=32` 可编，
-    正式后可放宽 `R_sub=64`/`TileN=64`。**两者 runtime 因 skew 未验**。**两个 bigbs 均已逐 op 对齐 AscendC**：
+    位域是为对齐 AscendC,非因 bf16 `TMAX` 不可用**；累积后 **`reinterpret_tile<__bf16>` 零指令视图**→`TCVT`→fp32 amax，
+    再**就地内联展开** `compute_cublas_core`（规避问题8 的 S64 栈往返，与 plain 同法：`raw`/`s32v` 两处
+    `reinterpret_tile<uint32_t>` 视图 + 原生 `TCMPS<CmpMode::{LT,NE,GT,EQ}>`，无 min/max-EQ 模拟、无 scratch-HBM）；
+    pass2 `reinterpret_tile<__bf16>`→fp32 inv_scale + 每子块 `TCOLEXPANDMUL`→fp32→fp8。bf16/half/fp32
+    三输入 BS=128（`R_sub=32`/`numSub=4`/`TileN=32`）compile+diss 通过、发射 42 条原生 TCMPS、零 scratch-HBM。
+  - **预算（cublas-bigbs 实测更正 2026-08-20）**：cuBLAS 固有 fp32 amax + uint32 位运算 + pass2 fp32 数据 cast，
+    这些都是 physical `[R_sub,TileN]` 的 **32b tile**，经 8192B tile 律（`TilesizeCode` enum 无 >8192B 码位）锁死
+    `R_sub*TileN≤2048`——**实测 2048 编过、4096 撞 TADDS `B.IOT unknown operand`**。故此 32b 中间量是**指数抽取固有**、
+    非可去 workaround，「formal 4096」**不可达**；`static_assert` 已从 4096 收紧到 **2048**（当前 `TileN=32`/`R_sub=32`
+    合法，`R_sub=64`/`TileN=32` 亦可，`R_sub=64`/`TileN=64`=4096 编不过）。**ocp-fp4-bigbs 不变**（走 16b、无 32b 中间量，
+    仍 `≤4096`）。**两者 runtime 因 skew 未验**（默认 BS=32 走 plain）。**两个 bigbs 均已逐 op 对齐 AscendC**：
     - **cublas-fp8-bigbs 对齐 `ComputeScaleCuBlas`**：归约域与 AscendC 一致（uint16 abs-bit——AscendC 非尾轴
       cuBLAS bf16 分支即 `And(BF16_ABS_MASK)`+`uint16 Reg::Max` 累积，`..._not_tail_axis_optimize_high_perf_large_tail.h:426-440`）、
-      守卫+recip 走 `compute_cublas_core`（AscendC guard 忠实移植，`TOR`≡`MaskXor` 因 p0/p1 互斥）、pass2 同
-      plain `compute_cublas_scale_not_tail` → 与 plain 同结果，唯残缺口 = 问题5 parity 交织。
+      守卫+recip 为**就地内联展开的 `compute_cublas_core`**（原生 CmpMode，AscendC guard 忠实移植，`TOR`≡`MaskXor`
+      因 p0/p1 互斥）、pass2 同 plain `compute_cublas_scale_not_tail` → 与 plain 同结果，唯残缺口 = 问题5 parity 交织。
     - **ocp-fp4-bigbs 对齐 `ComputeScaleOcp`**（`..._not_tail_axis_optimize_high_perf_large_tail.h:663-777`）：
       pass1 拆子块 `TMAX` 累积因 max 结合律 == 单遍全行 max，与 AscendC 同为 **uint16 指数位域**（`And(0x7F80 exp
       mask)`+`uint16 Reg::Max` 累积，种子 0）；finalize 的 kernel 内局部 helper `ocp_scale_from_maxexp_not_tail_boxed_bigbs`
@@ -233,7 +238,24 @@ TileSize 上界。`fa_hif4.hpp:85-92` 发射已验证；但为寄存器侧 fract
 > （`:3461`）向后兼容。故下文所述「4-参重载仅存在于 `jcore/TCmp.hpp`、linx 未包含」的缺口
 > **已闭合**。剩余工作纯在**业务 kernel 侧**：`compute_cublas_core`
 > （`dynamic_mx_quant_common.hpp:432`）仍用 min/max + 默认-EQ 的规避写法，末尾保留了
-> `IDEAL VERSION (blocked)`（`:522`），待切换到原生 `TCMPS(dst,src,s,CmpMode::…)`。
+> `IDEAL VERSION (blocked)`（`:522`），待切换到原生 CmpMode。
+>
+> **注意（实测 2026-08-19）**：CmpMode 是 **模板参数**，正确调用形如
+> `TCMPS<CmpMode::LT>(dst, src, s)`——**不是** docs / IDEAL VERSION 注释里那种 4-参运行期形式
+> `TCMPS(dst, src, s, CmpMode::LT)`（该形式在 `-D__linx` 下不存在、从未编译过）。签名见
+> `template_asm.hpp:4076` `template <CmpMode Mode, ...> void TCMPS(out&, in&, DType s)`。
+>
+> **已迁移（plain 路径）**：`dynamic_mx_quant_nontail_cublas_fp8` 的 `nontail_cublas_fp8_plain`
+> 已把 `compute_cublas_core` 就地展开并全部换成原生 `TCMPS<CmpMode::{LT,NE,GT,EQ}>`（无 GE），
+> compile+diss 实测每条 InT 路径发射 7 条原生 TCMPS，min/max+EQ 模拟序列消失。**`nontail_cublas_fp8_bigbs`
+> 亦已同步迁移（2026-08-20）**：就地展开 `compute_cublas_core` + 原生 `TCMPS<CmpMode>`，bf16/half/fp32 BS=128
+> compile+diss 通过（42 条原生 TCMPS，无模拟序列）。**其余 5 个 kernel** 仍调用 `common::compute_cublas_core`
+> （规避版）保持不变（注：ocp-fp4 系列从不走 cuBLAS core）。
+>
+> **gfrun 端到端已验证（2026-08-20）**：ELF 用 env_test 工具链（含 B.IOR 元素步长修复 `f35d3aa`）编译、
+> 工作目录 gfrun（feat/pto-v058-adaptation + 5 处 emulator 反应式移植，见问题9/14/17/18）执行到底
+> `R2=0`。**data 输出逐字节匹配 golden**（32 行全对，无棋盘错位）；**scale 值逐字节匹配**（仅布局差
+> = 问题5 parity 交织，值本身一致）。故原生 CmpMode 路径数值正确性已坐实。
 
 ### 结论（缺口闭合前的历史记录）
 
@@ -296,6 +318,24 @@ a!=b == TNOT(TCMPS(m,a,b))
 > 仍用 `reinterpret_u16_to_bf16` / `reinterpret_f32_to_u32`（`:201`/`:217`）的 scratch-HBM 往返，
 > 待迁移到 `reinterpret_tile<>`。迁移后 cuBLAS 非尾轴的 32b 往返消失、绑定回落 bf16 输入宽度，
 > TileSize 上界从 2048 回到 4096（见下方「代价2」与问题1）。
+>
+> **已迁移（plain 路径，实测 2026-08-19）**：`nontail_cublas_fp8_plain` 已把 scale pass 就地展开，
+> 两处位重解释换成 `reinterpret_tile<>`：（a）recip(uint16) → bf16 视图喂 TCVT；（b）clamp 前后
+> 各开一次 uint32 视图（`raw` 供 finite/nonzero 的 TCMPS 直接消费；`s32v` 供指数/尾数抽取）。
+> compile+diss 实测：scale 段仅 2×TLOAD + 2×TSTORE（纯数据流），**无 scratch-HBM 往返**，
+> `reinterpret_f32_to_u32`/`reinterpret_u16_to_bf16` 零命中。
+>
+> **gfrun 端到端已验证（2026-08-20）**：见问题3 状态块——同一 ELF+gfrun 跑到底 `R2=0`，data 逐字节
+> 匹配 golden、scale 值逐字节匹配。`reinterpret_tile` 视图被 compare/select 消费时暴露的 emulator
+> dtype 标签断言（问题14 的 302 兄弟）已按位宽相等放松，见问题14 补记与问题17/18。
+>
+> **实测约束**：`reinterpret_tile<>` 返回的 view 是**同寄存器视图**，与 TCVT / TCMP 这类**双模板参**
+> op 兼容（out/in 可异型，直接吃 view）；但 TSHRS/TANDS/TAND/TOR/TSEL/TADDS 等**单模板参** op 要求
+> dst 与 src **同类型**，view ≠ 真实 tile → 编译失败。故指数/尾数位运算需先用一条 u32→u32 恒等 TCVT
+> 把 view 物化成真实 uint32 tile（一条寄存器级指令，仍远优于 scratch-HBM 往返），之后的位运算全在真实
+> tile 上做。**`nontail_cublas_fp8_bigbs` 亦已迁移（2026-08-20）**：pass1 amax、core 的 `raw`/`s32v`、pass2 recip
+> 四处全换 `reinterpret_tile<>` 视图，零 scratch-HBM。**其余 5 个 kernel** 仍走 `common::reinterpret_*`（scratch-HBM）
+> 保持不变。
 
 ### 结论（缺口闭合前的历史记录）
 
@@ -393,6 +433,25 @@ host tiling :415-416 / swiglu `axis_last.h:585-592`），故本缺口只影响�
 `nontail_cublas_fp8` / `nontail_ocp_fp4`）：每块 E8M0 语义逐 op 对齐 AscendC，但**块行的 parity
 交织尚未施加**，故非尾轴 scale 布局尚非 AscendC-faithful。补齐 4-参交织重载后，在 compact 平铺
 之上追加一次 `TINTERLEAVE`（even/odd 块行 → 交织落盘）即可对齐。
+
+### 验证：compact-planar 的数值与列序已实测坐实，与 golden 差异纯 = 交织（2026-08-20）
+
+问题17 记录 `nontail_cublas_fp8_bigbs` gfrun 端到端跑通后，结论「scale 与 golden 仅差 parity 交织
+布局、数值/列序均正确」不能只靠**值集相同**判据——随机输入下非尾轴 scale **近常量**（每列是
+`BlockSize=128` 个同分布样本，amax 相近 → E8M0 多为同一字节 `0x78`，仅个别 `0x79`），此时列错位或
+数值错误都可能被同值掩盖。故该结论由两条**布局无关**证据坐实：
+
+1. **data 逐字节匹配 = 布局无关的 scale 正确性证据**：data = `quantize(x × recip)`，`recip = 1/scale`
+   取自**寄存器**、**不经 `scale_output.bin` 落盘布局**。故 4096B data 全对 ⟹ 每一列的 scale 数值都对，
+   与 scale 存储布局（planar vs 交织）无关。这是「数值正确」的主证据。
+2. **单调判别实验 = 列序 + planar 布局证据**：为破近常量，另构造输入令第 `c` 列 amax = `0.02·2^(c/2)`，
+   得**逐列单调**的 scale `0x71→0x81`（32 列 17 个不同值）。参考两布局：
+   planar = `[0x71,0x72,…,0x81, 0×32]`、interleave = `[0x71,0,0x72,0,…]`。工作目录 gfrun 跑出
+   kernel `scale_output` 前 32B = `[0x71,0x72,…,0x81]` **严格单调**、**== planar 字节精确**、
+   **≠ interleave**、后 32B pad 全 0 ⟹ kernel 写 **planar 布局、列序正确（单调保持 = 无列错位）**，
+   与 golden 差异**纯粹 = parity 交织**（本问题），非数值/列序错误。
+
+（判别实验为一次性验证，产物已清理、compare 目录复原为随机 golden；复现只需按上式生成单调输入重跑。）
 
 ---
 
@@ -915,7 +974,14 @@ dtype」强行划等号，禁掉一切「零指令 bitcast 后被异类型op消�
 
 `AccumulateBlockInfo.cpp:441` 的 `source->tileInfo->dataType == block->dataType` 放松为**位宽相等**
 `BytesOf(source->tileInfo->dataType) == BytesOf(block->dataType)`，保留 424 整数约束 +
-全部 shape/stride/valid 校验。同族相等断言（270/410/475）**本次暂不动**——probe 只撞 441。
+全部 shape/stride/valid 校验。同族相等断言（270/410/475）**probe 阶段暂不动**——probe 只撞 441。
+
+> **补记（2026-08-20，cuBLAS plain 路径 gfrun 落地）**：`nontail_cublas_fp8_plain` 把
+> `reinterpret_tile<uint32_t>` 视图直接喂 compare/select 后，撞上了 441 的**同族兄弟**——
+> `IsCompatibleDataTile`（`AccumulateBlockInfo.cpp:~302`）里 `source->tileInfo->dataType == dataType`。
+> 症结同 441：reinterpret 视图运行期仍带 producer（fp32）的 dtype 标签，与 compare/select block 的
+> u32 不等。按同一思路放松为 `BytesOf(...) == BytesOf(...)`（等宽即容），commit `c022a929`。至此
+> 问题14 的「解除路径」由 probe 的 441 单点，扩到 cuBLAS plain 路径的 302 兄弟；410/475 仍未撞、不动。
 
 ---
 
@@ -1070,3 +1136,90 @@ byte1=`0x02`），32 个 fp4 被解包成 32 字节、宽度翻倍越界。**证
 问题2 是**编译期** emit + tile 声明（`pto_tile.hpp:408` 32B 列对齐，窄 fp4 tile 声明）——emit 能过、
 用 padded-physical col-box 方案规避。本问题是**gfrun 运行时**解码校验（Block.cpp col==col）——即使编译过、
 emit 正确，gfrun 解码 fp4 TCVT 块时按 physical col 严格比对而崩。两层独立。
+
+---
+
+## 问题17：TCMPS 作用于 UINT32 被 emulator compare/select 白名单拒绝（需 emulator 侧解决）
+
+> 缺陷所在仓 **`SuperScalarModel`（emulator）**，复现入口 = `nontail_cublas_fp8_plain` 就地展开后、
+> 在 `reinterpret_tile<uint32_t>` 视图上做 `TCMPS<CmpMode::{LT,NE,GT,EQ}>` 抽 fp32 指数/尾数位。
+> **这是问题3（原生 CmpMode）+ 问题4（reinterpret_tile）落地到 cuBLAS plain 路径后暴露的下一道 emulator 墙。**
+
+### 结论
+
+`compute_cublas_core` 的 IDEAL 版本在 **u32 域**用 `TCMPS<CmpMode::LT>(finite, raw, FP32_EXP_MASK)`
+等直接比较 fp32 位型（`raw = reinterpret_tile<uint32_t>(max_f)`）。gfrun 挂在 compare/select 白名单：
+
+```
+SuperScalarModel/emulator/engine/AccumulateBlockInfo.cpp  IsCompareSelectTeplDataType (~:291)
+ASSERT(IsCompareSelectTeplDataType(...) && "...")
+```
+
+根因：`IsCompareSelectTeplDataType` 的 **TCMPS** 分支 dtype 集为
+`INT32||FP32||FP16||UINT16||INT16`，**不含 UINT32**：
+
+```cpp
+if (op == TileOp::TCMPS) {
+    return dataType == DataType::INT32 || dataType == DataType::FP32 ||
+           dataType == DataType::FP16 || dataType == DataType::UINT16 ||
+           dataType == DataType::INT16;   // 缺 UINT32
+}
+```
+
+而 kernel 在 fp32 位型上做整型比较（抽 exp/mantissa）天然要 UINT32 域；INT32 已在集内，UINT32
+是等宽同类，spec-legal。
+
+**解除路径（SuperScalarModel）**：TCMPS 分支加入 `DataType::UINT32`。已实测放行后 gfrun 推进到问题18。
+
+### 影响场景
+
+任何在 u32 位型域做 TCMPS 的路径——cuBLAS scale 的原生 CmpMode 版本（`nontail_cublas_fp8_plain`）首当其冲。
+scratch-HBM 版（其余 5 个 kernel）走真实 uint32 tile 也同样需要，只是此前被更前置的断言掩盖。
+**`nontail_cublas_fp8_bigbs` 端到端 gfrun 亦依赖此修复**（其就地展开的 `compute_cublas_core` 同在
+`reinterpret_tile<uint32_t>` 视图上发 `TCMPS<CmpMode>`）：2026-08-20 实测 **env_test 的 gfrun（未打
+`50afe316`，`AccumulateBlockInfo.cpp` TCMPS 白名单确无 UINT32）复现本断言崩溃；工作目录的 gfrun（已打
+`50afe316`）放行、跑到底 `R2=0`**——两个 gfrun 版本对 UINT32 compare/select 的支持点即差在此 commit。
+
+### 已落地
+
+emulator commit `50afe316`「fix(emulator): accept UINT32 for TCMPS compare/select TEPL」。
+**验证升级（2026-08-20）**：`nontail_cublas_fp8_bigbs` 走独立 harness（`TYPE=NONTAIL_CUBLAS_FP8_BIGBS`，
+Axis=128/Post=32/BS=128→`R_sub=32/TileN=32` 自动路由 bigbs）+ BS 参数化 golden（`--block-size 128`），
+env_test linx 编译、工作目录 gfrun 执行到底：**data 逐字节匹配 golden（4096B 全对）、scale 值逐字节匹配**
+（32 个真实 E8M0 全对，仅 parity 交织布局差=问题5）。cublas-bigbs 由此从「逐 op 对齐」升级为
+「gfrun 端到端逐字节验证」，成为继 plain 之后第二个带 golden 实测数值正确的业务路径。
+「仅布局差、数值/列序均正确」这一判定**不靠近常量下的值集相同**，而由 data 逐字节匹配（布局无关）+
+单调判别实验（planar 字节精确、无列错位）坐实——详见**问题5「验证」小节**。
+
+---
+
+## 问题18：linx 就地 TSEL（false-source 融进 dst）被 emulator 双侧拒绝（需 emulator 侧解决）
+
+> 缺陷所在仓 **`SuperScalarModel`（emulator）**，validate 侧 `AccumulateBlockInfo.cpp` +
+> execution 侧 `TEPLEngine.cpp`。复现入口 = `nontail_cublas_fp8_plain` 展开出的 `TSEL`（roundup 选择、
+> extractExp/recip 的 TSEL 链）。
+
+### 结论
+
+LinxV5 后端把 `TSEL(dst, mask, trueSrc)` lower 成**单条带两个 tile 源**的 B.IOT
+（`mask=srcTile[0]`、`trueSrc=srcTile[1]`），**false-source 即 dst 自身、就地写**
+（`dst = mask ? trueSrc : dst_prior`，与 TSELS「dst = mask ? src : scalar」同构，只是标量换成 dst 活字节）。
+emulator 两处都按「TSEL 必有 3 个 tile 源、无 dst」的旧契约建模，双侧崩：
+
+- **validate 侧**（`ValidateCompareSelectTepl`，`priorSources==0` 分支，~:388）：
+  `ASSERT(inst->srcs.size() == 3 && inst->dsts.empty() && ...)` —— 就地 TSEL 只有 2 源且带 1 个 dst，断言失败。
+- **execution 侧**（`ExecuteTSEL`，`TEPLEngine.cpp` ~:1118）：无条件 `LoadFromTileRegisterSrc(..., block->srcTile[2], ...)`
+  —— 就地 TSEL 无 `srcTile[2]`，越界。
+
+### 解除路径（SuperScalarModel，本次采用）
+
+- validate 侧放宽为「3 源显式-false」**或**「2 源+1 dst 就地」皆合法：
+  `srcs.size()==3 && dsts.size()<=1 && (dsts.empty() || dsts[0]->size >= dataBytes)`。
+- execution 侧 false-source 回退：`srcTile.size()>=3 ? srcTile[2] : dstTile[0]`（读 dst 活字节作 false 源）。
+
+两侧须成对改（validate 放行、execution 才不越界读）。
+
+### 已落地
+
+- validate 侧 commit `ab822e7a`「accept in-place TSEL dst fused onto first select B.IOT (validate side)」；
+- execution 侧 commit `1f398190`「read in-place TSEL false-source from dst tile (execution side)」。

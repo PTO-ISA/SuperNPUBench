@@ -40,6 +40,10 @@ CONFIGS = {
     "TAIL_CUBLAS_FP8":      {"M": 8,  "K": 32, "algo": "CUBLAS",        "kernel": "tail",    "dtype": "FP8", "driver": "tail_cublas_fp8",     "blocked": False, "scale_layout": "compact"},
     "TAIL_OCP_FP4":         {"M": 8,  "K": 64, "algo": "OCP",           "kernel": "tail",    "dtype": "FP4", "driver": "tail_ocp_fp4",        "blocked": False, "scale_layout": "compact"},
     "NONTAIL_CUBLAS_FP8":   {"M": 32, "K": 32, "algo": "CUBLAS",        "kernel": "nontail", "dtype": "FP8", "driver": "nontail_cublas_fp8",  "blocked": False, "scale_layout": "compact"},
+    # 方案A split-reduce bigbs: BS=128 (>=96) has no legal plain TileN -> auto-routes
+    # to _bigbs. M=Axis=128 (=1 reduce block), K=Post=32. Golden is BS-parametric
+    # (--block-size 128), same generator, no BS branch.
+    "NONTAIL_CUBLAS_FP8_BIGBS": {"M": 128, "K": 32, "block_size": 128, "algo": "CUBLAS", "kernel": "nontail", "dtype": "FP8", "driver": "nontail_cublas_fp8_bigbs", "blocked": False, "scale_layout": "compact"},
     "NONTAIL_OCP_FP4":      {"M": 32, "K": 64, "algo": "OCP",           "kernel": "nontail", "dtype": "FP4", "driver": "nontail_ocp_fp4",     "blocked": False, "scale_layout": "compact"},
 }
 
@@ -63,6 +67,7 @@ def gen_data(type_name: str, cfg: dict):
         sys.executable, str(gen_script),
         "--M", str(cfg["M"]),
         "--K", str(cfg["K"]),
+        "--block-size", str(cfg.get("block_size", 32)),
         "--algo", cfg["algo"],
         "--kernel", cfg["kernel"],
         "--dtype", cfg["dtype"],

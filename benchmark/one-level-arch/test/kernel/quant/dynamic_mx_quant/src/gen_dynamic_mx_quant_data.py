@@ -18,9 +18,11 @@ normal, <<7), mirroring AscendC GetFp8MaxExp<T>() / GetFp4MaxExp<T>():
 Legal (scaleAlg, dstType) pairs (AscendC dynamic_mx_quant_tiling_arch35.cpp):
   OCP -> FP8 & FP4 ;  CUBLAS -> FP8 only ;  DYNAMIC_RANGE -> FP4 only.
 
-Reduction orientation:
-  tail    : matrix [rows, cols], reduce along `cols` in BlockSize=32 chunks
-  nontail : matrix [rows, cols], reduce along `rows` in BlockSize=32 chunks
+Reduction orientation (BlockSize is a CLI parameter, default 32; the formula is
+BS-parametric and never branches on BS -- the host reference has no Tile-size
+constraints, unlike the PTO-ISA kernels which route plain vs bigbs by BlockSize):
+  tail    : matrix [rows, cols], reduce along `cols` in BlockSize chunks
+  nontail : matrix [rows, cols], reduce along `rows` in BlockSize chunks
 
 Output files (per ELF compare dir):
   input.bin        : rows*cols x bf16 (2 bytes each)
@@ -59,7 +61,7 @@ FP32_NUMBER_254 = 0x000000FE
 FP32_NUMBER_HALF = 0x00400000
 CLAMP_MIN = 1e-12
 
-BLOCK_SIZE = 32
+DEFAULT_BLOCK_SIZE = 32  # CLI --block-size default; the formula is BS-parametric.
 
 # emax keyed by output dtype tag.
 EMAX_BY_DTYPE = {"FP8": FP8_E4M3_EMAX, "FP4": FP4_E2M1_EMAX}
@@ -231,23 +233,24 @@ SCALE_RECIP = {
 }
 
 
-def reduction_groups(rows: int, cols: int, kernel: str):
+def reduction_groups(rows: int, cols: int, kernel: str, block_size: int):
     groups = []
     if kernel == "tail":
-        numKb = cols // BLOCK_SIZE
+        numKb = cols // block_size
         for m in range(rows):
             for kb in range(numKb):
-                base = m * cols + kb * BLOCK_SIZE
-                groups.append([base + j for j in range(BLOCK_SIZE)])
+                base = m * cols + kb * block_size
+                groups.append([base + j for j in range(block_size)])
     else:  # nontail: reduce along rows
-        numKb = rows // BLOCK_SIZE
+        numKb = rows // block_size
         for kb in range(numKb):
             for c in range(cols):
-                groups.append([(kb * BLOCK_SIZE + r) * cols + c for r in range(BLOCK_SIZE)])
+                groups.append([(kb * block_size + r) * cols + c for r in range(block_size)])
     return groups
 
 
-def compute_golden(x_val, rows: int, cols: int, algo: str, kernel: str, dtype: str):
+def compute_golden(x_val, rows: int, cols: int, algo: str, kernel: str, dtype: str,
+                   block_size: int):
     # x_val: per-element fp32 value the kernel actually operates on (already
     # round-tripped through the input dtype). The data path multiplies this value
     # by recip; the scale path regularizes it per-algo (see scale_recip_*).
@@ -257,7 +260,7 @@ def compute_golden(x_val, rows: int, cols: int, algo: str, kernel: str, dtype: s
     fn = SCALE_RECIP[algo]
     emax = EMAX_BY_DTYPE[dtype]
     enc = f32_to_fp8_e4m3 if dtype == "FP8" else f32_to_fp4_e2m1
-    for idx in reduction_groups(rows, cols, kernel):
+    for idx in reduction_groups(rows, cols, kernel, block_size):
         group_vals = [x_val[i] for i in idx]
         scale_byte, recip_bits = fn(group_vals, emax)
         block_scales.append(scale_byte & 0xFF)
@@ -268,7 +271,8 @@ def compute_golden(x_val, rows: int, cols: int, algo: str, kernel: str, dtype: s
     return quant, scale, block_scales
 
 
-def compact_scale_bytes(block_scales, rows: int, cols: int, kernel: str) -> bytes:
+def compact_scale_bytes(block_scales, rows: int, cols: int, kernel: str,
+                        block_size: int) -> bytes:
     """Pack per-block E8M0 scale bytes into the GROUND-TRUTH mxScale layout
     (ttk ttk/utilities/dtypes.py mx_quantize): pad the reduce-axis block count to
     even, then — only when the reduce axis is NOT the last axis — parity-interleave
@@ -288,7 +292,7 @@ def compact_scale_bytes(block_scales, rows: int, cols: int, kernel: str) -> byte
     interleave intrinsic lands; that divergence is the real defect, not a golden
     bug. Tail is unaffected (ground truth has no interleave there)."""
     if kernel == "tail":
-        numKb = cols // BLOCK_SIZE
+        numKb = cols // block_size
         scaleCols = ((numKb + 1) // 2) * 2
         out = bytearray(rows * scaleCols)  # zero-initialized -> padding stays 0
         gi = 0
@@ -300,7 +304,7 @@ def compact_scale_bytes(block_scales, rows: int, cols: int, kernel: str) -> byte
     # nontail: block_scales are in (kb, c) order (see reduction_groups). Build the
     # even-padded planar [scaleRows, cols] first (padding block-row stays 0x00),
     # then parity-interleave the block-row axis to match ttk ground truth.
-    numKb = rows // BLOCK_SIZE
+    numKb = rows // block_size
     scaleRows = ((numKb + 1) // 2) * 2
     planar = [[0] * cols for _ in range(scaleRows)]  # padding rows stay 0x00
     gi = 0
@@ -348,7 +352,8 @@ def input_encode(x_f32, in_dtype: str):
 
 
 def gen_all(out_dir: Path, rows: int, cols: int, algo: str, kernel: str,
-            dtype: str, seed: int, scale_layout: str, in_dtype: str) -> None:
+            dtype: str, seed: int, scale_layout: str, in_dtype: str,
+            block_size: int) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     rng = random.Random(seed)
     x_f32 = []
@@ -358,7 +363,8 @@ def gen_all(out_dir: Path, rows: int, cols: int, algo: str, kernel: str,
         z = math.sqrt(-2.0 * math.log(u1)) * math.cos(2.0 * math.pi * u2)
         x_f32.append(max(min(z, 8.0), -8.0))
     x_val, input_raw = input_encode(x_f32, in_dtype)
-    quant, scale, block_scales = compute_golden(x_val, rows, cols, algo, kernel, dtype)
+    quant, scale, block_scales = compute_golden(x_val, rows, cols, algo, kernel,
+                                                dtype, block_size)
     golden = pack_output(quant, dtype)
 
     (out_dir / "input.bin").write_bytes(input_raw)
@@ -366,7 +372,7 @@ def gen_all(out_dir: Path, rows: int, cols: int, algo: str, kernel: str,
     print(f"wrote {out_dir}/input.bin  in_dtype={in_dtype} elems={rows*cols} bytes={len(input_raw)}")
     print(f"wrote {out_dir}/golden.bin dtype={dtype} bytes={len(golden)}")
     if scale_layout == "compact":
-        sbytes = compact_scale_bytes(block_scales, rows, cols, kernel)
+        sbytes = compact_scale_bytes(block_scales, rows, cols, kernel, block_size)
         (out_dir / "scale_golden.bin").write_bytes(sbytes)
         print(f"wrote {out_dir}/scale_golden.bin layout=compact uint8 bytes={len(sbytes)}")
     else:
@@ -380,6 +386,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--M", type=int, default=8, help="rows")
     parser.add_argument("--K", type=int, default=32, help="cols")
+    parser.add_argument("--block-size", type=int, default=DEFAULT_BLOCK_SIZE,
+                        help="reduction BlockSize (elements per shared-scale block); "
+                             "the golden formula is BS-parametric, not BS-branched")
     parser.add_argument("--algo", type=str, default="OCP",
                         choices=["OCP", "CUBLAS", "DYNAMIC_RANGE"])
     parser.add_argument("--kernel", type=str, default="tail",
@@ -396,7 +405,7 @@ def main():
     parser.add_argument("-o", "--out-dir", type=Path, required=True)
     args = parser.parse_args()
     gen_all(args.out_dir, args.M, args.K, args.algo, args.kernel, args.dtype,
-            args.seed, args.scale_layout, args.in_dtype)
+            args.seed, args.scale_layout, args.in_dtype, args.block_size)
 
 
 if __name__ == "__main__":
