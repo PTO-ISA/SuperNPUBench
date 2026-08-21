@@ -84,6 +84,39 @@ ifeq ($(TESTCASE), fa_2d_unroll_gmma)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk)_X$(X)_Y$(Y).elf
 endif
 
+ifeq ($(TESTCASE), quant_sparse_flash_mla)
+   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/quant_sparse_flash_mla.cpp
+   B ?= 1
+   s1 ?= 64
+   s2 ?= 128
+   N1 ?= 1
+   N2 ?= 1
+   D ?= 512
+   Tm ?= 32
+   Tk ?= 32
+   Td_block ?= 64
+   softmax_scale ?= 0.125
+   wleft ?= 1
+   wright ?= 1
+   IMPL ?= onepass
+   DEFINES += -DTbatch=$(B)
+   DEFINES += -DTs1=$(s1)
+   DEFINES += -DTs2=$(s2)
+   DEFINES += -DTn1=$(N1)
+   DEFINES += -DTn2=$(N2)
+   DEFINES += -DTd=$(D)
+   DEFINES += -DTm=$(Tm)
+   DEFINES += -DTk=$(Tk)
+   DEFINES += -DTd_block=$(Td_block)
+   DEFINES += -DTsoftmax_scale=$(softmax_scale)
+   DEFINES += -DTwleft=$(wleft)
+   DEFINES += -DTwright=$(wright)
+   ifeq ($(IMPL), tadd)
+      DEFINES += -DQSMLA_USE_TADD
+   endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_s2$(s2)_N1$(N1)_N2$(N2)_D$(D)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block).elf
+endif
+
 include ../../common/Makefile.common
 
 clean:
