@@ -29,22 +29,14 @@
 #ifndef POW_R
 #define POW_R 4096
 #endif
-#ifndef K_WS_COLS
-#define K_WS_COLS 128
-#endif
-#ifndef K_MAX_LEVELS
-#define K_MAX_LEVELS 6
-#endif
 
 int main() {
     using dtype = DType;
 
     dtype input_buf[G_A * G_R];
     dtype output_buf[G_A * G_R];
-    float workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS];
     dtype *input = input_buf;
     dtype *output = output_buf;
-    float *workspace = workspace_buf;
 
 #ifdef RES_CHECK
 #ifndef CHK_DIR
@@ -54,8 +46,7 @@ int main() {
                    static_cast<size_t>(G_A) * G_R * sizeof(dtype));
 #endif
 
-    rms_norm_binary<dtype, G_A, G_R, TILE_A, TILE_R, POW_R>(input, output,
-                                                            workspace, EPS);
+    rms_norm_binary<dtype, G_A, G_R, TILE_A, TILE_R, POW_R>(input, output, EPS);
 
 #ifdef RES_CHECK
     writeBinaryFile(CHK_DIR "/output.bin", (uint8_t *)output,
