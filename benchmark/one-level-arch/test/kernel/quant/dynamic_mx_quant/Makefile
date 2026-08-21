@@ -74,6 +74,14 @@ ifeq ($(TYPE), ROW32_PROBE)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_row32_probe.elf
 endif
 
+ifeq ($(TYPE), FP4_SHAPE_PROBE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/fp4_shape_probe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_fp4_shape_probe.elf
+   ifeq ($(WIDEN), on)
+     DEFINES += -DWIDEN
+   endif
+endif
+
 include ../../../common/Makefile.common
 
 clean:

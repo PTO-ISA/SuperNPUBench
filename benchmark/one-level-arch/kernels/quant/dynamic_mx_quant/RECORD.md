@@ -1032,17 +1032,60 @@ probe **gfrun 跑到底**：23 blocks / 120 insts，`R2 = 0`（Success to Reach 
 
 ---
 
-## 问题16：emulator TCVT 形状契约逐 conjunct 比 physical row/col，打包 fp4 与源无法同时满足 → gfrun 结构性必崩（需 emulator 侧解决）
+## 问题16：TCVT 形状契约（TileLogicalShapeMatch）对打包 fp4 与源无法同时满足 → 结构性必崩；当前工具链落在**编译期 static_assert**（需工具链头 + emulator 双侧解决）
 
-> 缺陷所在仓 **`SuperScalarModel`（`isa/Block.cpp` `Block::ValidateOperandContract()` 的 TCVT 分支）**。
-> 触发 kernel `dynamic_mx_quant_tail_ocp_fp4.hpp`（`TYPE=TAIL_OCP_FP4`）。**scale 路径已由问题15 打通、
-> gfrun 可跑，本问题卡在最后 data 路径的 `fp32 → fp4` 输出转换块。** 与问题13/15 的「TCVT lb2」是
-> **两回事**——那是让正常 TCVT dst.col 取对的必需件（见下「排除法」），本问题是 emulator 校验本身对
-> 打包类型过严。
->
-> **2026-08-19 实证更正**：用 instrumented gfrun（在断言前打印实际 tileInfo）实测，崩点是
-> **`row==row` conjunct（src.row=8 ≠ dst.row=4）**，**不是** `col==col`。此前「崩在 col==col、dst.col=32、
-> inherit 未生效」的结论被推翻——见「根因」「排除法」。
+> 触发 kernel `dynamic_mx_quant_tail_ocp_fp4.hpp:206`（`TCVT(oq, xf)`，`TYPE=TAIL_OCP_FP4`）。
+> 同一契约（TCVT 的 src/dst 必须 physical Rows 与 Cols 全等）落在**两层**，缺陷在**工具链头
+> （`Linx-TileOP-API/jcore/template_asm.hpp`）+ emulator（`SuperScalarModel/isa/Block.cpp`）双侧**。
+> 专文见 `ISSUE_tcvt_fp4_shape_contract.md`。
+
+### 编译期 static_assert（当前工具链主障碍）
+
+**当前工具链（clang15.0.4，自报 PTO 0.58.1）的 `jcore/template_asm.hpp:115` `TCVT_T` 有硬
+`static_assert`**：`tile_shape_out::Rows==tile_shape_in::Rows && Cols==Cols`（msg:"TCVT source
+and destination must have identical physical Rows/Cols (PTO 0.58.1 TileLogicalShapeMatch)"）。其
+**自身注释**（template_asm.hpp:110-114）写明这是把运行期的 `TileOperandsLegal_TCVT` /
+`TileLogicalShapeMatch` 契约「提前到编译期拒绝」（"reject it at compile time"）。故 fp4 data 路径
+`TCVT(oq[8,32], xf[8,64])` **编译期即崩、连 `.o` 都出不来**：
+
+```
+template_asm.hpp:115:3: error: static assertion failed ...
+  'Tile<...__fp4_e2m1x2, 8, 32...>::Cols == Tile<...float, 8, 64...>::Cols':
+  TCVT source and destination must have identical physical Rows/Cols (PTO 0.58.1 TileLogicalShapeMatch)
+```
+
+**编译期崩的维度是 `Cols`（32≠64）**——同契约在两层各读不同来源的 physical col：
+
+| 层 | physical col 从哪读 | 崩的维度 |
+|---|---|---|
+| **编译期** `static_assert`（`template_asm.hpp:115`，本障碍） | **声明的模板** `Cols_`（fp4 tile_o=PW/2=32、fp32 tile_f=PW=64） | **Cols 32≠64** |
+| **运行期** `ValidateOperandContract`（emulator `Block.cpp:1039`，放宽编译期后） | emit 的 lb2 / inherit（不读模板声明） | Row 8≠4 / Col 64≠32（随 lb2） |
+
+**Rows/Cols 数值来源坐实**：`static_assert` 比的是 `Tile` 模板第 3、4 参 `Rows_`/`Cols_`
+（`pto_tile.hpp:604-611` 模板头、`:638-639` `Rows=Rows_; Cols=Cols_`）。kernel（`:96-103`，M=8/N=64/BS=32→
+TileM=8/PW=64）声明 `tile_f=Tile<...,TileM,PW,...>`（Rows=8,Cols=64）、`tile_o=Tile<...,TileM,PW/2,...>`
+（Rows=8,Cols=32）→ Rows 8==8 ✓、**Cols 32≠64 ✗**。
+
+**复现最小化（编译期崩的直接推论）**：既是编译期崩，复现**只需工具链编译**——
+- **不需要 `SuperScalarModel`（gfrun/gfsim）**：崩在 clang++ 编译阶段，到不了链接/执行。
+- **不需要携带任何本地改动**：崩点 `TCVT(oq, xf)` 在 data 路径、HEAD 即存在（本轮改动只在 scale/finalize 区）。
+```bash
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4 res_check=on   # 编译即失败
+```
+
+### 最小 TCVT 探针闭环实证（2026-08-21）
+
+`test/kernel/quant/dynamic_mx_quant/src/fp4_shape_probe.cpp`（`TYPE=FP4_SHAPE_PROBE`，`WIDEN=on`→
+`-DWIDEN`）：单条 `TLOAD(fp32)→TCVT→TSTORE`，`R=8,PW=64`。
+- **变体 A（`OCOL=PW/2=32`，打包正确）**：编译**唯一实质错误**即 `template_asm.hpp:115` static_assert
+  （`grep -c error: ==1`），坐实「不一致→编译崩 Cols」。
+- **变体 B（`WIDEN`，`OCOL=64`，加宽骗过断言）**：编译过、gfrun `R2=0`，但 `output.bin` 数据错——
+  反汇编 TCVT 发 `->lb2 64`+`B.DATR e2m1x2,byte0`→非打包；喂交替 1.0/4.0（fp4 nibble 0x2/0x6）得每行
+  64B（前 32B `02 06…` 低 nibble 单装 + 后 32B 补零、共 512B），对 golden 每行 32B 打包（`0x62`×32、共
+  256B）三重不符（字节翻倍/未打包/每行只落半数源值）。坐实「加宽一致→数据错」。
+
+> **运行期同契约（放宽编译期后的第二道）**：instrumented gfrun 实测崩点是 **`row==row` conjunct
+> （src.row=8 ≠ dst.row=4）**（不发 lb2→inherit col=64→row=4），非 `col==col`——见「根因」「排除法」。
 
 ### 现象
 
@@ -1103,11 +1146,17 @@ emulator 建模缺陷（过严校验），非 ISA/工具链/kernel。TCVT 到打
 不同（打包改变了 col↔row↔size 关系），这是**正确**的描述符；断言把 physical row/col 都强行要求相等，等于
 禁掉一切「宽类型 → 打包窄类型」的 TCVT。
 
-### 解除路径（emulator 侧）
+### 解除路径（工具链头 + emulator 双侧）
 
-放宽 `ValidateOperandContract()` TCVT 分支：**删掉 `row==row` / `col==col`，只保留
-`validRow==validRow` + `validCol==validCol` + `layout` + physical≥valid 的健全性检查**。因 fp4 两边
-validRow/validCol 都相等（8/8、32/32），放宽后 fp4 TCVT 过校验且不影响正确性。
+同一契约现落在两处，须**双侧**放宽（只保留 `validRow==validRow` + `validCol==validCol` + `layout`
++ physical≥valid 健全性检查；fp4 两边 valid 维度恒相等 8/8、32/32，放宽后过校验且不影响正确性）：
+
+1. **工具链头（编译期崩点）**：`Linx-TileOP-API/jcore/template_asm.hpp:115-118` `TCVT_T`
+   的 `static_assert` —— 删 `Rows==Rows && Cols==Cols` physical 强等，保留 valid 包含关系（:119-124 那条）。
+   **这是让 fp4 data 路径能编译的必要条件。**
+2. **emulator（运行期崩点）**：`SuperScalarModel` `ValidateOperandContract()`
+   （`Block.cpp:1042-1044`）—— 删 physical `row==row`/`col==col` 两条 conjunct，保留 valid + layout。
+   **这是让编译出的 elf 能跑到底的必要条件。**
 
 - 对症提交：**`eaa3dfe7` "fix(tile): relax TCVT legality to valid shape only"**（作者 jialewang，2026-08-14），
   正是删掉 `row==row`/`col==col` 只留 valid 维度 + 在 `UpdateDstTileInfo` 给 TCVT 加 dstPhysicalCol 继承/
@@ -1124,8 +1173,8 @@ validRow/validCol 都相等（8/8、32/32），放宽后 fp4 TCVT 过校验且�
 
 为确认「不改 emulator、只在 kernel 侧规避」是否可行，做过对照实验：把 fp4 输出 tile 的 physical 列
 `PW/2 → PW`、valid 列 `BlockSize/2 → BlockSize`（声明成未打包宽）。此时 dst size=`8×64×1=512B`、继承
-col=64 → `row=512/64=8==src.row` → **断言过、gfrun 跑到底 R2=0**。但**输出数据错**（M=8,N=64,BS=32，
-env_test 工具链 + gfrun `5689b3e7`）：`scale_output` 逐字节对，**`output` vs golden 不同**——golden 每字节
+col=64 → `row=512/64=8==src.row` → **断言过、gfrun 跑到底 R2=0**。但**输出数据错**（M=8,N=64,BS=32）：
+`scale_output` 逐字节对，**`output` vs golden 不同**——golden 每字节
 打包 2 个 fp4（byte0=`0x26`=nibble 2,6），加宽输出把每 fp4 摊进一整字节高半字节恒 0（byte0=`0x06`
 byte1=`0x02`），32 个 fp4 被解包成 32 字节、宽度翻倍越界。**证实：加宽 tile 只是让 physical row 恰好
 等于 src 而绕过断言，代价是 fp4 打包布局被破坏；kernel 侧无损规避不可行，修复只能在 emulator。** 亦见
@@ -1133,9 +1182,13 @@ byte1=`0x02`），32 个 fp4 被解包成 32 字节、宽度翻倍越界。**证
 
 ### 与问题2 / `ISSUE_32B_align` 的分层区别
 
-问题2 是**编译期** emit + tile 声明（`pto_tile.hpp:408` 32B 列对齐，窄 fp4 tile 声明）——emit 能过、
-用 padded-physical col-box 方案规避。本问题是**gfrun 运行时**解码校验（Block.cpp col==col）——即使编译过、
-emit 正确，gfrun 解码 fp4 TCVT 块时按 physical col 严格比对而崩。两层独立。
+问题2 是 tile **声明**的 32B 列对齐 `static_assert`（`pto_tile.hpp:408`）——用 padded-physical col-box
+方案已规避。本问题是 **TCVT 的 src/dst 形状匹配契约**（TileLogicalShapeMatch），与列对齐无关，且现分两层：
+- 编译期：`template_asm.hpp:115` `TCVT_T` 的 `static_assert`（崩 Cols 32≠64）。
+- 运行期：`Block.cpp:1039` 的解码校验（崩 Row 8≠4 或 Col 64≠32，放宽编译期后暴露）。
+
+即 fp4 现有三道独立关卡：问题2（列对齐声明，已规避）→ 本问题编译期（TCVT_T 形状匹配）→
+本问题运行期（Block.cpp 形状匹配）。前者与后两者无关；后两者同契约、不同层。
 
 ---
 
