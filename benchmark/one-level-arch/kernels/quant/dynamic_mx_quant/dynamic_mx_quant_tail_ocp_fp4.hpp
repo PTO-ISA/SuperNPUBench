@@ -154,15 +154,43 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
                 auto gs = s_iter(m, 0);
                 TSTORE(gs, scale_e8m0);
 
-                // --- recip via bit-complement (mirrors newcalc probe) ---
-                // shared = 2^(E_max-emax) 恒为 2 的幂；倒数 bits = 0x7F00 - bits，
-                // 就地在 int16 视图上 TXORS(0xFFFF)+TSUBS(0x80FF) 求补。
-                // 用 int16（非 uint16）：TSUBS 的 ISA profile 仅允许 INT16/INT32/FP16/FP32。
-                auto sh_i16 = reinterpret_tile<int16_t>(shared_bf);
-                TXORS(sh_i16, sh_i16, static_cast<uint16_t>(0xFFFF));
-                TSUBS(sh_i16, sh_i16, static_cast<uint16_t>(0x80FF));
+                // --- recip finalize：位补主路径 + inf/zero/special 三 Select ---
+                // 内联 common::finalize_recip_u16（规避问题8：tile 作真实函数入参会被
+                // lower 成 S64 栈往返、gfrun 拒），逐行对齐 AscendC ocp_new
+                // ComputeScaleOcp (bak/..._ocp_new.h:90-94)。scale byte 靠上方
+                // TCVT(scale_e8m0) 的 Cast<e8m0>(inf)→0xff，无需 Select；recip 保留
+                // 三类特殊值写回（探针是 MINIMAL 版故意省略，业务 kernel 必须补齐）：
+                //   inf/nan (max_exp==0x7f80) -> 0x7f81；全零 (max_exp==0) -> 0；
+                //   special (shared==0x7f00) -> 0x0040（位补公式在此点算出 0，须修正）。
+                // 主路径 recip = 0x7f00 - shared：二元 TSUB（收 uint16；标量 TSUBS 不收）。
+                // eq_inf/eq_zero 取自 pre-multiply 的 max_exp（= 清尾数后的 max_u16，
+                // TMULS 写 shared_bf 未改 max_bf，视图仍有效）。
+                // TSUB/TSEL 要求 dst/src 同 tile_shape（jcore/TSub.hpp:51、
+                // template_asm.hpp:5465 三参同型）；唯 TCMPS 允许 out≠in。故所有参与
+                // TSUB/TSEL 的 uint16 量都以 reinterpret_tile<uint16_t> 视图落在同一
+                // tile_recip_bf1 载体上——同源 Tile 类型的等宽视图彼此同型
+                // （ReinterpretedTileView<uint16_t,tile_recip_bf1>），与 shared_u16/
+                // max_u16 一致；k_u16 复用一块常数载体逐 Select 重填。
+                auto shared_u16 = reinterpret_tile<uint16_t>(shared_bf);
+                tile_recip_bf1 recip_bf, eqinf_bf, eqzero_bf, eqspc_bf, k_bf;
+                auto recip_u16  = reinterpret_tile<uint16_t>(recip_bf);
+                auto eq_inf     = reinterpret_tile<uint16_t>(eqinf_bf);
+                auto eq_zero    = reinterpret_tile<uint16_t>(eqzero_bf);
+                auto eq_special = reinterpret_tile<uint16_t>(eqspc_bf);
+                auto k_u16      = reinterpret_tile<uint16_t>(k_bf);
+                TCMPS(eq_inf,     max_u16,    BF16_EXP_MASK);              // NOT finite
+                TCMPS(eq_zero,    max_u16,    static_cast<uint16_t>(0));   // all-zero block
+                TCMPS(eq_special, shared_u16, BF16_EXP_BIAS);             // shared==0x7f00
+                TEXPANDS(k_u16, BF16_EXP_BIAS);
+                TSUB(recip_u16, k_u16, shared_u16);                       // 0x7f00 - shared
+                TEXPANDS(k_u16, BF16_NAN_PATTERN);
+                TSEL(recip_u16, eq_inf, k_u16);                           // inf 命中 -> 0x7f81
+                TEXPANDS(k_u16, static_cast<uint16_t>(0));
+                TSEL(recip_u16, eq_zero, k_u16);                          // 全零命中 -> 0
+                TEXPANDS(k_u16, BF16_SPECIAL_EXP);
+                TSEL(recip_u16, eq_special, k_u16);                       // special 命中 -> 0x0040
                 tile_recip_f1 recip_f;
-                TCVT(recip_f, shared_bf);                 // bf16 -> fp32
+                TCVT(recip_f, recip_bf);                                  // bf16 -> fp32
 
                 // --- data path: col-boxed load, fp32 scale, narrowed fp4 store ---
                 tile_x xq;
@@ -246,12 +274,31 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
             auto gs = s_iter(full_m, 0);
             TSTORE(gs, scale_e8m0);
 
-            // recip via bit-complement (mirrors newcalc probe)
-            auto sh_i16 = reinterpret_tile<int16_t>(shared_bf);
-            TXORS(sh_i16, sh_i16, static_cast<uint16_t>(0xFFFF));
-            TSUBS(sh_i16, sh_i16, static_cast<uint16_t>(0x80FF));
+            // recip finalize：位补主路径 + inf/zero/special 三 Select
+            // 内联 common::finalize_recip_u16（规避问题8），对齐 ocp_new:90-94；
+            // scale byte 靠上方 Cast<e8m0>(inf)→0xff，recip 补三类特殊值写回。
+            // 同型约束见 full-loop 展开注释：TSUB/TSEL 三参同 tile_shape，全部 uint16
+            // 量以 reinterpret_tile<uint16_t> 视图落在同一 tile_recip_bf1 载体上。
+            auto shared_u16 = reinterpret_tile<uint16_t>(shared_bf);
+            tile_recip_bf1 recip_bf, eqinf_bf, eqzero_bf, eqspc_bf, k_bf;
+            auto recip_u16  = reinterpret_tile<uint16_t>(recip_bf);
+            auto eq_inf     = reinterpret_tile<uint16_t>(eqinf_bf);
+            auto eq_zero    = reinterpret_tile<uint16_t>(eqzero_bf);
+            auto eq_special = reinterpret_tile<uint16_t>(eqspc_bf);
+            auto k_u16      = reinterpret_tile<uint16_t>(k_bf);
+            TCMPS(eq_inf,     max_u16,    BF16_EXP_MASK);              // NOT finite
+            TCMPS(eq_zero,    max_u16,    static_cast<uint16_t>(0));   // all-zero block
+            TCMPS(eq_special, shared_u16, BF16_EXP_BIAS);             // shared==0x7f00
+            TEXPANDS(k_u16, BF16_EXP_BIAS);
+            TSUB(recip_u16, k_u16, shared_u16);                      // 0x7f00 - shared
+            TEXPANDS(k_u16, BF16_NAN_PATTERN);
+            TSEL(recip_u16, eq_inf, k_u16);                           // inf 命中 -> 0x7f81
+            TEXPANDS(k_u16, static_cast<uint16_t>(0));
+            TSEL(recip_u16, eq_zero, k_u16);                          // 全零命中 -> 0
+            TEXPANDS(k_u16, BF16_SPECIAL_EXP);
+            TSEL(recip_u16, eq_special, k_u16);                       // special 命中 -> 0x0040
             tile_recip_f1 recip_f;
-            TCVT(recip_f, shared_bf);                 // bf16 -> fp32
+            TCVT(recip_f, recip_bf);                                  // bf16 -> fp32
 
             tile_x xq;
             TLOAD(xq, gx);
