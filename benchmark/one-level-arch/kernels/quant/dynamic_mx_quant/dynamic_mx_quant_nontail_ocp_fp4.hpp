@@ -50,11 +50,9 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
     // BlockSize range: single-load path is capped at BlockSize ≤ 64. With
     // TileN ≥ 64, the 16b input tile budget BlockSize*TileN ≤ 4096 forces
     // BlockSize ≤ 64. BlockSize ≥ 96 -> no legal TileN; use the _bigbs kernel.
-    // NOTE: unlike nontail_cublas_fp8, this BS ≤ 64 bound is FORMAL AND
-    // PERMANENT — OCP extracts the exponent in the bf16/uint16 (16b) domain
-    // (reinterpret_u16_to_bf16), never a fp32 32b roundtrip, so the binding tile
-    // is already the 16b input. The 4096 budget does NOT relax when the compiler
-    // gains a register-level reinterpret (问题4); large BS still needs _bigbs.
+    // The whole [BlockSize, TileN] input block is loaded in ONE tile (value-domain
+    // reduce), so the 16b input tile is the binding budget; large BS still needs
+    // _bigbs (split reduce axis).
     static_assert(BlockSize * TileN <= 4096,
                   "plain non-tail OCP-FP4 supports BlockSize ∈ {32,64} only (16b input "
                   "tile BlockSize*TileN <= 4096, and TileN >= 64 forces BlockSize <= 64). "
@@ -71,22 +69,20 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
     using tile_x  = Tile<Location::Vec, InT,    BlockSize, TileN,     BLayout::RowMajor>;
     using tile_f  = Tile<Location::Vec, float,  BlockSize, TileN,     BLayout::RowMajor>;
     using tile_o  = Tile<Location::Vec, OutT,   BlockSize, TileN / 2, BLayout::RowMajor>;
-    // Full uint16 input view (bit-reinterpret of bf16) for the boxed OCP reduce.
-    using tile_xu = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor>;
-    // Boxed (valid row=1) per-block scale/recip: one scalar per Post column.
-    using tile_sred      = Tile<Location::Vec, uint16_t,   BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    // Value-domain reduced per-block |max| (boxed valid row=1), per InT domain.
+    using tile_maxh      = Tile<Location::Vec, __half,   BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_maxf      = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    // Boxed (valid row=1) scale/recip carriers: one scalar per Post column.
     using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_bf1 = Tile<Location::Vec, __bf16,   BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_f1  = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
 
     using gm_x  = global_tensor<InT,      RowMajor<Axis, Post>>;
-    using gm_xu = global_tensor<uint16_t, RowMajor<Axis, Post>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<Axis, Post / 2>>;
     // scale: E8M0, compact planar [scaleRows, Post], one byte per block.
     using gm_s  = global_tensor<__fp8_e8m0, RowMajor<scaleRows, Post>>;
 
     global_iterator<gm_x,  tile_x>  x_iter(x);
-    global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x));
     global_iterator<gm_y,  tile_o>  y_iter(reinterpret_cast<uint8_t *>(y));
 
     for (int kb = 0; kb < numKb; ++kb) {
@@ -99,23 +95,49 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
             global_iterator<gm_s, tile_se8m0> s_iter(reinterpret_cast<__fp8_e8m0 *>(scale) + kb * Post);
             auto gs = s_iter(0, n);
 
-            tile_se8m0 scale_e8m0;
-            tile_sred recip;
-            // Regularize InT -> uint16 bf16-exponent bits for the shared OCP reduce.
-            tile_xu x_u16;
-            if constexpr (std::is_same_v<InT, __bf16>) {
-                auto gxu = xu_iter(kb, n);
-                TLOAD(x_u16, gxu);
-            } else {
-                tile_x xin;
-                TLOAD(xin, gx);
-                if constexpr (std::is_same_v<InT, __half>) {
-                    half_to_bf16bits<4, BlockSize, TileN>(xin, x_u16);
-                } else {
-                    f32_to_bf16expbits<4, BlockSize, TileN>(xin, x_u16);
-                }
+            // --- 值域归约（InT 分派，TABS 白名单 FP16/FP32 → bf16 先转 fp32）---
+            tile_x xin;
+            TLOAD(xin, gx);
+            tile_recip_bf1 max_bf;
+            if constexpr (std::is_same_v<InT, __half>) {
+                tile_x abs_h; TABS(abs_h, xin);
+                tile_maxh max_h; TCOLMAX(max_h, abs_h);   // reduce 行 -> valid row=1
+                TCVT(max_bf, max_h);                        // half -> bf16
+            } else if constexpr (std::is_same_v<InT, float>) {
+                tile_x abs_f; TABS(abs_f, xin);
+                tile_maxf max_f; TCOLMAX(max_f, abs_f);
+                TCVT(max_bf, max_f);                        // fp32 -> bf16
+            } else { // bf16
+                tile_f xf32; TCVT(xf32, xin);               // bf16 -> fp32（规避 TABS 拒 bf16）
+                tile_f abs_f; TABS(abs_f, xf32);
+                tile_maxf max_f; TCOLMAX(max_f, abs_f);
+                TCVT(max_bf, max_f);                        // fp32 -> bf16
             }
-            compute_ocp_scale_not_tail_boxed<OutT, BlockSize, TileN>(x_u16, scale_e8m0, recip);
+            // --- 清尾数留 2^E_max，乘 2^-emax，直转 e8m0 ---
+            auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
+            TANDS(max_u16, max_u16, BF16_EXP_MASK);
+            tile_recip_bf1 shared_bf;
+            TMULS(shared_bf, max_bf, __builtin_bit_cast(__bf16, recip_emax_bits<OutT>()));
+            tile_se8m0 scale_e8m0;
+            TCVT(scale_e8m0, shared_bf);                    // bf16 -> e8m0（inf/nan->0xff 硬件）
+
+            // --- finalize_recip_u16 内联（问题8）：同载体 uint16 视图（抄 tail_ocp_fp4:174-193）---
+            auto shared_u16 = reinterpret_tile<uint16_t>(shared_bf);
+            tile_recip_bf1 recip_bf, eqinf_bf, eqzero_bf, eqspc_bf, k_bf;
+            auto recip_u16  = reinterpret_tile<uint16_t>(recip_bf);
+            auto eq_inf     = reinterpret_tile<uint16_t>(eqinf_bf);
+            auto eq_zero    = reinterpret_tile<uint16_t>(eqzero_bf);
+            auto eq_special = reinterpret_tile<uint16_t>(eqspc_bf);
+            auto k_u16      = reinterpret_tile<uint16_t>(k_bf);
+            TCMPS(eq_inf,     max_u16,    BF16_EXP_MASK);              // NOT finite
+            TCMPS(eq_zero,    max_u16,    static_cast<uint16_t>(0));   // 全零块
+            TCMPS(eq_special, shared_u16, BF16_EXP_BIAS);             // shared==0x7f00
+            TEXPANDS(k_u16, BF16_EXP_BIAS);
+            TSUB(recip_u16, k_u16, shared_u16);                       // 0x7f00 - shared
+            TEXPANDS(k_u16, BF16_NAN_PATTERN);   TSEL(recip_u16, eq_inf, k_u16);       // inf -> 0x7f81
+            TEXPANDS(k_u16, static_cast<uint16_t>(0)); TSEL(recip_u16, eq_zero, k_u16);// 全零 -> 0
+            TEXPANDS(k_u16, BF16_SPECIAL_EXP);   TSEL(recip_u16, eq_special, k_u16);   // special -> 0x0040
+
             // scale_e8m0 boxed valid row=1: E8M0 byte produced directly by
             // Cast<bf16->e8m0>, store 1 byte/block (no narrowing TCVT).
             // MISSING INTERLEAVE: stored as COMPACT planar [scaleRows, Post]
@@ -126,11 +148,8 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
             // zip here once available.
             TSTORE(gs, scale_e8m0);
 
-            tile_recip_bf1 inv_bf16;
-            // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题5
-            reinterpret_u16_to_bf16<2, BlockSize, TileN, 1, TileN>(recip, inv_bf16);
             tile_recip_f1 inv_scale_f;
-            TCVT(inv_scale_f, inv_bf16);
+            TCVT(inv_scale_f, recip_bf);                    // 问题4 消除：recip_bf 直接转 fp32
 
             tile_x xq;
             TLOAD(xq, gx);
