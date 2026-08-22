@@ -35,22 +35,6 @@ namespace supernpu::tile_isa::mxquant {
 // dynamic_mx_quant_nontail_ocp_fp4. NOT the AscendC parity-interleaved layout
 // (interleave intrinsic is a header gap; see RECORD 问题5 / README).
 
-// OCP not-tail scale from an ALREADY-reduced per-column max exponent (boxed
-// valid row=1). Local to this kernel (方案A-only): pass1 reduces the BlockSize
-// rows ACROSS sub-chunks (running TMAX into a [R_sub, TileN] valid=1 tile), then
-// this finalizes once. Uses the new bf16-multiply + Cast<e8m0> scale (mirrors
-// compute_ocp_scale_not_tail_boxed's mul+cast core); kept here (not in
-// common.hpp) since only the split-reduce path needs a maxexp-first finalize.
-// R is the sub-chunk height R_sub, NOT BlockSize.
-template <typename OutT, int R, int TileN, int ValidN = TileN>
-static void ocp_scale_from_maxexp_not_tail_boxed_bigbs(
-    pto::Tile<pto::Location::Vec, uint16_t,   R, TileN, pto::BLayout::RowMajor, 1, ValidN> &max_exp,
-    pto::Tile<pto::Location::Vec, __fp8_e8m0, R, TileN, pto::BLayout::RowMajor, 1, ValidN> &scale_e8m0,
-    pto::Tile<pto::Location::Vec, uint16_t,   R, TileN, pto::BLayout::RowMajor, 1, ValidN> &recip_out) {
-    using namespace pto;
-    ocp_scale_mulcast_from_maxexp<OutT, 3, R, TileN, 1, ValidN>(max_exp, scale_e8m0, recip_out);
-}
-
 // Supported BlockSize range (方案A, split reduce axis):
 //   BlockSize ∈ { multiples of R_sub, R_sub..∞ }  (R_sub | BlockSize)
 // Unlike the plain `dynamic_mx_quant_nontail_ocp_fp4` (single-load, capped at
@@ -87,60 +71,75 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
 
     // Sub-chunk data/input tiles: physical [R_sub, TileN].
     using tile_x  = Tile<Location::Vec, InT,      R_sub, TileN,     BLayout::RowMajor>;
-    using tile_xu = Tile<Location::Vec, uint16_t, R_sub, TileN,     BLayout::RowMajor>;
     using tile_f  = Tile<Location::Vec, float,    R_sub, TileN,     BLayout::RowMajor>;
     using tile_o  = Tile<Location::Vec, OutT,     R_sub, TileN / 2, BLayout::RowMajor>;
-    // Boxed (valid row=1) accumulator / scale / recip: one scalar per Post column.
-    using tile_box       = Tile<Location::Vec, uint16_t,   R_sub, TileN, BLayout::RowMajor, 1, TileN>;
+    // Boxed (valid row=1) fp32 value-domain running-max accumulator + partial.
+    using tile_maxf      = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
+    // Boxed (valid row=1) scale / recip carriers: one scalar per Post column.
     using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_bf1 = Tile<Location::Vec, __bf16,   R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_recip_f1  = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
 
     using gm_x  = global_tensor<InT,      RowMajor<Axis, Post>>;
-    using gm_xu = global_tensor<uint16_t, RowMajor<Axis, Post>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<Axis, Post / 2>>;
     // scale: uint8 E8M0, compact planar [scaleRows, Post], one byte per block.
     using gm_s  = global_tensor<__fp8_e8m0, RowMajor<scaleRows, Post>>;
 
     global_iterator<gm_x,  tile_x>  x_iter(x);
-    global_iterator<gm_xu, tile_xu> xu_iter(reinterpret_cast<uint16_t *>(x));
     global_iterator<gm_y,  tile_o>  y_iter(reinterpret_cast<uint8_t *>(y));
 
     for (int kb = 0; kb < numKb; ++kb) {
         for (int n = 0; n < numN; ++n) {
-            // ---- Pass 1: reduce BlockSize rows across R_sub sub-chunks ----
-            tile_box max_exp_acc;
-            TEXPANDS(max_exp_acc, static_cast<uint16_t>(0)); // running max seed
+            // ---- Pass 1: 值域分裂归约（fp32 统一累加器，跨 R_sub sub-chunk）----
+            // 半/bf16 先 TCVT 到 fp32 再 TABS（TABS 白名单仅 FP16/FP32，bf16 被拒；
+            // half→fp32 无损，max 结果一致），fp32 直接 TABS；避免 half-scalar 种子风险。
+            tile_maxf max_acc;
+            TEXPANDS(max_acc, 0.0f);                          // running-max 种子（abs>=0，0 为幺元）
             for (int s = 0; s < numSub; ++s) {
                 // absolute sub-chunk row-block index; R_sub == tile height ==
                 // iterator i-stride, so no base-pointer fold needed for x.
                 const int rb = kb * numSub + s;
-                // Regularize InT input -> uint16 bf16-exponent bits (shared reduce).
-                tile_xu x_u16;
-                if constexpr (std::is_same_v<InT, __bf16>) {
-                    auto gxu = xu_iter(rb, n);
-                    TLOAD(x_u16, gxu);
+                auto gx = x_iter(rb, n);
+                tile_x xin;
+                TLOAD(xin, gx);
+                tile_f abs_f;
+                if constexpr (std::is_same_v<InT, float>) {
+                    TABS(abs_f, xin);                         // xin 即 float
                 } else {
-                    auto gx = x_iter(rb, n);
-                    tile_x xin;
-                    TLOAD(xin, gx);
-                    if constexpr (std::is_same_v<InT, __half>) {
-                        half_to_bf16bits<4, R_sub, TileN>(xin, x_u16);
-                    } else {
-                        f32_to_bf16expbits<4, R_sub, TileN>(xin, x_u16);
-                    }
+                    tile_f xf; TCVT(xf, xin);                 // half/bf16 -> fp32
+                    TABS(abs_f, xf);
                 }
-                tile_xu exp_bits;
-                TANDS(exp_bits, x_u16, BF16_EXP_MASK);
-                tile_box partial;
-                TCOLMAX(partial, exp_bits);              // rows -> valid row=1
-                TMAX(max_exp_acc, max_exp_acc, partial); // cross-sub-chunk accum
+                tile_maxf partial;
+                TCOLMAX(partial, abs_f);                      // reduce 行 -> valid row=1
+                TMAX(max_acc, max_acc, partial);              // 跨 sub-chunk 累加（max 结合律）
             }
 
+            // ---- 取指数 + 乘 2^-emax + 直转 e8m0 ----
+            tile_recip_bf1 max_bf;
+            TCVT(max_bf, max_acc);                            // fp32 -> bf16
+            auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
+            TANDS(max_u16, max_u16, BF16_EXP_MASK);
+            tile_recip_bf1 shared_bf;
+            TMULS(shared_bf, max_bf, __builtin_bit_cast(__bf16, recip_emax_bits<OutT>()));
             tile_se8m0 scale_e8m0;
-            tile_box recip;
-            ocp_scale_from_maxexp_not_tail_boxed_bigbs<OutT, R_sub, TileN>(
-                max_exp_acc, scale_e8m0, recip);
+            TCVT(scale_e8m0, shared_bf);                      // bf16 -> e8m0（inf/nan->0xff 硬件）
+
+            // ---- finalize_recip_u16 内联（问题8）：同载体 uint16 视图（同 plain）----
+            auto shared_u16 = reinterpret_tile<uint16_t>(shared_bf);
+            tile_recip_bf1 recip_bf, eqinf_bf, eqzero_bf, eqspc_bf, k_bf;
+            auto recip_u16  = reinterpret_tile<uint16_t>(recip_bf);
+            auto eq_inf     = reinterpret_tile<uint16_t>(eqinf_bf);
+            auto eq_zero    = reinterpret_tile<uint16_t>(eqzero_bf);
+            auto eq_special = reinterpret_tile<uint16_t>(eqspc_bf);
+            auto k_u16      = reinterpret_tile<uint16_t>(k_bf);
+            TCMPS(eq_inf,     max_u16,    BF16_EXP_MASK);              // NOT finite
+            TCMPS(eq_zero,    max_u16,    static_cast<uint16_t>(0));   // 全零块
+            TCMPS(eq_special, shared_u16, BF16_EXP_BIAS);             // shared==0x7f00
+            TEXPANDS(k_u16, BF16_EXP_BIAS);
+            TSUB(recip_u16, k_u16, shared_u16);                       // 0x7f00 - shared
+            TEXPANDS(k_u16, BF16_NAN_PATTERN);   TSEL(recip_u16, eq_inf, k_u16);       // inf -> 0x7f81
+            TEXPANDS(k_u16, static_cast<uint16_t>(0)); TSEL(recip_u16, eq_zero, k_u16);// 全零 -> 0
+            TEXPANDS(k_u16, BF16_SPECIAL_EXP);   TSEL(recip_u16, eq_special, k_u16);   // special -> 0x0040
 
             // Compact scale store: fold block-row index (kb) into the base
             // pointer (iterator i-stride is physical tile height, not 1). Each
@@ -159,11 +158,8 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
             TSTORE(gs, scale_e8m0);
 
             // ---- Pass 2: apply per-column inv_scale, cast to fp4 ----
-            tile_recip_bf1 inv_bf16;
-            // WORKAROUND: 寄存器级 reinterpret 未支持，经 HBM 字节别名规避，详见 RECORD.md 问题4
-            reinterpret_u16_to_bf16<3, R_sub, TileN, 1, TileN>(recip, inv_bf16);
             tile_recip_f1 inv_scale_f;
-            TCVT(inv_scale_f, inv_bf16);
+            TCVT(inv_scale_f, recip_bf);                      // 问题4 消除：recip_bf 直接转 fp32
 
             for (int s = 0; s < numSub; ++s) {
                 const int rb = kb * numSub + s;
