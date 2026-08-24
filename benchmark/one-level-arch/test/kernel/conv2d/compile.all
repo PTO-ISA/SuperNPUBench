@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+ELF_DIR="../output/kernel/conv2d/elf"
+mkdir -p "$ELF_DIR"
+
+echo "Compiling conv2d 1x1 FP32 (14x14x64 -> 14x14x64)..."
+make TYPE=FP32 IN_H=14 IN_W=14 IN_C=64 OUT_C=64 tilM=16 tilN=16 tilK=16 TESTCASE=conv2d
+
+echo "Compiling conv2d 1x1 FP16 (14x14x64 -> 14x14x64)..."
+make TYPE=FP16 IN_H=14 IN_W=14 IN_C=64 OUT_C=64 tilM=16 tilN=16 tilK=16 TESTCASE=conv2d
+
+echo "Conv2d 1x1 compilation completed"
