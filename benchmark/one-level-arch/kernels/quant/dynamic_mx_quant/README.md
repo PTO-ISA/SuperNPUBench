@@ -112,6 +112,29 @@ make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_OCP_FP4 res_check=on diss
 make TESTCASE=dynamic_mx_quant TYPE=FP4_PROBE diss
 ```
 
+## 可跑通的 linx + gfrun/gfsim 版本（相对远程基线的补充改动）
+
+> 实测 2026-08-24。`probe_ocp_fp8_newcalc` 与 `tail_cublas_fp8_fp16` 在下述组合上 **gfrun `R2=0` + gfsim 跑到底**（newcalc 620 cyc、tail_cublas_fp8_fp16 1122 cyc，均无 assert/段错误）。
+
+**① linx 工具链（编 ELF）**：工作目录 `linx-toolchain-build @ e6a31ef`（`output/linx_blockisa_llvm_musl`）。
+- **无需本地源码改动**即可编本文的 scale 路径：TCVT 补发 `->lb2`（问题13）与 TCVT 打包-fp4 的 `TileLogicalShapeMatch` 编译期 `static_assert`（问题16）**均已在上游头** `template_asm.hpp`（实测 `TCVT_T:133` 已发 `B.DIM zero,%c7,->lb2` + `Cols` 操作数）。该仓唯一本地文件是 untracked 的 `.github/workflows/pr-gate.yml`（CI 门禁，与跑 kernel 无关）。
+- **例外（cuBLAS 非尾轴 data 逐字节校验）**：需 **env_test 工具链**（含 `B.IOR` 元素步长修复 `f35d3aa`）；工作目录工具链仍是 byte 步长、会出 16/32 行棋盘错位（见状态表 `NONTAIL_CUBLAS_FP8`）。scale 路径与 newcalc/tail_cublas 探针不受此限。
+
+**② gfrun/gfsim（SuperScalarModel）**：分支 `feat/pto-v058-adaptation`，远程基线 `origin @ 63dbb5a2`，工作树 HEAD `1fecf9e6` — **领先基线 7 个 commit**（`git cherry -v origin/main HEAD` 实测：仅 1 个标 `-`=官方已有等价、6 个标 `+`=本地原创）：
+
+| commit | author | 相对 origin/main | RECORD | 改动 |
+|---|---|---|---|---|
+| `189e45f6` | jialewang | **官方移植**（`-`，= `52f56d5f` #253，patch-id 完全相同，在 origin/main 等 6 分支） | 问题15【已解决·官方】 | 实现 TCVT bf16/fp32/fp16→e8m0(SF8) + ARGMAX/ARGMIN 选择器 |
+| `1fecf9e6` | ziyang-cheng | 本地原创（`+`） | 问题14 | `ValidateScalarLogicalTepl` 源 dtype 相等→**位宽相等**（放行零指令 `reinterpret_tile` 视图）|
+| `1f398190` | ziyang-cheng | 本地原创（`+`） | 问题18 | 就地 TSEL 从 dst 读 false-source（执行侧）|
+| `ab822e7a` | ziyang-cheng | 本地原创（`+`） | 问题18 | 就地 TSEL dst 融进首个 select B.IOT（校验侧）|
+| `c022a929` | ziyang-cheng | 本地原创（`+`） | 问题14 兄弟 | compare/select 源 tile 按**位宽**匹配（`IsCompatibleDataTile`）|
+| `50afe316` | ziyang-cheng | 本地原创（`+`） | 问题17 | compare/select TEPL 接受 UINT32（TCMPS）|
+| `2f87edc9` | ziyang-cheng | 本地原创（`+`） | 问题9 | 一元 TEPL 接受 BF16（TABS）|
+
+- **官方 vs 本地的关键区分**：只有 **e8m0 TCVT（问题15）官方已修**，同步官方分支即自带；其余 **6 处是永久本地反应式移植**（patch-id 扫全 origin 无命中），**官方从未采纳**——每次跟随官方 force-push/rebase 后须重新反应式补齐（见 `reference_v058_branch_force_pushed`），否则 `reinterpret_tile`/UINT32-compare/in-place-TSEL/BF16-TABS 路径会重新撞断言。
+- **newcalc 探针为何 gfsim 不崩**：objdump 实测 `ssrset` 计数=0（编译期定尺、循环全展开），不触发 `Decoder` 的 ssrsetOrderQ null-write 潜伏 bug（该 bug 仍在 Model 源码，只对真正发 ssrset 的 kernel 才崩）。
+
 ## 验证边界
 
 - **正确性依据**：`TAIL_CUBLAS_FP8`、`NONTAIL_CUBLAS_FP8`、`NONTAIL_OCP_FP4`、`TAIL_OCP_FP4` 这 4 个已逐 op 对齐 AscendC（已调试）。其中两个 cuBLAS-FP8 无未决项；两个 OCP-fp4 的 scale 路径 faithful，data 路径 fp32→fp4 直转的 cast 语义待 ISA/编译器确认（RECORD 问题6）。其余 4 个配置存疑——编译+链接通过不构成验证，`NONTAIL_OCP_FP8` / `TAIL_OCP_FP8` 的 OCP scale 核心与两个 DynRange 配置均未逐 op 复核。

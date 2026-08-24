@@ -230,7 +230,7 @@ TileSize 上界。`fa_hif4.hpp:85-92` 发射已验证；但为寄存器侧 fract
 
 ---
 
-## 问题3：带 CmpMode 的 4-参 TCMP/TCMPS（工具链已原生支持；业务 kernel 待迁移）
+## 问题3：带 CmpMode 的 4-参 TCMP/TCMPS（工具链已原生支持；业务 kernel 待迁移）【已解决】
 
 > **状态（当前工具链）**：`template_asm.hpp` 已在 `-D__linx` 下原生提供带 CmpMode 的
 > `TCMP`/`TCMPS`——`template <CmpMode Mode, ...>` 覆盖全 6 模式（EQ/NE/LT/GT/LE/GE，
@@ -309,7 +309,7 @@ a!=b == TNOT(TCMPS(m,a,b))
 
 ---
 
-## 问题4：寄存器级 reinterpret（位重解释）（工具链已原生支持；业务 kernel 待迁移）
+## 问题4：寄存器级 reinterpret（位重解释）（工具链已原生支持；业务 kernel 待迁移）【已解决】
 
 > **状态（当前工具链）**：主线已提供零指令寄存器级 bitcast `reinterpret_tile<>`
 > （`common/pto_tile.hpp`），把 tile 元素按位重解释为等宽 dtype、不经 HBM、不做数值转换。
@@ -551,7 +551,7 @@ round 误差。**仅两处边界发散**，因 skew 无法运行期验证，记�
 
 ---
 
-## 问题8：非内联 helper 的 tile 参数经 `TSTORE/TLOAD, S64` 栈传参，被 emulator `ValidateLocalTlsu` 拒绝（需 emulator / linx 后端侧解决）
+## 问题8：非内联 helper 的 tile 参数经 `TSTORE/TLOAD, S64` 栈传参，被 emulator `ValidateLocalTlsu` 拒绝（需 emulator / linx 后端侧解决）【已解决】
 
 ### 结论
 
@@ -836,7 +836,7 @@ store 与 load 处理**不对称**：
 
 ---
 
-## 问题13：TCVT 不发 lb2，valid-col-1 的 TCVT 输出直接 TSTORE 被 emulator 拒绝（需 toolchain 侧解决）
+## 问题13：TCVT 不发 lb2，valid-col-1 的 TCVT 输出直接 TSTORE 被 emulator 拒绝（需 toolchain 侧解决）【已解决】
 
 > release_ver0812 未收录的报错。缺陷所在仓 **`linx-toolchain-build`（Linx-TileOP-API `-D__linx`
 > intrinsic header `template_asm.hpp`）**，复现入口在本仓 probe 探针
@@ -926,7 +926,14 @@ A、B 任一应用后，probe 全部 tile 指令链跑通，均收敛到与问�
 libc `__init_libc` 的 text 相对 store `sdi.u s1,t#1,-12xx`（`AssertNotTextStore`，
 `AaccelssMemoryEngine.cpp:12`），非 kernel 缺陷，是三仓版本 skew 的已知阻塞。
 
-## 问题14：零指令 `reinterpret_tile` 的位重解释运行期不可见，emulator dtype 相等断言误杀（需 emulator 侧解决）
+## 问题14：零指令 `reinterpret_tile` 的位重解释运行期不可见，emulator dtype 相等断言误杀（需 emulator 侧解决）【本地移植·官方从未修】
+
+> **状态更新（2026-08-24 实测 git 对比）**：位宽放宽是**永久本地反应式移植，官方从未采纳**——
+> `origin/main`（e82817e1，08-23）/ `origin/feat/pto-v058-adaptation`（63dbb5a2）/`_rebase_main`
+> 全保持**严格 dtype 相等**；本地放宽源自 `local_test`（f60ca82f），本次以工作树提交 `1fecf9e6`
+> （author ziyang-cheng）落地，patch-id 扫全 origin 无命中=本地原创、非官方移植。与问题15（官方已修
+> 52f56d5f）互为对照：**问题14 每次跟官方分支同步后都须重新反应式补这一处**（分支分叉/force-push 会丢，
+> 见 memory `reference_v058_branch_force_pushed`）。补后 `probe_ocp_fp8_newcalc` **gfrun R2=0 + gfsim 620 cyc 双通**。
 
 > 详见 `ISSUE_reinterpret_dtype_tag.md`。缺陷所在仓 **`SuperScalarModel`（emulator 建模层
 > `AccumulateBlockInfo.cpp:440` `ValidateScalarLogicalTepl`）**，复现入口在 probe 的 OCP 清尾数链
@@ -985,7 +992,16 @@ dtype」强行划等号，禁掉一切「零指令 bitcast 后被异类型op消�
 
 ---
 
-## 问题15：emulator 未实现 TCVT bf16→e8m0(SF8)，MX 共享 scale 转换缺失（需 emulator 侧解决）
+## 问题15：emulator 未实现 TCVT bf16→e8m0(SF8)，MX 共享 scale 转换缺失（需 emulator 侧解决）【已解决·官方】
+
+> **状态更新（2026-08-24 实测）**：**官方已修**——emulator 侧修复即上游 commit `52f56d5f`
+> （#253「TCVT float→E8M0」，jialewang 08-21，已在 `origin/main` 等 6 分支）：把 `DataType::SF8`
+> 移出 `CubeEngine.cpp OpCvtType` 的「未支持」assert 分支 + 实现 bf16/fp32/fp16→e8m0
+> （PTO-TCVT-E8M0-PROFILE-001，舍入/饱和/NaN→0xFF）。**当前工作目录 checkout 落后于 52f56d5f 才需补**，
+> 已干净 cherry-pick（工作树提交 `189e45f6`，author jialewang，7 文件无冲突）。补后
+> `probe_ocp_fp8_newcalc` **gfrun 跑到底 R2=0**（scale 前 4 block e8m0=0x79 正确）、**gfsim 亦跑通**
+> （620 cyc、完整 PMU）。与问题14 不同：**这一处官方已修**（问题14 官方从未放宽、是永久本地移植）。
+> 下方为修复前的原始记录。
 
 ### 现象
 
