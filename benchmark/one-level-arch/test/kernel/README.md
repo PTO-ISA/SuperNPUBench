@@ -28,6 +28,7 @@ test/kernel/
 | concat | 4 | ✓ | gather/scatter |
 | control | 1 | △ | pure tile-op; run gfsim with `-s core.singleTierMode=true`; `.data` via `gen_data.py` |
 | sort | 1 | △ | topk |
+| qli | 4 | ✓ | radix-select TopK (qli_check_opt); set-match verified; see [`qli/README.md`](qli/README.md) |
 
 (Configs reflect `compile.all` typical scenarios; `△` = compiles but needs special run flags / generated data.)
 

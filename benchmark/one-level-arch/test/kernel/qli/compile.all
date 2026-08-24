@@ -1,0 +1,20 @@
+#!/bin/bash
+# Quant Lightning Indexer test cases — radix-select TopK demo (已验证关键 Case)
+# ============================================================
+# 【demo 主线】qli_check_opt（qli_pto_opt.hpp 多轮 MSD radix-select TopK）
+#   - 精度判据：TopK set match（无序集合）+ score cosine
+#   - 数据：先 `python3 src/gen_qli_golden.py --mode gen --outdir ../compare/<cfg>`
+#           再按 src/../README.md 更新 qli_check_data.s 路径与地址后构建
+# ============================================================
+
+# ============ 关键 Case 1：单 chunk，多 token，全量 topK ============
+make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=64 Skv=128 topk=128
+
+# ============ 关键 Case 2：单 chunk，大 Skv，大 topK ============
+make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=4 Skv=2048 topk=512
+
+# ============ 关键 Case 3：4 chunk 大规模 ============
+make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=4 Skv=8192 topk=512
+
+# ============ 关键 Case 4：tail chunk（Skv%2048=32，Skv%kTk=0） ============
+make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=4 Skv=2080 topk=512
