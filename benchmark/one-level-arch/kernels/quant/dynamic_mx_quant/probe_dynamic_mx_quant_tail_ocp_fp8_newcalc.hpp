@@ -56,7 +56,10 @@ void probe_dynamic_mx_quant_tail_ocp_fp8_newcalc(__half *x, __fp8_e4m3 *y, uint8
     constexpr uint16_t RECIP_XOR_NOT   = 0xFFFF; // 按位取反 (int16: -1)
     constexpr uint16_t RECIP_COMPL_SUB = 0x80FF; // 0xFFFF - 0x7F00 (int16 补码减法, 低16位不变)
 
-    constexpr int kBudgetElems = 8192 / static_cast<int>(sizeof(__half)); // 4096
+    // 按最大中间量 (data pass 的 fp32 tile_f) 预算, 而非 half: tile_f 物理字节 =
+    // TileM*BlockSize*4, 而 TSize 只编码 <=8KB 的 2 的幂, 故须 TileM*BlockSize*4<=8192。
+    // 用 sizeof(__half) 预算会漏掉这翻倍, 令 TileM 撑到 128 -> tile_f=16KB -> 不可编码。
+    constexpr int kBudgetElems = 8192 / static_cast<int>(sizeof(float)); // 2048 (fp32-budgeted)
     constexpr int kMinElems    = 512  / static_cast<int>(sizeof(__half)); // 256
     constexpr int kTilemMax    = kBudgetElems / BlockSize;
     constexpr int kTilemMin    = (kMinElems + BlockSize - 1) / BlockSize;
