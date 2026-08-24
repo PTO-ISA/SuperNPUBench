@@ -74,6 +74,11 @@ ifeq ($(TYPE), ROW32_PROBE)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_row32_probe.elf
 endif
 
+ifeq ($(TYPE), TSEL_INPLACE_PROBE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tsel_inplace_probe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_tsel_inplace_probe.elf
+endif
+
 ifeq ($(TYPE), FP4_SHAPE_PROBE)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/fp4_shape_probe.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_fp4_shape_probe.elf
