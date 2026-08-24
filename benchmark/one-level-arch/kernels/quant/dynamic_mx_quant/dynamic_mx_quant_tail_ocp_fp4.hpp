@@ -100,7 +100,10 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
         using tile_recip_bf1 = Tile<Location::Vec, __bf16,   TileM, PW,     BLayout::RowMajor, TileM, 1>;
         using tile_recip_f1  = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, TileM, 1>;
         using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, TileM, PW,     BLayout::RowMajor, TileM, 1>;
-        using tile_o         = Tile<Location::Vec, OutT,     TileM, PW / 2, BLayout::RowMajor, TileM, BlockSize / 2>;
+        // fp4 output tile: ELEMENT-column shape (physical PW, valid BlockSize),
+        // matching tile_f so TCVT dst/src pass TileLogicalShapeMatch. gfrun packs
+        // two 4-bit elements per byte via BytesOf(fp4) (SuperScalarModel 31f7a8f).
+        using tile_o         = Tile<Location::Vec, OutT,     TileM, PW,     BLayout::RowMajor, TileM, BlockSize>;
 
         for (int m = 0; m < full_m; ++m) {
             for (int kb = 0; kb < numKb; ++kb) {
@@ -230,7 +233,9 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
         using tile_recip_bf1 = Tile<Location::Vec, __bf16,   TileM, PW,     BLayout::RowMajor, M_tail, 1>;
         using tile_recip_f1  = Tile<Location::Vec, float,    TileM, PW,     BLayout::RowMajor, M_tail, 1>;
         using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, TileM, PW,     BLayout::RowMajor, M_tail, 1>;
-        using tile_o         = Tile<Location::Vec, OutT,     TileM, PW / 2, BLayout::RowMajor, M_tail, BlockSize / 2>;
+        // fp4 output tile: ELEMENT-column shape (see full-pass note); gfrun packs
+        // two 4-bit elements per byte via BytesOf(fp4) (SuperScalarModel 31f7a8f).
+        using tile_o         = Tile<Location::Vec, OutT,     TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
 
         for (int kb = 0; kb < numKb; ++kb) {
             // scale path: value-domain reduce (mirrors newcalc probe; TROWMAX/TABS

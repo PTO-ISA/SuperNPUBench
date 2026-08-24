@@ -613,6 +613,12 @@ ASSERT(... IsCompatibleDataTile(inst->srcs[1], block->dataType, ...)
 
 ## 问题9：TABS 作用于 BF16 被 emulator 拒绝（需 emulator 侧解决）
 
+> **✅ 2026-08-24 已解决（ops-20260823 / a5dca25a 官方基线）。** 探针 `TABS_TROWMAX_PROBE`
+> （`TLOAD bf16 → TABS → reinterpret_tile<u16> → TROWMAX → TSTORE`）gfrun 跑到底 R2=0、无 assert
+> 实证。旧白名单 `IsBasicUnaryTeplDataType`(FP16/FP32) 已不存在；TABS 现走统一白名单
+> `TileVecArithmeticDataTypeSupported`（AccumulateBlockInfo.cpp:255-280，含 BF16:265）。属官方基线
+> 自带，非本地 cherry-pick。下文为历史记录。
+
 > release_ver0812 未收录的报错。缺陷所在仓 **`SuperScalarModel`（emulator）**，复现入口在本仓
 > cuBLAS scale 路径。
 
@@ -674,6 +680,12 @@ cuBLAS 路径（tail/not_tail）对 **bf16 输入的首个障碍**——bf16 输
 ---
 
 ## 问题10：TROWMAX 作用于 UINT16 被 emulator 拒绝（与 TCOLMAX 不对称，需 emulator 侧解决）
+
+> **✅ 2026-08-24 已解决（ops-20260823 / a5dca25a 官方基线）。** 同探针 `TABS_TROWMAX_PROBE`
+> 的 `reinterpret_tile<u16> → TROWMAX uint16 → TSTORE` 链，gfrun 跑到底 R2=0、无 assert 实证。旧
+> 白名单 `IsReduceAndExpandTeplDataType` 给 TROWMAX 的窄集(FP16/FP32/INT32) 已不存在；TROWMAX 现走
+> 统一白名单 `TileVecArithmeticDataTypeSupported`（含 UINT16:274），与 TCOLMAX 对称。执行侧
+> `ExecuteTROWMAX`(TEPLEngine.cpp) 有 UINT16 dstStride 分支佐证。属官方基线自带。下文为历史记录。
 
 > release_ver0812 未收录的报错。缺陷所在仓 **`SuperScalarModel`（emulator）**，复现入口在本仓
 > OCP tail scale 路径。
@@ -926,7 +938,7 @@ A、B 任一应用后，probe 全部 tile 指令链跑通，均收敛到与问�
 libc `__init_libc` 的 text 相对 store `sdi.u s1,t#1,-12xx`（`AssertNotTextStore`，
 `AaccelssMemoryEngine.cpp:12`），非 kernel 缺陷，是三仓版本 skew 的已知阻塞。
 
-## 问题14：零指令 `reinterpret_tile` 的位重解释运行期不可见，emulator dtype 相等断言误杀（需 emulator 侧解决）【本地移植·官方从未修】
+## 问题14：零指令 `reinterpret_tile` 的位重解释运行期不可见，emulator dtype 相等断言误杀（需 emulator 侧解决）【本地移植·官方从未修】【SuperScalarModel issue254】
 
 > **状态更新（2026-08-24 实测 git 对比）**：位宽放宽是**永久本地反应式移植，官方从未采纳**——
 > `origin/main`（e82817e1，08-23）/ `origin/feat/pto-v058-adaptation`（63dbb5a2）/`_rebase_main`
@@ -1048,7 +1060,7 @@ probe **gfrun 跑到底**：23 blocks / 120 insts，`R2 = 0`（Success to Reach 
 
 ---
 
-## 问题16：TCVT 形状契约（TileLogicalShapeMatch）对打包 fp4 与源无法同时满足 → 结构性必崩；当前工具链落在**编译期 static_assert**（需工具链头 + emulator 双侧解决）
+## 问题16：TCVT 形状契约（TileLogicalShapeMatch）对打包 fp4 与源无法同时满足 → 结构性必崩；当前工具链落在**编译期 static_assert**（需工具链头 + emulator 双侧解决）【SuperScalarModel issue314】
 
 > 触发 kernel `dynamic_mx_quant_tail_ocp_fp4.hpp:206`（`TCVT(oq, xf)`，`TYPE=TAIL_OCP_FP4`）。
 > 同一契约（TCVT 的 src/dst 必须 physical Rows 与 Cols 全等）落在**两层**，缺陷在**工具链头
@@ -1208,7 +1220,15 @@ byte1=`0x02`），32 个 fp4 被解包成 32 字节、宽度翻倍越界。**证
 
 ---
 
-## 问题17：TCMPS 作用于 UINT32 被 emulator compare/select 白名单拒绝（需 emulator 侧解决）
+## 问题17：TCMPS 作用于 UINT32 被 emulator compare/select 白名单拒绝（需 emulator 侧解决）【linx-toolchain-build issue5】
+
+> **❌ 2026-08-24 实测仍未解决（ops-20260823 / a5dca25a 官方基线）。** 探针 `TABS_TROWMAX_PROBE`
+> 尾段（`TCVT bf16→fp32 → reinterpret_tile<u32> → TCMPS uint32 → TSTORE`）gfrun 崩在
+> `IsCompareSelectTeplDataType`（AccumulateBlockInfo.cpp:384）。当前 HEAD 的 TCMPS 分支(:337-341)仍为
+> `INT32/FP32/FP16/UINT16/INT16`、**缺 UINT32**，与下文旧记录逐字一致。下文「已落地」的 emulator
+> commit `50afe316` 是旧 local_test 上的修复，**未并入官方 a5dca25a**（`git log|grep 50afe316` 查无），
+> 我为 tail_ocp_fp4 打的 4 个 cherry-pick 亦不含它。与问题9/10（官方已放宽 arithmetic/reduce 白名单）
+> 对比：compare/select 白名单官方仍未放宽。
 
 > 缺陷所在仓 **`SuperScalarModel`（emulator）**，复现入口 = `nontail_cublas_fp8_plain` 就地展开后、
 > 在 `reinterpret_tile<uint32_t>` 视图上做 `TCMPS<CmpMode::{LT,NE,GT,EQ}>` 抽 fp32 指数/尾数位。
@@ -1262,7 +1282,7 @@ env_test linx 编译、工作目录 gfrun 执行到底：**data 逐字节匹配 
 
 ---
 
-## 问题18：linx 就地 TSEL（false-source 融进 dst）被 emulator 双侧拒绝（需 emulator 侧解决）
+## 问题18：linx 就地 TSEL（false-source 融进 dst）被 emulator 双侧拒绝（需 emulator 侧解决）【SuperScalarModel issue339】
 
 > 缺陷所在仓 **`SuperScalarModel`（emulator）**，validate 侧 `AccumulateBlockInfo.cpp` +
 > execution 侧 `TEPLEngine.cpp`。复现入口 = `nontail_cublas_fp8_plain` 展开出的 `TSEL`（roundup 选择、

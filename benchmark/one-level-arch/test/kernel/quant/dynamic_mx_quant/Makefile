@@ -87,6 +87,11 @@ ifeq ($(TYPE), FP4_SHAPE_PROBE)
    endif
 endif
 
+ifeq ($(TYPE), TABS_TROWMAX_PROBE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tabs_trowmax_probe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_tabs_trowmax_probe.elf
+endif
+
 include ../../../common/Makefile.common
 
 clean:
