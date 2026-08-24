@@ -437,6 +437,8 @@ inline void RadixCountOf(TKey<CK, CKV>& m01, RU* cntOut)
 // pop n 次（mv 内元素，去重，每 pop 只消所选位置），写入 out
 // 注意：必须内联为宏——tile 作函数参数时 LinxV5 后端生成错误编码
 // （S64 [1,1024] TLOAD，TCMP 校验失败）。宏内所有 tile 均为局部变量。
+// A1：改用 TROWARGMAX 单指令取最大 key 的列索引（省 TROWMAX+TCMP+TMUL+TROWMAX
+// 索引反推链），加 CHBASE 得全局索引；set 契约无需降序。
 #define QLI_RADIX_POP_N(TK, MV, CHBASE, OUTPTR, N)                       \
     do {                                                               \
         using tkv_ = TK;                                               \
@@ -447,26 +449,17 @@ inline void RadixCountOf(TKey<CK, CKV>& m01, RU* cntOut)
         tkv_ I_;                                                       \
         TCI(I_, (CHBASE));                                             \
         for (int k_ = 0; k_ < (N); k_++) {                             \
-            t1v_ mx_;                                                  \
-            TROWMAX(mx_, (MV));                                        \
-            RU mxVal_ = 0;                                             \
-            { using gi1_ = global_tensor<RU, RowMajor<1, 1>>;          \
-              gi1_ gv_(&mxVal_); TSTORE(gv_, mx_); }                   \
-            tkv_ mxbc_;                                                \
-            TEXPANDS(mxbc_, mxVal_);                                   \
-            tkv_ ismax_;                                               \
-            TCMP<CmpMode::EQ>(ismax_, (MV), mxbc_);                    \
-            tkv_ picked_;                                              \
-            TMUL(picked_, I_, ismax_);                                 \
             t1v_ best_;                                                \
-            TROWMAX(best_, picked_);                                   \
+            TROWARGMAX(best_, (MV));          /* 最大 key 的列索引 */ \
+            t1v_ bestg_;                                               \
+            TADDS(bestg_, best_, (CHBASE));   /* 全局索引 */          \
             t1iv_ besti_;                                              \
-            TCVT(besti_, best_);                                       \
+            TCVT(besti_, bestg_);                                      \
             { using gi1_ = global_tensor<int32_t, RowMajor<1, 1>>;     \
               gi1_ gout_((OUTPTR) + k_); TSTORE(gout_, besti_); }      \
             RU bestVal_ = 0;                                           \
             { using gi1_ = global_tensor<RU, RowMajor<1, 1>>;          \
-              gi1_ gb_(&bestVal_); TSTORE(gb_, best_); }               \
+              gi1_ gb_(&bestVal_); TSTORE(gb_, bestg_); }              \
             tkv_ bestbc_;                                              \
             TEXPANDS(bestbc_, bestVal_);                               \
             tkv_ ispick_;                                              \
@@ -498,26 +491,17 @@ inline void RadixCountOf(TKey<CK, CKV>& m01, RU* cntOut)
             TADDS(rev1_, rev_, static_cast<RU>(1));                    \
             tkq_ pv_;                                                  \
             TMUL(pv_, rev1_, (EQMASK));                                \
-            t1q_ mx_;                                                  \
-            TROWMAX(mx_, pv_);                                         \
-            RU mxVal_ = 0;                                             \
-            { using gi1_ = global_tensor<RU, RowMajor<1, 1>>;          \
-              gi1_ gv_(&mxVal_); TSTORE(gv_, mx_); }                   \
-            tkq_ mxbc_;                                                \
-            TEXPANDS(mxbc_, mxVal_);                                   \
-            tkq_ ismax_;                                               \
-            TCMP<CmpMode::EQ>(ismax_, pv_, mxbc_);                     \
-            tkq_ picked_;                                              \
-            TMUL(picked_, I_, ismax_);                                 \
             t1q_ best_;                                                \
-            TROWMAX(best_, picked_);                                   \
+            TROWARGMAX(best_, pv_);      /* 最大 rev+1 = 最小索引（列号） */ \
+            t1q_ bestg_;                                               \
+            TADDS(bestg_, best_, (CHBASE));   /* 全局最小索引 */        \
             t1iq_ besti_;                                              \
-            TCVT(besti_, best_);                                       \
+            TCVT(besti_, bestg_);                                      \
             { using gi1_ = global_tensor<int32_t, RowMajor<1, 1>>;     \
               gi1_ gout_((OUTPTR) + k_); TSTORE(gout_, besti_); }      \
             RU bestVal_ = 0;                                           \
             { using gi1_ = global_tensor<RU, RowMajor<1, 1>>;          \
-              gi1_ gb_(&bestVal_); TSTORE(gb_, best_); }               \
+              gi1_ gb_(&bestVal_); TSTORE(gb_, bestg_); }              \
             tkq_ bestbc_;                                              \
             TEXPANDS(bestbc_, bestVal_);                               \
             tkq_ ispick_;                                              \
