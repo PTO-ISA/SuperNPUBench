@@ -36,12 +36,16 @@ except ImportError:
 # ============================================================
 # 1. 参数定义
 # ============================================================
-SQ    = 64
+# 维度默认值（可通过 --sq/--skv/--topk/--g/--d 覆盖）
+SQ    = 4
 G     = 64
 D     = 128
-SKV   = 128
-TOPK  = 128
+SKV   = 2080
+TOPK  = 512
 SEED  = 42
+
+# 运行时维度（gen/verify 统一读取；main 里按 CLI 参数更新）
+DIM = {"SQ": SQ, "G": G, "D": D, "SKV": SKV, "TOPK": TOPK}
 
 
 # ============================================================
@@ -50,39 +54,42 @@ SEED  = 42
 def gen_inputs(outdir):
     os.makedirs(outdir, exist_ok=True)
 
+    sq_, g_, d_, skv_, topk_ = (DIM["SQ"], DIM["G"], DIM["D"],
+                                DIM["SKV"], DIM["TOPK"])
+
     np.random.seed(SEED)
 
     # Q: [Sq*g, D] FP8_E4M3FN
-    q_f32 = np.random.randn(SQ * G, D).astype(np.float32)
+    q_f32 = np.random.randn(sq_ * g_, d_).astype(np.float32)
     q_fp8 = q_f32.astype(float8_e4m3fn)
     q_fp8.tofile(os.path.join(outdir, "srcq.bin"))
-    print(f"  srcq.bin: {q_fp8.nbytes} bytes  Q [{SQ*G}, {D}] FP8_E4M3FN")
+    print(f"  srcq.bin: {q_fp8.nbytes} bytes  Q [{sq_*g_}, {d_}] FP8_E4M3FN")
 
     # K: [Skv, D] FP8_E4M3FN
     # K continues from Q's random state (sequential, no reseed)
-    k_f32 = np.random.randn(SKV, D).astype(np.float32)
+    k_f32 = np.random.randn(skv_, d_).astype(np.float32)
     k_fp8 = k_f32.astype(float8_e4m3fn)
     k_fp8.tofile(os.path.join(outdir, "srck.bin"))
-    print(f"  srck.bin: {k_fp8.nbytes} bytes  K [{SKV}, {D}] FP8_E4M3FN")
+    print(f"  srck.bin: {k_fp8.nbytes} bytes  K [{skv_}, {d_}] FP8_E4M3FN")
 
     # W: [Sq*g] FP32 continuous
     # kernel TLOAD 用 RowMajor<kTm, 1> 从 w_ptr + i*g + gi*kTm 读取连续 float
     np.random.seed(SEED)
-    w_vals = np.random.randn(SQ * G).astype(np.float32)
+    w_vals = np.random.randn(sq_ * g_).astype(np.float32)
     w_vals.tofile(os.path.join(outdir, "srcw.bin"))
-    print(f"  srcw.bin: {w_vals.nbytes} bytes  W [{SQ*G}] FP32 (continuous)")
+    print(f"  srcw.bin: {w_vals.nbytes} bytes  W [{sq_*g_}] FP32 (continuous)")
 
     # scale_q: [Sq*g] FP32 — per-token-head Q 量化 scale
     np.random.seed(SEED)
-    scaleQ = (np.random.randn(SQ * G) * 0.01).astype(np.float32)
+    scaleQ = (np.random.randn(sq_ * g_) * 0.01).astype(np.float32)
     scaleQ.tofile(os.path.join(outdir, "srcsq.bin"))
-    print(f"  srcsq.bin: {scaleQ.nbytes} bytes  scale_q [{SQ*G}] FP32")
+    print(f"  srcsq.bin: {scaleQ.nbytes} bytes  scale_q [{sq_*g_}] FP32")
 
     # scale_k: [Skv] FP32 — per-token K 量化 scale
     np.random.seed(SEED)
-    scaleK = (np.random.randn(SKV) * 0.01).astype(np.float32)
+    scaleK = (np.random.randn(skv_) * 0.01).astype(np.float32)
     scaleK.tofile(os.path.join(outdir, "srcsk.bin"))
-    print(f"  srcsk.bin: {scaleK.nbytes} bytes  scale_k [{SKV}] FP32")
+    print(f"  srcsk.bin: {scaleK.nbytes} bytes  scale_k [{skv_}] FP32")
 
     # Return FP8-quantized Q/K as float32 for golden computation.
     # kernel TMATMUL reads FP8 Q/K and computes in FP32 accumulator,
@@ -109,15 +116,17 @@ def compute_golden(q_fp8_f32, k_fp8_f32, w_f32, scale_q, scale_k):
     注: golden 用 numpy 向量化一次性计算全部 Skv, 不需要像 kernel 那样
         按 kTk 分块 (分块是 tile register 大小限制, numpy 不受此约束)。
     """
-    Q = q_fp8_f32.reshape(SQ, G, D)      # [Sq, g, D]
+    sq_, g_, d_, skv_, topk_ = (DIM["SQ"], DIM["G"], DIM["D"],
+                                DIM["SKV"], DIM["TOPK"])
+    Q = q_fp8_f32.reshape(sq_, g_, d_)    # [Sq, g, D]
     K = k_fp8_f32                         # [Skv, D]
     wq = w_f32 * scale_q                  # [Sq*g] → W * scale_q
 
-    ref_scores = np.zeros((SQ, SKV), dtype=np.float32)
-    for i in range(SQ):
+    ref_scores = np.zeros((sq_, skv_), dtype=np.float32)
+    for i in range(sq_):
         QK = Q[i] @ K.T                   # [g, Skv] — 一次性计算, 不分块
         QK = np.maximum(QK, 0)            # ReLU
-        wq_i = wq[i*G:(i+1)*G]            # [g]
+        wq_i = wq[i*g_:(i+1)*g_]          # [g]
         weighted = QK * wq_i[:, np.newaxis]  # [g, Skv]
         ref_scores[i] = weighted.sum(axis=0) * scale_k  # [Skv]
 
@@ -126,10 +135,11 @@ def compute_golden(q_fp8_f32, k_fp8_f32, w_f32, scale_q, scale_k):
 
 def compute_topk(ref_scores):
     """迭代 argmax TopK, 并列取最小索引 (与 numpy argmax 一致)"""
-    ref_indices = np.zeros((SQ, TOPK), dtype=np.int32)
-    for i in range(SQ):
+    sq_, topk_ = DIM["SQ"], DIM["TOPK"]
+    ref_indices = np.zeros((sq_, topk_), dtype=np.int32)
+    for i in range(sq_):
         row = ref_scores[i].copy()
-        for k in range(TOPK):
+        for k in range(topk_):
             idx = np.argmax(row)
             ref_indices[i, k] = idx
             row[idx] = -np.inf
@@ -147,16 +157,18 @@ def topk_set_match(sim_idx, ref_idx):
 
 
 def verify(sim_res_path, ref_res_path, sim_idx_path, ref_idx_path):
-    sim = np.fromfile(sim_res_path, dtype=np.float32).reshape(SQ, SKV)
-    ref = np.fromfile(ref_res_path, dtype=np.float32).reshape(SQ, SKV)
-    sim_idx = np.fromfile(sim_idx_path, dtype=np.int32).reshape(SQ, TOPK)
-    ref_idx = np.fromfile(ref_idx_path, dtype=np.int32).reshape(SQ, TOPK)
+    sq_, g_, d_, skv_, topk_ = (DIM["SQ"], DIM["G"], DIM["D"],
+                                DIM["SKV"], DIM["TOPK"])
+    sim = np.fromfile(sim_res_path, dtype=np.float32).reshape(sq_, skv_)
+    ref = np.fromfile(ref_res_path, dtype=np.float32).reshape(sq_, skv_)
+    sim_idx = np.fromfile(sim_idx_path, dtype=np.int32).reshape(sq_, topk_)
+    ref_idx = np.fromfile(ref_idx_path, dtype=np.int32).reshape(sq_, topk_)
 
     nan_cnt = np.isnan(sim).sum()
     total = sim.size
 
     print(f"\n{'='*60}")
-    print(f"Score 矩阵比对 [{SQ}, {SKV}]")
+    print(f"Score 矩阵比对 [{sq_}, {skv_}]")
     print(f"{'='*60}")
 
     if nan_cnt > 0:
@@ -196,23 +208,40 @@ def main():
     parser.add_argument("--ref", default=None, help="reference_scores.bin (verify mode)")
     parser.add_argument("--sim_idx", default=None, help="sim indices.bin (verify mode)")
     parser.add_argument("--ref_idx", default=None, help="reference_indices.bin (verify mode)")
+    parser.add_argument("--sq", type=int, default=None, help="query token 数 (默认 %d)" % SQ)
+    parser.add_argument("--skv", type=int, default=None, help="KV 序列长度 (默认 %d)" % SKV)
+    parser.add_argument("--topk", type=int, default=None, help="TopK 选取数 (默认 %d)" % TOPK)
+    parser.add_argument("--g", type=int, default=None, help="head 数 (默认 %d)" % G)
+    parser.add_argument("--d", type=int, default=None, help="head 维度 (默认 %d)" % D)
     args = parser.parse_args()
+
+    # 维度参数覆盖（gen/verify 共享；目录名不再影响形状）
+    if args.sq is not None: DIM["SQ"] = args.sq
+    if args.skv is not None: DIM["SKV"] = args.skv
+    if args.topk is not None: DIM["TOPK"] = args.topk
+    if args.g is not None: DIM["G"] = args.g
+    if args.d is not None: DIM["D"] = args.d
+    sq_, skv_, topk_ = DIM["SQ"], DIM["SKV"], DIM["TOPK"]
 
     if args.mode == "gen":
         outdir = args.outdir or os.path.join(os.path.dirname(__file__),
-                    "../../../../../compare/qli_fp8_B1_Sq64_Skv128_g64_Tm16_Tk32")
+                    "../../../../../compare/qli_fp8_B1_Sq%d_Skv%d_g64_Tm16_Tk32"
+                    % (sq_, skv_))
         outdir = os.path.abspath(outdir)
-        print(f"Generating golden data to: {outdir}")
+        print(f"Generating golden data to: {outdir}  dims: Sq={sq_} G={DIM['G']} "
+              f"D={DIM['D']} Skv={skv_} topK={topk_}")
 
         q_fp8_f32, k_fp8_f32, w_f32, scale_q, scale_k = gen_inputs(outdir)
 
         ref_scores = compute_golden(q_fp8_f32, k_fp8_f32, w_f32, scale_q, scale_k)
         ref_scores.tofile(os.path.join(outdir, "reference_scores.bin"))
-        print(f"  reference_scores.bin: {ref_scores.nbytes} bytes  [{SQ}, {SKV}] FP32")
+        print(f"  reference_scores.bin: {ref_scores.nbytes} bytes  "
+              f"[{sq_}, {skv_}] FP32")
 
         ref_indices = compute_topk(ref_scores)
         ref_indices.tofile(os.path.join(outdir, "reference_indices.bin"))
-        print(f"  reference_indices.bin: {ref_indices.nbytes} bytes  [{SQ}, {TOPK}] INT32")
+        print(f"  reference_indices.bin: {ref_indices.nbytes} bytes  "
+              f"[{sq_}, {topk_}] INT32")
 
         print("\nDone.")
 

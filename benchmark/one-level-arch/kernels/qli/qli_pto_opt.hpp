@@ -370,10 +370,19 @@ inline void RadixMakeKey(RU* dst_key, const RU* src_bits)
     gk_s gs(const_cast<RU*>(src_bits));
     tk bits;
     TLOAD(bits, gs);
-    constexpr RU FP32_NAN_BITS  = 0x7FC00000u;
-    constexpr RU FP32_SIGN_MASK = 0x80000000u;
-    tk tNan;   TEXPANDS(tNan, FP32_NAN_BITS);
-    tk tNan01; TCMP(tNan01, bits, tNan);
+    constexpr RU FP32_NAN_MASK   = 0x7F800000u;  // exponent 全 1
+    constexpr RU FP32_MANT_MASK  = 0x007FFFFFu;  // mantissa
+    constexpr RU FP32_SIGN_MASK  = 0x80000000u;
+    // NaN 判定：exponent 全 1 && mantissa 非 0（覆盖正/负/quiet/signaling，
+    //     以及任意 payload），而非仅匹配单一规范位型
+    //     nan01 = (exp==EXP_MASK) AND (mant != 0) → 0/1
+    tk tExp;     TANDS(tExp, bits, FP32_NAN_MASK);
+    tk tExpA;    TEXPANDS(tExpA, FP32_NAN_MASK);
+    tk tExpIs;   TCMP(tExpIs, tExp, tExpA);        // exponent==full → 0/1
+    tk tMant;    TANDS(tMant, bits, FP32_MANT_MASK);
+    tk tMantZ;   TEXPANDS(tMantZ, static_cast<RU>(0));
+    tk tMantIs;  TCMP<CmpMode::NE>(tMantIs, tMant, tMantZ); // mant!=0
+    tk tNan01;   TMUL(tNan01, tExpIs, tMantIs);    // NaN 判定 0/1
     tk tNotBits; TNOT(tNotBits, bits);
     tk tNanPart; TMUL(tNanPart, tNotBits, tNan01);
     tk key0;   TADD(key0, bits, tNanPart);
@@ -632,13 +641,16 @@ void qli_topk_radix(float* scores_gm, int32_t* indices_gm) {
         }
 
         // ---- 2) 提取（输出契约为 TopK set）----
-        //   gt = key > kth_value（全部入选，无并列问题）
-        //   eq = key == kth_value（边界并列，取 remaining 个最小索引）
+        //   pass 1: 逐 chunk 输出全部 key > kth_value（gt）
+        //   pass 2: 再逐 chunk 从 key == kth_value（eq，并列）中按全局 remaining
+        //           补足最小索引。两遍分离保证 gt（更大 key）始终先于 eq
+        //           占据 outPos 前缀，避免 eq 提前占位导致越界写。
         int outPos = 0;
         const RU n1 = (RU)(Skv - 1);
         const RU kthVal = kth_value;
+        int needEq = remaining;   // 还需并列补足的数量（radix 结束时 remaining）
 
-#define EXTRACT(CK, CKV)                                                    \
+#define EXTRACT_GT(CK, CKV)                                                \
         {                                                                  \
             using tk = TKey<CK, CKV>; using gk = GMKey<CK, CKV>;           \
             gk g(krow + (uint64_t)c * MaxTileCol);                         \
@@ -653,30 +665,50 @@ void qli_topk_radix(float* scores_gm, int32_t* indices_gm) {
                                 (uint64_t)i * topK + outPos,               \
                             static_cast<int>(cntGt));                      \
             outPos += (int)cntGt;                                          \
-            /* 并列补足：chunk 内最小索引优先，全局按 chunk 递增 */         \
-            if (outPos < topK) {                                           \
+        }
+
+#define EXTRACT_EQ(CK, CKV)                                                \
+        {                                                                  \
+            if (needEq > 0) {                                              \
+                using tk = TKey<CK, CKV>; using gk = GMKey<CK, CKV>;       \
+                gk g(krow + (uint64_t)c * MaxTileCol);                     \
+                tk key; TLOAD(key, g);                                     \
+                tk kthk; TEXPANDS(kthk, kthVal);                           \
                 tk iseq; TCMP<CmpMode::EQ>(iseq, key, kthk);               \
                 RU cntEq = 0;                                              \
                 RadixCountOf<CK, CKV>(iseq, &cntEq);                       \
                 int take = static_cast<int>(cntEq);                        \
-                if (outPos + take > topK) take = topK - outPos;            \
+                if (take > needEq) take = needEq;                          \
                 QLI_RADIX_POP_EQN(tk, iseq, (RU)c * MaxTileCol, n1,        \
                                   reinterpret_cast<int32_t*>(indices_gm) + \
                                       (uint64_t)i * topK + outPos, take);  \
                 outPos += take;                                            \
+                needEq -= take;                                            \
             }                                                              \
         }
+
         if constexpr (NumChunks == 1) {
-            { constexpr int c = 0; EXTRACT(SinglePhy, Skv); }
+            { constexpr int c = 0; EXTRACT_GT(SinglePhy, Skv); }
         } else {
             if constexpr (TailCols != MaxTileCol) {
-                for (int c = 0; c < NumChunks - 1; c++) { EXTRACT(MaxTileCol, MaxTileCol); }
-                { constexpr int c = NumChunks - 1; EXTRACT(TailPhy, TailCols); }
+                for (int c = 0; c < NumChunks - 1; c++) { EXTRACT_GT(MaxTileCol, MaxTileCol); }
+                { constexpr int c = NumChunks - 1; EXTRACT_GT(TailPhy, TailCols); }
             } else {
-                for (int c = 0; c < NumChunks; c++) { EXTRACT(MaxTileCol, MaxTileCol); }
+                for (int c = 0; c < NumChunks; c++) { EXTRACT_GT(MaxTileCol, MaxTileCol); }
             }
         }
-#undef EXTRACT
+        if constexpr (NumChunks == 1) {
+            { constexpr int c = 0; EXTRACT_EQ(SinglePhy, Skv); }
+        } else {
+            if constexpr (TailCols != MaxTileCol) {
+                for (int c = 0; c < NumChunks - 1; c++) { EXTRACT_EQ(MaxTileCol, MaxTileCol); }
+                { constexpr int c = NumChunks - 1; EXTRACT_EQ(TailPhy, TailCols); }
+            } else {
+                for (int c = 0; c < NumChunks; c++) { EXTRACT_EQ(MaxTileCol, MaxTileCol); }
+            }
+        }
+#undef EXTRACT_GT
+#undef EXTRACT_EQ
     }
 }
 

@@ -361,12 +361,18 @@ void qli_topk_npu(float* scores_gm, int32_t* indices_gm) {
         }
     } else {
         constexpr int NumChunks = (Skv + MaxTileCol - 1) / MaxTileCol;
+        constexpr int TailCols = Skv - (NumChunks - 1) * MaxTileCol;
+        // tail chunk: 物理列宽 ≥128（512B 下限），valid=实际列数，避免越界读
+        constexpr int TailPhy = (TailCols < 128) ? 128 : TailCols;
 
         using tile_chunk = Tile<Location::Vec, float,    1, MaxTileCol, BLayout::RowMajor>;
+        using tile_chunk_tail = Tile<Location::Vec, float, 1, TailPhy,
+                                     BLayout::RowMajor, 1, TailCols>;
         using tile_max   = Tile<Location::Vec, float,    1, 32,         BLayout::RowMajor, 1, 1>;
         using tile_idx   = Tile<Location::Vec, uint32_t, 1, 32,         BLayout::RowMajor, 1, 1>;
 
         using gm_chunk  = global_tensor<float,    RowMajor<1, MaxTileCol>>;
+        using gm_chunk_tail = global_tensor<float, RowMajor<1, TailCols>>;
         using gm_idx    = global_tensor<uint32_t, RowMajor<1, 1>>;
         using it_chunk  = global_iterator<gm_chunk, tile_chunk>;
 
@@ -383,18 +389,31 @@ void qli_topk_npu(float* scores_gm, int32_t* indices_gm) {
 
                     float* chunk_ptr = scores_gm + (uint64_t)i * Skv + offset;
 
-                    it_chunk cIter(chunk_ptr);
-                    auto gin = cIter(0, 0);
-                    tile_chunk S_chunk;
-                    TLOAD(S_chunk, gin);
-
-                    tile_max mx;
-                    TROWMAX(mx, S_chunk);
-
                     float chunk_max = 0;
-                    {
-                        gm_idx mxGm(reinterpret_cast<uint32_t*>(&chunk_max));
-                        TSTORE(mxGm, mx);
+                    bool isTail = (c == NumChunks - 1) && (TailCols != MaxTileCol);
+                    if (!isTail) {
+                        it_chunk cIter(chunk_ptr);
+                        auto gin = cIter(0, 0);
+                        tile_chunk S_chunk;
+                        TLOAD(S_chunk, gin);
+                        tile_max mx;
+                        TROWMAX(mx, S_chunk);
+                        {
+                            gm_idx mxGm(reinterpret_cast<uint32_t*>(&chunk_max));
+                            TSTORE(mxGm, mx);
+                        }
+                    } else {
+                        using it_chunk_tail = global_iterator<gm_chunk_tail, tile_chunk_tail>;
+                        it_chunk_tail cIter(chunk_ptr);
+                        auto gin = cIter(0, 0);
+                        tile_chunk_tail S_chunk;
+                        TLOAD(S_chunk, gin);
+                        tile_max mx;
+                        TROWMAX(mx, S_chunk);
+                        {
+                            gm_idx mxGm(reinterpret_cast<uint32_t*>(&chunk_max));
+                            TSTORE(mxGm, mx);
+                        }
                     }
 
                     if (chunk_max > best_val) {
@@ -407,18 +426,31 @@ void qli_topk_npu(float* scores_gm, int32_t* indices_gm) {
                 int best_validCol = (best_offset + MaxTileCol <= Skv) ? MaxTileCol : (Skv - best_offset);
                 float* best_ptr = scores_gm + (uint64_t)i * Skv + best_offset;
 
-                it_chunk bestIter(best_ptr);
-                auto gin = bestIter(0, 0);
-                tile_chunk S_best;
-                TLOAD(S_best, gin);
-
-                tile_idx idx;
-                TROWARGMAX(idx, S_best);
-
                 uint32_t idx_val = 0;
-                {
-                    gm_idx idxGm(&idx_val);
-                    TSTORE(idxGm, idx);
+                bool bestIsTail = (best_chunk == NumChunks - 1) && (TailCols != MaxTileCol);
+                if (!bestIsTail) {
+                    it_chunk bestIter(best_ptr);
+                    auto gin = bestIter(0, 0);
+                    tile_chunk S_best;
+                    TLOAD(S_best, gin);
+                    tile_idx idx;
+                    TROWARGMAX(idx, S_best);
+                    {
+                        gm_idx idxGm(&idx_val);
+                        TSTORE(idxGm, idx);
+                    }
+                } else {
+                    using it_chunk_tail = global_iterator<gm_chunk_tail, tile_chunk_tail>;
+                    it_chunk_tail bestIter(best_ptr);
+                    auto gin = bestIter(0, 0);
+                    tile_chunk_tail S_best;
+                    TLOAD(S_best, gin);
+                    tile_idx idx;
+                    TROWARGMAX(idx, S_best);
+                    {
+                        gm_idx idxGm(&idx_val);
+                        TSTORE(idxGm, idx);
+                    }
                 }
 
                 int32_t global_idx = static_cast<int32_t>(best_offset + idx_val);
