@@ -24,6 +24,7 @@ TSTORE(gy, x);
 
 | 仓库 | HEAD | 说明 |
 |---|---|---|
+| SuperNPUBench | 3ecd9083 | pr: https://github.com/PTO-ISA/SuperNPUBench/pull/49 |
 | SuperScalarModel（gfrun） | 63dbb5a2 |
 | linx-toolchain-build | e6a31ef |
 | Linx-TileOP-API | cdeb624a |
