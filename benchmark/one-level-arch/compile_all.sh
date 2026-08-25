@@ -64,6 +64,7 @@ compile_operator "$REPO_ROOT/test/kernel/flashMLA" "flashMLA"
 compile_operator "$REPO_ROOT/test/kernel/multi_thread/vec" "multi_thread/vec"
 compile_operator "$REPO_ROOT/test/kernel/multi_thread/matmul" "multi_thread/matmul"
 compile_operator "$REPO_ROOT/test/kernel/multi_thread/fa" "multi_thread/fa"
+compile_operator "$REPO_ROOT/test/kernel/quant/dynamic_mx_quant" "dynamic_mx_quant"
 
 echo ""
 echo "=========================================="

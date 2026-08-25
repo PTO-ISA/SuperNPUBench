@@ -36,10 +36,12 @@ QEMU_ARGS = ["-blk_optimize", "force_tb_chained", "-s", "4096M"]
 # `blocked` = True would skip a config end-to-end; nothing is alignment-blocked now
 # (fp4 emit is verified, RECORD 问题2). NOTE: end-to-end QEMU is still globally
 # unreliable due to toolchain<->emulator skew; that is a separate documented caveat.
-# 精度看护第一批（batch1）：仅注册 tail_cublas_fp8（8×32）。后续批次逐个迁入 driver
-# 后再在此追加对应 config（保持每条都是已对齐 AscendC 的 DEBUGGED 配置）。
+# 精度看护基线：逐批迁入已对齐 AscendC 的 driver（tail_cublas_fp8、tail_ocp_fp4、nontail_cublas_fp8）。
+# 后续批次迁入 driver 后再在此追加对应 config（保持每条都是已对齐 AscendC 的 DEBUGGED 配置）。
 CONFIGS = {
     "TAIL_CUBLAS_FP8":      {"M": 8,  "K": 32, "algo": "CUBLAS",        "kernel": "tail",    "dtype": "FP8", "driver": "tail_cublas_fp8",     "blocked": False, "scale_layout": "compact"},
+    "TAIL_OCP_FP4":         {"M": 8,  "K": 64, "algo": "OCP",           "kernel": "tail",    "dtype": "FP4", "driver": "tail_ocp_fp4",        "blocked": False, "scale_layout": "compact"},
+    "NONTAIL_CUBLAS_FP8":   {"M": 32, "K": 32, "algo": "CUBLAS",        "kernel": "nontail", "dtype": "FP8", "driver": "nontail_cublas_fp8",  "blocked": False, "scale_layout": "compact"},
 }
 
 
