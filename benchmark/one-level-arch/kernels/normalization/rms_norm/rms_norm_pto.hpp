@@ -7,7 +7,8 @@
 //   out[a] = x[a] * rsqrt(mean(x[a]^2) + eps)
 //
 // Entry:
-//   rms_norm<dtype>(x, tiling, out, eps);
+//   rms_norm<dtype, peNum>(x, tiling, out, eps);
+//   peNum defaults to 1; PE partitioning stays inside the kernel.
 //   tiling[4] = {g_a, g_r, tile_a, tile_r}  (int64_t)
 //   tile_r <= 0 means use g_r (full-row tile).
 //
@@ -26,6 +27,12 @@
 #include <cstdint>
 
 namespace rms_detail {
+
+#ifdef PE_NUM
+constexpr int kDefaultPeNum = PE_NUM;
+#else
+constexpr int kDefaultPeNum = 1;
+#endif
 
 template <typename TileVec>
 inline void rsqrt_newton(TileVec &out, TileVec &a) {
@@ -89,35 +96,48 @@ inline void rms_norm_tile(dtype *x, dtype *out, int64_t gA, int64_t gR,
 } // namespace rms_detail
 
 // tiling: [g_a, g_r, tile_a, tile_r]
-template <typename dtype>
+template <typename dtype, int peNum = rms_detail::kDefaultPeNum>
 void rms_norm(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e-6f) {
+    static_assert(peNum > 0, "peNum must be positive");
+
     // Physical capacity (Rows×Cols); Valid comes from tiling (tile_a,tile_r).
     // Size must cover ValidRow×ValidCol; SoftCore should not require Rows≥ValidRow.
     constexpr int64_t tA = 1;
     constexpr int64_t tR = 1024;
 
-    const int64_t gA = tiling[0];
+    const int64_t globalA = tiling[0];
     const int64_t gR = tiling[1];
+    const int64_t peA = globalA / peNum;
     const int64_t tile_a = tiling[2] > 0 ? tiling[2] : tA;
     const int64_t tile_r = tiling[3] > 0 ? tiling[3] : gR;
+    const uint32_t tid = get_thread_idx();
+    const int64_t pe_offset = static_cast<int64_t>(tid) * peA * gR;
+
+    // The runtime tiling is host data, so divisibility cannot be a static
+    // assertion. Invalid configurations do no work rather than overlap rows.
+    if (globalA <= 0 || globalA % peNum != 0 || peA < tile_a) {
+        return;
+    }
+    x += pe_offset;
+    out += pe_offset;
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, -1, -1>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, -1, -1>;
-    // ValidCol=1; Cols=128 → 512B/row (TileOP IsValidActiveSize / TSize=1..7).
-    using tile_v = Tile<Location::Vec, float, tA, 128, BLayout::RowMajor, -1, 1>;
+    // Row-reduction output and row-broadcast input use physical Columns=1.
+    using tile_v = Tile<Location::Vec, float, tA, 1, BLayout::RowMajor, -1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
 
     // Full A tiles; peel the last iteration for the trailing block.
     int64_t ia = 0;
-    for (; ia + tile_a < gA; ia += tile_a) {
+    for (; ia + tile_a < peA; ia += tile_a) {
         rms_detail::rms_norm_tile<dtype, gm_t, tile_h, tile_f, tile_v>(
-            x, out, gA, gR, ia, tile_a, tile_r, inv_r, eps);
+            x, out, peA, gR, ia, tile_a, tile_r, inv_r, eps);
     }
     // Tail (or sole) block: ValidRow = remaining rows along A.
     rms_detail::rms_norm_tile<dtype, gm_t, tile_h, tile_f, tile_v>(
-        x, out, gA, gR, ia, gA - ia, tile_r, inv_r, eps);
+        x, out, peA, gR, ia, peA - ia, tile_r, inv_r, eps);
 }
 
 // Compile-time shape / tiling (gelu/gather style). tR must cover the full row.
@@ -135,7 +155,7 @@ void rms_norm(dtype *x, dtype *out, float eps = 1e-6f) {
     using gm_t = global_tensor<dtype, RowMajor<peA, gR>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor>;
-    using tile_v = Tile<Location::Vec, float, tA, 128, BLayout::RowMajor, tA, 1>;
+    using tile_v = Tile<Location::Vec, float, tA, 1, BLayout::RowMajor, tA, 1>;
     using it_t = global_iterator<gm_t, tile_h>;
 
     const uint32_t tid = get_thread_idx();
@@ -165,7 +185,7 @@ void rms_norm(dtype *x, dtype *out, float eps = 1e-6f) {
         using tile_h_r = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, rmd_A, tR>;
         using tile_f_r = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, rmd_A, tR>;
         using tile_v_r =
-            Tile<Location::Vec, float, tA, 128, BLayout::RowMajor, rmd_A, 1>;
+            Tile<Location::Vec, float, tA, 1, BLayout::RowMajor, rmd_A, 1>;
         tile_h_r src_h, dst_h;
         tile_f_r src, squared, dst;
         tile_v_r sqrsum, mean, denom, rms;

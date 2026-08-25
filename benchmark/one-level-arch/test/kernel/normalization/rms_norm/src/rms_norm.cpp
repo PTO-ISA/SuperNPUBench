@@ -20,16 +20,12 @@
 int main() {
     using dtype = DType;
 
-    static_assert(PE_NUM > 0, "PE_NUM must be positive");
-    static_assert(16 % PE_NUM == 0, "g_a=16 must be divisible by PE_NUM");
-
-    // tiling_info: {g_a, g_r, tile_a, tile_r} — host-visible full A.
-    // 4PE: split A across PEs like multi_thread/vec (get_thread_idx).
+    // tiling_info is always the host-visible full shape. PE partitioning is
+    // entirely owned by the kernel.
     int64_t tiling_info[4] = {16, 512, 1, -1};
 
     const int64_t g_a = tiling_info[0];
     const int64_t g_r = tiling_info[1];
-    constexpr int64_t pe_a = 16 / PE_NUM;
 
     dtype input_buf[16 * 512];
     dtype output_buf[16 * 512];
@@ -44,10 +40,7 @@ int main() {
                    static_cast<size_t>(g_a) * g_r * sizeof(dtype));
 #endif
 
-    const uint32_t tid = get_thread_idx();
-    int64_t tiling_pe[4] = {pe_a, g_r, tiling_info[2], tiling_info[3]};
-    rms_norm<dtype>(input + tid * pe_a * g_r, tiling_pe,
-                    output + tid * pe_a * g_r, EPS);
+    rms_norm<dtype>(input, tiling_info, output, EPS);
 
 #ifdef RES_CHECK
     writeBinaryFile(CHK_DIR "/output.bin", (uint8_t *)output,
