@@ -307,7 +307,8 @@ void qli_pto(float* scores_ptr,
 //   2) TROWARGMAX(idx_tile, S) → idx_tile 含 argmax 索引（uint32）
 //   3) TSTORE idx 到 GM
 //   4) 标量读 GM 获取索引值
-//   5) 标量写 GM 把 scores[best] 设为 -1e30f（volatile uint32 写入，规避 -inf bug）
+//   5) 标量写 GM 把 scores[best] 设为 -FLT_MAX（volatile uint32 写入，规避 -inf bug；
+//      用有限最小值保证低于任何合法 score，避免重复选中）
 //   6) 重新 TLOAD（因为标量修改了 GM，tile register 数据已过期）
 //
 // 【性能】
@@ -316,7 +317,8 @@ void qli_pto(float* scores_ptr,
 // 【约束】
 //   - Skv 须 8 的倍数
 //   - TROWARGMAX 支持 FP32 dtype
-//   - 标量消零用 volatile uint32_t 写入 0xF149F2CAu（-1e30f 位模式）
+//   - 标量消零用 volatile uint32_t 写入 0xFF7FFFFFu（-3.40282347e38f = -FLT_MAX 位模式）
+//     保证低于任何合法 score（FP32 min），避免 topK>1 时哨兵反而比剩余候选更大
 // -----------------------------------------------------------------------------
 template <int Sq, int Skv, int topK, int TileN = 8>
 void qli_topk_npu(float* scores_gm, int32_t* indices_gm) {
@@ -324,9 +326,12 @@ void qli_topk_npu(float* scores_gm, int32_t* indices_gm) {
     static_assert(topK <= Skv, "topK must be <= Skv");
 
     constexpr int MaxTileCol = 2048;
+    // Skv<128 时物理 tile <512B（v5 TLOAD/TSTORE 下限），pad 到 128，valid 用 Scv
+    constexpr int SinglePhy = (Skv < 128) ? 128 : Skv;
 
     if constexpr (Skv <= MaxTileCol) {
-        using tile_s   = Tile<Location::Vec, float,    1, Skv, BLayout::RowMajor>;
+        using tile_s   = Tile<Location::Vec, float, 1, SinglePhy,
+                              BLayout::RowMajor, 1, Skv>;
         using tile_idx = Tile<Location::Vec, uint32_t, 1, 32,  BLayout::RowMajor, 1, 1>;
 
         using gm_s   = global_tensor<float,    RowMajor<Sq, Skv>>;
@@ -354,7 +359,7 @@ void qli_topk_npu(float* scores_gm, int32_t* indices_gm) {
                 *out = static_cast<int32_t>(idx_val);
 
                 volatile uint32_t* row_u32 = reinterpret_cast<volatile uint32_t*>(scores_gm + (uint64_t)i * Skv);
-                row_u32[idx_val] = 0xF149F2CAu;
+                row_u32[idx_val] = 0xFF7FFFFFu;
 
                 TLOAD(S, gin);
             }
@@ -378,7 +383,7 @@ void qli_topk_npu(float* scores_gm, int32_t* indices_gm) {
 
         for (int i = 0; i < Sq; i++) {
             for (int k = 0; k < topK; k++) {
-                float best_val = -1e30f;
+                float best_val = -3.40282347e38f;
                 int best_chunk = 0;
 
                 for (int c = 0; c < NumChunks; c++) {
@@ -459,7 +464,7 @@ void qli_topk_npu(float* scores_gm, int32_t* indices_gm) {
                 *out = global_idx;
 
                 volatile uint32_t* row_u32 = reinterpret_cast<volatile uint32_t*>(scores_gm + (uint64_t)i * Skv);
-                row_u32[global_idx] = 0xF149F2CAu;
+                row_u32[global_idx] = 0xFF7FFFFFu;
             }
         }
     }

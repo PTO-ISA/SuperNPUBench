@@ -4,6 +4,23 @@
 > Kernel：`kernels/qli/qli_pto_opt.hpp`（`qli_topk_radix`，多轮 MSD radix-select）。
 > 精度判据：**TopK set match**（无序集合一致）+ score cosine。
 
+## Environment requirements（SuperScalarModel 本地修复）
+
+本 demo 的多轮 `THISTOGRAM`（Byte2/1/0 前缀收窄）、UINT32 域
+`TROWSUM/TROWMAX/TROWARGMAX`、`TROWARGMAX` 提取依赖 SuperScalarModel 侧的
+**本地修复**（已在本地验证环境应用，见
+[`kernels/qli/qli_radix_issues_found.md`](../../../kernels/qli/qli_radix_issues_found.md)）：
+在 stock 仿真器上需先应用以下改动才能全功能运行：
+
+| 项 | 文件 | 内容 | 对应 issue |
+|---|---|---|---|
+| THISTOGRAM ByteId 解码 | `isa/Block.cpp` `HandleBDATR` | 从 bits[19:18] 读 selectedByte（而非 bits[28:27]），否则 Byte0/1/2 恒解码为 Byte3 | R1 |
+| UINT32 归约/argmax 门禁 | `emulator/engine/AccumulateBlockInfo.cpp` `IsReduceAndExpandTeplDataType` | 允许 UINT32/UINT16 用于 `TROWSUM/TROWMAX/TROWARGMAX`（B8） | R2/B8 |
+| TROWARGMAX 指令映射 | `isa/ISACommon/TileOpManager.h` `GetTeplTileOp` | `REDUCEANDBROADCAST_RESERVE_{1..4}` → TROWARGMAX/TROWARGMIN/TCOLARGMAX/TCOLARGMIN | R3（A4） |
+
+> 未应用上述修复时，ByteId<3 轮次会统计错误字节、UINT32 掩码归约会被门禁拒绝，
+> 导致 TopK 结果错误或中止——**请先按 issues_found.md 应用修复再运行本 demo**。
+
 ## 预览
 
 本目录是 `test/kernel/qli`，对应源文件在 `src/`：
@@ -34,13 +51,24 @@
 
 > 需要先设置 `COMPILER_DIR`（linx_blockisa_llvm_musl 工具链 bin 目录）。
 
-### 1. 生成输入与 golden
+### 0. 定义本用例参数变量（后续命令引用）
+
+```bash
+# 与 Makefile 维度一致
+export SQ=4 SKV=8192 TOPK=512 G=64 TM=16 TK=32
+OUTDIR=../../../../../compare/qli_fp8_B1_Sq${SQ}_Skv${SKV}_g${G}_Tm${TM}_Tk${TK}
+```
+
+### 1. 生成输入与 golden（维度以 --sq/--skv/--topk 显式传入）
 
 ```bash
 cd test/kernel/qli/src
 python3 gen_qli_golden.py --mode gen \
-    --outdir ../../../../../compare/qli_fp8_B1_Sq4_Skv8192_g64_Tm16_Tk32
+    --sq $SQ --skv $SKV --topk $TOPK --g $G --d 128 \
+    --outdir $OUTDIR
 ```
+
+> 维度参数即真实张量形状；`--outdir` 仅决定存放目录，不影响形状。
 
 脚本会写入 `compare/<cfg>/` 下：
 - `srcq.bin` / `srck.bin` / `srcw.bin` / `srcsq.bin` / `srcsk.bin`（输入）
@@ -48,14 +76,21 @@ python3 gen_qli_golden.py --mode gen \
 
 ### 2. 更新数据嵌入文件路径
 
-`qli_check_data.s` 中的 `.incbin` 指向 `compare/<cfg>`（当前示例为
-`qli_fp8_B1_Sq64_Skv128_g64_Tm16_Tk32`）。验证其他配置时替换路径：
+`qli_check_data.s` 中的 `.incbin` 指向 `compare/<cfg>`。默认提交指向
+`qli_fp8_B1_Sq64_Skv128_g64_Tm16_Tk32`；验证其他配置时替换**整条路径前缀**：
 
 ```bash
 cd test/kernel/qli/src
-sed -i "s|qli_fp8_B1_Sq[0-9]*_Skv[0-9]*_g64_Tm16_Tk[0-9]*|qli_fp8_B1_Sq4_Skv8192_g64_Tm16_Tk32|g" \
+# 生成 .incbin 路径（repo 相对 .s；此处直接以绝对路径为例，也可替换为自己 checkout 的 repo 根）
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo /path/your/checkout)
+# 确保 .incbin 使用当前机器上真实的 compare 路径：
+sed -i "s|/home/z00947698/SuperNPUBench|$REPO_ROOT|g; \
+        s|qi_fp8_B1_Sq[0-9]*_Skv[0-9]*_g64_Tm16_Tk[0-9]*|qli_fp8_B1_Sq${SQ}_Skv${SKV}_g64_Tm16_Tk${TK}|g" \
     qli_check_data.s
 ```
+
+> 注意：`qli_check_data.s` 存库时使用示例绝对路径；任何 checkout 上必须先执行
+> 本 sed 将路径替换为你的 `compare` 目录，再汇编。
 
 ### 3. 汇编数据对象
 
@@ -87,9 +122,12 @@ ELF=../../output/kernel/qli/elf/kernel_qli/qli_check_opt_fp8_B1_Sq4_Skv8192_g64_
 
 ```bash
 # OUT_SCORES=0x4000802000, OUT_INDICES=OUT_SCORES+Sq*Skv*4（驱动内已动态化）
+DUMP_SIZE=$(( SQ * SKV * 4 + SQ * TOPK * 4 + 65536 ))
 $SSM/bin/gfrun -f $ELF \
-    --dump-memory 0x4000802000:$((Sq*Skv*4 + Sq*topk*4 + 65536)):$OUTDIR/sim_out_radix.bin
+    --dump-memory 0x4000802000:${DUMP_SIZE}:${OUTDIR}/sim_out_radix.bin
 ```
+
+> `$SQ/$SKV/$TOPK/$OUTDIR` 需在步骤 0 中定义（见前文）；否则 dump 尺寸会算错。
 
 ### 7. 精度验证（set-match 主判据）
 
@@ -112,6 +150,23 @@ EOF
 ```
 
 > 通过条件：`cosine≈1.0` 且 `set == SQ`（set-match 100%）。
+
+## Scratch memory contract（qli_topk_radix 内部工作区）
+
+`ql_topk_radix` 在 `indices_gm` **之后**声明未隐式契约的工作区，调用方需保证
+该区域可写且足够大：
+
+| 区段 | 大小 | 偏移（相对 indices 起始） |
+|---|---|---|
+| indices 输出 | `Sq*topK*4` | 0 |
+| key_scratch | `Sq*Skv*4` | `Sq*topK*4 + 8192` |
+| temp_hist | `256*4` | `key_scratch + Sq*Skv*4` |
+| prefix_buf | `32*4` | `temp_hist + 256*4` |
+
+要求：`indices_gm` 之后连续可写空间 ≥ `Sq*topK*4 + 8192 + Sq*Skv*4 + 1152`
+字节。demo 驱动（`qli_check_opt.cpp`）使用 map-memory 大区域满足该约束；
+作为 header 集成时调用方按此分配（详见
+[`qli_radix_issues_found.md` R 项 / kernel 源码注释）。
 
 ## 参考
 

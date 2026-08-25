@@ -18,7 +18,10 @@
 // indices 紧随 scores 之后，避免大 Sq*Skv 时与 scores 区域重叠
 #define OUT_INDICES (0x4000802000ULL + (uint64_t)Sq * Skv * 4)
 
+// 尊重 Makefile -DBatch=$(B)；未定义时默认 1
+#ifndef B
 #define B 1
+#endif
 
 #ifndef Tsq
 #define Sq 64

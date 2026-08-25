@@ -386,9 +386,15 @@ inline void RadixMakeKey(RU* dst_key, const RU* src_bits)
     tk tNotBits; TNOT(tNotBits, bits);
     tk tNanPart; TMUL(tNanPart, tNotBits, tNan01);
     tk key0;   TADD(key0, bits, tNanPart);
-    tk tSign;  TANDS(tSign, key0, FP32_SIGN_MASK);
-    tk tNeg;   TNOT(tNeg, key0);
-    tk tPos;   TORS(tPos, key0, FP32_SIGN_MASK);
+    // signed-zero canonicalization：-0.0f（bits=0x80000000）与 +0.0f 数值相等，
+    //     统一为 +0.0 保证并列取最小索引契约（避免 key 0x7FFFFFFF vs 0x80000000 分裂）
+    tk tNegZeroBits; TEXPANDS(tNegZeroBits, 0x80000000u);
+    tk tIsNegZero;   TCMP(tIsNegZero, key0, tNegZeroBits);   // key0==0x80000000 → 0/1
+    tk tToZero;      TMUL(tToZero, key0, tIsNegZero);         // 仅 -0 时 = 0x80000000
+    tk tClr;         TSUB(tClr, key0, tToZero);               // -0 时 →0，否则不变
+    tk tSign;  TANDS(tSign, tClr, FP32_SIGN_MASK);
+    tk tNeg;   TNOT(tNeg, tClr);
+    tk tPos;   TORS(tPos, tClr, FP32_SIGN_MASK);
     tk tSign01; TSHRS(tSign01, tSign, static_cast<RU>(31));
     tk tDiff;  TSUB(tDiff, tNeg, tPos);
     TMUL(tDiff, tDiff, tSign01);
@@ -530,11 +536,14 @@ void qli_topk_radix(float* scores_gm, int32_t* indices_gm) {
     constexpr int SinglePhy = (Skv < 128) ? 128 : Skv;
     constexpr int TailPhy = (TailCols < 128) ? 128 : TailCols;
 
-    // scratch 布局（紧随 indices 输出区，调用方须保证可写）：
-    //   key_scratch: Sq*Skv*4 字节 可容纳全部 key（不覆盖 scores_gm 供 cosine 验证）
-    //   temp_hist:   [1,256] 直方图 TSTORE 缓冲 1KB(=256*4B)
-    //   prefix_buf:  [4,8]  Idx 前缀 128B
-    uint32_t* key_scratch = reinterpret_cast<uint32_t*>(
+// scratch 布局（紧随 indices 输出区，调用方须保证可写；契约见
+// test/kernel/qli/README.md "Scratch memory contract"）：
+//   indices 输出   : indices_gm[0 .. Sq*topK)             （int32）
+//   key_scratch    : indices_gm + Sq*topK*4 + 8192 起，Sq*Skv*4 字节
+//   temp_hist      : key_scratch 后 1KB（256*4B）
+//   prefix_buf     : temp_hist 后 128B
+// 需求连续可写 ≥ Sq*topK*4 + 8192 + Sq*Skv*4 + 1152 字节。
+uint32_t* key_scratch = reinterpret_cast<uint32_t*>(
         reinterpret_cast<uint8_t*>(indices_gm) + (uint64_t)Sq * topK * 4 + 8192);
     uint32_t* temp_hist = key_scratch + (uint64_t)Sq * Skv;
     uint32_t* prefix_buf = temp_hist + 256;
