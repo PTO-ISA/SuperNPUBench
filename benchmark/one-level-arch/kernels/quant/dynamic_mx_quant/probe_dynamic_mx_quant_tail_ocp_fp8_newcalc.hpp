@@ -42,7 +42,7 @@ void probe_dynamic_mx_quant_tail_ocp_fp8_newcalc(__half *x, __fp8_e4m3 *y, uint8
 
     using namespace pto;
 
-    constexpr uint16_t BF16_EXP_MASK = 0x7F80; // bf16 指数位域 (取 2^E_max)
+    constexpr uint32_t FP32_EXP_MASK = 0x7F800000u; // fp32 指数位域 (清尾数+符号 = floor 到 2^E, 无进位)
     constexpr uint16_t RECIP_EMAX    = 0x3b80; // bf16 位型 = 2^-8 (emax_dst=8, e4m3)
     // 倒数位补常量: recip_bits = 0x7F00 - shared_bits。分两步:
     //   (1) XOR 0xFFFF (= 按位取反 NOT) -> 0xFFFF - bits
@@ -73,7 +73,9 @@ void probe_dynamic_mx_quant_tail_ocp_fp8_newcalc(__half *x, __fp8_e4m3 *y, uint8
     constexpr int full_m = M / TileM;
     constexpr int M_tail = M % TileM;
     constexpr int numKb  = N / BlockSize;
-    constexpr int scaleCols = numKb;
+    // AscendC compact scale layout: block count even-aligned (scaleColNum_ =
+    // CeilDiv(numKb,2)*2); padding column stays zero (buffer zero-init, never stored).
+    constexpr int scaleCols = ((numKb + 1) / 2) * 2;
 
     uint8_t *y_u8 = reinterpret_cast<uint8_t *>(y);
 
@@ -103,11 +105,19 @@ void probe_dynamic_mx_quant_tail_ocp_fp8_newcalc(__half *x, __fp8_e4m3 *y, uint8
                 TABS(abs_h, xh);
                 tile_hb max_h;
                 TROWMAX(max_h, abs_h);
+                // half->bf16 的 TCVT 在默认 round-to-nearest（非 trunc）舍入模式下有精度缺陷:
+                // 块 max 恰落在 2^k 正下方（如 1.9990234375，尾数 round bit 置位）时，舍入进位
+                // 越过 2^k，令随后取到的指数抬高 1 档 → shared scale 偏大一档、recip 减半、整块
+                // 量化 2× 偏低（与 golden 的截断语义失配）。改法: half->fp32（精确无舍入）后在
+                // fp32 位域用 FP32_EXP_MASK 清尾数+符号 = floor 到 2^E（无进位），再 fp32->bf16
+                // （尾数=0，转换精确）。等价 golden「截断 f32>>16 取指数」，且 subnormal/inf/nan/
+                // zero 逐位对齐（穷举 65536 fp16 已验）。
+                tile_fb max_f;
+                TCVT(max_f, max_h);                       // half -> fp32（精确无舍入）
+                auto max_u32 = reinterpret_tile<uint32_t>(max_f);
+                TANDS(max_u32, max_u32, FP32_EXP_MASK);   // floor 到 2^E_max（清尾数+符号，无进位）
                 tile_bfb max_bf;
-                TCVT(max_bf, max_h);                  // half -> bf16 (每 block max)
-
-                auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
-                TANDS(max_u16, max_u16, BF16_EXP_MASK);   // 清尾数, 只留 2^E_max
+                TCVT(max_bf, max_f);                       // fp32 -> bf16（尾数=0，转换精确）
                 tile_bfb &max_expbf = max_bf;
                 tile_bfb shared_bf;
                 TMULS(shared_bf, max_expbf, __builtin_bit_cast(__bf16, RECIP_EMAX)); // 2^(E_max-8)
@@ -160,11 +170,15 @@ void probe_dynamic_mx_quant_tail_ocp_fp8_newcalc(__half *x, __fp8_e4m3 *y, uint8
             TABS(abs_h, xh);
             tile_hb max_h;
             TROWMAX(max_h, abs_h);
+            // 同 full-tile pass: 避开 half->bf16 round-to-nearest 对 2^k 下方 max 的进位污染
+            // （非 trunc 舍入模式下 1.999… 进位越过 2^k → 指数抬高 1 档 → 整块 2× 偏低）。
+            // 走 half->fp32（精确）+ fp32 位域 FP32_EXP_MASK floor + fp32->bf16（精确）。
+            tile_fb max_f;
+            TCVT(max_f, max_h);                       // half -> fp32（精确无舍入）
+            auto max_u32 = reinterpret_tile<uint32_t>(max_f);
+            TANDS(max_u32, max_u32, FP32_EXP_MASK);   // floor 到 2^E_max（清尾数+符号，无进位）
             tile_bfb max_bf;
-            TCVT(max_bf, max_h);
-
-            auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
-            TANDS(max_u16, max_u16, BF16_EXP_MASK);
+            TCVT(max_bf, max_f);                       // fp32 -> bf16（尾数=0，转换精确）
             tile_bfb &max_expbf = max_bf;
             tile_bfb shared_bf;
             TMULS(shared_bf, max_expbf, __builtin_bit_cast(__bf16, RECIP_EMAX));

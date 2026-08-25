@@ -53,9 +53,11 @@ namespace supernpu::tile_isa::mxquant {
 // PADDED physical width PW (not BlockSize), so the budget contig axis passed to
 // max_tilem is PW, not BlockSize (max_tilem<M, PW, InT, /*IsCublas=*/false>()).
 // InT drives BOTH the budget (a wider input dtype shrinks TileM) AND the compute
-// domain: the scale-pass reduce and data-pass mul are InT-dispatched (half in
-// half domain, fp32 in fp32 domain, bf16 pre-cast to fp32), mirroring the
-// newcalc probe. See the scale-path comment for the TROWMAX/TABS whitelist.
+// domain: the scale-pass reduce is InT-dispatched — half/fp32/bf16 each reduce in
+// their NATIVE domain (the emulator's TABS/TROWMAX whitelist now covers BF16, see
+// AccumulateBlockInfo.cpp:255-280), and the exponent extraction floors in a
+// non-narrowing domain to dodge the round-to-nearest carry: half/fp32 mask in fp32
+// then narrow to bf16, bf16 masks bf16 directly. See the scale-path comment.
 template <int M, int N, int BlockSize = 32, typename OutT = __fp4_e2m1x2,
           typename InT = __bf16>
 void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
@@ -108,14 +110,23 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
         for (int m = 0; m < full_m; ++m) {
             for (int kb = 0; kb < numKb; ++kb) {
                 // --- scale path: value-domain reduce (mirrors newcalc probe) ---
-                // TROWMAX 的 emulator 白名单只含 FP16/FP32/INT32
-                // (AccumulateBlockInfo.cpp:550)，拒绝 BF16/UINT16；TABS 白名单同样
-                // 只含 FP16/FP32(:229)。故按 InT 分派归约域：
-                //   half -> half 域 TABS+TROWMAX;
-                //   fp32 -> fp32 域 TABS+TROWMAX;
-                //   bf16 -> 先 TCVT bf16->fp32，再在 fp32 域归约（bf16 同时被
-                //           TROWMAX 与 TABS 拒绝，转 fp32 一并规避）。
-                // 归约得每 block 的 |max|，TCVT 到 bf16 后取指数位得 2^E_max。
+                // 归约白名单已放宽：当前 emulator 的 TABS 与 TROWMAX/TCOLMAX 都走统一
+                // TileVecArithmeticDataTypeSupported(AccumulateBlockInfo.cpp:255-280，
+                // 含 BF16/FP16/FP32/UINT16 等)，故 half/fp32/bf16 均在**原生 InT 域**
+                // 直接 TABS+TROWMAX，不再需要 bf16->fp32 规避。
+                //
+                // ⚠ 指数抽取的 round-mode 缺口(关键正确性)：块 |max| 恰落在 2^k 正下方时
+                // (如 1.9990234375，bf16 尾数 round bit 置位)，narrowing 的 TCVT(_->bf16)
+                // 在默认 round-to-nearest(非 trunc)下会**进位越过 2^k**，令随后取到的指数
+                // 抬高 1 档 -> shared scale 偏大一档、recip 减半、整块量化 2× 偏低，与 golden
+                // 的**截断**语义(per-element f32>>16 指数字段取 max)失配。故 half/fp32 必须
+                // 在**更宽的域先 mask(floor 到 2^E，无进位)再窄化**；bf16 原生即无 narrowing：
+                //   half -> TCVT 到 fp32(精确加宽) -> FP32_EXP_MASK floor -> TCVT->bf16
+                //           (尾数=0，窄化精确)；
+                //   fp32 -> 直接 FP32_EXP_MASK floor -> TCVT->bf16(尾数=0，精确)；
+                //   bf16 -> 原生 bf16 域 BF16_EXP_MASK **直接取指数**：无转换故无 round 进位，
+                //           天然与截断一致。
+                // 三路出口统一为 max_bf = 2^E_max(bf16，尾数=0)，供下方 TMULS/finalize。
                 global_iterator<gm_x, tile_x> x_iter(x + kb * BlockSize);
                 auto gx = x_iter(m, 0);
                 tile_x xin;
@@ -126,28 +137,33 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
                     tile_x abs_h;
                     TABS(abs_h, xin);
                     tile_maxh max_h;
-                    TROWMAX(max_h, abs_h);
-                    TCVT(max_bf, max_h);                  // half -> bf16
+                    TROWMAX(max_h, abs_h);                // half 域归约
+                    tile_maxf max_f;
+                    TCVT(max_f, max_h);                   // half -> fp32(精确加宽)
+                    auto max_u32 = reinterpret_tile<uint32_t>(max_f);
+                    TANDS(max_u32, max_u32, FP32_EXP_MASK); // fp32 域 floor 到 2^E(无进位)
+                    TCVT(max_bf, max_f);                  // fp32 -> bf16(尾数=0，精确)
                 } else if constexpr (std::is_same_v<InT, float>) {
                     tile_x abs_f;
                     TABS(abs_f, xin);
                     tile_maxf max_f;
-                    TROWMAX(max_f, abs_f);
-                    TCVT(max_bf, max_f);                  // fp32 -> bf16
+                    TROWMAX(max_f, abs_f);                // fp32 域归约
+                    auto max_u32 = reinterpret_tile<uint32_t>(max_f);
+                    TANDS(max_u32, max_u32, FP32_EXP_MASK); // fp32 域 floor(无进位)
+                    TCVT(max_bf, max_f);                  // fp32 -> bf16(尾数=0，精确)
                 } else {
-                    tile_f xf32;
-                    TCVT(xf32, xin);                      // bf16 -> fp32（规避 TROWMAX/TABS 拒 bf16）
-                    tile_f abs_f;
-                    TABS(abs_f, xf32);
-                    tile_maxf max_f;
-                    TROWMAX(max_f, abs_f);
-                    TCVT(max_bf, max_f);                  // fp32 -> bf16
+                    tile_x abs_bf;
+                    TABS(abs_bf, xin);                    // bf16 原生(白名单已含 BF16)
+                    TROWMAX(max_bf, abs_bf);              // bf16 域归约 -> max_bf
+                    auto max_u16v = reinterpret_tile<uint16_t>(max_bf);
+                    TANDS(max_u16v, max_u16v, BF16_EXP_MASK); // 直接取指数(无转换->无进位)
                 }
 
-                // 清尾数只留 2^E_max，乘 2^-emax -> shared = 2^(E_max-emax)。
-                // emax 由 OutT 派生（recip_emax_bits<OutT>()），不硬编码探针的 e4m3 值。
+                // 乘 2^-emax -> shared = 2^(E_max-emax)。max_bf 已在各分支内 floor 到
+                // 2^E_max(尾数=0)，此处不再二次 mask。max_u16 供 finalize 的 eq_inf/eq_zero
+                // 检测(inf->exp 全1、zero->0 均在 floor 后保持)。
+                // emax 由 OutT 派生(recip_emax_bits<OutT>())，不硬编码探针的 e4m3 值。
                 auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
-                TANDS(max_u16, max_u16, BF16_EXP_MASK);
                 tile_recip_bf1 shared_bf;
                 TMULS(shared_bf, max_bf,
                       __builtin_bit_cast(__bf16, recip_emax_bits<OutT>()));
@@ -238,8 +254,9 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
         using tile_o         = Tile<Location::Vec, OutT,     TileM, PW,     BLayout::RowMajor, M_tail, BlockSize>;
 
         for (int kb = 0; kb < numKb; ++kb) {
-            // scale path: value-domain reduce (mirrors newcalc probe; TROWMAX/TABS
-            // 白名单只含 FP16/FP32 -> half 走 half 域, fp32 走 fp32 域, bf16 先转 fp32)。
+            // scale path: value-domain reduce（见 full-tile pass 的 round-mode 缺口注释）。
+            // 白名单已放宽 -> half/fp32/bf16 均原生域 TABS+TROWMAX；指数抽取 half/fp32 在
+            // fp32 域 floor 后再窄化到 bf16(避 round 进位)，bf16 原生直接取指数(无转换)。
             global_iterator<gm_x, tile_x> x_iter(x + kb * BlockSize);
             auto gx = x_iter(full_m, 0);
             tile_x xin;
@@ -250,26 +267,30 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
                 tile_x abs_h;
                 TABS(abs_h, xin);
                 tile_maxh max_h;
-                TROWMAX(max_h, abs_h);
-                TCVT(max_bf, max_h);                  // half -> bf16
+                TROWMAX(max_h, abs_h);                // half 域归约
+                tile_maxf max_f;
+                TCVT(max_f, max_h);                   // half -> fp32(精确加宽)
+                auto max_u32 = reinterpret_tile<uint32_t>(max_f);
+                TANDS(max_u32, max_u32, FP32_EXP_MASK); // fp32 域 floor(无进位)
+                TCVT(max_bf, max_f);                  // fp32 -> bf16(尾数=0，精确)
             } else if constexpr (std::is_same_v<InT, float>) {
                 tile_x abs_f;
                 TABS(abs_f, xin);
                 tile_maxf max_f;
-                TROWMAX(max_f, abs_f);
-                TCVT(max_bf, max_f);                  // fp32 -> bf16
+                TROWMAX(max_f, abs_f);                // fp32 域归约
+                auto max_u32 = reinterpret_tile<uint32_t>(max_f);
+                TANDS(max_u32, max_u32, FP32_EXP_MASK); // fp32 域 floor(无进位)
+                TCVT(max_bf, max_f);                  // fp32 -> bf16(尾数=0，精确)
             } else {
-                tile_f xf32;
-                TCVT(xf32, xin);                      // bf16 -> fp32（规避 TROWMAX/TABS 拒 bf16）
-                tile_f abs_f;
-                TABS(abs_f, xf32);
-                tile_maxf max_f;
-                TROWMAX(max_f, abs_f);
-                TCVT(max_bf, max_f);                  // fp32 -> bf16
+                tile_x abs_bf;
+                TABS(abs_bf, xin);                    // bf16 原生(白名单已含 BF16)
+                TROWMAX(max_bf, abs_bf);              // bf16 域归约 -> max_bf
+                auto max_u16v = reinterpret_tile<uint16_t>(max_bf);
+                TANDS(max_u16v, max_u16v, BF16_EXP_MASK); // 直接取指数(无转换->无进位)
             }
 
+            // max_bf 已在各分支内 floor 到 2^E_max(尾数=0)，不再二次 mask。
             auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
-            TANDS(max_u16, max_u16, BF16_EXP_MASK);
             tile_recip_bf1 shared_bf;
             TMULS(shared_bf, max_bf,
                   __builtin_bit_cast(__bf16, recip_emax_bits<OutT>()));

@@ -45,6 +45,9 @@ CONFIGS = {
     # (--block-size 128), same generator, no BS branch.
     "NONTAIL_CUBLAS_FP8_BIGBS": {"M": 128, "K": 32, "block_size": 128, "algo": "CUBLAS", "kernel": "nontail", "dtype": "FP8", "driver": "nontail_cublas_fp8_bigbs", "blocked": False, "scale_layout": "compact"},
     "NONTAIL_OCP_FP4":      {"M": 32, "K": 64, "algo": "OCP",           "kernel": "nontail", "dtype": "FP4", "driver": "nontail_ocp_fp4",     "blocked": False, "scale_layout": "compact"},
+    # NEWCALC probe: fp16 in -> e4m3 out, OCP tail, BlockSize=32; reciprocal via
+    # bit-complement (0x7F00-bits) instead of TRECIP. Only OCP-FP8-tail entry.
+    "PROBE_OCP_FP8_NEWCALC": {"M": 8, "K": 32, "algo": "OCP",           "kernel": "tail",    "dtype": "FP8", "driver": "probe_ocp_fp8_newcalc", "blocked": False, "scale_layout": "compact", "in_dtype": "fp16"},
 }
 
 
@@ -72,6 +75,7 @@ def gen_data(type_name: str, cfg: dict):
         "--kernel", cfg["kernel"],
         "--dtype", cfg["dtype"],
         "--scale-layout", cfg.get("scale_layout", "broadcast"),
+        "--in-dtype", cfg.get("in_dtype", "bf16"),
         "-o", str(cmp_dir),
     ])
     return cmp_dir

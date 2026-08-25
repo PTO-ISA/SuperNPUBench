@@ -252,9 +252,9 @@ TileSize 上界。`fa_hif4.hpp:85-92` 发射已验证；但为寄存器侧 fract
 > compile+diss 通过（42 条原生 TCMPS，无模拟序列）。**其余 5 个 kernel** 仍调用 `common::compute_cublas_core`
 > （规避版）保持不变（注：ocp-fp4 系列从不走 cuBLAS core）。
 >
-> **gfrun 端到端已验证（2026-08-20）**：ELF 用 env_test 工具链（含 B.IOR 元素步长修复 `f35d3aa`）编译、
+> **gfrun 端到端已验证（2026-08-20）**：ELF 用 env_test 工具链编译、
 > 工作目录 gfrun（feat/pto-v058-adaptation + 5 处 emulator 反应式移植，见问题9/14/17/18）执行到底
-> `R2=0`。**data 输出逐字节匹配 golden**（32 行全对，无棋盘错位）；**scale 值逐字节匹配**（仅布局差
+> `R2=0`。**data 输出逐字节匹配 golden**（32 行全对，无棋盘错位；e4m3 输出为 1B tile，B.IOR 元素步长==字节步长故无需字节步长补丁，见问题19）；**scale 值逐字节匹配**（仅布局差
 > = 问题5 parity 交织，值本身一致）。故原生 CmpMode 路径数值正确性已坐实。
 
 ### 结论（缺口闭合前的历史记录）
@@ -611,7 +611,7 @@ ASSERT(... IsCompatibleDataTile(inst->srcs[1], block->dataType, ...)
 
 ---
 
-## 问题9：TABS 作用于 BF16 被 emulator 拒绝（需 emulator 侧解决）
+## 问题9：TABS 作用于 BF16 被 emulator 拒绝（需 emulator 侧解决）【已解决】
 
 > **✅ 2026-08-24 已解决（ops-20260823 / a5dca25a 官方基线）。** 探针 `TABS_TROWMAX_PROBE`
 > （`TLOAD bf16 → TABS → reinterpret_tile<u16> → TROWMAX → TSTORE`）gfrun 跑到底 R2=0、无 assert
@@ -679,7 +679,7 @@ cuBLAS 路径（tail/not_tail）对 **bf16 输入的首个障碍**——bf16 输
 
 ---
 
-## 问题10：TROWMAX 作用于 UINT16 被 emulator 拒绝（与 TCOLMAX 不对称，需 emulator 侧解决）
+## 问题10：TROWMAX 作用于 UINT16 被 emulator 拒绝（与 TCOLMAX 不对称，需 emulator 侧解决）【已解决】
 
 > **✅ 2026-08-24 已解决（ops-20260823 / a5dca25a 官方基线）。** 同探针 `TABS_TROWMAX_PROBE`
 > 的 `reinterpret_tile<u16> → TROWMAX uint16 → TSTORE` 链，gfrun 跑到底 R2=0、无 assert 实证。旧
@@ -938,9 +938,9 @@ A、B 任一应用后，probe 全部 tile 指令链跑通，均收敛到与问�
 libc `__init_libc` 的 text 相对 store `sdi.u s1,t#1,-12xx`（`AssertNotTextStore`，
 `AaccelssMemoryEngine.cpp:12`），非 kernel 缺陷，是三仓版本 skew 的已知阻塞。
 
-## 问题14：零指令 `reinterpret_tile` 的位重解释运行期不可见，emulator dtype 相等断言误杀（需 emulator 侧解决）【本地移植·官方从未修】【SuperScalarModel issue254】
+## 问题14：零指令 `reinterpret_tile` 的位重解释运行期不可见，emulator dtype 相等断言误杀（需 emulator 侧解决）【SuperScalarModel issue254】
 
-> **状态更新（2026-08-24 实测 git 对比）**：位宽放宽是**永久本地反应式移植，官方从未采纳**——
+> **状态更新（2026-08-24 实测 git 对比）**：位宽放宽是**本地反应式移植，官方从未采纳**——
 > `origin/main`（e82817e1，08-23）/ `origin/feat/pto-v058-adaptation`（63dbb5a2）/`_rebase_main`
 > 全保持**严格 dtype 相等**；本地放宽源自 `local_test`（f60ca82f），本次以工作树提交 `1fecf9e6`
 > （author ziyang-cheng）落地，patch-id 扫全 origin 无命中=本地原创、非官方移植。与问题15（官方已修
@@ -1060,7 +1060,7 @@ probe **gfrun 跑到底**：23 blocks / 120 insts，`R2 = 0`（Success to Reach 
 
 ---
 
-## 问题16：TCVT 形状契约（TileLogicalShapeMatch）对打包 fp4 与源无法同时满足 → 结构性必崩；当前工具链落在**编译期 static_assert**（需工具链头 + emulator 双侧解决）【SuperScalarModel issue314】
+## 问题16：TCVT 形状契约（TileLogicalShapeMatch）对打包 fp4 与源无法同时满足 → 结构性必崩；当前工具链落在**编译期 static_assert**（需工具链头 + emulator 双侧解决）【SuperScalarModel issue314 已解决 + Linx-TileOP-API issue30 未解决】
 
 > 触发 kernel `dynamic_mx_quant_tail_ocp_fp4.hpp:206`（`TCVT(oq, xf)`，`TYPE=TAIL_OCP_FP4`）。
 > 同一契约（TCVT 的 src/dst 必须 physical Rows 与 Cols 全等）落在**两层**，缺陷在**工具链头
@@ -1313,7 +1313,7 @@ emulator 两处都按「TSEL 必有 3 个 tile 源、无 dst」的旧契约建�
 - validate 侧 commit `ab822e7a`「accept in-place TSEL dst fused onto first select B.IOT (validate side)」；
 - execution 侧 commit `1f398190`「read in-place TSEL false-source from dst tile (execution side)」。
 
-## 问题19：工具链 `TLOAD/TSTORE` 内联汇编模板把 B.IOR 的 GM 行步长按**元素数**发射（漏 ×bits/8），违反 pto-spec ADR 0074 字节步长契约 → 非 1B dtype 的 GM 访存半行错位（需 linx-toolchain / Linx-TileOP-API 侧解决）【已修·工作目录 installed 头，实证闭环】【Linx-TileOP-API issue31】
+## 问题19：工具链 `TLOAD/TSTORE` 内联汇编模板把 B.IOR 的 GM 行步长按**元素数**发射（漏 ×bits/8），违反 pto-spec ADR 0074 字节步长契约 → 非 1B dtype 的 GM 访存半行错位（需 linx-toolchain / Linx-TileOP-API 侧解决）【未修·上游 issue31 挂起；本地 installed 头两行字节步长补丁可跑通 MSE=0（未提交）】【Linx-TileOP-API issue31】
 
 > 缺陷所在 = **工具链头** `Linx-TileOP-API` `jcore/template_asm.hpp`（安装于
 > `linx-toolchain-build/output/linx_blockisa_llvm_musl/lib/clang/15.0.4/include/tileop-api/jcore/`）。
@@ -1357,17 +1357,122 @@ data 每行 16B 错位（同一半 stride 的两个投影）。本 kernel 反汇
 [GmStride]"r"((src.GetStride(3) * type_traits<typename gm_shape::DType>::bits + 7) / 8)
 ```
 
-### 已落地（工作目录 installed 头，未提交）
+### 本地补丁（工作目录 installed 头，未提交）
 
-- 单 tile `TLOAD`(:1774) / `TSTORE`(:1857) 两处（= 本 kernel 走的路径）已改，**实证闭环**：
-  官方流水线 `gen(seed=8) → 编 res_check=on → gfrun 代 QEMU → compare` → **data+scale 双 pass，
-  MSE=0 MaxAE=0（256/256 + 16/16 逐字节精确）**。seed=8 保证 scale 有区分度（seed=12345 全行恒 120 会掩盖）。
-- **未改**：template_asm.hpp 另有 ~16 处同缺陷 GmStride 绑定（`TLOAD2/4`、`TSTORE2/4`、Shared、
-  gather/scatter：约 284/307/330/351/376/401/426/462/487/520/548/1805/1833/1889/1923/1935）；src/ 副本亦未改
-  （只改了 installed 头）。正式修复应落 `Linx-TileOP-API` 源并覆盖全部绑定点。
+- 补丁 = 单 tile `TLOAD`(:1774) / `TSTORE`(:1857) 两处 `[GmStride]` 折成字节步长（= 本 kernel 走的路径）。
+  应用后官方流水线 `gen(seed=8) → 编 res_check=on → gfrun 代 QEMU → compare` **data+scale 双 pass，
+  MSE=0 MaxAE=0（256/256 + 16/16 逐字节精确）**；seed=8 保证 scale 有区分度（seed=12345 全行恒 120 会掩盖）。
+- 补丁仅落 installed 头、未提交，上游 `Linx-TileOP-API` src/ 与 issue31 未动。installed 头 template_asm.hpp
+  另有 ~16 处同缺陷 GmStride 绑定（`TLOAD2/4`、`TSTORE2/4`、Shared、gather/scatter：约
+  284/307/330/351/376/401/426/462/487/520/548/1805/1833/1889/1923/1935），正式修复应落 Linx-TileOP-API 源覆盖全部绑定点。
+- 两套工具链 raw-asm 路径默认都发元素步长；1B dtype（fp8/e4m3/uint8）元素数 == 字节数、B.IOR 巧合正确，
+  故 1B 主导的测点不打补丁也逐字节对，仅 bf16/fp32 等非 1B 的 GM 载入需要此补丁。
 
-### 勘误
+## 问题20：`tail_cublas_fp8` 多 block（numKb>1）散落个别 block 的 `max_f` 归约算成 0 → extract=0 连锁 scale 字节 0 + recip 巨值 → data 饱和到 e4m3 上限（数据相关，独立未定位）【未修·未定位】
 
-- memory / 问题3 状态块曾引用「env_test 侧含 B.IOR 元素步长修复 `f35d3aa`」——该 hash 在任何仓都不存在
-  （错记）。真实情况 = **两套工具链 raw-asm 路径都发元素步长**，env_test ELF 的「data 逐字节匹配」是因其测点
-  用 1B 输出 tile 而非 bf16 load 主导，非「env_test 已修」。跨工具链×gfrun 组合判步长语义须以反汇编实证为准。
+> 复现入口 = `TAIL_CUBLAS_FP8`（driver `tail_cublas_fp8.cpp`，bf16 in → e4m3 out）临时扩到 **128×256（numKb=8）seed=8**。
+> 与问题19（B.IOR 字节步长）**无关**、是独立的**第二问题**：问题19 修好后 8×32（numKb=1）seed=8 全字节 pass，扩到 128×256 才双 FAIL。
+
+### 结论
+
+问题19（B.IOR 字节步长）本地补丁应用后，`dynamic_mx_quant_tail_cublas_fp8` 在 **8×32（numKb=1）seed=8 逐字节 pass**；
+但扩到 **128×256（numKb=8）seed=8 data+scale 双 FAIL**。步长修复在 128×256 **确认成立**（bf16 load B.IOR
+步长寄存器 s0=`addi zero,512`=512B=256 元素×2B 正确缩放；data **118/128 行逐字节全对**、scale 128 行几乎全对——
+步长错会是**全行规律棋盘错位**，不会是 118 行全对 + 10 散行）。残差 = **数据相关的 `max_f` 归约→0 边界**，非步长回归。
+
+### 机理（精确解码）
+
+- ~10 散行的个别 block（如 row56 的 block4+block5、row73 block7、row76 block5）kernel 把该 block 的 `max_f`
+  **算成 0**（真实 amax=1.75 或 3.5，数据非零）。
+- 连锁（同一 `extract=0` 的两个投影，非两个独立 bug）：`nonzero=(raw!=0)` 掩码=假 → `extract=0` →
+  ① scale 字节存 **0**（应 120/119）；② `recip=0x7f00-(0<<7)=0x7f00`（bf16=2^127 巨值）→ data 路径
+  `TROWEXPANDMUL` 乘巨值 → **饱和到 e4m3 上限**（out 得 448/416/352/320…，golden 为 88/128/32…）。
+- 另有 3 处良性近零舍入差 `0x82` vs `0x80`（±0.0039）。
+- **无相关性排除**：坏块 amax 正负都有、值（1.75/3.5）与正常块无异；全局 496/1024 block 的 amax 来自负值 → 符号不相关。
+
+### 判据
+
+out 值 = x × 2^9（inv_scale 应为 2^7，即大 4× = 2 个指数档），对应 `recip=0x7f00` 巨值 → 坐实 `extract=0`。
+
+### 未定位
+
+疑 emulator 对特定归约模式的 TABS/TROWMAX 边界返 0，或 tiling 边界（M=128 → TileM=64，full_m=2）。
+下一步 = 锁一个坏 block，gfrun `--dump-memory` 抓中间 tile `abs_x`/`max_r`，判 TROWMAX 归约返 0 还是 TLOAD 该 block 数据本身为 0。
+
+### 复现
+
+driver `tail_cublas_fp8.cpp` 数组 + 模板实参临时改 128×256（scale=128×8），`gen --M 128 --K 256 seed=8`
+→ 编 res_check=on → gfrun → compare。seed=8 保证 scale 有区分度（seed=12345 全行恒 120 会掩盖）。
+**注**：验证后 driver 已还原 8×32（registered CONFIG=8×32）。记忆 `reference_tail_cublas_fp8_maxf_zero_multiblock`。
+
+## 问题21：fp32→e4m3 TCVT 溢出饱和漏「舍入进位越 exp_max」一路 → 进位溢出值吐 0x78=256 而非饱和 0x7e=448（需 emulator 侧解决）【SuperScalarModel issue364】
+
+> 缺陷所在仓 **`SuperScalarModel`（emulator）**，softfloat 定点内核 `softfloat/fpu/softfloat-parts.c.inc`
+> `partsN(uncanon_normal)` 的 `ocp_e4m3` 溢出分支（:193-205）。复现入口 = `PROBE_OCP_FP8_NEWCALC`
+> （`probe_dynamic_mx_quant_tail_ocp_fp8_newcalc`，fp16 in → e4m3 out，BS=32，M=8/K=32）。**非 kernel bug、非 scale 路径 bug。**
+
+### 前置：一阶 inf 语义已修（7d01ed6f）
+
+commit `7d01ed6f`「fix(softfloat): implement OCP E4M3 finite exponent range」（当前 HEAD `f0c488c8` 祖先链）
+已把 e4m3 从「IEEE 1-4-3、biased-exp=15 全判 inf/nan」改成 OCP 语义：`exp=15 / frac 0..6` 为有限正规数、
+仅 `0x7f`=NaN、溢出饱和 0x7e=448、E5M2 保持 IEEE 不受影响。本问题是该修复**未覆盖的二阶边界**。
+
+### 结论
+
+`ocp_e4m3` 溢出分支的饱和判据 `(frac & 0b111) >= 0b111`**只认「移位后尾数字段==全 1(7)」**，漏了
+「舍入进位使尾数溢出、exp 越过 exp_max」这一路：
+
+```c
+// :185-189  舍入进位：frac_addi 返回真 → 尾数右移、exp++（15→16），尾数被移位清 0
+if (frac_addi(p, p, inc)) { frac_shr(p, 1); ...; exp++; }
+...
+// :196-205  ocp_e4m3 溢出
+if (unlikely(exp >= exp_max)) {          // exp=16 也进这里
+    exp = exp_max;                        // 钉回 15
+    frac_shr(p, frac_shift);
+    if ((p->frac_hi & 7) >= 7) { ... }    // 进位来的尾数=0 → (0&7)>=7 假 → 不 clamp
+    goto packed;                          // → 打包 exp=15/mant=0 = 0x78 = 256（错，应 0x7e=448）
+}
+```
+
+### 机理（e4m3 顶档网格）
+
+顶档（exp 字段=15，值=1.mmm×2^8）：mant0=256=0x78，mant6=448=0x7e（最大有限），mant7=480 槽=0x7f=NaN；
+512=2^9 需 exp=16 越档。相邻档距=32。
+
+| 输入值 V | 舍入到 | 是否进位 | 现结果 | 应为 | 判 |
+|---|---|---|---|---|---|
+| [256,448] | 对应档 | 否 | 精确 | 同 | ✓ |
+| (448,496) | 448 或 480(mant7) | 否 | mant==7→clamp 0x7e | 0x7e | ✓ |
+| **[496,512)** | 512（进位）| **是** | exp→16、mant→0、漏 clamp → **0x78=256** | **0x7e=448** | ✗ bug |
+| ≥512（MX 域外）| — | exp 直接≥16 | 尾数各异、多数漏 clamp → 0x78..乱 | 0x7e | ✗（同因，MX 归一后不达）|
+
+**触发值**：喂 fp32→e4m3 TCVT 一个 `V ∈ [496, 512)`（如 500.0f、496.0f 边界）即触发。分界 496 = 480 与 512
+中点，round-half-to-even 偏 512（mant0 偶）→ 进位。**为何 MX 域内恰是此带**：OCP e4m3 emax=8，
+scale=2^(E_max−8) 令块最大元素 scaled∈[2^8,2^9)=[256,512)，故 mx_quant 永远够不到 512，相关带 = 交集 [496,512)。
+
+### 实证（newcalc probe，seed 数据，8×32）
+
+- **修复前**（HEAD gfrun）：`output.bin` 253/256，3 处失配 **r4c3 / r5c2 / r6c12 全 out=0x78 vs golden=0x7e**，
+  三者块最大元素 scaled 分别 **511.75 / 506.75 / 498.25**，逐一落在 [496,512)。scale 16/16 本就对齐。
+- **候选修法**（验证用，已回退未提交）：`ocp_e4m3` 分支内在钉 exp 前先取 `bool overflow = exp > exp_max;`，
+  再把 `overflow ||` OR 进 clamp 条件——真溢出无条件 clamp mant=6=0x7e，不再只靠尾数==7 的 NaN 避让。
+  只改 softfloat 内核，`fmt->ocp_e4m3` 门控、E5M2/fp4 不受影响。
+- **修复后**（重编 gfrun、同一 ELF）：`output.bin` **256/256 逐字节**、scale 16/16 不变；r4c3/r5c2/r6c12 全转 0x7e。
+  golden 含 6× 0x78(合法256) + 6× 0x7e(饱和448)，output 逐位复刻——坐实**修好越档、不误伤合法 256**
+  （240→256 这类 exp14→15 进位 overflow=false，仍打 0x78）。
+
+### 全情形复核（候选补丁）
+
+| 输入 | exp | overflow=exp>exp_max | 结果 | 对否 |
+|---|---|---|---|---|
+| 256…448 可表示 | 15 | false | mant 0..6，`m>=7` 假→原样 | ✓ |
+| (448,480) 舍到 m=7 | 15 | false | `7>=7` 真→clamp 6=0x7e | ✓ |
+| [480,512) 进位 | 16 | **true** | 无条件 clamp 6=0x7e | ✓ 修复 |
+| 240→256 进位(exp14→15) | 15 | false | mant=0，不 clamp→0x78 | ✓ 不误伤 |
+| ≥512 大输入 | ≥16 | true | clamp 6=448 | ✓ |
+
+### 状态
+
+缺陷已定位、修法已实证（output 253→256/256 逐字节对齐 golden）。**补丁在 worktree 试打后已回退、未提交**，
+正式修复挂 **SuperScalarModel issue364**（emulator 侧落地）。记忆 `reference_emulator_e4m3_clamp_256`。
