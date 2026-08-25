@@ -1,4 +1,4 @@
-# [Issue] linx `-D__linx` header：`TCVT` 不发 lb2，boxed valid-col-1 的 TCVT 输出无法 TSTORE
+# [Issue] linx `-D__linx` header：`TCVT` 不发 lb2，boxed valid-col-1 的 TCVT 输出无法 TSTORE【已解决】
 
 ## 摘要
 

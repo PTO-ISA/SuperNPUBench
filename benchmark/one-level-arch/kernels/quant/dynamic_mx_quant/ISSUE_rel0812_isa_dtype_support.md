@@ -1,4 +1,4 @@
-# [Issue] dynamic_mx_quant（release_ver0812）：2 处需 ISA 支持确认的 dtype×op 组合
+# [Issue] dynamic_mx_quant（release_ver0812）：2 处需 ISA 支持确认的 dtype×op 组合【已解决】
 
 在 `dynamic_mx_quant` kernel 的 gfrun 过程中，命中 2 处 emulator 白名单拒绝：**BF16-TABS**
 与 **UINT16-TROWMAX**。二者按规范 ASL 均为 spec-legal（对应 legality handler 无 dtype 白名单），

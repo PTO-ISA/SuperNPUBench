@@ -1312,3 +1312,62 @@ emulator 两处都按「TSEL 必有 3 个 tile 源、无 dst」的旧契约建�
 
 - validate 侧 commit `ab822e7a`「accept in-place TSEL dst fused onto first select B.IOT (validate side)」；
 - execution 侧 commit `1f398190`「read in-place TSEL false-source from dst tile (execution side)」。
+
+## 问题19：工具链 `TLOAD/TSTORE` 内联汇编模板把 B.IOR 的 GM 行步长按**元素数**发射（漏 ×bits/8），违反 pto-spec ADR 0074 字节步长契约 → 非 1B dtype 的 GM 访存半行错位（需 linx-toolchain / Linx-TileOP-API 侧解决）【已修·工作目录 installed 头，实证闭环】【Linx-TileOP-API issue31】
+
+> 缺陷所在 = **工具链头** `Linx-TileOP-API` `jcore/template_asm.hpp`（安装于
+> `linx-toolchain-build/output/linx_blockisa_llvm_musl/lib/clang/15.0.4/include/tileop-api/jcore/`）。
+> 复现入口 = `TAIL_CUBLAS_FP8`（M=8/K=32/BS=32，bf16 in → e4m3 out）data+scale 双失配。**非 gfrun bug、非 kernel bug。**
+
+### 结论
+
+kernel 写的 `TLOAD()`/`TSTORE()` 宏解析到 `template_asm.hpp` 里 **raw `asm volatile(...)` 模板路径**
+（单 tile `TLOAD` :1755 / `TSTORE` ~:1838），**不走** `blk_tload/blk_tstore` clang builtin 路径
+（`TLoadBackend.hpp`/`TStoreBackend.hpp`——那条自 `91e3d7a`(2026-06-22) 起已字节正确）。raw-asm 路径把
+B.IOR 的 GM 行步长操作数 `[GmStride]` **直接绑 `GetStride(3)`（元素行数），漏了 `×element_size_bytes`**：
+
+```cpp
+// 修前（:1774 TLOAD / :1857 TSTORE）
+[GmStride]"r"(src.GetStride(3))          // 元素行数，当字节喂 B.IOR
+```
+
+违反 pto-spec `e9e9934f` **ADR 0074「TLOAD/TSTORE GM Byte Row Stride」**：`B.IOR.RegSrc1 = row_stride_bytes`
+（**字节**），`byte_address = base + row*row_stride_bytes + column*element_size_bytes`，「encoded stride is
+a byte quantity, **not multiplied by element size a second time**」。emulator 侧已跟进字节契约
+（`TMAEngine.cpp` 行推进 `addr += i*stride` 原样字节、无 ×BytesOf；model 提交 `2d467114`「interpret as bytes」
+取代早期 `10e6557f`「scale by element size」），故 gfrun 完全合 ADR 0074，是**工具链未跟进**。
+
+**为何只有非 1B dtype 中招**：1 字节类型（fp8/e4m3/uint8）下「元素数 == 字节数」，B.IOR 巧合正确；
+bf16(2B) 输入 load 被发成半行 stride（32 元素当 32 字节 = 16 个 bf16），GM 行 pitch 减半 → scale 错行 +
+data 每行 16B 错位（同一半 stride 的两个投影）。本 kernel 反汇编 `__blkc_bf16`：修前 `addi zero,32,->a4`
+后 bf16 load 与 fp8 store **共用 a4=32** 作行 stride。
+
+### 机理（反汇编实证）
+
+`gm_x=RowMajor<8,32>` bf16 正确行 pitch = 32 元素 = **64B**，fp8 输出 = 32 元素 = **32B**；工具链修前对两者
+都发 32（元素计数）。修后两 B.IOR 按 dtype 分化：bf16 load `B.IOR[a0,a5]` a5=`addi 64`、e4m3 store
+`B.IOR[a1,a3]` a3=`addi 32`。
+
+### 解除路径（工具链头，本次采用）
+
+把每个 `TLOAD/TSTORE` 的 `[GmStride]` 绑定折成字节步长（抄同仓 builtin 路径 `TLoadBackend.hpp:230` 口径）：
+
+```cpp
+// 修后
+[GmStride]"r"((src.GetStride(3) * type_traits<typename gm_shape::DType>::bits + 7) / 8)
+```
+
+### 已落地（工作目录 installed 头，未提交）
+
+- 单 tile `TLOAD`(:1774) / `TSTORE`(:1857) 两处（= 本 kernel 走的路径）已改，**实证闭环**：
+  官方流水线 `gen(seed=8) → 编 res_check=on → gfrun 代 QEMU → compare` → **data+scale 双 pass，
+  MSE=0 MaxAE=0（256/256 + 16/16 逐字节精确）**。seed=8 保证 scale 有区分度（seed=12345 全行恒 120 会掩盖）。
+- **未改**：template_asm.hpp 另有 ~16 处同缺陷 GmStride 绑定（`TLOAD2/4`、`TSTORE2/4`、Shared、
+  gather/scatter：约 284/307/330/351/376/401/426/462/487/520/548/1805/1833/1889/1923/1935）；src/ 副本亦未改
+  （只改了 installed 头）。正式修复应落 `Linx-TileOP-API` 源并覆盖全部绑定点。
+
+### 勘误
+
+- memory / 问题3 状态块曾引用「env_test 侧含 B.IOR 元素步长修复 `f35d3aa`」——该 hash 在任何仓都不存在
+  （错记）。真实情况 = **两套工具链 raw-asm 路径都发元素步长**，env_test ELF 的「data 逐字节匹配」是因其测点
+  用 1B 输出 tile 而非 bf16 load 主导，非「env_test 已修」。跨工具链×gfrun 组合判步长语义须以反汇编实证为准。

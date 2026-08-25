@@ -1,4 +1,4 @@
-# [Issue] emulator 的 fp32→e4m3(`TCVT`) 用 IEEE 语义把 ≥2⁸ 的值溢出成 +inf(`0x78`)，OCP E4M3 应为正规数（上限 448），量化输出 block-max 恒错
+# [Issue] emulator 的 fp32→e4m3(`TCVT`) 用 IEEE 语义把 ≥2⁸ 的值溢出成 +inf(`0x78`)，OCP E4M3 应为正规数（上限 448），量化输出 block-max 恒错【已解决】
 
 ## 摘要
 

@@ -1,4 +1,4 @@
-# [Issue] emulator 未实现 `TCVT` 浮点→e8m0(SF8) 转换，MX 共享 scale 产出命中「不支持类型转换」断言
+# [Issue] emulator 未实现 `TCVT` 浮点→e8m0(SF8) 转换，MX 共享 scale 产出命中「不支持类型转换」断言【已解决】
 
 ## 摘要
 
