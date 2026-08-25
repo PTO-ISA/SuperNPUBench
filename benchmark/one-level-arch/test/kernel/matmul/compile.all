@@ -59,3 +59,18 @@ make TESTCASE=matmul TYPE=MASK MODE=MASK_FP8 M=256 N=256 K=256 tM=32 tN=32 tK=64
 make TESTCASE=matmul TYPE=MASK MODE=MASK_FP8_REUSEA M=256 N=256 K=256 tM=32 tN=32 tK=64
 make TESTCASE=matmul TYPE=MASK MODE=MASK_FP8_REUSEB M=256 N=256 K=256 tM=32 tN=32 tK=64
 # make TESTCASE=matmul TYPE=MASK MODE=MX_FP8 M=256 N=256 K=256 tM=32 tN=32 tK=64
+
+# ============================================
+# MATMUL_TEST: Dynamic-shape FP16 matmul (one ELF per tile config;
+# gM/gN/gK read from shape.txt at runtime)
+#   self_verify=on : in-kernel all-1 check, return code = mismatch count
+#   res_check=on   : file-based, host-side golden compare via gfrun_matmul.py
+# ============================================
+# SELF_VERIFY (tM=16 tN=16 tK=16)
+make TESTCASE=matmul TYPE=MATMUL_TEST tM=16 tN=16 tK=16 self_verify=on
+# SELF_VERIFY (tM=32 tN=32 tK=64), full check
+make TESTCASE=matmul TYPE=MATMUL_TEST tM=32 tN=32 tK=64 self_verify=on verify_elems=65535
+# RES_CHECK (tM=16 tN=16 tK=16)
+make TESTCASE=matmul TYPE=MATMUL_TEST tM=16 tN=16 tK=16 res_check=on
+# RES_CHECK (tM=32 tN=32 tK=64)
+make TESTCASE=matmul TYPE=MATMUL_TEST tM=32 tN=32 tK=64 res_check=on
