@@ -20,10 +20,10 @@ inline void fa_tcvt_packed_x2(tile_shape_out &dst, tile_shape_in &src) {
     asm volatile(
         "BSTART.TEPL 27, %c1\n"
         "B.DATR %c2, RNone\n"
-        "B.IOT %3, mask=15, last, ->%0<%Z4>\n"
         "B.DIM %5, 0, ->lb0\n"
         "B.DIM %6, 0, ->lb1\n"
         "B.DIM zero, %c7, ->lb2\n"
+        "B.IOT %3, mask=15, last, ->%0<%Z4>\n"
         : "=Tr"(dst.data())
         : "i"(type_traits<typename tile_shape_in::DType>::TypeCode),
           "i"(type_traits<typename tile_shape_out::DType>::TypeCode),
@@ -227,18 +227,24 @@ void flash_attention_2d_unroll_shared_impl(
 
     // Online softmax row-state tiles. Each PE owns kPeTm independent query
     // rows, and every row has one scalar max/sum/scale value.
-    // Physical cols = 8 only for tile alignment; valid cols = 1.
-    //   tileMax/tileSum/tileScale: valid shape [kPeTm, 1]
+    // Physical rows are padded to 64 so FP32 and BF16 TCVT operands resolve
+    // to the same 64x1 geometry despite using different capacity codes.
+    //   tileMax/tileSum/tileScale: physical [64,1], valid [kPeTm,1]
     constexpr int kVectorStateCols = 1;
+    constexpr int kVectorStateRows = 64;
+    static_assert(kPeTm <= kVectorStateRows,
+                  "PE-local state exceeds its padded physical rows");
     using tileMax =
-        Tile<Location::Vec, vector_dtype, kPeTm, kVectorStateCols,
-             BLayout::RowMajor,
-             kPeTm, 1>;
+        Tile<Location::Vec, vector_dtype, kVectorStateRows,
+             kVectorStateCols, BLayout::RowMajor, kPeTm, 1>;
     using tileSum = tileMax;
     using tileScale = tileMax;
     using tileStateAcc =
-        Tile<Location::Vec, float, kPeTm, kVectorStateCols,
+        Tile<Location::Vec, float, kVectorStateRows, kVectorStateCols,
              BLayout::RowMajor, kPeTm, 1>;
+    static_assert(tileMax::Rows == tileStateAcc::Rows &&
+                      tileMax::Cols == tileStateAcc::Cols,
+                  "TCVT state tiles must have identical physical geometry");
 
     // E8M0 scale tensors used by MXFP8/MXFP4/HiF8/HiF4. Q/K/V scales are
     // supplied by global memory. The softmax probability scale is unity
