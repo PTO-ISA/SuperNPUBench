@@ -3,6 +3,67 @@
 
 #include <cstddef>
 
+struct QsmlaSwaRange {
+    int begin;
+    int end;
+};
+
+static constexpr QsmlaSwaRange qsmla_swa_range(
+    int kv_sequence_length, int q_sequence_length, int q_position,
+    int win_left, int win_right)
+{
+    const int diagonal = kv_sequence_length - q_sequence_length + q_position;
+    const int unclipped_begin = win_left < 0 ? 0 : diagonal - win_left;
+    const int unclipped_end =
+        win_right < 0 ? kv_sequence_length : diagonal + win_right + 1;
+    const int begin = unclipped_begin < 0 ? 0 :
+                      (unclipped_begin > kv_sequence_length ? kv_sequence_length
+                                                            : unclipped_begin);
+    const int end = unclipped_end < 0 ? 0 :
+                    (unclipped_end > kv_sequence_length ? kv_sequence_length
+                                                        : unclipped_end);
+    return {begin, end < begin ? begin : end};
+}
+
+static constexpr QsmlaSwaRange qsmla_swa_block_range(
+    const QsmlaSwaRange& token_range, int tile_k)
+{
+    return {token_range.begin / tile_k,
+            (token_range.end + tile_k - 1) / tile_k};
+}
+
+static constexpr float qsmla_swa_mask_value(
+    int kv_position, const QsmlaSwaRange& token_range)
+{
+    return kv_position >= token_range.begin && kv_position < token_range.end
+               ? 0.0f
+               : -1.0e30f;
+}
+
+static inline void qsmla_build_shared_swa_masks(
+    float* first_mask, float* last_mask, float* zero_mask,
+    int mask_rows, int tile_k, int first_kv_block, int kv_block_count,
+    int kv_sequence_length, int q_sequence_length, int q_position,
+    int win_left, int win_right)
+{
+    const QsmlaSwaRange range = qsmla_swa_range(
+        kv_sequence_length, q_sequence_length, q_position,
+        win_left, win_right);
+    const int first_block_begin = first_kv_block * tile_k;
+    const int last_block_begin =
+        (first_kv_block + kv_block_count - 1) * tile_k;
+    for (int row = 0; row < mask_rows; ++row) {
+        for (int column = 0; column < tile_k; ++column) {
+            const int offset = row * tile_k + column;
+            first_mask[offset] = qsmla_swa_mask_value(
+                first_block_begin + column, range);
+            last_mask[offset] = qsmla_swa_mask_value(
+                last_block_begin + column, range);
+            zero_mask[offset] = 0.0f;
+        }
+    }
+}
+
 struct QsmlaWorkItem {
     int batch;
     int q_token;

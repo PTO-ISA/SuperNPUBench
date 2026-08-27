@@ -21,7 +21,9 @@
 //   - tile 寄存器压力更大 (O[Db] 数组跨 j 循环存活)
 //
 // 【mask 方式】
-//   TADD: mask=float[s1*s2], 0.0(有效)/-1e30(无效), score += mask
+//   BSND 共享 Q token 路径只预生成 first/last/zero 三个 [TileM,TileK]
+//   mask，内部整块直接复用 zero mask；旧 2D 路径保留 [s1,s2] mask。
+//   mask 写入仍放在 Tile/CUBE 流程前，避免当前编码问题。
 //
 // 【切换方法】
 //   test 文件中:
@@ -42,17 +44,16 @@ static inline void build_swa_mask_onepass(
     for (int q = 0; q < s1; ++q) {
         const int logical_q = q_position >= 0 ? q_position : q;
         const int logical_s1 = q_position >= 0 ? q_sequence_length : s1;
-        int diagonal = s2 - logical_s1 + logical_q;
-        int lo = diagonal - win_left;
-        int hi = diagonal + win_right;
+        const QsmlaSwaRange range = qsmla_swa_range(
+            s2, logical_s1, logical_q, win_left, win_right);
         for (int kv = 0; kv < s2; ++kv) {
-            bool valid = (kv >= lo) && (kv <= hi);
-            mask[q * s2 + kv] = valid ? 0.0f : -1e30f;
+            mask[q * s2 + kv] = qsmla_swa_mask_value(kv, range);
         }
     }
 }
 
-template <typename qdtype, typename kvdtype, typename odttype, typename Config>
+template <typename qdtype, typename kvdtype, typename odttype, typename Config,
+          bool SharedSwaMask = false>
 void quant_sparse_flash_mla_swa_onepass_config_pto(
     odttype* out_ptr,
     qdtype* q_ptr,
@@ -82,17 +83,23 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
     constexpr int kTd = Config::TileD;
     static_assert(D % kTd == 0,
                   "one-pass D-tail support is implemented in the next shape-generalization step");
+    static_assert(!SharedSwaMask || s1 == kTm,
+                  "shared BSND SWA mask expects one full M tile");
     constexpr int Db = D / kTd;
 
-    float mask_buf[s1 * s2];
-    build_swa_mask_onepass(
-        mask_buf, s1, s2, ori_win_left, ori_win_right,
-        q_position, q_sequence_length);
+    constexpr int MaskTileElements = kTm * kTk;
+    constexpr int MaskBufferElements =
+        SharedSwaMask ? 3 * MaskTileElements : s1 * s2;
+    float mask_buf[MaskBufferElements];
+    if constexpr (!SharedSwaMask) {
+        build_swa_mask_onepass(
+            mask_buf, s1, s2, ori_win_left, ori_win_right,
+            q_position, q_sequence_length);
+    }
 
     using gmQ    = global_tensor<qdtype,  RowMajor<s1, D>>;
     using gmKV   = global_tensor<kvdtype, RowMajor<s2, D>>;
     using gmO    = global_tensor<odttype, RowMajor<s1, D>>;
-    using gmMask = global_tensor<float,   RowMajor<s1, s2>>;
 
     using tileQ      = TileLeft<qdtype, kTm, kTd>;
     using tileKSrc   = Tile<Location::Vec, kvdtype, kTk, kTd, BLayout::RowMajor>;
@@ -112,20 +119,46 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
     using itKSrc = global_iterator<gmKV, tileKSrc>;
     using itV    = global_iterator<gmKV, tileV>;
     using itO    = global_iterator<gmO,  tileO_cast>;
-    using itMask = global_iterator<gmMask, tileMask>;
 
     itQ    gIterQ(q_ptr);
-    itKSrc gIterKSrc(ori_kv_ptr);
-    itV    gIterV(ori_kv_ptr);
     itO    gIterO(out_ptr);
-    itMask gIterMask(mask_buf);
 
     const int Qb = (s1 + kTm - 1) / kTm;
-    const int Kb = (s2 + kTk - 1) / kTk;
-
     const float scale = softmax_scale;
 
     for (int i = 0; i < Qb; ++i) {
+        const int q_row_begin = i * kTm;
+        constexpr bool shared_q_position = SharedSwaMask;
+        const int logical_q_sequence_length =
+            shared_q_position ? q_sequence_length : s1;
+        const int first_logical_q =
+            shared_q_position ? q_position : q_row_begin;
+        const int last_q_row =
+            q_row_begin + kTm < s1 ? q_row_begin + kTm - 1 : s1 - 1;
+        const int last_logical_q =
+            shared_q_position ? q_position : last_q_row;
+        const QsmlaSwaRange first_range = qsmla_swa_range(
+            s2, logical_q_sequence_length, first_logical_q,
+            ori_win_left, ori_win_right);
+        const QsmlaSwaRange last_range = qsmla_swa_range(
+            s2, logical_q_sequence_length, last_logical_q,
+            ori_win_left, ori_win_right);
+        const QsmlaSwaRange kv_range = {first_range.begin, last_range.end};
+        const QsmlaSwaRange kv_blocks = qsmla_swa_block_range(kv_range, kTk);
+        const int kv_block_count = kv_blocks.end - kv_blocks.begin;
+        if constexpr (SharedSwaMask) {
+            qsmla_build_shared_swa_masks(
+                mask_buf,
+                mask_buf + MaskTileElements,
+                mask_buf + 2 * MaskTileElements,
+                kTm, kTk, kv_blocks.begin, kv_block_count,
+                s2, q_sequence_length, q_position,
+                ori_win_left, ori_win_right);
+        }
+        kvdtype* clipped_kv_ptr =
+            ori_kv_ptr + static_cast<std::size_t>(kv_blocks.begin) * kTk * D;
+        itKSrc gIterKSrc(clipped_kv_ptr);
+        itV gIterV(clipped_kv_ptr);
 
         // ============================================================
         //  一遍式 fused online softmax + PV
@@ -156,7 +189,7 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
             TEXPANDS(tO[dd], 0.0f);
         }
 
-        for (int j = 0; j < Kb; ++j) {
+        for (int j = 0; j < kv_block_count; ++j) {
 
             // --- Step 1: QK^T 沿全 D 累加 ---
             // SuperScalarModel main does not preserve the input ACC correctly
@@ -186,8 +219,27 @@ void quant_sparse_flash_mla_swa_onepass_config_pto(
             TMULS(tW, tW, scale);
 
             tileMask tMask;
-            auto gMask = gIterMask(i, j);
-            TLOAD(tMask, gMask);
+            if constexpr (SharedSwaMask) {
+                float* selected_mask = mask_buf + 2 * MaskTileElements;
+                if (j == 0) {
+                    selected_mask = mask_buf;
+                }
+                if (j + 1 == kv_block_count) {
+                    selected_mask = mask_buf + MaskTileElements;
+                }
+                using gmSharedMask =
+                    global_tensor<float, RowMajor<kTm, kTk>>;
+                using itSharedMask = global_iterator<gmSharedMask, tileMask>;
+                itSharedMask gIterMask(selected_mask);
+                auto gMask = gIterMask(0, 0);
+                TLOAD(tMask, gMask);
+            } else {
+                using gmFullMask = global_tensor<float, RowMajor<s1, s2>>;
+                using itFullMask = global_iterator<gmFullMask, tileMask>;
+                itFullMask gIterMask(mask_buf);
+                auto gMask = gIterMask(i, kv_blocks.begin + j);
+                TLOAD(tMask, gMask);
+            }
             TADD(tW, tW, tMask);
 
             // --- Step 3: online softmax ---
@@ -333,7 +385,7 @@ void quant_sparse_flash_mla_swa_onepass_bsnd_pto(
             Config::TileM, Config::TileK, Config::TileD, Config::TileM>;
 
         quant_sparse_flash_mla_swa_onepass_config_pto<
-            qdtype, kvdtype, odttype, WorkConfig>(
+            qdtype, kvdtype, odttype, WorkConfig, true>(
             out_ptr + Config::out_work_offset(work) + row_offset * Config::D,
             q_ptr + Config::q_work_offset(work) + row_offset * Config::D,
             ori_kv_ptr + Config::kv_work_offset(work),
@@ -362,7 +414,7 @@ void quant_sparse_flash_mla_swa_onepass_bsnd_pto(
             1, Config::TileM, Config::S2, 1, 1, Config::D, Config::K,
             Config::TileM, Config::TileK, Config::TileD, Config::TileM>;
         quant_sparse_flash_mla_swa_onepass_config_pto<
-            qdtype, kvdtype, odttype, TailConfig>(
+            qdtype, kvdtype, odttype, TailConfig, true>(
             padded_out, padded_q,
             ori_kv_ptr + Config::kv_work_offset(work),
             softmax_scale, ori_win_left, ori_win_right,
