@@ -8,19 +8,22 @@ topK 个 token 索引，供后续稀疏注意力使用。
 QLI is the pre-processing operator of SparseFlashAttention (SFA). It selects the
 topK most important token indices from the full K/V sequence for sparse attention.
 
-本目录的 `qli_pto_opt.hpp`（`qli_topk_radix`）是 **分块多轮 MSD radix-select
-TopK**（主要推荐版本），`qli_pto.hpp`（`qli_topk_npu`，TROWARGMAX）为基准版本。
+本目录的 `qli_pto_opt_simple.hpp`（`qli_topk_radix`）是 **精简版 MSD radix-select
+TopK**（推荐），`qli_pto_opt.hpp` 为完整功能版（含 THISTOGRAMX 自定义汇编、
+NaN/-0 防御等增强特性），`qli_pto.hpp`（`qli_topk_npu`，TROWARGMAX）为基准版本。
 
-This directory's `qli_pto_opt.hpp` (`qli_topk_radix`) is the **multi-round MSD
-radix-select TopK** (recommended), while `qli_pto.hpp` (`qli_topk_npu`) is the
-TROWARGMAX baseline.
+This directory's `qli_pto_opt_simple.hpp` (`qli_topk_radix`) is the **simplified
+MSD radix-select TopK** (recommended). `qli_pto_opt.hpp` is the full-featured
+version (with THISTOGRAMX custom asm, NaN/-0 handling, etc.).
+`qli_pto.hpp` (`qli_topk_npu`) is the TROWARGMAX baseline.
 
-| 特性 / Feature | `qli_pto.hpp` (baseline) | `qli_pto_opt.hpp` (radix-select, 推荐) |
-|---|---|---|
-| TopK 算法 | TROWARGMAX 迭代 topK 轮 + 标量消零 | THISTOGRAM Byte3→Byte0 逐字节收窄 + tile pop-argmax |
-| 排序位宽 | — | float32 → uint32 sortable key |
-| 输出契约 | 有序（argmax 顺序） | **TopK set**（无序，并列取最小索引） |
-| 标量参与 | 每轮标量消零 + 重 TLOAD | 提取阶段全 tile 内消零，无重 TLOAD |
+| 特性 / Feature | `qli_pto.hpp` (baseline) | `qli_pto_opt_simple.hpp` (精简版) | `qli_pto_opt.hpp` (完整版) |
+|---|---|---|---|
+| TopK 算法 | TROWARGMAX 迭代 | THISTOGRAM Byte3→Byte0 逐字节收窄 + tile pop-argmax | 同左 + NaN/-0 防御 + rev 最小索引 |
+| 排序位宽 | — | float32 → uint32 sortable key | 同左 + NaN 隔离 |
+| 输出契约 | 有序（argmax 顺序） | **TopK set**（无序） | **TopK set**（无序，最小索引优先） |
+| 标量参与 | 每轮标量消零 + 重 TLOAD | 提取阶段全 tile 内消零，无重 TLOAD | 同左 |
+| 代码量 | ~150 行 | **~235 行**（TopK 部分） | ~376 行（TopK 部分） |
 
 ## 计算公式 / Formula
 
@@ -151,7 +154,8 @@ TCMPS UINT32 门禁等 R1–R4。
 | 文件 / File | 说明 / Description |
 |---|---|
 | `qli_pto.hpp` | Step1-6 基准 + TROWARGMAX TopK（baseline） |
-| `qli_pto_opt.hpp` | **Step1-6 + 多轮 MSD radix-select TopK（本 README 主题，推荐）** |
+| `qli_pto_opt.hpp` | Step1-6 + 完整版 MSD radix-select TopK（含 THISTOGRAMX/NaN/-0/rev） |
+| `qli_pto_opt_simple.hpp` | **Step1-6 + 精简版 MSD radix-select TopK（本 README 主题，推荐）** |
 | `qli_pto_opt_histogram_radix_design.md` | radix 直方图方案设计与实施记录 |
 | `qli_radix_issues_found.md` | 已知问题罗列（R1–R4，可提 ISSUE） |
 

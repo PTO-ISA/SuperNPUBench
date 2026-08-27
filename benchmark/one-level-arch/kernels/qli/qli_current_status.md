@@ -32,7 +32,8 @@ TROWARGMAX baseline.
 
 | 文件 / File | 函数 / Function | 定位 / Role |
 |---|---|---|
-| `qli_pto_opt.hpp` | `qli_topk_radix` | **推荐版本 / Recommended**：分块多轮 MSD radix-select |
+| `qli_pto_opt_simple.hpp` | `qli_topk_radix` | **推荐版本 / Recommended**：精简 MSD radix-select（本报告主题） |
+| `qli_pto_opt.hpp` | `qli_topk_radix` | 完整版 radix-select（含 THISTOGRAMX 自定义汇编、NaN/-0 防御） |
 | `qli_pto.hpp` | `qli_topk_npu` | 基准版本 / Baseline：TROWARGMAX 迭代 + 标量消零 |
 
 radix-select 算法 4 步 / radix-select algorithm (4 steps)：
@@ -220,7 +221,7 @@ radix-select 算法 4 步 / radix-select algorithm (4 steps)：
 | `../../test/kernel/qli/src/gen_qli_golden.py` | 生成输入 .bin + numpy golden 参考（set-match 主判据） |
 | `../../test/kernel/qli/src/qli_check_opt.cpp` | radix 版 driver（.data 直接地址，P1 优化） |
 | `../../test/kernel/qli/src/qli_check_data.s` | `.incbin` 嵌入 .bin 到 ELF |
-| `qli_pto_opt.hpp` | Step1-6 scores + radix TopK（同目录 / same dir） |
+| `qli_pto_opt_simple.hpp` | Step1-6 scores + radix TopK（同目录 / same dir，精简版） |
 | `SuperScalarModel/bin/gfrun` | 功能仿真 + `--dump-memory` |
 | `SuperScalarModel/bin/gfsim` | 时序仿真 + PMU（`-m` 截断规避末尾死锁） |
 

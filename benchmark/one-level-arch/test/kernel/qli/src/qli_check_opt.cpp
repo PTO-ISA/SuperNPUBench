@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
-#include "qli/qli_pto_opt.hpp"
+#include "qli/qli_pto_opt_simple.hpp"
 
 // P1 optimization: eliminate copy_bytes — pass .data segment absolute
 // addresses directly to the kernel. The kernel's global_tensor + TLOAD
@@ -8,11 +8,11 @@
 // that generated ~1.14M STD blocks (92.8% of total).
 //
 // Addresses updated via llvm-nm after each relink (same as qli_check.cpp).
-#define SRCQ_ADDR  0x0000000000014670ULL
-#define SRCK_ADDR  0x0000000000094670ULL
-#define SRCW_ADDR  0x0000000000098670ULL
-#define SRCSQ_ADDR  0x000000000009c670ULL
-#define SRCSK_ADDR  0x00000000000a0670ULL
+#define SRCQ_ADDR  0x0000000000014590ULL
+#define SRCK_ADDR  0x000000000001c590ULL
+#define SRCW_ADDR  0x000000000011c590ULL
+#define SRCSQ_ADDR  0x000000000011c990ULL
+#define SRCSK_ADDR  0x000000000011cd90ULL
 
 #define OUT_SCORES  0x4000802000ULL
 // indices 紧随 scores 之后，避免大 Sq*Skv 时与 scores 区域重叠
