@@ -2,8 +2,11 @@
 #include "benchmark.h"
 #include "fileop.h"
 // #include "fa/quant_sparse_flash_mla_pto.hpp"
-// #include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
+#ifdef QSMLA_USE_TADD
+#include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
+#else
 #include "fa/quant_sparse_flash_mla_onepass_pto.hpp"
+#endif
 
 #ifndef Tbatch
 #define B 1
@@ -110,7 +113,11 @@ int main(){
 
     BENCHSTART;
     if constexpr (N1 == 1 && N2 == 1) {
+#ifdef QSMLA_USE_TADD
+        quant_sparse_flash_mla_swa_tadd_config_pto<
+#else
         quant_sparse_flash_mla_swa_onepass_config_pto<
+#endif
             qdtype, kvdtype, odttype, Config>(
                 out, q, kv,
                 softmax_scale_val,
@@ -129,7 +136,11 @@ int main(){
                 (float*)nullptr    // softmax_lse
             );
     } else {
+#ifdef QSMLA_USE_TADD
+        quant_sparse_flash_mla_swa_tadd_bsnd_pto<
+#else
         quant_sparse_flash_mla_swa_onepass_bsnd_pto<
+#endif
             qdtype, kvdtype, odttype, Config>(
                 out, q, kv,
                 softmax_scale_val,
