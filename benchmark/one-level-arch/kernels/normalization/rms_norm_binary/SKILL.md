@@ -3,7 +3,7 @@ name: rms-norm-binary
 description: >-
   Build, run, and debug the one-level rms_norm_binary kernel (R-split RMSNorm)
   with SuperNPUBench + run_op.py + gfrun/gfsim precision checks. Use when
-  editing rms_norm_binary_pto.hpp, rms_norm_binary tests, workspace/GetCacheId
+  editing rms_norm_binary_pto.hpp, rms_norm_binary tests, GetCacheId
   reduce, TADD cross-tile sum, or verifying [1,8192] fp16 binary RMSNorm.
   Shape dims are A (outer) and R (reduce): g_a/g_r, tile_a/tile_r, tA/tR.
 ---
@@ -87,8 +87,8 @@ Important implementation notes:
 2. Zero-init `sum` outside the R loop; uniform `TADD` inside (no first-tile branch).
 3. `tile_v`: `Cols=32`, **static `Valid=1,1`** (`tile_a==1`) so TEPL `B.DIM`
    immediates are legal.
-4. `workspace` argument is kept in the API but **currently unused**.
-5. Do **not** put early-return parameter checks in the kernel (caller owns tiling).
+4. Do **not** put early-return parameter checks in the kernel (caller owns tiling).
+   Cache lives in a Local tile array; there is no GM `workspace` argument.
 
 ## How to verify
 
@@ -157,8 +157,7 @@ Baseline `rms_norm` (no cross-tile accumulate / second R loop) usually **PASS**e
 `rms_norm_binary.cpp` defaults:
 
 ```cpp
-G_A=1, G_R=8192, TILE_A=1, TILE_R=1024
-workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS]  // kept for ABI; unused by kernel
+G_A=1, G_R=8192, TILE_A=1, TILE_R=1024, POW_R=4096
 ```
 
 Precision scripts default shape `--g-r 8192`, `--tile-r 1024`.
@@ -175,15 +174,15 @@ Precision scripts default shape `--g-r 8192`, `--tile-r 1024`.
    same hot path without verifying Match Instruction / gfsim.
 5. After edits: `python3 run_op.py rms_norm_binary` (or `--func-only` if only
    checking correctness).
-6. If implementing true GetCacheId carry + workspace reload, also read
+6. If changing GetCacheId carry, also read
    `binary-accumulation-cache-id/SKILL.md` and expect toolchain/sim constraints
-   above.
+   above. Do not reintroduce a GM `workspace` cache.
 
 ## Anti-patterns
 
 - Naming the run_op preset `rms_norm_binary_1x8192` / `..._1x32768` — canonical
   name is `rms_norm_binary`.
 - Treating gfsim FAIL as a precision bug when gfrun+compare already PASS.
-- Putting workspace spill between `rsqrt` and `TROWEXPANDMUL` (clobbers `rms`).
+- Spilling the rsqrt tile between `rsqrt` and `TROWEXPANDMUL` (clobbers `rms`).
 - Using TEPL `TADD` with `Valid=-1` (`Match Instruction Error`).
 - Reverting shape names to M/N — use **A/R** consistently.
