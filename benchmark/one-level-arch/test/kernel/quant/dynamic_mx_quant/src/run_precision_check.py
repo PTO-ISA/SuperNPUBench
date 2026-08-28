@@ -42,6 +42,9 @@ CONFIGS = {
     "TAIL_CUBLAS_FP8":      {"M": 8,  "K": 32, "algo": "CUBLAS",        "kernel": "tail",    "dtype": "FP8", "driver": "tail_cublas_fp8",     "blocked": False, "scale_layout": "compact"},
     "TAIL_OCP_FP4":         {"M": 8,  "K": 64, "algo": "OCP",           "kernel": "tail",    "dtype": "FP4", "driver": "tail_ocp_fp4",        "blocked": False, "scale_layout": "compact"},
     "NONTAIL_CUBLAS_FP8":   {"M": 32, "K": 32, "algo": "CUBLAS",        "kernel": "nontail", "dtype": "FP8", "driver": "nontail_cublas_fp8",  "blocked": False, "scale_layout": "compact"},
+    # NEWCALC probe: fp16 in -> e4m3 out, OCP tail, BlockSize=32; reciprocal via
+    # bit-trick (非 TRECIP). 单驱动含单线程 + SPMD 4-PE(-DMT)变体。
+    "PROBE_OCP_FP8_NEWCALC": {"M": 8, "K": 32, "algo": "OCP",           "kernel": "tail",    "dtype": "FP8", "driver": "probe_ocp_fp8_newcalc", "blocked": False, "scale_layout": "compact", "in_dtype": "fp16"},
 }
 
 

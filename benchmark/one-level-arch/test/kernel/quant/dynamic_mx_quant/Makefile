@@ -17,6 +17,14 @@ ifeq ($(TYPE), NONTAIL_CUBLAS_FP8)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_cublas_fp8.elf
 endif
 
+# NEWCALC probe (fp16 in -> e4m3 out, OCP tail, BlockSize=32). 单驱动同时含
+# 单线程与 SPMD 4-PE 变体: CFLAGS 加 -DMT 选 _mt(4-PE)版, 否则单线程版。
+# 4-PE 变体需 gfrun -s softcore.multiThreadNum=4 / gfsim --conf fourpe.
+ifeq ($(TYPE), PROBE_OCP_FP8_NEWCALC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/probe_ocp_fp8_newcalc.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_probe_ocp_fp8_newcalc.elf
+endif
+
 include ../../../common/Makefile.common
 
 clean:
