@@ -137,10 +137,8 @@ void probe_dynamic_mx_quant_tail_ocp_fp8_newcalc(__half *x, __fp8_e4m3 *y, uint8
                 tile_fb recip_f;
                 TCVT(recip_f, recip_bf);              // bf16 -> fp32 (逆向已实现方向)
 
-                tile_h xh2;
-                TLOAD(xh2, gx);
                 tile_f xf;
-                TCVT(xf, xh2);                        // half -> fp32
+                TCVT(xf, xh);                         // half -> fp32 (复用 scale pass 的 xh, 免第二次 TLOAD)
                 TROWEXPANDMUL(xf, xf, recip_f);       // x * (1/scale)
                 tile_o oq;
                 TCVT(oq, xf);                         // fp32 -> e4m3
@@ -195,10 +193,8 @@ void probe_dynamic_mx_quant_tail_ocp_fp8_newcalc(__half *x, __fp8_e4m3 *y, uint8
             tile_fb recip_f;
             TCVT(recip_f, recip_bf);
 
-            tile_h xh2;
-            TLOAD(xh2, gx);
             tile_f xf;
-            TCVT(xf, xh2);
+            TCVT(xf, xh);                         // half -> fp32 (复用 scale pass 的 xh, 免第二次 TLOAD)
             TROWEXPANDMUL(xf, xf, recip_f);
             tile_o oq;
             TCVT(oq, xf);

@@ -2,6 +2,9 @@
 #include <cstdint>
 #include "fileop.h"
 #include "quant/dynamic_mx_quant/probe_dynamic_mx_quant_tail_ocp_fp8_newcalc.hpp"
+#ifdef MT
+#include "quant/dynamic_mx_quant/probe_dynamic_mx_quant_tail_ocp_fp8_newcalc_mt.hpp"
+#endif
 using namespace supernpu::tile_isa::mxquant;
 
 // NEWCALC probe: half(fp16) in -> e4m3 out, BlockSize=32, OCP; 倒数用位补 (非 TRECIP)。
@@ -25,8 +28,16 @@ int main() {
     readBinaryFile(CHK_DIR "/input.bin", (uint8_t*)xbits, sizeof(xbits));
 #endif
 
+#ifdef MT
+    // SPMD 4-PE 变体：runtime 把 [0,multiThreadNum) 所有线程 reset 到本 entry，kernel 内
+    // 靠 get_thread_idx() 自我按 M 切分。main 仍只调一次（对照 matmul_shared.cpp）。
+    // 必须用 4 线程跑：gfrun -s softcore.multiThreadNum=4 / gfsim --conf fourpe。
+    probe_dynamic_mx_quant_tail_ocp_fp8_newcalc_mt<PM, PN, 32>(
+        x, reinterpret_cast<__fp8_e4m3 *>(y), scale);
+#else
     probe_dynamic_mx_quant_tail_ocp_fp8_newcalc<PM, PN, 32>(
         x, reinterpret_cast<__fp8_e4m3 *>(y), scale);
+#endif
 
 #ifdef RES_CHECK
     writeBinaryFile(CHK_DIR "/output.bin", (uint8_t*)y, sizeof(y));
