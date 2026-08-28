@@ -36,6 +36,20 @@ ifeq ($(TESTCASE), qli_check_opt)
    TARGET = $(ELF_HEAD)/$(TESTCASE)$(DT_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv)_g$(g)_Tm$(Tm)_Tk$(Tk).elf
 endif
 
+ifeq ($(TESTCASE), qli_check_opt_dynamic)
+   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/qli_check_opt_dynamic.cpp
+   EXTRA_OBJ_FILES += $(TEST_ROOT)/$(CASE_SRC_DIR)/qli_check_data.o
+   B ?= 1
+   Sq ?= 4
+   Skv ?= 128
+   topk ?= 8
+   NPE ?= 1
+   DEFINES += -DBatch=$(B) -DTsq=$(Sq) -DTskv=$(Skv) -DTtopk=$(topk) -DTNPE=$(NPE)
+   DEFINES += -DQLI_DTYPE_FP8
+   DT_TAG = _fp8
+   TARGET = $(ELF_HEAD)/$(TESTCASE)$(DT_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv)_topk$(topk)_npe$(NPE).elf
+endif
+
 include ../../common/Makefile.common
 
 clean:

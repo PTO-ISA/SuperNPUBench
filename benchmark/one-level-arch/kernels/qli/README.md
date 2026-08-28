@@ -149,6 +149,29 @@ TCMPS UINT32 门禁等 R1–R4。
 - golden：`test/kernel/qli/src/gen_qli_golden.py --mode gen|verify`（set-match 主判据）
 - 验证流程详见 `test/kernel/qli/README.md`
 
+### 动态 shape 版 / Dynamic-shape variant
+
+`qli_pto_opt_dynamic.hpp`（driver `qli_check_opt_dynamic.cpp`）提供运行时
+Sq/Skv/topK（非模板参数）+ 多 PE 接口：
+
+```bash
+# 单 PE（已验证：Sq=4/64、Skv=128/2048/2080/8192 全部 cosine=1.0 set=100%）
+make TESTCASE=qli_check_opt_dynamic QLI_DTYPE=FP8 Sq=4 Skv=128 topk=8 NPE=1
+# 运行（scores 行步长为 paddedSkv = ceil(Skv/2048)*2048，末 chunk 补 0）
+gfrun -f <elf> --dump-memory 0x4000802000:<size>:sim.bin
+
+# 4PE（编译/运行需 -s softcore.multiThreadNum=4；当前数值验证未通过，见下）
+make TESTCASE=qli_check_opt_dynamic QLI_DTYPE=FP8 Sq=4 Skv=128 topk=8 NPE=4
+```
+
+**多 PE 已知限制（v0.58 仿真器）**：4PE 模式下 TMATMUL 为 cooperative 指令
+（B 操作数经 SharedTile + TMOV_L2S_PUBLISH），v0.58 要求 A/B 为 FP32 NORM 且
+Shared tile ≤8KB。动态版已实现 FP32 转换 + D 维拆分（[64,32] FP32=8KB）+
+TMATMUL/TMATMUL_ACC 两段累加的标准 cooperative 路径，但 gfrun 下数值验证
+未通过（Sq=4 NPE=4 仅 token 3 部分正确；TCVT FP8→FP32 单元测试通过，
+publish quarter 语义按 PTO-ISA #75 实现）。待上游确认 cooperative TMATMUL
+的 FP8/转换路径支持后重验。Sq 须为 numPEs 的倍数（集体指令同步要求）。
+
 ## 源文件 / Source Files
 
 | 文件 / File | 说明 / Description |
@@ -156,6 +179,7 @@ TCMPS UINT32 门禁等 R1–R4。
 | `qli_pto.hpp` | Step1-6 基准 + TROWARGMAX TopK（baseline） |
 | `qli_pto_opt.hpp` | Step1-6 + 完整版 MSD radix-select TopK（含 THISTOGRAMX/NaN/-0/rev） |
 | `qli_pto_opt_simple.hpp` | **Step1-6 + 精简版 MSD radix-select TopK（本 README 主题，推荐）** |
+| `qli_pto_opt_dynamic.hpp` | 动态 shape（运行时 Sq/Skv/topK）+ 多 PE 接口（NPE=1 已验证，4PE 受 v0.58 限制） |
 | `qli_pto_opt_histogram_radix_design.md` | radix 直方图方案设计与实施记录 |
 | `qli_radix_issues_found.md` | 已知问题罗列（R1–R4，可提 ISSUE） |
 
