@@ -3,10 +3,11 @@
 // THISTOGRAM (hist) i32 16x16
 int main() {
     constexpr int M = 16, N = 16;
-    int32_t a[256], b[256], d[256], c[256];
-    fill_seq(a, 256); fill_seq(b, 256); fill_seq(d, 256); zero(c, 256);
+    int32_t a[4096], b[4096], d[4096], c[4096];
+    fill_seq(a, 4096); fill_seq(b, 4096); fill_seq(d, 4096); zero(c, 4096);
     BENCHSTART;
-    bench_hist<int32_t,M,N>(c,a,b,0,[](auto& dst,auto& s,auto& idx,auto b){ THISTOGRAM(dst,s,idx,b); });
+    uint32_t ch[4096]; zero(ch, 4096);
+    bench_hist_u32<int32_t,M,N>(ch,a,b,0,[](auto& dst,auto& s,auto& idx,auto b){ THISTOGRAM(dst,s,idx,b); });
     BENCHEND;
     return 0;
 }

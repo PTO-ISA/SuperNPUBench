@@ -195,4 +195,22 @@ void bench_hist(D *c, D *a, D *idx, int byteId, auto op) {
     TSTORE(gC0, tC);
 }
 
+// dst = histogram(src, idx, byteId) -- U32 dst variant.
+// THISTOGRAM output is uint32_t [M, 256] (256 cumulative bins per src row),
+// so the dst tile/global differ from the src/idx tile type.
+template <typename D, int M, int N>
+void bench_hist_u32(uint32_t *c, D *a, D *idx, int byteId, auto op) {
+    iter_t<D, M, N> gA(a), gIdx(idx);
+    auto gA0 = gA(0, 0), gI0 = gIdx(0, 0);
+    using dst_tile_t = Tile<Location::Vec, uint32_t, M, 256, BLayout::RowMajor>;
+    using gdst_t = global_tensor<uint32_t, RowMajor<M, 256>>;
+    dst_tile_t tC;
+    tile_t<D, M, N> tA, tIdx;
+    TLOAD(tA, gA0);
+    TLOAD(tIdx, gI0);
+    op(tC, tA, tIdx, byteId);
+    gdst_t gC(c);
+    TSTORE(gC, tC);
+}
+
 #endif
