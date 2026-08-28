@@ -1,7 +1,7 @@
 .section .data
 .global _binary_srcq_data_start
 _binary_srcq_data_start:
-.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/compare/qli_fp8_B1_Sq64_Skv128_g64_Tm16_Tk32/srcq.bin"
+.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/test/kernel/qli/compare/sq4_skv128_topk8/srcq.bin"
 .global _binary_srcq_data_end
 _binary_srcq_data_end:
 .global _binary_srcq_data_size
@@ -10,7 +10,7 @@ _binary_srcq_data_end:
 .section .data
 .global _binary_srck_data_start
 _binary_srck_data_start:
-.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/compare/qli_fp8_B1_Sq64_Skv128_g64_Tm16_Tk32/srck.bin"
+.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/test/kernel/qli/compare/sq4_skv128_topk8/srck.bin"
 .global _binary_srck_data_end
 _binary_srck_data_end:
 .global _binary_srck_data_size
@@ -19,7 +19,7 @@ _binary_srck_data_end:
 .section .data
 .global _binary_srcw_data_start
 _binary_srcw_data_start:
-.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/compare/qli_fp8_B1_Sq64_Skv128_g64_Tm16_Tk32/srcw.bin"
+.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/test/kernel/qli/compare/sq4_skv128_topk8/srcw.bin"
 .global _binary_srcw_data_end
 _binary_srcw_data_end:
 .global _binary_srcw_data_size
@@ -28,7 +28,7 @@ _binary_srcw_data_end:
 .section .data
 .global _binary_srcsq_data_start
 _binary_srcsq_data_start:
-.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/compare/qli_fp8_B1_Sq64_Skv128_g64_Tm16_Tk32/srcsq.bin"
+.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/test/kernel/qli/compare/sq4_skv128_topk8/srcsq.bin"
 .global _binary_srcsq_data_end
 _binary_srcsq_data_end:
 .global _binary_srcsq_data_size
@@ -37,7 +37,7 @@ _binary_srcsq_data_end:
 .section .data
 .global _binary_srcsk_data_start
 _binary_srcsk_data_start:
-.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/compare/qli_fp8_B1_Sq64_Skv128_g64_Tm16_Tk32/srcsk.bin"
+.incbin "/home/z00947698/superScalar/SuperNPUBench/benchmark/one-level-arch/test/kernel/qli/compare/sq4_skv128_topk8/srcsk.bin"
 .global _binary_srcsk_data_end
 _binary_srcsk_data_end:
 .global _binary_srcsk_data_size
