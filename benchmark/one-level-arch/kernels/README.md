@@ -61,6 +61,11 @@ for type/dimension parameterization.
 - `_compile_test.cpp` 实例化全部 kernel 用于编译验证
 - 23 个独立测试用例 (每个 kernel 一个 ELF)
 
+### 12. QLI — `qli/` (see [`qli/README.md`](qli/README.md))
+- `qli_pto.hpp` — Quant Lightning Indexer baseline（Step1-6 + TROWARGMAX TopK）。
+- `qli_pto_opt.hpp` — **多轮 MSD radix-select TopK**（THISTOGRAM Byte3→Byte0 +
+  tile pop），SFA 前处理选 token，已通过 set-match 精度验证（推荐版本）。
+
 ### Utils — `utils/`
 - `layout_transform.hpp` — ND→ZZ / ND→NN offset calculation.
 
