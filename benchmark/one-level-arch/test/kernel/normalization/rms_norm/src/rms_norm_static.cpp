@@ -31,6 +31,14 @@
 #define TILE_R 512
 #endif
 
+#ifdef RES_CHECK
+namespace {
+volatile uint32_t input_ready = 0;
+volatile uint32_t kernel_done[PE_NUM] = {};
+volatile uint32_t output_written = 0;
+} // namespace
+#endif
+
 int main() {
     using dtype = DType;
 
@@ -40,8 +48,8 @@ int main() {
 
     constexpr int pe_a = G_A / PE_NUM;
 
-    dtype input_buf[G_A * G_R];
-    dtype output_buf[G_A * G_R];
+    static dtype input_buf[G_A * G_R];
+    static dtype output_buf[G_A * G_R];
     dtype *input = input_buf;
     dtype *output = output_buf;
 
@@ -49,15 +57,33 @@ int main() {
 #ifndef CHK_DIR
 #error "CHK_DIR must be set when RES_CHECK is enabled"
 #endif
-    readBinaryFile(CHK_DIR "/input.bin", (uint8_t *)input,
-                   static_cast<size_t>(G_A) * G_R * sizeof(dtype));
+    const uint32_t tid = get_thread_idx();
+    if (tid == 0) {
+        readBinaryFile(CHK_DIR "/input.bin", (uint8_t *)input,
+                       static_cast<size_t>(G_A) * G_R * sizeof(dtype));
+        input_ready = 1;
+    } else {
+        while (input_ready == 0) {
+        }
+    }
 #endif
 
     // Full [G_A, G_R] buffers; kernel splits A with get_thread_idx().
     rms_norm<dtype, pe_a, G_A, G_R, TILE_A, TILE_R>(input, output, EPS);
 
 #ifdef RES_CHECK
-    writeBinaryFile(CHK_DIR "/output.bin", (uint8_t *)output,
-                    static_cast<size_t>(G_A) * G_R * sizeof(dtype));
+    kernel_done[tid] = 1;
+    if (tid == 0) {
+        for (int pe = 0; pe < PE_NUM; ++pe) {
+            while (kernel_done[pe] == 0) {
+            }
+        }
+        writeBinaryFile(CHK_DIR "/output.bin", (uint8_t *)output,
+                        static_cast<size_t>(G_A) * G_R * sizeof(dtype));
+        output_written = 1;
+    } else {
+        while (output_written == 0) {
+        }
+    }
 #endif
 }
