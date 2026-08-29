@@ -133,12 +133,6 @@ def prep_tadd(case_dir: Path) -> np.ndarray:
     return (a + b).reshape(-1)
 
 
-def prep_trowsum(case_dir: Path) -> np.ndarray:
-    x = np.arange(256, dtype=np.float32).reshape(16, 16) / 32.0
-    write(case_dir, "src.bin", x)
-    return np.sum(x, axis=1, dtype=np.float32)
-
-
 def prep_matmul(case_dir: Path) -> np.ndarray:
     a = np.ones((1, 256, 256), dtype=np.float32)
     b = np.ones((1, 256, 256), dtype=np.float32)
@@ -194,7 +188,6 @@ CASES = [
     Case("reducesum_row", "reduction/reducesum_row/elf/kernel_multi_thread_reduction_reducesum_row_reducesum_row_PE4.elf", lambda p: prep_rows(p, "sum"), atol=2e-3, rtol=2e-3),
     Case("transpose", "transpose/elf/kernel_multi_thread_transpose_transpose_PE4.elf", prep_transpose, output_dtype=np.int32, atol=0.0, rtol=0.0),
     Case("tadd", "vec/elf/kernel_multi_thread_vec_Rows16_Cols16.elf", prep_tadd, output_name="vec_out.bin"),
-    Case("trowsum", "vec/elf/kernel_multi_thread_vec_trowsum_Rows16_Cols16.elf", prep_trowsum, output_name="trowsum_out.bin", atol=2e-4, rtol=2e-4),
 ]
 
 

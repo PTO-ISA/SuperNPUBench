@@ -32,7 +32,6 @@ divisible by the PE count. This is checked at compile time.
 | Binary-accumulation RMSNorm | `normalization/rms_norm_binary/rms_norm_binary.hpp` |
 | Row Cumsum | `reduction/cumsum_rowvec.hpp` |
 | Row Max/Prod/Sum | `reduction/reducemax_rowvec.hpp`, `reduction/reduceprod_rowvec.hpp`, `reduction/reducesum_rowvec.hpp` |
-| TROWSUM | `reduction/trowsum_multithread.hpp` |
 | 2D Transpose | `transpose/transpose.hpp` |
 
 ## Mirrored directory layout
@@ -76,8 +75,8 @@ simulated PEs.
 | Normalization | 2 | 2 | 0 |
 | Row reduction | 4 | 4 | 0 |
 | Transpose | 1 | 1 | 0 |
-| Vector | 2 | 2 | 0 |
-| **Total** | **40** | **34** | **6** |
+| Vector | 1 | 1 | 0 |
+| **Total** | **39** | **33** | **6** |
 
 There were no timeouts. The remaining six failures are FlashAttention
 conversion-surface limitations rather than PE partition failures:
@@ -142,7 +141,7 @@ done
 ```
 
 This compiles the complete precision/configuration matrix. The 2026-08-29
-run produced 40/40 ELFs successfully with compiler commit `e6a31ef`.
+run produced 39/39 ELFs successfully with compiler commit `e6a31ef`.
 
 ### Run and compare
 
@@ -173,10 +172,10 @@ and saves `gfrun.log` beside the binary inputs and outputs in the ELF's
 
 ### Numerical result: 2026-08-29
 
-The representative portfolio covers all 19 multi-thread testcase sources.
+The representative portfolio covers all 18 multi-thread testcase sources.
 FA uses the FP32/VecFP32 configuration. Low-precision Matmul uses exact FP8
 zero inputs to verify four-PE ownership and writeback without relying on a
-host FP8 package. The full 40-ELF compile matrix remains the compilation
+host FP8 package. The full 39-ELF compile matrix remains the compilation
 coverage for the other precision variants.
 
 | Testcase | Result | Maximum absolute error or failure |
@@ -199,8 +198,7 @@ coverage for the other precision variants.
 | `reducesum_row` | PASS | 5.72205e-06 |
 | `transpose` | PASS | 0 |
 | `tadd` | PASS | 0 |
-| `trowsum` | PASS | 0 |
-| **Total** | **15 PASS / 4 FAIL / 0 TIMEOUT** | **19 representative cases** |
+| **Total** | **14 PASS / 4 FAIL / 0 TIMEOUT** | **18 representative cases** |
 
 Two RMSNorm cases initially failed because the old Newton iteration used
 `TRECIP(x)` as the inverse-square-root seed. With the current compiler's
