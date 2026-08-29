@@ -17,3 +17,8 @@ __pycache__/
 
 # Temporary files
 *.log
+
+# Local agent tooling (machine-specific paths, not for the shared repo)
+AGENTS.md
+.agents/
+.zcode/
