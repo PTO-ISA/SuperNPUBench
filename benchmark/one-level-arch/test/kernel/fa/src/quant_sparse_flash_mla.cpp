@@ -2,7 +2,7 @@
 #include "benchmark.h"
 #include "fileop.h"
 // #include "fa/quant_sparse_flash_mla_pto.hpp"
-#ifdef QSMLA_USE_TADD
+#if defined(QSMLA_USE_TADD) || defined(QSMLA_USE_TADD_4PE)
 #include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
 #else
 #include "fa/quant_sparse_flash_mla_onepass_pto.hpp"
@@ -84,6 +84,10 @@
 #define ALIGN 4*1024
 #define MAP_MEM_BASE 0x4000802000ULL
 
+constexpr uint64_t align_up_4k(uint64_t bytes) {
+    return (bytes + ALIGN - 1) & ALIGN_MASK;
+}
+
 static void init_deterministic(__half* data, int count, int seed) {
     for (int i = 0; i < count; ++i) {
         float val = ((float)((i * 31 + seed * 17) % 100)) / 100.0f - 0.5f;
@@ -108,10 +112,52 @@ int main(){
 
     odttype* out = (odttype*)MAP_MEM_BASE;
 
+#ifdef QSMLA_USE_TADD_4PE
+    // Cooperative scratch must live in shared GM rather than a PE-private
+    // function stack.  Each PE computes and receives these identical mapped
+    // addresses, matching the shared-workspace contract used by the 4-PE FA.
+    constexpr uint64_t out_bytes =
+        static_cast<uint64_t>(B) * s1 * N1 * D * sizeof(odttype);
+    constexpr uint64_t score_bytes =
+        static_cast<uint64_t>(kTm) * kTk * sizeof(float);
+    constexpr uint64_t prob_bytes =
+        static_cast<uint64_t>(kTm) * kTk * sizeof(qdtype);
+    constexpr uint64_t score_addr = MAP_MEM_BASE + align_up_4k(out_bytes);
+    constexpr uint64_t prob_addr = score_addr + align_up_4k(score_bytes);
+    constexpr uint64_t pv_addr = prob_addr + align_up_4k(prob_bytes);
+    float* score_scratch = reinterpret_cast<float*>(score_addr);
+    qdtype* prob_scratch = reinterpret_cast<qdtype*>(prob_addr);
+    float* pv_scratch = reinterpret_cast<float*>(pv_addr);
+#endif
+
     init_deterministic(q, B*s1*N1*D, 1);
     init_deterministic(kv, B*s2*N2*D, 2);
 
     BENCHSTART;
+#ifdef QSMLA_USE_TADD_4PE
+    static_assert(N1 > 1,
+                  "tadd_4pe is a BSND G-slice implementation");
+    quant_sparse_flash_mla_swa_tadd_4pe_bsnd_pto<
+        qdtype, kvdtype, odttype, Config>(
+            out, q, kv,
+            softmax_scale_val,
+            win_left,
+            win_right,
+            (float*)nullptr,
+            (float*)nullptr,
+            (int*)nullptr,
+            (int*)nullptr,
+            (int*)nullptr,
+            (int*)nullptr,
+            (int*)nullptr,
+            (int*)nullptr,
+            (float*)nullptr,
+            (int*)nullptr,
+            (float*)nullptr,
+            score_scratch,
+            prob_scratch,
+            pv_scratch);
+#else
     if constexpr (N1 == 1 && N2 == 1) {
 #ifdef QSMLA_USE_TADD
         quant_sparse_flash_mla_swa_tadd_config_pto<
@@ -159,6 +205,7 @@ int main(){
                 (float*)nullptr    // softmax_lse
             );
     }
+#endif
     BENCHEND;
 
     return 0;

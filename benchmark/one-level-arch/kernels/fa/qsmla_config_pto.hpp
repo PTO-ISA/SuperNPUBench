@@ -3,6 +3,26 @@
 
 #include <cstddef>
 
+static constexpr int qsmla_pe_row_begin(
+    int row_count, int pe_count, int pe_id)
+{
+    const int rows_per_pe = row_count / pe_count;
+    const int extra_rows = row_count % pe_count;
+    return pe_id * rows_per_pe + (pe_id < extra_rows ? pe_id : extra_rows);
+}
+
+static constexpr int qsmla_pe_row_end(
+    int row_count, int pe_count, int pe_id)
+{
+    return qsmla_pe_row_begin(row_count, pe_count, pe_id + 1);
+}
+
+static constexpr int qsmla_pe_row_offset(
+    int row_count, int pe_count, int pe_id, int row_stride)
+{
+    return qsmla_pe_row_begin(row_count, pe_count, pe_id) * row_stride;
+}
+
 struct QsmlaSwaRange {
     int begin;
     int end;

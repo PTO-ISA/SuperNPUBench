@@ -114,7 +114,12 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    ifeq ($(IMPL), tadd)
       DEFINES += -DQSMLA_USE_TADD
    endif
-   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_s2$(s2)_N1$(N1)_N2$(N2)_D$(D)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block).elf
+   ifeq ($(IMPL), tadd_4pe)
+      DEFINES += -DQSMLA_USE_TADD_4PE
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_s2$(s2)_N1$(N1)_N2$(N2)_D$(D)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL).elf
+   else
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_s2$(s2)_N1$(N1)_N2$(N2)_D$(D)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block).elf
+   endif
 endif
 
 include ../../common/Makefile.common
