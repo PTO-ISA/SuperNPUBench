@@ -8,6 +8,13 @@
 
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 
+# Legacy local-to-shared implementation. Keep it in regression coverage until
+# it is either migrated or explicitly retired.
+make diss TESTCASE=matmul_multithread \
+    COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=16 N=16 K=32 \
+    tM=16 tN=16 tK=16
+
 # Use a 128x256 output tile.  Scale tK with the input element width so the
 # lower-precision variants retain the same A/B tile byte capacity as FP32.
 # FP32: tK=128; BF16/FP16: 2x; FP8: 4x; FP4: 8x.

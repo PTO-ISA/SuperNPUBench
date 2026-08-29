@@ -4,7 +4,10 @@
 
 #include "benchmark.h"
 #include "fileop.h"
+#include "multi_thread_res_check.h"
+#ifdef LINX_GROUP_RUNTIME
 #include <common/linx_group_runtime.h>
+#endif
 
 #ifndef LOWP_DTYPE
 #define LOWP_DTYPE __fp8_e4m3
@@ -108,7 +111,7 @@ int main() {
 #ifdef RES_CHECK
 #define SRC0_PATH CHK_DIR "/src0.bin"
 #define SRC1_PATH CHK_DIR "/src1.bin"
-    static volatile int leader_ready = 0;
+    static MultiThreadResCheckSync res_check_sync{};
     if (tid == kIoTid) {
         readBinaryFile(SRC0_PATH, (uint8_t *)src0,
                        Batch * globM * kStoredGK * sizeof(dtype));
@@ -122,13 +125,10 @@ int main() {
         readBinaryFile(SRC1_SCALE_PATH, src1Scale,
                        Batch * (globK / 32) * globN);
 #endif
-        __asm__ volatile("" : : : "memory");
-        leader_ready = 1;
-    } else {
-        while (!leader_ready) {
-        }
-        __asm__ volatile("" : : : "memory");
     }
+#ifndef LINX_GROUP_RUNTIME
+    res_check_publish_inputs(res_check_sync, tid);
+#endif
 #endif
 
     LowpMatmulContext context{src0, src1, src0Scale, src1Scale, dst};
@@ -140,6 +140,9 @@ int main() {
 
 #ifdef RES_CHECK
 #define RES_PATH CHK_DIR "/res.bin"
+#ifndef LINX_GROUP_RUNTIME
+    res_check_wait_for_all(res_check_sync, tid);
+#endif
     if (tid == kIoTid) {
         writeBinaryFile(RES_PATH, (uint8_t *)dst,
                         Batch * globM * globN * sizeof(float));

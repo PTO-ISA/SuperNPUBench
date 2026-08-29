@@ -32,6 +32,8 @@ DEFINES += -DtilK=$(tK)
 
 ifeq ($(TESTCASE),matmul_shared)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_shared.cpp
+else ifeq ($(TESTCASE),matmul_multithread)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_multithread.cpp
 else ifeq ($(TESTCASE),matmul_reuseB)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_reuseB.cpp
 else ifeq ($(TESTCASE),matmul_lowp)
@@ -67,12 +69,14 @@ DEFINES += -DLOWP_DTYPE=$(LOWP_DTYPE)
 DEFINES += -DPACKED_FACTOR=$(PACKED_FACTOR)
 DEFINES += -DUSE_MX=$(USE_MX)
 else
-$(error Unsupported TESTCASE=$(TESTCASE); expected matmul_shared, matmul_reuseB, or matmul_lowp)
+$(error Unsupported TESTCASE=$(TESTCASE); expected matmul_multithread, matmul_shared, matmul_reuseB, or matmul_lowp)
 endif
 
 # Keep the default (FP32) ELF name unchanged for backward compatibility;
 # non-default dtypes get a _DType<dtype> suffix so binaries don't collide.
-ifeq ($(TESTCASE),matmul_lowp)
+ifeq ($(TESTCASE),matmul_multithread)
+TARGET = $(ELF_HEAD)_$(TESTCASE)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
+else ifeq ($(TESTCASE),matmul_lowp)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_$(LP_MODE)_B$(B)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
 else ifeq ($(DTYPE),float)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_B$(B)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf

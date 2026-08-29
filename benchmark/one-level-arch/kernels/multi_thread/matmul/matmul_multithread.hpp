@@ -2,6 +2,7 @@
 
 #include <common/pto_tileop.hpp>
 #include <cstdint>
+#include <type_traits>
 
 using namespace pto;
 
@@ -36,6 +37,8 @@ void matmul_multithread(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
     static_assert(gM % tM == 0, "M must be divisible by tM");
     static_assert(gN % tN == 0, "N must be divisible by tN");
     static_assert(gK % tK == 0, "K must be divisible by tK");
+    static_assert(tM <= 32,
+                  "local CUBE_M16/M32 supports at most 32 rows per PE");
     static_assert(tM * tK * sizeof(dtype) < kTileByteLimit,
                   "each PE A tile must be smaller than 8 KB");
     static_assert(tM * tN * sizeof(float) < kTileByteLimit,
@@ -55,13 +58,16 @@ void matmul_multithread(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
     using gmC = global_tensor<float, RowMajor<gM, gN>>;
 
     // PE-private lhs and output cells.
-    using tileA = TileLeft<dtype, tM, tK>;
-    using tileC =
-        Tile<Location::Vec, float, tM, tN, BLayout::RowMajor>;
+    using tileAM16 = CubeTileM16<dtype, tM, tK>;
+    using tileAM32 = CubeTileM32<dtype, tM, tK>;
+    using tileA = std::conditional_t<(tM <= 16), tileAM16, tileAM32>;
+    using tileCM16 = CubeAccumulatorM16<float, tM, tN>;
+    using tileCM32 = CubeAccumulatorM32<float, tM, tN>;
+    using tileC = std::conditional_t<(tM <= 16), tileCM16, tileCM32>;
 
     // TLOAD requires a local tile. Publish it to compiler-managed shared
     // storage before passing B to the shared-right TMATMUL overload.
-    using tileBLocal = TileRight<dtype, tK, tN>;
+    using tileBLocal = SharedMatrixRight<dtype, tK, tN>;
     using tileBShared = SharedTile<tileBLocal>;
 
     using itA = global_iterator<gmA, tileA>;
@@ -86,43 +92,40 @@ void matmul_multithread(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
                 tileBLocal tBLocal;
 
                 auto gA = gIterA(i, 0);
-                TLOAD(tA, gA);
+                TLOAD_CUBE(tA, gA);
                 auto gB = gIterB(0, j);
                 TLOAD(tBLocal, gB);
                 tileBShared tBShared = TMOV_L2S_PUBLISH(tBLocal);
                 TMATMUL(tC, tA, tBShared);
             } else {
-                // Compile-only Shared B experiment: initialize tC from the
-                // first K block and temporarily disable the ACC/FIXP path.
+                // Initialize the accumulator from the first K block.
                 {
                     tileA tA;
                     tileBLocal tBLocal;
                     auto gA = gIterA(i, 0);
                     auto gB = gIterB(0, j);
-                    TLOAD(tA, gA);
+                    TLOAD_CUBE(tA, gA);
                     TLOAD(tBLocal, gB);
                     tileBShared tBShared = TMOV_L2S_PUBLISH(tBLocal);
                     TMATMUL(tC, tA, tBShared);
                 }
 
-                // Temporarily retained as load-only code so the original loop
-                // structure remains visible during the Shared B experiment.
+                // Accumulate all remaining K blocks.
                 #pragma clang loop unroll(full)
                 for (int k = 1; k < Kb; ++k) {
                     tileA tA;
                     tileBLocal tBLocal;
                     auto gA = gIterA(i, k);
                     auto gB = gIterB(k, j);
-                    TLOAD(tA, gA);
+                    TLOAD_CUBE(tA, gA);
                     TLOAD(tBLocal, gB);
                     tileBShared tBShared = TMOV_L2S_PUBLISH(tBLocal);
                     TMATMUL_ACC(tC, tC, tA, tBShared);
                 }
             }
 
-            // Compile-only experiment: tC currently contains only k=0.
             auto gC = gIterC(i, j);
-            TSTORE(gC, tC);
+            TSTORE_CUBE(gC, tC);
         }
     }
 }

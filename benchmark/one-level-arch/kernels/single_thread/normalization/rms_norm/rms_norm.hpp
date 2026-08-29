@@ -29,25 +29,7 @@ namespace rms_detail {
 
 template <typename TileVec>
 inline void rsqrt_newton(TileVec &out, TileVec &a) {
-    auto body = [&](auto &x, auto &t1, auto &t2) {
-        TRECIP(x, a);
-        for (int64_t i = 0; i < 4; ++i) {
-            TMUL(t1, x, x);
-            TMUL(t2, t1, a);
-            TMULS(t2, t2, -0.5f);
-            TADDS(t2, t2, 1.5f);
-            TMUL(x, x, t2);
-        }
-        TMULS(out, x, 1.0f);
-    };
-    if constexpr (TileVec::ValidRow > 0) {
-        TileVec x, t1, t2;
-        body(x, t1, t2);
-    } else {
-        const size_t vr = static_cast<size_t>(a.GetValidRow());
-        TileVec x(vr), t1(vr), t2(vr);
-        body(x, t1, t2);
-    }
+    TRSQRT(out, a);
 }
 
 template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
@@ -104,8 +86,10 @@ void rms_norm(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e-6f) {
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, -1, -1>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, -1, -1>;
-    // ValidCol=1; Cols=128 → 512B/row (TileOP IsValidActiveSize / TSize=1..7).
-    using tile_v = Tile<Location::Vec, float, tA, 128, BLayout::RowMajor, -1, 1>;
+    // Row expansion requires the broadcast source to have physical Cols=1.
+    // Keep a 512-byte carrier by placing the padding in Rows instead.
+    using tile_v =
+        Tile<Location::Vec, float, 128, 1, BLayout::RowMajor, -1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
 
@@ -132,7 +116,9 @@ void rms_norm(dtype *x, dtype *out, float eps = 1e-6f) {
     using gm_t = global_tensor<dtype, RowMajor<gA, gR>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor>;
-    using tile_v = Tile<Location::Vec, float, tA, 128, BLayout::RowMajor, tA, 1>;
+    static_assert(tA <= 128, "RMSNorm row-state carrier supports tA <= 128");
+    using tile_v =
+        Tile<Location::Vec, float, 128, 1, BLayout::RowMajor, tA, 1>;
     using it_t = global_iterator<gm_t, tile_h>;
 
     it_t gI(x);
@@ -159,7 +145,7 @@ void rms_norm(dtype *x, dtype *out, float eps = 1e-6f) {
         using tile_h_r = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, rmd_A, tR>;
         using tile_f_r = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, rmd_A, tR>;
         using tile_v_r =
-            Tile<Location::Vec, float, tA, 128, BLayout::RowMajor, rmd_A, 1>;
+            Tile<Location::Vec, float, 128, 1, BLayout::RowMajor, rmd_A, 1>;
         tile_h_r src_h, dst_h;
         tile_f_r src, squared, dst;
         tile_v_r sqrsum, mean, denom, rms;

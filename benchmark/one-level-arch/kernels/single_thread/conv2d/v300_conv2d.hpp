@@ -16,10 +16,13 @@ using AccTile = Tile<Location::Vec, Element, Rows, Cols,
 // A 1x1 NCHW convolution is a matrix multiplication:
 //   [H * W, C_in] x [C_in, C_out] -> [H * W, C_out].
 // ColMajor preserves the NCHW channel-major layout for input and output.
+// MBlockStride and m_block_start optionally select a round-robin subset of
+// output-spatial tile blocks. Their defaults preserve single-PE execution.
 template <typename DType,
           int InChannels, int InHeight, int InWidth, int OutChannels,
-          int TileM, int TileN, int TileK>
-void conv2d_1x1(float *output, DType *input, DType *weight) {
+          int TileM, int TileN, int TileK, int MBlockStride = 1>
+void conv2d_1x1(float *output, DType *input, DType *weight,
+                int m_block_start = 0) {
     constexpr int GlobalM = InHeight * InWidth;
     constexpr int GlobalN = OutChannels;
     constexpr int GlobalK = InChannels;
@@ -30,6 +33,7 @@ void conv2d_1x1(float *output, DType *input, DType *weight) {
                   "OutChannels must be divisible by TileN");
     static_assert(GlobalK % TileK == 0,
                   "InChannels must be divisible by TileK");
+    static_assert(MBlockStride > 0, "MBlockStride must be positive");
 
     using GlobalInput = global_tensor<DType, ColMajor<GlobalM, GlobalK>>;
     using GlobalWeight = global_tensor<DType, ColMajor<GlobalK, GlobalN>>;
@@ -59,7 +63,7 @@ void conv2d_1x1(float *output, DType *input, DType *weight) {
     constexpr int NBlocks = GlobalN / TileN;
     constexpr int KBlocks = GlobalK / TileK;
 
-    for (int m = 0; m < MBlocks; ++m) {
+    for (int m = m_block_start; m < MBlocks; m += MBlockStride) {
         for (int n = 0; n < NBlocks; ++n) {
             auto global_c = output_iter(m, n);
             TileC tile_c;

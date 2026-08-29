@@ -195,7 +195,11 @@ void broadcast(
     dtype *in_ptr,
     dtype *out_ptr,
     const size_t *in_shape,
-    const size_t *out_shape
+    const size_t *out_shape,
+    // Global flattened index represented by out_ptr[0]. The default keeps
+    // the original full-tensor behavior; multi-PE wrappers use a nonzero
+    // value for disjoint output slices.
+    size_t output_base = 0
     ) {
     const size_t Mb = gOM / tM;
     const size_t rmd_M = gOM % tM;
@@ -212,7 +216,7 @@ void broadcast(
     tile_shapeOffset offsetTile;
     tile_shapeData_rmd outTile_rmd;
     tile_shapeOffset_rmd offsetTile_rmd;
-    size_t base = 0;
+    size_t base = output_base;
 
     using itOut = global_iterator<gm_shapeOut, tile_shapeData>;
     itOut gOIter(out_ptr);

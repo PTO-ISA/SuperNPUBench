@@ -1,25 +1,234 @@
 # Four-PE Kernels
 
 This directory contains kernels whose implementation explicitly depends on
-four PEs. They use one of two execution models:
+four PEs. They use three execution models:
 
 - Cooperative execution: shared matrix operands and four-PE `TMATMUL` for
   Matmul and FlashAttention.
-- SPMD partitioning: `get_thread_idx()` assigns disjoint row ranges for TADD,
-  TROWSUM and RMSNorm.
+- Contiguous SPMD partitioning: `get_thread_idx()` assigns equal, disjoint
+  element or row ranges. The single-PE Tile kernel is reused on each range.
+- Tile-block SPMD partitioning: Conv2D output-spatial blocks and Transpose
+  input-row blocks are assigned round-robin while preserving the full global
+  tensor layout.
 
-Current implementations:
+The common `ContiguousPartition` helper requires its work dimension to be
+divisible by the PE count. This is checked at compile time.
+
+## Current implementations
 
 | Operator | Header |
 |---|---|
+| Broadcast | `broadcast/broadcast.hpp` |
+| Concat gather/scatter | `concat/concat_gather.hpp`, `concat/concat_scatter.hpp` |
+| 1x1 Conv2D | `conv2d/v300_conv2d.hpp` |
 | TADD | `element_wise/tadd_multithread.hpp` |
+| GELU | `element_wise/gelu.hpp` |
 | FlashAttention | `fa/fa_2d_unroll_gmma.hpp` |
+| Gather | `gather/gather.hpp` |
 | Matmul | `matmul/matmul_multithread.hpp` |
 | Shared Matmul | `matmul/matmul_shared.hpp` |
 | Shared-B-reuse Matmul | `matmul/matmul_shared_reuseB.hpp` |
 | Low-precision Matmul | `matmul/matmul_shared_lowp.hpp` |
 | RMSNorm | `normalization/rms_norm/rms_norm.hpp` |
+| Binary-accumulation RMSNorm | `normalization/rms_norm_binary/rms_norm_binary.hpp` |
+| Row Cumsum | `reduction/cumsum_rowvec.hpp` |
+| Row Max/Prod/Sum | `reduction/reducemax_rowvec.hpp`, `reduction/reduceprod_rowvec.hpp`, `reduction/reducesum_rowvec.hpp` |
 | TROWSUM | `reduction/trowsum_multithread.hpp` |
+| 2D Transpose | `transpose/transpose.hpp` |
+
+## Mirrored directory layout
+
+Kernel and test paths mirror the single-PE tree. For example:
+
+| Single PE | Four PE |
+|---|---|
+| `kernels/single_thread/gather/gather.hpp` | `kernels/multi_thread/gather/gather.hpp` |
+| `test/kernel/gather/` | `test/kernel/multi_thread/gather/` |
+| `test/kernel/element_wise/gelu/` | `test/kernel/multi_thread/element_wise/gelu/` |
+| `test/kernel/normalization/rms_norm_binary/` | `test/kernel/multi_thread/normalization/rms_norm_binary/` |
+
+Each operator directory has its own `Makefile`, `compile.all`, and `src/`
+instead of sharing a mixed test source. One model failure therefore does not
+hide the status of other operator classes.
+
+## Four-PE operator execution regression
+
+Build a single operator through its mirrored test directory:
+
+```bash
+make -C benchmark/one-level-arch/test/kernel/multi_thread/element_wise/gelu \
+  TESTCASE=gelu COMPILER_DIR="$COMPILER_DIR" diss
+```
+
+The 2026-08-29 full regression used main `linx-toolchain-build` commit
+`e6a31ef` and SuperScalarModel commit `d8903938`. It compiled every configuration
+listed by the `multi_thread` `compile.all` files and ran each ELF with four
+simulated PEs.
+
+| Operator family | ELF | PASS | FAIL |
+|---|---:|---:|---:|
+| Broadcast | 1 | 1 | 0 |
+| Concat | 2 | 2 | 0 |
+| Conv2D | 1 | 1 | 0 |
+| Element-wise | 1 | 1 | 0 |
+| FlashAttention | 16 | 10 | 6 |
+| Gather | 1 | 1 | 0 |
+| Matmul | 10 | 10 | 0 |
+| Normalization | 2 | 2 | 0 |
+| Row reduction | 4 | 4 | 0 |
+| Transpose | 1 | 1 | 0 |
+| Vector | 2 | 2 | 0 |
+| **Total** | **41** | **35** | **6** |
+
+There were no timeouts. The remaining six failures are FlashAttention
+conversion-surface limitations rather than PE partition failures:
+
+- Four HIF4/MXFP4 configurations require BF16-to-packed-FP4 conversion, while
+  PTO 0.58 TCVT requires matching source and destination logical shapes.
+- Two HIF8 configurations require FP32-to-HIF8 conversion, which the current
+  model reports as an unregistered `.fs -> .hifb` conversion.
+
+The tested Broadcast shape expands only leading unit dimensions, so each PE
+uses the direct full-input-copy fast path. Other Broadcast shapes still use
+the generic MGATHER offset path, whose compiler-generated raw-tile spill is a
+known compiler/model carrier limitation.
+
+The table above records compilation and gfrun completion. It does not by
+itself prove that the generated tensor is numerically correct. The separate
+`RES_CHECK` regression below supplies inputs and compares the complete output
+against a host reference.
+
+## Four-PE RES_CHECK numerical validation
+
+### Validation mechanism
+
+When `res_check=on` is passed to make, `Makefile.common` defines
+`RES_CHECK`, enables binary file I/O, and encodes a per-ELF directory under
+`benchmark/one-level-arch/compare/` as `CHK_DIR`.
+
+Hosted four-PE execution runs the testcase entry on PE0 through PE3. The
+multi-thread `RES_CHECK` path therefore follows these ownership rules:
+
+1. Input, output, scale, and workspace arrays used by multiple PEs are placed
+   in shared static storage rather than on a PE-private stack.
+2. PE0 is the only thread that calls `readBinaryFile` and
+   `writeBinaryFile`. For cooperative FA and Matmul, this is also the PE used
+   by the single-PE shared-tile load path.
+3. After PE0 loads all inputs, it publishes `input_ready`; PE1 through PE3
+   wait before entering the kernel.
+4. Every PE writes a separate completion slot after its final Tile operation.
+   PE0 waits for all four slots before exporting the complete output tensor.
+5. The host runner computes a NumPy reference, runs gfrun with
+   `softcore.multiThreadNum=4`, and compares every output element with
+   operator-specific tolerances.
+
+The shared synchronization implementation is
+`test/common/multi_thread_res_check.h`. The input generation, gfrun launch,
+and Golden comparison are implemented by
+`test/kernel/multi_thread/res_check_all.py`.
+
+### Build procedure
+
+All builds must use the main `linx-toolchain-build` checkout:
+
+```bash
+export COMPILER_DIR=/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
+export res_check=on
+
+for script in $(find benchmark/one-level-arch/test/kernel/multi_thread \
+    -name compile.all | sort); do
+  dir=${script%/compile.all}
+  (cd "$dir" && bash compile.all) || exit $?
+done
+```
+
+This compiles the complete precision/configuration matrix. The 2026-08-29
+run produced 41/41 ELFs successfully with compiler commit `e6a31ef`.
+
+### Run and compare
+
+Run one or more named cases:
+
+```bash
+python3 benchmark/one-level-arch/test/kernel/multi_thread/res_check_all.py \
+  broadcast fa matmul_shared rms_norm
+```
+
+Run the complete representative numerical portfolio:
+
+```bash
+python3 benchmark/one-level-arch/test/kernel/multi_thread/res_check_all.py \
+  --timeout 60
+```
+
+The runner uses
+`/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel/bin/gfrun`
+by default. It creates each input, preallocates the output file, invokes:
+
+```bash
+gfrun -s softcore.multiThreadNum=4 -f /absolute/path/to/operator.elf
+```
+
+and saves `gfrun.log` beside the binary inputs and outputs in the ELF's
+`compare/<elf-stem>/` directory.
+
+### Numerical result: 2026-08-29
+
+The representative portfolio covers all 20 multi-thread testcase sources.
+FA uses the FP32/VecFP32 configuration. Low-precision Matmul uses exact FP8
+zero inputs to verify four-PE ownership and writeback without relying on a
+host FP8 package. The full 41-ELF compile matrix remains the compilation
+coverage for the other precision variants.
+
+| Testcase | Result | Maximum absolute error or failure |
+|---|---|---|
+| `broadcast` | PASS | 0 |
+| `concat_gather` | PASS | 0 |
+| `concat_scatter` | PASS | 0 |
+| `v300_conv2d` | FAIL | 0.282559; only part of the output is written correctly |
+| `gelu` | PASS | 7.62939e-06 |
+| `fa_2d_unroll_gmma` FP32/VecFP32 | PASS | 7.12688e-05 |
+| `gather` | FAIL | 1.03847e+34; MGATHER index/offset contract mismatch |
+| `matmul_multithread` | FAIL | gfrun `collective order mismatch` assertion |
+| `matmul_shared` | PASS | 0 |
+| `matmul_reuseB` | PASS | 0 |
+| `matmul_lowp` FP8 | PASS | 0 |
+| `rms_norm` | PASS | 0.000976562 |
+| `rms_norm_binary` | PASS | 0.000976562 |
+| `cumsum_row` | PASS | 0 |
+| `reducemax_row` | FAIL | 0.999606; row-result physical stride mismatch |
+| `reduceprod_row` | FAIL | 1.06037; row-result physical stride mismatch |
+| `reducesum_row` | PASS | 5.72205e-06 |
+| `transpose` | PASS | 0 |
+| `tadd` | PASS | 0 |
+| `trowsum` | PASS | 0 |
+| **Total** | **15 PASS / 5 FAIL / 0 TIMEOUT** | **20 representative cases** |
+
+Two RMSNorm cases initially failed because the old Newton iteration used
+`TRECIP(x)` as the inverse-square-root seed. With the current compiler's
+`TRSQRT` support, replacing that sequence with `TRSQRT` reduced the maximum
+absolute error to 0.000976562 and made both cases pass.
+
+The remaining failures are kernel/API-model issues exposed by numerical
+checking, rather than binary I/O or four-PE synchronization failures:
+
+- Conv2D assigns different output-spatial blocks to PEs around a cooperative
+  TMATMUL path; its cube result ownership/writeback needs to be redesigned.
+- Gather passes row indexes to the current MGATHER path, while the generated
+  instruction/model behavior is offset-oriented and returns corrupted data.
+- `matmul_multithread` reaches different collective instruction identities at
+  the same collective point and is rejected by `ExecuteOrSuspendCollective`.
+- ReduceMax and ReduceProd expose one valid value per row through a padded
+  reduction carrier, but their current TSTORE path writes with the physical
+  carrier stride instead of a compact `[Rows]` layout.
+
+## Scope limits
+
+This directory only contains implementations with race-free output ownership.
+GroupNorm backward, column-wise/global reductions, TopK, and fused kernels
+with cross-PE dependencies still require a kernel-level barrier and/or an
+inter-PE reduction primitive. They must not be implemented by having four PEs
+write the same destination.
 
 ## Run with gfrun
 

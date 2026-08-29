@@ -35,16 +35,7 @@ inline int64_t GetCacheId(int64_t idx) {
 
 template <typename TileVec>
 inline void rsqrt_newton(TileVec &out, TileVec &a) {
-    TileVec x, t1, t2;
-    TRECIP(x, a);
-    for (int64_t i = 0; i < 4; ++i) {
-        TMUL(t1, x, x);
-        TMUL(t2, t1, a);
-        TMULS(t2, t2, -0.5f);
-        TADDS(t2, t2, 1.5f);
-        TMUL(x, x, t2);
-    }
-    TMULS(out, x, 1.0f);
+    TRSQRT(out, a);
 }
 
 } // namespace rms_bin
@@ -74,7 +65,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, -1, -1>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, -1, -1>;
-    using tile_v = Tile<Location::Vec, float, tA, rms_bin::kWsCols,
+    using tile_v = Tile<Location::Vec, float, rms_bin::kWsCols, 1,
                         BLayout::RowMajor, 1, 1>;
 
     for (int64_t ia = 0; ia < gA; ++ia) {
@@ -247,7 +238,7 @@ void rms_norm_binary(dtype *x, dtype *out, float *workspace,
     using gm_f = global_tensor<float, RowMajor<1, rms_bin::kWsCols>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor>;
-    using tile_v = Tile<Location::Vec, float, tA, rms_bin::kWsCols,
+    using tile_v = Tile<Location::Vec, float, rms_bin::kWsCols, 1,
                         BLayout::RowMajor, 1, 1>;
 
     for (int64_t ia = 0; ia < gA; ++ia) {

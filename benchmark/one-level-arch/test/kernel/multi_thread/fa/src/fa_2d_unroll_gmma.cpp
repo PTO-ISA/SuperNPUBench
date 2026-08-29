@@ -4,6 +4,7 @@
 
 #include "benchmark.h"
 #include "fileop.h"
+#include "multi_thread_res_check.h"
 
 // MATRIX_DTYPE controls the matrix-resident Q/K/V inputs. VECTOR_DTYPE
 // controls softmax, P, online accumulation and O. Both TMATMUL outputs are
@@ -97,17 +98,20 @@ int main() {
     static_assert(globSq % kPeNum == 0,
                   "global Sq must be divisible by the PE count");
 
-    matrix_dtype qp[B * H * globSq * kStoredQD + 2 * ALIGN];
-    matrix_dtype kp[B * H * globSkv * kStoredQD + 2 * ALIGN];
-    matrix_dtype vp[B * H * kStoredSkv * vD + 2 * ALIGN];
-    vector_dtype outp[B * H * globSq * vD + 2 * ALIGN];
-    uint8_t qsp[B * H * globSq * (qD / 32) + 2 * ALIGN];
-    uint8_t ksp[B * H * globSkv * (qD / 32) + 2 * ALIGN];
-    uint8_t vsp[B * H * (globSkv / 32) * vD + 2 * ALIGN];
-    float scorep[kPeNum * kPeTm * kTk + 2 * ALIGN];
-    matrix_dtype probp[kGroupM * kStoredTk + 2 * ALIGN];
-    uint8_t probsp[kGroupM * kTkScaleRows + 2 * ALIGN];
-    float pvp[kPeNum * kPeTm * vD + 2 * ALIGN];
+    static matrix_dtype qp[B * H * globSq * kStoredQD + 2 * ALIGN];
+    static matrix_dtype kp[B * H * globSkv * kStoredQD + 2 * ALIGN];
+    static matrix_dtype vp[B * H * kStoredSkv * vD + 2 * ALIGN];
+    static vector_dtype outp[B * H * globSq * vD + 2 * ALIGN];
+    static uint8_t qsp[B * H * globSq * (qD / 32) + 2 * ALIGN];
+    static uint8_t ksp[B * H * globSkv * (qD / 32) + 2 * ALIGN];
+    static uint8_t vsp[B * H * (globSkv / 32) * vD + 2 * ALIGN];
+    static float scorep[kPeNum * kPeTm * kTk + 2 * ALIGN];
+    static matrix_dtype probp[kGroupM * kStoredTk + 2 * ALIGN];
+    static uint8_t probsp[kGroupM * kTkScaleRows + 2 * ALIGN];
+    static float pvp[kPeNum * kPeTm * vD + 2 * ALIGN];
+#ifdef RES_CHECK
+    static MultiThreadResCheckSync res_check_sync{};
+#endif
 
     matrix_dtype *q =
         (matrix_dtype *)(((uint64_t)qp & ALIGN_MASK) + ALIGN);
@@ -160,6 +164,7 @@ int main() {
                        B * H * (globSkv / 32) * vD);
 #endif
     }
+    res_check_publish_inputs(res_check_sync, tid);
 #endif
 
     BENCHSTART;
@@ -193,6 +198,7 @@ int main() {
 
 #ifdef RES_CHECK
 #define RES_PATH CHK_DIR "/res.bin"
+    res_check_wait_for_all(res_check_sync, tid);
     if (tid == kIoTid) {
         writeBinaryFile(RES_PATH, (uint8_t *)out,
                         B * H * globSq * vD * sizeof(vector_dtype));

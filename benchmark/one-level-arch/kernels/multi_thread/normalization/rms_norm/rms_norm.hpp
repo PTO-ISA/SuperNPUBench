@@ -9,6 +9,7 @@ void rms_norm(dtype *x, dtype *out, float eps = 1e-6f) {
     static_assert(gA > 0 && gR > 0 && tA > 0 && tR > 0);
     static_assert(peA > 0 && gA % peA == 0, "gA must be divisible by peA");
     static_assert(peA >= tA, "peA must cover one tile_a");
+    static_assert(tA <= 128, "RMSNorm row-state carrier supports tA <= 128");
     static_assert(tR == gR, "static rms_norm is a single R-tile; use rms_norm_binary for R-split");
     constexpr int Mb = peA / tA;
     constexpr int rmd_A = peA % tA;
@@ -17,7 +18,8 @@ void rms_norm(dtype *x, dtype *out, float eps = 1e-6f) {
     using gm_t = global_tensor<dtype, RowMajor<peA, gR>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor>;
-    using tile_v = Tile<Location::Vec, float, tA, 128, BLayout::RowMajor, tA, 1>;
+    using tile_v =
+        Tile<Location::Vec, float, 128, 1, BLayout::RowMajor, tA, 1>;
     using it_t = global_iterator<gm_t, tile_h>;
 
     const uint32_t tid = get_thread_idx();
@@ -48,7 +50,7 @@ void rms_norm(dtype *x, dtype *out, float eps = 1e-6f) {
                             BLayout::RowMajor, rmd_A, tR>;
         using tile_f_r = Tile<Location::Vec, float, tA, tR,
                             BLayout::RowMajor, rmd_A, tR>;
-        using tile_v_r = Tile<Location::Vec, float, tA, 128,
+        using tile_v_r = Tile<Location::Vec, float, 128, 1,
                             BLayout::RowMajor, rmd_A, 1>;
         tile_h_r src_h, dst_h;
         tile_f_r src, squared, dst;

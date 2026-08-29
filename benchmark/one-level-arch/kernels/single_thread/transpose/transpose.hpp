@@ -263,16 +263,22 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
  * @tparam Cols 输入矩阵列数
  * @tparam TileRows tile 块行数（默认 16）
  * @tparam TileCols tile 块列数（默认 16）
+ * @tparam RowTileStride 输入行 tile 的调度步长（默认 1）
  * 
  * @param input 输入矩阵指针（Rows × Cols）
  * @param output 输出矩阵指针（Cols × Rows）
+ * @param row_tile_start 当前执行单元处理的首个输入行 tile
+ * @param handle_bottom_tail 是否负责唯一的底部尾块
  */
 template <typename DType, int Rows, int Cols, int TileRows = 16,
-          int TileCols = 16>
-void tile_transpose_2d(DType *input, DType *output) {
+          int TileCols = 16, int RowTileStride = 1>
+void tile_transpose_2d(DType *input, DType *output,
+                       int row_tile_start = 0,
+                       bool handle_bottom_tail = true) {
   // ========== 编译期安全检查 ==========
   static_assert(Rows > 0 && Cols > 0, "矩阵维度必须为正");
   static_assert(TileRows > 0 && TileCols > 0, "tile 维度必须为正");
+  static_assert(RowTileStride > 0, "RowTileStride must be positive");
   // TTRANS 对行宽有 32 字节对齐要求
   static_assert(TileRows * static_cast<int>(sizeof(DType)) % 32 == 0,
                 "TTRANS 输出行宽必须 32 字节对齐");
@@ -303,8 +309,8 @@ void tile_transpose_2d(DType *input, DType *output) {
   OutputIterator output_iter(output);
 
   // ========== 处理完整 tile 块 ==========
-  #pragma clang loop unroll(full)
-  for (int row_tile = 0; row_tile < kRowTiles; ++row_tile) {
+  for (int row_tile = row_tile_start; row_tile < kRowTiles;
+       row_tile += RowTileStride) {
     #pragma clang loop unroll(full)
     for (int col_tile = 0; col_tile < kColTiles; ++col_tile) {
       // 输入位置：(row_tile, col_tile)
@@ -360,58 +366,60 @@ void tile_transpose_2d(DType *input, DType *output) {
 
   // ========== 处理底部尾部 tile（行方向） ==========
   if constexpr (kTailRows != 0) {
-    #pragma clang loop unroll(full)
-    for (int col_tile = 0; col_tile < kColTiles; ++col_tile) {
-      // 输入 tile：kTailRows × TileCols（valid region）
-      using SrcBottomTile =
-          pto::Tile<pto::Location::Vec, DType, TileRows, TileCols,
-                    pto::BLayout::RowMajor, kTailRows, TileCols>;
-      // 输出 tile：TileCols × kTailRows（转置后）
-      using DstRightTile =
-          pto::Tile<pto::Location::Vec, DType, TileCols, TileRows,
-                    pto::BLayout::RowMajor, TileCols, kTailRows>;
-      
-      auto input_global = input_iter(kRowTiles, col_tile);
-      auto output_global = output_iter(col_tile, kRowTiles);
-      
-      SrcBottomTile src_tile;
-      DstRightTile dst_tile;
-      
-      TLOAD(src_tile, input_global);
-#if SUPERNPU_PTO_TTRANS_NEEDS_TMP
-      SrcBottomTile tmp_tile;
-      TTRANS(dst_tile, src_tile, tmp_tile);
-#else
-      TTRANS(dst_tile, src_tile);
-#endif
-      TSTORE(output_global, dst_tile);
-    }
+    if (handle_bottom_tail) {
+      #pragma clang loop unroll(full)
+      for (int col_tile = 0; col_tile < kColTiles; ++col_tile) {
+        // 输入 tile：kTailRows × TileCols（valid region）
+        using SrcBottomTile =
+            pto::Tile<pto::Location::Vec, DType, TileRows, TileCols,
+                      pto::BLayout::RowMajor, kTailRows, TileCols>;
+        // 输出 tile：TileCols × kTailRows（转置后）
+        using DstRightTile =
+            pto::Tile<pto::Location::Vec, DType, TileCols, TileRows,
+                      pto::BLayout::RowMajor, TileCols, kTailRows>;
 
-    // ========== 处理右下角尾部 tile ==========
-    if constexpr (kTailCols != 0) {
-      // 输入 tile：kTailRows × kTailCols（valid region）
-      using SrcCornerTile =
-          pto::Tile<pto::Location::Vec, DType, TileRows, TileCols,
-                    pto::BLayout::RowMajor, kTailRows, kTailCols>;
-      // 输出 tile：kTailCols × kTailRows（转置后）
-      using DstCornerTile =
-          pto::Tile<pto::Location::Vec, DType, TileCols, TileRows,
-                    pto::BLayout::RowMajor, kTailCols, kTailRows>;
-      
-      auto input_global = input_iter(kRowTiles, kColTiles);
-      auto output_global = output_iter(kColTiles, kRowTiles);
-      
-      SrcCornerTile src_tile;
-      DstCornerTile dst_tile;
-      
-      TLOAD(src_tile, input_global);
+        auto input_global = input_iter(kRowTiles, col_tile);
+        auto output_global = output_iter(col_tile, kRowTiles);
+
+        SrcBottomTile src_tile;
+        DstRightTile dst_tile;
+
+        TLOAD(src_tile, input_global);
 #if SUPERNPU_PTO_TTRANS_NEEDS_TMP
-      SrcCornerTile tmp_tile;
-      TTRANS(dst_tile, src_tile, tmp_tile);
+        SrcBottomTile tmp_tile;
+        TTRANS(dst_tile, src_tile, tmp_tile);
 #else
-      TTRANS(dst_tile, src_tile);
+        TTRANS(dst_tile, src_tile);
 #endif
-      TSTORE(output_global, dst_tile);
+        TSTORE(output_global, dst_tile);
+      }
+
+      // ========== 处理右下角尾部 tile ==========
+      if constexpr (kTailCols != 0) {
+        // 输入 tile：kTailRows × kTailCols（valid region）
+        using SrcCornerTile =
+            pto::Tile<pto::Location::Vec, DType, TileRows, TileCols,
+                      pto::BLayout::RowMajor, kTailRows, kTailCols>;
+        // 输出 tile：kTailCols × kTailRows（转置后）
+        using DstCornerTile =
+            pto::Tile<pto::Location::Vec, DType, TileCols, TileRows,
+                      pto::BLayout::RowMajor, kTailCols, kTailRows>;
+
+        auto input_global = input_iter(kRowTiles, kColTiles);
+        auto output_global = output_iter(kColTiles, kRowTiles);
+
+        SrcCornerTile src_tile;
+        DstCornerTile dst_tile;
+
+        TLOAD(src_tile, input_global);
+#if SUPERNPU_PTO_TTRANS_NEEDS_TMP
+        SrcCornerTile tmp_tile;
+        TTRANS(dst_tile, src_tile, tmp_tile);
+#else
+        TTRANS(dst_tile, src_tile);
+#endif
+        TSTORE(output_global, dst_tile);
+      }
     }
   }
 }
