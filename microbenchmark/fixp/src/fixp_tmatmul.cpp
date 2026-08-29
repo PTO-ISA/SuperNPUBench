@@ -88,12 +88,25 @@ using group_max_tile_t =
 template <int N>
 using bias_tile_t = Tile<Location::Vec, float, 4, N, BLayout::RowMajor, 1, N>;
 
+template <typename T, int N>
+using typed_bias_tile_t =
+    Tile<Location::Vec, T, 4, N, BLayout::RowMajor, 1, N>;
+
 // FP32 accumulator C tile for ACC ops. It must match D's CUBE_M layout.
 template <int M, int N>
 using acc_tile_t = cube_acc_t<float, M, N>;
 
 template <int N>
 using gemv_acc_tile_t = CubeAccumulatorM16<float, 16, N, 1, N>;
+
+template <typename T, int N>
+using typed_gemv_acc_tile_t = CubeAccumulatorM16<T, 16, N, 1, N>;
+
+// CScale is an ACC-only U8 mathematical source in CUBE_M32 layout. Its valid
+// shape is M x 1 while the physical carrier keeps the accumulator box width.
+template <int M, int N>
+using cscale_tile_t =
+    Tile<Location::Vec, uint8_t, M, N, BLayout::CubeM32, M, 1>;
 
 // MX scale tiles use one E8M0 value per 32 elements along K.  Physical shapes
 // are padded to at least 512 B while valid shapes follow the matrix contract:
@@ -111,6 +124,22 @@ template <int K>
 using scale_vec_tile_t =
     Tile<Location::Vec, __fp8_e8m0, 16, 32, BLayout::RowMajor,
          1, (K + 31) / 32>;
+
+// Auxiliary matrix operands are real Tile operands, not C++ parameter
+// objects.  Keep their creation, definition and use in one inlined scope;
+// passing an uninitialised Tile through a captured lambda makes it spill as a
+// scalar S64 object and loses the Tile descriptor required by B.FPATR.
+template <typename TileT>
+__attribute__((always_inline)) inline void load_aux(TileT &tile,
+                                                    uint8_t *address) {
+  using gm_t = global_tensor<typename TileT::DType,
+                             RowMajor<TileT::ValidRow, TileT::ValidCol>>;
+  gm_t gm(reinterpret_cast<typename TileT::DType *>(address));
+  if constexpr (TileT::IsCubeLayout)
+    TLOAD_CUBE(tile, gm);
+  else
+    TLOAD(tile, gm);
+}
 
 template <typename SrcT, typename DstT, typename OptsMaker>
 __attribute__((noinline)) void run_single(SrcT *a_ptr, SrcT *b_ptr,
@@ -168,6 +197,83 @@ __attribute__((noinline)) void run_matmul(SrcT *a_ptr, SrcT *b_ptr,
   BENCHEND;
 }
 
+// Mixed A/B dtypes are legal when both belong to the same numeric class.
+// This driver also enables the asymmetric MX scale-mask cases.
+template <typename AT, typename BT, typename DstT, typename Kernel>
+__attribute__((noinline)) void run_matmul_mixed(AT *a_ptr, BT *b_ptr,
+                                               DstT *d_ptr, Kernel kernel) {
+  constexpr int kM = TM, kN = TN, kK = TK;
+  using gm_a = global_tensor<AT, RowMajor<kM, kK>>;
+  using gm_b = global_tensor<BT, RowMajor<kK, kN>>;
+  using gm_d = global_tensor<DstT, RowMajor<kM, kN>>;
+  using tile_a = cube_left_t<AT, kM, kK>;
+  using tile_b = CubeTileN8<BT, kK, kN>;
+  using tile_d = cube_acc_t<DstT, kM, kN>;
+
+  gm_a gA(a_ptr); gm_b gB(b_ptr); gm_d gD(d_ptr);
+  tile_a tA; tile_b tB; tile_d tD;
+  BENCHSTART;
+  TLOAD_CUBE(tA, gA);
+  TLOAD_CUBE(tB, gB);
+  kernel(tD, tA, tB);
+  TSTORE_CUBE(gD, tD);
+  BENCHEND;
+}
+
+// A Shared matrix operand selects the four-PE cooperative contract.  Publish
+// the Core-total A (group_M=4*TM) and B directly from GM; D remains the local
+// per-PE TMxTN accumulator.  A default-constructed SharedTile is only an
+// opaque handle and does not define or ready any Shared bytes.
+template <typename DstT, typename Kernel>
+__attribute__((noinline)) void run_matmul_shared(__half *a_ptr, __half *b_ptr,
+                                                DstT *d_ptr, Kernel kernel) {
+  constexpr int kM = TM, kN = TN, kK = TK;
+  using gm_a = global_tensor<__half, RowMajor<4 * kM, kK>>;
+  using gm_b = global_tensor<__half, RowMajor<kK, kN>>;
+  using gm_d = global_tensor<DstT, RowMajor<kM, kN>>;
+  using tile_a_desc = SharedMatrixLeft<__half, 4 * kM, kK>;
+  using tile_b_desc = SharedMatrixRight<__half, kK, kN>;
+  using tile_d = cube_acc_t<DstT, kM, kN>;
+
+  gm_a gA(a_ptr);
+  gm_b gB(b_ptr);
+  gm_d gD(d_ptr);
+  tile_d tD;
+
+  BENCHSTART;
+  // Each of the four PEs publishes its own quarter.  A multi-PE Shared TLOAD
+  // with mask=15 would require a B.ASSEMBLE destination instead.
+  SharedTile<tile_a_desc> tA = TLOAD<tile_a_desc, 1>(gA);
+  SharedTile<tile_b_desc> tB = TLOAD<tile_b_desc, 1>(gB);
+  kernel(tD, tA, tB);
+  TSTORE_CUBE(gD, tD);
+  BENCHEND;
+}
+
+template <bool TransA, bool TransB, typename DstT, typename Kernel>
+__attribute__((noinline)) void run_matmul_shared_transpose(
+    __half *a_ptr, __half *b_ptr, DstT *d_ptr, Kernel kernel) {
+  constexpr int kGroupM = 4 * TM, kN = TN, kK = TK;
+  constexpr int kARows = TransA ? kK : kGroupM;
+  constexpr int kACols = TransA ? kGroupM : kK;
+  constexpr int kBRows = TransB ? kN : kK;
+  constexpr int kBCols = TransB ? kK : kN;
+  using gm_a = global_tensor<__half, RowMajor<kARows, kACols>>;
+  using gm_b = global_tensor<__half, RowMajor<kBRows, kBCols>>;
+  using gm_d = global_tensor<DstT, RowMajor<TM, kN>>;
+  using tile_a_desc = SharedMatrixLeft<__half, kARows, kACols>;
+  using tile_b_desc = SharedMatrixRight<__half, kBRows, kBCols>;
+  using tile_d = cube_acc_t<DstT, TM, kN>;
+
+  gm_a gA(a_ptr); gm_b gB(b_ptr); gm_d gD(d_ptr); tile_d tD;
+  BENCHSTART;
+  SharedTile<tile_a_desc> tA = TLOAD<tile_a_desc, 1>(gA);
+  SharedTile<tile_b_desc> tB = TLOAD<tile_b_desc, 1>(gB);
+  kernel(tD, tA, tB);
+  TSTORE_CUBE(gD, tD);
+  BENCHEND;
+}
+
 // TGEMV-family driver (M=1): vec=CUBE_M16(1xK valid), mtx=CUBE_N8(KxN),
 // D=CUBE_M16(1xN valid). The lambda kernel(tD,tMtx,tVec) calls the specific
 // TGEMV op with captured auxiliary tiles.
@@ -197,20 +303,81 @@ __attribute__((noinline)) void run_gemv(SrcT *vec_ptr, SrcT *mtx_ptr,
   BENCHEND;
 }
 
+template <typename VecT, typename MtxT, typename DstT, typename Kernel>
+__attribute__((noinline)) void run_gemv_mixed(VecT *vec_ptr, MtxT *mtx_ptr,
+                                             DstT *d_ptr, Kernel kernel) {
+  constexpr int kK = TK, kN = TN;
+  using gm_vec = global_tensor<VecT, RowMajor<1, kK>>;
+  using gm_mtx = global_tensor<MtxT, RowMajor<kK, kN>>;
+  using gm_d = global_tensor<DstT, RowMajor<1, kN>>;
+  using tile_vec = CubeTileM16<VecT, 16, kK, 1, kK>;
+  using tile_mtx = CubeTileN8<MtxT, kK, kN>;
+  using tile_d = CubeAccumulatorM16<DstT, 16, kN, 1, kN>;
+
+  gm_vec gV(vec_ptr); gm_mtx gMx(mtx_ptr); gm_d gD(d_ptr);
+  tile_vec tVec; tile_mtx tMtx; tile_d tD;
+  BENCHSTART;
+  TLOAD_CUBE(tVec, gV);
+  TLOAD_CUBE(tMtx, gMx);
+  kernel(tD, tMtx, tVec);
+  TSTORE_CUBE(gD, tD);
+  BENCHEND;
+}
+
 template <typename SrcT, typename DstT>
 struct buf_t {
   static constexpr size_t kAlign = 4096;
   static constexpr size_t kAlignMask = ~(kAlign - 1);
-  alignas(16) uint8_t a_raw[TM * TK * sizeof(SrcT) + 2 * kAlign];
+  static constexpr size_t kAuxBytes = 64 * 1024;
+  // Shared-A coverage needs a Core-total 4*TM x TK allocation; ordinary
+  // modes simply use the first TM x TK region.
+  alignas(16) uint8_t a_raw[4 * TM * TK * sizeof(SrcT) + 2 * kAlign];
   alignas(16) uint8_t b_raw[TK * TN * sizeof(SrcT) + 2 * kAlign];
   alignas(16) uint8_t d_raw[TM * TN * sizeof(DstT) + 2 * kAlign];
+  alignas(16) uint8_t aux_raw[kAuxBytes + 2 * kAlign];
   SrcT *a;
   SrcT *b;
   DstT *d;
+  uint8_t *aux;
   buf_t() {
     a = (SrcT *)(((uint64_t)&a_raw[0] & kAlignMask) + kAlign);
     b = (SrcT *)(((uint64_t)&b_raw[0] & kAlignMask) + kAlign);
     d = (DstT *)(((uint64_t)&d_raw[0] & kAlignMask) + kAlign);
+    aux = (uint8_t *)(((uint64_t)&aux_raw[0] & kAlignMask) + kAlign);
+    // Make every byte defined; viewed as U64, every parameter word is also a
+    // legal scalar descriptor. Other auxiliary modes only require a defined
+    // carrier here—the microbenchmark does not check their numerical value.
+    auto *descriptors = reinterpret_cast<uint64_t *>(aux);
+    for (size_t i = 0; i < kAuxBytes / sizeof(uint64_t); ++i)
+      descriptors[i] = mk_desc(1, 0, 9);
+  }
+};
+
+template <typename AT, typename BT, typename DstT>
+struct mixed_buf_t {
+  static constexpr size_t kAlign = 4096;
+  static constexpr size_t kAlignMask = ~(kAlign - 1);
+  static constexpr size_t kAuxBytes = 64 * 1024;
+  alignas(16) uint8_t a_raw[4 * TM * TK * sizeof(AT) + 2 * kAlign];
+  alignas(16) uint8_t b_raw[TK * TN * sizeof(BT) + 2 * kAlign];
+  alignas(16) uint8_t d_raw[TM * TN * sizeof(DstT) + 2 * kAlign];
+  alignas(16) uint8_t aux_raw[kAuxBytes + 2 * kAlign];
+  AT *a;
+  BT *b;
+  DstT *d;
+  uint8_t *aux;
+  mixed_buf_t() {
+    a = reinterpret_cast<AT *>((reinterpret_cast<uint64_t>(&a_raw[0]) &
+                                kAlignMask) + kAlign);
+    b = reinterpret_cast<BT *>((reinterpret_cast<uint64_t>(&b_raw[0]) &
+                                kAlignMask) + kAlign);
+    d = reinterpret_cast<DstT *>((reinterpret_cast<uint64_t>(&d_raw[0]) &
+                                  kAlignMask) + kAlign);
+    aux = reinterpret_cast<uint8_t *>((reinterpret_cast<uint64_t>(&aux_raw[0]) &
+                                       kAlignMask) + kAlign);
+    auto *descriptors = reinterpret_cast<uint64_t *>(aux);
+    for (size_t i = 0; i < kAuxBytes / sizeof(uint64_t); ++i)
+      descriptors[i] = mk_desc(1, 0, 9);
   }
 };
 
@@ -242,6 +409,52 @@ int main() {
   buf_t<__half, __bf16> buf;
   run_single<__half, __bf16>(buf.a, buf.b, buf.d,
                               [] { return fixp::bf16().relu(); });
+
+// --- matrix numeric-class and mixed-input contracts ----------------------
+#elif defined(SIGNED_KEEP_ACC)
+  buf_t<int8_t, int32_t> buf;
+  run_matmul<int8_t, int32_t>(buf.a, buf.b, buf.d,
+      [&](auto &d, auto &a, auto &b) { TMATMUL(d, a, b); });
+#elif defined(SIGNED_ACC)
+  buf_t<int8_t, int32_t> buf;
+  run_matmul<int8_t, int32_t>(buf.a, buf.b, buf.d,
+      [&](auto &d, auto &a, auto &b) {
+        cube_acc_t<int32_t, TM, TN> c; load_aux(c, buf.aux);
+        TMATMUL_ACC(d, c, a, b);
+      });
+#elif defined(SIGNED_BIAS)
+  buf_t<int8_t, int32_t> buf;
+  run_matmul<int8_t, int32_t>(buf.a, buf.b, buf.d,
+      [&](auto &d, auto &a, auto &b) {
+        typed_bias_tile_t<int32_t, TN> bias; load_aux(bias, buf.aux);
+        TMATMUL_BIAS(d, a, b, bias);
+      });
+#elif defined(UNSIGNED_KEEP_ACC)
+  buf_t<uint8_t, uint32_t> buf;
+  run_matmul<uint8_t, uint32_t>(buf.a, buf.b, buf.d,
+      [&](auto &d, auto &a, auto &b) { TMATMUL(d, a, b); });
+#elif defined(UNSIGNED_ACC)
+  buf_t<uint8_t, uint32_t> buf;
+  run_matmul<uint8_t, uint32_t>(buf.a, buf.b, buf.d,
+      [&](auto &d, auto &a, auto &b) {
+        cube_acc_t<uint32_t, TM, TN> c; load_aux(c, buf.aux);
+        TMATMUL_ACC(d, c, a, b);
+      });
+#elif defined(UNSIGNED_BIAS)
+  buf_t<uint8_t, uint32_t> buf;
+  run_matmul<uint8_t, uint32_t>(buf.a, buf.b, buf.d,
+      [&](auto &d, auto &a, auto &b) {
+        typed_bias_tile_t<uint32_t, TN> bias; load_aux(bias, buf.aux);
+        TMATMUL_BIAS(d, a, b, bias);
+      });
+#elif defined(MIXED_FLOAT)
+  mixed_buf_t<__half, __bf16, float> buf;
+  run_matmul_mixed<__half, __bf16, float>(buf.a, buf.b, buf.d,
+      [&](auto &d, auto &a, auto &b) { TMATMUL(d, a, b); });
+#elif defined(GEMV_MIXED_FLOAT)
+  mixed_buf_t<__half, __bf16, float> buf;
+  run_gemv_mixed<__half, __bf16, float>(buf.a, buf.b, buf.d,
+      [&](auto &d, auto &mtx, auto &vec) { TGEMV(d, mtx, vec); });
 
 // --- scalar quant descriptor modes ---------------------------------------
 #elif defined(S_REQS8)
@@ -308,74 +521,75 @@ int main() {
 // --- vector quant parameter tile modes ------------------------------------
 #elif defined(V_REQS8)
   buf_t<int8_t, int8_t> buf;
-  par_tile_t<TN> quant;
-  run_single<int8_t, int8_t>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VREQS8Pre>(quant);
+  run_matmul<int8_t, int8_t>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VREQS8Pre>(quant));
   });
 #elif defined(V_DEQF16)
   buf_t<int8_t, __half> buf;
-  par_tile_t<TN> quant;
-  run_single<int8_t, __half>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VDEQF16>(quant);
+  run_matmul<int8_t, __half>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VDEQF16>(quant));
   });
 #elif defined(V_SHIFTS16)
   buf_t<int8_t, int16_t> buf;
-  par_tile_t<TN> quant;
-  run_single<int8_t, int16_t>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VSHIFTS322S16>(quant);
+  run_matmul<int8_t, int16_t>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VSHIFTS322S16>(quant));
   });
 #elif defined(V_QF_S4)
   buf_t<int8_t, __int4x2> buf;
-  par_tile_t<TN> quant;
-  run_single<int8_t, __int4x2>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VQF322S4Pre>(quant);
+  run_matmul<int8_t, __int4x2>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VQF322S4Pre>(quant));
   });
 #elif defined(V_QF_S16)
   buf_t<int8_t, int16_t> buf;
-  par_tile_t<TN> quant;
-  run_single<int8_t, int16_t>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VQF322S16Pre>(quant);
+  run_matmul<int8_t, int16_t>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VQF322S16Pre>(quant));
   });
 #elif defined(V_QF_S8)
   buf_t<__half, int8_t> buf;
-  par_tile_t<TN> quant;
-  run_single<__half, int8_t>(buf.a, buf.b, buf.d,
-                              [&] { return fixp::s8(quant); });
+  run_matmul<__half, int8_t>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::s8(quant));
+  });
 #elif defined(V_QF_HIF8)
   buf_t<__half, __hif8> buf;
-  par_tile_t<TN> quant;
-  run_single<__half, __hif8>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VQF322HIF8Pre>(quant);
+  run_matmul<__half, __hif8>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VQF322HIF8Pre>(quant));
   });
 #elif defined(V_QF_F16)
   buf_t<__half, __half> buf;
-  par_tile_t<TN> quant;
-  run_single<__half, __half>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VQF322F16Pre>(quant);
+  run_matmul<__half, __half>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VQF322F16Pre>(quant));
   });
 #elif defined(V_QF_BF16)
   buf_t<__half, __bf16> buf;
-  par_tile_t<TN> quant;
-  run_single<__half, __bf16>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VQF322BF16Pre>(quant);
+  run_matmul<__half, __bf16>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VQF322BF16Pre>(quant));
   });
 #elif defined(V_QF_FP8)
   buf_t<__half, __fp8_e4m3> buf;
-  par_tile_t<TN> quant;
-  run_single<__half, __fp8_e4m3>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VQF322FP8Pre>(quant);
+  run_matmul<__half, __fp8_e4m3>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VQF322FP8Pre>(quant));
   });
 #elif defined(V_QF_F32)
   buf_t<__half, float> buf;
-  par_tile_t<TN> quant;
-  run_single<__half, float>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VQF322F32Pre>(quant);
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VQF322F32Pre>(quant));
   });
 #elif defined(V_QS_BF16)
   buf_t<int8_t, __bf16> buf;
-  par_tile_t<TN> quant;
-  run_single<int8_t, __bf16>(buf.a, buf.b, buf.d, [&] {
-    return fixp::vector<FixpPreQuantMode::VQS322BF16Pre>(quant);
+  run_matmul<int8_t, __bf16>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::vector<FixpPreQuantMode::VQS322BF16Pre>(quant));
   });
 
 // --- ReLU / quant combinations ---------------------------------------------
@@ -391,77 +605,113 @@ int main() {
   });
 #elif defined(V_S8_RELU)
   buf_t<__half, int8_t> buf;
-  par_tile_t<TN> quant;
-  run_single<__half, int8_t>(buf.a, buf.b, buf.d, [&] {
-    return fixp::s8(quant).relu();
+  run_matmul<__half, int8_t>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> quant; load_aux(quant, buf.aux);
+    TMATMUL(d, a, b, fixp::s8(quant).relu());
   });
 #elif defined(F16_PRELU)
   buf_t<__half, __half> buf;
-  par_tile_t<TN> prelu;
-  run_single<__half, __half>(buf.a, buf.b, buf.d, [&] {
-    return fixp::f16().prelu(prelu);
+  run_matmul<__half, __half>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> prelu; load_aux(prelu, buf.aux);
+    TMATMUL(d, a, b, fixp::f16().prelu(prelu));
   });
 #elif defined(S8_PRELU)
   buf_t<__half, int8_t> buf;
-  par_tile_t<TN> prelu;
-  run_single<__half, int8_t>(buf.a, buf.b, buf.d, [&] {
-    return fixp::s8(mk_desc(1, 0, 9)).prelu(prelu);
+  run_matmul<__half, int8_t>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    par_tile_t<TN> prelu; load_aux(prelu, buf.aux);
+    TMATMUL(d, a, b, fixp::s8(mk_desc(1, 0, 9)).prelu(prelu));
   });
 
 // --- RowMax / GroupMax / MaxAbs --------------------------------------------
 #elif defined(ROWMAX)
   buf_t<__half, float> buf;
-  row_max_tile_t<TM> row_out;
-  run_single<__half, float>(buf.a, buf.b, buf.d, [&] {
-    return fixp::keep_acc().row_max(row_out);
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    row_max_tile_t<TM> row_out;
+    TMATMUL(d, a, b, fixp::keep_acc().row_max(row_out));
   });
 #elif defined(ROWMAX_INIT)
   buf_t<__half, float> buf;
-  row_max_tile_t<TM> row_in;
-  row_max_tile_t<TM> row_out;
-  run_single<__half, float>(buf.a, buf.b, buf.d, [&] {
-    return fixp::keep_acc().row_max(row_in, row_out);
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    row_max_tile_t<TM> row_in; load_aux(row_in, buf.aux);
+    row_max_tile_t<TM> row_out;
+    TMATMUL(d, a, b, fixp::keep_acc().row_max(row_in, row_out));
   });
 #elif defined(GROUPMAX_8)
   buf_t<__half, float> buf;
-  group_max_tile_t<TM, (TN + 7) / 8> group_out;
-  run_single<__half, float>(buf.a, buf.b, buf.d, [&] {
-    return fixp::keep_acc().group_max<8>(group_out);
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 7) / 8> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc().group_max<8>(group_out));
   });
 #elif defined(GROUPMAX_16)
   buf_t<__half, float> buf;
-  group_max_tile_t<TM, (TN + 15) / 16> group_out;
-  run_single<__half, float>(buf.a, buf.b, buf.d, [&] {
-    return fixp::keep_acc().group_max<16>(group_out);
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 15) / 16> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc().group_max<16>(group_out));
+  });
+#elif defined(GROUPMAX_32)
+  buf_t<__half, float> buf;
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 31) / 32> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc().group_max<32>(group_out));
+  });
+#elif defined(GROUPMAX_48)
+  buf_t<__half, float> buf;
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 47) / 48> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc().group_max<48>(group_out));
+  });
+#elif defined(GROUPMAX_64)
+  buf_t<__half, float> buf;
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 63) / 64> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc().group_max<64>(group_out));
+  });
+#elif defined(GROUPMAX_80)
+  buf_t<__half, float> buf;
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 79) / 80> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc().group_max<80>(group_out));
+  });
+#elif defined(GROUPMAX_96)
+  buf_t<__half, float> buf;
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 95) / 96> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc().group_max<96>(group_out));
+  });
+#elif defined(GROUPMAX_112)
+  buf_t<__half, float> buf;
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 111) / 112> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc().group_max<112>(group_out));
   });
 #elif defined(GROUPMAX_128)
   buf_t<__half, float> buf;
-  group_max_tile_t<TM, (TN + 127) / 128> group_out;
-  run_single<__half, float>(buf.a, buf.b, buf.d, [&] {
-    return fixp::keep_acc().group_max<128>(group_out);
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 127) / 128> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc().group_max<128>(group_out));
   });
 #elif defined(ROWGROUP_MAXABS)
   buf_t<__half, float> buf;
-  row_max_tile_t<TM> row_in;
-  row_max_tile_t<TM> row_out;
-  group_max_tile_t<TM, (TN + 7) / 8> group_out;
-  run_single<__half, float>(buf.a, buf.b, buf.d, [&] {
-    return fixp::keep_acc()
+  run_matmul<__half, float>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    row_max_tile_t<TM> row_in; load_aux(row_in, buf.aux);
+    row_max_tile_t<TM> row_out;
+    group_max_tile_t<TM, (TN + 7) / 8> group_out;
+    TMATMUL(d, a, b, fixp::keep_acc()
         .row_max(row_in, row_out)
         .group_max<8>(group_out)
-        .max_abs();
+        .max_abs());
   });
 #elif defined(F16_GROUPMAX)
   buf_t<__half, __half> buf;
-  group_max_tile_t<TM, (TN + 15) / 16> group_out;
-  run_single<__half, __half>(buf.a, buf.b, buf.d, [&] {
-    return fixp::f16().group_max<16>(group_out);
+  run_matmul<__half, __half>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    group_max_tile_t<TM, (TN + 15) / 16> group_out;
+    TMATMUL(d, a, b, fixp::f16().group_max<16>(group_out));
   });
 #elif defined(S8_ROWMAX)
   buf_t<__half, int8_t> buf;
-  row_max_tile_t<TM> row_out;
-  run_single<__half, int8_t>(buf.a, buf.b, buf.d, [&] {
-    return fixp::s8(mk_desc(1, 0, 9)).row_max(row_out);
+  run_matmul<__half, int8_t>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
+    row_max_tile_t<TM> row_out;
+    TMATMUL(d, a, b, fixp::s8(mk_desc(1, 0, 9)).row_max(row_out));
   });
 
 // === operation-family coverage (param-free keep_acc) =====================
@@ -470,43 +720,80 @@ int main() {
 // never collide with the op function names (TMATMUL_BIAS / TGEMV / ...).
 #elif defined(BIAS)                       // D = A*B + Bias
   buf_t<__half, float> buf;
-  bias_tile_t<TN> bias;
   run_matmul<__half, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
+        bias_tile_t<TN> bias; load_aux(bias, buf.aux);
         TMATMUL_BIAS(tD, tA, tB, bias, fixp::keep_acc());
       });
 #elif defined(ACC)                        // D = C + A*B
   buf_t<__half, float> buf;
-  acc_tile_t<TM, TN> cacc;
   run_matmul<__half, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
+        acc_tile_t<TM, TN> cacc; load_aux(cacc, buf.aux);
         TMATMUL_ACC(tD, cacc, tA, tB, fixp::keep_acc());
+      });
+#elif defined(ACC_CSCALE)
+  buf_t<__half, float> buf;
+  run_matmul<__half, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        acc_tile_t<TM, TN> cacc; load_aux(cacc, buf.aux);
+        cscale_tile_t<TM, TN> cscale; load_aux(cscale, buf.aux);
+        TMATMUL_ACC(tD, cacc, tA, tB, fixp::keep_acc().cscale(cscale));
+      });
+#elif defined(MX_SCALE0)
+  mixed_buf_t<__half, __bf16, float> buf;
+  run_matmul_mixed<__half, __bf16, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL_MX(tD, tA, tB, fixp::keep_acc());
+      });
+#elif defined(MX_SCALE_A)
+  mixed_buf_t<__fp8_e4m3, __half, float> buf;
+  run_matmul_mixed<__fp8_e4m3, __half, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        scale_a_tile_t<TM, TK> sa; load_aux(sa, buf.aux);
+        TMATMUL_MX(tD, tA, sa, tB, fixp::keep_acc());
+      });
+#elif defined(MX_SCALE_B)
+  mixed_buf_t<__bf16, __fp8_e5m2, float> buf;
+  run_matmul_mixed<__bf16, __fp8_e5m2, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        scale_b_tile_t<TK, TN> sb; load_aux(sb, buf.aux);
+        TMATMUL_MX(tD, tA, tB, sb, fixp::keep_acc());
       });
 #elif defined(FIXP_MODE_MX)               // C = (A*ScaleA)*(B*ScaleB)
   buf_t<__fp8_e4m3, float> buf;
-  scale_a_tile_t<TM, TK> sa;
-  scale_b_tile_t<TK, TN> sb;
   run_matmul<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
+        scale_a_tile_t<TM, TK> sa; load_aux(sa, buf.aux);
+        scale_b_tile_t<TK, TN> sb; load_aux(sb, buf.aux);
         TMATMUL_MX(tD, tA, sa, tB, sb, fixp::keep_acc());
       });
 #elif defined(MXBIAS)                     // D = (A*ScaleA)*(B*ScaleB) + Bias
   buf_t<__fp8_e4m3, float> buf;
-  scale_a_tile_t<TM, TK> sa;
-  scale_b_tile_t<TK, TN> sb;
-  bias_tile_t<TN> bias;
   run_matmul<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
+        scale_a_tile_t<TM, TK> sa; load_aux(sa, buf.aux);
+        scale_b_tile_t<TK, TN> sb; load_aux(sb, buf.aux);
+        bias_tile_t<TN> bias; load_aux(bias, buf.aux);
         TMATMUL_MX_BIAS(tD, tA, sa, tB, sb, bias, fixp::keep_acc());
       });
 #elif defined(MXACC)                      // D = C + (A*ScaleA)*(B*ScaleB)
   buf_t<__fp8_e4m3, float> buf;
-  acc_tile_t<TM, TN> cacc;
-  scale_a_tile_t<TM, TK> sa;
-  scale_b_tile_t<TK, TN> sb;
   run_matmul<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
+        acc_tile_t<TM, TN> cacc; load_aux(cacc, buf.aux);
+        scale_a_tile_t<TM, TK> sa; load_aux(sa, buf.aux);
+        scale_b_tile_t<TK, TN> sb; load_aux(sb, buf.aux);
         TMATMUL_MX_ACC(tD, cacc, tA, sa, tB, sb, fixp::keep_acc());
+      });
+#elif defined(MXACC_CSCALE)
+  buf_t<__half, float> buf;
+  run_matmul<__half, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        acc_tile_t<TM, TN> cacc; load_aux(cacc, buf.aux);
+        cscale_tile_t<TM, TN> cscale; load_aux(cscale, buf.aux);
+        TMATMUL_MX_ACC(tD, cacc, tA, tB,
+                       fixp::keep_acc().cscale(cscale));
       });
 #elif defined(GEMV)                       // D = mtx * vec (M=1)
   buf_t<__half, float> buf;
@@ -516,67 +803,107 @@ int main() {
       });
 #elif defined(GEMV_BIAS)
   buf_t<__half, float> buf;
-  bias_tile_t<TN> bias;
   run_gemv<__half, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
+        bias_tile_t<TN> bias; load_aux(bias, buf.aux);
         TGEMV_BIAS(tD, tMtx, tVec, bias, fixp::keep_acc());
       });
 #elif defined(GEMV_ACC)
   buf_t<__half, float> buf;
-  gemv_acc_tile_t<TN> cacc;
   run_gemv<__half, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
+        gemv_acc_tile_t<TN> cacc; load_aux(cacc, buf.aux);
         TGEMV_ACC(tD, cacc, tMtx, tVec, fixp::keep_acc());
+      });
+#elif defined(GEMV_MX_SCALE0)
+  mixed_buf_t<__half, __bf16, float> buf;
+  run_gemv_mixed<__half, __bf16, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tMtx, auto &tVec) {
+        TGEMV_MX(tD, tMtx, tVec, fixp::keep_acc());
+      });
+#elif defined(GEMV_MX_SCALE_A)
+  mixed_buf_t<__fp8_e4m3, __half, float> buf;
+  run_gemv_mixed<__fp8_e4m3, __half, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tMtx, auto &tVec) {
+        scale_vec_tile_t<TK> svec; load_aux(svec, buf.aux);
+        TGEMV_MX(tD, tMtx, tVec, svec, fixp::keep_acc());
+      });
+#elif defined(GEMV_MX_SCALE_B)
+  mixed_buf_t<__bf16, __fp8_e5m2, float> buf;
+  run_gemv_mixed<__bf16, __fp8_e5m2, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tMtx, auto &tVec) {
+        scale_b_tile_t<TK, TN> smtx; load_aux(smtx, buf.aux);
+        TGEMV_MX(tD, tMtx, smtx, tVec, fixp::keep_acc());
       });
 #elif defined(GEMV_MX)
   buf_t<__fp8_e4m3, float> buf;
-  scale_b_tile_t<TK, TN> smtx;   // scale for mtx: K x N
-  scale_vec_tile_t<TK> svec;     // scale for vec: 1 x K
   run_gemv<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
+        scale_b_tile_t<TK, TN> smtx; load_aux(smtx, buf.aux);
+        scale_vec_tile_t<TK> svec; load_aux(svec, buf.aux);
         TGEMV_MX(tD, tMtx, smtx, tVec, svec, fixp::keep_acc());
       });
 #elif defined(GEMV_MX_BIAS)
   buf_t<__fp8_e4m3, float> buf;
-  scale_b_tile_t<TK, TN> smtx;
-  scale_vec_tile_t<TK> svec;
-  bias_tile_t<TN> bias;
   run_gemv<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
+        scale_b_tile_t<TK, TN> smtx; load_aux(smtx, buf.aux);
+        scale_vec_tile_t<TK> svec; load_aux(svec, buf.aux);
+        bias_tile_t<TN> bias; load_aux(bias, buf.aux);
         TGEMV_MX_BIAS(tD, tMtx, smtx, tVec, svec, bias, fixp::keep_acc());
       });
 #elif defined(GEMV_MX_ACC)
   buf_t<__fp8_e4m3, float> buf;
-  gemv_acc_tile_t<TN> cacc;
-  scale_b_tile_t<TK, TN> smtx;
-  scale_vec_tile_t<TK> svec;
   run_gemv<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
+        gemv_acc_tile_t<TN> cacc; load_aux(cacc, buf.aux);
+        scale_b_tile_t<TK, TN> smtx; load_aux(smtx, buf.aux);
+        scale_vec_tile_t<TK> svec; load_aux(svec, buf.aux);
         TGEMV_MX_ACC(tD, cacc, tMtx, smtx, tVec, svec, fixp::keep_acc());
       });
 
 // === full-options spot-check (s8 scalar quant on non-TMATMUL ops) =========
 #elif defined(BIAS_S8)
   buf_t<__half, int8_t> buf;
-  bias_tile_t<TN> bias;
   run_matmul<__half, int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
+        bias_tile_t<TN> bias; load_aux(bias, buf.aux);
         TMATMUL_BIAS(tD, tA, tB, bias, fixp::s8(mk_desc(1, 0, 9)));
       });
 #elif defined(ACC_S8)
   buf_t<__half, int8_t> buf;
-  acc_tile_t<TM, TN> cacc;
   run_matmul<__half, int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
+        acc_tile_t<TM, TN> cacc; load_aux(cacc, buf.aux);
         TMATMUL_ACC(tD, cacc, tA, tB, fixp::s8(mk_desc(1, 0, 9)));
       });
 #elif defined(MX_S8)
   buf_t<__fp8_e4m3, int8_t> buf;
-  scale_a_tile_t<TM, TK> sa;
-  scale_b_tile_t<TK, TN> sb;
   run_matmul<__fp8_e4m3, int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
+        scale_a_tile_t<TM, TK> sa; load_aux(sa, buf.aux);
+        scale_b_tile_t<TK, TN> sb; load_aux(sb, buf.aux);
         TMATMUL_MX(tD, tA, sa, tB, sb, fixp::s8(mk_desc(1, 0, 9)));
+      });
+#elif defined(MXBIAS_S8)
+  buf_t<__fp8_e4m3, int8_t> buf;
+  run_matmul<__fp8_e4m3, int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        scale_a_tile_t<TM, TK> sa; load_aux(sa, buf.aux);
+        scale_b_tile_t<TK, TN> sb; load_aux(sb, buf.aux);
+        bias_tile_t<TN> bias; load_aux(bias, buf.aux);
+        TMATMUL_MX_BIAS(tD, tA, sa, tB, sb, bias,
+                        fixp::s8(mk_desc(1, 0, 9)));
+      });
+#elif defined(MXACC_S8)
+  buf_t<__fp8_e4m3, int8_t> buf;
+  run_matmul<__fp8_e4m3, int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        acc_tile_t<TM, TN> cacc; load_aux(cacc, buf.aux);
+        scale_a_tile_t<TM, TK> sa; load_aux(sa, buf.aux);
+        scale_b_tile_t<TK, TN> sb; load_aux(sb, buf.aux);
+        TMATMUL_MX_ACC(tD, cacc, tA, sa, tB, sb,
+                       fixp::s8(mk_desc(1, 0, 9)));
       });
 #elif defined(GEMV_S8)
   buf_t<__half, int8_t> buf;
@@ -584,31 +911,82 @@ int main() {
       [&](auto &tD, auto &tMtx, auto &tVec) {
         TGEMV(tD, tMtx, tVec, fixp::s8(mk_desc(1, 0, 9)));
       });
+#elif defined(GEMV_BIAS_S8)
+  buf_t<__half, int8_t> buf;
+  run_gemv<__half, int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tMtx, auto &tVec) {
+        bias_tile_t<TN> bias; load_aux(bias, buf.aux);
+        TGEMV_BIAS(tD, tMtx, tVec, bias,
+                   fixp::s8(mk_desc(1, 0, 9)));
+      });
+#elif defined(GEMV_ACC_S8)
+  buf_t<__half, int8_t> buf;
+  run_gemv<__half, int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tMtx, auto &tVec) {
+        gemv_acc_tile_t<TN> cacc; load_aux(cacc, buf.aux);
+        TGEMV_ACC(tD, cacc, tMtx, tVec,
+                  fixp::s8(mk_desc(1, 0, 9)));
+      });
 #elif defined(GEMV_MX_S8)
   buf_t<__fp8_e4m3, int8_t> buf;
-  scale_b_tile_t<TK, TN> smtx;
-  scale_vec_tile_t<TK> svec;
   run_gemv<__fp8_e4m3, int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
+        scale_b_tile_t<TK, TN> smtx; load_aux(smtx, buf.aux);
+        scale_vec_tile_t<TK> svec; load_aux(svec, buf.aux);
         TGEMV_MX(tD, tMtx, smtx, tVec, svec, fixp::s8(mk_desc(1, 0, 9)));
       });
-
-// === Shared-Right B (B.IOS) ===============================================
-#elif defined(SHARED)                      // TMATMUL with SharedTile<Right> B
-  buf_t<__half, float> buf;
-  run_matmul<__half, float>(buf.a, buf.b, buf.d,
-      [&](auto &tD, auto &tA, auto &tB) {
-        SharedMatrixRight<__half, TK, TN> b_desc;
-        SharedTile<decltype(b_desc)> b_shared(b_desc);
-        TMATMUL(tD, tA, b_shared, fixp::keep_acc());
+#elif defined(GEMV_MX_BIAS_S8)
+  buf_t<__fp8_e4m3, int8_t> buf;
+  run_gemv<__fp8_e4m3, int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tMtx, auto &tVec) {
+        scale_b_tile_t<TK, TN> smtx; load_aux(smtx, buf.aux);
+        scale_vec_tile_t<TK> svec; load_aux(svec, buf.aux);
+        bias_tile_t<TN> bias; load_aux(bias, buf.aux);
+        TGEMV_MX_BIAS(tD, tMtx, smtx, tVec, svec, bias,
+                      fixp::s8(mk_desc(1, 0, 9)));
       });
-#elif defined(S8_SHARED)                   // Shared B + s8 scalar quant
-  buf_t<__half, int8_t> buf;
-  run_matmul<__half, int8_t>(buf.a, buf.b, buf.d,
+#elif defined(GEMV_MX_ACC_S8)
+  buf_t<__fp8_e4m3, int8_t> buf;
+  run_gemv<__fp8_e4m3, int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tMtx, auto &tVec) {
+        gemv_acc_tile_t<TN> cacc; load_aux(cacc, buf.aux);
+        scale_b_tile_t<TK, TN> smtx; load_aux(smtx, buf.aux);
+        scale_vec_tile_t<TK> svec; load_aux(svec, buf.aux);
+        TGEMV_MX_ACC(tD, cacc, tMtx, smtx, tVec, svec,
+                     fixp::s8(mk_desc(1, 0, 9)));
+      });
+
+// === Cooperative Shared A/B (B.IOS) =======================================
+#elif defined(SHARED)                      // four-PE Shared A/B TMATMUL
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        SharedMatrixRight<__half, TK, TN> b_desc;
-        SharedTile<decltype(b_desc)> b_shared(b_desc);
-        TMATMUL(tD, tA, b_shared, fixp::s8(mk_desc(1, 0, 9)));
+        TMATMUL(tD, tA, tB, fixp::keep_acc());
+      });
+#elif defined(S8_SHARED)                   // Shared A/B + s8 scalar quant
+  buf_t<__half, int8_t> buf;
+  run_matmul_shared<int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::s8(mk_desc(1, 0, 9)));
+      });
+#elif defined(TRANS_A)
+  buf_t<__half, float> buf;
+  run_matmul_shared_transpose<true, false, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::keep_acc().transpose_a());
+      });
+#elif defined(TRANS_B)
+  buf_t<__half, float> buf;
+  run_matmul_shared_transpose<false, true, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::keep_acc().transpose_b());
+      });
+#elif defined(TRANS_AB)
+  buf_t<__half, float> buf;
+  run_matmul_shared_transpose<true, true, float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB,
+                fixp::keep_acc().transpose_a().transpose_b());
       });
 
 // === edge-case FPATR / operand-stream features ============================
@@ -620,9 +998,11 @@ int main() {
       });
 #elif defined(VQF_S8_PRELU)               // vector-quant + PReLU (SrcMask=6)
   buf_t<__half, int8_t> buf;
-  par_tile_t<TN> quant, prelu;
   run_matmul<__half, int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
+        par_tile_t<TN> quant, prelu;
+        load_aux(quant, buf.aux);
+        load_aux(prelu, buf.aux);
         TMATMUL(tD, tA, tB, fixp::s8(quant).prelu(prelu));
       });
 #elif defined(LEGACY3)                     // 3-param no-options TMATMUL(c,a,b)
