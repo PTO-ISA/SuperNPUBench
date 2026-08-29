@@ -449,6 +449,8 @@ TCVT(xf, xh);             // 复用 scale pass 的 xh，免第二次 TLOAD
 新增 `kernels/quant/dynamic_mx_quant/probe_dynamic_mx_quant_tail_ocp_fp8_newcalc_mt.hpp`：
 逐元素算法与母本**逐字一致**，只把外层 m-loop 按 `get_thread_idx()`（0..3）切成 4 份，删 M_tail 分支。
 
+> **更新（去 probe）**：该 MT 文件已正名为 `kernels/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp8.hpp`（正式 kernel，固定 SPMD 4-PE），函数 `dynamic_mx_quant_tail_ocp_fp8`；本节以下的 `-DMT` 命令与 `M%TileM==0` 静态断言为历史母本形态，现版已改为按 TID 编译期展开 + boxed 尾块（`static_assert` 已移除），构建改走 `TYPE=TAIL_OCP_FP8`。single-PE 探针仍保留原名。
+
 ```cpp
 constexpr int kPeNum = 4;                       // 仅 multiThreadNum=1|4 合法
 static_assert(M % TileM == 0, "MT 变体要求无 M_tail（M=512,TileM=64 满足）");
@@ -520,16 +522,18 @@ bin/gfsim -f <path>/dynamic_mx_quant_probe_ocp_fp8_newcalc.elf
 bin/gfrun -f <path>/dynamic_mx_quant_probe_ocp_fp8_newcalc.elf
 
 # ---- 第四部分：MT 4-PE 变体（CFLAGS 加 -DMT，同一 TESTCASE/TYPE）----
+# 【已过时·2026-08-29】此报告采集时 MT 版还是 probe（-DMT 开关切换）。现 MT 版已去 probe
+# 正名为正式 kernel `dynamic_mx_quant_tail_ocp_fp8.hpp`（固定 4-PE，无 -DMT 开关），
+# 独立驱动 tail_ocp_fp8.cpp / TYPE=TAIL_OCP_FP8。下面命令按新用法等价重写：
 cd SuperNPUBench/benchmark/one-level-arch/test/kernel/quant/dynamic_mx_quant
-rm -f ../../../../output/kernel/quant/dynamic_mx_quant/src/probe_ocp_fp8_newcalc.o
-make TESTCASE=dynamic_mx_quant TYPE=PROBE_OCP_FP8_NEWCALC CFLAGS="-DPM=512 -DPN=256 -DMT"
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP8 CFLAGS="-DPM=512 -DPN=256"
 
 cd SuperScalarModel
 # 功能（必须 4 线程，否则只写 1/4 输出）
-bin/gfrun -f <path>/dynamic_mx_quant_probe_ocp_fp8_newcalc.elf -s softcore.multiThreadNum=4
+bin/gfrun -f <path>/dynamic_mx_quant_tail_ocp_fp8.elf -s softcore.multiThreadNum=4
 # 时序（4PE 配置）
-bin/gfsim -f <path>/dynamic_mx_quant_probe_ocp_fp8_newcalc.elf --conf fourpe
+bin/gfsim -f <path>/dynamic_mx_quant_tail_ocp_fp8.elf --conf fourpe
 # 泳道（VECTOR_0..3 四轨 + 共享 TLSU_0）
-bin/gfsim -f <path>/dynamic_mx_quant_probe_ocp_fp8_newcalc.elf --conf fourpe \
+bin/gfsim -f <path>/dynamic_mx_quant_tail_ocp_fp8.elf --conf fourpe \
     --swimlane 1 --swimfile newcalc_M512N256_mt4pe_swim.json
 ```

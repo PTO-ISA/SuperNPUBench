@@ -1476,3 +1476,69 @@ scale=2^(E_max−8) 令块最大元素 scaled∈[2^8,2^9)=[256,512)，故 mx_qua
 
 缺陷已定位、修法已实证（output 253→256/256 逐字节对齐 golden）。**补丁在 worktree 试打后已回退、未提交**，
 正式修复挂 **SuperScalarModel issue364**（emulator 侧落地）。记忆 `reference_emulator_e4m3_clamp_256`。
+
+## 问题22：boxed 尾块（validRow < 物理行高）reduce 输出物理列 stride 被模型反推塌成 1 → 下游 TCVT 形状契约崩溃（需 emulator/spec 侧解决）【ISSUE_reduce_output_stride_tail.md】
+
+> 缺陷所在仓 **`SuperScalarModel`（emulator）**，`isa/Block.cpp` rowReduce 分支的输出 stride 反推逻辑。
+> 复现入口 = `TYPE=TAIL_OCP_FP8`（正式 4-PE kernel `dynamic_mx_quant_tail_ocp_fp8.hpp`，本轮由
+> `probe_dynamic_mx_quant_tail_ocp_fp8_newcalc_mt.hpp` 去 probe 正名而来；fp16 in → e4m3 out，
+> BS=32）。**非 kernel bug、非工具链 codegen 缺陷。**
+
+### 结论
+
+当 reduce（`TROWMAX`）物理 tile 行高 `TileM` > 有效行 `validRow`（boxed 尾块，且 `validRow` 不整除
+物理分配字节）时，工作目录模型 `f0c488c8` 对 reduce 输出**物理列 stride** 用启发式
+`dst->size / (validRow * elemBytes)` 反推。该式在非整除时**塌成 1**，使 `TROWMAX` 输出被记为 `col=1`；
+紧随的 `TCVT` 目标物理列由 B.DIM `lb2=BlockSize`(=32) 给出 → `col=32`。二者不等 →
+`Block.cpp:1155 ValidateOperandContract`「PTO 0.58 TCVT requires matching source/destination
+logical shapes」断言崩溃。
+
+**关键点：非 codegen 分叉。** full-tile 与 tail 的 `TROWMAX`/`TCVT` 指令**编码逐位相同**（`24119181`/
+`21b19181`），唯一差别是运行期 `validRow` 寄存器（64 vs 58）。崩溃纯在模型构造 reduce 输出描述符的
+stride 反推上。
+
+### 反推表（物理 tile 恒 64×32 half = 4096B）
+
+| validRow | `4096 % (validRow*2)` | 反推 stride=col | TCVT dst col(lb2) | 判 |
+|---|---|---|---|---|
+| 64（full-tile） | 0 | `4096/128`=**32** | 32 | ✓ 通过 |
+| 58（boxed 尾块） | 36≠0 | **1** | 32 | ✗ 崩 |
+
+`validRow==物理 TileM` 时 `dst->size` 恰整除、反推=真实物理列；boxed 尾块 `validRow<TileM` 时
+`dst->size` 含 padding 行字节，反推失效。**物理行步长在 bundle 里没有独立 B.DIM 字段承载**——模型只能
+从 `dst->size` 反推，这是根因。
+
+### 触发条件
+
+`M % (kPeNum*TileM) != 0`，即某 PE `SubM % TileM != 0`（seg_tail>0）。例：M=1000/4PE → SubM=250 →
+seg_full=3、seg_tail=58 boxed → 崩；M=1024 → SubM=256 → seg_tail=0 → 通过（R2=0）。此前所有注册配置
+M 均被 `kPeNum×TileM` 整除，故一直未触发。**全 mx_quant 家族共有**（凡 reduce 输出直接喂 lb2 声明物理列的
+elementwise 且发生 boxed 尾块）。
+
+### 与 env_test（`d8903938`）回归的关系——两个独立问题
+
+`grep` 核实 env_test 最新版**不含反推式**，rowReduce 分支**硬编码 `const uint64_t stride = 1;`**
+（注释 "physical column count is always one"）。故：
+
+| 模型 | reduce 输出 col 来源 | full-tile | boxed 尾块 |
+|---|---|---|---|
+| **WD `f0c488c8`**（本问题） | `dst->size/(validRow*elemBytes)` 反推 | ✅ 通过 | ❌ 塌成 1 |
+| **ET `d8903938`**（另一问题） | **硬编码 =1** | ❌（≠32） | ❌ |
+
+ET 版直接假设 reduce 输出物理列恒 1、期望 kernel 声明 `physical Cols=1`；而 kernel 现用
+`physical=BlockSize / ValidCol=1`（行跨步，源于 `ISSUE_32B_align.md` 的 32B 列对齐 static_assert，
+最新工具链已删该约束）在 ET 彻底不兼容。这是「physical=1 迁移」的动因，独立于本尾块问题。
+
+### 修复建议
+
+- **根本解（模型/spec）**：reduce 输出物理列 stride 应有权威来源而非从 `dst->size` 反推——① 改用物理
+  行高 `TileM` 反推（`dst->size/(TileM*elemBytes)`，full/boxed 都得 BlockSize）；或 ② spec 给 reduce
+  输出补物理列步长字段（类 TCVT lb2）。
+- **kernel 侧规避（二选一，尚未落地）**：方案 C = `static_assert(SubM % TileM == 0)` 拦 boxed 尾块，
+  牺牲任意 M；方案 D = 把 seg_tail 按 2 的幂分解成若干合法物理行高 full-tile（58=32+16+8+2）绕开反推失败。
+
+### 状态
+
+缺陷已定位、机理已实证（M=1000 崩 / M=1024 通过，指令编码逐位对照）。**未修**，正式修复挂
+`ISSUE_reduce_output_stride_tail.md`（待提 SuperScalarModel issue）。kernel 侧规避方案 C/D **尚未选定落地**。
+相关：问题13（TCVT 不发 lb2）、问题16（TCVT 形状契约）、`ISSUE_32B_align.md`。

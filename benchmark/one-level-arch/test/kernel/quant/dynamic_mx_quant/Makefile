@@ -64,6 +64,13 @@ ifeq ($(TYPE), PROBE_OCP_FP8_NEWCALC)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_probe_ocp_fp8_newcalc.elf
 endif
 
+# 正式 TAIL_OCP_FP8 kernel（固定 SPMD 4-PE，去 probe 化自 newcalc_mt 母本）。
+# 必须用 4 线程跑：gfrun -s softcore.multiThreadNum=4 / gfsim --conf fourpe。
+ifeq ($(TYPE), TAIL_OCP_FP8)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_tail_ocp_fp8.elf
+endif
+
 ifeq ($(TYPE), ALIGN32_PROBE)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/align32_probe.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_align32_probe.elf
