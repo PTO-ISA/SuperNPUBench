@@ -139,13 +139,9 @@ def prep_trowsum(case_dir: Path) -> np.ndarray:
     return np.sum(x, axis=1, dtype=np.float32)
 
 
-def prep_matmul(case_dir: Path, per_pe: bool = False) -> np.ndarray:
-    if per_pe:
-        a = np.ones((4, 16, 32), dtype=np.float32)
-        b = np.ones((32, 16), dtype=np.float32)
-    else:
-        a = np.ones((1, 256, 256), dtype=np.float32)
-        b = np.ones((1, 256, 256), dtype=np.float32)
+def prep_matmul(case_dir: Path) -> np.ndarray:
+    a = np.ones((1, 256, 256), dtype=np.float32)
+    b = np.ones((1, 256, 256), dtype=np.float32)
     write(case_dir, "src0.bin", a)
     write(case_dir, "src1.bin", b)
     with np.errstate(all="ignore"):
@@ -187,7 +183,6 @@ CASES = [
     Case("gelu", "element_wise/gelu/elf/kernel_multi_thread_element_wise_gelu_gelu_PE4.elf", prep_gelu, output_dtype=np.float16, atol=2e-2, rtol=2e-2),
     Case("fa", "fa/elf/kernel_multi_thread_fa_Sq256_Skv256_Tm128_Tk128_X1_Y2_FP32_VECFP32.elf", prep_fa, output_name="res.bin", atol=3e-2, rtol=3e-2),
     Case("gather", "gather/elf/kernel_multi_thread_gather_gather_PE4.elf", prep_gather),
-    Case("matmul_multithread", "matmul/elf/kernel_multi_thread_matmul_matmul_multithread_M16_N16_K32_tM16_tN16_tK16.elf", lambda p: prep_matmul(p, True), output_name="res.bin"),
     Case("matmul_shared", "matmul/elf/kernel_multi_thread_matmul_matmul_shared_B1_M256_N256_K256_tM128_tN256_tK128.elf", prep_matmul, output_name="res.bin", atol=1e-3, rtol=1e-3),
     Case("matmul_reuseB", "matmul/elf/kernel_multi_thread_matmul_matmul_reuseB_B1_M256_N256_K256_tM128_tN256_tK128.elf", prep_matmul, output_name="res.bin", atol=1e-3, rtol=1e-3),
     Case("matmul_lowp_fp8", "matmul/elf/kernel_multi_thread_matmul_matmul_lowp_FP8_B1_M256_N256_K512_tM128_tN256_tK512.elf", prep_matmul_lowp, output_name="res.bin"),
