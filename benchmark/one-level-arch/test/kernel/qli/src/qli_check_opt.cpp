@@ -8,11 +8,11 @@
 // that generated ~1.14M STD blocks (92.8% of total).
 //
 // Addresses updated via llvm-nm after each relink (same as qli_check.cpp).
-#define SRCQ_ADDR  0x0000000000014560ULL
-#define SRCK_ADDR  0x000000000001c560ULL
-#define SRCW_ADDR  0x0000000000020560ULL
-#define SRCSQ_ADDR  0x0000000000020960ULL
-#define SRCSK_ADDR  0x0000000000020d60ULL
+#define SRCQ_ADDR  0x0000000000014608ULL
+#define SRCK_ADDR  0x0000000000094608ULL
+#define SRCW_ADDR  0x0000000000098608ULL
+#define SRCSQ_ADDR  0x000000000009c608ULL
+#define SRCSK_ADDR  0x00000000000a0608ULL
 
 #define OUT_SCORES  0x4000802000ULL
 // indices 紧随 scores 之后，避免大 Sq*Skv 时与 scores 区域重叠
@@ -79,15 +79,29 @@ int main(){
     float*   scale_q = reinterpret_cast<float*>(SRCSQ_ADDR);
     float*   scale_k = reinterpret_cast<float*>(SRCSK_ADDR);
 
+    // v0.58.4：W*scale_q 预广播为 [Sq*g, kTk]（行 r 全列同值），
+    // kernel 内用普通 TMUL（规避单列广播源的物理列校验）
+    static float wbb[Sq * g * kTk];
+    for (int r = 0; r < Sq * g; r++)
+        for (int c = 0; c < kTk; c++)
+            wbb[r * kTk + c] = w[r] * scale_q[r];
+    // v0.58.4：K 转置为 [D, Skv] 行主序（CUBE_N8 B-tile 契约）
+    static dtype ktt[D * Skv];
+    for (int n = 0; n < Skv; n++)
+        for (int d = 0; d < D; d++)
+            ktt[d * Skv + n] = k[n * D + d];
+    // CUBE->Vec 桥接临时区
+    static float tmp16[kTm * kTk];
+
     BENCHSTART;
     for(int i=0;i<B;i++){
         qli_pto<dtype, Sq, Skv, D, g, kTm, kTk>(
             reinterpret_cast<float*>(OUT_SCORES) + i*Sq*Skv,
             q + i*Sq*g*D,
-            k + i*Skv*D,
-            w + i*Sq*g,
-            scale_q + i*Sq*g,
-            scale_k + i*Skv
+            ktt + i*D*Skv,
+            wbb + i*Sq*g*kTk,
+            scale_k + i*Skv,
+            tmp16
         );
     }
     BENCHEND;

@@ -117,34 +117,51 @@ using namespace pto;
 // 输入:
 //   q_ptr       : Q [Sq*g, D]       BSND 布局，dtype
 //   k_ptr       : K [Skv, D]        所有 head 共享，dtype
-//   w_ptr       : W [Sq, g]         BSND weight，float
-//   scale_q_ptr : scale_q [Sq, g]   per-token per-head 反量化 scale，float
+//   wb_ptr      : 预广播 W*scale_q [Sq*g, kTk] float（行 r 全列同值）
 //   scale_k_ptr : scale_k [Skv]     per-token 反量化 scale，float
 //
 // 输出:
 //   scores_ptr  : scores [Sq, Skv]  ReduceG + scale_k 后的 score 矩阵，float
+//
+// 注：v0.58.4 row-expansion 校验要求广播源物理单列（<128B 不可加载），
+// 故 W*scale_q 由调用方预广播为 [kTm, kTk] tile，kernel 内用普通 TMUL。
 template <typename dtype, int Sq, int Skv, int D, int g, int kTm, int kTk>
 void qli_pto(float* scores_ptr,
              dtype* q_ptr, dtype* k_ptr,
-             float* w_ptr,
-             float* scale_q_ptr,
-             float* scale_k_ptr)
+             float* wb_ptr,
+             float* scale_k_ptr,
+             float* temp_gm = nullptr)   // [kTm, kTk] CUBE->Vec 桥接临时区
 {
     constexpr int Qb = Sq;
     constexpr int Kb = Skv / kTk;
     constexpr int Gb = g / kTm;
     static_assert(g % kTm == 0, "g must be multiple of kTm for G-blocking");
+    static_assert(kTm <= 32, "CUBE_M16/M32 matmul supports kTm <= 32");
+
+    // 临时区缺省：紧随 scores 之后（调用方保证可写 kTm*kTk*4 字节）
+    static float* s_default_temp = nullptr;
+    if (temp_gm == nullptr) {
+        if (s_default_temp == nullptr) {
+            s_default_temp = scores_ptr + (uint64_t)Sq * Skv + 2048;
+        }
+        temp_gm = s_default_temp;
+    }
 
     using gmQ   = global_tensor<dtype,  RowMajor<Sq * g, D>>;
-    using gmK   = global_tensor<dtype,  ColMajor<D, Skv>>;
+    using gmK   = global_tensor<dtype,  RowMajor<D, Skv>>;   // K^T [D, Skv] 行主序（CUBE_N8 契约）
     using gmOut = global_tensor<float,  RowMajor<Sq, Skv>>;
+    using gmTmp = global_tensor<float,  RowMajor<kTm, kTk>>;
 
-    using tileQ    = TileLeft<dtype, kTm, D>;
-    using tileK    = TileRight<dtype, D, kTk>;
+    // PTO v0.58.4 CUBE cell-layout：TMATMUL 的 A 用 CUBE_M16/M32、B 用 CUBE_N8、
+    // D 用 CUBE 累加器；TSTORE_CUBE 写回 GM 后 TLOAD 回 Vec tile 继续 Vec 链
+    using tileQ    = std::conditional_t<(kTm <= 16),
+                       CubeTileM16<dtype, kTm, D>, CubeTileM32<dtype, kTm, D>>;
+    using tileK    = CubeTileN8<dtype, D, kTk>;
+    using tileSCube = std::conditional_t<(kTm <= 16),
+                       CubeAccumulatorM16<float, kTm, kTk>,
+                       CubeAccumulatorM32<float, kTm, kTk>>;
     using tileS    = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
-    using tileWf   = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
-    using tileSq   = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
-    using tileRed  = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
+    using tileWb   = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
     using tileSum  = Tile<Location::Vec, float, 1, kTk, BLayout::RowMajor>;
     using tileSk   = Tile<Location::Vec, float, 1, kTk, BLayout::RowMajor>;
 
@@ -160,7 +177,7 @@ void qli_pto(float* scores_ptr,
         for (int j = 0; j < Kb; j++) {
             tileK tK;
             auto gK = gIterK(0, j);
-            TLOAD(tK, gK);
+            TLOAD_CUBE(tK, gK);
 
             tileSk tSk;
             {
@@ -179,42 +196,36 @@ void qli_pto(float* scores_ptr,
             for (int gi = 0; gi < Gb; gi++) {
                 tileQ tQ;
                 auto gQ = gIterQ(i * Gb + gi, 0);
-                TLOAD(tQ, gQ);
+                TLOAD_CUBE(tQ, gQ);
 
-                tileWf tWf;
+                // 预广播 W*scale_q tile [kTm, kTk]（调用方 wb_ptr 提供，
+                // 行 r 全列同值 = w[r]*scale_q[r]；规避 v0.58.4 单列广播源校验）
+                tileWb tWb;
                 {
-                    using gmWLocal = global_tensor<float, RowMajor<kTm, 1>>;
-                    using itWLocal = global_iterator<gmWLocal, tileWf>;
-                    itWLocal gIterW(w_ptr + (uint64_t)i * g + gi * kTm);
-                    auto gW = gIterW(0, 0);
-                    TLOAD(tWf, gW);
+                    using gmWbLocal = global_tensor<float, RowMajor<kTm, kTk>>;
+                    using itWbLocal = global_iterator<gmWbLocal, tileWb>;
+                    itWbLocal gIterWb(wb_ptr + (uint64_t)(i * Gb + gi) * kTm * kTk);
+                    auto gWb = gIterWb(0, 0);
+                    TLOAD(tWb, gWb);
                 }
 
-                tileSq tSq;
-                {
-                    using gmSqLocal = global_tensor<float, RowMajor<kTm, 1>>;
-                    using itSqLocal = global_iterator<gmSqLocal, tileSq>;
-                    itSqLocal gIterSq(scale_q_ptr + (uint64_t)i * g + gi * kTm);
-                    auto gSq = gIterSq(0, 0);
-                    TLOAD(tSq, gSq);
-                }
-
-                TMUL(tWf, tWf, tSq);
+                // TMATMUL（CUBE cell-layout）→ TSTORE_CUBE 桥接回 Vec
+                tileSCube tSCube;
+                TMATMUL(tSCube, tQ, tK);
+                gmTmp gTmp(temp_gm);
+                TSTORE_CUBE(gTmp, tSCube);
 
                 tileS tS;
-                TMATMUL(tS, tQ, tK);
+                TLOAD(tS, gTmp);
 
                 tileS tZero;
                 TEXPANDS(tZero, 0.0f);
                 TMAX(tS, tS, tZero);
 
-                TROWEXPANDMUL(tS, tS, tWf);
-
-                tileRed tRed;
-                TCVT(tRed, tS);
+                TMUL(tS, tS, tWb);
 
                 tileSum tPartial;
-                TCOLSUM(tPartial, tRed);
+                TCOLSUM(tPartial, tS);
 
                 if (gi == 0) {
                     TADD(tSum, tZeroSum, tPartial);
@@ -238,19 +249,19 @@ template <typename tile_o, typename tile_s, typename tile_idx>
 void THISTOGRAMX(tile_o& dst, tile_s& src, tile_idx& idx, int ByteId) {
 #define THISTOGRAMX_ASM(BYTE_NAME)                                    \
   asm volatile(                                                        \
-    "BSTART.TEPL 0b1101000, %c1\n"                                     \
-    "B.DATR %c2," BYTE_NAME ",Null\n"                                  \
+    "BSTART.TEPL 104, %D1\n"                                           \
+    "B.DATR %D1, " BYTE_NAME ", Zero\n"                                \
     "B.DIM %3, 0, ->LB0\n"                                             \
     "B.DIM %4, 0, ->LB1\n"                                             \
     "B.DIM zero, %c5, ->LB2\n"                                         \
-    "B.IOT %6, %7, mask=15, last, ->%0<%Z8>\n"                         \
-    "BSTOP\n"                                                          \
+    "B.IOT %6, %7, mask=1111, last, ->%0<%Z8>\n"                       \
+    ""                                                                 \
     : "=Tr"(dst.data())                                                \
     : "i"(type_traits<typename tile_s::DType>::TypeCode),              \
       "i"(type_traits<typename tile_o::DType>::TypeCode),              \
-      "r"(src.GetValidCol()),                                          \
+      "r"(dst.GetValidCol()),                                          \
       "r"(src.GetValidRow()),                                          \
-      "i"(tile_s::Cols),                                               \
+      "i"(tile_o::Cols),                                               \
       "Tr"(src.data()),                                                \
       "Tr"(idx.data()),                                                \
       "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode))
@@ -326,7 +337,10 @@ inline void RadixPopN(TKey<CK, CKV>& mv, RU chunkBase, int32_t* out, int n) {
         gi1i gout(out + k); TSTORE(gout, besti);
         RU bv = 0; gi1 gbv(&bv); TSTORE(gbv, bestg);
         TKey<CK, CKV> bbc; TEXPANDS(bbc, bv);
-        TKey<CK, CKV> isp; TCMP<CmpMode::EQ>(isp, idxTile, bbc);
+        // TCMP tile-tile 在 f94bc12 工具链不可用（cmode 助记符不同步）：
+        // 用 TSUB 求差 + TCMPS==0 判等价
+        TKey<CK, CKV> diff; TSUB(diff, idxTile, bbc);
+        TKey<CK, CKV> isp; TCMPS<CmpMode::EQ>(isp, diff, 0u);
         TKey<CK, CKV> one; TEXPANDS(one, 1u);
         TKey<CK, CKV> np; TSUB(np, one, isp);
         TMUL(mv, mv, np);
@@ -340,12 +354,11 @@ inline void RadixExtract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase,
     using t1 = Tile<Location::Vec, RU, 1, 32, BLayout::RowMajor, 1, 1>;
     using gi1 = global_tensor<RU, RowMajor<1, 1>>;
     gk g(key_ptr);
-    TKey<CK, CKV> kthk; TEXPANDS(kthk, kthVal);
 
-    // GT: key > kth
+    // GT: key > kth（TCMPS 标量比较，f94bc12 工具链 TCMP tile-tile 不可用）
     {
         TKey<CK, CKV> key; TLOAD(key, g);
-        TKey<CK, CKV> isgt; TCMP<CmpMode::GT>(isgt, key, kthk);
+        TKey<CK, CKV> isgt; TCMPS<CmpMode::GT>(isgt, key, kthVal);
         t1 s; TROWSUM(s, isgt); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
         TKey<CK, CKV> cand; TMUL(cand, key, isgt);
         RadixPopN<CK, CKV>(cand, chunkBase, outBase + outPos, (int)cnt);
@@ -354,7 +367,7 @@ inline void RadixExtract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase,
     // EQ: key == kth（补足剩余名额）
     if (needEq > 0) {
         TKey<CK, CKV> key; TLOAD(key, g);
-        TKey<CK, CKV> iseq; TCMP<CmpMode::EQ>(iseq, key, kthk);
+        TKey<CK, CKV> iseq; TCMPS<CmpMode::EQ>(iseq, key, kthVal);
         t1 s; TROWSUM(s, iseq); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
         int take = (int)cnt; if (take > needEq) take = needEq;
         TKey<CK, CKV> cand; TMUL(cand, key, iseq);

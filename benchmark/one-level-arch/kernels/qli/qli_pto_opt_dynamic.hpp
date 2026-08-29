@@ -20,6 +20,7 @@
 
 #include <common/pto_tileop.hpp>
 #include <cstdint>
+#include <type_traits>
 
 using namespace pto;
 
@@ -33,53 +34,63 @@ constexpr int MaxTileCol = 2048;
 constexpr int MaxSkv = 16384;
 constexpr int MaxSq = 8192;
 
-// ========== tile 类型别名 ==========
-template <typename dtype>
-using tileQ_t = TileLeft<dtype, kTm, kD>;
-template <typename dtype>
-using tileK_t = TileRight<dtype, kD, kTk>;
+// ========== tile 类型别名（Vec 链，TSTORE_CUBE 桥接后使用）==========
 using tileS_t = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
-using tileWf_t = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
-using tileSq_t = tileWf_t;
-using tileRed_t = tileS_t;
+using tileWb_t = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
 using tileSum_t = Tile<Location::Vec, float, 1, kTk, BLayout::RowMajor>;
 using tileSk_t = tileSum_t;
 
-template <typename dtype>
-using itQ_t = global_iterator<global_tensor<dtype, RowMajor<MaxSq, kD>>, tileQ_t<dtype>>;
-template <typename dtype>
-using itK_t = global_iterator<global_tensor<dtype, ColMajor<kD, MaxSkv>>, tileK_t<dtype>>;
 using itSk_t = global_iterator<global_tensor<float, RowMajor<1, MaxSkv>>, tileSk_t>;
 using itOut_t = itSk_t;
-using itW_t = global_iterator<global_tensor<float, RowMajor<kTm, 1>>, tileWf_t>;
 
 // ========== Step 1-6: 动态 shape + 多 PE ==========
-// 单 PE（numPEs==1）：FP8 直通 TMATMUL（已验证路径）
-// 多 PE（numPEs>1）：TMATMUL 是 cooperative 指令（v0.58 要求 FP32 NORM、
-//   Shared tile ≤8KB）：Q/K 经 TCVT 转 FP32，D=128 拆两段（kDh=64），
-//   K [64,32] FP32=8KB publish，TMATMUL + TMATMUL_ACC 累加。
-//   注意：v0.58 仿真器下 cooperative 数值验证未通过（见 README 已知限制）。
+// 单 PE（numPEs==1）：local CUBE tile（CubeTileM16/N8 + TLOAD_CUBE），
+//   TMATMUL 输出 CubeAccumulatorM16 → TSTORE_CUBE 桥接回 Vec tile 继续链
+// 多 PE（numPEs>1）：cooperative SharedMatrix（GM→Shared 直载
+//   TLOAD<Matrix,1>，kGroupM=16、kPeM=16），TMATMUL 每 PE 得 CUBE [16,32]
+//   私有切片 → TSTORE_CUBE 桥接回 Vec。
 // 约束：Sq % numPEs == 0（各 PE 迭代次数一致，保证集体指令同步）。
+// PTO v0.58.4 CUBE cell-layout：A=SharedMatrixLeft、B=SharedMatrixRight、
+// D=CubeAccumulatorM16（kTm=16 → kGroupM=16、kPeM=16），TSTORE_CUBE 桥接回 Vec。
 template <typename dtype>
 inline void qli_pto_dynamic(float* scores_ptr, dtype* q_ptr, dtype* k_ptr,
-                            float* w_ptr, float* scale_q_ptr, float* scale_k_ptr,
-                            int Sq, int Skv, int numPEs)
+                            float* wb_ptr, float* scale_k_ptr,
+                            int Sq, int Skv, int numPEs, float* temp_gm = nullptr)
 {
     const uint32_t tid = get_thread_idx();
     int Kb = Skv / kTk;
     int paddedSkv = ((Skv + MaxTileCol - 1) / MaxTileCol) * MaxTileCol;
 
+    // 临时区缺省：紧随 scores 之后
+    if (temp_gm == nullptr) {
+        temp_gm = scores_ptr + (uint64_t)Sq * paddedSkv + 2048;
+    }
+
+    // CUBE tile 类型（单/多 PE 共用声明）
+    using tileQCube_t = std::conditional_t<(kTm <= 16),
+                          CubeTileM16<dtype, kTm, kD>, CubeTileM32<dtype, kTm, kD>>;
+    using tileKCube_t = CubeTileN8<dtype, kD, kTk>;
+    using tileSCube_t = std::conditional_t<(kTm <= 16),
+                          CubeAccumulatorM16<float, kTm, kTk>,
+                          CubeAccumulatorM32<float, kTm, kTk>>;
+    using itQCube_t = global_iterator<global_tensor<dtype, RowMajor<MaxSq, kD>>, tileQCube_t>;
+    using itKCube_t = global_iterator<global_tensor<dtype, RowMajor<kD, MaxSkv>>, tileKCube_t>;
+    using gmTmp_t = global_tensor<float, RowMajor<kTm, kTk>>;
+
     if (numPEs == 1) {
-        // ---- 单 PE：FP8 直通 ----
+        // ---- 单 PE：FP8 直通（local CUBE tile）----
         for (int i = tid; i < Sq; i += numPEs) {
-            itQ_t<dtype> gQ(q_ptr + (uint64_t)i * G * kD);
+            itQCube_t gQ(q_ptr + (uint64_t)i * G * kD);
             itOut_t gOut(scores_ptr + (uint64_t)i * paddedSkv);
-            itK_t<dtype> gK(k_ptr);
+            // K^T [kD, Skv] 行主序：每列块 j 用 [kD, kTk] 子矩阵（真实步长 kTk），
+            // 避免 MaxSkv 模板步长与实际 Skv 不符导致跨行地址错
+            using itKBlk_t = global_iterator<global_tensor<dtype, RowMajor<kD, kTk>>, tileKCube_t>;
             itSk_t gSk(scale_k_ptr);
 
             for (int j = 0; j < Kb; j++) {
-                auto gKRef = gK(0, j);
-                tileK_t<dtype> tK; TLOAD(tK, gKRef);
+                itKBlk_t gKblk(k_ptr + (uint64_t)j * kD * kTk);   // 块连续布局：块 j 首地址
+                auto gKRef = gKblk(0, 0);
+                tileKCube_t tK; TLOAD_CUBE(tK, gKRef);
                 auto gSkRef = gSk(0, j);
                 tileSk_t tSk; TLOAD(tSk, gSkRef);
 
@@ -87,19 +98,22 @@ inline void qli_pto_dynamic(float* scores_ptr, dtype* q_ptr, dtype* k_ptr,
                 #pragma clang loop unroll(full)
                 for (int gi = 0; gi < Gb; gi++) {
                     auto gQRef = gQ(gi, 0);
-                    tileQ_t<dtype> tQ; TLOAD(tQ, gQRef);
-                    itW_t gW(w_ptr + (uint64_t)i * G + gi * kTm);
-                    auto gWRef = gW(0, 0);
-                    tileWf_t tWf; TLOAD(tWf, gWRef);
-                    itW_t gSq(scale_q_ptr + (uint64_t)i * G + gi * kTm);
-                    auto gSqRef = gSq(0, 0);
-                    tileSq_t tSq; TLOAD(tSq, gSqRef);
-                    TMUL(tWf, tWf, tSq);
-                    tileS_t tS; TMATMUL(tS, tQ, tK);
+                    tileQCube_t tQ; TLOAD_CUBE(tQ, gQRef);
+                    tileWb_t tWb;
+                    {
+                        using itWb_t = global_iterator<global_tensor<float, RowMajor<kTm, kTk>>, tileWb_t>;
+                        itWb_t gWb(wb_ptr + (uint64_t)(i * G + gi * kTm) * kTk);
+                        auto gWbRef = gWb(0, 0);
+                        TLOAD(tWb, gWbRef);
+                    }
+                    // TMATMUL CUBE → TSTORE_CUBE 桥接回 Vec
+                    tileSCube_t tSCube; TMATMUL(tSCube, tQ, tK);
+                    gmTmp_t gTmp(temp_gm);
+                    TSTORE_CUBE(gTmp, tSCube);
+                    tileS_t tS; TLOAD(tS, gTmp);
                     tileS_t tZero; TEXPANDS(tZero, 0.0f); TMAX(tS, tS, tZero);
-                    TROWEXPANDMUL(tS, tS, tWf);
-                    tileRed_t tRed; TCVT(tRed, tS);
-                    tileSum_t tPartial; TCOLSUM(tPartial, tRed);
+                    TMUL(tS, tS, tWb);
+                    tileSum_t tPartial; TCOLSUM(tPartial, tS);
                     if (gi == 0) { TADD(tSum, tZeroSum, tPartial); }
                     else { TADD(tSum, tSum, tPartial); }
                 }
@@ -111,32 +125,28 @@ inline void qli_pto_dynamic(float* scores_ptr, dtype* q_ptr, dtype* k_ptr,
         return;
     }
 
-    // ---- 多 PE：cooperative（FP32 + D 拆分 + publish）----
-    constexpr int kDh = kD / 2;  // D 维半段 = 64
-    using tileQh_t = TileLeft<dtype, kTm, kDh>;            // [16,64] FP8
-    using tileQhF_t = TileLeft<float, kTm, kDh>;           // [16,64] FP32 = 4KB
-    using tileKh_t = TileRight<dtype, kDh, kTk>;           // [64,32] FP8
-    using tileKhF_t = TileRight<float, kDh, kTk>;          // [64,32] FP32 = 8KB
-    using tileKhFShared_t = SharedTile<tileKhF_t>;
-    using itQh_t = global_iterator<global_tensor<dtype, RowMajor<MaxSq, kD>>, tileQh_t>;
-    using itKh_t = global_iterator<global_tensor<dtype, ColMajor<kD, MaxSkv>>, tileKh_t>;
+    // ---- 多 PE：cooperative SharedMatrix（GM→Shared 直载，kGroupM=kTm=16、kPeM=16）----
+    // token 并行：Q/K 每 PE 私有 local CUBE tile（Shared B 的 rendezvous
+    // 语义在 gfrun 独立 main 模型下未达成，回退 PE 私有加载）
+    using tileQMtrx_t = CubeTileM16<dtype, kTm, kD>;
+    using tileKMtrx_t = CubeTileN8<dtype, kD, kTk>;
+    using tileCGrp_t = CubeAccumulatorM16<float, kTm, kTk>;
+    using itQMtrx_t = global_iterator<global_tensor<dtype, RowMajor<MaxSq, kD>>, tileQMtrx_t>;
+    using itKMtrx_t = global_iterator<global_tensor<dtype, RowMajor<kD, kTk>>, tileKMtrx_t>;
+    // 每 PE 私有输出槽：temp_gm + tid * [kTm, kTk]
+    using gmTmpPe_t = global_tensor<float, RowMajor<kTm, kTk>>;
 
     for (int i = tid; i < Sq; i += numPEs) {
-        itQh_t gQ(q_ptr + (uint64_t)i * G * kD);
+        itQMtrx_t gQ(q_ptr + (uint64_t)i * G * kD);
         itOut_t gOut(scores_ptr + (uint64_t)i * paddedSkv);
-        itKh_t gK(k_ptr);
+
         itSk_t gSk(scale_k_ptr);
 
         for (int j = 0; j < Kb; j++) {
-            auto gKLoRef = gK(0, j);
-            tileKh_t tKLo; TLOAD(tKLo, gKLoRef);
-            tileKhF_t tKFLo; TCVT(tKFLo, tKLo);
-            tileKhFShared_t tKSharedLo = TMOV_L2S_PUBLISH(tKFLo);
-
-            auto gKHiRef = gK(1, j);
-            tileKh_t tKHi; TLOAD(tKHi, gKHiRef);
-            tileKhF_t tKFHi; TCVT(tKFHi, tKHi);
-            tileKhFShared_t tKSharedHi = TMOV_L2S_PUBLISH(tKFHi);
+            itKMtrx_t gKblk(k_ptr + (uint64_t)j * kD * kTk);
+            auto gKRef = gKblk(0, 0);
+            tileKMtrx_t tK;
+            TLOAD_CUBE(tK, gKRef);
 
             auto gSkRef = gSk(0, j);
             tileSk_t tSk; TLOAD(tSk, gSkRef);
@@ -145,30 +155,27 @@ inline void qli_pto_dynamic(float* scores_ptr, dtype* q_ptr, dtype* k_ptr,
 
             #pragma clang loop unroll(full)
             for (int gi = 0; gi < Gb; gi++) {
-                auto gQLoRef = gQ(gi, 0);
-                tileQh_t tQLo; TLOAD(tQLo, gQLoRef);
-                tileQhF_t tQFLo; TCVT(tQFLo, tQLo);
+                auto gQRef = gQ(gi, 0);
+                tileQMtrx_t tQ;
+                TLOAD_CUBE(tQ, gQRef);
 
-                auto gQHiRef = gQ(gi, 1);
-                tileQh_t tQHi; TLOAD(tQHi, gQHiRef);
-                tileQhF_t tQFHi; TCVT(tQFHi, tQHi);
-
-                itW_t gW(w_ptr + (uint64_t)i * G + gi * kTm);
-                auto gWRef = gW(0, 0);
-                tileWf_t tWf; TLOAD(tWf, gWRef);
-
-                itW_t gSq(scale_q_ptr + (uint64_t)i * G + gi * kTm);
-                auto gSqRef = gSq(0, 0);
-                tileSq_t tSq; TLOAD(tSq, gSqRef);
-
-                TMUL(tWf, tWf, tSq);
-                tileS_t tS;
-                TMATMUL(tS, tQFLo, tKSharedLo);
-                TMATMUL_ACC(tS, tS, tQFHi, tKSharedHi);
+                tileWb_t tWb;
+                {
+                    using itWb_t = global_iterator<global_tensor<float, RowMajor<kTm, kTk>>, tileWb_t>;
+                    itWb_t gWb(wb_ptr + (uint64_t)(i * G + gi * kTm) * kTk);
+                    auto gWbRef = gWb(0, 0);
+                    TLOAD(tWb, gWbRef);
+                }
+                // cooperative TMATMUL：Shared A[16,128] × Shared B[128,32] → 每 PE CUBE [16,32]
+                tileCGrp_t tCGrp;
+                TMATMUL(tCGrp, tQ, tK);
+                using gmTmpPe_t = global_tensor<float, RowMajor<kTm, kTk>>;
+                gmTmpPe_t gTmpPe(temp_gm + (uint64_t)tid * kTm * kTk);
+                TSTORE_CUBE(gTmpPe, tCGrp);
+                tileS_t tS; TLOAD(tS, gTmpPe);
                 tileS_t tZero; TEXPANDS(tZero, 0.0f); TMAX(tS, tS, tZero);
-                TROWEXPANDMUL(tS, tS, tWf);
-                tileRed_t tRed; TCVT(tRed, tS);
-                tileSum_t tPartial; TCOLSUM(tPartial, tRed);
+                TMUL(tS, tS, tWb);
+                tileSum_t tPartial; TCOLSUM(tPartial, tS);
                 if (gi == 0) { TADD(tSum, tZeroSum, tPartial); }
                 else { TADD(tSum, tSum, tPartial); }
             }
@@ -184,19 +191,19 @@ template <typename tile_o, typename tile_s, typename tile_idx>
 void THISTOGRAMX(tile_o& dst, tile_s& src, tile_idx& idx, int ByteId) {
 #define THISTOGRAMX_ASM(BYTE_NAME)                                    \
   asm volatile(                                                        \
-    "BSTART.TEPL 0b1101000, %c1\n"                                     \
-    "B.DATR %c2," BYTE_NAME ",Null\n"                                  \
+    "BSTART.TEPL 104, %D1\n"                                     \
+    "B.DATR %D1, " BYTE_NAME ", Zero\n"                                \
     "B.DIM %3, 0, ->LB0\n"                                             \
     "B.DIM %4, 0, ->LB1\n"                                             \
     "B.DIM zero, %c5, ->LB2\n"                                         \
-    "B.IOT %6, %7, mask=15, last, ->%0<%Z8>\n"                         \
-    "BSTOP\n"                                                          \
+    "B.IOT %6, %7, mask=1111, last, ->%0<%Z8>\n"                       \
+    ""                                                                  \
     : "=Tr"(dst.data())                                                \
     : "i"(type_traits<typename tile_s::DType>::TypeCode),              \
       "i"(type_traits<typename tile_o::DType>::TypeCode),              \
-      "r"(src.GetValidCol()),                                          \
+      "r"(dst.GetValidCol()),                                          \
       "r"(src.GetValidRow()),                                          \
-      "i"(tile_s::Cols),                                               \
+      "i"(tile_o::Cols),                                               \
       "Tr"(src.data()),                                                \
       "Tr"(idx.data()),                                                \
       "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode))
