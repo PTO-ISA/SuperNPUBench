@@ -40,8 +40,33 @@
 
 namespace gn_grad {
 
+#ifdef PE_NUM
+constexpr int kDefaultPeNum = PE_NUM;
+#else
+constexpr int kDefaultPeNum = 1;
+#endif
+
 inline int64_t workspace_elems(int64_t N, int64_t C, int64_t G) {
     return 2 * N * C + 2 * N * G;
+}
+
+static volatile uint32_t *const kPeBarrier =
+    reinterpret_cast<volatile uint32_t *>(0x30000);
+
+__attribute__((noinline)) inline uint32_t read_pe_id() {
+    return get_thread_idx();
+}
+
+template <int peNum>
+__attribute__((noinline)) void pe_barrier(uint32_t phase) {
+    if constexpr (peNum > 1) {
+        const uint32_t pe = read_pe_id();
+        kPeBarrier[pe] = phase;
+        for (int participant = 0; participant < peNum; ++participant) {
+            while (kPeBarrier[participant] < phase) {
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -327,7 +352,7 @@ inline void dgamma_group(float *ds, float *db, float *mean, float *rstd,
 //   for n,g fused_params    ↔ grid = dim3(N,G)
 //   for n,c dx_nc           ↔ numel 上 gpu_kernel 线性网格
 //   for g  dbeta/dgamma     ↔ 按通道写回（Kernel1/2）
-template <typename dtype>
+template <typename dtype, int peNum = gn_grad::kDefaultPeNum>
 void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
                      dtype *gamma, const int64_t *tiling, dtype *dx,
                      dtype *dgamma, dtype *dbeta, float *workspace) {
@@ -344,13 +369,20 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
     const int64_t HxW = tiling[3];
     const int64_t tile_hw =
         tiling[4] > 0 ? tiling[4] : (HxW < tCap ? HxW : tCap);
+    const uint32_t tid = gn_grad::read_pe_id();
+    if (N <= 0 || C <= 0 || G <= 0 || HxW <= 0 || C % G != 0) {
+        return;
+    }
     const int64_t D = C / G;
+    if (tile_hw <= 0 || tile_hw > tCap || HxW > tCap || D > tCap ||
+        tid >= static_cast<uint32_t>(peNum)) {
+        return;
+    }
 
     float *ds = workspace;
     float *db = workspace + N * C;
     float *c2_buf = workspace + 2 * N * C;
     float *c3_buf = c2_buf + N * G;
-
     using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
     using tile_h =
@@ -362,34 +394,35 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
 
     const float s = 1.0f / static_cast<float>(D * HxW);
 
-    for (int64_t n = 0; n < N; ++n) {
-        for (int64_t c = 0; c < C; ++c) {
-            gn_grad::spatial_reduce_nc<dtype, gm_h, gm_f, tile_h, tile_f,
-                                       tile_v>(dy, x, ds, db, N, C, HxW,
-                                               tile_hw, n, c);
-        }
+    for (int64_t nc = tid; nc < N * C; nc += peNum) {
+        const int64_t n = nc / C;
+        const int64_t c = nc % C;
+        gn_grad::spatial_reduce_nc<dtype, gm_h, gm_f, tile_h, tile_f,
+                                   tile_v>(dy, x, ds, db, N, C, HxW,
+                                           tile_hw, n, c);
+    }
+    gn_grad::pe_barrier<peNum>(1);
+
+    for (int64_t ng = tid; ng < N * G; ng += peNum) {
+        const int64_t n = ng / G;
+        const int64_t g = ng % G;
+        gn_grad::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f,
+                                    tile_v>(gamma, mean, rstd, ds, db,
+                                            c2_buf, c3_buf, N, C, G, D, n, g,
+                                            s);
+    }
+    gn_grad::pe_barrier<peNum>(2);
+
+    for (int64_t nc = tid; nc < N * C; nc += peNum) {
+        const int64_t n = nc / C;
+        const int64_t c = nc % C;
+        gn_grad::dx_nc<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
+            dy, x, gamma, rstd, c2_buf, c3_buf, dx, N, C, G, D, HxW, n, c);
     }
 
-    for (int64_t n = 0; n < N; ++n) {
-        for (int64_t g = 0; g < G; ++g) {
-            gn_grad::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f,
-                                        tile_v>(gamma, mean, rstd, ds, db,
-                                                c2_buf, c3_buf, N, C, G, D, n,
-                                                g, s);
-        }
-    }
-    for (int64_t n = 0; n < N; ++n) {
-        for (int64_t c = 0; c < C; ++c) {
-            gn_grad::dx_nc<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-                dy, x, gamma, rstd, c2_buf, c3_buf, dx, N, C, G, D, HxW, n, c);
-        }
-    }
-
-    for (int64_t g = 0; g < G; ++g) {
+    for (int64_t g = tid; g < G; g += peNum) {
         gn_grad::dbeta_group<dtype, gm_h, gm_f, tile_h, tile_f>(db, dbeta, N,
                                                                 C, D, g);
-    }
-    for (int64_t g = 0; g < G; ++g) {
         gn_grad::dgamma_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
             ds, db, mean, rstd, dgamma, N, C, G, D, g);
     }
