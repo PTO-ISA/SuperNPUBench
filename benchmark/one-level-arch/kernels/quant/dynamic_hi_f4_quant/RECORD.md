@@ -86,9 +86,16 @@ L1 base scale 的 bf16→e6m2 cast——三级 scale 的第一级、后续 recip
 = 指数重偏置（bf16 bias 127 → e6m2 bias 48）+ 2bit 尾数带舍入截断，在整数/bf16 位域用
 `TSHRS/TANDS/TADDS/TSELS` 拼出 8bit e6m2 位，`TSTORE` 成裸 `uint8`。只作用于块级 `[TileM,1]` 的 base，成本可忽略。
 
+> **规范定性（2026-08-25，`pto-spec` `tile-data-types.asl`）**：规范的 Tile DataType 枚举（0..28）
+> **根本不含 E6M2**（有 E5M2=8/E3M2=9/E2M3=10，无 E6M2）。E6M2 **仅**作为 HiF4 scale word 的 bits 7:0 存在
+> （`hif4-scale.asl` `HiF4E6M2FiniteValue`），**规范刻意不把 E6M2 暴露为 tile 元素类型**。→ 这把「位重构」从
+> 「临时权宜、等上游补 dtype」重定性为**规范设计意图下的正解**：不存在应被注册的 e6m2 tile dtype，产 e6m2 位并塞进
+> U32 scale word 是唯一与规范一致的路径。下方「解除路径」中「回退原生 TCVT(e6m2,bf16)」按此**大概率不会发生**。
+
 - **缺陷所在仓**：`linx-toolchain-build` / `Linx-TileOP-API`（头文件 `jcore/type.hpp` 缺 e6m2 枚举码 +
   type_traits 特化）。**解除路径**：上游补 `__type_fp8_e6m2` 枚举码 + `type_traits<__fp8_e6m2>` 特化，
-  且仿真器 `DataFormatCvt` 支持 e6m2 dst，则可回退到原生 `TCVT(e6m2,bf16)`，省去位重构。
+  且仿真器 `DataFormatCvt` 支持 e6m2 dst，则可回退到原生 `TCVT(e6m2,bf16)`，省去位重构。**但**（见上「规范定性」）
+  规范 tile dtype 枚举本就不含 E6M2，此回退路径**大概率不会实现**，位重构应视为长期方案。
 
 ---
 
@@ -185,6 +192,12 @@ L2/L3 两级 boost 位的判定 + 归一化用的 `2^-E1_8`、`2^-E1_16` 因子�
 `DataFormatCvt` 未支持**；但 `OPCVT_HIF4` 复用 e1m2 的 `bfloat16_to_float4_1`
 （`FloatPointUtils.cpp:794`）——与 y≡e1m2 定义一致。现有 two-level `fa_hif4` 也靠 `BF16→FP4_1(e1m2x2)` HACK 过关。
 
+> **规范 dtype 身份（2026-08-25，`pto-spec`）**：规范 `tile-data-types.asl` 把 y 登记为**独立 dtype `HiF4X2`（码 14）**，
+> 与 `E1M2X2`（码 12）**数值等价但为不同 tile 类型**；`hif4x2.asl`（`PTO-ARCH-DATA-TYPES-FORMAT-HIF4X2`）给权威
+> lane 表 `{0,0.25,0.5,0.75,1.0,1.25,1.5,1.75}`（含 ±0、次正规），`TCVT.asl` legality「**HiF4X2 is TCVT-only**」+
+> `matrix-functions.asl` `TileMXInputTypeSupported` 含 HiF4X2（Matrix-MX 专用，group 64、U32 scale carrier）。
+> → 规范正名 dst = `HiF4X2`(14)，本 kernel 现 emit `__fp4_e1m2x2`(12) 是数值等价替身；工具链补 `HiF4X2` type_traits+枚举码后应改正名。
+
 ### 影响场景
 
 最终量化输出 y 的元素 cast。
@@ -199,54 +212,59 @@ RECORD 问题2/6）。hi_f4 的「新」只在 scale 的三级结构，不在 y 
 
 ---
 
-## 问题8：三级 scale→元素映射 相邻(权威) vs 仿真器取模(strided) 不一致
+## 问题8：三级 scale→元素映射 —— 规范 ADR-0101 裁决 = 相邻(floor)；仿真器取模是相对规范的 bug
 
-### 结论
+### 结论（规范裁决 2026-08-24，ADR-0101 / `pto-spec` 提交 `d0ce06ad`）
 
-§1.2/§2.1 权威语义 = **相邻**（`j/4` L3、`j/8` L2 整除分组）。但仿真器 `MatrixScaleL/RHiF4`
-（`SuperScalarModel/.../CubeEngine.cpp:1326-1328`）按**取模（strided）**消费：`eb=(e8[i/64]>>(i%8))&1`、
-`ec=(e16[i/64]>>(i%16))&1`——L2 bit `b` 被 `{b,b+8,…}`（跨步 8）共享、L3 被跨步 16 共享，是「相邻」的**转置**。
+权威规范 `asl/arch/data-types/formats/hif4-scale.asl`（`PTO-CUBE-HIF4-SCALE-001`）的 `HiF4ScaleExponentIncrement`
+用 **`q DIVRM 8`（L2/E1_8）、`q DIVRM 4`（L3/E1_16）向下取整** = **相邻分组**，与 §1.2/§2.1 的 `j/8`、`j/4` 逐位一致。
+boundary demo `tests/asl/.../hif4-scale/arch-bound-hif4-scale-001.asl` 佐证（`q=0` increment=2、`q=8` increment=0）。
+**这一分歧由规范一锤定音：相邻是唯一权威语义。** 仿真器 `MatrixScaleL/RHiF4`（`SuperScalarModel/.../CubeEngine.cpp:1326-1328`）
+历史上若按**取模（strided）**消费（`eb=(e8>>(i%8))&1`、`ec=(e16>>(i%16))&1`，bit 跨步 8/16 共享 = 相邻的转置），
+则**是相对 ADR-0101 的 bug**，须以规范为准修正。
 
 ### 影响场景
 
-**运行期反量化**：量化算子按相邻 packing 输出、仿真器按取模消费 → 反量化错位。**encode 落地不受影响**
-（编码阶段不消费该映射），但 gfrun/上板前必须对齐。
+**运行期反量化**：量化算子按规范相邻 packing 输出即正确；若仿真器仍按取模消费 → 反量化错位。**encode 落地不受影响**
+（编码阶段不消费该映射），但 gfrun/上板前须让仿真器对齐规范。
 
-### 规避方案（二选一，待运行期解除时决策）
+### 消解方案（规范已定，唯一路径）
 
-(a) 仿真器改 `j/8`/`j/4`（相邻消费）；或 (b) 送 Cube 前对元素做转置重排以匹配 strided 消费。当前被 skew
-阻塞，暂不影响 encode，但运行期验证前须消解。
+**(a) 仿真器改 floor 分组 `j/8`/`j/4`（相邻消费），对齐 ADR-0101。** 早期备选 (b)「送 Cube 前转置重排匹配 strided」
+**已废弃**——规范裁决相邻权威，不应为迁就 emulator bug 而转置。当前被 skew 阻塞，暂不影响 encode，运行期验证前落地 (a)。
 
-- **缺陷所在仓**：`SuperScalarModel`（CubeEngine 取模消费与权威相邻语义不一致）。**解除路径**：(a) 或 (b) 落地并 gfrun 对齐。
+- **缺陷所在仓**：`SuperScalarModel`（若 CubeEngine 取模消费，则与规范 ADR-0101 的相邻语义冲突，是 bug）。
+  **解除路径**：仿真器改 floor 分组并 gfrun 对齐规范 `HiF4ScaleExponentIncrement`。
 
 ---
 
-## 问题9：`hifloat4_scale` 非已注册硬件 dtype —— 打包为单个 32bit 容器（uint32/float32）规避
+## 问题9：`hifloat4_scale` 无独立 dtype —— 规范钦定以单个 raw U32 word 承载（非规避，是正解）
 
-### 结论（已核查 2026-08-14）
+### 结论（规范确认 2026-08-24，ADR-0101）
 
-§0/§1.2 权威定义 scale 输出类型为 **`hifloat4_scale`**（每 block 32bit = L3 16 + L2 8 + L1 e6m2 8）。但该名
-**不是**工具链/仿真器里已注册的**硬件 dtype**：`jcore/type.hpp` 的 `__type_code` 枚举、仿真器 `DataType` 枚举中
-**均无此名**（`grep` 零命中）。它是一个**逻辑/概念上的 32bit 布局**——DataType 枚举仅登记了 y 的 `HIF4`
-（≡e1m2，`CubeCalculate.h:69`），无独立 scale 类型。故 scale 输出 tile **无法**直接声明为 `hifloat4_scale`。
+ADR-0101 明确：「A HiF4 Matrix scale MUST be **one raw U32 word**」（E6M2 bits 7:0、E1_8 bits 15:8、E1_16 bits 31:16），
+消费侧 demo `block-exec-bstart-tmatmulmx-hif4-002.asl` 用 `TileDataType_U32` + `CUBE_M32` layout 承载 scale。
+逻辑名 `hifloat4_scale`（L3 16 + L2 8 + L1 e6m2 8）**并非独立注册 dtype**——`jcore/type.hpp` 的 `__type_code` 枚举、
+仿真器 `DataType` 枚举中**均无此名**（`grep` 零命中，DataType 仅登记 y 的 `HIF4`≡e1m2，`CubeCalculate.h:69`）——
+但**这不是缺口**：规范本就以 raw U32 word 作 scale 载体，声明 `uint32` 即规范正解，无需独立 dtype。
 
 ### 影响场景
 
 算子 scale 输出 tile 的 dtype 声明与 `TSTORE`。
 
-### 规避方案（已定 → 打包为单个 32bit 容器，每 block 1 元素）
+### 落地（规范正解 → 单个 raw U32 word，每 block 1 元素）
 
 把 L3(16)+L2(8)+L1(8) 用位运算（`TSHLS`/`TORS`）拼进一个 32bit word，scale 输出 tile 声明为 **`uint32`**
-（或 `float32`，二者皆 32bit、仿真器按字节消费、等价）。**这样 `scale` 的 shape = `[..., num_blocks]`，每块恰好
-1 个 32bit 元素，与真实 per-block 语义一致**。字内布局（小端）：`word = e6m2 | (L2<<8) | (L3<<16)`
-（byte0=e6m2/L1、byte1=L2、byte2..3=L3）。L1 的 e6m2 字节仍由 bf16→e6m2 位重构产出（问题3）。
+（或 `float32`，二者皆 32bit、仿真器按字节消费、等价）。**`scale` 的 shape = `[..., num_blocks]`，每块恰好
+1 个 32bit 元素，与规范 per-block 语义一致**。字内布局（小端，对齐规范位段）：`word = e6m2 | (L2<<8) | (L3<<16)`
+（byte0=e6m2/L1=bits 7:0、byte1=L2=bits 15:8、byte2..3=L3=bits 31:16）。L1 的 e6m2 字节由 bf16→e6m2 位重构产出（问题3）。
 
-- **对比被否方案（uint8 每块 4 字节）**：`scale` shape 会变成 `[..., num_blocks*4]`——**4× 膨胀、与真实 shape
+- **对比被否方案（uint8 每块 4 字节）**：`scale` shape 会变成 `[..., num_blocks*4]`——**4× 膨胀、与规范 shape
   不符**，故不采用。尽管 two-level `fa_hif4.hpp:48-50` 用 `unsigned char` 逐字节写、仿真器 `MatrixScaleLHiF4/RHiF4`
   （`CubeEngine.cpp:928/934`）也按字节消费——字节流内容相同，但**张量 shape 语义错误**。
-- **仍属 dtype 规避**：真实类型是 `hifloat4_scale`，我们用 `uint32`/`float32` 作 32bit 容器承载其位模式。
-- **缺陷所在仓**：`Linx-TileOP-API`（`jcore/type.hpp` 无 `hifloat4_scale` 枚举/type_traits）+ `SuperScalarModel`
-  （`DataType` 无 scale 类型）。**解除路径**：上游注册 `hifloat4_scale` dtype 后，可直接改声明、去掉容器代换。
+- **非 dtype 规避**：规范载体本就是 raw U32 word，`uint32` 声明即正解；不存在「等 `hifloat4_scale` dtype 注册」的解除动作。
+- **仿真器侧提醒**：`DataType` 无独立 scale 类型属正常（规范以 U32 承载）；消费按 `CUBE_M32` layout（A-scale `[M,G]`、
+  B-scale `[N,G]` 语义 `[G,N]`），HiF4X2 仅在 Matrix-MX（`TMATMULMX`）路径，普通 `TMATMUL` 用之 `Fault_TileLegality`。
 
 ---
 
@@ -341,7 +359,7 @@ E1/factor 的 `TEXPANDS(1/0.5/0)`、占位 recip 的 `TEXPANDS(1.0)`。
 | 5 | ~~TCMP/TCMPS EQ-only 无 GE~~（v0.58 已补原生 GE） | ~~Linx-TileOP-API 头~~ 已解除 | 原生 `TCMPS<CmpMode::GE>`（旧 max-EQ 模拟已删） | **v0.58 已切原生，diss 见 8× B.DATR Zero,GE** |
 | 6 | 仿真器 TQUANT 带 scale ASSERT | SuperScalarModel | 走路线 A 手工多遍 | 已定 |
 | 7 | HIF4 作 cast dst 未登记 | SuperScalarModel | 复用 e1m2 通路（y≡e1m2） | 已定 |
-| 8 | scale→元素映射 相邻 vs 取模 不一致 | SuperScalarModel | 仿真器改整除 / 送 Cube 前转置 | 运行期前须消解 |
-| 9 | `hifloat4_scale` 非已注册硬件 dtype | Linx-TileOP-API + SuperScalarModel | 打包单个 32bit 容器（uint32/float32）每块 1 元素 | 已定 |
+| 8 | scale→元素映射 相邻 vs 取模 | SuperScalarModel（若取模则 bug） | 规范 ADR-0101 裁决=相邻(floor)；仿真器改整除对齐（(b)转置已废） | **规范一锤定音，运行期改 emulator** |
+| 9 | `hifloat4_scale` 无独立 dtype | 非缺口（规范以 raw U32 承载） | 声明 `uint32` 单 word/块（ADR-0101 正解，非规避） | **规范确认为正解** |
 | 10 | 32B 列对齐 + TRESHAPE header gap → 窄列 reshape 分段 max 不可声明 | Linx-TileOP-API | (A) strided load 宽子 tile + TMAX 树 / (B) 采纳 emulator strided 语义 / (C) 暂停待上游 | **探针实测确认，路线未定待决策** |
 | 11 | bf16 标量后端双缺陷：运行期 float→bf16 崩溃 + bf16 0.0 落 zero 寄存器匹配失败 | linx-toolchain-build（LinxV5 后端） | bf16 立即数走 `__builtin_bit_cast` 位模式 + 阈值改模板参数；0 tile 用 `TSUB(t,t)` | **框架编译实测确认，已规避（EXIT=0）** |

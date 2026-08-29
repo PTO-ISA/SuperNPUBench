@@ -7,6 +7,13 @@ fp32），而 hifloat4 采用**三级共享（3-level shared）**的分段 scale
 本文的**格式定义（§1）与量化算法（§2.1）均为需求方给出，权威**；§2.2–§2.5 是对其的
 标注、验证与映射分析；§3 是 PTO-ISA 落地缺口；§4 是工具链/仿真器现状。
 
+> **规范锚（normative，最高权威）—— PTO-spec ADR-0101「Matrix Scale Cell Layouts, HiF4 Scale Words, and CScale」**
+> （`pto-spec` 提交 `d0ce06ad` "Define Matrix scale and CScale contracts" #146，2026-08-24，accepted，target 0.58.4）。
+> 归一化 ASL 单元 `asl/arch/data-types/formats/hif4-scale.asl`（`PTO-CUBE-HIF4-SCALE-001`）逐位定义了 HiF4 scale word，
+> 可执行 demo `tests/asl/.../hif4-scale/arch-bound-hif4-scale-001.asl`、`.../BSTART.TMATMULMX/...-hif4-002.asl` 佐证。
+> 该规范**确认**了本文 §1.2 的相邻分组语义、§0/§2.5 的 U32 word 布局，并**裁决**了 §2.4/RECORD 问题8 的相邻-vs-取模分歧
+> （规范用 `q DIVRM 8`/`q DIVRM 4` 向下取整 = 相邻，emulator 取模消费是相对规范的 bug）。规范要点已就地并入各节。
+
 ## 0. 算子接口（权威约定）
 
 - **输入**：
@@ -16,19 +23,20 @@ fp32），而 hifloat4 采用**三级共享（3-level shared）**的分段 scale
     `dynamic_hi_f4_quant_tail.h`。非尾轴（`axis ≠ -1`）暂不实现。
 - **输出**：
   - `y` — 量化数据，**固定 `hifloat4` 类型**（4bit/元素，数值编码 ≡ e1m2，`__fp4_e1m2x2` 每字节 2 个）。
-  - `scale` — **逻辑类型 `hifloat4_scale`**（每 64-元素 block 32bit = L3 16 + L2 8 + L1 e6m2 8）；因该名**非已注册硬件 dtype**，
-    物理上以**单个 32bit 容器（`uint32` 或 `float32`）每 block 1 元素**承载（见 §0 类型支持性核查、RECORD 问题9）。
+  - `scale` — **规范载体 = 单个 raw U32 word / block**（ADR-0101：「one raw U32 HiF4 scale word」，E6M2 bits 7:0、
+    E1_8 bits 15:8、E1_16 bits 31:16）。逻辑名 `hifloat4_scale`（L3 16 + L2 8 + L1 e6m2 8）不是独立注册 dtype，
+    **规范钦定即以 `uint32` raw word 承载**，每 block 1 元素（见 §0 类型支持性核查、RECORD 问题9）。
 - **无 BlockSize 参数**（固定 64，见 §1.1）；**无输出 dtype 选择**（y/scale 类型均固定）。
 
-> **`hifloat4_scale` 类型支持性（已核查，2026-08-14）—— 缺口 + 规避**：`hifloat4_scale` **不是**工具链/仿真器
-> 里已注册的**硬件 dtype**——`jcore/type.hpp` 的 `__type_code` 枚举、仿真器 `DataType` 枚举中**均无此名**
-> （`grep` 零命中）。它是一个**逻辑/概念上的 32bit 布局**（L3 16 + L2 8 + L1 e6m2 8）。DataType 枚举仅登记了
-> y 的 `HIF4`（≡e1m2，`CubeCalculate.h:69`），无独立 scale 类型。**这是真实 dtype 缺口，须规避（RECORD 问题9）**。
+> **`hifloat4_scale` 类型支持性 —— 规范钦定 raw U32 承载（ADR-0101 确认，2026-08-24）**：规范明确
+> 「A HiF4 Matrix scale MUST be **one raw U32 word**」，消费侧 demo（`block-exec-bstart-tmatmulmx-hif4-002.asl`）
+> 用 `TileDataType_U32` + `CUBE_M32` layout 承载 scale。逻辑名 `hifloat4_scale` 并非独立注册 dtype——
+> `jcore/type.hpp` 的 `__type_code` 枚举、仿真器 `DataType` 枚举中**均无此名**（`grep` 零命中），DataType 仅登记
+> y 的 `HIF4`（≡e1m2，`CubeCalculate.h:69`）；但**这不构成缺口**：规范本就以 raw U32 word 作 scale 载体，无需独立 dtype。
 >
-> **规避（已定）——打包为单个 32bit 容器类型输出（`uint32` 或 `float32`），每 block 1 个元素**：把 L3(16)+L2(8)
-> +L1(8) 用位运算（`TSHLS`/`TORS`）拼进一个 32bit word，`scale` 输出 tile 声明为 **`uint32`**（或 `float32`，二者
-> 皆 32bit、仿真器按字节消费、等价）。**这样 `scale` 的 shape = `[..., num_blocks]`，每块恰好 1 个 32bit 元素，
-> 与真实 per-block 语义一致**。
+> **落地——单个 raw U32 word / block（规范正解，非权宜）**：把 L3(16)+L2(8)+L1(8) 用位运算（`TSHLS`/`TORS`）
+> 拼进一个 32bit word，`scale` 输出 tile 声明为 **`uint32`**（或 `float32`，二者皆 32bit、仿真器按字节消费、等价）。
+> **这样 `scale` 的 shape = `[..., num_blocks]`，每块恰好 1 个 32bit 元素，与规范 per-block 语义一致**。
 > - **对比被否方案**：若声明为 `uint8` 每块 4 字节，`scale` shape 会变成 `[..., num_blocks*4]`——**4× 膨胀、与真实
 >   shape 不符**，故不采用（尽管 two-level `fa_hif4.hpp:48-50` 用 `unsigned char` 逐字节写、仿真器
 >   `MatrixScaleLHiF4/RHiF4`（`CubeEngine.cpp:928/934`）也按字节消费——字节流内容相同，但**张量 shape 语义错误**）。
@@ -57,15 +65,20 @@ fp32），而 hifloat4 采用**三级共享（3-level shared）**的分段 scale
   即 1 个 L1 覆盖 8 个 L2；1 个 L2 覆盖 2 个 L3；1 个 L3 覆盖 4 个元素。
 - **元素→bit 映射 = 相邻（adjacent，权威）**：L3 bit `k` 管逻辑元素 `[4k,4k+4)`、L2 bit `k` 管 `[8k,8k+8)`
   （`j/4` / `j/8` 整除分组）。**注意**与 emulator 现状取模消费不一致，见 §2.4。
-- **拼接**：`L3(16bit) + L2(8bit) + L1(8bit) = 32bit`，组成特殊 scale 类型 **`hifloat4_scale`**（每 block 32bit）。
-  > `hifloat4_scale` 是**逻辑布局名，非已注册硬件 dtype**，物理上以 `uint8` 每块 4 字节承载（见 §0 类型支持性核查）。
-  > 拼接字节序（L1/L2/L3 在 32bit 中的排布）见 §2.5。
+- **拼接**：`L3(16bit) + L2(8bit) + L1(8bit) = 32bit`，组成 scale word **`hifloat4_scale`**（每 block 32bit）。
+  规范位段（ADR-0101 / `hif4-scale.asl`）：**E6M2 = bits 7:0、E1_8(L2) = bits 15:8、E1_16(L3) = bits 31:16**。
+  > `hifloat4_scale` 是**逻辑布局名，非独立注册 dtype**；规范钦定以 **raw `uint32`** 每 block 1 word 承载（见 §0）。
+  > 字内排布见 §2.5。
 
 ### 1.3 量化输出 y
 
 - dtype **`hifloat4`**，每元素 **4 bit**。
 - **数值编码格式与 e1m2 完全一致**（1 符号位 + 1 指数位 + 2 尾数位的 fp4 变体，`__fp4_e1m2x2` 每字节打包 2 个）。
 - 故 y 的**数值编码**可直接复用 e1m2 通路；hifloat4 的“新”只体现在 **scale 的三级结构**上，不在 y 的元素编码上。
+- **规范 dtype 身份（`tile-data-types.asl` 确认）**：规范把 y 登记为**独立 dtype `HiF4X2`（枚举码 14）**，与 `E1M2X2`（码 12）
+  **数值等价但为不同 tile 类型**；`TCVT.asl` legality 明写「**HiF4X2 is TCVT-only**」（仅能由 TCVT 产出、且被 Matrix-MX
+  输入角色接受，见 §2.4 消费契约）。**当前工具链**无 `HiF4X2` type_traits/枚举码，故本 kernel emit 数值等价的
+  `__fp4_e1m2x2`(12) 作 stand-in（问题7）；上游注册 `HiF4X2`(14) 后应改 emit 该正名 dst。
 
 ### 1.4 与 dynamic_mx_quant 的对比
 
@@ -132,8 +145,11 @@ hifloat4 每元素满量程 = `base(E6M2) × 最大 boost 4 × 最大 e1m2 幅�
     归一化走**除法**（`fdiv`）而非 recip+mul。
   - **价值**：印证结构（每 64 一组、`max×scale_factor→base`、`div→cvt hif4`、4 字节/块 scale 布局），但三级 scale 与
     E6M2 cast 都缺——仍需按 §2.1 全算法自行落地。
-- **权威反向锚**仍是 Cube 侧反量化 `CubeCalculate::GetElementValue`（`CubeCalculate.cpp:1113`），§2.1 必须是它的逆
-  （`bak/` 无 mxfp 外的 hif4 AscendC；matmul `HiF4_HiF4.cpp:50` scale 缓冲未初始化；无 python golden）：
+- **权威反向锚（normative）= ADR-0101 `hif4-scale.asl` 的 `HiF4ScaleFiniteValue`**：
+  `x̂[j] = HiF4E6M2FiniteValue(word[7:0]) · 2^(E1_8[floor(j/8)] + E1_16[floor(j/4)]) · HIF4elem(y[j])`，
+  其中 `HiF4E6M2FiniteValue = (1 + m2/4)·2^(exp6-48)`（`exp6=bits[7:2]` bias 48、`m2=bits[1:0]`、`FF`=quiet NaN）。
+  §2.1 encode 必须是它的逆。仿真器 `CubeCalculate::GetElementValue`（`CubeCalculate.cpp:1113`）是该规范的实现，
+  应与之逐位一致（`bak/` 无 mxfp 外的 hif4 AscendC；matmul `HiF4_HiF4.cpp:50` scale 缓冲未初始化；无 python golden）：
 
 ```text
 x̂[j] = E6M2(ea) · 2^(eb[j] + ec[j]) · HIF4elem(y[j])
@@ -142,26 +158,31 @@ x̂[j] = E6M2(ea) · 2^(eb[j] + ec[j]) · HIF4elem(y[j])
 - **ea = L1（e6m2, 8bit）**，`E6m2ToF32Bits`（:1093）：`exp6=bits[7:2]`（bias 48）、`m2=bits[1:0]`
   → `2^(exp6-48)·(1+m2/4)`，无符号，尾数 {1.0,1.25,1.5,1.75}，范围 `2^-48 … 2^15`。
 - **eb=L2, ec=L3（各 1bit）** → `2^(eb+ec)∈{1,2,4}`（相对 base 上调 0/1/2 个 binade）。
-- **HIF4elem = y（4bit ≡ e1m2）**，`Hif4ToF32Bits`（:1103）：`e1=bit[2]`、`m2=bits[1:0]`
-  → `2^(e1-1)·(1+m2/4)`，幅值 {0.5,0.625,…,1.75}；**符号 bit[3] decode 未乘**（取绝对值路径）。
+- **HIF4elem = y（4bit）—— 权威 lane 表见规范 `hif4x2.asl` `HiF4X2FiniteDecomposition`**（`PTO-ARCH-DATA-TYPES-FORMAT-HIF4X2`
+  + demo `arch-bound-hif4x2-decomp-001.asl`）：`sign=bit[3]`、`exp=bit[2]`、`frac=bits[1:0]`；**`exp=0 frac≠0` 走次正规
+  `frac/4`、`exp=1` 走 `1+frac/4`**，故幅值 = **`{0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75}`**（0x0/0x8 = ±0，有可表示零）。
+  > ⚠️ 早前把它当作全 normal 的 `2^(e1-1)·(1+m2/4)`→`{0.5,0.625,…,1.75}` **不正确**：低端是次正规、且含零。encode 的
+  > underflow/round 分析须按此权威表（§2.2 的满幅 1.75 上界不变）。emulator `Hif4ToF32Bits`（`CubeCalculate.cpp:1103`）
+  > 若按 normal-only 实现则与规范不符，运行期前须核对。**符号 bit[3] decode 未乘**（取绝对值路径）。
 
 即 encode 的 `S[j]=E6M2·2^(E1_8+E1_16)`、`y=e1m2(V/S)` 与 decode 严格互逆。
 
-### 2.4 三级 scale → 元素映射（相邻权威，emulator 现状 strided 待消解）
+### 2.4 三级 scale → 元素映射（规范裁决 = 相邻；emulator 取模是相对规范的 bug）
 
-- ✅ **语义权威 = 相邻**（`j/4`、`j/8` 整除分组，见 §1.2 / §2.1 的 `maxPer4`/`maxPer2`）。
-- ⚠️ **emulator 现状是取模（strided）**：`MatrixScaleL/RHiF4`（`CubeEngine.cpp:1326-1328`，全局 `i`、块 `i/64`、块内 `j=i%64`）：
+- ✅ **规范权威 = 相邻（floor 整除）**。ADR-0101 / `hif4-scale.asl` 的 `HiF4ScaleExponentIncrement`（`PTO-CUBE-HIF4-SCALE-001`）：
 
-  ```text
-  ea = e6m2[i/64]
-  eb = (e8 [i/64] >> (i % 8 )) & 1   // L2：块内 elem j 用 bit (j%8) —— 跨步共享
-  ec = (e16[i/64] >> (i % 16)) & 1   // L3：块内 elem j 用 bit (j%16) —— 跨步共享
+  ```asl
+  e1_8_index  = 8  + (q DIVRM 8)     // L2：lane q 用 bit[8 + floor(q/8)]  —— 8 相邻元素/bit
+  e1_16_index = 16 + (q DIVRM 4)     // L3：lane q 用 bit[16 + floor(q/4)] —— 4 相邻元素/bit
+  increment   = E1_8[..] + E1_16[..] ∈ {0,1,2}
   ```
-  L2 bit `b` 被 `{b,b+8,…,b+56}`（跨步 8）共享、L3 bit `b` 被 `{b,b+16,b+32,b+48}`（跨步 16）共享——
-  是「相邻」的**转置**（8×8 网格里按列共享，而相邻=按行）。
-- **残留一致性风险（运行期）**：量化算子按相邻 packing 输出、emulator 按取模消费 → 反量化错位。
-  消解二选一：(a) emulator 改 `j/8`/`j/4`；(b) 送 Cube 前对元素做转置重排。**运行期被 skew 阻塞，暂不影响
-  encode 落地，但 gfrun/上板前须对齐**。
+  `DIVRM`（向下取整除）= **相邻分组**，与 §1.2 / §2.1 的 `j/8`（L2）、`j/4`（L3）逐位一致。boundary demo
+  `arch-bound-hif4-scale-001.asl` 佐证：scale[7:0]=00 设 E1_8[0]/E1_16[0]→`q=0` increment=2→`2^-46`、`q=8` increment=0。
+- ⚠️ **emulator 现状若为取模（strided）则是相对规范的 bug**：`MatrixScaleL/RHiF4`（`CubeEngine.cpp:1326-1328`）历史上按
+  `(e8>>(i%8))&1`、`(e16>>(i%16))&1` 消费（bit `b` 被跨步 8/16 共享，是相邻的转置）——**与 ADR-0101 的 floor 分组冲突**，
+  须以规范为准修正。
+- **运行期消解 = (a) 改 emulator 对齐规范 floor 分组**（规范裁决已定，**不再走 (b) 送 Cube 前转置**）。量化算子按相邻
+  packing 输出即正确；运行期被 toolchain↔emulator skew 阻塞，encode 落地不受影响，gfrun/上板前对齐 emulator 即可。
 
 ### 2.5 scale 物理打包与尾轴布局
 
@@ -222,6 +243,72 @@ x̂[j] = E6M2(ea) · 2^(eb[j] + ec[j]) · HIF4elem(y[j])
 - **路线 B（单指令 `TQUANT`）**：`TQUANT` 至多做最后的元素 cast；三级 scale 的**求值**仍须算子内完成。
   且**当前仿真器 `TQUANT` 只实现无元数据纯 cast，带 scale tile 直接 ASSERT 失败**
   （`TEPLEngine.cpp:1650-1656`）→ 近期不可用。
+
+### 3.3 目标形态伪码（后端补齐 subview/assemble 后，M=32×N=64 单块示例）
+
+> **前提**：后端计划新增 **tile subview + assemble** 能力（对 CellReg 做 `[:,a:b]` 子视图读写、按写入位置组装）。
+> 一旦补齐，§3.2 路线 A 里最丑的部分——16 条显式 `TROWMAX` + 位置式 compaction——即可压成**带 subview 的单条循环**。
+> 下面是该形态下的完整、**已复核正确**的伪码蓝图（`M=32` 行、`N=64` 列 = 1 个 block，其它 M/N 按块循环平铺）。
+>
+> **指令描述符记法**：`<groupCols, rows, cols, dtype…>`。第 1 槽 `groupCols` 对**归约类**（TROWMAX）是每组归约的列宽、对
+> **elementwise** 恒 = `cols`（冗余）；归约类的输出列数由目标 subview 隐含。`<size>` 标注：整 tile op 标**整块**字节数，
+> 带 subview 循环的行标**单次写入**字节数（整块另计）。谓词 tile（TCMPS 输出）是 **1bit/elem 位图**（描述符沿用 BF16 仅表宗
+> 域，实际按 `<size>` 判定；如 `T10<32B>`=32×8bit）。
+>
+> **立即数图例**：`X1 = 1/7`（满刻度锚，§2.2）、`X2 = 4`（L2 阈值）、`X3 = 0.5`（boost 因子 2^-1）、
+> `X4 = 1.0`（无 boost 因子 2^0）、`X5 = 2`（L3 阈值）。全部走 `hif4_bf16c` 位模式立即数（问题11）。
+
+```text
+# ── 取绝对值 ──
+TABS          <64,32,64,BF16>              T1 -> T2<4KB>          # A=|X|
+# ── 三级相邻 max：64 → 16 → 8 → 1 ──
+TROWMAX       <4,32,4,BF16>  T2[:,4g:4g+4] -> T5[:,g]<64B>       # for g in 0..15：每 4 相邻 → Vmax16
+TROWMAX       <2,32,2,BF16>  T5[:,2g:2g+2] -> T7[:,g]<64B>       # for g in 0..7 ：每 2 相邻 → Vmax8
+TROWMAX       <8,32,8,BF16>            T7  -> T8<64B>            # 整块 8 → 1 → Vmax
+# ── 一级 base scale：SF = Vmax/7 → E6M2 → 倒数 ──
+TMULS         <1,32,1,BF16>        T8,X1  -> T11<64B>            # SF = Vmax·(1/7)
+TCVT          <1,32,1,BF16,E6M2,RNE>  T11 -> T12<32B>           # SF → E6M2（一级 scale，写 word[7:0]）
+TCVT          <1,32,1,E6M2,BF16,RNE>  T12 -> T12D<64B>          # decode E6M2 → bf16（用量化后的值）
+TRECIP        <1,32,1,BF16>          T12D -> T13<64B>            # rec = 1/decode(E6M2)
+# ── L2（E1_8，8 个）：Vmax8·rec ≥ 4 ? ──
+TROWEXPANDMUL <8,32,8,BF16>       T7,T13  -> T9<512B>            # V8 = Vmax8 · rec（rec 1→8 广播）
+TCMPS         <8,32,8,BF16,GE>    T9,X2   -> T10<32B>           # E1_8 mask = (V8 ≥ 4)，1bit/elem
+TEXPANDS      <8,32,8,BF16>          X3   -> T14<512B>          # T14 = 0.5（全 8 列）
+TSELS         <8,32,8,BF16>    T10,T14,X4 -> T15<512B>          # K8_factor = mask?0.5:1.0 = 2^-E1_8
+TROWEXPANDMUL <8,32,8,BF16>      T15,T13  -> T16<512B>          # K8 = rec · 2^-E1_8（每 8 元素一个）
+# ── L3（E1_16，16 个）：Vmax16·K8 ≥ 2 ? ──
+TROWEXPANDMUL <2,32,2,BF16> T5[:,2i:2i+2],T16[:,i] -> T17[:,2i:2i+2]<128B>  # for i in 0..7：V16=Vmax16·K8[i]（K8[i]→2列）
+TCMPS         <16,32,16,BF16,GE>  T17,X5  -> T18<64B>           # E1_16 mask = (V16 ≥ 2)，16 个 1bit
+TEXPANDS      <16,32,16,BF16>        X3   -> T19<1KB>           # 0.5（全 16 列）
+TSELS         <16,32,16,BF16> T18,T19,X4  -> T20<1KB>           # 2^-E1_16（16 列）
+# ── 组装每元素有效缩放因子 Fscale ──
+TROWEXPANDMUL <2,32,2,BF16> T20[:,2i:2i+2],T16[:,i] -> T21[:,2i:2i+2]<128B>  # for i in 0..7：F16=K8[i]·2^-E1_16（K8[i]→2列）
+TEXPANDS      <4,32,4,BF16>          X4   -> T22<256B>          # 1.0（4 列常量，供 4-lane 复制）
+TROWEXPANDMUL <4,32,4,BF16>  T22,T21[:,i] -> T23[:,4i:4i+4]<256B>          # for i in 0..15：F16[i] 铺到相邻 4 列 → Fscale64
+# ── 最终乘 + 量化 ──
+TMUL          <64,32,64,BF16>      T1,T23 -> T24<4KB>           # Z = X · Fscale（用带符号原始 X=T1）
+TCVT          <64,32,64,BF16,HIF4,RNE> T24 -> T25<1KB>          # Z → hifloat4（y，含符号）
+# ── 打包 scale word：E6M2|E1_8<<8|E1_16<<16 ──
+TPACK         <1,32,1,U32,HIF4_SCALE> T12,T10,T18 -> T26<128B>  # word[7:0]=E6M2、[15:8]=E1_8、[31:16]=E1_16
+```
+
+**复核结论**：算法语义完整、字节标注自洽、**嵌套关系正确**——关键的 E1_16 应用步（`T21`）左操作数用
+`T16[:,i]`（= K8[i]，复制到相邻 2 列），使 F16[2i]、F16[2i+1] 都乘同一 K8[i]（`floor(2i/2)=floor((2i+1)/2)=i`），
+与三级嵌套（L3 组 2i、2i+1 的父级 L2 = `floor(j/2)=i`）逐位一致（修正了早期把左操作数误用为 `[32,8]` 全 K8、导致
+奇子组错乘 + view 越界的 bug）。最终乘用 `T1`（带符号原始 X）保号；`TCVT→HIF4` 命中 `HiF4X2`(code14) 规范目标 dtype；
+`TPACK<U32,HIF4_SCALE>` 位布局与 ADR-0101 逐位一致（§2.5）。
+
+**此形态仍需的能力（subview/assemble 之外）**——即便后端补齐子视图，下列 gap 仍独立阻塞运行期落地：
+- **BF16 `TROWMAX` 被 emulator 运行期白名单拒**（仅 FP16/FP32/INT32，见 RECORD `reference_emulator_trowmax_dtype_whitelist`）
+  → 三级 max 全中，**最硬阻塞**；需在 FP16/FP32 域求 max 或等 emulator 修白名单。
+- **`TCVT BF16↔E6M2`**（`T12`/`T12D`）→ E6M2 非注册 tile dtype（问题3），需 scale-profile TCVT 或退位重构。
+- **`TCVT BF16→HIF4`**（`T25`）→ `HiF4X2` TCVT-only，需工具链暴露 code14（问题7）。
+- **`TROWEXPANDMUL`**（1→C 行广播乘）对应问题2「多对多广播无原生 op」；现 kernel 仍为 `group_bcast_mul_PLACEHOLDER`。
+- **`TRECIP` / `TEXPANDS` / `TSELS` / `TCMPS<GE>` / `TPACK<HIF4_SCALE>`** 逐个确认是现有 intrinsic 还是同待后端新增
+  （`TCMPS<GE>` 已在 v0.58 原生，见 §3.1 compare 行）。
+
+> **与 §3.2 路线 A 框架的记法差异**：本节 subview 版走 **tile 域**阈值→因子（`TCMPS<GE>`+`TSELS`），与现有
+> `dynamic_hi_f4_quant_tail.h` 的 `ge_threshold_e1_factor` 同路线（非早期讨论过的 GPR-predicate `TCMP.GPR`/`TSEL.GPR`）。
 
 ## 4. 工具链 / 仿真器现状（已知缺口）
 
