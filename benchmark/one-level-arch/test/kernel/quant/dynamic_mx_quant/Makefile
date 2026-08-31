@@ -99,6 +99,11 @@ ifeq ($(TYPE), TABS_TROWMAX_PROBE)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_tabs_trowmax_probe.elf
 endif
 
+ifeq ($(TYPE), TCVT_REDUCE_SHAPE_PROBE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tcvt_reduce_shape_probe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_tcvt_reduce_shape_probe.elf
+endif
+
 include ../../../common/Makefile.common
 
 clean:

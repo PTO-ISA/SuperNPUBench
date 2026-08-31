@@ -103,11 +103,17 @@ void dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scale) {
     //   ValidRow=ValidRows 只触碰活跃行。base 指针按 row0 偏移，段起点可非 TileM 对齐。
     // TileMv = 该 PE 的物理 tile 行高 (per-PE 编译期常量, 由 tilem_max 推得, 2 的幂)。
     auto process_tile = [&]<int TileMv, int ValidRows>(int row0) {
+        // 列向量中间 tile (reduce 输出及其下游) 声明 physical Cols=1 —— 匹配 model
+        //   d8903938 rowReduce 无条件 col=1 (Block.cpp:2069)，令 reduce→TCVT 两侧
+        //   physical Cols 全等，绕过 ValidateOperandContract「TCVT matching logical
+        //   shapes」契约 (RECORD 问题22 / ISSUE_reduce_output_stride_tail.md)。0.58.3
+        //   工具链头已删 32B 列对齐 static_assert，故 Cols=1 可直接构造。
+        //   全宽 tile (t_h/t_f/t_o) 仍 physical Cols=BlockSize。
         using t_h   = Tile<Location::Vec, __half,     TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
-        using t_hb  = Tile<Location::Vec, __half,     TileMv, BlockSize, BLayout::RowMajor, ValidRows, 1>;
-        using t_bfb = Tile<Location::Vec, __bf16,     TileMv, BlockSize, BLayout::RowMajor, ValidRows, 1>;
-        using t_e8b = Tile<Location::Vec, __fp8_e8m0, TileMv, BlockSize, BLayout::RowMajor, ValidRows, 1>;
-        using t_fb  = Tile<Location::Vec, float,      TileMv, BlockSize, BLayout::RowMajor, ValidRows, 1>;
+        using t_hb  = Tile<Location::Vec, __half,     TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
+        using t_bfb = Tile<Location::Vec, __bf16,     TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
+        using t_e8b = Tile<Location::Vec, __fp8_e8m0, TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
+        using t_fb  = Tile<Location::Vec, float,      TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
         using t_f   = Tile<Location::Vec, float,      TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
         using t_o   = Tile<Location::Vec, __fp8_e4m3, TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
 

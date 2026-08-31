@@ -163,7 +163,7 @@ physical col：
 | 层 | physical col 从哪读 | 若参与校验则崩的维度 |
 |---|---|---|
 | **编译期** `static_assert`（本 issue，`template_asm.hpp:115`） | **声明的模板** `Cols_`（fp4=32 / fp32=64） | **Cols 32≠64** |
-| **运行期** `ValidateOperandContract`（emulator `Block.cpp:1039`） | emit 的 lb2 / inherit（不读模板声明） | Row 8≠4 或 Col 64≠32（随 lb2） |
+| **运行期** `ValidateOperandContract`（emulator `Block.cpp:1039`） | emit 的 `lb2 = dst::Cols`（不读模板声明） | **Col 64≠32** |
 
 当前工具链下编译期先崩，打包声明根本到不了 emulator。**但只放宽编译期 static_assert 并不够**——放开后
 打包 TCVT 块进入 emulator，同一契约在运行期 `ValidateOperandContract()` 再崩一次。故修复须双侧（见下）。
@@ -180,16 +180,17 @@ ASSERTION FAILED: ... srcTile[0]->tileInfo->row == dstTile[0]->tileInfo->row &&
   func ValidateOperandContract, file isa/Block.cpp:1039
 ```
 
-运行期不读模板 Cols，而按 emit 决定 col，再 `row = size/(col × BytesOf(elem))`（`Block.cpp:1384-1386`）
-反推 row（`BytesOf(FP4)=HF4_DATA_WIDTH=1`，`DataType.h`）。对打包 fp4 TCVT（dst size=256B）：
+运行期不读模板 Cols，而按 emit 的 lb2 决定 col，再 `row = size/(col × BytesOf(elem))`（`Block.cpp:1384-1386`）
+反推 row（`BytesOf(FP4)=HF4_DATA_WIDTH=1`，`DataType.h`）。TCVT **恒发 `lb2 = dst::Cols`**
+（`template_asm.hpp:159` `B.DIM zero, %c7, ->lb2`，`%7 = tile_shape_out::Cols`），故对打包 fp4 TCVT
+（dst 声明 Cols=PW/2=32、size=256B）：
 
-| fp4 TCVT emit | dst.col | dst.row = size/(col×1) | 崩的 conjunct |
+| fp4 TCVT emit | dst.col = lb2 | dst.row = size/(col×1) | 崩的 conjunct |
 |---|---|---|---|
-| 不发 lb2 → inherit src | 继承 src=64 | 256/(64×1)=4 | **row（8≠4）** |
-| 发 `->lb2 32` | 32 | 256/(32×1)=8=src | **col（64≠32）** |
+| `->lb2 = dst::Cols = 32` | 32 | 256/(32×1)=8=src | **col（64≠32）** |
 
-选哪个 col 都有一个 physical 维度 ≠ src（打包改变 col↔row↔size 关系），**结构性**。而两边
-`validRow`/`validCol` 恒相等（8/8、32/32），只比 valid 维度即可放过。
+`dst.row = 8` 与 src 相等、`dst.col = 32` 减半 ≠ src 64——打包把 physical col 结构性减半，恒崩 `col`
+conjunct。而两边 `validRow`/`validCol` 恒相等（8/8、32/32），只比 valid 维度即可放过。
 
 > 佐证：加宽变体（Cols=64，见开头探针变体 B）dst size=512B、col=64→row=8=src，**运行期校验过、gfrun
 > R2=0**——即当前 emulator 只在 physical 维度不等时崩；这正是打包声明（Cols=32）放开编译期后会撞上的。

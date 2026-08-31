@@ -1004,15 +1004,24 @@ dtype」强行划等号，禁掉一切「零指令 bitcast 后被异类型op消�
 
 ---
 
-## 问题15：emulator 未实现 TCVT bf16→e8m0(SF8)，MX 共享 scale 转换缺失（需 emulator 侧解决）【已解决·官方】
+## 问题15：emulator 未实现 TCVT bf16→e8m0(SF8)，MX 共享 scale 转换缺失（需 emulator 侧解决）【官方 52f56d5 修复 → 930d9981 误回退 → 本地恢复，SuperScalarModel issues439】
 
-> **状态更新（2026-08-24 实测）**：**官方已修**——emulator 侧修复即上游 commit `52f56d5f`
-> （#253「TCVT float→E8M0」，jialewang 08-21，已在 `origin/main` 等 6 分支）：把 `DataType::SF8`
-> 移出 `CubeEngine.cpp OpCvtType` 的「未支持」assert 分支 + 实现 bf16/fp32/fp16→e8m0
-> （PTO-TCVT-E8M0-PROFILE-001，舍入/饱和/NaN→0xFF）。**当前工作目录 checkout 落后于 52f56d5f 才需补**，
-> 已干净 cherry-pick（工作树提交 `189e45f6`，author jialewang，7 文件无冲突）。补后
-> `probe_ocp_fp8_newcalc` **gfrun 跑到底 R2=0**（scale 前 4 block e8m0=0x79 正确）、**gfsim 亦跑通**
-> （620 cyc、完整 PMU）。与问题14 不同：**这一处官方已修**（问题14 官方从未放宽、是永久本地移植）。
+> **状态更新（2026-08-31 复核）——这是一个未恢复的回归**：官方 `52f56d5f`（#253「TCVT float→E8M0」，
+> jialewang 08-21，PTO-TCVT-E8M0-PROFILE-001）**确实修复过**，但该实现被并进 "unify TCVT/ARGMAX/FPATR,
+> cooperative TMATMUL, TSORT" 大包后，被 **`930d9981 Revert "unify…"` 连坐删除**。实测：
+> `git log -S ConvertFloatToE8M0 52f56d5..d8903938` 唯一命中 `930d9981`；**当前 `origin/main` 与侧支基线
+> `d8903938` 都已无该实现**（`ConvertFloatToE8M0` 出现 0 次、SF8 仍落 `CubeEngine.cpp` 的
+> `Not support such type convert` assert）。故**不是**「基线落后、同步官方即自带」，而是官方线自身的**未恢复回归**。
+>
+> **本地已恢复**：model 分支 `dmxq-ops-20260828` 提交 `ad288c24`，**忠实重放 52f56d5 的 E8M0 部分**
+> （不含被 revert 的 cooperative TMATMUL/TSORT/ARGMAX #271）——proper header `PtoRoundingMode` +
+> `ConvertFloatToE8M0`（全 rounding mode + Sat + IEEE flag）+ `DataFormatCvt(bundleRMode,saturating)`
+> 重载 + `CubeEngine.cpp` inline `if(dstType==SF8)` 块。验证：`tail_ocp_fp8` 4-PE 官方 res_check
+> **`scale=pass（MaxAE=0，逐字节精确）/ output=pass（MaxAE=0.011719）`**（真随机输入）。跟踪
+> **SuperScalarModel issues439**，详 `SuperScalarModel/docs/ISSUE_e8m0_tcvt_regression.md`。
+>
+> **过时口径（2026-08-24，已作废）**：曾记「官方已修、已在 origin/main 等 6 分支、同步官方分支即自带、
+> 干净 cherry-pick `189e45f6`」——基于当时工作目录尚含 52f56d5 的组合，`930d9981` 回退后不再成立。
 > 下方为修复前的原始记录。
 
 ### 现象
@@ -1477,7 +1486,7 @@ scale=2^(E_max−8) 令块最大元素 scaled∈[2^8,2^9)=[256,512)，故 mx_qua
 缺陷已定位、修法已实证（output 253→256/256 逐字节对齐 golden）。**补丁在 worktree 试打后已回退、未提交**，
 正式修复挂 **SuperScalarModel issue364**（emulator 侧落地）。记忆 `reference_emulator_e4m3_clamp_256`。
 
-## 问题22：boxed 尾块（validRow < 物理行高）reduce 输出物理列 stride 被模型反推塌成 1 → 下游 TCVT 形状契约崩溃（需 emulator/spec 侧解决）【ISSUE_reduce_output_stride_tail.md】
+## 问题22：boxed 尾块（validRow < 物理行高）reduce 输出物理列 stride 被模型反推塌成 1 → 下游 TCVT 形状契约崩溃（需 emulator/spec 侧解决）【Linx-TileOP-API issue42】
 
 > 缺陷所在仓 **`SuperScalarModel`（emulator）**，`isa/Block.cpp` rowReduce 分支的输出 stride 反推逻辑。
 > 复现入口 = `TYPE=TAIL_OCP_FP8`（正式 4-PE kernel `dynamic_mx_quant_tail_ocp_fp8.hpp`，本轮由
@@ -1529,6 +1538,27 @@ ET 版直接假设 reduce 输出物理列恒 1、期望 kernel 声明 `physical 
 `physical=BlockSize / ValidCol=1`（行跨步，源于 `ISSUE_32B_align.md` 的 32B 列对齐 static_assert，
 最新工具链已删该约束）在 ET 彻底不兼容。这是「physical=1 迁移」的动因，独立于本尾块问题。
 
+### 同根的另一面（2026-08-31）：physical=1 迁移后，1 字节 e8m0 收窄 TCVT 目的 row 被 128B 最小档撑翻倍
+
+对齐 `d8903938` 的 reduce-col=1 语义把 `tail_ocp_fp8` scale 链下游列向量迁到 `physical Cols=1`
+（提交见 SuperNPUBench `dmxq-ops-20260828`）之后，在 `d8903938` 基线上前移暴露出**同一「物理几何从
+`dst->size` 反推」根因的另一个触发面**：scale 链末端 `TCVT bf16→e8m0`（`DataType::SF8`，1 字节）的目的
+tile 是 `[TileM,1]`（`TileM=64`，BS=32），逻辑仅 64B，但 PTO TSize 最小档 128B（工具链
+`pto_tile.hpp:861 round_capacity` 从 128 起步），被抬到 128B 编进 `sizeClass`；模型
+`Block.cpp` 按 `row = dst->size/(physicalCol×elemBytes) = 128/(1×1) = 128` 反推，而 bf16 源同形状
+`128/(1×2)=64` → `TCVT` 契约物理 `row 64≠128` 崩。
+
+- **与本问题同根、异触发**：本问题是 boxed 尾块 `validRow<TileM` 令 `dst->size` 含 padding 行字节 →
+  反推塌 1；e8m0 这面是 1 字节窄 tile 逻辑字节 <128B 被**最小档下限**抬起 → 反推翻倍。二者都栽在
+  「物理 row/col 无独立字段、一律 `size÷(col×bytes)` 反推」。**口径**：非某一侧单独 bug，是编译器（发
+  `sizeClass=1`/128B 下限）与模型（按填充后字节数反推 row）对「sub-128B 窄 tile」处理未对齐。
+- **临时规避（已落地、未提交）**：`SuperScalarModel/isa/Block.cpp` 的 TCVT `ValidateOperandContract`
+  放宽为**只比 `validRow/validCol/layout`**、去掉物理 `row==row`/`col==col`（对齐「修复建议」方向）。
+  配合问题15 的 e8m0 转换恢复（`ad288c24`），`tail_ocp_fp8` 4-PE 官方 res_check
+  `scale=pass（MaxAE=0）/ output=pass（MaxAE=0.011719）`。
+- 详 `ISSUE_tcvt_e8m0_row_padding.md`（含 ①kBytes→②round_capacity 128→③TilesizeCode→④B.IOT
+  sizeClass→⑤BlockArgs.cpp size=128→⑥Block.cpp row=128→⑦契约断言 的逐行链条）。
+
 ### 修复建议
 
 - **根本解（模型/spec）**：reduce 输出物理列 stride 应有权威来源而非从 `dst->size` 反推——① 改用物理
@@ -1542,3 +1572,45 @@ ET 版直接假设 reduce 输出物理列恒 1、期望 kernel 声明 `physical 
 缺陷已定位、机理已实证（M=1000 崩 / M=1024 通过，指令编码逐位对照）。**未修**，正式修复挂
 `ISSUE_reduce_output_stride_tail.md`（待提 SuperScalarModel issue）。kernel 侧规避方案 C/D **尚未选定落地**。
 相关：问题13（TCVT 不发 lb2）、问题16（TCVT 形状契约）、`ISSUE_32B_align.md`。
+
+## 问题23：gfrun 对 res_check ELF 的 syscall-ABI 探测误判 → 读错寄存器、`Bad Syscall` 崩（需 emulator 侧解决）【未修·本地 env 规避】
+
+> 缺陷所在仓 **`SuperScalarModel`（gfrun）**，`emulator/main.cpp` + `emulator/SysCall.h` 的 syscall
+> ABI 选择。与 kernel / 工具链无关。**仅在跑 `res_check=on` 的 ELF 时触发**（官方精度流程本用 QEMU，但
+> 本环境 `/remote/.../qemu-linx` 不存在，改用 gfrun 才暴露）。
+
+### 现象
+
+`gfrun -f <tail_ocp_fp8 res_check elf> -s softcore.multiThreadNum=4`（单/多线程均然）在 libc 对 stdout
+做 `ioctl(1, TIOCGWINSZ)`（stdio/isatty 初始化）时崩：
+
+```
+At emulator/SysCall.h EcallAgent:
+Bad Syscall Request: syscall(102e2, 1, 5413, ..., 0, 0, 0);   # a1=0x5413=TIOCGWINSZ
+```
+
+### 根因
+
+`main.cpp` 按 `directBootSyscallAbi = !addrRet.hosted_runtime` 自动选 ABI：hosted→读 `A7`、
+direct-boot→读 `X1`。res_check ELF 被 `HasHostedRuntime`（`ELF.cpp`）**误判成 hosted** → 读 `A7`，
+而这个镜像其实是 **direct-boot（syscall 号在 `X1`，`A7` 是 caller-saved 残留旧地址 `0x102e2`）**，于是
+把垃圾地址当 syscall 号 → `HandlerTable` 无此项 → `Bad Syscall`。**gfrun 本身支持 ioctl**
+（`SysCall.h HANDLER(ioctl)`，含 TIOCGWINSZ），号读对（`X1=29`）即可正常返回；纯粹是 ABI 选错寄存器。
+`EcallAgent` 构造注释已预警此坑（"A7 may still contain a prior address/immediate"）。
+
+### 规避（已落地、未提交）
+
+`main.cpp` 加 env 开关 `GFRUN_FORCE_DIRECTBOOT_ABI=1` 强制读 `X1`（direct-boot ABI），使全部 syscall
+读对号、res_check 文件 I/O（open/read/write）走通：
+
+```bash
+GFRUN_FORCE_DIRECTBOOT_ABI=1 bin/gfrun -f <res_check elf> -s softcore.multiThreadNum=4
+```
+
+以此跑通 `tail_ocp_fp8` 4-PE 官方 res_check（`scale=pass MaxAE=0 / output=pass MaxAE=0.011719`）。
+
+### 状态
+
+**未修**（gfrun 侧 `HasHostedRuntime` 误判是根因）；当前用 env 开关规避，仅为在无 QEMU 环境跑精度流程。
+正式修复应在 gfrun 侧修正 res_check 直接引导镜像的 hosted/direct-boot 判定，或提供 CLI 覆盖。属跑官方精度
+流程（QEMU 缺席时）的前置，与问题15/问题22 的 e8m0 面组合后 `tail_ocp_fp8` 精度方能端到端验证。
