@@ -28,6 +28,12 @@ namespace rms_bin {
 constexpr int kWsCols = 128;
 constexpr int kMaxLevels = 6;
 
+#ifdef PE_NUM
+constexpr int kDefaultPeNum = PE_NUM;
+#else
+constexpr int kDefaultPeNum = 1;
+#endif
+
 inline int64_t GetCacheId(int64_t idx) {
     return static_cast<int64_t>(
         __builtin_ctzll(static_cast<unsigned long long>(idx + 1)));
@@ -49,14 +55,16 @@ inline void rsqrt_newton(TileVec &out, TileVec &a) {
 
 } // namespace rms_bin
 
-template <typename dtype>
+template <typename dtype, int peNum = rms_bin::kDefaultPeNum>
 void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
                      float *workspace, float eps = 1e-6f) {
+    static_assert(peNum > 0, "peNum must be positive");
     constexpr int64_t tA = 1;
     constexpr int64_t tR = 1024;
 
-    const int64_t gA = tiling[0];
+    const int64_t globalA = tiling[0];
     const int64_t gR = tiling[1];
+    const int64_t gA = globalA / peNum;
     const int64_t tile_r = tiling[3] > 0 ? tiling[3] : tR;
     const int64_t powR = tiling[4];
 
@@ -69,6 +77,16 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     const int64_t n_full = gR / tile_r;
     const int64_t tail_r = gR - n_full * tile_r;
     const float inv_r = 1.0f / static_cast<float>(gR);
+    const uint32_t tid = get_thread_idx();
+
+    if (globalA <= 0 || globalA % peNum != 0 || gA < tA) {
+        return;
+    }
+
+    const int64_t pe_offset = static_cast<int64_t>(tid) * gA * gR;
+    x += pe_offset;
+    out += pe_offset;
+    workspace += static_cast<int64_t>(tid) * gA * rms_bin::kWsCols;
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
@@ -85,7 +103,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
         TEXPANDS(zero, 0.0f);
 
         float *cache = workspace + ia * rms_bin::kWsCols;
-        const int64_t stride = gA * rms_bin::kWsCols;
+        const int64_t stride = globalA * rms_bin::kWsCols;
 
         for (int64_t lv = 0; lv < rms_bin::kMaxLevels; ++lv) {
             gm_f go(cache + lv * stride, 1, rms_bin::kWsCols);
@@ -228,10 +246,11 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
 }
 
 // Compile-time shape / tiling. Same algorithm as the dynamic entry.
-template <typename dtype, int gA, int gR, int tA, int tR, int powR>
+template <typename dtype, int peA, int gA, int gR, int tA, int tR, int powR>
 void rms_norm_binary(dtype *x, dtype *out, float *workspace,
                      float eps = 1e-6f) {
     static_assert(gA > 0 && gR > 0 && tA == 1 && tR > 0 && powR > 0);
+    static_assert(peA > 0 && gA % peA == 0, "gA must be divisible by peA");
     static_assert(powR < gR && gR <= 2 * powR);
     constexpr int remR = gR - powR;
     constexpr int headR = powR - remR;
@@ -243,14 +262,20 @@ void rms_norm_binary(dtype *x, dtype *out, float *workspace,
     constexpr int tail_r = gR % tR;
     constexpr float inv_r = 1.0f / static_cast<float>(gR);
 
-    using gm_t = global_tensor<dtype, RowMajor<gA, gR>>;
+    using gm_t = global_tensor<dtype, RowMajor<peA, gR>>;
     using gm_f = global_tensor<float, RowMajor<1, rms_bin::kWsCols>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor>;
     using tile_v = Tile<Location::Vec, float, tA, rms_bin::kWsCols,
                         BLayout::RowMajor, 1, 1>;
 
-    for (int64_t ia = 0; ia < gA; ++ia) {
+    const uint32_t tid = get_thread_idx();
+    const int64_t pe_offset = static_cast<int64_t>(tid) * peA * gR;
+    x += pe_offset;
+    out += pe_offset;
+    workspace += static_cast<int64_t>(tid) * peA * rms_bin::kWsCols;
+
+    for (int64_t ia = 0; ia < peA; ++ia) {
         tile_v cur, buf, sum, mean, denom, rms, zero;
         TEXPANDS(zero, 0.0f);
 

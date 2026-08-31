@@ -10,3 +10,9 @@ make TESTCASE=rms_norm_binary COMPILER_DIR="$COMPILER_DIR" DType=__half diss
 make TESTCASE=rms_norm_binary_static COMPILER_DIR="$COMPILER_DIR" DType=__half \
   G_A=1 G_R=8192 TILE_A=1 TILE_R=1024 POW_R=4096 diss
 
+
+# 4PE: split four independent rows across PEs inside the kernel.
+make TESTCASE=rms_norm_binary COMPILER_DIR="$COMPILER_DIR" DType=__half \
+  G_A=4 G_R=8192 TILE_A=1 TILE_R=1024 POW_R=4096 PE_NUM=4 diss
+make TESTCASE=rms_norm_binary_static COMPILER_DIR="$COMPILER_DIR" DType=__half \
+  G_A=4 G_R=8192 TILE_A=1 TILE_R=1024 POW_R=4096 PE_NUM=4 diss
