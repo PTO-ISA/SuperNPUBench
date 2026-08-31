@@ -8,6 +8,10 @@ set -euo pipefail
 make TESTCASE=group_norm_grad_1d COMPILER_DIR="$COMPILER_DIR" \
   DType=__half N_BATCH=8 C_CH=64 G_GRP=8 TILE_D=-1 diss
 
+# Same dynamic entry, one kernel call; PE partitioning is internal.
+make TESTCASE=group_norm_grad_1d COMPILER_DIR="$COMPILER_DIR" \
+  DType=__half N_BATCH=8 C_CH=64 G_GRP=8 TILE_D=-1 PE_NUM=4 diss
+
 # Static Valid; tile_d=-1 → D=C/G=8
 make TESTCASE=group_norm_grad_1d_static COMPILER_DIR="$COMPILER_DIR" \
   DType=__half N_BATCH=8 C_CH=64 G_GRP=8 TILE_D=8 diss

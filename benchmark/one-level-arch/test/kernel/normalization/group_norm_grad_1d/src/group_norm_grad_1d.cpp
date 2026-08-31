@@ -22,6 +22,17 @@
 #ifndef TILE_D
 #define TILE_D -1
 #endif
+#ifndef PE_NUM
+#define PE_NUM 1
+#endif
+
+#ifdef RES_CHECK
+namespace {
+volatile uint32_t input_ready = 0;
+volatile uint32_t kernel_done[PE_NUM] = {};
+volatile uint32_t output_written = 0;
+} // namespace
+#endif
 
 int main() {
     using dtype = DType;
@@ -33,14 +44,14 @@ int main() {
     const int64_t C = tiling_info[1];
     const int64_t G = tiling_info[2];
 
-    dtype dy_buf[N_BATCH * C_CH];
-    dtype x_buf[N_BATCH * C_CH];
-    float mean_buf[N_BATCH * G_GRP];
-    float rstd_buf[N_BATCH * G_GRP];
-    dtype gamma_buf[C_CH];
-    dtype dx_buf[N_BATCH * C_CH];
-    dtype dgamma_buf[C_CH];
-    dtype dbeta_buf[C_CH];
+    static dtype dy_buf[N_BATCH * C_CH];
+    static dtype x_buf[N_BATCH * C_CH];
+    static float mean_buf[N_BATCH * G_GRP];
+    static float rstd_buf[N_BATCH * G_GRP];
+    static dtype gamma_buf[C_CH];
+    static dtype dx_buf[N_BATCH * C_CH];
+    static dtype dgamma_buf[C_CH];
+    static dtype dbeta_buf[C_CH];
 
     dtype *dy = dy_buf;
     dtype *x = x_buf;
@@ -55,27 +66,45 @@ int main() {
 #ifndef CHK_DIR
 #error "CHK_DIR must be set when RES_CHECK is enabled"
 #endif
-    readBinaryFile(CHK_DIR "/dy.bin", (uint8_t *)dy,
-                   static_cast<size_t>(N) * C * sizeof(dtype));
-    readBinaryFile(CHK_DIR "/x.bin", (uint8_t *)x,
-                   static_cast<size_t>(N) * C * sizeof(dtype));
-    readBinaryFile(CHK_DIR "/mean.bin", (uint8_t *)mean,
-                   static_cast<size_t>(N) * G * sizeof(float));
-    readBinaryFile(CHK_DIR "/rstd.bin", (uint8_t *)rstd,
-                   static_cast<size_t>(N) * G * sizeof(float));
-    readBinaryFile(CHK_DIR "/gamma.bin", (uint8_t *)gamma,
-                   static_cast<size_t>(C) * sizeof(dtype));
+    const uint32_t tid = get_thread_idx();
+    if (tid == 0) {
+        readBinaryFile(CHK_DIR "/dy.bin", (uint8_t *)dy,
+                       static_cast<size_t>(N) * C * sizeof(dtype));
+        readBinaryFile(CHK_DIR "/x.bin", (uint8_t *)x,
+                       static_cast<size_t>(N) * C * sizeof(dtype));
+        readBinaryFile(CHK_DIR "/mean.bin", (uint8_t *)mean,
+                       static_cast<size_t>(N) * G * sizeof(float));
+        readBinaryFile(CHK_DIR "/rstd.bin", (uint8_t *)rstd,
+                       static_cast<size_t>(N) * G * sizeof(float));
+        readBinaryFile(CHK_DIR "/gamma.bin", (uint8_t *)gamma,
+                       static_cast<size_t>(C) * sizeof(dtype));
+        input_ready = 1;
+    } else {
+        while (input_ready == 0) {
+        }
+    }
 #endif
 
-    group_norm_grad_1d<dtype>(dy, x, mean, rstd, gamma, tiling_info, dx,
-                              dgamma, dbeta);
+    group_norm_grad_1d<dtype, PE_NUM>(dy, x, mean, rstd, gamma, tiling_info,
+                                      dx, dgamma, dbeta);
 
 #ifdef RES_CHECK
-    writeBinaryFile(CHK_DIR "/dx.bin", (uint8_t *)dx,
-                    static_cast<size_t>(N) * C * sizeof(dtype));
-    writeBinaryFile(CHK_DIR "/dgamma.bin", (uint8_t *)dgamma,
-                    static_cast<size_t>(C) * sizeof(dtype));
-    writeBinaryFile(CHK_DIR "/dbeta.bin", (uint8_t *)dbeta,
-                    static_cast<size_t>(C) * sizeof(dtype));
+    kernel_done[tid] = 1;
+    if (tid == 0) {
+        for (int pe = 0; pe < PE_NUM; ++pe) {
+            while (kernel_done[pe] == 0) {
+            }
+        }
+        writeBinaryFile(CHK_DIR "/dx.bin", (uint8_t *)dx,
+                        static_cast<size_t>(N) * C * sizeof(dtype));
+        writeBinaryFile(CHK_DIR "/dgamma.bin", (uint8_t *)dgamma,
+                        static_cast<size_t>(C) * sizeof(dtype));
+        writeBinaryFile(CHK_DIR "/dbeta.bin", (uint8_t *)dbeta,
+                        static_cast<size_t>(C) * sizeof(dtype));
+        output_written = 1;
+    } else {
+        while (output_written == 0) {
+        }
+    }
 #endif
 }
