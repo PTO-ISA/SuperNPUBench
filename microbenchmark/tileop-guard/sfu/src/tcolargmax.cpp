@@ -1,0 +1,13 @@
+#include "guard_common.hpp"
+// TileOP-API doc guard: TCOLARGMAX (SFU, reduce-and-expand)
+// Source: docs/tileop-usage/engines.md — SFU | TCOLARGMAX | reduce-and-expand.
+// NOTE(doc-gap): docs give NO signature/output shape. Col-reduce to 1 x N inferred.
+int main() {
+    constexpr int M = 16, N = 16;
+    float a[M*N], c[1*N];
+    gfill_seq(a, M*N, 1.0f); gzero(c, 1*N);
+    BENCHSTART;
+    g_colreduce<float, M, N>(c, a, [](auto& d, auto& s){ TCOLARGMAX(d, s); });
+    BENCHEND;
+    return 0;
+}
