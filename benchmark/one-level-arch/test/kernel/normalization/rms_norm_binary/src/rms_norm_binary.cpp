@@ -37,7 +37,7 @@
 #endif
 // Must match rms_bin::kWsCols / kMaxLevels
 #ifndef K_WS_COLS
-#define K_WS_COLS 128
+#define K_WS_COLS 1
 #endif
 #ifndef K_MAX_LEVELS
 #define K_MAX_LEVELS 6

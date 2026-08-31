@@ -25,7 +25,9 @@
 
 namespace rms_bin {
 
-constexpr int kWsCols = 128;
+// Row-reduction results have physical Columns=1. Workspace cache entries
+// must preserve that layout so TLOAD and TADD match the TROWSUM output.
+constexpr int kWsCols = 1;
 constexpr int kMaxLevels = 6;
 
 #ifdef PE_NUM

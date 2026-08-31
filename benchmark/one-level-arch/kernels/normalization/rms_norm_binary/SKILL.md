@@ -85,9 +85,10 @@ Important implementation notes:
 
 1. **Cross-tile sum is streaming** (`sum += cur`), not GetCacheId carry-merge.
 2. Zero-init `sum` outside the R loop; uniform `TADD` inside (no first-tile branch).
-3. `tile_v`: `Cols=32`, **static `Valid=1,1`** (`tile_a==1`) so TEPL `B.DIM`
-   immediates are legal.
-4. `workspace` argument is kept in the API but **currently unused**.
+3. `tile_v`: physical `Columns=1` and static `Valid=1,1`, matching the
+   hardware contract for `TROWSUM` output and later binary TEPL operations.
+4. `workspace` stores one FP32 reduction value per row and cache level. Its
+   layout is `[kMaxLevels, g_a, kWsCols]` with `kWsCols=1`.
 5. Do **not** put early-return parameter checks in the kernel (caller owns tiling).
 
 ## How to verify
@@ -158,7 +159,7 @@ Baseline `rms_norm` (no cross-tile accumulate / second R loop) usually **PASS**e
 
 ```cpp
 G_A=1, G_R=8192, TILE_A=1, TILE_R=1024
-workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS]  // kept for ABI; unused by kernel
+workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS]  // K_WS_COLS=1
 ```
 
 Precision scripts default shape `--g-r 8192`, `--tile-r 1024`.
@@ -168,7 +169,8 @@ Precision scripts default shape `--g-r 8192`, `--tile-r 1024`.
 ## Agent checklist when changing the kernel
 
 1. Keep compute TEPL-only; do not reintroduce `rms_norm_dyn_ops.hpp` unless asked.
-2. Prefer `Valid=1,1` on `tile_v` when using TEPL ops with NTTP `B.DIM`.
+2. Keep `tile_v` physical Columns and Valid Columns both equal to 1 so
+   `TROWSUM`, workspace reload, and binary TEPL operands have identical layout.
 3. Avoid taking addresses of `tile_v` / large pointer arrays of tiles (Liveouts /
    illegal spill).
 4. Do not mix `TROWSUM` u-reg lineage with `TLOAD` of small reduce tiles in the
