@@ -120,10 +120,47 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    else
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_s2$(s2)_N1$(N1)_N2$(N2)_D$(D)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block).elf
    endif
+
+   ifeq ($(QSMLA_EMBED_INPUT), on)
+      ifneq ($(B), 8)
+         $(error QSMLA_EMBED_INPUT supports only B=8,S1=4,N1=128,N2=1,D=512)
+      endif
+      ifneq ($(s1), 4)
+         $(error QSMLA_EMBED_INPUT supports only B=8,S1=4,N1=128,N2=1,D=512)
+      endif
+      ifneq ($(N1), 128)
+         $(error QSMLA_EMBED_INPUT supports only B=8,S1=4,N1=128,N2=1,D=512)
+      endif
+      ifneq ($(N2), 1)
+         $(error QSMLA_EMBED_INPUT supports only B=8,S1=4,N1=128,N2=1,D=512)
+      endif
+      ifneq ($(D), 512)
+         $(error QSMLA_EMBED_INPUT supports only B=8,S1=4,N1=128,N2=1,D=512)
+      endif
+      ifeq ($(filter $(s2),128 1024 4096),)
+         $(error QSMLA_EMBED_INPUT supports only S2=128,1024,4096)
+      endif
+
+      QSMLA_DATA_DIR ?= $(abspath $(CURDIR)/../../../../../..)/qsmla_testdata/typical_bsnd_swa
+      QSMLA_DATA_OBJ_DIR := $(abspath $(CURDIR)/../../../output/kernel/fa/qsmla_data)
+      QSMLA_Q_OBJ := $(QSMLA_DATA_OBJ_DIR)/qsmla_q_input.o
+      QSMLA_KV_OBJ := $(QSMLA_DATA_OBJ_DIR)/qsmla_kv_input_s2_$(s2).o
+      QSMLA_Q_BYTES := 4194304
+      QSMLA_KV_BYTES := $(shell expr $(B) \* $(s2) \* $(N2) \* $(D) \* 2)
+      QSMLA_INPUT_BUILDER := $(CURDIR)/build_qsmla_input_object.py
+
+      DEFINES += -DQSMLA_USE_EMBEDDED_INPUT
+      EXTRA_OBJ_FILES += $(QSMLA_Q_OBJ) $(QSMLA_KV_OBJ)
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_s2$(s2)_N1$(N1)_N2$(N2)_D$(D)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_INPUTembedded.elf
+
+      $(QSMLA_Q_OBJ): $(QSMLA_DATA_DIR)/q.fp16.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_DATA_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol q_fp16 --bytes $(QSMLA_Q_BYTES)
+
+      $(QSMLA_KV_OBJ): $(QSMLA_DATA_DIR)/kv_s2_4096.fp16.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_DATA_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol kv_fp16 --bytes $(QSMLA_KV_BYTES)
+   endif
 endif
 
 include ../../common/Makefile.common
-
-clean:
-	@find $(OBJ_ROOT) -type f -name "*.o" -exec rm -rf {} \;
-	@rm -rf $(COMM_OBJ) $(LINK_SCRIPT)

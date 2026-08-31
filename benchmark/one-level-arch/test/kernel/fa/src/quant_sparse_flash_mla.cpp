@@ -95,6 +95,13 @@ static void init_deterministic(__half* data, int count, int seed) {
     }
 }
 
+#ifdef QSMLA_USE_EMBEDDED_INPUT
+extern "C" {
+extern const uint8_t _binary_q_fp16_start[];
+extern const uint8_t _binary_kv_fp16_start[];
+}
+#endif
+
 int main(){
     using qdtype = __half;
     using kvdtype = __half;
@@ -104,11 +111,21 @@ int main(){
     using Config = QsmlaConfig<
         B, s1, s2, N1, N2, D, 0, kTm, kTk, kTd, g_slice_max>;
 
+#ifdef QSMLA_USE_EMBEDDED_INPUT
+    // The fixed typical-case inputs are linked into an aligned read-only ELF
+    // section.  All four PEs share these addresses and the kernel never writes
+    // Q/KV, avoiding simulated scalar initialization before BENCHSTART.
+    qdtype* q = reinterpret_cast<qdtype*>(
+        const_cast<uint8_t*>(_binary_q_fp16_start));
+    kvdtype* kv = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_kv_fp16_start));
+#else
     qdtype qp[B*s1*N1*D + 2*ALIGN];
     kvdtype kvp[B*s2*N2*D + 2*ALIGN];
 
     qdtype* q = (qdtype*)(((uint64_t)qp & ALIGN_MASK) + ALIGN);
     kvdtype* kv = (kvdtype*)(((uint64_t)kvp & ALIGN_MASK) + ALIGN);
+#endif
 
     odttype* out = (odttype*)MAP_MEM_BASE;
 
@@ -130,8 +147,10 @@ int main(){
     float* pv_scratch = reinterpret_cast<float*>(pv_addr);
 #endif
 
+#ifndef QSMLA_USE_EMBEDDED_INPUT
     init_deterministic(q, B*s1*N1*D, 1);
     init_deterministic(kv, B*s2*N2*D, 2);
+#endif
 
     BENCHSTART;
 #ifdef QSMLA_USE_TADD_4PE
