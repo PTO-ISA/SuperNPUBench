@@ -32,7 +32,12 @@ DEFINES += -DC_CH=$(C_CH)
 DEFINES += -DG_GRP=$(G_GRP)
 DEFINES += -DHxW_SZ=$(HxW_SZ)
 DEFINES += -DTILE_HW=$(TILE_HW)
+DEFINES += -DPE_NUM=$(PE_NUM)
+ifeq ($(PE_NUM),1)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_N$(N_BATCH)_C$(C_CH)_G$(G_GRP)_HxW$(HxW_SZ)_tHW$(TILE_HW).elf
+else
+TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_N$(N_BATCH)_C$(C_CH)_G$(G_GRP)_HxW$(HxW_SZ)_tHW$(TILE_HW)_PE$(PE_NUM).elf
+endif
 endif
 
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp

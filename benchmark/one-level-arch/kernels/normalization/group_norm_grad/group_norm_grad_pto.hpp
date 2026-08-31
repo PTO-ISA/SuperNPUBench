@@ -429,7 +429,8 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
 }
 
 // Compile-time N,C,G,HxW,tile_hw. Physical Cols = tCap (>=512B); Valid = tiling.
-template <typename dtype, int N, int C, int G, int HxW, int tile_hw>
+template <typename dtype, int N, int C, int G, int HxW, int tile_hw,
+          int peNum = gn_grad::kDefaultPeNum>
 void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
                      dtype *gamma, dtype *dx, dtype *dgamma, dtype *dbeta,
                      float *workspace) {
@@ -445,6 +446,10 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
     constexpr int n_hw = HxW / tile_hw;
     constexpr int rmd_hw = HxW % tile_hw;
     constexpr float s = 1.0f / static_cast<float>(D * HxW);
+    const uint32_t tid = gn_grad::read_pe_id();
+    if (tid >= static_cast<uint32_t>(peNum)) {
+        return;
+    }
 
     float *ds = workspace;
     float *db = workspace + N * C;
@@ -475,9 +480,9 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
     using tile_v =
         Tile<Location::Vec, float, 1, tV, BLayout::RowMajor, 1, 1>;
 
-    for (int n = 0; n < N; ++n) {
-        for (int c = 0; c < C; ++c) {
-            const int nc = n * C + c;
+    for (int nc = tid; nc < N * C; nc += peNum) {
+        const int n = nc / C;
+        const int c = nc % C;
             const int64_t base = static_cast<int64_t>(nc) * HxW;
             gm_f1 gds(ds + nc);
             gm_f1 gdb(db + nc);
@@ -520,12 +525,12 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
             }
             TSTORE(gds, ds_acc);
             TSTORE(gdb, db_acc);
-        }
     }
+    gn_grad::pe_barrier<peNum>(1);
 
-    for (int n = 0; n < N; ++n) {
-        for (int g = 0; g < G; ++g) {
-            const int ng = n * G + g;
+    for (int ng = tid; ng < N * G; ng += peNum) {
+        const int n = ng / G;
+        const int g = ng % G;
             const int c0 = g * D;
             gm_fG gmean(mean + ng);
             gm_fG grstd(rstd + ng);
@@ -560,12 +565,13 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
             TSUB(c3, c3, sum1);
             TSTORE(gc2, c2);
             TSTORE(gc3, c3);
-        }
     }
+    gn_grad::pe_barrier<peNum>(2);
 
-    for (int n = 0; n < N; ++n) {
-        for (int c = 0; c < C; ++c) {
-            const int g = c / D;
+    for (int nc = tid; nc < N * C; nc += peNum) {
+        const int n = nc / C;
+        const int c = nc % C;
+        const int g = c / D;
             const int ng = n * G + g;
             const int64_t offset = (static_cast<int64_t>(n) * C + c) * HxW;
             gm_h gdy(dy + offset);
@@ -600,10 +606,9 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
             TROWEXPANDADD(dx_f, dx_f, c3);
             TCVT(h0, dx_f);
             TSTORE(gdx, h0);
-        }
     }
 
-    for (int g = 0; g < G; ++g) {
+    for (int g = tid; g < G; g += peNum) {
         const int c0 = g * D;
         tile_f_d acc, cur;
         tile_h_d h0;
@@ -617,7 +622,7 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
         TCVT(h0, acc);
         TSTORE(gout, h0);
     }
-    for (int g = 0; g < G; ++g) {
+    for (int g = tid; g < G; g += peNum) {
         const int c0 = g * D;
         tile_f_d acc, ds_f, db_f, t0;
         tile_h_d h0;

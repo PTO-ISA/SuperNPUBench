@@ -7,6 +7,10 @@ TILE_R ?= 512
 # gfrun needs -s softcore.multiThreadNum=4 (same as multi_thread/vec).
 PE_NUM ?= 1
 
+ifneq ($(PE_NUM),1)
+START_FILE = $(ROOT)/test/common/_start_multipe.s
+endif
+
 ifeq ($(TESTCASE), rms_norm)
 DEFINES += -DDType=$(DType) -DPE_NUM=$(PE_NUM)
 ifeq ($(PE_NUM),1)

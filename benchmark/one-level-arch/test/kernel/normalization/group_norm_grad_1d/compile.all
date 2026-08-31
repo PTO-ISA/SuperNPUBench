@@ -16,3 +16,6 @@ make TESTCASE=group_norm_grad_1d COMPILER_DIR="$COMPILER_DIR" \
 make TESTCASE=group_norm_grad_1d_static COMPILER_DIR="$COMPILER_DIR" \
   DType=__half N_BATCH=8 C_CH=64 G_GRP=8 TILE_D=8 diss
 
+make TESTCASE=group_norm_grad_1d_static COMPILER_DIR="$COMPILER_DIR" \
+  DType=__half N_BATCH=8 C_CH=64 G_GRP=8 TILE_D=8 PE_NUM=4 diss
+

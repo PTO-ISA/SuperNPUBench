@@ -339,7 +339,8 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
     }
 }
 
-template <typename dtype, int N, int C, int G, int tile_d>
+template <typename dtype, int N, int C, int G, int tile_d,
+          int peNum = gn_grad_1d::kDefaultPeNum>
 void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
                         dtype *gamma, dtype *dx, dtype *dgamma,
                         dtype *dbeta) {
@@ -356,6 +357,10 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
     constexpr int n_d = D / kTileD;
     constexpr int rmd_d = D % kTileD;
     constexpr float s = 1.0f / static_cast<float>(D);
+    const uint32_t tid = get_thread_idx();
+    if (tid >= static_cast<uint32_t>(peNum)) {
+        return;
+    }
 
     using gm_h = global_tensor<dtype, RowMajor<N, C>>;
     using gm_c = global_tensor<dtype, RowMajor<1, C>>;
@@ -374,9 +379,9 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
 
     float scratch[2];
 
-    for (int n = 0; n < N; ++n) {
-        for (int g = 0; g < G; ++g) {
-            const int ng = n * G + g;
+    for (int ng = tid; ng < N * G; ng += peNum) {
+        const int n = ng / G;
+        const int g = ng % G;
             const int c0 = g * D;
             const int offset = n * C + c0;
             gm_h gdy(dy + offset);
@@ -434,10 +439,9 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
             TROWEXPANDADD(t1, t1, c3);
             TCVT(h0, t1);
             TSTORE(gdx, h0);
-        }
     }
 
-    for (int g = 0; g < G; ++g) {
+    for (int g = tid; g < G; g += peNum) {
         const int c0 = g * D;
         for (int d0 = 0; d0 < n_d; ++d0) {
             tile_h_td h0;
@@ -473,7 +477,7 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
         }
     }
 
-    for (int g = 0; g < G; ++g) {
+    for (int g = tid; g < G; g += peNum) {
         const int c0 = g * D;
         for (int d0 = 0; d0 < n_d; ++d0) {
             tile_h_td h0;
