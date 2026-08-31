@@ -17,7 +17,8 @@
 //   dX still requires HxW <= tCap (one spatial tile; RF-limited).
 //
 // tCap: logical tile >= 512B (TileOP IsValidActiveSize / TSize=1..7).
-//   fp16 → Cols>=256; fp32 → Cols>=128. tile_v is always fp32 → Cols=128.
+//   fp16 → Cols>=256; fp32 data tiles → Cols>=128. Reduction/broadcast
+//   tile_v follows the hardware contract and uses physical Columns=1.
 // Cols=1024 like rms_norm overflows Tile RF here.
 //
 // Torch CUDA launch 总览 (NVIDIA, warp=32):
@@ -361,7 +362,7 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
         (512 + static_cast<int64_t>(sizeof(dtype)) - 1) /
         static_cast<int64_t>(sizeof(dtype));
     constexpr int64_t tCap = tCapDtype > 128 ? tCapDtype : 128;
-    constexpr int64_t tV = 128; // float scalar/broadcast strip: 128*4B = 512B
+    constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
 
     const int64_t N = tiling[0];
     const int64_t C = tiling[1];
@@ -441,7 +442,7 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
         (512 + static_cast<int>(sizeof(dtype)) - 1) /
         static_cast<int>(sizeof(dtype));
     constexpr int tCap = tCapDtype > 128 ? tCapDtype : 128;
-    constexpr int tV = 128;
+    constexpr int tV = 1;
     static_assert(tile_hw <= tCap && HxW <= tCap && D <= tCap);
     constexpr int n_hw = HxW / tile_hw;
     constexpr int rmd_hw = HxW % tile_hw;

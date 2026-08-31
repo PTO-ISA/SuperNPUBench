@@ -16,7 +16,8 @@
 //   Stage A requires D <= tD (one tile).
 //
 // Tile capacity: logical tile >= 512B (TileOP IsValidActiveSize / TSize=1..7).
-//   fp16 → Cols>=256; fp32 → Cols>=128. tile_v is always fp32 → Cols=128.
+//   fp16 → Cols>=256; fp32 data tiles → Cols>=128. Reduction/broadcast
+//   tile_v follows the hardware contract and uses physical Columns=1.
 // Reduce and dX are separate passes so large tiles do not stay live across both.
 //
 // Torch CUDA launch 总览 (NVIDIA, warp=32; HxW==1 特化):
@@ -293,7 +294,7 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
         (512 + static_cast<int64_t>(sizeof(dtype)) - 1) /
         static_cast<int64_t>(sizeof(dtype));
     constexpr int64_t tD = tDDtype > 128 ? tDDtype : 128;
-    constexpr int64_t tV = 128; // float scalar/broadcast strip: 128*4B = 512B
+    constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
 
     const int64_t N = tiling[0];
     const int64_t C = tiling[1];
@@ -351,7 +352,7 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
         (512 + static_cast<int>(sizeof(dtype)) - 1) /
         static_cast<int>(sizeof(dtype));
     constexpr int tD = tDDtype > 128 ? tDDtype : 128;
-    constexpr int tV = 128;
+    constexpr int tV = 1;
     constexpr int kTileD = tile_d > 0 ? tile_d : (D < tD ? D : tD);
     static_assert(kTileD > 0 && kTileD <= tD && D <= tD);
     constexpr int n_d = D / kTileD;
