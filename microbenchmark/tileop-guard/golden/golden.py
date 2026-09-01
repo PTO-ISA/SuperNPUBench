@@ -186,6 +186,8 @@ def ref(case, chkdir):
         return a * b + c, dt
     if fam == 'fill':
         return np.full(a.shape, s['scalar'], dtype=np.float32), dt
+    if fam == 'identity':
+        return a, dt
     if fam == 'unary':
         op = s['op']
         if op == 'abs':  return np.abs(a), dt

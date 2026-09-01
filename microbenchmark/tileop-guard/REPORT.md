@@ -99,6 +99,26 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 
 这些留待后续轮次:先按 ISA/refmodel 钉定语义,再补 golden。
 
+### 文档更新跟踪(远程 linx 分支)
+
+对比本地 `Linx-TileOP-API` d6a52b8 与远程 `linx` 顶端 fa24eae(2026-09-01),
+`docs/tileop-usage/` 有 2 个 commit、3 个文件更新:
+
+| 文件 | 变更 | 是否新接口 / demo 缺口 |
+|------|------|----------------------|
+| `options.md` | +420/−26 大改 | 否。是 fixp 后处理 options 的**文档扩写**,builder 集合(keep_acc/f16/bf16/convert/scalar/vector/s8/lrelu/row_max/group_max/max_abs/cscale)均为已知,fixp demo 已覆盖 |
+| `range-modifiers.md` (+33)、`range-modifiers-developer-guide.md` (+85) | 新增 **TileArray region API** | **是**。`TPARTVIEW` / `TileArray` / `TASSEMBLY` 为新接口,原 demo 只有 `range::Subview`/`range::Assemble`,**缺口** |
+
+**已补 demo**:`tlsu/src/region_tilearray.cpp`(看护 TileArray/TASSEMBLY + TCVT slot producer)。
+guard 结论 = **run-fail**,并暴露文档/实现缺口:
+1. 文档示例 `TCVT(destinations[0][2], source_tile)` 用临时量,而 region `TCVT` 签名是
+   `TCVT(TileArrayOutputRef& dst, In& src)`(非 const 左值引用),临时量无法绑定;且示例源
+   变量名 `source`(=TPARTVIEW 视图)与 `source_tile` 不一致——**照抄不可编译**,须绑具名左值。
+2. 用 TPARTVIEW 父 strided 子视图作源 → gfrun `raw tile spill source does not fit the carrier
+   shape`;改独立紧凑 Fragment 作源仍触发同一断言。结合文档自身 "until the … path is
+   implemented and validated" 告警,且该特性是远程顶端 commit,判定**region producer 路径在
+   当前 env_test 模型上尚不可运行**,待模型侧补齐后再验证组装布局。
+
 ---
 
 ## VEC 族(elementwise / scalar / compare)
