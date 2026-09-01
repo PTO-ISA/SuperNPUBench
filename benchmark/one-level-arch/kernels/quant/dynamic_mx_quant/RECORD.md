@@ -1,6 +1,67 @@
 # DynamicMxQuant 问题记录
 
+## 2026-09-01 状态更新（当前基线 codex/pr-0.58.4，取代下方 0828 清单中的 codex 判断）
+
+**当前工作基线**：model `SuperScalarModel dmxq-ops-20260828`（源自 `origin/codex/pr-0.58.4-shared-model`）
++ 工具链 `Linx-TileOP-API d6a52b8`（fp4 `bits` 保持**官方 8**）+ llvm `0f878a8`。
+
+### 端到端状态
+
+| kernel | 状态 |
+|---|---|
+| `dynamic_mx_quant_tail_ocp_fp8` | ✅ **res_check PASS**（output MSE=0/MaxAE=0.0117，scale MSE=0） |
+| `dynamic_mx_quant_tail_ocp_fp4` | ❌ **res_check FAIL**（output MSE=7.83；scale=pass）—— fp4 **写侧**未修 |
+
+### 已落地（本轮）
+
+| 仓 | 内容 | 状态 |
+|---|---|---|
+| model | e8m0(SF8) 转换（问题15） | 已提交 `60ce26fd` |
+| model | compare-select 用 carrier-width 兼容（问题14，reinterpret 守卫） | 已提交 `3ca5744c` |
+| model | `GFRUN_FORCE_DIRECTBOOT_ABI` 注释更正为 X1（问题23） | 已提交 `19e2e97a` |
+| 工具链 | PR#41 两拍显式 false-source TSEL（问题18，源+已装头） | 未提交（`linx` 分支工作树） |
+| Bench | `readBinary.h`/`writeBinary.h` 在 `#ifndef RES_CHECK` 静音 stdout printf（res_check writev 挂起规避） | 未提交，跟踪 `ISSUE_gfrun_res_check_writev_hang.md` |
+
+### ⚠️ 更正：codex/pr-0.58.4 **并未**原生修复 fp4 打包（下方 0828 清单该结论作废）
+
+下方 0828 清单多处写「上游 codex/pr-0.58.4 已原生修复 fp4 打包，应弃用 31f7a8f 移植、整体对齐 codex」
+—— **实测证伪**。当前基线就是 codex/pr-0.58.4，`dynamic_mx_quant_tail_ocp_fp4` 实跑 **output=fail**。
+
+- codex 只有 fp4 **读侧**（`TMAEngine::ExecuteTSTORE` `packed=CubeCellElementBits==4`、`CubeEngine` `srcType==FP4`
+  解码），**缺写侧**（`DataFormatCvt` 的 `dstType==FP4` 值编码 + `ExecuteTCVT` nibble 打包 + `IsFourBitDataType`）。
+  读侧必要非充分：TCVT 从没把编码/打包好的数据写进 tile。
+- 跟踪 issue：**`ISSUE_fp4_pack_tcvt_regression.md` → SuperScalarModel issues454**（已按远端最新代码重写，去本地引用）。
+
+### 最小复现探针（隔离模型值编码，纯 origin + 官方工具链）
+
+`fp4_shape_probe.cpp` `WIDEN=on`，单条 `TCVT(fp32→fp4)`，输入 `[0.5,1,1.5,2,3,4,6,0]`：
+```
+期望 E2M1 码 [1,2,3,4,5,6,7,0]  vs  实测 [1,2,3,4,5,6,6,0]   # 6.0→码6(4.0) 应码7(6.0),MaxAE=2.0
+```
+坐实模型缺 E2M1 顶档编码（全 1 码被通用 softfloat 当 NaN/Inf 舍一档），与打包/工具链无关。
+
+### 本地修复思路（分两层，反应式、每步可验）
+
+1. **A 值编码（先做，隔离低风险）**：`CubeEngine::DataFormatCvt` 加 `dstType==FP4/FP4_1` E2M1/E1M2 值表编码
+   （顶档饱和到码7）→ WIDEN 探针验 `6.0→7`。不碰打包/工具链/形状。
+2. **B 打包（后做，尊重 codex 原生读侧）**：`ExecuteTCVT` 打包 + `IsFourBitDataType` + `Block.cpp` 用
+   `ElementBitsOf` 派生打包行。**fc643829 的 TMAEngine `eleRSize` 配套大概率不需要**（codex 已有原生 `packed`
+   读侧，套了反而打架）；工具链打包宽度是否需动 **以补完 B 跑全 kernel 的实报错为准**（不预套 bits=4）。
+3. **C 全 kernel 复测** output=pass 才闭环。
+
+### 工具链 fp4 `bits`：官方是 `ddd07b9`，不是 `bits 8→4`
+
+远端官方对 fp4 TCVT tile size 的修复是 `ddd07b9 [tileop-api] Encode TCVT destination logical tile size`
+（作者 zhuwei0003，**已在 d6a52b8**，改 `TilesizeCode` 取 `tile_shape_out::TilesizeCode`，**未动 bits=8**）。
+「`bits 8→4`」无官方提交，是本地 stopgap（下方 0828 清单 A 段记的即此）。当前已把 bits 恢复官方 8。
+`ddd07b9` 单独不足以让 fp4 打包（仍需模型写侧 B）——见 `ISSUE_linx_tileop_fp4_tile_size_bits`。
+
+---
+
 ## 0828-tag 补丁清单（工具链 / model / kernel）
+
+> ⚠️ 本节针对**旧基线 d8903938**（非当前 codex）；其中「codex 已原生修复 fp4 打包 / 应对齐 codex」
+> 的判断**已被上方 2026-09-01 节证伪作废**，其余站点清单仍可参考。
 
 > 面向 `ops-20260828` 配套（TileOP-API `f94bc12` / llvm `adcb879` / model `d8903938`+`ad288c24`）为让
 > `dynamic_mx_quant_tail_ocp_fp4`（4PE + 特殊值守卫）端到端跑通所打的补丁清单。类型：**移植**=反应式重放
