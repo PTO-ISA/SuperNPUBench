@@ -1,170 +1,102 @@
 #ifndef CUBE_BENCH_HPP
 #define CUBE_BENCH_HPP
 
-// Named TMA/CUBE direct-operation micro-bench templates.
-// Intrinsic naming follows DavinciOO/PTO (OPERATOR_REFERENCE.md §8):
-//   TMATMUL / TMATMUL_ACC / TMATMUL_BIAS / TMATMUL_MX
-//   TGEMV  / TGEMV_ACC  / TGEMV_BIAS  / TGEMV_MX
+// PTO ISA v0.58 single-PE CUBE microbench templates. Matrix operands and
+// accumulators use persistent CELL layouts; GM transport uses TLOAD_CUBE and
+// TSTORE_CUBE. There is intentionally no synthetic TLOAD_ND2NZ operation.
 
 #include <common/pto_tileop.hpp>
 #include <cstdint>
+#include <type_traits>
 #include "benchmark.h"
 #include "bench_utils.hpp"
 
 using namespace pto;
 
-template <typename D, int M, int K>
-using gmA_t = global_tensor<D, RowMajor<M, K>>;
-template <typename D, int K, int N>
-using gmB_t = global_tensor<D, RowMajor<K, N>>;
-template <typename D, int M, int N>
-using gmC_t = global_tensor<D, RowMajor<M, N>>;
+template <typename D>
+using cube_acc_element_t = std::conditional_t<
+    std::is_same_v<D, int8_t>, int32_t,
+    std::conditional_t<std::is_same_v<D, uint8_t>, uint32_t, float>>;
 
 template <typename D, int M, int K>
-using tL_t = TileLeft<D, M, K>;
+using cube_a_t = std::conditional_t<(M <= 16), CubeTileM16<D, M, K>,
+                                    CubeTileM32<D, M, K>>;
 template <typename D, int K, int N>
-using tR_t = TileRight<D, K, N>;
+using cube_b_t = CubeTileN8<D, K, N>;
+template <typename AccD, int M, int N>
+using cube_c_t = std::conditional_t<(M <= 16), CubeAccumulatorM16<AccD, M, N>,
+                                    CubeAccumulatorM32<AccD, M, N>>;
+template <typename AccD, int N>
+using cube_bias_t = Tile<Location::Bias, AccD, 8, N,
+                         BLayout::RowMajor, 1, N>;
+
+template <typename D, int M, int K>
+using gm_a_t = global_tensor<D, RowMajor<M, K>>;
+template <typename D, int K, int N>
+using gm_b_t = global_tensor<D, RowMajor<K, N>>;
 template <typename D, int M, int N>
-using tAcc_t = Tile<Location::Vec, float, M, N, BLayout::RowMajor>;  // ACC is float accumulator regardless of input dtype
-template <typename D, int M, int N>
-using tOut_t = Tile<Location::Vec, D, M, N, BLayout::RowMajor>;
+using gm_c_t = global_tensor<D, RowMajor<M, N>>;
 
-// C = A * B   (TMATMUL -> Tile -> GM)
 template <typename D, int M, int N, int K>
-void bench_matmul(D *c, D *a, D *b) {
-    using itA = global_iterator<gmA_t<D, M, K>, tL_t<D, M, K>>;
-    using itB = global_iterator<gmB_t<D, K, N>, tR_t<D, K, N>>;
-    using itC = global_iterator<gmC_t<D, M, N>, tOut_t<D, M, N>>;
-    itA gA(a); itB gB(b); itC gC(c);
-    auto gA0 = gA(0, 0), gB0 = gB(0, 0), gC0 = gC(0, 0);
-    tL_t<D, M, K> tA; tR_t<D, K, N> tB;
-    tAcc_t<D, M, N> tAcc; tOut_t<D, M, N> tOut;
-    TLOAD(tA, gA0);
-    TLOAD(tB, gB0);
-    TMATMUL(tOut, tA, tB);
-    TSTORE(gC0, tOut);
+void bench_matmul(cube_acc_element_t<D> *out, D *a, D *b) {
+    using AccD = cube_acc_element_t<D>;
+    gm_a_t<D, M, K> gA(a); gm_b_t<D, K, N> gB(b); gm_c_t<AccD, M, N> gD(out);
+    cube_a_t<D, M, K> tA; cube_b_t<D, K, N> tB; cube_c_t<AccD, M, N> tD;
+    TLOAD_CUBE(tA, gA);
+    TLOAD_CUBE(tB, gB);
+    TMATMUL(tD, tA, tB);
+    TSTORE_CUBE(gD, tD);
 }
 
-// C += A * B  (TMATMUL_ACC accumulate into ACC)
 template <typename D, int M, int N, int K>
-void bench_matmul_acc(D *c, D *a, D *b) {
-    using itA = global_iterator<gmA_t<D, M, K>, tL_t<D, M, K>>;
-    using itB = global_iterator<gmB_t<D, K, N>, tR_t<D, K, N>>;
-    using itC = global_iterator<gmC_t<D, M, N>, tOut_t<D, M, N>>;
-    itA gA(a); itB gB(b); itC gC(c);
-    auto gA0 = gA(0, 0), gB0 = gB(0, 0), gC0 = gC(0, 0);
-    tL_t<D, M, K> tA; tR_t<D, K, N> tB;
-    tAcc_t<D, M, N> tAcc; tOut_t<D, M, N> tOut;
-    TLOAD(tA, gA0);
-    TLOAD(tB, gB0);
-    TMATMUL_ACC(tAcc, tA, tB);
-    TSTORE(gC0, tOut);
+void bench_matmul_acc(cube_acc_element_t<D> *out,
+                      cube_acc_element_t<D> *initial, D *a, D *b) {
+    using AccD = cube_acc_element_t<D>;
+    gm_a_t<D, M, K> gA(a); gm_b_t<D, K, N> gB(b);
+    gm_c_t<AccD, M, N> gC(initial), gD(out);
+    cube_a_t<D, M, K> tA; cube_b_t<D, K, N> tB;
+    cube_c_t<AccD, M, N> tC, tD;
+    TLOAD_CUBE(tA, gA);
+    TLOAD_CUBE(tB, gB);
+    TLOAD_CUBE(tC, gC);
+    TMATMUL_ACC(tD, tC, tA, tB);
+    TSTORE_CUBE(gD, tD);
 }
 
-// C = A * B + bias  (TMATMUL_BIAS)
 template <typename D, int M, int N, int K>
-void bench_matmul_bias(D *c, D *a, D *b, D *bias) {
-    using itA = global_iterator<gmA_t<D, M, K>, tL_t<D, M, K>>;
-    using itB = global_iterator<gmB_t<D, K, N>, tR_t<D, K, N>>;
-    using itC = global_iterator<gmC_t<D, M, N>, tOut_t<D, M, N>>;
-    using itBias = global_iterator<gmC_t<D, 1, N>, tOut_t<D, 1, N>>;
-    itA gA(a); itB gB(b); itC gC(c); itBias gBias(bias);
-    auto gA0 = gA(0, 0), gB0 = gB(0, 0), gC0 = gC(0, 0), gBias0 = gBias(0, 0);
-    tL_t<D, M, K> tA; tR_t<D, K, N> tB; tOut_t<D, 1, N> tBias;
-    tAcc_t<D, M, N> tAcc; tOut_t<D, M, N> tOut;
-    TLOAD(tA, gA0);
-    TLOAD(tB, gB0);
-    TLOAD(tBias, gBias0);
-    TMATMUL_BIAS(tOut, tA, tB, tBias);
-    TSTORE(gC0, tOut);
+void bench_matmul_bias(cube_acc_element_t<D> *out, D *a, D *b,
+                       cube_acc_element_t<D> *bias) {
+    using AccD = cube_acc_element_t<D>;
+    gm_a_t<D, M, K> gA(a); gm_b_t<D, K, N> gB(b);
+    gm_c_t<AccD, M, N> gD(out); global_tensor<AccD, RowMajor<1, N>> gBias(bias);
+    cube_a_t<D, M, K> tA; cube_b_t<D, K, N> tB;
+    cube_c_t<AccD, M, N> tD; cube_bias_t<AccD, N> tBias;
+    TLOAD_CUBE(tA, gA);
+    TLOAD_CUBE(tB, gB);
+    TLOAD(tBias, gBias);
+    TMATMUL_BIAS(tD, tA, tB, tBias);
+    TSTORE_CUBE(gD, tD);
 }
 
-// C = A * B  microscaling (TMATMUL_MX, with per-tile scale factors)
-template <typename D, int M, int N, int K>
-void bench_matmul_mx(D *c, D *a, D *as, D *b, D *bs) {
-    using itA = global_iterator<gmA_t<D, M, K>, tL_t<D, M, K>>;
-    using itB = global_iterator<gmB_t<D, K, N>, tR_t<D, K, N>>;
-    using itC = global_iterator<gmC_t<D, M, N>, tOut_t<D, M, N>>;
-    itA gA(a), gAs(as); itB gB(b), gBs(bs); itC gC(c);
-    auto gA0 = gA(0, 0), gAs0 = gAs(0, 0), gB0 = gB(0, 0), gBs0 = gBs(0, 0), gC0 = gC(0, 0);
-    tL_t<D, M, K> tA, tAs; tR_t<D, K, N> tB, tBs;
-    tAcc_t<D, M, N> tAcc; tOut_t<D, M, N> tOut;
-    TLOAD(tA, gA0); TLOAD(tAs, gAs0);
-    TLOAD(tB, gB0); TLOAD(tBs, gBs0);
-    TMATMUL_MX(tOut, tA, tAs, tB, tBs);
-    TSTORE(gC0, tOut);
+template <typename InD, typename AccD, int M, int N, int K>
+void reference_matmul(AccD *out, InD *a, InD *b,
+                      const AccD *initial = nullptr,
+                      const AccD *bias = nullptr) {
+    for (int m = 0; m < M; ++m) {
+        for (int n = 0; n < N; ++n) {
+            AccD v = initial ? initial[m * N + n] : (AccD)0;
+            if (bias) v += bias[n];
+            for (int k = 0; k < K; ++k)
+                v += (AccD)a[m * K + k] * (AccD)b[k * N + n];
+            out[m * N + n] = v;
+        }
+    }
 }
 
-// FIXME: TGEMV / TGEMV_ACC / TGEMV_BIAS / TGEMV_MX are not yet exposed by the
-// toolchain (only TMATMUL* are). The gemv bench templates are
-// disabled until the TGEMV* intrinsics land. Re-enable and regenerate gemv
-// cases when they appear.
-#if 0
-// C = A * v  (TGEMV matrix-vector)
-template <typename D, int M, int N, int K>
-void bench_gemv(D *c, D *a, D *b) {
-    using itA = global_iterator<gmA_t<D, M, K>, tL_t<D, M, K>>;
-    using itB = global_iterator<gmB_t<D, K, N>, tR_t<D, K, N>>;
-    using itC = global_iterator<gmC_t<D, M, N>, tOut_t<D, M, N>>;
-    itA gA(a); itB gB(b); itC gC(c);
-    auto gA0 = gA(0, 0), gB0 = gB(0, 0), gC0 = gC(0, 0);
-    tL_t<D, M, K> tA; tR_t<D, K, N> tB;
-    tAcc_t<D, M, N> tAcc; tOut_t<D, M, N> tOut;
-    TLOAD(tA, gA0);
-    TLOAD(tB, gB0);
-    TGEMV(tAcc, tA, tB);
-    TSTORE(gC0, tOut);
+template <typename T>
+constexpr T cube_epsilon() {
+    if constexpr (std::is_integral_v<T>) return (T)0;
+    return (T)1e-2;
 }
-
-// C += A * v  (TGEMV_ACC)
-template <typename D, int M, int N, int K>
-void bench_gemv_acc(D *c, D *a, D *b) {
-    using itA = global_iterator<gmA_t<D, M, K>, tL_t<D, M, K>>;
-    using itB = global_iterator<gmB_t<D, K, N>, tR_t<D, K, N>>;
-    using itC = global_iterator<gmC_t<D, M, N>, tOut_t<D, M, N>>;
-    itA gA(a); itB gB(b); itC gC(c);
-    auto gA0 = gA(0, 0), gB0 = gB(0, 0), gC0 = gC(0, 0);
-    tL_t<D, M, K> tA; tR_t<D, K, N> tB;
-    tAcc_t<D, M, N> tAcc; tOut_t<D, M, N> tOut;
-    TLOAD(tA, gA0);
-    TLOAD(tB, gB0);
-    TGEMV_ACC(tAcc, tA, tB);
-    TSTORE(gC0, tOut);
-}
-
-// C = A * v + bias  (TGEMV_BIAS)
-template <typename D, int M, int N, int K>
-void bench_gemv_bias(D *c, D *a, D *b, D *bias) {
-    using itA = global_iterator<gmA_t<D, M, K>, tL_t<D, M, K>>;
-    using itB = global_iterator<gmB_t<D, K, N>, tR_t<D, K, N>>;
-    using itC = global_iterator<gmC_t<D, M, N>, tOut_t<D, M, N>>;
-    using itBias = global_iterator<gmC_t<D, 1, N>, tOut_t<D, 1, N>>;
-    itA gA(a); itB gB(b); itC gC(c); itBias gBias(bias);
-    auto gA0 = gA(0, 0), gB0 = gB(0, 0), gC0 = gC(0, 0), gBias0 = gBias(0, 0);
-    tL_t<D, M, K> tA; tR_t<D, K, N> tB; tOut_t<D, 1, N> tBias;
-    tAcc_t<D, M, N> tAcc; tOut_t<D, M, N> tOut;
-    TLOAD(tA, gA0);
-    TLOAD(tB, gB0);
-    TLOAD(tBias, gBias0);
-    TGEMV_BIAS(tAcc, tA, tB, tBias);
-    TSTORE(gC0, tOut);
-}
-
-// C = A * v  microscaling (TGEMV_MX, with per-tile scale factors)
-template <typename D, int M, int N, int K>
-void bench_gemv_mx(D *c, D *a, D *as, D *b, D *bs) {
-    using itA = global_iterator<gmA_t<D, M, K>, tL_t<D, M, K>>;
-    using itB = global_iterator<gmB_t<D, K, N>, tR_t<D, K, N>>;
-    using itC = global_iterator<gmC_t<D, M, N>, tOut_t<D, M, N>>;
-    itA gA(a), gAs(as); itB gB(b), gBs(bs); itC gC(c);
-    auto gA0 = gA(0, 0), gAs0 = gAs(0, 0), gB0 = gB(0, 0), gBs0 = gBs(0, 0), gC0 = gC(0, 0);
-    tL_t<D, M, K> tA, tAs; tR_t<D, K, N> tB, tBs;
-    tAcc_t<D, M, N> tAcc; tOut_t<D, M, N> tOut;
-    TLOAD(tA, gA0); TLOAD(tAs, gAs0);
-    TLOAD(tB, gB0); TLOAD(tBs, gBs0);
-    TGEMV_MX(tAcc, tA, tAs, tB, tBs);
-    TSTORE(gC0, tOut);
-}
-#endif  // FIXME: TGEMV* not exposed yet
 
 #endif

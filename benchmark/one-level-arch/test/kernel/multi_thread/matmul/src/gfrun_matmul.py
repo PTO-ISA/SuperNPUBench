@@ -102,6 +102,7 @@ MAX_WORKERS = min(8, (os.cpu_count() or 4))
 _DTYPE_MAP = {
     "fp32": (np.float32, 4),
     "fp16": (np.float16, 2),
+    "bf16": (np.uint16, 2),  # bfloat16 stored as raw uint16 bits
     "fp8": (np.uint8, 1),  # e4m3 stored as raw bytes
 }
 
@@ -109,6 +110,7 @@ _DTYPE_MAP = {
 _TOL = {
     "fp32": (2e-2, 2e-2),
     "fp16": (2e-2, 2e-2),
+    "bf16": (2e-2, 2e-2),
     "fp8": (5e-2, 5e-2),
 }
 
@@ -147,7 +149,12 @@ def parse_matmul_shape(elf_name, args):
 
     if multi_thread:
         mode = None
-        dtype = "fp32"
+        if "_DType__bf16" in base:
+            dtype = "bf16"
+        elif "_DType__half" in base:
+            dtype = "fp16"
+        else:
+            dtype = "fp32"
         threads = 4  # kPeNum = 4
         b = extract_int("B", base, default=1)
     else:
@@ -286,6 +293,9 @@ def matmul_reference(a_np, b_np, dtype):
         if dtype == "fp16":
             a = a.to(torch.float16).to(torch.float32)
             b = b.to(torch.float16).to(torch.float32)
+        elif dtype == "bf16":
+            a = a.to(torch.bfloat16).to(torch.float32)
+            b = b.to(torch.bfloat16).to(torch.float32)
         elif dtype == "fp8":
             a = a.to(torch.float8_e4m3fn).to(torch.float32)
             b = b.to(torch.float8_e4m3fn).to(torch.float32)
@@ -298,10 +308,27 @@ def matmul_reference(a_np, b_np, dtype):
     if dtype == "fp16":
         a = a.astype(np.float16).astype(np.float32)
         b = b.astype(np.float16).astype(np.float32)
+    elif dtype == "bf16":
+        a = _dequantize_bf16_np(_quantize_bf16_np(a))
+        b = _dequantize_bf16_np(_quantize_bf16_np(b))
     elif dtype == "fp8":
         a = _dequant_fp8_e4m3_np(_quantize_fp8_e4m3_np(a)).astype(np.float32)
         b = _dequant_fp8_e4m3_np(_quantize_fp8_e4m3_np(b)).astype(np.float32)
     return np.matmul(a, b).astype(np.float32)
+
+
+def _quantize_bf16_np(x):
+    """Round float32 to bfloat16 and return the raw uint16 payload."""
+    bits = np.asarray(x, dtype=np.float32).view(np.uint32)
+    rounded = bits + np.uint32(0x7FFF) + ((bits >> 16) & 1)
+    return (rounded >> 16).astype(np.uint16)
+
+
+def _dequantize_bf16_np(bits):
+    """Expand raw bfloat16 uint16 payload to float32."""
+    return (np.asarray(bits, dtype=np.uint16).astype(np.uint32) << 16).view(
+        np.float32
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -328,6 +355,9 @@ def gen_input_and_golden(elf_name, path, args):
     if dtype == "fp16":
         a_q = a.astype(np.float16)
         b_q = b.astype(np.float16)
+    elif dtype == "bf16":
+        a_q = _quantize_bf16_np(a)
+        b_q = _quantize_bf16_np(b)
     elif dtype == "fp8":
         a_q = _quantize_fp8_e4m3(a)
         b_q = _quantize_fp8_e4m3(b)

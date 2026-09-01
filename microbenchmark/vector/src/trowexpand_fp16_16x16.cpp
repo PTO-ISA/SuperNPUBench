@@ -6,7 +6,7 @@ int main() {
     __half a[256], b[256], d[256], c[256];
     fill_seq(a, 256); fill_seq(b, 256); fill_seq(d, 256); zero(c, 256);
     BENCHSTART;
-    bench_unary<__half,M,N>(c,a,[](auto& dst,auto& s){ TROWEXPAND(dst,s); });
+    bench_expand_copy_row<__half,M,N>(c,a,[](auto& dst,auto& s){ TROWEXPAND(dst,s); });
     BENCHEND;
     return 0;
 }

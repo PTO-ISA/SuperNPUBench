@@ -1,127 +1,143 @@
 #!/bin/bash
+set -u
 echo "=== scalar ==="
-echo "  abs_f64_lat"; make TESTCASE=abs_f64_lat
-echo "  abs_f64_thr"; make TESTCASE=abs_f64_thr
-echo "  abs_fp32_lat"; make TESTCASE=abs_fp32_lat
-echo "  abs_fp32_thr"; make TESTCASE=abs_fp32_thr
-echo "  abs_i32_lat"; make TESTCASE=abs_i32_lat
-echo "  abs_i32_thr"; make TESTCASE=abs_i32_thr
-echo "  add_f64_lat"; make TESTCASE=add_f64_lat
-echo "  add_f64_thr"; make TESTCASE=add_f64_thr
-echo "  add_fp32_lat"; make TESTCASE=add_fp32_lat
-echo "  add_fp32_thr"; make TESTCASE=add_fp32_thr
-echo "  add_i32_lat"; make TESTCASE=add_i32_lat
-echo "  add_i32_thr"; make TESTCASE=add_i32_thr
-echo "  add_i64_lat"; make TESTCASE=add_i64_lat
-echo "  add_i64_thr"; make TESTCASE=add_i64_thr
-echo "  and_i32_lat"; make TESTCASE=and_i32_lat
-echo "  and_i32_thr"; make TESTCASE=and_i32_thr
-echo "  and_i64_lat"; make TESTCASE=and_i64_lat
-echo "  and_i64_thr"; make TESTCASE=and_i64_thr
-echo "  clz_i32_lat"; make TESTCASE=clz_i32_lat
-echo "  clz_i32_thr"; make TESTCASE=clz_i32_thr
-echo "  clz_i64_lat"; make TESTCASE=clz_i64_lat
-echo "  clz_i64_thr"; make TESTCASE=clz_i64_thr
-echo "  div_f64_lat"; make TESTCASE=div_f64_lat
-echo "  div_f64_thr"; make TESTCASE=div_f64_thr
-echo "  div_fp32_lat"; make TESTCASE=div_fp32_lat
-echo "  div_fp32_thr"; make TESTCASE=div_fp32_thr
-echo "  div_i32_lat"; make TESTCASE=div_i32_lat
-echo "  div_i32_thr"; make TESTCASE=div_i32_thr
-echo "  div_i64_lat"; make TESTCASE=div_i64_lat
-echo "  div_i64_thr"; make TESTCASE=div_i64_thr
-echo "  f2f_narrow_f64_to_fp32_thr"; make TESTCASE=f2f_narrow_f64_to_fp32_thr
-echo "  f2f_widen_fp32_to_f64_thr"; make TESTCASE=f2f_widen_fp32_to_f64_thr
-echo "  f2i_f64_to_i32_thr"; make TESTCASE=f2i_f64_to_i32_thr
-echo "  f2i_fp32_to_i32_thr"; make TESTCASE=f2i_fp32_to_i32_thr
-echo "  i2f_i32_to_f64_thr"; make TESTCASE=i2f_i32_to_f64_thr
-echo "  i2f_i32_to_fp32_thr"; make TESTCASE=i2f_i32_to_fp32_thr
-echo "  ld_f64_thr"; make TESTCASE=ld_f64_thr
-echo "  ld_fp32_thr"; make TESTCASE=ld_fp32_thr
-echo "  ld_i32_thr"; make TESTCASE=ld_i32_thr
-echo "  ld_i64_thr"; make TESTCASE=ld_i64_thr
-echo "  max_f64_lat"; make TESTCASE=max_f64_lat
-echo "  max_f64_thr"; make TESTCASE=max_f64_thr
-echo "  max_fp32_lat"; make TESTCASE=max_fp32_lat
-echo "  max_fp32_thr"; make TESTCASE=max_fp32_thr
-echo "  max_i32_lat"; make TESTCASE=max_i32_lat
-echo "  max_i32_thr"; make TESTCASE=max_i32_thr
-echo "  max_i64_lat"; make TESTCASE=max_i64_lat
-echo "  max_i64_thr"; make TESTCASE=max_i64_thr
-echo "  min_f64_lat"; make TESTCASE=min_f64_lat
-echo "  min_f64_thr"; make TESTCASE=min_f64_thr
-echo "  min_fp32_lat"; make TESTCASE=min_fp32_lat
-echo "  min_fp32_thr"; make TESTCASE=min_fp32_thr
-echo "  min_i32_lat"; make TESTCASE=min_i32_lat
-echo "  min_i32_thr"; make TESTCASE=min_i32_thr
-echo "  min_i64_lat"; make TESTCASE=min_i64_lat
-echo "  min_i64_thr"; make TESTCASE=min_i64_thr
-echo "  mod_i32_lat"; make TESTCASE=mod_i32_lat
-echo "  mod_i32_thr"; make TESTCASE=mod_i32_thr
-echo "  mod_i64_lat"; make TESTCASE=mod_i64_lat
-echo "  mod_i64_thr"; make TESTCASE=mod_i64_thr
-echo "  mul_f64_lat"; make TESTCASE=mul_f64_lat
-echo "  mul_f64_thr"; make TESTCASE=mul_f64_thr
-echo "  mul_fp32_lat"; make TESTCASE=mul_fp32_lat
-echo "  mul_fp32_thr"; make TESTCASE=mul_fp32_thr
-echo "  mul_i32_lat"; make TESTCASE=mul_i32_lat
-echo "  mul_i32_thr"; make TESTCASE=mul_i32_thr
-echo "  mul_i64_lat"; make TESTCASE=mul_i64_lat
-echo "  mul_i64_thr"; make TESTCASE=mul_i64_thr
-echo "  neg_f64_lat"; make TESTCASE=neg_f64_lat
-echo "  neg_f64_thr"; make TESTCASE=neg_f64_thr
-echo "  neg_fp32_lat"; make TESTCASE=neg_fp32_lat
-echo "  neg_fp32_thr"; make TESTCASE=neg_fp32_thr
-echo "  neg_i32_lat"; make TESTCASE=neg_i32_lat
-echo "  neg_i32_thr"; make TESTCASE=neg_i32_thr
-echo "  neg_i64_lat"; make TESTCASE=neg_i64_lat
-echo "  neg_i64_thr"; make TESTCASE=neg_i64_thr
-echo "  not_i32_lat"; make TESTCASE=not_i32_lat
-echo "  not_i32_thr"; make TESTCASE=not_i32_thr
-echo "  not_i64_lat"; make TESTCASE=not_i64_lat
-echo "  not_i64_thr"; make TESTCASE=not_i64_thr
-echo "  or_i32_lat"; make TESTCASE=or_i32_lat
-echo "  or_i32_thr"; make TESTCASE=or_i32_thr
-echo "  or_i64_lat"; make TESTCASE=or_i64_lat
-echo "  or_i64_thr"; make TESTCASE=or_i64_thr
-echo "  popc_i32_lat"; make TESTCASE=popc_i32_lat
-echo "  popc_i32_thr"; make TESTCASE=popc_i32_thr
-echo "  popc_i64_lat"; make TESTCASE=popc_i64_lat
-echo "  popc_i64_thr"; make TESTCASE=popc_i64_thr
-echo "  sll_i32_lat"; make TESTCASE=sll_i32_lat
-echo "  sll_i32_thr"; make TESTCASE=sll_i32_thr
-echo "  sll_i64_lat"; make TESTCASE=sll_i64_lat
-echo "  sll_i64_thr"; make TESTCASE=sll_i64_thr
-echo "  slt_i32_lat"; make TESTCASE=slt_i32_lat
-echo "  slt_i32_thr"; make TESTCASE=slt_i32_thr
-echo "  slt_i64_lat"; make TESTCASE=slt_i64_lat
-echo "  slt_i64_thr"; make TESTCASE=slt_i64_thr
-echo "  sqrt_f64_lat"; make TESTCASE=sqrt_f64_lat
-echo "  sqrt_f64_thr"; make TESTCASE=sqrt_f64_thr
-echo "  sqrt_fp32_lat"; make TESTCASE=sqrt_fp32_lat
-echo "  sqrt_fp32_thr"; make TESTCASE=sqrt_fp32_thr
-echo "  sra_i32_lat"; make TESTCASE=sra_i32_lat
-echo "  sra_i32_thr"; make TESTCASE=sra_i32_thr
-echo "  sra_i64_lat"; make TESTCASE=sra_i64_lat
-echo "  sra_i64_thr"; make TESTCASE=sra_i64_thr
-echo "  srl_i32_lat"; make TESTCASE=srl_i32_lat
-echo "  srl_i32_thr"; make TESTCASE=srl_i32_thr
-echo "  srl_i64_lat"; make TESTCASE=srl_i64_lat
-echo "  srl_i64_thr"; make TESTCASE=srl_i64_thr
-echo "  st_f64_thr"; make TESTCASE=st_f64_thr
-echo "  st_fp32_thr"; make TESTCASE=st_fp32_thr
-echo "  st_i32_thr"; make TESTCASE=st_i32_thr
-echo "  st_i64_thr"; make TESTCASE=st_i64_thr
-echo "  sub_f64_lat"; make TESTCASE=sub_f64_lat
-echo "  sub_f64_thr"; make TESTCASE=sub_f64_thr
-echo "  sub_fp32_lat"; make TESTCASE=sub_fp32_lat
-echo "  sub_fp32_thr"; make TESTCASE=sub_fp32_thr
-echo "  sub_i32_lat"; make TESTCASE=sub_i32_lat
-echo "  sub_i32_thr"; make TESTCASE=sub_i32_thr
-echo "  sub_i64_lat"; make TESTCASE=sub_i64_lat
-echo "  sub_i64_thr"; make TESTCASE=sub_i64_thr
-echo "  xor_i32_lat"; make TESTCASE=xor_i32_lat
-echo "  xor_i32_thr"; make TESTCASE=xor_i32_thr
-echo "  xor_i64_lat"; make TESTCASE=xor_i64_lat
-echo "  xor_i64_thr"; make TESTCASE=xor_i64_thr
-echo "=== Done ==="
+failures=()
+run_case() {
+  local testcase=$1
+  echo "  $testcase"
+  if make TESTCASE="$testcase" diss; then
+    echo "PASS: $testcase"
+  else
+    echo "FAIL: $testcase"
+    failures+=("$testcase")
+  fi
+}
+run_case abs_f64_lat
+run_case abs_f64_thr
+run_case abs_fp32_lat
+run_case abs_fp32_thr
+run_case abs_i32_lat
+run_case abs_i32_thr
+run_case add_f64_lat
+run_case add_f64_thr
+run_case add_fp32_lat
+run_case add_fp32_thr
+run_case add_i32_lat
+run_case add_i32_thr
+run_case add_i64_lat
+run_case add_i64_thr
+run_case and_i32_lat
+run_case and_i32_thr
+run_case and_i64_lat
+run_case and_i64_thr
+run_case clz_i32_lat
+run_case clz_i32_thr
+run_case clz_i64_lat
+run_case clz_i64_thr
+run_case div_f64_lat
+run_case div_f64_thr
+run_case div_fp32_lat
+run_case div_fp32_thr
+run_case div_i32_lat
+run_case div_i32_thr
+run_case div_i64_lat
+run_case div_i64_thr
+run_case f2f_narrow_f64_to_fp32_thr
+run_case f2f_widen_fp32_to_f64_thr
+run_case f2i_f64_to_i32_thr
+run_case f2i_fp32_to_i32_thr
+run_case i2f_i32_to_f64_thr
+run_case i2f_i32_to_fp32_thr
+run_case ld_f64_thr
+run_case ld_fp32_thr
+run_case ld_i32_thr
+run_case ld_i64_thr
+run_case max_f64_lat
+run_case max_f64_thr
+run_case max_fp32_lat
+run_case max_fp32_thr
+run_case max_i32_lat
+run_case max_i32_thr
+run_case max_i64_lat
+run_case max_i64_thr
+run_case min_f64_lat
+run_case min_f64_thr
+run_case min_fp32_lat
+run_case min_fp32_thr
+run_case min_i32_lat
+run_case min_i32_thr
+run_case min_i64_lat
+run_case min_i64_thr
+run_case mod_i32_lat
+run_case mod_i32_thr
+run_case mod_i64_lat
+run_case mod_i64_thr
+run_case mul_f64_lat
+run_case mul_f64_thr
+run_case mul_fp32_lat
+run_case mul_fp32_thr
+run_case mul_i32_lat
+run_case mul_i32_thr
+run_case mul_i64_lat
+run_case mul_i64_thr
+run_case neg_f64_lat
+run_case neg_f64_thr
+run_case neg_fp32_lat
+run_case neg_fp32_thr
+run_case neg_i32_lat
+run_case neg_i32_thr
+run_case neg_i64_lat
+run_case neg_i64_thr
+run_case not_i32_lat
+run_case not_i32_thr
+run_case not_i64_lat
+run_case not_i64_thr
+run_case or_i32_lat
+run_case or_i32_thr
+run_case or_i64_lat
+run_case or_i64_thr
+run_case popc_i32_lat
+run_case popc_i32_thr
+run_case popc_i64_lat
+run_case popc_i64_thr
+run_case sll_i32_lat
+run_case sll_i32_thr
+run_case sll_i64_lat
+run_case sll_i64_thr
+run_case slt_i32_lat
+run_case slt_i32_thr
+run_case slt_i64_lat
+run_case slt_i64_thr
+run_case sqrt_f64_lat
+run_case sqrt_f64_thr
+run_case sqrt_fp32_lat
+run_case sqrt_fp32_thr
+run_case sra_i32_lat
+run_case sra_i32_thr
+run_case sra_i64_lat
+run_case sra_i64_thr
+run_case srl_i32_lat
+run_case srl_i32_thr
+run_case srl_i64_lat
+run_case srl_i64_thr
+run_case st_f64_thr
+run_case st_fp32_thr
+run_case st_i32_thr
+run_case st_i64_thr
+run_case sub_f64_lat
+run_case sub_f64_thr
+run_case sub_fp32_lat
+run_case sub_fp32_thr
+run_case sub_i32_lat
+run_case sub_i32_thr
+run_case sub_i64_lat
+run_case sub_i64_thr
+run_case xor_i32_lat
+run_case xor_i32_thr
+run_case xor_i64_lat
+run_case xor_i64_thr
+if [ "${#failures[@]}" -ne 0 ]; then
+  echo "=== scalar FAILED: ${failures[*]} ==="
+  exit 1
+fi
+echo "=== scalar completed: all 124 cases passed ==="

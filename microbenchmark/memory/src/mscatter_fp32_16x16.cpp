@@ -3,8 +3,9 @@
 // MSCATTER (scatter) fp32 16x16
 int main() {
     constexpr int M = 16, N = 16;
-    float a[M*N], c[M*N], idx[M*N], mask[M*N];
-    fill_seq(a, M*N); fill_idx(idx, M*N); fill_const(mask, M*N, (float)1); zero(c, M*N);
+    float a[M*N], c[M*N];
+    int32_t idx[M*N]; uint16_t mask[M*N];
+    fill_seq(a, M*N); fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);
     BENCHSTART;
     bench_scatter<float,M,N>(c,a,idx);
     BENCHEND;

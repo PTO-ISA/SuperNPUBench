@@ -201,13 +201,23 @@ void flash_mla_dense_decode_tileop(
     using gmO = global_tensor<dtype, RowMajor<QSeqPerHK, Dv_>>;
     using gmLSE = global_tensor<float, RowMajor<QSeqPerHK, 1>>;
 
-    using tileQ = TileLeft<dtype, Tm_, DChunk_>;
-    using tileK = TileRight<dtype, DChunk_, Tk_>;
-    using tileV = TileRight<dtype, Tk_, VChunk_>;
+    using tileQ = std::conditional_t<
+        (Tm_ <= 16), CubeTileM16<dtype, Tm_, DChunk_>,
+        CubeTileM32<dtype, Tm_, DChunk_>>;
+    using tileK = CubeTileN8<dtype, DChunk_, Tk_>;
+    using tileV = CubeTileN8<dtype, Tk_, VChunk_>;
+    using tileScoreCube = std::conditional_t<
+        (Tm_ <= 16), CubeAccumulatorM16<float, Tm_, Tk_>,
+        CubeAccumulatorM32<float, Tm_, Tk_>>;
+    using tilePVCube = std::conditional_t<
+        (Tm_ <= 16), CubeAccumulatorM16<float, Tm_, VChunk_>,
+        CubeAccumulatorM32<float, Tm_, VChunk_>>;
 
     using tileScore = Tile<Location::Vec, float, Tm_, Tk_, BLayout::ColMajor>;
     using tileScoreCast = Tile<Location::Vec, dtype, Tm_, Tk_, BLayout::ColMajor>;
-    using tileScoreLeft = TileLeft<dtype, Tm_, Tk_>;
+    using tileScoreLeft = std::conditional_t<
+        (Tm_ <= 16), CubeTileM16<dtype, Tm_, Tk_>,
+        CubeTileM32<dtype, Tm_, Tk_>>;
 
     using tileO = Tile<Location::Vec, float, Tm_, VChunk_, BLayout::ColMajor>;
     using tileOCast = Tile<Location::Vec, dtype, Tm_, VChunk_, BLayout::ColMajor>;
@@ -227,6 +237,16 @@ void flash_mla_dense_decode_tileop(
     itV gVIter(kv_cache_ptr);
     itO gOIter(out_ptr);
     itLSE gLSEIter(lse_ptr);
+
+    float score_cube_scratch[Tm_ * Tk_];
+    dtype prob_cube_scratch[Tm_ * Tk_];
+    float pv_cube_scratch[Tm_ * VChunk_];
+    global_tensor<float, RowMajor<Tm_, Tk_>> gScoreCubeScratch(
+        score_cube_scratch);
+    global_tensor<dtype, RowMajor<Tm_, Tk_>> gProbCubeScratch(
+        prob_cube_scratch);
+    global_tensor<float, RowMajor<Tm_, VChunk_>> gPVCubeScratch(
+        pv_cube_scratch);
 
 #ifdef FLASHMLA_DEBUG_BIN
     using gmDbgScore = global_tensor<float, RowMajor<Tm_, Tk_>>;
@@ -288,13 +308,16 @@ void flash_mla_dense_decode_tileop(
                 tileScore tScore;
                 auto gQ0 = gQIter(q_block, 0);
                 auto gK0 = gKIter(0, kv_tile_row);
-                TLOAD(tQ0, gQ0);
-                TLOAD(tK0, gK0);
+                TLOAD_CUBE(tQ0, gQ0);
+                TLOAD_CUBE(tK0, gK0);
                 if (q_block == 0 && logical_page == 0 && sub == 0) {
                     FLASHMLA_DUMP_TILE("pass1/tQ q_block=0 d_block=0 shape=[Tm,DChunk]", tQ0);
                     FLASHMLA_DUMP_TILE("pass1/tK cube-right kv_tile=0 d_block=0 logical shape=[DChunk,Tk]", tK0);
                 }
-                TMATMUL(tScore, tQ0, tK0);
+                tileScoreCube tScoreCube;
+                TMATMUL(tScoreCube, tQ0, tK0);
+                TSTORE_CUBE(gScoreCubeScratch, tScoreCube);
+                TLOAD(tScore, gScoreCubeScratch);
 
                 #pragma clang loop unroll(full)
                 for (int d_block = 1; d_block < Db; ++d_block) {
@@ -303,9 +326,12 @@ void flash_mla_dense_decode_tileop(
                     tileScore tPartial;
                     auto gQ = gQIter(q_block, d_block);
                     auto gK = gKIter(d_block, kv_tile_row);
-                    TLOAD(tQ, gQ);
-                    TLOAD(tK, gK);
-                    TMATMUL(tPartial, tQ, tK);
+                    TLOAD_CUBE(tQ, gQ);
+                    TLOAD_CUBE(tK, gK);
+                    tileScoreCube tPartialCube;
+                    TMATMUL(tPartialCube, tQ, tK);
+                    TSTORE_CUBE(gScoreCubeScratch, tPartialCube);
+                    TLOAD(tPartial, gScoreCubeScratch);
                     TADD(tScore, tScore, tPartial);
                 }
 
@@ -386,8 +412,8 @@ void flash_mla_dense_decode_tileop(
                     tileScore tScore;
                     auto gQ0 = gQIter(q_block, 0);
                     auto gK0 = gKIter(0, kv_tile_row);
-                    TLOAD(tQ0, gQ0);
-                    TLOAD(tK0, gK0);
+                    TLOAD_CUBE(tQ0, gQ0);
+                    TLOAD_CUBE(tK0, gK0);
                     if (q_block == 0 && v_block == 0 && logical_page == 0 && sub == 0) {
                         FLASHMLA_DUMP_TILE("pass2/tQ q_block=0 d_block=0 shape=[Tm,DChunk]", tQ0);
                         FLASHMLA_DUMP_TILE("pass2/tK cube-right kv_tile=0 d_block=0 logical shape=[DChunk,Tk]", tK0);
@@ -398,7 +424,10 @@ void flash_mla_dense_decode_tileop(
                         TSTORE(dbgKSub, tK0);
                     }
 #endif
-                    TMATMUL(tScore, tQ0, tK0);
+                    tileScoreCube tScoreCube;
+                    TMATMUL(tScoreCube, tQ0, tK0);
+                    TSTORE_CUBE(gScoreCubeScratch, tScoreCube);
+                    TLOAD(tScore, gScoreCubeScratch);
 
                     #pragma clang loop unroll(full)
                     for (int d_block = 1; d_block < Db; ++d_block) {
@@ -407,15 +436,18 @@ void flash_mla_dense_decode_tileop(
                         tileScore tPartial;
                         auto gQ = gQIter(q_block, d_block);
                         auto gK = gKIter(d_block, kv_tile_row);
-                        TLOAD(tQ, gQ);
-                        TLOAD(tK, gK);
+                        TLOAD_CUBE(tQ, gQ);
+                        TLOAD_CUBE(tK, gK);
 #ifdef FLASHMLA_DEBUG_BIN
                         if (q_block == 0 && v_block == 0 && logical_page == 0) {
                             auto dbgKSub = gDbgKSub(sub * Db + d_block, 0);
                             TSTORE(dbgKSub, tK);
                         }
 #endif
-                        TMATMUL(tPartial, tQ, tK);
+                        tileScoreCube tPartialCube;
+                        TMATMUL(tPartialCube, tQ, tK);
+                        TSTORE_CUBE(gScoreCubeScratch, tPartialCube);
+                        TLOAD(tPartial, gScoreCubeScratch);
                         TADD(tScore, tScore, tPartial);
                     }
 
@@ -446,14 +478,15 @@ void flash_mla_dense_decode_tileop(
                     tileScoreCast tProbCast;
                     tileScoreLeft tProbLeft;
                     TCVT(tProbCast, tScore);
-                    TCVT(tProbLeft, tProbCast);
+                    TSTORE(gProbCubeScratch, tProbCast);
+                    TLOAD_CUBE(tProbLeft, gProbCubeScratch);
                     if (q_block == 0 && v_block == 0 && logical_page == 0 && sub == 0) {
                         FLASHMLA_DUMP_TILE("pass2/prob cast to left shape=[Tm,Tk]", tProbLeft);
                     }
 
                     tileV tV;
                     auto gV = gVIter(kv_tile_row, v_block);
-                    TLOAD(tV, gV);
+                    TLOAD_CUBE(tV, gV);
                     if (q_block == 0 && v_block == 0 && logical_page == 0 && sub == 0) {
                         FLASHMLA_DUMP_TILE("pass2/tV v_block=0 shape=[Tk,VChunk]", tV);
 #ifdef FLASHMLA_DEBUG_BIN
@@ -463,7 +496,10 @@ void flash_mla_dense_decode_tileop(
                     }
 
                     tileO tPV;
-                    TMATMUL(tPV, tProbLeft, tV);
+                    tilePVCube tPVCube;
+                    TMATMUL(tPVCube, tProbLeft, tV);
+                    TSTORE_CUBE(gPVCubeScratch, tPVCube);
+                    TLOAD(tPV, gPVCubeScratch);
                     TADD(tO, tO, tPV);
                     if (q_block == 0 && v_block == 0 && logical_page == 0 && sub == 0) {
                         FLASHMLA_DUMP_TILE("pass2/tPV first sub shape=[Tm,VChunk]", tPV);

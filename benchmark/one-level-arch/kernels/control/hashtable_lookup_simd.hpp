@@ -41,6 +41,30 @@ struct HashFindTypes {
     using TileI32 = Tile<Location::Vec, int32_t,  kTileRows, kTileCols, BLayout::RowMajor>;
 };
 
+// The selected compiler's public TCMP wrapper emits the obsolete token
+// `cmode0`, while its assembler accepts the PTO v0.58 spelling `EQ` for the
+// B.DATR comparison mode. Keep the workaround local to this operator until
+// the installed TileOP header and assembler are synchronized.
+template <typename TileOut, typename TileIn>
+inline void tileCmpEq(TileOut& dst, TileIn& lhs, TileIn& rhs) {
+    static_assert(TileOut::Rows == TileIn::Rows &&
+                      TileOut::Cols == TileIn::Cols,
+                  "comparison output shape must match input shape");
+    asm volatile(
+        "BSTART.TEPL 13, %D[TCode]\n"
+        "B.DATR Zero, EQ\n"
+        "B.DIM %[VCOL], 0, ->lb0\n"
+        "B.DIM %[VROW], 0, ->lb1\n"
+        "B.DIM zero, %c[Cols], ->lb2\n"
+        "B.IOT %[Lhs], %[Rhs], mask=1111, last, ->%[Dst]<%Z[TSize]>\n"
+        : [Dst] "=Tr"(dst.data())
+        : [TCode] "i"(type_traits<typename TileIn::DType>::TypeCode),
+          [VCOL] "r"(lhs.GetValidCol()), [VROW] "r"(lhs.GetValidRow()),
+          [Cols] "i"(TileIn::Cols), [Lhs] "Tr"(lhs.data()),
+          [Rhs] "Tr"(rhs.data()),
+          [TSize] "i"(tile_type_traits<typename TileOut::TileDType>::TilesizeCode));
+}
+
 // dst = rotl32(x, r) = (x << r) | (x >>(logical) (32 - r))   (in-place safe)
 template <typename TileU32>
 inline void tileRotl32(TileU32& dst, TileU32& x, unsigned r, TileU32& tA, TileU32& tB) {
@@ -189,8 +213,8 @@ void runHashFind(int32_t __out__ *out,
         TCVT(tableLo, tableKeyTile);
         TSHRS(tableKeyHi, tableKeyTile, 32u);
         TCVT(tableHi, tableKeyHi);
-        TCMP(matchLo, queryLo, tableLo);
-        TCMP(matchHi, queryHi, tableHi);
+        tileCmpEq(matchLo, queryLo, tableLo);
+        tileCmpEq(matchHi, queryHi, tableHi);
         TAND(matchMask, matchLo, matchHi);
         TSEL(outTile, matchMask, tableValTile);   // match ? value : keep
 

@@ -35,9 +35,13 @@ void tmatmul_acc_unit_kernel(float* score_ptr, dtype* q_ptr, dtype* k_ptr) {
     using gmKView = global_tensor<dtype, MatrixLayout<K, Rows * N, 1, K>>;
     using gmScore = global_tensor<float, RowMajor<Rows * M, N>>;
 
-    using tileQ = TileLeft<dtype, M, DChunk>;
-    using tileK = TileRight<dtype, DChunk, N>;
-    using tileAcc = TileAcc<float, M, N>;
+    using tileQ = std::conditional_t<
+        (M <= 16), CubeTileM16<dtype, M, DChunk>,
+        CubeTileM32<dtype, M, DChunk>>;
+    using tileK = CubeTileN8<dtype, DChunk, N>;
+    using tileAcc = std::conditional_t<
+        (M <= 16), CubeAccumulatorM16<float, M, N>,
+        CubeAccumulatorM32<float, M, N>>;
     using tileScore = Tile<Location::Vec, float, M, N, BLayout::ColMajor>;
 
     using itQ = global_iterator<gmQ, tileQ>;
@@ -57,18 +61,16 @@ void tmatmul_acc_unit_kernel(float* score_ptr, dtype* q_ptr, dtype* k_ptr) {
             tileK tK;
             auto gQ = q_iter(0, d);
             auto gKTile = k_iter(d, row);
-            TLOAD(tQ, gQ);
-            TLOAD(tK, gKTile);
+            TLOAD_CUBE(tQ, gQ);
+            TLOAD_CUBE(tK, gKTile);
             if (d == 0) {
                 TMATMUL(tAcc, tQ, tK);
             } else {
-                TMATMUL_ACC(tAcc, tQ, tK);
+                TMATMUL_ACC(tAcc, tAcc, tQ, tK);
             }
         }
-        tileScore tScore;
-        ACCCVT(tScore, tAcc);
         auto gScore = score_iter(row, 0);
-        TSTORE(gScore, tScore);
+        TSTORE_CUBE(gScore, tAcc);
     }
 }
 

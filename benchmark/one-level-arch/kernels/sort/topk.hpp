@@ -38,9 +38,12 @@ template <typename tile_shape_out>
 void ExtractHigh8Hist_PTO(tile_shape_out& dst, const uint16_t* src) {
     using DataTile = Tile<Location::Vec, uint16_t, 1, kTileSize, BLayout::RowMajor>;
     using HistTile = Tile<Location::Vec, uint32_t, 1, kNumBuckets, BLayout::RowMajor>;
+    using InputTensor = global_tensor<uint16_t, RowMajor<1, kInputCount>>;
+    using InputIter = global_iterator<InputTensor, DataTile>;
     
     DataTile data_tile;
     HistTile hist_tile;
+    InputIter input_iter(const_cast<uint16_t*>(src));
     
     // Initialize histogram to 0
     TEXPANDS(hist_tile, static_cast<uint32_t>(0));
@@ -48,7 +51,8 @@ void ExtractHigh8Hist_PTO(tile_shape_out& dst, const uint16_t* src) {
     // Process input in tiles
     for (int tile_idx = 0; tile_idx < kNumTiles; ++tile_idx) {
         // Load input tile
-        TLOAD(data_tile, src + tile_idx * kTileSize);
+        auto input_tile = input_iter(0, tile_idx);
+        TLOAD(data_tile, input_tile);
         
         // Extract high8 bits: high8 = val >> 8
         DataTile high8_tile;
@@ -80,9 +84,12 @@ void ExtractLow8HistForKthBin_PTO(tile_shape_out& dst, const uint16_t* src,
                                    uint16_t kth_bin) {
     using DataTile = Tile<Location::Vec, uint16_t, 1, kTileSize, BLayout::RowMajor>;
     using HistTile = Tile<Location::Vec, uint32_t, 1, kNumBuckets, BLayout::RowMajor>;
+    using InputTensor = global_tensor<uint16_t, RowMajor<1, kInputCount>>;
+    using InputIter = global_iterator<InputTensor, DataTile>;
     
     DataTile data_tile;
     HistTile hist_tile;
+    InputIter input_iter(const_cast<uint16_t*>(src));
     
     // Initialize histogram to 0
     TEXPANDS(hist_tile, static_cast<uint32_t>(0));
@@ -90,7 +97,8 @@ void ExtractLow8HistForKthBin_PTO(tile_shape_out& dst, const uint16_t* src,
     // Process input in tiles
     for (int tile_idx = 0; tile_idx < kNumTiles; ++tile_idx) {
         // Load input tile
-        TLOAD(data_tile, src + tile_idx * kTileSize);
+        auto input_tile = input_iter(0, tile_idx);
+        TLOAD(data_tile, input_tile);
         
         // Extract high8 bits
         DataTile high8_tile;

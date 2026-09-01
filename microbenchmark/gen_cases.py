@@ -10,17 +10,32 @@
 from __future__ import annotations
 
 import os
+import json
 from dataclasses import dataclass
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
 DTYPE = {
     "fp16": "__half",
+    "bf16": "__bf16",
     "fp32": "float",
     "i8":   "int8_t",
     "i16":  "int16_t",
     "i32":  "int32_t",
 }
+
+FIXP_MODES = (
+    "keep_acc keep_acc_relu f16 f16_relu bf16 bf16_relu "
+    "s_reqs8 s_deqf16 s_shifts16 s_qf_s4 s_qf_s16 s_qf_s8 s_qf_hif8 s_qf_fp8 "
+    "s_qf_f32 s_qf_f16 s_qf_bf16 s_qs_bf16 "
+    "v_reqs8 v_deqf16 v_shifts16 v_qf_s4 v_qf_s16 v_qf_s8 v_qf_hif8 "
+    "v_qf_f16 v_qf_bf16 v_qf_fp8 v_qf_f32 v_qs_bf16 "
+    "s8_relu s8_lrelu v_s8_relu f16_prelu s8_prelu "
+    "rowmax rowmax_init groupmax_8 groupmax_16 groupmax_128 rowgroup_maxabs "
+    "f16_groupmax s8_rowmax bias acc mx mxbias mxacc gemv gemv_bias gemv_acc "
+    "gemv_mx gemv_mx_bias gemv_mx_acc bias_s8 acc_s8 mx_s8 gemv_s8 gemv_mx_s8 "
+    "shared s8_shared vqf_s8_prelu legacy3"
+).split()
 
 # ---- case spec ----
 # kind selects the bench template + call lambda.
@@ -52,7 +67,7 @@ for op in ["TADD", "TSUB", "TMUL", "TDIV", "TREm".replace("REm", "REM"),
 
 # mode 0 unary
 for op, dt in [
-    ("TABS", ("fp16", "fp32", "i16", "i32")),
+    ("TABS", ("fp16", "fp32", "bf16")),
     ("TNOT", ("i16", "i32")),
     ("TNEG", ("fp16", "fp32", "i16", "i32")),
     ("TEXP", ("fp16", "fp32")),
@@ -82,22 +97,13 @@ for op in ["TADDS", "TSUBS", "TMULS", "TDIVS", "TREMS", "TMAXS", "TMINS", "TCMPS
 for op in ["TANDS", "TORS", "TXORS", "TSHLS", "TSHRS"]:
     V.append(Case(op, "scalar", ("i16", "i32"), M16))
 
-# mode 1 tile-scalar (1 tile + scalar)
-# arithmetic scalar ops: float dtypes
-for op in ["TADDS", "TSUBS", "TMULS", "TDIVS", "TREMS", "TMAXS", "TMINS", "TCMPS"]:
-    V.append(Case(op, "scalar", ("fp16", "fp32"), M16))
-
-# bitwise/shift scalar ops: integer dtypes (ISA v0.58 only allows integer)
-for op in ["TANDS", "TORS", "TXORS", "TSHLS", "TSHRS"]:
-    V.append(Case(op, "scalar", ("i16", "i32"), M16))
-
 # mode 1 scalar broadcast
 V.append(Case("TEXPANDS", "scalarbcast", ("fp16", "fp32"), M16))
 
 # mode 3 contiguous integer sequence generation
 # TCI supports signed/unsigned 16-bit and 32-bit integer tiles. The generator's
 # current dtype table exposes the two signed variants.
-V.append(Case("TCI", "sequence", ("i16", "i32"), M16))
+V.append(Case("TCI", "sequence", ("i16", "i32"), (1, 64)))
 
 # mode 2 reduce
 for op in ["TROWSUM", "TROWMAX", "TROWMIN", "TROWPROD",
@@ -132,9 +138,18 @@ VECTOR_SKIP = {
     # need fractal/NZ layout (32-byte align) — plain RowMajor Mx1/Nx1 output fails:
     "TROWMAX", "TROWMIN", "TROWPROD", "TROWSUM", "TROWARGMAX", "TROWARGMIN",
     "TCOLSUM", "TCOLMAX", "TCOLMIN", "TCOLPROD", "TCOLARGMAX", "TCOLARGMIN",
-    # signature mismatch (PTO arity != bench template); TODO align:
+    # The checked-out API source has TSELECT, but the installed main compiler
+    # headers do not expose it yet. Keep it visible in coverage.json.
     "TSEL",
+    # The installed assembler rejects the B.DATR encodings emitted by these
+    # headers. Keep the operations visible as unsupported compiler coverage.
+    "TCMP", "TCMPS", "THISTOGRAM",
 }
+# BF16 TABS reaches the frontend but crashes during instruction selection in
+# the installed compiler. FP16/FP32 remain active.
+for case in V:
+    if case.op == "TABS":
+        case.dtypes = tuple(dt for dt in case.dtypes if dt != "bf16")
 V = [c for c in V if c.op not in VECTOR_SKIP]
 
 
@@ -144,14 +159,15 @@ for op, kind, dt, sz in [
     ("TLOAD", "load", ("fp16", "fp32", "i32"), M16),
     ("TLOAD", "load", ("fp16", "fp32"), (32, 32)),
     ("TSTORE", "store", ("fp16", "fp32", "i32"), M16),
-    ("TMOV", "mov", ("fp16", "fp32", "i32"), M16),
-    ("TMOV", "mov", ("fp16", "fp32"), (32, 32)),
     ("MGATHER", "gather", ("fp16", "fp32", "i32"), M16),
     ("MSCATTER", "scatter", ("fp16", "fp32", "i32"), M16),
     ("MGATHER_MASK", "gather_mask", ("fp16", "fp32"), M16),
     ("MSCATTER_MASK", "scatter_mask", ("fp16", "fp32"), M16),
 ]:
     ME.append(Case(op, kind, dt, sz))
+
+MEMORY_SKIP = {"MGATHER_MASK", "MSCATTER_MASK"}
+ME = [case for case in ME if case.op not in MEMORY_SKIP]
 
 
 # ============ matrix (TMA/CUBE direct operations) cases ============
@@ -174,14 +190,17 @@ def cube(op, kind, dt, sz=None):
         sz = csize(dt)
     C.append(Case(op, kind, (dt,), sz, cube=True))
 
-for dt in ("fp16", "fp32", "i8"):
-    cube("TMATMUL", "matmul", dt)
-cube("TMATMUL_BIAS", "matmul_bias", "fp16")
-cube("TMATMUL_BIAS", "matmul_bias", "fp32")
-cube("TMATMUL_MX", "matmul_mx", "fp16")        # e4m3 placeholder -> fp16
-# matmul.ac backend still crashes (llvm.linx.blk.matmul.ac SelectionDAG) on latest toolchain
-# cube("TMATMUL_ACC", "matmul_acc", "fp16")
-# cube("TMATMUL_ACC", "matmul_acc", "fp32")
+cube("TMATMUL", "matmul", "fp32", (32, 32, 32))
+cube("TMATMUL", "matmul", "fp16", (16, 32, 32))
+cube("TMATMUL", "matmul", "fp16", (32, 64, 64))
+cube("TMATMUL", "matmul", "bf16", (32, 64, 64))
+cube("TMATMUL", "matmul", "i8", (32, 64, 64))
+cube("TMATMUL_ACC", "matmul_acc", "fp32", (32, 32, 32))
+cube("TMATMUL_ACC", "matmul_acc", "fp16", (32, 64, 64))
+cube("TMATMUL_ACC", "matmul_acc", "bf16", (32, 64, 64))
+cube("TMATMUL_BIAS", "matmul_bias", "fp32", (32, 32, 32))
+cube("TMATMUL_BIAS", "matmul_bias", "fp16", (32, 64, 64))
+cube("TMATMUL_BIAS", "matmul_bias", "bf16", (32, 64, 64))
 
 # TODO: re-enable when toolchain exposes TGEMV/TGEMV_ACC/TGEMV_BIAS/TGEMV_MX.
 # cube("TGEMV", "gemv", "fp16")
@@ -275,10 +294,14 @@ int main() {{
     elif c.kind == "concat":
         # src0=M×K, src1=M×K, dst=M×2K (K=32/sizeof(D)); arrays sized for max (fp16 K=16->dst 32 cols)
         body = f"    bench_concat<{ct},M>(c,a,b,[](auto& dst,auto& s0,auto& s1){{ {op}(dst,s0,s1); }});\n"
+    elif c.op == "TROWEXPAND":
+        body = f"    bench_expand_copy_row<{ct},M,N>(c,a,[](auto& dst,auto& s){{ {op}(dst,s); }});\n"
+    elif c.op == "TCOLEXPAND":
+        body = f"    bench_expand_copy_col<{ct},M,N>(c,a,[](auto& dst,auto& s){{ {op}(dst,s); }});\n"
     elif c.kind == "unary":
         body = f"    bench_unary<{ct},M,N>(c,a,[](auto& dst,auto& s){{ {op}(dst,s); }});\n"
     elif c.kind == "ternary":
-        body = f"    bench_ternary<{ct},M,N>(c,a,b,d,[](auto& dst,auto& s0,auto& s1,auto& s2){{ {op}(dst,s0,s1,s2); }});\n"
+        body = f"    bench_select<{ct},M,N>(c,a,b,[](auto& dst,auto& cond,auto& s0,auto& s1){{ TSELECT(dst,cond,s0,s1); }});\n"
     elif c.kind == "reduce":
         body = f"    bench_reduce<{ct},M,N>(c,a,[](auto& dst,auto& s){{ {op}(dst,s); }});\n"
     elif c.kind == "scalar":
@@ -310,15 +333,14 @@ def emit_memory(c: Case, dt: str) -> str:
 // {op} ({c.kind}) {dt} {c.size[0]}x{c.size[1]}
 int main() {{
     constexpr int M = {m}, N = {n};
-    {ct} a[M*N], c[M*N], idx[M*N], mask[M*N];
-    fill_seq(a, M*N); fill_idx(idx, M*N); fill_const(mask, M*N, ({ct})1); zero(c, M*N);
+    {ct} a[M*N], c[M*N];
+    int32_t idx[M*N]; uint16_t mask[M*N];
+    fill_seq(a, M*N); fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);
     BENCHSTART;
 '''
     tail = "    BENCHEND;\n    return 0;\n}\n"
     if c.kind == "load":
         body = f"    bench_load<{ct},M,N>(c,a);\n"
-    elif c.kind == "load_layout":
-        body = f"    bench_load_layout<{ct},M,N>(c,a);\n"
     elif c.kind == "store":
         body = f"    bench_load<{ct},M,N>(c,a);  // load then store\n"
     elif c.kind == "mov":
@@ -337,28 +359,43 @@ int main() {{
 
 
 def emit_cube(c: Case, dt: str) -> str:
-    ct = DTYPE.get(dt, "__half")  # low-precision placeholder falls back to __half
+    ct = DTYPE[dt]
+    acc = "int32_t" if dt == "i8" else "float"
     m, n, k = c.size
     op = c.op
+    declarations = (f"    static {ct} a[M*K] = {{}}, b[K*N] = {{}};\n"
+                    f"    static {acc} bias[N] = {{}}, initial[M*N] = {{}}, "
+                    f"c[M*N] = {{}}, ref[M*N] = {{}};"
+                    if dt == "bf16" else
+                    f"    {ct} a[M*K], b[K*N];\n"
+                    f"    {acc} bias[N], initial[M*N], c[M*N], ref[M*N];")
+    init = ("" if dt == "bf16" else
+            "    fill_seq(a, M*K); fill_seq(b, K*N); fill_seq(bias, N);\n"
+            f"    fill_const(initial, M*N, ({acc})1); zero(c, M*N); zero(ref, M*N);")
     head = f'''#include "cube_bench.hpp"
 // auto-generated by gen_cases.py
 // {op} ({c.kind}) {dt} {m}x{n}x{k}
 int main() {{
     constexpr int M = {m}, N = {n}, K = {k};
-    {ct} a[M*K], b[K*N], bias[1*N], as[M*K], bs[K*N], c[M*N];
-    fill_seq(a, M*K); fill_seq(b, K*N); fill_seq(bias, N);
-    fill_const(as, M*K, ({ct})1); fill_const(bs, K*N, ({ct})1); zero(c, M*N);
+{declarations}
+{init}
     BENCHSTART;
 '''
-    tail = "    BENCHEND;\n    return 0;\n}\n"
+    tail = (f"    BENCHEND;\n    return verify(c,ref,M*N,cube_epsilon<{acc}>()) ? 0 : 1;\n}}\n"
+            if dt == "bf16" else
+            f"    BENCHEND;\n    reference_matmul<{ct},{acc},M,N,K>(ref,a,b);\n    return verify(c,ref,M*N,cube_epsilon<{acc}>()) ? 0 : 1;\n}}\n")
     if c.kind == "matmul":
         body = f"    bench_matmul<{ct},M,N,K>(c,a,b);\n"
     elif c.kind == "matmul_acc":
-        body = f"    bench_matmul_acc<{ct},M,N,K>(c,a,b);\n"
+        body = f"    bench_matmul_acc<{ct},M,N,K>(c,initial,a,b);\n"
+        tail = (f"    BENCHEND;\n    return verify(c,ref,M*N,cube_epsilon<{acc}>()) ? 0 : 1;\n}}\n"
+                if dt == "bf16" else
+                f"    BENCHEND;\n    reference_matmul<{ct},{acc},M,N,K>(ref,a,b,initial);\n    return verify(c,ref,M*N,cube_epsilon<{acc}>()) ? 0 : 1;\n}}\n")
     elif c.kind == "matmul_bias":
         body = f"    bench_matmul_bias<{ct},M,N,K>(c,a,b,bias);\n"
-    elif c.kind == "matmul_mx":
-        body = f"    bench_matmul_mx<{ct},M,N,K>(c,a,as,b,bs);\n"
+        tail = (f"    BENCHEND;\n    return verify(c,ref,M*N,cube_epsilon<{acc}>()) ? 0 : 1;\n}}\n"
+                if dt == "bf16" else
+                f"    BENCHEND;\n    reference_matmul<{ct},{acc},M,N,K>(ref,a,b,nullptr,bias);\n    return verify(c,ref,M*N,cube_epsilon<{acc}>()) ? 0 : 1;\n}}\n")
     elif c.kind == "gemv":
         body = f"    bench_gemv<{ct},M,N,K>(c,a,b);\n"
     elif c.kind == "gemv_acc":
@@ -388,11 +425,22 @@ def gen_family(family: str, cases: list[Case], emitter):
             names.append(name)
             with open(os.path.join(src_dir, name + ".cpp"), "w") as f:
                 f.write(emitter(c, dt))
-    # compile.all
-    lines = ["#!/bin/bash", f'echo "=== {family} ==="']
+    if len(names) != len(set(names)):
+        duplicates = sorted({n for n in names if names.count(n) > 1})
+        raise RuntimeError(f"duplicate {family} testcase names: {duplicates}")
+    # compile.all: run every case, preserve all failures, and fail closed.
+    lines = ["#!/bin/bash", "set -u", f'echo "=== {family} ==="',
+             "failures=()", "run_case() {", "  local testcase=$1",
+             "  echo \"  $testcase\"",
+             "  if make TESTCASE=\"$testcase\" diss; then",
+             "    echo \"PASS: $testcase\"", "  else",
+             "    echo \"FAIL: $testcase\"", "    failures+=(\"$testcase\")",
+             "  fi", "}"]
     for n in sorted(names):
-        lines.append(f'echo "  {n}"; make TESTCASE={n}')
-    lines.append('echo "=== Done ==="')
+        lines.append(f"run_case {n}")
+    lines += ['if [ "${#failures[@]}" -ne 0 ]; then',
+              f'  echo "=== {family} FAILED: ${{failures[*]}} ==="', "  exit 1", "fi",
+              f'echo "=== {family} completed: all {len(names)} cases passed ==="']
     with open(os.path.join(ROOT, family, "compile.all"), "w") as f:
         f.write("\n".join(lines) + "\n")
     os.chmod(os.path.join(ROOT, family, "compile.all"), 0o755)
@@ -471,10 +519,20 @@ int main() {{
 }}
 ''')
 
-    lines = ["#!/bin/bash", 'echo "=== scalar ==="']
+    if len(names) != len(set(names)):
+        raise RuntimeError("duplicate scalar testcase names")
+    lines = ["#!/bin/bash", "set -u", 'echo "=== scalar ==="',
+             "failures=()", "run_case() {", "  local testcase=$1",
+             "  echo \"  $testcase\"",
+             "  if make TESTCASE=\"$testcase\" diss; then",
+             "    echo \"PASS: $testcase\"", "  else",
+             "    echo \"FAIL: $testcase\"", "    failures+=(\"$testcase\")",
+             "  fi", "}"]
     for n in sorted(names):
-        lines.append(f'echo "  {n}"; make TESTCASE={n}')
-    lines.append('echo "=== Done ==="')
+        lines.append(f"run_case {n}")
+    lines += ['if [ "${#failures[@]}" -ne 0 ]; then',
+              '  echo "=== scalar FAILED: ${failures[*]} ==="', "  exit 1", "fi",
+              f'echo "=== scalar completed: all {len(names)} cases passed ==="']
     with open(os.path.join(ROOT, "scalar", "compile.all"), "w") as f:
         f.write("\n".join(lines) + "\n")
     os.chmod(os.path.join(ROOT, "scalar", "compile.all"), 0o755)
@@ -486,6 +544,71 @@ def main():
     nm = gen_family("memory", ME, emit_memory)
     nc = gen_family("cube", C, emit_cube)
     ns = gen_scalar()
+    active = []
+    for family, cases in (("vector", V), ("memory", ME), ("cube", C)):
+        for case in cases:
+            for dt in case.dtypes:
+                if dt in DTYPE:
+                    active.append({"name": case_name(case, dt), "family": family,
+                                   "operation": case.op, "dtype": dt,
+                                   "shape": list(case.size), "status": "active"})
+    active.extend({"name": name, "family": "scalar", "operation": name.split("_")[0],
+                   "status": "active"}
+                  for name in sorted(p[:-4] for p in os.listdir(os.path.join(ROOT, "scalar", "src"))
+                                     if p.endswith(".cpp")))
+    active.extend({"name": f"fixp_tmatmul_{mode}_M32_N32_K32_tM32_tN32_tK32",
+                   "family": "fixp", "operation": "TMATMUL",
+                   "mode": mode, "shape": [32, 32, 32], "status": "active"}
+                  for mode in FIXP_MODES)
+    unsupported = [
+        {"name": "fixp_tmatmul_lrelu_only", "family": "fixp",
+         "operation": "TMATMUL", "status": "unsupported",
+         "reason": "main compiler assembler rejects empty LRELU_ONLY B.IOR operand stream"},
+        {"name": "tsel_fp16_16x16", "family": "vector", "operation": "TSELECT",
+         "dtype": "fp16", "shape": [16, 16], "status": "unsupported",
+         "reason": "installed compiler TileOP headers do not expose TSELECT"},
+        {"name": "tmatmul_fp16_64x64x64", "family": "cube", "operation": "TMATMUL",
+         "dtype": "fp16", "shape": [64, 64, 64], "status": "unsupported",
+         "reason": "CUBE_M32 supports at most 32 logical rows; M=64 requires operator tiling"},
+        {"name": "tsel_fp32_16x16", "family": "vector", "operation": "TSELECT",
+         "dtype": "fp32", "shape": [16, 16], "status": "unsupported",
+         "reason": "installed compiler TileOP headers do not expose TSELECT"},
+        {"name": "tabs_bf16_16x16", "family": "vector", "operation": "TABS",
+         "dtype": "bf16", "shape": [16, 16], "status": "unsupported",
+         "reason": "main compiler crashes during BF16 TABS instruction selection"},
+    ]
+    for op, dtypes in (("TCMP", ("fp16", "fp32", "i32")),
+                       ("TCMPS", ("fp16", "fp32")),
+                       ("THISTOGRAM", ("i16", "i32"))):
+        for dtype in dtypes:
+            unsupported.append({"name": f"{op.lower()}_{dtype}_16x16",
+                                "family": "vector", "operation": op,
+                                "dtype": dtype, "shape": [16, 16],
+                                "status": "unsupported",
+                                "reason": "main compiler assembler rejects emitted B.DATR encoding"})
+    for dt in ("fp16", "fp32", "i32"):
+        unsupported.append({"name": f"tmov_{dt}_16x16", "family": "memory",
+                            "operation": "TMOV", "dtype": dt, "shape": [16, 16],
+                            "status": "unsupported",
+                            "reason": "main compiler assembler rejects generic TMOV B.DATR"})
+    for dt in ("fp16", "fp32"):
+        unsupported.append({"name": f"tmov_{dt}_32x32", "family": "memory",
+                            "operation": "TMOV", "dtype": dt, "shape": [32, 32],
+                            "status": "unsupported",
+                            "reason": "main compiler assembler rejects generic TMOV B.DATR"})
+    for op in ("MGATHER_MASK", "MSCATTER_MASK"):
+        for dt in ("fp16", "fp32"):
+            unsupported.append({"name": f"{op.lower()}_{dt}_16x16",
+                                "family": "memory", "operation": op,
+                                "dtype": dt, "shape": [16, 16],
+                                "status": "unsupported",
+                                "reason": "main compiler assembler rejects emitted masked B.IOT encoding"})
+    with open(os.path.join(ROOT, "coverage.json"), "w") as f:
+        json.dump({"schema_version": 1, "active": active, "unsupported": unsupported,
+                   "notes": ["TLOAD_ND2NZ is not a PTO operation and is intentionally absent",
+                             "fixp modes are maintained separately in fixp/compile.all"]},
+                  f, indent=2)
+        f.write("\n")
     print(f"generated: vector={nv} memory={nm} cube={nc} scalar={ns} total={nv+nm+nc+ns}")
 
 

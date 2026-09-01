@@ -12,6 +12,16 @@ using namespace pto;
 template <typename E_, int R_, int C_, int VR_=R_, int VC_=C_>
 using TileAcc = Tile<Location::Vec, E_, R_, C_, BLayout::RowMajor, VR_, VC_>;
 
+template <typename E_, int R_, int C_, int VR_=R_, int VC_=C_>
+using CubeTileA = std::conditional_t<
+    (R_ <= 16), CubeTileM16<E_, R_, C_, VR_, VC_>,
+    CubeTileM32<E_, R_, C_, VR_, VC_>>;
+
+template <typename E_, int R_, int C_, int VR_=R_, int VC_=C_>
+using CubeTileC = std::conditional_t<
+    (R_ <= 16), CubeAccumulatorM16<E_, R_, C_, VR_, VC_>,
+    CubeAccumulatorM32<E_, R_, C_, VR_, VC_>>;
+
 template <is_global_data_v GmOut, is_tile_data_v TileAcc>
 void store_acc_tile(GmOut &Gout, TileAcc &tAcc){
     TSTORE(Gout, tAcc);
@@ -30,9 +40,10 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-  using tile_shapeA = TileLeft<dtype, tM, tK>;
-  using tile_shapeB = TileRight<dtype, tK, tN>;
-  using tile_shapeACC = TileAcc<float, tM, tN>;
+  static_assert(tM <= 32, "Local CUBE_M16/M32 matmul supports tM <= 32");
+  using tile_shapeA = CubeTileA<dtype, tM, tK>;
+  using tile_shapeB = CubeTileN8<dtype, tK, tN>;
+  using tile_shapeACC = CubeTileC<float, tM, tN>;
   // using tile_shapecast = Tile<Location::Vec, __bf16, kTm, kTk, BLayout::ColMajor>;
 
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -52,17 +63,17 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
   const int rmd_N = gN % tN;
   const int rmd_K = gK % tK;
 
-  using tile_shapeA_trows = TileLeft<dtype, tM, tK,  tM, rmd_K>;
-  using tile_shapeA_tcols = TileLeft<dtype, tM, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft<dtype, tM, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows = CubeTileA<dtype, tM, tK,  tM, rmd_K>;
+  using tile_shapeA_tcols = CubeTileA<dtype, tM, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtype, tM, tK, rmd_M, rmd_K>;
 
-  using tile_shapeB_trows = TileRight<dtype, tK, tN, tK, rmd_N>;
-  using tile_shapeB_tcols = TileRight<dtype, tK, tN, rmd_K, tN>;
-  using tile_shapeB_tcorner = TileRight<dtype, tK, tN, rmd_K, rmd_N>;
+  using tile_shapeB_trows = CubeTileN8<dtype, tK, tN, tK, rmd_N>;
+  using tile_shapeB_tcols = CubeTileN8<dtype, tK, tN, rmd_K, tN>;
+  using tile_shapeB_tcorner = CubeTileN8<dtype, tK, tN, rmd_K, rmd_N>;
 
-  using tile_shapeC_trows = TileAcc<float, tM, tN, tM, rmd_N>;
-  using tile_shapeC_tcols = TileAcc<float, tM, tN, rmd_M, tN>;
-  using tile_shapeC_tcorner = TileAcc<float, tM, tN, rmd_M, rmd_N>;
+  using tile_shapeC_trows = CubeTileC<float, tM, tN, tM, rmd_N>;
+  using tile_shapeC_tcols = CubeTileC<float, tM, tN, rmd_M, tN>;
+  using tile_shapeC_tcorner = CubeTileC<float, tM, tN, rmd_M, rmd_N>;
 
   for (int b=0;b<Batch;b++){
     for (int i = 0; i < Mb; ++i) {
@@ -78,8 +89,8 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           TMATMUL(tACC, tA, tB);
         }
         #pragma clang loop unroll(full)
@@ -89,8 +100,8 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           TMATMUL_ACC(tACC, tACC, tA, tB);
         }
 
@@ -100,8 +111,8 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_trows tA;
           tile_shapeB_tcols tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           if constexpr(Kb>0){
             TMATMUL_ACC(tACC, tACC, tA, tB);
           } else {
@@ -109,7 +120,7 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
           }
         }
         // TSTORE(gC, tCast);
-        store_acc_tile(gC, tACC);
+        TSTORE_CUBE(gC, tACC);
       }
       if constexpr (rmd_N) {
         auto gC = gCIter(i, Nb);
@@ -121,8 +132,8 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           TMATMUL(tACC, tA, tB);
         }
         #pragma clang loop unroll(full)
@@ -132,8 +143,8 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           TMATMUL_ACC(tACC, tACC, tA, tB);
         }
         if constexpr (rmd_K) {
@@ -142,15 +153,15 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_trows tA;
           tile_shapeB_tcorner tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           if constexpr(Kb>0){
             TMATMUL_ACC(tACC, tACC, tA, tB);
           } else {
             TMATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TSTORE_CUBE(gC, tACC);
       }
     }
     if constexpr (rmd_M) {
@@ -164,8 +175,8 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           TMATMUL(tACC, tA, tB);
         }
         #pragma clang loop unroll(full)
@@ -175,8 +186,8 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           TMATMUL_ACC(tACC, tACC, tA, tB);
         }
         if constexpr (rmd_K) {
@@ -185,15 +196,15 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcorner tA;
           tile_shapeB_tcols tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           if constexpr(Kb>0){
             TMATMUL_ACC(tACC, tACC, tA, tB);
           } else {
             TMATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TSTORE_CUBE(gC, tACC);
       }
       if constexpr (rmd_N) {
         auto gC = gCIter(Mb, Nb);
@@ -205,8 +216,8 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           TMATMUL(tACC, tA, tB);
         }
         #pragma clang loop unroll(full)
@@ -216,8 +227,8 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcols tA;
           tile_shapeB_trows tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           TMATMUL_ACC(tACC, tACC, tA, tB);
         }
         if constexpr (rmd_K) {
@@ -226,15 +237,15 @@ void matmul_mask(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
           tile_shapeA_tcorner tA;
           tile_shapeB_tcorner tB;
-          TLOAD(tA, gA);
-          TLOAD(tB, gB);
+          TLOAD_CUBE(tA, gA);
+          TLOAD_CUBE(tB, gB);
           if constexpr(Kb>0){
             TMATMUL_ACC(tACC, tACC, tA, tB);
           } else {
             TMATMUL(tACC, tA, tB);
           }
         }
-        store_acc_tile(gC, tACC);
+        TSTORE_CUBE(gC, tACC);
       }
     }
   }
@@ -340,14 +351,19 @@ constexpr ResB find_reuseB(int Nb, int Kb, int MAX_TILE_NUM) {
 
 template<typename dtype, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK>
 void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
-  // const int MAX_TILE_NUM = gK/tK;
-  const int MAX_TILE_NUM = 24;
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
   using tile_shapeA = TileLeft<dtype, tM, tK>;
   using tile_shapeB = TileRight<dtype, tK, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
+  constexpr int kLocalTileBytes = 64 * 1024;
+  constexpr int kReservedBytes = tile_shapeACC::LogicalTileBytes +
+                                 tile_shapeB::LogicalTileBytes;
+  constexpr int MAX_TILE_NUM =
+      (kLocalTileBytes - kReservedBytes) / tile_shapeA::LogicalTileBytes;
+  static_assert(MAX_TILE_NUM > 0,
+                "Local tile capacity cannot hold C, B and one reusable A");
 
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
   using itB = global_iterator<gm_shapeB, tile_shapeB>;
@@ -2221,13 +2237,19 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
 
 template<typename dtype, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK>
 void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
-  const int MAX_TILE_NUM = 24;
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
   using tile_shapeA = TileLeft<dtype, tM, tK>;
   using tile_shapeB = TileRight<dtype, tK, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
+  constexpr int kLocalTileBytes = 64 * 1024;
+  constexpr int kReservedBytes = tile_shapeACC::LogicalTileBytes +
+                                 tile_shapeA::LogicalTileBytes;
+  constexpr int MAX_TILE_NUM =
+      (kLocalTileBytes - kReservedBytes) / tile_shapeB::LogicalTileBytes;
+  static_assert(MAX_TILE_NUM > 0,
+                "Local tile capacity cannot hold C, A and one reusable B");
 
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
   using itB = global_iterator<gm_shapeB, tile_shapeB>;
@@ -3367,6 +3389,7 @@ __attribute__((noinline)) void matmul_dynamic_reuseB(float* dst, dtype* src0, dt
 */
 
 
+#ifdef MX_FP8
 template <typename dtype, const int gM, const int gN, const int gK, const int tM, const int tN, const int tK>
 void matmul_mx(float *dst, dtype *src0, dtype *src1, uint8_t *src0_mx, uint8_t *src1_mx) {
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
@@ -3440,6 +3463,7 @@ void matmul_mx(float *dst, dtype *src0, dtype *src1, uint8_t *src0_mx, uint8_t *
     }
   }
 }
+#endif
 
 template <typename dtype, const int gM, const int gN, const int gK, const int tM,
           const int tN, const int tK>

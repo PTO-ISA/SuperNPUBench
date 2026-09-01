@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "linx_isa": {
+    "repository": "https://github.com/LinxISA/linx-isa.git",
+    "commit": "cbbb23a2d1cedc83573a0ffdd4e3a7b09f17401f"
+  },
+  "tsvc": {
+    "repository": "https://github.com/UoB-HPC/TSVC_2.git",
+    "commit": "badf9adb2974867ac0937718d85a44dec6dec95a"
+  },
+  "pto_kernels": {
+    "repository": "https://github.com/PTO-ISA/pto-kernels.git",
+    "commit": "5f5cf061c4439a2c54bb91bfa6e2205b86cc0dcd",
+    "note": "provenance only; operator workloads are outside this P2 layer"
+  },
+  "polybench": {
+    "repository": "https://github.com/ferrandi/PolyBenchC.git",
+    "ref": "refs/heads/main",
+    "archive_sha256": "6ee0d5316724451fc2fada09ff581c069b045090d8f3c84b0c5c108e0c0bdc5f"
+  },
+  "ctuning_codelets": {
+    "repository": "https://github.com/ctuning/ctuning-programs.git",
+    "ref": "refs/heads/master",
+    "archive_sha256": "a08004964fed4b4f52bdb17499d445d78aa2f9c11266d9c00121c751c9f20d2c"
+  }
+}

@@ -1,24 +1,67 @@
 #!/bin/bash
-# Multi-thread GMMA FlashAttention operator.
-#
-# DTYPE selects the element data type for Q/K/V and the stored O tile (the
-# attention score W and output-accumulator tiles stay FP32 inside the kernel).
-# Supported: float, __bf16, __half. Non-float builds emit a _DType<dtype> ELF
-# suffix so binaries of different dtypes don't collide.
+# Multi-thread GMMA FlashAttention precision variants.
 
+set -e
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 
-# FP32 (default): emits kernel_multi_thread_fa_Sq256_Skv256_Tm64_Tk64.elf
-make diss TESTCASE=fa_2d_unroll_gmma \
-    COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float Sq=256 Skv=256 Tm=64 Tk=64
+# Multi-tile variants: stage two Q tiles and two K/V tiles per unrolled group.
+for mode in \
+    FP32_VECFP32 \
+    BF16_VECFP32 \
+    MXFP8_VECFP32 \
+    HIF8_VECFP32 \
+    FP8_VECFP32 \
+    FP8_VECBF16 \
+    MXFP4_VECBF16 \
+    HIF4_VECBF16; do
+    make diss TESTCASE=fa_2d_unroll_gmma \
+        COMPILER_DIR="$COMPILER_DIR" \
+        FA_MODE="$mode" Sq=256 Skv=256 Tm=128 Tk=128 \
+        X_dim=1 Y_dim=2
+done
 
-# BF16: emits kernel_multi_thread_fa_Sq256_Skv256_Tm64_Tk64_DType__bf16.elf
-make diss TESTCASE=fa_2d_unroll_gmma \
-    COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=__bf16 Sq=256 Skv=256 Tm=64 Tk=64
-
-# FP16: emits kernel_multi_thread_fa_Sq256_Skv256_Tm64_Tk64_DType__half.elf
-make diss TESTCASE=fa_2d_unroll_gmma \
-    COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=__half Sq=256 Skv=256 Tm=64 Tk=64
+# Capacity-bound QK/PV configurations. In QK notation, Tm/Tk/QD are M/N/K.
+# TMATMUL supports at most group_M=128, so use Tm=128 explicitly instead of
+# relying on the kernel's Tm=256 -> two M=128 group split. Non-MX modes use
+# Tk=128: Q+K occupies exactly 256 KiB at the selected qD. MX modes use Tk=64
+# to leave room for their Q/K E8M0 scale tiles. PV operands are smaller.
+for mode in \
+    FP32_VECFP32 \
+    BF16_VECFP32 \
+    MXFP8_VECFP32 \
+    HIF8_VECFP32 \
+    FP8_VECFP32 \
+    FP8_VECBF16 \
+    MXFP4_VECBF16 \
+    HIF4_VECBF16; do
+    case "$mode" in
+        FP32_VECFP32)
+            cap_k=256
+            cap_n=128
+            ;;
+        BF16_VECFP32)
+            cap_k=512
+            cap_n=128
+            ;;
+        MXFP8_VECFP32)
+            cap_k=1024
+            cap_n=64
+            ;;
+        HIF8_VECFP32|FP8_VECFP32|FP8_VECBF16)
+            cap_k=1024
+            cap_n=128
+            ;;
+        MXFP4_VECBF16)
+            cap_k=2048
+            cap_n=64
+            ;;
+        HIF4_VECBF16)
+            cap_k=2048
+            cap_n=128
+            ;;
+    esac
+    make diss TESTCASE=fa_2d_unroll_gmma \
+        COMPILER_DIR="$COMPILER_DIR" FA_MODE="$mode" \
+        Sq=256 Skv=256 Tm=128 Tk="$cap_n" QD="$cap_k" VD=256 \
+        X_dim=1 Y_dim=1
+done

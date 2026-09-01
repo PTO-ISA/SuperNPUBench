@@ -1,0 +1,3464 @@
+{
+  "schema_version": 1,
+  "active": [
+    {
+      "name": "tadd_fp16_16x16",
+      "family": "vector",
+      "operation": "TADD",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tadd_fp32_16x16",
+      "family": "vector",
+      "operation": "TADD",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tadd_i16_16x16",
+      "family": "vector",
+      "operation": "TADD",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tadd_i32_16x16",
+      "family": "vector",
+      "operation": "TADD",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tsub_fp16_16x16",
+      "family": "vector",
+      "operation": "TSUB",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tsub_fp32_16x16",
+      "family": "vector",
+      "operation": "TSUB",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tsub_i16_16x16",
+      "family": "vector",
+      "operation": "TSUB",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tsub_i32_16x16",
+      "family": "vector",
+      "operation": "TSUB",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmul_fp16_16x16",
+      "family": "vector",
+      "operation": "TMUL",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmul_fp32_16x16",
+      "family": "vector",
+      "operation": "TMUL",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmul_i16_16x16",
+      "family": "vector",
+      "operation": "TMUL",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmul_i32_16x16",
+      "family": "vector",
+      "operation": "TMUL",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tdiv_fp16_16x16",
+      "family": "vector",
+      "operation": "TDIV",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tdiv_fp32_16x16",
+      "family": "vector",
+      "operation": "TDIV",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tdiv_i16_16x16",
+      "family": "vector",
+      "operation": "TDIV",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tdiv_i32_16x16",
+      "family": "vector",
+      "operation": "TDIV",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trem_fp16_16x16",
+      "family": "vector",
+      "operation": "TREM",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trem_fp32_16x16",
+      "family": "vector",
+      "operation": "TREM",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trem_i32_16x16",
+      "family": "vector",
+      "operation": "TREM",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tand_i16_16x16",
+      "family": "vector",
+      "operation": "TAND",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tand_i32_16x16",
+      "family": "vector",
+      "operation": "TAND",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tor_i16_16x16",
+      "family": "vector",
+      "operation": "TOR",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tor_i32_16x16",
+      "family": "vector",
+      "operation": "TOR",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "txor_i16_16x16",
+      "family": "vector",
+      "operation": "TXOR",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "txor_i32_16x16",
+      "family": "vector",
+      "operation": "TXOR",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tshl_i16_16x16",
+      "family": "vector",
+      "operation": "TSHL",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tshl_i32_16x16",
+      "family": "vector",
+      "operation": "TSHL",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tshr_i16_16x16",
+      "family": "vector",
+      "operation": "TSHR",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tshr_i32_16x16",
+      "family": "vector",
+      "operation": "TSHR",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmax_fp16_16x16",
+      "family": "vector",
+      "operation": "TMAX",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmax_fp32_16x16",
+      "family": "vector",
+      "operation": "TMAX",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmax_i16_16x16",
+      "family": "vector",
+      "operation": "TMAX",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmax_i32_16x16",
+      "family": "vector",
+      "operation": "TMAX",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmin_fp16_16x16",
+      "family": "vector",
+      "operation": "TMIN",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmin_fp32_16x16",
+      "family": "vector",
+      "operation": "TMIN",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmin_i16_16x16",
+      "family": "vector",
+      "operation": "TMIN",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmin_i32_16x16",
+      "family": "vector",
+      "operation": "TMIN",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tabs_fp16_16x16",
+      "family": "vector",
+      "operation": "TABS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tabs_fp32_16x16",
+      "family": "vector",
+      "operation": "TABS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tnot_i16_16x16",
+      "family": "vector",
+      "operation": "TNOT",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tnot_i32_16x16",
+      "family": "vector",
+      "operation": "TNOT",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tneg_fp16_16x16",
+      "family": "vector",
+      "operation": "TNEG",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tneg_fp32_16x16",
+      "family": "vector",
+      "operation": "TNEG",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tneg_i16_16x16",
+      "family": "vector",
+      "operation": "TNEG",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tneg_i32_16x16",
+      "family": "vector",
+      "operation": "TNEG",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "texp_fp16_16x16",
+      "family": "vector",
+      "operation": "TEXP",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "texp_fp32_16x16",
+      "family": "vector",
+      "operation": "TEXP",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tlog_fp16_16x16",
+      "family": "vector",
+      "operation": "TLOG",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tlog_fp32_16x16",
+      "family": "vector",
+      "operation": "TLOG",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trecip_fp16_16x16",
+      "family": "vector",
+      "operation": "TRECIP",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trecip_fp32_16x16",
+      "family": "vector",
+      "operation": "TRECIP",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tsqrt_fp16_16x16",
+      "family": "vector",
+      "operation": "TSQRT",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tsqrt_fp32_16x16",
+      "family": "vector",
+      "operation": "TSQRT",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trsqrt_fp16_16x16",
+      "family": "vector",
+      "operation": "TRSQRT",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trsqrt_fp32_16x16",
+      "family": "vector",
+      "operation": "TRSQRT",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trelu_fp16_16x16",
+      "family": "vector",
+      "operation": "TRELU",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trelu_fp32_16x16",
+      "family": "vector",
+      "operation": "TRELU",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcvt_fp16_16x16",
+      "family": "vector",
+      "operation": "TCVT",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcvt_fp32_16x16",
+      "family": "vector",
+      "operation": "TCVT",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tpartadd_fp16_16x16",
+      "family": "vector",
+      "operation": "TPARTADD",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tpartadd_fp32_16x16",
+      "family": "vector",
+      "operation": "TPARTADD",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tpartmul_fp16_16x16",
+      "family": "vector",
+      "operation": "TPARTMUL",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tpartmul_fp32_16x16",
+      "family": "vector",
+      "operation": "TPARTMUL",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tpartmax_fp16_16x16",
+      "family": "vector",
+      "operation": "TPARTMAX",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tpartmax_fp32_16x16",
+      "family": "vector",
+      "operation": "TPARTMAX",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tpartmin_fp16_16x16",
+      "family": "vector",
+      "operation": "TPARTMIN",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tpartmin_fp32_16x16",
+      "family": "vector",
+      "operation": "TPARTMIN",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tadds_fp16_16x16",
+      "family": "vector",
+      "operation": "TADDS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tadds_fp32_16x16",
+      "family": "vector",
+      "operation": "TADDS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tsubs_fp16_16x16",
+      "family": "vector",
+      "operation": "TSUBS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tsubs_fp32_16x16",
+      "family": "vector",
+      "operation": "TSUBS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmuls_fp16_16x16",
+      "family": "vector",
+      "operation": "TMULS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmuls_fp32_16x16",
+      "family": "vector",
+      "operation": "TMULS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tdivs_fp16_16x16",
+      "family": "vector",
+      "operation": "TDIVS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tdivs_fp32_16x16",
+      "family": "vector",
+      "operation": "TDIVS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trems_fp16_16x16",
+      "family": "vector",
+      "operation": "TREMS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trems_fp32_16x16",
+      "family": "vector",
+      "operation": "TREMS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmaxs_fp16_16x16",
+      "family": "vector",
+      "operation": "TMAXS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmaxs_fp32_16x16",
+      "family": "vector",
+      "operation": "TMAXS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmins_fp16_16x16",
+      "family": "vector",
+      "operation": "TMINS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmins_fp32_16x16",
+      "family": "vector",
+      "operation": "TMINS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tands_i16_16x16",
+      "family": "vector",
+      "operation": "TANDS",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tands_i32_16x16",
+      "family": "vector",
+      "operation": "TANDS",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tors_i16_16x16",
+      "family": "vector",
+      "operation": "TORS",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tors_i32_16x16",
+      "family": "vector",
+      "operation": "TORS",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "txors_i16_16x16",
+      "family": "vector",
+      "operation": "TXORS",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "txors_i32_16x16",
+      "family": "vector",
+      "operation": "TXORS",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tshls_i16_16x16",
+      "family": "vector",
+      "operation": "TSHLS",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tshls_i32_16x16",
+      "family": "vector",
+      "operation": "TSHLS",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tshrs_i16_16x16",
+      "family": "vector",
+      "operation": "TSHRS",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tshrs_i32_16x16",
+      "family": "vector",
+      "operation": "TSHRS",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "texpands_fp16_16x16",
+      "family": "vector",
+      "operation": "TEXPANDS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "texpands_fp32_16x16",
+      "family": "vector",
+      "operation": "TEXPANDS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tci_i16_1x64",
+      "family": "vector",
+      "operation": "TCI",
+      "dtype": "i16",
+      "shape": [
+        1,
+        64
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tci_i32_1x64",
+      "family": "vector",
+      "operation": "TCI",
+      "dtype": "i32",
+      "shape": [
+        1,
+        64
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpand_fp16_16x16",
+      "family": "vector",
+      "operation": "TROWEXPAND",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpand_fp32_16x16",
+      "family": "vector",
+      "operation": "TROWEXPAND",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpand_fp16_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPAND",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpand_fp32_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPAND",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandadd_fp16_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDADD",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandadd_fp32_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDADD",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandsub_fp16_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDSUB",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandsub_fp32_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDSUB",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandmul_fp16_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDMUL",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandmul_fp32_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDMUL",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpanddiv_fp16_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDDIV",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpanddiv_fp32_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDDIV",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandmax_fp16_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDMAX",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandmax_fp32_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDMAX",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandmin_fp16_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDMIN",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandmin_fp32_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDMIN",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandexpdif_fp16_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDEXPDIF",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "trowexpandexpdif_fp32_16x16",
+      "family": "vector",
+      "operation": "TROWEXPANDEXPDIF",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandadd_fp16_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDADD",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandadd_fp32_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDADD",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandsub_fp16_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDSUB",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandsub_fp32_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDSUB",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandmul_fp16_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDMUL",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandmul_fp32_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDMUL",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpanddiv_fp16_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDDIV",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpanddiv_fp32_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDDIV",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandmax_fp16_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDMAX",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandmax_fp32_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDMAX",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandmin_fp16_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDMIN",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandmin_fp32_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDMIN",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandexpdif_fp16_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDEXPDIF",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tcolexpandexpdif_fp32_16x16",
+      "family": "vector",
+      "operation": "TCOLEXPANDEXPDIF",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tconcat_fp16_16x16",
+      "family": "vector",
+      "operation": "TCONCAT",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tconcat_fp32_16x16",
+      "family": "vector",
+      "operation": "TCONCAT",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tload_fp16_16x16",
+      "family": "memory",
+      "operation": "TLOAD",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tload_fp32_16x16",
+      "family": "memory",
+      "operation": "TLOAD",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tload_i32_16x16",
+      "family": "memory",
+      "operation": "TLOAD",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tload_fp16_32x32",
+      "family": "memory",
+      "operation": "TLOAD",
+      "dtype": "fp16",
+      "shape": [
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tload_fp32_32x32",
+      "family": "memory",
+      "operation": "TLOAD",
+      "dtype": "fp32",
+      "shape": [
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tstore_fp16_16x16",
+      "family": "memory",
+      "operation": "TSTORE",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tstore_fp32_16x16",
+      "family": "memory",
+      "operation": "TSTORE",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tstore_i32_16x16",
+      "family": "memory",
+      "operation": "TSTORE",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "mgather_fp16_16x16",
+      "family": "memory",
+      "operation": "MGATHER",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "mgather_fp32_16x16",
+      "family": "memory",
+      "operation": "MGATHER",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "mgather_i32_16x16",
+      "family": "memory",
+      "operation": "MGATHER",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "mscatter_fp16_16x16",
+      "family": "memory",
+      "operation": "MSCATTER",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "mscatter_fp32_16x16",
+      "family": "memory",
+      "operation": "MSCATTER",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "mscatter_i32_16x16",
+      "family": "memory",
+      "operation": "MSCATTER",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_fp32_32x32x32",
+      "family": "cube",
+      "operation": "TMATMUL",
+      "dtype": "fp32",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_fp16_16x32x32",
+      "family": "cube",
+      "operation": "TMATMUL",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_fp16_32x64x64",
+      "family": "cube",
+      "operation": "TMATMUL",
+      "dtype": "fp16",
+      "shape": [
+        32,
+        64,
+        64
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_bf16_32x64x64",
+      "family": "cube",
+      "operation": "TMATMUL",
+      "dtype": "bf16",
+      "shape": [
+        32,
+        64,
+        64
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_i8_32x64x64",
+      "family": "cube",
+      "operation": "TMATMUL",
+      "dtype": "i8",
+      "shape": [
+        32,
+        64,
+        64
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_acc_fp32_32x32x32",
+      "family": "cube",
+      "operation": "TMATMUL_ACC",
+      "dtype": "fp32",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_acc_fp16_32x64x64",
+      "family": "cube",
+      "operation": "TMATMUL_ACC",
+      "dtype": "fp16",
+      "shape": [
+        32,
+        64,
+        64
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_acc_bf16_32x64x64",
+      "family": "cube",
+      "operation": "TMATMUL_ACC",
+      "dtype": "bf16",
+      "shape": [
+        32,
+        64,
+        64
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_bias_fp32_32x32x32",
+      "family": "cube",
+      "operation": "TMATMUL_BIAS",
+      "dtype": "fp32",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_bias_fp16_32x64x64",
+      "family": "cube",
+      "operation": "TMATMUL_BIAS",
+      "dtype": "fp16",
+      "shape": [
+        32,
+        64,
+        64
+      ],
+      "status": "active"
+    },
+    {
+      "name": "tmatmul_bias_bf16_32x64x64",
+      "family": "cube",
+      "operation": "TMATMUL_BIAS",
+      "dtype": "bf16",
+      "shape": [
+        32,
+        64,
+        64
+      ],
+      "status": "active"
+    },
+    {
+      "name": "abs_f64_lat",
+      "family": "scalar",
+      "operation": "abs",
+      "status": "active"
+    },
+    {
+      "name": "abs_f64_thr",
+      "family": "scalar",
+      "operation": "abs",
+      "status": "active"
+    },
+    {
+      "name": "abs_fp32_lat",
+      "family": "scalar",
+      "operation": "abs",
+      "status": "active"
+    },
+    {
+      "name": "abs_fp32_thr",
+      "family": "scalar",
+      "operation": "abs",
+      "status": "active"
+    },
+    {
+      "name": "abs_i32_lat",
+      "family": "scalar",
+      "operation": "abs",
+      "status": "active"
+    },
+    {
+      "name": "abs_i32_thr",
+      "family": "scalar",
+      "operation": "abs",
+      "status": "active"
+    },
+    {
+      "name": "add_f64_lat",
+      "family": "scalar",
+      "operation": "add",
+      "status": "active"
+    },
+    {
+      "name": "add_f64_thr",
+      "family": "scalar",
+      "operation": "add",
+      "status": "active"
+    },
+    {
+      "name": "add_fp32_lat",
+      "family": "scalar",
+      "operation": "add",
+      "status": "active"
+    },
+    {
+      "name": "add_fp32_thr",
+      "family": "scalar",
+      "operation": "add",
+      "status": "active"
+    },
+    {
+      "name": "add_i32_lat",
+      "family": "scalar",
+      "operation": "add",
+      "status": "active"
+    },
+    {
+      "name": "add_i32_thr",
+      "family": "scalar",
+      "operation": "add",
+      "status": "active"
+    },
+    {
+      "name": "add_i64_lat",
+      "family": "scalar",
+      "operation": "add",
+      "status": "active"
+    },
+    {
+      "name": "add_i64_thr",
+      "family": "scalar",
+      "operation": "add",
+      "status": "active"
+    },
+    {
+      "name": "and_i32_lat",
+      "family": "scalar",
+      "operation": "and",
+      "status": "active"
+    },
+    {
+      "name": "and_i32_thr",
+      "family": "scalar",
+      "operation": "and",
+      "status": "active"
+    },
+    {
+      "name": "and_i64_lat",
+      "family": "scalar",
+      "operation": "and",
+      "status": "active"
+    },
+    {
+      "name": "and_i64_thr",
+      "family": "scalar",
+      "operation": "and",
+      "status": "active"
+    },
+    {
+      "name": "clz_i32_lat",
+      "family": "scalar",
+      "operation": "clz",
+      "status": "active"
+    },
+    {
+      "name": "clz_i32_thr",
+      "family": "scalar",
+      "operation": "clz",
+      "status": "active"
+    },
+    {
+      "name": "clz_i64_lat",
+      "family": "scalar",
+      "operation": "clz",
+      "status": "active"
+    },
+    {
+      "name": "clz_i64_thr",
+      "family": "scalar",
+      "operation": "clz",
+      "status": "active"
+    },
+    {
+      "name": "div_f64_lat",
+      "family": "scalar",
+      "operation": "div",
+      "status": "active"
+    },
+    {
+      "name": "div_f64_thr",
+      "family": "scalar",
+      "operation": "div",
+      "status": "active"
+    },
+    {
+      "name": "div_fp32_lat",
+      "family": "scalar",
+      "operation": "div",
+      "status": "active"
+    },
+    {
+      "name": "div_fp32_thr",
+      "family": "scalar",
+      "operation": "div",
+      "status": "active"
+    },
+    {
+      "name": "div_i32_lat",
+      "family": "scalar",
+      "operation": "div",
+      "status": "active"
+    },
+    {
+      "name": "div_i32_thr",
+      "family": "scalar",
+      "operation": "div",
+      "status": "active"
+    },
+    {
+      "name": "div_i64_lat",
+      "family": "scalar",
+      "operation": "div",
+      "status": "active"
+    },
+    {
+      "name": "div_i64_thr",
+      "family": "scalar",
+      "operation": "div",
+      "status": "active"
+    },
+    {
+      "name": "f2f_narrow_f64_to_fp32_thr",
+      "family": "scalar",
+      "operation": "f2f",
+      "status": "active"
+    },
+    {
+      "name": "f2f_widen_fp32_to_f64_thr",
+      "family": "scalar",
+      "operation": "f2f",
+      "status": "active"
+    },
+    {
+      "name": "f2i_f64_to_i32_thr",
+      "family": "scalar",
+      "operation": "f2i",
+      "status": "active"
+    },
+    {
+      "name": "f2i_fp32_to_i32_thr",
+      "family": "scalar",
+      "operation": "f2i",
+      "status": "active"
+    },
+    {
+      "name": "i2f_i32_to_f64_thr",
+      "family": "scalar",
+      "operation": "i2f",
+      "status": "active"
+    },
+    {
+      "name": "i2f_i32_to_fp32_thr",
+      "family": "scalar",
+      "operation": "i2f",
+      "status": "active"
+    },
+    {
+      "name": "ld_f64_thr",
+      "family": "scalar",
+      "operation": "ld",
+      "status": "active"
+    },
+    {
+      "name": "ld_fp32_thr",
+      "family": "scalar",
+      "operation": "ld",
+      "status": "active"
+    },
+    {
+      "name": "ld_i32_thr",
+      "family": "scalar",
+      "operation": "ld",
+      "status": "active"
+    },
+    {
+      "name": "ld_i64_thr",
+      "family": "scalar",
+      "operation": "ld",
+      "status": "active"
+    },
+    {
+      "name": "max_f64_lat",
+      "family": "scalar",
+      "operation": "max",
+      "status": "active"
+    },
+    {
+      "name": "max_f64_thr",
+      "family": "scalar",
+      "operation": "max",
+      "status": "active"
+    },
+    {
+      "name": "max_fp32_lat",
+      "family": "scalar",
+      "operation": "max",
+      "status": "active"
+    },
+    {
+      "name": "max_fp32_thr",
+      "family": "scalar",
+      "operation": "max",
+      "status": "active"
+    },
+    {
+      "name": "max_i32_lat",
+      "family": "scalar",
+      "operation": "max",
+      "status": "active"
+    },
+    {
+      "name": "max_i32_thr",
+      "family": "scalar",
+      "operation": "max",
+      "status": "active"
+    },
+    {
+      "name": "max_i64_lat",
+      "family": "scalar",
+      "operation": "max",
+      "status": "active"
+    },
+    {
+      "name": "max_i64_thr",
+      "family": "scalar",
+      "operation": "max",
+      "status": "active"
+    },
+    {
+      "name": "min_f64_lat",
+      "family": "scalar",
+      "operation": "min",
+      "status": "active"
+    },
+    {
+      "name": "min_f64_thr",
+      "family": "scalar",
+      "operation": "min",
+      "status": "active"
+    },
+    {
+      "name": "min_fp32_lat",
+      "family": "scalar",
+      "operation": "min",
+      "status": "active"
+    },
+    {
+      "name": "min_fp32_thr",
+      "family": "scalar",
+      "operation": "min",
+      "status": "active"
+    },
+    {
+      "name": "min_i32_lat",
+      "family": "scalar",
+      "operation": "min",
+      "status": "active"
+    },
+    {
+      "name": "min_i32_thr",
+      "family": "scalar",
+      "operation": "min",
+      "status": "active"
+    },
+    {
+      "name": "min_i64_lat",
+      "family": "scalar",
+      "operation": "min",
+      "status": "active"
+    },
+    {
+      "name": "min_i64_thr",
+      "family": "scalar",
+      "operation": "min",
+      "status": "active"
+    },
+    {
+      "name": "mod_i32_lat",
+      "family": "scalar",
+      "operation": "mod",
+      "status": "active"
+    },
+    {
+      "name": "mod_i32_thr",
+      "family": "scalar",
+      "operation": "mod",
+      "status": "active"
+    },
+    {
+      "name": "mod_i64_lat",
+      "family": "scalar",
+      "operation": "mod",
+      "status": "active"
+    },
+    {
+      "name": "mod_i64_thr",
+      "family": "scalar",
+      "operation": "mod",
+      "status": "active"
+    },
+    {
+      "name": "mul_f64_lat",
+      "family": "scalar",
+      "operation": "mul",
+      "status": "active"
+    },
+    {
+      "name": "mul_f64_thr",
+      "family": "scalar",
+      "operation": "mul",
+      "status": "active"
+    },
+    {
+      "name": "mul_fp32_lat",
+      "family": "scalar",
+      "operation": "mul",
+      "status": "active"
+    },
+    {
+      "name": "mul_fp32_thr",
+      "family": "scalar",
+      "operation": "mul",
+      "status": "active"
+    },
+    {
+      "name": "mul_i32_lat",
+      "family": "scalar",
+      "operation": "mul",
+      "status": "active"
+    },
+    {
+      "name": "mul_i32_thr",
+      "family": "scalar",
+      "operation": "mul",
+      "status": "active"
+    },
+    {
+      "name": "mul_i64_lat",
+      "family": "scalar",
+      "operation": "mul",
+      "status": "active"
+    },
+    {
+      "name": "mul_i64_thr",
+      "family": "scalar",
+      "operation": "mul",
+      "status": "active"
+    },
+    {
+      "name": "neg_f64_lat",
+      "family": "scalar",
+      "operation": "neg",
+      "status": "active"
+    },
+    {
+      "name": "neg_f64_thr",
+      "family": "scalar",
+      "operation": "neg",
+      "status": "active"
+    },
+    {
+      "name": "neg_fp32_lat",
+      "family": "scalar",
+      "operation": "neg",
+      "status": "active"
+    },
+    {
+      "name": "neg_fp32_thr",
+      "family": "scalar",
+      "operation": "neg",
+      "status": "active"
+    },
+    {
+      "name": "neg_i32_lat",
+      "family": "scalar",
+      "operation": "neg",
+      "status": "active"
+    },
+    {
+      "name": "neg_i32_thr",
+      "family": "scalar",
+      "operation": "neg",
+      "status": "active"
+    },
+    {
+      "name": "neg_i64_lat",
+      "family": "scalar",
+      "operation": "neg",
+      "status": "active"
+    },
+    {
+      "name": "neg_i64_thr",
+      "family": "scalar",
+      "operation": "neg",
+      "status": "active"
+    },
+    {
+      "name": "not_i32_lat",
+      "family": "scalar",
+      "operation": "not",
+      "status": "active"
+    },
+    {
+      "name": "not_i32_thr",
+      "family": "scalar",
+      "operation": "not",
+      "status": "active"
+    },
+    {
+      "name": "not_i64_lat",
+      "family": "scalar",
+      "operation": "not",
+      "status": "active"
+    },
+    {
+      "name": "not_i64_thr",
+      "family": "scalar",
+      "operation": "not",
+      "status": "active"
+    },
+    {
+      "name": "or_i32_lat",
+      "family": "scalar",
+      "operation": "or",
+      "status": "active"
+    },
+    {
+      "name": "or_i32_thr",
+      "family": "scalar",
+      "operation": "or",
+      "status": "active"
+    },
+    {
+      "name": "or_i64_lat",
+      "family": "scalar",
+      "operation": "or",
+      "status": "active"
+    },
+    {
+      "name": "or_i64_thr",
+      "family": "scalar",
+      "operation": "or",
+      "status": "active"
+    },
+    {
+      "name": "popc_i32_lat",
+      "family": "scalar",
+      "operation": "popc",
+      "status": "active"
+    },
+    {
+      "name": "popc_i32_thr",
+      "family": "scalar",
+      "operation": "popc",
+      "status": "active"
+    },
+    {
+      "name": "popc_i64_lat",
+      "family": "scalar",
+      "operation": "popc",
+      "status": "active"
+    },
+    {
+      "name": "popc_i64_thr",
+      "family": "scalar",
+      "operation": "popc",
+      "status": "active"
+    },
+    {
+      "name": "sll_i32_lat",
+      "family": "scalar",
+      "operation": "sll",
+      "status": "active"
+    },
+    {
+      "name": "sll_i32_thr",
+      "family": "scalar",
+      "operation": "sll",
+      "status": "active"
+    },
+    {
+      "name": "sll_i64_lat",
+      "family": "scalar",
+      "operation": "sll",
+      "status": "active"
+    },
+    {
+      "name": "sll_i64_thr",
+      "family": "scalar",
+      "operation": "sll",
+      "status": "active"
+    },
+    {
+      "name": "slt_i32_lat",
+      "family": "scalar",
+      "operation": "slt",
+      "status": "active"
+    },
+    {
+      "name": "slt_i32_thr",
+      "family": "scalar",
+      "operation": "slt",
+      "status": "active"
+    },
+    {
+      "name": "slt_i64_lat",
+      "family": "scalar",
+      "operation": "slt",
+      "status": "active"
+    },
+    {
+      "name": "slt_i64_thr",
+      "family": "scalar",
+      "operation": "slt",
+      "status": "active"
+    },
+    {
+      "name": "sqrt_f64_lat",
+      "family": "scalar",
+      "operation": "sqrt",
+      "status": "active"
+    },
+    {
+      "name": "sqrt_f64_thr",
+      "family": "scalar",
+      "operation": "sqrt",
+      "status": "active"
+    },
+    {
+      "name": "sqrt_fp32_lat",
+      "family": "scalar",
+      "operation": "sqrt",
+      "status": "active"
+    },
+    {
+      "name": "sqrt_fp32_thr",
+      "family": "scalar",
+      "operation": "sqrt",
+      "status": "active"
+    },
+    {
+      "name": "sra_i32_lat",
+      "family": "scalar",
+      "operation": "sra",
+      "status": "active"
+    },
+    {
+      "name": "sra_i32_thr",
+      "family": "scalar",
+      "operation": "sra",
+      "status": "active"
+    },
+    {
+      "name": "sra_i64_lat",
+      "family": "scalar",
+      "operation": "sra",
+      "status": "active"
+    },
+    {
+      "name": "sra_i64_thr",
+      "family": "scalar",
+      "operation": "sra",
+      "status": "active"
+    },
+    {
+      "name": "srl_i32_lat",
+      "family": "scalar",
+      "operation": "srl",
+      "status": "active"
+    },
+    {
+      "name": "srl_i32_thr",
+      "family": "scalar",
+      "operation": "srl",
+      "status": "active"
+    },
+    {
+      "name": "srl_i64_lat",
+      "family": "scalar",
+      "operation": "srl",
+      "status": "active"
+    },
+    {
+      "name": "srl_i64_thr",
+      "family": "scalar",
+      "operation": "srl",
+      "status": "active"
+    },
+    {
+      "name": "st_f64_thr",
+      "family": "scalar",
+      "operation": "st",
+      "status": "active"
+    },
+    {
+      "name": "st_fp32_thr",
+      "family": "scalar",
+      "operation": "st",
+      "status": "active"
+    },
+    {
+      "name": "st_i32_thr",
+      "family": "scalar",
+      "operation": "st",
+      "status": "active"
+    },
+    {
+      "name": "st_i64_thr",
+      "family": "scalar",
+      "operation": "st",
+      "status": "active"
+    },
+    {
+      "name": "sub_f64_lat",
+      "family": "scalar",
+      "operation": "sub",
+      "status": "active"
+    },
+    {
+      "name": "sub_f64_thr",
+      "family": "scalar",
+      "operation": "sub",
+      "status": "active"
+    },
+    {
+      "name": "sub_fp32_lat",
+      "family": "scalar",
+      "operation": "sub",
+      "status": "active"
+    },
+    {
+      "name": "sub_fp32_thr",
+      "family": "scalar",
+      "operation": "sub",
+      "status": "active"
+    },
+    {
+      "name": "sub_i32_lat",
+      "family": "scalar",
+      "operation": "sub",
+      "status": "active"
+    },
+    {
+      "name": "sub_i32_thr",
+      "family": "scalar",
+      "operation": "sub",
+      "status": "active"
+    },
+    {
+      "name": "sub_i64_lat",
+      "family": "scalar",
+      "operation": "sub",
+      "status": "active"
+    },
+    {
+      "name": "sub_i64_thr",
+      "family": "scalar",
+      "operation": "sub",
+      "status": "active"
+    },
+    {
+      "name": "xor_i32_lat",
+      "family": "scalar",
+      "operation": "xor",
+      "status": "active"
+    },
+    {
+      "name": "xor_i32_thr",
+      "family": "scalar",
+      "operation": "xor",
+      "status": "active"
+    },
+    {
+      "name": "xor_i64_lat",
+      "family": "scalar",
+      "operation": "xor",
+      "status": "active"
+    },
+    {
+      "name": "xor_i64_thr",
+      "family": "scalar",
+      "operation": "xor",
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_keep_acc_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "keep_acc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_keep_acc_relu_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "keep_acc_relu",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_f16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "f16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_f16_relu_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "f16_relu",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_bf16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "bf16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_bf16_relu_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "bf16_relu",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_reqs8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_reqs8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_deqf16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_deqf16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_shifts16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_shifts16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_qf_s4_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_qf_s4",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_qf_s16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_qf_s16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_qf_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_qf_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_qf_hif8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_qf_hif8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_qf_fp8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_qf_fp8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_qf_f32_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_qf_f32",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_qf_f16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_qf_f16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_qf_bf16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_qf_bf16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s_qs_bf16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s_qs_bf16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_reqs8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_reqs8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_deqf16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_deqf16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_shifts16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_shifts16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_qf_s4_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_qf_s4",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_qf_s16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_qf_s16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_qf_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_qf_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_qf_hif8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_qf_hif8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_qf_f16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_qf_f16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_qf_bf16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_qf_bf16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_qf_fp8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_qf_fp8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_qf_f32_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_qf_f32",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_qs_bf16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_qs_bf16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s8_relu_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s8_relu",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s8_lrelu_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s8_lrelu",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_v_s8_relu_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "v_s8_relu",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_f16_prelu_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "f16_prelu",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s8_prelu_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s8_prelu",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_rowmax_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "rowmax",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_rowmax_init_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "rowmax_init",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_groupmax_8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "groupmax_8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_groupmax_16_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "groupmax_16",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_groupmax_128_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "groupmax_128",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_rowgroup_maxabs_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "rowgroup_maxabs",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_f16_groupmax_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "f16_groupmax",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s8_rowmax_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s8_rowmax",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_bias_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "bias",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_acc_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "acc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_mx_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "mx",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_mxbias_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "mxbias",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_mxacc_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "mxacc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "gemv",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_bias_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "gemv_bias",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_acc_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "gemv_acc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mx_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "gemv_mx",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mx_bias_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "gemv_mx_bias",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mx_acc_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "gemv_mx_acc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_bias_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "bias_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_acc_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "acc_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_mx_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "mx_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "gemv_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mx_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "gemv_mx_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_shared_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "shared",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_s8_shared_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s8_shared",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_vqf_s8_prelu_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "vqf_s8_prelu",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_legacy3_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "legacy3",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    }
+  ],
+  "unsupported": [
+    {
+      "name": "fixp_tmatmul_lrelu_only",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects empty LRELU_ONLY B.IOR operand stream"
+    },
+    {
+      "name": "tsel_fp16_16x16",
+      "family": "vector",
+      "operation": "TSELECT",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "installed compiler TileOP headers do not expose TSELECT"
+    },
+    {
+      "name": "tmatmul_fp16_64x64x64",
+      "family": "cube",
+      "operation": "TMATMUL",
+      "dtype": "fp16",
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "status": "unsupported",
+      "reason": "CUBE_M32 supports at most 32 logical rows; M=64 requires operator tiling"
+    },
+    {
+      "name": "tsel_fp32_16x16",
+      "family": "vector",
+      "operation": "TSELECT",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "installed compiler TileOP headers do not expose TSELECT"
+    },
+    {
+      "name": "tabs_bf16_16x16",
+      "family": "vector",
+      "operation": "TABS",
+      "dtype": "bf16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler crashes during BF16 TABS instruction selection"
+    },
+    {
+      "name": "tcmp_fp16_16x16",
+      "family": "vector",
+      "operation": "TCMP",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted B.DATR encoding"
+    },
+    {
+      "name": "tcmp_fp32_16x16",
+      "family": "vector",
+      "operation": "TCMP",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted B.DATR encoding"
+    },
+    {
+      "name": "tcmp_i32_16x16",
+      "family": "vector",
+      "operation": "TCMP",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted B.DATR encoding"
+    },
+    {
+      "name": "tcmps_fp16_16x16",
+      "family": "vector",
+      "operation": "TCMPS",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted B.DATR encoding"
+    },
+    {
+      "name": "tcmps_fp32_16x16",
+      "family": "vector",
+      "operation": "TCMPS",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted B.DATR encoding"
+    },
+    {
+      "name": "thistogram_i16_16x16",
+      "family": "vector",
+      "operation": "THISTOGRAM",
+      "dtype": "i16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted B.DATR encoding"
+    },
+    {
+      "name": "thistogram_i32_16x16",
+      "family": "vector",
+      "operation": "THISTOGRAM",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted B.DATR encoding"
+    },
+    {
+      "name": "tmov_fp16_16x16",
+      "family": "memory",
+      "operation": "TMOV",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects generic TMOV B.DATR"
+    },
+    {
+      "name": "tmov_fp32_16x16",
+      "family": "memory",
+      "operation": "TMOV",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects generic TMOV B.DATR"
+    },
+    {
+      "name": "tmov_i32_16x16",
+      "family": "memory",
+      "operation": "TMOV",
+      "dtype": "i32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects generic TMOV B.DATR"
+    },
+    {
+      "name": "tmov_fp16_32x32",
+      "family": "memory",
+      "operation": "TMOV",
+      "dtype": "fp16",
+      "shape": [
+        32,
+        32
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects generic TMOV B.DATR"
+    },
+    {
+      "name": "tmov_fp32_32x32",
+      "family": "memory",
+      "operation": "TMOV",
+      "dtype": "fp32",
+      "shape": [
+        32,
+        32
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects generic TMOV B.DATR"
+    },
+    {
+      "name": "mgather_mask_fp16_16x16",
+      "family": "memory",
+      "operation": "MGATHER_MASK",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted masked B.IOT encoding"
+    },
+    {
+      "name": "mgather_mask_fp32_16x16",
+      "family": "memory",
+      "operation": "MGATHER_MASK",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted masked B.IOT encoding"
+    },
+    {
+      "name": "mscatter_mask_fp16_16x16",
+      "family": "memory",
+      "operation": "MSCATTER_MASK",
+      "dtype": "fp16",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted masked B.IOT encoding"
+    },
+    {
+      "name": "mscatter_mask_fp32_16x16",
+      "family": "memory",
+      "operation": "MSCATTER_MASK",
+      "dtype": "fp32",
+      "shape": [
+        16,
+        16
+      ],
+      "status": "unsupported",
+      "reason": "main compiler assembler rejects emitted masked B.IOT encoding"
+    }
+  ],
+  "notes": [
+    "TLOAD_ND2NZ is not a PTO operation and is intentionally absent",
+    "fixp modes are maintained separately in fixp/compile.all"
+  ]
+}

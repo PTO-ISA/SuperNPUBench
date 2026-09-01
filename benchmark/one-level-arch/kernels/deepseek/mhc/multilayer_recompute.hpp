@@ -31,6 +31,7 @@ using TileAcc = pto::Tile<pto::Location::Vec, E_, R_, C_, pto::BLayout::RowMajor
 #include <common/pto_tileop.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 namespace supernpu::tile_isa {
 
@@ -43,13 +44,16 @@ void multilayer_recompute(float *initial_residual, float *const *comb_mix_ptrs,
     using namespace pto;
     using gm_r = global_tensor<float, RowMajor<Mhc, TileH>>;
     using gm_m = global_tensor<float, RowMajor<Mhc, Mhc>>;
-    using tile_left = TileLeft<float, Mhc, Mhc>;        // A (Mhc×Mhc) Left box
-    using tile_right = TileRight<float, Mhc, TileH>;    // B (Mhc×TileH) Right box
-    using tile_acc = TileAcc<float, Mhc, TileH>;        // C ACC
-    using tile_out = Tile<Location::Vec, float, Mhc, TileH, BLayout::RowMajor, Mhc, TileH>;
+    using tile_left = std::conditional_t<
+        (Mhc <= 16), CubeTileM16<float, Mhc, Mhc>,
+        CubeTileM32<float, Mhc, Mhc>>;
+    using tile_right = CubeTileN8<float, Mhc, TileH>;
+    using tile_acc = std::conditional_t<
+        (Mhc <= 16), CubeAccumulatorM16<float, Mhc, TileH>,
+        CubeAccumulatorM32<float, Mhc, TileH>>;
     using it_r = global_iterator<gm_r, tile_right>;
     using it_m = global_iterator<gm_m, tile_left>;
-    using it_o = global_iterator<gm_r, tile_out>;
+    using it_o = global_iterator<gm_r, tile_acc>;
     it_r res_iter(initial_residual); it_o out_iter(out_residual);
 
     tile_acc acc;                                        // 链式累加器，整条层链复用
@@ -58,7 +62,7 @@ void multilayer_recompute(float *initial_residual, float *const *comb_mix_ptrs,
         tile_left a; tile_right b;
         auto ga = it_m(const_cast<float*>(comb_mix_ptrs[0]))(0, 0);  // 间接寻址取本层 A
         auto gb = res_iter(0, 0);                                   // B = 初始残差
-        TLOAD(a, ga); TLOAD(b, gb);
+        TLOAD_CUBE(a, ga); TLOAD_CUBE(b, gb);
         TMATMUL(acc, a, b);                            // acc = A0 * B0（清零起算）
     }
     // 后续层：TMATMUL_ACC 累加 acc += A_l * B_l
@@ -66,12 +70,11 @@ void multilayer_recompute(float *initial_residual, float *const *comb_mix_ptrs,
         tile_left a; tile_right b;
         auto ga = it_m(const_cast<float*>(comb_mix_ptrs[l]))(0, 0);
         auto gb = it_r(const_cast<float*>(layer_input_ptrs[l]))(0, 0);
-        TLOAD(a, ga); TLOAD(b, gb);
+        TLOAD_CUBE(a, ga); TLOAD_CUBE(b, gb);
         TMATMUL_ACC(acc, acc, a, b);                        // acc += A_l * B_l
     }
     auto gout = out_iter(0, 0);
-    tile_out o;
-    TSTORE(gout, o);
+    TSTORE_CUBE(gout, acc);
 }
 
 } // namespace supernpu::tile_isa

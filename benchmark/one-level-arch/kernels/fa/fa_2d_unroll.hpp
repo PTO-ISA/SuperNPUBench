@@ -21,7 +21,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
     // K load 成 [qD, kTk] 的 Right tile（K^T 形状，Rows=qD=K, Cols=kTk=N），
     // 作为 TMATMUL 右操作数直接参与 Q * K^T。
     using gmQ = global_tensor<dtype, RowMajor<Sq, qD>>;   // Q global: [Sq, qD]
-    using gmK = global_tensor<dtype, RowMajor<Skv, qD>>;  // K global: [Skv, qD]
+    using gmK = global_tensor<dtype, MatrixLayout<qD, Skv, 1, qD>>; // transposed K view: [qD, Skv]
     using gmV = global_tensor<dtype, RowMajor<Skv, vD>>;  // V global: [Skv, vD]
     using gmO = global_tensor<dtype, RowMajor<Sq, vD>>;   // O global: [Sq, vD]
 
@@ -50,18 +50,27 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
     // Softmax row state:
     //   tileMax/tileSum/tileScale 的逻辑 shape 都是 [kTm, 1]。
     //   这里第二维物理写成 8，valid col 为 1，用于满足 Vec tile 对齐/active size 要求。
-    using tileQ      = TileLeft<dtype, kTm, (qD==192? 256:qD), kTm, qD>;
-    using tileK      = TileRight<dtype, (qD==192? 256:qD), kTk, qD, kTk>;
-    using tileW_out  = TileAcc<float, kTm, kTk>;
+    static_assert(kTm <= 32, "Local CUBE_M16/M32 FA supports kTm <= 32");
+    using tileQ      = std::conditional_t<
+        (kTm <= 16), CubeTileM16<dtype, kTm, (qD==192? 256:qD), kTm, qD>,
+        CubeTileM32<dtype, kTm, (qD==192? 256:qD), kTm, qD>>;
+    using tileK      = CubeTileN8<dtype, (qD==192? 256:qD), kTk, qD, kTk>;
+    using tileW_out  = std::conditional_t<
+        (kTm <= 16), CubeAccumulatorM16<float, kTm, kTk>,
+        CubeAccumulatorM32<float, kTm, kTk>>;
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
     using tileW_cast = Tile<Location::Vec, typename tileW_type<dtype>::DType, kTm, kTk, BLayout::ColMajor>;
-    using tileW_left = TileLeft<dtype, kTm, kTk>; 
+    using tileW_left = std::conditional_t<
+        (kTm <= 16), CubeTileM16<dtype, kTm, kTk>,
+        CubeTileM32<dtype, kTm, kTk>>;
 
-    using tileO_out  = TileAcc<float, kTm, vD>;
+    using tileO_out  = std::conditional_t<
+        (kTm <= 16), CubeAccumulatorM16<float, kTm, vD>,
+        CubeAccumulatorM32<float, kTm, vD>>;
     using tileO      = Tile<Location::Vec, float, kTm, vD, BLayout::ColMajor>;
     using tileO_cast = Tile<Location::Vec, dtype, kTm, vD, BLayout::ColMajor>;
 
-    using tileV      = TileRight<dtype, kTk, vD>;
+    using tileV      = CubeTileN8<dtype, kTk, vD>;
     using tileMax    = Tile<Location::Vec, float, kTm, 8, BLayout::ColMajor, kTm, 1>;
     using tileSum    = Tile<Location::Vec, float, kTm, 8, BLayout::ColMajor, kTm, 1>;
     using tileScale  = Tile<Location::Vec, float, kTm, 8, BLayout::ColMajor, kTm, 1>;
@@ -80,6 +89,16 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
     itK gIterK(k_ptr);
     itV gIterV(v_ptr);
     itO gIterO(out_ptr);
+
+    // Persistent CUBE CELL layouts have an explicit GM conversion boundary.
+    // Scratch storage bridges CUBE accumulators and vector tiles used by the
+    // online-softmax stages without relying on the removed ACCCVT/TMOV path.
+    float score_cube_scratch[kTm * kTk];
+    dtype prob_cube_scratch[kTm * kTk];
+    float pv_cube_scratch[kTm * vD];
+    global_tensor<float, RowMajor<kTm, kTk>> gScoreCubeScratch(score_cube_scratch);
+    global_tensor<dtype, RowMajor<kTm, kTk>> gProbCubeScratch(prob_cube_scratch);
+    global_tensor<float, RowMajor<kTm, vD>> gPVCubeScratch(pv_cube_scratch);
 
     // FlashAttention score scale。默认 scaleD=qD，与标准 attention 的 1/sqrt(qD) 一致。
     const float scale = 1.0f / sqrt((float)scaleD);
@@ -105,7 +124,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
         #pragma clang loop unroll(full)
         for(int x=0;x<Xdim;x++){
             auto gQ = gIterQ(i+x,0);
-            TLOAD(tQ[x], gQ);
+            TLOAD_CUBE(tQ[x], gQ);
         }
 
         tileMax tMax[Xdim];
@@ -145,8 +164,8 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             //   after : tK[y] is Right tile, logical loaded shape [kTk, qD]
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
-                auto gK = gIterK(j+y, 0);
-                TLOAD(tK[y], gK);
+                auto gK = gIterK(0, j+y);
+                TLOAD_CUBE(tK[y], gK);
             }
 
             tileW tW[Xdim][Ydim];
@@ -161,7 +180,10 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             for(int x=0;x<Xdim;x++){
                 #pragma clang loop unroll(full)
                 for(int y=0;y<Ydim;y++){
-                    TMATMUL(tW[x][y], tQ[x], tK[y]);
+                    tileW_out tWCube;
+                    TMATMUL(tWCube, tQ[x], tK[y]);
+                    TSTORE_CUBE(gScoreCubeScratch, tWCube);
+                    TLOAD(tW[x][y], gScoreCubeScratch);
                     TMULS(tW[x][y], tW[x][y], scale);
                 }
             }
@@ -271,7 +293,7 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             #pragma clang loop unroll(full)
             for(int y=0;y<Ydim;y++){
                 auto gV = gIterV(j+y, 0);
-                TLOAD(tV[y], gV);
+                TLOAD_CUBE(tV[y], gV);
             }
 
             // Compute current weighted value:
@@ -287,11 +309,20 @@ void flash_attention_2d_unroll_pto(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr, d
             for(int x=0;x<Xdim;x++){
                 #pragma clang loop unroll(full)
                 for(int y=0;y<Ydim;y++){
-                    TCVT(tW_left[x][y], tExpW[x][y]);
+                    TSTORE(gProbCubeScratch, tExpW[x][y]);
+                    TLOAD_CUBE(tW_left[x][y], gProbCubeScratch);
                     if(y==0){
-                        TMATMUL(tPV[x], tW_left[x][y], tV[y]);
+                        tileO_out tPVCube;
+                        TMATMUL(tPVCube, tW_left[x][y], tV[y]);
+                        TSTORE_CUBE(gPVCubeScratch, tPVCube);
+                        TLOAD(tPV[x], gPVCubeScratch);
                     }else{
-                        TMATMUL_ACC(tPV[x], tPV[x], tW_left[x][y], tV[y]);
+                        tileO_out tPVCube;
+                        TMATMUL(tPVCube, tW_left[x][y], tV[y]);
+                        TSTORE_CUBE(gPVCubeScratch, tPVCube);
+                        tileO tPVPart;
+                        TLOAD(tPVPart, gPVCubeScratch);
+                        TADD(tPV[x], tPV[x], tPVPart);
                     }
                 }
             }

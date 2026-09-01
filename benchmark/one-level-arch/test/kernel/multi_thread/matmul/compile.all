@@ -8,31 +8,42 @@
 
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 
-# Build the baseline SharedTile kernel and the variant that reuses Shared B
-# across all M blocks in the same N block. FP32 (default): no ELF suffix.
+# Use a 128x256 output tile.  Scale tK with the input element width so the
+# lower-precision variants retain the same A/B tile byte capacity as FP32.
+# FP32: tK=128; BF16/FP16: 2x; FP8: 4x; FP4: 8x.
+# Build the SharedTile kernel and the variant that reuses Shared B across all
+# M blocks in the same N block. FP32 (default): no ELF suffix.
 make diss TESTCASE=matmul_shared \
     COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=float B=1 M=256 N=256 K=256 \
-    tM=128 tN=64 tK=64
+    tM=128 tN=256 tK=128
 
 make diss TESTCASE=matmul_reuseB \
     COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=float B=1 M=256 N=256 K=256 \
-    tM=128 tN=64 tK=64
+    tM=128 tN=256 tK=128
 
-# BF16 inputs: emits ..._tK64_DType__bf16.elf
+# BF16/FP16 inputs use twice the FP32 K tile extent.
 make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=__bf16 B=1 M=256 N=256 K=256 tM=128 tN=64 tK=64
+    DTYPE=__bf16 B=1 M=256 N=256 K=256 tM=128 tN=256 tK=256
 
-# FP16 inputs: emits ..._tK64_DType__half.elf
 make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=__half B=1 M=256 N=256 K=256 tM=128 tN=64 tK=64
+    DTYPE=__half B=1 M=256 N=256 K=256 tM=128 tN=256 tK=256
 
-# Low-precision SharedTile matmul. HIFP8/HIF4X2/MXFP8/MXFP4 load A/B scales.
-# HIF4X2 stores two logical FP4 values per __fp4_hif4x2 element, so its
+# Low-precision SharedTile matmul. MXFP8/MXFP4 load Shared E8M0 scales;
+# HIFP8 uses the normal TMATMUL input path.
+# HIF4X2 stores two logical FP4 values per __fp4_e1m2x2 element, so its
 # physical K extent is K/2 and one scale byte covers 16 packed K elements.
-for mode in FP8 HIFP8 HIF4X2 MXFP8 MXFP4; do
+# FP8-family inputs use four times the FP32 K tile extent.
+for mode in FP8 HIFP8 MXFP8; do
     make diss TESTCASE=matmul_lowp LP_MODE="$mode" \
         COMPILER_DIR="$COMPILER_DIR" \
-        B=1 M=256 N=256 K=256 tM=128 tN=64 tK=64
+        B=1 M=256 N=256 K=512 tM=128 tN=256 tK=512
+done
+
+# FP4-family inputs use eight times the FP32 K tile extent.
+for mode in HIF4X2 MXFP4; do
+    make diss TESTCASE=matmul_lowp LP_MODE="$mode" \
+        COMPILER_DIR="$COMPILER_DIR" \
+        B=1 M=256 N=256 K=1024 tM=128 tN=256 tK=1024
 done

@@ -6,7 +6,7 @@ int main() {
     float a[256], b[256], d[256], c[256];
     fill_seq(a, 256); fill_seq(b, 256); fill_seq(d, 256); zero(c, 256);
     BENCHSTART;
-    bench_unary<float,M,N>(c,a,[](auto& dst,auto& s){ TCOLEXPAND(dst,s); });
+    bench_expand_copy_col<float,M,N>(c,a,[](auto& dst,auto& s){ TCOLEXPAND(dst,s); });
     BENCHEND;
     return 0;
 }

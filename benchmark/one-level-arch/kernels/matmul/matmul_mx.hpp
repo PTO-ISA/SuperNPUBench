@@ -320,6 +320,7 @@ template <typename dtypeA, const int gM, const int gN, const int gK, const int t
           typename dtypeB = dtypeA, const int typeb_wfactor = 1, const int smatrix_wfactor=1>
 void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8_t *src1_mx) {
   static_assert(typeb_wfactor == 1 );
+  using scale_dtype = __fp8_e8m0;
   static const uint32_t valid_row = (tM > gM) ? gM : tM;
   static const uint32_t valid_col = (tN > gN) ? gN : tN;
   using gm_shapeA = global_tensor<dtypeA, RowMajor<gM, gK/typeb_wfactor>>;
@@ -337,15 +338,15 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
   itB gBIter(src1);
   itC gCIter(dst);
 
-  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>;
-  using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, valid_row, tK/smatrix_wfactor>; // 实际tile尺寸<tM, tK/32>, 需初始化为0
+  using gm_shapeAMX = global_tensor<scale_dtype, RowMajor<gM, gK/smatrix_wfactor>>;
+  using tile_shapeAMX = Tile<Location::Scaling, scale_dtype, tM, tK, BLayout::RowMajor, valid_row, tK/smatrix_wfactor>;
   using itAMX = global_iterator<gm_shapeAMX, tile_shapeAMX>;
-  itAMX gAMXIter(src0_mx);
+  itAMX gAMXIter(reinterpret_cast<scale_dtype *>(src0_mx));
 
-  using gm_shapeBMX = global_tensor<uint8_t, RowMajor<gK/smatrix_wfactor, gN>>;
-  using tile_shapeBMX = Tile<Location::Scaling, uint8_t, tK, tN, BLayout::RowMajor, tK/smatrix_wfactor, valid_col>;
+  using gm_shapeBMX = global_tensor<scale_dtype, RowMajor<gK/smatrix_wfactor, gN>>;
+  using tile_shapeBMX = Tile<Location::Scaling, scale_dtype, tK, tN, BLayout::RowMajor, tK/smatrix_wfactor, valid_col>;
   using itBMX = global_iterator<gm_shapeBMX, tile_shapeBMX>;
-  itBMX gBMXIter(src1_mx);
+  itBMX gBMXIter(reinterpret_cast<scale_dtype *>(src1_mx));
 
   const int Mb = (gM) / tM;
   const int Nb = (gN) / tN;
@@ -359,17 +360,17 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
   using tile_shapeA_tcols = TileLeft<dtypeA, tM, tK, rmd_M, tK>;
   using tile_shapeA_tcorner = TileLeft<dtypeA, tM, tK, rmd_M, rmd_K>;
 
-  using tile_shapeAMX_trows = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, valid_row, rmd_K/smatrix_wfactor>;
-  using tile_shapeAMX_tcols = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, rmd_M, tK/smatrix_wfactor>;
-  using tile_shapeAMX_tcorner = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, rmd_M, rmd_K/smatrix_wfactor>;
+  using tile_shapeAMX_trows = Tile<Location::Scaling, scale_dtype, tM, tK, BLayout::RowMajor, valid_row, rmd_K/smatrix_wfactor>;
+  using tile_shapeAMX_tcols = Tile<Location::Scaling, scale_dtype, tM, tK, BLayout::RowMajor, rmd_M, tK/smatrix_wfactor>;
+  using tile_shapeAMX_tcorner = Tile<Location::Scaling, scale_dtype, tM, tK, BLayout::RowMajor, rmd_M, rmd_K/smatrix_wfactor>;
 
   using tile_shapeB_trows = TileRight<dtypeB, tK, tN, tK, rmd_N>;
   using tile_shapeB_tcols = TileRight<dtypeB, tK, tN, rmd_K, valid_col>;
   using tile_shapeB_tcorner = TileRight<dtypeB, tK, tN, rmd_K, rmd_N>;
 
-  using tile_shapeBMX_trows = Tile<Location::Scaling, uint8_t, tK, tN, BLayout::RowMajor, tK/smatrix_wfactor, rmd_N>;
-  using tile_shapeBMX_tcols = Tile<Location::Scaling, uint8_t, tK, tN, BLayout::RowMajor, rmd_K/smatrix_wfactor, valid_col>;
-  using tile_shapeBMX_tcorner = Tile<Location::Scaling, uint8_t, tK, tN, BLayout::RowMajor, rmd_K/smatrix_wfactor, rmd_N>;
+  using tile_shapeBMX_trows = Tile<Location::Scaling, scale_dtype, tK, tN, BLayout::RowMajor, tK/smatrix_wfactor, rmd_N>;
+  using tile_shapeBMX_tcols = Tile<Location::Scaling, scale_dtype, tK, tN, BLayout::RowMajor, rmd_K/smatrix_wfactor, valid_col>;
+  using tile_shapeBMX_tcorner = Tile<Location::Scaling, scale_dtype, tK, tN, BLayout::RowMajor, rmd_K/smatrix_wfactor, rmd_N>;
 
   using tile_shapeC_trows = TileAcc<float, tM, tN, valid_row, rmd_N>;
   using tile_shapeC_tcols = TileAcc<float, tM, tN, rmd_M, valid_col>;
@@ -614,9 +615,9 @@ template <typename dtypeA, const int gM, const int gN, const int gK, const int t
           typename dtypeB = dtypeA, const int typeb_wfactor = 1, const int smatrix_wfactor=1>
 void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8_t *src1_mx) {
   static_assert(typeb_wfactor == 1 );
+  using scale_dtype = __fp8_e8m0;
   static const uint32_t valid_row = (tM > gM) ? gM : tM;
   static const uint32_t valid_col = (tN > gN) ? gN : tN;
-  static const uint32_t MAX_TILE_NUM = 24; // TODO, check this value
 
   using gm_shapeA = global_tensor<dtypeA, RowMajor<gM, gK/typeb_wfactor>>;
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
@@ -634,15 +635,26 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
   itB gBIter(src1);
   itC gCIter(dst);
 
-  using gm_shapeAMX = global_tensor<uint8_t, RowMajor<gM, gK/smatrix_wfactor>>;
-  using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, valid_row, tK/smatrix_wfactor>;
+  using gm_shapeAMX = global_tensor<scale_dtype, RowMajor<gM, gK/smatrix_wfactor>>;
+  using tile_shapeAMX = Tile<Location::Scaling, scale_dtype, tM, tK, BLayout::RowMajor, valid_row, tK/smatrix_wfactor>;
   using itAMX = global_iterator<gm_shapeAMX, tile_shapeAMX>;
-  itAMX gAMXIter(src0_mx);
+  itAMX gAMXIter(reinterpret_cast<scale_dtype *>(src0_mx));
 
-  using gm_shapeBMX = global_tensor<uint8_t, RowMajor<gK/smatrix_wfactor, gN>>;
-  using tile_shapeBMX = Tile<Location::Scaling, uint8_t, tK, tN, BLayout::RowMajor, tK/smatrix_wfactor, valid_col>;
+  using gm_shapeBMX = global_tensor<scale_dtype, RowMajor<gK/smatrix_wfactor, gN>>;
+  using tile_shapeBMX = Tile<Location::Scaling, scale_dtype, tK, tN, BLayout::RowMajor, tK/smatrix_wfactor, valid_col>;
   using itBMX = global_iterator<gm_shapeBMX, tile_shapeBMX>;
-  itBMX gBMXIter(src1_mx);
+  itBMX gBMXIter(reinterpret_cast<scale_dtype *>(src1_mx));
+
+  constexpr int kLocalTileBytes = 64 * 1024;
+  constexpr int kResidentBytes = tile_shapeACC::LogicalTileBytes +
+                                 tile_shapeB::LogicalTileBytes +
+                                 tile_shapeBMX::LogicalTileBytes;
+  constexpr int kReusePairBytes = tile_shapeA::LogicalTileBytes +
+                                  tile_shapeAMX::LogicalTileBytes;
+  constexpr int MAX_TILE_NUM =
+      (kLocalTileBytes - kResidentBytes) / kReusePairBytes;
+  static_assert(MAX_TILE_NUM > 0,
+                "Local tile capacity cannot hold MX C/B and one A/scale pair");
 
   const int Mb = (gM) / tM;
   const int Nb = (gN) / tN;
@@ -1496,6 +1508,5 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
     // }
   }
 }
-
 
 #endif

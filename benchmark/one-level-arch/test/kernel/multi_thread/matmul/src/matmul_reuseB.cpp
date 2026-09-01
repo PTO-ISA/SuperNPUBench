@@ -1,6 +1,7 @@
 #include "matmul/matmul_shared_reuseB.hpp"
 
 #include <cstdint>
+#include <unistd.h>
 
 #include "benchmark.h"
 #include "fileop.h"
@@ -46,13 +47,15 @@
 int main() {
     using dtype = DTYPE;
     constexpr int kPeNum = 4;
+    constexpr uint32_t kIoTid = 0;
+    const uint32_t tid = get_thread_idx();
 
     static_assert(globM % kPeNum == 0,
                   "global M must be divisible by the PE count");
 
-    dtype src0p[Batch * globM * globK + 2 * ALIGN];
-    dtype src1p[Batch * globK * globN + 2 * ALIGN];
-    float dstp[Batch * globM * globN + 2 * ALIGN];
+    static dtype src0p[Batch * globM * globK + 2 * ALIGN];
+    static dtype src1p[Batch * globK * globN + 2 * ALIGN];
+    static float dstp[Batch * globM * globN + 2 * ALIGN];
 
     dtype *src0 = (dtype *)(((uint64_t)src0p & ALIGN_MASK) + ALIGN);
     dtype *src1 = (dtype *)(((uint64_t)src1p & ALIGN_MASK) + ALIGN);
@@ -61,10 +64,19 @@ int main() {
 #ifdef RES_CHECK
 #define SRC0_PATH CHK_DIR "/src0.bin"
 #define SRC1_PATH CHK_DIR "/src1.bin"
-    readBinaryFile(SRC0_PATH, (uint8_t *)src0,
-                   Batch * globM * globK * sizeof(dtype));
-    readBinaryFile(SRC1_PATH, (uint8_t *)src1,
-                   Batch * globK * globN * sizeof(dtype));
+    static volatile int leader_ready = 0;
+    if (tid == kIoTid) {
+        readBinaryFile(SRC0_PATH, (uint8_t *)src0,
+                       Batch * globM * globK * sizeof(dtype));
+        readBinaryFile(SRC1_PATH, (uint8_t *)src1,
+                       Batch * globK * globN * sizeof(dtype));
+        __asm__ volatile("" : : : "memory");
+        leader_ready = 1;
+    } else {
+        while (!leader_ready) {
+        }
+        __asm__ volatile("" : : : "memory");
+    }
 #endif
 
     BENCHSTART;
@@ -79,8 +91,10 @@ int main() {
 
 #ifdef RES_CHECK
 #define RES_PATH CHK_DIR "/res.bin"
-    writeBinaryFile(RES_PATH, (uint8_t *)dst,
-                    Batch * globM * globN * sizeof(float));
+    if (tid == kIoTid) {
+        writeBinaryFile(RES_PATH, (uint8_t *)dst,
+                        Batch * globM * globN * sizeof(float));
+    }
 #endif
 
     return 0;

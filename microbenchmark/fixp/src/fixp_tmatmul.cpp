@@ -14,8 +14,17 @@
 //   - LReLU / PReLU:              .lrelu(desc) / .prelu(tile)
 //   - max reductions:             .row_max(out) / .row_max(in,out)
 //                                 .group_max<GroupN>(out) / .max_abs()
+// The compile-all mode label "MX" is passed as -DMX.  Undefine it before
+// including TileOP headers because the current API also uses MX as an internal
+// template parameter name.
+#if defined(MX)
+#define FIXP_MODE_MX
+#undef MX
+#endif
+
 #include <common/pto_tileop.hpp>
 #include <cstdint>
+#include <type_traits>
 
 #include "benchmark.h"
 
@@ -32,6 +41,18 @@
 #endif
 
 using namespace pto;
+
+// PTO v0.58 persistent Local CUBE layouts.  A and D/C use the same CUBE_M
+// family; the right matrix operand always uses CUBE_N8.
+template <typename T, int M, int K, int VM = M, int VK = K>
+using cube_left_t = std::conditional_t<
+    (M <= 16), CubeTileM16<T, M, K, VM, VK>,
+    CubeTileM32<T, M, K, VM, VK>>;
+
+template <typename T, int M, int N, int VM = M, int VN = N>
+using cube_acc_t = std::conditional_t<
+    (M <= 16), CubeAccumulatorM16<T, M, N, VM, VN>,
+    CubeAccumulatorM32<T, M, N, VM, VN>>;
 
 // B.IOR SrcReg0 scalar quant descriptor layout:
 //   FP19 scale in [31:13]; signed offset (width S4/S8/S16) starting at bit 37.
@@ -67,20 +88,29 @@ using group_max_tile_t =
 template <int N>
 using bias_tile_t = Tile<Location::Vec, float, 4, N, BLayout::RowMajor, 1, N>;
 
-// FP32 accumulator C tile for ACC ops: full M x N (>=512 B at 32x32).
+// FP32 accumulator C tile for ACC ops. It must match D's CUBE_M layout.
 template <int M, int N>
-using acc_tile_t = Tile<Location::Vec, float, M, N>;
+using acc_tile_t = cube_acc_t<float, M, N>;
 
-// MX scale tiles (per-element, shape matching A / B): ScaleA = M x K,
-// ScaleB = K x N. Dtype __half (pairs with the FP16 operand).
+template <int N>
+using gemv_acc_tile_t = CubeAccumulatorM16<float, 16, N, 1, N>;
+
+// MX scale tiles use one E8M0 value per 32 elements along K.  Physical shapes
+// are padded to at least 512 B while valid shapes follow the matrix contract:
+// ScaleA=M x ceil(K/32), ScaleB=ceil(K/32) x N.
 template <int M, int K>
-using scale_a_tile_t = Tile<Location::Vec, __half, M, K>;
+using scale_a_tile_t =
+    Tile<Location::Vec, __fp8_e8m0, M, 16, BLayout::RowMajor,
+         M, (K + 31) / 32>;
 template <int K, int N>
-using scale_b_tile_t = Tile<Location::Vec, __half, K, N>;
-// TGEMV_MX scale-vec: valid 1 x K __half, padded to >=512 B.
+using scale_b_tile_t =
+    Tile<Location::Vec, __fp8_e8m0, 16, N, BLayout::RowMajor,
+         (K + 31) / 32, N>;
+// TGEMV_MX vector scale: valid 1 x ceil(K/32), padded to 512 B.
 template <int K>
 using scale_vec_tile_t =
-    Tile<Location::Vec, __half, 16, K, BLayout::RowMajor, 1, K>;
+    Tile<Location::Vec, __fp8_e8m0, 16, 32, BLayout::RowMajor,
+         1, (K + 31) / 32>;
 
 template <typename SrcT, typename DstT, typename OptsMaker>
 __attribute__((noinline)) void run_single(SrcT *a_ptr, SrcT *b_ptr,
@@ -89,9 +119,9 @@ __attribute__((noinline)) void run_single(SrcT *a_ptr, SrcT *b_ptr,
   using gm_a = global_tensor<SrcT, RowMajor<kM, kK>>;
   using gm_b = global_tensor<SrcT, RowMajor<kK, kN>>;
   using gm_c = global_tensor<DstT, RowMajor<kM, kN>>;
-  using tile_a = TileLeft<SrcT, kM, kK>;
-  using tile_b = TileRight<SrcT, kK, kN>;
-  using tile_d = Tile<Location::Vec, DstT, kM, kN>;
+  using tile_a = cube_left_t<SrcT, kM, kK>;
+  using tile_b = CubeTileN8<SrcT, kK, kN>;
+  using tile_d = cube_acc_t<DstT, kM, kN>;
 
   gm_a gA(a_ptr);
   gm_b gB(b_ptr);
@@ -101,18 +131,17 @@ __attribute__((noinline)) void run_single(SrcT *a_ptr, SrcT *b_ptr,
   tile_d tD;
 
   BENCHSTART;
-  TLOAD(tA, gA);
-  TLOAD(tB, gB);
+  TLOAD_CUBE(tA, gA);
+  TLOAD_CUBE(tB, gB);
   auto options = maker();
   TMATMUL(tD, tA, tB, options);
-  TSTORE(gC, tD);
+  TSTORE_CUBE(gC, tD);
   BENCHEND;
 }
 
-// TMATMUL-family driver: TLOADs A,B; declares tD; the lambda kernel(tD,tA,tB)
-// calls the specific op (TMATMUL_BIAS / TMATMUL_ACC / TMATMUL_MX / ...) with any
-// aux tiles (C / bias / scales) captured from the enclosing scope. A/B/C are
-// full M x ... tiles (>=512 B at 32x32), so no padding is needed here.
+// TMATMUL-family driver: Cube-loads A/B, declares Cube D, then invokes
+// kernel(tD,tA,tB). The callback calls TMATMUL_BIAS / TMATMUL_ACC /
+// TMATMUL_MX / ... with any auxiliary tiles captured from the enclosing scope.
 template <typename SrcT, typename DstT, typename Kernel>
 __attribute__((noinline)) void run_matmul(SrcT *a_ptr, SrcT *b_ptr,
                                          DstT *d_ptr, Kernel kernel) {
@@ -120,9 +149,9 @@ __attribute__((noinline)) void run_matmul(SrcT *a_ptr, SrcT *b_ptr,
   using gm_a = global_tensor<SrcT, RowMajor<kM, kK>>;
   using gm_b = global_tensor<SrcT, RowMajor<kK, kN>>;
   using gm_d = global_tensor<DstT, RowMajor<kM, kN>>;
-  using tile_a = TileLeft<SrcT, kM, kK>;
-  using tile_b = TileRight<SrcT, kK, kN>;
-  using tile_d = Tile<Location::Vec, DstT, kM, kN>;
+  using tile_a = cube_left_t<SrcT, kM, kK>;
+  using tile_b = CubeTileN8<SrcT, kK, kN>;
+  using tile_d = cube_acc_t<DstT, kM, kN>;
 
   gm_a gA(a_ptr);
   gm_b gB(b_ptr);
@@ -132,17 +161,16 @@ __attribute__((noinline)) void run_matmul(SrcT *a_ptr, SrcT *b_ptr,
   tile_d tD;
 
   BENCHSTART;
-  TLOAD(tA, gA);
-  TLOAD(tB, gB);
+  TLOAD_CUBE(tA, gA);
+  TLOAD_CUBE(tB, gB);
   kernel(tD, tA, tB);
-  TSTORE(gD, tD);
+  TSTORE_CUBE(gD, tD);
   BENCHEND;
 }
 
-// TGEMV-family driver (M=1): vec=Left(1xK), mtx=Right(KxN), d=Vec(1xN).
-// vec and d are padded to >=512 B physical (valid 1xK / 1xN) per the
-// tile-register contract; mtx is KxN (already >=512 B at 32x32). The lambda
-// kernel(tD,tMtx,tVec) calls the specific TGEMV op with captured aux tiles.
+// TGEMV-family driver (M=1): vec=CUBE_M16(1xK valid), mtx=CUBE_N8(KxN),
+// D=CUBE_M16(1xN valid). The lambda kernel(tD,tMtx,tVec) calls the specific
+// TGEMV op with captured auxiliary tiles.
 template <typename SrcT, typename DstT, typename Kernel>
 __attribute__((noinline)) void run_gemv(SrcT *vec_ptr, SrcT *mtx_ptr,
                                         DstT *d_ptr, Kernel kernel) {
@@ -150,9 +178,9 @@ __attribute__((noinline)) void run_gemv(SrcT *vec_ptr, SrcT *mtx_ptr,
   using gm_vec = global_tensor<SrcT, RowMajor<1, kK>>;
   using gm_mtx = global_tensor<SrcT, RowMajor<kK, kN>>;
   using gm_d = global_tensor<DstT, RowMajor<1, kN>>;
-  using tile_vec = Tile<Location::Left, SrcT, 16, kK, BLayout::RowMajor, 1, kK>;
-  using tile_mtx = TileRight<SrcT, kK, kN>;
-  using tile_d = Tile<Location::Vec, DstT, 16, kN, BLayout::RowMajor, 1, kN>;
+  using tile_vec = CubeTileM16<SrcT, 16, kK, 1, kK>;
+  using tile_mtx = CubeTileN8<SrcT, kK, kN>;
+  using tile_d = CubeAccumulatorM16<DstT, 16, kN, 1, kN>;
 
   gm_vec gV(vec_ptr);
   gm_mtx gMx(mtx_ptr);
@@ -162,10 +190,10 @@ __attribute__((noinline)) void run_gemv(SrcT *vec_ptr, SrcT *mtx_ptr,
   tile_d tD;
 
   BENCHSTART;
-  TLOAD(tVec, gV);
-  TLOAD(tMtx, gMx);
+  TLOAD_CUBE(tVec, gV);
+  TLOAD_CUBE(tMtx, gMx);
   kernel(tD, tMtx, tVec);
-  TSTORE(gD, tD);
+  TSTORE_CUBE(gD, tD);
   BENCHEND;
 }
 
@@ -217,28 +245,28 @@ int main() {
 
 // --- scalar quant descriptor modes ---------------------------------------
 #elif defined(S_REQS8)
-  buf_t<__half, int8_t> buf;
-  run_single<__half, int8_t>(buf.a, buf.b, buf.d, [] {
+  buf_t<int8_t, int8_t> buf;
+  run_single<int8_t, int8_t>(buf.a, buf.b, buf.d, [] {
     return fixp::scalar<FixpPreQuantMode::REQS8Pre>(mk_desc(1, 0, 9));
   });
 #elif defined(S_DEQF16)
-  buf_t<__half, __half> buf;
-  run_single<__half, __half>(buf.a, buf.b, buf.d, [] {
+  buf_t<int8_t, __half> buf;
+  run_single<int8_t, __half>(buf.a, buf.b, buf.d, [] {
     return fixp::scalar<FixpPreQuantMode::DEQF16>(mk_desc(1, 0, 0));
   });
 #elif defined(S_SHIFTS16)
-  buf_t<__half, int16_t> buf;
-  run_single<__half, int16_t>(buf.a, buf.b, buf.d, [] {
+  buf_t<int8_t, int16_t> buf;
+  run_single<int8_t, int16_t>(buf.a, buf.b, buf.d, [] {
     return fixp::scalar<FixpPreQuantMode::SHIFTS322S16>(mk_desc(1, 0, 17));
   });
 #elif defined(S_QF_S4)
-  buf_t<__half, __int4x2> buf;
-  run_single<__half, __int4x2>(buf.a, buf.b, buf.d, [] {
+  buf_t<int8_t, __int4x2> buf;
+  run_single<int8_t, __int4x2>(buf.a, buf.b, buf.d, [] {
     return fixp::scalar<FixpPreQuantMode::QF322S4Pre>(mk_desc(1, 0, 5));
   });
 #elif defined(S_QF_S16)
-  buf_t<__half, int16_t> buf;
-  run_single<__half, int16_t>(buf.a, buf.b, buf.d, [] {
+  buf_t<int8_t, int16_t> buf;
+  run_single<int8_t, int16_t>(buf.a, buf.b, buf.d, [] {
     return fixp::scalar<FixpPreQuantMode::QF322S16Pre>(mk_desc(1, 0, 17));
   });
 #elif defined(S_QF_S8)
@@ -272,40 +300,40 @@ int main() {
     return fixp::scalar<FixpPreQuantMode::QF322BF16Pre>(mk_desc(1, 0, 9));
   });
 #elif defined(S_QS_BF16)
-  buf_t<__half, __bf16> buf;
-  run_single<__half, __bf16>(buf.a, buf.b, buf.d, [] {
+  buf_t<int8_t, __bf16> buf;
+  run_single<int8_t, __bf16>(buf.a, buf.b, buf.d, [] {
     return fixp::scalar<FixpPreQuantMode::QS322BF16Pre>(mk_desc(1, 0, 9));
   });
 
 // --- vector quant parameter tile modes ------------------------------------
 #elif defined(V_REQS8)
-  buf_t<__half, int8_t> buf;
+  buf_t<int8_t, int8_t> buf;
   par_tile_t<TN> quant;
-  run_single<__half, int8_t>(buf.a, buf.b, buf.d, [&] {
+  run_single<int8_t, int8_t>(buf.a, buf.b, buf.d, [&] {
     return fixp::vector<FixpPreQuantMode::VREQS8Pre>(quant);
   });
 #elif defined(V_DEQF16)
-  buf_t<__half, __half> buf;
+  buf_t<int8_t, __half> buf;
   par_tile_t<TN> quant;
-  run_single<__half, __half>(buf.a, buf.b, buf.d, [&] {
+  run_single<int8_t, __half>(buf.a, buf.b, buf.d, [&] {
     return fixp::vector<FixpPreQuantMode::VDEQF16>(quant);
   });
 #elif defined(V_SHIFTS16)
-  buf_t<__half, int16_t> buf;
+  buf_t<int8_t, int16_t> buf;
   par_tile_t<TN> quant;
-  run_single<__half, int16_t>(buf.a, buf.b, buf.d, [&] {
+  run_single<int8_t, int16_t>(buf.a, buf.b, buf.d, [&] {
     return fixp::vector<FixpPreQuantMode::VSHIFTS322S16>(quant);
   });
 #elif defined(V_QF_S4)
-  buf_t<__half, __int4x2> buf;
+  buf_t<int8_t, __int4x2> buf;
   par_tile_t<TN> quant;
-  run_single<__half, __int4x2>(buf.a, buf.b, buf.d, [&] {
+  run_single<int8_t, __int4x2>(buf.a, buf.b, buf.d, [&] {
     return fixp::vector<FixpPreQuantMode::VQF322S4Pre>(quant);
   });
 #elif defined(V_QF_S16)
-  buf_t<__half, int16_t> buf;
+  buf_t<int8_t, int16_t> buf;
   par_tile_t<TN> quant;
-  run_single<__half, int16_t>(buf.a, buf.b, buf.d, [&] {
+  run_single<int8_t, int16_t>(buf.a, buf.b, buf.d, [&] {
     return fixp::vector<FixpPreQuantMode::VQF322S16Pre>(quant);
   });
 #elif defined(V_QF_S8)
@@ -344,9 +372,9 @@ int main() {
     return fixp::vector<FixpPreQuantMode::VQF322F32Pre>(quant);
   });
 #elif defined(V_QS_BF16)
-  buf_t<__half, __bf16> buf;
+  buf_t<int8_t, __bf16> buf;
   par_tile_t<TN> quant;
-  run_single<__half, __bf16>(buf.a, buf.b, buf.d, [&] {
+  run_single<int8_t, __bf16>(buf.a, buf.b, buf.d, [&] {
     return fixp::vector<FixpPreQuantMode::VQS322BF16Pre>(quant);
   });
 
@@ -454,29 +482,29 @@ int main() {
       [&](auto &tD, auto &tA, auto &tB) {
         TMATMUL_ACC(tD, cacc, tA, tB, fixp::keep_acc());
       });
-#elif defined(MX)                         // C = (A*ScaleA)*(B*ScaleB)
-  buf_t<__half, float> buf;
+#elif defined(FIXP_MODE_MX)               // C = (A*ScaleA)*(B*ScaleB)
+  buf_t<__fp8_e4m3, float> buf;
   scale_a_tile_t<TM, TK> sa;
   scale_b_tile_t<TK, TN> sb;
-  run_matmul<__half, float>(buf.a, buf.b, buf.d,
+  run_matmul<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
         TMATMUL_MX(tD, tA, sa, tB, sb, fixp::keep_acc());
       });
 #elif defined(MXBIAS)                     // D = (A*ScaleA)*(B*ScaleB) + Bias
-  buf_t<__half, float> buf;
+  buf_t<__fp8_e4m3, float> buf;
   scale_a_tile_t<TM, TK> sa;
   scale_b_tile_t<TK, TN> sb;
   bias_tile_t<TN> bias;
-  run_matmul<__half, float>(buf.a, buf.b, buf.d,
+  run_matmul<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
         TMATMUL_MX_BIAS(tD, tA, sa, tB, sb, bias, fixp::keep_acc());
       });
 #elif defined(MXACC)                      // D = C + (A*ScaleA)*(B*ScaleB)
-  buf_t<__half, float> buf;
+  buf_t<__fp8_e4m3, float> buf;
   acc_tile_t<TM, TN> cacc;
   scale_a_tile_t<TM, TK> sa;
   scale_b_tile_t<TK, TN> sb;
-  run_matmul<__half, float>(buf.a, buf.b, buf.d,
+  run_matmul<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
         TMATMUL_MX_ACC(tD, cacc, tA, sa, tB, sb, fixp::keep_acc());
       });
@@ -495,34 +523,34 @@ int main() {
       });
 #elif defined(GEMV_ACC)
   buf_t<__half, float> buf;
-  bias_tile_t<TN> cacc;    // GEMV accumulator C is 1 x N
+  gemv_acc_tile_t<TN> cacc;
   run_gemv<__half, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
         TGEMV_ACC(tD, cacc, tMtx, tVec, fixp::keep_acc());
       });
 #elif defined(GEMV_MX)
-  buf_t<__half, float> buf;
+  buf_t<__fp8_e4m3, float> buf;
   scale_b_tile_t<TK, TN> smtx;   // scale for mtx: K x N
   scale_vec_tile_t<TK> svec;     // scale for vec: 1 x K
-  run_gemv<__half, float>(buf.a, buf.b, buf.d,
+  run_gemv<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
         TGEMV_MX(tD, tMtx, smtx, tVec, svec, fixp::keep_acc());
       });
 #elif defined(GEMV_MX_BIAS)
-  buf_t<__half, float> buf;
+  buf_t<__fp8_e4m3, float> buf;
   scale_b_tile_t<TK, TN> smtx;
   scale_vec_tile_t<TK> svec;
   bias_tile_t<TN> bias;
-  run_gemv<__half, float>(buf.a, buf.b, buf.d,
+  run_gemv<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
         TGEMV_MX_BIAS(tD, tMtx, smtx, tVec, svec, bias, fixp::keep_acc());
       });
 #elif defined(GEMV_MX_ACC)
-  buf_t<__half, float> buf;
-  bias_tile_t<TN> cacc;
+  buf_t<__fp8_e4m3, float> buf;
+  gemv_acc_tile_t<TN> cacc;
   scale_b_tile_t<TK, TN> smtx;
   scale_vec_tile_t<TK> svec;
-  run_gemv<__half, float>(buf.a, buf.b, buf.d,
+  run_gemv<__fp8_e4m3, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
         TGEMV_MX_ACC(tD, cacc, tMtx, smtx, tVec, svec, fixp::keep_acc());
       });
@@ -543,10 +571,10 @@ int main() {
         TMATMUL_ACC(tD, cacc, tA, tB, fixp::s8(mk_desc(1, 0, 9)));
       });
 #elif defined(MX_S8)
-  buf_t<__half, int8_t> buf;
+  buf_t<__fp8_e4m3, int8_t> buf;
   scale_a_tile_t<TM, TK> sa;
   scale_b_tile_t<TK, TN> sb;
-  run_matmul<__half, int8_t>(buf.a, buf.b, buf.d,
+  run_matmul<__fp8_e4m3, int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
         TMATMUL_MX(tD, tA, sa, tB, sb, fixp::s8(mk_desc(1, 0, 9)));
       });
@@ -557,10 +585,10 @@ int main() {
         TGEMV(tD, tMtx, tVec, fixp::s8(mk_desc(1, 0, 9)));
       });
 #elif defined(GEMV_MX_S8)
-  buf_t<__half, int8_t> buf;
+  buf_t<__fp8_e4m3, int8_t> buf;
   scale_b_tile_t<TK, TN> smtx;
   scale_vec_tile_t<TK> svec;
-  run_gemv<__half, int8_t>(buf.a, buf.b, buf.d,
+  run_gemv<__fp8_e4m3, int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tMtx, auto &tVec) {
         TGEMV_MX(tD, tMtx, smtx, tVec, svec, fixp::s8(mk_desc(1, 0, 9)));
       });
@@ -570,14 +598,16 @@ int main() {
   buf_t<__half, float> buf;
   run_matmul<__half, float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        SharedTile<std::decay_t<decltype(tB)>> b_shared(tB);
+        SharedMatrixRight<__half, TK, TN> b_desc;
+        SharedTile<decltype(b_desc)> b_shared(b_desc);
         TMATMUL(tD, tA, b_shared, fixp::keep_acc());
       });
 #elif defined(S8_SHARED)                   // Shared B + s8 scalar quant
   buf_t<__half, int8_t> buf;
   run_matmul<__half, int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        SharedTile<std::decay_t<decltype(tB)>> b_shared(tB);
+        SharedMatrixRight<__half, TK, TN> b_desc;
+        SharedTile<decltype(b_desc)> b_shared(b_desc);
         TMATMUL(tD, tA, b_shared, fixp::s8(mk_desc(1, 0, 9)));
       });
 

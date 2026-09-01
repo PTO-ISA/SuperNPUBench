@@ -27,9 +27,12 @@ void tmatmul_unit_kernel(float* score_ptr, dtype* q_loaded_ptr, dtype* k_loaded_
     using gmK = global_tensor<dtype, RowMajor<K, N>>;
     using gmScore = global_tensor<float, RowMajor<M, N>>;
 
-    using tileQ = TileLeft<dtype, M, K>;
-    using tileK = TileRight<dtype, K, N>;
-    using tileAcc = TileAcc<float, M, N>;
+    using tileQ = std::conditional_t<(M <= 16), CubeTileM16<dtype, M, K>,
+                                     CubeTileM32<dtype, M, K>>;
+    using tileK = CubeTileN8<dtype, K, N>;
+    using tileAcc = std::conditional_t<
+        (M <= 16), CubeAccumulatorM16<float, M, N>,
+        CubeAccumulatorM32<float, M, N>>;
     using tileScore = Tile<Location::Vec, float, M, N, BLayout::ColMajor>;
 
     using itQ = global_iterator<gmQ, tileQ>;
@@ -48,11 +51,10 @@ void tmatmul_unit_kernel(float* score_ptr, dtype* q_loaded_ptr, dtype* k_loaded_
     auto q_tile_gm = q_iter(0, 0);
     auto k_tile_gm = k_iter(0, 0);
     auto gScore = score_iter(0, 0);
-    TLOAD(tQ, q_tile_gm);
-    TLOAD(tK, k_tile_gm);
+    TLOAD_CUBE(tQ, q_tile_gm);
+    TLOAD_CUBE(tK, k_tile_gm);
     TMATMUL(tAcc, tQ, tK);
-    ACCCVT(tScore, tAcc);
-    TSTORE(gScore, tScore);
+    TSTORE_CUBE(gScore, tAcc);
 
 #ifdef RES_CHECK
     using itQDump = global_iterator<gmQ, tileQ>;
@@ -61,8 +63,8 @@ void tmatmul_unit_kernel(float* score_ptr, dtype* q_loaded_ptr, dtype* k_loaded_
     itKDump k_dump_iter(k_loaded_ptr);
     auto qDump = q_dump_iter(0, 0);
     auto kDump = k_dump_iter(0, 0);
-    TSTORE(qDump, tQ);
-    TSTORE(kDump, tK);
+    TSTORE_CUBE(qDump, tQ);
+    TSTORE_CUBE(kDump, tK);
 #endif
 }
 

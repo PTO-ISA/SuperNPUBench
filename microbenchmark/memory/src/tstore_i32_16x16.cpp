@@ -3,8 +3,9 @@
 // TSTORE (store) i32 16x16
 int main() {
     constexpr int M = 16, N = 16;
-    int32_t a[M*N], c[M*N], idx[M*N], mask[M*N];
-    fill_seq(a, M*N); fill_idx(idx, M*N); fill_const(mask, M*N, (int32_t)1); zero(c, M*N);
+    int32_t a[M*N], c[M*N];
+    int32_t idx[M*N]; uint16_t mask[M*N];
+    fill_seq(a, M*N); fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);
     BENCHSTART;
     bench_load<int32_t,M,N>(c,a);  // load then store
     BENCHEND;
