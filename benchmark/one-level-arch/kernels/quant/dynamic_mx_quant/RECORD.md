@@ -398,6 +398,13 @@ TileSize 上界。`fa_hif4.hpp:85-92` 发射已验证；但为寄存器侧 fract
 > `R2=0`。**data 输出逐字节匹配 golden**（32 行全对，无棋盘错位；e4m3 输出为 1B tile，B.IOR 元素步长==字节步长故无需字节步长补丁，见问题19）；**scale 值逐字节匹配**（仅布局差
 > = 问题5 parity 交织，值本身一致）。故原生 CmpMode 路径数值正确性已坐实。
 
+> **更新（2026-09-01，供 codex 系列）**：本节下文（2026-08-19/20）中「`compute_cublas_core` 末尾保留
+> `IDEAL VERSION (blocked)`（`:522`）」「其余 5 个 kernel 仍调用规避版」等**表述已过时**——(1) 该函数末尾的
+> IDEAL VERSION 注释块**已删除**；(2) 3 个 cuBLAS kernel（tail / nontail plain / nontail bigbs）均已**就地内联**
+> native `TCMPS<CmpMode>` 版本、`common::compute_cublas_core` **无 kernel 调用**（dead reference）；(3) 该 reference
+> 函数保留 min/max 比较模拟，但其守卫掩码组合已从数据域 TAND/TOR 改为**合规嵌套 TSEL**（PTO ISA 规范，见
+> README「cuBLAS 守卫掩码的 PTO ISA 合规写法」小节，属 kernel 合规、非本 CmpMode 缺口）。下文按历史记录保留。
+
 ### 结论（缺口闭合前的历史记录）
 
 `-D__linx` 构建下曾**只有 3-参 mode-less（语义固定 EQ）的 `TCMP`/`TCMPS`**，没有带 CmpMode 的
@@ -1386,7 +1393,7 @@ byte1=`0x02`），32 个 fp4 被解包成 32 字节、宽度翻倍越界。**证
 
 ### 结论
 
-`compute_cublas_core` 的 IDEAL 版本在 **u32 域**用 `TCMPS<CmpMode::LT>(finite, raw, FP32_EXP_MASK)`
+cuBLAS plain 路径（各 kernel 内联的 native CmpMode 版本）在 **u32 域**用 `TCMPS<CmpMode::LT>(finite, raw, FP32_EXP_MASK)`
 等直接比较 fp32 位型（`raw = reinterpret_tile<uint32_t>(max_f)`）。gfrun 挂在 compare/select 白名单：
 
 ```

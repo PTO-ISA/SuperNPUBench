@@ -425,9 +425,8 @@ AscendC 实现两种等价形态：
 | 位操作 | TANDS | 掩码提取 |
 | 移位 | TSHRS, TSHLS | 指数提取、位模式构造 |
 | 归约 | TROWMAX / TCOLMAX | tail 行最大 / nontail 列最大（U16 和 FP32） |
-| 比较 | TCMPS, TCMP | EQ 掩码（GT/LT 用 min/max 模拟） |
-| 逻辑 | TAND, TOR, TNOT | 守卫掩码代数（cuBLAS） |
-| 选择 | TSEL | 条件赋值 `mask?src:dst` |
+| 比较 | TCMPS, TCMP | 产 packed predicate；kernel 用原生 `TCMPS<CmpMode>`（6 模式），dead-reference `compute_cublas_core` 保留 min/max EQ 模拟 |
+| 选择 | TSEL | 条件赋值 `mask?src:dst`；cuBLAS 守卫复合条件（`&&`/`||`）用**嵌套 TSEL** 组合（PTO ISA 合规，取代旧的数据域 TAND/TOR/TNOT 掩码代数——已全部移除，见 README 合规小节） |
 | 广播 | TEXPANDS | 标量广播到 tile |
 | 绝对值 | TABS | 浮点绝对值（仅 cuBLAS） |
 | 最大/最小 | TMAXS, TMINS | 标量钳位；LT/GT 模拟 |
