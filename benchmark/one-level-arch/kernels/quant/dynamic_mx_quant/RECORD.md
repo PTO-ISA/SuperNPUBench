@@ -1762,3 +1762,70 @@ GFRUN_FORCE_DIRECTBOOT_ABI=1 bin/gfrun -f <res_check elf> -s softcore.multiThrea
 **未修**（gfrun 侧 `HasHostedRuntime` 误判是根因）；当前用 env 开关规避，仅为在无 QEMU 环境跑精度流程。
 正式修复应在 gfrun 侧修正 res_check 直接引导镜像的 hosted/direct-boot 判定，或提供 CLI 覆盖。属跑官方精度
 流程（QEMU 缺席时）的前置，与问题15/问题22 的 e8m0 面组合后 `tail_ocp_fp8` 精度方能端到端验证。
+
+## 问题24：非尾轴 4-PE gfrun res_check 落盘随问题规模出现"仅 PE0 段有数据、其余块行为零"，小尺寸复现、大尺寸不复现（**根因未定位**）
+
+> **本条目记录一个观察到的现象，其根因尚未定位。下文所有"可能方向"均为未经证实的猜测，不作结论。**
+> 现象在 `SuperScalarModel`（gfrun）多-PE（`multiThreadNum=4`）+ res_check 落盘流程下出现；是否属 gfrun、
+> harness（driver/`writeBinaryFile`）、抑或其它，均未确定。**kernel 单 PE 计算结果已验证正确**（见下）。
+
+### 现象
+
+非尾轴 kernel 做 4-PE SPMD（按块行 kb 连续切 4 段，每 PE 写不重叠的 y 行段 + scale 行段）后，用
+`GFRUN_FORCE_DIRECTBOOT_ABI=1 gfrun -f <res_check elf> -s softcore.multiThreadNum=4` 跑，落盘的
+`output.bin` / `scale_output.bin`：
+
+- **仅 PE0 段（kb 0..numKb/4−1）有正确数据，其余块行为零**，另有末块（kb=numKb−1）出现少量非零"碎片"。
+- 输出文件为**满尺寸**（非截断），无 `writeBinaryFile` 的 "faild" 报错。
+
+同一 kernel 随**问题规模**呈现确定性差异（`Axis=512, BlockSize=32` 固定，仅变 `Post`）：
+
+| Post | numN | 落盘覆盖 | 结果 |
+|---|---|---|---|
+| 64 / 96 / 128 / 192 | 2 / 3 / 4 / 6 | 仅 kb 0–3（PE0 段）+ kb15 碎片 | 挂 |
+| 256 | 8 | 全部 16 块行完整、逐字节匹配金标 | 过 |
+
+临界点落在 Post=192 与 256 之间。
+
+### 复现范围（**不限于本次改的 kernel**）
+
+- `nontail_cublas_fp8`（此前 Post=256 记为"精度通过"的 kernel）：**Post≤192 同样挂，签名一致**；其
+  Post=256 的"通过"是在阈值之上。故该 kernel 4-PE 精度结论**只在大尺寸成立、非规模无关的可靠证据**。
+- `nontail_ocp_fp4`（本次新增 4-PE）：Post=64 挂，签名与 cublas 完全一致。
+- 两者 `multiThreadNum=1` 单 PE 均**写满全部块行、逐字节正确** → kernel 计算逻辑无误。
+
+### 已排除的方向（各带证据）
+
+1. **不是 kernel 代码差异**：`nontail_cublas_fp8` 的 Post=128 与 256 反汇编逐条对比——tile 指令流同序、
+   tile 维度（lb0/lb1/lb2=64/32/64）相同；差异仅为内层 numN 循环次数、访存 stride 常量（正比于 Post，各自
+   正确）、寄存器分配。无任何会改变计算的代码区别。
+2. **不是 write 截断/超时**：输出文件满尺寸，无 "faild"；落盘内容本身就是"半成品"内存状态。
+3. **不是通用内存/dump 竞争**：最小**标量**探针（每 PE 用标量写把自己 kb 段写成 `tid+1`）在任意尺寸、
+   甚至加大每块计算延迟后，落盘**均完整**（4 段齐全）。
+4. **不是单纯 tile 存储路径**：`TLOAD+TCVT+TSTORE` identity-copy tile 探针在 Post=64 落盘**也完整**。
+5. **不是每 PE 工作量不均**：挂/过两种情况每 PE 块数相同（PE0 仅多约 3 条收尾指令），均衡。
+
+### 确定性事实（供后续定位）
+
+- 运行时：4 个 PE 均执行完整 `main()`（`readBinaryFile`→kernel→两次 `writeBinaryFile`）；worker 跑完
+  `main` 后 park（`test/common/src/group_worker_runtime.c`）。
+- `SoftCore::Step()`（`emulator/SoftCore.cpp`）为 round-robin（thread 0 先跑）；`emulator/SoftCore.cpp:379-388`
+  注释与逻辑："a passing write from one PE terminates the complete SPMD program instance" —— 任一 PE 触发
+  即置全部 `simEnd` 并立即返回。
+- `writeBinary.h`/`readBinary.h` **未被本次改动**（RES_CHECK 静音 printf 是既有已提交规避，见问题相关的
+  writev 挂起说明），非本问题引入。
+
+### 可能方向（**均为未证实猜测，不作结论**）
+
+- 多-PE 下 tile 存储对 host 侧 `writeBinaryFile` 读取的可见时序，与"首个 PE 到达终点即终止全组"之间的
+  交互；是否存在提交/可见延迟未验证。
+- 访存 stride/对齐的规模相关性（Post=256 时输入行 stride=512B，恰为常见 bank/对齐宽度）；是否影响多-PE
+  写回落 bank 未验证。
+- 注：曾试过"仅 PE0 落盘 + 共享 .bss 标志 barrier"，PE0 自旋等标志时**死锁**（标量 `.bss` 跨 PE 读未即时
+  可见），说明标量与 tile 存储的跨-PE 可见性可能不同——但这同样只是线索，非定论。
+
+### 状态
+
+**未定位、未修**。kernel 逻辑已由单 PE 逐字节正确佐证；4-PE 下的落盘现象是**规模相关**的，且在既有
+`nontail_cublas_fp8` 上同样存在。当前 4-PE 精度验证仅在 Post≥256 量级可得到完整落盘。根因待进一步在
+gfrun/harness 侧定位（tile 存储可见性、组终止时序、访存对齐等方向均待验证）。

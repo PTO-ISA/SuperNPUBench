@@ -70,9 +70,13 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
     using namespace pto;
 
     // Sub-chunk data/input tiles: physical [R_sub, TileN].
-    using tile_x  = Tile<Location::Vec, InT,      R_sub, TileN,     BLayout::RowMajor>;
-    using tile_f  = Tile<Location::Vec, float,    R_sub, TileN,     BLayout::RowMajor>;
-    using tile_o  = Tile<Location::Vec, OutT,     R_sub, TileN / 2, BLayout::RowMajor>;
+    using tile_x  = Tile<Location::Vec, InT,      R_sub, TileN, BLayout::RowMajor>;
+    using tile_f  = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor>;
+    // fp4 输出 tile：ELEMENT-列形（physical Cols=TileN，与源 fp32 同列），TCVT 走 fp4 打包
+    //   specialization；存储侧 Post/2 字节经 gm_y byte 域 + 字节基址折叠 y_iter。旧
+    //   [R_sub, TileN/2] 字节列约定会让 TCVT 落 ordinary 路径编译崩（同 nontail_ocp_fp4 plain /
+    //   tail_ocp_fp4 的 element-列迁移，0.58.3 工具链头已删 32B 列对齐 assert）。
+    using tile_o  = Tile<Location::Vec, OutT,     R_sub, TileN, BLayout::RowMajor>;
     // Boxed (valid row=1) fp32 value-domain running-max accumulator + partial.
     using tile_maxf      = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
     // Boxed (valid row=1) scale / recip carriers: one scalar per Post column.
@@ -86,7 +90,6 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
     using gm_s  = global_tensor<__fp8_e8m0, RowMajor<scaleRows, Post>>;
 
     global_iterator<gm_x,  tile_x>  x_iter(x);
-    global_iterator<gm_y,  tile_o>  y_iter(reinterpret_cast<uint8_t *>(y));
 
     for (int kb = 0; kb < numKb; ++kb) {
         for (int n = 0; n < numN; ++n) {
@@ -164,7 +167,11 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
             for (int s = 0; s < numSub; ++s) {
                 const int rb = kb * numSub + s;
                 auto gx = x_iter(rb, n);
-                auto gy = y_iter(rb, n);
+                // fp4 输出 element-列形对字节域 gm_y：字节基址折叠——子块行 rb 偏
+                //   rb*R_sub 行 × (Post/2) 字节行距，列块 n 偏 n*(TileN/2) 字节。
+                global_iterator<gm_y, tile_o> y_iter(
+                    reinterpret_cast<uint8_t *>(y) + rb * R_sub * (Post / 2) + n * (TileN / 2));
+                auto gy = y_iter(0, 0);
                 tile_x xq;
                 TLOAD(xq, gx);
                 tile_o oq;

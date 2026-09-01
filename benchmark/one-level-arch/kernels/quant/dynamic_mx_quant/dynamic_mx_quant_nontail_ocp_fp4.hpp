@@ -39,9 +39,11 @@ namespace supernpu::tile_isa::mxquant {
 // not (large BlockSize). TileN stays an explicit param here so the dispatcher can
 // feed the derived value.
 template <int Axis, int Post, int BlockSize = 32, int TileN = 64, typename OutT = __fp4_e2m1x2,
-          typename InT = __bf16>
+          typename InT = __bf16, int kPeNum = 1>
 static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
     static_assert(Axis > 0 && Post > 0, "dims must be positive");
+    static_assert(kPeNum == 1 || kPeNum == 4,
+                  "kPeNum must be 1 (single PE) or 4 (SoftCore.h kCorePeCount)");
     static_assert(Axis % BlockSize == 0, "Axis must be multiple of BlockSize");
     static_assert(Post % TileN == 0, "Post must be multiple of TileN");
     static_assert(TileN % 64 == 0,
@@ -66,9 +68,15 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
 
     using namespace pto;
 
-    using tile_x  = Tile<Location::Vec, InT,    BlockSize, TileN,     BLayout::RowMajor>;
-    using tile_f  = Tile<Location::Vec, float,  BlockSize, TileN,     BLayout::RowMajor>;
-    using tile_o  = Tile<Location::Vec, OutT,   BlockSize, TileN / 2, BLayout::RowMajor>;
+    using tile_x  = Tile<Location::Vec, InT,    BlockSize, TileN, BLayout::RowMajor>;
+    using tile_f  = Tile<Location::Vec, float,  BlockSize, TileN, BLayout::RowMajor>;
+    // fp4 输出 tile：ELEMENT-列形（physical Cols=TileN，与源 fp32 tile 同列数），故 TCVT
+    //   源/目标 physical/valid Rows/Cols 完全一致、走 fp4 打包 specialization；gfrun 按
+    //   BytesOf(fp4) 打包两个 4bit/字节（SuperScalarModel 31f7a8f）。存储侧仍是 Post/2 字节
+    //   （gm_y byte 域 + 字节基址折叠 y_iter）。旧的 [BlockSize, TileN/2] 字节列约定会让
+    //   TCVT 落到 ordinary 路径（dst Cols=TileN/2≠src Cols=TileN）而编译崩——与 tail_ocp_fp4
+    //   同一 element-列迁移（0.58.3 工具链头已删 32B 列对齐 assert，无需 PW-padding）。
+    using tile_o  = Tile<Location::Vec, OutT,   BlockSize, TileN, BLayout::RowMajor>;
     // Value-domain reduced per-block |max| (boxed valid row=1), per InT domain.
     using tile_maxh      = Tile<Location::Vec, __half,   BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
     using tile_maxf      = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
@@ -83,12 +91,31 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
     using gm_s  = global_tensor<__fp8_e8m0, RowMajor<scaleRows, Post>>;
 
     global_iterator<gm_x,  tile_x>  x_iter(x);
-    global_iterator<gm_y,  tile_o>  y_iter(reinterpret_cast<uint8_t *>(y));
 
-    for (int kb = 0; kb < numKb; ++kb) {
+    // SPMD 4-PE：按**块行 kb**（归约块索引，= 输出行块 / scale 行）连续切分给 kPeNum 个
+    //   PE，每个 PE 只算 [kb_begin, kb_end) 段的块行——写不重叠的 y 行块 + scale 行，无 barrier。
+    //   块行切分不改任何 tile 形状（不同于 tail 的 M 行 boxed 尾块），故用**运行期**值即可。
+    //   kPeNum=1（默认）→ tid=0 跑全部块行，与旧单线程行为等价（现有 driver 零回归）。
+    //   kPeNum=4 须 4 线程跑（gfrun -s softcore.multiThreadNum=4）；单线程只写 1/kPeNum 输出。
+    //   与 nontail_cublas_fp8 同一切分范式。
+    const uint32_t tid = get_thread_idx();          // 0..kPeNum-1
+    if (static_cast<int>(tid) >= kPeNum) return;    // 多余线程空转（kPeNum=1 只保留 tid 0）
+    const int kb_base  = numKb / kPeNum;
+    const int kb_rem   = numKb % kPeNum;
+    const int SubKb    = kb_base + (static_cast<int>(tid) < kb_rem ? 1 : 0);
+    const int kb_begin = (static_cast<int>(tid) < kb_rem)
+                             ? static_cast<int>(tid) * (kb_base + 1)
+                             : kb_rem * (kb_base + 1) + (static_cast<int>(tid) - kb_rem) * kb_base;
+    const int kb_end   = kb_begin + SubKb;
+
+    for (int kb = kb_begin; kb < kb_end; ++kb) {
         for (int n = 0; n < numN; ++n) {
             auto gx  = x_iter(kb, n);
-            auto gy  = y_iter(kb, n);
+            // fp4 输出 element-列形 tile 对字节域 gm_y：字节基址折叠定位（同 tail_ocp_fp4）——
+            //   块行 kb 偏 kb*BlockSize 行 × (Post/2) 字节行距，列块 n 偏 n*(TileN/2) 字节。
+            global_iterator<gm_y, tile_o> y_iter(
+                reinterpret_cast<uint8_t *>(y) + kb * BlockSize * (Post / 2) + n * (TileN / 2));
+            auto gy  = y_iter(0, 0);
             // Compact scale: fold block-row index (kb) into the base pointer since
             // the iterator's i-stride is the PHYSICAL tile height, not 1. Each
             // block-row writes TileN bytes at scale + kb*Post.
@@ -176,15 +203,17 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
 // instantiated. InT drives BOTH the budget AND the compute domain: scale-reduce and
 // data paths are InT-dispatched (bf16/half/fp32) via `if constexpr`.
 template <int Axis, int Post, int BlockSize = 32, typename OutT = __fp4_e2m1x2,
-          typename InT = __bf16>
+          typename InT = __bf16, int kPeNum = 1>
 void dynamic_mx_quant_nontail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
     static_assert(std::is_same_v<InT, __bf16> || std::is_same_v<InT, __half> ||
                       std::is_same_v<InT, float>,
                   "InT must be one of {__bf16, __half, float}");
     constexpr int TileN = pick_tilen<BlockSize, Post, OutT, InT, /*IsCublas=*/false>();
     if constexpr (TileN >= nontail_align_lower<OutT>()) {
-        nontail_ocp_fp4_plain<Axis, Post, BlockSize, TileN, OutT, InT>(x, y, scale);
+        nontail_ocp_fp4_plain<Axis, Post, BlockSize, TileN, OutT, InT, kPeNum>(x, y, scale);
     } else {
+        // 大 BlockSize 自动路由到 _bigbs（方案A 切归约轴）；bigbs 场景块行少、并行度有限,
+        // 不做 4-PE（与 nontail_cublas_fp8 一致，kPeNum 不透传）。
         constexpr int BigTileN = nontail_align_lower<OutT>();
         constexpr int Rsub = max_rsub<BlockSize, BigTileN, InT, /*IsCublas=*/false>();
         dynamic_mx_quant_nontail_ocp_fp4_bigbs<Axis, Post, BlockSize, BigTileN, Rsub, OutT, InT>(x, y, scale);

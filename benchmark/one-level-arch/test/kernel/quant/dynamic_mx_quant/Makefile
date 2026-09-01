@@ -85,6 +85,13 @@ ifeq ($(TYPE), NONTAIL_CUBLAS_FP8_4PE)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_cublas_fp8_4pe.elf
 endif
 
+# 正式 NONTAIL_OCP_FP4 kernel（固定 SPMD 4-PE，kPeNum=4，按块行切分，fp16 in）。
+# 必须用 4 线程跑：gfrun -s softcore.multiThreadNum=4。
+ifeq ($(TYPE), NONTAIL_OCP_FP4_4PE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_ocp_fp4_4pe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_ocp_fp4_4pe.elf
+endif
+
 ifeq ($(TYPE), ALIGN32_PROBE)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/align32_probe.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_align32_probe.elf
