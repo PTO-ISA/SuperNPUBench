@@ -3,9 +3,9 @@
 本报告是"依据 `Linx-TileOP-API/docs/tileop-usage/*.md` 文档为每个接口写最小看护
 demo"过程的**副产物**:记录文档中缺失、不足或与实际不符之处。
 
-- **依据**:仅 `docs/tileop-usage/`,不读 intrinsic 源码。
-- **通过标准**:编译成 `.elf` 且 gfrun 正常退出(`Reach the End of Benchmark`),
-  不做数值 golden 比对。
+- **依据**:demo 仍仅依据 `docs/tileop-usage/` 写(不读 intrinsic 源码)。
+- **分类**:①编译成 `.elf`;②gfrun 跑到 `Reach the End of Benchmark`;③(新增)**精度校验**——
+  host 侧独立 golden 逐元素比对通过。见「精度校验(res_check)」小节。
 - demo 目录:`microbenchmark/tileop-guard/{vec,sfu,tlsu,cube,fixp,misc}/`
 - 跑批:`source env.sh && bash run_guard.sh <sub>`
 
@@ -18,28 +18,86 @@ demo"过程的**副产物**:记录文档中缺失、不足或与实际不符之�
 
 ## 基线指纹(结论只认此基线)
 
-本报告全部状态来自**一次干净重编重跑**:先 `make clean_all` 清空 `.o`/`.elf`,
-再全量 `run_guard.sh`。共享头 `common/guard_common.hpp` 承载所有 driver 模板,
-增量 `make` 不会因其改动触发 case 重编,故必须清缓存后重跑才可签字。
+全部状态来自**一次干净重编重跑**:`make clean_all` 后全量 `run_guard.sh`(共享头改动不触发
+增量重编,必须清缓存才可签字)。
 
 ```
-run-date : 2026-08-31 12:08
+run-date : 2026-09-01 15:34
 toolchain: env_test/linx-toolchain-build/output/linx_blockisa_llvm_musl
-           clang  md5 13660b5647499e09eb57dbad1504a78b
+           clang++ md5 c5a5edef0d9ca809dc368de7dbc2ad28
 gfrun    : env_test/SuperScalarModel/bin/gfrun
-           gfrun  md5 848906bc9fb7801dc590e64a07948387
+           gfrun   md5 04ca39ece7533eb35c805a4741996ebb
 ```
 
-**合计:87 通过 / 16 编译失败 / 17 gfrun 失败。**
+> **env_test 二进制已较上次基线更新**(旧 clang 13660b56 / gfrun 848906bc → 新
+> c5a5edef / 04ca39ec)。因此若干编译/运行分类发生漂移(如 TCMP/TCMPS 由「编译崩」变
+> 「gfrun 崩」;TMATMUL_MX/TGEMV 由「gfrun 崩」变「run-only」)。本表为当前二进制下的重测结果。
 
-| 域 | 通过 | 编译失败 | gfrun 失败 | 备注 |
-|----|------|----------|-----------|------|
-| vec  | 32 | 2 | 1  | TCMP/TCMPS 后端拒;TSEL gfrun 拒 |
-| sfu  | 36 | 6 | 10 | 见下 |
-| tlsu | 4  | 6 | 2  | Shared/gather 族无签名;range descriptor gfrun 拒 |
-| cube | 6  | 1 | 2  | bf16 编译崩;MX/TGEMV gfrun 拒 |
-| fixp | 9  | 0 | 2  | postprocess options;cscale/chain gfrun 拒 |
-| misc | 0  | 1 | 0  | reinterpret_tile 消费视图编译崩 |
+**合计 120 case:45 精度PASS / 48 run-only / 14 编译失败 / 13 run-fail(崩)。**
+
+| 域 | 精度PASS | run-only | 编译失败 | run-fail | 合计 |
+|----|---------|----------|----------|----------|------|
+| vec  | 30 | 1  | 0 | 4 | 35 |
+| sfu  | 8  | 30 | 6 | 8 | 52 |
+| tlsu | 0  | 5  | 6 | 1 | 12 |
+| cube | 6  | 2  | 1 | 0 | 9  |
+| fixp | 1  | 10 | 0 | 0 | 11 |
+| misc | 0  | 0  | 1 | 0 | 1  |
+| 合计 | **45** | **48** | **14** | **13** | **120** |
+
+- **精度PASS**:host 独立 golden 逐元素比对通过(真「算对」)。
+- **run-only**:跑到 end-of-benchmark 但本轮未写 golden(语义待定/暂缓);仅「能跑」,未验数值。
+- **run-fail**:gfrun 崩(assert/fault),无输出可校。
+
+---
+
+## 精度校验(res_check)
+
+原报告的「通过」只到「能编译 + 能跑完」,不含数值正确性。本轮放宽「只依赖文档、不越界」
+约束,补上**独立 golden 精度校验**,让「跑通」升级为「跑通且算对」。
+
+### 机制(res_check + host 侧独立 golden)
+
+```
+host  golden.py gen  → 按 case 语义 numpy 生成输入 compare/<sub>/<case>/in_*.bin
+ELF   guard_read_bin(read() 系统调用整块读入) → TLOAD/op/TSTORE → guard_dump_bin(out.bin)
+host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素带容差比 → exit 0/1
+```
+
+- **独立性**:golden 用 numpy 从**接口语义**独立实现,不读 emulator 的 tile 实现,是真独立 oracle。
+- **输入 host 生成 + `read()` 读入**:设备端填充会被 tile 后端错编导致输入退化(实测两 fill 调用
+  被混叠、一个操作数塌成 0),故由 host 拥有输入、ELF 用 `read()` 整块读入(emulator syscall 直接
+  写内存,绕过 tile-register 提升)。
+- **无 printf dump**:工具链自带 `writeBinaryFile` 的尾部 `printf/fflush` 会死循环卡死 gfrun,改用
+  自写 `guard_dump_bin`(open/write/close)。
+- 校验代码:`golden/golden.py`(注册表 + 语义)、`common/guard_io.{h,c}`(fill/read/dump,以
+  `-mlxbc -O2` 无 matrix flags 编译)、`common/guard_case.hpp`(case 宏)。
+
+### 本轮覆盖(45 个精度PASS,均在语义无歧义域)
+
+| 域 | 已带 golden(精度PASS) | 独立 golden 语义 |
+|----|----------------------|------------------|
+| VEC 二元 | tadd/tsub/tmul/tdiv/tmax/tmin(f32)、tand/tor/txor/trem/tshl/tshr(i32) | elementwise;移位取正、rem 取正保证逻辑=算术、无溢出 |
+| VEC 一元/标量 | tabs/tneg/trelu/tnot、tfma、t{add,sub,mul,div,max,min}s、t{and,or,xor,rem,shl,shr}s、texpands | abs/neg/relu/not、a*b+c、tile⊕标量、填充 |
+| SFU reduce | trow{sum,max,min,prod}、tcol{sum,max,min,prod} | 沿轴 sum/max/min/prod;row 比 out[r*N+0]、col 比 out[c] |
+| CUBE matmul | tmatmul、_acc、_bias、_f16、_relu、_rowmax | A@B(f16→f32 累加);+C / +bias(1×N) / relu / f16 输出 |
+| FIXP | convert | A@B 后 cast f16 |
+
+容差:f32/整数精确(整数 eps=0);f16 matmul rel-eps 2e-2~3e-2(f16 舍入)。实测 tmatmul
+`max|out-A@B|=0.0`(f16 matmul 与 numpy 逐字节一致)。
+
+### 暂缓(run-only,未写 golden 的原因)
+
+- **语义需读 ISA 才能独立实现**:expand-arith(t{row,col}expand{add,sub,mul,div,max,min}、expdif,
+  文档未定义精确语义)、tpart*、tconcat/ttrans/tfillpad(layout)、tci。
+- **量化需 RNE+饱和 spec golden**:tquant/tdequant、fixp s8/vector quant/lrelu/prelu/rowmax_acc/
+  group_max/cscale/chain。
+- **超越函数需容差建模**:texp/tlog/trecip/tsqrt/trsqrt。
+- **舍入模式未定**:tcvt(f32→i32,trunc vs RNE 未由文档钉死)。
+- **本就崩/未实现**:argmax/argmin、sort/mrgsort、img2col、gather/scatter 族、MX/TGEMV、reinterpret_tile 等
+  (compile-fail / run-fail,无输出可校)。
+
+这些留待后续轮次:先按 ISA/refmodel 钉定语义,再补 golden。
 
 ---
 

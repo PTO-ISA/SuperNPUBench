@@ -1,13 +1,5 @@
-#include "guard_common.hpp"
-// TileOP-API doc guard: TCOLMIN (SFU, reduce-and-expand)
-// Source: docs/tileop-usage/engines.md — SFU | TCOLMIN | reduce-and-expand.
-// NOTE(doc-gap): docs give NO signature/output shape. Col-reduce to 1 x N inferred.
-int main() {
-    constexpr int M = 16, N = 16;
-    float a[M*N], c[1*N];
-    gfill_seq(a, M*N, 1.0f); gzero(c, 1*N);
-    BENCHSTART;
-    g_colreduce<float, M, N>(c, a, [](auto& d, auto& s){ TCOLMIN(d, s); });
-    BENCHEND;
-    return 0;
-}
+#include "guard_case.hpp"
+// TileOP-API doc guard: TCOLMIN (SFU reduce, col-reduce over rows).
+// Source: engines.md (no signature/output-shape). Output physical MxN, valid 1xN
+// at out[0*N+c]. Precision: res_check, independent numpy golden.
+GUARD_COLREDUCE(float, 16, 16, [](auto& d, auto& s){ TCOLMIN(d, s); })

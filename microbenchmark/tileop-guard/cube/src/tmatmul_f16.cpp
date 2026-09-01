@@ -1,27 +1,26 @@
 #include "guard_common.hpp"
+#include "guard_io.h"
 // TileOP-API doc guard: TMATMUL + fixp::f16() — D = A*B, PreQuant F322F16.
 // Source: matrix-postprocess.md line 163 — TMATMUL(dst_fp16, a, b, fixp::f16());
 //   options 表: fixp::f16() -> PreQuantMode F322F16, dst dtype FP16.
+// Precision: res_check, golden = (A@B) cast to f16.
+constexpr int GM = 32, GN = 32, GK = 32;
+static __half ha[GM * GK], hb[GK * GN], hd[GM * GN];
 int main() {
-    constexpr int M = 32, N = 32, K = 32;
-    __half ha[M * K], hb[K * N], hd[M * N];
-    for (int i = 0; i < M * K; ++i) ha[i] = (__half)(0.01f * i);
-    for (int i = 0; i < K * N; ++i) hb[i] = (__half)(0.02f * i);
-    for (int i = 0; i < M * N; ++i) hd[i] = (__half)0.0f;
-
-    CubeTileM32<__half, M, K> a;
-    CubeTileN8<__half, K, N>  b;
-    CubeAccumulatorM32<__half, M, N> out;    // dst dtype FP16 per options 表
-
-    global_tensor<__half, RowMajor<M, K>> gA(ha);
-    global_tensor<__half, RowMajor<K, N>> gB(hb);
-    global_tensor<__half, RowMajor<M, N>> gD(hd);
-
+    guard_read_bin(CHK_DIR "/in_a.bin", ha, sizeof(ha));
+    guard_read_bin(CHK_DIR "/in_b.bin", hb, sizeof(hb));
+    CubeTileM32<__half, GM, GK> a;
+    CubeTileN8<__half, GK, GN>  b;
+    CubeAccumulatorM32<__half, GM, GN> out;    // dst dtype FP16 per options 表
+    global_tensor<__half, RowMajor<GM, GK>> gA(ha);
+    global_tensor<__half, RowMajor<GK, GN>> gB(hb);
+    global_tensor<__half, RowMajor<GM, GN>> gD(hd);
     TLOAD_CUBE(a, gA);
     TLOAD_CUBE(b, gB);
     BENCHSTART;
     TMATMUL(out, a, b, fixp::f16());
     BENCHEND;
     TSTORE_CUBE(gD, out);
+    guard_dump_bin(CHK_DIR "/out.bin", hd, sizeof(hd));
     return 0;
 }

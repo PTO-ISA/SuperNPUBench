@@ -45,6 +45,10 @@ CC_O = -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true $
 CXX_VER ?= -std=c++20
 CC_LINK += -nostartfiles $(TEST_ROOT)/common/_start.s
 DEFINES += -DENABLE_TENSOR_INSTR
+# res_check precision path: bake the per-case compare dir + link the scalar
+# guard_io TU (fills/dump/read compiled WITHOUT matrix flags; see guard_io.h).
+DEFINES += -DRES_CHECK -DCHK_DIR=\"$(GUARD_ROOT)/compare/$(CATEGORY)/$(TESTCASE)\"
+GUARD_IO_OBJ := $(OBJ_ROOT)/microbenchmark/tileop-guard/guard_io.o
 endif
 
 # Include paths (add guard common on top of the standard set)
@@ -69,9 +73,15 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
 	@mkdir -p $(shell dirname $@)
 	$(CXX) $(CXX_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
 
-$(TARGET): $(OBJ)
+# guard_io: scalar helper TU compiled WITHOUT matrix flags (-mlxbc -O2 only),
+# via clang++ ($(CXX)) since -mlxbc pulls in the C++-only linx_blkc.h header.
+$(GUARD_IO_OBJ): $(GUARD_ROOT)/common/guard_io.c
 	@mkdir -p $(shell dirname $@)
-	$(LINK) $(CC_LINK) $(OBJ) -o $@
+	$(CXX) -mlxbc -O2 $(CXX_VER) $(INCLUDE) -c $< -o $@
+
+$(TARGET): $(OBJ) $(GUARD_IO_OBJ)
+	@mkdir -p $(shell dirname $@)
+	$(LINK) $(CC_LINK) $(OBJ) $(GUARD_IO_OBJ) -o $@
 
 pre_work:
 	@mkdir -p $(OBJ_DIR)

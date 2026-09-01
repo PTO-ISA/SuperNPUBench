@@ -1,14 +1,5 @@
-#include "guard_common.hpp"
-// TileOP-API doc guard: TROWPROD (SFU, reduce-and-expand)
-// Source: docs/tileop-usage/engines.md — SFU | TROWPROD | reduce-and-expand.
-// NOTE(doc-gap): docs give NO signature and do not state the output shape.
-// Row-reduce to M x 1 inferred (matches reference-tree ValidCol==1 rule).
-int main() {
-    constexpr int M = 16, N = 16;
-    float a[M*N], c[M*1];
-    gfill_seq(a, M*N, 1.0f); gzero(c, M*1);
-    BENCHSTART;
-    g_rowreduce<float, M, N>(c, a, [](auto& d, auto& s){ TROWPROD(d, s); });
-    BENCHEND;
-    return 0;
-}
+#include "guard_case.hpp"
+// TileOP-API doc guard: TROWPROD (SFU reduce, row-reduce over cols).
+// Source: engines.md (no signature/output-shape). Output physical MxN, valid Mx1
+// at out[r*N+0]. Precision: res_check, independent numpy golden.
+GUARD_ROWREDUCE(float, 16, 16, [](auto& d, auto& s){ TROWPROD(d, s); })

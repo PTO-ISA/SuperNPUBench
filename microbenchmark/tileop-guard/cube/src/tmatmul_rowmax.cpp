@@ -1,31 +1,30 @@
 #include "guard_common.hpp"
+#include "guard_io.h"
 // TileOP-API doc guard: TMATMUL + RowMax postprocess.
 // Source: matrix-postprocess.md — fixp::keep_acc().row_max(row_max_out).
-//   row_max_tile: Tile<Vec, __fp32, 32, 8, RowMajor, 32, 1> (valid M x 1, 物理 >=128B).
-//   设置 RowMaxEn=1, RowMaxInit=0；无 RowMaxIn。dtype 必须精确匹配派生 AccType(FP32)。
+//   row_max_tile: Tile<Vec, float, 32, 8, RowMajor, 32, 1> (valid M x 1, 物理 >=128B).
+//   RowMaxEn=1, RowMaxInit=0. dtype 必须精确匹配派生 AccType(FP32)。
+// Precision: res_check, golden checks the accumulator out = A@B (row_max side
+// output is not dumped).
+constexpr int GM = 32, GN = 32, GK = 32;
+static __half ha[GM * GK], hb[GK * GN];
+static float  hc[GM * GN];
 int main() {
-    constexpr int M = 32, N = 32, K = 32;
-    __half ha[M * K], hb[K * N];
-    float  hc[M * N], hrm[M * 8];
-    for (int i = 0; i < M * K; ++i) ha[i] = (__half)(0.01f * i);
-    for (int i = 0; i < K * N; ++i) hb[i] = (__half)(0.02f * i);
-    gzero(hc, M * N); gzero(hrm, M * 8);
-
-    CubeTileM32<__half, M, K> a;
-    CubeTileN8<__half, K, N>  b;
-    CubeAccumulatorM32<float, M, N> out;
-    // row_max 输出: 物理 32x8 (>=128B), valid 32x1
+    guard_read_bin(CHK_DIR "/in_a.bin", ha, sizeof(ha));
+    guard_read_bin(CHK_DIR "/in_b.bin", hb, sizeof(hb));
+    CubeTileM32<__half, GM, GK> a;
+    CubeTileN8<__half, GK, GN>  b;
+    CubeAccumulatorM32<float, GM, GN> out;
     Tile<Location::Vec, float, 32, 8, BLayout::RowMajor, 32, 1> row_max_out;
-
-    global_tensor<__half, RowMajor<M, K>> gA(ha);
-    global_tensor<__half, RowMajor<K, N>> gB(hb);
-    global_tensor<float,  RowMajor<M, N>> gC(hc);
-
+    global_tensor<__half, RowMajor<GM, GK>> gA(ha);
+    global_tensor<__half, RowMajor<GK, GN>> gB(hb);
+    global_tensor<float,  RowMajor<GM, GN>> gC(hc);
     TLOAD_CUBE(a, gA);
     TLOAD_CUBE(b, gB);
     BENCHSTART;
     TMATMUL(out, a, b, fixp::keep_acc().row_max(row_max_out));
     BENCHEND;
     TSTORE_CUBE(gC, out);
+    guard_dump_bin(CHK_DIR "/out.bin", hc, sizeof(hc));
     return 0;
 }

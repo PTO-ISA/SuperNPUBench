@@ -1,19 +1,16 @@
-#include "guard_common.hpp"
-// TileOP-API doc guard: TEXPANDS (VEC, tile-scalar-and-immediate)
-// Source: docs/tileop-usage/engines.md — VEC | TEXPANDS | tile-scalar-and-immediate.
-// NOTE(doc-gap): docs give NO signature. The real API is 2-arg
-// TEXPANDS(dst, scalar) — it fills a tile with a broadcast scalar and takes
-// NO source tile (compiler feedback). Recorded in REPORT.md.
+#include "guard_case.hpp"
+// TileOP-API doc guard: TEXPANDS (VEC, tile-scalar-and-immediate): dst filled with
+// scalar (2 args, no src). Source: engines.md. Precision: res_check, scalar=1.75.
+constexpr int GM = 16, GN = 16;
+static float gC[GM * GN];
 int main() {
-    constexpr int M = 16, N = 16, NE = M * N;
-    float c[NE];
-    gzero(c, NE);
-    iter_t<float, M, N> gC(c);
-    auto gC0 = gC(0, 0);
-    vtile_t<float, M, N> tC;
+    iter_t<float, GM, GN> gc(gC);
+    auto gc0 = gc(0, 0);
+    vtile_t<float, GM, GN> tC;
     BENCHSTART;
-    TEXPANDS(tC, 1.5f);
-    TSTORE(gC0, tC);
+    TEXPANDS(tC, 1.75f);
     BENCHEND;
+    TSTORE(gc0, tC);
+    guard_dump_bin(CHK_DIR "/out.bin", gC, sizeof(gC));
     return 0;
 }
