@@ -24,8 +24,12 @@ bool writeBinaryFile(const char * filename, const uint8_t* data, size_t size) {
     }
 
     close(fd);
+    // gfrun 规避:见 readBinary.h / ISSUE_gfrun_res_check_writev_hang.md。RES_CHECK 下
+    // 向 stdout 的 printf 会触发 gfrun writev 死循环(iov 落未映射高栈地址),静音状态打印。
+#ifndef RES_CHECK
     printf("data write to file done: %s\n", filename);
     fflush(stdout);
+#endif
     return true;
 #else
     return true;
