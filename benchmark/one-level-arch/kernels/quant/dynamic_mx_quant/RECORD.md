@@ -1,5 +1,85 @@
 # DynamicMxQuant 问题记录
 
+## 0828-tag 补丁清单（工具链 / model / kernel）
+
+> 面向 `ops-20260828` 配套（TileOP-API `f94bc12` / llvm `adcb879` / model `d8903938`+`ad288c24`）为让
+> `dynamic_mx_quant_tail_ocp_fp4`（4PE + 特殊值守卫）端到端跑通所打的补丁清单。类型：**移植**=反应式重放
+> 上游已有/应有修复；**配套**=0.58.4 重构后新增、需与打包对齐的站点；**临时**=待正式方案的 TEMP 规避。
+
+### A. 工具链 installed 头（构建产物，非 git 跟踪 → 重建工具链会丢，须重打）
+
+路径 `linx-toolchain-build/output/linx_blockisa_llvm_musl/lib/clang/15.0.4/include/tileop-api/jcore/`
+
+| 文件 | 补丁 | 对应 | 类型 |
+|---|---|---|---|
+| `template_asm.hpp` | TCMP/TCMPS `B.DATR Zero, cmode0..5` → 命名 `eq..ge`（12 处） | 官方 `16dc674`（PR 已合） | 移植 |
+| `template_asm.hpp` | **TSEL 单拍就地 → 两拍显式 false-source**（`B.IOT Mask,True; B.IOT Prior,last,->Dst`，`[Prior] "0"(dst)`） | **Linx-TileOP-API PR #41 `072ea70`** | 移植 |
+| `type.hpp` | `__fp4_e2m1x2`/`__fp4_e1m2x2` 的 `bits` 8→4 | `ISSUE_linx_tileop_fp4_tile_size_bits`；**上游正解见下** | 本地 stopgap |
+
+- **cmode**：头 f94bc12 发 `cmode0..5` 超前 adcb879 后端（后端只认命名 `eq..ge` @ `Inst{31-29}`）→ 编译期
+  `Match Instruction Error`。移植官方修复即解（当前后端 `eq`/`EQ` 都认、编码同）。**cmode 编解码本身正确**
+  （后端 `enum CmpMode{EQ=0..GE=5}` 与模型 `CMode` + `(word>>29)&0x7` 逐值同位）——曾误判为"cmode 错位"，已澄清。
+- **TSEL**：就地 `TSEL(dst,mask,true)` 旧头发单拍（2 源 + dst 就地 false-source），false-source(prior-dst)
+  被读成 0 → `mask=0` 的 no-op 也清零 dst → 三守卫塌成 output 全 ±0。PR #41 改发两拍显式 false-source（用 `"0"`
+  匹配约束把 Prior 绑到 dst 旧值），emulator **原始**显式三源建模即正确。详见 `ISSUE_tsel_inplace_falsesrc.md`。
+- **fp4 bits 8→4**：fp4 是 4bit/元素，头误声明 8bit（"x2 打包对载体"视角）。该 bits 喂 `pto_tile.hpp`
+  `kBytes=Rows*Cols*bits/8`：bits=8→每元素 1 字节（未打包、2× 大），与模型 `ElementBits(FP4)=4`（打包 2/byte）
+  矛盾 → 运行期 `IsLegalLocalTileDescriptor` 尺寸校验崩。bits=4 令工具链 tile 尺寸对齐模型打包布局。
+  - **以上游方案为准**：本地 bits=4 仅是配合本仓「31f7a8f TCVT 侧打包」移植的 stopgap。**上游正解**是
+    `codex/pr-0.58.4-shared-model` 的 `ElementBitsOf` 抽象 + **存储侧打包**（tile 寄存器保持未打包，只在落 GM 时
+    按 nibble 打包）——该路线**无需改 `bits`**、不撞尺寸校验，侵入更小。采用上游方案时应弃用本 bits=4 补丁与本仓
+    的 TCVT 侧打包移植，整体对齐 codex 分支。跟踪：`ISSUE_linx_tileop_fp4_tile_size_bits`。
+
+### B. SuperScalarModel（model 仓，工作区未提交，HEAD=`ad288c24`）
+
+| 文件 | 补丁 | 对应 | 类型 |
+|---|---|---|---|
+| `isa/ISACommon/DataType.h` | `ElementBits` / `IsFourBitDataType` | 移 `31f7a8f`(#314，被 `930d9981` 连坐删) | 移植·fp4打包 |
+| `emulator/engine/CubeEngine.cpp` | `DataFormatCvt` fp32→fp4 有限表 + RNE 编码 | 移 `31f7a8f` | 移植·fp4打包 |
+| `emulator/engine/TEPLEngine.cpp` | `ExecuteTCVT` 偶低奇高 nibble 打包 | 移 `31f7a8f` | 移植·fp4打包 |
+| `isa/Block.cpp` | `UpdateDstTileInfo` 用 `ElementBits` 派生打包行 | 移 `31f7a8f` | 移植·fp4打包 |
+| `emulator/engine/AccumulateBlockInfo.cpp` | `IsLegalLocalTileDescriptor` `size==r*c*BytesOf` → `size*8==r*c*ElementBits` | 0.58.4 新增站点（缺则 double-free） | 配套·fp4打包 |
+| `emulator/engine/TMAEngine.cpp` | NORM TSTORE `srcRowWidth = totalCol*eleSize` → `*eleRSize`(fp4=0.5) | 0.58.4 新增站点（缺则逐行错位） | 配套·fp4打包 |
+| `emulator/engine/AccumulateBlockInfo.cpp` | `IsCompatibleDataTile` `dtype==` → 按位宽 `BytesOf==BytesOf` | **问题14 同类**（reinterpret_tile 位重解释被 dtype 相等断言误杀，`SuperScalarModel issue254`；仿 `3739068c`） | 配套·守卫 |
+| `isa/Block.cpp` | TCVT `ValidateOperandContract` 去物理 `row==row`/`col==col` 两条 conjunct | 问题22；**`codex/pr-0.58.4-shared-model` 已解**（改为只比 valid 形状+layout+合法物理描述符） | 临时·对齐上游 |
+| `emulator/main.cpp` | `GFRUN_FORCE_DIRECTBOOT_ABI=1` env 规避 | 问题23（纯本地，**不单开 issue**） | **临时**（仅 env 生效） |
+| `kernels/quant/dynamic_mx_quant/ISSUE_fp4_pack_tcvt_regression.md`(新，本仓) | fp4 打包回归 issue（由 model 仓迁入 Bench 仓） | — | 文档 |
+
+- **移植 + 配套 = 同一类问题（"fp4 打包在 0.58.4 model 上跑通"），统一由 `ISSUE_fp4_pack_tcvt_regression.md`
+  （本仓）跟踪**：4 条移植是重放被 `930d9981` 连坐删的 `31f7a8f` 打包算法；2 条配套（`IsLegalLocalTileDescriptor`
+  位宽、TMA `srcRowWidth` eleRSize）是 0.58.4 重构后新增、需与打包对齐的站点。三者 + 工具链 bits 一体，缺一即崩。
+  另与既有 `ISSUE_tcvt_fp4_shape_contract`（问题16，TCVT 打包形状契约）、`ISSUE_linx_tileop_fp4_tile_size_bits`
+  （tile 位宽）同族。
+- fp4 打包（`31f7a8f`，#314）与 e8m0（`52f56d5`，#253）是**同一个 `930d9981` "Revert unify" 连坐删除**的两个受害者；
+  e8m0 已由 `ad288c24` 恢复（问题15），fp4 打包本轮补齐。
+- **远程现状**：`origin/main` 至今仍缺 fp4 打包；**上游 `codex/pr-0.58.4-shared-model`（另一 0.58.4 子线，不含
+  d8903938）已有原生修复**——`ElementBitsOf` 抽象 + **存储侧打包**（`packed=CubeCellElementBits==4`、
+  `memoryRowBytes=(validCol+1)/2`、偶低奇高 nibble），且其 TCVT 契约已放宽（去物理 row/col，见上表问题22 行）。
+  即本轮 fp4 打包 + 问题22 两处，远程 `codex/pr-0.58.4` 都已正式解决，本仓补丁为对齐前的本地落地。
+- **已还原（不在上表）**：本地一度加的 TSEL 就地适配 `ab822e7a`(validate)+`1f398190`(execute) —— PR #41 后原始
+  模型即可处理显式两拍，已回退。**判 fp4 守卫问题勿再查 cmode**（已证清白）。
+- **已提交（早前 commit，不在工作区）**：`ad288c24` e8m0 恢复、`4cacc579` `ValidateScalarLogicalTepl` 位宽。
+
+### C. SuperNPUBench（kernel 仓，工作区未提交）
+
+| 文件 | 改动 |
+|---|---|
+| `kernels/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp4.hpp` | 重写为 4PE SPMD（get_thread_idx/run_pe/process_tile，reduce tile Cols=1）+ 三守卫（`TCMPS`+`TSEL`）+ fp4 打包输出 |
+| `test/kernel/quant/dynamic_mx_quant/src/tail_ocp_fp4.cpp` | driver 改 PM=512/PN=256/RES_CHECK/4 线程 |
+| `test/kernel/quant/dynamic_mx_quant/src/tsel_inplace_falsesrc_probe.cpp`(新) | 就地 TSEL false-source 最简探针（mask=0，期望保留 prior-dst） |
+| `test/kernel/quant/dynamic_mx_quant/Makefile` | 加 `TYPE=TSEL_INPLACE_FALSESRC_PROBE` 条目 |
+| `kernels/quant/dynamic_mx_quant/ISSUE_tsel_inplace_falsesrc.md`(新) | TSEL false-source issue（已标 PR #41 根治） |
+
+### 验证（补丁全到位后）
+
+```
+dynamic_mx_quant_tail_ocp_fp4 (4PE, M=512 N=256 BS=32, bf16 in / fp4 out / e8m0 scale, 含三守卫):
+  output = pass (MSE=0.022, MaxAE=0.5)   scale = pass (MSE=0, MaxAE=0)   gfrun 4线程 R2=0
+tsel_inplace_falsesrc_probe (mask=0): 0x1234 ✓   tsel_inplace_probe (mask=1): 0x1234 ✓
+```
+
+---
+
 ## 问题1：TileSize 大小约束分析
 
 ### 结论
@@ -1291,7 +1371,7 @@ env_test linx 编译、工作目录 gfrun 执行到底：**data 逐字节匹配 
 
 ---
 
-## 问题18：linx 就地 TSEL（false-source 融进 dst）被 emulator 双侧拒绝（需 emulator 侧解决）【SuperScalarModel issue339】
+## 问题18：linx 就地 TSEL（false-source 融进 dst）被 emulator 双侧拒绝（需 emulator 侧解决）【SuperScalarModel issue338+Linx-TileOP-API issue39，官方pr修复 [Linx-TileOP-API pr39](https://github.com/LinxISA/Linx-TileOP-API/pull/41)】
 
 > 缺陷所在仓 **`SuperScalarModel`（emulator）**，validate 侧 `AccumulateBlockInfo.cpp` +
 > execution 侧 `TEPLEngine.cpp`。复现入口 = `nontail_cublas_fp8_plain` 展开出的 `TSEL`（roundup 选择、
