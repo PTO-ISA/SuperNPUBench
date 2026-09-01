@@ -1,20 +1,29 @@
 #include "guard_common.hpp"
-// TileOP-API doc guard: TCI (SFU irregular) — contiguous integer sequence.
-// Source: docs/tileop-usage/tci.md — FULL signature + operand contract given.
-//   template <is_tile_data_v Tile, typename T, int descending=0>
-//   void TCI(Tile &dst, T start);
-// Contract: dst = ordinary Local VEC RowMajor tile; dtype exactly S32/S16/U32/
-//   U16; start same C++ type as element; ValidRow == 1.
+#include "guard_io.h"
+// TileOP-API doc guard: TCI (SFU irregular/initialization) — contiguous integer
+// sequence generation ("create index" / vci).
+// Source: docs/tileop-usage/irregular-and-complex/initialization/TCI.md — FULL
+//   signature + example given:
+//     template <is_tile_data_v tile_shape, typename T, int descending=0>
+//     void TCI(tile_shape &dst, T s);
+//   Example: TileT = Tile<Vec,int32_t,1,64>; TCI<TileT,int32_t,0>(dst, 0); TSTORE.
+//   Semantics (doc prose): one row, ValidRow==1; ascending col k = start+k,
+//   descending = start-k; dtype in {S32,S16,U32,U16}.
+// Precision: res_check. TCI takes NO input tile (self-generates), so golden.py
+//   gen is a no-op; the numpy oracle recomputes the iota independently.
+constexpr int GN = 64;                 // 1x64 int32 == 256 B (doc example shape)
+static int32_t out[GN];
 int main() {
-    constexpr int N = 64;
-    int32_t out[N];
-    gzero(out, N);
-    iter_t<int32_t, 1, N> gO(out);
+    using TileT = vtile_t<int32_t, 1, GN>;
+    iter_t<int32_t, 1, GN> gO(out);
     auto gO0 = gO(0, 0);
-    vtile_t<int32_t, 1, N> t;
+    TileT t;
     BENCHSTART;
-    TCI(t, static_cast<int32_t>(0));   // ascending: col k -> start + k
+    TCI<TileT, int32_t, 0>(t, 0);      // ascending from 0: col k -> k
     BENCHEND;
     TSTORE(gO0, t);
+#ifdef RES_CHECK
+    guard_dump_bin(CHK_DIR "/out.bin", out, sizeof(out));
+#endif
     return 0;
 }

@@ -44,6 +44,7 @@ def f32_to_f16bits(a):
 #   M,N[,K], dt_in, dt_out, scalar (for *S), axis/bcast (reduce/expand), eps
 # --------------------------------------------------------------------------
 F32 = 'f32'; I32 = 'i32'; F16 = 'f16'
+I16 = 'i16'; U32 = 'u32'; U16 = 'u16'
 
 def R(**kw):
     return kw
@@ -93,8 +94,22 @@ REG['tmatmul_f16']    = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F1
 # ---- FIXP convert (matmul then cast to fp16 via fixp::convert) ----
 REG['convert'] = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F16, eps=3e-2)
 
+# ---- TCI (create index / "vci"): self-generated iota, NO input ----
+#   ascending col k = start+k, descending = start-k; ValidRow=1 (TCI.md).
+REG['tci']      = R(fam='iota', M=1, N=64, dt=I32, start=0,   desc=0, vc=64, eps=0)
+REG['tci_desc'] = R(fam='iota', M=1, N=64, dt=I32, start=100, desc=1, vc=64, eps=0)
+REG['tci_s16']  = R(fam='iota', M=1, N=64, dt=I16, start=0,   desc=0, vc=64, eps=0)
+REG['tci_u32']  = R(fam='iota', M=1, N=64, dt=U32, start=0,   desc=0, vc=64, eps=0)
+REG['tci_u16']  = R(fam='iota', M=1, N=64, dt=U16, start=0,   desc=0, vc=64, eps=0)
+
+# ---- MGATHER / MSCATTER / MGATHER_MASK (GM byte-offset addressing) ----
+REG['mgather']      = R(fam='gather',      BM=8, BN=1024, OM=8, ON=32, eps=0)
+REG['mscatter']     = R(fam='scatter',     BM=8, BN=1024, OM=8, ON=32, eps=0)
+REG['mgather_mask'] = R(fam='gather_mask', BM=8, BN=1024, OM=8, ON=32, eps=0)
+
 # --------------------------------------------------------------------------
-NP = {F32: np.float32, I32: np.int32, F16: np.float16}
+NP = {F32: np.float32, I32: np.int32, F16: np.float16,
+      I16: np.int16, U32: np.uint32, U16: np.uint16}
 
 def np_read(path, dt):
     return np.fromfile(path, dtype=NP[dt])
@@ -102,6 +117,24 @@ def np_read(path, dt):
 def gen(case, chkdir):
     s = REG[case]; fam = s['fam']; op = s.get('op', '')
     os.makedirs(chkdir, exist_ok=True)
+    # --- TCI: self-generated iota, no input files ---
+    if fam == 'iota':
+        return
+    # --- MGATHER / MSCATTER / MGATHER_MASK: host owns base + byte offsets ---
+    if fam in ('gather', 'scatter', 'gather_mask'):
+        BNE = s['BM'] * s['BN']; ONE = s['OM'] * s['ON']
+        base = (np.arange(BNE, dtype=np.float32) * np.float32(0.5) + np.float32(1.0))
+        idx = ((np.arange(ONE, dtype=np.int64) * 101 + 7) % BNE)   # injective (101 coprime 8192)
+        off = (idx * 4).astype(np.uint32)                          # U32 byte displacement
+        base.tofile(os.path.join(chkdir, 'in_base.bin'))
+        off.tofile(os.path.join(chkdir, 'in_off.bin'))
+        if fam == 'scatter':
+            src = -(np.arange(ONE, dtype=np.float32) + np.float32(1.0))   # distinct from base
+            src.tofile(os.path.join(chkdir, 'in_src.bin'))
+        if fam == 'gather_mask':
+            mask = ((np.arange(ONE, dtype=np.int64) % 3) != 0).astype(np.uint8)
+            mask.tofile(os.path.join(chkdir, 'in_mask.bin'))
+        return
     # --- matmul family (f16 A/B, optional f32 C / bias) ---
     if fam == 'matmul':
         M, N, K = s['M'], s['N'], s['K']
@@ -249,12 +282,91 @@ def check_matmul(case, chkdir):
           file=sys.stderr)
     return 1
 
+def check_iota(case, chkdir):
+    s = REG[case]; dt = s['dt']; vc = s['vc']; start = s['start']; desc = s['desc']
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, dt)[:vc]
+    k = np.arange(vc, dtype=np.int64)
+    seq = (start - k) if desc else (start + k)      # TCI.md: asc start+k / desc start-k
+    ref = seq.astype(NP[dt])                          # astype wraps modulo element width
+    bad = np.flatnonzero(got != ref)
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] TCI MISMATCH {bad.size}/{vc} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_gather(case, chkdir):
+    base = np.fromfile(os.path.join(chkdir, 'in_base.bin'), np.float32)
+    off = np.fromfile(os.path.join(chkdir, 'in_off.bin'), np.uint32).astype(np.int64)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np.fromfile(out_path, np.float32)
+    ref = base[off // 4]                              # addr = base + byte displacement
+    n = min(got.size, ref.size)
+    bad = np.flatnonzero(got[:n] != ref[:n])
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] GATHER MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_scatter(case, chkdir):
+    base = np.fromfile(os.path.join(chkdir, 'in_base.bin'), np.float32)
+    src = np.fromfile(os.path.join(chkdir, 'in_src.bin'), np.float32)
+    off = np.fromfile(os.path.join(chkdir, 'in_off.bin'), np.uint32).astype(np.int64)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np.fromfile(out_path, np.float32)
+    ref = base.copy()
+    ref[off // 4] = src                              # injective offsets -> deterministic
+    n = min(got.size, ref.size)
+    bad = np.flatnonzero(got[:n] != ref[:n])
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] SCATTER MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_gather_mask(case, chkdir):
+    base = np.fromfile(os.path.join(chkdir, 'in_base.bin'), np.float32)
+    off = np.fromfile(os.path.join(chkdir, 'in_off.bin'), np.uint32).astype(np.int64)
+    mask = np.fromfile(os.path.join(chkdir, 'in_mask.bin'), np.uint8)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np.fromfile(out_path, np.float32)
+    ref = np.where(mask == 1, base[off // 4], np.float32(0.0)).astype(np.float32)
+    n = min(got.size, ref.size)
+    bad = np.flatnonzero(got[:n] != ref[:n])
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] GATHER_MASK MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
 def check(case, chkdir):
     s = REG[case]
     if s['fam'] == 'matmul':
         return check_matmul(case, chkdir)
     if s['fam'] == 'reduce':
         return check_reduce(case, chkdir)
+    if s['fam'] == 'iota':
+        return check_iota(case, chkdir)
+    if s['fam'] == 'gather':
+        return check_gather(case, chkdir)
+    if s['fam'] == 'scatter':
+        return check_scatter(case, chkdir)
+    if s['fam'] == 'gather_mask':
+        return check_gather_mask(case, chkdir)
     r, out_dt = ref(case, chkdir)
     out_path = os.path.join(chkdir, 'out.bin')
     if not os.path.exists(out_path):

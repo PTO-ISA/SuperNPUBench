@@ -22,7 +22,7 @@ demo"过程的**副产物**:记录文档中缺失、不足或与实际不符之�
 增量重编,必须清缓存才可签字)。
 
 ```
-run-date : 2026-09-01 15:34
+run-date : 2026-09-01 17:28
 toolchain: env_test/linx-toolchain-build/output/linx_blockisa_llvm_musl
            clang++ md5 c5a5edef0d9ca809dc368de7dbc2ad28
 gfrun    : env_test/SuperScalarModel/bin/gfrun
@@ -33,17 +33,22 @@ gfrun    : env_test/SuperScalarModel/bin/gfrun
 > c5a5edef / 04ca39ec)。因此若干编译/运行分类发生漂移(如 TCMP/TCMPS 由「编译崩」变
 > 「gfrun 崩」;TMATMUL_MX/TGEMV 由「gfrun 崩」变「run-only」)。本表为当前二进制下的重测结果。
 
-**合计 120 case:45 精度PASS / 48 run-only / 14 编译失败 / 13 run-fail(崩)。**
+**合计 125 case:52 精度PASS / 47 run-only / 12 编译失败 / 14 run-fail(崩)。**
 
 | 域 | 精度PASS | run-only | 编译失败 | run-fail | 合计 |
 |----|---------|----------|----------|----------|------|
 | vec  | 30 | 1  | 0 | 4 | 35 |
-| sfu  | 8  | 30 | 6 | 8 | 52 |
-| tlsu | 0  | 5  | 6 | 1 | 12 |
+| sfu  | 13 | 29 | 6 | 8 | 56 |
+| tlsu | 2  | 5  | 4 | 2 | 13 |
 | cube | 6  | 2  | 1 | 0 | 9  |
 | fixp | 1  | 10 | 0 | 0 | 11 |
 | misc | 0  | 0  | 1 | 0 | 1  |
-| 合计 | **45** | **48** | **14** | **13** | **120** |
+| 合计 | **52** | **47** | **12** | **14** | **125** |
+
+> **本次 Review 补齐(2026-09-01)**:新增 TCI(vci)5 变体 + golden、MGATHER 按新文档签名重写 + golden、
+> TIMG2COL 核对文档示例;并补 MSCATTER(精度PASS)、MGATHER_MASK(后端 Match Instruction Error,compile-fail)。
+> 净增 5 case;精度PASS +7(5×TCI + MGATHER + MSCATTER),MGATHER/MSCATTER 从旧「编译失败(旧文档无签名、
+> 我猜签名)」更正为「精度PASS」。详见「Review 补齐」小节。
 
 - **精度PASS**:host 独立 golden 逐元素比对通过(真「算对」)。
 - **run-only**:跑到 end-of-benchmark 但本轮未写 golden(语义待定/暂缓);仅「能跑」,未验数值。
@@ -73,14 +78,16 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 - 校验代码:`golden/golden.py`(注册表 + 语义)、`common/guard_io.{h,c}`(fill/read/dump,以
   `-mlxbc -O2` 无 matrix flags 编译)、`common/guard_case.hpp`(case 宏)。
 
-### 本轮覆盖(45 个精度PASS,均在语义无歧义域)
+### 本轮覆盖(52 个精度PASS,均在语义无歧义域)
 
 | 域 | 已带 golden(精度PASS) | 独立 golden 语义 |
 |----|----------------------|------------------|
 | VEC 二元 | tadd/tsub/tmul/tdiv/tmax/tmin(f32)、tand/tor/txor/trem/tshl/tshr(i32) | elementwise;移位取正、rem 取正保证逻辑=算术、无溢出 |
 | VEC 一元/标量 | tabs/tneg/trelu/tnot、tfma、t{add,sub,mul,div,max,min}s、t{and,or,xor,rem,shl,shr}s、texpands | abs/neg/relu/not、a*b+c、tile⊕标量、填充 |
 | SFU reduce | trow{sum,max,min,prod}、tcol{sum,max,min,prod} | 沿轴 sum/max/min/prod;row 比 out[r*N+0]、col 比 out[c] |
+| SFU TCI(vci) | tci、tci_desc、tci_s16、tci_u32、tci_u16 | 自生成 iota:asc=start+k / desc=start−k,整数精确(**本次 Review 补齐**) |
 | CUBE matmul | tmatmul、_acc、_bias、_f16、_relu、_rowmax | A@B(f16→f32 累加);+C / +bias(1×N) / relu / f16 输出 |
+| TLSU gather/scatter | mgather、mscatter | GM base + U32 字节位移;gather=base[off//4]、scatter=base[off//4]←src(单射无碰撞)(**本次 Review 补齐**) |
 | FIXP | convert | A@B 后 cast f16 |
 
 容差:f32/整数精确(整数 eps=0);f16 matmul rel-eps 2e-2~3e-2(f16 舍入)。实测 tmatmul
@@ -89,13 +96,15 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 ### 暂缓(run-only,未写 golden 的原因)
 
 - **语义需读 ISA 才能独立实现**:expand-arith(t{row,col}expand{add,sub,mul,div,max,min}、expdif,
-  文档未定义精确语义)、tpart*、tconcat/ttrans/tfillpad(layout)、tci。
+  文档未定义精确语义)、tpart*、tconcat/ttrans/tfillpad(layout)。
+  (注:tci 已在本轮 Review 补齐,转精度PASS;见「Review 补齐」小节。)
 - **量化需 RNE+饱和 spec golden**:tquant/tdequant、fixp s8/vector quant/lrelu/prelu/rowmax_acc/
   group_max/cscale/chain。
 - **超越函数需容差建模**:texp/tlog/trecip/tsqrt/trsqrt。
 - **舍入模式未定**:tcvt(f32→i32,trunc vs RNE 未由文档钉死)。
-- **本就崩/未实现**:argmax/argmin、sort/mrgsort、img2col、gather/scatter 族、MX/TGEMV、reinterpret_tile 等
-  (compile-fail / run-fail,无输出可校)。
+- **本就崩/未实现**:argmax/argmin、sort/mrgsort、timg2col(卷积,模型断言桩)、mgather_mask/mscatter_mask
+  (掩码变体,后端不支持)、MX/TGEMV、reinterpret_tile 等(compile-fail / run-fail,无输出可校)。
+  (注:MGATHER、MSCATTER 已在本轮 Review 补齐,转精度PASS。)
 
 这些留待后续轮次:先按 ISA/refmodel 钉定语义,再补 golden。
 
@@ -118,6 +127,29 @@ guard 结论 = **run-fail**,并暴露文档/实现缺口:
    shape`;改独立紧凑 Fragment 作源仍触发同一断言。结合文档自身 "until the … path is
    implemented and validated" 告警,且该特性是远程顶端 commit,判定**region producer 路径在
    当前 env_test 模型上尚不可运行**,待模型侧补齐后再验证组装布局。
+
+---
+
+## Review 补齐(vci / 卷积 / MGATHER)
+
+针对 Review「缺少 vci、卷积类、控制类,MGATHER demo 较简单」逐条核对 + 处置。方法仍是**文档驱动**
+(demo 只据 `docs/tileop-usage/*.md`,golden 允许用 ISA 语义做独立 oracle;验证走 env_test)。
+
+| Review 项 | 核对结论 | 处置 | 结果 |
+|-----------|---------|------|------|
+| **vci** | = **TCI**(create-index,单行整数序列)。TCI.md 现给完整签名+示例。旧 demo 仅 1 个升序 S32、无 golden。 | 照 TCI.md 加 golden(iota 独立 oracle)+ 补 `descending` 两向 + S16/U32/U16 dtype,共 5 变体 | **5 精度PASS** |
+| **卷积类** | = **TIMG2COL**(image-to-column)。TIMG2COL.md 示例用普通 Vec tile(非描述符源)。 | 照文档示例写(不越界造 feature-map 描述符源);落盘 | **run-fail(忠实)**:gfrun `"TIMG2COL not yet fully implemented"`——env_test 模型断言桩,卷积窗口/padding 契约未实现。照文档示例写也跑不通,属模型缺口 |
+| **控制类** | tileop **不含**控制类接口(比较/选择族属 logical,非控制流)。 | 忽略 | — |
+| **MGATHER 过简** | MGATHER.md 现给完整签名+示例(旧扁平 tlsu.md 无签名,故旧 demo 猜错→编译失败)。 | 照 MGATHER.md 签名重写(GM base + U32 字节位移 tile + **非平凡置换**);加 golden(`out[i]==base[off[i]//4]`,8×32=256 元素逐一比) | **精度PASS** |
+| **MSCATTER**(同族) | MSCATTER.md 现给完整签名+示例。 | 照签名重写(base[off//4]=src);单射 offset 无碰撞→确定;golden 比 scatter 后的 base 数组 | **精度PASS** |
+| **MGATHER_MASK**(同族) | MGATHER_MASK.md 现给完整签名+示例(Pad+mask)。 | 照签名写(U32 offset + uint8 mask + Pad::Zero) | **compile-fail**:工具链后端 `Match Instruction Error`(`BSTART.TLSU MGATHER.MASK` 双 B.IOT bundle 无法汇编);uint16(文档示例原样)同样崩→非 dtype 因素,是后端未支持该编码(详述 19) |
+
+**新发现的文档缺口([示例])**:MGATHER.md 的**使用示例**把 offset 声明为 `Tile<Vec,uint16_t,...>`,但**同页 dtype 表**
+规定索引 Tile 必须是 S32/U32/S64/U64。照示例用 uint16 编译能过,gfrun 拒 `"illegal MGATHER operand or
+descriptor contract"`。demo 遂遵从**规范的 dtype 表**(U32)而非自相矛盾的示例,并在此登记建议修正示例。
+
+TCI/MGATHER 的 golden 语义:TCI 无输入自生成(golden gen 为 no-op,check 按 asc=start+k / desc=start−k 重算 iota,
+整数精确);MGATHER host 拥有 base+offset,check 按「addr=base+字节位移」独立算 `base[off//4]`(float 精确)。
 
 ---
 
@@ -164,10 +196,10 @@ VEC 小结:35 个 case,**32 通过 / 2 编译失败 / 1 gfrun 失败**。除 cmp
 | TEXTRACT/TINSERT | ❌ | - | **[签名]** 无签名;`no matching function`,无从推断(详述 10) |
 | TTRI/THISTOGRAM | ❌ | - | **[签名]** 无任何文档;`no matching function`(详述 10) |
 | TGATHER/TSCATTER | ❌ | - | **[签名]** 无任何文档;后端 `Match Instruction Error`(详述 10) |
-| TCI | ✅ | ✅ | 文档签名完整(tci.md);S32 单行升序 |
+| TCI(vci) | ✅ | ✅ | **精度PASS**(5 变体)。TCI.md 签名+示例完整;asc/desc × S32/S16/U32/U16,golden=iota(Review 补齐) |
 | TQUANT | ✅ | ✅ | 文档签名完整(quant-and-im2col.md);FP32→S8,RNE+sat |
 | TDEQUANT | ✅ | ❌ | 文档签名完整;src=int8→gfrun `source must be S8/U8/S16/U16`(详述 11) |
-| TIMG2COL | ✅ | ❌ | 文档签名完整;gfrun `TIMG2COL not yet fully implemented`(详述 11) |
+| TIMG2COL(卷积) | ✅ | ❌ | 照 TIMG2COL.md 示例(普通 Vec tile);gfrun `TIMG2COL not yet fully implemented`——模型断言桩,卷积窗口/padding 契约未实现(详述 11) |
 | TSORT | ✅ | ❌ | 文档签名完整(sort.md);gfrun `Undefined TEPL TileOp function`(详述 11) |
 | TMRGSORT | ✅ | ❌ | **[示例]** 文档示例 shape 不可编译;修正后 gfrun `not yet fully implemented`(详述 9) |
 
@@ -194,14 +226,18 @@ SFU 小结:52 个 case,**36 通过 / 6 编译失败 / 10 gfrun 失败**。
 | MGATHER_CAS | ✅ | ✅ | 文档签名完整(tlsu.md);base+offset+expected+replacement |
 | TMOV | ❌ | - | **[签名]** 基础 Local 形式无签名;后端 `Match Instruction Error`(详述 12) |
 | GMOV | ❌ | - | **[示例]** 照抄文档示例 `GMOV<15>(dst,peer_tid,src)` 仍后端 `Match Instruction Error`(详述 12) |
-| MGATHER/MSCATTER | ❌ | - | **[签名]** 仅散文,无签名;`no matching function`(详述 13) |
-| MGATHER_MASK/MSCATTER_MASK | ❌ | - | **[签名]** 同上 |
+| MGATHER | ✅ | ✅ | **精度PASS**。MGATHER.md 现给签名+示例;GM base + U32 字节位移聚集,golden=base[off//4]。**[示例]** 示例误用 uint16 offset(违反同页 dtype 表 S32/U32/S64/U64)→照示例 gfrun 拒,遵从 dtype 表改 U32(详述 18) |
+| MSCATTER | ✅ | ✅ | **精度PASS**。MSCATTER.md 签名+示例完整;`MSCATTER(base_gm,src,off)`,base[off//4]←src(单射 offset),golden 比 scatter 后 base。同 [示例] U32 doc-gap(详述 18) |
+| MGATHER_MASK | ❌ | - | **[后端]** MGATHER_MASK.md 签名+示例完整;照写编译崩 `Match Instruction Error`(`MGATHER.MASK` 双 B.IOT bundle 后端未支持);uint16/U32 均崩(详述 19) |
+| MSCATTER_MASK | ❌ | - | **[后端]** 同 MGATHER_MASK,后端未支持 `MSCATTER.MASK` bundle(详述 19) |
 
-TLSU 小结:12 个 case,**4 通过 / 6 编译失败 / 2 gfrun 失败**。
-- **通过 (4)**:TLOAD/TSTORE/TPREFETCH/MGATHER_CAS——签名完整或可从散文补全。
-- **编译失败 (6)**:MGATHER/MSCATTER/掩码变体(4)文档只有散文无签名;TMOV/GMOV(2)
-  后端 `Match Instruction Error`。均为硬文档缺口或文档-后端不一致。
-- **gfrun 失败 (2)**:range::Subview/range::Assemble——range-modifiers.md 签名+示例
+TLSU 小结:13 个 case,**2 精度PASS / 5 run-only / 4 编译失败 / 2 run-fail**。
+- **精度PASS (2)**:MGATHER、MSCATTER——文档现给签名+示例,照 dtype 表用 U32 offset,golden 逐元素通过(Review 补齐)。
+- **run-only (5)**:TLOAD/TSTORE/TPREFETCH/TMOV/MGATHER_CAS——跑通但本轮未写 golden。
+- **编译失败 (4)**:MGATHER_MASK/MSCATTER_MASK(掩码变体,后端不支持 `*.MASK` bundle,详述 19)、
+  GMOV(后端 `Match Instruction Error`)、range::Assemble。
+- **run-fail (2)**:range::Subview(详述 16)、region_tilearray(TileArray region API,详述见文档更新跟踪)。
+- **gfrun 失败详**:range::Subview/range::Assemble——range-modifiers.md 签名+示例
   完整,严格照示例参数(SubviewSizeCode=1/ParentSizeCode=12/RegSrc=0/Offset=0)写,
   wrapper static_assert 通过,gfrun 却拒 descriptor 契约(详述 16),按约束标"待判断"。
 - 注:Shared TMOV 四变体(TMOV_L2S_INSERT/PUBLISH、TMOV_S2L_BROADCAST/EXTRACT)与
@@ -500,3 +536,33 @@ matrix-postprocess.md 示例完整,11 个 postprocess demo 中 9 个编译+gfrun
   dtype",**未给 mode 与输入矩阵 dtype 的兼容矩阵**(S16 量化疑似要求整数矩阵输入,
   派生 S32 accumulator)。generic scalar demo 遂改用 QF322S8Pre 演示 `fixp::scalar<>`
   写法。建议文档补 PreQuantMode↔输入 dtype 的合法组合表。
+
+### 18. [示例] MGATHER — 使用示例的 offset dtype 违反同页 dtype 表
+
+MGATHER.md 现已给出完整 C++ 签名 + dtype 表 + 示例(旧扁平 tlsu.md 无签名,故旧 demo 猜
+`(dst,base,off,vc,vr)` 编译失败;新签名是 `MGATHER(dst, gmSrc, offsetTile)`,base/stride 由
+gm 源携带,offset 存**字节位移**)。照签名重写后 gfrun 一次通过,golden(`out[i]==base[off[i]//4]`)
+逐元素 PASS。唯一缺口在示例:
+
+- **[示例]** 使用示例把 offset 声明为 `Tile<Location::Vec, uint16_t, 8, 32>`,但**同一页的 dtype 表**
+  规定「索引 / 地址位移 Tile」必须是 S32/U32/S64/U64。照示例用 uint16 编译能过,gfrun 拒
+  `"illegal MGATHER operand or descriptor contract"`。二者自相矛盾。
+- demo 遂遵从**规范的 dtype 表**(改 U32 offset),与仿真器 PASS 档位(U32 数据 + U32 字节位移)一致。
+- **建议**:把示例的 offset 类型从 uint16_t 改为 uint32_t,与 dtype 表一致。
+
+### 19. [后端] MGATHER_MASK / MSCATTER_MASK — 文档签名完整,后端无法汇编
+
+MGATHER_MASK.md / MSCATTER_MASK.md 均给出完整 C++ 签名 + dtype 表 + 带 `TmaPadValue::Zero`
+的示例(`MGATHER_MASK<out,off,mask,gm,Pad>(dst, base_gm, offset, mask)`,mask=uint8,
+"只收集谓词恰为 1 的 lane,禁用 lane 填 padding")。严格照签名写,clang 在工具链头
+`template_asm.hpp:566` 报 `Match Instruction Error!`——发射的 `BSTART.TLSU MGATHER.MASK`
+双 `B.IOT`(IndexTile + MaskTile)bundle 形式无法被后端匹配/汇编。
+
+- **非 dtype 因素**:offset 用 U32(dtype 表)或 uint16(文档示例原样)**都崩在同一行同一错误**,
+  static_assert(dst size / ValidCol)已通过,崩在 asm 指令匹配。排除操作数类型问题。
+- 对比同族 **MGATHER/MSCATTER(无 mask)照文档写一次通过 + golden PASS**,可见问题仅在
+  带 mask 的 `*.MASK` 变体:后端未实现该指令编码,与 GMOV/TMOV 的 `Match Instruction Error`
+  同类(文档暴露了后端尚未支持的指令)。
+- **建议**:或补齐后端 `MGATHER.MASK`/`MSCATTER.MASK` 汇编支持,或在文档标注该变体当前不可用。
+- golden 已按语义就绪(`golden.py` fam=`gather_mask`:`where(mask==1, base[off//4], 0)`),
+  待后端补齐即可直接转精度PASS。
