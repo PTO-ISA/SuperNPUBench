@@ -110,8 +110,11 @@ endif
 ifeq ($(res_check), on)
 DEFINES += -DRES_CHECK -DENABLE_BINARY_OUTPUT
 DEFINES += -DCHK_DIR=\"$(ROOT)/compare/$(notdir $(basename $(TARGET)))\"
+ifeq ($(PLAT), linx)
+CC_LINK = -nostartfiles $(START_FILE)
+else
 CC_LINK =
-EXTRA_OBJ_FILES += $(OBJ_ROOT)/$(COMM_SRC_DIR)/group_worker_runtime.o
+endif
 endif
 
 .DEFAULT_GOAL := all
