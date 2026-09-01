@@ -9,15 +9,22 @@ namespace supernpu::tile_isa::mxquant {
 // cuBLAS consumes the fp32 VALUE view (amax via TABS+TROWMAX, guarded exponent
 // extract). Two-pass structure keeps peak live tiles low.
 //
+// SPMD 4-PE (kPeNum) —— 与 tail_ocp_fp8 同构的两级切分骨架：
+//   L1 (行切分, 定 SubM)：把 M 行按连续段均分给 kPeNum 个 PE，每个 PE 只算自己那
+//     [row_begin, row_begin+SubM) 段；行余数 (M%kPeNum) 前几个 PE 各多 1 行 (起点仍连续)。
+//   L2 (段内 tiling, 定 TileM)：TileM = max_tilem<M,BlockSize,InT,cublas>()，段内先
+//     seg_full 个 full-tile 再 (若有) 一个 seg_tail 行 boxed 尾块。
+//   实现：kPeNum 编译期已知 → 按 TID 编译期展开 (模板 lambda run_pe<Pe>)，令
+//     row_begin/SubM/seg_tail 均为 constexpr (满足 boxed 尾块 validRow 编译期常量要求)；
+//     运行期 switch(get_thread_idx()) 分派。kPeNum=1 (默认) 时只 PE0 跑全部 M 行，行为
+//     与旧的 full_m+M_tail 单线程结构完全等价 (现有单线程 driver / 字节校验零回归)。
+//   kPeNum=4 时必须用 4 线程跑：gfrun -s softcore.multiThreadNum=4；单线程只写 1/4 输出。
+//
 // BlockSize range: UNBOUNDED. Unlike the non-tail kernels, the tail contiguous
 // axis is BlockSize (the quant axis, always a multiple of 32 -> naturally 32B
-// aligned), and the free axis is M rows tiled by the tunable TileM. There is no
+// aligned), and the free axis is M rows tiled by the derived TileM. There is no
 // alignment-vs-TileSize conflict on a single axis: the binding tile budget
-// (TileM*BlockSize) is met by shrinking TileM, so ANY BlockSize is legal. The
-// budget itself has two values from the fp32 reinterpret roundtrip (问题4):
-// CURRENT (fp32 32b roundtrip) TileM*BlockSize <= 2048; FORMAL (post-bitcast,
-// 16b) TileM*BlockSize <= 4096. Either way BlockSize is free — only TileM shrinks
-// — so no static_assert on BlockSize is needed here.
+// (TileM*BlockSize) is met by shrinking TileM, so ANY BlockSize is legal.
 //
 // TileM is NOT a caller knob: it is DERIVED at compile time from M + the InT
 // binding-tile budget (max_tilem<M, BlockSize, InT, /*IsCublas=*/true>()), clamped
@@ -25,17 +32,17 @@ namespace supernpu::tile_isa::mxquant {
 // (a wider input dtype shrinks TileM) AND the compute domain: scale-reduce and data
 // paths are InT-dispatched (bf16/half/fp32) via `if constexpr` (static_assert below).
 template <int M, int K, int BlockSize = 32, typename OutT = __fp8_e4m3,
-          typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
+          typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu,
+          int kPeNum = 1>
 void dynamic_mx_quant_tail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
     static_assert(M > 0 && K > 0, "dim must be positive");
     static_assert(K % BlockSize == 0, "K must be multiple of BlockSize");
     static_assert(std::is_same_v<InT, __bf16> || std::is_same_v<InT, __half> ||
                       std::is_same_v<InT, float>,
                   "InT must be one of {__bf16, __half, float}");
+    static_assert(kPeNum == 1 || kPeNum == 4,
+                  "kPeNum must be 1 (single PE) or 4 (SoftCore.h kCorePeCount)");
 
-    constexpr int TileM  = max_tilem<M, BlockSize, InT, /*IsCublas=*/true>();
-    constexpr int full_m = M / TileM;
-    constexpr int M_tail = M % TileM;
     constexpr int numKb  = K / BlockSize;
     // AscendC scale layout: uint8 E8M0, one byte per block, compact [M, scaleCols]
     // with the block count even-aligned (scaleColNum_ = CeilDiv(numKb,2)*2). The
@@ -44,51 +51,57 @@ void dynamic_mx_quant_tail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
 
     using namespace pto;
 
-    using tile_x     = Tile<Location::Vec, InT,      TileM, BlockSize, BLayout::RowMajor>;
-    using tile_f     = Tile<Location::Vec, float,    TileM, BlockSize, BLayout::RowMajor>;
-    using tile_o     = Tile<Location::Vec, OutT,     TileM, BlockSize, BLayout::RowMajor>;
-    using tile_scale = Tile<Location::Vec, uint16_t, TileM, BlockSize, BLayout::RowMajor>;
-    // Compact scale store: the cuBLAS core now emits scale_byte/recip already
-    // boxed valid col=1 (one per-row scalar per block), so we narrow straight to
-    // uint8 and store one byte per block — no intermediate TROWMAX.
-    using tile_sred   = Tile<Location::Vec, uint16_t, TileM, BlockSize, BLayout::RowMajor, TileM, 1>;
-    using tile_sstore = Tile<Location::Vec, uint8_t,  TileM, BlockSize, BLayout::RowMajor, TileM, 1>;
-    // Per-row-scalar (valid col=1) reciprocal, reinterpreted + cast to fp32 and
-    // fused into the data pass via TROWEXPANDMUL (row broadcast mul).
-    using tile_recip_f1  = Tile<Location::Vec, float,  TileM, BlockSize, BLayout::RowMajor, TileM, 1>;
-    // Inlined scale-compute intermediates (boxed valid col=1): InT-domain reduced
-    // amax and the uint32 bit-math working set for the expanded compute_cublas_core.
-    using tile_in1   = Tile<Location::Vec, InT,      TileM, BlockSize, BLayout::RowMajor, TileM, 1>;
-    using tile_u32_1 = Tile<Location::Vec, uint32_t, TileM, BlockSize, BLayout::RowMajor, TileM, 1>;
+    uint8_t *y_u8 = reinterpret_cast<uint8_t *>(y);
+    const uint32_t tid = get_thread_idx();          // 0..kPeNum-1
 
-    using gm_x = global_tensor<InT,      RowMajor<M, K>>;
-    using gm_y = global_tensor<uint8_t,  RowMajor<M, K>>;
-    using gm_s = global_tensor<uint8_t,  RowMajor<M, scaleCols>>;
+    using gm_x = global_tensor<InT,     RowMajor<M, K>>;
+    using gm_y = global_tensor<uint8_t, RowMajor<M, K>>;
+    using gm_s = global_tensor<uint8_t, RowMajor<M, scaleCols>>;
 
-    global_iterator<gm_x, tile_x> x_iter(x);
-    global_iterator<gm_y, tile_o> y_iter(reinterpret_cast<uint8_t *>(y));
+    // 单个 tile-行块的完整计算 (scale pass + data pass)。TileMv = 该 tile 物理行高
+    //   (per-PE 编译期常量, 由 max_tilem 推得)；ValidRows = 该 tile 活跃行数 (full-tile:
+    //   TileMv；尾块: seg_tail<TileMv, boxed)；row0 = 该 tile 全局起始行。物理 tile 恒
+    //   TileMv×BlockSize (logicalTileBytes>=512B, 避免 sub-512B spill)，boxed ValidRows
+    //   只触碰活跃行。base 指针按 row0 偏移 (对照 tail_ocp_fp8::process_tile)。
+    //   列向量中间 tile (reduce 输出及其下游) 声明 physical Cols=1 —— 匹配 codex 模型
+    //   rowReduce 无条件 col=1 (对照 tail_ocp_fp8::process_tile 注释 / Block.cpp)，令
+    //   reduce 输出与下游 binary/compare TEPL 两侧 physical Cols 全等，绕过
+    //   IsCompatibleOperationDataTile 的 source->col==physicalCol 契约 (否则 physical
+    //   Cols=BlockSize 会撞 ValidateBasicBinaryTepl:748)。全宽 tile (tile_x/f/o) 仍 Cols=BlockSize。
+    auto process_tile = [&]<int TileMv, int ValidRows>(int row0) {
+        using tile_x        = Tile<Location::Vec, InT,      TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
+        using tile_f        = Tile<Location::Vec, float,    TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
+        using tile_o        = Tile<Location::Vec, OutT,     TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
+        // Compact scale store: the cuBLAS core emits scale_byte/recip already boxed
+        // valid col=1 (one per-row scalar per block), narrow straight to uint8, store
+        // one byte per block. Physical Cols=1 (see note above).
+        using tile_sred     = Tile<Location::Vec, uint16_t, TileMv, 1, BLayout::RowMajor, ValidRows, 1>;
+        using tile_sstore   = Tile<Location::Vec, uint8_t,  TileMv, 1, BLayout::RowMajor, ValidRows, 1>;
+        using tile_recip_f1 = Tile<Location::Vec, float,    TileMv, 1, BLayout::RowMajor, ValidRows, 1>;
+        using tile_in1      = Tile<Location::Vec, InT,      TileMv, 1, BLayout::RowMajor, ValidRows, 1>;
+        using tile_u32_1    = Tile<Location::Vec, uint32_t, TileMv, 1, BLayout::RowMajor, ValidRows, 1>;
 
-    for (int m = 0; m < full_m; ++m) {
         for (int kb = 0; kb < numKb; ++kb) {
-            auto gx = x_iter(m, kb);
-            auto gy = y_iter(m, kb);
-            // Compact scale: base pointer folds the block index (kb) since the
-            // iterator's j-stride is the PHYSICAL tile width, not 1. Iterate rows
-            // only via s_iter(m, 0); each row writes one byte at column kb.
-            global_iterator<gm_s, tile_sstore> s_iter(scale + kb);
-            auto gs = s_iter(m, 0);
+            global_iterator<gm_x, tile_x> x_iter(x + row0 * K + kb * BlockSize);
+            auto gx = x_iter(0, 0);
+            global_iterator<gm_y, tile_o> y_iter(y_u8 + row0 * K + kb * BlockSize);
+            auto gy = y_iter(0, 0);
+            // Compact scale: base pointer folds row0 (row stride scaleCols) and the
+            // block index kb (per-row byte column); index (0,0) writes ValidRows rows.
+            global_iterator<gm_s, tile_sstore> s_iter(scale + row0 * scaleCols + kb);
+            auto gs = s_iter(0, 0);
 
-            // ComputeScale pass: reduce the amax in bf16, cast only the reduced
+            // ComputeScale pass: reduce the amax in InT domain, cast only the reduced
             // per-row scalar to fp32 (mirrors AscendC; no whole-tile CVT).
             tile_sred scale_byte;
             tile_sred recip;
             tile_x xq_s;
             TLOAD(xq_s, gx);
             // ================================================================
-            // 内联展开：等价于 common::compute_cublas_scale_tail<OutT,InT,TileM,
-            // BlockSize,MaxLowBoundBits> + common::compute_cublas_core（含其末尾保留
-            // 的 IDEAL CmpMode 版）。就地展开以规避 RECORD 问题8（tile 作真实函数入参
-            // → S64 栈往返 → gfrun 拒）。两处规避已换正式方案：
+            // 内联展开：等价于 common::compute_cublas_scale_tail<OutT,InT,TileMv,
+            // BlockSize,MaxLowBoundBits,ValidRows> + common::compute_cublas_core（IDEAL
+            // CmpMode 版）。就地展开以规避 RECORD 问题8（tile 作真实函数入参 → S64 栈往返
+            // → gfrun 拒）。两处规避已换正式方案：
             //   · reinterpret_f32_to_u32（scratch-HBM，问题4）→ reinterpret_tile<>（零指令视图）
             //   · GT/LT/NE 的 min/max+默认-EQ 模拟（问题3）→ 带 CmpMode 的原生 TCMPS
             // scale 无需交织（尾轴块行行内已连续，compact 平铺即等价，问题5）。
@@ -122,26 +135,32 @@ void dynamic_mx_quant_tail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
             TSHRS(exp32, s32, FP32_SHR_NUM);
             tile_u32_1 man32;
             TANDS(man32, s32, FP32_MANTISSA_MASK);
-            // p0 = (exp>0) && (exp<254) && (man>0)
-            tile_u32_1 p0a; TCMPS<CmpMode::GT>(p0a, exp32, static_cast<uint32_t>(0));
-            tile_u32_1 p0b; TCMPS<CmpMode::LT>(p0b, exp32, FP32_NUMBER_254);
-            tile_u32_1 p0c; TCMPS<CmpMode::GT>(p0c, man32, static_cast<uint32_t>(0));
-            tile_u32_1 pa;
-            TAND(pa, p0a, p0b);
-            TAND(pa, pa, p0c);
-            // p1 = (exp==0) && (man>0x400000)
-            tile_u32_1 p1a; TCMPS<CmpMode::EQ>(p1a, exp32, static_cast<uint32_t>(0));
-            tile_u32_1 p1b; TCMPS<CmpMode::GT>(p1b, man32, FP32_NUMBER_HALF);
-            tile_u32_1 pb;
-            TAND(pb, p1a, p1b);
-            tile_u32_1 roundup;
-            TOR(roundup, pa, pb);
-            // extractExp = roundup? exp+1 : exp ; finite? .. : 0xff ; nonzero? .. : 0
+            // extractExp = ((exp>0 && exp<254 && man>0) || (exp==0 && man>0x400000))
+            //                ? exp+1 : exp
+            // PTO ISA 合规写法（PTO-REQ-TEPL-COMPARISON-001，pto-spec）：TCMP/TCMPS 产出**packed
+            // predicate Tile**（位打包，元素 i 占 byte i/8 的 bit i%8），TSEL 的 mask 源**必须**是
+            // packed predicate，而 TAND 规范上**只作用于 integer 数据、显式 reject packed 格式**——故
+            // 不能用数据域 TAND/TOR 组合 compare 掩码（那是旧仿真器纵容的不合规写法）。ISA 也无 predicate
+            // 组合指令,复合条件（&& / ||）只能经**嵌套 TSEL**逐个 predicate 串联,每个 TSEL 只吃单个直接
+            // compare predicate。逐值等价旧 TAND/TOR+单 TSEL（这些 tile 全是掩码、不承载数值）。
+            // 详见 README「cuBLAS 守卫掩码的 PTO ISA 合规写法」小节。
             tile_u32_1 exp_p1;
             TADDS(exp_p1, exp32, static_cast<uint32_t>(1));
             tile_u32_1 sel;
-            TADDS(sel, exp32, static_cast<uint32_t>(0));
-            TSEL(sel, roundup, exp_p1);
+            TADDS(sel, exp32, static_cast<uint32_t>(0));   // 默认 extractExp = exp
+            // p0 = (exp>0)&&(exp<254)&&(man>0) ? exp+1 : sel —— 嵌套 c3→c2→c1 gate
+            tile_u32_1 c1; TCMPS<CmpMode::GT>(c1, exp32, static_cast<uint32_t>(0));
+            tile_u32_1 c2; TCMPS<CmpMode::LT>(c2, exp32, FP32_NUMBER_254);
+            tile_u32_1 c3; TCMPS<CmpMode::GT>(c3, man32, static_cast<uint32_t>(0));
+            tile_u32_1 n3; TADDS(n3, sel, static_cast<uint32_t>(0)); TSEL(n3, c3, exp_p1); // c3? e+1 : e
+            tile_u32_1 n2; TADDS(n2, sel, static_cast<uint32_t>(0)); TSEL(n2, c2, n3);     // c2? n3 : e
+            TSEL(sel, c1, n2);                                                             // c1? n2 : e = p0?e+1:e
+            // p1 = (exp==0)&&(man>0x400000) ? exp+1 : sel —— 从含 p0 的 sel 起做 OR
+            tile_u32_1 c4; TCMPS<CmpMode::EQ>(c4, exp32, static_cast<uint32_t>(0));
+            tile_u32_1 c5; TCMPS<CmpMode::GT>(c5, man32, FP32_NUMBER_HALF);
+            tile_u32_1 u5; TADDS(u5, sel, static_cast<uint32_t>(0)); TSEL(u5, c5, exp_p1); // c5? e+1 : sel
+            TSEL(sel, c4, u5);                                                             // c4? u5 : sel = p1?e+1:sel
+            // finite? .. : 0xff ; nonzero? .. : 0
             tile_u32_1 nanb;
             TEXPANDS(nanb, FP32_FP8_NAN);
             TSEL(nanb, finite, sel);        // finite? sel : 0xff
@@ -192,125 +211,41 @@ void dynamic_mx_quant_tail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
             }
             TSTORE(gy, oq);
         }
-    }
+    };
 
-    // Tail block: M_tail (< TileM) leftover rows. Keep the PHYSICAL tile shape at
-    // TileM x BlockSize (so logicalTileBytes stays >= 512B; a TileM'=M_tail
-    // recursion would create sub-512B tiles and fail IsValidActiveSize) but box
-    // every tile to ValidRow = M_tail so only the live rows are touched. The row
-    // block is addressed at index full_m (iterator i-stride uses PHYSICAL Rows).
-    if constexpr (M_tail > 0) {
-        using tile_x_r      = Tile<Location::Vec, InT,      TileM, BlockSize, BLayout::RowMajor, M_tail, BlockSize>;
-        using tile_f_r      = Tile<Location::Vec, float,    TileM, BlockSize, BLayout::RowMajor, M_tail, BlockSize>;
-        using tile_o_r      = Tile<Location::Vec, OutT,     TileM, BlockSize, BLayout::RowMajor, M_tail, BlockSize>;
-        using tile_scale_r  = Tile<Location::Vec, uint16_t, TileM, BlockSize, BLayout::RowMajor, M_tail, BlockSize>;
-        using tile_sred_r   = Tile<Location::Vec, uint16_t, TileM, BlockSize, BLayout::RowMajor, M_tail, 1>;
-        using tile_sstore_r = Tile<Location::Vec, uint8_t,  TileM, BlockSize, BLayout::RowMajor, M_tail, 1>;
-        using tile_recip_f1_r  = Tile<Location::Vec, float,  TileM, BlockSize, BLayout::RowMajor, M_tail, 1>;
-        using tile_in1_r   = Tile<Location::Vec, InT,      TileM, BlockSize, BLayout::RowMajor, M_tail, 1>;
-        using tile_u32_1_r = Tile<Location::Vec, uint32_t, TileM, BlockSize, BLayout::RowMajor, M_tail, 1>;
-
-        global_iterator<gm_x, tile_x_r> x_iter_r(x);
-        global_iterator<gm_y, tile_o_r> y_iter_r(reinterpret_cast<uint8_t *>(y));
-
-        for (int kb = 0; kb < numKb; ++kb) {
-            auto gx = x_iter_r(full_m, kb);
-            auto gy = y_iter_r(full_m, kb);
-            global_iterator<gm_s, tile_sstore_r> s_iter_r(scale + kb);
-            auto gs = s_iter_r(full_m, 0);
-
-            tile_sred_r scale_byte;
-            tile_sred_r recip;
-            tile_x_r xq_s;
-            TLOAD(xq_s, gx);
-            // 内联展开（同 full loop，boxed ValidM=M_tail、valid col=1）：等价
-            // common::compute_cublas_scale_tail<...,M_tail> + compute_cublas_core（IDEAL 版）。
-            // 规避问题8；reinterpret_tile 替 scratch-HBM(问题4)；原生 CmpMode 替模拟(问题3)。
-            tile_x_r abs_x;
-            TABS(abs_x, xq_s);
-            tile_recip_f1_r max_f;
-            if constexpr (std::is_same_v<InT, float>) {
-                TROWMAX(max_f, abs_x);
-            } else {
-                tile_in1_r max_r;
-                TROWMAX(max_r, abs_x);
-                TCVT(max_f, max_r);
+    // 单个 PE (编译期常量 Pe) 的驱动：算自己那段连续行 [row_begin, row_begin+SubM)，
+    // 段内先 seg_full 个 TileM full-tile，再 (若有) 一个 seg_tail 行的 boxed 尾块。
+    //   row_base = M / kPeNum;  row_rem = M % kPeNum
+    //   Pe < row_rem -> SubM = row_base+1, row_begin = Pe*(row_base+1)  (前几个 PE 各多 1 行)
+    //   Pe >= row_rem-> SubM = row_base,   row_begin = row_rem*(row_base+1)+(Pe-row_rem)*row_base
+    // row_begin/SubM/seg_tail 全为 constexpr → 满足 boxed 尾块 validRow 编译期常量要求。
+    auto run_pe = [&]<int Pe>() {
+        constexpr int row_base  = M / kPeNum;
+        constexpr int row_rem   = M % kPeNum;
+        constexpr int SubM      = row_base + (Pe < row_rem ? 1 : 0);
+        constexpr int row_begin = (Pe < row_rem)
+                                      ? Pe * (row_base + 1)
+                                      : row_rem * (row_base + 1) + (Pe - row_rem) * row_base;
+        if constexpr (SubM > 0) {
+            constexpr int TileM    = max_tilem<M, BlockSize, InT, /*IsCublas=*/true>();
+            constexpr int seg_full = SubM / TileM;   // SubM>TileM 时循环多个 full-tile
+            constexpr int seg_tail = SubM % TileM;   // 余行 (< TileM), boxed 尾块
+            for (int lm = 0; lm < seg_full; ++lm) {
+                process_tile.template operator()<TileM, TileM>(row_begin + lm * TileM);
             }
-            auto raw = reinterpret_tile<uint32_t>(max_f);
-            tile_u32_1_r finite;
-            TCMPS<CmpMode::LT>(finite, raw, FP32_EXP_MASK);
-            tile_u32_1_r nonzero;
-            TCMPS<CmpMode::NE>(nonzero, raw, static_cast<uint32_t>(0));
-            TMAXS(max_f, max_f, __builtin_bit_cast(float, MaxLowBoundBits));
-            TMULS(max_f, max_f, inv_dst_max<OutT>());
-            auto s32v = reinterpret_tile<uint32_t>(max_f);
-            tile_u32_1_r s32;
-            TCVT(s32, s32v);
-            tile_u32_1_r exp32;
-            TSHRS(exp32, s32, FP32_SHR_NUM);
-            tile_u32_1_r man32;
-            TANDS(man32, s32, FP32_MANTISSA_MASK);
-            tile_u32_1_r p0a; TCMPS<CmpMode::GT>(p0a, exp32, static_cast<uint32_t>(0));
-            tile_u32_1_r p0b; TCMPS<CmpMode::LT>(p0b, exp32, FP32_NUMBER_254);
-            tile_u32_1_r p0c; TCMPS<CmpMode::GT>(p0c, man32, static_cast<uint32_t>(0));
-            tile_u32_1_r pa;
-            TAND(pa, p0a, p0b);
-            TAND(pa, pa, p0c);
-            tile_u32_1_r p1a; TCMPS<CmpMode::EQ>(p1a, exp32, static_cast<uint32_t>(0));
-            tile_u32_1_r p1b; TCMPS<CmpMode::GT>(p1b, man32, FP32_NUMBER_HALF);
-            tile_u32_1_r pb;
-            TAND(pb, p1a, p1b);
-            tile_u32_1_r roundup;
-            TOR(roundup, pa, pb);
-            tile_u32_1_r exp_p1;
-            TADDS(exp_p1, exp32, static_cast<uint32_t>(1));
-            tile_u32_1_r sel;
-            TADDS(sel, exp32, static_cast<uint32_t>(0));
-            TSEL(sel, roundup, exp_p1);
-            tile_u32_1_r nanb;
-            TEXPANDS(nanb, FP32_FP8_NAN);
-            TSEL(nanb, finite, sel);
-            tile_u32_1_r extract;
-            TEXPANDS(extract, static_cast<uint32_t>(0));
-            TSEL(extract, nonzero, nanb);
-            TCVT(scale_byte, extract);
-            tile_u32_1_r sh;
-            TSHLS(sh, extract, static_cast<uint32_t>(BF16_SHR_NUM));
-            tile_u32_1_r bias;
-            TEXPANDS(bias, FP32_EXP_BIAS_CUBLAS);
-            tile_u32_1_r half;
-            TSUB(half, bias, sh);
-            tile_u32_1_r rnan;
-            TEXPANDS(rnan, FP32_NAN_PACK);
-            TSEL(rnan, finite, half);
-            tile_u32_1_r rsel;
-            TEXPANDS(rsel, static_cast<uint32_t>(0));
-            TSEL(rsel, nonzero, rnan);
-            TCVT(recip, rsel);
-
-            tile_sstore_r scale_u8;
-            TCVT(scale_u8, scale_byte);
-            TSTORE(gs, scale_u8);
-
-            // 问题4 正式方案：reinterpret_tile 零指令把 recip(uint16) 视为 bf16。
-            auto inv_bf16 = reinterpret_tile<__bf16>(recip);
-            tile_recip_f1_r inv_scale_f;
-            TCVT(inv_scale_f, inv_bf16);
-
-            tile_x_r xq;
-            TLOAD(xq, gx);
-            tile_o_r oq;
-            if constexpr (std::is_same_v<InT, float>) {
-                TROWEXPANDMUL(xq, xq, inv_scale_f);
-                TCVT(oq, xq);
-            } else {
-                tile_f_r xf;
-                TCVT(xf, xq); // bf16/half -> fp32
-                TROWEXPANDMUL(xf, xf, inv_scale_f); // per-row scalar broadcast-mul
-                TCVT(oq, xf);
+            if constexpr (seg_tail > 0) {
+                process_tile.template operator()<TileM, seg_tail>(row_begin + seg_full * TileM);
             }
-            TSTORE(gy, oq);
         }
+    };
+
+    // 运行期按 tid 分派到编译期展开的 per-PE 实例 (kPeNum 编译期已知)。kPeNum=1 时只 case0。
+    switch (static_cast<int>(tid)) {
+        case 0: run_pe.template operator()<0>(); break;
+        case 1: if constexpr (kPeNum > 1) run_pe.template operator()<1>(); break;
+        case 2: if constexpr (kPeNum > 2) run_pe.template operator()<2>(); break;
+        case 3: if constexpr (kPeNum > 3) run_pe.template operator()<3>(); break;
+        default: break;
     }
 }
 

@@ -428,17 +428,13 @@ inline void compute_cublas_core(
     using tile_u32 = Tile<Location::Vec, uint32_t, R, C, BLayout::RowMajor, ValidR, ValidC>;
 
     // ================== 规避方案 (WORKAROUND) ==================
-    // 本段用 min/max + 默认-EQ 的 3-参 TCMP/TCMPS 模拟 GT/LT/NE 比较。
-    // 理想写法是直接用带 CmpMode 的 4-参 TCMP/TCMPS 1:1 对照 AscendC
-    // ComputeScaleCublas（见文件末尾注释保留的 IDEAL 版本），但 -D__linx 构建
-    // 下随附头文件 jcore/template_asm.hpp 只提供 3-参 mode-less 的 TCMP/TCMPS，
-    // 带 CmpMode 的 4-参重载仅存在于 jcore/TCmp.hpp（linx 未包含）。
-    // 详见 RECORD.md「问题3：linx 缺失带 CmpMode 的 TCMP/TCMPS」。
-    // 这是 linx 工具链侧需要补齐的能力；补齐后可切换到 IDEAL 版本。
-    // 语义等价映射：
+    // 本 reference 函数保留用 min/max + 默认-EQ 的 3-参 TCMP/TCMPS 模拟 GT/LT 比较（问题3）；
+    // 各比较各自产出一个 packed predicate，复合条件用嵌套 TSEL 组合（PTO ISA 合规，见下方）。
+    // 3 个实际 kernel 已就地内联为 native 4-参 `TCMPS<CmpMode>` + 嵌套 TSEL（当前工具链已支持
+    // 4-参重载），本函数无 kernel 调用、仅作参考，故沿用旧的 3-参模拟无需改动比较机制。
+    // 语义等价映射（EQ 模拟）：
     //   a<b  == TMINS(t,a,b-1); TCMP(m,t,a)   （默认 EQ：t==a 即 a<=b-1 即 a<b）
-    //   a>b  == TMAXS(t,a,b+1); TCMP(m,t,a)
-    //   a!=b == TNOT(TCMPS(m,a,b))
+    //   a>b  == TMAXS(t,a,1); TCMP(m,t,a)     （a>0：max(a,1)==a 即 a>=1）
     // ===========================================================
 
     // raw amax bits (pre-clamp) for finite / nonzero masks
@@ -462,38 +458,51 @@ inline void compute_cublas_core(
     tile_u32 man32;
     TANDS(man32, s32, FP32_MANTISSA_MASK);
 
-    // p0 = (exp>0) && (exp<254) && (man>0)
-    tile_u32 exp0;
-    TCMPS(exp0, exp32, static_cast<uint32_t>(0));
-    tile_u32 man0;
-    TCMPS(man0, man32, static_cast<uint32_t>(0));
-    tile_u32 t_lt;
-    TMINS(t_lt, exp32, static_cast<uint32_t>(FP32_NUMBER_254 - 1));
-    tile_u32 exp_lt254;
-    TCMP(exp_lt254, t_lt, exp32);
-    tile_u32 not_exp0;
-    TNOT(not_exp0, exp0);
-    tile_u32 not_man0;
-    TNOT(not_man0, man0);
-    tile_u32 pa;
-    TAND(pa, not_exp0, exp_lt254);
-    TAND(pa, pa, not_man0);
-    // p1 = (exp==0) && (man>0x400000)
-    tile_u32 t_gt;
-    TMAXS(t_gt, man32, static_cast<uint32_t>(FP32_NUMBER_HALF + 1));
-    tile_u32 man_gt;
-    TCMP(man_gt, t_gt, man32);
-    tile_u32 pb;
-    TAND(pb, exp0, man_gt);
-    tile_u32 roundup;
-    TOR(roundup, pa, pb);
-
-    // extractExp = roundup? exp+1 : exp ; finite? .. : 0xff ; nonzero? .. : 0
+    // extractExp = ((exp>0 && exp<254 && man>0) || (exp==0 && man>0x400000)) ? exp+1 : exp
+    // PTO ISA 合规写法（PTO-REQ-TEPL-COMPARISON-001）：compare 出 packed predicate、TSEL 的 mask
+    // 须 packed predicate、TAND 只作用 integer 且 reject packed——复合条件（&& / ||）用**嵌套
+    // TSEL**、每个 TSEL 吃单个直接 compare predicate，不可用数据域 TAND/TOR 组合掩码。此函数保留
+    // 其 min/max+EQ 比较模拟风格（问题3：各比较各自产出一个 predicate 供单个 TSEL 消费）；仅把
+    // 掩码组合从 TAND/TOR 改为嵌套 TSEL。详见 README「cuBLAS 守卫掩码的 PTO ISA 合规写法」。
     tile_u32 exp_p1;
     TADDS(exp_p1, exp32, static_cast<uint32_t>(1));
     tile_u32 sel;
-    TADDS(sel, exp32, static_cast<uint32_t>(0));
-    TSEL(sel, roundup, exp_p1);
+    TADDS(sel, exp32, static_cast<uint32_t>(0));                 // 默认 extractExp = exp
+    // c1=(exp>0): max(exp,1)==exp ; c2=(exp<254): min(exp,253)==exp ; c3=(man>0): max(man,1)==man
+    tile_u32 t1;
+    TMAXS(t1, exp32, static_cast<uint32_t>(1));
+    tile_u32 c1;
+    TCMP(c1, t1, exp32);
+    tile_u32 t2;
+    TMINS(t2, exp32, static_cast<uint32_t>(FP32_NUMBER_254 - 1));
+    tile_u32 c2;
+    TCMP(c2, t2, exp32);
+    tile_u32 t3;
+    TMAXS(t3, man32, static_cast<uint32_t>(1));
+    tile_u32 c3;
+    TCMP(c3, t3, man32);
+    // c4=(exp==0) ; c5=(man>0x400000): max(man,HALF+1)==man
+    tile_u32 c4;
+    TCMPS(c4, exp32, static_cast<uint32_t>(0));
+    tile_u32 t5;
+    TMAXS(t5, man32, static_cast<uint32_t>(FP32_NUMBER_HALF + 1));
+    tile_u32 c5;
+    TCMP(c5, t5, man32);
+    // p0 = c1&&c2&&c3 ? exp+1 : exp（嵌套 c3→c2→c1 gate）
+    tile_u32 n3;
+    TADDS(n3, sel, static_cast<uint32_t>(0));
+    TSEL(n3, c3, exp_p1);
+    tile_u32 n2;
+    TADDS(n2, sel, static_cast<uint32_t>(0));
+    TSEL(n2, c2, n3);
+    TSEL(sel, c1, n2);
+    // p1 = c4&&c5 ? exp+1 : sel（从含 p0 的 sel 起做 OR）
+    tile_u32 u5;
+    TADDS(u5, sel, static_cast<uint32_t>(0));
+    TSEL(u5, c5, exp_p1);
+    TSEL(sel, c4, u5);
+
+    // finite? .. : 0xff ; nonzero? .. : 0
     tile_u32 nanb;
     TEXPANDS(nanb, FP32_FP8_NAN);
     tile_u32 fsel;
@@ -518,73 +527,10 @@ inline void compute_cublas_core(
     TSEL(rsel, finite, half);
     TSEL(rsel, eq_zero, zero_t);
     TCVT(recip_out, rsel);
-
-/* === IDEAL VERSION (blocked): direct-CmpMode, mirrors AscendC ComputeScaleCublas
-   1:1 (Compare<LT>/<NE>/<GT>/<EQ>) via the 4-arg TCMPS(dst,src,s,CmpMode) that is
-   documented in docs/intrinsics/tcmps.md. Does NOT compile on -D__linx today —
-   jcore/template_asm.hpp only ships the 3-arg mode-less TCMP/TCMPS; the 4-arg
-   CmpMode overloads live in jcore/TCmp.hpp which is not included under __linx.
-   Switch to this once linx exposes the 4-arg overload (see RECORD.md 问题3).
-
-    tile_u32 raw;
-    reinterpret_f32_to_u32<0, R, C, ValidR>(max_abs, raw);
-    tile_u32 finite;  // raw < 0x7f800000   (AscendC:741 Compare<LT>)
-    TCMPS(finite, raw, FP32_EXP_MASK, CmpMode::LT);
-    tile_u32 nonzero; // raw != 0           (AscendC:742 Compare<NE>)
-    TCMPS(nonzero, raw, static_cast<uint32_t>(0), CmpMode::NE);
-
-    TMAXS(max_abs, max_abs, __builtin_bit_cast(float, MaxLowBoundBits));
-    TMULS(max_abs, max_abs, inv_dst_max<OutT>());
-    tile_u32 s32;
-    reinterpret_f32_to_u32<1, R, C, ValidR, ValidC>(max_abs, s32);
-
-    tile_u32 exp32;
-    TSHRS(exp32, s32, FP32_SHR_NUM);
-    tile_u32 man32;
-    TANDS(man32, s32, FP32_MANTISSA_MASK);
-
-    // p0 = (exp>0) && (exp<254) && (man>0)   (AscendC:751-755)
-    tile_u32 p0a; TCMPS(p0a, exp32, static_cast<uint32_t>(0),                CmpMode::GT);
-    tile_u32 p0b; TCMPS(p0b, exp32, static_cast<uint32_t>(FP32_NUMBER_254),  CmpMode::LT);
-    tile_u32 p0c; TCMPS(p0c, man32, static_cast<uint32_t>(0),                CmpMode::GT);
-    tile_u32 pa;
-    TAND(pa, p0a, p0b);
-    TAND(pa, pa, p0c);
-    // p1 = (exp==0) && (man>0x400000)        (AscendC:757-759)
-    tile_u32 p1a; TCMPS(p1a, exp32, static_cast<uint32_t>(0),                CmpMode::EQ);
-    tile_u32 p1b; TCMPS(p1b, man32, static_cast<uint32_t>(FP32_NUMBER_HALF), CmpMode::GT);
-    tile_u32 pb;
-    TAND(pb, p1a, p1b);
-    tile_u32 roundup;
-    TOR(roundup, pa, pb);
-
-    tile_u32 exp_p1;
-    TADDS(exp_p1, exp32, static_cast<uint32_t>(1));
-    tile_u32 sel;
-    TADDS(sel, exp32, static_cast<uint32_t>(0));
-    TSEL(sel, roundup, exp_p1);          // roundup? exp+1 : exp
-    tile_u32 nanb;
-    TEXPANDS(nanb, FP32_FP8_NAN);
-    TSEL(nanb, finite, sel);             // finite? sel : 0xff
-    tile_u32 extract;
-    TEXPANDS(extract, static_cast<uint32_t>(0));
-    TSEL(extract, nonzero, nanb);        // nonzero? .. : 0   (AscendC:765)
-    TCVT(scale_byte, extract);           // narrow low16
-
-    tile_u32 sh;
-    TSHLS(sh, extract, static_cast<uint32_t>(BF16_SHR_NUM));
-    tile_u32 bias;
-    TEXPANDS(bias, FP32_EXP_BIAS_CUBLAS);
-    tile_u32 half;
-    TSUB(half, bias, sh);
-    tile_u32 rnan;
-    TEXPANDS(rnan, FP32_NAN_PACK);
-    TSEL(rnan, finite, half);            // finite? half : 0x7f81
-    tile_u32 rsel;
-    TEXPANDS(rsel, static_cast<uint32_t>(0));
-    TSEL(rsel, nonzero, rnan);           // nonzero? .. : 0
-    TCVT(recip_out, rsel);
-*/
+    // 注：原「IDEAL VERSION（native 4-参 CmpMode）」注释块已删除——其比较用 native CmpMode
+    // 但掩码仍用数据域 TAND/TOR 组合，属 PTO ISA 不合规（见上）。当前 active 版已是合规参考
+    // （嵌套 TSEL）；3 个 cuBLAS kernel 各自内联的版本用 native CmpMode + 嵌套 TSEL，均已 gfrun
+    // 4 线程验证。本 reference 函数当前无 kernel 调用（各 kernel 就地展开以规避问题8）。
 }
 
 // ===========================================================================

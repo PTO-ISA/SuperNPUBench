@@ -37,9 +37,11 @@ namespace supernpu::tile_isa::mxquant {
 // not (large BlockSize). TileN stays an explicit param here so the dispatcher can
 // feed the derived value.
 template <int Axis, int Post, int BlockSize = 32, int TileN = 32, typename OutT = __fp8_e4m3,
-          typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
+          typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu, int kPeNum = 1>
 static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
     static_assert(Axis > 0 && Post > 0, "dims must be positive");
+    static_assert(kPeNum == 1 || kPeNum == 4,
+                  "kPeNum must be 1 (single PE) or 4 (SoftCore.h kCorePeCount)");
     // Axis must be whole blocks (a block is exactly BlockSize along the quant
     // axis); Post need NOT be a multiple of TileN: full column tiles + N_tail.
     static_assert(Axis % BlockSize == 0, "Axis must be multiple of BlockSize");
@@ -89,7 +91,23 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
     global_iterator<gm_x, tile_x> x_iter(x);
     global_iterator<gm_y, tile_o> y_iter(reinterpret_cast<uint8_t *>(y));
 
-    for (int kb = 0; kb < numKb; ++kb) {
+    // SPMD 4-PE：按**块行 kb**（归约块索引，= 输出行块 / scale 行）连续切分给 kPeNum 个
+    //   PE，每个 PE 只算自己那段 [kb_begin, kb_end) 的块行——写不重叠的 y 行块 + scale 行,
+    //   无 barrier。块行切分不改任何 tile 形状（不同于 tail 的 M 行 boxed 尾块），故 kb_begin/
+    //   SubKb 用**运行期**值即可（无需按 Pe 编译期展开）。kPeNum=1（默认）→ tid=0 跑全部块行,
+    //   与旧单线程行为等价（现有 driver 零回归）。kPeNum=4 须 4 线程跑
+    //   （gfrun -s softcore.multiThreadNum=4）；单线程只写 1/kPeNum 输出。
+    const uint32_t tid = get_thread_idx();          // 0..kPeNum-1
+    if (static_cast<int>(tid) >= kPeNum) return;    // 多余线程空转（kPeNum=1 只保留 tid 0）
+    const int kb_base  = numKb / kPeNum;
+    const int kb_rem   = numKb % kPeNum;
+    const int SubKb    = kb_base + (static_cast<int>(tid) < kb_rem ? 1 : 0);
+    const int kb_begin = (static_cast<int>(tid) < kb_rem)
+                             ? static_cast<int>(tid) * (kb_base + 1)
+                             : kb_rem * (kb_base + 1) + (static_cast<int>(tid) - kb_rem) * kb_base;
+    const int kb_end   = kb_begin + SubKb;
+
+    for (int kb = kb_begin; kb < kb_end; ++kb) {
         for (int n = 0; n < numN; ++n) {
             auto gx = x_iter(kb, n);
             auto gy = y_iter(kb, n);
@@ -141,26 +159,28 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
             TSHRS(exp32, s32, FP32_SHR_NUM);
             tile_u32_1 man32;
             TANDS(man32, s32, FP32_MANTISSA_MASK);
-            // p0 = (exp>0) && (exp<254) && (man>0)
-            tile_u32_1 p0a; TCMPS<CmpMode::GT>(p0a, exp32, static_cast<uint32_t>(0));
-            tile_u32_1 p0b; TCMPS<CmpMode::LT>(p0b, exp32, FP32_NUMBER_254);
-            tile_u32_1 p0c; TCMPS<CmpMode::GT>(p0c, man32, static_cast<uint32_t>(0));
-            tile_u32_1 pa;
-            TAND(pa, p0a, p0b);
-            TAND(pa, pa, p0c);
-            // p1 = (exp==0) && (man>0x400000)
-            tile_u32_1 p1a; TCMPS<CmpMode::EQ>(p1a, exp32, static_cast<uint32_t>(0));
-            tile_u32_1 p1b; TCMPS<CmpMode::GT>(p1b, man32, FP32_NUMBER_HALF);
-            tile_u32_1 pb;
-            TAND(pb, p1a, p1b);
-            tile_u32_1 roundup;
-            TOR(roundup, pa, pb);
-            // extractExp = roundup? exp+1 : exp ; finite? .. : 0xff ; nonzero? .. : 0
+            // extractExp = ((exp>0 && exp<254 && man>0) || (exp==0 && man>0x400000))
+            //                ? exp+1 : exp
+            // PTO ISA 合规写法（PTO-REQ-TEPL-COMPARISON-001，pto-spec）：TCMP/TCMPS 产 packed
+            // predicate，TSEL 的 mask 必须是 packed predicate，TAND 只作用 integer 且 reject
+            // packed——故不能用数据域 TAND/TOR 组合 compare 掩码（旧仿真器纵容的不合规写法）。
+            // 复合条件（&& / ||）改用嵌套 TSEL，每个 TSEL 只吃单个直接 compare predicate。
+            // 详见 README「cuBLAS 守卫掩码的 PTO ISA 合规写法」小节 / tail_cublas_fp8 同法。
             tile_u32_1 exp_p1;
             TADDS(exp_p1, exp32, static_cast<uint32_t>(1));
             tile_u32_1 sel;
-            TADDS(sel, exp32, static_cast<uint32_t>(0));
-            TSEL(sel, roundup, exp_p1);
+            TADDS(sel, exp32, static_cast<uint32_t>(0));   // 默认 extractExp = exp
+            tile_u32_1 c1; TCMPS<CmpMode::GT>(c1, exp32, static_cast<uint32_t>(0));
+            tile_u32_1 c2; TCMPS<CmpMode::LT>(c2, exp32, FP32_NUMBER_254);
+            tile_u32_1 c3; TCMPS<CmpMode::GT>(c3, man32, static_cast<uint32_t>(0));
+            tile_u32_1 n3; TADDS(n3, sel, static_cast<uint32_t>(0)); TSEL(n3, c3, exp_p1); // c3? e+1 : e
+            tile_u32_1 n2; TADDS(n2, sel, static_cast<uint32_t>(0)); TSEL(n2, c2, n3);     // c2? n3 : e
+            TSEL(sel, c1, n2);                                                             // c1? n2 : e = p0?e+1:e
+            tile_u32_1 c4; TCMPS<CmpMode::EQ>(c4, exp32, static_cast<uint32_t>(0));
+            tile_u32_1 c5; TCMPS<CmpMode::GT>(c5, man32, FP32_NUMBER_HALF);
+            tile_u32_1 u5; TADDS(u5, sel, static_cast<uint32_t>(0)); TSEL(u5, c5, exp_p1); // c5? e+1 : sel
+            TSEL(sel, c4, u5);                                                             // c4? u5 : sel = p1?e+1:sel
+            // finite? .. : 0xff ; nonzero? .. : 0
             tile_u32_1 nanb;
             TEXPANDS(nanb, FP32_FP8_NAN);
             TSEL(nanb, finite, sel);        // finite? sel : 0xff
@@ -238,7 +258,7 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
         global_iterator<gm_x, tile_x_r> x_iter_r(x);
         global_iterator<gm_y, tile_o_r> y_iter_r(reinterpret_cast<uint8_t *>(y));
 
-        for (int kb = 0; kb < numKb; ++kb) {
+        for (int kb = kb_begin; kb < kb_end; ++kb) {  // SPMD：本 PE 的块行段（同上）
             auto gx = x_iter_r(kb, numN);
             auto gy = y_iter_r(kb, numN);
             global_iterator<gm_s, tile_sstore_r> s_iter_r(scale + kb * Post);
@@ -276,25 +296,21 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
             TSHRS(exp32, s32, FP32_SHR_NUM);
             tile_u32_1_r man32;
             TANDS(man32, s32, FP32_MANTISSA_MASK);
-            // p0 = (exp>0) && (exp<254) && (man>0)
-            tile_u32_1_r p0a; TCMPS<CmpMode::GT>(p0a, exp32, static_cast<uint32_t>(0));
-            tile_u32_1_r p0b; TCMPS<CmpMode::LT>(p0b, exp32, FP32_NUMBER_254);
-            tile_u32_1_r p0c; TCMPS<CmpMode::GT>(p0c, man32, static_cast<uint32_t>(0));
-            tile_u32_1_r pa;
-            TAND(pa, p0a, p0b);
-            TAND(pa, pa, p0c);
-            // p1 = (exp==0) && (man>0x400000)
-            tile_u32_1_r p1a; TCMPS<CmpMode::EQ>(p1a, exp32, static_cast<uint32_t>(0));
-            tile_u32_1_r p1b; TCMPS<CmpMode::GT>(p1b, man32, FP32_NUMBER_HALF);
-            tile_u32_1_r pb;
-            TAND(pb, p1a, p1b);
-            tile_u32_1_r roundup;
-            TOR(roundup, pa, pb);
+            // 同 full loop：嵌套 TSEL 表达复合条件（PTO ISA 合规，见上方注释 / README）。
             tile_u32_1_r exp_p1;
             TADDS(exp_p1, exp32, static_cast<uint32_t>(1));
             tile_u32_1_r sel;
             TADDS(sel, exp32, static_cast<uint32_t>(0));
-            TSEL(sel, roundup, exp_p1);
+            tile_u32_1_r c1; TCMPS<CmpMode::GT>(c1, exp32, static_cast<uint32_t>(0));
+            tile_u32_1_r c2; TCMPS<CmpMode::LT>(c2, exp32, FP32_NUMBER_254);
+            tile_u32_1_r c3; TCMPS<CmpMode::GT>(c3, man32, static_cast<uint32_t>(0));
+            tile_u32_1_r n3; TADDS(n3, sel, static_cast<uint32_t>(0)); TSEL(n3, c3, exp_p1);
+            tile_u32_1_r n2; TADDS(n2, sel, static_cast<uint32_t>(0)); TSEL(n2, c2, n3);
+            TSEL(sel, c1, n2);
+            tile_u32_1_r c4; TCMPS<CmpMode::EQ>(c4, exp32, static_cast<uint32_t>(0));
+            tile_u32_1_r c5; TCMPS<CmpMode::GT>(c5, man32, FP32_NUMBER_HALF);
+            tile_u32_1_r u5; TADDS(u5, sel, static_cast<uint32_t>(0)); TSEL(u5, c5, exp_p1);
+            TSEL(sel, c4, u5);
             tile_u32_1_r nanb;
             TEXPANDS(nanb, FP32_FP8_NAN);
             TSEL(nanb, finite, sel);        // finite? sel : 0xff
@@ -350,14 +366,14 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
 // InT drives BOTH the budget (a wider input dtype shrinks it) AND the compute domain:
 // scale-reduce and data paths are InT-dispatched (bf16/half/fp32) via `if constexpr`.
 template <int Axis, int Post, int BlockSize = 32, typename OutT = __fp8_e4m3,
-          typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu>
+          typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu, int kPeNum = 1>
 void dynamic_mx_quant_nontail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
     static_assert(std::is_same_v<InT, __bf16> || std::is_same_v<InT, __half> ||
                       std::is_same_v<InT, float>,
                   "InT must be one of {__bf16, __half, float}");
     constexpr int TileN = pick_tilen<BlockSize, Post, OutT, InT, /*IsCublas=*/true>();
     if constexpr (TileN >= nontail_align_lower<OutT>()) {
-        nontail_cublas_fp8_plain<Axis, Post, BlockSize, TileN, OutT, InT, MaxLowBoundBits>(x, y, scale);
+        nontail_cublas_fp8_plain<Axis, Post, BlockSize, TileN, OutT, InT, MaxLowBoundBits, kPeNum>(x, y, scale);
     } else {
         constexpr int BigTileN = nontail_align_lower<OutT>();
         constexpr int Rsub = max_rsub<BlockSize, BigTileN, InT, /*IsCublas=*/true>();

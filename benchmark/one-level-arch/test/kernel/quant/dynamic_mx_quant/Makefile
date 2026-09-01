@@ -71,6 +71,20 @@ ifeq ($(TYPE), TAIL_OCP_FP8)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_tail_ocp_fp8.elf
 endif
 
+# 正式 TAIL_CUBLAS_FP8 kernel（固定 SPMD 4-PE，kPeNum=4，fp16 in）。
+# 必须用 4 线程跑：gfrun -s softcore.multiThreadNum=4。
+ifeq ($(TYPE), TAIL_CUBLAS_FP8_4PE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_cublas_fp8_4pe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_tail_cublas_fp8_4pe.elf
+endif
+
+# 正式 NONTAIL_CUBLAS_FP8 kernel（固定 SPMD 4-PE，kPeNum=4，按块行切分，fp16 in）。
+# 必须用 4 线程跑：gfrun -s softcore.multiThreadNum=4。
+ifeq ($(TYPE), NONTAIL_CUBLAS_FP8_4PE)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8_4pe.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_nontail_cublas_fp8_4pe.elf
+endif
+
 ifeq ($(TYPE), ALIGN32_PROBE)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/align32_probe.cpp
    TARGET = $(ELF_HEAD)/$(TESTCASE)_align32_probe.elf
