@@ -3,6 +3,8 @@
 
 #include <cstddef>
 
+// Shared shape/address helpers for the single-PE and four-PE QSMLA kernels.
+
 static constexpr int qsmla_pe_row_begin(
     int row_count, int pe_count, int pe_id)
 {

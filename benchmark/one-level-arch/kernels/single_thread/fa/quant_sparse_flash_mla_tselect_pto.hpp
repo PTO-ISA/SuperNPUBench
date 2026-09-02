@@ -1,8 +1,8 @@
-#ifndef QUANT_SPARSE_FLASH_MLA_PTO_HPP
-#define QUANT_SPARSE_FLASH_MLA_PTO_HPP
+#ifndef QUANT_SPARSE_FLASH_MLA_TSELECT_PTO_HPP
+#define QUANT_SPARSE_FLASH_MLA_TSELECT_PTO_HPP
 
 // =============================================================================
-// quant_sparse_flash_mla_pto.hpp
+// quant_sparse_flash_mla_tselect_pto.hpp
 //   Quant Sparse Flash MLA (SWA mode) on PTO Tile-OP
 //
 // 【计算语义】

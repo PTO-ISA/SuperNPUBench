@@ -5,15 +5,15 @@
 // quant_sparse_flash_mla_tadd_pto.hpp
 //   Quant Sparse Flash MLA (SWA mode) — TADD mask variant
 //
-//   本文件是 quant_sparse_flash_mla_pto.hpp (TSEL 版) 的备选实现,
+//   本文件是 quant_sparse_flash_mla_tselect_pto.hpp 的 TADD 备选实现,
 //   使用 TADD 替代 TSEL 施加 mask, 代码更简单, 兼容旧版模拟器.
 //
 //   切换方法: 在 test 文件中修改 include 和函数名:
-//     #include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
+//     #include "single_thread/fa/quant_sparse_flash_mla_tadd_pto.hpp"
 //     quant_sparse_flash_mla_swa_tadd_pto<...>(...)
 //
 // 【与 TSEL 版的差异】
-//   | 项目        | TADD 版 (本文件)              | TSEL 版 (quant_sparse_flash_mla_pto.hpp)     |
+//   | 项目        | TADD 版 (本文件)              | TSEL 版 (quant_sparse_flash_mla_tselect_pto.hpp) |
 //   |-------------|------------------------------|----------------------------------------------|
 //   | mask 格式   | float[s1*s2], 0.0/-1e30      | uint32_t 位打包[s1*ceil(s2/32)]              |
 //   | mask 构建   | build_swa_mask 直接赋值       | build_swa_mask_bitpacked 位操作              |
@@ -53,7 +53,7 @@
 
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
-#include "qsmla_config_pto.hpp"
+#include <common/qsmla_config_pto.hpp>
 
 using namespace pto;
 

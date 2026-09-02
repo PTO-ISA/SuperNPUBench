@@ -27,13 +27,13 @@
 //
 // 【切换方法】
 //   test 文件中:
-//     #include "fa/quant_sparse_flash_mla_onepass_pto.hpp"
+//     #include "single_thread/fa/quant_sparse_flash_mla_onepass_pto.hpp"
 //     quant_sparse_flash_mla_swa_onepass_pto<...>(...)
 // =============================================================================
 
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
-#include "qsmla_config_pto.hpp"
+#include <common/qsmla_config_pto.hpp>
 
 using namespace pto;
 
