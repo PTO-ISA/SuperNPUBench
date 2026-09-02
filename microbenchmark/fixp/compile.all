@@ -40,7 +40,20 @@ MODES=(
   gemv_s8 gemv_bias_s8 gemv_acc_s8
   gemv_mx_s8 gemv_mx_bias_s8 gemv_mx_acc_s8
   # four-PE cooperative Shared A/B (B.IOS)
-  shared s8_shared trans_a trans_b trans_ab
+  shared s8_shared shared_acc shared_bias shared_rowmax shared_groupmax_8
+  shared_rowmax_groupmax_8
+  # shared param-free conversion (+ plain ReLU)
+  shared_keep_acc_relu shared_f16 shared_f16_relu shared_bf16 shared_bf16_relu
+  # shared ReLU / quant combinations
+  shared_s8_relu shared_s8_lrelu shared_v_s8_relu shared_f16_prelu shared_s8_prelu
+  # shared RowMax / GroupMax / MaxAbs (Core-total 4*TM)
+  shared_rowmax_init
+  shared_groupmax_16 shared_groupmax_32 shared_groupmax_48 shared_groupmax_64
+  shared_groupmax_80 shared_groupmax_96 shared_groupmax_112 shared_groupmax_128
+  shared_rowgroup_maxabs shared_f16_groupmax shared_s8_rowmax
+  # shared ACC + CScale
+  shared_acc_cscale
+  trans_a trans_b trans_ab
   # edge-case FPATR / operand-stream features
   vqf_s8_prelu legacy3
 )
@@ -81,6 +94,13 @@ echo "log: $LOG"
 echo "=========================================="
 
 if [ "$FAIL" -ne 0 ]; then
+  exit 1
+fi
+
+# Decode every emitted B.FPATR bundle and verify that the report expectation
+# list stays in lockstep with this script's active mode list.
+if ! python3 report_fixp.py; then
+  echo "fixp disassembly contract validation failed (see fixp_report.md)"
   exit 1
 fi
 exit 0
