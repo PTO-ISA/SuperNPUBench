@@ -79,6 +79,22 @@ ifeq ($(TYPE), MATMUL_VALIDATE)
    endif
 endif
 
+ifeq ($(TYPE), MULTI_BLOCK)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_multi_block.cpp
+   DEFINES += -DglobM=$(M) -DglobN=$(N) -DglobK=$(K) -DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK)
+   ifneq ($(MODE), )
+      DEFINES += -D$(MODE)
+   endif
+   ifneq ($(NBLOCKS), )
+      DEFINES += -DNBLOCKS=$(NBLOCKS)
+   endif
+   ifneq ($(NAME), )
+      TARGET = $(ELF_HEAD)/$(NAME)_MULTI_BLOCK_$(MODE)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
+   else
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_MULTI_BLOCK_$(MODE)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
+   endif
+endif
+
 include ../../common/Makefile.common
 
 clean:
