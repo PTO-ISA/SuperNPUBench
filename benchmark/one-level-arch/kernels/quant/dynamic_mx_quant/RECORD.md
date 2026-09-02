@@ -1721,6 +1721,25 @@ tile 是 `[TileM,1]`（`TileM=64`，BS=32），逻辑仅 64B，但 PTO TSize 最
 `ISSUE_reduce_output_stride_tail.md`（待提 SuperScalarModel issue）。kernel 侧规避方案 C/D **尚未选定落地**。
 相关：问题13（TCVT 不发 lb2）、问题16（TCVT 形状契约）、`ISSUE_32B_align.md`。
 
+### 补充（2026-09-02）：rowReduce（尾轴 TROWMAX）与 colReduce（非尾轴 TCOLMAX）在模型侧物理形状处理**不对称**
+
+核对 `SuperScalarModel/isa/Block.cpp` 的 reduce 输出形状分支，两者机制不同：
+
+- **rowReduce（`TROWMAX/…`，Block.cpp:2328）**：`stride=1` **硬编码** → `col=1`、`validCol=1`，
+  `row = dst->size/(1×elemBytes)`。即**物理列被强制塌成 1**（列 stride 在 bundle 无独立 B.DIM 字段承载）。
+  故尾轴 reduce 下游列向量 tile **必须声明 physical Cols=1** 来匹配（本问题正文）。
+- **colReduce（`TCOLMAX/…`，Block.cpp:2349）**：`validRow=1`、`col=validCol`、
+  `row = dst->size/(validCol×elemBytes)`。即**物理行不被强制为 1，而是按分配 size 反推**。
+
+代入非尾轴现用声明 `Tile<…, BlockSize, TileN, …, ValidRow=1, ValidCol=TileN>`：`dst->size=
+BlockSize·TileN·elemBytes`、`validCol=TileN` → 模型反推 `col=TileN`、`row=BlockSize`，与声明的物理行
+`BlockSize` **自洽**，不崩；`nontail_cublas_fp8` 逐字节 `output=pass` 亦佐证数值正确。
+
+- **两种写法都合法（colReduce 特有）**：因物理行由 `dst->size` 反推，声明 `physical row=BlockSize`（复用
+  输入块物理行高）反推得 `BlockSize`；声明 `physical row=1` 则 `dst->size=TileN·elemBytes`、反推得 `1`，
+  同样自洽。这与 rowReduce（物理列被无条件塌 1、只有 col=1 一种合法声明）**不同**。
+- 与问题24（4-PE 落盘规模相关现象）**无关**：colReduce 形状自洽且数值正确，非该现象成因。
+
 ## 问题23：gfrun 对 res_check ELF 的 syscall-ABI 探测误判 → 读错寄存器、`Bad Syscall` 崩（需 emulator 侧解决）【未修·本地 env 规避】
 
 > 缺陷所在仓 **`SuperScalarModel`（gfrun）**，`emulator/main.cpp` + `emulator/SysCall.h` 的 syscall
@@ -1829,3 +1848,6 @@ GFRUN_FORCE_DIRECTBOOT_ABI=1 bin/gfrun -f <res_check elf> -s softcore.multiThrea
 **未定位、未修**。kernel 逻辑已由单 PE 逐字节正确佐证；4-PE 下的落盘现象是**规模相关**的，且在既有
 `nontail_cublas_fp8` 上同样存在。当前 4-PE 精度验证仅在 Post≥256 量级可得到完整落盘。根因待进一步在
 gfrun/harness 侧定位（tile 存储可见性、组终止时序、访存对齐等方向均待验证）。
+
+完整可复现 issue（含逐一版本清单 + 最小复现 + 已排除方向 + 确定性事实 + 猜测方向）见
+`ISSUE_gfrun_multipe_size_dependent_dump.md`。

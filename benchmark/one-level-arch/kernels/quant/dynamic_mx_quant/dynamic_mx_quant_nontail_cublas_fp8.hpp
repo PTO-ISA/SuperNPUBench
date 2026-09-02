@@ -70,16 +70,17 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
     // Compact scale store (transposed): the cuBLAS core emits scale_byte/recip
     // boxed valid row=1 (one per-column scalar per block-row), so we narrow to
     // uint8 and store one byte per block — no intermediate TCOLMAX.
-    using tile_sred   = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_sstore = Tile<Location::Vec, uint8_t,  BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    // colReduce（TCOLMAX）输出行向量：physical row=1（对齐模型 Block.cpp:2349，见 RECORD 问题22 补充）。
+    using tile_sred   = Tile<Location::Vec, uint16_t, 1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_sstore = Tile<Location::Vec, uint8_t,  1, TileN, BLayout::RowMajor, 1, TileN>;
     // Per-column-scalar (valid row=1) reciprocal, reinterpreted + cast to fp32 and
     // fused into the data pass via TCOLEXPANDMUL (col broadcast mul).
-    using tile_recip_bf1 = Tile<Location::Vec, __bf16, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_recip_f1  = Tile<Location::Vec, float,  BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_recip_bf1 = Tile<Location::Vec, __bf16, 1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_recip_f1  = Tile<Location::Vec, float,  1, TileN, BLayout::RowMajor, 1, TileN>;
     // Inlined scale-compute intermediates (boxed valid row=1): InT-domain reduced
     // amax and the uint32 bit-math working set for the expanded compute_cublas_core.
-    using tile_in1   = Tile<Location::Vec, InT,      BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_u32_1 = Tile<Location::Vec, uint32_t, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_in1   = Tile<Location::Vec, InT,      1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_u32_1 = Tile<Location::Vec, uint32_t, 1, TileN, BLayout::RowMajor, 1, TileN>;
 
     using gm_x = global_tensor<InT,      RowMajor<Axis, Post>>;
     using gm_y = global_tensor<uint8_t,  RowMajor<Axis, Post>>;
@@ -247,13 +248,15 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
         using tile_x_r      = Tile<Location::Vec, InT,      BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
         using tile_f_r      = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
         using tile_o_r      = Tile<Location::Vec, OutT,     BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
-        using tile_sred_r   = Tile<Location::Vec, uint16_t, BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
-        using tile_sstore_r = Tile<Location::Vec, uint8_t,  BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
-        using tile_recip_bf1_r = Tile<Location::Vec, __bf16, BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
-        using tile_recip_f1_r  = Tile<Location::Vec, float,  BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
+        // colReduce 输出行向量：physical [1, N_tail]（physCol=validCol=N_tail，physRow=1，
+        //   模型 Block.cpp:2349 反推恰得 row=1；见 RECORD 问题22 补充）。
+        using tile_sred_r   = Tile<Location::Vec, uint16_t, 1, N_tail, BLayout::RowMajor, 1, N_tail>;
+        using tile_sstore_r = Tile<Location::Vec, uint8_t,  1, N_tail, BLayout::RowMajor, 1, N_tail>;
+        using tile_recip_bf1_r = Tile<Location::Vec, __bf16, 1, N_tail, BLayout::RowMajor, 1, N_tail>;
+        using tile_recip_f1_r  = Tile<Location::Vec, float,  1, N_tail, BLayout::RowMajor, 1, N_tail>;
         // Inlined scale-compute intermediates (boxed valid row=1, valid col=N_tail).
-        using tile_in1_r   = Tile<Location::Vec, InT,      BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
-        using tile_u32_1_r = Tile<Location::Vec, uint32_t, BlockSize, TileN, BLayout::RowMajor, 1, N_tail>;
+        using tile_in1_r   = Tile<Location::Vec, InT,      1, N_tail, BLayout::RowMajor, 1, N_tail>;
+        using tile_u32_1_r = Tile<Location::Vec, uint32_t, 1, N_tail, BLayout::RowMajor, 1, N_tail>;
 
         global_iterator<gm_x, tile_x_r> x_iter_r(x);
         global_iterator<gm_y, tile_o_r> y_iter_r(reinterpret_cast<uint8_t *>(y));

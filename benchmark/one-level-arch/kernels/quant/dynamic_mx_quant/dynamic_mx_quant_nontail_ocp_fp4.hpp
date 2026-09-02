@@ -77,13 +77,14 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
     //   TCVT 落到 ordinary 路径（dst Cols=TileN/2≠src Cols=TileN）而编译崩——与 tail_ocp_fp4
     //   同一 element-列迁移（0.58.3 工具链头已删 32B 列对齐 assert，无需 PW-padding）。
     using tile_o  = Tile<Location::Vec, OutT,   BlockSize, TileN, BLayout::RowMajor>;
-    // Value-domain reduced per-block |max| (boxed valid row=1), per InT domain.
-    using tile_maxh      = Tile<Location::Vec, __half,   BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_maxf      = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
-    // Boxed (valid row=1) scale/recip carriers: one scalar per Post column.
-    using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_recip_bf1 = Tile<Location::Vec, __bf16,   BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_recip_f1  = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, 1, TileN>;
+    // colReduce（TCOLMAX）输出为行向量：physical row=1（对齐模型 Block.cpp:2349 —— colReduce
+    //   按 dst->size/(validCol·elem) 反推物理行，physical row=1 时反推得 1，自洽）。下游 scale/
+    //   recip 载体同取 physical row=1（TCOLEXPANDMUL 的一行广播源）。见 RECORD 问题22 补充。
+    using tile_maxh      = Tile<Location::Vec, __half,   1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_maxf      = Tile<Location::Vec, float,    1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, 1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_recip_bf1 = Tile<Location::Vec, __bf16,   1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_recip_f1  = Tile<Location::Vec, float,    1, TileN, BLayout::RowMajor, 1, TileN>;
 
     using gm_x  = global_tensor<InT,      RowMajor<Axis, Post>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<Axis, Post / 2>>;

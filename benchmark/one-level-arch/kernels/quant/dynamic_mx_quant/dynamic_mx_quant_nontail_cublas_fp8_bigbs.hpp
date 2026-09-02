@@ -103,13 +103,14 @@ void dynamic_mx_quant_nontail_cublas_fp8_bigbs(InT *x, OutT *y, uint8_t *scale) 
     using tile_xu = Tile<Location::Vec, uint16_t, R_sub, TileN, BLayout::RowMajor>;
     using tile_f  = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor>;
     using tile_o  = Tile<Location::Vec, OutT,     R_sub, TileN, BLayout::RowMajor>;
-    // Boxed (valid row=1) accumulator / scale / recip: one scalar per Post column.
-    using tile_box       = Tile<Location::Vec, uint16_t, R_sub, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_amax_in   = Tile<Location::Vec, InT,      R_sub, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_f32_1     = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_u32_1     = Tile<Location::Vec, uint32_t, R_sub, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_sstore    = Tile<Location::Vec, uint8_t,  R_sub, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_recip_f1  = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
+    // colReduce 输出行向量 + 累加器 / scale / recip：physical row=1（physCol=validCol=TileN，
+    //   模型 Block.cpp:2349 反推恰得 row=1；见 RECORD 问题22 补充）。
+    using tile_box       = Tile<Location::Vec, uint16_t, 1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_amax_in   = Tile<Location::Vec, InT,      1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_f32_1     = Tile<Location::Vec, float,    1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_u32_1     = Tile<Location::Vec, uint32_t, 1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_sstore    = Tile<Location::Vec, uint8_t,  1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_recip_f1  = Tile<Location::Vec, float,    1, TileN, BLayout::RowMajor, 1, TileN>;
 
     using gm_x  = global_tensor<InT,      RowMajor<Axis, Post>>;
     using gm_xu = global_tensor<uint16_t, RowMajor<Axis, Post>>;

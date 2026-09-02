@@ -77,12 +77,12 @@ void dynamic_mx_quant_nontail_ocp_fp4_bigbs(InT *x, OutT *y, uint8_t *scale) {
     //   [R_sub, TileN/2] 字节列约定会让 TCVT 落 ordinary 路径编译崩（同 nontail_ocp_fp4 plain /
     //   tail_ocp_fp4 的 element-列迁移，0.58.3 工具链头已删 32B 列对齐 assert）。
     using tile_o  = Tile<Location::Vec, OutT,     R_sub, TileN, BLayout::RowMajor>;
-    // Boxed (valid row=1) fp32 value-domain running-max accumulator + partial.
-    using tile_maxf      = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
-    // Boxed (valid row=1) scale / recip carriers: one scalar per Post column.
-    using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, R_sub, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_recip_bf1 = Tile<Location::Vec, __bf16,   R_sub, TileN, BLayout::RowMajor, 1, TileN>;
-    using tile_recip_f1  = Tile<Location::Vec, float,    R_sub, TileN, BLayout::RowMajor, 1, TileN>;
+    // colReduce（TCOLMAX）输出行向量 + running-max 累加器：physical row=1（physCol=validCol=TileN，
+    //   模型 Block.cpp:2349 反推恰得 row=1；见 RECORD 问题22 补充）。
+    using tile_maxf      = Tile<Location::Vec, float,    1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_se8m0     = Tile<Location::Vec, __fp8_e8m0, 1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_recip_bf1 = Tile<Location::Vec, __bf16,   1, TileN, BLayout::RowMajor, 1, TileN>;
+    using tile_recip_f1  = Tile<Location::Vec, float,    1, TileN, BLayout::RowMajor, 1, TileN>;
 
     using gm_x  = global_tensor<InT,      RowMajor<Axis, Post>>;
     using gm_y  = global_tensor<uint8_t,  RowMajor<Axis, Post / 2>>;
