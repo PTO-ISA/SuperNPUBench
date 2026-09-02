@@ -100,12 +100,31 @@ against a host reference.
 
 ### Validation mechanism
 
-When `res_check=on` is passed to make, `Makefile.common` defines
-`RES_CHECK`, enables binary file I/O, and encodes a per-ELF directory under
-`benchmark/one-level-arch/compare/` as `CHK_DIR`.
+The numerical check is a host-driven flow. The ELF reads prepared binary
+inputs and writes its result, while Python computes the reference and performs
+the comparison; the ELF does not calculate the Golden result itself.
 
-Hosted four-PE execution runs the testcase entry on PE0 through PE3. The
-multi-thread `RES_CHECK` path therefore follows these ownership rules:
+```text
+build a RES_CHECK ELF
+        -> generate binary inputs and a NumPy Golden result
+        -> execute the ELF with four gfrun PEs
+        -> let PE0 export the complete output tensor
+        -> compare every element with NumPy allclose
+```
+
+Passing `res_check=on` to make causes `test/common/Makefile.common` to:
+
+- define `RES_CHECK` and `ENABLE_BINARY_OUTPUT`;
+- define `CHK_DIR` as `benchmark/one-level-arch/compare/<elf-stem>`;
+- link the hosted file-I/O and group-worker support needed by the testcase.
+
+Only an ELF built with `res_check=on` can be used for this flow. A later normal
+build may overwrite the same output ELF with file I/O disabled, in which case
+running the Python checker against that ELF does not constitute a numerical
+check.
+
+Hosted four-PE execution runs the testcase entry on PE0 through PE3. Each
+testcase therefore follows these ownership and synchronization rules:
 
 1. Input, output, scale, and workspace arrays used by multiple PEs are placed
    in shared static storage rather than on a PE-private stack.
@@ -116,14 +135,21 @@ multi-thread `RES_CHECK` path therefore follows these ownership rules:
    wait before entering the kernel.
 4. Every PE writes a separate completion slot after its final Tile operation.
    PE0 waits for all four slots before exporting the complete output tensor.
-5. The host runner computes a NumPy reference, runs gfrun with
-   `softcore.multiThreadNum=4`, and compares every output element with
-   operator-specific tolerances.
+5. The Python runner pre-creates an output file of the expected type and size,
+   runs gfrun with `softcore.multiThreadNum=4`, then reads that file back.
+6. The runner checks the gfrun return code, output element count, and every
+   output value using the testcase's `atol` and `rtol`.
 
 The shared synchronization implementation is
 `test/common/multi_thread_res_check.h`. The input generation, gfrun launch,
 and Golden comparison are implemented by
 `test/kernel/multi_thread/res_check_all.py`.
+
+For SPMD testcases, `res_check_publish_inputs()` prevents PE1 through PE3 from
+reading uninitialized inputs and `res_check_wait_for_all()` prevents PE0 from
+exporting a partial result. Cooperative testcases launched through
+`linx_group_run()` use the group runtime to start and join their worker PEs;
+file ownership remains on PE0.
 
 ### Build procedure
 
@@ -143,6 +169,18 @@ done
 This compiles the complete precision/configuration matrix. The 2026-08-29
 run produced 39/39 ELFs successfully with compiler commit `e6a31ef`.
 
+To build only one configuration, pass `res_check=on` directly to make. For
+example:
+
+```bash
+make -C benchmark/one-level-arch/test/kernel/multi_thread/matmul \
+  TESTCASE=matmul_shared \
+  COMPILER_DIR="$COMPILER_DIR" \
+  res_check=on \
+  DTYPE=float B=1 M=256 N=256 K=256 \
+  tM=128 tN=256 tK=128
+```
+
 ### Run and compare
 
 Run one or more named cases:
@@ -156,19 +194,33 @@ Run the complete representative numerical portfolio:
 
 ```bash
 python3 benchmark/one-level-arch/test/kernel/multi_thread/res_check_all.py \
-  --timeout 60
+  --timeout 120
 ```
 
 The runner uses
 `/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel/bin/gfrun`
-by default. It creates each input, preallocates the output file, invokes:
+by default. Use `--gfrun /other/path/to/gfrun` to select another model binary.
+For each case the runner creates deterministic input files, keeps the NumPy
+Golden result in host memory, preallocates the output file, and invokes:
 
 ```bash
 gfrun -s softcore.multiThreadNum=4 -f /absolute/path/to/operator.elf
 ```
 
-and saves `gfrun.log` beside the binary inputs and outputs in the ELF's
-`compare/<elf-stem>/` directory.
+It saves `gfrun.log` beside the binary inputs and outputs in the ELF's
+`compare/<elf-stem>/` directory. The final status is classified as:
+
+- `PASS`: gfrun exits normally, output length matches, and `np.allclose`
+  passes;
+- `FAIL`: gfrun returns nonzero, the output length differs, or the numerical
+  comparison fails;
+- `TIMEOUT`: gfrun exceeds `--timeout`;
+- `SKIP`: the requested ELF does not exist.
+
+For a numerical mismatch, the runner reports the maximum absolute error.
+Exact data-movement tests can use zero tolerance, while FP16/BF16, Matmul, FA,
+and nonlinear operators use case-specific tolerances declared in the `CASES`
+table in `res_check_all.py`.
 
 ### Numerical result: 2026-08-29
 

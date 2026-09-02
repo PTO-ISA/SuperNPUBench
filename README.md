@@ -298,6 +298,115 @@ See LICENSE.
 
 ---
 
+# res_check 数值校验结果汇总 — 2026-09-01
+
+与常规 gfrun 功能回归（只验“跑到终点 + R2=0”，不查结果数值）不同，本轮在
+`res_check=on` 下重编全部算子并复跑 gfrun，**对每个算子的计算结果做金标准（golden）比对**，
+暴露功能性模型在数值层面的保真度差距。编译器仍按 AGENTS.md 用主 `linx-toolchain-build`
+worktree（clang 15.0.4 / linx64v5-unknown-linux-musl）；gfrun 用 `SuperScalarModel/bin/gfrun`。
+
+## 校验方法
+
+| 范围 | res_check 机制 | PASS 判据 |
+|---|---|---|
+| microbenchmark | `res_check=on` → `Makefile.common` 加 `-DRES_CHECK`，产物落到 `output/res_check/`；测试在 `main()` 内用 `bench_utils.hpp::verify()/verify_scalar()` 把算子输出与 host C 参考逐元素比对，失败置 `g_numeric_failure` | gfrun rc=0 且含 `Reach the End of Benchmark` 且 `R2=0`（R2≠0 即数值不匹配） |
+| one-level-arch | `res_check=on` → 加 `-DRES_CHECK -DENABLE_BINARY_OUTPUT -DCHK_DIR="compare/<test>"`，`CC_LINK` 置空并链 `group_worker_runtime.o`；运行时把算子二进制输出与 `compare/<test>/` 金标准逐字节比对 | 同上（`R2=0` 表示金标准一致） |
+
+- 固定 `COMPILER_DIR`（主 worktree）。multi_thread 与 fixp 协作（cooperative）模式均加
+  `-s softcore.multiThreadNum=4`。单 ELF 90s 看门狗。共 492 个 res_check ELF。
+- 常规回归里“PASS”只代表“模型没崩、跑到终点”；res_check 才查“结果对不对”。因此本轮
+  通过率（55.1%）显著低于常规回归（~81.7%）——多出的失败全属**数值层**问题。
+
+## 总体结果
+
+| 范围 | ELF 数 | PASS | FAIL | 通过率 |
+|---|---|---|---|---|
+| microbenchmark | 398 | 195 | 203 | 49.0% |
+| one-level-arch | 94 | 76 | 18 | 80.9% |
+| **合计** | **492** | **271** | **221** | **55.1%** |
+
+## 算子族通过率
+
+| 算子族 | ELF | PASS | FAIL | 通过率 | 说明 |
+|---|---|---|---|---|---|
+| micro/vector | 127 | 6 | 121 | 4.7% | 系统性数值不匹配（见下 Bucket A） |
+| micro/scalar | 124 | 68 | 56 | 54.8% | 42 数值 + 14 移位/SQRT 无 handler |
+| micro/fixp | 122 | 116 | 6 | 95.1% | 4 协作 max-reduction 缺口 + 2 S4 零点 |
+| micro/memory | 14 | 4 | 10 | 28.6% | tload/tstore/mgather/mscatter 往返失真 |
+| micro/cube | 11 | 1 | 10 | 9.1% | TMATMUL 累加结果偏离 host 参考 |
+| one-level/fa | 10 | 10 | 0 | 100% | 金标准全过 |
+| one-level/matmul | 3 | 3 | 0 | 100% | 金标准全过 |
+| one-level/multi_thread/matmul | 8 | 8 | 0 | 100% | 金标准全过 |
+| one-level/multi_thread/normalization | 2 | 2 | 0 | 100% | 金标准全过 |
+| one-level/multi_thread/reduction | 4 | 4 | 0 | 100% | 金标准全过 |
+| one-level/deepseek | 21 | 16 | 5 | 76.2% | 5 个逻辑 tile 契约断言（模型侧） |
+| one-level/multi_thread/fa | 7 | 5 | 2 | 71.4% | HIF8 rc=134 + MXFP4 tile-carrier |
+| one-level/multi_thread/broadcast | 1 | 0 | 1 | 0% | raw tile spill 源形状不匹配 carrier |
+| one-level/broadcast | 6 | 5 | 1 | 83.3% | 1 个 COPY 广播展开契约 |
+| one-level/reduction | 6 | 5 | 1 | 83.3% | 1 个 TROWSUM 操作数契约 |
+| one-level/concat | 4 | 3 | 1 | 75.0% | 1 个 scatter 日志截断/超时（待定） |
+| one-level/control | 6 | 0 | 6 | 0% | hashtable_lookup tile-carrier 契约 |
+| one-level/sort | 1 | 0 | 1 | 0% | topk 日志截断/超时（待定） |
+| 其余 one-level 单/多线程族 | 15 | 15 | 0 | 100% | element_wise/gather/transpose/flashMLA + 多线程 concat·conv2d·gather·transpose·vec·element_wise 全过 |
+
+> 合计编译 492 ELF（microbench 398 + one-level 94）。本轮为**数值校验**口径，FAIL 含
+> “数值不匹配”与“模型断言中止”两类；与常规功能回归的 FAIL 不可直接对比。
+
+## 失败归因（两大桶）
+
+### Bucket A — 数值不匹配（178，rc=0 / R2=1，跑到终点但比对失败）
+
+算子完整执行并打印 `Reach the End of Benchmark`，但 `verify()`/金标准比对报错。全部集中在
+microbench（one-level 金标准比对几乎全过）。**与精度容差无关**：i32/i16 整型（精确算术，eps=0）
+与 fp16/fp32 同等失败，证明不是浮点容差问题，而是模型侧结果本身不对。
+
+| 算子族 | 数量 | 根因 |
+|---|---|---|
+| micro/vector | 114 | 元素级算术结果未落回输出缓冲：`tadd/tsub/tmul`（ref=3/1/2 非零）全失败，而 `tand/trem`（2&1=0、2%1=0）因 ref 恰为 0 与零初值 c 相等而**伪通过**；仅 `tcvt`（拷贝写回）真通过。dtype 无关（fp16/fp32/i32/i16 全失败） |
+| micro/scalar | 42 | per-op 算术保真度缺口：同模板下 `and` 通过、`add/sub/mul` 失败，输入为非常量、`verify_scalar` 实比对，模型标量算术结果偏离 host 参考 |
+| micro/cube | 10 | TMATMUL（fp16/fp32/bf16/i8/bias/acc 全变体）累加结果偏离 host 参考；唯一通过的是不需累加的变体 |
+| micro/memory | 10 | tload/tstore/mgather/mscatter 的 load→tile→store 往返不保数据：加载到 tile 再写回 c 后，c 与源 a 不等 |
+| micro/fixp | 2 | `s_qf_s4`/`v_qf_s4`：S4 量化带零点偏移，零输入下 `check_zero_result` 仍检出非零 D（该 smoke-test 不适用于带零点量化的测例，非真 bug） |
+
+### Bucket B — 功能性故障（41，rc≠0，gfrun 模型断言/illegal instruction 中止）
+
+算子未跑到终点，gfrun 在执行中命中模型断言。这部分与常规功能回归的 FAIL 重合。
+
+| 断言/现象 | 数量 | 算子族 | 根因 |
+|---|---|---|---|
+| `threadStatus.size() >= kCorePeCount`（协作 TMATMUL 需 4 PE） | 4 | micro/fixp | `shared_rowmax_init`/`shared_rowgroup_maxabs`/`shared_f16_groupmax`/`shared_s8_rowmax`——协作+非 keep_acc 预量化+max 归约集合的已知工具链/模型缺口（单 PE 孪生通过），详见 fixp 源码 NOTE |
+| `m_handlers.find(grp) != m_handlers.cend()` | 21 | micro/scalar 14 + micro/vector 7 | **模型未注册移位与开方指令 handler**：标量 `sll/sra/srl`（i32/i64）、`sqrt`（f64）与向量 `tshl/tshr/trsqrt/tsqrt` 全部 illegal instruction |
+| `srcTile.size()==1 && dstTile.size()==1 && ...TileCarrier` | 5 | one-level/control 4 + multi_thread/fa 1 | TEPL/COPY tile-carrier 契约：hashtable_lookup 的 tile 传送与 MXFP4 fa 的 tile 尺寸不满足契约 |
+| `IsCompatibleLogicalTile` / `priorSources` / `IsCompatibleOperationDataTile` | 5 | one-level/deepseek | deepseek group/mapping kernel 用到的 3 源逻辑 tile 形状/数据 tile 契约未满足 |
+| `RawTileSourceFits(source, shape)` | 3 | control 2 + multi_thread/broadcast 1 | raw tile spill 源形状不匹配 carrier |
+| `broadcastShapeLegal`（COPY 广播展开） | 1 | one-level/broadcast | 广播展开维度契约 |
+| `illegal TROWSUM operand or descriptor` | 1 | one-level/reduction | TROWSUM 操作数/descriptor 契约 |
+| rc=134（abort） | 1 | multi_thread/fa | `HIF8_VECFP32` 运行时 abort |
+
+### 待定（2）
+
+`concat_scatter`（half, tM512）与 `topk`：日志被 400 行截断且无 `Reach the End` 标记、rc 无法解析，
+疑为超时或截断致判据缺失（非数值/非断言）。需以更长日志复跑确认。
+
+## 结论与要点
+
+1. **常规 gfrun 回归“PASS”≠ 结果正确**。`micro/vector` 121/127 在功能回归里全部“PASS”，但
+   res_check 下 114 个数值不匹配——功能性模型把指令跑通了，结果却没写回/算错。res_check 是
+   唯一能挡住这类“假绿”的关卡，应纳入回归基线。
+2. **两大缺口可定位到模型侧**：(a) 元素级算术/访存结果未正确落回内存（vector/cube/memory/scalar
+   数值桶）；(b) 移位/SQRT 指令组未注册 handler（scalar/vector 功能桶）。两者均非 kernel 代码
+   缺陷——同一模板下 `and/cvt` 通过、`add/mul` 失败即可证。
+3. **one-level 金标准保真度高**：94 个里 76 过（80.9%），失败全是少量 kernel 命中 tile 契约断言
+   （hashtable/deepseek/broadcast/TROWSUM），属模型对个别 tile op 的支持边界，非数值漂移。
+4. **fixp 协作模式**：33 个 cooperative 模式须加 `-s softcore.multiThreadNum=4`（首轮漏配致 33 个
+   伪 FAIL，补跑后 29 翻转为 PASS、4 留作已记录缺口）。后续回归脚本对 fixp 协作模式应默认带 4-PE。
+5. **数值不匹配的 verify() 不打印逐元素差异**（只置 R2=1），定位需离线比对。建议后续给
+   `bench_utils.hpp::verify()` 加一行首个失配元素的 `expected/got` 打印，可大幅缩短排障路径。
+
+> 提取方法：`res_check=on` 全量重编 → gfrun 逐 ELF 跑（multi_thread/fixp 协作加 4-PE）→
+> 按rc 与 R2 二分（rc=0&R2=1=数值；rc≠0=断言）→ 失配断言文本取每日志首行聚类。原始明细：
+> `/tmp/res_check_run/summary_corrected.tsv`（elf / 类别 / 状态 / rc / note）。
+
 > **当前验证基线**：2026-08-27（427 个已编译 ELF 全量 gfrun 复测；编译器按 AGENTS.md 用主
 > linx-toolchain-build worktree（llvm `adcb8794` + TileOP-API `f94bc12`，CUBE cell-layout 强制）、
 > gfrun 用 SuperScalarModel `codex/pr-0.58.4-shared-model` `d8903938`（含 reduce/expand dtype 门控
