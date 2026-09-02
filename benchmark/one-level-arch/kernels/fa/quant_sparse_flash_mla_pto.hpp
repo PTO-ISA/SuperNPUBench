@@ -1,6 +1,7 @@
 #ifndef QUANT_SPARSE_FLASH_MLA_PTO_HPP
 #define QUANT_SPARSE_FLASH_MLA_PTO_HPP
 
+#include <type_traits>
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
 #include "qsmla_config_pto.hpp"
@@ -25,6 +26,9 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
     const int* ori_topk_length,
     const int* cmp_topk_length,
     float softmax_scale,
+    float q_descale,
+    float ori_kv_descale,
+    float cmp_kv_descale,
     int cmp_ratio,
     int ori_win_left,
     int ori_win_right,
@@ -39,6 +43,9 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
     constexpr int kTd = Config::TileD;
     constexpr int kDb = Config::D / kTd;
     constexpr int kPeRows = kGroupM / kPeNum;
+    constexpr float kHif8ProbabilityScale = 16.0f;
+    constexpr bool kUseHif8Probability =
+        std::is_same_v<qdtype, __hif8>;
     constexpr int kOriIndexStorage =
         ModeConfig::OriTopK > 0 ? ModeConfig::OriTopK : 1;
     constexpr int kCmpIndexStorage =
@@ -52,6 +59,8 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                   "sparse v1 fixes TileM=64 and TileK=32");
     static_assert(Config::D % kTd == 0,
                   "sparse four-PE D-tail support is deferred");
+    static_assert(!std::is_same_v<kvdtype, __hif8> || Config::D % 4 == 0,
+                  "HIF8 gather uses four-byte carriers");
 
     const int pe_id = static_cast<int>(get_thread_idx());
 
@@ -189,7 +198,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
             }
         }
 
-        auto stage_source_tile = [&](
+        auto stage_source_tile = [&] (
             kvdtype* source, const int* selected, int range_begin,
             int logical_begin, int valid_rows) {
             for (int row = 0; row < kTk; ++row) {
@@ -198,11 +207,25 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                            ? range_begin + logical_begin + row
                            : selected[logical_begin + row])
                     : 0;
-                for (int dim = 0; dim < Config::D; ++dim) {
-                    kv_tile_buf[row * Config::D + dim] =
-                        row < valid_rows
-                            ? source[source_row * Config::D + dim]
-                            : static_cast<kvdtype>(0.0f);
+                if constexpr (std::is_same_v<kvdtype, __hif8>) {
+                    // The LinxV5 backend cannot legalize divergent scalar
+                    // i8/HIF8 copies. Preserve the raw HIF8 payload and gather
+                    // four elements per uint32 carrier instead.
+                    auto* destination = reinterpret_cast<uint32_t*>(
+                        kv_tile_buf + row * Config::D);
+                    auto* source_words = reinterpret_cast<const uint32_t*>(
+                        source + source_row * Config::D);
+                    for (int word = 0; word < Config::D / 4; ++word) {
+                        destination[word] =
+                            row < valid_rows ? source_words[word] : 0U;
+                    }
+                } else {
+                    for (int dim = 0; dim < Config::D; ++dim) {
+                        kv_tile_buf[row * Config::D + dim] =
+                            row < valid_rows
+                                ? source[source_row * Config::D + dim]
+                                : static_cast<kvdtype>(0.0f);
+                    }
                 }
             }
         };
@@ -229,7 +252,9 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
 
         auto visit_source_pass1 = [&](kvdtype* source, const int* selected,
                                       int range_begin, int logical_count,
-                                      bool allow_direct) {
+                                      int allow_direct, float kv_descale) {
+            const float score_scale =
+                softmax_scale * q_descale * kv_descale;
             const int block_count = (logical_count + kTk - 1) / kTk;
             for (int block = 0; block < block_count; ++block) {
                 const int logical_begin = block * kTk;
@@ -282,7 +307,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                 TSTORE_CUBE(gScore, tScoreCube);
                 tileW tW;
                 TLOAD(tW, gScore);
-                TMULS(tW, tW, softmax_scale);
+                TMULS(tW, tW, score_scale);
                 using gmMask = global_tensor<float, RowMajor<kPeRows, kTk>>;
                 using itMask = global_iterator<gmMask, tileMask>;
                 itMask gIterMask(mask_buf);
@@ -315,13 +340,13 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
         visit_source_pass1(
             work_ori,
             ModeConfig::HasIndexedOri ? ori_selected : nullptr,
-            ori_begin, ori_count, true);
+            ori_begin, ori_count, true, ori_kv_descale);
         // visit_cmp_pass1: CMP continues the same tMax/tSum state.
         if constexpr (ModeConfig::HasCmp) {
             visit_source_pass1(
                 work_cmp,
                 ModeConfig::HasIndexedCmp ? cmp_selected : nullptr,
-                0, cmp_count, false);
+                0, cmp_count, false, cmp_kv_descale);
         }
 
         tileSum tFinalSum;
@@ -345,7 +370,10 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                                       const int* selected,
                                       int range_begin,
                                       int logical_count,
-                                      bool allow_direct) {
+                                      int allow_direct,
+                                      float kv_descale) {
+            const float score_scale =
+                softmax_scale * q_descale * kv_descale;
             const int block_count = (logical_count + kTk - 1) / kTk;
             for (int block = 0; block < block_count; ++block) {
                 const int logical_begin = block * kTk;
@@ -398,7 +426,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                 TSTORE_CUBE(gScore, tScoreCube);
                 tileW tW;
                 TLOAD(tW, gScore);
-                TMULS(tW, tW, softmax_scale);
+                TMULS(tW, tW, score_scale);
                 using gmMask =
                     global_tensor<float, RowMajor<kPeRows, kTk>>;
                 using itMask = global_iterator<gmMask, tileMask>;
@@ -410,6 +438,12 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                 TROWEXPANDSUB(tW, tW, tMax);
                 TEXP(tW, tW);
                 TROWEXPANDMUL(tW, tW, tInvSum);
+                if constexpr (kUseHif8Probability) {
+                    // The original QSMLA contract quantizes P*16 to HIF8,
+                    // performs the second CUBE matmul, then removes 16 once
+                    // at final output. Online l remains the unquantized sum.
+                    TMULS(tW, tW, kHif8ProbabilityScale);
+                }
 
                 tilePShard tPShard;
                 TCVT(tPShard, tW);
@@ -441,6 +475,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                     TSTORE_CUBE(gOState, tPVCube);
                     tileO tPV;
                     TLOAD(tPV, gOState);
+                    TMULS(tPV, tPV, kv_descale);
                     TADD(tO, tO, tPV);
                     TSTORE(gOState, tO);
                 }
@@ -451,13 +486,13 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
         visit_source_pass2(
             work_ori,
             ModeConfig::HasIndexedOri ? ori_selected : nullptr,
-            ori_begin, ori_count, true);
+            ori_begin, ori_count, true, ori_kv_descale);
         if constexpr (ModeConfig::HasCmp) {
             // visit_cmp_pass2: continue into the same FP32 O scratch.
             visit_source_pass2(
                 work_cmp,
                 ModeConfig::HasIndexedCmp ? cmp_selected : nullptr,
-                0, cmp_count, false);
+                0, cmp_count, false, cmp_kv_descale);
         }
 
 #pragma clang loop unroll(disable)
@@ -465,6 +500,10 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
             auto gOState = gIterPV(0, out_dd);
             tileO tFinalO;
             TLOAD(tFinalO, gOState);
+            if constexpr (kUseHif8Probability) {
+                TMULS(tFinalO, tFinalO,
+                      1.0f / kHif8ProbabilityScale);
+            }
             tileOCast tOCast;
             TCVT(tOCast, tFinalO);
             itO gIterO(out_ptr + work_out_offset
