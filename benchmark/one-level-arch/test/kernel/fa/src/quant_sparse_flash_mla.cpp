@@ -98,6 +98,24 @@
 #define softmax_scale_val Tsoftmax_scale
 #endif
 
+#ifndef Tq_descale
+#define q_descale_val 1.0f
+#else
+#define q_descale_val Tq_descale
+#endif
+
+#ifndef Tori_kv_descale
+#define ori_kv_descale_val 1.0f
+#else
+#define ori_kv_descale_val Tori_kv_descale
+#endif
+
+#ifndef Tcmp_kv_descale
+#define cmp_kv_descale_val 1.0f
+#else
+#define cmp_kv_descale_val Tcmp_kv_descale
+#endif
+
 #ifndef Twleft
 #define win_left 1
 #else
@@ -134,12 +152,22 @@ extern const uint8_t _binary_kv_fp16_start[];
 
 #ifdef QSMLA_USE_SPARSE_EMBEDDED_INPUT
 extern "C" {
+#ifdef QSMLA_USE_HIF8
+extern const uint8_t _binary_q_hif8_start[];
+extern const uint8_t _binary_ori_kv_hif8_start[];
+#if defined(QSMLA_USE_HCA_TADD_4PE) || \
+    defined(QSMLA_USE_CSA_TADD_4PE) || \
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+extern const uint8_t _binary_cmp_kv_hif8_start[];
+#endif
+#else
 extern const uint8_t _binary_q_fp16_start[];
 extern const uint8_t _binary_ori_kv_fp16_start[];
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
 extern const uint8_t _binary_cmp_kv_fp16_start[];
+#endif
 #endif
 #if defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
@@ -157,9 +185,15 @@ extern const uint8_t _binary_cmp_topk_length_int32_start[];
 #endif
 
 int main(){
+#ifdef QSMLA_USE_HIF8
+    using qdtype = __hif8;
+    using kvdtype = __hif8;
+    using odttype = __bf16;
+#else
     using qdtype = __half;
     using kvdtype = __half;
     using odttype = __half;
+#endif
     constexpr int group_size = N1 / N2;
     constexpr int g_slice_max = group_size < 64 ? group_size : 64;
     using Config = QsmlaConfig<
@@ -184,15 +218,27 @@ int main(){
 #endif
 
 #ifdef QSMLA_USE_SPARSE_EMBEDDED_INPUT
+#ifdef QSMLA_USE_HIF8
+    qdtype* q = reinterpret_cast<qdtype*>(
+        const_cast<uint8_t*>(_binary_q_hif8_start));
+    kvdtype* kv = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_ori_kv_hif8_start));
+#else
     qdtype* q = reinterpret_cast<qdtype*>(
         const_cast<uint8_t*>(_binary_q_fp16_start));
     kvdtype* kv = reinterpret_cast<kvdtype*>(
         const_cast<uint8_t*>(_binary_ori_kv_fp16_start));
+#endif
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+#ifdef QSMLA_USE_HIF8
+    kvdtype* cmp_kv = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_cmp_kv_hif8_start));
+#else
     kvdtype* cmp_kv = reinterpret_cast<kvdtype*>(
         const_cast<uint8_t*>(_binary_cmp_kv_fp16_start));
+#endif
 #else
     kvdtype* cmp_kv = nullptr;
 #endif
@@ -277,7 +323,9 @@ int main(){
         qdtype, kvdtype, odttype, ModeConfig>(
             out, q, kv, cmp_kv,
             ori_indices, cmp_indices, ori_lengths, cmp_lengths,
-            softmax_scale_val, cmp_ratio, win_left, win_right,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
             score_scratch, prob_scratch, pv_scratch);
 #else
     if constexpr (N1 == 1 && N2 == 1) {

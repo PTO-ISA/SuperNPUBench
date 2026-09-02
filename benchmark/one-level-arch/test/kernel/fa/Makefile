@@ -102,6 +102,19 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    ori_topk ?= 40
    cmp_topk ?= 40
    cmp_ratio ?= 4
+   QSMLA_DTYPE ?= HIF8
+   ifeq ($(filter $(QSMLA_DTYPE),HIF8 FP16),)
+      $(error QSMLA_DTYPE must be HIF8 or FP16)
+   endif
+   ifeq ($(QSMLA_DTYPE), HIF8)
+      q_descale ?= 0.5
+      ori_kv_descale ?= 0.25
+      cmp_kv_descale ?= 0.125
+   else
+      q_descale ?= 1.0
+      ori_kv_descale ?= 1.0
+      cmp_kv_descale ?= 1.0
+   endif
    IMPL ?= onepass
    DEFINES += -DTbatch=$(B)
    DEFINES += -DTs1=$(s1)
@@ -119,6 +132,17 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    DEFINES += -DTori_topk=$(ori_topk)
    DEFINES += -DTcmp_topk=$(cmp_topk)
    DEFINES += -DTcmp_ratio=$(cmp_ratio)
+   DEFINES += -DTq_descale=$(q_descale)
+   DEFINES += -DTori_kv_descale=$(ori_kv_descale)
+   DEFINES += -DTcmp_kv_descale=$(cmp_kv_descale)
+   ifeq ($(QSMLA_DTYPE), HIF8)
+      DEFINES += -DQSMLA_USE_HIF8
+      QSMLA_INPUT_EXT := hif8
+      QSMLA_INPUT_BYTES := 1
+   else
+      QSMLA_INPUT_EXT := fp16
+      QSMLA_INPUT_BYTES := 2
+   endif
    ifeq ($(IMPL), tadd)
       DEFINES += -DQSMLA_USE_TADD
    endif
@@ -201,11 +225,11 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       endif
       QSMLA_SPARSE_DATA_ROOT ?= /tmp/qsmla-sparse
       QSMLA_SPARSE_DATA_DIR := $(QSMLA_SPARSE_DATA_ROOT)/$(QSMLA_SPARSE_CASE)
-      QSMLA_SPARSE_OBJ_DIR := $(abspath $(CURDIR)/../../../output/kernel/fa/qsmla_sparse_data/$(QSMLA_SPARSE_CASE))
+      QSMLA_SPARSE_OBJ_DIR := $(abspath $(CURDIR)/../../../output/kernel/fa/qsmla_sparse_data/$(QSMLA_SPARSE_CASE)_$(QSMLA_DTYPE))
       QSMLA_INPUT_BUILDER := $(CURDIR)/build_qsmla_input_object.py
-      QSMLA_Q_BYTES := $(shell expr $(B) \* $(s1) \* $(N1) \* $(D) \* 2)
-      QSMLA_ORI_KV_BYTES := $(shell expr $(B) \* $(s2) \* $(N2) \* $(D) \* 2)
-      QSMLA_CMP_KV_BYTES := $(shell expr $(B) \* $(cmp_s2) \* $(N2) \* $(D) \* 2)
+      QSMLA_Q_BYTES := $(shell expr $(B) \* $(s1) \* $(N1) \* $(D) \* $(QSMLA_INPUT_BYTES))
+      QSMLA_ORI_KV_BYTES := $(shell expr $(B) \* $(s2) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
+      QSMLA_CMP_KV_BYTES := $(shell expr $(B) \* $(cmp_s2) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
       QSMLA_ORI_INDEX_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* $(ori_topk) \* 4)
       QSMLA_CMP_INDEX_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* $(cmp_topk) \* 4)
       QSMLA_LENGTH_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* 4)
@@ -233,19 +257,19 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
          EXTRA_OBJ_FILES += $(QSMLA_CMP_LENGTH_OBJ)
       endif
 
-      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_INPUTembedded.elf
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_INPUTembedded.elf
 
-      $(QSMLA_Q_OBJ): $(QSMLA_SPARSE_DATA_DIR)/q.fp16.bin $(QSMLA_INPUT_BUILDER)
+      $(QSMLA_Q_OBJ): $(QSMLA_SPARSE_DATA_DIR)/q.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol q_fp16 --bytes $(QSMLA_Q_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol q_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_Q_BYTES) --exact-bytes
 
-      $(QSMLA_ORI_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv.fp16.bin $(QSMLA_INPUT_BUILDER)
+      $(QSMLA_ORI_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_fp16 --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
 
-      $(QSMLA_CMP_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv.fp16.bin $(QSMLA_INPUT_BUILDER)
+      $(QSMLA_CMP_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_kv_fp16 --bytes $(QSMLA_CMP_KV_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_kv_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_CMP_KV_BYTES) --exact-bytes
 
       $(QSMLA_ORI_INDEX_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_sparse_indices.int32.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)

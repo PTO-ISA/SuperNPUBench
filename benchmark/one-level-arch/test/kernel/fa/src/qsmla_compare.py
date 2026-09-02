@@ -12,11 +12,11 @@ HERE = Path(__file__).resolve().parent
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Compare FP16 QSMLA NPU output with FP32 CPU golden output."
+        description="Compare FP16/BF16 QSMLA NPU output with FP32 CPU golden output."
     )
     parser.add_argument(
         "--actual", type=Path, default=HERE / "qsmla_onepass_npu_out.bin",
-        help="NPU output in little-endian FP16 format",
+        help="NPU output in the format selected by --actual-dtype",
     )
     parser.add_argument(
         "--golden", type=Path, default=HERE / "qsmla_golden.bin",
@@ -28,6 +28,10 @@ def parse_args():
     parser.add_argument("--d", type=int)
     parser.add_argument("--atol", type=float, default=1e-3)
     parser.add_argument("--rtol", type=float, default=1e-3)
+    parser.add_argument(
+        "--actual-dtype", choices=("fp16", "bf16"), default="fp16",
+        help="storage dtype of --actual (default: fp16)",
+    )
     return parser.parse_args()
 
 
@@ -39,6 +43,16 @@ def read_values(path: Path, element_bytes: int, format_code: str):
         )
     count = len(data) // element_bytes
     return struct.unpack(f"<{count}{format_code}", data)
+
+
+def read_actual(path: Path, dtype: str):
+    if dtype == "fp16":
+        return read_values(path, 2, "e")
+    words = read_values(path, 2, "H")
+    return tuple(
+        struct.unpack("<f", struct.pack("<I", word << 16))[0]
+        for word in words
+    )
 
 
 def main() -> int:
@@ -54,7 +68,7 @@ def main() -> int:
         return 2
 
     try:
-        actual = read_values(args.actual, 2, "e")
+        actual = read_actual(args.actual, args.actual_dtype)
         golden = read_values(args.golden, 4, "f")
     except (OSError, ValueError) as error:
         print(error, file=sys.stderr)

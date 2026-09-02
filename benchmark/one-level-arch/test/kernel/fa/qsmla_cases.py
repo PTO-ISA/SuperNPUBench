@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import FrozenSet, Optional, Tuple
 
-from qsmla_reference import qsmla_reference
+from qsmla_reference import decode_hif8, encode_hif8, qsmla_reference
 
 
 @dataclass(frozen=True)
@@ -32,9 +32,9 @@ class QsmlaCase:
     mode: str = "SWA"
     q_layout: str = "BSND"
     kv_layout: str = "BSND"
-    logical_dtype: str = "fp16"
-    source_storage_dtype: str = "fp16"
-    stage0_compute_dtype: str = "fp16"
+    logical_dtype: str = "hifp8"
+    source_storage_dtype: str = "uint8"
+    stage0_compute_dtype: str = "fp32"
     enable_stage: str = "stage0_reference"
     coverage: FrozenSet[str] = frozenset()
     reference_feasible: bool = True
@@ -45,6 +45,9 @@ class QsmlaCase:
     cmp_ratio: int = 1
     seed: int = 20260831
     mode_generation_feasible: bool = False
+    q_descale: float = 0.5
+    ori_kv_descale: float = 0.25
+    cmp_kv_descale: float = 0.125
 
     @property
     def ori_s2(self) -> int:
@@ -233,33 +236,40 @@ _QSMLA_STAGE0_CASES: Tuple[QsmlaCase, ...] = (
 _QSMLA_MODE_CASES: Tuple[QsmlaCase, ...] = (
     QsmlaCase(name="swa_small", mode="SWA", b=1, s1=1, s2=128,
               n1=64, n2=1, d=512, k=0, cmp_s2=64,
-              tm=64, tk=32, td=64,
-              win_left=127, win_right=0, source="supernpubench:five-mode",
-              enable_stage="gfrun", reference_feasible=False,
-              mode_generation_feasible=True),
+              tm=64, tk=32, td=64, win_left=127, win_right=0,
+              softmax_scale=0.04419417,
+              source="supernpubench:five-mode", enable_stage="gfrun",
+              reference_feasible=True, mode_generation_feasible=True,
+              coverage=frozenset({"hif8", "bf16_output", "descale"})),
     QsmlaCase(name="hca_small", mode="HCA", b=1, s1=1, s2=128,
               n1=64, n2=1, d=512, k=0, cmp_s2=64, cmp_ratio=4,
               tm=64, tk=32, td=64, win_left=127, win_right=0,
+              softmax_scale=0.04419417,
               source="supernpubench:five-mode", enable_stage="gfrun",
-              reference_feasible=False, mode_generation_feasible=True),
+              reference_feasible=True, mode_generation_feasible=True,
+              coverage=frozenset({"hif8", "bf16_output", "descale"})),
     QsmlaCase(name="csa_small", mode="CSA", b=1, s1=1, s2=128,
               n1=64, n2=1, d=512, k=40, cmp_s2=64, cmp_topk=40,
               cmp_ratio=4, tm=64, tk=32, td=64, win_left=127,
-              win_right=0, source="supernpubench:five-mode",
-              enable_stage="gfrun", reference_feasible=False,
-              mode_generation_feasible=True),
+              win_right=0, softmax_scale=0.04419417,
+              source="supernpubench:five-mode", enable_stage="gfrun",
+              reference_feasible=True, mode_generation_feasible=True,
+              coverage=frozenset({"hif8", "bf16_output", "descale"})),
     QsmlaCase(name="ori_sparse_small", mode="ORI_SPARSE", b=1, s1=1,
               s2=128, n1=64, n2=1, d=512, k=0, k1=40, cmp_s2=64,
-              ori_topk=40, cmp_ratio=4, tm=64, tk=32, td=64, win_left=127,
-              win_right=0, source="supernpubench:five-mode",
-              enable_stage="gfrun", reference_feasible=False,
-              mode_generation_feasible=True),
+              ori_topk=40, cmp_ratio=4, tm=64, tk=32, td=64,
+              win_left=127, win_right=0, softmax_scale=0.04419417,
+              source="supernpubench:five-mode", enable_stage="gfrun",
+              reference_feasible=True, mode_generation_feasible=True,
+              coverage=frozenset({"hif8", "bf16_output", "descale"})),
     QsmlaCase(name="ori_cmp_sparse_small", mode="ORI_CMP_SPARSE",
               b=1, s1=1, s2=128, n1=64, n2=1, d=512, k=40, k1=40,
               cmp_s2=64, ori_topk=40, cmp_topk=40, cmp_ratio=4,
               tm=64, tk=32, td=64, win_left=127, win_right=0,
+              softmax_scale=0.04419417,
               source="supernpubench:five-mode", enable_stage="gfrun",
-              reference_feasible=False, mode_generation_feasible=True),
+              reference_feasible=True, mode_generation_feasible=True,
+              coverage=frozenset({"hif8", "bf16_output", "descale"})),
     QsmlaCase(name="typical_bsnd_csa_s2_128_topk32", mode="CSA",
               b=8, s1=4, s2=128, n1=128, n2=1, d=512, k=32,
               cmp_s2=32, cmp_topk=32, cmp_ratio=4, tm=64, tk=32, td=64,
@@ -280,10 +290,11 @@ _QSMLA_MODE_CASES: Tuple[QsmlaCase, ...] = (
               b=8, s1=4, s2=4096, n1=128, n2=1, d=512, k=512,
               cmp_s2=1024, cmp_topk=512, cmp_ratio=4, tm=64, tk=32, td=64,
               win_left=128, win_right=576, source="user:typical_csa",
-              enable_stage="compile_only", reference_feasible=False,
+              enable_stage="gfrun", reference_feasible=False,
+              mode_generation_feasible=True,
               coverage=frozenset({"typical_csa", "bsnd_layout", "batch_gqa",
                                   "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
-              note="Compile-only: deterministic input generation is intentionally disabled."),
+              note="Production HIF8 validation case; input and golden generation are expensive."),
     QsmlaCase(name="typical_bsnd_csa_s2_131072_topk512", mode="CSA",
               b=8, s1=4, s2=131072, n1=128, n2=1, d=512, k=512,
               cmp_s2=32768, cmp_topk=512, cmp_ratio=4, tm=64, tk=32, td=64,
@@ -328,6 +339,14 @@ def _tensor4(b, s, n, d, rng):
               for _ in range(n)] for _ in range(s)] for _ in range(b)]
 
 
+def _hif8_tensor(b, s, n, d, rng):
+    encoded = [[[[encode_hif8(rng.uniform(-2.0, 2.0)) for _ in range(d)]
+                 for _ in range(n)] for _ in range(s)] for _ in range(b)]
+    decoded = [[[[decode_hif8(value) for value in row] for row in heads]
+                 for heads in seq] for seq in encoded]
+    return encoded, decoded
+
+
 def _sparse_tensor(b, s1, n2, topk, source_s2):
     base = list(range(topk))
     if topk >= 8:
@@ -355,15 +374,31 @@ def _write(path, format_code, values):
     path.write_bytes(struct.pack(f"<{len(flattened)}{format_code}", *flattened))
 
 
-def generate_case(case, output_root):
+def generate_case(case, output_root, dtype="HIF8"):
     output = Path(output_root) / case.name
     output.mkdir(parents=True, exist_ok=True)
     rng = random.Random(case.seed)
 
-    q = _tensor4(case.b, case.s1, case.n1, case.d, rng)
-    ori_kv = _tensor4(case.b, case.ori_s2, case.n2, case.d, rng)
-    cmp_kv = None if case.mode in {"SWA", "ORI_SPARSE"} else _tensor4(
-        case.b, case.cmp_s2, case.n2, case.d, rng)
+    dtype = dtype.upper()
+    if dtype not in {"HIF8", "FP16"}:
+        raise ValueError(f"unsupported QSMLA_DTYPE: {dtype}")
+    is_hif8 = dtype == "HIF8"
+    q_descale = case.q_descale if is_hif8 else 1.0
+    ori_kv_descale = case.ori_kv_descale if is_hif8 else 1.0
+    cmp_kv_descale = case.cmp_kv_descale if is_hif8 else 1.0
+    if is_hif8:
+        q_raw, q = _hif8_tensor(case.b, case.s1, case.n1, case.d, rng)
+        ori_raw, ori_kv = _hif8_tensor(case.b, case.ori_s2, case.n2, case.d, rng)
+        if case.mode in {"SWA", "ORI_SPARSE"}:
+            cmp_raw = cmp_kv = None
+        else:
+            cmp_raw, cmp_kv = _hif8_tensor(
+                case.b, case.cmp_s2, case.n2, case.d, rng)
+    else:
+        q = _tensor4(case.b, case.s1, case.n1, case.d, rng)
+        ori_kv = _tensor4(case.b, case.ori_s2, case.n2, case.d, rng)
+        cmp_kv = None if case.mode in {"SWA", "ORI_SPARSE"} else _tensor4(
+            case.b, case.cmp_s2, case.n2, case.d, rng)
     ori_indices = None if case.mode in {"SWA", "HCA", "CSA"} else _sparse_tensor(
         case.b, case.s1, case.n2, case.ori_topk, case.ori_s2)
     cmp_indices = None if case.mode not in {"CSA", "ORI_CMP_SPARSE"} else _sparse_tensor(
@@ -380,12 +415,22 @@ def generate_case(case, output_root):
         mode=case.mode, softmax_scale=case.softmax_scale,
         cmp_ratio=case.cmp_ratio,
         win_left=case.win_left, win_right=case.win_right,
+        q_descale=q_descale,
+        ori_kv_descale=ori_kv_descale,
+        cmp_kv_descale=cmp_kv_descale,
+        quantize_probability=is_hif8,
     )
 
-    _write(output / "q.fp16.bin", "e", q)
-    _write(output / "ori_kv.fp16.bin", "e", ori_kv)
-    if cmp_kv is not None:
-        _write(output / "cmp_kv.fp16.bin", "e", cmp_kv)
+    if is_hif8:
+        _write(output / "q.hif8.bin", "B", q_raw)
+        _write(output / "ori_kv.hif8.bin", "B", ori_raw)
+        if cmp_raw is not None:
+            _write(output / "cmp_kv.hif8.bin", "B", cmp_raw)
+    else:
+        _write(output / "q.fp16.bin", "e", q)
+        _write(output / "ori_kv.fp16.bin", "e", ori_kv)
+        if cmp_kv is not None:
+            _write(output / "cmp_kv.fp16.bin", "e", cmp_kv)
     if ori_indices is not None:
         _write(output / "ori_sparse_indices.int32.bin", "i", ori_indices)
         _write(output / "ori_topk_length.int32.bin", "i", ori_lengths)
@@ -399,9 +444,14 @@ def generate_case(case, output_root):
     manifest["ori_s2"] = case.ori_s2
     manifest["coverage"] = sorted(case.coverage)
     manifest.update({
+        "qsmla_dtype": dtype,
+        "q_descale": q_descale,
+        "ori_kv_descale": ori_kv_descale,
+        "cmp_kv_descale": cmp_kv_descale,
         "q_layout": "BSND", "kv_layout": "BSND",
-        "input_dtype": "fp16", "index_dtype": "int32",
-        "golden_dtype": "fp32",
+        "input_dtype": "hif8" if is_hif8 else "fp16",
+        "output_dtype": "bf16" if is_hif8 else "fp16",
+        "index_dtype": "int32", "golden_dtype": "fp32",
     })
     (output / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n")
@@ -414,6 +464,10 @@ def main():
     action.add_argument("--all", action="store_true")
     action.add_argument("--case", choices=[case.name for case in QSMLA_CASES])
     parser.add_argument("--output-root", type=Path, default=Path("qsmla_output"))
+    parser.add_argument(
+        "--dtype", choices=("HIF8", "FP16"), default="HIF8",
+        help="generate primary HIF8 data by default; FP16 is opt-in",
+    )
     args = parser.parse_args()
 
     if args.all:
@@ -425,7 +479,7 @@ def main():
                 f"case {selected[0].name} is compile-only and has no generated input"
             )
     for case in selected:
-        output = generate_case(case, args.output_root)
+        output = generate_case(case, args.output_root, dtype=args.dtype)
         print(output)
 
 
