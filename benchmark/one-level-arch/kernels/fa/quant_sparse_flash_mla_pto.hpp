@@ -1,285 +1,478 @@
 #ifndef QUANT_SPARSE_FLASH_MLA_PTO_HPP
 #define QUANT_SPARSE_FLASH_MLA_PTO_HPP
 
-// =============================================================================
-// quant_sparse_flash_mla_pto.hpp
-//   Quant Sparse Flash MLA (SWA mode) on PTO Tile-OP
-//
-// 【计算语义】
-//   O = softmax(Q @ K^T * softmax_scale, mask=invalid) @ V
-//   Q: [s1, D], KV: [s2, D] (MLA shared K=V=ori_kv), O: [s1, D]
-//
-// 【SWA 滑动窗口 — kernel 内部 token 级 mask, 使用 TSEL】
-//   mask 为 UINT32 条件矩阵 (1 表示无效/被 mask, 0 表示有效)
-//   TSELECT_Impl(dst, mask, neg_inf, score): mask=1 → dst=-1e30
-//   窗口范围 (对第 q 个 Q token, 0-indexed):
-//     diagonal = (s2 - s1) + q
-//     valid kv: [diagonal - win_left, diagonal + win_right]  (闭区间)
-//   mask 在 kernel 函数内部根据 win_left/win_right 计算, 放在 stack 上.
-//   与原算子入参完全一致: win_left/win_right 为标量属性, 无额外 mask 入参.
-//
-// 【入参说明】
-//   win_left / win_right : 滑动窗口参数, kernel 内部用于计算 mask
-//   ori_sparse_indices   : SWA 模式下不使用 (为 nullptr), 保留入参签名
-//   ori_block_table      : 非 PA 场景下不使用, 保留入参签名
-//   其余可选入参均为 nullptr 占位, 保留签名方便后续扩展
-//
-// 【D=512 分块】
-//   D 超出单 tile 上限, 沿 D 维切分为 Db 块 (kTd)
-//   QK^T: 每个 D 块独立 TMATMUL, 转为 Vec 后用 TADD 累加
-//   PV: 每个 D 分块独立计算并存储
-//
-// 【两遍式】
-//   Pass 1: online softmax 归约 (m, l), 含 mask
-//   Pass 2: 归一化 P, 计算 P@V, 含 mask
-//
-// 当前 template_asm.hpp 的 packed TSEL 包装与模型三输入契约不一致，
-// 因此使用类型安全的四参数 TSELECT_Impl 和完整 UINT32 条件矩阵。
-// =============================================================================
-
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
+#include "qsmla_config_pto.hpp"
+#include "qsmla_mode_pto.hpp"
 
 using namespace pto;
 
-// CPU 侧 mask 预计算 (在 kernel 内部调用, 放在 stack 上)
-// 生成 UINT32 条件矩阵：窗口外为 1，窗口内为 0。
-static inline void build_swa_mask_select(
-    uint32_t* maskBuf, int s1, int s2, int win_left, int win_right)
-{
-    const int causal_offset = s2 - s1;
-    for (int q = 0; q < s1; ++q) {
-        int diagonal = causal_offset + q;
-        int lo = diagonal - win_left;
-        int hi = diagonal + win_right;
-        for (int kv = 0; kv < s2; ++kv) {
-            bool valid = (kv >= lo) && (kv <= hi);
-            maskBuf[q * s2 + kv] = valid ? 0u : 1u;
-        }
-    }
-}
-
+// Unified five-mode four-PE TADD implementation. Mode selection only decides
+// which logical ORI/CMP RANGE or INDEXED sources participate. Every source is
+// then visited by the same QK -> online-softmax -> PV machinery and updates
+// one shared (m,l,O) state. Indexed rows use one reusable TileK-by-D staging
+// tile; no TopK-by-D or source-length-by-D workspace is allocated.
 template <typename qdtype, typename kvdtype, typename odttype,
-          int s1, int s2, int D, int kTm, int kTk, int kTd,
-          int scaleD = D>
-void quant_sparse_flash_mla_swa_pto(
+          typename ModeConfig>
+void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
     odttype* out_ptr,
     qdtype* q_ptr,
     kvdtype* ori_kv_ptr,
+    kvdtype* cmp_kv_ptr,
+    const int* ori_sparse_indices,
+    const int* cmp_sparse_indices,
+    const int* ori_topk_length,
+    const int* cmp_topk_length,
     float softmax_scale,
+    int cmp_ratio,
     int ori_win_left,
     int ori_win_right,
-    float* q_descale,
-    float* ori_kv_descale,
-    int* ori_sparse_indices,
-    int* ori_block_table,
-    int* cu_seqlens_q,
-    int* cu_seqlens_ori_kv,
-    int* seqused_q,
-    int* seqused_ori_kv,
-    float* sinks,
-    int* metadata,
-    float* softmax_lse)
+    float* score_scratch,
+    qdtype* prob_scratch,
+    float* pv_scratch)
 {
-    constexpr int Db = D / kTd;
+    using Config = typename ModeConfig::Base;
+    constexpr int kPeNum = 4;
+    constexpr int kGroupM = Config::TileM;
+    constexpr int kTk = Config::TileK;
+    constexpr int kTd = Config::TileD;
+    constexpr int kDb = Config::D / kTd;
+    constexpr int kPeRows = kGroupM / kPeNum;
+    constexpr int kOriIndexStorage =
+        ModeConfig::OriTopK > 0 ? ModeConfig::OriTopK : 1;
+    constexpr int kCmpIndexStorage =
+        ModeConfig::CmpTopK > 0 ? ModeConfig::CmpTopK : 1;
 
-    uint32_t maskBuf[s1 * s2];
-    build_swa_mask_select(maskBuf, s1, s2, ori_win_left, ori_win_right);
+    static_assert(Config::N2 == 1,
+                  "sparse four-PE BSND requires contiguous N2=1 KV");
+    static_assert(Config::GSliceMax == 64 && Config::G % 64 == 0,
+                  "sparse four-PE requires complete 64-head G slices");
+    static_assert(kGroupM == 64 && kTk == 32,
+                  "sparse v1 fixes TileM=64 and TileK=32");
+    static_assert(Config::D % kTd == 0,
+                  "sparse four-PE D-tail support is deferred");
 
-    using gmQ    = global_tensor<qdtype,  RowMajor<s1, D>>;
-    using gmKV   = global_tensor<kvdtype, RowMajor<s2, D>>;
-    // 与 gmKV 共用同一块内存，逻辑上表示 K^T；TCOPYIN 将 DN 转为 ZN。
-    using gmKT   = global_tensor<kvdtype, ColMajor<D, s2>>;
-    using gmO    = global_tensor<odttype, RowMajor<s1, D>>;
-    using gmMask = global_tensor<uint32_t, RowMajor<s1, s2>>;
+    const int pe_id = static_cast<int>(get_thread_idx());
 
-    using tileQ      = TileLeft<qdtype,  kTm, kTd>;
-    using tileK      = TileRight<kvdtype, kTd, kTk>;
-    using tileW_out  = TileAcc<float, kTm, kTk>;
+    using tileQMatrix = SharedMatrixLeft<qdtype, kGroupM, kTd>;
+    using tileKMatrix = SharedMatrixRight<kvdtype, kTd, kTk>;
+    using tilePMatrix = SharedMatrixLeft<qdtype, kGroupM, kTk>;
+    using tileVMatrix = SharedMatrixRight<kvdtype, kTk, kTd>;
+    using tileQShared = SharedTile<tileQMatrix>;
+    using tileKShared = SharedTile<tileKMatrix>;
+    using tilePShared = SharedTile<tilePMatrix>;
+    using tileVShared = SharedTile<tileVMatrix>;
+    using tileScoreCube = CubeAccumulatorM16<float, kPeRows, kTk>;
+    using tilePVCube = CubeAccumulatorM16<float, kPeRows, kTd>;
+    using tileW =
+        Tile<Location::Vec, float, kPeRows, kTk, BLayout::RowMajor>;
+    using tileMask = tileW;
+    using tilePShard =
+        Tile<Location::Vec, qdtype, kPeRows, kTk, BLayout::RowMajor>;
+    using tileKSrc =
+        Tile<Location::Vec, kvdtype, kTk, kTd, BLayout::RowMajor>;
+    using tileO =
+        Tile<Location::Vec, float, kPeRows, kTd, BLayout::RowMajor>;
+    using tileOCast =
+        Tile<Location::Vec, odttype, kPeRows, kTd, BLayout::RowMajor>;
+    using tileMax =
+        Tile<Location::Vec, float, kPeRows, 1, BLayout::RowMajor,
+             kPeRows, 1>;
+    using tileSum = tileMax;
 
-    // score tile: RowMajor float
-    using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
+    using gmQ = global_tensor<qdtype, RowMajor<kGroupM, Config::D>>;
+    using gmGatherKV = global_tensor<kvdtype, RowMajor<kTk, Config::D>>;
+    using gmO = global_tensor<odttype, RowMajor<kGroupM, Config::D>>;
+    using itQ = global_iterator<gmQ, tileQMatrix>;
+    using itKSrc = global_iterator<gmGatherKV, tileKSrc>;
+    using itV = global_iterator<gmGatherKV, tileVMatrix>;
+    using itO = global_iterator<gmO, tileOCast>;
 
-    using tileMask   = Tile<Location::Vec, uint32_t, kTm, kTk,
-                            BLayout::RowMajor>;
+    using gmScoreScratch = global_tensor<float, RowMajor<kPeRows, kTk>>;
+    using gmProbScratch = global_tensor<qdtype, RowMajor<kGroupM, kTk>>;
+    using gmPVScratch = global_tensor<float, RowMajor<kPeRows, Config::D>>;
+    using gmRowState = global_tensor<float, RowMajor<kPeRows, 1>>;
+    using itProbShard = global_iterator<gmProbScratch, tilePShard>;
+    using itPShared = global_iterator<gmProbScratch, tilePMatrix>;
+    using itPVScratch = global_iterator<gmPVScratch, tileO>;
+    using itRowState = global_iterator<gmRowState, tileMax>;
+    float* pe_score_scratch = score_scratch + pe_id * kPeRows * kTk;
+    gmScoreScratch gScore(pe_score_scratch);
+    itPVScratch gIterPV(
+        pv_scratch +
+        qsmla_full_o_scratch_pe_offset(pe_id, kPeRows, Config::D));
+    itRowState gIterMax(pe_score_scratch);
+    itRowState gIterSum(pe_score_scratch + kPeRows);
+    itProbShard gIterProb(prob_scratch);
+    itPShared gIterP(prob_scratch);
 
-    using tileW_cast = Tile<Location::Vec, qdtype, kTm, kTk, BLayout::RowMajor>;
-    using tileW_left = TileLeft<qdtype, kTm, kTk>;
+    constexpr int kMaskElements = kPeRows * kTk;
+    float mask_buf[kMaskElements];
+    // One bounded staging tile is reused by ORI and CMP and by both passes.
+    kvdtype kv_tile_buf[kTk * Config::D];
+    int ori_selected[kOriIndexStorage];
+    int cmp_selected[kCmpIndexStorage];
 
-    using tileO_out  = TileAcc<float, kTm, kTd>;
-    using tileO      = Tile<Location::Vec, float, kTm, kTd, BLayout::RowMajor>;
-    using tileO_cast = Tile<Location::Vec, odttype, kTm, kTd, BLayout::RowMajor>;
+    for (int work_id = 0; work_id < Config::WorkCount; ++work_id) {
+        const QsmlaWorkItem work = Config::decode_work(work_id);
+        qdtype* work_q = q_ptr + Config::q_work_offset(work);
+        const std::size_t work_out_offset = Config::out_work_offset(work);
+        itQ gIterQ(work_q);
 
-    using tileV      = TileRight<kvdtype, kTk, kTd>;
-    using tileMax    = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
-    using tileSum    = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
-
-    using itQ    = global_iterator<gmQ,  tileQ>;
-    using itK    = global_iterator<gmKT, tileK>;
-    using itV    = global_iterator<gmKV, tileV>;
-    using itO    = global_iterator<gmO,  tileO_cast>;
-    using itMask = global_iterator<gmMask, tileMask>;
-
-    itQ  gIterQ(q_ptr);
-    itK  gIterK(ori_kv_ptr);
-    itV  gIterV(ori_kv_ptr);
-    itO  gIterO(out_ptr);
-    itMask gIterMask(maskBuf);
-
-    const int Qb = (s1 + kTm - 1) / kTm;
-    const int Kb = (s2 + kTk - 1) / kTk;
-
-    const float scale = softmax_scale;
-
-    for (int i = 0; i < Qb; ++i) {
-
-        // ============================================================
-        //  Pass 1: online softmax 归约 row max (m) 与 row sum (l)
-        //  遍历全部 KV 块, 用 mask 屏蔽窗口外 token
-        // ============================================================
-        tileMax tMax;  TEXPANDS(tMax, -1e30f);
-        tileSum tSum;  TEXPANDS(tSum, 0.0f);
-
-        // TSEL 的 true-value: -1e30 (mask 命中时取此值)
-        tileW tNegInf;  TEXPANDS(tNegInf, -1e30f);
-
-        for (int j = 0; j < Kb; ++j) {
-
-            // QK^T 沿 D 维累加
-            tileW tW;
-            TEXPANDS(tW, 0.0f);
-            #pragma clang loop unroll(full)
-            for (int dd = 0; dd < Db; ++dd) {
-                tileQ tQ;
-                auto gQ = gIterQ(i, dd);
-                TCOPYIN(tQ, gQ);
-
-                tileK tK;
-                auto gK = gIterK(dd, j);
-                TCOPYIN(tK, gK);
-
-                tileW_out tW_out;
-                TMATMUL(tW_out, tQ, tK);
-                tileW tW_partial;
-                TCVT_Impl(tW_partial, tW_out);
-                TADD(tW, tW, tW_partial);
-            }
-
-            TMULS(tW, tW, scale);
-
-            // mask=1 选择 neg_inf，mask=0 保留 score。
-            {
-                tileMask tMask;
-                auto gMask = gIterMask(i, j);
-                TLOAD(tMask, gMask);
-                tileW tMasked;
-                TSELECT_Impl(tMasked, tMask, tNegInf, tW);
-                tW = tMasked;
-            }
-
-            // m_new = max(m_old, rowmax(score))
-            tileMax tLocalMax;
-            TROWMAX(tLocalMax, tW);
-            tileMax tNewMax;
-            TMAX(tNewMax, tMax, tLocalMax);
-
-            // rescale = exp(m_old - m_new); l_old' = l_old * rescale
-            tileMax tScale;
-            TSUB(tScale, tMax, tNewMax);
-            TEXP(tScale, tScale);
-            tileSum tScaledOldSum;
-            TMUL(tScaledOldSum, tSum, tScale);
-
-            // local_sum = rowsum(exp(score - m_new))
-            TROWEXPANDSUB(tW, tW, tNewMax);
-            TEXP(tW, tW);
-            tileSum tLocalSum;
-            TROWSUM(tLocalSum, tW);
-
-            // l_new = l_old' + local_sum
-            tileSum tNewSum;
-            TADD(tNewSum, tScaledOldSum, tLocalSum);
-
-            tMax = tNewMax;
-            tSum = tNewSum;
+        kvdtype* work_ori = ori_kv_ptr +
+            ((static_cast<std::size_t>(work.batch) * ModeConfig::OriS2)
+             * Config::N2 + work.kv_head) * Config::D;
+        kvdtype* work_cmp = nullptr;
+        if constexpr (ModeConfig::HasCmp) {
+            work_cmp = cmp_kv_ptr +
+                ((static_cast<std::size_t>(work.batch) * ModeConfig::CmpS2)
+                 * Config::N2 + work.kv_head) * Config::D;
         }
 
-        // ============================================================
-        //  Pass 2: p = exp(QK*scale, mask - m) / l, O = Σ p·V
-        //  QK^T 用全 D 累加, PV 按 D 分块计算
-        // ============================================================
-        tileSum tInvSum;
-        TRECIP(tInvSum, tSum);
+        int ori_begin = 0;
+        int ori_count = 0;
+        if constexpr (ModeConfig::Mode == QsmlaMode::SWA ||
+                      ModeConfig::Mode == QsmlaMode::HCA ||
+                      ModeConfig::Mode == QsmlaMode::CSA) {
+            const QsmlaSwaRange range = qsmla_swa_range(
+                ModeConfig::OriS2, Config::S1, work.q_token,
+                ori_win_left, ori_win_right);
+            ori_begin = range.begin;
+            ori_count = range.end - range.begin;
+        } else if constexpr (ModeConfig::HasIndexedOri) {
+            const std::size_t list_offset =
+                ((static_cast<std::size_t>(work.batch) * Config::S1
+                  + work.q_token) * Config::N2 + work.kv_head)
+                * ModeConfig::OriTopK;
+            const std::size_t length_offset =
+                (static_cast<std::size_t>(work.batch) * Config::S1
+                 + work.q_token) * Config::N2 + work.kv_head;
+            int candidate_count = ori_topk_length[length_offset];
+            candidate_count = qsmla_sparse_clamp(
+                candidate_count, 0, ModeConfig::OriTopK);
+            ori_count = qsmla_sparse_collect_indices(
+                ori_selected, ModeConfig::OriTopK,
+                ori_sparse_indices + list_offset, candidate_count,
+                ModeConfig::OriS2,
+                qsmla_sparse_ori_valid_end(
+                    ModeConfig::OriS2, Config::S1, work.q_token));
+        }
 
-        for (int dd = 0; dd < Db; ++dd) {
-            tileO tO;
-            TEXPANDS(tO, 0.0f);
+        int cmp_count = 0;
+        if constexpr (ModeConfig::HasCmp) {
+            const int cmp_valid_end = qsmla_csa_cmp_valid_end(
+                ModeConfig::CmpS2, Config::S1,
+                work.q_token, cmp_ratio);
+            if constexpr (ModeConfig::Mode == QsmlaMode::HCA) {
+                // HCA is continuous compressed attention. Sparse CMP inputs
+                // are intentionally ignored; [0,cmp_valid_end) participates.
+                cmp_count = cmp_valid_end;
+            } else {
+                const std::size_t list_offset =
+                    ((static_cast<std::size_t>(work.batch) * Config::S1
+                      + work.q_token) * Config::N2 + work.kv_head)
+                    * ModeConfig::CmpTopK;
+                const std::size_t length_offset =
+                    (static_cast<std::size_t>(work.batch) * Config::S1
+                     + work.q_token) * Config::N2 + work.kv_head;
+                int candidate_count = ModeConfig::CmpTopK;
+                if (cmp_topk_length != nullptr) {
+                    candidate_count = cmp_topk_length[length_offset];
+                }
+                candidate_count = qsmla_sparse_clamp(
+                    candidate_count, 0, ModeConfig::CmpTopK);
+                cmp_count = qsmla_sparse_collect_indices(
+                    cmp_selected, ModeConfig::CmpTopK,
+                    cmp_sparse_indices + list_offset, candidate_count,
+                    ModeConfig::CmpS2, cmp_valid_end);
+            }
+        }
 
-            for (int j = 0; j < Kb; ++j) {
+        auto stage_source_tile = [&](
+            kvdtype* source, const int* selected, int range_begin,
+            int logical_begin, int valid_rows) {
+            for (int row = 0; row < kTk; ++row) {
+                const int source_row = row < valid_rows
+                    ? (selected == nullptr
+                           ? range_begin + logical_begin + row
+                           : selected[logical_begin + row])
+                    : 0;
+                for (int dim = 0; dim < Config::D; ++dim) {
+                    kv_tile_buf[row * Config::D + dim] =
+                        row < valid_rows
+                            ? source[source_row * Config::D + dim]
+                            : static_cast<kvdtype>(0.0f);
+                }
+            }
+        };
+        auto build_source_mask = [&](int valid_rows) {
+            for (int row = 0; row < kPeRows; ++row) {
+                for (int column = 0; column < kTk; ++column) {
+                    mask_buf[row * kTk + column] =
+                        column < valid_rows ? 0.0f : -1.0e30f;
+                }
+            }
+        };
 
-                // 计算完整 QK^T (沿 D 累加, 与 Pass 1 一致)
+        tileMax tMax;
+        tileSum tSum;
+        TEXPANDS(tMax, -1e30f);
+        TEXPANDS(tSum, 0.0f);
+        auto gMaxState = gIterMax(0, 0);
+        auto gSumState = gIterSum(0, 0);
+        // Scalar indexed gather makes implicit Tile spills compiler-dependent.
+        // Persist the one shared m/l state explicitly between source blocks;
+        // gScore may overwrite these slots only after both states are loaded.
+        TSTORE(gMaxState, tMax);
+        TSTORE(gSumState, tSum);
+
+        auto visit_source_pass1 = [&](kvdtype* source, const int* selected,
+                                      int range_begin, int logical_count,
+                                      bool allow_direct) {
+            const int block_count = (logical_count + kTk - 1) / kTk;
+            for (int block = 0; block < block_count; ++block) {
+                const int logical_begin = block * kTk;
+                const int remaining = logical_count - logical_begin;
+                const int valid_rows = remaining < kTk ? remaining : kTk;
+                const bool direct_contiguous =
+                    qsmla_use_direct_contiguous_tile(
+                        allow_direct, selected != nullptr, valid_rows, kTk);
+                kvdtype* tile_ptr = kv_tile_buf;
+                if (direct_contiguous) {
+                    // A full contiguous ORI/HCA tile can be consumed from GM
+                    // directly. Indexed tiles and the non-integral tail keep
+                    // using the bounded gather buffer to avoid over-reading.
+                    tile_ptr = source +
+                        (range_begin + logical_begin) * Config::D;
+                } else {
+                    stage_source_tile(source, selected, range_begin,
+                                      logical_begin, valid_rows);
+                }
+                build_source_mask(valid_rows);
+                itKSrc gIterKSrc(tile_ptr);
+
+                tileMax tMax;
+                tileSum tSum;
+                TLOAD(tMax, gMaxState);
+                TLOAD(tSum, gSumState);
+
+                tileScoreCube tScoreCube;
+#pragma clang loop unroll(full)
+                for (int dd = 0; dd < kDb; ++dd) {
+                    tileQShared tQShared;
+                    tileKSrc tKSrc;
+                    tileKMatrix tKLocal;
+                    tileKShared tKShared;
+                    auto gQ = gIterQ(0, dd);
+                    auto gK = gIterKSrc(0, dd);
+                    TLOAD<tileQMatrix, 1>(tQShared, gQ);
+                    TLOAD(tKSrc, gK);
+                    TTRANS(tKLocal, tKSrc);
+                    TMOV_L2S_PUBLISH(tKShared, tKLocal);
+                    if (dd == 0) {
+                        TMATMUL(tScoreCube, tQShared, tKShared,
+                                fixp::keep_acc());
+                    } else {
+                        TMATMUL_ACC(tScoreCube, tScoreCube,
+                                    tQShared, tKShared, fixp::keep_acc());
+                    }
+                }
+
+                TSTORE_CUBE(gScore, tScoreCube);
                 tileW tW;
-                TEXPANDS(tW, 0.0f);
-                #pragma clang loop unroll(full)
-                for (int dd2 = 0; dd2 < Db; ++dd2) {
-                    tileQ tQ;
-                    auto gQ = gIterQ(i, dd2);
-                    TCOPYIN(tQ, gQ);
+                TLOAD(tW, gScore);
+                TMULS(tW, tW, softmax_scale);
+                using gmMask = global_tensor<float, RowMajor<kPeRows, kTk>>;
+                using itMask = global_iterator<gmMask, tileMask>;
+                itMask gIterMask(mask_buf);
+                tileMask tMask;
+                auto gMask = gIterMask(0, 0);
+                TLOAD(tMask, gMask);
+                TADD(tW, tW, tMask);
 
-                    tileK tK;
-                    auto gK = gIterK(dd2, j);
-                    TCOPYIN(tK, gK);
+                tileMax tLocalMax;
+                tileMax tNewMax;
+                TROWMAX(tLocalMax, tW);
+                TMAX(tNewMax, tMax, tLocalMax);
+                tileMax tScale;
+                TSUB(tScale, tMax, tNewMax);
+                TEXP(tScale, tScale);
+                tileSum tScaledOldSum;
+                TMUL(tScaledOldSum, tSum, tScale);
+                TROWEXPANDSUB(tW, tW, tNewMax);
+                TEXP(tW, tW);
+                tileSum tLocalSum;
+                TROWSUM(tLocalSum, tW);
+                TADD(tSum, tScaledOldSum, tLocalSum);
+                tMax = tNewMax;
+                TSTORE(gMaxState, tMax);
+                TSTORE(gSumState, tSum);
+            }
+        };
 
-                    tileW_out tW_out;
-                    TMATMUL(tW_out, tQ, tK);
-                    tileW tW_partial;
-                    TCVT_Impl(tW_partial, tW_out);
-                    TADD(tW, tW, tW_partial);
+        // visit_ori_pass1: ORI is always the first logical source.
+        visit_source_pass1(
+            work_ori,
+            ModeConfig::HasIndexedOri ? ori_selected : nullptr,
+            ori_begin, ori_count, true);
+        // visit_cmp_pass1: CMP continues the same tMax/tSum state.
+        if constexpr (ModeConfig::HasCmp) {
+            visit_source_pass1(
+                work_cmp,
+                ModeConfig::HasIndexedCmp ? cmp_selected : nullptr,
+                0, cmp_count, false);
+        }
+
+        tileSum tFinalSum;
+        TLOAD(tFinalSum, gSumState);
+        tileSum tInvSum;
+        TRECIP(tInvSum, tFinalSum);
+        TSTORE(gSumState, tInvSum);
+
+        // Keep the complete FP32 O state in GM. Only one [PeRows,Td] tile is
+        // live locally, so loop interchange does not recreate one-pass tile
+        // pressure.
+#pragma clang loop unroll(disable)
+        for (int out_dd = 0; out_dd < kDb; ++out_dd) {
+            tileO tZeroO;
+            TEXPANDS(tZeroO, 0.0f);
+            auto gOState = gIterPV(0, out_dd);
+            TSTORE(gOState, tZeroO);
+        }
+
+        auto visit_source_pass2 = [&](kvdtype* source,
+                                      const int* selected,
+                                      int range_begin,
+                                      int logical_count,
+                                      bool allow_direct) {
+            const int block_count = (logical_count + kTk - 1) / kTk;
+            for (int block = 0; block < block_count; ++block) {
+                const int logical_begin = block * kTk;
+                const int remaining = logical_count - logical_begin;
+                const int valid_rows = remaining < kTk ? remaining : kTk;
+                const bool direct_contiguous =
+                    qsmla_use_direct_contiguous_tile(
+                        allow_direct, selected != nullptr,
+                        valid_rows, kTk);
+                kvdtype* tile_ptr = kv_tile_buf;
+                if (direct_contiguous) {
+                    tile_ptr = source +
+                        (range_begin + logical_begin) * Config::D;
+                } else {
+                    stage_source_tile(source, selected, range_begin,
+                                      logical_begin, valid_rows);
+                }
+                build_source_mask(valid_rows);
+                itKSrc gIterKSrc(tile_ptr);
+                itV gIterV(tile_ptr);
+
+                tileMax tMax;
+                tileSum tInvSum;
+                TLOAD(tMax, gMaxState);
+                TLOAD(tInvSum, gSumState);
+
+                tileScoreCube tScoreCube;
+#pragma clang loop unroll(full)
+                for (int dd = 0; dd < kDb; ++dd) {
+                    tileQShared tQShared;
+                    tileKSrc tKSrc;
+                    tileKMatrix tKLocal;
+                    tileKShared tKShared;
+                    auto gQ = gIterQ(0, dd);
+                    auto gK = gIterKSrc(0, dd);
+                    TLOAD<tileQMatrix, 1>(tQShared, gQ);
+                    TLOAD(tKSrc, gK);
+                    TTRANS(tKLocal, tKSrc);
+                    TMOV_L2S_PUBLISH(tKShared, tKLocal);
+                    if (dd == 0) {
+                        TMATMUL(tScoreCube, tQShared, tKShared,
+                                fixp::keep_acc());
+                    } else {
+                        TMATMUL_ACC(tScoreCube, tScoreCube,
+                                    tQShared, tKShared,
+                                    fixp::keep_acc());
+                    }
                 }
 
-                TMULS(tW, tW, scale);
-
-                // 应用 token 级 mask: TSEL(score, mask, neg_inf)
-                {
-                    tileMask tMask;
-                    auto gMask = gIterMask(i, j);
-                    TLOAD(tMask, gMask);
-                    tileW tMasked;
-                    TSELECT_Impl(tMasked, tMask, tNegInf, tW);
-                    tW = tMasked;
-                }
-
-                // p = exp(score - m) / l
+                TSTORE_CUBE(gScore, tScoreCube);
+                tileW tW;
+                TLOAD(tW, gScore);
+                TMULS(tW, tW, softmax_scale);
+                using gmMask =
+                    global_tensor<float, RowMajor<kPeRows, kTk>>;
+                using itMask = global_iterator<gmMask, tileMask>;
+                itMask gIterMask(mask_buf);
+                tileMask tMask;
+                auto gMask = gIterMask(0, 0);
+                TLOAD(tMask, gMask);
+                TADD(tW, tW, tMask);
                 TROWEXPANDSUB(tW, tW, tMax);
                 TEXP(tW, tW);
                 TROWEXPANDMUL(tW, tW, tInvSum);
 
-                // cast p -> qdtype Left tile for TMATMUL
-                tileW_cast tExpW;
-                TCVT(tExpW, tW);
-                tileW_left tW_left;
-                TMOV_ND2NZ(tW_left, tExpW);
+                tilePShard tPShard;
+                TCVT(tPShard, tW);
+                auto gProbShard = gIterProb(pe_id, 0);
+                TSTORE(gProbShard, tPShard);
 
-                // PV = p * V (当前 D 分块)
-                tileV tV;
-                auto gV = gIterV(j, dd);
-                TCOPYIN(tV, gV);
+                // gScore aliases the row-state backing store. Restore it once
+                // after probability generation, before the next source block.
+                TSTORE(gMaxState, tMax);
+                TSTORE(gSumState, tInvSum);
 
-                tileO_out tPV_out;
-                TMATMUL(tPV_out, tW_left, tV);
-                tileO tPV;
-                TCVT_Impl(tPV, tPV_out);
-
-                TADD(tO, tO, tPV);
+#pragma clang loop unroll(disable)
+                for (int out_dd = 0; out_dd < kDb; ++out_dd) {
+                    auto gOState = gIterPV(0, out_dd);
+                    tileO tO;
+                    TLOAD(tO, gOState);
+                    // Shared CUBE operands must not remain live across a
+                    // runtime loop: reload the already-published P payload
+                    // into a short-lived tile for each D block.
+                    tilePShared tPShared;
+                    auto gP = gIterP(0, 0);
+                    TLOAD<tilePMatrix, 1>(tPShared, gP);
+                    tileVShared tVShared;
+                    auto gV = gIterV(0, out_dd);
+                    TLOAD<tileVMatrix, 1>(tVShared, gV);
+                    tilePVCube tPVCube;
+                    TMATMUL(tPVCube, tPShared, tVShared,
+                            fixp::keep_acc());
+                    TSTORE_CUBE(gOState, tPVCube);
+                    tileO tPV;
+                    TLOAD(tPV, gOState);
+                    TADD(tO, tO, tPV);
+                    TSTORE(gOState, tO);
+                }
             }
+        };
 
-            // 写回 O 分块 [kTm, kTd]
-            tileO_cast tO_cast;
-            TCVT(tO_cast, tO);
-            auto gO = gIterO(i, dd);
-            TCOPYOUT(gO, tO_cast);
+        // visit_ori_pass2: preserve the pass-1 ORI then CMP source order.
+        visit_source_pass2(
+            work_ori,
+            ModeConfig::HasIndexedOri ? ori_selected : nullptr,
+            ori_begin, ori_count, true);
+        if constexpr (ModeConfig::HasCmp) {
+            // visit_cmp_pass2: continue into the same FP32 O scratch.
+            visit_source_pass2(
+                work_cmp,
+                ModeConfig::HasIndexedCmp ? cmp_selected : nullptr,
+                0, cmp_count, false);
+        }
+
+#pragma clang loop unroll(disable)
+        for (int out_dd = 0; out_dd < kDb; ++out_dd) {
+            auto gOState = gIterPV(0, out_dd);
+            tileO tFinalO;
+            TLOAD(tFinalO, gOState);
+            tileOCast tOCast;
+            TCVT(tOCast, tFinalO);
+            itO gIterO(out_ptr + work_out_offset
+                       + pe_id * kPeRows * Config::D);
+            auto gO = gIterO(0, out_dd);
+            TSTORE(gO, tOCast);
         }
     }
 }
 
-#endif
+#endif // QUANT_SPARSE_FLASH_MLA_PTO_HPP

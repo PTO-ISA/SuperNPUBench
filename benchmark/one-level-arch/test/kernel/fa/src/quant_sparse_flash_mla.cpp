@@ -1,11 +1,41 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "fileop.h"
-// #include "fa/quant_sparse_flash_mla_pto.hpp"
-#if defined(QSMLA_USE_TADD) || defined(QSMLA_USE_TADD_4PE)
+#if defined(QSMLA_USE_TADD_4PE) || \
+    defined(QSMLA_USE_HCA_TADD_4PE) || \
+    defined(QSMLA_USE_CSA_TADD_4PE) || \
+    defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+#define QSMLA_USE_UNIFIED_TADD_4PE
+#include "fa/quant_sparse_flash_mla_pto.hpp"
+#elif defined(QSMLA_USE_TADD)
 #include "fa/quant_sparse_flash_mla_tadd_pto.hpp"
 #else
 #include "fa/quant_sparse_flash_mla_onepass_pto.hpp"
+#endif
+
+#ifndef Tcmp_s2
+#define cmp_s2 64
+#else
+#define cmp_s2 Tcmp_s2
+#endif
+
+#ifndef Tori_topk
+#define ori_topk 40
+#else
+#define ori_topk Tori_topk
+#endif
+
+#ifndef Tcmp_topk
+#define cmp_topk 40
+#else
+#define cmp_topk Tcmp_topk
+#endif
+
+#ifndef Tcmp_ratio
+#define cmp_ratio 4
+#else
+#define cmp_ratio Tcmp_ratio
 #endif
 
 #ifndef Tbatch
@@ -102,6 +132,30 @@ extern const uint8_t _binary_kv_fp16_start[];
 }
 #endif
 
+#ifdef QSMLA_USE_SPARSE_EMBEDDED_INPUT
+extern "C" {
+extern const uint8_t _binary_q_fp16_start[];
+extern const uint8_t _binary_ori_kv_fp16_start[];
+#if defined(QSMLA_USE_HCA_TADD_4PE) || \
+    defined(QSMLA_USE_CSA_TADD_4PE) || \
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+extern const uint8_t _binary_cmp_kv_fp16_start[];
+#endif
+#if defined(QSMLA_USE_CSA_TADD_4PE) || \
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+extern const uint8_t _binary_cmp_sparse_indices_int32_start[];
+#endif
+#if defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+extern const uint8_t _binary_ori_sparse_indices_int32_start[];
+extern const uint8_t _binary_ori_topk_length_int32_start[];
+#endif
+#if defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+extern const uint8_t _binary_cmp_topk_length_int32_start[];
+#endif
+}
+#endif
+
 int main(){
     using qdtype = __half;
     using kvdtype = __half;
@@ -111,7 +165,61 @@ int main(){
     using Config = QsmlaConfig<
         B, s1, s2, N1, N2, D, 0, kTm, kTk, kTd, g_slice_max>;
 
-#ifdef QSMLA_USE_EMBEDDED_INPUT
+#ifdef QSMLA_USE_TADD_4PE
+    using ModeConfig = QsmlaModeConfig<
+        Config, QsmlaMode::SWA, 0, 0, 0>;
+#elif defined(QSMLA_USE_HCA_TADD_4PE)
+    using ModeConfig = QsmlaModeConfig<
+        Config, QsmlaMode::HCA, cmp_s2, 0, 0>;
+#elif defined(QSMLA_USE_CSA_TADD_4PE)
+    using ModeConfig = QsmlaModeConfig<
+        Config, QsmlaMode::CSA, cmp_s2, ori_topk, cmp_topk>;
+#elif defined(QSMLA_USE_ORI_SPARSE_TADD_4PE)
+    using ModeConfig = QsmlaModeConfig<
+        Config, QsmlaMode::ORI_SPARSE, cmp_s2, ori_topk, cmp_topk>;
+#elif defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    using ModeConfig = QsmlaModeConfig<
+        Config, QsmlaMode::ORI_CMP_SPARSE,
+        cmp_s2, ori_topk, cmp_topk>;
+#endif
+
+#ifdef QSMLA_USE_SPARSE_EMBEDDED_INPUT
+    qdtype* q = reinterpret_cast<qdtype*>(
+        const_cast<uint8_t*>(_binary_q_fp16_start));
+    kvdtype* kv = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_ori_kv_fp16_start));
+#if defined(QSMLA_USE_HCA_TADD_4PE) || \
+    defined(QSMLA_USE_CSA_TADD_4PE) || \
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    kvdtype* cmp_kv = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_cmp_kv_fp16_start));
+#else
+    kvdtype* cmp_kv = nullptr;
+#endif
+#if defined(QSMLA_USE_CSA_TADD_4PE) || \
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    const int* cmp_indices = reinterpret_cast<const int*>(
+        _binary_cmp_sparse_indices_int32_start);
+#else
+    const int* cmp_indices = nullptr;
+#endif
+#if defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    const int* ori_indices = reinterpret_cast<const int*>(
+        _binary_ori_sparse_indices_int32_start);
+    const int* ori_lengths = reinterpret_cast<const int*>(
+        _binary_ori_topk_length_int32_start);
+#else
+    const int* ori_indices = nullptr;
+    const int* ori_lengths = nullptr;
+#endif
+#if defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    const int* cmp_lengths = reinterpret_cast<const int*>(
+        _binary_cmp_topk_length_int32_start);
+#else
+    const int* cmp_lengths = nullptr;
+#endif
+#elif defined(QSMLA_USE_EMBEDDED_INPUT)
     // The fixed typical-case inputs are linked into an aligned read-only ELF
     // section.  All four PEs share these addresses and the kernel never writes
     // Q/KV, avoiding simulated scalar initialization before BENCHSTART.
@@ -127,9 +235,17 @@ int main(){
     kvdtype* kv = (kvdtype*)(((uint64_t)kvp & ALIGN_MASK) + ALIGN);
 #endif
 
+#ifndef QSMLA_USE_SPARSE_EMBEDDED_INPUT
+    kvdtype* cmp_kv = nullptr;
+    const int* ori_indices = nullptr;
+    const int* cmp_indices = nullptr;
+    const int* ori_lengths = nullptr;
+    const int* cmp_lengths = nullptr;
+#endif
+
     odttype* out = (odttype*)MAP_MEM_BASE;
 
-#ifdef QSMLA_USE_TADD_4PE
+#if defined(QSMLA_USE_UNIFIED_TADD_4PE)
     // Cooperative scratch must live in shared GM rather than a PE-private
     // function stack.  Each PE computes and receives these identical mapped
     // addresses, matching the shared-workspace contract used by the 4-PE FA.
@@ -147,35 +263,22 @@ int main(){
     float* pv_scratch = reinterpret_cast<float*>(pv_addr);
 #endif
 
-#ifndef QSMLA_USE_EMBEDDED_INPUT
+#if !defined(QSMLA_USE_EMBEDDED_INPUT) && \
+    !defined(QSMLA_USE_SPARSE_EMBEDDED_INPUT)
     init_deterministic(q, B*s1*N1*D, 1);
     init_deterministic(kv, B*s2*N2*D, 2);
 #endif
 
     BENCHSTART;
-#ifdef QSMLA_USE_TADD_4PE
+#ifdef QSMLA_USE_UNIFIED_TADD_4PE
     static_assert(N1 > 1,
-                  "tadd_4pe is a BSND G-slice implementation");
-    quant_sparse_flash_mla_swa_tadd_4pe_bsnd_pto<
-        qdtype, kvdtype, odttype, Config>(
-            out, q, kv,
-            softmax_scale_val,
-            win_left,
-            win_right,
-            (float*)nullptr,
-            (float*)nullptr,
-            (int*)nullptr,
-            (int*)nullptr,
-            (int*)nullptr,
-            (int*)nullptr,
-            (int*)nullptr,
-            (int*)nullptr,
-            (float*)nullptr,
-            (int*)nullptr,
-            (float*)nullptr,
-            score_scratch,
-            prob_scratch,
-            pv_scratch);
+                  "unified tadd 4pe is a BSND G-slice implementation");
+    quant_sparse_flash_mla_tadd_4pe_bsnd_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val, cmp_ratio, win_left, win_right,
+            score_scratch, prob_scratch, pv_scratch);
 #else
     if constexpr (N1 == 1 && N2 == 1) {
 #ifdef QSMLA_USE_TADD

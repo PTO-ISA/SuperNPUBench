@@ -98,6 +98,10 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    softmax_scale ?= 0.125
    wleft ?= 1
    wright ?= 1
+   cmp_s2 ?= 64
+   ori_topk ?= 40
+   cmp_topk ?= 40
+   cmp_ratio ?= 4
    IMPL ?= onepass
    DEFINES += -DTbatch=$(B)
    DEFINES += -DTs1=$(s1)
@@ -111,6 +115,10 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    DEFINES += -DTsoftmax_scale=$(softmax_scale)
    DEFINES += -DTwleft=$(wleft)
    DEFINES += -DTwright=$(wright)
+   DEFINES += -DTcmp_s2=$(cmp_s2)
+   DEFINES += -DTori_topk=$(ori_topk)
+   DEFINES += -DTcmp_topk=$(cmp_topk)
+   DEFINES += -DTcmp_ratio=$(cmp_ratio)
    ifeq ($(IMPL), tadd)
       DEFINES += -DQSMLA_USE_TADD
    endif
@@ -119,6 +127,31 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_s2$(s2)_N1$(N1)_N2$(N2)_D$(D)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL).elf
    else
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_s2$(s2)_N1$(N1)_N2$(N2)_D$(D)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block).elf
+   endif
+
+   QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
+   ifneq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS)),)
+      ifeq ($(IMPL), swa_tadd_4pe)
+         DEFINES += -DQSMLA_USE_TADD_4PE
+         QSMLA_SPARSE_CASE := swa_small
+      endif
+      ifeq ($(IMPL), hca_tadd_4pe)
+         DEFINES += -DQSMLA_USE_HCA_TADD_4PE
+         QSMLA_SPARSE_CASE := hca_small
+      endif
+      ifeq ($(IMPL), csa_tadd_4pe)
+         DEFINES += -DQSMLA_USE_CSA_TADD_4PE
+         QSMLA_SPARSE_CASE := csa_small
+      endif
+      ifeq ($(IMPL), ori_sparse_tadd_4pe)
+         DEFINES += -DQSMLA_USE_ORI_SPARSE_TADD_4PE
+         QSMLA_SPARSE_CASE := ori_sparse_small
+      endif
+      ifeq ($(IMPL), ori_cmp_sparse_tadd_4pe)
+         DEFINES += -DQSMLA_USE_ORI_CMP_SPARSE_TADD_4PE
+         QSMLA_SPARSE_CASE := ori_cmp_sparse_small
+      endif
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL).elf
    endif
 
    ifeq ($(QSMLA_EMBED_INPUT), on)
@@ -160,6 +193,75 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       $(QSMLA_KV_OBJ): $(QSMLA_DATA_DIR)/kv_s2_4096.fp16.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_DATA_OBJ_DIR)
 	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol kv_fp16 --bytes $(QSMLA_KV_BYTES)
+   endif
+
+   ifeq ($(QSMLA_SPARSE_EMBED_INPUT), on)
+      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS)),)
+         $(error QSMLA_SPARSE_EMBED_INPUT requires a unified four-PE IMPL)
+      endif
+      QSMLA_SPARSE_DATA_ROOT ?= /tmp/qsmla-sparse
+      QSMLA_SPARSE_DATA_DIR := $(QSMLA_SPARSE_DATA_ROOT)/$(QSMLA_SPARSE_CASE)
+      QSMLA_SPARSE_OBJ_DIR := $(abspath $(CURDIR)/../../../output/kernel/fa/qsmla_sparse_data/$(QSMLA_SPARSE_CASE))
+      QSMLA_INPUT_BUILDER := $(CURDIR)/build_qsmla_input_object.py
+      QSMLA_Q_BYTES := $(shell expr $(B) \* $(s1) \* $(N1) \* $(D) \* 2)
+      QSMLA_ORI_KV_BYTES := $(shell expr $(B) \* $(s2) \* $(N2) \* $(D) \* 2)
+      QSMLA_CMP_KV_BYTES := $(shell expr $(B) \* $(cmp_s2) \* $(N2) \* $(D) \* 2)
+      QSMLA_ORI_INDEX_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* $(ori_topk) \* 4)
+      QSMLA_CMP_INDEX_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* $(cmp_topk) \* 4)
+      QSMLA_LENGTH_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* 4)
+
+      QSMLA_Q_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/q.o
+      QSMLA_ORI_KV_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_kv.o
+      EXTRA_OBJ_FILES += $(QSMLA_Q_OBJ) $(QSMLA_ORI_KV_OBJ)
+      DEFINES += -DQSMLA_USE_SPARSE_EMBEDDED_INPUT
+
+      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe),)
+         QSMLA_CMP_KV_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_kv.o
+         EXTRA_OBJ_FILES += $(QSMLA_CMP_KV_OBJ)
+      endif
+      ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe),)
+         QSMLA_CMP_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_indices.o
+         EXTRA_OBJ_FILES += $(QSMLA_CMP_INDEX_OBJ)
+      endif
+      ifneq ($(filter $(IMPL),ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe),)
+         QSMLA_ORI_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_indices.o
+         QSMLA_ORI_LENGTH_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_length.o
+         EXTRA_OBJ_FILES += $(QSMLA_ORI_INDEX_OBJ) $(QSMLA_ORI_LENGTH_OBJ)
+      endif
+      ifeq ($(IMPL), ori_cmp_sparse_tadd_4pe)
+         QSMLA_CMP_LENGTH_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_length.o
+         EXTRA_OBJ_FILES += $(QSMLA_CMP_LENGTH_OBJ)
+      endif
+
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_INPUTembedded.elf
+
+      $(QSMLA_Q_OBJ): $(QSMLA_SPARSE_DATA_DIR)/q.fp16.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol q_fp16 --bytes $(QSMLA_Q_BYTES) --exact-bytes
+
+      $(QSMLA_ORI_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv.fp16.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_fp16 --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
+
+      $(QSMLA_CMP_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv.fp16.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_kv_fp16 --bytes $(QSMLA_CMP_KV_BYTES) --exact-bytes
+
+      $(QSMLA_ORI_INDEX_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_sparse_indices.int32.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_sparse_indices_int32 --bytes $(QSMLA_ORI_INDEX_BYTES) --exact-bytes
+
+      $(QSMLA_CMP_INDEX_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_sparse_indices.int32.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_sparse_indices_int32 --bytes $(QSMLA_CMP_INDEX_BYTES) --exact-bytes
+
+      $(QSMLA_ORI_LENGTH_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_topk_length.int32.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_topk_length_int32 --bytes $(QSMLA_LENGTH_BYTES) --exact-bytes
+
+      $(QSMLA_CMP_LENGTH_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_topk_length.int32.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_topk_length_int32 --bytes $(QSMLA_LENGTH_BYTES) --exact-bytes
    endif
 endif
 
