@@ -105,10 +105,9 @@ int main() {
     static uint8_t qsp[B * H * globSq * (qD / 32) + 2 * ALIGN];
     static uint8_t ksp[B * H * globSkv * (qD / 32) + 2 * ALIGN];
     static uint8_t vsp[B * H * (globSkv / 32) * vD + 2 * ALIGN];
-    static float scorep[kPeNum * kPeTm * kTk + 2 * ALIGN];
+    static float prob_convertp[kPeNum * kPeTm * kTk + 2 * ALIGN];
     static matrix_dtype probp[kGroupM * kStoredTk + 2 * ALIGN];
     static uint8_t probsp[kGroupM * kTkScaleRows + 2 * ALIGN];
-    static float pvp[kPeNum * kPeTm * vD + 2 * ALIGN];
 #ifdef RES_CHECK
     static MultiThreadResCheckSync res_check_sync{};
 #endif
@@ -124,12 +123,12 @@ int main() {
     uint8_t *q_scale = (uint8_t *)(((uint64_t)qsp & ALIGN_MASK) + ALIGN);
     uint8_t *k_scale = (uint8_t *)(((uint64_t)ksp & ALIGN_MASK) + ALIGN);
     uint8_t *v_scale = (uint8_t *)(((uint64_t)vsp & ALIGN_MASK) + ALIGN);
-    float *score = (float *)(((uint64_t)scorep & ALIGN_MASK) + ALIGN);
+    float *prob_convert =
+        (float *)(((uint64_t)prob_convertp & ALIGN_MASK) + ALIGN);
     matrix_dtype *prob =
         (matrix_dtype *)(((uint64_t)probp & ALIGN_MASK) + ALIGN);
     uint8_t *prob_scale =
         (uint8_t *)(((uint64_t)probsp & ALIGN_MASK) + ALIGN);
-    float *pv = (float *)(((uint64_t)pvp & ALIGN_MASK) + ALIGN);
 
     // MX probability tiles are produced by an explicit vector-to-matrix
     // conversion, so their E8M0 scale is unity. Initialize the shared scale
@@ -189,9 +188,8 @@ int main() {
                     j * globSkv * (qD / 32),
                 v_scale + i * H * (globSkv / 32) * vD +
                     j * (globSkv / 32) * vD,
-                score + tid * kPeTm * kTk,
-                prob, prob_scale,
-                pv + tid * kPeTm * vD);
+                prob_convert + tid * kPeTm * kTk,
+                prob, prob_scale);
         }
     }
     BENCHEND;
