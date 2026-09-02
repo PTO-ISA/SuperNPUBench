@@ -1,0 +1,32 @@
+#!/bin/bash
+# view_copy operator compile cases
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+# Copy a transposed 2x4x8 view into contiguous storage, with non-zero offsets.
+make TESTCASE=view_copy COMPILER_DIR="$COMPILER_DIR" \
+    DType=int32_t RANK=3 ELEMENTS=64 TILE_ELEMENTS=32 \
+    SHAPE=2,4,8 SHAPE_NAME=2_4_8 \
+    INPUT_GLOBAL_STRIDE=32,1,4 INPUT_GLOBAL_STRIDE_NAME=32_1_4 \
+    OUTPUT_GLOBAL_STRIDE=32,8,1 OUTPUT_GLOBAL_STRIDE_NAME=32_8_1 \
+    INPUT_OFFSET_BYTES=32 OUTPUT_OFFSET_BYTES=64 \
+    ABS_TOL=0.0f REL_TOL=0.0f
+
+# Copy a contiguous 4x4x8 half view into storage whose last two axes are swapped.
+make TESTCASE=view_copy COMPILER_DIR="$COMPILER_DIR" \
+    DType=__half RANK=3 ELEMENTS=128 TILE_ELEMENTS=64 \
+    SHAPE=4,4,8 SHAPE_NAME=4_4_8 \
+    INPUT_GLOBAL_STRIDE=32,8,1 INPUT_GLOBAL_STRIDE_NAME=32_8_1 \
+    OUTPUT_GLOBAL_STRIDE=32,1,4 OUTPUT_GLOBAL_STRIDE_NAME=32_1_4 \
+    INPUT_OFFSET_BYTES=64 OUTPUT_OFFSET_BYTES=128 \
+    ABS_TOL=0.001f REL_TOL=0.001f
+
+# Real tail tile: 96 half elements are processed as one 128-byte physical tile
+# plus a 32-element tail. The tail keeps the same 64-element physical tile size.
+make TESTCASE=view_copy COMPILER_DIR="$COMPILER_DIR" \
+    DType=__half RANK=3 ELEMENTS=96 TILE_ELEMENTS=64 \
+    SHAPE=4,4,6 SHAPE_NAME=4_4_6 \
+    INPUT_GLOBAL_STRIDE=24,1,4 INPUT_GLOBAL_STRIDE_NAME=24_1_4 \
+    OUTPUT_GLOBAL_STRIDE=24,6,1 OUTPUT_GLOBAL_STRIDE_NAME=24_6_1 \
+    INPUT_OFFSET_BYTES=64 OUTPUT_OFFSET_BYTES=96 \
+    ABS_TOL=0.001f REL_TOL=0.001f
