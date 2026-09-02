@@ -5,9 +5,15 @@ int main() {
     constexpr int M = 32, N = 32;
     __half a[M*N], c[M*N];
     int32_t idx[M*N]; uint16_t mask[M*N];
-    fill_seq(a, M*N); fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);
+    fill_const(a, M*N, (__half)2); fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);
+    for (int i=0;i<M*N;++i) idx[i] *= sizeof(__half); // gather/scatter offsets are bytes
     BENCHSTART;
     bench_load<__half,M,N>(c,a);
     BENCHEND;
+#ifdef RES_CHECK
+    __half ref[M*N]; zero(ref,M*N); for(int i=0;i<M*N;++i) ref[i]=a[i];
+    return verify(c,ref,M*N,(__half)verify_epsilon<__half>(),(__half)verify_epsilon<__half>()) ? 0 : 1;
+#else
     return 0;
+#endif
 }

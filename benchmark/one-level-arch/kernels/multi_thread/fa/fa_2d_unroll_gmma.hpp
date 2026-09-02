@@ -99,9 +99,8 @@ template <typename matrix_dtype, typename vector_dtype, int PackedFactor,
 void flash_attention_2d_unroll_shared_impl(
     vector_dtype *out_ptr, matrix_dtype *q_ptr, matrix_dtype *k_ptr,
     matrix_dtype *v_ptr, uint8_t *q_scale_ptr, uint8_t *k_scale_ptr,
-    uint8_t *v_scale_ptr, float *score_scratch,
-    matrix_dtype *prob_scratch, uint8_t *prob_scale_scratch,
-    float *pv_scratch) {
+    uint8_t *v_scale_ptr, float *prob_convert_scratch,
+    matrix_dtype *prob_scratch, uint8_t *prob_scale_scratch) {
     const uint32_t tid = get_thread_idx();
     constexpr int kPeNum = 4;
     constexpr int kStoredQD = qD / PackedFactor;
@@ -111,7 +110,7 @@ void flash_attention_2d_unroll_shared_impl(
     constexpr int kPeTm = kGroupM <= 64 ? 16 : 32;
     constexpr int kQScaleCols = (kStoredQD + 31) / 32;
     constexpr int kTkScaleRows = (kStoredTk + 31) / 32;
-    constexpr int kVectorStateRows = 64; // gfrun/isa not define how to fill 128B m32 with 64B half data
+    constexpr int kVectorStateRows = 32;
     // SharedTReg is a single 256 KiB pool, rather than a per-operand limit.
     // Match the shared matmul kernels by splitting both CUBE reductions along
     // K when a configured reduction is wider than the legal active operand
@@ -193,20 +192,19 @@ void flash_attention_2d_unroll_shared_impl(
     //     tQ          -> shared Q_big [kTm, qD]
     //     tK          -> shared K tile [kTk, qD]
     //   tmatmul output in each PE:
-    //     tW          -> current PE's W_pe [kPeTm, kTk], ordinary Vec tile
+    //     tW          -> current PE's W_pe [kPeTm, kTk], persistent M16/M32
     //   logical collective output:
     //     W_big       -> concat W_pe from PE0..PE3, shape [kTm, kTk].
     //
-    // tileW/tileWCast are PE-local vector tiles used by online softmax.
-    // The group score C has only kPeTm rows. RowMajor keeps the 4-row FP32
-    // slice legal because the contiguous kTk columns provide 32-byte alignment.
-    using tileWAcc =
+    // The QK accumulator remains in its persistent CUBE_M16/M32 layout while
+    // the vector engine performs scale, row-max, exp and row-sum.  The current
+    // TileOP/ISA contract allows M16/M32 inputs for these vector operations,
+    // so no CUBE->GM->RowMajor bridge is needed before online softmax.
+    using tileW = tileScoreCube;
+    using tileProbVec =
         Tile<Location::Vec, float, kPeTm, kTk, BLayout::RowMajor>;
-    using tileW =
-        Tile<Location::Vec, vector_dtype, kPeTm, kTk, BLayout::RowMajor>;
-    using tileWCast = tileW;
-    // P is produced in vector_dtype by softmax, then explicitly converted to
-    // the configured cube input dtype before P*V. Packed FP4x2 uses K/2
+    // P is produced in FP32 by softmax, then explicitly converted to the
+    // configured matrix input dtype before P*V. Packed FP4x2 uses K/2
     // physical elements, each containing two logical probability values.
     using tilePShard =
         Tile<Location::Vec, matrix_dtype, kPeTm, kStoredTk,
@@ -216,30 +214,33 @@ void flash_attention_2d_unroll_shared_impl(
     //   TMATMUL(P_pe, V_shared) -> PV_pe [kPeTm, vD]
     //   current PE receives PV_pe/tileO [kPeTm, vD].
     //   tileO accumulates the online-softmax numerator for this PE row slice.
-    //   tileOCast is the dtype tile stored to gmO.
-    // P is PE-local while V is shared, so this is the local-A/shared-B
-    // TMATMUL form. Its local C has the same row count as the local A:
-    // [kPeTm,vD]. No full-kTm physical output container is needed.
-    using tileOAcc =
-        Tile<Location::Vec, float, kPeTm, vD, BLayout::RowMajor>;
-    using tileO =
-        Tile<Location::Vec, vector_dtype, kPeTm, vD, BLayout::RowMajor>;
-    using tileOCast = tileO;
+    //   tileOCast is the M16/M32 vector_dtype tile stored to gmO.
+    // P starts as one PE-local row shard, is gathered into the shared P
+    // operand below, and is consumed cooperatively with shared V. Each PE
+    // still receives only its [kPeTm,vD] C slice, so no full-kTm physical
+    // output container is needed.
+    // Keep PV and the online output numerator in the CUBE accumulator layout
+    // as well.  Only the final normalized output is converted to vector_dtype
+    // and stored to GM.
+    using tileO = tilePVCube;
+    using tileOCastM16 =
+        CubeAccumulatorM16<vector_dtype, kPeTm, vD>;
+    using tileOCastM32 =
+        CubeAccumulatorM32<vector_dtype, kPeTm, vD>;
+    using tileOCast =
+        std::conditional_t<(kPeTm <= 16), tileOCastM16, tileOCastM32>;
 
     // Online softmax row-state tiles. Each PE owns kPeTm independent query
     // rows, and every row has one scalar max/sum/scale value.
-    // Physical cols = 8 only for tile alignment; valid cols = 1.
+    // Thirty-two physical FP32 rows keep the state tile at the 128-byte
+    // minimum active size; valid shape remains [kPeTm,1].
     //   tileMax/tileSum/tileScale: valid shape [kPeTm, 1]
     constexpr int kVectorStateCols = 1;
     using tileMax =
-        Tile<Location::Vec, vector_dtype, kVectorStateRows, kVectorStateCols,
-             BLayout::RowMajor,
-             kPeTm, 1>;
-    using tileSum = tileMax;
-    using tileScale = tileMax;
-    using tileStateAcc =
         Tile<Location::Vec, float, kVectorStateRows, kVectorStateCols,
              BLayout::RowMajor, kPeTm, 1>;
+    using tileSum = tileMax;
+    using tileScale = tileMax;
 
     // E8M0 scale tensors used by MXFP8/MXFP4/HiF8/HiF4. Q/K/V scales are
     // supplied by global memory. The softmax probability scale is unity
@@ -282,20 +283,19 @@ void flash_attention_2d_unroll_shared_impl(
     itKScale gIterKScale(reinterpret_cast<scale_dtype *>(k_scale_ptr));
     itVScale gIterVScale(reinterpret_cast<scale_dtype *>(v_scale_ptr));
 
-    using gmScoreScratch = global_tensor<float, RowMajor<kPeTm, kTk>>;
+    using gmProbConvertScratch =
+        global_tensor<float, RowMajor<kPeTm, kTk>>;
     using gmProbScratch =
         global_tensor<matrix_dtype, RowMajor<kGroupM, kStoredTk>>;
     using gmProbScaleScratch =
         global_tensor<scale_dtype, RowMajor<kGroupM, kTkScaleRows>>;
-    using gmPVScratch = global_tensor<float, RowMajor<kPeTm, vD>>;
     using itP = global_iterator<gmProbScratch, tilePMatrix>;
     using itPScale =
         global_iterator<gmProbScaleScratch, tilePScaleMatrix>;
-    gmScoreScratch gScore(score_scratch);
+    gmProbConvertScratch gProbConvert(prob_convert_scratch);
     gmProbScratch gProb(prob_scratch);
     gmProbScaleScratch gProbScale(
         reinterpret_cast<scale_dtype *>(prob_scale_scratch));
-    gmPVScratch gPV(pv_scratch);
     using itProbShard = global_iterator<gmProbScratch, tilePShard>;
     itProbShard gIterProb(prob_scratch);
     itP gIterP(prob_scratch);
@@ -337,12 +337,8 @@ void flash_attention_2d_unroll_shared_impl(
         tileScale tScale[XDim];
 #pragma clang loop unroll(full)
         for (int x = 0; x < XDim; ++x) {
-            tileStateAcc tMaxInit;
-            tileStateAcc tSumInit;
-            TEXPANDS(tMaxInit, -1e30f);
-            TEXPANDS(tSumInit, 0.0f);
-            TCVT(tMax[x], tMaxInit);
-            TCVT(tSum[x], tSumInit);
+            TEXPANDS(tMax[x], -1e30f);
+            TEXPANDS(tSum[x], 0.0f);
         }
 
         // A YDim group shares its K/V loads across all XDim Q tiles. The
@@ -350,8 +346,6 @@ void flash_attention_2d_unroll_shared_impl(
         // contributions are accumulated.
 #pragma clang loop unroll(full)
         for (int j = 0; j < Kb; j += YDim) {
-            tileScoreCube tScoreCube[XDim][YDim];
-            tileWAcc tWAcc[XDim][YDim];
             tileW tW[XDim][YDim];
 #pragma clang loop unroll(full)
             for (int qk = 0; qk < kQKBlocks; ++qk) {
@@ -385,21 +379,21 @@ void flash_attention_2d_unroll_shared_impl(
                         if constexpr (UseMx) {
                             if (qk == 0) {
                                 TMATMUL_MX<3>(
-                                    tScoreCube[x][y], tQ[x], tQScale[x],
+                                    tW[x][y], tQ[x], tQScale[x],
                                     tK[y], tKScale[y], qkOptions);
                             } else {
                                 TMATMUL_MX_ACC<3>(
-                                    tScoreCube[x][y], tScoreCube[x][y],
+                                    tW[x][y], tW[x][y],
                                     tQ[x], tQScale[x], tK[y], tKScale[y],
                                     qkOptions);
                             }
                         } else {
                             if (qk == 0) {
-                                TMATMUL(tScoreCube[x][y], tQ[x], tK[y],
+                                TMATMUL(tW[x][y], tQ[x], tK[y],
                                         qkOptions);
                             } else {
-                                TMATMUL_ACC(tScoreCube[x][y],
-                                            tScoreCube[x][y], tQ[x], tK[y],
+                                TMATMUL_ACC(tW[x][y],
+                                            tW[x][y], tQ[x], tK[y],
                                             qkOptions);
                             }
                         }
@@ -410,10 +404,7 @@ void flash_attention_2d_unroll_shared_impl(
             for (int x = 0; x < XDim; ++x) {
 #pragma clang loop unroll(full)
                 for (int y = 0; y < YDim; ++y) {
-                    TSTORE_CUBE(gScore, tScoreCube[x][y]);
-                    TLOAD(tWAcc[x][y], gScore);
-                    TMULS(tWAcc[x][y], tWAcc[x][y], scale);
-                    TCVT(tW[x][y], tWAcc[x][y]);
+                    TMULS(tW[x][y], tW[x][y], scale);
                 }
             }
 
@@ -422,7 +413,6 @@ void flash_attention_2d_unroll_shared_impl(
             tileMax tLocalMax[XDim][YDim];
             tileSum tLocalSum[XDim][YDim];
             tileSum tScaledOldSum[XDim];
-            tileWCast tExpW[XDim][YDim];
             tileMax tMaxReduce[XDim][YDim];
             tileSum tSumReduce[XDim][YDim];
 
@@ -449,7 +439,6 @@ void flash_attention_2d_unroll_shared_impl(
                     TROWEXPANDSUB(tW[x][y], tW[x][y], tNewMax[x]);
                     TEXP(tW[x][y], tW[x][y]);
                     TROWSUM(tLocalSum[x][y], tW[x][y]);
-                    TCVT(tExpW[x][y], tW[x][y]);
                     if (y == 0) {
                         TADD(tSumReduce[x][y], tScaledOldSum[x],
                              tLocalSum[x][y]);
@@ -461,16 +450,25 @@ void flash_attention_2d_unroll_shared_impl(
                 tNewSum[x] = tSumReduce[x][YDim - 1];
             }
 
+#ifndef FA_DISABLE_CUBE_TSTORE
             tilePShard tPShard[XDim][YDim];
             tileO tPV[XDim];
 #pragma clang loop unroll(full)
             for (int x = 0; x < XDim; ++x) {
 #pragma clang loop unroll(full)
                 for (int y = 0; y < YDim; ++y) {
+                    // P must be gathered from the four PE-local row shards
+                    // into the Shared left operand used by P*V.  Convert the
+                    // already-softmaxed M16/M32 tile to RowMajor only at this
+                    // ownership boundary; QK scale/rowmax/rowsum above stay
+                    // entirely local and never spill to GM.
+                    tileProbVec tProbVec;
+                    TSTORE_CUBE(gProbConvert, tW[x][y]);
+                    TLOAD(tProbVec, gProbConvert);
                     if constexpr (PackedFactor == 2) {
-                        fa_tcvt_packed_x2(tPShard[x][y], tExpW[x][y]);
+                        fa_tcvt_packed_x2(tPShard[x][y], tProbVec);
                     } else {
-                        TCVT(tPShard[x][y], tExpW[x][y]);
+                        TCVT(tPShard[x][y], tProbVec);
                     }
                     auto gProbShard = gIterProb(tid, 0);
                     TSTORE(gProbShard, tPShard[x][y]);
@@ -509,15 +507,10 @@ void flash_attention_2d_unroll_shared_impl(
                             }
                         }
                     }
-                    TSTORE_CUBE(gPV, tPVCube);
-                    tileOAcc tPVAcc;
-                    TLOAD(tPVAcc, gPV);
-                    tileO tPVPart;
-                    TCVT(tPVPart, tPVAcc);
                     if (y == 0) {
-                        tPV[x] = tPVPart;
+                        tPV[x] = tPVCube;
                     } else {
-                        TADD(tPV[x], tPV[x], tPVPart);
+                        TADD(tPV[x], tPV[x], tPVCube);
                     }
                 }
                 if (j == 0) {
@@ -529,8 +522,10 @@ void flash_attention_2d_unroll_shared_impl(
                 tMax[x] = tNewMax[x];
                 tSum[x] = tNewSum[x];
             }
+#endif
         }
 
+#ifndef FA_DISABLE_CUBE_TSTORE
         tileSum tInvSum[XDim];
         tileOCast tOCast[XDim];
 #pragma clang loop unroll(full)
@@ -540,8 +535,9 @@ void flash_attention_2d_unroll_shared_impl(
             TCVT(tOCast[x], tO[x]);
             auto dstO =
                 gIterO((i + x) * kPeNum + tid, 0);
-            TSTORE(dstO, tOCast[x]);
+            TSTORE_CUBE(dstO, tOCast[x]);
         }
+#endif
     }
 }
 
@@ -552,5 +548,5 @@ void flash_attention_2d_unroll_tmatmul_pto(dtype *out_ptr, dtype *q_ptr,
     flash_attention_2d_unroll_shared_impl<
         dtype, dtype, 1, false, Sq, Skv, qD, vD, kTm, kTk, 1, 1, scaleD>(
         out_ptr, q_ptr, k_ptr, v_ptr, nullptr, nullptr, nullptr,
-        nullptr, nullptr, nullptr, nullptr);
+        nullptr, nullptr, nullptr);
 }

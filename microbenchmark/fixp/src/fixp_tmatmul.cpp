@@ -28,6 +28,27 @@
 
 #include "benchmark.h"
 
+#ifdef RES_CHECK
+static volatile int g_numeric_failure = 0;
+__attribute__((noinline)) void fill_bytes(void *p, size_t n, uint8_t value) {
+  volatile uint8_t source = value;
+  auto *bytes = reinterpret_cast<uint8_t *>(p);
+  for (size_t i = 0; i < n; ++i) bytes[i] = source;
+}
+template <typename T>
+__attribute__((noinline)) void check_zero_result(const T *p, int n) {
+  const auto *bytes = reinterpret_cast<const uint8_t *>(p);
+  for (size_t i = 0; i < static_cast<size_t>(n) * sizeof(T); ++i)
+    if (bytes[i] != 0) {
+      g_numeric_failure = 1;
+      return;
+    }
+}
+#else
+template <typename T>
+inline void check_zero_result(const T *, int) {}
+#endif
+
 #ifndef TM
 #define TM 32
 #endif
@@ -166,6 +187,7 @@ __attribute__((noinline)) void run_single(SrcT *a_ptr, SrcT *b_ptr,
   TMATMUL(tD, tA, tB, options);
   TSTORE_CUBE(gC, tD);
   BENCHEND;
+  check_zero_result(d_ptr, kM * kN);
 }
 
 // TMATMUL-family driver: Cube-loads A/B, declares Cube D, then invokes
@@ -195,6 +217,7 @@ __attribute__((noinline)) void run_matmul(SrcT *a_ptr, SrcT *b_ptr,
   kernel(tD, tA, tB);
   TSTORE_CUBE(gD, tD);
   BENCHEND;
+  check_zero_result(d_ptr, kM * kN);
 }
 
 // Mixed A/B dtypes are legal when both belong to the same numeric class.
@@ -218,6 +241,7 @@ __attribute__((noinline)) void run_matmul_mixed(AT *a_ptr, BT *b_ptr,
   kernel(tD, tA, tB);
   TSTORE_CUBE(gD, tD);
   BENCHEND;
+  check_zero_result(d_ptr, kM * kN);
 }
 
 // A Shared matrix operand selects the four-PE cooperative contract.  Publish
@@ -248,6 +272,32 @@ __attribute__((noinline)) void run_matmul_shared(__half *a_ptr, __half *b_ptr,
   kernel(tD, tA, tB);
   TSTORE_CUBE(gD, tD);
   BENCHEND;
+  check_zero_result(d_ptr, kM * kN);
+}
+
+// [TEMP] Shared TLOAD A/B + TMATMUL with NO destination TSTORE.  The matmul
+// result stays in the local tile register and is never written back to GM;
+// used to inspect the cooperative TLOAD + TMATMUL bundle in isolation.
+template <typename DstT, typename Kernel>
+__attribute__((noinline)) void run_matmul_shared_nostore(__half *a_ptr,
+                                                        __half *b_ptr,
+                                                        Kernel kernel) {
+  constexpr int kM = TM, kN = TN, kK = TK;
+  using gm_a = global_tensor<__half, RowMajor<4 * kM, kK>>;
+  using gm_b = global_tensor<__half, RowMajor<kK, kN>>;
+  using tile_a_desc = SharedMatrixLeft<__half, 4 * kM, kK>;
+  using tile_b_desc = SharedMatrixRight<__half, kK, kN>;
+  using tile_d = cube_acc_t<DstT, kM, kN>;
+
+  gm_a gA(a_ptr);
+  gm_b gB(b_ptr);
+  tile_d tD;
+
+  BENCHSTART;
+  SharedTile<tile_a_desc> tA = TLOAD<tile_a_desc, 1>(gA);
+  SharedTile<tile_b_desc> tB = TLOAD<tile_b_desc, 1>(gB);
+  kernel(tD, tA, tB);
+  BENCHEND;
 }
 
 template <bool TransA, bool TransB, typename DstT, typename Kernel>
@@ -272,6 +322,7 @@ __attribute__((noinline)) void run_matmul_shared_transpose(
   kernel(tD, tA, tB);
   TSTORE_CUBE(gD, tD);
   BENCHEND;
+  check_zero_result(d_ptr, TM * kN);
 }
 
 // TGEMV-family driver (M=1): vec=CUBE_M16(1xK valid), mtx=CUBE_N8(KxN),
@@ -301,6 +352,7 @@ __attribute__((noinline)) void run_gemv(SrcT *vec_ptr, SrcT *mtx_ptr,
   kernel(tD, tMtx, tVec);
   TSTORE_CUBE(gD, tD);
   BENCHEND;
+  check_zero_result(d_ptr, kN);
 }
 
 template <typename VecT, typename MtxT, typename DstT, typename Kernel>
@@ -322,6 +374,7 @@ __attribute__((noinline)) void run_gemv_mixed(VecT *vec_ptr, MtxT *mtx_ptr,
   kernel(tD, tMtx, tVec);
   TSTORE_CUBE(gD, tD);
   BENCHEND;
+  check_zero_result(d_ptr, kN);
 }
 
 template <typename SrcT, typename DstT>
@@ -344,12 +397,18 @@ struct buf_t {
     b = (SrcT *)(((uint64_t)&b_raw[0] & kAlignMask) + kAlign);
     d = (DstT *)(((uint64_t)&d_raw[0] & kAlignMask) + kAlign);
     aux = (uint8_t *)(((uint64_t)&aux_raw[0] & kAlignMask) + kAlign);
-    // Make every byte defined; viewed as U64, every parameter word is also a
-    // legal scalar descriptor. Other auxiliary modes only require a defined
-    // carrier here—the microbenchmark does not check their numerical value.
+#ifdef RES_CHECK
+    fill_bytes(a, 4 * TM * TK * sizeof(SrcT), 0);
+    fill_bytes(b, TK * TN * sizeof(SrcT), 0);
+    // A non-zero destination catches a missing or partial store. Zero A/B and
+    // zero auxiliary operands make zero the common oracle for every mode.
+    fill_bytes(d, TM * TN * sizeof(DstT), 1);
+    fill_bytes(aux, kAuxBytes, 0);
+#else
     auto *descriptors = reinterpret_cast<uint64_t *>(aux);
     for (size_t i = 0; i < kAuxBytes / sizeof(uint64_t); ++i)
       descriptors[i] = mk_desc(1, 0, 9);
+#endif
   }
 };
 
@@ -375,9 +434,16 @@ struct mixed_buf_t {
                                   kAlignMask) + kAlign);
     aux = reinterpret_cast<uint8_t *>((reinterpret_cast<uint64_t>(&aux_raw[0]) &
                                        kAlignMask) + kAlign);
+#ifdef RES_CHECK
+    fill_bytes(a, 4 * TM * TK * sizeof(AT), 0);
+    fill_bytes(b, TK * TN * sizeof(BT), 0);
+    fill_bytes(d, TM * TN * sizeof(DstT), 1);
+    fill_bytes(aux, kAuxBytes, 0);
+#else
     auto *descriptors = reinterpret_cast<uint64_t *>(aux);
     for (size_t i = 0; i < kAuxBytes / sizeof(uint64_t); ++i)
       descriptors[i] = mk_desc(1, 0, 9);
+#endif
   }
 };
 
@@ -969,6 +1035,248 @@ int main() {
       [&](auto &tD, auto &tA, auto &tB) {
         TMATMUL(tD, tA, tB, fixp::s8(mk_desc(1, 0, 9)));
       });
+#elif defined(SHARED_ACC)                  // Shared A/B + local accumulator C
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        acc_tile_t<TM, TN> cacc; load_aux(cacc, buf.aux);
+        TMATMUL_ACC(tD, cacc, tA, tB, fixp::keep_acc());
+      });
+#elif defined(SHARED_BIAS)                 // Shared A/B + local bias
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        bias_tile_t<TN> bias; load_aux(bias, buf.aux);
+        TMATMUL_BIAS(tD, tA, tB, bias, fixp::keep_acc());
+      });
+#elif defined(SHARED_ROWMAX)               // Shared A/B + RowMax output
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        // Cooperative Shared-A exposes the Core-total M dimension.
+        row_max_tile_t<4 * TM> row_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().row_max(row_out));
+      });
+#elif defined(SHARED_GROUPMAX_8)            // Shared A/B + GroupMax<8> output
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        TMATMUL(tD, tA, tB,
+                fixp::keep_acc().group_max<8>(group_out));
+      });
+#elif defined(SHARED_ROWMAX_GROUPMAX_8)    // Shared A/B + RowMax + GroupMax<8>
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        // Cooperative Shared-A exposes the Core-total M dimension.
+        row_max_tile_t<4 * TM> row_out;
+        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc()
+            .row_max(row_out)
+            .group_max<8>(group_out));
+      });
+#elif defined(SHARED_KEEP_ACC_RELU)        // Shared A/B + keep_acc + ReLU
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::keep_acc().relu());
+      });
+#elif defined(SHARED_F16)                   // Shared A/B + f16 destination
+  buf_t<__half, __half> buf;
+  run_matmul_shared<__half>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::f16());
+      });
+#elif defined(SHARED_F16_RELU)              // Shared A/B + f16 + ReLU
+  buf_t<__half, __half> buf;
+  run_matmul_shared<__half>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::f16().relu());
+      });
+#elif defined(SHARED_BF16)                  // Shared A/B + bf16 destination
+  buf_t<__half, __bf16> buf;
+  run_matmul_shared<__bf16>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::bf16());
+      });
+#elif defined(SHARED_BF16_RELU)             // Shared A/B + bf16 + ReLU
+  buf_t<__half, __bf16> buf;
+  run_matmul_shared<__bf16>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::bf16().relu());
+      });
+#elif defined(SHARED_S8_RELU)               // Shared A/B + s8 scalar quant + ReLU
+  buf_t<__half, int8_t> buf;
+  run_matmul_shared<int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::s8(mk_desc(1, 0, 9)).relu());
+      });
+#elif defined(SHARED_S8_LRELU)              // Shared A/B + s8 + LReLU
+  buf_t<__half, int8_t> buf;
+  run_matmul_shared<int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        TMATMUL(tD, tA, tB, fixp::s8(mk_desc(1, 0, 9)).lrelu(1));
+      });
+#elif defined(SHARED_V_S8_RELU)             // Shared A/B + vector s8 quant + ReLU
+  buf_t<__half, int8_t> buf;
+  run_matmul_shared<int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        par_tile_t<TN> quant; load_aux(quant, buf.aux);
+        TMATMUL(tD, tA, tB, fixp::s8(quant).relu());
+      });
+#elif defined(SHARED_F16_PRELU)             // Shared A/B + f16 + PReLU
+  buf_t<__half, __half> buf;
+  run_matmul_shared<__half>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        par_tile_t<TN> prelu; load_aux(prelu, buf.aux);
+        TMATMUL(tD, tA, tB, fixp::f16().prelu(prelu));
+      });
+#elif defined(SHARED_S8_PRELU)              // Shared A/B + s8 + PReLU
+  buf_t<__half, int8_t> buf;
+  run_matmul_shared<int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        par_tile_t<TN> prelu; load_aux(prelu, buf.aux);
+        TMATMUL(tD, tA, tB, fixp::s8(mk_desc(1, 0, 9)).prelu(prelu));
+      });
+#elif defined(SHARED_ROWMAX_INIT)           // Shared A/B + RowMax(in,out)
+  // NOTE: compiles (RowIn==RowOut==EffectiveM=4*TM, the cooperative group_M),
+  // but gfrun rejects the shared RowMaxIn form: the model asserts RowMaxIn
+  // must be a Local Mx1 tile with validRow=min(16,lb0)<=32, while the
+  // compiler's static_assert demands RowIn.ValidRow==EffectiveM=4*TM. No
+  // dimension satisfies both — a toolchain/model gap for shared RowMaxInit.
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        row_max_tile_t<4 * TM> row_in; load_aux(row_in, buf.aux);
+        row_max_tile_t<4 * TM> row_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().row_max(row_in, row_out));
+      });
+#elif defined(SHARED_GROUPMAX_16)           // Shared A/B + GroupMax<16>
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 15) / 16> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<16>(group_out));
+      });
+#elif defined(SHARED_GROUPMAX_32)           // Shared A/B + GroupMax<32>
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 31) / 32> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<32>(group_out));
+      });
+#elif defined(SHARED_GROUPMAX_48)           // Shared A/B + GroupMax<48>
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 47) / 48> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<48>(group_out));
+      });
+#elif defined(SHARED_GROUPMAX_64)           // Shared A/B + GroupMax<64>
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 63) / 64> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<64>(group_out));
+      });
+#elif defined(SHARED_GROUPMAX_80)           // Shared A/B + GroupMax<80>
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 79) / 80> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<80>(group_out));
+      });
+#elif defined(SHARED_GROUPMAX_96)           // Shared A/B + GroupMax<96>
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 95) / 96> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<96>(group_out));
+      });
+#elif defined(SHARED_GROUPMAX_112)          // Shared A/B + GroupMax<112>
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 111) / 112> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<112>(group_out));
+      });
+#elif defined(SHARED_GROUPMAX_128)          // Shared A/B + GroupMax<128>
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 127) / 128> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<128>(group_out));
+      });
+#elif defined(SHARED_ROWGROUP_MAXABS)       // Shared A/B + RowMax + GroupMax<8> + MaxAbs
+  // NOTE: same shared-RowMaxInit gap as SHARED_ROWMAX_INIT — compiles at
+  // 4*TM but gfrun rejects the shared RowMaxIn (Local Mx1 vs cooperative
+  // EffectiveM contradiction). FPATR encoding is still valid.
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        row_max_tile_t<4 * TM> row_in; load_aux(row_in, buf.aux);
+        row_max_tile_t<4 * TM> row_out;
+        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc()
+            .row_max(row_in, row_out)
+            .group_max<8>(group_out)
+            .max_abs());
+      });
+#elif defined(SHARED_F16_GROUPMAX)           // Shared A/B + f16 + GroupMax<16>
+  // NOTE: compiles + FPATR-valid, but gfrun rejects the cooperative collective
+  // when a non-keep_acc PreQuant (f16/s8 destination) is combined with a
+  // max-reduction (RowMax/GroupMax). The single-PE twin passes, so this is a
+  // cooperative-path model gap, not a test-code bug. keep_acc+GroupMax on
+  // shared (shared_groupmax_16) works; only the f16/s8 PreQuant breaks it.
+  buf_t<__half, __half> buf;
+  run_matmul_shared<__half>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 15) / 16> group_out;
+        TMATMUL(tD, tA, tB, fixp::f16().group_max<16>(group_out));
+      });
+#elif defined(SHARED_S8_ROWMAX)              // Shared A/B + s8 + RowMax
+  // NOTE: same cooperative+PreQuant+max-reduction gap as SHARED_F16_GROUPMAX.
+  // Compiles + FPATR-valid; single-PE twin passes; gfrun rejects the
+  // collective on the cooperative path. keep_acc+RowMax (shared_rowmax) works.
+  buf_t<__half, int8_t> buf;
+  run_matmul_shared<int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        row_max_tile_t<4 * TM> row_out;
+        TMATMUL(tD, tA, tB, fixp::s8(mk_desc(1, 0, 9)).row_max(row_out));
+      });
+#elif defined(SHARED_ACC_CSCALE)             // Shared A/B + ACC + CScale
+  buf_t<__half, float> buf;
+  run_matmul_shared<float>(buf.a, buf.b, buf.d,
+      [&](auto &tD, auto &tA, auto &tB) {
+        acc_tile_t<TM, TN> cacc; load_aux(cacc, buf.aux);
+        cscale_tile_t<TM, TN> cscale; load_aux(cscale, buf.aux);
+        TMATMUL_ACC(tD, cacc, tA, tB, fixp::keep_acc().cscale(cscale));
+      });
+#elif defined(SHARED_NOSTORE_ROWMAX)      // [TEMP] Shared TLOAD + TMATMUL row_max, no TSTORE
+  buf_t<__half, float> buf;
+  run_matmul_shared_nostore<float>(buf.a, buf.b,
+      [&](auto &tD, auto &tA, auto &tB) {
+        row_max_tile_t<4 * TM> row_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().row_max(row_out));
+      });
+#elif defined(SHARED_NOSTORE_GROUPMAX)    // [TEMP] Shared TLOAD + TMATMUL group_max<8>, no TSTORE
+  buf_t<__half, float> buf;
+  run_matmul_shared_nostore<float>(buf.a, buf.b,
+      [&](auto &tD, auto &tA, auto &tB) {
+        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<8>(group_out));
+      });
+#elif defined(SHARED_NOSTORE_ROWGROUPMAX) // [TEMP] Shared TLOAD + TMATMUL row_max+group_max<8>, no TSTORE
+  buf_t<__half, float> buf;
+  run_matmul_shared_nostore<float>(buf.a, buf.b,
+      [&](auto &tD, auto &tA, auto &tB) {
+        row_max_tile_t<4 * TM> row_out;
+        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        TMATMUL(tD, tA, tB, fixp::keep_acc()
+            .row_max(row_out)
+            .group_max<8>(group_out));
+      });
 #elif defined(TRANS_A)
   buf_t<__half, float> buf;
   run_matmul_shared_transpose<true, false, float>(buf.a, buf.b, buf.d,
@@ -1016,5 +1324,9 @@ int main() {
 #error "no fixp mode selected: pass -D<KEEP_ACC|F16|BF16|S_*|V_*|BIAS|ACC|MX|GEMV|...> (see compile.all)"
 #endif
 
+#ifdef RES_CHECK
+  return g_numeric_failure;
+#else
   return 0;
+#endif
 }

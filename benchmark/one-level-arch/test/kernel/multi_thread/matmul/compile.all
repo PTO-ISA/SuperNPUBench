@@ -30,10 +30,9 @@ make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
 make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=__half B=1 M=256 N=256 K=256 tM=128 tN=256 tK=256
 
-# Low-precision SharedTile matmul. MXFP8/MXFP4 load Shared E8M0 scales;
-# HIFP8 uses the normal TMATMUL input path.
-# HIF4X2 stores two logical FP4 values per __fp4_e1m2x2 element, so its
-# physical K extent is K/2 and one scale byte covers 16 packed K elements.
+# Low-precision SharedTile matmul. MXFP8/MXFP4 load group-32 Shared E8M0
+# scales; HIF4X2 uses Matrix-MX with one raw U32 scale word per 64 logical K
+# values. HIFP8 uses the normal TMATMUL input path.
 # FP8-family inputs use four times the FP32 K tile extent.
 for mode in FP8 HIFP8 MXFP8; do
     make diss TESTCASE=matmul_lowp LP_MODE="$mode" \

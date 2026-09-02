@@ -17,6 +17,16 @@ __pycache__/
 
 # Temporary files
 *.log
+*.tar.gz
+
+# Package manager cache
+.pnpm-store/
+
+# Comparison / artifact directories
+benchmark/**/compare/
+
+# Separate project (has its own .git)
+release-plan-site/
 
 # Local agent tooling (machine-specific paths, not for the shared repo)
 AGENTS.md

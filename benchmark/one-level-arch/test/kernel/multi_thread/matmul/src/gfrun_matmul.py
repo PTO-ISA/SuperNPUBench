@@ -35,6 +35,7 @@ zero; the script reports that as a "no output / RES_CHECK off?" failure.
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -104,6 +105,10 @@ _DTYPE_MAP = {
     "fp16": (np.float16, 2),
     "bf16": (np.uint16, 2),  # bfloat16 stored as raw uint16 bits
     "fp8": (np.uint8, 1),  # e4m3 stored as raw bytes
+    "hif8": (np.uint8, 1),
+    "mxfp8": (np.uint8, 1),
+    "hif4x2": (np.uint8, 1),  # two logical values per byte
+    "mxfp4": (np.uint8, 1),   # two logical values per byte
 }
 
 # atol/rtol defaults. fp8 accumulates more error; allow more slack.
@@ -112,6 +117,10 @@ _TOL = {
     "fp16": (2e-2, 2e-2),
     "bf16": (2e-2, 2e-2),
     "fp8": (5e-2, 5e-2),
+    "hif8": (5e-2, 5e-2),
+    "mxfp8": (5e-2, 5e-2),
+    "hif4x2": (5e-2, 5e-2),
+    "mxfp4": (5e-2, 5e-2),
 }
 
 statics = {"pass": [], "fail": []}
@@ -148,13 +157,28 @@ def parse_matmul_shape(elf_name, args):
     multi_thread = "multi_thread_matmul" in base
 
     if multi_thread:
-        mode = None
-        if "_DType__bf16" in base:
+        lowp_match = re.search(
+            r"matmul_lowp_(FP8|HIFP8|MXFP8|HIF4X2|MXFP4)_B\d", base
+        )
+        mode = lowp_match.group(1) if lowp_match else None
+        lowp_dtypes = {
+            "FP8": ("fp8", 1, False),
+            "HIFP8": ("hif8", 1, False),
+            "MXFP8": ("mxfp8", 1, True),
+            "HIF4X2": ("hif4x2", 2, True),
+            "MXFP4": ("mxfp4", 2, True),
+        }
+        if mode is not None:
+            dtype, packed_factor, use_mx = lowp_dtypes[mode]
+        elif "_DType__bf16" in base:
             dtype = "bf16"
+            packed_factor, use_mx = 1, False
         elif "_DType__half" in base:
             dtype = "fp16"
+            packed_factor, use_mx = 1, False
         else:
             dtype = "fp32"
+            packed_factor, use_mx = 1, False
         threads = 4  # kPeNum = 4
         b = extract_int("B", base, default=1)
     else:
@@ -175,6 +199,7 @@ def parse_matmul_shape(elf_name, args):
             return None  # unsupported MASK variant
         threads = 1
         b = 1  # MASK Makefile does not pass -DBatch; defaults to 1.
+        packed_factor, use_mx = 1, mode == "MX_FP8"
 
     shape = {
         "B": b,
@@ -188,6 +213,8 @@ def parse_matmul_shape(elf_name, args):
         "multi_thread": multi_thread,
         "mode": mode,
         "threads": threads,
+        "packed_factor": packed_factor,
+        "use_mx": use_mx,
     }
     if any(shape[k] is None for k in ("M", "N", "K", "tM", "tN", "tK")):
         return None
@@ -345,11 +372,23 @@ def gen_input_and_golden(elf_name, path, args):
     dtype = shape["dtype"]
 
     rng = np.random.default_rng(args.seed)
-    # Same distribution as gfrun_flashMLA: N(0,1)/10 clipped to [-1,1].
-    a = (rng.standard_normal((B, M, K), dtype=np.float32) / 10.0).clip(-1.0, 1.0)
-    b = (rng.standard_normal((B, K, N), dtype=np.float32) / 10.0).clip(-1.0, 1.0)
-
-    golden = matmul_reference(a, b, dtype)  # [B,M,N] float32
+    if dtype in ("fp8", "hif8", "mxfp8", "hif4x2", "mxfp4"):
+        # Use non-zero values that are represented exactly by every tested
+        # low-precision format. This exercises sign decoding, packed-lane
+        # ordering and MX scales without making the reference depend on a
+        # separate approximation of each format's rounding rules.
+        a = np.where(
+            rng.integers(0, 2, size=(B, M, K), dtype=np.uint8), 1.0, -1.0
+        ).astype(np.float32)
+        b = np.where(
+            rng.integers(0, 2, size=(B, K, N), dtype=np.uint8), 1.0, -1.0
+        ).astype(np.float32)
+        golden = np.matmul(a, b).astype(np.float32)
+    else:
+        # Same distribution as gfrun_flashMLA: N(0,1)/10 clipped to [-1,1].
+        a = (rng.standard_normal((B, M, K), dtype=np.float32) / 10.0).clip(-1.0, 1.0)
+        b = (rng.standard_normal((B, K, N), dtype=np.float32) / 10.0).clip(-1.0, 1.0)
+        golden = matmul_reference(a, b, dtype)  # [B,M,N] float32
 
     # Inputs written in the operator's input-dtype layout.
     if dtype == "fp16":
@@ -358,15 +397,48 @@ def gen_input_and_golden(elf_name, path, args):
     elif dtype == "bf16":
         a_q = _quantize_bf16_np(a)
         b_q = _quantize_bf16_np(b)
-    elif dtype == "fp8":
+    elif dtype in ("fp8", "mxfp8"):
         a_q = _quantize_fp8_e4m3(a)
         b_q = _quantize_fp8_e4m3(b)
+    elif dtype == "hif8":
+        # PTO HiF8: D0 payload 0x08 is +1.0; setting the sign bit gives -1.0.
+        a_q = np.where(a > 0, 0x08, 0x88).astype(np.uint8)
+        b_q = np.where(b > 0, 0x08, 0x88).astype(np.uint8)
+    elif dtype in ("hif4x2", "mxfp4"):
+        # Finite-only nibble tables used by CubeEngine:
+        # HiF4 index 4 == 1.0; E2M1 index 2 == 1.0; bit 3 is the sign.
+        one = 0x04 if dtype == "hif4x2" else 0x02
+        a_lane = np.where(a > 0, one, one | 0x08).astype(np.uint8)
+        b_lane = np.where(b > 0, one, one | 0x08).astype(np.uint8)
+        # Packed storage is [M,K/2] and [K/2,N]: low nibble is logical
+        # K=2k, high nibble is logical K=2k+1.
+        a_q = a_lane[:, :, 0::2] | (a_lane[:, :, 1::2] << 4)
+        b_q = b_lane[:, 0::2, :] | (b_lane[:, 1::2, :] << 4)
     else:
         a_q = a.astype(np.float32)
         b_q = b.astype(np.float32)
 
     a_q.tofile(os.path.join(path, "src0.bin"))
     b_q.tofile(os.path.join(path, "src1.bin"))
+    if shape["use_mx"]:
+        if dtype == "hif4x2":
+            # HiF4X2 is Matrix-MX-only. One raw U32 word scales 64 logical
+            # lanes. 0x000000c0 encodes E6M2 1.0 with all E1 bits clear.
+            np.full((B, M, K // 64), 0x000000C0, dtype=np.uint32).tofile(
+                os.path.join(path, "src0_scale.bin")
+            )
+            np.full((B, K // 64, N), 0x000000C0, dtype=np.uint32).tofile(
+                os.path.join(path, "src1_scale.bin")
+            )
+        else:
+            # E8M0 0x7f decodes to 2^(127-127) == 1.0. Scale tensors follow
+            # [B,M,K/32] for A and [B,K/32,N] for B.
+            np.full((B, M, K // 32), 0x7F, dtype=np.uint8).tofile(
+                os.path.join(path, "src0_scale.bin")
+            )
+            np.full((B, K // 32, N), 0x7F, dtype=np.uint8).tofile(
+                os.path.join(path, "src1_scale.bin")
+            )
     golden.tofile(os.path.join(path, "golden.bin"))
 
     # Pre-allocate res.bin (zero). Guest cannot reliably create files.
@@ -490,7 +562,8 @@ def check_elf(elf, args):
     elf_name = os.path.basename(elf).replace(".elf", "").strip()
     cmp_data_path = os.path.join(CMP_ROOT, elf_name)
 
-    os.system(f"rm -rf {cmp_data_path}; mkdir -p {cmp_data_path}")
+    if os.path.isdir(cmp_data_path):
+        shutil.rmtree(cmp_data_path)
     os.makedirs(cmp_data_path, exist_ok=True)
 
     try:

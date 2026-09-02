@@ -4,9 +4,16 @@
 int main() {
     constexpr int M = 16, N = 16;
     __half a[512], b[512], d[512], c[512];
-    fill_seq(a, 512); fill_seq(b, 512); fill_seq(d, 512); zero(c, 512);
+    fill_const(a, 512, (__half)2); fill_const(b, 512, (__half)1);
+    fill_const(d, 512, (__half)3); zero(c, 512);
+    fill_const(b, 512, (__half)3);
     BENCHSTART;
     bench_concat<__half,M>(c,a,b,[](auto& dst,auto& s0,auto& s1){ TCONCAT(dst,s0,s1); });
     BENCHEND;
+#ifdef RES_CHECK
+    __half ref[512]; zero(ref, 512); constexpr int K=16; for(int r=0;r<M;++r) for(int j=0;j<K;++j) { ref[r*2*K+j]=a[r*K+j]; ref[r*2*K+K+j]=b[r*K+j]; }
+    return verify(c,ref,512,(__half)verify_epsilon<__half>(),(__half)verify_epsilon<__half>()) ? 0 : 1;
+#else
     return 0;
+#endif
 }

@@ -21,6 +21,14 @@
 #define USE_MX 0
 #endif
 
+#ifndef SCALE_DTYPE
+#define SCALE_DTYPE __fp8_e8m0
+#endif
+
+#ifndef SCALE_GROUP
+#define SCALE_GROUP 32
+#endif
+
 #ifndef globM
 #define globM 256
 #endif
@@ -53,12 +61,13 @@
 #define ALIGN (4 * 1024)
 
 using dtype = LOWP_DTYPE;
+using scale_dtype = SCALE_DTYPE;
 
 struct LowpMatmulContext {
     dtype *src0;
     dtype *src1;
-    uint8_t *src0Scale;
-    uint8_t *src1Scale;
+    scale_dtype *src0Scale;
+    scale_dtype *src1Scale;
     float *dst;
 };
 
@@ -70,13 +79,14 @@ extern "C" int __linx_group_worker_main(uint32_t peId, void *opaque) {
 
     BENCHSTART;
     for (int b = 0; b < Batch; ++b) {
-        matmul_shared_lowp<dtype, PACKED_FACTOR, USE_MX != 0,
+        matmul_shared_lowp<dtype, scale_dtype, PACKED_FACTOR, USE_MX != 0,
+                           SCALE_GROUP,
                            globM, globN, globK, tilM, tilN, tilK>(
             context->dst + b * globM * globN,
             context->src0 + b * globM * kStoredGK,
             context->src1 + b * kStoredGK * globN,
-            context->src0Scale + b * globM * (globK / 32),
-            context->src1Scale + b * (globK / 32) * globN);
+            context->src0Scale + b * globM * (globK / SCALE_GROUP),
+            context->src1Scale + b * (globK / SCALE_GROUP) * globN);
     }
     BENCHEND;
     return 0;
@@ -93,18 +103,20 @@ int main() {
 
     static dtype src0p[Batch * globM * kStoredGK + 2 * ALIGN];
     static dtype src1p[Batch * kStoredGK * globN + 2 * ALIGN];
-    static uint8_t src0Scalep[Batch * globM * (globK / 32) + 2 * ALIGN];
-    static uint8_t src1Scalep[Batch * (globK / 32) * globN + 2 * ALIGN];
+    static scale_dtype
+        src0Scalep[Batch * globM * (globK / SCALE_GROUP) + 2 * ALIGN];
+    static scale_dtype
+        src1Scalep[Batch * (globK / SCALE_GROUP) * globN + 2 * ALIGN];
     static float dstp[Batch * globM * globN + 2 * ALIGN];
 
     dtype *src0 =
         (dtype *)(((uint64_t)src0p & ALIGN_MASK) + ALIGN);
     dtype *src1 =
         (dtype *)(((uint64_t)src1p & ALIGN_MASK) + ALIGN);
-    uint8_t *src0Scale =
-        (uint8_t *)(((uint64_t)src0Scalep & ALIGN_MASK) + ALIGN);
-    uint8_t *src1Scale =
-        (uint8_t *)(((uint64_t)src1Scalep & ALIGN_MASK) + ALIGN);
+    scale_dtype *src0Scale =
+        (scale_dtype *)(((uint64_t)src0Scalep & ALIGN_MASK) + ALIGN);
+    scale_dtype *src1Scale =
+        (scale_dtype *)(((uint64_t)src1Scalep & ALIGN_MASK) + ALIGN);
     float *dst =
         (float *)(((uint64_t)dstp & ALIGN_MASK) + ALIGN);
 
@@ -120,10 +132,12 @@ int main() {
 #if USE_MX
 #define SRC0_SCALE_PATH CHK_DIR "/src0_scale.bin"
 #define SRC1_SCALE_PATH CHK_DIR "/src1_scale.bin"
-        readBinaryFile(SRC0_SCALE_PATH, src0Scale,
-                       Batch * globM * (globK / 32));
-        readBinaryFile(SRC1_SCALE_PATH, src1Scale,
-                       Batch * (globK / 32) * globN);
+        readBinaryFile(SRC0_SCALE_PATH, (uint8_t *)src0Scale,
+                       Batch * globM * (globK / SCALE_GROUP) *
+                           sizeof(scale_dtype));
+        readBinaryFile(SRC1_SCALE_PATH, (uint8_t *)src1Scale,
+                       Batch * (globK / SCALE_GROUP) * globN *
+                           sizeof(scale_dtype));
 #endif
     }
 #ifndef LINX_GROUP_RUNTIME

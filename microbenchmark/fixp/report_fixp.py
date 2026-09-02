@@ -8,7 +8,7 @@ this script's expectation table.
 
 The benchmark covers the full 12-operation family (TMATMUL{,_BIAS,_ACC,_MX,
 _MX_BIAS,_MX_ACC} + TGEMV{,_BIAS,_ACC,_MX,_MX_BIAS,_MX_ACC}) sharing one B.FPATR
-options mechanism, plus the Shared-Right (B.IOS), LReLU-without-quant, vector-
+options mechanism, plus cooperative Shared A/B (B.IOS), LReLU-without-quant, vector-
 quant+PReLU and legacy 3-param edge cases.
 
 Output: fixp_report.md (next to this script).
@@ -19,11 +19,13 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_FLAVOR = "res_check" if os.environ.get("res_check") == "on" else ""
 ELF_GLOB = os.path.join(
-    HERE, "..", "..", "output", "microbenchmark", "fixp", "elf",
+    HERE, "..", "..", "output", OUTPUT_FLAVOR, "microbenchmark", "fixp", "elf",
     "fixp", "fixp_tmatmul_*_M*_N*_K*.elf.diss",
 )
 REPORT = os.path.join(HERE, "fixp_report.md")
+COMPILE_SCRIPT = os.path.join(HERE, "compile.all")
 
 # GroupN -> B.FPATR GroupNCode (fixp::group_n_code).
 GROUP_N_CODE = {8: 1, 16: 2, 32: 3, 48: 4, 64: 5, 80: 6, 96: 7, 112: 8, 128: 9}
@@ -38,16 +40,19 @@ MNEMONICS = {
 }
 
 # Number of B.IOT *source* (non-destination) lines that carry the math operands
-# (A/B/C/Bias/ScaleA/ScaleB/Mtx/Vec) for each (mnemonic, shared-B). A Shared
-# right operand (and, for MX, its ScaleB) moves off B.IOT onto B.IOS. This is
+# (A/B/C/Bias/ScaleA/ScaleB/Mtx/Vec) for each (mnemonic, shared). Shared
+# operands move off B.IOT onto B.IOS, so shared plain TMATMUL carries 0 math
+# B.IOT sources (A/B are on B.IOS; the pre-TLSU region holds only destination
+# stores plus any PostProcess aux tile). Shared BIAS/ACC keep 1 because the
+# local Bias/C accumulator stays on B.IOT even when A/B are shared. This is
 # subtracted from the total non-destination B.IOT count so the remainder is the
 # PostProcess aux-source count (RowMaxIn / vector-quant Tile / PReLU Tile).
 # Calibrated from real .diss; if an unseen (mnemonic, shared) combo turns up the
 # aux check reports "unknown MATH_SRC" rather than guessing.
 MATH_SRC = {
-    ("TMATMUL", False): 1, ("TMATMUL", True): 1,
-    ("TMATMUL.BIAS", False): 2,
-    ("TMATMUL.ACC", False): 2,
+    ("TMATMUL", False): 1, ("TMATMUL", True): 0,
+    ("TMATMUL.BIAS", False): 2, ("TMATMUL.BIAS", True): 1,
+    ("TMATMUL.ACC", False): 2, ("TMATMUL.ACC", True): 1,
     ("TMATMULMX", False): 4,
     ("TMATMULMX.BIAS", False): 5,
     ("TMATMULMX.ACC", False): 5,
@@ -66,7 +71,11 @@ MATH_SRC_BY_MODE = {
     "mx_scale0": 2,
     "mx_scale_a": 3,
     "mx_scale_b": 3,
-    "mxacc_cscale": 2,
+    # TMATMULMX.ACC + CScaleEn: ScaleMask=0 drops the two MX block-scale
+    # carriers, leaving A, B, and the C accumulator as the 3 math sources
+    # (the 4th B.IOT is the CScale post-process aux tile). Non-ACC MX modes
+    # (mx_scale0) have only A, B = 2, but the .ACC suffix adds C as a source.
+    "mxacc_cscale": 3,
     "gemv_mx_scale0": 2,
     "gemv_mx_scale_a": 3,
     "gemv_mx_scale_b": 3,
@@ -75,7 +84,7 @@ MATH_SRC_BY_MODE = {
 # Expected FPATR (PreQuant, Relu, GroupNCode, RowMaxEn, GroupMaxEn, RowMaxInit,
 # MaxAbsEn[, TransA, TransB, CScaleEn]) and operand-stream shape per mode.
 #   op:     expected BSTART mnemonic
-#   shared: expected B.IOS (Shared-Right) presence
+#   shared: expected B.IOS (cooperative Shared operand) presence
 #   ior:    expected number of real B.IOR source GPR slots (the literal `zero`
 #           placeholder is not counted) carrying scalar-quant / LReLU descriptors
 #   aux:    expected PostProcess aux B.IOT source tiles (RowMaxIn / quant / PReLU)
@@ -173,9 +182,39 @@ MODES = [
     ("gemv_mx_s8",      "TGEMVMX", False, (24, 0, 0, 0, 0, 0, 0), 1, 0, "TGEMV_MX + s8(desc)"),
     ("gemv_mx_bias_s8", "TGEMVMX.BIAS", False, (24, 0, 0, 0, 0, 0, 0), 1, 0, "TGEMV_MX_BIAS + s8(desc)"),
     ("gemv_mx_acc_s8",  "TGEMVMX.ACC", False, (24, 0, 0, 0, 0, 0, 0), 1, 0, "TGEMV_MX_ACC + s8(desc)"),
-    # --- Shared-Right B (B.IOS) --------------------------------------------
-    ("shared",          "TMATMUL", True, (0, 0, 0, 0, 0, 0, 0), 0, 0, "TMATMUL(d,a,SharedTile<B>,keep_acc())"),
-    ("s8_shared",       "TMATMUL", True, (24, 0, 0, 0, 0, 0, 0), 1, 0, "TMATMUL + SharedTile<B> + s8(desc)"),
+    # --- cooperative Shared A/B (B.IOS) ------------------------------------
+    ("shared",          "TMATMUL", True, (0, 0, 0, 0, 0, 0, 0), 0, 0, "TMATMUL(d,SharedTile<A>,SharedTile<B>,keep_acc())"),
+    ("s8_shared",       "TMATMUL", True, (24, 0, 0, 0, 0, 0, 0), 1, 0, "TMATMUL + SharedTile<A/B> + s8(desc)"),
+    ("shared_acc",      "TMATMUL.ACC", True, (0, 0, 0, 0, 0, 0, 0), 0, 0, "TMATMUL_ACC(d,c,SharedTile<A>,SharedTile<B>,keep_acc())"),
+    ("shared_bias",     "TMATMUL.BIAS", True, (0, 0, 0, 0, 0, 0, 0), 0, 0, "TMATMUL_BIAS(d,SharedTile<A>,SharedTile<B>,bias,keep_acc())"),
+    ("shared_rowmax",   "TMATMUL", True, (0, 0, 0, 1, 0, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().row_max(out)"),
+    ("shared_groupmax_8", "TMATMUL", True, (0, 0, GROUP_N_CODE[8], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().group_max<8>(out)"),
+    ("shared_rowmax_groupmax_8", "TMATMUL", True, (0, 0, GROUP_N_CODE[8], 1, 1, 0, 0), 0, 0,
+     "SharedTile<A/B> + keep_acc().row_max(out).group_max<8>(out)"),
+    ("shared_keep_acc_relu", "TMATMUL", True, (0, 1, 0, 0, 0, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().relu()"),
+    ("shared_f16",           "TMATMUL", True, (1, 0, 0, 0, 0, 0, 0), 0, 0, "SharedTile<A/B> + fixp::f16()"),
+    ("shared_f16_relu",      "TMATMUL", True, (1, 1, 0, 0, 0, 0, 0), 0, 0, "SharedTile<A/B> + f16().relu()"),
+    ("shared_bf16",          "TMATMUL", True, (16, 0, 0, 0, 0, 0, 0), 0, 0, "SharedTile<A/B> + fixp::bf16()"),
+    ("shared_bf16_relu",     "TMATMUL", True, (16, 1, 0, 0, 0, 0, 0), 0, 0, "SharedTile<A/B> + bf16().relu()"),
+    ("shared_s8_relu",       "TMATMUL", True, (24, 1, 0, 0, 0, 0, 0), 1, 0, "SharedTile<A/B> + s8(desc).relu()"),
+    ("shared_s8_lrelu",      "TMATMUL", True, (24, 2, 0, 0, 0, 0, 0), 2, 0, "SharedTile<A/B> + s8(desc).lrelu(fp19)"),
+    ("shared_v_s8_relu",     "TMATMUL", True, (23, 1, 0, 0, 0, 0, 0), 0, 1, "SharedTile<A/B> + s8(quant_tile).relu()"),
+    ("shared_f16_prelu",     "TMATMUL", True, (1, 3, 0, 0, 0, 0, 0), 0, 1, "SharedTile<A/B> + f16().prelu(fp19_tile)"),
+    ("shared_s8_prelu",      "TMATMUL", True, (24, 3, 0, 0, 0, 0, 0), 1, 1, "SharedTile<A/B> + s8(desc).prelu(fp19_tile)"),
+    ("shared_rowmax_init",   "TMATMUL", True, (0, 0, 0, 1, 0, 1, 0), 0, 1, "SharedTile<A/B> + keep_acc().row_max(in,out)"),
+    ("shared_groupmax_16",   "TMATMUL", True, (0, 0, GROUP_N_CODE[16], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().group_max<16>(out)"),
+    ("shared_groupmax_32",   "TMATMUL", True, (0, 0, GROUP_N_CODE[32], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().group_max<32>(out)"),
+    ("shared_groupmax_48",   "TMATMUL", True, (0, 0, GROUP_N_CODE[48], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().group_max<48>(out)"),
+    ("shared_groupmax_64",   "TMATMUL", True, (0, 0, GROUP_N_CODE[64], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().group_max<64>(out)"),
+    ("shared_groupmax_80",   "TMATMUL", True, (0, 0, GROUP_N_CODE[80], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().group_max<80>(out)"),
+    ("shared_groupmax_96",   "TMATMUL", True, (0, 0, GROUP_N_CODE[96], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().group_max<96>(out)"),
+    ("shared_groupmax_112",  "TMATMUL", True, (0, 0, GROUP_N_CODE[112], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().group_max<112>(out)"),
+    ("shared_groupmax_128",  "TMATMUL", True, (0, 0, GROUP_N_CODE[128], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + keep_acc().group_max<128>(out)"),
+    ("shared_rowgroup_maxabs", "TMATMUL", True, (0, 0, GROUP_N_CODE[8], 1, 1, 1, 1), 0, 1,
+     "SharedTile<A/B> + keep_acc().row_max(in,out).group_max<8>(out).max_abs()"),
+    ("shared_f16_groupmax",  "TMATMUL", True, (1, 0, GROUP_N_CODE[16], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + f16().group_max<16>(out)"),
+    ("shared_s8_rowmax",     "TMATMUL", True, (24, 0, 0, 1, 0, 0, 0), 1, 0, "SharedTile<A/B> + s8(desc).row_max(out)"),
+    ("shared_acc_cscale",    "TMATMUL.ACC", True, (0, 0, 0, 0, 0, 0, 0, 0, 0, 1), 0, 1, "SharedTile<A/B> + TMATMUL_ACC + CScale"),
     ("trans_a",         "TMATMUL", True, (0, 0, 0, 0, 0, 0, 0, 1, 0, 0), 0, 0, "Shared A/B + transpose_a"),
     ("trans_b",         "TMATMUL", True, (0, 0, 0, 0, 0, 0, 0, 0, 1, 0), 0, 0, "Shared A/B + transpose_b"),
     ("trans_ab",        "TMATMUL", True, (0, 0, 0, 0, 0, 0, 0, 1, 1, 0), 0, 0, "Shared A/B + transpose_a + transpose_b"),
@@ -186,6 +225,17 @@ MODES = [
 ]
 
 MODE_MAP = {m[0]: m for m in MODES}
+
+
+def load_active_compile_modes():
+    """Read the bash MODES array so compile and report coverage cannot drift."""
+    with open(COMPILE_SCRIPT, errors="replace") as fh:
+        text = fh.read()
+    match = re.search(r"^MODES=\((.*?)^\)", text, re.MULTILINE | re.DOTALL)
+    if match is None:
+        raise RuntimeError("cannot find MODES array in compile.all")
+    body = re.sub(r"#.*", "", match.group(1))
+    return body.split()
 
 
 def expected_word(f):
@@ -280,6 +330,20 @@ COVERAGE = [
 
 
 def main():
+    active_modes = load_active_compile_modes()
+    reported_active = [mode for mode in MODE_MAP if mode != "lrelu_only"]
+    missing_from_report = sorted(set(active_modes) - set(reported_active))
+    missing_from_compile = sorted(set(reported_active) - set(active_modes))
+    if missing_from_report or missing_from_compile:
+        print("compile/report mode mismatch", file=sys.stderr)
+        if missing_from_report:
+            print("  missing from report: " + ", ".join(missing_from_report),
+                  file=sys.stderr)
+        if missing_from_compile:
+            print("  missing from compile.all: " + ", ".join(missing_from_compile),
+                  file=sys.stderr)
+        return 1
+
     rows = []
     n_pass = 0
     n_fail = 0
@@ -459,7 +523,7 @@ def main():
         fh.write("\n".join(out))
     print(f"wrote {REPORT}")
     print(f"summary: PASS={n_pass} FAIL={n_fail} BLOCKED={n_blocked}")
-    return 0
+    return 1 if n_fail else 0
 
 
 if __name__ == "__main__":

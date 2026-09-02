@@ -17,7 +17,7 @@ make FIXP_MODE=S_QF_S8 diss        # -> output/.../fixp_tmatmul_s_qf_s8_*.elf{.d
 make FIXP_MODE=BIAS diss          # TMATMUL_BIAS variant
 make FIXP_MODE=GEMV diss          # TGEMV variant
 
-# 2. build + disassemble all 94 active variants (prints PASS/FAIL table)
+# 2. build + disassemble all 122 active variants (prints PASS/FAIL table)
 bash compile.all                 # log: compile.fixp.log
 
 # 3. regenerate this report from the .diss files
@@ -26,7 +26,7 @@ python3 report_fixp.py           # -> fixp_report.md
 
 Tile shape defaults `M=N=K=TM=TN=TK=32` (override with `M=... TM=...`); `FIXP_MODE` is upper-cased to a `-D` define and lower-cased for the ELF suffix. Mode labels are short (`bias`/`acc`/`mx`/`gemv`/...) so the `-D` macro never collides with the op function name. The `diss` target runs `llvm-objdump -dl` to emit the `.elf.diss` next to each `.elf`.
 
-Result summary: **PASS=94 FAIL=0 BLOCKED=1 (total=95)**
+Result summary: **PASS=122 FAIL=0 BLOCKED=1 (total=123)**
 
 ## Coverage vs doc (12 operations x B.FPATR options)
 
@@ -140,8 +140,36 @@ All 12 documented operations share one B.FPATR options mechanism (PreQuantMode, 
 | gemv_mx_s8 | TGEMVMX | no | `TGEMV_MX + s8(desc)` | 24, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x60002023 | 1 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
 | gemv_mx_bias_s8 | TGEMVMX.BIAS | no | `TGEMV_MX_BIAS + s8(desc)` | 24, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x60002023 | 1 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
 | gemv_mx_acc_s8 | TGEMVMX.ACC | no | `TGEMV_MX_ACC + s8(desc)` | 24, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x60002023 | 1 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
-| shared | TMATMUL | yes | `TMATMUL(d,a,SharedTile<B>,keep_acc())` | 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x00002023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
-| s8_shared | TMATMUL | yes | `TMATMUL + SharedTile<B> + s8(desc)` | 24, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x60002023 | 1 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared | TMATMUL | yes | `TMATMUL(d,SharedTile<A>,SharedTile<B>,keep_acc())` | 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x00002023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| s8_shared | TMATMUL | yes | `TMATMUL + SharedTile<A/B> + s8(desc)` | 24, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x60002023 | 1 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_acc | TMATMUL.ACC | yes | `TMATMUL_ACC(d,c,SharedTile<A>,SharedTile<B>,keep_acc())` | 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x00002023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_bias | TMATMUL.BIAS | yes | `TMATMUL_BIAS(d,SharedTile<A>,SharedTile<B>,bias,keep_acc())` | 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x00002023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_rowmax | TMATMUL | yes | `SharedTile<A/B> + keep_acc().row_max(out)` | 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 | 0x00042023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_groupmax_8 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().group_max<8>(out)` | 0, 0, 1, 0, 1, 0, 0, 0, 0, 0 | 0x000a2023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_rowmax_groupmax_8 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().row_max(out).group_max<8>(out)` | 0, 0, 1, 1, 1, 0, 0, 0, 0, 0 | 0x000e2023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_keep_acc_relu | TMATMUL | yes | `SharedTile<A/B> + keep_acc().relu()` | 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 | 0x00802023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_f16 | TMATMUL | yes | `SharedTile<A/B> + fixp::f16()` | 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x04002023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_f16_relu | TMATMUL | yes | `SharedTile<A/B> + f16().relu()` | 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 | 0x04802023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_bf16 | TMATMUL | yes | `SharedTile<A/B> + fixp::bf16()` | 16, 0, 0, 0, 0, 0, 0, 0, 0, 0 | 0x40002023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_bf16_relu | TMATMUL | yes | `SharedTile<A/B> + bf16().relu()` | 16, 1, 0, 0, 0, 0, 0, 0, 0, 0 | 0x40802023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_s8_relu | TMATMUL | yes | `SharedTile<A/B> + s8(desc).relu()` | 24, 1, 0, 0, 0, 0, 0, 0, 0, 0 | 0x60802023 | 1 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_s8_lrelu | TMATMUL | yes | `SharedTile<A/B> + s8(desc).lrelu(fp19)` | 24, 2, 0, 0, 0, 0, 0, 0, 0, 0 | 0x61002023 | 2 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_v_s8_relu | TMATMUL | yes | `SharedTile<A/B> + s8(quant_tile).relu()` | 23, 1, 0, 0, 0, 0, 0, 0, 0, 0 | 0x5c802023 | 0 | 1 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_f16_prelu | TMATMUL | yes | `SharedTile<A/B> + f16().prelu(fp19_tile)` | 1, 3, 0, 0, 0, 0, 0, 0, 0, 0 | 0x05802023 | 0 | 1 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_s8_prelu | TMATMUL | yes | `SharedTile<A/B> + s8(desc).prelu(fp19_tile)` | 24, 3, 0, 0, 0, 0, 0, 0, 0, 0 | 0x61802023 | 1 | 1 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_rowmax_init | TMATMUL | yes | `SharedTile<A/B> + keep_acc().row_max(in,out)` | 0, 0, 0, 1, 0, 1, 0, 0, 0, 0 | 0x00052023 | 0 | 1 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_groupmax_16 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().group_max<16>(out)` | 0, 0, 2, 0, 1, 0, 0, 0, 0, 0 | 0x00122023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_groupmax_32 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().group_max<32>(out)` | 0, 0, 3, 0, 1, 0, 0, 0, 0, 0 | 0x001a2023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_groupmax_48 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().group_max<48>(out)` | 0, 0, 4, 0, 1, 0, 0, 0, 0, 0 | 0x00222023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_groupmax_64 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().group_max<64>(out)` | 0, 0, 5, 0, 1, 0, 0, 0, 0, 0 | 0x002a2023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_groupmax_80 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().group_max<80>(out)` | 0, 0, 6, 0, 1, 0, 0, 0, 0, 0 | 0x00322023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_groupmax_96 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().group_max<96>(out)` | 0, 0, 7, 0, 1, 0, 0, 0, 0, 0 | 0x003a2023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_groupmax_112 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().group_max<112>(out)` | 0, 0, 8, 0, 1, 0, 0, 0, 0, 0 | 0x00422023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_groupmax_128 | TMATMUL | yes | `SharedTile<A/B> + keep_acc().group_max<128>(out)` | 0, 0, 9, 0, 1, 0, 0, 0, 0, 0 | 0x004a2023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_rowgroup_maxabs | TMATMUL | yes | `SharedTile<A/B> + keep_acc().row_max(in,out).group_max<8>(out).max_abs()` | 0, 0, 1, 1, 1, 1, 1, 0, 0, 0 | 0x000fa023 | 0 | 1 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_f16_groupmax | TMATMUL | yes | `SharedTile<A/B> + f16().group_max<16>(out)` | 1, 0, 2, 0, 1, 0, 0, 0, 0, 0 | 0x04122023 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_s8_rowmax | TMATMUL | yes | `SharedTile<A/B> + s8(desc).row_max(out)` | 24, 0, 0, 1, 0, 0, 0, 0, 0, 0 | 0x60042023 | 1 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
+| shared_acc_cscale | TMATMUL.ACC | yes | `SharedTile<A/B> + TMATMUL_ACC + CScale` | 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 | 0x00002223 | 0 | 1 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
 | trans_a | TMATMUL | yes | `Shared A/B + transpose_a` | 0, 0, 0, 0, 0, 0, 0, 1, 0, 0 | 0x000020a3 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
 | trans_b | TMATMUL | yes | `Shared A/B + transpose_b` | 0, 0, 0, 0, 0, 0, 0, 0, 1, 0 | 0x00002123 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
 | trans_ab | TMATMUL | yes | `Shared A/B + transpose_a + transpose_b` | 0, 0, 0, 0, 0, 0, 0, 1, 1, 0 | 0x000021a3 | 0 | 0 | PASS | mnemonic + FPATR + encoding + IOR + IOS + aux match |
