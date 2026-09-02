@@ -75,7 +75,7 @@ int main() {
     }
 #endif
 
-    rms_norm<dtype>(input, tiling_info, output, EPS);
+    rms_norm<dtype, PE_NUM>(input, tiling_info, output, EPS);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

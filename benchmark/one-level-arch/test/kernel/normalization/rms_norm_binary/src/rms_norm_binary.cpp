@@ -89,7 +89,7 @@ int main() {
     }
 #endif
 
-    rms_norm_binary<dtype>(input, tiling_info, output, workspace, EPS);
+    rms_norm_binary<dtype, PE_NUM>(input, tiling_info, output, workspace, EPS);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

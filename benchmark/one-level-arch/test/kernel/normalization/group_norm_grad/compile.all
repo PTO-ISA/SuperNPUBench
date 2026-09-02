@@ -1,21 +1,5 @@
 #!/bin/bash
-# GroupNorm Grad HxW>1 dynamic 4PE: fp16; N=32 C=16 G=8 HxW=512
-
+# Dynamic 4PE GroupNormGrad N=32,C=16,G=8,HxW=512; tiling is calculated from runtime shape.
 set -euo pipefail
-
-: "${COMPILER_DIR:?Set COMPILER_DIR to the linx_blockisa_llvm_musl bin directory}"
-
-make TESTCASE=group_norm_grad COMPILER_DIR="$COMPILER_DIR" \
-  DType=__half N_BATCH=2 C_CH=16 G_GRP=4 HxW_SZ=16 TILE_HW=8 diss
-
-# Same dynamic entry, one kernel call; PE partitioning is internal.
-make TESTCASE=group_norm_grad COMPILER_DIR="$COMPILER_DIR" \
-  DType=__half N_BATCH=32 C_CH=16 G_GRP=8 HxW_SZ=512 PE_NUM=4 diss
-
-# Static Valid; same N/C/G/HxW/tile_hw
-make TESTCASE=group_norm_grad_static COMPILER_DIR="$COMPILER_DIR" \
-  DType=__half N_BATCH=2 C_CH=16 G_GRP=4 HxW_SZ=16 TILE_HW=8 diss
-
-make TESTCASE=group_norm_grad_static COMPILER_DIR="$COMPILER_DIR" \
-  DType=__half N_BATCH=2 C_CH=16 G_GRP=4 HxW_SZ=16 TILE_HW=8 PE_NUM=4 diss
-
+: "${COMPILER_DIR:?Set COMPILER_DIR to the compiler bin directory}"
+make TESTCASE=group_norm_grad COMPILER_DIR="$COMPILER_DIR" DType=__half N_BATCH=32 C_CH=16 G_GRP=8 HxW_SZ=512 PE_NUM=4 diss

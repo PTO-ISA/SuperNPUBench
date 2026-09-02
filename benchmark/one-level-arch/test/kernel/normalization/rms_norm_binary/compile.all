@@ -1,18 +1,5 @@
 #!/bin/bash
-# RMSNorm binary-accumulate dynamic 4PE: [16,16384] fp16; C++ computes tile_r=1024, pow_r=8192
+# Dynamic 4PE RMSNorm binary [16,16384]; tiling is calculated from runtime shape.
 set -euo pipefail
-
-: "${COMPILER_DIR:?Set COMPILER_DIR to the linx_blockisa_llvm_musl bin directory}"
-
-make TESTCASE=rms_norm_binary COMPILER_DIR="$COMPILER_DIR" DType=__half diss
-
-# Static Valid; same [1,8192] tile_r=1024 pow_r=4096
-make TESTCASE=rms_norm_binary_static COMPILER_DIR="$COMPILER_DIR" DType=__half \
-  G_A=1 G_R=8192 TILE_A=1 TILE_R=1024 POW_R=4096 diss
-
-
-# 4PE: split four independent rows across PEs inside the kernel.
-make TESTCASE=rms_norm_binary COMPILER_DIR="$COMPILER_DIR" DType=__half \
-  G_A=4 G_R=8192 TILE_A=1 TILE_R=1024 POW_R=4096 PE_NUM=4 diss
-make TESTCASE=rms_norm_binary_static COMPILER_DIR="$COMPILER_DIR" DType=__half \
-  G_A=16 G_R=16384 PE_NUM=4 diss
+: "${COMPILER_DIR:?Set COMPILER_DIR to the compiler bin directory}"
+make TESTCASE=rms_norm_binary COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=16 G_R=16384 PE_NUM=4 diss
