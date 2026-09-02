@@ -1,6 +1,6 @@
 DType ?= __half
-G_A ?= 1
-G_R ?= 8192
+G_A ?= 16
+G_R ?= 16384
 TILE_A ?= 1
 TILE_R ?= 1024
 POW_R ?= 4096
@@ -11,7 +11,7 @@ START_FILE = $(ROOT)/test/common/_start_multipe.s
 endif
 
 ifeq ($(TESTCASE), rms_norm_binary)
-DEFINES += -DDType=$(DType) -DG_A=$(G_A) -DG_R=$(G_R) -DTILE_A=$(TILE_A) -DTILE_R=$(TILE_R) -DPOW_R=$(POW_R) -DPE_NUM=$(PE_NUM)
+DEFINES += -DDType=$(DType) -DG_A=$(G_A) -DG_R=$(G_R) -DPE_NUM=$(PE_NUM)
 ifeq ($(PE_NUM),1)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType).elf
 else

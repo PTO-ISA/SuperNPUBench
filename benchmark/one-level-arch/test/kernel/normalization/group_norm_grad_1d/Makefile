@@ -1,7 +1,7 @@
-N_BATCH ?= 8
+N_BATCH ?= 512
 C_CH ?= 64
 G_GRP ?= 8
-TILE_D ?= -1
+TILE_D ?= 8
 DType ?= __half
 PE_NUM ?= 1
 
@@ -14,7 +14,6 @@ DEFINES += -DDType=$(DType)
 DEFINES += -DN_BATCH=$(N_BATCH)
 DEFINES += -DC_CH=$(C_CH)
 DEFINES += -DG_GRP=$(G_GRP)
-DEFINES += -DTILE_D=$(TILE_D)
 DEFINES += -DPE_NUM=$(PE_NUM)
 ifeq ($(PE_NUM),1)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_N$(N_BATCH)_C$(C_CH)_G$(G_GRP).elf

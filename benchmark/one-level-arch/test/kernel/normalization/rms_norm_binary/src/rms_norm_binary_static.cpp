@@ -17,7 +17,7 @@
 #define PE_NUM 1
 #endif
 
-// Default [1,8192]; 4PE validation uses [4,8192], tile_r=1024, pow_r=4096
+// Static coverage defaults to [1,8192]; its 4PE case uses [4,8192]
 #ifndef G_A
 #define G_A 1
 #endif

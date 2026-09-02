@@ -9,25 +9,30 @@
 #define DType __half
 #endif
 
-// Default: HxW>1, N=2, C=16, G=4 → D=4, HxW=16
+// Dynamic 4PE validation: N=32, C=16, G=8, HxW=512.
 #ifndef N_BATCH
-#define N_BATCH 2
+#define N_BATCH 32
 #endif
 #ifndef C_CH
 #define C_CH 16
 #endif
 #ifndef G_GRP
-#define G_GRP 4
+#define G_GRP 8
 #endif
 #ifndef HxW_SZ
-#define HxW_SZ 16
-#endif
-#ifndef TILE_HW
-#define TILE_HW 8
+#define HxW_SZ 512
 #endif
 #ifndef PE_NUM
 #define PE_NUM 1
 #endif
+
+namespace {
+template <typename dtype>
+constexpr int64_t group_norm_tile_hw(int64_t spatial_size) {
+    constexpr int64_t kTileCapacity = 512;
+    return spatial_size < kTileCapacity ? spatial_size : kTileCapacity;
+}
+} // namespace
 
 #ifdef RES_CHECK
 namespace {
@@ -41,7 +46,10 @@ int main() {
     using dtype = DType;
 
     // tiling: {N, C, G, HxW, tile_hw}
-    int64_t tiling_info[5] = {N_BATCH, C_CH, G_GRP, HxW_SZ, TILE_HW};
+    constexpr int64_t kTileHw = group_norm_tile_hw<dtype>(HxW_SZ);
+    static_assert(N_BATCH > 0 && C_CH > 0 && G_GRP > 0 && HxW_SZ > 0);
+    static_assert(C_CH % G_GRP == 0 && kTileHw > 0);
+    int64_t tiling_info[5] = {N_BATCH, C_CH, G_GRP, HxW_SZ, kTileHw};
 
     const int64_t N = tiling_info[0];
     const int64_t C = tiling_info[1];

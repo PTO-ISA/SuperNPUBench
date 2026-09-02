@@ -1,5 +1,5 @@
 DType ?= __half
-G_A ?= 16
+G_A ?= 512
 G_R ?= 512
 TILE_A ?= 2
 TILE_R ?= 512
@@ -12,11 +12,11 @@ START_FILE = $(ROOT)/test/common/_start_multipe.s
 endif
 
 ifeq ($(TESTCASE), rms_norm)
-DEFINES += -DDType=$(DType) -DPE_NUM=$(PE_NUM)
+DEFINES += -DDType=$(DType) -DPE_NUM=$(PE_NUM) -DG_A=$(G_A) -DG_R=$(G_R)
 ifeq ($(PE_NUM),1)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType).elf
+TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_gA$(G_A)_gR$(G_R).elf
 else
-TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_PE$(PE_NUM).elf
+TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_gA$(G_A)_gR$(G_R)_PE$(PE_NUM).elf
 endif
 endif
 

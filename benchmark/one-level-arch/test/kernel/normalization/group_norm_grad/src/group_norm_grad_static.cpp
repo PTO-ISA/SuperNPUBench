@@ -9,7 +9,7 @@
 #define DType __half
 #endif
 
-// Same as dynamic group_norm_grad.cpp: N=2 C=16 G=4 HxW=16 tile_hw=8
+// Static coverage: N=2 C=16 G=4 HxW=16 tile_hw=8
 #ifndef N_BATCH
 #define N_BATCH 2
 #endif

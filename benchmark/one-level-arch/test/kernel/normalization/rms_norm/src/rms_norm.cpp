@@ -16,6 +16,22 @@
 #ifndef PE_NUM
 #define PE_NUM 1
 #endif
+#ifndef G_A
+#define G_A 512
+#endif
+#ifndef G_R
+#define G_R 512
+#endif
+
+namespace {
+constexpr int64_t rms_tile_a(int64_t global_a, int64_t pe_num) {
+    return global_a >= pe_num ? 1 : 0;
+}
+constexpr int64_t rms_tile_r(int64_t reduce_size) {
+    constexpr int64_t kMaxTileR = 1024;
+    return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
+}
+} // namespace
 
 #ifdef RES_CHECK
 namespace {
@@ -30,13 +46,17 @@ int main() {
 
     // tiling_info is always the host-visible full shape. PE partitioning is
     // entirely owned by the kernel.
-    int64_t tiling_info[4] = {16, 512, 1, -1};
+    constexpr int64_t kTileA = rms_tile_a(G_A, PE_NUM);
+    constexpr int64_t kTileR = rms_tile_r(G_R);
+    static_assert(G_A > 0 && G_R > 0 && G_A % PE_NUM == 0);
+    static_assert(kTileA > 0 && kTileR == G_R);
+    int64_t tiling_info[4] = {G_A, G_R, kTileA, kTileR};
 
     const int64_t g_a = tiling_info[0];
     const int64_t g_r = tiling_info[1];
 
-    static dtype input_buf[16 * 512];
-    static dtype output_buf[16 * 512];
+    static dtype input_buf[G_A * G_R];
+    static dtype output_buf[G_A * G_R];
     dtype *input = input_buf;
     dtype *output = output_buf;
 

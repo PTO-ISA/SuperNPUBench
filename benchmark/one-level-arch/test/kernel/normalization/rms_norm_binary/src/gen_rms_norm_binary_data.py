@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate rms_norm_binary host bins for [1, 8192] fp16.
+"""Generate rms_norm_binary host bins for [16, 16384] fp16.
 
 tiling_info.bin  : 5 x int64 LE = (g_a, g_r, tile_a, tile_r, pow_r)
 input.bin        : g_a * g_r x float16
@@ -20,7 +20,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
-    / "kernel_normalization_rms_norm_binary_rms_norm_binary_DType__half"
+    / "kernel_normalization_rms_norm_binary_rms_norm_binary_DType__half_gA16_gR16384_PE4"
 )
 DATA_DIR = SCRIPT_DIR / "data"
 
@@ -121,11 +121,11 @@ def gen_all(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--g-a", type=int, default=1)
-    parser.add_argument("--g-r", type=int, default=8192)
+    parser.add_argument("--g-a", type=int, default=16)
+    parser.add_argument("--g-r", type=int, default=16384)
     parser.add_argument("--tile-a", type=int, default=1)
     parser.add_argument("--tile-r", type=int, default=1024)
-    parser.add_argument("--pow-r", type=int, default=4096)
+    parser.add_argument("--pow-r", type=int, default=8192)
     parser.add_argument("--eps", type=float, default=1e-6)
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("-o", "--out-dir", type=Path, default=DEFAULT_CMP_DIR)

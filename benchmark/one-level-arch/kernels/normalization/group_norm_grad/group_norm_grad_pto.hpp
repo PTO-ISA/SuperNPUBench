@@ -51,8 +51,8 @@ inline int64_t workspace_elems(int64_t N, int64_t C, int64_t G) {
     return 2 * N * C + 2 * N * G;
 }
 
-static volatile uint32_t *const kPeBarrier =
-    reinterpret_cast<volatile uint32_t *>(0x30000);
+constexpr int kMaxPeCount = 64;
+static volatile uint32_t kPeBarrier[kMaxPeCount] = {};
 
 __attribute__((noinline)) inline uint32_t read_pe_id() {
     return get_thread_idx();
@@ -60,6 +60,7 @@ __attribute__((noinline)) inline uint32_t read_pe_id() {
 
 template <int peNum>
 __attribute__((noinline)) void pe_barrier(uint32_t phase) {
+    static_assert(peNum > 0 && peNum <= kMaxPeCount);
     if constexpr (peNum > 1) {
         const uint32_t pe = read_pe_id();
         kPeBarrier[pe] = phase;
@@ -213,33 +214,19 @@ template <typename dtype, typename gm_h, typename gm_f, typename tile_h,
           typename tile_f, typename tile_v>
 inline void dx_nc(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2_buf,
                   float *c3_buf, dtype *dx, int64_t N, int64_t C, int64_t G,
-                  int64_t D, int64_t HxW, int64_t n, int64_t c) {
+                  int64_t D, int64_t HxW, int64_t tile_hw, int64_t n,
+                  int64_t c) {
     const int64_t g = c / D;
     const int64_t ng = n * G + g;
-    const int64_t offset = (n * C + c) * HxW;
-    const size_t active_hw = static_cast<size_t>(HxW);
-
-    gm_h gdy(dy + offset, static_cast<int>(N * C), static_cast<int>(HxW));
-    gm_h gx(x + offset, static_cast<int>(N * C), static_cast<int>(HxW));
-    gm_h gdx(dx + offset, static_cast<int>(N * C), static_cast<int>(HxW));
     gm_f grstd(rstd + ng, static_cast<int>(N * G), 1);
     gm_f gc2(c2_buf + ng, static_cast<int>(N * G), 1);
     gm_f gc3(c3_buf + ng, static_cast<int>(N * G), 1);
 
-    tile_h h0(1, active_hw);
-    tile_f x_f(1, active_hw);
-    tile_f dy_f(1, active_hw);
-    tile_f dx_f(1, active_hw);
-    tile_f tmp(1, active_hw);
     tile_v rstd_t(1);
     tile_v c1(1);
     tile_v c2(1);
     tile_v c3(1);
 
-    TLOAD(h0, gx);
-    TCVT(x_f, h0);
-    TLOAD(h0, gdy);
-    TCVT(dy_f, h0);
     TLOAD(rstd_t, grstd);
     TLOAD(c2, gc2);
     TLOAD(c3, gc3);
@@ -258,13 +245,30 @@ inline void dx_nc(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2_buf,
         TMUL(c1, gv, rstd_t);
     }
 
-    TROWEXPANDMUL(dx_f, dy_f, c1);
-    TROWEXPANDMUL(tmp, x_f, c2);
-    TADD(dx_f, dx_f, tmp);
-    TROWEXPANDADD(dx_f, dx_f, c3);
-
-    TCVT(h0, dx_f);
-    TSTORE(gdx, h0);
+    const int64_t base = (n * C + c) * HxW;
+    for (int64_t hw0 = 0; hw0 < HxW; hw0 += tile_hw) {
+        const size_t active_hw = static_cast<size_t>(
+            (hw0 + tile_hw <= HxW) ? tile_hw : (HxW - hw0));
+        const int64_t offset = base + hw0;
+        gm_h gdy(dy + offset, static_cast<int>(N * C), static_cast<int>(HxW));
+        gm_h gx(x + offset, static_cast<int>(N * C), static_cast<int>(HxW));
+        gm_h gdx(dx + offset, static_cast<int>(N * C), static_cast<int>(HxW));
+        tile_h h0(1, active_hw);
+        tile_f x_f(1, active_hw);
+        tile_f dy_f(1, active_hw);
+        tile_f dx_f(1, active_hw);
+        tile_f tmp(1, active_hw);
+        TLOAD(h0, gx);
+        TCVT(x_f, h0);
+        TLOAD(h0, gdy);
+        TCVT(dy_f, h0);
+        TROWEXPANDMUL(dx_f, dy_f, c1);
+        TROWEXPANDMUL(tmp, x_f, c2);
+        TADD(dx_f, dx_f, tmp);
+        TROWEXPANDADD(dx_f, dx_f, c3);
+        TCVT(h0, dx_f);
+        TSTORE(gdx, h0);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -357,11 +361,9 @@ template <typename dtype, int peNum = gn_grad::kDefaultPeNum>
 void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
                      dtype *gamma, const int64_t *tiling, dtype *dx,
                      dtype *dgamma, dtype *dbeta, float *workspace) {
-    // Capacity in elements: every Tile buffer >= 512B (dtype strip + float strip).
-    constexpr int64_t tCapDtype =
-        (512 + static_cast<int64_t>(sizeof(dtype)) - 1) /
-        static_cast<int64_t>(sizeof(dtype));
-    constexpr int64_t tCap = tCapDtype > 128 ? tCapDtype : 128;
+    // One 512-element spatial tile matches the source algorithm's maximum block.
+    // Larger HxW values are handled by the tile_hw loops.
+    constexpr int64_t tCap = 512;
     constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
 
     const int64_t N = tiling[0];
@@ -375,7 +377,7 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
         return;
     }
     const int64_t D = C / G;
-    if (tile_hw <= 0 || tile_hw > tCap || HxW > tCap || D > tCap ||
+    if (tile_hw <= 0 || tile_hw > tCap || D > tCap ||
         tid >= static_cast<uint32_t>(peNum)) {
         return;
     }
@@ -418,7 +420,8 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
         const int64_t n = nc / C;
         const int64_t c = nc % C;
         gn_grad::dx_nc<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-            dy, x, gamma, rstd, c2_buf, c3_buf, dx, N, C, G, D, HxW, n, c);
+            dy, x, gamma, rstd, c2_buf, c3_buf, dx, N, C, G, D, HxW,
+            tile_hw, n, c);
     }
 
     for (int64_t g = tid; g < G; g += peNum) {
@@ -427,6 +430,7 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
         gn_grad::dgamma_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
             ds, db, mean, rstd, dgamma, N, C, G, D, g);
     }
+    gn_grad::pe_barrier<peNum>(3);
 }
 
 // Compile-time N,C,G,HxW,tile_hw. Physical Cols = tCap (>=512B); Valid = tiling.

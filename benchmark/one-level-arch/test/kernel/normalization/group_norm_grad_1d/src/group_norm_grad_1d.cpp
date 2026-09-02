@@ -9,9 +9,9 @@
 #define DType __half
 #endif
 
-// Default shape: HxW==1, N=8, C=64, G=8 → D=8
+// Dynamic 4PE validation: HxW==1, N=512, C=64, G=8, D=8.
 #ifndef N_BATCH
-#define N_BATCH 8
+#define N_BATCH 512
 #endif
 #ifndef C_CH
 #define C_CH 64
@@ -19,12 +19,22 @@
 #ifndef G_GRP
 #define G_GRP 8
 #endif
-#ifndef TILE_D
-#define TILE_D -1
-#endif
 #ifndef PE_NUM
 #define PE_NUM 1
 #endif
+
+namespace {
+template <typename dtype>
+constexpr int64_t group_norm_1d_tile_d(int64_t channels, int64_t groups) {
+    constexpr int64_t kDtypeCapacity =
+        (512 + static_cast<int64_t>(sizeof(dtype)) - 1) /
+        static_cast<int64_t>(sizeof(dtype));
+    constexpr int64_t kTileCapacity =
+        kDtypeCapacity > 128 ? kDtypeCapacity : 128;
+    const int64_t group_width = channels / groups;
+    return group_width < kTileCapacity ? group_width : kTileCapacity;
+}
+} // namespace
 
 #ifdef RES_CHECK
 namespace {
@@ -38,7 +48,10 @@ int main() {
     using dtype = DType;
 
     // tiling: {N, C, G, tile_d}
-    int64_t tiling_info[4] = {N_BATCH, C_CH, G_GRP, TILE_D};
+    constexpr int64_t kTileD = group_norm_1d_tile_d<dtype>(C_CH, G_GRP);
+    static_assert(N_BATCH > 0 && C_CH > 0 && G_GRP > 0);
+    static_assert(C_CH % G_GRP == 0 && kTileD > 0);
+    int64_t tiling_info[4] = {N_BATCH, C_CH, G_GRP, kTileD};
 
     const int64_t N = tiling_info[0];
     const int64_t C = tiling_info[1];

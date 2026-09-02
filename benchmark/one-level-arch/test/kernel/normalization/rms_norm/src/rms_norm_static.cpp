@@ -17,7 +17,7 @@
 #define PE_NUM 1
 #endif
 
-// Same as dynamic rms_norm.cpp tiling_info {16,512,2,512}
+// Static coverage: {16,512,2,512}
 #ifndef G_A
 #define G_A 16
 #endif

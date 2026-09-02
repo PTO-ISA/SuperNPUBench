@@ -1,8 +1,8 @@
 #!/bin/bash
 # RMSNorm one-level: fp16
-#   rms_norm.cpp tiling_info = {16,512,1,-1}  (g_a,g_r,tile_a,tile_r; tile_r<0 => full row)
+#   rms_norm.cpp computes tiling_info = {512,512,1,512} from shape  (g_a,g_r,tile_a,tile_r; tile_r<0 => full row)
 #   rms_norm_static: G_A=16 G_R=512 TILE_A=2 TILE_R=512
-# PE_NUM=4 splits A (16/4=4 rows/PE). Run those ELFs with:
+# PE_NUM=4 splits A (512/4=128 rows/PE). Run those ELFs with:
 #   gfrun -f <elf> -s softcore.multiThreadNum=4
 
 set -euo pipefail
@@ -15,7 +15,8 @@ make TESTCASE=rms_norm COMPILER_DIR="$COMPILER_DIR" DType=__half diss
 make TESTCASE=rms_norm_static COMPILER_DIR="$COMPILER_DIR" DType=__half \
   G_A=16 G_R=512 TILE_A=2 TILE_R=512 diss
 
-# 4PE: split A (16/4=4 rows per PE)
-make TESTCASE=rms_norm COMPILER_DIR="$COMPILER_DIR" DType=__half PE_NUM=4 diss
+# 4PE: dynamic [512,512], 128 rows per PE
+make TESTCASE=rms_norm COMPILER_DIR="$COMPILER_DIR" DType=__half \
+  G_A=512 G_R=512 PE_NUM=4 diss
 make TESTCASE=rms_norm_static COMPILER_DIR="$COMPILER_DIR" DType=__half \
   G_A=16 G_R=512 TILE_A=2 TILE_R=512 PE_NUM=4 diss

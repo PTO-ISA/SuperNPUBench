@@ -17,23 +17,12 @@
 #define PE_NUM 1
 #endif
 
-// Spec: default shape [g_a, g_r] = [1, 8192]; 4PE validation uses [4, 8192], fp16
-// tiling: tile_a=1, tile_r=1024, pow_r=4096
-//   pow_r is 2^n and pow_r < g_r <= 2*pow_r
+// Dynamic 4PE validation shape: [16, 16384], fp16.
 #ifndef G_A
-#define G_A 1
+#define G_A 16
 #endif
 #ifndef G_R
-#define G_R 8192
-#endif
-#ifndef TILE_A
-#define TILE_A 1
-#endif
-#ifndef TILE_R
-#define TILE_R 1024
-#endif
-#ifndef POW_R
-#define POW_R 4096
+#define G_R 16384
 #endif
 // Must match rms_bin::kWsCols / kMaxLevels
 #ifndef K_WS_COLS
@@ -42,6 +31,20 @@
 #ifndef K_MAX_LEVELS
 #define K_MAX_LEVELS 6
 #endif
+
+namespace {
+constexpr int64_t floor_power_of_two(int64_t value) {
+    int64_t result = 1;
+    while (result <= value / 2) {
+        result *= 2;
+    }
+    return result;
+}
+constexpr int64_t binary_tile_r(int64_t reduce_size) {
+    constexpr int64_t kMaxTileR = 1024;
+    return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
+}
+} // namespace
 
 #ifdef RES_CHECK
 namespace {
@@ -54,7 +57,12 @@ volatile uint32_t output_written = 0;
 int main() {
     using dtype = DType;
 
-    int64_t tiling_info[5] = {G_A, G_R, TILE_A, TILE_R, POW_R};
+    constexpr int64_t kTileA = 1;
+    constexpr int64_t kTileR = binary_tile_r(G_R);
+    constexpr int64_t kPowR = floor_power_of_two(G_R - 1);
+    static_assert(G_A > 0 && G_R > 1 && G_A % PE_NUM == 0);
+    static_assert(kPowR < G_R && G_R <= 2 * kPowR);
+    int64_t tiling_info[5] = {G_A, G_R, kTileA, kTileR, kPowR};
 
     const int64_t g_a = tiling_info[0];
     const int64_t g_r = tiling_info[1];

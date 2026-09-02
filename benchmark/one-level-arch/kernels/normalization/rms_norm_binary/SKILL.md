@@ -4,7 +4,7 @@ description: >-
   Build, run, and debug the one-level rms_norm_binary kernel (R-split RMSNorm)
   with SuperNPUBench + run_op.py + gfrun/gfsim precision checks. Use when
   editing rms_norm_binary_pto.hpp, rms_norm_binary tests, workspace/GetCacheId
-  reduce, TADD cross-tile sum, or verifying [1,8192] fp16 binary RMSNorm.
+  reduce, TADD cross-tile sum, or verifying [16,16384] fp16 binary RMSNorm.
   Shape dims are A (outer) and R (reduce): g_a/g_r, tile_a/tile_r, tA/tR.
 ---
 
