@@ -79,6 +79,29 @@ ifeq ($(TYPE), MATMUL_VALIDATE)
    endif
 endif
 
+ifeq ($(TYPE), MATMUL_TEST)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_test.cpp
+   DEFINES += -DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK)
+   ifneq ($(NAME), )
+      TARGET = $(ELF_HEAD)/$(NAME)_MATMUL_TEST_tM$(tM)_tN$(tN)_tK$(tK).elf
+   else
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_MATMUL_TEST_tM$(tM)_tN$(tN)_tK$(tK).elf
+   endif
+   # 动态 shape 算子：gM/gN/gK运行时从 CHK_DIR/shape.txt(res_check)或shape.txt(self_verify)读取
+   # 一个ELF（固定 tM/tN/tK ）可测任意gM/gN/gK，只需更新shape.txt + bin文件重跑gfrun
+   # 算子内自验证模式：编译期生成确定性输入 + 标量 golden + 对比，不依赖文件IO
+   # 用法：make ... self_verify=on
+   # 结果通过 main 返回码暴露：0=通过，非0=不匹配元素数（截断到255）
+   # 抽样验证：默认值对比前1024个c元素
+   # 全量验证：make ... self_verify=on verify_elems=65535
+   ifeq ($(self_verify), on)
+      DEFINES += -DSELF_VERIFY
+   endif
+   ifneq ($(verify_elems),)
+      DEFINES += -DVERIFY_ELEMS=$(verify_elems)
+   endif
+endif
+
 include ../../common/Makefile.common
 
 clean:
