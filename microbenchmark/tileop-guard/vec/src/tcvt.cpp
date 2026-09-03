@@ -1,15 +1,8 @@
-#include "guard_common.hpp"
-// TileOP-API doc guard: TCVT (VEC, elementwise-tile-tile, numeric conversion)
+#include "guard_case.hpp"
+// TileOP-API doc guard: TCVT (VEC, elementwise numeric conversion fp32 -> s32).
 // Source: docs/tileop-usage/reinterpret-tile.md — contrasts TCVT (numeric
 // conversion, emits hardware op) vs reinterpret_tile (bit view). Signature
 // shown there: TCVT(converted, src) with distinct dst dtype.
-// NOTE(doc-gap): only the fp32->int32 form is exemplified; call shape reused.
-int main() {
-    constexpr int M = 16, N = 16, NE = M * N;
-    float a[NE]; int32_t c[NE];
-    gfill_seq(a, NE); gzero(c, NE);
-    BENCHSTART;
-    g_unary_cvt<float, int32_t, M, N>(c, a, [](auto& d, auto& s){ TCVT(d, s); });
-    BENCHEND;
-    return 0;
-}
+// Precision: res_check, host-generated fp32 (both signs, .5 midpoints), golden
+// pins the rounding mode (see golden.py fam='cvt' round=...).
+GUARD_UNARY_CVT(float, int32_t, 16, 16, [](auto& d, auto& s){ TCVT(d, s); })

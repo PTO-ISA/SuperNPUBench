@@ -105,6 +105,11 @@ REG['trsqrt'] = R(fam='transcend', op='rsqrt', M=16, N=16, dt=F32, eps=1e-5)
 REG['tquant']   = R(fam='quant',   M=8, N=256, mult=1.0, zp=0, eps=0)  # emu ignores mult/zp
 REG['tdequant'] = R(fam='dequant', M=8, N=256, mult=2.0, zp=0, eps=0)
 
+# ---- TCVT (numeric conversion fp32 -> s32). Rounding mode pinned empirically
+#      below (round=...). Inputs span both signs with varied fractions so the
+#      chosen mode is actually exercised at the .5 boundary. ----
+REG['tcvt'] = R(fam='cvt', M=16, N=16, din=F32, dout=I32, round='rne', eps=0)
+
 # ---- TPART* : elementwise binary over the common valid region (full-valid here
 #      => plain elementwise). "PART" = partial-valid-region, not segmented. ----
 for name, op in [('tpartadd','add'),('tpartmul','mul'),('tpartmax','max'),('tpartmin','min')]:
@@ -129,6 +134,12 @@ REG['tmatmul_bias']   = R(fam='matmul', M=32, N=32, K=32, post='bias', dt_out=F3
 REG['tmatmul_relu']   = R(fam='matmul', M=32, N=32, K=32, post='relu', dt_out=F16, eps=3e-2)
 REG['tmatmul_rowmax'] = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F32, eps=2e-2)
 REG['tmatmul_f16']    = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F16, eps=3e-2)
+# TMATMUL_MX FP16 pair (no scales): identical math to a plain f16 matmul; the
+# convenience overload just omits the scale operand. Golden = A@B, same family.
+REG['tmatmul_mx']     = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F32, eps=2e-2)
+# TGEMV: D(1,N) = Vec(1,K) @ Mtx(K,N). GEMV is a matmul with M=1 (in_a=vec,
+# in_b=mtx). doc arg order TGEMV(Dst,Mtx,Vec) but math source A=Vec, B=Mtx.
+REG['tgemv']          = R(fam='matmul', M=1, N=32, K=32, post='none', dt_out=F32, eps=2e-2)
 
 # ---- FIXP convert (matmul then cast to fp16 via fixp::convert) ----
 REG['convert'] = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F16, eps=3e-2)
@@ -235,6 +246,18 @@ def gen(case, chkdir):
         i = np.arange(n, dtype=np.float32)
         a = (np.float32(512.0) * (i / np.float32(n)) - np.float32(256.0) +
              np.float32(0.5) * np.sin(i * np.float32(0.9))).astype(np.float32)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- cvt: fp32 source with varied fractional parts, both signs; includes
+    #     exact .5 midpoints so the rounding mode is exercised. ---
+    if fam == 'cvt':
+        M, N = s['M'], s['N']
+        n = M * N
+        i = np.arange(n, dtype=np.float32)
+        # base ramp across [-N/2, +N/2) plus a fractional wobble hitting .5/.25/.75
+        base = (i - np.float32(n // 2)).astype(np.float32)
+        frac = (np.float32(0.5) * ((i.astype(np.int64) % 4).astype(np.float32) - 1.0))  # {-0.5,0,0.5,1.0}
+        a = (base + frac).astype(np.float32)
         a.tofile(os.path.join(chkdir, 'in_a.bin'))
         return
     # --- dequant: int8 source spanning full [-128,127] ---
@@ -488,6 +511,34 @@ def check_iota(case, chkdir):
         return 0
     i = int(bad[0])
     print(f'[{case}] TCI MISMATCH {bad.size}/{vc} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_cvt(case, chkdir):
+    s = REG[case]
+    a = np.fromfile(os.path.join(chkdir, 'in_a.bin'), NP[s['din']]).astype(np.float64)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, s['dout']).astype(np.int64)
+    mode = s['round']
+    if mode == 'rne':
+        ref = np.rint(a)                 # round-half-to-even
+    elif mode == 'rtz':
+        ref = np.trunc(a)                # toward zero
+    elif mode == 'floor':
+        ref = np.floor(a)
+    elif mode == 'ceil':
+        ref = np.ceil(a)
+    else:
+        print(f'[{case}] unknown round mode {mode}', file=sys.stderr); return 2
+    ref = ref.astype(np.int64)
+    n = min(got.size, ref.size)
+    bad = np.flatnonzero(got[:n] != ref[:n])
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] CVT MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]} src={a[i]} mode={mode}',
           file=sys.stderr)
     return 1
 
@@ -864,6 +915,8 @@ def check(case, chkdir):
         return check_transcend(case, chkdir)
     if s['fam'] == 'expandarith':
         return check_expandarith(case, chkdir)
+    if s['fam'] == 'cvt':
+        return check_cvt(case, chkdir)
     if s['fam'] == 'quant':
         return check_quant(case, chkdir)
     if s['fam'] == 'dequant':

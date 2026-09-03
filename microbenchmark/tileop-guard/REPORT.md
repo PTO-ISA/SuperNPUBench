@@ -23,7 +23,7 @@
 增量重编,须清缓存才可签字)。
 
 ```
-run-date : 2026-09-03 (第三轮:为可钉语义的 run-only 接口补独立 golden)
+run-date : 2026-09-03 (第四轮:tcvt/tmatmul_mx/tgemv 补独立 golden)
 toolchain: env_test/linx-toolchain-build/output/linx_blockisa_llvm_musl
            clang++ md5 b6201631d2fdb77c6ad541c2c769460e  (第二轮为 1ee479a3;工具链已升级)
 gfrun    : env_test/SuperScalarModel/bin/gfrun
@@ -38,20 +38,20 @@ gfrun    : env_test/SuperScalarModel/bin/gfrun
 
 ## 状态总表
 
-**合计 126 case:91 精度PASS / 25 run-only / 2 编译失败 / 8 run-fail(崩)。**
-（第一轮 125=52/47/12/14；第二轮读头修正签名 61/53/7/5；第三轮为可钉语义的 run-only 补独立 golden，
-**精度PASS +30**（我方 golden +29 + 工具链升级带来 mgather_mask +1），run-only −28，编译失败/run-fail
+**合计 126 case:94 精度PASS / 22 run-only / 2 编译失败 / 8 run-fail(崩)。**
+（第一轮 125=52/47/12/14；第二轮读头修正签名 61/53/7/5；第三轮为可钉语义的 run-only 补独立 golden
+91/25/2/8；第四轮 tcvt/tmatmul_mx/tgemv 补 golden **精度PASS +3**、run-only −3。编译失败/run-fail
 口径变化含工具链升级副作用，见上「工具链升级影响」。）
 
 | 域 | 精度PASS | run-only | 编译失败 | run-fail | 合计 |
 |----|---------|----------|----------|----------|------|
-| vec  | 34 | 1  | 0 | 0 | 35 |
+| vec  | 35 | 0  | 0 | 0 | 35 |
 | sfu  | 45 | 5  | 1 | 5 | 56 |
 | tlsu | 4  | 7  | 0 | 2 | 13 |
-| cube | 6  | 2  | 1 | 0 | 9  |
+| cube | 8  | 0  | 1 | 0 | 9  |
 | fixp | 1  | 10 | 0 | 0 | 11 |
 | misc | 1  | 0  | 0 | 1 | 2  |
-| 合计 | **91** | **25** | **2** | **8** | **126** |
+| 合计 | **94** | **22** | **2** | **8** | **126** |
 
 - **精度PASS**:编译 + gfrun 跑通 + host 独立 golden 逐元素比对通过(真「算对」)。
 - **run-only**:编译 + gfrun 跑通,但未写独立 golden(语义/舍入未由文档钉死),仅验「能跑」。
@@ -108,10 +108,24 @@ witness）**。
 忽略**（斜率拟合 slope≈1.0）。故 demo 改用 identity 参数（mult=1/zp=0）精确看护它**确实执行**的核心
 ——RNE 舍入 + S8 饱和（输入跨 ±256 触发双端 clamp）;被忽略的缩放路径单独记录，不在此断言。
 
-**仍 run-only（无法钉精度，诚实上限）**:tcvt（舍入未钉）、tfillpad/tinsert/ttri/copy-expand（退化/部分语义）、
+**仍 run-only（无法钉精度，诚实上限）**:tfillpad/tinsert/ttri/copy-expand（退化/部分语义）、
 tload/tstore/tmov/tprefetch/mgather_cas/range_assemble/region_tilearray（纯搬运/视图无数值语义）、
-tmatmul_mx/tgemv（scale/形状未钉）、**fixp postprocess 族 10 个**（matmul+FP19 scale 描述符量化，独立
-golden 需先解码 FP19 格式 + 匹配硬件量化路径，是独立深水区，待后续）。
+**fixp postprocess 族 10 个**（matmul+FP19 scale 描述符量化，独立 golden 需先解码 FP19 格式 + 匹配硬件
+量化路径，是独立深水区，待后续）。
+
+## 第四轮:tcvt / tmatmul_mx / tgemv 补独立 golden（2026-09-03）
+
+第三轮遗留的「好啃」run-only 三个，均转精度PASS（走 res_check，无回归）：
+
+| 接口 | 域 | golden 语义 | 结果 |
+|---|---|---|---|
+| **tcvt** | vec | fp32→s32 数值转换，舍入=**RNE**（round-half-to-even，实测命中；输入跨双符号+含 .5 中点，`fam='cvt' round='rne'`） | run-only→**精度PASS** |
+| **tmatmul_mx** | cube | FP16 pair 无 scale，数学 == 普通 f16 matmul，复用 `fam='matmul'` D=A@B | run-only→**精度PASS** |
+| **tgemv** | cube | D(1,N)=Vec(1,K)@Mtx(K,N)，即 M=1 的 matmul（in_a=vec, in_b=mtx），复用 `fam='matmul'` | run-only→**精度PASS** |
+
+- **TCVT 舍入钉死为 RNE**:candidate `np.rint`(round-half-to-even) 首击逐元素通过，无需回退到 RTZ/floor。
+- tmatmul_mx/tgemv 无需新 golden 族——GEMV 是 M=1 的 GEMM，MX-f16 是无 scale 的 GEMM，两者数学与 matmul 同，仅复用现成 `check_matmul`。
+- MX 的 scale 侧（FP8/FP4 带 scale operand）语义仍未钉，不在此三者内。
 
 ## 精度校验机制(res_check + host 独立 golden)
 
@@ -130,7 +144,7 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 - 校验代码:`golden/golden.py`(注册表 + 语义)、`common/guard_io.{h,c}`(fill/read/dump,以
   `-mlxbc -O2` 无 matrix flags 编译)、`common/guard_case.hpp`(case 宏)。
 
-### 已带独立 golden 的接口(61 精度PASS)
+### 已带独立 golden 的接口(第一~二轮 61 + 第四轮 3 = 64;第三轮 +30 见上「第三轮」节表，合计 94)
 
 | 域 | 接口 | golden 语义 | 容差 |
 |----|------|-------------|------|
@@ -140,23 +154,24 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 | SFU reduce | trow{sum,max,min,prod}、tcol{sum,max,min,prod} | 沿轴 sum/max/min/prod;row 比 out[r*N+0]、col 比 out[c] | 1e-3 |
 | **SFU argmax** | trow/tcol{argmax,argmin}（**新增**） | 沿轴 arg 索引，UINT32 输出;row 比 out[r*N+0]、col 比 out[0*N+c];源用双重排列避并列 | eps=0 |
 | SFU create-index | tci、tci_desc、tci_s16、tci_u32、tci_u16 | iota:asc=start+k / desc=start−k(按元素位宽 wrap),ValidRow=1 | 整数 eps=0 |
-| CUBE matmul | tmatmul、_acc、_bias、_f16、_relu、_rowmax | A@B(f16→f32 累加);+C / +bias(1×N) / relu / f16 输出 | f16 rel 2e-2~3e-2 |
+| CUBE matmul | tmatmul、_acc、_bias、_f16、_relu、_rowmax、**tmatmul_mx、tgemv（第四轮）** | A@B(f16→f32 累加);+C / +bias(1×N) / relu / f16 输出;MX-f16 无 scale == matmul、tgemv=M=1 GEMM | f16 rel 2e-2~3e-2 |
+| **VEC cvt** | tcvt（**第四轮**） | fp32→s32 数值转换，舍入=RNE(round-half-to-even) | 整数 eps=0 |
 | TLSU gather/scatter | mgather、mscatter | GM base + U32 字节位移;gather=base[off//4]、scatter=base[off//4]←src(单射无碰撞) | eps=0 |
 | FIXP | convert | A@B 后 cast f16 | 3e-2 |
 | **misc** | reinterpret_tile（**新增**） | fp32→int32 视图 + TANDS 清符号位 + TMULS 重置标签 → \|x\| | eps=0 |
 
 实测 tmatmul `max|out−A@B|=0.0`(f16 matmul 与 numpy 逐字节一致)。
 
-### 未写 golden 的接口(run-only,原因)
+### 未写 golden 的接口(run-only,原因) — 截至第四轮的真实剩余
 
-- **舍入模式未由文档钉死**:tcvt(f32→i32,trunc vs RNE)。
-- **语义需读 ISA 才能独立实现**:expand-arith(t{row,col}expand{add,sub,mul,div,max,min}/expdif)、
-  tpart*、tconcat/ttrans/tfillpad、tsort。
-- **量化需 RNE+饱和 spec golden**:tquant/tdequant、fixp s8/vector quant/lrelu/prelu/rowmax_acc/
-  group_max/cscale/chain。
-- **超越函数需容差建模**:texp/tlog/trecip/tsqrt/trsqrt。
-- **CUBE 变体形状/scale 语义未钉**:tmatmul_mx、tgemv。
-- **通路/搬运类**:tload/tstore/tmov/tprefetch/mgather_cas(无独立数值语义可校)。
+（超越/expand-arith/tpart/layout-sort/tquant-dequant/tcvt/tmatmul_mx/tgemv 均已在第三、四轮补齐，
+从本表移除。）
+
+- **fixp postprocess 族 10 个**:s8/vector quant、lrelu/prelu、rowmax_acc、group_max、cscale、chain。
+  matmul + FP19 scale 描述符量化，独立 golden 需先解码 FP19 格式 + 匹配硬件量化路径，是独立深水区，待后续。
+- **退化/部分语义无法设 golden**:tfillpad/tinsert/ttri/copy-expand(t{row,col}expand 退化)。
+- **通路/搬运类**:tload/tstore/tmov/tprefetch/mgather_cas/range_assemble/region_tilearray
+  (无独立数值语义可校)。
 
 ---
 
@@ -174,14 +189,15 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 | TREMS/TANDS/TORS/TXORS/TSHLS/TSHRS | ✅ | ✅ | ✅ | [签名] 同上;整数 |
 | TMAXS/TMINS | ✅ | ✅ | ✅ | [签名] 同上 |
 | TEXPANDS | ✅ | ✅ | ✅ | **[签名]** 真实 `(dst,scalar)` 仅 2 参,标量填充整个 tile(详述 2) |
-| TCVT | ✅ | ✅ | — | [签名] `(dst,src)` 异 dtype;舍入(trunc/RNE)文档未钉,未写 golden |
+| TCVT | ✅ | ✅ | ✅ | 第四轮:fp32→s32 舍入实测=**RNE**(round-half-to-even),补 golden 精度PASS |
 | TSEL | ✅ | ❌ | — | **[签名][语义][dtype]** gfrun 要 mask+true+false 三源元组(详述 1) |
 | TSELS | ✅ | ❌ | — | **[签名][语义]** gfrun 要 mask+source 三源(`TSELS requires mask and source Tile`)(详述 1) |
 | TCMP | ✅ | ❌ | — | **[语义]** cmp.md 签名完整;gfrun 结果为 packed predicate,与 TSTORE 源契约不符(详述 4) |
 | TCMPS | ✅ | ❌ | — | 同上 |
 
-VEC 小结:35 case,**34 精度PASS / 1 run-only(tcvt)/ 0 run-fail**（第二轮：比较/选择族
-tsel/tsels/tcmp/tcmps 由 run-fail 转精度PASS，见「第二轮修正」表；上表这四行的旧「❌」状态已过时）。
+VEC 小结:35 case,**35 精度PASS / 0 run-only / 0 run-fail**（第四轮 tcvt 补 golden 转精度PASS，
+舍入=RNE；第二轮：比较/选择族 tsel/tsels/tcmp/tcmps 由 run-fail 转精度PASS，见「第二轮修正」表；
+上表这四行的旧「❌」状态已过时）。VEC 域已全部精度看护。
 除 cmp.md 外,VEC 全族文档不给 C++ 签名(engines.md 只有「名字 + 汇编 + 分类」三列,详述 3)。
 
 ## SFU 族(reduce / expand / transcendental / layout / irregular)
@@ -255,12 +271,13 @@ TLSU 小结:13 case,**4 精度PASS / 7 run-only / 0 编译失败 / 2 run-fail**�
 | TMATMUL(f16) | ✅ | ✅ | ✅ | `fixp::f16()` |
 | TMATMUL(relu) | ✅ | ✅ | ✅ | `fixp::f16().relu()` 链式 |
 | TMATMUL(row_max) | ✅ | ✅ | ✅ | `fixp::keep_acc().row_max(out)` |
-| TMATMUL_MX | ✅ | ✅ | — | 无 scale 便捷式;跑通,MX scale 语义未钉,未写 golden(详述 13) |
-| TGEMV | ✅ | ✅ | — | 跑通;matrix-vector 输出形状/语义未钉,未写 golden(详述 13) |
+| TMATMUL_MX | ✅ | ✅ | ✅ | 第四轮:FP16 pair 无 scale == 普通 f16 matmul,复用 matmul golden 精度PASS(带 scale 变体未钉) |
+| TGEMV | ✅ | ✅ | ✅ | 第四轮:M=1 的 GEMM,复用 matmul golden 精度PASS(_BIAS/_ACC/_MX 变体未钉) |
 | TMATMUL(bf16) | ❌ | - | — | **[示例]** 照 `fixp::bf16()` 写→clang frontend abort(exit 134)(详述 13) |
 
-CUBE 小结:9 case,**6 精度PASS / 2 run-only(tmatmul_mx/tgemv)/ 1 编译失败(bf16)/ 0 run-fail**。
-核心 matmul 通路 + B.FPATR options 链式文档足够;bf16 options 触发编译器崩溃。
+CUBE 小结:9 case,**8 精度PASS / 0 run-only / 1 编译失败(bf16)/ 0 run-fail**（第四轮 tmatmul_mx/tgemv
+补 golden 转精度PASS，复用 matmul 族，见「第四轮」节）。核心 matmul 通路 + B.FPATR options 链式文档
+足够;唯 bf16 options 触发编译器 clang frontend abort(exit 134)。
 
 ## FIXP 族(matrix postprocess options,matrix-postprocess.md)
 
@@ -301,8 +318,8 @@ matrix-postprocess.md 列出的部分 CUBE 操作族尚未写 demo,集中登记�
 
 | 未覆盖项 | 域 | 文档位置 | 原因 |
 |----------|----|----------|------|
-| TMATMUL_MX 带 scale 全组(单/双 scale + `_BIAS`/`_ACC`) | cube | matrix-postprocess.md L44-49 | 基础形 `tmatmul_mx`(无 scale)已 run-only;带 scale 变体需先钉 scale 载入/语义 |
-| TGEMV 全族(`_BIAS`/`_ACC`/`_MX`/`_MX_BIAS`/`_MX_ACC`) | cube | matrix-postprocess.md L50-58 | 基础形 `tgemv` 已 run-only;变体成批复现同一语义待钉项 |
+| TMATMUL_MX 带 scale 全组(单/双 scale + `_BIAS`/`_ACC`) | cube | matrix-postprocess.md L44-49 | 基础形 `tmatmul_mx`(无 scale)第四轮已精度PASS;带 scale 变体需先钉 scale 载入/语义 |
+| TGEMV 全族(`_BIAS`/`_ACC`/`_MX`/`_MX_BIAS`/`_MX_ACC`) | cube | matrix-postprocess.md L50-58 | 基础形 `tgemv` 第四轮已精度PASS;变体成批复现同一语义待钉项 |
 | Shared Right(`SharedTile<RightTile>` 作 B) | cube | matrix-postprocess.md L377-398 | 依赖 Shared tile 构造,docs/tileop-usage 全目录无 Shared tile 构造示例(详述 12),无法写出可编译 demo |
 
 ---
@@ -399,8 +416,8 @@ tlsu.md 提到 Shared TMOV 四变体(TMOV_L2S_INSERT/PUBLISH、TMOV_S2L_BROADCAS
   global_tensor)` 二参惯例命中。
 - **[示例] tmatmul_bf16**:照 `TMATMUL(dst_bf16,a,b,fixp::bf16())` 写,`__bf16` 累加器,clang frontend
   abort(exit 134)——编译器崩溃。
-- **tmatmul_mx / tgemv**:无 scale 便捷式 / 基础 gemv 均编译 + gfrun 跑通(run-only);MX scale 语义与
-  matrix-vector 输出形状文档未钉,未写 golden。
+- **tmatmul_mx / tgemv**:无 scale 便捷式 / 基础 gemv 均编译 + gfrun 跑通。第四轮已补 golden 转精度PASS
+  (MX-f16 无 scale == 普通 matmul、GEMV == M=1 GEMM，复用 matmul 族)；仅 MX 带 scale 变体的 scale 语义待钉。
 
 ### 14. [实现] reinterpret_tile — 返回视图不被下游 tileop 接受
 
