@@ -27,14 +27,21 @@
 #include <type_traits>
 
 #include "benchmark.h"
+#ifdef CROSS_MODEL_CORPUS
+#include "../../common/cross_model_result.hpp"
+#endif
 
 #ifdef RES_CHECK
 static volatile int g_numeric_failure = 0;
+#endif
+#if defined(RES_CHECK) || defined(CROSS_MODEL_CORPUS)
 __attribute__((noinline)) void fill_bytes(void *p, size_t n, uint8_t value) {
   volatile uint8_t source = value;
   auto *bytes = reinterpret_cast<uint8_t *>(p);
   for (size_t i = 0; i < n; ++i) bytes[i] = source;
 }
+#endif
+#ifdef RES_CHECK
 template <typename T>
 __attribute__((noinline)) void check_zero_result(const T *p, int n) {
   const auto *bytes = reinterpret_cast<const uint8_t *>(p);
@@ -188,6 +195,9 @@ __attribute__((noinline)) void run_single(SrcT *a_ptr, SrcT *b_ptr,
   TSTORE_CUBE(gC, tD);
   BENCHEND;
   check_zero_result(d_ptr, kM * kN);
+#ifdef CROSS_MODEL_CORPUS
+  publish_cross_model_result(d_ptr, kM * kN);
+#endif
 }
 
 // TMATMUL-family driver: Cube-loads A/B, declares Cube D, then invokes
@@ -218,6 +228,9 @@ __attribute__((noinline)) void run_matmul(SrcT *a_ptr, SrcT *b_ptr,
   TSTORE_CUBE(gD, tD);
   BENCHEND;
   check_zero_result(d_ptr, kM * kN);
+#ifdef CROSS_MODEL_CORPUS
+  publish_cross_model_result(d_ptr, kM * kN);
+#endif
 }
 
 // Mixed A/B dtypes are legal when both belong to the same numeric class.
@@ -242,6 +255,9 @@ __attribute__((noinline)) void run_matmul_mixed(AT *a_ptr, BT *b_ptr,
   TSTORE_CUBE(gD, tD);
   BENCHEND;
   check_zero_result(d_ptr, kM * kN);
+#ifdef CROSS_MODEL_CORPUS
+  publish_cross_model_result(d_ptr, kM * kN);
+#endif
 }
 
 // A Shared matrix operand selects the four-PE cooperative contract.  Publish
@@ -273,6 +289,9 @@ __attribute__((noinline)) void run_matmul_shared(__half *a_ptr, __half *b_ptr,
   TSTORE_CUBE(gD, tD);
   BENCHEND;
   check_zero_result(d_ptr, kM * kN);
+#ifdef CROSS_MODEL_CORPUS
+  publish_cross_model_result(d_ptr, kM * kN);
+#endif
 }
 
 // [TEMP] Shared TLOAD A/B + TMATMUL with NO destination TSTORE.  The matmul
@@ -323,6 +342,9 @@ __attribute__((noinline)) void run_matmul_shared_transpose(
   TSTORE_CUBE(gD, tD);
   BENCHEND;
   check_zero_result(d_ptr, TM * kN);
+#ifdef CROSS_MODEL_CORPUS
+  publish_cross_model_result(d_ptr, TM * kN);
+#endif
 }
 
 // TGEMV-family driver (M=1): vec=CUBE_M16(1xK valid), mtx=CUBE_N8(KxN),
@@ -353,6 +375,9 @@ __attribute__((noinline)) void run_gemv(SrcT *vec_ptr, SrcT *mtx_ptr,
   TSTORE_CUBE(gD, tD);
   BENCHEND;
   check_zero_result(d_ptr, kN);
+#ifdef CROSS_MODEL_CORPUS
+  publish_cross_model_result(d_ptr, kN);
+#endif
 }
 
 template <typename VecT, typename MtxT, typename DstT, typename Kernel>
@@ -375,6 +400,9 @@ __attribute__((noinline)) void run_gemv_mixed(VecT *vec_ptr, MtxT *mtx_ptr,
   TSTORE_CUBE(gD, tD);
   BENCHEND;
   check_zero_result(d_ptr, kN);
+#ifdef CROSS_MODEL_CORPUS
+  publish_cross_model_result(d_ptr, kN);
+#endif
 }
 
 template <typename SrcT, typename DstT>
@@ -397,14 +425,15 @@ struct buf_t {
     b = (SrcT *)(((uint64_t)&b_raw[0] & kAlignMask) + kAlign);
     d = (DstT *)(((uint64_t)&d_raw[0] & kAlignMask) + kAlign);
     aux = (uint8_t *)(((uint64_t)&aux_raw[0] & kAlignMask) + kAlign);
-#ifdef RES_CHECK
+#if defined(RES_CHECK) || defined(CROSS_MODEL_CORPUS)
     fill_bytes(a, 4 * TM * TK * sizeof(SrcT), 0);
     fill_bytes(b, TK * TN * sizeof(SrcT), 0);
     // A non-zero destination catches a missing or partial store. Zero A/B and
     // zero auxiliary operands make zero the common oracle for every mode.
     fill_bytes(d, TM * TN * sizeof(DstT), 1);
     fill_bytes(aux, kAuxBytes, 0);
-#else
+#endif
+#ifndef RES_CHECK
     auto *descriptors = reinterpret_cast<uint64_t *>(aux);
     for (size_t i = 0; i < kAuxBytes / sizeof(uint64_t); ++i)
       descriptors[i] = mk_desc(1, 0, 9);
@@ -434,12 +463,13 @@ struct mixed_buf_t {
                                   kAlignMask) + kAlign);
     aux = reinterpret_cast<uint8_t *>((reinterpret_cast<uint64_t>(&aux_raw[0]) &
                                        kAlignMask) + kAlign);
-#ifdef RES_CHECK
+#if defined(RES_CHECK) || defined(CROSS_MODEL_CORPUS)
     fill_bytes(a, 4 * TM * TK * sizeof(AT), 0);
     fill_bytes(b, TK * TN * sizeof(BT), 0);
     fill_bytes(d, TM * TN * sizeof(DstT), 1);
     fill_bytes(aux, kAuxBytes, 0);
-#else
+#endif
+#ifndef RES_CHECK
     auto *descriptors = reinterpret_cast<uint64_t *>(aux);
     for (size_t i = 0; i < kAuxBytes / sizeof(uint64_t); ++i)
       descriptors[i] = mk_desc(1, 0, 9);

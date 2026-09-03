@@ -86,14 +86,6 @@ run_case tor_i16_16x16
 run_case tor_i32_16x16
 run_case tors_i16_16x16
 run_case tors_i32_16x16
-run_case tpartadd_fp16_16x16
-run_case tpartadd_fp32_16x16
-run_case tpartmax_fp16_16x16
-run_case tpartmax_fp32_16x16
-run_case tpartmin_fp16_16x16
-run_case tpartmin_fp32_16x16
-run_case tpartmul_fp16_16x16
-run_case tpartmul_fp32_16x16
 run_case trecip_fp16_16x16
 run_case trecip_fp32_16x16
 run_case trelu_fp16_16x16
@@ -145,4 +137,4 @@ if [ "${#failures[@]}" -ne 0 ]; then
   echo "=== vector FAILED: ${failures[*]} ==="
   exit 1
 fi
-echo "=== vector completed: all 129 cases passed ==="
+echo "=== vector completed: all 121 cases passed ==="

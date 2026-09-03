@@ -1,4 +1,7 @@
 #include "scalar_bench.hpp"
+#ifdef CROSS_MODEL_CORPUS
+#include "../common/cross_model_result.hpp"
+#endif
 // auto-generated: f2i (cv) f64->i32 throughput
 int main() {
     double b[16];
@@ -8,6 +11,9 @@ int main() {
     int32_t r = bench_cv<double, int32_t>(b);
     BENCHEND;
     sink = r;
+#ifdef CROSS_MODEL_CORPUS
+    publish_cross_model_scalar(r);
+#endif
 #ifdef RES_CHECK
     int32_t ref = (int32_t)0;
     for (int lane = 0; lane < 8; ++lane)

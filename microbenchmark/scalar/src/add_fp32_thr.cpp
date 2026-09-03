@@ -1,4 +1,7 @@
 #include "scalar_bench.hpp"
+#ifdef CROSS_MODEL_CORPUS
+#include "../common/cross_model_result.hpp"
+#endif
 // auto-generated: add (bin) fp32 thr
 int main() {
     float a[16], b[16];
@@ -9,6 +12,9 @@ int main() {
     float r = bench_throughput<float>(a, b, scalar_op);
     BENCHEND;
     sink = r;
+#ifdef CROSS_MODEL_CORPUS
+    publish_cross_model_scalar(r);
+#endif
 #ifdef RES_CHECK
     float ref = reference_throughput<float>(a, b, scalar_op);
     return verify_scalar(r, ref) ? 0 : 1;
