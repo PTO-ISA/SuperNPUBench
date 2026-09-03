@@ -1,4 +1,7 @@
 #include "scalar_bench.hpp"
+#ifdef CROSS_MODEL_CORPUS
+#include "../common/cross_model_result.hpp"
+#endif
 // auto-generated: sra (bin) i64 thr
 int main() {
     int64_t a[16], b[16];
@@ -9,6 +12,9 @@ int main() {
     int64_t r = bench_throughput<int64_t>(a, b, scalar_op);
     BENCHEND;
     sink = r;
+#ifdef CROSS_MODEL_CORPUS
+    publish_cross_model_scalar(r);
+#endif
 #ifdef RES_CHECK
     int64_t ref = reference_throughput<int64_t>(a, b, scalar_op);
     return verify_scalar(r, ref) ? 0 : 1;

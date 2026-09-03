@@ -7,9 +7,18 @@ MICROBENCH_ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/microbenchmark/.*@\1/
 CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/microbenchmark/([^/]+).*@\1@')
 CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')
 res_check ?= off
+corpus ?= off
+ifeq ($(res_check),on)
+ifeq ($(corpus),on)
+$(error res_check=on and corpus=on are mutually exclusive)
+endif
+endif
 ifeq ($(res_check),on)
 OBJ_ROOT := $(shell realpath $(ROOT)/output/res_check 2>/dev/null || echo $(ROOT)/output/res_check)
 DEFINES += -DRES_CHECK
+else ifeq ($(corpus),on)
+OBJ_ROOT := $(shell realpath $(ROOT)/output/asl_corpus 2>/dev/null || echo $(ROOT)/output/asl_corpus)
+DEFINES += -DCROSS_MODEL_CORPUS
 else
 OBJ_ROOT := $(shell realpath $(ROOT)/output 2>/dev/null || echo $(ROOT)/output)
 endif

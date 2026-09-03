@@ -6,9 +6,11 @@ the PTO v0.58 TileOP surface (`TLOAD/TSTORE`, `TLOAD_CUBE/TSTORE_CUBE`,
 family uses plain C + volatile to drive the GPR micro-ISA; the `fixp`
 family exercises the `B.FPATR` quantization/PostProcess options
 (scalar/vector quant, ReLU/PReLU, row/group-max, shared-right) on
-`TMATMUL`/`TGEMV`. The four generated families currently emit 278 unique active
-cases; the hand-maintained `fixp` family adds 94 active modes (372 configurations).
-`coverage.json` records active and unsupported cases.
+`TMATMUL`/`TGEMV`. The four generated families emit 270 ASL-corpus cases; the
+deterministic `fixp` subset adds 63, for 333 active cases. `coverage.json` also
+records 29 explicitly unsupported cases, so the complete classified inventory
+contains 362 entries. Additional benchmark-only FIXP modes remain buildable but
+do not count as formal execution coverage without independent goldens.
 
 ## Directory Structure
 
@@ -31,7 +33,7 @@ microbenchmark/
 ├── scalar/                  # GPR scalar family (BSTART.STD / FP)
 │   ├── scalar_bench.hpp     # bench_latency / bench_throughput / bench_store / bench_cv
 │   ├── Makefile / compile.all / src/*.cpp
-└── fixp/                    # hand-maintained FPATR/quant TMATMUL (one src, 94 active modes)
+└── fixp/                    # hand-maintained FPATR/quant TMATMUL (63 corpus modes)
     ├── src/fixp_tmatmul.cpp
     ├── Makefile / compile.all / report_fixp.py / fixp_report.md
 ```
@@ -41,11 +43,14 @@ microbenchmark/
 | family | covers | cases |
 | --- | --- | ---: |
 | matrix (CUBE direct) | TMATMUL / TMATMUL_ACC / TMATMUL_BIAS | 11 |
-| vector (TEPL) | elementwise / tile-scalar / expand / TCI sequence | 129 |
+| vector (TEPL) | elementwise / tile-scalar / expand / TCI sequence | 121 |
 | memory (TLSU) | TLOAD / TSTORE / MGATHER / MSCATTER | 14 |
 | scalar (GPR) | int ALU / load-store / float / conversion × throughput+latency | 124 |
-| fixp (FPATR/quant) | TMATMUL/TGEMV × `fixp::Options` (scalar/vector quant, relu/prelu, row/group-max, shared-right) | 94 |
-| **total** | | **372** |
+| fixp (FPATR/quant) | deterministic TMATMUL/TGEMV × `fixp::Options` subset | 63 |
+| **active total** | | **333** |
+
+The 29 unsupported entries are explicit and excluded from active execution;
+active plus unsupported equals the 362-entry classified inventory.
 
 - tile dtypes: `bf16 / fp16 / fp32 / i8 / i16 / i32`; scalar dtypes: `i32 / i64 / fp32 / f64`.
 - tile sizes: vector/memory 16×16 (some 32×32); CUBE uses M16/M32 and N8 CELL layouts.
@@ -72,6 +77,27 @@ cd fixp   && bash compile.all
 ```
 
 Artifacts: `output/microbenchmark/<family>/elf/<family>/<case>.elf`.
+
+## ASL corpus artifacts
+
+Build corpus ELFs with `corpus=on`; this enables the result carrier after the
+timed region and writes into `output/asl_corpus`. Normal benchmark and
+`res_check=on` builds retain their existing inputs and behavior.
+
+The family producers under `scripts/generate_asl_*_corpus.py` require clean,
+committed SuperNPUBench, LLVM toolchain, TileOp, PTO, and ASL-model checkouts.
+They verify each checkout's exact commit/tree and the caller-supplied SHA-256
+for clang, LLD, llvm-readelf, and the host C++ golden compiler before writing
+output. Each producer emits one ELF sidecar and one independently derived
+golden per active case. `scripts/merge_asl_corpus_indexes.py` independently
+revalidates all 333 active IDs and every ELF ABI before writing the manifest.
+
+Each manifest case commits to the source, ELF, sidecar, and independent golden
+SHA-256 hashes. The manifest also locks producer, toolchain, TileOp, PTO, and
+ASL-model commit/tree identities, tool hashes, and execution classification. Missing files, duplicate
+IDs, malformed or mismatched hashes, mixed identities, unexpected cases, and
+incomplete family counts fail closed. ELF, object, log, sidecar, golden, index,
+and manifest outputs remain generated artifacts and must not be committed.
 
 ## Numerical validation
 
@@ -111,26 +137,16 @@ python3 run_all.py --res-check --category memory
 
 The CUBE, vector, memory, and scalar families compare tile/element output
 against an untimed scalar reference computed in the same kernel (`verify()` in
-`common/bench_utils.hpp`). Fixp uses a zero-input invariant: inputs and
-auxiliary operands are zero, the destination begins with a nonzero sentinel,
-and every output byte must become zero.
+`common/bench_utils.hpp`). Fixp uses zero matrix inputs and deterministic
+auxiliary descriptor storage; the destination begins with a nonzero sentinel,
+and the producer derives each mode's independent golden from that contract.
 
-### Regression results
+### Regression evidence
 
-Last full run: 2026-09-01. Toolchain: clang 15.0.4 (`0f878a871`,
-linx64v5-musl-local), gfrun `762a72c3` (Tag_0817-459). Repo HEAD: `58d436c`.
-
-| family | total | PASS | NUMERIC_FAIL | RUN_FAIL | COMPILE_FAIL |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| cube | 11 | 9 | 2 | 0 | 0 |
-| vector | 129 | 93 | 27 | 7 | 2 |
-| memory | 14 | 14 | 0 | 0 | 0 |
-| scalar | 124 | 91 | 19 | 14 | 0 |
-| fixp | 94 | 92 | 2 | 0 | 0 |
-| **total** | **372** | **299** | **50** | **21** | **2** |
-
-**Pass rate: 80.4 % (299/372).** Memory (14/14) and fixp (92/94) are
-near-clean; failures concentrate in vector and scalar.
+Historical runs from older repository and toolchain identities are not current
+corpus evidence. A result is publishable only when the 333 active cases are
+produced and executed from the exact commits recorded in the artifact manifest;
+partial, skipped, or different-commit runs do not count as a pass.
 
 ### Issue analysis
 
@@ -141,7 +157,7 @@ Machine `0x105` (261); the compiler later switched `EM_LinxV5` to `0xE9` (233)
 in commit `0f878a871`. This mismatch caused **all** links to fail with
 `is incompatible with elf64llinxv5`. Rebuilding musl and libc++ from the
 toolchain `Makefile` (`make build-musl build-libcxx build-libcxxabi build-libunwind`)
-after cleaning stale build objects resolved the issue: all 372 cases now link
+after cleaning stale build objects resolved the issue for that historical set
 with the default toolchain sysroot — no `-nostdlib` bypass or custom `memops.o`
 is needed. Math functions (`exp`, `sqrt`, `log`, `fmodf` …) resolve from
 `libc.a` (musl does not populate `libm.a` separately).
