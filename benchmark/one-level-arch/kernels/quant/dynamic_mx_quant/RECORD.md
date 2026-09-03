@@ -538,51 +538,50 @@ kernel 的 `static_assert` 尺寸/BlockSize 边界一律**按编译器补齐寄�
 
 ---
 
-## 问题5：linx `-D__linx` 头未暴露 TINTERLEAVE/TDEINTERLEAVE（需 linx 侧解决）
+## 问题5：非尾轴 scale「parity 交织」缺口——【已解除 2026-09-03：pto-spec 规范定义无需交织，问题不存在】
 
-### 结论
+### 结论（定性反转）
 
-`-D__linx` 构建下**没有 zip/unzip 交织 intrinsic**——`TINTERLEAVE`/`TDEINTERLEAVE` 无法直接发射。
-但这**不是「ISA 没有该指令」，而是「ISA 有、linx 头未暴露其 lowering」**——与问题3（4-参 TCMP）、
-问题4（寄存器 reinterpret）**同一类头文件封装缺口**，非硬件能力问题：
+**PTO-ISA 规范不要求 parity 交织；非尾轴 scale 的正解就是 kernel 现有的 compact planar。**
+原「必须交织、卡在缺 `TINTERLEAVE` intrinsic」的框定，是把 golden 对齐到了**错误的目标**
+（AscendC/ttk 的 `DataCopy<DIST_INTLV_B8>` 打包约定，属 Ascend 硬件而非 PTO-ISA）。规范落地后
+本缺口自然消解，**无需交织、无需等 intrinsic**。
 
-- **ISA 层有定义**：`docs/scripts/data/linxisa-0.57-intrinsics.txt:101-102` 列出
-  `TDEINTERLEAVE`/`TINTERLEAVE`；文档页 `docs/content/intrinsics/{tinterleave,tdeinterleave}.md`
-  给出 4-参签名，语义即 parity zip：`result[2i]=even[i]`、`result[2i+1]=odd[i]`，结果按中点拆到
-  两个 dst tile：
+**规范依据 = pto-spec `d0ce06ad`（ADR-0101「Matrix Scale Cell Layouts, HiF4 Scale Words, and
+CScale」，target 0.58.4）**：matmul 消费 MX scale 分两类载体，两者**都不做 even/odd parity zip**：
 
-  ```cpp
-  template <typename DstTile, typename SrcTile>
-  PTO_INST void TINTERLEAVE(DstTile &dst0, DstTile &dst1, SrcTile &even, SrcTile &odd);
-  ```
+- **Shared scale（普通 Tile，常规 HBM→tile 路径）**：A-scale 纯 planar `[group_M, G]`、
+  B-scale 纯 planar `[G, N]`。取元素走非 CUBE 分支
+  `MatrixRightScaleElement → TileStorageIndex(scale, group, column)` = 行主序 `[G,N]`
+  （`asl/tile/model/execution/matrix-scale.asl`）；`TileStorageIndex` 对非 cube 布局 =
+  `TileLinearIndex` = 纯 planar。转置靠 primary+scale 一起重绑定，非字节交织。
+- **Local scale（CUBE_M32 CellReg 网格）**：`[M,G]`/`[N,G]`，128B CellReg 网格「K-fast /
+  32-row-slow」（`PTO-CUBE-MATRIX-SCALE-CELL-001`）——CUBE 专属分块，仍非 parity zip，且通常由
+  CUBE 的 scale-load 从 planar tile 加载时完成，量化算子只需存 planar。
 
-- **但 `-D__linx` 头里没有**：`-D__linx` 分发链（`common/tileop_api_impl.hpp:4-5`）只包含
-  `jcore/template_asm.hpp`。对整个 `tileop-api` 目录做大小写不敏感搜索
-  `interleave|intlv|deintlv` → **零匹配**。`template_asm.hpp` 的 TEPL 操作码本身有空档
-  （29/30/31、48-55 缺失），无对应发射模板。
-- **规范自身的限制标注**：0.57 workbook 把该 op 标为 **A5-only**，且**无独立 PTO-AS 汇编页**，
-  注明「由选定 backend 提供 block-template lowering」——而 linx block backend 未提供。
+### 实证核实（2026-09-03）
 
-**解除路径（linx 工具链侧）**：在 `-D__linx` 下暴露 `TINTERLEAVE`/`TDEINTERLEAVE`（在
-`template_asm.hpp` 补 4-参发射模板，或让 `tileop_api_impl.hpp` 的 `#ifdef __linx` 分支也包含
-定义它的头）。补齐后即可实现非尾轴 scale 的 parity 交织。
+1. **真实消费方 `matmul_shared_lowp.hpp` 逐行坐实 Shared + planar**：
+   `gmAScale = global_tensor<e8m0, RowMajor<gM, gK/32>>`（`[M,G]`）、
+   `gmBScale = global_tensor<e8m0, RowMajor<gK/32, gN>>`（`[G,N]`），
+   `SharedMatrixLeft/Right` 绑定 + 普通 `global_iterator` planar 加载，**全链零交织** ——
+   与 ADR-0101 Shared 契约、与 kernel 现有 compact-planar 三方一致。
+2. **golden 已修正 + 端到端复验**：`gen_dynamic_mx_quant_data.py:compact_scale_bytes` 非尾轴分支
+   由 parity 交织改为纯 planar `[scaleRows, cols]`（尾轴本就 planar，无改动）。
+   `nontail_cublas_fp8_4pe`（Axis=512/Post=256/BS=32，numKb=16 → 交织本会大幅重排 16 块行）
+   4-PE gfrun：**output=pass（MaxAE=0.0117）、scale=pass（MaxAE=0，逐字节精确）**。
+   kernel 未改一行 → 证明 compact-planar 一直就是 PTO-ISA 正解。
 
-### 影响场景
+### 历史遗留 intrinsic 缺口（现无功能影响，仅存档）
 
-非尾轴 scale 的 AscendC-faithful 落盘布局是 `[ceil(Axis/32/2), Post, 2]` 的 **parity 交织**
-（even/odd 块行按列 zip，parity 在最内层），对应 AscendC `DataCopy<DIST_INTLV_B8>` /
-`Reg::Interleave`（standalone `dynamic_mx_quant_post.h` / swiglu `axis_not_last.h`）。缺交织
-intrinsic 即无法在寄存器内做这个 zip。**尾轴无需交织**（块行在行内已连续，compact 平铺即等价，见
-host tiling :415-416 / swiglu `axis_last.h:585-592`），故本缺口只影响非尾轴。
+`-D__linx` 头确未暴露 `TINTERLEAVE`/`TDEINTERLEAVE`（ISA 0.57 有定义，`template_asm.hpp` TEPL 操作码
+29/30/31、48-55 空档无发射模板；0.57 workbook 标 A5-only 无独立汇编页）。但**该 intrinsic 对本量化
+算子已无需求**——scale 无需交织。若未来别处（非 MX scale）确需 zip，再按「补 4-参发射模板」路径解除。
 
-### 规避方案
+### 历史验证：compact-planar 的数值与列序早已实测坐实（2026-08-20，现回看即正解证据）
 
-当前非尾轴 scale 输出退化为 **compact 平铺**（每块 1 字节，归约轴 ÷BlockSize + 偶数对齐，见
-`nontail_cublas_fp8` / `nontail_ocp_fp4`）：每块 E8M0 语义逐 op 对齐 AscendC，但**块行的 parity
-交织尚未施加**，故非尾轴 scale 布局尚非 AscendC-faithful。补齐 4-参交织重载后，在 compact 平铺
-之上追加一次 `TINTERLEAVE`（even/odd 块行 → 交织落盘）即可对齐。
-
-### 验证：compact-planar 的数值与列序已实测坐实，与 golden 差异纯 = 交织（2026-08-20）
+> 注：以下为定性反转前的记录。当时把 planar 与 golden 的差异归为「待补的 parity 交织」；
+> ADR-0101 落地后回看，**planar 本身即 PTO-ISA 正解**，这段实验正是「kernel 输出一直正确」的旁证。
 
 问题17 记录 `nontail_cublas_fp8_bigbs` gfrun 端到端跑通后，结论「scale 与 golden 仅差 parity 交织
 布局、数值/列序均正确」不能只靠**值集相同**判据——随机输入下非尾轴 scale **近常量**（每列是

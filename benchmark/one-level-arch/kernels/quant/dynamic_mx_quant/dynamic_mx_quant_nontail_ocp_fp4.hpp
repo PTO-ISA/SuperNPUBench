@@ -17,12 +17,13 @@ namespace supernpu::tile_isa::mxquant {
 // axis (Post) is orthogonal to the reduce axis (rows), so this widening does not
 // touch the per-column TCOLMAX reduce. Default TileN=64 = 2 blocks.
 //
-// scale: E8M0 1 byte/block, compact planar [scaleRows, Post] with
+// scale: E8M0 1 byte/block, planar [scaleRows, Post] with
 // scaleRows = evenAlign(numKb) (reduce-axis collapsed by BlockSize + even-aligned)
-// — same as dynamic_mx_quant_nontail_cublas_fp8. NOTE: this is NOT the final
-// AscendC interleaved layout [ceil(numKb/2), Post, 2]; the parity zip is a
-// documented gap (PTO Tile-ISA has no interleave/zip intrinsic, only TCONCAT +
-// reduce-internal butterfly shuffle). See DESIGN §5.3 / README.
+// — same as dynamic_mx_quant_nontail_cublas_fp8. This IS the PTO-ISA Shared
+// B-scale [G,N] contract (ADR-0101 / pto-spec d0ce06ad; matmul_shared_lowp.hpp
+// consumes plain RowMajor). NO parity interleave — AscendC's [ceil(numKb/2),
+// Post, 2] zip is an Ascend packing convention, not the PTO-ISA scale contract
+// (RECORD 问题5 dissolved 2026-09-03). See DESIGN §5.3 / README.
 // Supported BlockSize range (plain single-load path): BlockSize ∈ {32, 64}.
 // The whole [BlockSize, TileN] block is loaded in ONE tile, so the contiguous
 // axis TileN carries BOTH the fp4 32B alignment LOWER bound (TileN % 64 == 0,
@@ -168,12 +169,10 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
 
             // scale_e8m0 boxed valid row=1: E8M0 byte produced directly by
             // Cast<bf16->e8m0>, store 1 byte/block (no narrowing TCVT).
-            // MISSING INTERLEAVE: stored as COMPACT planar [scaleRows, Post]
-            // (block-rows in order). AscendC's mxScale is PARITY-INTERLEAVED
-            // [ceil(numKb/2), Post, 2] -- even/odd block-rows zipped via
-            // Reg::Interleave. Blocked on TINTERLEAVE/TDEINTERLEAVE not being
-            // exposed in the -D__linx header (RECORD 问题5); insert the even/odd
-            // zip here once available.
+            // stored as PLAIN planar [scaleRows, Post] = PTO-ISA Shared B-scale
+            // [G,N] (ADR-0101). NO parity interleave: AscendC's [ceil(numKb/2),
+            // Post, 2] zip is an Ascend packing convention, not the PTO-ISA scale
+            // contract (RECORD 问题5 dissolved 2026-09-03).
             TSTORE(gs, scale_e8m0);
 
             tile_recip_f1 inv_scale_f;

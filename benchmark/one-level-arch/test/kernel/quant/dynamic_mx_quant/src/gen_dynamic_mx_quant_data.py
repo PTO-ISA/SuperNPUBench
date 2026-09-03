@@ -273,24 +273,23 @@ def compute_golden(x_val, rows: int, cols: int, algo: str, kernel: str, dtype: s
 
 def compact_scale_bytes(block_scales, rows: int, cols: int, kernel: str,
                         block_size: int) -> bytes:
-    """Pack per-block E8M0 scale bytes into the GROUND-TRUTH mxScale layout
-    (ttk ttk/utilities/dtypes.py mx_quantize): pad the reduce-axis block count to
-    even, then — only when the reduce axis is NOT the last axis — parity-interleave
-    the block rows. Padding blocks are 2**-127 whose E8M0 byte is 0x00.
+    """Pack per-block E8M0 scale bytes into the PTO-ISA matmul scale layout
+    (ADR-0101 / pto-spec d0ce06ad; consumed by matmul_shared_lowp.hpp as Shared
+    tiles): pad the reduce-axis block count to even, emit PLAIN row-major. Padding
+    blocks are 2**-127 whose E8M0 byte is 0x00.
 
-    tail (reduce axis = cols = LAST axis): ttk applies pad_to_even but NO
-        interleave -> planar [rows, scaleCols], scaleCols = evenAlign(K/32).
-    nontail (reduce axis = rows, NOT last): ttk applies pad_to_even THEN
-        interleave(axis=reduce, n_group=2) -> [scaleRows/2, cols, 2] whose byte
-        order is  for g: for c: for p in (0,1): scale[block_row = 2*g + p][c],
-        i.e. even/odd block-rows of each pair zipped adjacently per column.
+    tail (reduce axis = cols = LAST axis): planar [rows, scaleCols] = A-scale
+        [group_M, G], scaleCols = evenAlign(K/32).
+    nontail (reduce axis = rows, NOT last): planar [scaleRows, cols] = B-scale
+        [G, N], scaleRows = evenAlign(Axis/32).
 
-    NOTE (kernel gap, RECORD 问题5): the current PTO-ISA nontail kernels still
-    emit COMPACT PLANAR [scaleRows, cols] (no interleave) because -D__linx does
-    not expose TINTERLEAVE/TDEINTERLEAVE. This golden is the ground truth, so the
-    nontail scale compare will legitimately DIVERGE from those kernels until the
-    interleave intrinsic lands; that divergence is the real defect, not a golden
-    bug. Tail is unaffected (ground truth has no interleave there)."""
+    NO parity interleave on either axis. PTO-ISA matmul binds MX scale as Shared
+    ordinary Tiles with A-scale [group_M,G] / B-scale [G,N] (ADR-0101; verified
+    against matmul_shared_lowp.hpp gmAScale/gmBScale = plain RowMajor global_tensor
+    loaded via ordinary global_iterator). AscendC's DIST_INTLV_B8 / Reg::Interleave
+    zip is an Ascend-hardware packing convention, NOT the PTO-ISA scale contract,
+    so the ground truth is plain planar — matching what the kernels already emit
+    (see RECORD 问题5: gap dissolved, not a real defect)."""
     if kernel == "tail":
         numKb = cols // block_size
         scaleCols = ((numKb + 1) // 2) * 2
@@ -301,24 +300,18 @@ def compact_scale_bytes(block_scales, rows: int, cols: int, kernel: str,
                 out[m * scaleCols + kb] = block_scales[gi]
                 gi += 1
         return bytes(out)
-    # nontail: block_scales are in (kb, c) order (see reduction_groups). Build the
-    # even-padded planar [scaleRows, cols] first (padding block-row stays 0x00),
-    # then parity-interleave the block-row axis to match ttk ground truth.
+    # nontail: block_scales are in (kb, c) order (see reduction_groups). Emit the
+    # even-padded PLAIN planar [scaleRows, cols] = B-scale [G, N] (padding block-row
+    # stays 0x00). No parity interleave: PTO-ISA matmul (ADR-0101) binds this as a
+    # Shared ordinary Tile, exactly the compact-planar layout the kernel emits.
     numKb = rows // block_size
     scaleRows = ((numKb + 1) // 2) * 2
-    planar = [[0] * cols for _ in range(scaleRows)]  # padding rows stay 0x00
+    out = bytearray(scaleRows * cols)  # zero-init -> padding block-row stays 0x00
     gi = 0
     for kb in range(numKb):
         for c in range(cols):
-            planar[kb][c] = block_scales[gi]
+            out[kb * cols + c] = block_scales[gi]
             gi += 1
-    out = bytearray(scaleRows * cols)
-    oi = 0
-    for g in range(scaleRows // 2):
-        for c in range(cols):
-            for p in range(2):
-                out[oi] = planar[2 * g + p][c]
-                oi += 1
     return bytes(out)
 
 

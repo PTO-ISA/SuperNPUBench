@@ -36,9 +36,9 @@ namespace supernpu::tile_isa::mxquant {
 // TCOLEXPANDMUL broadcasts the per-column inv_scale to all R_sub rows, TCVT
 // fp32->fp8, TSTORE. The same per-column scale applies to every sub-chunk row.
 //
-// scale layout: E8M0 1 byte/block, compact planar [scaleRows, Post] — same as
-// dynamic_mx_quant_nontail_cublas_fp8. NOT the AscendC parity-interleaved layout
-// (interleave intrinsic is a header gap; see RECORD 问题5 / README).
+// scale layout: E8M0 1 byte/block, planar [scaleRows, Post] — same as
+// dynamic_mx_quant_nontail_cublas_fp8. This IS the PTO-ISA Shared B-scale [G,N]
+// contract (ADR-0101); NO parity interleave needed (RECORD 问题5 dissolved).
 //
 // NOTE vs the plain kernel: this branch requires Post % TileN == 0 (no N_tail
 // column handling) to keep the structure identical to nontail_ocp_fp4_bigbs; the
@@ -286,12 +286,10 @@ void dynamic_mx_quant_nontail_cublas_fp8_bigbs(InT *x, OutT *y, uint8_t *scale) 
             auto gs = s_iter(0, n);
             tile_sstore scale_u8;
             TCVT(scale_u8, scale_byte);
-            // MISSING INTERLEAVE: stored as COMPACT planar [scaleRows, Post]
-            // (block-rows in order). AscendC's mxScale is PARITY-INTERLEAVED
-            // [ceil(numKb/2), Post, 2] -- even/odd block-rows zipped via
-            // Reg::Interleave (..._not_tail_axis_optimize_high_perf_large_tail.h:511).
-            // Blocked on TINTERLEAVE/TDEINTERLEAVE not being exposed in the -D__linx
-            // header (RECORD 问题5); insert the even/odd zip here once available.
+            // stored as PLAIN planar [scaleRows, Post] = PTO-ISA Shared B-scale
+            // [G,N] (ADR-0101). NO parity interleave: AscendC's Reg::Interleave /
+            // [ceil(numKb/2), Post, 2] zip is an Ascend packing convention, not the
+            // PTO-ISA scale contract (RECORD 问题5 dissolved 2026-09-03).
             TSTORE(gs, scale_u8);
 
             // ---- Pass 2: apply per-column inv_scale, cast to fp8 ----

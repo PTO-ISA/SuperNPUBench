@@ -16,8 +16,9 @@ using namespace supernpu::tile_isa::mxquant;
 //
 // RES_CHECK 下读 gen（--kernel nontail --algo OCP --dtype FP4 --in-dtype fp16）的
 // input.bin，写 output.bin + scale_output.bin。gen 约定 --M=Axis(归约行) / --K=Post(自由列)。
-// 注：非尾轴 scale 金标是 parity 交织布局，本 kernel 发 compact planar（TINTERLEAVE 未暴露,
-// RECORD 问题5）——scale 比对会按 问题5 合理发散，正确性以 output 逐字节为门。
+// 注：非尾轴 scale = compact planar [scaleRows, Post] = PTO-ISA Shared B-scale [G,N]
+// 契约（ADR-0101 / pto-spec d0ce06ad）——**无需交织**，scale 与 golden 逐字节精确
+// （RECORD 问题5 已解除：规范定义无需交织）。
 // 另注：fp4 data 路径当前基线存在模型侧 fp4 写侧缺失（SuperScalarModel issues454），output
 // 可能 fail，与 4-PE 切分无关（切分正确性看 scale 落盘与 tid 分片）。
 // PPOST=64 → 派生 TileN=64（唯一经原 kernel 验证的 fp4 data 路径宽度；TileN=128 会让

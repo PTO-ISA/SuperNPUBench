@@ -38,7 +38,7 @@
 | emax | 由 `emax_field<OutT, Domain>()` 从输出 dtype 派生、按输入计算域宽移位（16bit: FP8_E4M3=0x0400 / FP4_E2M1=0x0100；32bit: `<<23`，如 FP4_E2M1=0x01000000） |
 | blockSize | 32（TileM=8 时上限 512，TileM=4 时上限 1024） |
 | round_mode | rint |
-| scale 输出 | FLOAT8_E8M0（1 字节/块）。归约轴块数 `numKb=归约维/BlockSize` 偶数对齐。**尾轴**：紧凑平铺 `[..., ceil(K/BlockSize)]`（无交织）；**非尾轴**：交织 `[ceil(Axis/BlockSize/2), Post, 2]`（even/odd 按列 zip，parity 内层）。详见 §4.3 / §5.3 |
+| scale 输出 | FLOAT8_E8M0（1 字节/块）。归约轴块数 `numKb=归约维/BlockSize` 偶数对齐。**PTO-ISA 契约（ADR-0101）= 纯 planar，无交织**：尾轴 `[..., evenAlign(K/BlockSize)]`（A-scale `[group_M,G]`）、非尾轴 `[evenAlign(Axis/BlockSize), Post]`（B-scale `[G,N]`）。AscendC 的 parity 交织非 PTO-ISA 契约（RECORD 问题5 已解除）。详见 §4.3 / §5.3 |
 | M 维度尾块 | tail 支持（boxed 部分 tile：物理 TileM×BlockSize + ValidRow=M_tail） |
 | K 维度 | 必须为 BlockSize 的倍数 |
 
@@ -397,11 +397,17 @@ void dynamic_mx_quant_nontail_ocp_fp8(__bf16 *x, OutT *y, uint16_t *scale);
 ```cpp
 using gm_x = global_tensor<__bf16,  RowMajor<Axis, Post>>;
 // FP8：gm_y = RowMajor<Axis, Post>；FP4：gm_y = RowMajor<Axis, Post/2>
-// scale：E8M0 1 字节/块，交织 [ceil(numKb/2), Post, 2]，numKb = Axis/BlockSize
-using gm_s = global_tensor<uint8_t, RowMajor<((numKb + 1) / 2) * 2, Post>>; // 扁平视图，含 parity 内层
+// scale：E8M0 1 字节/块，planar [scaleRows, Post]，scaleRows = evenAlign(numKb)
+using gm_s = global_tensor<uint8_t, RowMajor<((numKb + 1) / 2) * 2, Post>>; // 纯 planar
 ```
 
-**非尾轴 scale 必须交织**。配对轴是行（量化轴），但目标 shape `[ceil(numKb/2), Post, 2]` 的 parity 维 `2` 追加在**列维 Post 之后**当最内层，故要把相邻两个 block 行（even=rows[0:32)，odd=rows[32:64)）**按列 zip**：`offset = rowPair*2*Post + col*2 + parity`，即同一列的 even/odd 两字节相邻。
+> **【2026-09-03 更正】PTO-ISA 不要求交织，本节以下描述的是 AscendC 约定（历史留档）。**
+> pto-spec `d0ce06ad`（ADR-0101）定义 matmul 消费 MX scale 为 **Shared 普通 Tile，B-scale
+> 纯 planar `[G,N]`**（`matmul_shared_lowp.hpp` 坐实），故非尾轴 scale **正解 = planar，无需交织**。
+> 下述 AscendC 的 `Reg::Interleave` / `DataCopy<DIST_INTLV_B8>` parity zip 是 Ascend 硬件打包约定，
+> **不属 PTO-ISA scale 契约**；golden 已去交织，kernel 现有 planar 逐字节 pass（RECORD 问题5 已解除）。
+
+**（以下为 AscendC 交织约定的历史描述）** AscendC 非尾轴 scale 交织：配对轴是行（量化轴），目标 shape `[ceil(numKb/2), Post, 2]` 的 parity 维 `2` 追加在**列维 Post 之后**当最内层，把相邻两个 block 行（even=rows[0:32)，odd=rows[32:64)）**按列 zip**：`offset = rowPair*2*Post + col*2 + parity`。
 
 AscendC 实现两种等价形态：
 - **标准 `dynamic_mx_quant`**：kernel 先把每 32 行 block 的 scale **平铺**写 workspace，再由 `dynamic_mx_quant_post.h`（`ComputeInterleaveVF` / `Reg::Interleave`，`:455-477`）读回**交织**写最终 mxScale。host `tiling_arch35.cpp:415-416` 规定所有非尾轴强制走此 post。

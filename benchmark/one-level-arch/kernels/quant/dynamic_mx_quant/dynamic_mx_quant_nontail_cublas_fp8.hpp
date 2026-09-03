@@ -58,8 +58,9 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
     constexpr int numKb  = Axis / BlockSize;
     constexpr int numN   = Post / TileN;   // full column tiles
     constexpr int N_tail = Post % TileN;   // trailing partial column tile
-    // AscendC scale even-pads the quant-axis block count (交织/interleaving):
-    // scaleRows = ceil_even(numKb). The trailing padding block-row is left zero.
+    // scale even-pads the quant-axis block count: scaleRows = ceil_even(numKb).
+    // The trailing padding block-row is left zero. Layout is PLAIN planar
+    // [scaleRows, Post] = PTO-ISA Shared B-scale [G,N] (ADR-0101); no interleave.
     constexpr int scaleRows = ((numKb + 1) / 2) * 2;
 
     using namespace pto;
@@ -129,7 +130,7 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
             // 函数入参 → S64 栈往返 → gfrun 拒）。两处规避已换正式方案：
             //   · reinterpret_f32_to_u32（scratch-HBM，问题4）→ reinterpret_tile<>（零指令视图）
             //   · GT/LT/NE 的 min/max+默认-EQ 模拟（问题3）→ 带 CmpMode 的原生 TCMPS
-            // scale 交织（问题5）仍无正式方案，保持 planar（见下方 MISSING INTERLEAVE）。
+            // scale 存 planar 即 PTO-ISA Shared B-scale [G,N] 契约，无需交织（问题5 已解除）。
             // -- compute_cublas_scale_not_tail：InT 域 TABS+TCOLMAX，仅把归约量转 fp32 --
             tile_x abs_x;
             TABS(abs_x, xq_s);
@@ -207,13 +208,12 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
             // scale_byte already boxed valid row=1; narrow to uint8, store 1 byte/block.
             tile_sstore scale_u8;
             TCVT(scale_u8, scale_byte);
-            // MISSING INTERLEAVE: this stores scale as a COMPACT planar [scaleRows,
-            // Post] layout (block-rows in order). AscendC's mxScale is PARITY-
-            // INTERLEAVED [ceil(numKb/2), Post, 2] -- even/odd block-rows zipped via
-            // Reg::Interleave (..._not_tail_axis_optimize_high_perf_large_tail.h:511).
-            // The zip needs TINTERLEAVE/TDEINTERLEAVE, which LinxISA 0.57 defines but
-            // the -D__linx header does not expose (RECORD 问题5). Once exposed, insert
-            // a TINTERLEAVE of even/odd block-rows right here before the store.
+            // scale stored as PLAIN planar [scaleRows, Post] = PTO-ISA Shared
+            // B-scale [G,N] (ADR-0101 / pto-spec d0ce06ad; consumed by
+            // matmul_shared_lowp.hpp gmBScale = plain RowMajor, no interleave).
+            // NO parity zip: AscendC's Reg::Interleave / DIST_INTLV_B8 is an
+            // Ascend packing convention, not the PTO-ISA scale contract. Verified
+            // byte-exact vs planar golden (RECORD 问题5, dissolved 2026-09-03).
             TSTORE(gs, scale_u8); // store scale early; scale_byte now dead
 
             // 问题4 正式方案：reinterpret_tile 零指令把 recip(uint16) 视为 bf16，替代
