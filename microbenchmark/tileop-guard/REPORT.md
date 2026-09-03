@@ -23,7 +23,7 @@
 增量重编,须清缓存才可签字)。
 
 ```
-run-date : 2026-09-03 (第四轮:tcvt/tmatmul_mx/tgemv 补独立 golden)
+run-date : 2026-09-03 (第五轮:mgather_cas 补 CAS 独立 golden)
 toolchain: env_test/linx-toolchain-build/output/linx_blockisa_llvm_musl
            clang++ md5 b6201631d2fdb77c6ad541c2c769460e  (第二轮为 1ee479a3;工具链已升级)
 gfrun    : env_test/SuperScalarModel/bin/gfrun
@@ -38,20 +38,20 @@ gfrun    : env_test/SuperScalarModel/bin/gfrun
 
 ## 状态总表
 
-**合计 126 case:94 精度PASS / 22 run-only / 2 编译失败 / 8 run-fail(崩)。**
+**合计 126 case:95 精度PASS / 21 run-only / 2 编译失败 / 8 run-fail(崩)。**
 （第一轮 125=52/47/12/14；第二轮读头修正签名 61/53/7/5；第三轮为可钉语义的 run-only 补独立 golden
-91/25/2/8；第四轮 tcvt/tmatmul_mx/tgemv 补 golden **精度PASS +3**、run-only −3。编译失败/run-fail
-口径变化含工具链升级副作用，见上「工具链升级影响」。）
+91/25/2/8；第四轮 tcvt/tmatmul_mx/tgemv 补 golden 94/22/2/8；第五轮 mgather_cas 补 CAS golden
+**精度PASS +1**、run-only −1。编译失败/run-fail 口径变化含工具链升级副作用，见上「工具链升级影响」。）
 
 | 域 | 精度PASS | run-only | 编译失败 | run-fail | 合计 |
 |----|---------|----------|----------|----------|------|
 | vec  | 35 | 0  | 0 | 0 | 35 |
 | sfu  | 45 | 5  | 1 | 5 | 56 |
-| tlsu | 4  | 7  | 0 | 2 | 13 |
+| tlsu | 5  | 6  | 0 | 2 | 13 |
 | cube | 8  | 0  | 1 | 0 | 9  |
 | fixp | 1  | 10 | 0 | 0 | 11 |
 | misc | 1  | 0  | 0 | 1 | 2  |
-| 合计 | **94** | **22** | **2** | **8** | **126** |
+| 合计 | **95** | **21** | **2** | **8** | **126** |
 
 - **精度PASS**:编译 + gfrun 跑通 + host 独立 golden 逐元素比对通过(真「算对」)。
 - **run-only**:编译 + gfrun 跑通,但未写独立 golden(语义/舍入未由文档钉死),仅验「能跑」。
@@ -108,8 +108,9 @@ witness）**。
 忽略**（斜率拟合 slope≈1.0）。故 demo 改用 identity 参数（mult=1/zp=0）精确看护它**确实执行**的核心
 ——RNE 舍入 + S8 饱和（输入跨 ±256 触发双端 clamp）;被忽略的缩放路径单独记录，不在此断言。
 
-**仍 run-only（无法钉精度，诚实上限）**:tfillpad/tinsert/ttri/copy-expand（退化/部分语义）、
-tload/tstore/tmov/tprefetch/mgather_cas/range_assemble/region_tilearray（纯搬运/视图无数值语义）、
+**仍 run-only（无法钉精度，诚实上限）**:tfillpad/tinsert/ttri/copy-expand（退化/部分语义，凑不出干净
+闭式）、tload/tstore/tmov（identity，已被全部 94 个 case 端到端透传覆盖，单独 golden 无新增信息）、
+tprefetch（纯 hint 无输出）、range_assemble/region_tilearray（模型 producer 路径缺口，跑不对无正确输出）、
 **fixp postprocess 族 10 个**（matmul+FP19 scale 描述符量化，独立 golden 需先解码 FP19 格式 + 匹配硬件
 量化路径，是独立深水区，待后续）。
 
@@ -126,6 +127,19 @@ tload/tstore/tmov/tprefetch/mgather_cas/range_assemble/region_tilearray（纯搬
 - **TCVT 舍入钉死为 RNE**:candidate `np.rint`(round-half-to-even) 首击逐元素通过，无需回退到 RTZ/floor。
 - tmatmul_mx/tgemv 无需新 golden 族——GEMV 是 M=1 的 GEMM，MX-f16 是无 scale 的 GEMM，两者数学与 matmul 同，仅复用现成 `check_matmul`。
 - MX 的 scale 侧（FP8/FP4 带 scale operand）语义仍未钉，不在此三者内。
+
+## 第五轮:mgather_cas 补 CAS 独立 golden（2026-09-03）
+
+MGATHER_CAS（逐元素 compare-and-swap）此前归 run-only，实为**可看护**（原理同 mscatter，只需钉 CAS
+条件写语义）。按 MGATHER_CAS.md 语义补 golden，run-only→**精度PASS**：
+
+- **语义**:`addr = base + byteDisplacement[i]`;`observedOld[i] = *addr`（**交换前**的旧值，恒成立）;
+  若 `*addr == expected[i]` 则 `*addr = replacement[i]`，否则不变。
+- **双文件校验**:base 用 host 自有 backing 数组的地址（`(uint64_t)(uintptr_t)backing`），demo 落盘
+  **两个**输出——`out.bin`(observedOld) + `out_mem.bin`(CAS 后的 backing)。golden(`fam='cas'`)同时校验
+  ①observedOld==交换前值、②hit 槽位==replacement、③miss 槽位不变、④未命中的 backing 槽位保持不变。
+- **非平凡覆盖**:offset 单射；偶数 lane expected==槽值（HIT）、奇数 lane 失配（MISS）→ 实测 128 HIT / 128
+  MISS 平衡，backing 恰在 128 个 HIT 槽被改写为 replacement，CAS 的写路径与不写路径都被触发。
 
 ## 精度校验机制(res_check + host 独立 golden)
 
@@ -144,7 +158,7 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 - 校验代码:`golden/golden.py`(注册表 + 语义)、`common/guard_io.{h,c}`(fill/read/dump,以
   `-mlxbc -O2` 无 matrix flags 编译)、`common/guard_case.hpp`(case 宏)。
 
-### 已带独立 golden 的接口(第一~二轮 61 + 第四轮 3 = 64;第三轮 +30 见上「第三轮」节表，合计 94)
+### 已带独立 golden 的接口(第一~二轮 61 + 第四轮 3 + 第五轮 1(mgather_cas) = 65;第三轮 +30 见上「第三轮」节表，合计 95)
 
 | 域 | 接口 | golden 语义 | 容差 |
 |----|------|-------------|------|
@@ -156,7 +170,7 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 | SFU create-index | tci、tci_desc、tci_s16、tci_u32、tci_u16 | iota:asc=start+k / desc=start−k(按元素位宽 wrap),ValidRow=1 | 整数 eps=0 |
 | CUBE matmul | tmatmul、_acc、_bias、_f16、_relu、_rowmax、**tmatmul_mx、tgemv（第四轮）** | A@B(f16→f32 累加);+C / +bias(1×N) / relu / f16 输出;MX-f16 无 scale == matmul、tgemv=M=1 GEMM | f16 rel 2e-2~3e-2 |
 | **VEC cvt** | tcvt（**第四轮**） | fp32→s32 数值转换，舍入=RNE(round-half-to-even) | 整数 eps=0 |
-| TLSU gather/scatter | mgather、mscatter | GM base + U32 字节位移;gather=base[off//4]、scatter=base[off//4]←src(单射无碰撞) | eps=0 |
+| TLSU gather/scatter | mgather、mscatter、**mgather_cas（第五轮）** | GM base + U32 字节位移;gather=base[off//4]、scatter=base[off//4]←src(单射无碰撞);CAS=旧值读回+hit写replacement/miss不变(双文件校验 observedOld+backing) | eps=0 |
 | FIXP | convert | A@B 后 cast f16 | 3e-2 |
 | **misc** | reinterpret_tile（**新增**） | fp32→int32 视图 + TANDS 清符号位 + TMULS 重置标签 → \|x\| | eps=0 |
 
@@ -164,14 +178,16 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 
 ### 未写 golden 的接口(run-only,原因) — 截至第四轮的真实剩余
 
-（超越/expand-arith/tpart/layout-sort/tquant-dequant/tcvt/tmatmul_mx/tgemv 均已在第三、四轮补齐，
-从本表移除。）
+（超越/expand-arith/tpart/layout-sort/tquant-dequant/tcvt/tmatmul_mx/tgemv/mgather_cas 均已在第三~五轮
+补齐，从本表移除。）
 
 - **fixp postprocess 族 10 个**:s8/vector quant、lrelu/prelu、rowmax_acc、group_max、cscale、chain。
   matmul + FP19 scale 描述符量化，独立 golden 需先解码 FP19 格式 + 匹配硬件量化路径，是独立深水区，待后续。
-- **退化/部分语义无法设 golden**:tfillpad/tinsert/ttri/copy-expand(t{row,col}expand 退化)。
-- **通路/搬运类**:tload/tstore/tmov/tprefetch/mgather_cas/range_assemble/region_tilearray
-  (无独立数值语义可校)。
+- **退化/部分语义凑不出干净闭式**:tfillpad/tinsert/ttri/copy-expand(t{row,col}expand 退化)——实际行为与
+  文档背离且是截断窗口/塌维，贴实现=bug 焊死进 oracle、贴文档=假失败，故不设 golden。
+- **identity 已透传覆盖**:tload/tstore/tmov(out==in，每个 compute case 都 TLOAD→算子→TSTORE→逐字节比,
+  单独 golden 零新增)。
+- **无输出 / 模型缺口**:tprefetch(纯 hint 无输出)、range_assemble/region_tilearray(producer 路径未实现)。
 
 ---
 
@@ -241,7 +257,7 @@ SFU 小结:56 case,**45 精度PASS / 5 run-only / 1 编译失败 / 5 run-fail**�
 | TSTORE | ✅ | ✅ | — | 文档充分;通路正常 |
 | TPREFETCH | ✅ | ✅ | — | **[签名]** src 须 static RowMajor `global_tensor` 本体,非 iterator 视图(详述 11) |
 | TMOV | ✅ | ✅ | — | 基础 Local `(dst,src)`;跑通 |
-| MGATHER_CAS | ✅ | ✅ | — | 签名完整;base+offset+expected+replacement |
+| MGATHER_CAS | ✅ | ✅ | ✅ | 第五轮:逐元素 CAS,双文件校验 observedOld+CAS 后 backing(128 HIT/128 MISS 覆盖) |
 | MGATHER | ✅ | ✅ | ✅ | MGATHER.md 签名+示例完整;GM base + U32 字节位移,golden=base[off//4]。**[示例]** 示例误用 uint16 offset(违反同页 dtype 表),遵从 dtype 表用 U32(详述 17) |
 | MSCATTER | ✅ | ✅ | ✅ | MSCATTER.md 签名+示例完整;`MSCATTER(base_gm,src,off)`,base[off//4]←src(单射),golden 比 scatter 后 base。同 [示例] U32 缺口(详述 17) |
 | GMOV | ❌ | - | — | **[后端]** 照示例 `GMOV<15>(dst,peer_tid,src)` 后端 `Match Instruction Error`(详述 11) |
@@ -251,10 +267,10 @@ SFU 小结:56 case,**45 精度PASS / 5 run-only / 1 编译失败 / 5 run-fail**�
 | range::Subview | ✅ | ❌ | — | **[dtype/契约]** 第二轮根因:parent **须 cube 布局**(模型 Block.cpp:1052 `IsCubeLayout`+`CubeCellDescribeSubview`),Vec tile 被运行期拒;文档示例用 Vec 且未说此要求(详述 15) |
 | TileArray region API(region_tilearray) | ✅ | ❌ | — | **[契约]** TPARTVIEW/TileArray/TASSEMBLY;gfrun `raw tile spill source does not fit the carrier shape`(详述 19) |
 
-TLSU 小结:13 case,**4 精度PASS / 7 run-only / 0 编译失败 / 2 run-fail**（第三轮更新）。
-- 精度PASS(4):MGATHER、MSCATTER、**MGATHER_MASK（工具链升级后 `*.MASK` bundle 可汇编+跑通+golden 通过）**、
-  **MSCATTER_MASK（工具链升级后可跑，第三轮补 golden）**。
-- run-only(7):TLOAD/TSTORE/TPREFETCH/TMOV/MGATHER_CAS/range::Assemble/region_tilearray。
+TLSU 小结:13 case,**5 精度PASS / 6 run-only / 0 编译失败 / 2 run-fail**（第五轮更新:mgather_cas 补 CAS golden 转精度PASS）。
+- 精度PASS(5):MGATHER、MSCATTER、**MGATHER_MASK（工具链升级后 `*.MASK` bundle 可汇编+跑通+golden 通过）**、
+  **MSCATTER_MASK（工具链升级后可跑，第三轮补 golden）**、**MGATHER_CAS（第五轮补 CAS 双文件 golden）**。
+- run-only(6):TLOAD/TSTORE/TPREFETCH/TMOV/range::Assemble/region_tilearray。
 - 编译失败(0):——原 GMOV/MGATHER_MASK/MSCATTER_MASK 的后端 `Match Instruction Error` 已随工具链升级消失。
 - run-fail(2):range::Subview(模型 descriptor 契约)、**GMOV(工具链升级后编译过，gfrun `GMOV source/dest
   descriptors must match` 断言——下游模型缺口)**。

@@ -157,6 +157,11 @@ REG['mgather']      = R(fam='gather',      BM=8, BN=1024, OM=8, ON=32, eps=0)
 REG['mscatter']     = R(fam='scatter',     BM=8, BN=1024, OM=8, ON=32, eps=0)
 REG['mgather_mask'] = R(fam='gather_mask', BM=8, BN=1024, OM=8, ON=32, eps=0)
 REG['mscatter_mask'] = R(fam='scatter_mask', BM=8, BN=1024, OM=8, ON=32, eps=0)
+# MGATHER_CAS: per-element compare-and-swap on GM. observedOld[i]=*(base+off[i])
+# (always the pre-swap value); if *(base+off[i])==expected[i] then it is set to
+# replacement[i], else unchanged. Injective offsets; ~half lanes hit / half miss.
+# Golden checks BOTH observedOld (out.bin) and the post-CAS backing (out_mem.bin).
+REG['mgather_cas']  = R(fam='cas', BM=8, BN=1024, OM=8, ON=32, eps=0)
 
 # ---- expand-arith: fused broadcast + binary op. row broadcasts a per-row scalar
 #      (src1[i,0], M x 1 source); col broadcasts a per-col scalar (src1[0,j],
@@ -222,6 +227,23 @@ def gen(case, chkdir):
         if fam in ('gather_mask', 'scatter_mask'):
             mask = ((np.arange(ONE, dtype=np.int64) % 3) != 0).astype(np.uint8)
             mask.tofile(os.path.join(chkdir, 'in_mask.bin'))
+        return
+    # --- MGATHER_CAS: host owns backing + byte offsets + expected + replacement.
+    #     expected is set so even lanes HIT (== current slot) and odd lanes MISS. ---
+    if fam == 'cas':
+        BNE = s['BM'] * s['BN']; ONE = s['OM'] * s['ON']
+        base = (np.arange(BNE, dtype=np.float32) * np.float32(0.5) + np.float32(1.0))
+        idx = ((np.arange(ONE, dtype=np.int64) * 101 + 7) % BNE)   # injective
+        off = (idx * 4).astype(np.uint32)
+        cur = base[idx]                                            # current slot values
+        rep = -(np.arange(ONE, dtype=np.float32) + np.float32(1.0))  # distinct replacements
+        exp = cur.copy()                                           # even lanes: exact match -> HIT
+        miss = (np.arange(ONE) % 2) == 1
+        exp[miss] = cur[miss] + np.float32(1000.0)                 # odd lanes: mismatch -> MISS
+        base.tofile(os.path.join(chkdir, 'in_base.bin'))
+        off.tofile(os.path.join(chkdir, 'in_off.bin'))
+        exp.astype(np.float32).tofile(os.path.join(chkdir, 'in_exp.bin'))
+        rep.astype(np.float32).tofile(os.path.join(chkdir, 'in_rep.bin'))
         return
     # --- TCMP/TCMPS end-to-end: compare operands + prior + true ---
     if fam in ('cmpsel', 'cmpsel_s'):
@@ -723,6 +745,38 @@ def check_scatter(case, chkdir):
           file=sys.stderr)
     return 1
 
+def check_cas(case, chkdir):
+    s = REG[case]; ONE = s['OM'] * s['ON']
+    base0 = np.fromfile(os.path.join(chkdir, 'in_base.bin'), np.float32)
+    off = np.fromfile(os.path.join(chkdir, 'in_off.bin'), np.uint32).astype(np.int64)
+    exp = np.fromfile(os.path.join(chkdir, 'in_exp.bin'), np.float32)
+    rep = np.fromfile(os.path.join(chkdir, 'in_rep.bin'), np.float32)
+    old_path = os.path.join(chkdir, 'out.bin')
+    mem_path = os.path.join(chkdir, 'out_mem.bin')
+    if not os.path.exists(old_path) or not os.path.exists(mem_path):
+        print(f'[{case}] MISSING out.bin/out_mem.bin', file=sys.stderr); return 1
+    got_old = np.fromfile(old_path, np.float32)[:ONE]
+    got_mem = np.fromfile(mem_path, np.float32)
+    slot = off // 4
+    cur = base0[slot]                                   # pre-swap values (injective offsets)
+    hit = (cur == exp)                                  # CAS succeeds iff current == expected
+    # 1) observedOld is always the pre-swap value
+    ref_old = cur
+    bad = np.flatnonzero(got_old[:ONE] != ref_old)
+    if bad.size:
+        i = int(bad[0])
+        print(f'[{case}] CAS observedOld MISMATCH {bad.size}/{ONE} first@{i} '
+              f'got={got_old[i]} ref={ref_old[i]}', file=sys.stderr); return 1
+    # 2) backing after CAS: hit lanes -> replacement, miss lanes -> unchanged
+    ref_mem = base0.copy()
+    ref_mem[slot] = np.where(hit, rep, cur)
+    bad = np.flatnonzero(got_mem != ref_mem)
+    if bad.size:
+        i = int(bad[0])
+        print(f'[{case}] CAS backing MISMATCH {bad.size}/{ref_mem.size} first@slot{i} '
+              f'got={got_mem[i]} ref={ref_mem[i]}', file=sys.stderr); return 1
+    return 0
+
 def check_gather_mask(case, chkdir):
     base = np.fromfile(os.path.join(chkdir, 'in_base.bin'), np.float32)
     off = np.fromfile(os.path.join(chkdir, 'in_off.bin'), np.uint32).astype(np.int64)
@@ -931,6 +985,8 @@ def check(case, chkdir):
         return check_gather(case, chkdir)
     if s['fam'] == 'scatter':
         return check_scatter(case, chkdir)
+    if s['fam'] == 'cas':
+        return check_cas(case, chkdir)
     if s['fam'] == 'gather_mask':
         return check_gather_mask(case, chkdir)
     if s['fam'] == 'scatter_mask':
