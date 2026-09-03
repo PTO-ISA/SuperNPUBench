@@ -1,15 +1,22 @@
 #include "guard_common.hpp"
-// TileOP-API doc guard: TTRI (SFU irregular-and-complex).
-// Source: docs/tileop-usage/engines.md ONLY — one row, no signature; no
-// dedicated doc page.
-// NOTE(doc-gap): triangular fill/mask presumably; NO signature documented.
-// Guess: (dst, src) unary; recorded in REPORT as "no usable signature".
+#include "guard_io.h"
+// TileOP-API guard: TTRI — triangular fill. v0.58 header signature is 1-arg
+// (dst only): the op self-generates a triangular pattern into dst (no input
+// tile). docs/tileop-usage gives NO signature; 1-arg form recovered from the
+// header. Semantics (which triangle / fill value) are not pinned by docs, so
+// this stays a run-only stability guard (no golden).
+constexpr int M = 16, N = 16, NE = M * N;
+static float out[NE];
 int main() {
-    constexpr int M = 16, N = 16, NE = M * N;
-    float a[NE], c[NE];
-    gfill_seq(a, NE); gzero(c, NE);
+    iter_t<float, M, N> gO(out);
+    auto gO0 = gO(0, 0);
+    vtile_t<float, M, N> tD;
     BENCHSTART;
-    g_unary<float, M, N>(c, a, [](auto& d, auto& s){ TTRI(d, s); });
+    TTRI(tD);
     BENCHEND;
+    TSTORE(gO0, tD);
+#ifdef RES_CHECK
+    guard_dump_bin(CHK_DIR "/out.bin", out, sizeof(out));
+#endif
     return 0;
 }

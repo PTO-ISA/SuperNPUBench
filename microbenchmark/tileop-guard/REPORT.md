@@ -23,26 +23,28 @@
 增量重编,须清缓存才可签字)。
 
 ```
-run-date : 2026-09-01 18:40
+run-date : 2026-09-02 (第二轮:放宽纯文档驱动，读头文件修正签名/契约)
 toolchain: env_test/linx-toolchain-build/output/linx_blockisa_llvm_musl
-           clang++ md5 c5a5edef0d9ca809dc368de7dbc2ad28
+           clang++ md5 1ee479a3f4678006953db5b0af0f50a2
 gfrun    : env_test/SuperScalarModel/bin/gfrun
            gfrun   md5 04ca39ece7533eb35c805a4741996ebb
 ```
 
 ## 状态总表
 
-**合计 125 case:52 精度PASS / 47 run-only / 12 编译失败 / 14 run-fail(崩)。**
+**合计 126 case:61 精度PASS / 53 run-only / 7 编译失败 / 5 run-fail(崩)。**
+（第一轮基线 125 case = 52 / 47 / 12 / 14；第二轮读头文件修正签名后 PASS +9、编译失败 −5；并新增
+1 个 misc witness 用例 `reinterpret_tcmp`（TCMP+视图模型缺口，run-fail），故总数 125→126。）
 
 | 域 | 精度PASS | run-only | 编译失败 | run-fail | 合计 |
 |----|---------|----------|----------|----------|------|
-| vec  | 30 | 1  | 0 | 4 | 35 |
-| sfu  | 13 | 29 | 6 | 8 | 56 |
-| tlsu | 2  | 5  | 4 | 2 | 13 |
+| vec  | 34 | 1  | 0 | 0 | 35 |
+| sfu  | 17 | 33 | 3 | 3 | 56 |
+| tlsu | 2  | 7  | 3 | 1 | 13 |
 | cube | 6  | 2  | 1 | 0 | 9  |
 | fixp | 1  | 10 | 0 | 0 | 11 |
-| misc | 0  | 0  | 1 | 0 | 1  |
-| 合计 | **52** | **47** | **12** | **14** | **125** |
+| misc | 1  | 0  | 0 | 1 | 2  |
+| 合计 | **61** | **53** | **7** | **5** | **126** |
 
 - **精度PASS**:编译 + gfrun 跑通 + host 独立 golden 逐元素比对通过(真「算对」)。
 - **run-only**:编译 + gfrun 跑通,但未写独立 golden(语义/舍入未由文档钉死),仅验「能跑」。
@@ -51,6 +53,33 @@ gfrun    : env_test/SuperScalarModel/bin/gfrun
 
 **各表「精度」列**:✅ = 独立 golden 逐元素通过;❌ = golden 比对失败;— = 未做精度校验
 (编译/运行失败无输出,或该接口未写 golden)。当前无 ❌(precision-fail = 0)。
+
+## 第二轮修正:读头文件订正签名/契约（2026-09-02）
+
+放宽「纯文档驱动」限制后，允许读工具链头 `jcore/template_asm.hpp`（+ 少量模型断言）订正
+**因文档信息不足而写错的 demo**。甄别原则：凡「签名/形状/dtype 猜错」→ 本轮修正；凡后端
+`Match Instruction Error`、clang abort、模型未实现桩 → 确保用**正确签名**调用，使失败原因确属
+对方缺口（另见三份 issue）。逐条结果：
+
+| demo | 旧态 | 根因（我方 demo 错） | 新态 |
+|------|------|----------------------|------|
+| TSEL/TSELS/TCMP/TCMPS | run-fail×4 | TCMP 产 packed predicate 不能直接 TSTORE；TSEL/TSELS 的 mask 必须是 predicate。正确用法=`TCMP→predicate→TSEL/TSELS 消费→存 select 结果` | **精度PASS×4** |
+| TROW/TCOLARGMAX/ARGMIN | run-fail×4 | 输出 dtype 必须 UINT32（模型 argReduce 强制），旧用 float | **精度PASS×4** |
+| TTRI | 编译失败 | 真实签名 1 参 `TTRI(dst)`，旧写 2 参 | run-only |
+| TINSERT | 编译失败 | 真实签名 `(dst,src,indexRow,indexCol)`，旧写 3 参；能跑但模型只插 patch 左上部分窗口、且不保留 base，语义未由文档钉死 | run-only |
+| TROWEXPAND/TCOLEXPAND(copy) | run-fail×2 | 需广播源(M×1 / 1×N)。用对广播源后**能跑**，但模型填充宽/高被源 ValidCol/Row 钉死为 1（退化 expand，header 与实现矛盾），不设 golden | run-only×2 |
+| range::Assemble | 编译失败 | `ParentSizeCode` 须匹配 tile 容量：4×8 float=128B→SizeCode 1，文档示例的 12(256KiB)越界 | run-only |
+| MSCATTER_MASK | 编译失败 | 旧写 6 参猜错；真实 4 参 `(base_gm,src,off,mask)`。改对后仍后端 `Match Instruction Error`（与 MGATHER_MASK 同族，真后端缺口） | 编译失败(后端) |
+| reinterpret_tile | 编译失败 | 旧 `TABS(普通tile,视图)` 混用类型不合(**非** TABS 拒视图)。订正：TABS/TANDS 已接受视图(双视图即可)；落盘按模型 cross_model 测试 `bf16_backing_tands_u16_then_tmuls_bf16` 的「整数视图 op → 原生类型 op 重置 dtype 标签 → 存」模式 | **精度PASS** |
+| reinterpret_tcmp（新增 witness） | — | 同款 bitcast 但消费 op 换 TCMP：`TCMP<out,in>` 分离模板参→普通 predicate 输出 + int32 视图源**编译过**,但仿真器 TCMP 处理器 `IsCompatibleDataTile` **拒视图源**(崩在 TCMP，早于 store);对照 TANDS+同视图 PASS、普通 tile+TCMP PASS→差异是视图。官方 reinterpret 修复在**模型层遗漏 TCMP** | run-fail(模型缺口,witness) |
+| TEXTRACT | 编译失败 | 真实签名 `(dst,src,indexRow,indexCol)`。改对后编译过,gfrun 拒 descriptor。**根因(第二轮定)**:header 把**源的 valid 维**发成 block 维,而模型 `ValidateV058SpecialTepl` 校验 `rowOffset+blockValidRow>source.validRow` + dst 尺寸——任何真实抽取(offset>0 或 dst<源)必 illegal,仅 offset=0+dst==源全尺寸的退化恒等才过。header 发的 block 维与「抽取区域维」不一致(头/模型契约不符,非 demo 错) | run-fail(契约缺口) |
+| THISTOGRAM | 编译失败 | 真实签名 `(dst,src,Idx,ByteId)`。改对后仍后端 `Match Instruction Error`(TEPL 104) | 编译失败(后端) |
+| region_tilearray | run-fail | 干净重编后跑通（此前 run-fail 疑为增量缓存陷阱；gfrun-3 或已随模型版本解） | run-only |
+
+**仍为真缺口（正确签名下失败，属对方）**：编译失败 7=THISTOGRAM/TGATHER/TSCATTER/GMOV/MGATHER_MASK/
+MSCATTER_MASK 后端 Match Error + TMATMUL bf16 clang abort；run-fail 5=TEXTRACT/range::Subview 模型
+descriptor 契约、TIMG2COL/TMRGSORT 模型未实现桩、**reinterpret_tcmp（TCMP+视图被模型 TCMP 处理器拒，
+witness）**。
 
 ## 精度校验机制(res_check + host 独立 golden)
 
@@ -69,17 +98,20 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 - 校验代码:`golden/golden.py`(注册表 + 语义)、`common/guard_io.{h,c}`(fill/read/dump,以
   `-mlxbc -O2` 无 matrix flags 编译)、`common/guard_case.hpp`(case 宏)。
 
-### 已带独立 golden 的接口(52 精度PASS)
+### 已带独立 golden 的接口(61 精度PASS)
 
 | 域 | 接口 | golden 语义 | 容差 |
 |----|------|-------------|------|
 | VEC 二元 | tadd/tsub/tmul/tdiv/tmax/tmin(f32)、tand/tor/txor/trem/tshl/tshr(i32) | elementwise;移位/rem 取正保证逻辑=算术、无溢出 | 整数 eps=0 / f32 1e-4 |
 | VEC 一元/标量 | tabs/tneg/trelu/tnot、tfma、t{add,sub,mul,div,max,min}s、t{and,or,xor,rem,shl,shr}s、texpands | abs/neg/relu/not、a*b+c、tile⊕标量、标量填充 | 同上 |
+| **VEC 比较/选择** | tcmp/tcmps/tsel/tsels（**新增**） | 链式 `TCMP→predicate→TSEL/TSELS`;out=where(a⋛b\|s, tru, prior)（tsels: mask?src:标量） | eps=0 |
 | SFU reduce | trow{sum,max,min,prod}、tcol{sum,max,min,prod} | 沿轴 sum/max/min/prod;row 比 out[r*N+0]、col 比 out[c] | 1e-3 |
+| **SFU argmax** | trow/tcol{argmax,argmin}（**新增**） | 沿轴 arg 索引，UINT32 输出;row 比 out[r*N+0]、col 比 out[0*N+c];源用双重排列避并列 | eps=0 |
 | SFU create-index | tci、tci_desc、tci_s16、tci_u32、tci_u16 | iota:asc=start+k / desc=start−k(按元素位宽 wrap),ValidRow=1 | 整数 eps=0 |
 | CUBE matmul | tmatmul、_acc、_bias、_f16、_relu、_rowmax | A@B(f16→f32 累加);+C / +bias(1×N) / relu / f16 输出 | f16 rel 2e-2~3e-2 |
 | TLSU gather/scatter | mgather、mscatter | GM base + U32 字节位移;gather=base[off//4]、scatter=base[off//4]←src(单射无碰撞) | eps=0 |
 | FIXP | convert | A@B 后 cast f16 | 3e-2 |
+| **misc** | reinterpret_tile（**新增**） | fp32→int32 视图 + TANDS 清符号位 + TMULS 重置标签 → \|x\| | eps=0 |
 
 实测 tmatmul `max|out−A@B|=0.0`(f16 matmul 与 numpy 逐字节一致)。
 
@@ -116,9 +148,9 @@ host  golden.py check → 读 in_*.bin + out.bin,numpy 独立算 ref,逐元素�
 | TCMP | ✅ | ❌ | — | **[语义]** cmp.md 签名完整;gfrun 结果为 packed predicate,与 TSTORE 源契约不符(详述 4) |
 | TCMPS | ✅ | ❌ | — | 同上 |
 
-VEC 小结:35 case,**30 精度PASS / 1 run-only(tcvt)/ 4 run-fail(tsel/tsels/tcmp/tcmps)**。
-除 cmp.md 外,VEC 全族文档不给 C++ 签名(engines.md 只有「名字 + 汇编 + 分类」三列,详述 3);
-比较/选择族(TSEL/TSELS/TCMP/TCMPS)编译通过但 gfrun 拒当前源契约。
+VEC 小结:35 case,**34 精度PASS / 1 run-only(tcvt)/ 0 run-fail**（第二轮：比较/选择族
+tsel/tsels/tcmp/tcmps 由 run-fail 转精度PASS，见「第二轮修正」表；上表这四行的旧「❌」状态已过时）。
+除 cmp.md 外,VEC 全族文档不给 C++ 签名(engines.md 只有「名字 + 汇编 + 分类」三列,详述 3)。
 
 ## SFU 族(reduce / expand / transcendental / layout / irregular)
 
@@ -145,12 +177,13 @@ VEC 小结:35 case,**30 精度PASS / 1 run-only(tcvt)/ 4 run-fail(tsel/tsels/tcm
 | TTRI/THISTOGRAM | ❌ | - | — | **[签名]** 无文档;`no matching function`(详述 9) |
 | TGATHER/TSCATTER | ❌ | - | — | **[签名]** 无文档;后端 `Match Instruction Error`(详述 9) |
 
-SFU 小结:56 case,**13 精度PASS / 29 run-only / 6 编译失败 / 8 run-fail**。
-- 精度PASS(13):8 reduce + 5 TCI。
-- run-only(29):5 超越函数 + 14 expand-arith + tconcat/tfillpad/ttrans + 4 tpart + tquant/tdequant/tsort。
-  多因语义/舍入未由文档钉死,未写 golden。
-- 编译失败(6):TEXTRACT/TINSERT/TTRI/THISTOGRAM/TGATHER/TSCATTER——文档无签名,无法写出可编译调用。
-- run-fail(8):copy-expand(2)、argmax/argmin(4)、TIMG2COL、TMRGSORT——模型未实现或 dtype/契约断言。
+SFU 小结:56 case,**17 精度PASS / 33 run-only / 3 编译失败 / 3 run-fail**（第二轮更新）。
+- 精度PASS(17):8 reduce + 5 TCI + **4 argmax/argmin(新增，UINT32 输出契约)**。
+- run-only(33):5 超越 + 14 expand-arith + tconcat/tfillpad/ttrans + 4 tpart + tquant/tdequant/tsort
+  + **ttri/tinsert(签名订正后能跑)** + **trowexpand/tcolexpand(广播源订正，模型填充退化不设 golden)**。
+- 编译失败(3):THISTOGRAM/TGATHER/TSCATTER——正确签名下后端 `Match Instruction Error`(真后端缺口)。
+- run-fail(3):TEXTRACT(模型 descriptor 契约)、TIMG2COL/TMRGSORT(模型未实现桩)——均正确签名。
+  （上表 TEXTRACT/TINSERT/TTRI/argmax/copy-expand 行的旧状态已过时，以「第二轮修正」表为准。）
 
 ## TLSU 族(load / store / move / gather / scatter)
 
@@ -167,14 +200,15 @@ SFU 小结:56 case,**13 精度PASS / 29 run-only / 6 编译失败 / 8 run-fail**
 | MGATHER_MASK | ❌ | - | — | **[后端]** 签名+示例完整;`MGATHER.MASK` 双 B.IOT bundle 后端无法汇编(详述 18) |
 | MSCATTER_MASK | ❌ | - | — | **[后端]** 同上,`MSCATTER.MASK` bundle 后端未支持(详述 18) |
 | range::Assemble | ❌ | - | — | **[示例]** 照示例参数(ParentSizeCode=12)编译即被 static_assert 拒 `B.ASSEMBLE length cannot exceed parent Tile capacity`(详述 15) |
-| range::Subview | ✅ | ❌ | — | **[契约]** 照示例编译过,gfrun `illegal TSTORE operand or descriptor contract`(详述 15) |
+| range::Subview | ✅ | ❌ | — | **[dtype/契约]** 第二轮根因:parent **须 cube 布局**(模型 Block.cpp:1052 `IsCubeLayout`+`CubeCellDescribeSubview`),Vec tile 被运行期拒;文档示例用 Vec 且未说此要求(详述 15) |
 | TileArray region API(region_tilearray) | ✅ | ❌ | — | **[契约]** TPARTVIEW/TileArray/TASSEMBLY;gfrun `raw tile spill source does not fit the carrier shape`(详述 19) |
 
-TLSU 小结:13 case,**2 精度PASS / 5 run-only / 4 编译失败 / 2 run-fail**。
+TLSU 小结:13 case,**2 精度PASS / 7 run-only / 3 编译失败 / 1 run-fail**（第二轮更新）。
 - 精度PASS(2):MGATHER、MSCATTER。
-- run-only(5):TLOAD/TSTORE/TPREFETCH/TMOV/MGATHER_CAS(通路/搬运类,无独立数值语义可校)。
-- 编译失败(4):GMOV / MGATHER_MASK / MSCATTER_MASK(后端不支持)、range::Assemble(static_assert)。
-- run-fail(2):range::Subview、region_tilearray(gfrun descriptor 契约)。
+- run-only(7):TLOAD/TSTORE/TPREFETCH/TMOV/MGATHER_CAS + **range::Assemble(SizeCode 订正)** +
+  **region_tilearray(干净重编后跑通)**。
+- 编译失败(3):GMOV / MGATHER_MASK / MSCATTER_MASK——正确签名下后端 `Match Instruction Error`。
+- run-fail(1):range::Subview(gfrun descriptor 契约，正确签名)。
 - 注:Shared TMOV 四变体(TMOV_L2S_INSERT/PUBLISH、TMOV_S2L_BROADCAST/EXTRACT)与 TSTORE_PART
   依赖 opaque Shared handle,docs/tileop-usage 全目录无 Shared tile 构造示例,无法写出可编译 demo(详述 13)。
 
@@ -223,7 +257,8 @@ FIXP 小结:11 case,**1 精度PASS(convert)/ 10 run-only / 0 编译失败 / 0 ru
 
 | 接口 | 编译 | gfrun | 精度 | 说明 / 文档问题 |
 |------|------|-------|------|-----------------|
-| reinterpret_tile | ❌ | - | — | **[实现]** reinterpret-tile.md 签名/示例完整;`reinterpret_tile<int32_t>(src)` 视图被后续 `TABS` 拒(`no matching function`)(详述 14) |
+| reinterpret_tile | ✅ | ✅ | ✅ | **[已解]** 第二轮：旧 `TABS(普通tile,视图)` 混用类型不合(非 TABS 拒视图);TABS/TANDS 已接受视图，落盘按 cube cross_model 的「整数视图 op→原生类型 op 重置标签→存」模式 → **精度PASS(golden=abs)** |
+| reinterpret_tcmp | ✅ | ❌ | — | **[模型缺口 witness]** 同款 bitcast 消费 op 换 TCMP：编译过(TCMP out/in 分离模板参),但仿真器 TCMP 处理器 `IsCompatibleDataTile` 拒视图源("TCMP requires two compatible Tile sources",早于 store);官方 reinterpret 修复在模型层遗漏 TCMP(TANDS 接受、TCMP 不接受)。应提 [gfrun][NA] |
 
 ---
 
@@ -345,8 +380,13 @@ reinterpret_tile<int32_t>` 得视图,随后 `TABS` 消费该视图,编译报 `no
 range-modifiers.md 给出完整模板签名 + 示例 + 合法值域 + 发射 asm。
 - **range::Assemble**:照示例参数(ParentSizeCode=12)编译即被 static_assert 拒 `B.ASSEMBLE length
   cannot exceed the parent Tile capacity`(SizeCode 反推容量 < 声明容量)。
-- **range::Subview**:照示例编译通过,gfrun `illegal TSTORE operand or descriptor contract`——运行期拒
-  按文档示例参数生成的 descriptor。签名/汇编层无缺口,受阻在编译期容量断言或 gfrun descriptor 契约。
+- **range::Subview**（第二轮根因）：parent **必须是 cube 布局 tile**——模型 `Block.cpp:1052 HandleBSubview`
+  断言 `IsCubeLayout(parent)` 并走 `CubeCellDescribeSubview`;Vec/RowMajor parent 编译过(Subview 头不限制
+  parent)但运行期被拒 `illegal TSTORE operand or descriptor contract`。`range-modifiers.md` 示例用 Vec tile
+  且未说此要求（doc gap，同 TEXTRACT/TIMG2COL「需持久 cube/Matrix 源」族）。进一步：正确 cube demo
+  (`CubeTileM32`+`TLOAD_CUBE`+`Subview`+存) 还会撞更多未文档化 cube 契约——`TSTORE_CUBE` 要求 GM/CUBE
+  dtype 一致，且其 `const&` 形参与 `Subview::data()`(非 const) 不兼容——完整 cube-subview demo 需更深
+  cube 支持/owner 澄清。当前留 Vec witness 精确定位 cube-parent 要求。
 
 ### 16. [契约][dtype] FIXP postprocess
 

@@ -1,15 +1,36 @@
 #include "guard_common.hpp"
-// TileOP-API doc guard: THISTOGRAM (SFU irregular-and-complex).
-// Source: docs/tileop-usage/engines.md ONLY — one row, no signature; no
-// dedicated doc page.
-// NOTE(doc-gap): histogram bin-count presumably; NO signature documented.
-// Guess: (dst, src) unary; recorded in REPORT as "no usable signature".
+#include "guard_io.h"
+// TileOP-API guard: THISTOGRAM — byte-indexed histogram.
+// v0.58 signature: THISTOGRAM(dst, src, Idx, int ByteId).
+//   Two source tiles (data src + index Idx) + a ByteId selector (0..3); output
+//   defaults to UINT32 bins. docs/tileop-usage gives NO signature; 4-arg form
+//   recovered from the header. Bin/accumulation semantics are not pinned by
+//   docs, so this stays a run-only stability guard (no golden).
+constexpr int M = 16, N = 16, NE = M * N;
+static int32_t src[NE], idx[NE];
+static uint32_t out[NE];
 int main() {
-    constexpr int M = 16, N = 16, NE = M * N;
-    int32_t a[NE], c[NE];
-    gfill_idx(a, NE); for (int i = 0; i < NE; ++i) c[i] = 0;
+#ifdef RES_CHECK
+    guard_read_bin(CHK_DIR "/in_a.bin", src, sizeof(src));
+    guard_read_bin(CHK_DIR "/in_b.bin", idx, sizeof(idx));
+#else
+    for (int i = 0; i < NE; ++i) { src[i] = (i * 7) % 251; idx[i] = i % N; }
+#endif
+    iter_t<int32_t, M, N> gS(src), gX(idx);
+    iter_t<uint32_t, M, N> gO(out);
+    auto gS0 = gS(0, 0);
+    auto gX0 = gX(0, 0);
+    auto gO0 = gO(0, 0);
+    vtile_t<int32_t, M, N> tS, tX;
+    vtile_t<uint32_t, M, N> tD;
+    TLOAD(tS, gS0);
+    TLOAD(tX, gX0);
     BENCHSTART;
-    g_unary<int32_t, M, N>(c, a, [](auto& d, auto& s){ THISTOGRAM(d, s); });
+    THISTOGRAM(tD, tS, tX, 0);
     BENCHEND;
+    TSTORE(gO0, tD);
+#ifdef RES_CHECK
+    guard_dump_bin(CHK_DIR "/out.bin", out, sizeof(out));
+#endif
     return 0;
 }

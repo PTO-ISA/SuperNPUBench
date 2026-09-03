@@ -19,9 +19,13 @@ int main() {
     auto gC0 = gC(0, 0);
 
     BENCHSTART;
-    auto as = range::Assemble<Dst, 12, /*INIT*/ true, /*LAST*/ false,
+    // ParentSizeCode must match the parent tile capacity: a 4x8 float tile is
+    // 128 B = SizeCode 1 (the doc example's 12 = 256 KiB over-runs the tile and
+    // trips a static_assert "B.ASSEMBLE length cannot exceed the parent Tile
+    // capacity"). See range-modifiers.md docs issue.
+    auto as = range::Assemble<Dst, 1, /*INIT*/ true, /*LAST*/ false,
                               /*Off*/ 0, /*RegSrc*/ 0>(d, 0);
-    TLOAD(as, gm);   // B.ASSEMBLE 1, 0, r0, 0, 12
+    TLOAD(as, gm);   // B.ASSEMBLE 1, 0, r0, 0, 1
     BENCHEND;
     TSTORE(gC0, d);
     return 0;

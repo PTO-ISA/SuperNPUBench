@@ -1,26 +1,37 @@
 #include "guard_common.hpp"
-// TileOP-API doc guard: TSELS (VEC, tile-scalar-and-immediate)
-// Source: docs/tileop-usage/engines.md — VEC | TSELS | tile-scalar-and-immediate.
-// NOTE(doc-gap): docs give NO signature/semantics/dtype. Real API (compiler
-// feedback) is 4-arg TSELS(dst, src0, scalar, src1) with the scalar in the
-// MIDDLE — unusual and undocumented. int32 dtype mirrors TSEL. Recorded in
-// REPORT.md.
+#include "guard_io.h"
+// TileOP-API guard: TSELS — masked select between a tile source and a scalar.
+// v0.58: TSELS(dst, mask, scalar, src1). gfrun contract: srcs[1] is a logical
+// predicate (mask), srcs[2] a data source; dst is a fresh output (not in-place).
+// So the mask must come from TCMP. End-to-end:
+//   TCMP<GT>(mask, a, b);  TSELS(dst, mask, SVAL, src)  => out = where(a>b, src, SVAL)
+// (polarity confirmed by the res_check golden). docs give NO signature; the
+// scalar-in-the-middle 4-arg form + predicate contract are recovered from the
+// header + gfrun. Precision: res_check.
+constexpr int M = 16, N = 16, NE = M * N;
+constexpr int32_t SVAL = 777;
+static int32_t A[NE], B[NE], src[NE], out[NE];
 int main() {
-    constexpr int M = 16, N = 16, NE = M * N;
-    int32_t a[NE], b[NE], c[NE];
-    for (int i = 0; i < NE; ++i) { a[i] = i - 8; b[i] = i; c[i] = 0; }
-
-    iter_t<int32_t, M, N> gA(a), gB(b), gC(c);
-    auto gA0 = gA(0, 0);
-    auto gB0 = gB(0, 0);
-    auto gC0 = gC(0, 0);
-    vtile_t<int32_t, M, N> tA, tB, tC;
-
+#ifdef RES_CHECK
+    guard_read_bin(CHK_DIR "/in_a.bin", A, sizeof(A));
+    guard_read_bin(CHK_DIR "/in_b.bin", B, sizeof(B));
+    guard_read_bin(CHK_DIR "/in_c.bin", src, sizeof(src));
+#else
+    for (int i = 0; i < NE; ++i) { A[i] = i - 8; B[i] = (i * 3) % 11 - 5; src[i] = i + 100; }
+#endif
+    iter_t<int32_t, M, N> gA(A), gB(B), gS(src), gO(out);
+    auto a0 = gA(0, 0), b0 = gB(0, 0), s0 = gS(0, 0), o0 = gO(0, 0);
+    vtile_t<int32_t, M, N> tA, tB, tMask, tSrc, tD;
+    TLOAD(tA, a0);
+    TLOAD(tB, b0);
+    TLOAD(tSrc, s0);
     BENCHSTART;
-    TLOAD(tA, gA0);
-    TLOAD(tB, gB0);
-    TSELS(tC, tA, 0, tB);
-    TSTORE(gC0, tC);
+    TCMP<CmpMode::GT>(tMask, tA, tB);       // predicate: a > b
+    TSELS(tD, tMask, SVAL, tSrc);           // dst = mask ? src : SVAL
     BENCHEND;
+    TSTORE(o0, tD);
+#ifdef RES_CHECK
+    guard_dump_bin(CHK_DIR "/out.bin", out, sizeof(out));
+#endif
     return 0;
 }

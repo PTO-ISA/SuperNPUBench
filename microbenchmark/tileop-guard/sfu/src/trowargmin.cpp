@@ -1,14 +1,31 @@
 #include "guard_common.hpp"
-// TileOP-API doc guard: TROWARGMIN (SFU, reduce-and-expand)
-// Source: docs/tileop-usage/engines.md — SFU | TROWARGMIN | reduce-and-expand.
-// NOTE(doc-gap): docs give NO signature and do not state the output shape.
-// Row-reduce to M x 1 inferred (matches reference-tree ValidCol==1 rule).
+#include "guard_io.h"
+// TileOP-API guard: TROWARGMIN — per-row argmin index. Output dtype forced to
+// UINT32 (argReduce); dst physical MxN with ValidCol=1 (index at out[r*N+0]).
+// See trowargmax.cpp for the full contract note. Precision: res_check.
+constexpr int M = 16, N = 16, NE = M * N;
+static float src[NE];
+static uint32_t out[NE];
+using OutTile = Tile<Location::Vec, uint32_t, M, N, BLayout::RowMajor, M, 1>;
 int main() {
-    constexpr int M = 16, N = 16;
-    float a[M*N], c[M*1];
-    gfill_seq(a, M*N, 1.0f); gzero(c, M*1);
+#ifdef RES_CHECK
+    guard_read_bin(CHK_DIR "/in_a.bin", src, sizeof(src));
+#else
+    for (int i = 0; i < NE; ++i) src[i] = (float)((i * 37) % 101);
+#endif
+    iter_t<float, M, N> gS(src);
+    global_iterator<gm_t<uint32_t, M, N>, OutTile> gO(out);
+    auto s0 = gS(0, 0);
+    auto o0 = gO(0, 0);
+    vtile_t<float, M, N> tS;
+    OutTile tD;
+    TLOAD(tS, s0);
     BENCHSTART;
-    g_rowreduce<float, M, N>(c, a, [](auto& d, auto& s){ TROWARGMIN(d, s); });
+    TROWARGMIN(tD, tS);
     BENCHEND;
+    TSTORE(o0, tD);
+#ifdef RES_CHECK
+    guard_dump_bin(CHK_DIR "/out.bin", out, sizeof(out));
+#endif
     return 0;
 }

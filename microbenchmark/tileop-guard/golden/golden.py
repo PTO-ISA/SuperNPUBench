@@ -63,6 +63,12 @@ for name, op in [('tand','and'),('tor','or'),('txor','xor'),('trem','rem'),
 for name, op in [('tabs','abs'),('tneg','neg'),('trelu','relu')]:
     REG[name] = R(fam='unary', op=op, M=16, N=16, dt=F32, eps=1e-5)
 REG['tnot'] = R(fam='unary', op='not', M=16, N=16, dt=I32, eps=0)
+# reinterpret_tile: bitcast fp32->int32, clear sign bit (TANDS 0x7fffffff), then a
+# native fp32 op re-tags the backing; host reads back |x| as fp32. golden = abs.
+REG['reinterpret_tile'] = R(fam='unary', op='abs', M=16, N=16, dt=F32, eps=0)
+# reinterpret_tcmp: same bitcast but consumed by TCMP -> run-fail witness (emulator
+# TCMP handler rejects reinterpret-view sources). NO golden (crashes before store);
+# would be where(int_bits(a)>int_bits(b), tru, prior) once the model accepts views.
 # tcvt (f32->i32) left run-only: rounding mode (trunc vs RNE) not pinned by docs.
 REG['tfma'] = R(fam='ternary', op='fma', M=16, N=16, dt=F32, eps=1e-4)
 
@@ -75,6 +81,14 @@ for name, op in [('tands','and'),('tors','or'),('txors','xor'),('trems','rem'),
                  ('tshls','shl'),('tshrs','shr')]:
     REG[name] = R(fam='scalar', op=op, M=16, N=16, dt=I32, scalar=5, eps=0)
 REG['texpands'] = R(fam='fill', op='fill', M=16, N=16, dt=F32, scalar=float(SCAL), eps=0)
+
+# ---- TCMP/TCMPS produce a packed predicate consumed by TSEL. End-to-end golden:
+#      out = where(a <cmp> b|s, tru, prior). tsel chains TCMP<LT> -> TSEL. ----
+REG['tsel']  = R(fam='cmpsel',   mode='lt', M=16, N=16, dt=I32, eps=0)
+REG['tcmp']  = R(fam='cmpsel',   mode='gt', M=16, N=16, dt=I32, eps=0)
+REG['tcmps'] = R(fam='cmpsel_s', mode='gt', M=16, N=16, dt=I32, scalar=0, eps=0)
+# ---- TSELS: masked select between a tile source and a scalar; out = where(a>b, src, SVAL) ----
+REG['tsels'] = R(fam='tsels', mode='gt', M=16, N=16, dt=I32, scalar=777, eps=0)
 
 # ---- SFU reduce (row: reduce over cols -> per-row scalar at out[r*N+0];
 #                  col: reduce over rows -> per-col scalar at out[0*N+c]=out[c]) ----
@@ -107,6 +121,25 @@ REG['mgather']      = R(fam='gather',      BM=8, BN=1024, OM=8, ON=32, eps=0)
 REG['mscatter']     = R(fam='scatter',     BM=8, BN=1024, OM=8, ON=32, eps=0)
 REG['mgather_mask'] = R(fam='gather_mask', BM=8, BN=1024, OM=8, ON=32, eps=0)
 
+# NOTE: TROWEXPAND/TCOLEXPAND (copy-expand) left run-only — the correct broadcast
+# source now runs, but the model's fill width/height is pinned to the source
+# valid dim (=1), a degenerate expand not worth asserting. See the demo comments.
+
+# ---- TROW/TCOL ARGMAX/ARGMIN: index output forced to UINT32; reduce shape ----
+#   src distinct per line (perm) so the arg index is unambiguous.
+REG['trowargmax'] = R(fam='argreduce', op='max', foot='row', M=16, N=16, eps=0)
+REG['trowargmin'] = R(fam='argreduce', op='min', foot='row', M=16, N=16, eps=0)
+REG['tcolargmax'] = R(fam='argreduce', op='max', foot='col', M=16, N=16, eps=0)
+REG['tcolargmin'] = R(fam='argreduce', op='min', foot='col', M=16, N=16, eps=0)
+
+# ---- TEXTRACT / TINSERT (sub-tile copy at (indexRow,indexCol)) ----
+# Signatures corrected from the header (TEXTRACT/TINSERT(dst,src,indexRow,indexCol)),
+# but left run-only (NO golden REG): TEXTRACT is rejected by gfrun's descriptor
+# contract (same TEPL family as TIMG2COL); TINSERT runs but the model writes a
+# fresh tile with only a partial (4x8) window of the patch — semantics are not
+# pinned by docs, so we do not assert a golden. check_extract/check_insert kept
+# below for when the model/doc contract is settled.
+
 # --------------------------------------------------------------------------
 NP = {F32: np.float32, I32: np.int32, F16: np.float16,
       I16: np.int16, U32: np.uint32, U16: np.uint16}
@@ -134,6 +167,62 @@ def gen(case, chkdir):
         if fam == 'gather_mask':
             mask = ((np.arange(ONE, dtype=np.int64) % 3) != 0).astype(np.uint8)
             mask.tofile(os.path.join(chkdir, 'in_mask.bin'))
+        return
+    # --- TCMP/TCMPS end-to-end: compare operands + prior + true ---
+    if fam in ('cmpsel', 'cmpsel_s'):
+        n = s['M'] * s['N']
+        a = seq_i32(n, 1, 2, 0)
+        prior = seq_i32(n, -1, -1, 4)
+        tru = seq_i32(n, 100, 3, 9)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        if fam == 'cmpsel':
+            b = seq_i32(n, 3, 1, 9)                # tile-tile compare operand
+            b.tofile(os.path.join(chkdir, 'in_b.bin'))
+            prior.tofile(os.path.join(chkdir, 'in_c.bin'))
+            tru.tofile(os.path.join(chkdir, 'in_d.bin'))
+        else:                                       # tile-scalar
+            prior.tofile(os.path.join(chkdir, 'in_b.bin'))
+            tru.tofile(os.path.join(chkdir, 'in_c.bin'))
+        return
+    # --- copy-expand: full MxN source; row reads col 0 (src[r,0]), col reads
+    #     row 0 (src[0,c]). The valid extent (=source valid dims) drives fill. ---
+    if fam == 'copyexpand':
+        M, N = s['M'], s['N']
+        full = seq_f32(M * N, 1.0, 0.1, 7).reshape(M, N)
+        full.reshape(-1).tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- ARGMAX/ARGMIN: src distinct per row & per col (double perm) ---
+    if fam == 'argreduce':
+        M, N = s['M'], s['N']
+        r = np.arange(M)[:, None]; c = np.arange(N)[None, :]
+        # (7*c + 3*r) % N is a per-row permutation (7 coprime 16); add r to also
+        # separate columns so per-col reductions have a unique arg too.
+        a = ((7 * c + 3 * r) % N + r * N).astype(np.float32)
+        a.reshape(-1).tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- TSELS: compare operands (a,b) + tile source ---
+    if fam == 'tsels':
+        n = s['M'] * s['N']
+        a = seq_i32(n, 1, 2, 0)
+        b = seq_i32(n, 3, 1, 9)
+        src = seq_i32(n, 100, 3, 5)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        b.tofile(os.path.join(chkdir, 'in_b.bin'))
+        src.tofile(os.path.join(chkdir, 'in_c.bin'))
+        return
+    # --- TEXTRACT: host owns the big src tile ---
+    if fam == 'extract':
+        SNE = s['SM'] * s['SN']
+        src = seq_f32(SNE, 1.0, 0.1, 3)
+        src.tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- TINSERT: host owns base + patch ---
+    if fam == 'insert':
+        DNE = s['DM'] * s['DN']; SNE = s['SM'] * s['SN']
+        base = seq_f32(DNE, 1.0, 0.1, 3)
+        patch = -(seq_f32(SNE, 2.0, 0.07, 9))
+        base.tofile(os.path.join(chkdir, 'in_a.bin'))
+        patch.tofile(os.path.join(chkdir, 'in_b.bin'))
         return
     # --- matmul family (f16 A/B, optional f32 C / bias) ---
     if fam == 'matmul':
@@ -353,10 +442,151 @@ def check_gather_mask(case, chkdir):
           file=sys.stderr)
     return 1
 
+def check_extract(case, chkdir):
+    s = REG[case]
+    src = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(s['SM'], s['SN'])
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(s['DM'], s['DN'])
+    ref = src[s['OR']:s['OR'] + s['DM'], s['OC']:s['OC'] + s['DN']]
+    bad = np.flatnonzero(got.reshape(-1) != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] EXTRACT MISMATCH {bad.size} first@{i}', file=sys.stderr)
+    return 1
+
+def check_insert(case, chkdir):
+    s = REG[case]
+    base = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(s['DM'], s['DN'])
+    patch = np_read(os.path.join(chkdir, 'in_b.bin'), F32).reshape(s['SM'], s['SN'])
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(s['DM'], s['DN'])
+    ref = base.copy()
+    ref[s['OR']:s['OR'] + s['SM'], s['OC']:s['OC'] + s['SN']] = patch
+    bad = np.flatnonzero(got.reshape(-1) != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] INSERT MISMATCH {bad.size} first@{i}', file=sys.stderr)
+    return 1
+
+def _cmp_mask(mode, a, rhs):
+    if mode == 'gt': return a > rhs
+    if mode == 'lt': return a < rhs
+    if mode == 'ge': return a >= rhs
+    if mode == 'le': return a <= rhs
+    if mode == 'eq': return a == rhs
+    if mode == 'ne': return a != rhs
+    raise KeyError(mode)
+
+def check_cmpsel(case, chkdir):
+    s = REG[case]
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), I32)
+    if s['fam'] == 'cmpsel':
+        b = np_read(os.path.join(chkdir, 'in_b.bin'), I32)
+        prior = np_read(os.path.join(chkdir, 'in_c.bin'), I32)
+        tru = np_read(os.path.join(chkdir, 'in_d.bin'), I32)
+        mask = _cmp_mask(s['mode'], a, b)
+    else:
+        prior = np_read(os.path.join(chkdir, 'in_b.bin'), I32)
+        tru = np_read(os.path.join(chkdir, 'in_c.bin'), I32)
+        mask = _cmp_mask(s['mode'], a, np.int32(s['scalar']))
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, I32)
+    ref = np.where(mask, tru, prior).astype(np.int32)
+    n = min(got.size, ref.size)
+    bad = np.flatnonzero(got[:n] != ref[:n])
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] CMPSEL MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_copyexpand(case, chkdir):
+    s = REG[case]; M, N = s['M'], s['N']
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(M, N)
+    src = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N)
+    if s['foot'] == 'row':
+        ref = np.repeat(src[:, 0:1], N, axis=1)                # dst[r,c] = src[r,0]
+    else:
+        ref = np.repeat(src[0:1, :], M, axis=0)                # dst[r,c] = src[0,c]
+    eps = np.float32(s.get('eps', 1e-4))
+    atol = eps + eps * np.abs(ref)
+    bad = np.flatnonzero(np.abs(got - ref) > atol)
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] COPYEXPAND MISMATCH {bad.size} first@{i}', file=sys.stderr)
+    return 1
+
+def check_argreduce(case, chkdir):
+    s = REG[case]; M, N = s['M'], s['N']
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    o = np_read(out_path, U32)
+    fn = np.argmax if s['op'] == 'max' else np.argmin
+    if s['foot'] == 'row':
+        ref = fn(a, axis=1).astype(np.uint32)      # per-row -> length M
+        got = o.reshape(M, N)[:, 0]                 # index at out[r*N+0]
+    else:
+        ref = fn(a, axis=0).astype(np.uint32)       # per-col -> length N
+        got = o.reshape(M, N)[0, :]                 # index at out[0*N+c]
+    bad = np.flatnonzero(got.astype(np.int64) != ref.astype(np.int64))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] ARGREDUCE MISMATCH {bad.size} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_tsels(case, chkdir):
+    s = REG[case]
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), I32)
+    b = np_read(os.path.join(chkdir, 'in_b.bin'), I32)
+    src = np_read(os.path.join(chkdir, 'in_c.bin'), I32)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, I32)
+    mask = _cmp_mask(s['mode'], a, b)
+    ref = np.where(mask, src, np.int32(s['scalar'])).astype(np.int32)   # dst = mask ? src : SVAL
+    n = min(got.size, ref.size)
+    bad = np.flatnonzero(got[:n] != ref[:n])
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] TSELS MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
 def check(case, chkdir):
     s = REG[case]
     if s['fam'] == 'matmul':
         return check_matmul(case, chkdir)
+    if s['fam'] == 'tsels':
+        return check_tsels(case, chkdir)
+    if s['fam'] == 'argreduce':
+        return check_argreduce(case, chkdir)
+    if s['fam'] == 'copyexpand':
+        return check_copyexpand(case, chkdir)
+    if s['fam'] in ('cmpsel', 'cmpsel_s'):
+        return check_cmpsel(case, chkdir)
+    if s['fam'] == 'extract':
+        return check_extract(case, chkdir)
+    if s['fam'] == 'insert':
+        return check_insert(case, chkdir)
     if s['fam'] == 'reduce':
         return check_reduce(case, chkdir)
     if s['fam'] == 'iota':

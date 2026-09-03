@@ -26,3 +26,17 @@
 | linux-linxisa | `main` | `1055a74` |
 
 看护 demo 代码:https://github.com/PTO-ISA/SuperNPUBench/pull/96
+
+---
+
+## 第二轮新增 issue（2026-09-03 09:29，读头文件订正后新发现）
+
+首轮 3 份 issue 保持不变；第二轮新发现单独成文（带日期时间后缀），版本清单以各文件内为准
+（本轮工具链已更新：Linx-TileOP-API `d6a52b8→6f230c5`、llvm `0f878a8→25677bb`；demo 仍经
+**SuperNPUBench PR #96** 提供 https://github.com/PTO-ISA/SuperNPUBench/pull/96 ）。
+
+| issue 文件 | 提交目标仓 | 前缀 | 覆盖问题 |
+|---|---|---|---|
+| `ISSUE_tileop_docs_20260903_0929.md` | Linx-TileOP-API | (docs) | docs-N1 Subview parent 须 cube 布局（未文档化）；docs-N2 reinterpret_tile 使用规则（双视图 + 落盘重置标签），并修正首轮 linx-4「TABS 拒视图」判断 |
+| `ISSUE_gfrun_NA_model_gaps_20260903_0929.md` | SuperScalarModel | `[gfrun][NA]` | gfrun-N1 TCMP 处理器拒 reinterpret 视图源（官方修复漏 TCMP）；gfrun-N2 TEXTRACT 任何真实子抽取被判非法（block 维取自源 valid 维） |
+| `ISSUE_linx_toolchain_gaps_20260903_0929.md` | Linx-TileOP-API / llvm | `[linx]` | linx-N1 TSTORE_CUBE 无法接收 Subview 载体（const& vs 非 const `data()` + dtype 强绑），阻断 cube-subview 落盘 |
