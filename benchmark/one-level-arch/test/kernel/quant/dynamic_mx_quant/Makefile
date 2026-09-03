@@ -71,6 +71,13 @@ ifeq ($(TYPE), TAIL_OCP_FP8)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_tail_ocp_fp8.elf
 endif
 
+# TAIL_OCP_FP8 运行期动态 shape 版（M/N 运行期 tiling 传入，BlockSize/kPeNum 模板）。
+# kPeNum=4 时必须用 4 线程跑：gfrun -s softcore.multiThreadNum=4。
+ifeq ($(TYPE), TAIL_OCP_FP8_DYN)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_dyn.cpp
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_tail_ocp_fp8_dyn.elf
+endif
+
 # 正式 TAIL_CUBLAS_FP8 kernel（固定 SPMD 4-PE，kPeNum=4，fp16 in）。
 # 必须用 4 线程跑：gfrun -s softcore.multiThreadNum=4。
 ifeq ($(TYPE), TAIL_CUBLAS_FP8_4PE)

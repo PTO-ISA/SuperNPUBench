@@ -1811,7 +1811,12 @@ GFRUN_FORCE_DIRECTBOOT_ABI=1 bin/gfrun -f <res_check elf> -s softcore.multiThrea
 - `nontail_cublas_fp8`（此前 Post=256 记为"精度通过"的 kernel）：**Post≤192 同样挂，签名一致**；其
   Post=256 的"通过"是在阈值之上。故该 kernel 4-PE 精度结论**只在大尺寸成立、非规模无关的可靠证据**。
 - `nontail_ocp_fp4`（本次新增 4-PE）：Post=64 挂，签名与 cublas 完全一致。
-- 两者 `multiThreadNum=1` 单 PE 均**写满全部块行、逐字节正确** → kernel 计算逻辑无误。
+- `tail_ocp_fp8`（**运行期动态 shape 版**，尾轴/OCP/fp8，2026-09-02）：BS=64、M=130 的 4-PE 落盘出现
+  **变体签名**——`output.bin` 满尺寸且逐字节正确，但**第二次落盘 `scale_output.bin` 写空（0 字节）**；
+  `multiThreadNum=1` 时 scale 写满 260 字节、逐字节匹配金标。故本现象**不限于非尾轴/cublas/fp4**，尾轴
+  fp8 亦触发；且签名可为"整个第二输出文件空"而非仅"部分块行零"，但同属"多-PE + res_check + 规模相关 +
+  单 PE 正确"一族。
+- 上述各 kernel `multiThreadNum=1` 单 PE 均**写满全部块行/字节、逐字节正确** → kernel 计算逻辑无误。
 
 ### 已排除的方向（各带证据）
 
@@ -1845,8 +1850,9 @@ GFRUN_FORCE_DIRECTBOOT_ABI=1 bin/gfrun -f <res_check elf> -s softcore.multiThrea
 
 ### 状态
 
-**未定位、未修**。kernel 逻辑已由单 PE 逐字节正确佐证；4-PE 下的落盘现象是**规模相关**的，且在既有
-`nontail_cublas_fp8` 上同样存在。当前 4-PE 精度验证仅在 Post≥256 量级可得到完整落盘。根因待进一步在
+**未定位、未修**。kernel 逻辑已由单 PE 逐字节正确佐证；4-PE 下的落盘现象是**规模相关**的，且在
+`nontail_cublas_fp8`、`nontail_ocp_fp4` 及**尾轴 fp8 动态 shape 版**上同样存在（跨 axis / scaleAlg /
+dstType，非某一 kernel 特有）。当前 4-PE 精度验证仅在足够大尺寸可得到完整落盘。根因待进一步在
 gfrun/harness 侧定位（tile 存储可见性、组终止时序、访存对齐等方向均待验证）。
 
 完整可复现 issue（含逐一版本清单 + 最小复现 + 已排除方向 + 确定性事实 + 猜测方向）见
