@@ -1,14 +1,18 @@
 #include "guard_common.hpp"
+#include "guard_io.h"
 // TileOP-API doc guard: chained RowMax + GroupMax + MaxAbs postprocess.
 // Source: matrix-postprocess.md — "RowMax + GroupMax + MaxAbs"
 //   fixp::keep_acc().row_max(in,out).group_max<8>(gout).max_abs().
-//   .max_abs() 只能在已启用 RowMax 或 GroupMax 后调用;dst 紧凑顺序 D,RowMaxOut,GroupMaxOut.
+// Precision: res_check. RowMaxOut/GroupMaxOut are auxiliary destinations; the main
+//   D committed to gC is the plain fp32 matmul (postprocess.asl identity on D for
+//   pre_quant_mode==0). Golden = A@B. Guards that the full reduction chain does not
+//   corrupt D.
 int main() {
     constexpr int M = 32, N = 32, K = 32;
     __half ha[M * K], hb[K * N];
     float  hc[M * N], hrmi[M * 8];
-    for (int i = 0; i < M * K; ++i) ha[i] = (__half)(0.01f * i);
-    for (int i = 0; i < K * N; ++i) hb[i] = (__half)(0.02f * i);
+    guard_read_bin(CHK_DIR "/in_a.bin", ha, sizeof(ha));
+    guard_read_bin(CHK_DIR "/in_b.bin", hb, sizeof(hb));
     gzero(hc, M * N);
     for (int i = 0; i < M * 8; ++i) hrmi[i] = 0.0f;
 
@@ -36,5 +40,6 @@ int main() {
                 .max_abs());
     BENCHEND;
     TSTORE_CUBE(gC, out);
+    guard_dump_bin(CHK_DIR "/out.bin", hc, sizeof(hc));
     return 0;
 }

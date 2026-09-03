@@ -1,15 +1,17 @@
 #include "guard_common.hpp"
+#include "guard_io.h"
 // TileOP-API doc guard: range::Assemble — destination-side range carrier over TLOAD.
 // Source: docs/tileop-usage/range-modifiers.md — full signature + example.
 //   template<Parent, ParentSizeCode, INIT=true, LAST=false, Offset=0, RegSrc=2>
 //   auto as = range::Assemble<Dst, 12, /*INIT*/true, /*LAST*/false, 0, /*RegSrc*/0>(d, base);
 //   TLOAD(as, gm);  // B.IOT ..., ->d / B.ASSEMBLE 1, 0, r0, 0, 12
 //   INIT=1 requires ParentSizeCode 1..12.
+// The carrier only retargets the load; the loaded data is an identity copy of the
+// source GM tile. Precision: res_check, independent golden = identity (out == in).
+constexpr int M = 4, N = 8, NE = M * N;
+static float ha[NE], hc[NE];
 int main() {
-    constexpr int M = 4, N = 8;
-    float ha[M * N], hc[M * N];
-    gfill_seq(ha, M * N);
-    gzero(hc, M * N);
+    guard_read_bin(CHK_DIR "/in_a.bin", ha, sizeof(ha));
 
     using Dst = vtile_t<float, M, N>;
     Dst d;
@@ -28,5 +30,6 @@ int main() {
     TLOAD(as, gm);   // B.ASSEMBLE 1, 0, r0, 0, 1
     BENCHEND;
     TSTORE(gC0, d);
+    guard_dump_bin(CHK_DIR "/out.bin", hc, sizeof(hc));
     return 0;
 }

@@ -1,20 +1,21 @@
 #include "guard_common.hpp"
+#include "guard_io.h"
 // TileOP-API doc guard: fixp::keep_acc().cscale(scale) — FP32 accumulator C scaling.
-// Source: matrix-postprocess.md — "FP32 accumulator C scaling (PTO ISA 0.58.4)"
-//   只适用于 TMATMUL_ACC 的 FP32 accumulator 路径.
-//   CScale: Tile<Vec, uint8_t, 32, 32, CubeM32, 32, 1> — Local U8 CUBE_M32, valid M x 1.
-// NOTE(doc-gap): 文档给出 cscale(scale) 调用和 CScale tile 类型,但未说明该 CUBE_M32
-//   layout tile 的加载方式;这里按 CUBE tile 惯例用 TLOAD_CUBE 尝试.
+// Source: matrix-postprocess.md — "FP32 accumulator C scaling (PTO ISA 0.58.4)".
+// Precision: res_check. pto-spec cube.asl MatrixInitialAccumulatorValue applies the
+//   per-row U8 exponent to the initial accumulator C: TileProfileMatrixCScale =
+//   C / 2^exponent (matrix-postprocess.asl). Then A@B accumulates on top:
+//     d = A@B + C / 2^exp.  Here exp=1 (all rows) -> d = A@B + C/2. Golden = that.
 int main() {
     constexpr int M = 32, N = 32, K = 32;
     __half  ha[M * K], hb[K * N];
     float   hcc[M * N], hd[M * N];
     uint8_t hs[32 * 32];
-    for (int i = 0; i < M * K; ++i) ha[i] = (__half)(0.01f * i);
-    for (int i = 0; i < K * N; ++i) hb[i] = (__half)(0.02f * i);
-    for (int i = 0; i < M * N; ++i) hcc[i] = 1.0f;
+    guard_read_bin(CHK_DIR "/in_a.bin", ha, sizeof(ha));
+    guard_read_bin(CHK_DIR "/in_b.bin", hb, sizeof(hb));
+    guard_read_bin(CHK_DIR "/in_c.bin", hcc, sizeof(hcc));
     gzero(hd, M * N);
-    for (int i = 0; i < 32 * 32; ++i) hs[i] = 1;
+    for (int i = 0; i < 32 * 32; ++i) hs[i] = 1;      // per-row exponent 1 -> C/2
 
     CubeTileM32<__half, M, K> a;
     CubeTileN8<__half, K, N>  b;
@@ -36,5 +37,6 @@ int main() {
     TMATMUL_ACC(d, c, a, b, fixp::keep_acc().cscale(scale));
     BENCHEND;
     TSTORE_CUBE(gD, d);
+    guard_dump_bin(CHK_DIR "/out.bin", hd, sizeof(hd));
     return 0;
 }

@@ -44,7 +44,7 @@ def f32_to_f16bits(a):
 #   M,N[,K], dt_in, dt_out, scalar (for *S), axis/bcast (reduce/expand), eps
 # --------------------------------------------------------------------------
 F32 = 'f32'; I32 = 'i32'; F16 = 'f16'
-I16 = 'i16'; U32 = 'u32'; U16 = 'u16'
+I16 = 'i16'; U32 = 'u32'; U16 = 'u16'; S8 = 's8'
 
 def R(**kw):
     return kw
@@ -100,9 +100,14 @@ REG['tsqrt']  = R(fam='transcend', op='sqrt',  M=16, N=16, dt=F32, eps=1e-5)
 REG['trsqrt'] = R(fam='transcend', op='rsqrt', M=16, N=16, dt=F32, eps=1e-5)
 
 # ---- TQUANT / TDEQUANT (explicit float multiplier + integer zeroPoint) ----
-#   TQUANT:  q = clamp(round_RNE(src*mult) + zp, -128, 127)  (S8, saturate)
+#   TQUANT (pto-spec normative, format-conversion/TQUANT.md): "compute x*multiplier
+#   + zero_point, then apply the selected rounding mode"; Sat=1 clamps to S8/U8.
+#   → q = clamp(round_RNE(src*mult) + zp, -128, 127). multiplier/zeroPoint are
+#   NORMATIVELY MANDATORY (omitted B.IOR defaults 1.0/0 only). golden pins real
+#   mult/zp; the emulator IGNORES them → this case is expected to land in
+#   PRECISION-FAIL, witnessing model gap gfrun-5 (NOT a golden regression).
 #   TDEQUANT: dst = (src - zp) * mult                         (fp32)
-REG['tquant']   = R(fam='quant',   M=8, N=256, mult=1.0, zp=0, eps=0)  # emu ignores mult/zp
+REG['tquant']   = R(fam='quant',   M=8, N=256, mult=0.5, zp=1, eps=0)  # real mult/zp per spec
 REG['tdequant'] = R(fam='dequant', M=8, N=256, mult=2.0, zp=0, eps=0)
 
 # ---- TCVT (numeric conversion fp32 -> s32). Rounding mode pinned empirically
@@ -144,6 +149,41 @@ REG['tgemv']          = R(fam='matmul', M=1, N=32, K=32, post='none', dt_out=F32
 # ---- FIXP convert (matmul then cast to fp16 via fixp::convert) ----
 REG['convert'] = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F16, eps=3e-2)
 
+# ---- FIXP B.FPATR matrix post-process (matmul + quant/activation/reduction) ----
+# Golden pins the *spec* post-process contract (pto-spec arch/profile/
+# matrix-postprocess.asl + matrix-quantization.asl). Shared FP19 carriers
+# (must match the demo make_*_quant constants exactly):
+#   FP19 16.0 = 0x20C00 ; 8.0 = 0x20800 ; 1.0 = 0x1FC00 ; 0.5 = 0x1F800.
+# S8 quant (QF322S8Pre / VQF322S8Pre): offset width 9 (S9 intermediate). Scale
+# folded into a single multiplier per spec MatrixSelectedMultiplier; positive ->
+# scale, negative under LReLU/PReLU -> slope. Then round+sat S9, +offset, encode.
+#
+# Tier 1 -- keep_acc reductions: main D published is the *plain* fp32 matmul
+# (RowMax/GroupMax/MaxAbs write only the *auxiliary* destinations, which these
+# demos do not store). So golden = matmul, post=none. Guards that enabling the
+# reduction path does not corrupt D.
+REG['rowmax_acc'] = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F32, eps=2e-2)
+REG['group_max']  = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F32, eps=2e-2)
+REG['chain']      = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F32, eps=2e-2)
+# Tier 2 -- quantizing post-process: D itself is requantized.
+#   scale=16.0 (0x20C00) keeps D*scale in +-40 -> rich, non-saturating S8 spread.
+#   offset=5 exercises the S9 offset path. itol=1 absorbs f16-matmul boundary
+#   rounding (host f32 accum vs cube accum) without masking a scale/offset bug.
+REG['s8_scalar']      = R(fam='mquant', M=32, N=32, K=32, qmode='s8', fp19=0x20C00, off=5, dt_out=S8, itol=1)
+REG['scalar_generic'] = R(fam='mquant', M=32, N=32, K=32, qmode='s8', fp19=0x20C00, off=5, dt_out=S8, itol=1)
+REG['s8_vector']      = R(fam='mquant', M=32, N=32, K=32, qmode='s8', fp19=0x20C00, off=5, dt_out=S8, itol=1)
+REG['vquant_f16']     = R(fam='mquant', M=32, N=32, K=32, qmode='f16', fp19=0x20C00, off=0, dt_out=F16, eps=3e-2)
+# Tier 3 -- activation fused with the multiplier. lrelu: pos*scale, neg*slope,
+# then S8 quant. prelu: fixp::f16() convert (scale=1.0), pos*1, neg*slope, fp16.
+REG['lrelu'] = R(fam='mquant', M=32, N=32, K=32, qmode='s8',  fp19=0x20C00, off=5,
+                 relu='lrelu', slope_fp19=0x20800, dt_out=S8, itol=1)
+REG['prelu'] = R(fam='mquant', M=32, N=32, K=32, qmode='f16', fp19=0x1FC00, off=0,
+                 relu='prelu', slope_fp19=0x1F800, dt_out=F16, eps=3e-2)
+# cscale: TMATMUL_ACC with per-row U8 exponent on the initial accumulator C
+# (pto-spec cube.asl MatrixInitialAccumulatorValue -> C/2^exp), then A@B on top.
+# exp=1 (all rows) -> d = A@B + C/2.
+REG['cscale'] = R(fam='cscale', M=32, N=32, K=32, cexp=1, dt_out=F32, eps=2e-2)
+
 # ---- TCI (create index / "vci"): self-generated iota, NO input ----
 #   ascending col k = start+k, descending = start-k; ValidRow=1 (TCI.md).
 REG['tci']      = R(fam='iota', M=1, N=64, dt=I32, start=0,   desc=0, vc=64, eps=0)
@@ -172,9 +212,16 @@ for op in ['add', 'sub', 'mul', 'div', 'max', 'min', 'expdif']:
     REG['trowexpand' + op] = R(fam='expandarith', op=op, foot='row', M=16, N=16, eps=1e-5)
     REG['tcolexpand' + op] = R(fam='expandarith', op=op, foot='col', M=16, N=16, eps=1e-5)
 
-# NOTE: TROWEXPAND/TCOLEXPAND (copy-expand) left run-only — the correct broadcast
-# source now runs, but the model's fill width/height is pinned to the source
-# valid dim (=1), a degenerate expand not worth asserting. See the demo comments.
+# TROWEXPAND/TCOLEXPAND (copy-expand). Authoritative semantics (pto-spec normative
+# ASL): TROWEXPAND "broadcasts one one-column source bit-for-bit across every valid
+# destination column" -> dst[r,c]=src[r,0]; TCOLEXPAND broadcasts a one-row source
+# across every valid row -> dst[r,c]=src[0,c]. golden pins the full M x N broadcast.
+# The emulator pins the fill extent to the source valid dim (=1), a degenerate
+# expand, so these are expected to land in PRECISION-FAIL, witnessing that model
+# contract gap (header/impl vs spec). foot=row: src is an M-vector column; foot=col:
+# src is an M x N tile whose valid row 0 holds the N-vector.
+REG['trowexpand'] = R(fam='copyexpand', foot='row', M=16, N=16, eps=0)
+REG['tcolexpand'] = R(fam='copyexpand', foot='col', M=16, N=16, eps=0)
 
 # ---- TROW/TCOL ARGMAX/ARGMIN: index output forced to UINT32; reduce shape ----
 #   src distinct per line (perm) so the arg index is unambiguous.
@@ -184,16 +231,62 @@ REG['tcolargmax'] = R(fam='argreduce', op='max', foot='col', M=16, N=16, eps=0)
 REG['tcolargmin'] = R(fam='argreduce', op='min', foot='col', M=16, N=16, eps=0)
 
 # ---- TEXTRACT / TINSERT (sub-tile copy at (indexRow,indexCol)) ----
-# Signatures corrected from the header (TEXTRACT/TINSERT(dst,src,indexRow,indexCol)),
-# but left run-only (NO golden REG): TEXTRACT is rejected by gfrun's descriptor
-# contract (same TEPL family as TIMG2COL); TINSERT runs but the model writes a
-# fresh tile with only a partial (4x8) window of the patch — semantics are not
-# pinned by docs, so we do not assert a golden. check_extract/check_insert kept
-# below for when the model/doc contract is settled.
+# Authoritative semantics (pto-spec normative ASL): TINSERT "inserts a source Tile
+# into a snapshotted OLD destination at encoded row/column offsets" — source0 is the
+# persistent old destination (base PRESERVED outside the window), source1 the patch.
+# -> dst = base.copy(); dst[OR:OR+SM, OC:OC+SN] = patch. golden pins that. The
+# emulator writes a fresh tile with only a partial window and does not preserve base,
+# so TINSERT is expected to land in PRECISION-FAIL (model contract gap). TEXTRACT
+# stays run-fail (gfrun descriptor contract rejects it); its golden (check_extract)
+# is kept READY so it auto-validates once the model implements the extract path.
+REG['tinsert'] = R(fam='insert', DM=16, DN=32, SM=8, SN=16, OR=4, OC=8, eps=0)
+# TEXTRACT (pto-spec normative ASL): dst[j,i] = src[OR+j, OC+i] (copy the rectangle
+# beginning at the encoded row/col offset). READY golden — the case currently
+# run-fails (gfrun descriptor contract), so it stays run-fail until the model
+# implements the extract path, then check_extract auto-validates.
+REG['textract'] = R(fam='extract', SM=16, SN=32, DM=8, DN=16, OR=4, OC=8, eps=0)
+
+# ---- TMRGSORT / TGATHER / TSCATTER (irregular-and-complex). READY goldens: all
+#      three currently run-fail (model stubs/gaps); goldens encode the pto-spec
+#      normative semantics and auto-validate once the model implements them. ----
+#   TMRGSORT: stably merge two sorted single-row streams -> sorted(concat).
+#   TGATHER : dst[r,c] = value[idx[r,c], c]  (row-index gather, per column).
+#   TSCATTER: dst[idx[r,c], c] = src[r,c]     (row-index scatter; idx injective/col).
+REG['tmrgsort'] = R(fam='mrgsort', H=128, W=256, eps=0)
+REG['tgather']  = R(fam='tgather', M=16, N=16, eps=0)
+REG['tscatter'] = R(fam='tscatter', M=16, N=16, eps=0)
+
+# ---- TFILLPAD (layout/init): copy the VALID source rectangle into dst and fill
+#   the physical padding with zero. Authoritative semantics: TFILLPAD.md ("复制
+#   有效源区域, 并将绑定标量写入 padding") + the page's worked example (InputTile
+#   valid 9x9 inside a 16x16 physical, OutputTile PadValue::Zero); cpu_sim
+#   TFillPad.hpp static_assert PadVal==Zero confirms zero-pad only. src is a
+#   VR x VC valid region in a physical M x N tile -> dst[i,j] = src[i,j] for
+#   i<VR & j<VC, else 0.
+REG['tfillpad'] = R(fam='fillpad', M=16, N=16, VR=9, VC=9, eps=0)
+
+# ---- range::Assemble: a destination-side range carrier layered over TLOAD. The
+#   carrier only retargets the load; the data is an identity copy of the source
+#   GM tile -> out == in. golden = identity (transitive TLOAD coverage made
+#   explicit with a numeric check).
+REG['range_assemble'] = R(fam='identity', M=4, N=8, dt=F32, eps=0)
+
+# ---- region TileArray + TASSEMBLY: NF row-major fragments (PM x FN) laid out
+#   block-major in memory are column-concatenated into a PM x (NF*FN) parent
+#   (TileArrayRegionAsm.cpp assembles 4 x 32x16 -> 32x64). golden = concat over
+#   columns. The case currently run-fails (region producer path not yet
+#   implemented in the model); the golden is READY and auto-validates once it is.
+REG['region_tilearray'] = R(fam='regionasm', PM=32, PN=64, FN=16, NF=4, eps=0)
+
+# ---- TTRI: self-generated triangular matrix (no input). pto-spec normative ASL
+#   (TTRI.asl): the 1-arg C++ overload omits B.IOR -> diagonal 0 + LOWER
+#   orientation; logical element [r,c] is typed 1.0 iff c <= r+diagonal (here
+#   c <= r), else 0.0 (exact FP32 0/1 encodings). golden = tril(ones).
+REG['ttri'] = R(fam='ttri', M=16, N=16, diag=0, upper=0, eps=0)
 
 # --------------------------------------------------------------------------
 NP = {F32: np.float32, I32: np.int32, F16: np.float16,
-      I16: np.int16, U32: np.uint32, U16: np.uint16}
+      I16: np.int16, U32: np.uint32, U16: np.uint16, S8: np.int8}
 
 def np_read(path, dt):
     return np.fromfile(path, dtype=NP[dt])
@@ -332,12 +425,19 @@ def gen(case, chkdir):
             b = np.tile(row0, (M, 1)).reshape(-1)          # full MxN, every row = row0
         b.tofile(os.path.join(chkdir, 'in_b.bin'))
         return
-    # --- copy-expand: full MxN source; row reads col 0 (src[r,0]), col reads
-    #     row 0 (src[0,c]). The valid extent (=source valid dims) drives fill. ---
+    # --- copy-expand: match the demo's source read. row: demo loads an M x 1
+    #     column (M floats) -> dst[r,c]=src[r]. col: demo loads an M x N tile whose
+    #     valid row 0 is the N-vector -> dst[r,c]=src[c]. Nonzero values so the
+    #     demo's `if(src[i]==0)` fallback is a no-op under RES_CHECK. ---
     if fam == 'copyexpand':
         M, N = s['M'], s['N']
-        full = seq_f32(M * N, 1.0, 0.1, 7).reshape(M, N)
-        full.reshape(-1).tofile(os.path.join(chkdir, 'in_a.bin'))
+        if s['foot'] == 'row':
+            col = ((np.arange(M, dtype=np.float32) + np.float32(1.0)) * np.float32(0.5))
+            col.tofile(os.path.join(chkdir, 'in_a.bin'))
+        else:
+            row0 = ((np.arange(N, dtype=np.float32) + np.float32(1.0)) * np.float32(0.25))
+            full = np.tile(row0, (M, 1)).reshape(-1).astype(np.float32)   # every row = row0
+            full.tofile(os.path.join(chkdir, 'in_a.bin'))
         return
     # --- ARGMAX/ARGMIN: src distinct per row & per col (double perm) ---
     if fam == 'argreduce':
@@ -372,8 +472,64 @@ def gen(case, chkdir):
         base.tofile(os.path.join(chkdir, 'in_a.bin'))
         patch.tofile(os.path.join(chkdir, 'in_b.bin'))
         return
-    # --- matmul family (f16 A/B, optional f32 C / bias) ---
-    if fam == 'matmul':
+    # --- TMRGSORT: two ascending-sorted single-row streams (disjoint interleave) ---
+    if fam == 'mrgsort':
+        H = s['H']
+        a = (2.0 * np.arange(H, dtype=np.float32))          # 0,2,4,... sorted
+        b = (2.0 * np.arange(H, dtype=np.float32) + 1.0)    # 1,3,5,... sorted, disjoint
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        b.tofile(os.path.join(chkdir, 'in_b.bin'))
+        return
+    # --- TGATHER: value MxN + per-coordinate ROW index in [0,M) (nontrivial) ---
+    if fam == 'tgather':
+        M, N = s['M'], s['N']
+        r = np.arange(M)[:, None]; c = np.arange(N)[None, :]
+        val = ((np.arange(M * N, dtype=np.float32) + 1.0) * np.float32(0.1))
+        idx = ((7 * r + 3 * c) % M).astype(np.int32)        # picks a row per (r,c)
+        val.tofile(os.path.join(chkdir, 'in_a.bin'))
+        idx.reshape(-1).tofile(os.path.join(chkdir, 'in_idx.bin'))
+        return
+    # --- TSCATTER: src MxN + per-column PERMUTATION row index (injective/col) ---
+    if fam == 'tscatter':
+        M, N = s['M'], s['N']
+        r = np.arange(M)[:, None]; c = np.arange(N)[None, :]
+        src = ((np.arange(M * N, dtype=np.float32) + 1.0) * np.float32(0.1))
+        idx = ((r + c) % M).astype(np.int32)                # each column is a perm of [0,M)
+        src.tofile(os.path.join(chkdir, 'in_a.bin'))
+        idx.reshape(-1).tofile(os.path.join(chkdir, 'in_idx.bin'))
+        return
+    # --- TFILLPAD: full physical M x N nonzero source (golden reads only the
+    #     VR x VC valid rectangle; the rest is what the op must zero out). ---
+    if fam == 'fillpad':
+        M, N = s['M'], s['N']
+        a = seq_f32(M * N, 1.0, 0.13, 3)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- region TileArray: NF contiguous PM x FN blocks, each block distinct so
+    #     a mis-ordered assembly is caught. ---
+    if fam == 'regionasm':
+        PM, PN = s['PM'], s['PN']
+        a = seq_f32(PM * PN, 1.0, 0.05, 7)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- TTRI: self-generated, no input files ---
+    if fam == 'ttri':
+        return
+    # --- cscale: matmul + fp32 accumulator C (scaled per-row) ---
+    if fam == 'cscale':
+        M, N, K = s['M'], s['N'], s['K']
+        ii = np.arange(M * K, dtype=np.float32)
+        jj = np.arange(K * N, dtype=np.float32)
+        A = (np.sin(ii * np.float32(0.13)) * np.float32(0.8)).astype(np.float16)
+        B = (np.cos(jj * np.float32(0.21)) * np.float32(0.8)).astype(np.float16)
+        kk = np.arange(M * N, dtype=np.float32)
+        C = (np.sin(kk * np.float32(0.07)) * np.float32(0.5)).astype(np.float32)
+        A.tofile(os.path.join(chkdir, 'in_a.bin'))
+        B.tofile(os.path.join(chkdir, 'in_b.bin'))
+        C.tofile(os.path.join(chkdir, 'in_c.bin'))
+        return
+    # --- matmul + fixp post-process families (f16 A/B, optional f32 C / bias) ---
+    if fam in ('matmul', 'mquant'):
         M, N, K = s['M'], s['N'], s['K']
         ii = np.arange(M * K, dtype=np.float32)
         jj = np.arange(K * N, dtype=np.float32)
@@ -381,11 +537,11 @@ def gen(case, chkdir):
         B = (np.cos(jj * np.float32(0.21)) * np.float32(0.8)).astype(np.float16)
         A.tofile(os.path.join(chkdir, 'in_a.bin'))
         B.tofile(os.path.join(chkdir, 'in_b.bin'))
-        if s['post'] == 'acc':
+        if s.get('post') == 'acc':
             kk = np.arange(M * N, dtype=np.float32)
             C = (np.sin(kk * np.float32(0.07)) * np.float32(0.5)).astype(np.float32)
             C.tofile(os.path.join(chkdir, 'in_c.bin'))
-        if s['post'] == 'bias':
+        if s.get('post') == 'bias':
             bias = (np.arange(N, dtype=np.float32) * np.float32(0.01) + np.float32(0.5)).astype(np.float32)
             bias.tofile(os.path.join(chkdir, 'in_bias.bin'))
         return
@@ -516,6 +672,92 @@ def check_matmul(case, chkdir):
         return 0
     i = int(bad[0])
     print(f'[{case}] MATMUL MISMATCH {bad.size}/{ref_f.size} first@{i} got={got[i]} ref={ref_f[i]}',
+          file=sys.stderr)
+    return 1
+
+def fp19_to_f32(v):
+    """Decode a 19-bit FP19 carrier (pto-spec arch/data-types/fp19.asl):
+    1 sign [18], 8-bit bias-127 exponent [17:10], 10-bit fraction [9:0]."""
+    v &= 0x7ffff
+    sign = (v >> 18) & 1
+    exp = (v >> 10) & 0xff
+    frac = v & 0x3ff
+    if exp == 0:
+        mag = float(frac) * (2.0 ** -136)      # subnormal (unused for our normals)
+    else:
+        mag = (1.0 + frac / 1024.0) * (2.0 ** (exp - 127))
+    return -mag if sign else mag
+
+def check_mquant(case, chkdir):
+    """B.FPATR matrix post-process golden (pto-spec matrix-postprocess.asl).
+    D = A@B (fp32); a single multiplier folds scale+activation:
+      positive -> scale ; negative under LReLU/PReLU -> slope (replaces scale).
+    S8 path: round+sat S9 intermediate, +offset, encode S8 (RNE).
+    F16 path: (D*mult) encoded to fp16 (RNE)."""
+    s = REG[case]; M, N, K = s['M'], s['N'], s['K']
+    A = np.fromfile(os.path.join(chkdir, 'in_a.bin'), np.float16).reshape(M, K).astype(np.float32)
+    B = np.fromfile(os.path.join(chkdir, 'in_b.bin'), np.float16).reshape(K, N).astype(np.float32)
+    D = (A @ B).astype(np.float64)
+    scale = fp19_to_f32(s['fp19'])
+    relu = s.get('relu', 'none')
+    if relu in ('lrelu', 'prelu'):
+        slope = fp19_to_f32(s['slope_fp19'])
+        # spec source_negative: value<0 -> slope; value>=0 (incl +0) -> scale.
+        mult = np.where(D < 0.0, slope, scale)
+    else:
+        mult = scale
+    act = D * mult
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    if s['qmode'] == 's8':
+        off = s.get('off', 0)
+        inter = np.clip(np.rint(act), -256, 255)          # S9 round+sat (RNE)
+        ref = np.clip(inter + off, -128, 127).astype(np.int64)
+        got = np.fromfile(out_path, np.int8).astype(np.int64).reshape(-1)[:ref.size]
+        itol = int(s.get('itol', 0))
+        d = np.abs(got - ref.reshape(-1))
+        bad = np.flatnonzero(d > itol)
+        if bad.size == 0:
+            return 0
+        i = int(bad[0])
+        print(f'[{case}] MQUANT-S8 MISMATCH {bad.size}/{ref.size} first@{i} '
+              f'got={got[i]} ref={ref.reshape(-1)[i]} (scale={scale} off={off} tol={itol})',
+              file=sys.stderr)
+        return 1
+    # f16 floating encode
+    ref = act.astype(np.float16).astype(np.float32).reshape(-1)
+    got = np.fromfile(out_path, np.float16).astype(np.float32).reshape(-1)[:ref.size]
+    eps = np.float32(s.get('eps', 3e-2))
+    atol = eps + eps * np.abs(ref)
+    bad = np.flatnonzero(np.abs(got - ref) > atol)
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] MQUANT-F16 MISMATCH {bad.size}/{ref.size} first@{i} '
+          f'got={got[i]} ref={ref[i]} (scale={scale})', file=sys.stderr)
+    return 1
+
+def check_cscale(case, chkdir):
+    """TMATMUL_ACC + cscale golden (pto-spec cube.asl / matrix-postprocess.asl):
+    d = A@B + C / 2^exp (per-row exponent; here uniform exp)."""
+    s = REG[case]; M, N, K = s['M'], s['N'], s['K']
+    A = np.fromfile(os.path.join(chkdir, 'in_a.bin'), np.float16).reshape(M, K).astype(np.float32)
+    B = np.fromfile(os.path.join(chkdir, 'in_b.bin'), np.float16).reshape(K, N).astype(np.float32)
+    C = np.fromfile(os.path.join(chkdir, 'in_c.bin'), np.float32).reshape(M, N)
+    D = (A @ B) + C / np.float32(2.0 ** s['cexp'])
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    ref = D.astype(np.float32).reshape(-1)
+    got = np.fromfile(out_path, np.float32).reshape(-1)[:ref.size]
+    eps = np.float32(s.get('eps', 2e-2))
+    atol = eps + eps * np.abs(ref)
+    bad = np.flatnonzero(np.abs(got - ref) > atol)
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] CSCALE MISMATCH {bad.size}/{ref.size} first@{i} got={got[i]} ref={ref[i]}',
           file=sys.stderr)
     return 1
 
@@ -688,9 +930,14 @@ def check_transcend(case, chkdir):
     if not os.path.exists(out_path):
         print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
     got = np_read(out_path, F32).astype(np.float64)
-    # TLOG is base-2 (verified: TLOG(4.25)=2.0875=log2(4.25), not ln); TEXP is
-    # base-e (verified PASS against np.exp). Asymmetric bases confirmed empirically.
-    fn = {'exp': np.exp, 'log': np.log2, 'recip': lambda x: 1.0 / x,
+    # Authoritative semantics (pto-spec normative ASL contract): TLOG = same-type
+    # NATURAL logarithm (ln) — docs/tile/.../transcendental/TLOG.md states "natural
+    # logarithm" 3x + log(1)=+0/log(0)=-inf/log(neg)=NaN; SuperNPUBench tlog.md and
+    # tileop-usage TLOG.md agree. golden pins the DESIGN intent (ln). The emulator
+    # currently computes log2 (measured TLOG(4.25)=2.0875) → this case is expected to
+    # land in PRECISION-FAIL, witnessing model gap gfrun-6 (NOT a golden regression).
+    # TEXP is base-e (matches spec + emulator).
+    fn = {'exp': np.exp, 'log': np.log, 'recip': lambda x: 1.0 / x,
           'sqrt': np.sqrt, 'rsqrt': lambda x: 1.0 / np.sqrt(x)}[s['op']]
     ref = fn(a)
     n = min(got.size, ref.size)
@@ -831,6 +1078,59 @@ def check_extract(case, chkdir):
     print(f'[{case}] EXTRACT MISMATCH {bad.size} first@{i}', file=sys.stderr)
     return 1
 
+def check_mrgsort(case, chkdir):
+    s = REG[case]; H, W = s['H'], s['W']
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), F32)
+    b = np_read(os.path.join(chkdir, 'in_b.bin'), F32)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32)
+    ref = np.sort(np.concatenate([a[:H], b[:H]]))          # stable ascending merge
+    n = min(got.size, ref.size, W)
+    bad = np.flatnonzero(got[:n] != ref[:n])
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] MRGSORT MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_tgather(case, chkdir):
+    s = REG[case]; M, N = s['M'], s['N']
+    val = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N)
+    idx = np_read(os.path.join(chkdir, 'in_idx.bin'), I32).reshape(M, N)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(M, N)
+    c = np.arange(N)[None, :]
+    ref = val[idx, c]                                      # dst[r,c] = val[idx[r,c], c]
+    bad = np.flatnonzero(got.reshape(-1) != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] TGATHER MISMATCH {bad.size} first@{i}', file=sys.stderr)
+    return 1
+
+def check_tscatter(case, chkdir):
+    s = REG[case]; M, N = s['M'], s['N']
+    src = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N)
+    idx = np_read(os.path.join(chkdir, 'in_idx.bin'), I32).reshape(M, N)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(M, N)
+    ref = np.zeros((M, N), np.float32)
+    c = np.broadcast_to(np.arange(N)[None, :], (M, N))
+    ref[idx, c] = src                                     # dst[idx[r,c], c] = src[r,c]
+    bad = np.flatnonzero(got.reshape(-1) != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] TSCATTER MISMATCH {bad.size} first@{i}', file=sys.stderr)
+    return 1
+
 def check_insert(case, chkdir):
     s = REG[case]
     base = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(s['DM'], s['DN'])
@@ -889,11 +1189,13 @@ def check_copyexpand(case, chkdir):
     if not os.path.exists(out_path):
         print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
     got = np_read(out_path, F32).reshape(M, N)
-    src = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N)
+    raw = np_read(os.path.join(chkdir, 'in_a.bin'), F32)
     if s['foot'] == 'row':
-        ref = np.repeat(src[:, 0:1], N, axis=1)                # dst[r,c] = src[r,0]
+        col = raw[:M].reshape(M, 1)                             # M x 1 broadcast column
+        ref = np.repeat(col, N, axis=1)                        # dst[r,c] = src[r]
     else:
-        ref = np.repeat(src[0:1, :], M, axis=0)                # dst[r,c] = src[0,c]
+        row0 = raw.reshape(M, N)[0:1, :]                        # 1 x N broadcast row (valid row 0)
+        ref = np.repeat(row0, M, axis=0)                       # dst[r,c] = src[c]
     eps = np.float32(s.get('eps', 1e-4))
     atol = eps + eps * np.abs(ref)
     bad = np.flatnonzero(np.abs(got - ref) > atol)
@@ -945,10 +1247,71 @@ def check_tsels(case, chkdir):
           file=sys.stderr)
     return 1
 
+def check_fillpad(case, chkdir):
+    s = REG[case]; M, N, VR, VC = s['M'], s['N'], s['VR'], s['VC']
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(M, N)
+    ref = np.zeros((M, N), np.float32)
+    ref[:VR, :VC] = a[:VR, :VC]                       # copy valid rect, zero the pad
+    bad = np.flatnonzero(got.reshape(-1) != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] FILLPAD MISMATCH {bad.size}/{M*N} first@{i} '
+          f'got={got.reshape(-1)[i]} ref={ref.reshape(-1)[i]}', file=sys.stderr)
+    return 1
+
+def check_regionasm(case, chkdir):
+    s = REG[case]; PM, PN, FN, NF = s['PM'], s['PN'], s['FN'], s['NF']
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), F32)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(PM, PN)
+    frags = [a[k * PM * FN:(k + 1) * PM * FN].reshape(PM, FN) for k in range(NF)]
+    ref = np.concatenate(frags, axis=1)               # PM x (NF*FN) column concat
+    bad = np.flatnonzero(got.reshape(-1) != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] REGIONASM MISMATCH {bad.size}/{PM*PN} first@{i} '
+          f'got={got.reshape(-1)[i]} ref={ref.reshape(-1)[i]}', file=sys.stderr)
+    return 1
+
+def check_ttri(case, chkdir):
+    s = REG[case]; M, N, diag = s['M'], s['N'], s['diag']
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(M, N)
+    r = np.arange(M)[:, None]; c = np.arange(N)[None, :]
+    mask = (c >= r + diag) if s['upper'] else (c <= r + diag)   # ASL: lower iff c<=r+diag
+    ref = mask.astype(np.float32)
+    bad = np.flatnonzero(got.reshape(-1) != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] TTRI MISMATCH {bad.size}/{M*N} first@{i} '
+          f'got={got.reshape(-1)[i]} ref={ref.reshape(-1)[i]}', file=sys.stderr)
+    return 1
+
 def check(case, chkdir):
     s = REG[case]
     if s['fam'] == 'matmul':
         return check_matmul(case, chkdir)
+    if s['fam'] == 'mquant':
+        return check_mquant(case, chkdir)
+    if s['fam'] == 'cscale':
+        return check_cscale(case, chkdir)
+    if s['fam'] == 'fillpad':
+        return check_fillpad(case, chkdir)
+    if s['fam'] == 'regionasm':
+        return check_regionasm(case, chkdir)
+    if s['fam'] == 'ttri':
+        return check_ttri(case, chkdir)
     if s['fam'] == 'tsels':
         return check_tsels(case, chkdir)
     if s['fam'] == 'argreduce':
@@ -961,6 +1324,12 @@ def check(case, chkdir):
         return check_extract(case, chkdir)
     if s['fam'] == 'insert':
         return check_insert(case, chkdir)
+    if s['fam'] == 'mrgsort':
+        return check_mrgsort(case, chkdir)
+    if s['fam'] == 'tgather':
+        return check_tgather(case, chkdir)
+    if s['fam'] == 'tscatter':
+        return check_tscatter(case, chkdir)
     if s['fam'] == 'reduce':
         return check_reduce(case, chkdir)
     if s['fam'] == 'iota':

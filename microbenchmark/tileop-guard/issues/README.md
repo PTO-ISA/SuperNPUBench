@@ -1,7 +1,21 @@
 # tileop-guard 看护结果 → issue 提交清单
 
-基于 TileOP-API v0.58 文档看护(125 case)整理,按「文档 / 仿真器 / 编译器」拆成 3 份可直接提交的 issue。
+基于 TileOP-API v0.58 文档看护整理,按「文档 / 仿真器 / 编译器」拆成 3 份可直接提交的 issue。
 每份含统一的组件版本清单 + 通用复现步骤,内部以问题为单位分节。
+
+## 轮次差异(简述)
+
+看护结果按时间戳分两份报告,本目录 issue 随之分两批;两个时点的差异如下:
+
+- **2026-09-01**(见 `../REPORT_20260901.md`,三态,125 case):首轮看护,暴露文档/模型/工具链三类
+  缺口,据此提交下方**首轮 3 份 issue**(Doc-1..15 / gfrun-1..4 / linx-1..4)。
+- **2026-09-03**(见 `../REPORT_20260903.md`,四态,126 case):demo 持续完善(读头订正 TSEL/TCMP/
+  argmax/MGATHER 等签名、为可钉语义的 run-only 补 host 独立 golden)+ 工具链升级(Linx-TileOP-API
+  `d6a52b8→6f230c5`、llvm `0f878a8→25677bb`)后重跑。相对首轮的三点变化:
+  1. 一批「无签名→编译失败」「`*.MASK`/GMOV 后端 Match Error」case 随读头订正与工具链升级**转正**;
+  2. golden 改钉 pto-spec **预期语义**(不再采信实现),TLOG(ln)/TQUANT(mult/zp)/copy-expand(全广播)/
+     TINSERT(保留 base)5 个原「run-only 假绿」落到**精度失败**,作模型缺口 witness → 新增 gfrun-5..8;
+  3. 09-03 09:29 读头订正另发现 docs-N / gfrun-N / linx-N **增量 issue**(带时间戳后缀,见文末)。
 
 | issue 文件 | 提交目标仓 | 前缀 | 覆盖问题 |
 |---|---|---|---|
@@ -38,5 +52,5 @@
 | issue 文件 | 提交目标仓 | 前缀 | 覆盖问题 |
 |---|---|---|---|
 | `ISSUE_tileop_docs_20260903_0929.md` | Linx-TileOP-API | (docs) | docs-N1 Subview parent 须 cube 布局（未文档化）；docs-N2 reinterpret_tile 使用规则（双视图 + 落盘重置标签），并修正首轮 linx-4「TABS 拒视图」判断 |
-| `ISSUE_gfrun_NA_model_gaps_20260903_0929.md` | SuperScalarModel | `[gfrun][NA]` | gfrun-N1 TCMP 处理器拒 reinterpret 视图源（官方修复漏 TCMP）；gfrun-N2 TEXTRACT 任何真实子抽取被判非法（block 维取自源 valid 维） |
+| `ISSUE_gfrun_NA_model_gaps_20260903_0929.md` | SuperScalarModel | `[gfrun][NA]` | gfrun-N1 TCMP 处理器拒 reinterpret 视图源（官方修复漏 TCMP）；gfrun-N2 TEXTRACT 任何真实子抽取被判非法（block 维取自源 valid 维）；gfrun-N3 region TASSEMBLY 只落 slot0、其余 slot 归零；gfrun-N4 B.FPATR PreQuant 消费 FP19 scale 参数时丢弃缩放后 payload（S8 输出≡offset、F16≡0；与 gfrun-5 同缺陷族） |
 | `ISSUE_linx_toolchain_gaps_20260903_0929.md` | Linx-TileOP-API / llvm | `[linx]` | linx-N1 TSTORE_CUBE 无法接收 Subview 载体（const& vs 非 const `data()` + dtype 强绑），阻断 cube-subview 落盘 |

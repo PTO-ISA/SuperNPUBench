@@ -1,9 +1,11 @@
 #include "guard_common.hpp"
-// TileOP-API doc guard: fixp::vector<Mode>(tile) — vector quant parameter.
+#include "guard_io.h"
+// TileOP-API doc guard: fixp::vector<Mode>(tile) — vector quant parameter to FP16.
 // Source: matrix-postprocess.md — "Vector quant parameter"
-//   quant Tile: Tile<Vec, uint64_t, 2, 32, RowMajor, 1, 32> (物理>=128B, valid 1xN).
-//   fixp::vector<FixpPreQuantMode::VQF322F16Pre>(quant) -> dst FP16.
-//   每个 64-bit element 与 scalar descriptor 同 bit layout.
+//   fixp::vector<VQF322F16Pre>(quant) -> dst FP16; each 64-bit element same bit
+//   layout as the scalar descriptor.
+// Precision: res_check. F16 (floating) path, offset unused; golden pins pto-spec
+//   matrix-postprocess.asl: dst = fp16(D * scale). FP19 16.0 per column.
 static constexpr uint64_t make_quant(uint32_t fp19_scale, int16_t offset) {
     return (static_cast<uint64_t>(fp19_scale & 0x7ffff) << 13) |
            ((static_cast<uint64_t>(offset) & 0x1ff) << 37);
@@ -12,10 +14,10 @@ int main() {
     constexpr int M = 32, N = 32, K = 32;
     __half ha[M * K], hb[K * N], hd[M * N];
     uint64_t hq[2 * 32];
-    for (int i = 0; i < M * K; ++i) ha[i] = (__half)(0.01f * i);
-    for (int i = 0; i < K * N; ++i) hb[i] = (__half)(0.02f * i);
+    guard_read_bin(CHK_DIR "/in_a.bin", ha, sizeof(ha));
+    guard_read_bin(CHK_DIR "/in_b.bin", hb, sizeof(hb));
     for (int i = 0; i < M * N; ++i) hd[i] = (__half)0.0f;
-    for (int i = 0; i < 2 * 32; ++i) hq[i] = make_quant(0x40000u, 0);
+    for (int i = 0; i < 2 * 32; ++i) hq[i] = make_quant(0x20C00u, 0);   // FP19 16.0
 
     CubeTileM32<__half, M, K> a;
     CubeTileN8<__half, K, N>  b;
@@ -37,5 +39,6 @@ int main() {
     TMATMUL(out, a, b, fixp::vector<FixpPreQuantMode::VQF322F16Pre>(quant));
     BENCHEND;
     TSTORE_CUBE(gD, out);
+    guard_dump_bin(CHK_DIR "/out.bin", hd, sizeof(hd));
     return 0;
 }

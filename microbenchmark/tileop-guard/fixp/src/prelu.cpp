@@ -1,16 +1,18 @@
 #include "guard_common.hpp"
-// TileOP-API doc guard: fixp::f16().prelu(tile) — convert + PReLU.
-// Source: matrix-postprocess.md — "PReLU"
-//   PReLU 参数是长度 N 的 FP19 Tile: Tile<Vec, uint64_t, 2, 32, RowMajor, 1, 32>,
-//   每 element 低 19 bit 保存 FP19 slope. 可配合无 quant 的 convert(fixp::f16()).
+#include "guard_io.h"
+// TileOP-API doc guard: fixp::f16().prelu(tile) — convert + PReLU (no quant).
+// Source: matrix-postprocess.md — "PReLU" (length-N FP19 Tile, low 19 bits = slope).
+// Precision: res_check. fixp::f16() convert has scale 1.0; pto-spec
+//   matrix-postprocess.asl multiplier: value>=0 -> 1.0, value<0 -> slope. F16
+//   floating encode: dst = fp16(where(D>=0, D, D*slope)). Slope FP19 0.5 per column.
 int main() {
     constexpr int M = 32, N = 32, K = 32;
     __half ha[M * K], hb[K * N], hd[M * N];
     uint64_t hp[2 * 32];
-    for (int i = 0; i < M * K; ++i) ha[i] = (__half)(0.01f * i);
-    for (int i = 0; i < K * N; ++i) hb[i] = (__half)(0.02f * i);
+    guard_read_bin(CHK_DIR "/in_a.bin", ha, sizeof(ha));
+    guard_read_bin(CHK_DIR "/in_b.bin", hb, sizeof(hb));
     for (int i = 0; i < M * N; ++i) hd[i] = (__half)0.0f;
-    for (int i = 0; i < 2 * 32; ++i) hp[i] = 0x10000u & 0x7ffffu;   // FP19 slope
+    for (int i = 0; i < 2 * 32; ++i) hp[i] = 0x1F800u & 0x7ffffu;   // FP19 slope 0.5
 
     CubeTileM32<__half, M, K> a;
     CubeTileN8<__half, K, N>  b;
@@ -31,5 +33,6 @@ int main() {
     TMATMUL(out, a, b, fixp::f16().prelu(prelu));
     BENCHEND;
     TSTORE_CUBE(gD, out);
+    guard_dump_bin(CHK_DIR "/out.bin", hd, sizeof(hd));
     return 0;
 }
