@@ -95,14 +95,14 @@ witness）**。
 
 | 族 | 接口（数量） | golden 语义 | 容差 | 备注 |
 |----|------|-------------|------|------|
-| SFU 超越 | texp/tlog/trecip/tsqrt/trsqrt（5） | exp / **log₂** / 1/x / √x / 1/√x | rel 1e-5 | **TLOG 是 log₂ 不是 ln**（实测证实 TLOG(4.25)=2.0875=log₂）；TEXP 是 base-e。SFU 实测误差 ~6e-8（近 fp32 精确） |
+| SFU 超越 | texp/tlog/trecip/tsqrt/trsqrt（5） | exp / **log₂** / 1/x / √x / 1/√x | rel 1e-5 | **TLOG 是 log₂ 不是 ln**（实测证实 TLOG(4.25)=2.0875=log₂）；TEXP 是 base-e。但 TLOG.md 文档写「natural logarithm」→ 模型与文档不一致，已提 gfrun-6。SFU 实测误差 ~6e-8（近 fp32 精确） |
 | SFU expand-arith | trow/tcol × add/sub/mul/div/max/min/expdif（14） | dst[i,j]=f(src0[i,j], src1 广播);row 广播 M×1、col 广播 1×N;EXPDIF=exp(src0−src1) | rel 1e-5 | 语义取自 docs/intrinsics/t{row,col}expand*.md |
 | SFU layout/sort | ttrans/tconcat/tsort（3） | 转置 src^T / 列拼接 [a\|b] / 逐行升序排序 | 0~1e-6 | tsort 用不重复值避并列（值校验，索引未校） |
 | SFU irregular | tpartadd/mul/max/min（4） | elementwise;"PART"=partial-valid-region 非分段（docs 证实），全有效即普通 elementwise | 1e-4 | |
 | SFU quant | tquant/tdequant（2） | quant=clamp(round_RNE(src),−128,127);dequant=(src−zp)*mult | 0 | 见下 TQUANT 缺口 |
 | TLSU | mscatter_mask（1） | base[off//4]←src where mask==1（单射 offset） | 0 | 工具链升级后可跑;补 golden 即 PASS |
 
-**TQUANT multiplier/zeroPoint 被 emulator 忽略（第三轮发现，应提 gfrun issue）**:TQUANT 签名
+**TQUANT multiplier/zeroPoint 被 emulator 忽略（第三轮发现，已提 issues/ISSUE_gfrun_NA_model_gaps.md gfrun-5，根因反汇编隔离到模型侧）**:TQUANT 签名
 `TQUANT<Mode,Sat>(dst,src,float multiplier,int zeroPoint)`。实测传 `multiplier=0.5, zeroPoint=1` 时输出
 = `clamp(round_RNE(src), −128,127)`（**逐字节 0/2048 匹配 mult=1/zp=0**），即 **multiplier 与 zeroPoint 被静默
 忽略**（斜率拟合 slope≈1.0）。故 demo 改用 identity 参数（mult=1/zp=0）精确看护它**确实执行**的核心
