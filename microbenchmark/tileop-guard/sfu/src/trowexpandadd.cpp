@@ -1,15 +1,5 @@
-#include "guard_common.hpp"
-// TileOP-API doc guard: TROWEXPANDADD (SFU, reduce-and-expand)
-// Source: docs/tileop-usage/engines.md — SFU | TROWEXPANDADD | reduce-and-expand.
-// NOTE(doc-gap): docs give NO signature. Name implies a row-reduce broadcast
-// combined arithmetically with a second full tile; binary (dst,src0,src1)
-// inferred after the unary form failed to compile (compiler feedback).
-int main() {
-    constexpr int M = 16, N = 16, NE = M*N;
-    float a[NE], b[NE], c[NE];
-    gfill_seq(a, NE, 1.0f); gfill_seq(b, NE, 2.0f); gzero(c, NE);
-    BENCHSTART;
-    g_rowexpand<float, M, N>(c, a, b, [](auto& d, auto& s0, auto& s1){ TROWEXPANDADD(d, s0, s1); });
-    BENCHEND;
-    return 0;
-}
+#include "guard_case.hpp"
+// TileOP-API doc guard: TROWEXPANDADD (SFU expand-arith, row broadcast M×1).
+// Semantics (docs/intrinsics/trowexpandadd.md): dst[i,j] = f(src0[i,j], src1[i,0]);
+// EXPDIF = exp(src0-src1). Precision: res_check, independent numpy golden.
+GUARD_ROWEXPAND(float, 16, 16, [](auto& d, auto& s0, auto& s1){ TROWEXPANDADD(d, s0, s1); })

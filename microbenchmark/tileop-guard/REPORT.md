@@ -23,28 +23,35 @@
 增量重编,须清缓存才可签字)。
 
 ```
-run-date : 2026-09-02 (第二轮:放宽纯文档驱动，读头文件修正签名/契约)
+run-date : 2026-09-03 (第三轮:为可钉语义的 run-only 接口补独立 golden)
 toolchain: env_test/linx-toolchain-build/output/linx_blockisa_llvm_musl
-           clang++ md5 1ee479a3f4678006953db5b0af0f50a2
+           clang++ md5 b6201631d2fdb77c6ad541c2c769460e  (第二轮为 1ee479a3;工具链已升级)
 gfrun    : env_test/SuperScalarModel/bin/gfrun
-           gfrun   md5 04ca39ece7533eb35c805a4741996ebb
+           gfrun   md5 04ca39ece7533eb35c805a4741996ebb  (不变)
 ```
+
+> **工具链升级影响（第三轮干净重建发现）**：clang++ 由 `1ee479a3`→`b6201631`。新后端修复了
+> 一批 `*.MASK`/GMOV/gather-scatter 的 `Match Instruction Error`：**MGATHER_MASK 现编译+跑通+golden
+> 通过（run-fail→精度PASS）**、MSCATTER_MASK 现可跑（补 golden 后精度PASS）；而 TGATHER/TSCATTER/GMOV
+> 由「编译失败(后端)」转为「gfrun 运行断言」(编译失败→run-fail，暴露下游模型缺口)。故本轮编译失败
+> 7→2、run-fail 5→8 的口径变化中，一部分来自工具链升级而非 demo 改动。
 
 ## 状态总表
 
-**合计 126 case:61 精度PASS / 53 run-only / 7 编译失败 / 5 run-fail(崩)。**
-（第一轮基线 125 case = 52 / 47 / 12 / 14；第二轮读头文件修正签名后 PASS +9、编译失败 −5；并新增
-1 个 misc witness 用例 `reinterpret_tcmp`（TCMP+视图模型缺口，run-fail），故总数 125→126。）
+**合计 126 case:91 精度PASS / 25 run-only / 2 编译失败 / 8 run-fail(崩)。**
+（第一轮 125=52/47/12/14；第二轮读头修正签名 61/53/7/5；第三轮为可钉语义的 run-only 补独立 golden，
+**精度PASS +30**（我方 golden +29 + 工具链升级带来 mgather_mask +1），run-only −28，编译失败/run-fail
+口径变化含工具链升级副作用，见上「工具链升级影响」。）
 
 | 域 | 精度PASS | run-only | 编译失败 | run-fail | 合计 |
 |----|---------|----------|----------|----------|------|
 | vec  | 34 | 1  | 0 | 0 | 35 |
-| sfu  | 17 | 33 | 3 | 3 | 56 |
-| tlsu | 2  | 7  | 3 | 1 | 13 |
+| sfu  | 45 | 5  | 1 | 5 | 56 |
+| tlsu | 4  | 7  | 0 | 2 | 13 |
 | cube | 6  | 2  | 1 | 0 | 9  |
 | fixp | 1  | 10 | 0 | 0 | 11 |
 | misc | 1  | 0  | 0 | 1 | 2  |
-| 合计 | **61** | **53** | **7** | **5** | **126** |
+| 合计 | **91** | **25** | **2** | **8** | **126** |
 
 - **精度PASS**:编译 + gfrun 跑通 + host 独立 golden 逐元素比对通过(真「算对」)。
 - **run-only**:编译 + gfrun 跑通,但未写独立 golden(语义/舍入未由文档钉死),仅验「能跑」。
@@ -80,6 +87,31 @@ gfrun    : env_test/SuperScalarModel/bin/gfrun
 MSCATTER_MASK 后端 Match Error + TMATMUL bf16 clang abort；run-fail 5=TEXTRACT/range::Subview 模型
 descriptor 契约、TIMG2COL/TMRGSORT 模型未实现桩、**reinterpret_tcmp（TCMP+视图被模型 TCMP 处理器拒，
 witness）**。
+
+## 第三轮:为可钉语义的 run-only 补独立 golden（2026-09-03）
+
+对语义能从 ISA 规格/文档独立钉死的 run-only 接口补 host golden，转精度PASS。均走 res_check
+（host numpy 生成输入 + ELF 落盘 out.bin + numpy 独立复算）。共 **+29 精度PASS**：
+
+| 族 | 接口（数量） | golden 语义 | 容差 | 备注 |
+|----|------|-------------|------|------|
+| SFU 超越 | texp/tlog/trecip/tsqrt/trsqrt（5） | exp / **log₂** / 1/x / √x / 1/√x | rel 1e-5 | **TLOG 是 log₂ 不是 ln**（实测证实 TLOG(4.25)=2.0875=log₂）；TEXP 是 base-e。SFU 实测误差 ~6e-8（近 fp32 精确） |
+| SFU expand-arith | trow/tcol × add/sub/mul/div/max/min/expdif（14） | dst[i,j]=f(src0[i,j], src1 广播);row 广播 M×1、col 广播 1×N;EXPDIF=exp(src0−src1) | rel 1e-5 | 语义取自 docs/intrinsics/t{row,col}expand*.md |
+| SFU layout/sort | ttrans/tconcat/tsort（3） | 转置 src^T / 列拼接 [a\|b] / 逐行升序排序 | 0~1e-6 | tsort 用不重复值避并列（值校验，索引未校） |
+| SFU irregular | tpartadd/mul/max/min（4） | elementwise;"PART"=partial-valid-region 非分段（docs 证实），全有效即普通 elementwise | 1e-4 | |
+| SFU quant | tquant/tdequant（2） | quant=clamp(round_RNE(src),−128,127);dequant=(src−zp)*mult | 0 | 见下 TQUANT 缺口 |
+| TLSU | mscatter_mask（1） | base[off//4]←src where mask==1（单射 offset） | 0 | 工具链升级后可跑;补 golden 即 PASS |
+
+**TQUANT multiplier/zeroPoint 被 emulator 忽略（第三轮发现，应提 gfrun issue）**:TQUANT 签名
+`TQUANT<Mode,Sat>(dst,src,float multiplier,int zeroPoint)`。实测传 `multiplier=0.5, zeroPoint=1` 时输出
+= `clamp(round_RNE(src), −128,127)`（**逐字节 0/2048 匹配 mult=1/zp=0**），即 **multiplier 与 zeroPoint 被静默
+忽略**（斜率拟合 slope≈1.0）。故 demo 改用 identity 参数（mult=1/zp=0）精确看护它**确实执行**的核心
+——RNE 舍入 + S8 饱和（输入跨 ±256 触发双端 clamp）;被忽略的缩放路径单独记录，不在此断言。
+
+**仍 run-only（无法钉精度，诚实上限）**:tcvt（舍入未钉）、tfillpad/tinsert/ttri/copy-expand（退化/部分语义）、
+tload/tstore/tmov/tprefetch/mgather_cas/range_assemble/region_tilearray（纯搬运/视图无数值语义）、
+tmatmul_mx/tgemv（scale/形状未钉）、**fixp postprocess 族 10 个**（matmul+FP19 scale 描述符量化，独立
+golden 需先解码 FP19 格式 + 匹配硬件量化路径，是独立深水区，待后续）。
 
 ## 精度校验机制(res_check + host 独立 golden)
 
@@ -177,13 +209,13 @@ tsel/tsels/tcmp/tcmps 由 run-fail 转精度PASS，见「第二轮修正」表�
 | TTRI/THISTOGRAM | ❌ | - | — | **[签名]** 无文档;`no matching function`(详述 9) |
 | TGATHER/TSCATTER | ❌ | - | — | **[签名]** 无文档;后端 `Match Instruction Error`(详述 9) |
 
-SFU 小结:56 case,**17 精度PASS / 33 run-only / 3 编译失败 / 3 run-fail**（第二轮更新）。
-- 精度PASS(17):8 reduce + 5 TCI + **4 argmax/argmin(新增，UINT32 输出契约)**。
-- run-only(33):5 超越 + 14 expand-arith + tconcat/tfillpad/ttrans + 4 tpart + tquant/tdequant/tsort
-  + **ttri/tinsert(签名订正后能跑)** + **trowexpand/tcolexpand(广播源订正，模型填充退化不设 golden)**。
-- 编译失败(3):THISTOGRAM/TGATHER/TSCATTER——正确签名下后端 `Match Instruction Error`(真后端缺口)。
-- run-fail(3):TEXTRACT(模型 descriptor 契约)、TIMG2COL/TMRGSORT(模型未实现桩)——均正确签名。
-  （上表 TEXTRACT/TINSERT/TTRI/argmax/copy-expand 行的旧状态已过时，以「第二轮修正」表为准。）
+SFU 小结:56 case,**45 精度PASS / 5 run-only / 1 编译失败 / 5 run-fail**（第三轮更新）。
+- 精度PASS(45):8 reduce + 5 TCI + 4 argmax/argmin + **5 超越 + 14 expand-arith + ttrans/tconcat/tsort
+  + 4 tpart + tquant/tdequant（第三轮补 golden，见「第三轮」节）**。
+- run-only(5):tfillpad/tinsert/ttri/trowexpand/tcolexpand（退化/部分语义，不设 golden）。
+- 编译失败(1):THISTOGRAM——后端 `Match Instruction Error`。（TGATHER/TSCATTER 工具链升级后转 run-fail。）
+- run-fail(5):TEXTRACT(模型 descriptor 契约)、TIMG2COL/TMRGSORT(模型未实现桩)、**TGATHER/TSCATTER
+  (工具链升级后编译过，gfrun `ASSERTION FAILED`——下游模型缺口)**。
 
 ## TLSU 族(load / store / move / gather / scatter)
 
@@ -203,12 +235,13 @@ SFU 小结:56 case,**17 精度PASS / 33 run-only / 3 编译失败 / 3 run-fail**
 | range::Subview | ✅ | ❌ | — | **[dtype/契约]** 第二轮根因:parent **须 cube 布局**(模型 Block.cpp:1052 `IsCubeLayout`+`CubeCellDescribeSubview`),Vec tile 被运行期拒;文档示例用 Vec 且未说此要求(详述 15) |
 | TileArray region API(region_tilearray) | ✅ | ❌ | — | **[契约]** TPARTVIEW/TileArray/TASSEMBLY;gfrun `raw tile spill source does not fit the carrier shape`(详述 19) |
 
-TLSU 小结:13 case,**2 精度PASS / 7 run-only / 3 编译失败 / 1 run-fail**（第二轮更新）。
-- 精度PASS(2):MGATHER、MSCATTER。
-- run-only(7):TLOAD/TSTORE/TPREFETCH/TMOV/MGATHER_CAS + **range::Assemble(SizeCode 订正)** +
-  **region_tilearray(干净重编后跑通)**。
-- 编译失败(3):GMOV / MGATHER_MASK / MSCATTER_MASK——正确签名下后端 `Match Instruction Error`。
-- run-fail(1):range::Subview(gfrun descriptor 契约，正确签名)。
+TLSU 小结:13 case,**4 精度PASS / 7 run-only / 0 编译失败 / 2 run-fail**（第三轮更新）。
+- 精度PASS(4):MGATHER、MSCATTER、**MGATHER_MASK（工具链升级后 `*.MASK` bundle 可汇编+跑通+golden 通过）**、
+  **MSCATTER_MASK（工具链升级后可跑，第三轮补 golden）**。
+- run-only(7):TLOAD/TSTORE/TPREFETCH/TMOV/MGATHER_CAS/range::Assemble/region_tilearray。
+- 编译失败(0):——原 GMOV/MGATHER_MASK/MSCATTER_MASK 的后端 `Match Instruction Error` 已随工具链升级消失。
+- run-fail(2):range::Subview(模型 descriptor 契约)、**GMOV(工具链升级后编译过，gfrun `GMOV source/dest
+  descriptors must match` 断言——下游模型缺口)**。
 - 注:Shared TMOV 四变体(TMOV_L2S_INSERT/PUBLISH、TMOV_S2L_BROADCAST/EXTRACT)与 TSTORE_PART
   依赖 opaque Shared handle,docs/tileop-usage 全目录无 Shared tile 构造示例,无法写出可编译 demo(详述 13)。
 

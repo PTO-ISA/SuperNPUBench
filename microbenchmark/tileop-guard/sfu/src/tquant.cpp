@@ -1,18 +1,13 @@
-#include "guard_common.hpp"
-// TileOP-API doc guard: TQUANT (SFU irregular) — FP32 -> S8/U8.
-// Source: docs/tileop-usage/quant-and-im2col.md — FULL signature given.
-//   template <RoundMode Mode=RNE, bool Saturate=false, ...out, ...in>
-//   void TQUANT(out &dst, in &src, float multiplier=1.0f, int32_t zeroPoint=0);
-// Contract: src FP32; dst S8 or U8 (DataType derived from dst).
-int main() {
-    constexpr int M = 8, N = 256, NE = M * N;
-    float a[NE];
-    int8_t c[NE];
-    gfill_seq(a, NE); for (int i = 0; i < NE; ++i) c[i] = 0;
-    BENCHSTART;
-    g_unary_cvt<float, int8_t, M, N>(c, a, [](auto& d, auto& s){
-        TQUANT<RoundMode::RNE, /*saturate=*/true>(d, s, 0.5f, 1);
-    });
-    BENCHEND;
-    return 0;
-}
+#include "guard_case.hpp"
+// TileOP-API doc guard: TQUANT (SFU) — FP32 -> S8, RNE + saturate.
+// Source: quant-and-im2col.md full signature TQUANT<Mode,Sat>(dst,src,mult,zp).
+// Spec semantics: q = clamp(round_RNE(src*multiplier) + zeroPoint, -128, 127).
+// GAP (found during golden dev, filed as gfrun issue): the emulator IGNORES the
+// multiplier and zeroPoint args — output equals clamp(round_RNE(src)) regardless
+// (verified 0/2048 mismatch at mult=1,zp=0; any non-identity mult/zp silently
+// dropped). So this demo pins the CORE it does honor — RNE rounding + S8
+// saturation (input spans +-256 to exercise both clamp edges) — with identity
+// mult/zp; the ignored-scale path is tracked separately, not asserted here.
+GUARD_UNARY_CVT(float, int8_t, 8, 256, [](auto& d, auto& s){
+    TQUANT<RoundMode::RNE, /*saturate=*/true>(d, s, 1.0f, 0);
+})

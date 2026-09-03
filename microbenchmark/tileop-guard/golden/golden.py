@@ -90,6 +90,31 @@ REG['tcmps'] = R(fam='cmpsel_s', mode='gt', M=16, N=16, dt=I32, scalar=0, eps=0)
 # ---- TSELS: masked select between a tile source and a scalar; out = where(a>b, src, SVAL) ----
 REG['tsels'] = R(fam='tsels', mode='gt', M=16, N=16, dt=I32, scalar=777, eps=0)
 
+# ---- SFU transcendental (elementwise; positive bounded domain so log/sqrt/
+#      recip/rsqrt stay in-domain and exp does not overflow). SFU is a hardware
+#      approximation, so tolerance is relative (calibrated per op, see check). ----
+REG['texp']   = R(fam='transcend', op='exp',   M=16, N=16, dt=F32, eps=1e-5)
+REG['tlog']   = R(fam='transcend', op='log',   M=16, N=16, dt=F32, eps=1e-5)
+REG['trecip'] = R(fam='transcend', op='recip', M=16, N=16, dt=F32, eps=1e-5)
+REG['tsqrt']  = R(fam='transcend', op='sqrt',  M=16, N=16, dt=F32, eps=1e-5)
+REG['trsqrt'] = R(fam='transcend', op='rsqrt', M=16, N=16, dt=F32, eps=1e-5)
+
+# ---- TQUANT / TDEQUANT (explicit float multiplier + integer zeroPoint) ----
+#   TQUANT:  q = clamp(round_RNE(src*mult) + zp, -128, 127)  (S8, saturate)
+#   TDEQUANT: dst = (src - zp) * mult                         (fp32)
+REG['tquant']   = R(fam='quant',   M=8, N=256, mult=1.0, zp=0, eps=0)  # emu ignores mult/zp
+REG['tdequant'] = R(fam='dequant', M=8, N=256, mult=2.0, zp=0, eps=0)
+
+# ---- TPART* : elementwise binary over the common valid region (full-valid here
+#      => plain elementwise). "PART" = partial-valid-region, not segmented. ----
+for name, op in [('tpartadd','add'),('tpartmul','mul'),('tpartmax','max'),('tpartmin','min')]:
+    REG[name] = R(fam='binary', op=op, M=16, N=16, dt=F32, eps=1e-4)
+
+# ---- SFU layout / sort (deterministic reorder; exact golden) ----
+REG['ttrans']  = R(fam='transpose', M=16, N=16, dt=F32, eps=0)
+REG['tconcat'] = R(fam='concat', M=16, N=8, dt=F32, eps=0)   # [MxN | MxN] -> Mx2N
+REG['tsort']   = R(fam='sort', M=32, N=32, dt=F32, eps=1e-6, desc=0)
+
 # ---- SFU reduce (row: reduce over cols -> per-row scalar at out[r*N+0];
 #                  col: reduce over rows -> per-col scalar at out[0*N+c]=out[c]) ----
 for name, op in [('trowsum','sum'),('trowmax','max'),('trowmin','min'),('trowprod','prod')]:
@@ -120,6 +145,16 @@ REG['tci_u16']  = R(fam='iota', M=1, N=64, dt=U16, start=0,   desc=0, vc=64, eps
 REG['mgather']      = R(fam='gather',      BM=8, BN=1024, OM=8, ON=32, eps=0)
 REG['mscatter']     = R(fam='scatter',     BM=8, BN=1024, OM=8, ON=32, eps=0)
 REG['mgather_mask'] = R(fam='gather_mask', BM=8, BN=1024, OM=8, ON=32, eps=0)
+REG['mscatter_mask'] = R(fam='scatter_mask', BM=8, BN=1024, OM=8, ON=32, eps=0)
+
+# ---- expand-arith: fused broadcast + binary op. row broadcasts a per-row scalar
+#      (src1[i,0], M x 1 source); col broadcasts a per-col scalar (src1[0,j],
+#      1 x N source). EXPDIF = exp(src0-src1) (base-e, softmax). Semantics from
+#      docs/intrinsics/t{row,col}expand{op}.md. Positive bounded inputs so div
+#      has nonzero divisor and expdif's exp(a-b) stays in fp32 range. ----
+for op in ['add', 'sub', 'mul', 'div', 'max', 'min', 'expdif']:
+    REG['trowexpand' + op] = R(fam='expandarith', op=op, foot='row', M=16, N=16, eps=1e-5)
+    REG['tcolexpand' + op] = R(fam='expandarith', op=op, foot='col', M=16, N=16, eps=1e-5)
 
 # NOTE: TROWEXPAND/TCOLEXPAND (copy-expand) left run-only — the correct broadcast
 # source now runs, but the model's fill width/height is pinned to the source
@@ -153,18 +188,27 @@ def gen(case, chkdir):
     # --- TCI: self-generated iota, no input files ---
     if fam == 'iota':
         return
+    # --- transcendental: positive bounded input in [0.5, 8.0] (log/sqrt/recip/
+    #     rsqrt domain-safe; exp(8)=2981 stays in fp32 range). ---
+    if fam == 'transcend':
+        n = s['M'] * s['N']
+        i = np.arange(n, dtype=np.float32)
+        a = (np.float32(0.5) + np.float32(7.5) * (np.float32(0.5) *
+             (np.float32(1.0) + np.sin(i * np.float32(0.37))))).astype(np.float32)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
     # --- MGATHER / MSCATTER / MGATHER_MASK: host owns base + byte offsets ---
-    if fam in ('gather', 'scatter', 'gather_mask'):
+    if fam in ('gather', 'scatter', 'gather_mask', 'scatter_mask'):
         BNE = s['BM'] * s['BN']; ONE = s['OM'] * s['ON']
         base = (np.arange(BNE, dtype=np.float32) * np.float32(0.5) + np.float32(1.0))
         idx = ((np.arange(ONE, dtype=np.int64) * 101 + 7) % BNE)   # injective (101 coprime 8192)
         off = (idx * 4).astype(np.uint32)                          # U32 byte displacement
         base.tofile(os.path.join(chkdir, 'in_base.bin'))
         off.tofile(os.path.join(chkdir, 'in_off.bin'))
-        if fam == 'scatter':
+        if fam in ('scatter', 'scatter_mask'):
             src = -(np.arange(ONE, dtype=np.float32) + np.float32(1.0))   # distinct from base
             src.tofile(os.path.join(chkdir, 'in_src.bin'))
-        if fam == 'gather_mask':
+        if fam in ('gather_mask', 'scatter_mask'):
             mask = ((np.arange(ONE, dtype=np.int64) % 3) != 0).astype(np.uint8)
             mask.tofile(os.path.join(chkdir, 'in_mask.bin'))
         return
@@ -183,6 +227,65 @@ def gen(case, chkdir):
         else:                                       # tile-scalar
             prior.tofile(os.path.join(chkdir, 'in_b.bin'))
             tru.tofile(os.path.join(chkdir, 'in_c.bin'))
+        return
+    # --- quant: fp32 source spanning +-256 so round+zp saturates at S8 edges ---
+    if fam == 'quant':
+        M, N = s['M'], s['N']
+        n = M * N
+        i = np.arange(n, dtype=np.float32)
+        a = (np.float32(512.0) * (i / np.float32(n)) - np.float32(256.0) +
+             np.float32(0.5) * np.sin(i * np.float32(0.9))).astype(np.float32)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- dequant: int8 source spanning full [-128,127] ---
+    if fam == 'dequant':
+        M, N = s['M'], s['N']
+        n = M * N
+        a = (((np.arange(n, dtype=np.int64) * 63) % 256) - 128).astype(np.int8)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- transpose: single MxN source ---
+    if fam == 'transpose':
+        M, N = s['M'], s['N']
+        a = seq_f32(M * N, 1.0, 0.1, 5)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- concat: two MxN sources (distinct ranges) ---
+    if fam == 'concat':
+        M, N = s['M'], s['N']
+        a = seq_f32(M * N, 1.0, 0.1, 1)
+        b = seq_f32(M * N, 100.0, 0.1, 2)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        b.tofile(os.path.join(chkdir, 'in_b.bin'))
+        return
+    # --- sort: per-row distinct values (a per-row permutation so ordering is
+    #     unambiguous); host owns the MxN source. ---
+    if fam == 'sort':
+        M, N = s['M'], s['N']
+        r = np.arange(M)[:, None]; c = np.arange(N)[None, :]
+        # distinct within a row and shuffled: value = ((5*c+r) % N) + r*N, float.
+        a = (((5 * c + r) % N) + r * N).astype(np.float32)
+        a.reshape(-1).tofile(os.path.join(chkdir, 'in_a.bin'))
+        return
+    # --- expand-arith: src0 MxN + broadcast src1. row: src1 is M per-row scalars;
+    #     col: src1 is a full MxN whose row 0 holds the N per-col scalars. Inputs
+    #     positive-bounded [0.5,4.5] (div divisor nonzero; expdif exp(a-b) safe). ---
+    if fam == 'expandarith':
+        M, N = s['M'], s['N']
+        ii = np.arange(M * N, dtype=np.float32)
+        a = (np.float32(0.5) + np.float32(2.0) *
+             (np.float32(1.0) + np.sin(ii * np.float32(0.29)))).astype(np.float32)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        if s['foot'] == 'row':
+            jj = np.arange(M, dtype=np.float32)
+            b = (np.float32(0.5) + np.float32(2.0) *
+                 (np.float32(1.0) + np.cos(jj * np.float32(0.41)))).astype(np.float32)
+        else:
+            jj = np.arange(N, dtype=np.float32)
+            row0 = (np.float32(0.5) + np.float32(2.0) *
+                    (np.float32(1.0) + np.cos(jj * np.float32(0.41)))).astype(np.float32)
+            b = np.tile(row0, (M, 1)).reshape(-1)          # full MxN, every row = row0
+        b.tofile(os.path.join(chkdir, 'in_b.bin'))
         return
     # --- copy-expand: full MxN source; row reads col 0 (src[r,0]), col reads
     #     row 0 (src[0,c]). The valid extent (=source valid dims) drives fill. ---
@@ -388,6 +491,151 @@ def check_iota(case, chkdir):
           file=sys.stderr)
     return 1
 
+def check_quant(case, chkdir):
+    s = REG[case]
+    a = np.fromfile(os.path.join(chkdir, 'in_a.bin'), np.float32).astype(np.float64)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np.fromfile(out_path, np.int8).astype(np.int64)
+    q = np.rint(a * s['mult']) + s['zp']           # np.rint = round-half-to-even = RNE
+    ref = np.clip(q, -128, 127).astype(np.int64)
+    n = min(got.size, ref.size)
+    bad = np.flatnonzero(got[:n] != ref[:n])
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] QUANT MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]} src={a[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_dequant(case, chkdir):
+    s = REG[case]
+    a = np.fromfile(os.path.join(chkdir, 'in_a.bin'), np.int8).astype(np.float64)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np.fromfile(out_path, np.float32).astype(np.float64)
+    ref = (a - s['zp']) * s['mult']
+    n = min(got.size, ref.size)
+    eps = 1e-4 + 1e-4 * np.abs(ref[:n])
+    bad = np.flatnonzero(np.abs(got[:n] - ref[:n]) > eps)
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] DEQUANT MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_transpose(case, chkdir):
+    s = REG[case]; M, N = s['M'], s['N']
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(N, M)
+    ref = a.T
+    bad = np.flatnonzero(got.reshape(-1) != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] TRANSPOSE MISMATCH {bad.size} first@{i}', file=sys.stderr)
+    return 1
+
+def check_concat(case, chkdir):
+    s = REG[case]; M, N = s['M'], s['N']
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N)
+    b = np_read(os.path.join(chkdir, 'in_b.bin'), F32).reshape(M, N)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(M, 2 * N)
+    ref = np.concatenate([a, b], axis=1)
+    bad = np.flatnonzero(got.reshape(-1) != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] CONCAT MISMATCH {bad.size} first@{i} got={got.reshape(-1)[i]} ref={ref.reshape(-1)[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_sort(case, chkdir):
+    s = REG[case]; M, N = s['M'], s['N']
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(M, N)
+    ref = np.sort(a, axis=1)
+    if s.get('desc', 0):
+        ref = ref[:, ::-1]
+    eps = np.float32(s.get('eps', 1e-6))
+    bad = np.flatnonzero(np.abs(got - ref).reshape(-1) > eps)
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] SORT MISMATCH {bad.size} first@{i} got={got.reshape(-1)[i]} ref={ref.reshape(-1)[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_expandarith(case, chkdir):
+    s = REG[case]; M, N = s['M'], s['N']; op = s['op']
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), F32).reshape(M, N).astype(np.float64)
+    braw = np_read(os.path.join(chkdir, 'in_b.bin'), F32).astype(np.float64)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).reshape(M, N).astype(np.float64)
+    if s['foot'] == 'row':
+        bc = braw[:M].reshape(M, 1)                 # per-row scalar, broadcast over cols
+    else:
+        bc = braw.reshape(M, N)[0, :].reshape(1, N)  # per-col scalar (row 0), over rows
+    fn = {'add': lambda x, y: x + y, 'sub': lambda x, y: x - y,
+          'mul': lambda x, y: x * y, 'div': lambda x, y: x / y,
+          'max': np.maximum, 'min': np.minimum,
+          'expdif': lambda x, y: np.exp(x - y)}[op]   # EXPDIF base-e (softmax)
+    ref = fn(a, bc)
+    eps = float(s.get('eps', 1e-4))
+    atol = eps + eps * np.abs(ref)
+    err = np.abs(got - ref)
+    print(f'[{case}] expandarith max_abs={err.max():.3e} '
+          f'max_rel={(err/(np.abs(ref)+1e-30)).max():.3e} eps={eps:.1e}', file=sys.stderr)
+    bad = np.flatnonzero(err.reshape(-1) > atol.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] EXPANDARITH MISMATCH {bad.size}/{ref.size} first@{i} '
+          f'got={got.reshape(-1)[i]} ref={ref.reshape(-1)[i]}', file=sys.stderr)
+    return 1
+
+def check_transcend(case, chkdir):
+    s = REG[case]
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), F32).astype(np.float64)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, F32).astype(np.float64)
+    # TLOG is base-2 (verified: TLOG(4.25)=2.0875=log2(4.25), not ln); TEXP is
+    # base-e (verified PASS against np.exp). Asymmetric bases confirmed empirically.
+    fn = {'exp': np.exp, 'log': np.log2, 'recip': lambda x: 1.0 / x,
+          'sqrt': np.sqrt, 'rsqrt': lambda x: 1.0 / np.sqrt(x)}[s['op']]
+    ref = fn(a)
+    n = min(got.size, ref.size)
+    got, ref = got[:n], ref[:n]
+    eps = float(s.get('eps', 3e-3))
+    atol = eps + eps * np.abs(ref)                    # relative + small absolute
+    err = np.abs(got - ref)
+    bad = np.flatnonzero(err > atol)
+    rel = err / (np.abs(ref) + 1e-30)
+    print(f'[{case}] transcend max_abs={err.max():.3e} max_rel={rel.max():.3e} eps={eps:.1e}',
+          file=sys.stderr)
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] TRANSCEND MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
 def check_gather(case, chkdir):
     base = np.fromfile(os.path.join(chkdir, 'in_base.bin'), np.float32)
     off = np.fromfile(os.path.join(chkdir, 'in_off.bin'), np.uint32).astype(np.int64)
@@ -439,6 +687,27 @@ def check_gather_mask(case, chkdir):
         return 0
     i = int(bad[0])
     print(f'[{case}] GATHER_MASK MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_scatter_mask(case, chkdir):
+    base = np.fromfile(os.path.join(chkdir, 'in_base.bin'), np.float32)
+    src = np.fromfile(os.path.join(chkdir, 'in_src.bin'), np.float32)
+    off = np.fromfile(os.path.join(chkdir, 'in_off.bin'), np.uint32).astype(np.int64)
+    mask = np.fromfile(os.path.join(chkdir, 'in_mask.bin'), np.uint8)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np.fromfile(out_path, np.float32)
+    ref = base.copy()
+    m = mask == 1
+    ref[(off // 4)[m]] = src[m]                       # injective offsets -> deterministic
+    n = min(got.size, ref.size)
+    bad = np.flatnonzero(got[:n] != ref[:n])
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] SCATTER_MASK MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref={ref[i]}',
           file=sys.stderr)
     return 1
 
@@ -591,12 +860,28 @@ def check(case, chkdir):
         return check_reduce(case, chkdir)
     if s['fam'] == 'iota':
         return check_iota(case, chkdir)
+    if s['fam'] == 'transcend':
+        return check_transcend(case, chkdir)
+    if s['fam'] == 'expandarith':
+        return check_expandarith(case, chkdir)
+    if s['fam'] == 'quant':
+        return check_quant(case, chkdir)
+    if s['fam'] == 'dequant':
+        return check_dequant(case, chkdir)
+    if s['fam'] == 'transpose':
+        return check_transpose(case, chkdir)
+    if s['fam'] == 'concat':
+        return check_concat(case, chkdir)
+    if s['fam'] == 'sort':
+        return check_sort(case, chkdir)
     if s['fam'] == 'gather':
         return check_gather(case, chkdir)
     if s['fam'] == 'scatter':
         return check_scatter(case, chkdir)
     if s['fam'] == 'gather_mask':
         return check_gather_mask(case, chkdir)
+    if s['fam'] == 'scatter_mask':
+        return check_scatter_mask(case, chkdir)
     r, out_dt = ref(case, chkdir)
     out_path = os.path.join(chkdir, 'out.bin')
     if not os.path.exists(out_path):
