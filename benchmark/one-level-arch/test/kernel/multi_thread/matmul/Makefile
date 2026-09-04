@@ -97,9 +97,18 @@ endif
 include ../../../common/Makefile.common
 
 .PHONY: golden-check
+ifeq ($(TESTCASE),matmul_lowp)
+golden-check:
+	$(MAKE) -B TESTCASE=$(TESTCASE) LP_MODE=$(LP_MODE) \
+		B=$(B) M=$(M) N=$(N) K=$(K) tM=$(tM) tN=$(tN) tK=$(tK) \
+		COMPILER_DIR=$(COMPILER_DIR) OBJ_ROOT=$(OBJ_ROOT) \
+		res_check=on all
+	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/gfrun_matmul.py -d $(TARGET)
+else
 golden-check:
 	$(MAKE) -B TESTCASE=$(TESTCASE) DTYPE=$(DTYPE) B=$(B) M=$(M) N=$(N) K=$(K) \
 		tM=$(tM) tN=$(tN) tK=$(tK) \
-		COMPILER_DIR=$(COMPILER_DIR) \
+		COMPILER_DIR=$(COMPILER_DIR) OBJ_ROOT=$(OBJ_ROOT) \
 		res_check=on all
 	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/golden_cmp.py $(GOLDEN_ARGS) -d $(TARGET)
+endif
