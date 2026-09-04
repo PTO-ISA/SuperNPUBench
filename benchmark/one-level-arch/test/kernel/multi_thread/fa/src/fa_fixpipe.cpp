@@ -1,4 +1,4 @@
-#include "multi_thread/fa/fa_2d_unroll_gmma.hpp"
+#include "multi_thread/fa/fa_fixpipe.hpp"
 
 #include <cstdint>
 
@@ -86,7 +86,7 @@ int main() {
     using matrix_dtype = MATRIX_DTYPE;
     using vector_dtype = VECTOR_DTYPE;
     constexpr int kPeNum = 4;
-    constexpr uint32_t kIoTid = 0;
+    constexpr int kIoTid = 0;
     const uint32_t tid = get_thread_idx();
     constexpr int kStoredQD = qD / PACKED_FACTOR;
     constexpr int kStoredSkv = globSkv / PACKED_FACTOR;
@@ -105,6 +105,7 @@ int main() {
     static uint8_t qsp[B * H * globSq * (qD / 32) + 2 * ALIGN];
     static uint8_t ksp[B * H * globSkv * (qD / 32) + 2 * ALIGN];
     static uint8_t vsp[B * H * (globSkv / 32) * vD + 2 * ALIGN];
+    static float prob_convertp[kPeNum * kPeTm * kTk + 2 * ALIGN];
     static matrix_dtype probp[kGroupM * kStoredTk + 2 * ALIGN];
     static uint8_t probsp[kGroupM * kTkScaleRows + 2 * ALIGN];
 #ifdef RES_CHECK
@@ -122,6 +123,8 @@ int main() {
     uint8_t *q_scale = (uint8_t *)(((uint64_t)qsp & ALIGN_MASK) + ALIGN);
     uint8_t *k_scale = (uint8_t *)(((uint64_t)ksp & ALIGN_MASK) + ALIGN);
     uint8_t *v_scale = (uint8_t *)(((uint64_t)vsp & ALIGN_MASK) + ALIGN);
+    float *prob_convert =
+        (float *)(((uint64_t)prob_convertp & ALIGN_MASK) + ALIGN);
     matrix_dtype *prob =
         (matrix_dtype *)(((uint64_t)probp & ALIGN_MASK) + ALIGN);
     uint8_t *prob_scale =
@@ -171,7 +174,7 @@ int main() {
             // PE0 loads the full shared Q/K/V tiles (PEMask=1), which are
             // then consumed cooperatively by all four PEs. The RES_CHECK I/O
             // uses the same PE0 thread.
-            flash_attention_2d_unroll_shared_impl<
+            flash_attention_fixpipe_impl<
                 matrix_dtype, vector_dtype, PACKED_FACTOR, USE_MX != 0,
                 globSq, globSkv, qD, vD, kTm, kTk, FA_X_DIM, FA_Y_DIM>(
                 out + i * H * globSq * vD + j * globSq * vD,
@@ -185,6 +188,7 @@ int main() {
                     j * globSkv * (qD / 32),
                 v_scale + i * H * (globSkv / 32) * vD +
                     j * (globSkv / 32) * vD,
+                prob_convert + tid * kPeTm * kTk,
                 prob, prob_scale);
         }
     }
