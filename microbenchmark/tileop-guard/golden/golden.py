@@ -44,7 +44,7 @@ def f32_to_f16bits(a):
 #   M,N[,K], dt_in, dt_out, scalar (for *S), axis/bcast (reduce/expand), eps
 # --------------------------------------------------------------------------
 F32 = 'f32'; I32 = 'i32'; F16 = 'f16'
-I16 = 'i16'; U32 = 'u32'; U16 = 'u16'; S8 = 's8'
+I16 = 'i16'; U32 = 'u32'; U16 = 'u16'; S8 = 's8'; U8 = 'u8'
 
 def R(**kw):
     return kw
@@ -184,6 +184,29 @@ REG['prelu'] = R(fam='mquant', M=32, N=32, K=32, qmode='f16', fp19=0x1FC00, off=
 # exp=1 (all rows) -> d = A@B + C/2.
 REG['cscale'] = R(fam='cscale', M=32, N=32, K=32, cexp=1, dt_out=F32, eps=2e-2)
 
+# ---- PTO 0.58.5 layout ops (SFU/TEPL, U32 CUBE) ----
+# TPACK / TUNPACK operate on *logical* U32 elements (pto-spec rearrangement.asl
+# TileReadLogicalElement), so the CUBE_M16/M32 physical layout is transparent and
+# the golden is plain row-major element-wise.
+#   TPACK  (rearrangement.asl:296): dst = (src0 & mask(w0)) | ((src1 & mask(w1)) << 8*w0)
+#     control[7:0]=src0 field width (bytes), control[15:8]=src1 width; 1..3 each, sum<=4.
+#   TUNPACK(rearrangement.asl:332): dst = (src >> 8*off) & mask(cnt) ; control[7:0]=off(0..3),
+#     control[15:8]=cnt(1..4), off+cnt<=4. Zero-extended raw byte extraction.
+REG['tpack']   = R(fam='tpack',   M=32, N=32, w0=2, w1=2, eps=0)
+REG['tunpack'] = R(fam='tunpack', M=32, N=32, off=1, cnt=2, eps=0)
+# TPERMUTE / TSHUF read *physical* cell bytes/words (rearrangement.asl:177/222), so a
+# full permute/shuffle golden would need the CUBE fractal layout model. Instead we
+# guard the *identity* config, which is layout-invariant and verifiable:
+#   TPERMUTE: index byte j = j mod row_bytes (M32 row_bytes=4) -> each dst byte reads
+#     src0's own byte within its word -> dst == src0 (words map wholesale).
+#   TSHUF:    mode=UP(0), controls all 0 (b=0) -> candidate_row == row -> dst == src.
+# (Full non-identity golden deferred until the physical layout is modelled.)
+REG['tpermute'] = R(fam='eqsrc', M=32, N=32, dt=U32, mk='permute', eps=0)
+REG['tshuf']    = R(fam='eqsrc', M=32, N=32, dt=U32, mk='shuf', eps=0)
+# TGPR2T has no pto-spec ASL (spec still v0.58.4). Doc-derived sanity golden only:
+# all-zero predicate planes -> all-zero U8 output (zero-in -> zero-out repack).
+REG['tgpr2t']   = R(fam='zeros', M=32, N=4, dt=U8, eps=0)
+
 # ---- TCI (create index / "vci"): self-generated iota, NO input ----
 #   ascending col k = start+k, descending = start-k; ValidRow=1 (TCI.md).
 REG['tci']      = R(fam='iota', M=1, N=64, dt=I32, start=0,   desc=0, vc=64, eps=0)
@@ -286,7 +309,7 @@ REG['ttri'] = R(fam='ttri', M=16, N=16, diag=0, upper=0, eps=0)
 
 # --------------------------------------------------------------------------
 NP = {F32: np.float32, I32: np.int32, F16: np.float16,
-      I16: np.int16, U32: np.uint32, U16: np.uint16, S8: np.int8}
+      I16: np.int16, U32: np.uint32, U16: np.uint16, S8: np.int8, U8: np.uint8}
 
 def np_read(path, dt):
     return np.fromfile(path, dtype=NP[dt])
@@ -528,6 +551,33 @@ def gen(case, chkdir):
         B.tofile(os.path.join(chkdir, 'in_b.bin'))
         C.tofile(os.path.join(chkdir, 'in_c.bin'))
         return
+    # --- PTO 0.58.5 layout ops: U32 inputs (full 32-bit spread so byte fields matter) ---
+    if fam in ('tpack', 'tunpack'):
+        M, N = s['M'], s['N']; n = M * N
+        i = np.arange(n, dtype=np.uint64)
+        a = ((i * np.uint64(2654435761) + np.uint64(0x9E3779B1)) & np.uint64(0xFFFFFFFF)).astype(np.uint32)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))
+        if fam == 'tpack':
+            b = ((i * np.uint64(40503) + np.uint64(0x1234ABCD)) & np.uint64(0xFFFFFFFF)).astype(np.uint32)
+            b.tofile(os.path.join(chkdir, 'in_b.bin'))
+        return
+    # --- TPERMUTE/TSHUF identity config (golden = known source) ---
+    if fam == 'eqsrc':
+        M, N = s['M'], s['N']; n = M * N
+        i = np.arange(n, dtype=np.uint64)
+        a = ((i * np.uint64(2654435761) + np.uint64(0x9E3779B1)) & np.uint64(0xFFFFFFFF)).astype(np.uint32)
+        a.tofile(os.path.join(chkdir, 'in_a.bin'))     # src0 / src
+        if s['mk'] == 'permute':
+            b = ((i * np.uint64(40503) + np.uint64(0x1234ABCD)) & np.uint64(0xFFFFFFFF)).astype(np.uint32)
+            b.tofile(os.path.join(chkdir, 'in_b.bin'))  # src1 (unused by identity golden)
+            idx = (np.arange(n * 4, dtype=np.uint8) % 4)  # byte j -> j mod 4 (identity to src0)
+            idx.tofile(os.path.join(chkdir, 'in_idx.bin'))
+        else:  # shuf: control tile all zero -> row identity
+            np.zeros(n, dtype=np.uint32).tofile(os.path.join(chkdir, 'in_ctrl.bin'))
+        return
+    # --- TGPR2T sanity: zero planes -> zero output (no input files) ---
+    if fam == 'zeros':
+        return
     # --- matmul + fixp post-process families (f16 A/B, optional f32 C / bias) ---
     if fam in ('matmul', 'mquant'):
         M, N, K = s['M'], s['N'], s['K']
@@ -759,6 +809,73 @@ def check_cscale(case, chkdir):
     i = int(bad[0])
     print(f'[{case}] CSCALE MISMATCH {bad.size}/{ref.size} first@{i} got={got[i]} ref={ref[i]}',
           file=sys.stderr)
+    return 1
+
+def check_tpack(case, chkdir):
+    s = REG[case]
+    a = np.fromfile(os.path.join(chkdir, 'in_a.bin'), np.uint32).astype(np.uint64)
+    b = np.fromfile(os.path.join(chkdir, 'in_b.bin'), np.uint32).astype(np.uint64)
+    w0, w1 = s['w0'], s['w1']
+    m0 = (1 << (8 * w0)) - 1; m1 = (1 << (8 * w1)) - 1
+    ref = (((a & m0) | ((b & m1) << (8 * w0))) & 0xFFFFFFFF).astype(np.uint64)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np.fromfile(out_path, np.uint32).astype(np.uint64).reshape(-1)[:ref.size]
+    bad = np.flatnonzero(got != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] TPACK MISMATCH {bad.size}/{ref.size} first@{i} '
+          f'got=0x{int(got[i]):08x} ref=0x{int(ref.reshape(-1)[i]):08x}', file=sys.stderr)
+    return 1
+
+def check_tunpack(case, chkdir):
+    s = REG[case]
+    a = np.fromfile(os.path.join(chkdir, 'in_a.bin'), np.uint32).astype(np.uint64)
+    off, cnt = s['off'], s['cnt']
+    m = (1 << (8 * cnt)) - 1
+    ref = (((a >> (8 * off)) & m) & 0xFFFFFFFF).astype(np.uint64)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np.fromfile(out_path, np.uint32).astype(np.uint64).reshape(-1)[:ref.size]
+    bad = np.flatnonzero(got != ref.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] TUNPACK MISMATCH {bad.size}/{ref.size} first@{i} '
+          f'got=0x{int(got[i]):08x} ref=0x{int(ref.reshape(-1)[i]):08x}', file=sys.stderr)
+    return 1
+
+def check_eqsrc(case, chkdir):
+    """TPERMUTE/TSHUF identity config: output must equal src (in_a), bit-exact."""
+    s = REG[case]; dt = s['dt']
+    a = np_read(os.path.join(chkdir, 'in_a.bin'), dt)
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, dt).reshape(-1)[:a.size]
+    bad = np.flatnonzero(got != a.reshape(-1))
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] EQSRC MISMATCH {bad.size}/{a.size} first@{i} got={got[i]} ref={a.reshape(-1)[i]}',
+          file=sys.stderr)
+    return 1
+
+def check_zeros(case, chkdir):
+    """TGPR2T sanity: all-zero planes -> all-zero U8 output."""
+    s = REG[case]; dt = s['dt']; n = s['M'] * s['N']
+    out_path = os.path.join(chkdir, 'out.bin')
+    if not os.path.exists(out_path):
+        print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+    got = np_read(out_path, dt).reshape(-1)[:n]
+    bad = np.flatnonzero(got != 0)
+    if bad.size == 0:
+        return 0
+    i = int(bad[0])
+    print(f'[{case}] ZEROS MISMATCH {bad.size}/{n} first@{i} got={got[i]} ref=0', file=sys.stderr)
     return 1
 
 def check_iota(case, chkdir):
@@ -1306,6 +1423,14 @@ def check(case, chkdir):
         return check_mquant(case, chkdir)
     if s['fam'] == 'cscale':
         return check_cscale(case, chkdir)
+    if s['fam'] == 'tpack':
+        return check_tpack(case, chkdir)
+    if s['fam'] == 'tunpack':
+        return check_tunpack(case, chkdir)
+    if s['fam'] == 'eqsrc':
+        return check_eqsrc(case, chkdir)
+    if s['fam'] == 'zeros':
+        return check_zeros(case, chkdir)
     if s['fam'] == 'fillpad':
         return check_fillpad(case, chkdir)
     if s['fam'] == 'regionasm':
