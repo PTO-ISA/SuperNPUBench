@@ -24,56 +24,42 @@ using namespace pto;
 
 template <int Rows, int Cols, int Parts>
 void rowsum_subview(float *out_ptr, float *in_ptr) {
-    static_assert(Rows % Parts == 0,
-                  "Rows must be divisible by the number of subviews");
+    static_assert(Cols % Parts == 0,
+                  "Columns must be divisible by the number of subviews");
     static_assert(Parts == 4,
-                  "This example spells out the four assemble phases");
-    static_assert((Rows / Parts) * Cols * sizeof(float) >= 128,
+                  "This example spells out four CUBE_M32 column views");
+    static_assert(Rows == 32,
+                  "CUBE_M32 row subspace must contain 32 rows");
+    static_assert(Rows * (Cols / Parts) * sizeof(float) >= 128,
                   "Each subview must contain at least one 128-byte CELL");
 
-    constexpr int kSubRows = Rows / Parts;
+    constexpr int kSubCols = Cols / Parts;
 
     using gmIn = global_tensor<float, RowMajor<Rows, Cols>>;
     using gmOut = global_tensor<float, RowMajor<Rows, 1>>;
-    using tileIn = Tile<Location::Vec, float, Rows, Cols,
-                        BLayout::RowMajor>;
-    using tileInPart = Tile<Location::Vec, float, kSubRows, Cols,
-                            BLayout::RowMajor>;
+    // In CUBE_M32 CELL order, consecutive ranges partition columns while
+    // keeping all 32 rows, so four ranges represent 32x8 views.
+    using tileIn = CubeTileM32<float, Rows, Cols>;
+    using tileInPart = CubeTileM32<float, Rows, kSubCols>;
 
-    // TROWSUM has one valid value per row. Four physical columns keep each
-    // 8-row fragment at the minimum 128-byte range size.
-    using tilePartSum = Tile<Location::Vec, float, kSubRows, 4,
-                             BLayout::RowMajor, kSubRows, 1>;
-    using tileOut = Tile<Location::Vec, float, Rows, 4,
-                         BLayout::RowMajor, Rows, 1>;
-    using outputParts = TileArray<tilePartSum, Parts, 1>;
+    // Each column-range reduction produces one partial value per input row.
+    using tilePartSum = Tile<Location::Vec, float, Rows, 1,
+                             BLayout::RowMajor>;
 
     static_assert(tileIn::LogicalTileBytes ==
                       Parts * tileInPart::LogicalTileBytes,
                   "Subviews must exactly cover the input tile");
-    static_assert(tileInPart::LogicalTileBytes %
-                          range::RangeAddressUnitBytes ==
-                      0,
-                  "Subview offsets must use complete 128-byte range units");
-    static_assert(tileOut::LogicalTileBytes ==
-                      Parts * tilePartSum::LogicalTileBytes,
-                  "Assembled fragments must exactly cover the output tile");
-    static_assert(outputParts::ParentSizeCode == tileOut::TilesizeCode,
-                  "Assembly parent capacity must match the output tile");
-
     gmIn input_gm(in_ptr);
     gmOut output_gm(out_ptr);
     tileIn input_tile;
     TLOAD(input_tile, input_gm);
 
-    // TPARTVIEW emits B.SUBVIEW when a fragment is consumed by TROWSUM.
-    auto input_parts = TPARTVIEW<tileInPart, Parts, 1>(input_tile);
-    outputParts output_parts;
-
+    auto input_parts = TPARTVIEW<tileInPart, 1, Parts>(input_tile);
     auto input_part0 = input_parts[0][0];
-    auto input_part1 = input_parts[1][0];
-    auto input_part2 = input_parts[2][0];
-    auto input_part3 = input_parts[3][0];
+    auto input_part1 = input_parts[0][1];
+    auto input_part2 = input_parts[0][2];
+    auto input_part3 = input_parts[0][3];
+
     tilePartSum partial_sum0;
     tilePartSum partial_sum1;
     tilePartSum partial_sum2;
@@ -83,16 +69,12 @@ void rowsum_subview(float *out_ptr, float *in_ptr) {
     TROWSUM(partial_sum2, input_part2);
     TROWSUM(partial_sum3, input_part3);
 
-    // Public TileArray output references encode INIT/MIDDLE/MIDDLE/LAST from
-    // their slot ordinals; no internal assembly helper is needed.
-    TCVT(output_parts[0][0], partial_sum0);
-    TCVT(output_parts[1][0], partial_sum1);
-    TCVT(output_parts[2][0], partial_sum2);
-    TCVT(output_parts[3][0], partial_sum3);
-
-    tileOut output_tile =
-        TASSEMBLY<tileOut, tilePartSum, Parts, 1>(
-            static_cast<outputParts &&>(output_parts));
+    tilePartSum partial_sum01;
+    tilePartSum partial_sum23;
+    tilePartSum output_tile;
+    TADD(partial_sum01, partial_sum0, partial_sum1);
+    TADD(partial_sum23, partial_sum2, partial_sum3);
+    TADD(output_tile, partial_sum01, partial_sum23);
     TSTORE(output_gm, output_tile);
 }
 

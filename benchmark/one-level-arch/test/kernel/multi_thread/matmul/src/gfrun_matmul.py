@@ -649,3 +649,4 @@ if __name__ == "__main__":
             f.write(f"{item}\n")
     print(f"\n[summary] pass={len(statics['pass'])} fail={len(statics['fail'])} "
           f"log={os.path.join(CMP_ROOT, args.res_log)}")
+    sys.exit(1 if statics["fail"] else 0)

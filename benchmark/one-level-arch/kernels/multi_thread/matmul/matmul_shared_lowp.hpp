@@ -87,6 +87,19 @@ void matmul_shared_lowp(float *c_ptr, dtype *a_ptr, dtype *b_ptr,
     using itAScale = global_iterator<gmAScale, tileAScaleMatrix>;
     using itBScale = global_iterator<gmBScale, tileBScaleMatrix>;
 
+    // SharedTile operands share one 256 KiB SharedTReg pool.  Check the
+    // rounded Tile capacities used by B.IOS, including both MX scale tiles,
+    // so an oversized tiling configuration fails during compilation instead
+    // of aborting later in gfrun.
+    constexpr int kSharedTRegBytes = 256 * 1024;
+    constexpr int kSharedOperandBytes =
+        tileAMatrix::LogicalTileBytes + tileBMatrix::LogicalTileBytes +
+        (UseMx ? tileAScaleMatrix::LogicalTileBytes +
+                     tileBScaleMatrix::LogicalTileBytes
+               : 0);
+    static_assert(kSharedOperandBytes <= kSharedTRegBytes,
+                  "A/B and MX scale tiles exceed the 256 KiB SharedTReg pool");
+
     itAScale gIterAScale(a_scale_ptr);
     itBScale gIterBScale(b_scale_ptr);
 
