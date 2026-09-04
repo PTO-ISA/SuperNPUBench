@@ -117,20 +117,24 @@ and every output byte must become zero.
 
 ### Regression results
 
-Last full run: 2026-09-01. Toolchain: clang 15.0.4 (`0f878a871`,
-linx64v5-musl-local), gfrun `762a72c3` (Tag_0817-459). Repo HEAD: `58d436c`.
+Last full run: 2026-09-02 (vector re-run with updated compiler; cube / memory /
+scalar / fixp retain 2026-09-01 results). Toolchain: clang 15.0.4 (`183f534`,
+linx64v5-musl-local; compiler checkout `e6a31ef`), gfrun `762a72c3`
+(Tag_0817-459). Repo HEAD: `a95e45f`.
 
 | family | total | PASS | NUMERIC_FAIL | RUN_FAIL | COMPILE_FAIL |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | cube | 11 | 9 | 2 | 0 | 0 |
-| vector | 129 | 93 | 27 | 7 | 2 |
+| vector | 129 | 111 | 16 | 0 | 2 |
 | memory | 14 | 14 | 0 | 0 | 0 |
 | scalar | 124 | 91 | 19 | 14 | 0 |
 | fixp | 94 | 92 | 2 | 0 | 0 |
-| **total** | **372** | **299** | **50** | **21** | **2** |
+| **total** | **372** | **317** | **39** | **14** | **2** |
 
-**Pass rate: 80.4 % (299/372).** Memory (14/14) and fixp (92/94) are
-near-clean; failures concentrate in vector and scalar.
+**Pass rate: 85.2 % (317/372).** Memory (14/14) and fixp (92/94) are
+near-clean; vector improved sharply (93→111 PASS) after the compiler update —
+all 7 previous RUN_FAIL cases (shift ×4, sqrt/rsqrt ×3) now run to completion,
+and 15 trivial-op mismatches (min/neg/not/concat/expand-min) are resolved.
 
 ### Issue analysis
 
@@ -154,9 +158,9 @@ reference path for FP16. This is a **compiler bug**, not a source error; the
 FP32 variants (`trem_fp32`, `trems_fp32`) compile and pass. The crash produces
 a `DiagnosticReports/clang-15_*.crash` file.
 
-#### RUN_FAIL — 21 cases (gfrun model gap)
+#### RUN_FAIL — 14 cases (gfrun model gap)
 
-All 21 share one crash signature:
+All 14 share one crash signature:
 
 ```
 gfrun: illegal instruction: ASSERTION FAILED: m_handlers.find(grp) != m_handlers.cend()
@@ -169,23 +173,25 @@ by these operations:
 | pattern | cases | operations |
 | --- | ---: | --- |
 | scalar shift | 12 | `sll/sra/srl` × `{i32, i64}` × `{lat, thr}` |
-| vector shift | 4 | `tshl/tshr` × `{i16, i32}` |
 | scalar sqrt | 2 | `sqrt_f64_{lat,thr}` |
-| vector sqrt/rsqrt | 3 | `tsqrt_fp16`, `trsqrt_{fp16,fp32}` |
 
 This is a **gfrun model limitation** (no `MInst` handler for shift/sqrt
-groups), not an operator or compiler issue.
+groups), not an operator or compiler issue. The 2026-09-02 compiler update
+resolved the vector shift and vector sqrt/rsqrt cases — `tshl`/`tshr` (4)
+now pass, and `tsqrt`/`trsqrt` (4) now reach `End of Benchmark` (reclassified
+from RUN_FAIL to NUMERIC_FAIL — see below).
 
-#### NUMERIC_FAIL — 50 cases (R2 ≠ 0)
+#### NUMERIC_FAIL — 39 cases (R2 ≠ 0)
 
-All 50 reach `End of Benchmark` with `R2 = 1` — the computed output differs
+All 39 reach `End of Benchmark` with `R2 = 1` — the computed output differs
 from the in-kernel reference. Grouped by suspected root cause:
 
 | group | count | cases | likely cause |
 | --- | ---: | --- | --- |
-| vec min/neg/not/concat | 15 | `tmin`, `tneg`, `tnot`, `tpartmin`, `tmins`, `tconcat` (fp16/fp32/i16/i32) | verify reference or epsilon bug — trivial ops should not mismatch |
-| vec expand-min/expdif | 8 | `trowexpandmin`, `tcolexpandmin`, `trowexpandexpdif`, `tcolexpandexpdif` | expand + min/expdif reference path |
 | vec math (exp/log) | 4 | `texp`, `tlog` (fp16/fp32) | musl `exp`/`log` precision vs reference |
+| vec sqrt/rsqrt | 4 | `tsqrt`, `trsqrt` (fp16/fp32) | musl `sqrtf`/`rsqrtf` precision — reclassified from RUN_FAIL after compiler update |
+| vec expand-expdif | 4 | `tcolexpandexpdif`, `trowexpandexpdif` (fp16/fp32) | contains `expf()` call — same musl precision root cause |
+| vec copy-only expand | 4 | `tcolexpand`, `trowexpand` (fp16/fp32) | **regression** — pure data-broadcast with no arithmetic; investigate compiler codegen for copy-only tile expand |
 | scalar ld/st | 7 | `ld/st` × `{f64, fp32, i32, i64}` | verify reference bug — load/store has no computation |
 | scalar abs/neg | 5 | `abs`, `neg` × `{f64, fp32, i64}` | verify reference bug — trivial unary ops |
 | scalar div/mod | 4 | `div`, `mod` × `{f64, fp32, i32, i64}` | precision or signed-remainder semantics |
@@ -197,7 +203,25 @@ The `ld/st` and `abs/neg` groups (12 cases) are the strongest candidates for
 **verify-reference bugs** rather than real operator defects — a load/store or
 unary-negation kernel should produce bit-identical output, so a mismatch most
 likely indicates the in-kernel `verify()` golden path or epsilon threshold is
-wrong. Investigating these first would likely clear 12 of the 50 failures.
+wrong. Investigating these first would likely clear 12 of the 39 failures.
+
+The 4 **vec copy-only expand** failures (`tcolexpand`/`trowexpand` fp16/fp32)
+are a new regression introduced by the 2026-09-02 compiler update — these
+operations perform only data broadcast with no arithmetic and previously
+passed. The arithmetic variants (`tcolexpandadd`/`trowexpandmul`/etc.) still
+pass, isolating the issue to the copy-only codegen path (`TCOLEXPAND`/
+`TROWEXPAND` opcodes 0x254/0x244 vs arithmetic `TCOLEXPANDADD`/`TROWEXPANDADD`
+0x255/0x245).
+
+#### Issue documents & artifacts
+
+- **Vector failure analysis**: [`vector/vector_numeric_fail_issues.md`](vector/vector_numeric_fail_issues.md) —
+  4 issue groups (copy-only expand regression, math precision, expand-expdif,
+  clang-15 fmodf crash) with root-cause analysis, reproduction commands, and
+  suggested investigation steps.
+- **Failing-case ELF + .diss package**: 16 NUMERIC_FAIL `.elf` + `.elf.diss`
+  pairs (the 2 COMPILE_FAIL cases produce no ELF). See the issue document for
+  the full list.
 
 ## Run
 
