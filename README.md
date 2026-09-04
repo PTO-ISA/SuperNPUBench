@@ -408,7 +408,7 @@ microbench（one-level 金标准比对几乎全过）。**与精度容差无关*
 > `/tmp/res_check_run/summary_corrected.tsv`（elf / 类别 / 状态 / rc / note）。
 
 > **当前验证基线**：2026-09-04（496 个已编译 ELF 全量 gfrun 复测；编译器按 AGENTS.md 用主
-> linx-toolchain-build worktree（llvm `25677bb1a` + TileOP-API `804eb03`）、gfrun 用
+> linx-toolchain-build worktree（llvm `1ae4ee39` + TileOP-API `804eb03`）、gfrun 用
 > SuperScalarModel `codex/consolidate-post-main-fixes-20260903` `bc7fae00`（08-27 后 253 commits，
 > 集中修复 CUBE subview 行归约 / fixpipe GroupMax/RowMax / HiF4X2 cooperative MX / packed FP4 TCVT
 > 等模型侧断言）；总 PASS 478，通过率 96.4%——与 08-27 单一变量（仅版本更新，编译器 worktree 不变），
@@ -421,12 +421,14 @@ microbench（one-level 金标准比对几乎全过）。**与精度容差无关*
 | 组件 | 分支/版本 | Commit |
 |---|---|---|
 | gfrun / SuperScalarModel | `codex/consolidate-post-main-fixes-20260903` | `bc7fae00` |
-| llvm-project | `dev-llvm15_56` | `25677bb1a` |
+| llvm-project | `dev-llvm15_56` | `1ae4ee39` |
 | Linx-TileOP-API | `linx` | `804eb03` |
 
 编译器按 **AGENTS.md** 指定用主 `linx-toolchain-build` worktree：`COMPILER_DIR=…/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin`，clang 15.0.4，target `linx64v5-unknown-linux-musl`。gfrun 用 `codex/consolidate-post-main-fixes-20260903` `bc7fae00`（08-27 `d8903938` 之后 253 commits，集中修复 CUBE subview 行归约、fixpipe GroupMax/RowMax、HiF4X2 cooperative MX、packed FP4 TCVT、cube store layout 等模型侧断言）。执行：`gfrun -t 1 -f <elf>`，multi_thread 加 `-s softcore.multiThreadNum=4`，单 ELF 90s 超时。PASS = 退出码 0 + `Reach the End of Benchmark` + `R2 = 0`。
 
 > 注：run_all.sh 的 `tail -400` 日志截断对 gfrun 输出超 400 行的 ELF（cube tmatmul fp16/i8、concat half gather/scatter）误判为 FAIL（PASS 标记被截断）。手工复跑 6 例确认实际 PASS，已修正；修正后合计 478 PASS / 18 FAIL。
+
+> 注（09-04 复测）：编译器更新至 llvm `1ae4ee39`（+1 commit over `25677bb1a`，重编 toolchain output），TileOP-API `804eb03` 含未提交 `template_asm.hpp`（cooperative matmul LB0 = per-PE M × 4，满足 ADR-0100 group_M 合约）。multi_thread/fa 全 6 组 48 模式复测：fa_2d_unroll_gmma 三种 shape（Sq256 多 tile / Sq256 容量受限 / Sq1024）各 5 PASS / 2 FAIL（HIF8 convert + MXFP4 TCVT，模型侧限制，与 `25677bb1a` 完全一致，无回归）；fa_fixpipe 编译通过但 gfrun 全部 FAIL（cooperative TMATMUL 断言，新内核待修复）；HIF4_VECBF16 仍编译失败（shared fp4+shared fp4 不被 `matrix_input_pair_legal` 接受）。
 
 ## 本次新增特性（工具链 / 模型，08-27→09-04）
 
