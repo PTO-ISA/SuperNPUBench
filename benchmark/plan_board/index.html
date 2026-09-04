@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="SuperNPUBench 算子工作状态、计划与结果看板" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SuperNPUBench 工作计划看板" />
+    <meta property="og:description" content="集中维护算子工作状态、版本发布计划、发布特性与验证结果。" />
+    <meta property="og:image" content="https://pto-isa.github.io/SuperNPUBench/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SuperNPUBench 工作计划看板" />
+    <meta name="twitter:description" content="集中维护算子工作状态、版本发布计划、发布特性与验证结果。" />
+    <meta name="twitter:image" content="https://pto-isa.github.io/SuperNPUBench/og.png" />
+    <title>SuperNPUBench 工作计划看板</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand"><span class="brand-dot"></span><b>SuperNPUBench</b><em>PLAN BOARD</em></div>
+      <nav><a href="#current">当前工作</a><a href="#plans">版本计划</a><a href="#results">结果</a><a href="#released">已发布</a></nav>
+      <div class="toolbar">
+        <button class="quiet" id="exportButton">导出数据</button>
+        <button class="primary" id="editButton">管理看板</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="overview" id="overview">
+        <div class="overview-copy">
+          <span class="kicker">WORKSPACE / OPERATOR DELIVERY</span>
+          <h1 id="boardTitle">工作计划看板</h1>
+          <p id="boardSubtitle"></p>
+          <div class="focus-line"><span>当前重点</span><b id="currentFocus"></b></div>
+        </div>
+        <aside class="update-card"><span>最后更新</span><strong id="lastUpdated"></strong><small id="owner"></small><button class="inline-edit" data-editor-section="meta">编辑基本信息</button></aside>
+      </section>
+
+      <section class="summary-grid" id="summaryGrid" aria-label="工作摘要"></section>
+
+      <section class="board-section" id="current">
+        <div class="section-head"><div><span>01</span><h2>当前工作状态</h2></div><div class="section-tools"><div class="filters" id="statusFilters"><button class="active" data-status="all">全部</button><button data-status="in_progress">进行中</button><button data-status="blocked">问题阻塞</button><button data-status="planned">待开始</button></div><button class="quick-add-task" id="quickAddTaskButton">＋ 添加工作卡</button><button class="inline-edit" data-editor-section="currentWork">批量管理</button></div></div>
+        <div class="work-grid" id="currentWorkList"></div>
+      </section>
+
+      <section class="board-section" id="plans">
+        <div class="section-head"><div><span>02</span><h2>版本发布计划</h2></div><div class="section-tools"><p>按版本维护发布内容、特性和预计增加的算子。</p><button class="inline-edit" data-editor-section="plans">编辑本节</button></div></div>
+        <div class="plan-list" id="planList"></div>
+      </section>
+      <section class="board-section" id="results">
+        <div class="section-head"><div><span>03</span><h2>验证与工作结果</h2></div><div class="section-tools"><p>记录已经执行的验证、性能分析和关键结论。</p><button class="inline-edit" data-editor-section="results">编辑本节</button></div></div>
+        <div class="result-grid" id="resultList"></div>
+      </section>
+      <section class="board-section" id="versions">
+        <div class="section-head"><div><span>04</span><h2>当前版本基线</h2></div><div class="section-tools"><p>用于复现工作结果；正式记录前应将本地修改提交或单独注明。</p><button class="inline-edit" data-editor-section="versions">编辑本节</button></div></div>
+        <div class="version-table" id="versionList"></div>
+      </section>
+      <section class="board-section" id="released">
+        <div class="section-head"><div><span>05</span><h2>已经发布的特性</h2></div><div class="section-tools"><p>已完成并进入主线或稳定分支的能力与结果。</p><button class="inline-edit" data-editor-section="released">编辑本节</button></div></div>
+        <div class="release-list" id="releasedList"></div>
+      </section>
+    </main>
+
+    <dialog id="editorDialog">
+      <form class="editor-panel" id="editorForm" onsubmit="return false">
+        <div class="editor-head"><div><span>CONTENT MANAGER</span><h2>管理看板内容</h2><p>通过表单新增、修改或删除内容，保存后立即更新当前页面。</p></div><button type="button" class="icon-button" id="closeEditorButton" aria-label="关闭且不保存">×</button></div>
+        <div class="editor-layout">
+          <nav class="editor-nav" id="editorNav" aria-label="编辑内容分类"></nav>
+          <section class="editor-workspace">
+            <div class="editor-section-head"><div><h3 id="editorSectionTitle"></h3><p id="editorSectionDescription"></p></div><button type="button" class="quiet" id="addItemButton">＋ 新增一项</button></div>
+            <div class="form-list" id="formList"></div>
+          </section>
+        </div>
+        <output id="editorMessage" aria-live="polite"></output>
+        <div class="editor-actions"><button type="button" class="quiet danger" id="resetButton">恢复仓库版本</button><label class="quiet file-button">导入数据<input type="file" id="importInput" accept="application/json,.json" /></label><button type="button" class="quiet" id="downloadButton">导出数据</button><span></span><button type="button" class="quiet" id="cancelEditButton">取消</button><button type="button" class="primary" id="applyButton">保存全部更改</button></div>
+      </form>
+    </dialog>
+
+    <footer><span>SuperNPUBench Plan Board</span><p>页面数据由 <code>plan_data.json</code> 驱动 · 浏览器编辑保存在 localStorage</p></footer>
+    <script src="app.js" defer></script>
+  </body>
+</html>

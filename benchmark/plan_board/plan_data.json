@@ -1,0 +1,414 @@
+{
+  "meta": {
+    "dataRevision": 8,
+    "title": "SuperNPUBench 工作计划看板",
+    "subtitle": "维护算子工作状态、计划、验证结果与版本进展",
+    "owner": "PTO Operator Team",
+    "lastUpdated": "2026-09-03",
+    "currentFocus": "多线程 FA 模型适配与数值/性能闭环"
+  },
+  "summary": [
+    {
+      "label": "One-level 数值验证",
+      "value": "76 / 94",
+      "detail": "通过率 80.9%",
+      "tone": "green"
+    },
+    {
+      "label": "四 PE 功能回归",
+      "value": "33 / 39",
+      "detail": "6 项集中在 FA",
+      "tone": "blue"
+    },
+    {
+      "label": "当前进行中",
+      "value": "4",
+      "detail": "2 项高优先级",
+      "tone": "orange"
+    },
+    {
+      "label": "已发布特性",
+      "value": "7",
+      "detail": "持续维护",
+      "tone": "purple"
+    }
+  ],
+  "released": [
+    {
+      "date": "2026-09-03",
+      "title": "大 Tile Size 与 Shared/Local Tile 分级支持",
+      "version": "main",
+      "description": "支持 local tile 128B–8KB、shared tile 512B–32KB；从 4PE core 视角统一覆盖 512B–32KB。Shared tile 可由单个 PE 加载并通过 pe_mask 在 core 内共享，local tile 由各 PE 并行持有自己的局部数据。",
+      "result": "multi_thread MatMul 已覆盖 shared A/B 与 PE-local C 编程路径，并完成编译及反汇编验证。",
+      "tags": [
+        "Large Tile",
+        "Shared Tile",
+        "Local Tile",
+        "4PE"
+      ]
+    },
+    {
+      "date": "2026-09-01",
+      "title": "全量 RES_CHECK 数值验证体系",
+      "version": "main",
+      "description": "microbenchmark 与 one-level-arch 支持 res_check=on 构建，区分“模型跑完”和“结果正确”，形成 Golden 校验基线。",
+      "result": "完成 492 个 ELF 数值回归；one-level 76/94 通过。",
+      "tags": [
+        "Golden",
+        "RES_CHECK",
+        "验证"
+      ]
+    },
+    {
+      "date": "2026-08-29",
+      "title": "四 PE 算子目录与回归组合",
+      "version": "main",
+      "description": "建立 multi_thread 镜像目录，覆盖 MatMul、FA、RMSNorm、Reduction、Transpose、Gather、Concat、Conv2D 与 TADD。",
+      "result": "39 个 ELF 编译完成，gfrun 功能回归 33 PASS。",
+      "tags": [
+        "4PE",
+        "Multi-thread",
+        "gfrun"
+      ]
+    },
+    {
+      "date": "2026-08-27",
+      "title": "Shared Tile MatMul 与低精度路径",
+      "version": "main",
+      "description": "支持 shared A/B、PE-local C、B reuse 和 FP8 等低精度 cooperative TMATMUL 组合。",
+      "result": "multi_thread/matmul 9/9 功能通过，代表 Golden 用例通过。",
+      "tags": [
+        "MatMul",
+        "Shared Tile",
+        "Low Precision"
+      ]
+    },
+    {
+      "date": "2026-08-12",
+      "title": "release_ver0812 稳定快照",
+      "version": "release_ver0812",
+      "description": "沉淀阶段性稳定算子集合、验证记录与构建方式，作为后续 main 集成基线。",
+      "result": "已合入 main，并保留发布分支用于版本对比。",
+      "tags": [
+        "Release",
+        "Baseline"
+      ]
+    },
+    {
+      "date": "2026-08-01",
+      "title": "PTO One-level 算子组织重构",
+      "version": "main",
+      "description": "算子实现拆分到 kernels，测试入口保留在 test/kernel，形成单线程和多线程一致的目录结构。",
+      "result": "核心算子可独立构建、反汇编与模型运行。",
+      "tags": [
+        "PTO",
+        "Repository",
+        "Build"
+      ]
+    },
+    {
+      "date": "2026-07-20",
+      "title": "Microbenchmark 指令覆盖扩展",
+      "version": "main",
+      "description": "补充 TCI、FIXP、Cube、Vector、Memory 与 Scalar 指令级测例及覆盖统计。",
+      "result": "形成四大 ISA family 的编译和模型回归入口。",
+      "tags": [
+        "Microbenchmark",
+        "ISA",
+        "Coverage"
+      ]
+    }
+  ],
+  "currentWork": [
+    {
+      "id": "MT-FA-01",
+      "title": "多线程 FA：M32 Vector 路径",
+      "area": "FlashAttention",
+      "status": "blocked",
+      "priority": "P0",
+      "description": "Cube 输出直接参与 scale、rowmax、exp、rowsum；BF16 输入/FP32 Vector 与 FP32 路径均已编译。",
+      "stages": [
+        {
+          "name": "ISA",
+          "status": "done"
+        },
+        {
+          "name": "算子",
+          "status": "done"
+        },
+        {
+          "name": "编译器",
+          "status": "done"
+        },
+        {
+          "name": "gfrun",
+          "status": "done"
+        }
+      ],
+      "currentIssueSummary": "CUBE_M32_TO_ND 写回语义仍需模型补齐；BF16 精度尚未闭环，gfsim 在 shared GMMA TLOAD 同步处死锁。",
+      "next": "推动模型补齐布局写回和四 PE group load 同步。"
+    },
+    {
+      "id": "WORK-8837",
+      "title": "fixpipe特性",
+      "area": "Operator",
+      "status": "planned",
+      "priority": "P1",
+      "description": "点击此处填写工作说明。",
+      "stages": [
+        {
+          "name": "ISA",
+          "status": "done"
+        },
+        {
+          "name": "算子",
+          "status": "done"
+        },
+        {
+          "name": "编译器",
+          "status": "done"
+        },
+        {
+          "name": "gfrun",
+          "status": "done"
+        }
+      ],
+      "currentIssueSummary": "点击此处填写当前问题总结。",
+      "next": "点击此处填写下一步。"
+    },
+    {
+      "id": "MODEL-02",
+      "title": "Microbenchmark 数值校验收敛",
+      "area": "Toolchain",
+      "status": "in_progress",
+      "priority": "P0",
+      "description": "定位 Vector、Memory、Cube、Scalar 在 RES_CHECK 下的系统性数值失败。",
+      "stages": [
+        {
+          "name": "ISA",
+          "status": "in_progress"
+        },
+        {
+          "name": "算子",
+          "status": "in_progress"
+        },
+        {
+          "name": "编译器",
+          "status": "in_progress"
+        },
+        {
+          "name": "gfrun",
+          "status": "planned"
+        }
+      ],
+      "currentIssueSummary": "",
+      "next": "优先处理 Vector 结果未写回和 Memory 往返失真。"
+    },
+    {
+      "id": "VERIFY-03",
+      "title": "subview功能",
+      "area": "Verification",
+      "status": "in_progress",
+      "priority": "P1",
+      "description": "",
+      "stages": [
+        {
+          "name": "ISA",
+          "status": "blocked"
+        },
+        {
+          "name": "算子",
+          "status": "done"
+        },
+        {
+          "name": "编译器",
+          "status": "done"
+        },
+        {
+          "name": "gfrun",
+          "status": "in_progress"
+        }
+      ],
+      "currentIssueSummary": "rowsum冒烟测试中，gfrun报错m32 layout不支持，https://github.com/PTO-ISA/pto-spec/blob/v0.58.4/asl/tile/reduce-and-expand/row-reduction/TROWSUM.asl#L3-L13 表明layout需要row-major",
+      "next": ""
+    },
+    {
+      "id": "PERF-04",
+      "title": "hif4x2 matmul问题跟踪",
+      "area": "Performance",
+      "status": "planned",
+      "priority": "P1",
+      "description": "为 MatMul、FA、Reduction 生成 PipeView 与 SwimLane，并记录版本间周期差异。",
+      "stages": [
+        {
+          "name": "ISA",
+          "status": "done"
+        },
+        {
+          "name": "算子",
+          "status": "done"
+        },
+        {
+          "name": "编译器",
+          "status": "done"
+        },
+        {
+          "name": "gfrun",
+          "status": "in_progress"
+        }
+      ],
+      "currentIssueSummary": "目前gfrun报错matmul_mx不支持hif4数据类型，问题跟踪：https://github.com/LinxISA/SuperScalarModel/issues/501",
+      "next": "模型问题关闭后生成首轮完整性能报告。"
+    },
+    {
+      "id": "WORK-3320",
+      "title": "FA算子性能优化：提升CUBE利用率并减少冗余向量操作",
+      "area": "Operator",
+      "status": "planned",
+      "priority": "P1",
+      "description": "点击此处填写工作说明。",
+      "stages": [
+        {
+          "name": "ISA",
+          "status": "planned"
+        },
+        {
+          "name": "算子",
+          "status": "planned"
+        },
+        {
+          "name": "编译器",
+          "status": "planned"
+        },
+        {
+          "name": "gfrun",
+          "status": "planned"
+        }
+      ],
+      "currentIssueSummary": "点击此处填写当前问题总结。",
+      "next": "点击此处填写下一步。"
+    },
+    {
+      "id": "WORK-1837",
+      "title": "低精度算子支持",
+      "area": "Operator",
+      "status": "planned",
+      "priority": "P1",
+      "description": "点击此处填写工作说明。",
+      "stages": [
+        {
+          "name": "ISA",
+          "status": "done"
+        },
+        {
+          "name": "算子",
+          "status": "in_progress"
+        },
+        {
+          "name": "编译器",
+          "status": "done"
+        },
+        {
+          "name": "gfrun",
+          "status": "in_progress"
+        }
+      ],
+      "currentIssueSummary": "mxfp4，mxfp8，hifp4，hifp8精度matmul算子-gfrun已经支持完毕，数值校验还存在问题；\nmxfp4，mxfp8，hifp4，hifp8精度的fa算子还在写，依赖subview功能打通；",
+      "next": "点击此处填写下一步。"
+    }
+  ],
+  "plans": [
+    {
+      "id": "PLAN-01",
+      "version": "release_ver0903",
+      "target": "2026-09-03",
+      "status": "in_progress",
+      "priority": "P0",
+      "title": "subview和fixpipe适配",
+      "description": "1.支持 M32/M16 layout for vector；\n2.支持subview特性；\n3.支持mxfp4/8，hifp4/hifp8 matmul， fp8 FA；\n4.支持fixpipe特性， FA fixpipe优化；",
+      "features": [
+        "CUBE_M32_TO_ND 写回支持",
+        "四 PE Shared TLOAD/GMMA 同步修复",
+        "FP32 与 BF16 FA 执行到结束",
+        "生成完整 PipeView 与 SwimLane"
+      ],
+      "operators": [
+        { "name": "M32/M16 Vector 算子", "done": false },
+        { "name": "Subview RowSum", "done": false },
+        { "name": "MXFP4/MXFP8 MatMul", "done": false },
+        { "name": "HIFP4/HIFP8 MatMul", "done": false },
+        { "name": "FP8 FlashAttention", "done": false },
+        { "name": "FIXP FlashAttention", "done": false }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "date": "2026-09-02",
+      "title": "多线程 FA FP32 Golden",
+      "status": "pass",
+      "value": "max abs 0.01736",
+      "summary": "Sq=256、Skv=256、Tm=128、Tk=128、4PE，atol/rtol=0.03。"
+    },
+    {
+      "date": "2026-09-02",
+      "title": "FA no-TSTORE gfsim 诊断",
+      "status": "blocked",
+      "value": "cycle 6675",
+      "summary": "FP32/BF16 均越过布局写回断言，随后在 BPC 0x11470 shared GMMA TLOAD 死锁。"
+    },
+    {
+      "date": "2026-09-01",
+      "title": "One-level 全量数值验证",
+      "status": "pass",
+      "value": "76 / 94",
+      "summary": "通过率 80.9%；核心 MatMul、单线程 FA、四 PE MatMul/Norm/Reduction 全过。"
+    },
+    {
+      "date": "2026-08-29",
+      "title": "四 PE 功能回归",
+      "status": "partial",
+      "value": "33 / 39",
+      "summary": "无超时；6 项失败集中于 FA 低精度转换支持边界。"
+    },
+    {
+      "date": "2026-08-27",
+      "title": "常规 gfrun 全量回归",
+      "status": "partial",
+      "value": "349 / 427",
+      "summary": "通过率 81.7%；该口径只表示执行到终点，不代表 Golden 正确。"
+    }
+  ],
+  "versions": [
+    {
+      "name": "SuperNPUBench",
+      "branch": "main",
+      "commit": "0d1f7d8acd74",
+      "note": "当前工作树有未提交修改"
+    },
+    {
+      "name": "linx-toolchain-build",
+      "branch": "main",
+      "commit": "e6a31efb4cfb",
+      "note": "clang 15.0.4 / linx64v5"
+    },
+    {
+      "name": "llvm-project",
+      "branch": "dev-llvm15_56",
+      "commit": "0f878a871d32",
+      "note": "编译器后端"
+    },
+    {
+      "name": "Linx-TileOP-API",
+      "branch": "linx",
+      "commit": "ace71b673cc7",
+      "note": "TileOP API"
+    },
+    {
+      "name": "SuperScalarModel",
+      "branch": "codex/pr-0.58.4-shared-model",
+      "commit": "762a72c34305",
+      "note": "gfrun/gfsim，含本地修改"
+    }
+  ]
+}
