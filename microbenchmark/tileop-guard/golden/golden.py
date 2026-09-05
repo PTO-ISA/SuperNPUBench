@@ -113,7 +113,14 @@ REG['tdequant'] = R(fam='dequant', M=8, N=256, mult=2.0, zp=0, eps=0)
 # ---- TCVT (numeric conversion fp32 -> s32). Rounding mode pinned empirically
 #      below (round=...). Inputs span both signs with varied fractions so the
 #      chosen mode is actually exercised at the .5 boundary. ----
-REG['tcvt'] = R(fam='cvt', M=16, N=16, din=F32, dout=I32, round='rne', eps=0)
+# TCVT fp32->s32, default RMode=0: pto-spec format-conversion/TCVT.asl is normative
+# -- "RMode zero selects RTZ for floating-to-integer conversion and RNE for every
+# other conversion" (ASL returns NumericRound_RTZ). Demo TCVT(d,s) omits RMode ->
+# RMode=0 -> RTZ (truncate toward zero). Golden pins the SPEC (RTZ); model computes
+# RNE (verified: at -125.5 model=-126, spec RTZ=-125) -> precision-fail witness for
+# a model rounding bug. Prior 'rne' golden fit observed model behavior and MASKED
+# this gap -- corrected per golden-discipline (pin expected semantics, not observed).
+REG['tcvt'] = R(fam='cvt', M=16, N=16, din=F32, dout=I32, round='rtz', eps=0)
 
 # ---- TPART* : elementwise binary over the common valid region (full-valid here
 #      => plain elementwise). "PART" = partial-valid-region, not segmented. ----
