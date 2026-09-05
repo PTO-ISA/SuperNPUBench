@@ -137,6 +137,22 @@ ifeq ($(TYPE), TCVT_REDUCE_SHAPE_PROBE)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_tcvt_reduce_shape_probe.elf
 endif
 
+# 可选 shape 覆盖（4-PE res_check 多 Post 一致性验证，issue #489）：命令行提供时
+# 转发为 -D 宏，使同一 driver 可编不同 shape；driver 内 #ifndef 默认值不受影响。
+# tail driver 用 PM/PN；nontail driver 用 PAXIS/PPOST。
+ifdef PM
+   DEFINES += -DPM=$(PM)
+endif
+ifdef PN
+   DEFINES += -DPN=$(PN)
+endif
+ifdef PAXIS
+   DEFINES += -DPAXIS=$(PAXIS)
+endif
+ifdef PPOST
+   DEFINES += -DPPOST=$(PPOST)
+endif
+
 include ../../../common/Makefile.common
 
 clean:

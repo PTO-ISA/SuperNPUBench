@@ -1,6 +1,7 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
 #include "fileop.h"
+#include "spmd_res_check.h"  // 4-PE 收尾协议：leader-gate I/O + 两道屏障（issue #489）
 #include "quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp4.hpp"
 using namespace supernpu::tile_isa::mxquant;
 
@@ -39,7 +40,8 @@ static uint8_t scale_f32[8 * 2] __attribute__((aligned(4096))) = {};
 
 int main() {
 #ifdef RES_CHECK
-    readBinaryFile(CHK_DIR "/input.bin", (uint8_t*)xbits, sizeof(xbits));
+    SpmdResCheck<4> io;  // leader(tid0) 读输入，worker 自旋等齐（输入屏障）
+    io.leader_load(CHK_DIR "/input.bin", (uint8_t*)xbits, sizeof(xbits));
 #endif
 
     dynamic_mx_quant_tail_ocp_fp4<PM, PN, 32>(
@@ -54,8 +56,12 @@ int main() {
 #endif
 
 #ifdef RES_CHECK
-    writeBinaryFile(CHK_DIR "/output.bin", (uint8_t*)y, sizeof(y));
-    writeBinaryFile(CHK_DIR "/scale_output.bin", (uint8_t*)scale, sizeof(scale));
+    // 仅 leader(tid0) 落盘（消除 O_TRUNC 竞争）；完整性由 leader-heaviest 块级锁步保证，无需
+    // 输出屏障；worker 返回后 runtime park（详见 spmd_res_check.h / issue 489）。
+    if (io.leader_should_write()) {
+        writeBinaryFile(CHK_DIR "/output.bin", (uint8_t*)y, sizeof(y));
+        writeBinaryFile(CHK_DIR "/scale_output.bin", (uint8_t*)scale, sizeof(scale));
+    }
 #endif
     return 0;
 }
