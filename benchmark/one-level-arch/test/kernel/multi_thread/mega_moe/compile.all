@@ -1,0 +1,8 @@
+#!/bin/bash
+# MegaMoe A8W8 — 真 4PE (multi-thread) 版编译入口
+# 规格与单线程版一致: 16×32×64
+# Run the ELF with: gfrun -f <elf> -s softcore.multiThreadNum=4
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+make TESTCASE=mega_moe_sim_mt BS=16 H=32 HIDDEN=64 diss

@@ -1,0 +1,6 @@
+#!/bin/bash
+# MoE Combine V2 compile test
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+make TESTCASE=moe_combine_v2 diss

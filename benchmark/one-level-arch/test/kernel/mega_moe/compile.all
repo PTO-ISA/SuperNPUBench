@@ -1,0 +1,8 @@
+#!/bin/bash
+# MegaMoe A8W8 (完整真机流水) 迁移样例编译入口
+# 仿真验证仅保留小规格 16×32×64 (已跑通 gfsim, Total
+# Cycles = 2190707), A5 cann-samples mega_moe_story 同步适配此规格用于性能对比
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+make TESTCASE=mega_moe_sim BS=16 H=32 HIDDEN=64 diss

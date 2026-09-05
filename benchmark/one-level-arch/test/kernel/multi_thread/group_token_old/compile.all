@@ -1,0 +1,5 @@
+#!/bin/bash
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+
+make TESTCASE=group_token_old \
+    COMPILER_DIR="$COMPILER_DIR"
