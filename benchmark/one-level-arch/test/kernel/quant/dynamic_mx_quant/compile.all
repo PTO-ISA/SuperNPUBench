@@ -1,0 +1,14 @@
+#!/bin/bash
+# DynamicMxQuant — 组件合入前的功能/精度看护基线。仅含已迁移并对齐 AscendC 的 driver。
+# 逐批迁入：TAIL_CUBLAS_FP8、TAIL_OCP_FP4、NONTAIL_CUBLAS_FP8。
+# 其余 driver（NONTAIL_OCP_FP4、各 probe）待后续批次迁入后再在此追加。
+
+# --- plain builds ---
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8 diss
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4 diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_CUBLAS_FP8 diss
+
+# --- res_check builds (for precision verification) ---
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_CUBLAS_FP8 res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4 res_check=on diss
+make TESTCASE=dynamic_mx_quant TYPE=NONTAIL_CUBLAS_FP8 res_check=on diss

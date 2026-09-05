@@ -76,6 +76,7 @@ compile_operator "$REPO_ROOT/test/kernel/multi_thread/reduction/reducesum_row" "
 compile_operator "$REPO_ROOT/test/kernel/multi_thread/transpose" "multi_thread/transpose"
 compile_operator "$REPO_ROOT/test/kernel/multi_thread/matmul" "multi_thread/matmul"
 compile_operator "$REPO_ROOT/test/kernel/multi_thread/fa" "multi_thread/fa"
+compile_operator "$REPO_ROOT/test/kernel/quant/dynamic_mx_quant" "dynamic_mx_quant"
 
 echo ""
 echo "=========================================="
