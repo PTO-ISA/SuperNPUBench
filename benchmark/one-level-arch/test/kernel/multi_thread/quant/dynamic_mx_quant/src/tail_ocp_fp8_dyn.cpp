@@ -1,6 +1,7 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
 #include "fileop.h"
+#include "multi_thread_res_check.h"  // 官方 4-PE 收尾协议（输入/输出屏障 + PE0 落盘）
 #include "multi_thread/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp8_dyn.hpp"
 using namespace supernpu::tile_isa::mxquant;
 
@@ -30,9 +31,17 @@ static __half  *x = reinterpret_cast<__half *>(xbits);
 static uint8_t y[PM * PN] __attribute__((aligned(4096))) = {};
 static uint8_t scale[PM * PSCALE_COLS] __attribute__((aligned(4096))) = {};
 
+#ifdef RES_CHECK
+static MultiThreadResCheckSync res_check_sync{};  // 4 PE 共享(.bss)：屏障状态
+#endif
+
 int main() {
 #ifdef RES_CHECK
-    readBinaryFile(CHK_DIR "/input.bin", (uint8_t*)xbits, sizeof(xbits));
+    const uint32_t tid = get_thread_idx();
+    if (tid == 0) {
+        readBinaryFile(CHK_DIR "/input.bin", (uint8_t*)xbits, sizeof(xbits));
+    }
+    res_check_publish_inputs(res_check_sync, tid);  // 输入屏障：worker 等 PE0 读完
 #endif
 
     // 动态 shape：M/N 运行期传入（编译期 kernel 不可知）。
@@ -41,8 +50,11 @@ int main() {
         x, reinterpret_cast<__fp8_e4m3 *>(y), scale, tiling);
 
 #ifdef RES_CHECK
-    writeBinaryFile(CHK_DIR "/output.bin", (uint8_t*)y, sizeof(y));
-    writeBinaryFile(CHK_DIR "/scale_output.bin", (uint8_t*)scale, sizeof(scale));
+    res_check_wait_for_all(res_check_sync, tid);  // 输出屏障：PE0 等 PE1..3 算完再落盘
+    if (tid == 0) {
+        writeBinaryFile(CHK_DIR "/output.bin", (uint8_t*)y, sizeof(y));
+        writeBinaryFile(CHK_DIR "/scale_output.bin", (uint8_t*)scale, sizeof(scale));
+    }
 #endif
     return 0;
 }
