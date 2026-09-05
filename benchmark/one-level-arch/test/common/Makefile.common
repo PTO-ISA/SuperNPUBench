@@ -76,7 +76,8 @@ CXX_VER ?= -std=c++20
 	ifeq ($(baremetal), on)
 	CC_LINK += -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
 	else
-	CC_LINK += -nostartfiles $(ROOT)/test/common/_start.s
+	START_FILE ?= $(ROOT)/test/common/_start.s
+	CC_LINK += -nostartfiles $(START_FILE)
 	endif
 
     DEFINES += -DENABLE_TENSOR_INSTR
@@ -111,8 +112,11 @@ endif
 ifeq ($(res_check), on)
 DEFINES += -DRES_CHECK -DENABLE_BINARY_OUTPUT
 DEFINES += -DCHK_DIR=\"$(ROOT)/compare/$(notdir $(basename $(TARGET)))\"
+ifeq ($(PLAT), linx)
+CC_LINK = -nostartfiles $(START_FILE)
+else
 CC_LINK =
-EXTRA_OBJ_FILES += $(OBJ_ROOT)/$(COMM_SRC_DIR)/group_worker_runtime.o
+endif
 endif
 
 .DEFAULT_GOAL := all

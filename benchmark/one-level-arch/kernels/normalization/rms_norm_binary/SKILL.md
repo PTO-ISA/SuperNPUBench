@@ -3,8 +3,8 @@ name: rms-norm-binary
 description: >-
   Build, run, and debug the one-level rms_norm_binary kernel (R-split RMSNorm)
   with SuperNPUBench + run_op.py + gfrun/gfsim precision checks. Use when
-  editing rms_norm_binary.hpp, rms_norm_binary tests, workspace/GetCacheId
-  reduce, TADD cross-tile sum, or verifying [1,8192] fp16 binary RMSNorm.
+  editing rms_norm_binary_pto.hpp, rms_norm_binary tests, workspace/GetCacheId
+  reduce, TADD cross-tile sum, or verifying [16,16384] fp16 binary RMSNorm.
   Shape dims are A (outer) and R (reduce): g_a/g_r, tile_a/tile_r, tA/tR.
 ---
 
@@ -39,8 +39,8 @@ Current default test shape: **`[1, 8192]`**, `tile_r=1024` → **`Rb=8`**, fp16.
 
 | Role | Path |
 |------|------|
-| Kernel | `$ROOT/SuperNPUBench/benchmark/one-level-arch/kernels/single_thread/normalization/rms_norm_binary/rms_norm_binary.hpp` |
-| Reference (single-tile) | `.../kernels/single_thread/normalization/rms_norm/rms_norm.hpp` |
+| Kernel | `$ROOT/SuperNPUBench/benchmark/one-level-arch/kernels/normalization/rms_norm_binary/rms_norm_binary_pto.hpp` |
+| Reference (single-tile) | `.../kernels/normalization/rms_norm/rms_norm_pto.hpp` |
 | Testcase | `.../test/kernel/normalization/rms_norm_binary/` |
 | Host entry | `.../rms_norm_binary/src/rms_norm_binary.cpp` |
 | Gen golden | `.../rms_norm_binary/src/gen_rms_norm_binary_data.py` |
@@ -48,7 +48,7 @@ Current default test shape: **`[1, 8192]`**, `tile_r=1024` → **`Rb=8`**, fp16.
 | Runner | `$ROOT/run_op.py` preset `rms_norm_binary` |
 | Toolchain | `$ROOT/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin` → `COMPILER_DIR` |
 | Sims | `$ROOT/SuperScalarModel/bin/gfrun`, `gfsim` |
-| Related skill | `.../kernels/single_thread/reduction/binary-accumulation-cache-id/SKILL.md` |
+| Related skill | `.../kernels/reduction/binary-accumulation-cache-id/SKILL.md` |
 
 ELF after build:
 
@@ -66,8 +66,8 @@ Compare dir (precision):
 
 ## Kernel pipeline (current)
 
-File: `rms_norm_binary.hpp`. **No `rms_norm_dyn_ops.hpp`.** TEPL style like
-`rms_norm.hpp`.
+File: `rms_norm_binary_pto.hpp`. **No `rms_norm_dyn_ops.hpp`.** TEPL style like
+`rms_norm_pto.hpp`.
 
 ```text
 Pass1:
@@ -85,9 +85,10 @@ Important implementation notes:
 
 1. **Cross-tile sum is streaming** (`sum += cur`), not GetCacheId carry-merge.
 2. Zero-init `sum` outside the R loop; uniform `TADD` inside (no first-tile branch).
-3. `tile_v`: `Cols=32`, **static `Valid=1,1`** (`tile_a==1`) so TEPL `B.DIM`
-   immediates are legal.
-4. `workspace` argument is kept in the API but **currently unused**.
+3. `tile_v`: physical `Columns=1` and static `Valid=1,1`, matching the
+   hardware contract for `TROWSUM` output and later binary TEPL operations.
+4. `workspace` stores one FP32 reduction value per row and cache level. Its
+   layout is `[kMaxLevels, g_a, kWsCols]` with `kWsCols=1`.
 5. Do **not** put early-return parameter checks in the kernel (caller owns tiling).
 
 ## How to verify
@@ -158,7 +159,7 @@ Baseline `rms_norm` (no cross-tile accumulate / second R loop) usually **PASS**e
 
 ```cpp
 G_A=1, G_R=8192, TILE_A=1, TILE_R=1024
-workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS]  // kept for ABI; unused by kernel
+workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS]  // K_WS_COLS=1
 ```
 
 Precision scripts default shape `--g-r 8192`, `--tile-r 1024`.
@@ -168,7 +169,8 @@ Precision scripts default shape `--g-r 8192`, `--tile-r 1024`.
 ## Agent checklist when changing the kernel
 
 1. Keep compute TEPL-only; do not reintroduce `rms_norm_dyn_ops.hpp` unless asked.
-2. Prefer `Valid=1,1` on `tile_v` when using TEPL ops with NTTP `B.DIM`.
+2. Keep `tile_v` physical Columns and Valid Columns both equal to 1 so
+   `TROWSUM`, workspace reload, and binary TEPL operands have identical layout.
 3. Avoid taking addresses of `tile_v` / large pointer arrays of tiles (Liveouts /
    illegal spill).
 4. Do not mix `TROWSUM` u-reg lineage with `TLOAD` of small reduce tiles in the

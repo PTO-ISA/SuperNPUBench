@@ -15,7 +15,7 @@ DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
     / "kernel_normalization_group_norm_grad_group_norm_grad"
-    "_DType__half_N2_C16_G4_HxW16"
+    "_DType__half_N32_C16_G8_HxW8192_PE4"
 )
 
 

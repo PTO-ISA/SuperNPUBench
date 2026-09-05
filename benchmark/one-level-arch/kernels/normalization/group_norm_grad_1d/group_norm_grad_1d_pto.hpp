@@ -1,5 +1,5 @@
 // =============================================================================
-// group_norm_grad_1d.hpp — GroupNorm backward, HxW == 1 (one-level PTO)
+// group_norm_grad_1d_pto.hpp — GroupNorm backward, HxW == 1 (one-level PTO)
 // =============================================================================
 //
 // Matches PyTorch GroupNorm1dBackward
@@ -16,7 +16,8 @@
 //   Stage A requires D <= tD (one tile).
 //
 // Tile capacity: logical tile >= 512B (TileOP IsValidActiveSize / TSize=1..7).
-//   fp16 → Cols>=256; fp32 → Cols>=128. tile_v is always fp32 → Cols=128.
+//   fp16 → Cols>=256; fp32 data tiles → Cols>=128. Reduction/broadcast
+//   tile_v follows the hardware contract and uses physical Columns=1.
 // Reduce and dX are separate passes so large tiles do not stay live across both.
 //
 // Torch CUDA launch 总览 (NVIDIA, warp=32; HxW==1 特化):
@@ -36,6 +37,7 @@
 #include <cstdint>
 
 namespace gn_grad_1d {
+
 
 // ---------------------------------------------------------------------------
 // Stage A1: channel reduce → c2/c3 for one (n, g)
@@ -278,22 +280,31 @@ inline void dgamma_group(dtype *dy, dtype *x, float *mean, float *rstd,
 // 入口循环 ↔ Torch grid：
 //   for n,g fused_params + dx_group  ↔ grid=dim3(N,G) 再接 numel 上 gpu_kernel
 //   for g  dbeta/dgamma              ↔ Kernel1/2 按通道写回
-template <typename dtype>
+template <typename dtype, int peNum>
 void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
                         dtype *gamma, const int64_t *tiling, dtype *dx,
                         dtype *dgamma, dtype *dbeta) {
+    static_assert(peNum == 4, "normalization kernels support only 4PE");
     // Capacity in elements: every Tile buffer >= 512B (dtype strip + float strip).
     constexpr int64_t tDDtype =
         (512 + static_cast<int64_t>(sizeof(dtype)) - 1) /
         static_cast<int64_t>(sizeof(dtype));
     constexpr int64_t tD = tDDtype > 128 ? tDDtype : 128;
-    constexpr int64_t tV = 128; // float scalar/broadcast strip: 128*4B = 512B
+    constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
 
     const int64_t N = tiling[0];
     const int64_t C = tiling[1];
     const int64_t G = tiling[2];
+    const uint32_t tid = get_thread_idx();
+    if (N <= 0 || C <= 0 || G <= 0 || C % G != 0 ||
+        tid >= static_cast<uint32_t>(peNum)) {
+        return;
+    }
     const int64_t D = C / G;
     const int64_t tile_d = tiling[3] > 0 ? tiling[3] : (D < tD ? D : tD);
+    if (tile_d <= 0 || tile_d > tD || D > tD) {
+        return;
+    }
 
     using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
@@ -307,225 +318,21 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
     const float s = 1.0f / static_cast<float>(D);
     float scratch[2]; // c2, c3 for one (n,g)
 
-    for (int64_t n = 0; n < N; ++n) {
-        for (int64_t g = 0; g < G; ++g) {
-            gn_grad_1d::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f,
-                                           tile_v>(dy, x, mean, rstd, gamma,
-                                                   scratch, N, C, G, D, n, g,
-                                                   s);
-            gn_grad_1d::dx_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-                dy, x, rstd, gamma, scratch, dx, N, C, G, D, n, g);
-        }
+    for (int64_t ng = tid; ng < N * G; ng += peNum) {
+        const int64_t n = ng / G;
+        const int64_t g = ng % G;
+        gn_grad_1d::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f,
+                                       tile_v>(dy, x, mean, rstd, gamma,
+                                               scratch, N, C, G, D, n, g, s);
+        gn_grad_1d::dx_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
+            dy, x, rstd, gamma, scratch, dx, N, C, G, D, n, g);
     }
 
-    for (int64_t g = 0; g < G; ++g) {
+    for (int64_t g = tid; g < G; g += peNum) {
         gn_grad_1d::dbeta_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
             dy, dbeta, N, C, D, tile_d, g);
-    }
-    for (int64_t g = 0; g < G; ++g) {
         gn_grad_1d::dgamma_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
             dy, x, mean, rstd, dgamma, N, C, G, D, tile_d, g);
-    }
-}
-
-template <typename dtype, int N, int C, int G, int tile_d>
-void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
-                        dtype *gamma, dtype *dx, dtype *dgamma,
-                        dtype *dbeta) {
-    static_assert(N > 0 && C > 0 && G > 0);
-    static_assert(C % G == 0);
-    constexpr int D = C / G;
-    constexpr int tDDtype =
-        (512 + static_cast<int>(sizeof(dtype)) - 1) /
-        static_cast<int>(sizeof(dtype));
-    constexpr int tD = tDDtype > 128 ? tDDtype : 128;
-    constexpr int tV = 128;
-    constexpr int kTileD = tile_d > 0 ? tile_d : (D < tD ? D : tD);
-    static_assert(kTileD > 0 && kTileD <= tD && D <= tD);
-    constexpr int n_d = D / kTileD;
-    constexpr int rmd_d = D % kTileD;
-    constexpr float s = 1.0f / static_cast<float>(D);
-
-    using gm_h = global_tensor<dtype, RowMajor<N, C>>;
-    using gm_c = global_tensor<dtype, RowMajor<1, C>>;
-    using gm_f1 = global_tensor<float, RowMajor<1, 1>>;
-    using gm_fG = global_tensor<float, RowMajor<N * G, 1>>;
-    using tile_h_d =
-        Tile<Location::Vec, dtype, 1, tD, BLayout::RowMajor, 1, D>;
-    using tile_f_d =
-        Tile<Location::Vec, float, 1, tD, BLayout::RowMajor, 1, D>;
-    using tile_h_td =
-        Tile<Location::Vec, dtype, 1, tD, BLayout::RowMajor, 1, kTileD>;
-    using tile_f_td =
-        Tile<Location::Vec, float, 1, tD, BLayout::RowMajor, 1, kTileD>;
-    using tile_v =
-        Tile<Location::Vec, float, 1, tV, BLayout::RowMajor, 1, 1>;
-
-    float scratch[2];
-
-    for (int n = 0; n < N; ++n) {
-        for (int g = 0; g < G; ++g) {
-            const int ng = n * G + g;
-            const int c0 = g * D;
-            const int offset = n * C + c0;
-            gm_h gdy(dy + offset);
-            gm_h gx(x + offset);
-            gm_h gdx(dx + offset);
-            gm_fG gmean(mean + ng);
-            gm_fG grstd(rstd + ng);
-            gm_f1 gc2(scratch + 0);
-            gm_f1 gc3(scratch + 1);
-            gm_c gg(gamma + c0);
-
-            tile_h_d h0, h1;
-            tile_f_d x_f, dy_f, t0, t1;
-            tile_v mean_t, rstd_t, sum1, sum2, c2, c3;
-
-            TLOAD(h0, gx);
-            TCVT(x_f, h0);
-            TLOAD(h0, gdy);
-            TCVT(dy_f, h0);
-            TLOAD(mean_t, gmean);
-            TLOAD(rstd_t, grstd);
-            TLOAD(h1, gg);
-            TCVT(t0, h1);
-            TMUL(t1, dy_f, t0);
-            TROWSUM(sum2, t1);
-            TMUL(t1, t1, x_f);
-            TROWSUM(sum1, t1);
-            TMUL(c2, sum2, mean_t);
-            TSUB(c2, c2, sum1);
-            TMUL(c3, rstd_t, rstd_t);
-            TMUL(c3, c3, rstd_t);
-            TMUL(c2, c2, c3);
-            TMULS(c2, c2, s);
-            TMUL(c3, c2, mean_t);
-            TMULS(c3, c3, -1.0f);
-            TMUL(sum1, sum2, rstd_t);
-            TMULS(sum1, sum1, s);
-            TSUB(c3, c3, sum1);
-            TSTORE(gc2, c2);
-            TSTORE(gc3, c3);
-
-            TLOAD(h0, gx);
-            TCVT(x_f, h0);
-            TLOAD(h0, gdy);
-            TCVT(dy_f, h0);
-            TLOAD(rstd_t, grstd);
-            TLOAD(c2, gc2);
-            TLOAD(c3, gc3);
-            TLOAD(h1, gg);
-            TCVT(t0, h1);
-            TROWEXPANDMUL(t1, t0, rstd_t);
-            TMUL(t1, t1, dy_f);
-            TROWEXPANDMUL(t0, x_f, c2);
-            TADD(t1, t1, t0);
-            TROWEXPANDADD(t1, t1, c3);
-            TCVT(h0, t1);
-            TSTORE(gdx, h0);
-        }
-    }
-
-    for (int g = 0; g < G; ++g) {
-        const int c0 = g * D;
-        for (int d0 = 0; d0 < n_d; ++d0) {
-            tile_h_td h0;
-            tile_f_td dy_f, acc;
-            TEXPANDS(acc, 0.0f);
-            for (int n = 0; n < N; ++n) {
-                gm_h gdy(dy + n * C + c0 + d0 * kTileD);
-                TLOAD(h0, gdy);
-                TCVT(dy_f, h0);
-                TADD(acc, acc, dy_f);
-            }
-            gm_c gdb(dbeta + c0 + d0 * kTileD);
-            TCVT(h0, acc);
-            TSTORE(gdb, h0);
-        }
-        if constexpr (rmd_d) {
-            using tile_h_r =
-                Tile<Location::Vec, dtype, 1, tD, BLayout::RowMajor, 1, rmd_d>;
-            using tile_f_r =
-                Tile<Location::Vec, float, 1, tD, BLayout::RowMajor, 1, rmd_d>;
-            tile_h_r h0;
-            tile_f_r dy_f, acc;
-            TEXPANDS(acc, 0.0f);
-            for (int n = 0; n < N; ++n) {
-                gm_h gdy(dy + n * C + c0 + n_d * kTileD);
-                TLOAD(h0, gdy);
-                TCVT(dy_f, h0);
-                TADD(acc, acc, dy_f);
-            }
-            gm_c gdb(dbeta + c0 + n_d * kTileD);
-            TCVT(h0, acc);
-            TSTORE(gdb, h0);
-        }
-    }
-
-    for (int g = 0; g < G; ++g) {
-        const int c0 = g * D;
-        for (int d0 = 0; d0 < n_d; ++d0) {
-            tile_h_td h0;
-            tile_f_td dy_f, x_f, t0, acc;
-            tile_v mean_t, rstd_t;
-            TEXPANDS(acc, 0.0f);
-            for (int n = 0; n < N; ++n) {
-                const int ng = n * G + g;
-                const int offset = n * C + c0 + d0 * kTileD;
-                gm_h gdy(dy + offset);
-                gm_h gx(x + offset);
-                gm_fG gmean(mean + ng);
-                gm_fG grstd(rstd + ng);
-                TLOAD(h0, gdy);
-                TCVT(dy_f, h0);
-                TLOAD(h0, gx);
-                TCVT(x_f, h0);
-                TLOAD(mean_t, gmean);
-                TLOAD(rstd_t, grstd);
-                TROWEXPANDMUL(t0, x_f, rstd_t);
-                TMUL(t0, t0, dy_f);
-                TROWEXPANDMUL(x_f, dy_f, mean_t);
-                TROWEXPANDMUL(x_f, x_f, rstd_t);
-                TSUB(t0, t0, x_f);
-                TADD(acc, acc, t0);
-            }
-            gm_c gdg(dgamma + c0 + d0 * kTileD);
-            TCVT(h0, acc);
-            TSTORE(gdg, h0);
-        }
-        if constexpr (rmd_d) {
-            using tile_h_r =
-                Tile<Location::Vec, dtype, 1, tD, BLayout::RowMajor, 1, rmd_d>;
-            using tile_f_r =
-                Tile<Location::Vec, float, 1, tD, BLayout::RowMajor, 1, rmd_d>;
-            tile_h_r h0;
-            tile_f_r dy_f, x_f, t0, acc;
-            tile_v mean_t, rstd_t;
-            TEXPANDS(acc, 0.0f);
-            for (int n = 0; n < N; ++n) {
-                const int ng = n * G + g;
-                const int offset = n * C + c0 + n_d * kTileD;
-                gm_h gdy(dy + offset);
-                gm_h gx(x + offset);
-                gm_fG gmean(mean + ng);
-                gm_fG grstd(rstd + ng);
-                TLOAD(h0, gdy);
-                TCVT(dy_f, h0);
-                TLOAD(h0, gx);
-                TCVT(x_f, h0);
-                TLOAD(mean_t, gmean);
-                TLOAD(rstd_t, grstd);
-                TROWEXPANDMUL(t0, x_f, rstd_t);
-                TMUL(t0, t0, dy_f);
-                TROWEXPANDMUL(x_f, dy_f, mean_t);
-                TROWEXPANDMUL(x_f, x_f, rstd_t);
-                TSUB(t0, t0, x_f);
-                TADD(acc, acc, t0);
-            }
-            gm_c gdg(dgamma + c0 + n_d * kTileD);
-            TCVT(h0, acc);
-            TSTORE(gdg, h0);
-        }
     }
 }
 

@@ -1,21 +1,5 @@
 #!/bin/bash
-# RMSNorm one-level: fp16
-#   rms_norm.cpp tiling_info = {16,512,1,-1}  (g_a,g_r,tile_a,tile_r; tile_r<0 => full row)
-#   rms_norm_static: G_A=16 G_R=512 TILE_A=2 TILE_R=512
-# PE_NUM=4 splits A (16/4=4 rows/PE). Run those ELFs with:
-#   gfrun -f <elf> -s softcore.multiThreadNum=4
-
+# Dynamic 4PE RMSNorm [512,8192]; tiling is calculated from runtime shape.
 set -euo pipefail
-
-: "${COMPILER_DIR:?Set COMPILER_DIR to the linx_blockisa_llvm_musl bin directory}"
-
-make TESTCASE=rms_norm COMPILER_DIR="$COMPILER_DIR" DType=__half diss
-
-# Static Valid (compile-time G_A/G_R/TILE_A/TILE_R)
-make TESTCASE=rms_norm_static COMPILER_DIR="$COMPILER_DIR" DType=__half \
-  G_A=16 G_R=512 TILE_A=2 TILE_R=512 diss
-
-# 4PE: split A (16/4=4 rows per PE)
-make TESTCASE=rms_norm COMPILER_DIR="$COMPILER_DIR" DType=__half PE_NUM=4 diss
-make TESTCASE=rms_norm_static COMPILER_DIR="$COMPILER_DIR" DType=__half \
-  G_A=16 G_R=512 TILE_A=2 TILE_R=512 PE_NUM=4 diss
+: "${COMPILER_DIR:?Set COMPILER_DIR to the compiler bin directory}"
+make TESTCASE=rms_norm COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=512 G_R=8192 PE_NUM=4 diss
