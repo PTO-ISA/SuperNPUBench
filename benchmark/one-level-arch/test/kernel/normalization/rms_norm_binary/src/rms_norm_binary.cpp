@@ -60,7 +60,7 @@ int main() {
     constexpr int64_t kTileA = 1;
     constexpr int64_t kTileR = binary_tile_r(G_R);
     constexpr int64_t kPowR = floor_power_of_two(G_R - 1);
-    static_assert(G_A > 0 && G_R > 1 && G_A % PE_NUM == 0);
+    static_assert(G_A > 0 && G_R > 1);
     static_assert(kPowR < G_R && G_R <= 2 * kPowR);
     int64_t tiling_info[5] = {G_A, G_R, kTileA, kTileR, kPowR};
 

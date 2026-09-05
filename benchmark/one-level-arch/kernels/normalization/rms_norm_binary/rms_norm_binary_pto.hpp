@@ -61,9 +61,34 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
 
     const int64_t globalA = tiling[0];
     const int64_t gR = tiling[1];
-    const int64_t gA = globalA / peNum;
     const int64_t tile_r = tiling[3] > 0 ? tiling[3] : tR;
     const int64_t powR = tiling[4];
+    const uint32_t tid = get_thread_idx();
+
+    if (globalA <= 0 || gR <= 1 || tile_r <= 0 || tile_r > tR ||
+        powR <= 0 || powR >= gR || gR > 2 * powR ||
+        tid >= static_cast<uint32_t>(peNum)) {
+        return;
+    }
+
+    // Ceil partition: for M=333 and 4PE, rows are split 84, 84, 84, 81.
+    const int64_t rows_per_pe = (globalA + peNum - 1) / peNum;
+    const int64_t pe_start = static_cast<int64_t>(tid) * rows_per_pe;
+    if (pe_start >= globalA) {
+        return;
+    }
+    const int64_t remaining = globalA - pe_start;
+    const int64_t gA =
+        remaining < rows_per_pe ? remaining : rows_per_pe;
+    if (gA < tA) {
+        return;
+    }
+
+    const int64_t pe_offset = pe_start * gR;
+    x += pe_offset;
+    out += pe_offset;
+    // Workspace is level-major: [level][global row].
+    workspace += pe_start * rms_bin::kWsCols;
 
     const int64_t remR = gR - powR;
     const int64_t headR = powR - remR;
@@ -74,16 +99,6 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     const int64_t n_full = gR / tile_r;
     const int64_t tail_r = gR - n_full * tile_r;
     const float inv_r = 1.0f / static_cast<float>(gR);
-    const uint32_t tid = get_thread_idx();
-
-    if (globalA <= 0 || globalA % peNum != 0 || gA < tA) {
-        return;
-    }
-
-    const int64_t pe_offset = static_cast<int64_t>(tid) * gA * gR;
-    x += pe_offset;
-    out += pe_offset;
-    workspace += static_cast<int64_t>(tid) * gA * rms_bin::kWsCols;
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
