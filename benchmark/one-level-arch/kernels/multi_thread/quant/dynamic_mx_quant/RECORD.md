@@ -1901,3 +1901,28 @@ libc init**，因而也顺带躲过了 ppoll；新 model 把该 flag 在 `EcallA
 
 完整可复现 issue（组件清单以 Bench PR 链接给出 + 最小复现 + 根因 + patch + 验证）见
 `ISSUE_gfrun_ppoll_libc_startup.md`。
+
+## 问题26：packed FP4 端到端在 ops-20260904 打通（PR#510 恢复写侧 + 4 处新 model 缺口 + 工具链 tile-size）【已修·model 本地补丁 + 工具链本地补丁】
+
+- **归属**：SuperScalarModel（gfrun）+ Linx-TileOP-API（工具链头）。
+- **组合**：model `49547742`（含 PR#510 `eededa48`）+ 工具链 llvm `1ae4ee39` / TileOP `804eb03` + musl `af0dfc20`。
+- **触发**：`dynamic_mx_quant_tail_ocp_fp4`（bf16 in / packed fp4 out / e8m0 scale，4-PE res_check，512×256）。
+
+### 前置澄清
+
+`ISSUE_fp4_pack_tcvt_regression`（float→FP4 写侧被 930d9981 连坐回退）**已由 PR#510（`eededa48` restore packed FP4 TCVT support，Refs #454）修复并合入当前 model**：CubeEngine E2M1 有限值编码 / TEPLEngine nibble 打包 / Block.cpp bit-based row 派生 / DataType.h `IsFourBitDataType` 四件套齐全。**不需再移植 model 写侧。** 但 PR#510 未覆盖 TSTORE 描述符/落盘与 compare-select，故端到端仍需下列 4 处 model 修复 + 1 处工具链修复。
+
+### 4 处新 model 缺口（本次修复，`8b93926d`；四态诊断法逐层剥离）
+
+1. **compare/select 白名单**（AccumulateBlockInfo `IsCompatibleDataTile`）：TCMPS 源按 **bit-width** 匹配非 dtype 相等（端口 backup `c022a929`）。fp4 三守卫 TCMPS 作用于 bf16 的 uint16 reinterpret 视图 → dtype 相等断言误杀（问题14 sibling）。**症状**：`TCMPS requires one compatible Tile source` abort。
+2. **本地 tile 描述符**（AccumulateBlockInfo `IsLegalLocalTileDescriptor`）：size 校验按 `ElementBitsOf`（4-bit packed）非 `BytesOf`（==1）。**症状**：`Local TSTORE requires one legal source Tile descriptor` abort（size 2048≠row128×col32×1）。diff_test 走 `ExecuteTEPL` 不经 TSTORE 校验，故 PR#510 未暴露。
+3. **E2M1/E1M2 编码 RNE**（CubeEngine `DataFormatCvt`）：最近邻搜索**纳入 code 0（0.0）**。原从 code 1 起搜 → `|v|<table[1]/2` 的小值（如 0.19）被错误抬到最小正档（0.5/0.25），与 AscendC/pto-spec RNE golden 背离。**症状**：小商值 output 错（0.0→0.5）。
+4. **NORM TSTORE packed 行 stride**（TMAEngine `ExecuteTSTORE` NORM 分支）：4-bit packed 的本地行宽/GM 回退 stride 按 `floor(totalCol×EleRealSize)` packed 字节，非 `totalCol×eleSize`（eleSize=1 是字节容器口径）。CUBE 分支有 `packed?(validCol+1)/2` 处理、**NORM 分支漏了**。**症状**：仅 tile 第 0 行落对、行 1..63 源行步长 2× 全错位（8 个正确行 = 各 PE 各 tile 的第 0 行 [0,64,128,…,448]）。列内 packing（`EleOffset`=idx/2 + `EleDataExtract` nibble mask）本就正确，唯行寻址漏。
+
+### 1 处工具链修复（`local/fp4-tile-size-fix` `78045d6`；= `ISSUE_linx_tileop_fp4_tile_size_bits`）
+
+`type_traits<__fp4_e2m1x2>::bits=8`（打包容器位宽）使 `kBytes/StorageBytes = Rows*Cols*8/8` = 逻辑元素数的 2× 字节；喂进模型 bit-based row 派生使行数翻倍（实测 64→128）。改 `pto_tile.hpp` 的 kBytes/StorageBytes（非 Cube 分支）用已有的 `CubeElementBits`（fp4→4，其余=bits），`type_traits::bits` 保持 8（storage/reinterpret/stride 不变）。
+
+### 验证
+
+补齐后 `tail_ocp_fp4` 512×256 4-PE res_check **output/scale 逐字节 pass（MSE=0，MaxAE=0）**；gfrun 自检 pass-list **349/349 无回归**；`tail_ocp_fp8`/`tail_ocp_fp8_dyn` 仍 pass。诊断纪律：scale=pass 但 output 错 → 隔离到 data pass；四态逐层剥离（编译崩→运行崩→精度失败）；guard-removal bisect 排除 TSEL；行级模式（8 正确行=tile 起点）直指 TSTORE 行 stride。
