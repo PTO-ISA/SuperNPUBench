@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "broadcast/broadcast_mscatter.hpp"
+#include "single_thread/broadcast/broadcast_mscatter.hpp"
 
 
 #ifndef DATA_TYPE

@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "fileop.h"
-#include "reduction/reducemax_colvec_unalign_120_8.hpp"
+#include "single_thread/reduction/reducemax_colvec_unalign_120_8.hpp"
 
 
 #ifndef DType

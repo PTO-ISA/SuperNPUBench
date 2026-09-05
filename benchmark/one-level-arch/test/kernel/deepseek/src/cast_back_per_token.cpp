@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
-#include "deepseek/quant/cast_back.hpp"
+#include "single_thread/deepseek/quant/cast_back.hpp"
 using namespace pto;
 using namespace supernpu::tile_isa;
 

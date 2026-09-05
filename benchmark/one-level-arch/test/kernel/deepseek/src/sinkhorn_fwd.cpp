@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
-#include "deepseek/mhc/sinkhorn.hpp"
+#include "single_thread/deepseek/mhc/sinkhorn.hpp"
 using namespace pto;
 using namespace supernpu::tile_isa;
 

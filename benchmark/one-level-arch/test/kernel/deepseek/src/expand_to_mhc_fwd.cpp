@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
-#include "deepseek/mhc/expand_to_mhc.hpp"
+#include "single_thread/deepseek/mhc/expand_to_mhc.hpp"
 using namespace pto;
 using namespace supernpu::tile_isa;
 

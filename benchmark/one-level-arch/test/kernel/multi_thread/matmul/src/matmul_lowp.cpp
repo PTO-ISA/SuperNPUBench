@@ -1,9 +1,13 @@
-#include "matmul/matmul_shared_lowp.hpp"
+#include "multi_thread/matmul/matmul_shared_lowp.hpp"
 
 #include <cstdint>
 
 #include "benchmark.h"
 #include "fileop.h"
+#include "multi_thread_res_check.h"
+#ifdef LINX_GROUP_RUNTIME
+#include <common/linx_group_runtime.h>
+#endif
 
 #ifndef LOWP_DTYPE
 #define LOWP_DTYPE __fp8_e4m3
@@ -15,6 +19,14 @@
 
 #ifndef USE_MX
 #define USE_MX 0
+#endif
+
+#ifndef SCALE_DTYPE
+#define SCALE_DTYPE __fp8_e8m0
+#endif
+
+#ifndef SCALE_GROUP
+#define SCALE_GROUP 32
 #endif
 
 #ifndef globM
@@ -48,6 +60,38 @@
 #define ALIGN_MASK 0xfffffffffffff000ull
 #define ALIGN (4 * 1024)
 
+using dtype = LOWP_DTYPE;
+using scale_dtype = SCALE_DTYPE;
+
+struct LowpMatmulContext {
+    dtype *src0;
+    dtype *src1;
+    scale_dtype *src0Scale;
+    scale_dtype *src1Scale;
+    float *dst;
+};
+
+extern "C" int __linx_group_worker_main(uint32_t peId, void *opaque) {
+    (void)peId;
+    LowpMatmulContext *context =
+        static_cast<LowpMatmulContext *>(opaque);
+    constexpr int kStoredGK = globK / PACKED_FACTOR;
+
+    BENCHSTART;
+    for (int b = 0; b < Batch; ++b) {
+        matmul_shared_lowp<dtype, scale_dtype, PACKED_FACTOR, USE_MX != 0,
+                           SCALE_GROUP,
+                           globM, globN, globK, tilM, tilN, tilK>(
+            context->dst + b * globM * globN,
+            context->src0 + b * globM * kStoredGK,
+            context->src1 + b * kStoredGK * globN,
+            context->src0Scale + b * globM * (globK / SCALE_GROUP),
+            context->src1Scale + b * (globK / SCALE_GROUP) * globN);
+    }
+    BENCHEND;
+    return 0;
+}
+
 int main() {
     using dtype = LOWP_DTYPE;
     constexpr uint32_t kIoTid = 0;
@@ -59,25 +103,27 @@ int main() {
 
     static dtype src0p[Batch * globM * kStoredGK + 2 * ALIGN];
     static dtype src1p[Batch * kStoredGK * globN + 2 * ALIGN];
-    static uint8_t src0Scalep[Batch * globM * (globK / 32) + 2 * ALIGN];
-    static uint8_t src1Scalep[Batch * (globK / 32) * globN + 2 * ALIGN];
+    static scale_dtype
+        src0Scalep[Batch * globM * (globK / SCALE_GROUP) + 2 * ALIGN];
+    static scale_dtype
+        src1Scalep[Batch * (globK / SCALE_GROUP) * globN + 2 * ALIGN];
     static float dstp[Batch * globM * globN + 2 * ALIGN];
 
     dtype *src0 =
         (dtype *)(((uint64_t)src0p & ALIGN_MASK) + ALIGN);
     dtype *src1 =
         (dtype *)(((uint64_t)src1p & ALIGN_MASK) + ALIGN);
-    uint8_t *src0Scale =
-        (uint8_t *)(((uint64_t)src0Scalep & ALIGN_MASK) + ALIGN);
-    uint8_t *src1Scale =
-        (uint8_t *)(((uint64_t)src1Scalep & ALIGN_MASK) + ALIGN);
+    scale_dtype *src0Scale =
+        (scale_dtype *)(((uint64_t)src0Scalep & ALIGN_MASK) + ALIGN);
+    scale_dtype *src1Scale =
+        (scale_dtype *)(((uint64_t)src1Scalep & ALIGN_MASK) + ALIGN);
     float *dst =
         (float *)(((uint64_t)dstp & ALIGN_MASK) + ALIGN);
 
 #ifdef RES_CHECK
 #define SRC0_PATH CHK_DIR "/src0.bin"
 #define SRC1_PATH CHK_DIR "/src1.bin"
-    static volatile int leader_ready = 0;
+    static MultiThreadResCheckSync res_check_sync{};
     if (tid == kIoTid) {
         readBinaryFile(SRC0_PATH, (uint8_t *)src0,
                        Batch * globM * kStoredGK * sizeof(dtype));
@@ -86,39 +132,36 @@ int main() {
 #if USE_MX
 #define SRC0_SCALE_PATH CHK_DIR "/src0_scale.bin"
 #define SRC1_SCALE_PATH CHK_DIR "/src1_scale.bin"
-        readBinaryFile(SRC0_SCALE_PATH, src0Scale,
-                       Batch * globM * (globK / 32));
-        readBinaryFile(SRC1_SCALE_PATH, src1Scale,
-                       Batch * (globK / 32) * globN);
+        readBinaryFile(SRC0_SCALE_PATH, (uint8_t *)src0Scale,
+                       Batch * globM * (globK / SCALE_GROUP) *
+                           sizeof(scale_dtype));
+        readBinaryFile(SRC1_SCALE_PATH, (uint8_t *)src1Scale,
+                       Batch * (globK / SCALE_GROUP) * globN *
+                           sizeof(scale_dtype));
 #endif
-        __asm__ volatile("" : : : "memory");
-        leader_ready = 1;
-    } else {
-        while (!leader_ready) {
-        }
-        __asm__ volatile("" : : : "memory");
     }
+#ifndef LINX_GROUP_RUNTIME
+    res_check_publish_inputs(res_check_sync, tid);
+#endif
 #endif
 
-    BENCHSTART;
-    for (int b = 0; b < Batch; ++b) {
-        matmul_shared_lowp<dtype, PACKED_FACTOR, USE_MX != 0,
-                           globM, globN, globK, tilM, tilN, tilK>(
-            dst + b * globM * globN,
-            src0 + b * globM * kStoredGK,
-            src1 + b * kStoredGK * globN,
-            src0Scale + b * globM * (globK / 32),
-            src1Scale + b * (globK / 32) * globN);
-    }
-    BENCHEND;
+    LowpMatmulContext context{src0, src1, src0Scale, src1Scale, dst};
+#ifdef LINX_GROUP_RUNTIME
+    const int status = linx_group_run(&context);
+#else
+    const int status = __linx_group_worker_main(0, &context);
+#endif
 
 #ifdef RES_CHECK
 #define RES_PATH CHK_DIR "/res.bin"
+#ifndef LINX_GROUP_RUNTIME
+    res_check_wait_for_all(res_check_sync, tid);
+#endif
     if (tid == kIoTid) {
         writeBinaryFile(RES_PATH, (uint8_t *)dst,
                         Batch * globM * globN * sizeof(float));
     }
 #endif
 
-    return 0;
+    return status;
 }

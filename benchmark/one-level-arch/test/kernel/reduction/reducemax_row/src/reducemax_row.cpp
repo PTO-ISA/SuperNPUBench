@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "reduction/reducemax_rowvec.hpp"
+#include "single_thread/reduction/reducemax_rowvec.hpp"
 
 
 

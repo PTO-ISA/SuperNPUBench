@@ -13,6 +13,9 @@ LOG="$(pwd)/compile.fixp.log"
 MODES=(
   # parameter-free conversion (+ plain ReLU)
   keep_acc keep_acc_relu f16 f16_relu bf16 bf16_relu
+  # matrix numeric classes / mixed floating input contracts
+  signed_keep_acc signed_acc signed_bias
+  unsigned_keep_acc unsigned_acc unsigned_bias mixed_float gemv_mixed_float
   # scalar quant descriptor
   s_reqs8 s_deqf16 s_shifts16 s_qf_s4 s_qf_s16 s_qf_s8 s_qf_hif8 s_qf_fp8
   s_qf_f32 s_qf_f16 s_qf_bf16 s_qs_bf16
@@ -22,15 +25,35 @@ MODES=(
   # ReLU / quant combinations
   s8_relu s8_lrelu v_s8_relu f16_prelu s8_prelu
   # RowMax / GroupMax / MaxAbs
-  rowmax rowmax_init groupmax_8 groupmax_16 groupmax_128 rowgroup_maxabs
+  rowmax rowmax_init
+  groupmax_8 groupmax_16 groupmax_32 groupmax_48 groupmax_64
+  groupmax_80 groupmax_96 groupmax_112 groupmax_128 rowgroup_maxabs
   f16_groupmax s8_rowmax
   # operation-family coverage (param-free keep_acc) — 11 ops beyond plain TMATMUL
-  bias acc mx mxbias mxacc
-  gemv gemv_bias gemv_acc gemv_mx gemv_mx_bias gemv_mx_acc
+  bias acc acc_cscale
+  mx_scale0 mx_scale_a mx_scale_b mx mxbias mxacc mxacc_cscale
+  gemv gemv_bias gemv_acc
+  gemv_mx_scale0 gemv_mx_scale_a gemv_mx_scale_b
+  gemv_mx gemv_mx_bias gemv_mx_acc
   # full-options spot-check (s8 scalar quant on non-TMATMUL ops)
-  bias_s8 acc_s8 mx_s8 gemv_s8 gemv_mx_s8
-  # Shared-Right B (B.IOS)
-  shared s8_shared
+  bias_s8 acc_s8 mx_s8 mxbias_s8 mxacc_s8
+  gemv_s8 gemv_bias_s8 gemv_acc_s8
+  gemv_mx_s8 gemv_mx_bias_s8 gemv_mx_acc_s8
+  # four-PE cooperative Shared A/B (B.IOS)
+  shared s8_shared shared_acc shared_bias shared_rowmax shared_groupmax_8
+  shared_rowmax_groupmax_8
+  # shared param-free conversion (+ plain ReLU)
+  shared_keep_acc_relu shared_f16 shared_f16_relu shared_bf16 shared_bf16_relu
+  # shared ReLU / quant combinations
+  shared_s8_relu shared_s8_lrelu shared_v_s8_relu shared_f16_prelu shared_s8_prelu
+  # shared RowMax / GroupMax / MaxAbs (Core-total 4*TM)
+  shared_rowmax_init
+  shared_groupmax_16 shared_groupmax_32 shared_groupmax_48 shared_groupmax_64
+  shared_groupmax_80 shared_groupmax_96 shared_groupmax_112 shared_groupmax_128
+  shared_rowgroup_maxabs shared_f16_groupmax shared_s8_rowmax
+  # shared ACC + CScale
+  shared_acc_cscale
+  trans_a trans_b trans_ab
   # edge-case FPATR / operand-stream features
   vqf_s8_prelu legacy3
 )
@@ -71,6 +94,13 @@ echo "log: $LOG"
 echo "=========================================="
 
 if [ "$FAIL" -ne 0 ]; then
+  exit 1
+fi
+
+# Decode every emitted B.FPATR bundle and verify that the report expectation
+# list stays in lockstep with this script's active mode list.
+if ! python3 report_fixp.py; then
+  echo "fixp disassembly contract validation failed (see fixp_report.md)"
   exit 1
 fi
 exit 0

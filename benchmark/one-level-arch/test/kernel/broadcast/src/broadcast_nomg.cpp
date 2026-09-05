@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "broadcast/broadcast_nomg.hpp"
+#include "single_thread/broadcast/broadcast_nomg.hpp"
 
 
 #ifndef DATA_TYPE

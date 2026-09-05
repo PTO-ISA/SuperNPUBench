@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "element_wise/gelu_debug.hpp"
+#include "single_thread/element_wise/gelu_debug.hpp"
 
 
 #ifndef DTYPE

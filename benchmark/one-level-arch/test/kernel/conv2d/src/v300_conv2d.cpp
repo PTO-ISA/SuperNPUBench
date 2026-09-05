@@ -1,5 +1,5 @@
 #include "benchmark.h"
-#include "conv2d/v300_conv2d.hpp"
+#include "single_thread/conv2d/v300_conv2d.hpp"
 
 #ifndef CONV_IN_C
 #define CONV_IN_C 16

@@ -50,7 +50,7 @@
 #define Batch 1
 #endif
 
-#include "matmul/matmul.hpp"
+#include "single_thread/matmul/matmul.hpp"
 
 // dst is a file-scope global so its address is fixed in .bss; this lets the
 // result be dumped verbatim via `gfrun --dump-memory` for printf-independent,

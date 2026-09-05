@@ -131,7 +131,7 @@ void rms_norm(float *output, const float *input, const float *weight,
 
     #include "benchmark.h"
     #include "fileop.h"
-    #include "norm/rms_norm.hpp"
+    #include "single_thread/norm/rms_norm.hpp"
 
     #include <cstdint>
 
@@ -212,16 +212,16 @@ the spellings below use the canonical public operation names.
 
 | Intrinsic contract | Source spelling | Called from |
 | --- | --- | --- |
-| [`TADD`](../../../../intrinsics/tadd.md) | `TADD` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
-| [`TADDS`](../../../../intrinsics/tadds.md) | `TADDS` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
-| [`TCOLEXPANDMUL`](../../../../intrinsics/tcolexpandmul.md) | `TCOLEXPANDMUL` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
-| [`TLOAD`](../../../../intrinsics/tload.md) | `TLOAD` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
-| [`TMUL`](../../../../intrinsics/tmul.md) | `TMUL` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
-| [`TMULS`](../../../../intrinsics/tmuls.md) | `TMULS` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
-| [`TROWEXPANDMUL`](../../../../intrinsics/trowexpandmul.md) | `TROWEXPANDMUL` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
-| [`TROWSUM`](../../../../intrinsics/trowsum.md) | `TROWSUM` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
-| [`TRSQRT`](../../../../intrinsics/trsqrt.md) | `TRSQRT` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
-| [`TSTORE`](../../../../intrinsics/tstore.md) | `TSTORE` | `benchmark/one-level-arch/kernels/norm/rms_norm.hpp` |
+| [`TADD`](../../../../intrinsics/tadd.md) | `TADD` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
+| [`TADDS`](../../../../intrinsics/tadds.md) | `TADDS` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
+| [`TCOLEXPANDMUL`](../../../../intrinsics/tcolexpandmul.md) | `TCOLEXPANDMUL` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
+| [`TLOAD`](../../../../intrinsics/tload.md) | `TLOAD` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
+| [`TMUL`](../../../../intrinsics/tmul.md) | `TMUL` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
+| [`TMULS`](../../../../intrinsics/tmuls.md) | `TMULS` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
+| [`TROWEXPANDMUL`](../../../../intrinsics/trowexpandmul.md) | `TROWEXPANDMUL` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
+| [`TROWSUM`](../../../../intrinsics/trowsum.md) | `TROWSUM` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
+| [`TRSQRT`](../../../../intrinsics/trsqrt.md) | `TRSQRT` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
+| [`TSTORE`](../../../../intrinsics/tstore.md) | `TSTORE` | `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp` |
 
 ## Manifest Build Commands
 
@@ -238,7 +238,7 @@ promoted cases in the build guide for compiler and model validation.
 
 ??? info "6 source files reached through local includes"
 
-    - `benchmark/one-level-arch/kernels/norm/rms_norm.hpp`
+    - `benchmark/one-level-arch/kernels/single_thread/norm/rms_norm.hpp`
     - `benchmark/one-level-arch/test/common/fileop.h`
     - `benchmark/one-level-arch/test/common/readBinary.h`
     - `benchmark/one-level-arch/test/common/src/benchmark.h`

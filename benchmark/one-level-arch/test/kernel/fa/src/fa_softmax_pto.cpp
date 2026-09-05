@@ -63,9 +63,9 @@ void softmax_qk_2d_unroll_pto(float* out_ptr, float* score_ptr) {
 
     using tileScore = Tile<Location::Vec, float, kTm_, kTk_, BLayout::RowMajor>;
 
-    using tileMax = Tile<Location::Vec, float, kTm_, 8, BLayout::RowMajor, kTm_, 1>;
-    using tileSum = Tile<Location::Vec, float, kTm_, 8, BLayout::RowMajor, kTm_, 1>;
-    using tileScale = Tile<Location::Vec, float, kTm_, 8, BLayout::RowMajor, kTm_, 1>;
+    using tileMax = Tile<Location::Vec, float, kTm_, 1, BLayout::RowMajor, kTm_, 1>;
+    using tileSum = Tile<Location::Vec, float, kTm_, 1, BLayout::RowMajor, kTm_, 1>;
+    using tileScale = Tile<Location::Vec, float, kTm_, 1, BLayout::RowMajor, kTm_, 1>;
 
     using itScore = global_iterator<gmScore, tileScore>;
     using itOut = global_iterator<gmOut, tileScore>;

@@ -542,7 +542,7 @@ if constexpr (rmd_M > 0) {
 ```cpp
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
-#include "matmul/matmul.hpp"
+#include "single_thread/matmul/matmul.hpp"
 
 #define globM 256
 #define globN 256

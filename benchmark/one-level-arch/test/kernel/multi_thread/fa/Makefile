@@ -52,7 +52,7 @@ VECTOR_DTYPE := __bf16
 PACKED_FACTOR := 1
 USE_MX := 0
 else ifeq ($(FA_MODE),HIF4_VECBF16)
-MATRIX_DTYPE := __fp4_e1m2x2
+MATRIX_DTYPE := __fp4_hif4x2
 VECTOR_DTYPE := __bf16
 PACKED_FACTOR := 2
 USE_MX := 0
@@ -75,8 +75,12 @@ DEFINES += -DFA_Y_DIM=$(Y_dim)
 
 ifeq ($(TESTCASE),fa_2d_unroll_gmma)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_2d_unroll_gmma.cpp
+else ifeq ($(TESTCASE),fa_2d_unroll_gmma_no_tstore)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_2d_unroll_gmma_no_tstore.cpp
+else ifeq ($(TESTCASE),fa_fixpipe)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_fixpipe.cpp
 else
-$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma)
+$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma, fa_2d_unroll_gmma_no_tstore, or fa_fixpipe)
 endif
 
 ifeq ($(QD)_$(VD),128_128)

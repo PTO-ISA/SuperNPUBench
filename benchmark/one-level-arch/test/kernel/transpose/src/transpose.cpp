@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "transpose/transpose.hpp"
+#include "single_thread/transpose/transpose.hpp"
 
 
 #ifndef DATA_TYPE

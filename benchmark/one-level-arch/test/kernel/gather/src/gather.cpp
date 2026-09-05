@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "gather/gather.hpp"
+#include "single_thread/gather/gather.hpp"
 
 
 #ifndef DATA_TYPE

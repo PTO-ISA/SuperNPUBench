@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
-#include "deepseek/moe/group_count_aux_fi.hpp"
+#include "single_thread/deepseek/moe/group_count_aux_fi.hpp"
 using namespace pto;
 using namespace supernpu::tile_isa;
 

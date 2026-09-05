@@ -30,7 +30,7 @@ Column reduction operators perform reduction along the M-axis (vertical directio
 
 #### Basic Implementation: `reducesum_colvec.hpp` / `reducemax_colvec.hpp`
 
-**Header Location**: `kernels/reduction/reducesum_colvec.hpp`
+**Header Location**: `kernels/single_thread/reduction/reducesum_colvec.hpp`
 
 **Key Features**:
 - 8-way tree unrolling for vectorized accumulation
@@ -61,7 +61,7 @@ for(size_t j=0; j<tileSrc::ValidRow; j+=8) {
 
 #### Optimized Single Tree: `reducesum_colvec_single_tree.hpp`
 
-**Header Location**: `kernels/reduction/reducesum_colvec_single_tree.hpp`
+**Header Location**: `kernels/single_thread/reduction/reducesum_colvec_single_tree.hpp`
 
 **Optimization Strategy**:
 - Multi-stage tree reduction within tiles
@@ -83,7 +83,7 @@ Row reduction operators perform reduction along the N-axis (horizontal direction
 
 #### Basic Implementation: `reducesum_rowvec.hpp` / `reducemax_rowvec.hpp`
 
-**Header Location**: `kernels/reduction/reducesum_rowvec.hpp`
+**Header Location**: `kernels/single_thread/reduction/reducesum_rowvec.hpp`
 
 **Key Features**:
 - 8-way tree unrolling for horizontal reduction
@@ -108,7 +108,7 @@ for(size_t i=0; i<tileSrc::ValidCol; i+=8) {
 
 #### Optimized Single Tree: `reducesum_rowvec_single_tree.hpp` / `reducemax_rowvec_single_tree.hpp`
 
-**Header Location**: `kernels/reduction/reducesum_rowvec_single_tree.hpp`
+**Header Location**: `kernels/single_thread/reduction/reducesum_rowvec_single_tree.hpp`
 
 **Optimization Strategy**:
 - Uses column-major intermediate storage for better memory access
@@ -126,7 +126,7 @@ These operators are specifically optimized for 3D tensor reduction with unaligne
 
 #### Implementation: `reducesum_colvec_unalign_120_8.hpp` / `reducemax_colvec_unalign_120_8.hpp`
 
-**Header Location**: `kernels/reduction/reducesum_colvec_unalign_120_8.hpp`
+**Header Location**: `kernels/single_thread/reduction/reducesum_colvec_unalign_120_8.hpp`
 
 **Special Characteristics**:
 - Designed for batch processing of multiple 3D tensors (Nums×gIM×gIN)
@@ -213,7 +213,7 @@ Uses built-in vector operations:
 ### Column Sum Reduction
 
 ```cpp
-#include "reduction/reducesum_colvec.hpp"
+#include "single_thread/reduction/reducesum_colvec.hpp"
 
 dtype input[8192 * 1024];
 dtype output[1 * 1024];
@@ -224,7 +224,7 @@ reducesum_colsum_rand<dtype, 8192, 1024, 32, 128>(input, output);
 ### Row Sum Reduction (Optimized)
 
 ```cpp
-#include "reduction/reducesum_rowvec_single_tree.hpp"
+#include "single_thread/reduction/reducesum_rowvec_single_tree.hpp"
 
 dtype input[1024 * 8192];
 dtype output[1024 * 1];
@@ -235,7 +235,7 @@ reducesum_trowsum_rand<dtype, 1024, 8192, 128, 64>(input, output);
 ### 3D Column Sum Reduction
 
 ```cpp
-#include "reduction/reducesum_colvec_unalign_120_8.hpp"
+#include "single_thread/reduction/reducesum_colvec_unalign_120_8.hpp"
 
 dtype input[381 * 120 * 8];  // 381 batches of 120×8
 dtype output[381 * 1 * 8];

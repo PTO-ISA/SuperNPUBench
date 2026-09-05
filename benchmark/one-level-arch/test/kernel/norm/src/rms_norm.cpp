@@ -2,7 +2,7 @@
 
 #include "benchmark.h"
 #include "fileop.h"
-#include "norm/rms_norm.hpp"
+#include "single_thread/norm/rms_norm.hpp"
 
 #include <cstdint>
 

@@ -24,6 +24,8 @@ LINK_SCRIPT =  $(patsubst %.S, %, $(subst $(TEST_ROOT), $(OBJ_ROOT), $(LINK_SCRI
 
 PLAT ?= linx
 baremetal ?= off
+group_runtime ?= off
+RUNTIME_LIBS :=
 
 ifeq ($(PLAT), cpu)
 DEFINES += -D__cpu_sim__
@@ -163,7 +165,7 @@ $(OBJ_ROOT)/$(COMM_SRC_DIR)%.lds : $(TEST_ROOT)/$(COMM_SRC_DIR)%.lds.S
 
 $(TARGET): clean $(LINK_SCRIPT) $(COMM_OBJ) $(OBJ) $(EXTRA_OBJ_FILES)
 	@mkdir -p $(shell dirname $@)
-	$(LINK) $(CC_LINK) $(OBJ) $(COMM_OBJ) $(EXTRA_OBJ_FILES) -o $@
+	$(LINK) $(CC_LINK) $(OBJ) $(COMM_OBJ) $(EXTRA_OBJ_FILES) $(RUNTIME_LIBS) -o $@
 
 pre_work:
 	@mkdir -p $(OBJ_DIR)

@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "fileop.h"
-#include "concat/concat_gather.hpp"
+#include "single_thread/concat/concat_gather.hpp"
 
 
 #ifndef DATA_TYPE

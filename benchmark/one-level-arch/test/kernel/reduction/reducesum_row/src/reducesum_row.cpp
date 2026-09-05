@@ -4,8 +4,8 @@
 #include <cstdio>
 
 #include "fileop.h"
-//#include "reduction/reducesum_rowvec.hpp"
-#include "reduction/reducesum_rowvec.hpp"
+//#include "single_thread/reduction/reducesum_rowvec.hpp"
+#include "single_thread/reduction/reducesum_rowvec.hpp"
 
 
 

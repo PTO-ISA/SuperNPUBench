@@ -1,10 +1,14 @@
-#include "matmul/matmul_shared.hpp"
+#include "multi_thread/matmul/matmul_shared.hpp"
 
 #include <cstdint>
 #include <unistd.h>
 
 #include "benchmark.h"
 #include "fileop.h"
+#include "multi_thread_res_check.h"
+#ifdef LINX_GROUP_RUNTIME
+#include <common/linx_group_runtime.h>
+#endif
 
 // Element data type for the A/B input tiles. Set via -DDTYPE=<token> from the
 // Makefile (float / __bf16 / __half). The output C tile stays FP32 inside the
@@ -44,8 +48,31 @@
 #define ALIGN_MASK 0xfffffffffffff000ull
 #define ALIGN (4 * 1024)
 
+using dtype = DTYPE;
+
+struct MatmulContext {
+    dtype *src0;
+    dtype *src1;
+    float *dst;
+};
+
+extern "C" int __linx_group_worker_main(uint32_t peId, void *opaque) {
+    (void)peId;
+    MatmulContext *context = static_cast<MatmulContext *>(opaque);
+
+    BENCHSTART;
+    for (int b = 0; b < Batch; ++b) {
+        matmul_shared<dtype, globM, globN, globK,
+                      tilM, tilN, tilK>(
+            context->dst + b * globM * globN,
+            context->src0 + b * globM * globK,
+            context->src1 + b * globK * globN);
+    }
+    BENCHEND;
+    return 0;
+}
+
 int main() {
-    using dtype = DTYPE;
     constexpr int kPeNum = 4;
     constexpr uint32_t kIoTid = 0;
     const uint32_t tid = get_thread_idx();
@@ -64,38 +91,35 @@ int main() {
 #ifdef RES_CHECK
 #define SRC0_PATH CHK_DIR "/src0.bin"
 #define SRC1_PATH CHK_DIR "/src1.bin"
-    static volatile int leader_ready = 0;
+    static MultiThreadResCheckSync res_check_sync{};
     if (tid == kIoTid) {
         readBinaryFile(SRC0_PATH, (uint8_t *)src0,
                        Batch * globM * globK * sizeof(dtype));
         readBinaryFile(SRC1_PATH, (uint8_t *)src1,
                        Batch * globK * globN * sizeof(dtype));
-        __asm__ volatile("" : : : "memory");
-        leader_ready = 1;
-    } else {
-        while (!leader_ready) {
-        }
-        __asm__ volatile("" : : : "memory");
     }
+#ifndef LINX_GROUP_RUNTIME
+    res_check_publish_inputs(res_check_sync, tid);
+#endif
 #endif
 
-    BENCHSTART;
-    for (int b = 0; b < Batch; ++b) {
-        matmul_shared<dtype, globM, globN, globK,
-                      tilM, tilN, tilK>(
-            dst + b * globM * globN,
-            src0 + b * globM * globK,
-            src1 + b * globK * globN);
-    }
-    BENCHEND;
+    MatmulContext context{src0, src1, dst};
+#ifdef LINX_GROUP_RUNTIME
+    const int status = linx_group_run(&context);
+#else
+    const int status = __linx_group_worker_main(0, &context);
+#endif
 
 #ifdef RES_CHECK
 #define RES_PATH CHK_DIR "/res.bin"
+#ifndef LINX_GROUP_RUNTIME
+    res_check_wait_for_all(res_check_sync, tid);
+#endif
     if (tid == kIoTid) {
         writeBinaryFile(RES_PATH, (uint8_t *)dst,
                         Batch * globM * globN * sizeof(float));
     }
 #endif
 
-    return 0;
+    return status;
 }

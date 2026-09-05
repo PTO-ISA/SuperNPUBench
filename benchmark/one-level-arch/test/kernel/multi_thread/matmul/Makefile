@@ -10,6 +10,7 @@ tM ?= 32
 tN ?= 32
 tK ?= 32
 GOLDEN_ARGS ?= --ones
+group_runtime := on
 
 # Element data type for the A/B input tiles. The output C tile is always FP32
 # (see matmul_shared.hpp: gmC/tileC use float). Supported: float, __bf16, __half.
@@ -39,32 +40,46 @@ ifeq ($(LP_MODE),FP8)
 LOWP_DTYPE := __fp8_e4m3
 PACKED_FACTOR := 1
 USE_MX := 0
+SCALE_DTYPE := __fp8_e8m0
+SCALE_GROUP := 32
 else ifeq ($(LP_MODE),HIFP8)
 LOWP_DTYPE := __hif8
 PACKED_FACTOR := 1
 USE_MX := 0
+SCALE_DTYPE := __fp8_e8m0
+SCALE_GROUP := 32
 else ifeq ($(LP_MODE),HIF4)
-LOWP_DTYPE := __fp4_e1m2x2
+LOWP_DTYPE := __fp4_hif4x2
 PACKED_FACTOR := 2
-USE_MX := 0
+USE_MX := 1
+SCALE_DTYPE := uint32_t
+SCALE_GROUP := 64
 else ifeq ($(LP_MODE),HIF4X2)
-LOWP_DTYPE := __fp4_e1m2x2
+LOWP_DTYPE := __fp4_hif4x2
 PACKED_FACTOR := 2
-USE_MX := 0
+USE_MX := 1
+SCALE_DTYPE := uint32_t
+SCALE_GROUP := 64
 else ifeq ($(LP_MODE),MXFP8)
 LOWP_DTYPE := __fp8_e4m3
 PACKED_FACTOR := 1
 USE_MX := 1
+SCALE_DTYPE := __fp8_e8m0
+SCALE_GROUP := 32
 else ifeq ($(LP_MODE),MXFP4)
 LOWP_DTYPE := __fp4_e2m1x2
 PACKED_FACTOR := 2
 USE_MX := 1
+SCALE_DTYPE := __fp8_e8m0
+SCALE_GROUP := 32
 else
 $(error Unsupported LP_MODE=$(LP_MODE); expected FP8, HIFP8, HIF4, HIF4X2, MXFP8, or MXFP4)
 endif
 DEFINES += -DLOWP_DTYPE=$(LOWP_DTYPE)
 DEFINES += -DPACKED_FACTOR=$(PACKED_FACTOR)
 DEFINES += -DUSE_MX=$(USE_MX)
+DEFINES += -DSCALE_DTYPE=$(SCALE_DTYPE)
+DEFINES += -DSCALE_GROUP=$(SCALE_GROUP)
 else
 $(error Unsupported TESTCASE=$(TESTCASE); expected matmul_shared, matmul_reuseB, or matmul_lowp)
 endif
@@ -82,9 +97,18 @@ endif
 include ../../../common/Makefile.common
 
 .PHONY: golden-check
+ifeq ($(TESTCASE),matmul_lowp)
+golden-check:
+	$(MAKE) -B TESTCASE=$(TESTCASE) LP_MODE=$(LP_MODE) \
+		B=$(B) M=$(M) N=$(N) K=$(K) tM=$(tM) tN=$(tN) tK=$(tK) \
+		COMPILER_DIR=$(COMPILER_DIR) OBJ_ROOT=$(OBJ_ROOT) \
+		res_check=on all
+	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/gfrun_matmul.py -d $(TARGET)
+else
 golden-check:
 	$(MAKE) -B TESTCASE=$(TESTCASE) DTYPE=$(DTYPE) B=$(B) M=$(M) N=$(N) K=$(K) \
 		tM=$(tM) tN=$(tN) tK=$(tK) \
-		COMPILER_DIR=$(COMPILER_DIR) \
+		COMPILER_DIR=$(COMPILER_DIR) OBJ_ROOT=$(OBJ_ROOT) \
 		res_check=on all
 	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/golden_cmp.py $(GOLDEN_ARGS) -d $(TARGET)
+endif

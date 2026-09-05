@@ -3,7 +3,7 @@
 #include "fileop.h"
 #include "linx_print.h"
 
-#include "control/hashtable_lookup_simd.hpp"
+#include "single_thread/control/hashtable_lookup_simd.hpp"
 
 // ============================================================================
 // Constants

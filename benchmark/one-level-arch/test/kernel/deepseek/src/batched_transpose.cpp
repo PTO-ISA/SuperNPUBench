@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
-#include "deepseek/transpose/batched_transpose.hpp"
+#include "single_thread/deepseek/transpose/batched_transpose.hpp"
 using namespace pto;
 using namespace supernpu::tile_isa;
 

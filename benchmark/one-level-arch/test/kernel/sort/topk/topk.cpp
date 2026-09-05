@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "sort/topk.hpp"
+#include "single_thread/sort/topk.hpp"
 
 // #define FOR_GFSIM
 // ============================================================================

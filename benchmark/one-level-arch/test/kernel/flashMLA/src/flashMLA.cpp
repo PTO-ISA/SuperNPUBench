@@ -222,9 +222,9 @@ void flash_mla_dense_decode_tileop(
     using tileO = Tile<Location::Vec, float, Tm_, VChunk_, BLayout::ColMajor>;
     using tileOCast = Tile<Location::Vec, dtype, Tm_, VChunk_, BLayout::ColMajor>;
 
-    using tileMax = Tile<Location::Vec, float, Tm_, 8, BLayout::ColMajor, Tm_, 1>;
-    using tileSum = Tile<Location::Vec, float, Tm_, 8, BLayout::ColMajor, Tm_, 1>;
-    using tileScale = Tile<Location::Vec, float, Tm_, 8, BLayout::ColMajor, Tm_, 1>;
+    using tileMax = Tile<Location::Vec, float, Tm_, 1, BLayout::ColMajor, Tm_, 1>;
+    using tileSum = Tile<Location::Vec, float, Tm_, 1, BLayout::ColMajor, Tm_, 1>;
+    using tileScale = Tile<Location::Vec, float, Tm_, 1, BLayout::ColMajor, Tm_, 1>;
 
     using itQ = global_iterator<gmQ, tileQ>;
     using itK = global_iterator<gmKView, tileK>;

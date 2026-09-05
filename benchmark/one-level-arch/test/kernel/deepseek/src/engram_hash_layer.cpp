@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
-#include "deepseek/engram/engram_hash.hpp"
+#include "single_thread/deepseek/engram/engram_hash.hpp"
 using namespace pto;
 using namespace supernpu::tile_isa;
 

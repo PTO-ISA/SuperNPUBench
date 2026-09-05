@@ -3,9 +3,9 @@
 // TMATMUL_ACC (matmul_acc) bf16 32x64x64
 int main() {
     constexpr int M = 32, N = 64, K = 64;
-    static __bf16 a[M*K] = {}, b[K*N] = {};
-    static float bias[N] = {}, initial[M*N] = {}, c[M*N] = {}, ref[M*N] = {};
-
+    static __bf16 a[M*K], b[K*N];
+    static float bias[N], initial[M*N], c[M*N], ref[M*N];
+    fill_const(c, M*N, (float)1); zero(ref, M*N);
     BENCHSTART;
     bench_matmul_acc<__bf16,M,N,K>(c,initial,a,b);
     BENCHEND;

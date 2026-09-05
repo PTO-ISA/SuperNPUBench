@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
-#include "deepseek/moe/reduce_fused.hpp"
+#include "single_thread/deepseek/moe/reduce_fused.hpp"
 using namespace pto;
 using namespace supernpu::tile_isa;
 

@@ -35,7 +35,7 @@
 #define ALIGN_MASK 0xfffffffffffff000ull
 #define ALIGN 4*1024
 
-#include "matmul/matmul.hpp"
+#include "single_thread/matmul/matmul.hpp"
 
 int main() {
 
