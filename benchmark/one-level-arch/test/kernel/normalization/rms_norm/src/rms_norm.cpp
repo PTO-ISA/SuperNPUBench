@@ -25,7 +25,7 @@
 
 namespace {
 constexpr int64_t rms_tile_a(int64_t global_a, int64_t pe_num) {
-    return global_a >= pe_num ? 1 : 0;
+    return global_a > 0 && pe_num > 0 ? 1 : 0;
 }
 constexpr int64_t rms_tile_r(int64_t reduce_size) {
     constexpr int64_t kMaxTileR = 8192;
@@ -48,7 +48,7 @@ int main() {
     // entirely owned by the kernel.
     constexpr int64_t kTileA = rms_tile_a(G_A, PE_NUM);
     constexpr int64_t kTileR = rms_tile_r(G_R);
-    static_assert(G_A > 0 && G_R > 0 && G_A % PE_NUM == 0);
+    static_assert(G_A > 0 && G_R > 0);
     static_assert(kTileA > 0 && kTileR == G_R);
     int64_t tiling_info[4] = {G_A, G_R, kTileA, kTileR};
 

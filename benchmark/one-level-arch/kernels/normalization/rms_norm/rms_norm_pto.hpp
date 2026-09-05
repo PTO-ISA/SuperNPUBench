@@ -102,17 +102,29 @@ void rms_norm(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e-6f) {
 
     const int64_t globalA = tiling[0];
     const int64_t gR = tiling[1];
-    const int64_t peA = globalA / peNum;
     const int64_t tile_a = tiling[2] > 0 ? tiling[2] : tA;
     const int64_t tile_r = tiling[3] > 0 ? tiling[3] : gR;
     const uint32_t tid = get_thread_idx();
-    const int64_t pe_offset = static_cast<int64_t>(tid) * peA * gR;
 
-    // The runtime tiling is host data, so divisibility cannot be a static
-    // assertion. Invalid configurations do no work rather than overlap rows.
-    if (globalA <= 0 || globalA % peNum != 0 || peA < tile_a) {
+    if (globalA <= 0 || gR <= 0 || tile_a <= 0 || tile_r <= 0 ||
+        tile_r > tR || tid >= static_cast<uint32_t>(peNum)) {
         return;
     }
+
+    // Ceil partition: the first PEs take rows_per_pe rows and the last
+    // active PE owns the remainder. For M=333 and 4PE: 84, 84, 84, 81.
+    const int64_t rows_per_pe = (globalA + peNum - 1) / peNum;
+    const int64_t pe_start = static_cast<int64_t>(tid) * rows_per_pe;
+    if (pe_start >= globalA) {
+        return;
+    }
+    const int64_t remaining = globalA - pe_start;
+    const int64_t peA =
+        remaining < rows_per_pe ? remaining : rows_per_pe;
+    if (peA < tile_a) {
+        return;
+    }
+    const int64_t pe_offset = pe_start * gR;
     x += pe_offset;
     out += pe_offset;
 
