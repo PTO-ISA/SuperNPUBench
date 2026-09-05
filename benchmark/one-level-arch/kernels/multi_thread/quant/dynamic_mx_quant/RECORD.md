@@ -1856,3 +1856,48 @@ gfrun/harness 侧定位（tile 存储可见性、组终止时序、访存对齐�
 
 完整可复现 issue（含逐一版本清单 + 最小复现 + 已排除方向 + 确定性事实 + 猜测方向）见
 `ISSUE_gfrun_multipe_size_dependent_dump.md`。
+
+## 问题25：gfrun 缺 `ppoll` syscall handler → hosted musl 启动即 `abort()`（res_check ELF 全崩）【已修·本地补丁 + 已提 SuperScalarModel issue】
+
+- **归属**：SuperScalarModel（gfrun / emulator）。
+- **暴露组合**（ops-20260904 迁移）：model tip `49547742`；工具链 llvm `1ae4ee39` + Linx-TileOP-API `804eb03` + **musl `af0dfc20`**（新 musl 才引入此启动行为）。
+- **状态**：已定位根因 + 已验证修复（`do_ppoll` 最小 patch），已提上游 issue。
+
+### 现象
+
+任意 hosted-musl ELF（含全部 res_check harness）在 gfrun 启动即 `abort()`：
+```
+Bad Syscall Request: syscall(49, 808d420, 3, 808d410, 0, 8, 0);   // hex 49 = 十进制 73 = ppoll
+```
+发生在 `__init_libc` / `__libc_start_main`（block B66，程序最开头），远早于任何计算或 res_check I/O。
+
+### 根因
+
+新 musl `src/env/__libc_start_main.c:45-50` 启动时对 fd 0/1/2 发 `ppoll(pfd,3,&{0},0,_NSIG/8)` 探测 stdio
+是否打开（检 `revents & POLLNVAL`，无效则 open `/dev/null` 顶上）。LinxISA 无 `SYS_poll` → 走 `#else` 发
+`ppoll`（号 73）。gfrun `HandlerTable`（`emulator/SysCall.h:1254`）白名单**无 ppoll** → 命中未注册号 → 构造
+函数走 `abort()`（`SysCall.h:668`）。老 musl 无此启动 poll，随 musl 升级到 `af0dfc20` 才暴露；三个既有
+backup model 分支均无 ppoll handler → 非回归，是新增覆盖缺口。
+
+### 与问题23 的关系
+
+问题23 是**旧栈**上 `GFRUN_FORCE_DIRECTBOOT_ABI` 的 X1/A7 选号误判；本问题是**新栈**上 ppoll 未注册。
+二者同属"syscall 处理"域但根因不同。关键：旧流程靠 `DIRECTBOOT_ABI=1` 走 direct-boot **整段跳过 musl
+libc init**，因而也顺带躲过了 ppoll；新 model 把该 flag 在 `EcallAgent` 里 `(void)` 忽略、ELF 按 hosted
+加载 → `__init_libc` 必执行 → 必发 ppoll。故该 env 不再是可行绕过（res_check 需 hosted 的 openat/read/write
+落盘），正解只能补 handler。
+
+### 修复（已验证）
+
+`emulator/SysCall.h` 新增 `do_ppoll`：stdio 0/1/2 在仿真里恒有效，清各 pollfd 的 `revents`（struct 偏移 6
+的 short）=0、返回 0（timeout、无就绪 fd）→ musl 判无 POLLNVAL 正常继续；`REGISTER_HANDLER(ppoll)` 入表。
+纯增量，不触碰任何既有 handler / pass-list。补丁重编 gfrun 后 `tail_ocp_fp8`（512×256，4-PE res_check）
+端到端跑通、`exit_group` 正常收尾，逐字节 `output=pass (MSE=0, MaxAE=0.0117=fp8 LSB) / scale=pass (MSE=0, MaxAE=0)`。
+
+> 顺带证实：官方输出屏障 `res_check_wait_for_all`（PE0 等 worker，`test/common/multi_thread_res_check.h`）
+> 在新 model（含 writev EFAULT 修复）上**不 hang**、PE0 完整落盘——推翻问题24 中"leader-gate barrier 死锁"
+> 的旧观察（那是旧 model 的标量 .bss 跨-PE 可见性限制，新 model 已改善）。此补丁是全 res_check 精度流程
+> 的共用前置，一处修复解锁全部。
+
+完整可复现 issue（组件清单以 Bench PR 链接给出 + 最小复现 + 根因 + patch + 验证）见
+`ISSUE_gfrun_ppoll_libc_startup.md`。
