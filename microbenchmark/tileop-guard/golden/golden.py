@@ -683,10 +683,10 @@ def check_reduce(case, chkdir):
     o = np_read(out_path, F32)
     if s['foot'] == 'row':
         red = fn(a, axis=1)                       # length M
-        got = o.reshape(M, N)[:, 0]               # out[r*N+0]
+        got = o[:M]                               # genuine M x 1 dst (ops-20260904)
     else:
         red = fn(a, axis=0)                       # length N
-        got = o.reshape(M, N)[0, :]               # out[0*N+c]
+        got = o[:N]                               # genuine 1 x N dst (ops-20260904)
     eps = np.float32(s.get('eps', 1e-3))
     atol = eps + eps * np.abs(red.astype(np.float32))
     bad = np.flatnonzero(np.abs(got.astype(np.float32) - red.astype(np.float32)) > atol)
@@ -1332,10 +1332,10 @@ def check_argreduce(case, chkdir):
     fn = np.argmax if s['op'] == 'max' else np.argmin
     if s['foot'] == 'row':
         ref = fn(a, axis=1).astype(np.uint32)      # per-row -> length M
-        got = o.reshape(M, N)[:, 0]                 # index at out[r*N+0]
+        got = o[:M]                                 # genuine M x 1 dst (ops-20260904)
     else:
         ref = fn(a, axis=0).astype(np.uint32)       # per-col -> length N
-        got = o.reshape(M, N)[0, :]                 # index at out[0*N+c]
+        got = o[:N]                                 # genuine 1 x N dst (ops-20260904)
     bad = np.flatnonzero(got.astype(np.int64) != ref.astype(np.int64))
     if bad.size == 0:
         return 0

@@ -153,15 +153,22 @@ void g_scalar_cvt(DOut *c, const DIn *a, DIn s, Op op) {
 // and corrected from compiler / gfrun feedback (recorded in REPORT.md).
 // ---------------------------------------------------------------------------
 
-// row reduce: src M x N  ->  dst physical M x N, ValidCol=1.
-// A physical M x 1 tile is ILLEGAL (fp32 needs Cols*bits % 256 == 0, i.e.
-// Cols % 8 == 0). matrix-postprocess.md documents the workaround: keep the
-// physical Cols wide and use ValidCol=1 for the reduced axis.
+// row reduce: src M x N  ->  dst GENUINE M x 1 (Cols==1).
+// ops-20260904 TileOP-API (f8fb894) added a static_assert requiring the
+// row-reduce destination to be a real single-column tile
+// (ValidCol==1 && Cols==1); the historical "physical M x N + ValidCol=1"
+// workaround now fails to compile. The paired model lifted the old fp32
+// Cols%8 store constraint for reduce outputs.
 template <typename D, int M, int N, typename Op>
 void g_rowreduce(D *c, const D *a, Op op) {
-    using OutTile = Tile<Location::Vec, D, M, N, BLayout::RowMajor, M, 1>;
+    // ops-20260904 TileOP-API (f8fb894) requires the row-reduce dst to be a
+    // GENUINE single-column tile (ValidCol==1 && Cols==1); the historical
+    // physical M x N + ValidCol=1 workaround now fails to compile. Mirror the
+    // release reference kernel (reducemax_rowvec.hpp): static M x N source,
+    // genuine M x 1 dst, M x 1 output global.
+    using OutTile = Tile<Location::Vec, D, M, 1, BLayout::RowMajor, M, 1>;
     iter_t<D, M, N> gA((D *)a);
-    global_iterator<gm_t<D, M, N>, OutTile> gC(c);
+    global_iterator<gm_t<D, M, 1>, OutTile> gC(c);
     auto gA0 = gA(0, 0);
     auto gC0 = gC(0, 0);
     vtile_t<D, M, N> tA;
@@ -171,12 +178,17 @@ void g_rowreduce(D *c, const D *a, Op op) {
     TSTORE(gC0, tC);
 }
 
-// col reduce: src M x N  ->  dst physical M x N, ValidRow=1.
+// col reduce: src M x N  ->  dst GENUINE 1 x N (Rows==1).
+// ops-20260904 model writes col reductions into a real single-row 1 x N tile
+// (release reference reducemax_colvec.hpp: dst Tile<Vec,dtype,1,tN,RowMajor>,
+// output global RowMajor<1,gIN>). The historical physical M x N + ValidRow=1
+// workaround made the harness read stale row-0 bytes (got=1.0), so use the
+// genuine 1 x N geometry.
 template <typename D, int M, int N, typename Op>
 void g_colreduce(D *c, const D *a, Op op) {
-    using OutTile = Tile<Location::Vec, D, M, N, BLayout::RowMajor, 1, N>;
+    using OutTile = Tile<Location::Vec, D, 1, N, BLayout::RowMajor>;
     iter_t<D, M, N> gA((D *)a);
-    global_iterator<gm_t<D, M, N>, OutTile> gC(c);
+    global_iterator<gm_t<D, 1, N>, OutTile> gC(c);
     auto gA0 = gA(0, 0);
     auto gC0 = gC(0, 0);
     vtile_t<D, M, N> tA;

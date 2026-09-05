@@ -17,6 +17,15 @@ constexpr int OM = 8, ON = 32, ONE = OM * ON;      // old/exp/rep/off 8x32
 static float backing[BNE], expv[ONE], repv[ONE], oldv[ONE];
 static uint32_t off[ONE];
 int main() {
+    // Leader-gate (issue #489 idiom): MGATHER_CAS mutates SHARED GM state and is
+    // NOT idempotent. gfrun runs 4 SPMD PE-threads (PE0..3), all executing this
+    // block against the SAME `backing` base — without a gate the CAS applies 4x,
+    // so observedOld on the 2nd..4th pass reads the already-swapped replacement
+    // (verified via -t2: lane(0,0) old 4.5->-1.0 across 4 executions). The model's
+    // per-execution CAS is correct (old captured before swap); the 4x replay is a
+    // pure SPMD-structuring artifact. Confine the atomic + I/O to leader tid 0;
+    // workers return and park (no output barrier -> no gfrun hang).
+    if (get_thread_idx() != 0) return 0;
 #ifdef RES_CHECK
     guard_read_bin(CHK_DIR "/in_base.bin", backing, sizeof(backing));
     guard_read_bin(CHK_DIR "/in_exp.bin", expv, sizeof(expv));

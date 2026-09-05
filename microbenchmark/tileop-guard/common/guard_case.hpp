@@ -56,7 +56,7 @@
 // reduce: src M x N -> dst physical M x N with valid axis = 1 (row: ValidCol=1,
 // col: ValidRow=1). golden.py compares only the valid footprint.
 #define GUARD_ROWREDUCE(DT, M, N, ...) \
-  static DT gA[(M) * (N)], gC[(M) * (N)]; \
+  static DT gA[(M) * (N)], gC[(M) * 1]; \
   int main() { \
     guard_read_bin(CHK_DIR "/in_a.bin", gA, sizeof(gA)); \
     BENCHSTART; g_rowreduce<DT, M, N>(gC, gA, __VA_ARGS__); BENCHEND; \
@@ -64,7 +64,7 @@
     return 0; }
 
 #define GUARD_COLREDUCE(DT, M, N, ...) \
-  static DT gA[(M) * (N)], gC[(M) * (N)]; \
+  static DT gA[(M) * (N)], gC[1 * (N)]; \
   int main() { \
     guard_read_bin(CHK_DIR "/in_a.bin", gA, sizeof(gA)); \
     BENCHSTART; g_colreduce<DT, M, N>(gC, gA, __VA_ARGS__); BENCHEND; \
