@@ -1,5 +1,7 @@
 # [linx-toolchain][ops-20260904] TGPR2T 后端 Match Instruction Error
 
+> **已提交**（2026-09-05）：`LinxISA/llvm-project` **#87** — https://github.com/LinxISA/llvm-project/issues/87
+
 接口按文档正确写，但在 clang++ 内联汇编 → LLVM 后端指令匹配阶段编译失败。已排除 demo 写法：崩发生在
 header 自身展开的内联汇编、后端匹配阶段。
 

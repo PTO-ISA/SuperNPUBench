@@ -1,5 +1,7 @@
 # [gfrun][NA] ops-20260904 模型缺口汇总（7 项）：B.FPATR None、行列归约 skew、TINVALID layout selector、pre-quant 丢 FP19 scale、TCVT 舍入、TQUANT 忽略 mult/zp、TINSERT 不保留 base
 
+> **已提交**（2026-09-05）：`LinxISA/SuperScalarModel` **#560** — https://github.com/LinxISA/SuperScalarModel/issues/560
+
 接口按文档正确写、编译通过，但 gfrun 侧崩溃或数值错误。每项均已用 **release 自带参考源现编复现** 或 **model 源码
 定位 / 反汇编隔离 / 数值探针**自证——排除 kernel 侧 dtype/shape/layout/operand-role 写错。编译器后端类缺陷
 另行提 linx issue。（本 issue 只收**已严格自证为模型侧**的缺口；另有若干 run-fail 崩点尚未证非 demo，暂不列入。）
