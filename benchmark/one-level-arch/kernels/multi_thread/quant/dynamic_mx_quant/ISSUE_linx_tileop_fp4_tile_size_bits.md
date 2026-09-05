@@ -1,6 +1,6 @@
-# [Linx-TileOP-API] fp4(e2m1x2) tile 的 size 位宽用 8-bit（打包容器）算，与 pto-spec / 模型的 4-bit(每元素) 口径不一致，导致宽→打包fp4 的 TCVT 在运行期崩形状契约
+# [Linx-TileOP-API] fp4(e2m1x2) tile 的 size 位宽用 8-bit（打包容器）算，与 pto-spec / 模型的 4-bit(每元素) 口径不一致，导致宽→打包fp4 的 TCVT 在运行期崩形状契约【已修复】
 
-> **2026-09-05 更新：`804eb03`（比本 issue 的 `a795b97` 新）仍存在，已本地修复待上游。** 采用下文「建议修复」option (b)：`pto_tile.hpp` 的 `kBytes`/`StorageBytes`（非 Cube 分支）改用已有的 `CubeElementBits`（e2m1x2/e1m2x2/hif4x2/int4x2/uint4x2 → 4，其余 = `type_traits::bits`），`type_traits::bits` 保持 8（storage/reinterpret/stride 不变）。本地补丁分支 `local/fp4-tile-size-fix` `78045d6`。配合模型侧 4 处修复后 `tail_ocp_fp4` 512×256 4-PE 逐字节 pass。详见 RECORD 问题26。
+> **已修复**：官方 `ddd07b9`（Encode TCVT destination logical tile size）。`tail_ocp_fp4` 在 `804eb03` 无需工具链改动即编译通过、TCVT 运行期形状自洽（见 RECORD 问题16/26）。
 
 ## 环境
 

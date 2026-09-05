@@ -1,7 +1,6 @@
-# TCVT float→FP4 写侧(值编码 + nibble 打包)缺失 —— `31f7a8f`(#314)被 `930d9981` 连坐回退【已由 PR#510 官方恢复】
+# TCVT float→FP4 写侧(值编码 + nibble 打包)缺失 —— `31f7a8f`(#314)被 `930d9981` 连坐回退，官方未恢复【SuperScalarModel issues454·已修复】
 
-> **2026-09-05 更新：已修复。** 官方 PR **#510**（`eededa48 fix(gfrun): restore packed FP4 TCVT support`，Refs #454）把 FP4 写侧四件套（CubeEngine E2M1/E1M2 有限值编码 + TEPLEngine nibble 打包 + Block.cpp bit-based row 派生 + DataType.h `IsFourBitDataType`）重放回 `codex/consolidate-post-main-fixes-20260903`（当前 model tip `49547742` 已含）。本 issue 记录的回归**已闭合**。
-> 但端到端 packed FP4 还需 4 处 PR#510 未覆盖的 model 缺口（compare-select bit-width / TSTORE 描述符 packed / **E2M1 编码 RNE 漏 code 0** / **NORM TSTORE packed 行 stride**）+ 工具链 tile-size（见 `ISSUE_linx_tileop_fp4_tile_size_bits`），均已本地修复，`tail_ocp_fp4` 逐字节 pass。详见 RECORD 问题26。
+> **已修复**：官方 PR #510（`eededa48`，Refs #454）把 FP4 写侧四件套（E2M1/E1M2 有限值编码 + nibble 打包 + bit-based row 派生 + `IsFourBitDataType`）重放回 `codex/consolidate-post-main-fixes-20260903`（当前 model `49547742` 已含）。
 
 
 - 仓库：`github.com/LinxISA/SuperScalarModel`

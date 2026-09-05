@@ -1,6 +1,6 @@
 # ISSUE: gfrun 缺 `ppoll` syscall handler → hosted musl 启动即 `abort()`(res_check ELF 全崩)
 
-- **归属仓库**: SuperScalarModel(gfrun / emulator）
+- **归属仓库**: SuperScalarModel(gfrun / emulator）【SuperScalarModel issue554】
 - **状态**: 已定位根因 + 已验证修复（本 issue 附最小 patch，补上后端到端逐字节 pass）
 - **严重度**: 阻塞级 —— 所有 hosted-musl ELF（含全部 res_check 精度 harness）启动即崩，无法跑到计算路径
 

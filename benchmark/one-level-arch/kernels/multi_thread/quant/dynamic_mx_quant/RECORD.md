@@ -1099,6 +1099,14 @@ libc `__init_libc` 的 text 相对 store `sdi.u s1,t#1,-12xx`（`AssertNotTextSt
 > `reinterpret_tile<uint16_t>(max_bf) → TANDS → 读回 bf16`。**这是问题4「无寄存器 bitcast」被 v0.58
 > `reinterpret_tile` 解除后，暴露出的下一道墙**（HBM 往返时被 TLOAD 重打标签掩盖，零指令 bitcast 才显形）。
 
+> **同根 sibling（ops-20260904 / fp4 再次命中）**：compare/select 路径的 `IsCompatibleDataTile`
+> （`AccumulateBlockInfo.cpp` `ValidateCompareSelectTepl`）是本问题的姊妹断言——`tail_ocp_fp4` 三守卫
+> `TCMPS(eq_inf, reinterpret_tile<uint16_t>(max_bf), …)` 对 bf16 的 u16 视图比较，同样按 `dataType 相等`
+> 误杀（崩 `TCMPS requires one compatible Tile source`）。与 `ValidateScalarLogicalTepl` 同根、须同样放宽为
+> **carrier 位宽匹配**（`BytesOf==BytesOf`）。规范依据：`TCMP/TCMPS.asl` Legacy RowMajor 形式"the existing
+> sixteen-type domain remains unchanged"（源不限定=操作 dtype）+ ADR-0112 reinterpret「observable only
+> through carrier width」。每次同步官方分支后与本问题一并须重新反应式补。
+
 ### 结论
 
 v0.58 `reinterpret_tile<uint16_t>(max_bf)` 把 bf16 tile **零指令**重解释成 u16 喂 `TANDS`（清尾数
@@ -1216,7 +1224,13 @@ probe **gfrun 跑到底**：23 blocks / 120 insts，`R2 = 0`（Success to Reach 
 
 ---
 
-## 问题16：TCVT 形状契约（TileLogicalShapeMatch）对打包 fp4 与源无法同时满足 → 结构性必崩；当前工具链落在**编译期 static_assert**（需工具链头 + emulator 双侧解决）【SuperScalarModel issue314 已解决 + Linx-TileOP-API issue30 未解决】
+## 问题16：TCVT 形状契约（TileLogicalShapeMatch）对打包 fp4 与源无法同时满足 → 结构性必崩；当前工具链落在**编译期 static_assert**（需工具链头 + emulator 双侧解决）【SuperScalarModel issue314 已解决 + Linx-TileOP-API issue30 已解决（官方 ddd07b9）】
+
+> **状态更新（ops-20260904 / TileOP `804eb03`）：工具链侧已由官方 `ddd07b9`（Encode TCVT destination
+> logical tile size：`TCVT_T` 改用 `tile_shape_out::TilesizeCode`）解决。** `tail_ocp_fp4` 在 `804eb03`
+> 未打任何工具链改动即编译通过且 TCVT 运行期形状自洽（工具链发的物理容量经 `DerivedTileRows` 派生成
+> 与 `validRow` 相容的物理行数，emulator 侧按 packed 落盘——见问题26）。原「工具链头 `type_traits::bits=8`
+> 使 tile size 2×」的推断不再需要工具链改动。
 
 > 触发 kernel `dynamic_mx_quant_tail_ocp_fp4.hpp:206`（`TCVT(oq, xf)`，`TYPE=TAIL_OCP_FP4`）。
 > 同一契约（TCVT 的 src/dst 必须 physical Rows 与 Cols 全等）落在**两层**，缺陷在**工具链头
@@ -1857,11 +1871,10 @@ gfrun/harness 侧定位（tile 存储可见性、组终止时序、访存对齐�
 完整可复现 issue（含逐一版本清单 + 最小复现 + 已排除方向 + 确定性事实 + 猜测方向）见
 `ISSUE_gfrun_multipe_size_dependent_dump.md`。
 
-## 问题25：gfrun 缺 `ppoll` syscall handler → hosted musl 启动即 `abort()`（res_check ELF 全崩）【已修·本地补丁 + 已提 SuperScalarModel issue】
+## 问题25：gfrun 缺 `ppoll` syscall handler → hosted musl 启动即 `abort()`（全 res_check ELF 崩）（需 emulator 侧解决）【SuperScalarModel issue554·未修】
 
 - **归属**：SuperScalarModel（gfrun / emulator）。
-- **暴露组合**（ops-20260904 迁移）：model tip `49547742`；工具链 llvm `1ae4ee39` + Linx-TileOP-API `804eb03` + **musl `af0dfc20`**（新 musl 才引入此启动行为）。
-- **状态**：已定位根因 + 已验证修复（`do_ppoll` 最小 patch），已提上游 issue。
+- **暴露组合**（ops-20260904）：model `49547742`；工具链 llvm `1ae4ee39` + Linx-TileOP-API `804eb03` + **musl `af0dfc20`**（新 musl 才引入此启动 poll）。
 
 ### 现象
 
@@ -1887,42 +1900,64 @@ libc init**，因而也顺带躲过了 ppoll；新 model 把该 flag 在 `EcallA
 加载 → `__init_libc` 必执行 → 必发 ppoll。故该 env 不再是可行绕过（res_check 需 hosted 的 openat/read/write
 落盘），正解只能补 handler。
 
-### 修复（已验证）
+### 解除路径（SuperScalarModel）
 
-`emulator/SysCall.h` 新增 `do_ppoll`：stdio 0/1/2 在仿真里恒有效，清各 pollfd 的 `revents`（struct 偏移 6
-的 short）=0、返回 0（timeout、无就绪 fd）→ musl 判无 POLLNVAL 正常继续；`REGISTER_HANDLER(ppoll)` 入表。
-纯增量，不触碰任何既有 handler / pass-list。补丁重编 gfrun 后 `tail_ocp_fp8`（512×256，4-PE res_check）
-端到端跑通、`exit_group` 正常收尾，逐字节 `output=pass (MSE=0, MaxAE=0.0117=fp8 LSB) / scale=pass (MSE=0, MaxAE=0)`。
+emulator `HandlerTable`（`SysCall.h`）注册 ppoll handler：stdio 0/1/2 在仿真里恒有效，清各 pollfd 的
+`revents`（struct 偏移 6 的 short）=0、返回 0（timeout、无就绪 fd），musl 判无 POLLNVAL 正常继续；纯增量
+注册，不影响既有 pass-list。是全 hosted-musl / res_check ELF 的共用前置（放行后 res_check 端到端可跑）。
 
-> 顺带证实：官方输出屏障 `res_check_wait_for_all`（PE0 等 worker，`test/common/multi_thread_res_check.h`）
-> 在新 model（含 writev EFAULT 修复）上**不 hang**、PE0 完整落盘——推翻问题24 中"leader-gate barrier 死锁"
-> 的旧观察（那是旧 model 的标量 .bss 跨-PE 可见性限制，新 model 已改善）。此补丁是全 res_check 精度流程
-> 的共用前置，一处修复解锁全部。
+复现 issue 见 `ISSUE_gfrun_ppoll_libc_startup.md`。
 
-完整可复现 issue（组件清单以 Bench PR 链接给出 + 最小复现 + 根因 + patch + 验证）见
-`ISSUE_gfrun_ppoll_libc_startup.md`。
+## 问题26：emulator NORM Local TSTORE 不支持打包 4-bit（描述符 size 与源行 stride 均按字节容器口径，应按元素位宽）（需 emulator 侧解决）【SuperScalarModel issue557·未修】
 
-## 问题26：packed FP4 端到端在 ops-20260904 打通（PR#510 恢复写侧 + 4 处新 model 缺口 + 工具链 tile-size）【已修·model 本地补丁 + 工具链本地补丁】
+- **归属**：SuperScalarModel（emulator）。
+- **复现入口**：`dynamic_mx_quant_tail_ocp_fp4` data pass 末 `TSTORE`（打包 fp4 输出，RowMajor/NORM）。
 
-- **归属**：SuperScalarModel（gfrun）+ Linx-TileOP-API（工具链头）。
-- **组合**：model `49547742`（含 PR#510 `eededa48`）+ 工具链 llvm `1ae4ee39` / TileOP `804eb03` + musl `af0dfc20`。
-- **触发**：`dynamic_mx_quant_tail_ocp_fp4`（bf16 in / packed fp4 out / e8m0 scale，4-PE res_check，512×256）。
+### 现象
 
-### 前置澄清
+打包 fp4 tile 的 Local TSTORE（NORM 布局）两处按字节容器口径处理，先崩描述符、放行后行错位：
 
-`ISSUE_fp4_pack_tcvt_regression`（float→FP4 写侧被 930d9981 连坐回退）**已由 PR#510（`eededa48` restore packed FP4 TCVT support，Refs #454）修复并合入当前 model**：CubeEngine E2M1 有限值编码 / TEPLEngine nibble 打包 / Block.cpp bit-based row 派生 / DataType.h `IsFourBitDataType` 四件套齐全。**不需再移植 model 写侧。** 但 PR#510 未覆盖 TSTORE 描述符/落盘与 compare-select，故端到端仍需下列 4 处 model 修复 + 1 处工具链修复。
+- **(a) 描述符**：`AccumulateBlockInfo.cpp` `IsLegalLocalTileDescriptor` 用 `size == rows*cols*BytesOf`（`BytesOf(FP4)=1`）→ gfrun 崩 `Local TSTORE requires one legal source Tile descriptor`（`size` 与 `rows*cols*1` 不符）。
+- **(b) 源行 stride**：`TMAEngine.cpp` `ExecuteTSTORE` NORM 分支 `srcRowWidth = totalCol*eleSize`（`eleSize=1` 字节容器口径）→ 每源行步长为 packed 的 2×，仅 tile 第 0 行落对、其余行全错位（fp4 512×256 4-PE `output=fail MSE=8.4`；8 个正确行 = 各 PE 各 tile 的第 0 行 [0,64,…,448]）。
 
-### 4 处新 model 缺口（本次修复，`8b93926d`；四态诊断法逐层剥离）
+### 根因（对照 pto-spec）
 
-1. **compare/select 白名单**（AccumulateBlockInfo `IsCompatibleDataTile`）：TCMPS 源按 **bit-width** 匹配非 dtype 相等（端口 backup `c022a929`）。fp4 三守卫 TCMPS 作用于 bf16 的 uint16 reinterpret 视图 → dtype 相等断言误杀（问题14 sibling）。**症状**：`TCMPS requires one compatible Tile source` abort。
-2. **本地 tile 描述符**（AccumulateBlockInfo `IsLegalLocalTileDescriptor`）：size 校验按 `ElementBitsOf`（4-bit packed）非 `BytesOf`（==1）。**症状**：`Local TSTORE requires one legal source Tile descriptor` abort（size 2048≠row128×col32×1）。diff_test 走 `ExecuteTEPL` 不经 TSTORE 校验，故 PR#510 未暴露。
-3. **E2M1/E1M2 编码 RNE**（CubeEngine `DataFormatCvt`）：最近邻搜索**纳入 code 0（0.0）**。原从 code 1 起搜 → `|v|<table[1]/2` 的小值（如 0.19）被错误抬到最小正档（0.5/0.25），与 AscendC/pto-spec RNE golden 背离。**症状**：小商值 output 错（0.0→0.5）。
-4. **NORM TSTORE packed 行 stride**（TMAEngine `ExecuteTSTORE` NORM 分支）：4-bit packed 的本地行宽/GM 回退 stride 按 `floor(totalCol×EleRealSize)` packed 字节，非 `totalCol×eleSize`（eleSize=1 是字节容器口径）。CUBE 分支有 `packed?(validCol+1)/2` 处理、**NORM 分支漏了**。**症状**：仅 tile 第 0 行落对、行 1..63 源行步长 2× 全错位（8 个正确行 = 各 PE 各 tile 的第 0 行 [0,64,128,…,448]）。列内 packing（`EleOffset`=idx/2 + `EleDataExtract` nibble mask）本就正确，唯行寻址漏。
+pto-spec 对打包 4-bit 用**元素位宽**而非字节容器：
 
-### 1 处工具链修复（`local/fp4-tile-size-fix` `78045d6`；= `ISSUE_linx_tileop_fp4_tile_size_bits`）
+- `DerivedTileRows`（`asl/tile/model/shape/rows-columns.asl`）：`rows = capacity_bits DIVRM (columns × TileElementBits(dt))`，`TileElementBits(E2M1X2)=4` → 描述符 size 校验须按 `(rows*cols*TileElementBits + 7)/8`，非 `BytesOf`。
+- `TileMemoryElementAddress`（`asl/tile/model/memory/addressing.asl`）：four-bit `offset = element DIVRM 2`（2 元素/字节），`TileMemoryElementHighNibble = element MOD 2 == 1` → NORM 源行 stride 须为 `floor(totalCol × 0.5)` 打包字节。
 
-`type_traits<__fp4_e2m1x2>::bits=8`（打包容器位宽）使 `kBytes/StorageBytes = Rows*Cols*8/8` = 逻辑元素数的 2× 字节；喂进模型 bit-based row 派生使行数翻倍（实测 64→128）。改 `pto_tile.hpp` 的 kBytes/StorageBytes（非 Cube 分支）用已有的 `CubeElementBits`（fp4→4，其余=bits），`type_traits::bits` 保持 8（storage/reinterpret/stride 不变）。
+CUBE TSTORE 分支已有 `packed ? (validCol+1)/2` 打包处理，**NORM 分支缺**。列内 nibble packing（`EleOffset`=idx/2 + `EleDataExtract` nibble mask）本就正确，唯描述符 size 与源行寻址按字节。
 
-### 验证
+### 解除路径（SuperScalarModel）
 
-补齐后 `tail_ocp_fp4` 512×256 4-PE res_check **output/scale 逐字节 pass（MSE=0，MaxAE=0）**；gfrun 自检 pass-list **349/349 无回归**；`tail_ocp_fp8`/`tail_ocp_fp8_dyn` 仍 pass。诊断纪律：scale=pass 但 output 错 → 隔离到 data pass；四态逐层剥离（编译崩→运行崩→精度失败）；guard-removal bisect 排除 TSEL；行级模式（8 正确行=tile 起点）直指 TSTORE 行 stride。
+`IsLegalLocalTileDescriptor` 的 NORM/RowMajor size 校验改按元素位宽（`(rows*cols*ElementBitsOf+7)/8`；字节类型 `ElementBitsOf==BytesOf*8` 等价不变）；`ExecuteTSTORE` NORM 分支 `srcRowWidth` 与 GM 回退 stride 改按打包元素地址（`floor(totalCol × EleRealSize)`）。放行后 `tail_ocp_fp4` 512×256 4-PE 逐字节 pass，gfrun 自检 pass-list 349/349 无回归。
+
+### 影响
+
+所有把打包 4-bit（FP4/FP4_1/HIF4/INT4/UINT4）经 NORM Local TSTORE 落盘的路径。
+
+复现 issue（组件清单以 Bench PR#111 给出 + 前置依赖 + 复现步骤 + spec 依据）见 `ISSUE_gfrun_norm_tstore_packed4bit.md`。
+
+## 问题27：TCVT fp→E2M1/E1M2 编码最近邻漏 code 0（小值抬到最小正档，偏离 RNE）；且参考模型无 E2M1 目的编码器（需 emulator + pto-spec 侧解决）【SuperScalarModel issue558·未修】
+
+- **归属**：SuperScalarModel（emulator）+ pto-spec（参考模型缺口）。
+- **复现入口**：`dynamic_mx_quant_tail_ocp_fp4` data pass 末 `TCVT(fp32→fp4)`，小商值 `|x/scale| < 0.25`。
+
+### 现象
+
+`fp32→fp4(e2m1)` 的小值应 RNE 到 `0.0`（如 `0.19→0.0`），emulator 却输出 `0.5`（最小正档）。fp4 512×256 4-PE `MSE=0.022`（`MaxAE=0.5`，1 LSB）；compare 判据 `MSE<0.1` 仍 pass，故非阻塞、但非 byte-exact、偏离 golden。
+
+### 根因（对照 pto-spec）
+
+`CubeEngine.cpp` `DataFormatCvt` 的 E2M1/E1M2 编码分支最近邻搜索从 `code 1`（0.5）起、跳过 `code 0`（0.0）→ 任意非零小值最小编成 `0.5`。而 E2M1X2 格式 `has_zero=TRUE`、值集含 `0.0`（`asl/arch/data-types/formats/e2m1x2.asl`），TCVT 默认 float→float 为 RNE（`asl/.../TCVT.asl` `InstructionContractDefaultRounding_TCVT`），故 `|v|<0.25` 应舍到 `0.0`。
+
+### spec 缺口
+
+参考模型 `ReferenceFP8Encoding`（`asl/arch/profile/matrix-quantization.asl`）断言 `dst==E4M3 ‖ HiF8`，**不含 E2M1/E1M2** → `ReferenceMatrixFloatingEncoding` 对 fp4 目的会 assert，pto-spec 参考模型**未定义 fp→E2M1 目的的编码/舍入**。emulator 的 E2M1 编码属实现扩展，须按 TCVT RNE 契约补齐，spec 侧须补 E2M1/E1M2 目的的参考编码器。
+
+### 解除路径
+
+emulator 最近邻搜索纳入 `code 0`（从 `code 0` 起，ties-to-even）；pto-spec 为 E2M1/E1M2 目的补 RNE 参考编码器。
+
+复现 issue（组件清单以 Bench PR#111 给出 + 前置依赖 + 逐元素证据 + spec 依据/缺口）见 `ISSUE_gfrun_tcvt_e2m1_rne_code0.md`。
