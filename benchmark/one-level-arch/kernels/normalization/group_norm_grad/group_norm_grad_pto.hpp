@@ -357,9 +357,9 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
                      dtype *gamma, const int64_t *tiling, dtype *dx,
                      dtype *dgamma, dtype *dbeta, float *workspace) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
-    // One 512-element spatial tile matches the source algorithm's maximum block.
+    // One 8192-element spatial tile uses 32 KiB for fp32, within the 64 KiB TileOP limit.
     // Larger HxW values are handled by the tile_hw loops.
-    constexpr int64_t tCap = 512;
+    constexpr int64_t tCap = 8192;
     constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
 
     const int64_t N = tiling[0];

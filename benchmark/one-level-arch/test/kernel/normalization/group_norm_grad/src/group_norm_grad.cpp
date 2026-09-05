@@ -9,7 +9,7 @@
 #define DType __half
 #endif
 
-// Dynamic 4PE validation: N=32, C=16, G=8, HxW=512.
+// Dynamic 4PE validation: N=32, C=16, G=8, HxW=8192.
 #ifndef N_BATCH
 #define N_BATCH 32
 #endif
@@ -20,7 +20,7 @@
 #define G_GRP 8
 #endif
 #ifndef HxW_SZ
-#define HxW_SZ 512
+#define HxW_SZ 8192
 #endif
 #ifndef PE_NUM
 #define PE_NUM 1
@@ -29,7 +29,7 @@
 namespace {
 template <typename dtype>
 constexpr int64_t group_norm_tile_hw(int64_t spatial_size) {
-    constexpr int64_t kTileCapacity = 512;
+    constexpr int64_t kTileCapacity = 8192;
     return spatial_size < kTileCapacity ? spatial_size : kTileCapacity;
 }
 } // namespace

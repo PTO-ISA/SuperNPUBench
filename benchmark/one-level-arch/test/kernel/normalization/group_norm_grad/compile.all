@@ -1,5 +1,5 @@
 #!/bin/bash
-# Dynamic 4PE GroupNormGrad N=32,C=16,G=8,HxW=512; tiling is calculated from runtime shape.
+# Dynamic 4PE GroupNormGrad N=32,C=16,G=8,HxW=8192; tiling is calculated from runtime shape.
 set -euo pipefail
 : "${COMPILER_DIR:?Set COMPILER_DIR to the compiler bin directory}"
-make TESTCASE=group_norm_grad COMPILER_DIR="$COMPILER_DIR" DType=__half N_BATCH=32 C_CH=16 G_GRP=8 HxW_SZ=512 PE_NUM=4 diss
+make TESTCASE=group_norm_grad COMPILER_DIR="$COMPILER_DIR" DType=__half N_BATCH=32 C_CH=16 G_GRP=8 HxW_SZ=8192 PE_NUM=4 diss

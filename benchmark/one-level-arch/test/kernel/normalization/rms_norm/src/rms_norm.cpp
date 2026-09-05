@@ -20,7 +20,7 @@
 #define G_A 512
 #endif
 #ifndef G_R
-#define G_R 512
+#define G_R 8192
 #endif
 
 namespace {
@@ -28,7 +28,7 @@ constexpr int64_t rms_tile_a(int64_t global_a, int64_t pe_num) {
     return global_a >= pe_num ? 1 : 0;
 }
 constexpr int64_t rms_tile_r(int64_t reduce_size) {
-    constexpr int64_t kMaxTileR = 1024;
+    constexpr int64_t kMaxTileR = 8192;
     return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
 }
 } // namespace

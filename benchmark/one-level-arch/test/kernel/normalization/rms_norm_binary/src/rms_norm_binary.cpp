@@ -41,7 +41,7 @@ constexpr int64_t floor_power_of_two(int64_t value) {
     return result;
 }
 constexpr int64_t binary_tile_r(int64_t reduce_size) {
-    constexpr int64_t kMaxTileR = 1024;
+    constexpr int64_t kMaxTileR = 8192;
     return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
 }
 } // namespace

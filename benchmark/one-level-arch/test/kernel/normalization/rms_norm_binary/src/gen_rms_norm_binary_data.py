@@ -124,7 +124,7 @@ def main() -> None:
     parser.add_argument("--g-a", type=int, default=16)
     parser.add_argument("--g-r", type=int, default=16384)
     parser.add_argument("--tile-a", type=int, default=1)
-    parser.add_argument("--tile-r", type=int, default=1024)
+    parser.add_argument("--tile-r", type=int, default=8192)
     parser.add_argument("--pow-r", type=int, default=8192)
     parser.add_argument("--eps", type=float, default=1e-6)
     parser.add_argument("--seed", type=int, default=123)

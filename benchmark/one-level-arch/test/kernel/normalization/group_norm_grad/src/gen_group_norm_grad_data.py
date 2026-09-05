@@ -9,7 +9,7 @@ Bins:
   golden_dx / golden_dgamma / golden_dbeta : float16
 
 Math matches PyTorch GroupNormBackward (HxW>1): spatial ds/db then fused c2/c3.
-Default: N=32, C=16, G=8, HxW=512 (D=2), tile_hw=512.
+Default: N=32, C=16, G=8, HxW=8192 (D=2), tile_hw=8192.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
     / "kernel_normalization_group_norm_grad_group_norm_grad"
-    "_DType__half_N32_C16_G8_HxW512_PE4"
+    "_DType__half_N32_C16_G8_HxW8192_PE4"
 )
 
 
@@ -231,8 +231,8 @@ def main() -> None:
     parser.add_argument("--n", type=int, default=32)
     parser.add_argument("--c", type=int, default=16)
     parser.add_argument("--g", type=int, default=8)
-    parser.add_argument("--hxw", type=int, default=512)
-    parser.add_argument("--tile-hw", type=int, default=512)
+    parser.add_argument("--hxw", type=int, default=8192)
+    parser.add_argument("--tile-hw", type=int, default=8192)
     parser.add_argument("--eps", type=float, default=1e-5)
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("-o", "--out-dir", type=Path, default=DEFAULT_CMP_DIR)

@@ -98,7 +98,7 @@ void rms_norm(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e-6f) {
     // Physical capacity (Rows×Cols); Valid comes from tiling (tile_a,tile_r).
     // Size must cover ValidRow×ValidCol; SoftCore should not require Rows≥ValidRow.
     constexpr int64_t tA = 1;
-    constexpr int64_t tR = 1024;
+    constexpr int64_t tR = 8192;
 
     const int64_t globalA = tiling[0];
     const int64_t gR = tiling[1];
