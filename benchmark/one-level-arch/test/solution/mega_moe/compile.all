@@ -1,0 +1,13 @@
+#!/bin/bash
+# MegaMoe A8W8 — sim (single-PE) / sim_mt (true 4-PE) compile entries.
+# Simulation keeps the small 16x32x64 spec (gfsim verified, Total Cycles = 2190707);
+# the A5 cann-samples mega_moe_story uses the same spec for perf comparison.
+# mega_moe_full_sim (self-contained GMM debug driver) is NOT in the batch scope:
+# it still uses pre-CUBE-layout plain tiles and hits the 0904 toolchain baseline
+# IsCubeLayout static asserts (same known regression as the matmul variants).
+# Run the _mt ELF with: gfrun -t 1 -s softcore.multiThreadNum=4 -f <elf>
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+make TESTCASE=mega_moe_sim BS=16 H=32 HIDDEN=64 COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=mega_moe_sim_mt BS=16 H=32 HIDDEN=64 COMPILER_DIR="$COMPILER_DIR" diss

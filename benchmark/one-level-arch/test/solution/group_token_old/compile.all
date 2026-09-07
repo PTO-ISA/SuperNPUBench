@@ -1,0 +1,11 @@
+#!/bin/bash
+# Group Token Old — single-PE + 4-PE SPMD compile tests.
+# Run modes on the current (09-01+) functional model:
+#   group_token_old:     gfrun -t 1 -s softcore.multiThreadNum=1 -f <elf>
+#                        (data-gen uses read-modify-write, not PE-idempotent)
+#   group_token_old_mt:  gfrun -t 1 -s softcore.multiThreadNum=4 -f <elf>
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+make TESTCASE=group_token_old COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=group_token_old_mt COMPILER_DIR="$COMPILER_DIR" diss
