@@ -8,10 +8,11 @@
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
 #define QSMLA_USE_UNIFIED_TADD_4PE
 #include "multi_thread/fa/quant_sparse_flash_mla_pto.hpp"
-#elif defined(QSMLA_USE_TADD)
-#include "single_thread/fa/quant_sparse_flash_mla_tadd_pto.hpp"
 #else
-#include "single_thread/fa/quant_sparse_flash_mla_onepass_pto.hpp"
+#include "single_thread/fa/quant_sparse_flash_mla_tadd_pto.hpp"
+#ifdef QSMLA_USE_HIF8
+#error "Single-PE tadd supports FP16 only; use the unified four-PE kernel for HIF8"
+#endif
 #endif
 
 #ifndef Tcmp_s2
@@ -329,11 +330,7 @@ int main(){
             score_scratch, prob_scratch, pv_scratch);
 #else
     if constexpr (N1 == 1 && N2 == 1) {
-#ifdef QSMLA_USE_TADD
         quant_sparse_flash_mla_swa_tadd_config_pto<
-#else
-        quant_sparse_flash_mla_swa_onepass_config_pto<
-#endif
             qdtype, kvdtype, odttype, Config>(
                 out, q, kv,
                 softmax_scale_val,
@@ -352,11 +349,7 @@ int main(){
                 (float*)nullptr    // softmax_lse
             );
     } else {
-#ifdef QSMLA_USE_TADD
         quant_sparse_flash_mla_swa_tadd_bsnd_pto<
-#else
-        quant_sparse_flash_mla_swa_onepass_bsnd_pto<
-#endif
             qdtype, kvdtype, odttype, Config>(
                 out, q, kv,
                 softmax_scale_val,

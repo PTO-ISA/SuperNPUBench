@@ -5,22 +5,21 @@
 // quant_sparse_flash_mla_tadd_pto.hpp
 //   Quant Sparse Flash MLA (SWA mode) — TADD mask variant
 //
-//   本文件是 quant_sparse_flash_mla_tselect_pto.hpp 的 TADD 备选实现,
-//   使用 TADD 替代 TSEL 施加 mask, 代码更简单, 兼容旧版模拟器.
+//   保留的单 PE FP16 SWA 实现，使用 TADD 施加 mask。
+//   正式五模式 / HIF8 / 4-PE 实现在 multi_thread/fa 中，与本文件独立。
 //
 //   切换方法: 在 test 文件中修改 include 和函数名:
 //     #include "single_thread/fa/quant_sparse_flash_mla_tadd_pto.hpp"
 //     quant_sparse_flash_mla_swa_tadd_pto<...>(...)
+//   现有测试入口: make ... TESTCASE=quant_sparse_flash_mla IMPL=tadd
+//                  QSMLA_DTYPE=FP16 Tm=32 Tk=32 Td_block=64
+//   执行: gfrun -f <ELF> -s softcore.multiThreadNum=1
 //
-// 【与 TSEL 版的差异】
-//   | 项目        | TADD 版 (本文件)              | TSEL 版 (quant_sparse_flash_mla_tselect_pto.hpp) |
-//   |-------------|------------------------------|----------------------------------------------|
-//   | mask 格式   | float[s1*s2], 0.0/-1e30      | uint32_t 位打包[s1*ceil(s2/32)]              |
-//   | mask 构建   | build_swa_mask 直接赋值       | build_swa_mask_bitpacked 位操作              |
-//   | mask 加载   | global_iterator 直接 TLOAD    | 手动提取 block bit 重打包后 TLOAD             |
-//   | mask 应用   | TADD(score, score, mask)      | TSEL(score, mask, neg_inf)                   |
-//   | 额外 tile   | 无                            | tNegInf (TEXPANDS -1e30)                     |
-//   | 模拟器要求  | 无特殊要求                    | 需更新后模拟器 (o_main 分支, ExecuteTSEL fix)|
+// 【当前 Local CUBE 接口】
+//   参考 single_thread/fa/fa_2d_unroll.hpp：Left/Acc 使用 CUBE_M16/M32，
+//   Right 使用 CUBE_N8。TLOAD_CUBE/TSTORE_CUBE 显式转换 GM ND 与 CELL 布局；
+//   不能把普通 Vec/旧 TileLeft/TileRight 直接交给当前 Local TMATMUL。
+//   K 仍按块 TTRANS；经小块 GM 缓冲加载到 CUBE，不分配完整转置 KV。
 //
 // 【计算语义】
 //   O = softmax(Q @ K^T * softmax_scale + mask) @ V
@@ -54,6 +53,7 @@
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
 #include <common/qsmla_config_pto.hpp>
+#include <type_traits>
 
 using namespace pto;
 
@@ -106,6 +106,11 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
     constexpr int kTm = Config::TileM;
     constexpr int kTk = Config::TileK;
     constexpr int kTd = Config::TileD;
+    static_assert(kTm <= 32, "single-PE Local CUBE supports TileM <= 32");
+    static_assert(std::is_same_v<qdtype, __half> &&
+                      std::is_same_v<kvdtype, __half> &&
+                      std::is_same_v<odttype, __half>,
+                  "single-PE tadd supports FP16 only; HIF8 uses the four-PE kernel");
     static_assert(D % kTd == 0,
                   "tadd D-tail support is intentionally deferred");
     static_assert(!SharedSwaMask || s1 == kTm,
@@ -128,21 +133,46 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
     using gmKV   = global_tensor<kvdtype, RowMajor<s2, D>>;
     using gmO    = global_tensor<odttype, RowMajor<s1, D>>;
 
-    using tileQ      = TileLeft<qdtype,  kTm, kTd>;
+    using tileQ      = std::conditional_t<
+        (kTm <= 16), CubeTileM16<qdtype, kTm, kTd>,
+        CubeTileM32<qdtype, kTm, kTd>>;
     using tileKSrc   = Tile<Location::Vec, kvdtype, kTk, kTd, BLayout::RowMajor>;
-    using tileKRight = TileRight<kvdtype, kTd, kTk>;
+    using tileKTrans = Tile<Location::Vec, kvdtype, kTd, kTk, BLayout::RowMajor>;
+    using tileKRight = CubeTileN8<kvdtype, kTd, kTk>;
+    using tileScoreCube = std::conditional_t<
+        (kTm <= 16), CubeAccumulatorM16<float, kTm, kTk>,
+        CubeAccumulatorM32<float, kTm, kTk>>;
 
     // score tile 与 mask tile 都用 RowMajor, 保证 TADD 类型一致
     using tileW      = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
     using tileMask   = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
-    using tileW_left = TileLeft<qdtype, kTm, kTk>;
+    using tileW_cast = Tile<Location::Vec, qdtype, kTm, kTk, BLayout::RowMajor>;
+    using tileW_left = std::conditional_t<
+        (kTm <= 16), CubeTileM16<qdtype, kTm, kTk>,
+        CubeTileM32<qdtype, kTm, kTk>>;
 
     using tileO      = Tile<Location::Vec, float, kTm, kTd, BLayout::RowMajor>;
     using tileO_cast = Tile<Location::Vec, odttype, kTm, kTd, BLayout::RowMajor>;
 
-    using tileV      = TileRight<kvdtype, kTk, kTd>;
-    using tileMax    = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
-    using tileSum    = Tile<Location::Vec, float, kTm, 8, BLayout::RowMajor, kTm, 1>;
+    using tileV      = CubeTileN8<kvdtype, kTk, kTd>;
+    using tilePVCube = std::conditional_t<
+        (kTm <= 16), CubeAccumulatorM16<float, kTm, kTd>,
+        CubeAccumulatorM32<float, kTm, kTd>>;
+    // Row reductions produce a dense [M,1] descriptor in the current API.
+    using tileMax    = Tile<Location::Vec, float, kTm, 1, BLayout::RowMajor, kTm, 1>;
+    using tileSum    = tileMax;
+
+    // Explicit Local CUBE <-> Vec conversion boundaries, reused per block.
+    // Single-PE scratch may live on this PE's stack; no shared workspace or
+    // whole-sequence K transpose is needed. TCVT alone is not a CELL conversion.
+    alignas(64) kvdtype k_trans_scratch[kTd * kTk];
+    alignas(64) float score_scratch[kTm * kTk];
+    alignas(64) qdtype prob_scratch[kTm * kTk];
+    alignas(64) float pv_scratch[kTm * kTd];
+    global_tensor<kvdtype, RowMajor<kTd, kTk>> gKTrans(k_trans_scratch);
+    global_tensor<float, RowMajor<kTm, kTk>> gScore(score_scratch);
+    global_tensor<qdtype, RowMajor<kTm, kTk>> gProb(prob_scratch);
+    global_tensor<float, RowMajor<kTm, kTd>> gPV(pv_scratch);
 
     using itQ    = global_iterator<gmQ,  tileQ>;
     using itKSrc = global_iterator<gmKV, tileKSrc>;
@@ -205,14 +235,20 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
             for (int dd = 0; dd < Db; ++dd) {
                 tileQ tQ;
                 auto gQ = gIterQ(i, dd);
-                TLOAD(tQ, gQ);
+                TLOAD_CUBE(tQ, gQ);
                 tileKSrc tKSrc;
                 auto gK = gIterKSrc(j, dd);
                 TLOAD(tKSrc, gK);
+                tileKTrans tKTrans;
+                TTRANS(tKTrans, tKSrc);
+                TSTORE(gKTrans, tKTrans);
                 tileKRight tK;
-                TTRANS(tK, tKSrc);
+                TLOAD_CUBE(tK, gKTrans);
+                tileScoreCube tScoreCube;
+                TMATMUL(tScoreCube, tQ, tK);
+                TSTORE_CUBE(gScore, tScoreCube);
                 tileW tW_partial;
-                TMATMUL(tW_partial, tQ, tK);
+                TLOAD(tW_partial, gScore);
                 TADD(tW, tW, tW_partial);
             }
 
@@ -289,14 +325,20 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
                 for (int dd2 = 0; dd2 < Db; ++dd2) {
                     tileQ tQ;
                     auto gQ = gIterQ(i, dd2);
-                    TLOAD(tQ, gQ);
+                    TLOAD_CUBE(tQ, gQ);
                     tileKSrc tKSrc;
                     auto gK = gIterKSrc(j, dd2);
                     TLOAD(tKSrc, gK);
+                    tileKTrans tKTrans;
+                    TTRANS(tKTrans, tKSrc);
+                    TSTORE(gKTrans, tKTrans);
                     tileKRight tK;
-                    TTRANS(tK, tKSrc);
+                    TLOAD_CUBE(tK, gKTrans);
+                    tileScoreCube tScoreCube;
+                    TMATMUL(tScoreCube, tQ, tK);
+                    TSTORE_CUBE(gScore, tScoreCube);
                     tileW tW_partial;
-                    TMATMUL(tW_partial, tQ, tK);
+                    TLOAD(tW_partial, gScore);
                     TADD(tW, tW, tW_partial);
                 }
 
@@ -331,18 +373,21 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
                 TEXP(tW, tW);
                 TROWEXPANDMUL(tW, tW, tInvSum);
 
+                tileW_cast tProb;
+                TCVT(tProb, tW);
+                TSTORE(gProb, tProb);
                 tileW_left tW_left;
-                // PTO v0.58 Local CUBE reads Left payloads as NORM row-major
-                // and has no NZ dependency, so convert/copy probabilities
-                // directly into the qdtype Left tile.
-                TCVT(tW_left, tW);
+                TLOAD_CUBE(tW_left, gProb);
 
                 // PV = p * V (当前 D 分块)
                 auto gV = gIterV(j, dd);
                 tileV tV;
-                TLOAD(tV, gV);
+                TLOAD_CUBE(tV, gV);
+                tilePVCube tPVCube;
+                TMATMUL(tPVCube, tW_left, tV);
+                TSTORE_CUBE(gPV, tPVCube);
                 tileO tPV;
-                TMATMUL(tPV, tW_left, tV);
+                TLOAD(tPV, gPV);
 
                 TADD(tO, tO, tPV);
             }
@@ -352,285 +397,6 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
             TCVT(tO_cast, tO);
             auto gO = gIterO(i, dd);
             TSTORE(gO, tO_cast);
-        }
-    }
-}
-
-// First-stage four-PE BSND path.  A complete 64-head G slice remains one
-// work item, while PE tid owns a contiguous 16-row Q/O slice.  All PEs execute
-// the same work_id and the same cooperative TMATMUL sequence; get_thread_idx()
-// is a PE id, not a multi-core work distributor.
-template <typename qdtype, typename kvdtype, typename odttype, typename Config>
-void quant_sparse_flash_mla_swa_tadd_4pe_bsnd_pto(
-    odttype* out_ptr,
-    qdtype* q_ptr,
-    kvdtype* ori_kv_ptr,
-    float softmax_scale,
-    int ori_win_left,
-    int ori_win_right,
-    float* q_descale,
-    float* ori_kv_descale,
-    int* ori_sparse_indices,
-    int* ori_block_table,
-    int* cu_seqlens_q,
-    int* cu_seqlens_ori_kv,
-    int* seqused_q,
-    int* seqused_ori_kv,
-    float* sinks,
-    int* metadata,
-    float* softmax_lse,
-    float* score_scratch,
-    qdtype* prob_scratch,
-    float* pv_scratch)
-{
-    constexpr int kPeNum = 4;
-    constexpr int kGroupM = Config::TileM;
-    constexpr int kTk = Config::TileK;
-    constexpr int kTd = Config::TileD;
-    constexpr int kDb = Config::D / kTd;
-    static_assert(Config::N2 == 1,
-                  "the first four-PE BSND path requires contiguous N2=1 KV");
-    static_assert(Config::GSliceMax == 64 && Config::G % 64 == 0,
-                  "the first four-PE path supports complete 64-head G slices");
-    static_assert(kGroupM == 64,
-                  "the collective four-PE M tile is fixed at 64 rows");
-    static_assert(Config::D % kTd == 0,
-                  "four-PE D-tail support is intentionally deferred");
-    constexpr int kPeRows = kGroupM / kPeNum;
-    const int pe_id = static_cast<int>(get_thread_idx());
-
-    // The current cooperative CUBE contract mirrors fa_2d_unroll_gmma:
-    // PE0 stages complete Q/K/V/P matrices in SharedTReg, while TMATMUL maps
-    // one contiguous kPeRows-row accumulator shard to each PE.  Left/Right
-    // describe operand roles; the shared payload itself remains row-major ND.
-    using tileQMatrix = SharedMatrixLeft<qdtype, kGroupM, kTd>;
-    using tileKMatrix = SharedMatrixRight<kvdtype, kTd, kTk>;
-    using tilePMatrix = SharedMatrixLeft<qdtype, kGroupM, kTk>;
-    using tileVMatrix = SharedMatrixRight<kvdtype, kTk, kTd>;
-    using tileQShared = SharedTile<tileQMatrix>;
-    using tileKShared = SharedTile<tileKMatrix>;
-    using tilePShared = SharedTile<tilePMatrix>;
-    using tileVShared = SharedTile<tileVMatrix>;
-
-    using tileScoreCube = CubeAccumulatorM16<float, kPeRows, kTk>;
-    using tilePVCube = CubeAccumulatorM16<float, kPeRows, kTd>;
-    using tileW =
-        Tile<Location::Vec, float, kPeRows, kTk, BLayout::RowMajor>;
-    using tileMask = tileW;
-    using tilePShard =
-        Tile<Location::Vec, qdtype, kPeRows, kTk, BLayout::RowMajor>;
-    using tileKSrc =
-        Tile<Location::Vec, kvdtype, kTk, kTd, BLayout::RowMajor>;
-    using tileO =
-        Tile<Location::Vec, float, kPeRows, kTd, BLayout::RowMajor>;
-    using tileOCast =
-        Tile<Location::Vec, odttype, kPeRows, kTd, BLayout::RowMajor>;
-    // PTO v0.58.4 row reductions publish a dense one-column result.  Keep
-    // the online-softmax state on the same physical descriptor so the
-    // following TMAX/TADD binary TEPL operations consume matching tiles.
-    using tileMax =
-        Tile<Location::Vec, float, kPeRows, 1, BLayout::RowMajor,
-             kPeRows, 1>;
-    using tileSum = tileMax;
-
-    using gmQ = global_tensor<qdtype, RowMajor<kGroupM, Config::D>>;
-    using gmKV = global_tensor<kvdtype, RowMajor<Config::S2, Config::D>>;
-    using gmV = global_tensor<kvdtype, RowMajor<Config::S2, Config::D>>;
-    using gmO = global_tensor<odttype, RowMajor<kGroupM, Config::D>>;
-    using itQ = global_iterator<gmQ, tileQMatrix>;
-    using itKSrc = global_iterator<gmKV, tileKSrc>;
-    using itV = global_iterator<gmV, tileVMatrix>;
-    using itO = global_iterator<gmO, tileOCast>;
-
-    constexpr int kMaskElements = kPeRows * kTk;
-    // mask_buf is PE-local.  The three scratch pointers are supplied by the
-    // caller from shared GM. score/pv use disjoint PE-local shards within
-    // that region, while prob_scratch gathers all four PE shards into the
-    // complete shared P operand used by P@V.
-    float mask_buf[3 * kMaskElements];
-
-    using gmScoreScratch =
-        global_tensor<float, RowMajor<kPeRows, kTk>>;
-    using gmProbScratch =
-        global_tensor<qdtype, RowMajor<kGroupM, kTk>>;
-    using gmPVScratch =
-        global_tensor<float, RowMajor<kPeRows, kTd>>;
-    using itProbShard = global_iterator<gmProbScratch, tilePShard>;
-    using itPShared = global_iterator<gmProbScratch, tilePMatrix>;
-    gmScoreScratch gScore(score_scratch + pe_id * kPeRows * kTk);
-    gmPVScratch gPV(pv_scratch + pe_id * kPeRows * kTd);
-    itProbShard gIterProb(prob_scratch);
-    itPShared gIterP(prob_scratch);
-
-    for (int work_id = 0; work_id < Config::WorkCount; ++work_id) {
-        const QsmlaWorkItem work = Config::decode_work(work_id);
-        qdtype* work_q = q_ptr + Config::q_work_offset(work);
-        kvdtype* work_kv = ori_kv_ptr + Config::kv_work_offset(work);
-        const std::size_t work_out_offset = Config::out_work_offset(work);
-        itQ gIterQ(work_q);
-        itKSrc gIterKSrc(work_kv);
-        itV gIterV(work_kv);
-
-        const QsmlaSwaRange range = qsmla_swa_range(
-            Config::S2, Config::S1, work.q_token,
-            ori_win_left, ori_win_right);
-        const QsmlaSwaRange kv_blocks =
-            qsmla_swa_block_range(range, kTk);
-        const int kv_block_count = kv_blocks.end - kv_blocks.begin;
-        qsmla_build_shared_swa_masks(
-            mask_buf, mask_buf + kMaskElements,
-            mask_buf + 2 * kMaskElements,
-            kPeRows, kTk, kv_blocks.begin, kv_block_count,
-            Config::S2, Config::S1, work.q_token,
-            ori_win_left, ori_win_right);
-
-        tileMax tMax;
-        tileSum tSum;
-        TEXPANDS(tMax, -1e30f);
-        TEXPANDS(tSum, 0.0f);
-
-        // Pass 1: keep QK's D reduction in the native FP32 CUBE accumulator,
-        // then cross the explicit CUBE->GM->Vec boundary for online softmax.
-        for (int j = 0; j < kv_block_count; ++j) {
-            tileScoreCube tScoreCube;
-#pragma clang loop unroll(full)
-            for (int dd = 0; dd < kDb; ++dd) {
-                tileQShared tQShared;
-                tileKSrc tKSrc;
-                tileKMatrix tKLocal;
-                tileKShared tKShared;
-                auto gQ = gIterQ(0, dd);
-                auto gK = gIterKSrc(kv_blocks.begin + j, dd);
-                TLOAD<tileQMatrix, 1>(tQShared, gQ);
-                TLOAD(tKSrc, gK);
-                TTRANS(tKLocal, tKSrc);
-                TMOV_L2S_PUBLISH(tKShared, tKLocal);
-                if (dd == 0) {
-                    TMATMUL(tScoreCube, tQShared, tKShared,
-                            fixp::keep_acc());
-                } else {
-                    TMATMUL_ACC(tScoreCube, tScoreCube,
-                                tQShared, tKShared, fixp::keep_acc());
-                }
-            }
-
-            TSTORE_CUBE(gScore, tScoreCube);
-            tileW tW;
-            TLOAD(tW, gScore);
-            TMULS(tW, tW, softmax_scale);
-
-            float* selected_mask = mask_buf + 2 * kMaskElements;
-            if (j == 0) {
-                selected_mask = mask_buf;
-            }
-            if (j + 1 == kv_block_count) {
-                selected_mask = mask_buf + kMaskElements;
-            }
-            using gmMask =
-                global_tensor<float, RowMajor<kPeRows, kTk>>;
-            using itMask = global_iterator<gmMask, tileMask>;
-            itMask gIterMask(selected_mask);
-            tileMask tMask;
-            auto gMask = gIterMask(0, 0);
-            TLOAD(tMask, gMask);
-            TADD(tW, tW, tMask);
-
-            tileMax tLocalMax;
-            tileMax tNewMax;
-            TROWMAX(tLocalMax, tW);
-            TMAX(tNewMax, tMax, tLocalMax);
-            tileMax tScale;
-            TSUB(tScale, tMax, tNewMax);
-            TEXP(tScale, tScale);
-            tileSum tScaledOldSum;
-            TMUL(tScaledOldSum, tSum, tScale);
-            TROWEXPANDSUB(tW, tW, tNewMax);
-            TEXP(tW, tW);
-            tileSum tLocalSum;
-            TROWSUM(tLocalSum, tW);
-            TADD(tSum, tScaledOldSum, tLocalSum);
-            tMax = tNewMax;
-        }
-
-        tileSum tInvSum;
-        TRECIP(tInvSum, tSum);
-
-        // Pass 2: regenerate probabilities, gather PE shards into shared P,
-        // and let the collective P@V produce one kPeRows-row result per PE.
-        for (int out_dd = 0; out_dd < kDb; ++out_dd) {
-            tileO tO;
-            TEXPANDS(tO, 0.0f);
-            for (int j = 0; j < kv_block_count; ++j) {
-                tileScoreCube tScoreCube;
-#pragma clang loop unroll(full)
-                for (int dd = 0; dd < kDb; ++dd) {
-                    tileQShared tQShared;
-                    tileKSrc tKSrc;
-                    tileKMatrix tKLocal;
-                    tileKShared tKShared;
-                    auto gQ = gIterQ(0, dd);
-                    auto gK = gIterKSrc(kv_blocks.begin + j, dd);
-                    TLOAD<tileQMatrix, 1>(tQShared, gQ);
-                    TLOAD(tKSrc, gK);
-                    TTRANS(tKLocal, tKSrc);
-                    TMOV_L2S_PUBLISH(tKShared, tKLocal);
-                    if (dd == 0) {
-                        TMATMUL(tScoreCube, tQShared, tKShared,
-                                fixp::keep_acc());
-                    } else {
-                        TMATMUL_ACC(tScoreCube, tScoreCube,
-                                    tQShared, tKShared, fixp::keep_acc());
-                    }
-                }
-
-                TSTORE_CUBE(gScore, tScoreCube);
-                tileW tW;
-                TLOAD(tW, gScore);
-                TMULS(tW, tW, softmax_scale);
-                float* selected_mask = mask_buf + 2 * kMaskElements;
-                if (j == 0) {
-                    selected_mask = mask_buf;
-                }
-                if (j + 1 == kv_block_count) {
-                    selected_mask = mask_buf + kMaskElements;
-                }
-                using gmMask =
-                    global_tensor<float, RowMajor<kPeRows, kTk>>;
-                using itMask = global_iterator<gmMask, tileMask>;
-                itMask gIterMask(selected_mask);
-                tileMask tMask;
-                auto gMask = gIterMask(0, 0);
-                TLOAD(tMask, gMask);
-                TADD(tW, tW, tMask);
-                TROWEXPANDSUB(tW, tW, tMax);
-                TEXP(tW, tW);
-                TROWEXPANDMUL(tW, tW, tInvSum);
-
-                tilePShard tPShard;
-                TCVT(tPShard, tW);
-                auto gProbShard = gIterProb(pe_id, 0);
-                TSTORE(gProbShard, tPShard);
-
-                tilePShared tPShared;
-                tileVShared tVShared;
-                auto gP = gIterP(0, 0);
-                auto gV = gIterV(kv_blocks.begin + j, out_dd);
-                TLOAD<tilePMatrix, 1>(tPShared, gP);
-                TLOAD<tileVMatrix, 1>(tVShared, gV);
-                tilePVCube tPVCube;
-                TMATMUL(tPVCube, tPShared, tVShared, fixp::keep_acc());
-                TSTORE_CUBE(gPV, tPVCube);
-                tileO tPV;
-                TLOAD(tPV, gPV);
-                TADD(tO, tO, tPV);
-            }
-
-            tileOCast tOCast;
-            TCVT(tOCast, tO);
-            itO gIterO(out_ptr + work_out_offset +
-                       pe_id * kPeRows * Config::D);
-            auto gO = gIterO(0, out_dd);
-            TSTORE(gO, tOCast);
         }
     }
 }
@@ -668,7 +434,7 @@ void quant_sparse_flash_mla_swa_tadd_pto(
         sinks, metadata, softmax_lse, -1, -1);
 }
 
-// BSND dispatcher aligned with the one-pass address model. One work item owns
+// BSND dispatcher using the common QsmlaConfig address model. One work item owns
 // all G rows of one (batch, qToken, kvHead, gSlice). N2>1 remains deferred
 // because [S2,N2,D] KV storage needs a strided view.
 template <typename qdtype, typename kvdtype, typename odttype, typename Config>

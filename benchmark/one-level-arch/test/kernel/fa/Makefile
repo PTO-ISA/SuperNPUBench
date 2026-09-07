@@ -115,7 +115,18 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       ori_kv_descale ?= 1.0
       cmp_kv_descale ?= 1.0
    endif
-   IMPL ?= onepass
+   # Single-PE compatibility: IMPL=tadd QSMLA_DTYPE=FP16.
+   # HIF8 remains the default dtype for the unified four-PE implementations.
+   IMPL ?= tadd
+   QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
+   ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS)),)
+      $(error unsupported QSMLA IMPL=$(IMPL); use tadd or a unified four-PE implementation)
+   endif
+   ifeq ($(IMPL), tadd)
+      ifneq ($(QSMLA_DTYPE), FP16)
+         $(error single-PE tadd requires QSMLA_DTYPE=FP16; HIF8 uses a unified four-PE IMPL)
+      endif
+   endif
    DEFINES += -DTbatch=$(B)
    DEFINES += -DTs1=$(s1)
    DEFINES += -DTs2=$(s2)
@@ -153,7 +164,6 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_s2$(s2)_N1$(N1)_N2$(N2)_D$(D)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block).elf
    endif
 
-   QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
    ifneq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS)),)
       ifeq ($(IMPL), swa_tadd_4pe)
          DEFINES += -DQSMLA_USE_TADD_4PE
