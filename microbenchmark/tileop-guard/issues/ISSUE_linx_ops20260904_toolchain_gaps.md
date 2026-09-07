@@ -62,6 +62,8 @@ clang-15: 编译失败
 
 ---
 
+> **linx-2 已单独提交为 `LinxISA/llvm-project` #89**（https://github.com/LinxISA/llvm-project/issues/89）。
+
 ## linx-2 · clang-15 对内联 bf16 CUBE matmul codegen SIGABRT
 
 **涉及接口**：TMATMUL + `fixp::bf16()`（F322BF16，bf16 输出）。

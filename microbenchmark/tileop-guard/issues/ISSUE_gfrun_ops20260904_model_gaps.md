@@ -262,6 +262,8 @@ bash run_guard.sh vec tcvt
 
 ---
 
+> **本轮新钉死的 gfrun-8~11 已单独提交为 `LinxISA/SuperScalarModel` #569**（https://github.com/LinxISA/SuperScalarModel/issues/569）。
+
 ## gfrun-8 · range::subview 强制 cube parent，拒 spec 合法的 RowMajor Local subview
 
 **涉及接口**：range::subview（Local source 范围 carrier over TSTORE）。
