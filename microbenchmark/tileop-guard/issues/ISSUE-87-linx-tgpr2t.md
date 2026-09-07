@@ -1,4 +1,4 @@
-# [linx-toolchain][ops-20260904] TGPR2T 后端 Match Instruction Error
+# [linx-toolchain][ops-20260904] TGPR2T 后端 Match Instruction Error  【线上 issue #87】
 
 > **已提交**（2026-09-05）：`LinxISA/llvm-project` **#87** — https://github.com/LinxISA/llvm-project/issues/87
 
@@ -60,28 +60,7 @@ clang-15: 编译失败
 > demo 内联版符合 spec，clang 却 SIGABRT；noinline 能编证明代码合法（编译器对任何输入都不应 abort），
 > 不能以"release 用 noinline 结构能编"为由判 demo 侧。`thistogram`（THISTOGRAM 已退休，见 `retired/`）作退休 selector 处理，不入本 issue。
 
+
 ---
 
-> **linx-2 已单独提交为 `LinxISA/llvm-project` #89**（https://github.com/LinxISA/llvm-project/issues/89）。
-
-## linx-2 · clang-15 对内联 bf16 CUBE matmul codegen SIGABRT
-
-**涉及接口**：TMATMUL + `fixp::bf16()`（F322BF16，bf16 输出）。
-
-**问题**：把 CUBE bf16 matmul 直接写在 `main()` 内联时，clang-15 在中端 "Function Pass Manager" 阶段
-`abort()`（exit 134），非诊断错误：
-```
-#8 ... abort ./stdlib/abort.c:81:7
-clang-15: error: clang frontend command failed with exit code 134
-```
-
-**复现**：`bash run_guard.sh cube tmatmul_bf16`（内联版）。
-
-**自证 demo 合规 + 是编译器 bug**：
-- demo 符合 spec：`fixp::bf16()`=F322BF16=码 16，在 B.FPATR 合法 PreQuantMode（16..20）内；matrix-postprocess.asl
-  把 BF16 作合法目标转换。用法与 release `microbenchmark/fixp` BF16 模式一致（`run_single<__half,__bf16>`）。
-- **编译器对任何输入都不应 SIGABRT**——把同一段逻辑包进 `noinline` 函数即正常编译（release fixp 正是 noinline 结构），
-  证明代码语义合法，是 **clang 在 `__bf16 CubeAccumulatorM32` 内联实例化下的 codegen 健壮性 bug**。
-- **不用 noinline 绕过**（会失去看护意义）；demo 保持内联以暴露该 bug。
-
-**建议**：修 LinxV5 后端/clang 对内联 bf16 CUBE 累加器的 codegen（不应 abort）。
+> **注**：本轮 tmatmul_bf16 内联 bf16 codegen SIGABRT 已拆分为独立 issue **llvm-project #89**（见 `ISSUE-89-linx-bf16-codegen.md`），不在本文件（本文件=#87 TGPR2T）。

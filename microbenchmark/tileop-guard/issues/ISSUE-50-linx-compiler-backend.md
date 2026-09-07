@@ -1,4 +1,4 @@
-# [linx] 编译器/后端无法处理文档接口(clang frontend abort / Match Instruction Error / 模板不兼容)
+# [linx] 编译器/后端无法处理文档接口(clang frontend abort / Match Instruction Error / 模板不兼容)  【线上 issue #50】
 
 本 issue 汇总 TileOP-API v0.58 文档看护中,**报错发生在编译器/后端(linx clang / lld / TileOP-API 头)**
 且**无法靠补文档解决**的问题:接口按文档完整签名/示例写,却在编译期崩溃、后端无法汇编、或头模板拒绝

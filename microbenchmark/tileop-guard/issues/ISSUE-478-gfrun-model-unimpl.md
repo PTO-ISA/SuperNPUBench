@@ -1,4 +1,4 @@
-# [gfrun][NA] SuperScalarModel 模型未实现 / 模型侧契约拒绝
+# [gfrun][NA] SuperScalarModel 模型未实现 / 模型侧契约拒绝  【线上 issue #478】
 
 本 issue 汇总 TileOP-API v0.58 文档看护中,**报错发生在仿真器(gfrun)** 且**无法靠补文档解决**的问题:
 接口按文档正确写、编译通过,但 gfrun 侧要么是**未实现桩**,要么在运行期拒绝按文档示例生成的

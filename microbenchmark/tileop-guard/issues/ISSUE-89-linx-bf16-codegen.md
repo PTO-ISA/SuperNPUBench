@@ -1,4 +1,4 @@
-# [linx-toolchain][ops-20260904] clang-15 对内联 bf16 CUBE matmul codegen SIGABRT
+# [linx-toolchain][ops-20260904] clang-15 对内联 bf16 CUBE matmul codegen SIGABRT  【线上 issue #89】
 
 > **已提交**（2026-09-07）：`LinxISA/llvm-project` **#89** — https://github.com/LinxISA/llvm-project/issues/89
 

@@ -1,4 +1,4 @@
-# [gfrun][NA] ops-20260904 缺口汇总（7 项，已按 owner 回复重分类责任仓）
+# [gfrun][NA] ops-20260904 缺口汇总（7 项，已按 owner 回复重分类责任仓）  【线上 issue #560】
 
 > **已提交**（2026-09-05）：`LinxISA/SuperScalarModel` **#560** — https://github.com/LinxISA/SuperScalarModel/issues/560
 >
@@ -260,80 +260,7 @@ bash run_guard.sh vec tcvt
 **建议**：TINSERT 按「快照旧 dst + 窗口插入」实现。
 
 
----
-
-> **本轮新钉死的 gfrun-8~11 已单独提交为 `LinxISA/SuperScalarModel` #569**（https://github.com/LinxISA/SuperScalarModel/issues/569）。
-
-## gfrun-8 · range::subview 强制 cube parent，拒 spec 合法的 RowMajor Local subview
-
-**涉及接口**：range::subview（Local source 范围 carrier over TSTORE）。
-> 【归属】**SuperScalarModel**（模型越出 spec 强加 cube-parent 限制）
-
-**问题**：模型 `Block::HandleBSubview`（`isa/Block.cpp:1100`，行 49）硬性 `if (!IsCubeLayout(parent->layout)) return false`——
-RowMajor/Vec parent 一律拒。但 **pto-spec `B.SUBVIEW.asl` legality 无任何 cube 要求**（"Cube" 出现 0 次；仅约束 RegSrc 0..23、
-SubviewSizeCode 1..12），基础文档 `range-modifiers-developer-guide.md` subview 示例用泛型 `TileT tile`，
-`range-modifiers.md` 列 "Local source Subview over TSTORE = **Implemented**"。
-
-**复现**：`bash run_guard.sh tlsu range_subview`（demo 用正确小写 `range::subview(s)`，Vec parent）。
-**错误信息**：`gfrun: illegal instruction at 0x0: illegal TSTORE operand or descriptor contract`。
-**自证 demo 合规**：改用文档推荐的小写 helper `range::subview(tile)`（参数自动推导）；RowMajor Local subview 是
-spec 合法构造。**建议**：HandleBSubview 支持 RowMajor Local parent（或 spec 明确 subview 限 cube layout）。
 
 ---
 
-## gfrun-9 · TCMP 校验器拒 reinterpret_tile 视图源（其它 op 接受）
-
-**涉及接口**：TCMP + reinterpret_tile。
-> 【归属】**SuperScalarModel**（TCMP 校验器视图处理不一致）
-
-**问题**：`reinterpret_tile<int32_t>(fp32_tile)`（等位宽视图）喂 TCMP 时，模型 `ValidateCompareSelectTepl`
-（`AccumulateBlockInfo.cpp:555`）`IsCompatibleDataTile(srcs[1/2], block->dataType=S32...)` 失败，报
-"TCMP requires two compatible Tile sources"。但**同一个 reinterpret 视图喂 TANDS 正常 PASS**（`reinterpret_tile` case），
-且普通 int32 TCMP PASS。反汇编确认 API 正确发 `BSTART.TEPL TCMP, S32`（block dataType 已重贴 S32）。
-
-**复现**：`bash run_guard.sh misc reinterpret_tcmp`（崩）vs `bash run_guard.sh misc reinterpret_tile`（TANDS 视图，PASS）。
-**自证 demo 合规**：reinterpret_tile 契约明示"下游 op 看 NewDType"；TANDS 等接受，唯 TCMP 校验器漏改。
-**建议**：TCMP 校验器与 TABS/TANDS 一致地接受等位宽 reinterpret 视图源。
-
----
-
-## gfrun-10 · TGATHER / TSCATTER 执行期模型标量寄存器环形队列越界
-
-**涉及接口**：TGATHER、TSCATTER。
-> 【归属】**SuperScalarModel**（模型执行期缺陷）
-
-**问题**：demo 按文档 3 参签名 `TGATHER(dst, src, off)` / `TSCATTER(dst, src, index)`，float 数据 + S32 索引
-（golden 生成合法行索引 [0,M)），编译通过，gfrun 执行时命中
-`ASSERTION FAILED: false; Scalar T RegBackToFrontIndex: out of index range, func BackToFrontIndex, RingQ.h:81`。
-
-**复现**：`bash run_guard.sh sfu tgather` / `tscatter`。
-**自证 demo 合规**：签名/dtype/索引域均符合 `TGATHER.md`/spec（index 整数 dtype、行索引语义 source1=persistent-row-index-source）；
-TGATHER/TSCATTER 在 0.58.6 spec 为 active（有 ASL）。崩在模型自身标量 tile 寄存器环形队列 = 执行期实现缺陷。
-**建议**：修模型 TGATHER/TSCATTER 执行的寄存器索引路径。
-
----
-
-## gfrun-11 · GMOV 描述符匹配断言拒绝相同的 source/dest tile
-
-**涉及接口**：GMOV（TLSU peer 间 tile 搬移）。
-> 【归属】**SuperScalarModel**（GMOV source/dest 描述符非对称填充；GMOV 在 model pass-list 无任何用例）
-
-**问题**：`GMOV<15>(dst, peer_tid, src)` 用**两个完全相同**的 tile（`vtile_t<float,16,16>`，均已 TLOAD），
-模型仍崩：
-```
-ASSERTION FAILED: sourceOperand->size == destinationOperand->size && ... validRow/validCol/row/col ==
-"PTO 0.58 GMOV source and destination descriptors must match"
-func ExecuteTMA, file emulator/engine/TMAEngine.cpp:965
-```
-
-**复现**：`bash run_guard.sh tlsu gmov`。
-
-**自证 demo 合规 + 无条件失败**：
-- demo 完全按 `tlsu.md` 示例 `GMOV<15>(dst, peer_tid, src)`；source/dest 是**同一 tile 类型**（16×16 float），
-  都 TLOAD 初始化——描述符本应逐字段相等。**相同 tile 无法再"更匹配"**。
-- 该断言比对**本地静态描述符**（GMOV.asl bundle：单个 `B.IOT source, destination, PE_MASK, TSize`），每 PE 相同 →
-  **无条件失败，非 4-PE peer 问题**（断言在 peer 解析之前，不涉及 threadStatus[peerTid]）。
-- 探针：8×256 与 16×16、是否初始化 dest，均崩同一断言。GMOV 在 `gfrun-pass-list.txt` **0 命中**（从未验证）。
-- ⇒ 模型对 GMOV source（`operands` 里 role=`resolved-peer-source`）与 destination 的 tileInfo 非对称填充。
-
-**建议**：修模型 GMOV 的 source/dest 描述符填充，使相同 tile 通过匹配检查；补 GMOV 回归用例。
+> **注**：本轮新钉死的 gfrun-8~11（range::subview / TCMP-reinterpret / TGATHER-TSCATTER / GMOV）已拆分为独立 issue **SuperScalarModel #569**（见 `ISSUE-569-gfrun-model4.md`），不在本文件（本文件=#560，owner 已按责任仓重分类）。

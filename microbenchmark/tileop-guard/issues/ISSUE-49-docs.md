@@ -1,4 +1,4 @@
-# [docs] Linx-TileOP-API `docs/tileop-usage` 文档缺陷汇总
+# [docs] Linx-TileOP-API `docs/tileop-usage` 文档缺陷汇总  【线上 issue #49】
 
 本 issue 汇总 TileOP-API v0.58 文档看护(逐接口写最小 demo)中发现的**文档类缺陷**:签名缺失、
 示例不可编译、dtype/形状契约未写、语义未说明。均为「补文档即可解决」的问题——现象即便表现为

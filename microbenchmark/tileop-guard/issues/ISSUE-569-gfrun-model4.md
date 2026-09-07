@@ -1,4 +1,4 @@
-# [gfrun][NA] 4 类模型执行/校验缺口（demo 均已 pto-spec 合规自证）：range::subview cube 限制、TCMP 拒 reinterpret 视图、TGATHER/TSCATTER 越界、GMOV 描述符匹配
+# [gfrun][NA] 4 类模型执行/校验缺口（demo 均已 pto-spec 合规自证）：range::subview cube 限制、TCMP 拒 reinterpret 视图、TGATHER/TSCATTER 越界、GMOV 描述符匹配  【线上 issue #569】
 
 > **已提交**（2026-09-07）：`LinxISA/SuperScalarModel` **#569** — https://github.com/LinxISA/SuperScalarModel/issues/569
 
