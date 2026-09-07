@@ -17,12 +17,9 @@ using namespace pto;
 //   - C is an array of four PE matrices, each with shape [gM, gN].
 //   - B is one shared matrix with shape [gK, gN].
 //
-// Difference from matmul_multithread:
-//   - Both A and B are loaded directly into SharedTile via the new
-//     GM->Shared TLOAD (PTO v0.58 reissue), eliminating the
-//     TMOV_L2S_PUBLISH step entirely.
-//   - A is a Shared Left tile, B is a Shared Right tile.
-//   - C remains a PE-private local accumulator tile.
+// Both A and B are loaded directly into SharedTile via GM->Shared TLOAD.
+// A is a Shared Left tile, B is a Shared Right tile, and C remains a
+// PE-private local accumulator tile.
 template <typename dtype, int gM, int gN, int gK, int tM, int tN, int tK>
 void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
     constexpr int kPeNum = 4;

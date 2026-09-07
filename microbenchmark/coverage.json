@@ -2523,6 +2523,102 @@
       "status": "active"
     },
     {
+      "name": "fixp_tmatmul_signed_keep_acc_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "signed_keep_acc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_signed_acc_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "signed_acc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_signed_bias_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "signed_bias",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_unsigned_keep_acc_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "unsigned_keep_acc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_unsigned_acc_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "unsigned_acc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_unsigned_bias_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "unsigned_bias",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_mixed_float_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "mixed_float",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mixed_float_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
+      "mode": "gemv_mixed_float",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
       "name": "fixp_tmatmul_s_reqs8_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
       "operation": "TMATMUL",
@@ -2919,6 +3015,78 @@
       "status": "active"
     },
     {
+      "name": "fixp_tmatmul_groupmax_32_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "groupmax_32",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_groupmax_48_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "groupmax_48",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_groupmax_64_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "groupmax_64",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_groupmax_80_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "groupmax_80",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_groupmax_96_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "groupmax_96",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_groupmax_112_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "groupmax_112",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
       "name": "fixp_tmatmul_groupmax_128_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
       "operation": "TMATMUL",
@@ -2991,6 +3159,54 @@
       "status": "active"
     },
     {
+      "name": "fixp_tmatmul_acc_cscale_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "acc_cscale",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_mx_scale0_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "mx_scale0",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_mx_scale_a_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "mx_scale_a",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_mx_scale_b_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "mx_scale_b",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
       "name": "fixp_tmatmul_mx_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
       "operation": "TMATMUL",
@@ -3027,9 +3243,21 @@
       "status": "active"
     },
     {
-      "name": "fixp_tmatmul_gemv_M32_N32_K32_tM32_tN32_tK32",
+      "name": "fixp_tmatmul_mxacc_cscale_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
       "operation": "TMATMUL",
+      "mode": "mxacc_cscale",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
       "mode": "gemv",
       "shape": [
         32,
@@ -3041,7 +3269,7 @@
     {
       "name": "fixp_tmatmul_gemv_bias_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
-      "operation": "TMATMUL",
+      "operation": "TGEMV",
       "mode": "gemv_bias",
       "shape": [
         32,
@@ -3053,8 +3281,44 @@
     {
       "name": "fixp_tmatmul_gemv_acc_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
-      "operation": "TMATMUL",
+      "operation": "TGEMV",
       "mode": "gemv_acc",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mx_scale0_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
+      "mode": "gemv_mx_scale0",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mx_scale_a_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
+      "mode": "gemv_mx_scale_a",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mx_scale_b_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
+      "mode": "gemv_mx_scale_b",
       "shape": [
         32,
         32,
@@ -3065,7 +3329,7 @@
     {
       "name": "fixp_tmatmul_gemv_mx_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
-      "operation": "TMATMUL",
+      "operation": "TGEMV",
       "mode": "gemv_mx",
       "shape": [
         32,
@@ -3077,7 +3341,7 @@
     {
       "name": "fixp_tmatmul_gemv_mx_bias_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
-      "operation": "TMATMUL",
+      "operation": "TGEMV",
       "mode": "gemv_mx_bias",
       "shape": [
         32,
@@ -3089,7 +3353,7 @@
     {
       "name": "fixp_tmatmul_gemv_mx_acc_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
-      "operation": "TMATMUL",
+      "operation": "TGEMV",
       "mode": "gemv_mx_acc",
       "shape": [
         32,
@@ -3135,10 +3399,58 @@
       "status": "active"
     },
     {
-      "name": "fixp_tmatmul_gemv_s8_M32_N32_K32_tM32_tN32_tK32",
+      "name": "fixp_tmatmul_mxbias_s8_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
       "operation": "TMATMUL",
+      "mode": "mxbias_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_mxacc_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "mxacc_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
       "mode": "gemv_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_bias_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
+      "mode": "gemv_bias_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_acc_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
+      "mode": "gemv_acc_s8",
       "shape": [
         32,
         32,
@@ -3149,8 +3461,32 @@
     {
       "name": "fixp_tmatmul_gemv_mx_s8_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
-      "operation": "TMATMUL",
+      "operation": "TGEMV",
       "mode": "gemv_mx_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mx_bias_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
+      "mode": "gemv_mx_bias_s8",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_gemv_mx_acc_s8_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TGEMV",
+      "mode": "gemv_mx_acc_s8",
       "shape": [
         32,
         32,
@@ -3175,6 +3511,42 @@
       "family": "fixp",
       "operation": "TMATMUL",
       "mode": "s8_shared",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_trans_a_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "trans_a",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_trans_b_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "trans_b",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
+      "name": "fixp_tmatmul_trans_ab_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "trans_ab",
       "shape": [
         32,
         32,

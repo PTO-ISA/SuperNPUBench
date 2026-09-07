@@ -28,6 +28,8 @@ def main() -> int:
     parser.add_argument("--category", choices=["all", "cube", "vector", "memory", "scalar", "fixp"], default="all")
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument("--skip-run", action="store_true")
+    parser.add_argument("--res-check", action="store_true",
+                        help="build and run the in-kernel numerical checks")
     parser.add_argument("--timeout", type=float, default=90.0)
     parser.add_argument("--out", type=Path, default=REPO / "output/microbenchmark/report")
     args = parser.parse_args()
@@ -36,6 +38,7 @@ def main() -> int:
     if not args.skip_build:
         env = os.environ.copy()
         env["COMPILER_DIR"] = str(args.compiler_dir)
+        env["res_check"] = "on" if args.res_check else "off"
         build = subprocess.run(["bash", str(ROOT / "compile_all.sh"), args.category],
                                cwd=ROOT, env=env, text=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -48,7 +51,8 @@ def main() -> int:
     records = []
     for case in active:
         family, name = case["family"], case["name"]
-        matches = list((REPO / f"output/microbenchmark/{family}/elf").rglob(f"{name}.elf"))
+        output_root = REPO / ("output/res_check" if args.res_check else "output")
+        matches = list((output_root / f"microbenchmark/{family}/elf").rglob(f"{name}.elf"))
         if not matches:
             records.append({**case, "state": "COMPILE_FAIL", "elf": None})
             continue
@@ -64,7 +68,12 @@ def main() -> int:
             records.append({**case, "state": "NOT_RUN", "elf": str(elf), "diss": str(diss)})
             continue
         try:
-            proc = subprocess.run([str(args.gfrun), "-t", "1", "-f", str(elf)],
+            command = [str(args.gfrun), "-t", "1"]
+            if family == "fixp" and case.get("mode") in {
+                    "shared", "s8_shared", "trans_a", "trans_b", "trans_ab"}:
+                command += ["-s", "softcore.multiThreadNum=4"]
+            command += ["-f", str(elf)]
+            proc = subprocess.run(command,
                                   text=True, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, timeout=args.timeout)
             log = args.out / "logs" / f"{family}_{name}.log"
@@ -72,14 +81,21 @@ def main() -> int:
             log.write_text(proc.stdout)
             ended = "Reach the End of Benchmark" in proc.stdout
             r2_ok = "R2 = 0" in proc.stdout
-            state = "PASS" if proc.returncode == 0 and ended and r2_ok else "RUN_FAIL"
+            if proc.returncode == 0 and ended and r2_ok:
+                state = "PASS"
+            elif args.res_check and ended and not r2_ok:
+                state = "NUMERIC_FAIL"
+            else:
+                state = "RUN_FAIL"
             records.append({**case, "state": state, "elf": str(elf), "diss": str(diss),
-                            "returncode": proc.returncode, "log": str(log)})
+                            "returncode": proc.returncode, "command": command,
+                            "log": str(log)})
         except subprocess.TimeoutExpired:
             records.append({**case, "state": "TIMEOUT", "elf": str(elf), "diss": str(diss)})
     counts = Counter(item["state"] for item in records)
     payload = {"generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                "compiler_dir": str(args.compiler_dir), "gfrun": str(args.gfrun),
+               "res_check": args.res_check,
                "build_returncode": build_rc, "counts": dict(counts), "results": records,
                "unsupported": coverage["unsupported"]}
     (args.out / "result.json").write_text(json.dumps(payload, indent=2) + "\n")
@@ -89,7 +105,7 @@ def main() -> int:
     rows.extend(f"| {r['family']} | {r['name']} | {r['state']} |" for r in records)
     (args.out / "result.md").write_text("\n".join(rows) + "\n")
     print(json.dumps(dict(counts), sort_keys=True))
-    bad = {"COMPILE_FAIL", "DISS_MISSING_OPCODE", "RUN_FAIL", "TIMEOUT"}
+    bad = {"COMPILE_FAIL", "DISS_MISSING_OPCODE", "NUMERIC_FAIL", "RUN_FAIL", "TIMEOUT"}
     return 1 if build_rc or any(state in counts for state in bad) else 0
 
 

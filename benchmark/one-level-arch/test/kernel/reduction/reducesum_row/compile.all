@@ -3,6 +3,10 @@
 
 : "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
 
+# Row sum through B.SUBVIEW and B.ASSEMBLE range modifiers.
+make TESTCASE=rowsum_subview COMPILER_DIR=$COMPILER_DIR \
+    ROWSUM_ROWS=32 ROWSUM_COLS=32 ROWSUM_PARTS=4 diss
+
 # Large matrix, float
 make TESTCASE=reducesum_row COMPILER_DIR=$COMPILER_DIR DType=float tM_s=16 tN_s=128 \
     gM_s=16 gN_s=8192 diss

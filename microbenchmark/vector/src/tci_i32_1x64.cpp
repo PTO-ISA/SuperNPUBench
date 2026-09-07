@@ -4,10 +4,16 @@
 int main() {
     constexpr int M = 1, N = 64;
     int32_t a[64], b[64], d[64], c[64];
-    fill_seq(a, 64); fill_seq(b, 64); fill_seq(d, 64); zero(c, 64);
+    fill_const(a, 64, (int32_t)2); fill_const(b, 64, (int32_t)1);
+    fill_const(d, 64, (int32_t)3); zero(c, 64);
     BENCHSTART;
     int32_t s = (int32_t)7;
     bench_scalar_bcast<int32_t,M,N>(c,s,[](auto& dst,auto& sc){ TCI(dst,sc); });
     BENCHEND;
+#ifdef RES_CHECK
+    int32_t ref[64]; zero(ref, 64); for(int i=0;i<M*N;++i) ref[i]=(int32_t)(s+i);
+    return verify(c,ref,64,(int32_t)verify_epsilon<int32_t>(),(int32_t)verify_epsilon<int32_t>()) ? 0 : 1;
+#else
     return 0;
+#endif
 }

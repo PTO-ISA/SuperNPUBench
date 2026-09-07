@@ -4,9 +4,15 @@
 int main() {
     constexpr int M = 16, N = 16;
     int32_t a[256], b[256], d[256], c[256];
-    fill_seq(a, 256); fill_seq(b, 256); fill_seq(d, 256); zero(c, 256);
+    fill_const(a, 256, (int32_t)2); fill_const(b, 256, (int32_t)1);
+    fill_const(d, 256, (int32_t)3); zero(c, 256);
     BENCHSTART;
     bench_unary<int32_t,M,N>(c,a,[](auto& dst,auto& s){ TNOT(dst,s); });
     BENCHEND;
+#ifdef RES_CHECK
+    int32_t ref[256]; zero(ref, 256); for(int i=0;i<M*N;++i) ref[i]=(int32_t)(~a[i]);
+    return verify(c,ref,256,(int32_t)verify_epsilon<int32_t>(),(int32_t)verify_epsilon<int32_t>()) ? 0 : 1;
+#else
     return 0;
+#endif
 }

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+make TESTCASE=concat_gather COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=concat_scatter COMPILER_DIR="$COMPILER_DIR" diss

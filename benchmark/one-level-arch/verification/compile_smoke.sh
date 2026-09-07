@@ -1,6 +1,6 @@
 #!/bin/bash
 # SuperNPUBench — 精简测试编译脚本（芯片核心功能验证）
-# 15 个用例覆盖：CUBE/TEPL/TLSU/GPR + 多线程 + 全部 ISA 族
+# 16 个用例覆盖：CUBE/TEPL/TLSU/GPR + 多线程 + 全部 ISA 族
 
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 export COMPILER_DIR
@@ -93,6 +93,10 @@ smoke "multi_thread/vec" \
 # --- 15. multi_thread/fa (CUBE+TEPL: 多线程 FA) ---
 smoke "multi_thread/fa" \
     make -C "$REPO_ROOT/test/kernel/multi_thread/fa" TESTCASE=fa_2d_unroll_gmma COMPILER_DIR="$COMPILER_DIR" Sq=128 Skv=64 Tm=16 Tk=16 clean all
+
+# --- 16. multi_thread/element_wise/gelu (SPMD: 连续分片) ---
+smoke "multi_thread/element_wise/gelu" \
+    make -C "$REPO_ROOT/test/kernel/multi_thread/element_wise/gelu" TESTCASE=gelu COMPILER_DIR="$COMPILER_DIR" clean all
 
 echo ""
 echo "=========================================="

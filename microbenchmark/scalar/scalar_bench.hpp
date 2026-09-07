@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cmath>
 #include "benchmark.h"
+#include "bench_utils.hpp"
 
 constexpr int SCALAR_N = 1024;    // loop trip count
 constexpr int SCALAR_MASK = 15;   // b index window (16 entries)
@@ -72,6 +73,32 @@ inline OUT bench_cv(const IN *b) {
         a7 = (OUT)b[(i * 8 + 7) & SCALAR_MASK];
     }
     return (OUT)(a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7);
+}
+
+// Kept out of line and volatile so the compiler cannot common-subexpression
+// eliminate the untimed oracle with the instruction stream under test.
+template <typename T, int N = SCALAR_N>
+__attribute__((noinline)) T reference_latency(const T *a, const T *b, auto op) {
+    volatile T acc = a[0];
+    for (int i = 0; i < N; ++i) acc = op((T)acc, b[i & SCALAR_MASK]);
+    return (T)acc;
+}
+
+template <typename T, int N = SCALAR_N>
+__attribute__((noinline)) T reference_throughput(const T *a, const T *b, auto op) {
+    volatile T a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3];
+    volatile T a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7];
+    for (int i = 0; i < N; ++i) {
+        a0 = op((T)a0, b[(i * 8 + 0) & SCALAR_MASK]);
+        a1 = op((T)a1, b[(i * 8 + 1) & SCALAR_MASK]);
+        a2 = op((T)a2, b[(i * 8 + 2) & SCALAR_MASK]);
+        a3 = op((T)a3, b[(i * 8 + 3) & SCALAR_MASK]);
+        a4 = op((T)a4, b[(i * 8 + 4) & SCALAR_MASK]);
+        a5 = op((T)a5, b[(i * 8 + 5) & SCALAR_MASK]);
+        a6 = op((T)a6, b[(i * 8 + 6) & SCALAR_MASK]);
+        a7 = op((T)a7, b[(i * 8 + 7) & SCALAR_MASK]);
+    }
+    return (T)(a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7);
 }
 
 #endif

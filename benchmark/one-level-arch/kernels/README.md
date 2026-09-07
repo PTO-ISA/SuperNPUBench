@@ -88,8 +88,14 @@ matmul_mask<float, M, N, K, tM, tN, tK>(dst, src0, src1);
 
 - Matmul: shared, shared-B-reuse and low-precision cooperative variants.
 - FlashAttention: cooperative GMMA implementation.
-- Vector: TADD and TROWSUM with row ranges partitioned across four PEs.
-- RMSNorm: dynamic and static A-dimension partitioning across four PEs.
+- Element-wise and data movement: TADD, GELU, Broadcast, Gather and Concat.
+- Reduction: TROWSUM plus row-wise Cumsum, Max, Product and Sum.
+- Normalization: RMSNorm and binary-accumulation RMSNorm.
+- Structured operators: 1x1 Conv2D output-block partitioning and 2D
+  Transpose row-block partitioning.
+
+See the [four-PE coverage and limitations](multi_thread/README.md) for the
+exact headers, partition rules and gfrun status.
 
 ## See Also
 - [Top-level README](../../README.md)

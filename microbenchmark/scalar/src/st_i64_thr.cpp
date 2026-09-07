@@ -7,5 +7,8 @@ int main() {
     bench_store<int64_t>(out, val);
     BENCHEND;
     volatile int64_t sink = out[0];
+#ifdef RES_CHECK
+    for (int i = 0; i < 16; ++i) if (out[i] != val) return 1;
+#endif
     return 0;
 }

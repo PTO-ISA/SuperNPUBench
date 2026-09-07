@@ -4,9 +4,15 @@
 int main() {
     constexpr int M = 16, N = 16;
     __half a[256], b[256], d[256], c[256];
-    fill_seq(a, 256); fill_seq(b, 256); fill_seq(d, 256); zero(c, 256);
+    fill_const(a, 256, (__half)2); fill_const(b, 256, (__half)1);
+    fill_const(d, 256, (__half)3); zero(c, 256);
     BENCHSTART;
     bench_unary<__half,M,N>(c,a,[](auto& dst,auto& s){ TABS(dst,s); });
     BENCHEND;
+#ifdef RES_CHECK
+    __half ref[256]; zero(ref, 256); for(int i=0;i<M*N;++i) ref[i]=(__half)(std::fabs((double)a[i]));
+    return verify(c,ref,256,(__half)verify_epsilon<__half>(),(__half)verify_epsilon<__half>()) ? 0 : 1;
+#else
     return 0;
+#endif
 }

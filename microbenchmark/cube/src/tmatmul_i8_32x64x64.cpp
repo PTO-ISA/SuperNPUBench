@@ -3,10 +3,11 @@
 // TMATMUL (matmul) i8 32x64x64
 int main() {
     constexpr int M = 32, N = 64, K = 64;
-    int8_t a[M*K], b[K*N];
-    int32_t bias[N], initial[M*N], c[M*N], ref[M*N];
-    fill_seq(a, M*K); fill_seq(b, K*N); fill_seq(bias, N);
-    fill_const(initial, M*N, (int32_t)1); zero(c, M*N); zero(ref, M*N);
+    static int8_t a[M*K], b[K*N];
+    static int32_t bias[N], initial[M*N], c[M*N], ref[M*N];
+    fill_const(a, M*K, (int8_t)1); fill_const(b, K*N, (int8_t)1);
+    fill_const(bias, N, (int32_t)1); fill_const(initial, M*N, (int32_t)1);
+    zero(c, M*N); zero(ref, M*N);
     BENCHSTART;
     bench_matmul<int8_t,M,N,K>(c,a,b);
     BENCHEND;

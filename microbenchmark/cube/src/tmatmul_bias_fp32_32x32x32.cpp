@@ -3,10 +3,11 @@
 // TMATMUL_BIAS (matmul_bias) fp32 32x32x32
 int main() {
     constexpr int M = 32, N = 32, K = 32;
-    float a[M*K], b[K*N];
-    float bias[N], initial[M*N], c[M*N], ref[M*N];
-    fill_seq(a, M*K); fill_seq(b, K*N); fill_seq(bias, N);
-    fill_const(initial, M*N, (float)1); zero(c, M*N); zero(ref, M*N);
+    static float a[M*K], b[K*N];
+    static float bias[N], initial[M*N], c[M*N], ref[M*N];
+    fill_const(a, M*K, (float)0.25); fill_const(b, K*N, (float)0.25);
+    fill_const(bias, N, (float)1); fill_const(initial, M*N, (float)1);
+    zero(c, M*N); zero(ref, M*N);
     BENCHSTART;
     bench_matmul_bias<float,M,N,K>(c,a,b,bias);
     BENCHEND;

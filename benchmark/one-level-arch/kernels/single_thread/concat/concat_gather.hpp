@@ -27,7 +27,9 @@ void concat_gather(
     DType *in_ptr,
     DType *out_ptr,
     size_t *in_shape,
-    size_t *out_shape
+    size_t *out_shape,
+    // Global flattened index represented by out_ptr[0].
+    uint32_t output_base_start = 0
 )
 {
     constexpr int kFullTiles = gOM / tM;
@@ -42,7 +44,7 @@ void concat_gather(
     InputGlobal input_global(in_ptr);
     OutputIterator output_iter(out_ptr);
 
-    uint32_t output_base = 0;
+    uint32_t output_base = output_base_start;
     for (int tile_index = 0; tile_index < kFullTiles; ++tile_index) {
         auto output_global = output_iter(0, tile_index);
         DataTile output_tile;

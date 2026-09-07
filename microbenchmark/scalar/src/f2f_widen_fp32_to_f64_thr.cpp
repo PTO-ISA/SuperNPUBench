@@ -8,5 +8,12 @@ int main() {
     double r = bench_cv<float, double>(b);
     BENCHEND;
     sink = r;
+#ifdef RES_CHECK
+    double ref = (double)0;
+    for (int lane = 0; lane < 8; ++lane)
+        ref = (double)(ref + (double)b[(1023 * 8 + lane) & 15]);
+    return verify_scalar(r, ref) ? 0 : 1;
+#else
     return 0;
+#endif
 }

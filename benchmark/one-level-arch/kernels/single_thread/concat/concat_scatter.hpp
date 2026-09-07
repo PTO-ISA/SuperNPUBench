@@ -30,7 +30,9 @@ void concat_scatter(
     DType *in_ptr,
     DType *out_ptr,
     size_t *in_shape,
-    size_t *out_shape
+    size_t *out_shape,
+    // Global flattened index represented by in_ptr[0].
+    uint32_t input_base_start = 0
 )
 {
     constexpr int kFullTiles = gIM / tM;
@@ -46,7 +48,7 @@ void concat_scatter(
     OutputGlobal output_global(out_ptr);
     InputIterator input_iter(in_ptr);
 
-    uint32_t input_base = 0;
+    uint32_t input_base = input_base_start;
     for (int tile_index = 0; tile_index < kFullTiles; ++tile_index) {
         auto input_tile_global = input_iter(0, tile_index);
         DataTile data_tile;

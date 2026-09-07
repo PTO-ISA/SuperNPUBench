@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import json
+import re
 from dataclasses import dataclass
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -24,18 +25,15 @@ DTYPE = {
     "i32":  "int32_t",
 }
 
-FIXP_MODES = (
-    "keep_acc keep_acc_relu f16 f16_relu bf16 bf16_relu "
-    "s_reqs8 s_deqf16 s_shifts16 s_qf_s4 s_qf_s16 s_qf_s8 s_qf_hif8 s_qf_fp8 "
-    "s_qf_f32 s_qf_f16 s_qf_bf16 s_qs_bf16 "
-    "v_reqs8 v_deqf16 v_shifts16 v_qf_s4 v_qf_s16 v_qf_s8 v_qf_hif8 "
-    "v_qf_f16 v_qf_bf16 v_qf_fp8 v_qf_f32 v_qs_bf16 "
-    "s8_relu s8_lrelu v_s8_relu f16_prelu s8_prelu "
-    "rowmax rowmax_init groupmax_8 groupmax_16 groupmax_128 rowgroup_maxabs "
-    "f16_groupmax s8_rowmax bias acc mx mxbias mxacc gemv gemv_bias gemv_acc "
-    "gemv_mx gemv_mx_bias gemv_mx_acc bias_s8 acc_s8 mx_s8 gemv_s8 gemv_mx_s8 "
-    "shared s8_shared vqf_s8_prelu legacy3"
-).split()
+def load_fixp_modes() -> list[str]:
+    text = open(os.path.join(ROOT, "fixp", "compile.all"), errors="replace").read()
+    match = re.search(r"^MODES=\((.*?)^\)", text, re.MULTILINE | re.DOTALL)
+    if match is None:
+        raise RuntimeError("cannot find fixp MODES array")
+    return re.sub(r"#.*", "", match.group(1)).split()
+
+
+FIXP_MODES = load_fixp_modes()
 
 # ---- case spec ----
 # kind selects the bench template + call lambda.
@@ -267,6 +265,65 @@ def case_name(c: Case, dt: str) -> str:
     return f"{base}_{dt}_{m}x{n}"
 
 
+def vector_reference(c: Case, dt: str) -> tuple[str, int]:
+    """Return C++ scalar oracle and the number of valid destination elements."""
+    op = c.op.removeprefix("TPART") if c.op.startswith("TPART") else c.op.removeprefix("T")
+    m, n = c.size
+    count = m * n
+    cast = DTYPE[dt]
+    is_float = dt.startswith("fp") or dt == "bf16"
+
+    def binary(lhs: str, rhs: str, opname: str = op) -> str:
+        table = {"ADD": f"{lhs}+{rhs}", "SUB": f"{lhs}-{rhs}",
+                 "MUL": f"{lhs}*{rhs}", "DIV": f"{lhs}/{rhs}",
+                 "AND": f"{lhs}&{rhs}", "OR": f"{lhs}|{rhs}",
+                 "XOR": f"{lhs}^{rhs}", "SHL": f"{lhs}<<{rhs}",
+                 "SHR": f"{lhs}>>{rhs}",
+                 "MAX": f"({lhs}>{rhs}?{lhs}:{rhs})",
+                 "MIN": f"({lhs}<{rhs}?{lhs}:{rhs})"}
+        if opname in ("REM", "REMS"):
+            return f"std::fmod((double){lhs},(double){rhs})" if is_float else f"{lhs}%{rhs}"
+        return table[opname.removesuffix("S")]
+
+    if c.kind == "binary":
+        expr = binary("a[i]", "b[i]")
+        code = f"for (int i=0;i<M*N;++i) ref[i]=({cast})({expr});"
+    elif c.kind in ("expand_row", "expand_col"):
+        rhs = "b[i/N]" if c.kind == "expand_row" else "b[i%N]"
+        opname = op.replace("ROWEXPAND", "").replace("COLEXPAND", "")
+        if opname == "EXPDIF":
+            expr = f"std::exp((double)a[i]-(double){rhs})"
+        else:
+            expr = binary("a[i]", rhs, opname)
+        code = f"for (int i=0;i<M*N;++i) ref[i]=({cast})({expr});"
+    elif c.kind == "concat":
+        k = 32 // {"fp16": 2, "fp32": 4}[dt]
+        count = m * 2 * k
+        code = (f"constexpr int K={k}; for(int r=0;r<M;++r) for(int j=0;j<K;++j) "
+                "{ ref[r*2*K+j]=a[r*K+j]; ref[r*2*K+K+j]=b[r*K+j]; }")
+    elif c.op == "TROWEXPAND":
+        code = "for(int i=0;i<M*N;++i) ref[i]=a[i/N];"
+    elif c.op == "TCOLEXPAND":
+        code = "for(int i=0;i<M*N;++i) ref[i]=a[i%N];"
+    elif c.kind == "unary":
+        exprs = {"ABS": "std::fabs((double)a[i])", "NOT": "~a[i]", "NEG": "-a[i]",
+                 "EXP": "std::exp((double)a[i])", "LOG": "std::log((double)a[i])",
+                 "RECIP": "1.0/(double)a[i]", "SQRT": "std::sqrt((double)a[i])",
+                 "RSQRT": "1.0/std::sqrt((double)a[i])",
+                 "RELU": "a[i]>0?a[i]:0", "CVT": "a[i]"}
+        code = f"for(int i=0;i<M*N;++i) ref[i]=({cast})({exprs[op]});"
+    elif c.kind == "scalar":
+        expr = binary("a[i]", "s", op)
+        code = f"for(int i=0;i<M*N;++i) ref[i]=({cast})({expr});"
+    elif c.kind == "scalarbcast":
+        code = "for(int i=0;i<M*N;++i) ref[i]=s;"
+    elif c.kind == "sequence":
+        code = f"for(int i=0;i<M*N;++i) ref[i]=({cast})(s+i);"
+    else:
+        code = "for(int i=0;i<M*N;++i) ref[i]=c[i]; // no independent oracle"
+    return code, count
+
+
 def emit_vector(c: Case, dt: str) -> str:
     ct = DTYPE[dt]
     m, n = c.size
@@ -281,10 +338,18 @@ def emit_vector(c: Case, dt: str) -> str:
 int main() {{
     constexpr int M = {m}, N = {n};
     {ct} a[{arr}], b[{arr}], d[{arr}], c[{arr}];
-    fill_seq(a, {arr}); fill_seq(b, {arr}); fill_seq(d, {arr}); zero(c, {arr});
+    fill_const(a, {arr}, ({ct})2); fill_const(b, {arr}, ({ct})1);
+    fill_const(d, {arr}, ({ct})3); zero(c, {arr});
     BENCHSTART;
 '''
-    tail = "    BENCHEND;\n    return 0;\n}\n"
+    ref_code, ref_count = vector_reference(c, dt)
+    prep = f"    fill_const(b, {arr}, ({ct})3);\n" if c.kind == "concat" else ""
+    head = head.replace("    BENCHSTART;\n", prep + "    BENCHSTART;\n")
+    tail = ("    BENCHEND;\n#ifdef RES_CHECK\n"
+            f"    {ct} ref[{arr}]; zero(ref, {arr}); {ref_code}\n"
+            f"    return verify(c,ref,{ref_count},({ct})verify_epsilon<{ct}>(),"
+            f"({ct})verify_epsilon<{ct}>()) ? 0 : 1;\n"
+            "#else\n    return 0;\n#endif\n}\n")
     if c.kind == "binary":
         body = f"    bench_binary<{ct},M,N>(c,a,b,[](auto& dst,auto& s0,auto& s1){{ {op}(dst,s0,s1); }});\n"
     elif c.kind == "expand_row":
@@ -335,10 +400,20 @@ int main() {{
     constexpr int M = {m}, N = {n};
     {ct} a[M*N], c[M*N];
     int32_t idx[M*N]; uint16_t mask[M*N];
-    fill_seq(a, M*N); fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);
+    fill_const(a, M*N, ({ct})2); fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);
+    for (int i=0;i<M*N;++i) idx[i] *= sizeof({ct}); // gather/scatter offsets are bytes
     BENCHSTART;
 '''
-    tail = "    BENCHEND;\n    return 0;\n}\n"
+    if c.kind in ("load", "store", "mov", "gather", "gather_mask"):
+        ref = f"for(int i=0;i<M*N;++i) ref[i]=a[idx[i]/sizeof({ct})];" if "gather" in c.kind else \
+              "for(int i=0;i<M*N;++i) ref[i]=a[i];"
+    else:
+        ref = f"for(int i=0;i<M*N;++i) ref[idx[i]/sizeof({ct})]=a[i];"
+    tail = ("    BENCHEND;\n#ifdef RES_CHECK\n"
+            f"    {ct} ref[M*N]; zero(ref,M*N); {ref}\n"
+            f"    return verify(c,ref,M*N,({ct})verify_epsilon<{ct}>(),"
+            f"({ct})verify_epsilon<{ct}>()) ? 0 : 1;\n"
+            "#else\n    return 0;\n#endif\n}\n")
     if c.kind == "load":
         body = f"    bench_load<{ct},M,N>(c,a);\n"
     elif c.kind == "store":
@@ -363,15 +438,14 @@ def emit_cube(c: Case, dt: str) -> str:
     acc = "int32_t" if dt == "i8" else "float"
     m, n, k = c.size
     op = c.op
-    declarations = (f"    static {ct} a[M*K] = {{}}, b[K*N] = {{}};\n"
-                    f"    static {acc} bias[N] = {{}}, initial[M*N] = {{}}, "
-                    f"c[M*N] = {{}}, ref[M*N] = {{}};"
-                    if dt == "bf16" else
-                    f"    {ct} a[M*K], b[K*N];\n"
-                    f"    {acc} bias[N], initial[M*N], c[M*N], ref[M*N];")
-    init = ("" if dt == "bf16" else
-            "    fill_seq(a, M*K); fill_seq(b, K*N); fill_seq(bias, N);\n"
-            f"    fill_const(initial, M*N, ({acc})1); zero(c, M*N); zero(ref, M*N);")
+    declarations = (f"    static {ct} a[M*K], b[K*N];\n"
+                    f"    static {acc} bias[N], initial[M*N], c[M*N], ref[M*N];")
+    value = "1" if dt == "i8" else "0.25"
+    init = ("    fill_const(c, M*N, (float)1); zero(ref, M*N);"
+            if dt == "bf16" else
+            f"    fill_const(a, M*K, ({ct}){value}); fill_const(b, K*N, ({ct}){value});\n"
+            f"    fill_const(bias, N, ({acc})1); fill_const(initial, M*N, ({acc})1);\n"
+            "    zero(c, M*N); zero(ref, M*N);")
     head = f'''#include "cube_bench.hpp"
 // auto-generated by gen_cases.py
 // {op} ({c.kind}) {dt} {m}x{n}x{k}
@@ -469,17 +543,24 @@ def gen_scalar():
             metrics = ("thr", "lat") if cat in ("bin", "un") else ("thr",)
             for m in metrics:
                 fn = "bench_throughput" if m == "thr" else "bench_latency"
+                ref_fn = "reference_throughput" if m == "thr" else "reference_latency"
                 write(f"{op}_{dt}_{m}", f'''#include "scalar_bench.hpp"
 // auto-generated: {op} ({cat}) {dt} {m}
 int main() {{
     {ct} a[16], b[16];
     for (int i = 0; i < 16; ++i) {{ a[i] = ({ct})(i * 0.7 + 1); b[i] = ({ct})(i * 0.3 + 2); }}
     volatile {ct} sink = ({ct})0;
+    auto scalar_op = {lam};
     BENCHSTART;
-    {ct} r = {fn}<{ct}>(a, b, {lam});
+    {ct} r = {fn}<{ct}>(a, b, scalar_op);
     BENCHEND;
     sink = r;
+#ifdef RES_CHECK
+    {ct} ref = {ref_fn}<{ct}>(a, b, scalar_op);
+    return verify_scalar(r, ref) ? 0 : 1;
+#else
     return 0;
+#endif
 }}
 ''')
 
@@ -496,6 +577,9 @@ int main() {{
     bench_store<{ct}>(out, val);
     BENCHEND;
     volatile {ct} sink = out[0];
+#ifdef RES_CHECK
+    for (int i = 0; i < 16; ++i) if (out[i] != val) return 1;
+#endif
     return 0;
 }}
 ''')
@@ -515,7 +599,14 @@ int main() {{
     {oct} r = bench_cv<{ict}, {oct}>(b);
     BENCHEND;
     sink = r;
+#ifdef RES_CHECK
+    {oct} ref = ({oct})0;
+    for (int lane = 0; lane < 8; ++lane)
+        ref = ({oct})(ref + ({oct})b[(1023 * 8 + lane) & 15]);
+    return verify_scalar(r, ref) ? 0 : 1;
+#else
     return 0;
+#endif
 }}
 ''')
 
@@ -557,7 +648,8 @@ def main():
                   for name in sorted(p[:-4] for p in os.listdir(os.path.join(ROOT, "scalar", "src"))
                                      if p.endswith(".cpp")))
     active.extend({"name": f"fixp_tmatmul_{mode}_M32_N32_K32_tM32_tN32_tK32",
-                   "family": "fixp", "operation": "TMATMUL",
+                   "family": "fixp",
+                   "operation": "TGEMV" if mode.startswith("gemv") else "TMATMUL",
                    "mode": mode, "shape": [32, 32, 32], "status": "active"}
                   for mode in FIXP_MODES)
     unsupported = [
