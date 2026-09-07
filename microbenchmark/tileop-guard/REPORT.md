@@ -6,7 +6,7 @@
 |--------|------|------|------|
 | 2026-09-01 | [`REPORT_20260901.md`](REPORT_20260901.md) | 三态 | 125 = 52 精度PASS / 47 run-only / 12 编译失败 / 14 run-fail;据此提 docs/gfrun/linx 三份 issue |
 | 2026-09-03 | [`REPORT_20260903.md`](REPORT_20260903.md) | 四态 | 126 = 101 精度正确 / 11 精度失败(witness) / 4 run-only / 2 编译失败 / 8 run-fail |
-| 2026-09-05 | [`REPORT_20260905.md`](REPORT_20260905.md) | 四态 | 工具链升 ops-20260904;125 已发布 case = 76 精度正确 / 13 精度失败 / 4 run-only / 3 编译失败 / 29 run-fail;全 case demo+golden 严格审计(唯一 golden 错=tcvt RNE→RTZ,原假 PASS 掩盖模型舍入缺口,已订正为 witness);gfrun issue 7 条(B.FPATR None、行列归约 skew、TINVALID selector、pre-quant 丢 FP19 scale、TCVT 舍入、TQUANT 忽略 mult/zp、TINSERT 不保留 base)已提 SuperScalarModel #560 + linx tgpr2t 后端已提 llvm-project #87;mgather_cas 证为 demo bug 已修 PASS |
+| 2026-09-05 | [`REPORT_20260905.md`](REPORT_20260905.md) | 四态 | 工具链升 ops-20260904;125 已发布 case = 76 精度正确 / 13 精度失败 / 4 run-only / 3 编译失败 / 29 run-fail;全 case demo+golden 严格审计(唯一 golden 错=tcvt RNE→RTZ,原假 PASS 掩盖模型舍入缺口,已订正为 witness);gfrun issue 提 SuperScalarModel #560 + tgpr2t 提 llvm-project #87;**2026-09-06 owner 重分类**:7 项拆三类——API(gfrun-1/2→Linx-TileOP-API #62/#63)、模型保留(gfrun-3/4/5 tpack族/FP19 scale/TCVT RTZ)、已退休伪缺口(gfrun-6/7 TQUANT/TINSERT + 另 6 op);#87(TGPR2T)归 llvm 后端正确;mgather_cas 证为 demo bug 已修 PASS |
 
 - **三态 → 四态**:2026-09-03 起把「精度失败」独立成层。golden 改钉 pto-spec **预期语义**,实现
   背离自然落精度失败,作模型缺口 witness。详见各文件开头判据说明。

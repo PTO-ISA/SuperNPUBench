@@ -1,6 +1,21 @@
-# [gfrun][NA] ops-20260904 模型缺口汇总（7 项）：B.FPATR None、行列归约 skew、TINVALID layout selector、pre-quant 丢 FP19 scale、TCVT 舍入、TQUANT 忽略 mult/zp、TINSERT 不保留 base
+# [gfrun][NA] ops-20260904 缺口汇总（7 项，已按 owner 回复重分类责任仓）
 
 > **已提交**（2026-09-05）：`LinxISA/SuperScalarModel` **#560** — https://github.com/LinxISA/SuperScalarModel/issues/560
+>
+> **⚠️ 2026-09-06 owner 重分类（权威）**：本汇总**不能作为七项全部改 gfrun 的依据**。按 PTO-SPEC 0.58.6
+> owning ASL + 当前 API header 复核，责任边界拆三类——本文件下方各条已就地标注 `【归属】`：
+>
+> | 项 | 真实缺口? | 责任仓 | 说明 |
+> |---|---|---|---|
+> | gfrun-1 B.FPATR RNE | ✅ 真 | **Linx-TileOP-API #62** | API 矩阵宏固定发 RNE；spec 要 PreQuant=0→RMode=NONE。模型不应放宽 |
+> | gfrun-2 归约几何 | ✅ 真 | **Linx-TileOP-API #63** | API 把 destination 几何写进 B.DIM；spec 要 B.DIM 匹配 source 几何 |
+> | gfrun-3 TPACK/TPERMUTE/TSHUF/TUNPACK | ✅ 真 | **SuperScalarModel（保留）** | active selector/catalog 解码，按 0.58.6 补模型回归 |
+> | gfrun-4 pre-quant 丢 FP19 scale | ✅ 真 | **SuperScalarModel（保留）** | Matrix pre-quant 未消费 FP19 scale |
+> | gfrun-5 TCVT float→int | ✅ 真 | **SuperScalarModel（保留）** | 默认 RTZ 实现（模型现做 RNE） |
+> | gfrun-6 TQUANT | ⚠️ 伪 | **已退休** | PTO-SPEC `edcbd8b` 退休；应 API/Bench fail-closed，非模型语义 |
+> | gfrun-7 TINSERT | ⚠️ 伪 | **已退休** | 同上（退休 8 op：TCONCAT/TEXTRACT/TINSERT/THISTOGRAM/TQUANT/TDEQUANT/TSORT/TMRGSORT） |
+>
+> owner 建议：勿以本 issue 为由用一个模型 PR 同时改 API 契约 / 模型 active 指令 / 退休兼容路径。
 
 接口按文档正确写、编译通过，但 gfrun 侧崩溃或数值错误。每项均已用 **release 自带参考源现编复现** 或 **model 源码
 定位 / 反汇编隔离 / 数值探针**自证——排除 kernel 侧 dtype/shape/layout/operand-role 写错。编译器后端类缺陷
@@ -41,6 +56,7 @@ reducemax 参考 kernel（PR 分支基线较旧不含）。用于佐证「即便
 ---
 
 ## gfrun-1 · B.FPATR None：CUBE matmul 全族 + FIXP float 输出族崩
+> 【归属】**Linx-TileOP-API #62**（API 矩阵宏发 RNE 违反 spec；模型断言正确，非模型缺口）
 
 **涉及接口**：TMATMUL / TMATMUL_ACC / TMATMUL_BIAS / TMATMUL_MX / TMATMUL_ROWMAX / TGEMV / fixpipe(keep_acc/bias/acc/cscale/rowmax/groupmax)。
 
@@ -78,6 +94,7 @@ gfrun: illegal instruction: ASSERTION FAILED:
 ---
 
 ## gfrun-2 · 行/列归约 header↔model 维度 skew
+> 【归属】**Linx-TileOP-API #63**（API 把 destination 几何写进 B.DIM；非模型缺口）
 
 **涉及接口**：TROWMAX/MIN/SUM/PROD/ARGMAX/ARGMIN、TCOLMAX/MIN/SUM/PROD/ARGMAX。
 
@@ -110,6 +127,7 @@ Branch-1 应发**源**归约维度到 lb0/lb1，或 model 改按 dst 维度解�
 ---
 
 ## gfrun-3 · TINVALID 保留/删除选择子 —— 0.58.5 layout 算子
+> 【归属】**SuperScalarModel 保留**（active selector/catalog 解码，按 0.58.6 补模型回归）
 
 **涉及接口**：TPACK / TPERMUTE / TSHUF / TUNPACK。
 
@@ -140,6 +158,7 @@ U32 同几何 + control=0(UP/seg0/SELF)——均按 `*.md` 签名与约束写。
 ---
 
 ## gfrun-4 · 矩阵 pre-quant 丢弃 FP19 scale（只保留 offset / LReLU slope）
+> 【归属】**SuperScalarModel 保留**（Matrix pre-quant 未消费 FP19 scale）
 
 **涉及接口**：TMATMUL + `fixp::s8` / 标量·向量量化后处理（PreQuantMode QF322S8Pre=24、VQF322S8Pre=23、F16 量化等）。
 
@@ -173,6 +192,7 @@ bash run_guard.sh fixp lrelu            # 正半轴丢 scale=offset、负半轴�
 ---
 
 ## gfrun-5 · TCVT float→int 用 RNE，违反规范默认 RTZ
+> 【归属】**SuperScalarModel 保留**（TCVT float→int 默认应 RTZ，模型现做 RNE）
 
 **涉及接口**：TCVT（fp32→s32，默认 RMode=0）。
 
@@ -197,6 +217,7 @@ bash run_guard.sh vec tcvt
 ---
 
 ## gfrun-6 · TQUANT 静默忽略 multiplier / zeroPoint
+> 【归属】**已退休**（PTO-SPEC edcbd8b；应 API/Bench fail-closed，非模型缺口——本条作废）
 
 **涉及接口**：TQUANT。
 
@@ -219,6 +240,7 @@ bash run_guard.sh vec tcvt
 ---
 
 ## gfrun-7 · TINSERT 不保留 base、只写部分窗口
+> 【归属】**已退休**（PTO-SPEC edcbd8b；应 fail-closed，非模型缺口——本条作废）
 
 **涉及接口**：TINSERT。
 
