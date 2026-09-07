@@ -1,0 +1,45 @@
+#!/bin/bash
+# DynamicMxQuant solution 一键构建：为 8 个验证通过的正式 kernel 现场生成 golden
+# （gen_dynamic_mx_quant_data.py，无需迁移 .bin）并用 res_check=on 编译。
+#
+#   export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
+#   ./compile.all
+#
+# 精度验证（gfrun + 逐字节比对）见 src/run_precision_check.py。
+# golden 落 ROOT/compare/dynamic_mx_quant_<driver>/，与 ELF basename 同名，供
+# dynamic_mx_quant_data_compare.py 按 basename 取用。4-PE 变体运行须
+#   gfrun -s softcore.multiThreadNum=4。
+set -euo pipefail
+: "${COMPILER_DIR:?Set COMPILER_DIR to the linx_blockisa_llvm_musl bin directory}"
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SRC="$HERE/src"
+ROOT="$(cd "$HERE/../../../.." && pwd)"          # benchmark/one-level-arch
+CMP_ROOT="$ROOT/compare"
+GEN="$SRC/gen_dynamic_mx_quant_data.py"
+SEED=42
+
+# TYPE : driver : M(Axis) : K(Post) : BS : in-dtype : algo : kernel : dtype
+CONFIGS=(
+  "TAIL_OCP_FP8:tail_ocp_fp8:512:256:32:fp16:OCP:tail:FP8"
+  "TAIL_OCP_FP8_DYN:tail_ocp_fp8_dyn:512:256:32:fp16:OCP:tail:FP8"
+  "TAIL_OCP_FP4:tail_ocp_fp4:512:256:32:bf16:OCP:tail:FP4"
+  "TAIL_CUBLAS_FP8_4PE:tail_cublas_fp8_4pe:512:256:32:fp16:CUBLAS:tail:FP8"
+  "NONTAIL_CUBLAS_FP8_4PE:nontail_cublas_fp8_4pe:512:256:32:fp16:CUBLAS:nontail:FP8"
+  "NONTAIL_CUBLAS_FP8_BIGBS:nontail_cublas_fp8_bigbs:128:32:128:bf16:CUBLAS:nontail:FP8"
+  "NONTAIL_OCP_FP4_4PE:nontail_ocp_fp4_4pe:512:64:32:fp16:OCP:nontail:FP4"
+  "NONTAIL_OCP_FP4_BIGBS:nontail_ocp_fp4_bigbs:128:64:128:bf16:OCP:nontail:FP4"
+)
+
+for cfg in "${CONFIGS[@]}"; do
+  IFS=: read -r TYPE DRIVER M K BS INDT ALGO KERNEL DTYPE <<<"$cfg"
+  cmpdir="$CMP_ROOT/dynamic_mx_quant_${DRIVER}"
+  echo "==== $TYPE ($DRIVER  M=$M K=$K BS=$BS in=$INDT $ALGO/$KERNEL/$DTYPE) ===="
+  mkdir -p "$cmpdir"
+  python3 "$GEN" --M "$M" --K "$K" --block-size "$BS" --algo "$ALGO" \
+      --kernel "$KERNEL" --dtype "$DTYPE" --in-dtype "$INDT" \
+      --scale-layout compact --seed "$SEED" -o "$cmpdir"
+  make -C "$HERE" TESTCASE=dynamic_mx_quant TYPE="$TYPE" COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+done
+
+echo "全部 8 个 kernel 已生成 golden + 编译完成。"
