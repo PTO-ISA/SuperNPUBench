@@ -308,3 +308,30 @@ spec 合法构造。**建议**：HandleBSubview 支持 RowMajor Local parent（�
 **自证 demo 合规**：签名/dtype/索引域均符合 `TGATHER.md`/spec（index 整数 dtype、行索引语义 source1=persistent-row-index-source）；
 TGATHER/TSCATTER 在 0.58.6 spec 为 active（有 ASL）。崩在模型自身标量 tile 寄存器环形队列 = 执行期实现缺陷。
 **建议**：修模型 TGATHER/TSCATTER 执行的寄存器索引路径。
+
+---
+
+## gfrun-11 · GMOV 描述符匹配断言拒绝相同的 source/dest tile
+
+**涉及接口**：GMOV（TLSU peer 间 tile 搬移）。
+> 【归属】**SuperScalarModel**（GMOV source/dest 描述符非对称填充；GMOV 在 model pass-list 无任何用例）
+
+**问题**：`GMOV<15>(dst, peer_tid, src)` 用**两个完全相同**的 tile（`vtile_t<float,16,16>`，均已 TLOAD），
+模型仍崩：
+```
+ASSERTION FAILED: sourceOperand->size == destinationOperand->size && ... validRow/validCol/row/col ==
+"PTO 0.58 GMOV source and destination descriptors must match"
+func ExecuteTMA, file emulator/engine/TMAEngine.cpp:965
+```
+
+**复现**：`bash run_guard.sh tlsu gmov`。
+
+**自证 demo 合规 + 无条件失败**：
+- demo 完全按 `tlsu.md` 示例 `GMOV<15>(dst, peer_tid, src)`；source/dest 是**同一 tile 类型**（16×16 float），
+  都 TLOAD 初始化——描述符本应逐字段相等。**相同 tile 无法再"更匹配"**。
+- 该断言比对**本地静态描述符**（GMOV.asl bundle：单个 `B.IOT source, destination, PE_MASK, TSize`），每 PE 相同 →
+  **无条件失败，非 4-PE peer 问题**（断言在 peer 解析之前，不涉及 threadStatus[peerTid]）。
+- 探针：8×256 与 16×16、是否初始化 dest，均崩同一断言。GMOV 在 `gfrun-pass-list.txt` **0 命中**（从未验证）。
+- ⇒ 模型对 GMOV source（`operands` 里 role=`resolved-peer-source`）与 destination 的 tileInfo 非对称填充。
+
+**建议**：修模型 GMOV 的 source/dest 描述符填充，使相同 tile 通过匹配检查；补 GMOV 回归用例。
