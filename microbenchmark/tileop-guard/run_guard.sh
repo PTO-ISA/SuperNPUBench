@@ -32,10 +32,20 @@ for src in "$SUBDIR"/src/*.cpp; do
     name="$(basename "$src" .cpp)"
     [ -n "$ONLY" ] && [ "$name" != "$ONLY" ] && continue
 
+    # 干净捕获每个失败 case 的报错点(仿 version-tracking:per-invocation 捕获 + 无断言取尾部兜底),
+    # 落一条不会错位的 ERRSIG token(TAB 分隔:ERRSIG<域内 case><compile|run><首条报错行>) + per-case 落盘。
+    errsig() {  # $1=name $2=phase(compile|run) $3=完整输出
+        local sig; sig="$(printf '%s' "$3" | grep -iE 'ASSERTION FAILED|illegal instruction|Match Instruction Error|Segmentation|Aborted|abort|fatal|error:|fault' | head -1)"
+        [ -z "$sig" ] && sig="$(printf '%s' "$3" | grep -v '^[[:space:]]*$' | tail -1)"
+        printf 'ERRSIG\t%s\t%s\t%s\n' "$1" "$2" "$(printf '%s' "$sig" | tr '\t' ' ' | cut -c1-220)"
+    }
+
     clog="$(cd "$SUBDIR" && make TESTCASE="$name" 2>&1)"
     if [ $? -ne 0 ]; then
         printf '%-28s %-8s %-8s %-10s\n' "$name" "FAIL" "-" "-"
         echo "$clog" | grep -E 'error:|assert' | head -3 | sed 's/^/    /'
+        mkdir -p "$GUARD_ROOT/compare/$SUB/$name"; printf '%s\n' "$clog" > "$GUARD_ROOT/compare/$SUB/$name/compile.log"
+        errsig "$name" compile "$clog"
         cfail=$((cfail+1)); continue
     fi
 
@@ -49,6 +59,8 @@ for src in "$SUBDIR"/src/*.cpp; do
     if ! echo "$rlog" | grep -q "Reach the End of Benchmark"; then
         printf '%-28s %-8s %-8s %-10s\n' "$name" "ok" "FAIL" "-"
         echo "$rlog" | grep -iE 'assert|error|abort|fault|fatal' | head -3 | sed 's/^/    /'
+        printf '%s\n' "$rlog" > "$chk/gfrun.log"
+        errsig "$name" run "$rlog"
         rfail=$((rfail+1)); continue
     fi
 
