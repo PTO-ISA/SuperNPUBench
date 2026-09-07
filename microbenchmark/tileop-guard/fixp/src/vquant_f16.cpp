@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::vector<Mode>(tile) — vector quant parameter to FP16.
-// Source: matrix-postprocess.md — "Vector quant parameter"
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — "Vector quant parameter"
 //   fixp::vector<VQF322F16Pre>(quant) -> dst FP16; each 64-bit element same bit
 //   layout as the scalar descriptor.
 // Precision: res_check. F16 (floating) path, offset unused; golden pins pto-spec

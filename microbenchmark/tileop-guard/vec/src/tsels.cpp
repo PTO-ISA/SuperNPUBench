@@ -5,7 +5,7 @@
 // predicate (mask), srcs[2] a data source; dst is a fresh output (not in-place).
 // So the mask must come from TCMP. End-to-end:
 //   TCMP<GT>(mask, a, b);  TSELS(dst, mask, SVAL, src)  => out = where(a>b, src, SVAL)
-// (polarity confirmed by the res_check golden). docs give NO signature; the
+// (polarity confirmed by the res_check golden). docs 早期无签名（现 per-op 文档已补）; the
 // scalar-in-the-middle 4-arg form + predicate contract are recovered from the
 // header + gfrun. Precision: res_check.
 constexpr int M = 16, N = 16, NE = M * N;

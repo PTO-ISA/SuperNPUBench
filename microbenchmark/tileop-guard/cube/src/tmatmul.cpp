@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: TMATMUL (CUBE) — D = A*B.
-// Source: docs/tileop-usage/cube.md + matrix-postprocess.md.
+// Source: docs/tileop-usage/cube.md + options.md（+ pto-spec matrix-postprocess.asl）.
 //   CubeTileM32<T,M,K> a; CubeTileN8<T,K,N> b; CubeAccumulatorM32<AccT,M,N> out;
 //   TMATMUL(out,a,b); GM 边界用 TLOAD_CUBE/TSTORE_CUBE。
 // NOTE(doc-gap): TLOAD_CUBE/TSTORE_CUBE 无 C++ 签名;(cube_tile, global_view) 推断。

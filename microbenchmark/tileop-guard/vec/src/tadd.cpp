@@ -2,7 +2,7 @@
 #include "guard_io.h"
 // TileOP-API doc guard: TADD (VEC, elementwise-tile-tile, binary)
 // Source: docs/tileop-usage/engines.md — VEC | TADD | elementwise-tile-tile.
-// NOTE(doc-gap): engines.md lists the op + class but gives NO signature for
+// NOTE(doc-gap): engines.md lists the op + class（早期无签名，现 per-op 文档已补签名）for
 // basic arithmetic; the (dst,src0,src1) call shape is inferred from the
 // dst-first convention shown in cmp.md / cube.md.
 //

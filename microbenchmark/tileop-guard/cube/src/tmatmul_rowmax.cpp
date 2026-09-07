@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: TMATMUL + RowMax postprocess.
-// Source: matrix-postprocess.md — fixp::keep_acc().row_max(row_max_out).
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — fixp::keep_acc().row_max(row_max_out).
 //   row_max_tile: Tile<Vec, float, 32, 8, RowMajor, 32, 1> (valid M x 1, 物理 >=128B).
 //   RowMaxEn=1, RowMaxInit=0. dtype 必须精确匹配派生 AccType(FP32)。
 // Precision: res_check, golden checks the accumulator out = A@B (row_max side

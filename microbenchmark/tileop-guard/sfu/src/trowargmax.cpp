@@ -5,7 +5,7 @@
 // (argReduce), so a float dst is rejected ("typed Local TSTORE source dtype
 // must match the block dtype"). ops-20260904 TileOP-API requires the row-reduce
 // dst to be a GENUINE single-column tile (ValidCol==1 && Cols==1); index at
-// out[r] of an M x 1 tile. docs give NO signature/dtype; recovered from the
+// out[r] of an M x 1 tile. docs 早期无签名/dtype（现 per-op 文档已补）; recovered from the
 // header static_assert + gfrun contract. Precision: res_check.
 constexpr int M = 16, N = 16, NE = M * N;
 static float src[NE];

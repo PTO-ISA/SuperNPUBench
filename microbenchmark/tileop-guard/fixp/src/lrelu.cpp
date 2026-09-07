@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::s8(desc).lrelu(fp19) — scalar quant + scalar LReLU.
-// Source: matrix-postprocess.md — "LReLU" (lrelu_fp19 low 19 bits).
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — "LReLU" (lrelu_fp19 low 19 bits).
 // Precision: res_check. pto-spec matrix-postprocess.asl folds scale+activation into
 //   one multiplier: value>=0 -> scale, value<0 -> lrelu slope (REPLACES scale).
 //   Then S9 round+sat -> +offset -> encode S8. FP19 scale 16.0, offset 5, slope 8.0.

@@ -6,7 +6,7 @@
 // data tile ("select first B.IOT requires mask then true/source Tile"). The only
 // producer of a predicate is TCMP/TCMPS, so a correct TSEL demo chains them:
 //   TCMP<LT>(mask, a, b);  TSEL(dst=prior, mask, tru)  => out = where(a<b, tru, prior)
-// docs (engines.md) give NO signature/semantics; recovered from the header +
+// 早期 engines.md 无签名/语义（现 per-op 文档已补）; recovered from the header +
 // gfrun contract. Precision: res_check.
 constexpr int M = 16, N = 16, NE = M * N;
 static int32_t A[NE], B[NE], prior[NE], tru[NE], out[NE];

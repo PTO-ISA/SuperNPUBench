@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::f16().prelu(tile) — convert + PReLU (no quant).
-// Source: matrix-postprocess.md — "PReLU" (length-N FP19 Tile, low 19 bits = slope).
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — "PReLU" (length-N FP19 Tile, low 19 bits = slope).
 // Precision: res_check. fixp::f16() convert has scale 1.0; pto-spec
 //   matrix-postprocess.asl multiplier: value>=0 -> 1.0, value<0 -> slope. F16
 //   floating encode: dst = fp16(where(D>=0, D, D*slope)). Slope FP19 0.5 per column.

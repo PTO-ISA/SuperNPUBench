@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: TMATMUL_BIAS (CUBE) — D = A*B + Bias.
-// Source: matrix-postprocess.md — TMATMUL_BIAS<Attr>(Dst, A, B, Bias, options).
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — TMATMUL_BIAS<Attr>(Dst, A, B, Bias, options).
 // NOTE(doc-gap): Bias 必须 派生AccType(FP32) + ordinary RowMajor + valid 1 x N,
 //   且用普通 TLOAD(非 TLOAD_CUBE);全靠 static_assert 反推(文档只说"普通 Local Tile")。
 // Precision: res_check, golden = A@B + bias(1xN broadcast).

@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::s8(tile) — vector-quant shortcut (VQF322S8Pre).
-// Source: matrix-postprocess.md — "fixp::s8(quant) 是 VQF322S8Pre 的快捷形式".
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — "fixp::s8(quant) 是 VQF322S8Pre 的快捷形式".
 // Precision: res_check. Per-column FP19 scale + S9 offset; here uniform across
 //   columns (FP19 16.0, offset 5) so golden = spec scalar path per column
 //   (pto-spec matrix-postprocess.asl): act=D*scale; S9 round+sat -> +off -> S8.

@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: TMATMUL_ACC (CUBE) — D = C + A*B.
-// Source: matrix-postprocess.md — TMATMUL_ACC(Dst, C, A, B, options);
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — TMATMUL_ACC(Dst, C, A, B, options);
 //   .ACC 读显式累加器 C 作首源，写独立 D。无 options 等价 keep_acc()。
 // Precision: res_check, host-generated A/B(f16)+C(f32), golden D = C + A@B.
 constexpr int GM = 32, GN = 32, GK = 32;

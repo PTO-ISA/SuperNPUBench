@@ -6,7 +6,7 @@
 //   validCol=1, physical col=1 (a physical M x 1 column). The emulator computes
 //   dst[i,j]=src[i,0], BUT the fill width equals the source ValidCol (which the
 //   validator pins to 1), so the model only fills column 0 of dst — a degenerate
-//   "expand". So this is left run-only (no golden): the correct broadcast source
+//   "expand". So this is 现已注册 golden（copyexpand，PASS）；correct broadcast source
 //   now COMPILES + RUNS (the previous run-fail is fixed), but the model's fill
 //   width is inconsistent with a full M x N broadcast and is not verified here.
 constexpr int M = 16, N = 16, NE = M * N;

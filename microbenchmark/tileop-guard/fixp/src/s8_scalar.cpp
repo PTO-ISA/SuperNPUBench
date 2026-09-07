@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::s8(uint64_t) — scalar quant to S8 (QF322S8Pre).
-// Source: matrix-postprocess.md — "Scalar quant descriptor"
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — "Scalar quant descriptor"
 //   descriptor 布局(64-bit): FP19 scale [31:13], S8 offset(S9) [45:37].
 // Precision: res_check. Golden pins pto-spec matrix-postprocess.asl:
 //   D=A@B (fp32); act=D*scale; S9 round+sat -> +offset -> encode S8 (RNE).

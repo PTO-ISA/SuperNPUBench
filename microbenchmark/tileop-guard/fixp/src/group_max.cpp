@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::keep_acc().group_max<GroupN>(out) — GroupMax reduction.
-// Source: matrix-postprocess.md — "GroupMax" (N=32, GroupN=8 -> valid columns = 4).
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — "GroupMax" (N=32, GroupN=8 -> valid columns = 4).
 // Precision: res_check. GroupMaxOut goes to a separate auxiliary destination; the
 //   main D committed to gC is the plain fp32 matmul (postprocess.asl identity on D
 //   for pre_quant_mode==0). Golden = A@B.

@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: chained RowMax + GroupMax + MaxAbs postprocess.
-// Source: matrix-postprocess.md — "RowMax + GroupMax + MaxAbs"
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — "RowMax + GroupMax + MaxAbs"
 //   fixp::keep_acc().row_max(in,out).group_max<8>(gout).max_abs().
 // Precision: res_check. RowMaxOut/GroupMaxOut are auxiliary destinations; the main
 //   D committed to gC is the plain fp32 matmul (postprocess.asl identity on D for

@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::scalar<Mode>(descriptor) — generic scalar-param spelling.
-// Source: matrix-postprocess.md — fixp::scalar<QF322S8Pre>(desc) == fixp::s8(desc).
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — fixp::scalar<QF322S8Pre>(desc) == fixp::s8(desc).
 // Precision: res_check. Same spec math as s8_scalar (pto-spec matrix-postprocess.asl):
 //   act=D*scale; S9 round+sat -> +offset -> encode S8 (RNE). FP19 16.0, offset 5.
 static constexpr uint64_t make_s8_quant(uint32_t fp19_scale, int16_t offset) {

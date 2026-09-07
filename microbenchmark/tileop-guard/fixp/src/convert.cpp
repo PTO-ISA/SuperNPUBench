@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::convert<Mode>() — generic parameter-free PreQuant.
-// Source: matrix-postprocess.md — fixp::convert<FixpPreQuantMode::F322F16>() ->
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — fixp::convert<FixpPreQuantMode::F322F16>() ->
 //   PreQuant F322F16, dst FP16. Equivalent to fixp::f16(); exercises generic convert<>.
 // Precision: res_check, golden = (A@B) cast to f16.
 constexpr int GM = 32, GN = 32, GK = 32;

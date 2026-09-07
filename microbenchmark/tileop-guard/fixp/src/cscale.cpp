@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::keep_acc().cscale(scale) — FP32 accumulator C scaling.
-// Source: matrix-postprocess.md — "FP32 accumulator C scaling (PTO ISA 0.58.4)".
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — "FP32 accumulator C scaling (PTO ISA 0.58.4)".
 // Precision: res_check. pto-spec cube.asl MatrixInitialAccumulatorValue applies the
 //   per-row U8 exponent to the initial accumulator C: TileProfileMatrixCScale =
 //   C / 2^exponent (matrix-postprocess.asl). Then A@B accumulates on top:

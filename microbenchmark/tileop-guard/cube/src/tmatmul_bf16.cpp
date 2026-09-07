@@ -1,6 +1,6 @@
 #include "guard_common.hpp"
 // TileOP-API doc guard: TMATMUL + fixp::bf16() — D = A*B, PreQuant F322BF16.
-// Source: matrix-postprocess.md line 164 — TMATMUL(dst_bf16, a, b, fixp::bf16());
+// Source: options.md（+ pto-spec matrix-postprocess.asl） line 164 — TMATMUL(dst_bf16, a, b, fixp::bf16());
 int main() {
     constexpr int M = 32, N = 32, K = 32;
     __half ha[M * K], hb[K * N];

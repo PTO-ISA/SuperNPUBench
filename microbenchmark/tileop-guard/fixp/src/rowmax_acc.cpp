@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: fixp::keep_acc().row_max(in, out) — accumulate existing RowMax.
-// Source: matrix-postprocess.md — "累加已有 RowMax" (RowMaxEn=1, RowMaxInit=1).
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — "累加已有 RowMax" (RowMaxEn=1, RowMaxInit=1).
 // Precision: res_check. keep_acc + RowMax publishes the *auxiliary* RowMaxOut to a
 //   separate destination; the main D committed to gC is the plain fp32 matmul
 //   (pto-spec postprocess.asl: pre_quant_mode==0 -> identity on D). Golden = A@B.

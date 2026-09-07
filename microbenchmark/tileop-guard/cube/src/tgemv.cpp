@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: TGEMV (CUBE) — D(1,N) = Vec(1,K) * Mtx(K,N), M=1.
-// Source: matrix-postprocess.md — TGEMV(Dst, Mtx, Vec, options);
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — TGEMV(Dst, Mtx, Vec, options);
 //   Vec=CubeTileM16<T,1,K>, Mtx=CubeTileN8<T,K,N>, Dst=CubeAccumulatorM16<AccT,1,N>.
 //   数学源顺序 A=Vec, B=Mtx；Local-only（任何 B.IOS illegal）。
 // Precision: res_check, f16 vec/mtx host-generated, independent numpy golden

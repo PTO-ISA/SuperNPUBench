@@ -2,9 +2,9 @@
 #include "guard_io.h"
 // TileOP-API guard: TTRI — triangular fill. v0.58 header signature is 1-arg
 // (dst only): the op self-generates a triangular pattern into dst (no input
-// tile). docs/tileop-usage gives NO signature; 1-arg form recovered from the
+// tile). docs/tileop-usage 早期无签名（现 per-op 文档已补）; 1-arg form recovered from the
 // header. Semantics (which triangle / fill value) are not pinned by docs, so
-// this stays a run-only stability guard (no golden).
+// 现已注册 golden（check_ttri，PASS）.
 constexpr int M = 16, N = 16, NE = M * N;
 static float out[NE];
 int main() {

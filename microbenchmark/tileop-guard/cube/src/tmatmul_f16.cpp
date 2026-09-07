@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: TMATMUL + fixp::f16() — D = A*B, PreQuant F322F16.
-// Source: matrix-postprocess.md line 163 — TMATMUL(dst_fp16, a, b, fixp::f16());
+// Source: options.md（+ pto-spec matrix-postprocess.asl） line 163 — TMATMUL(dst_fp16, a, b, fixp::f16());
 //   options 表: fixp::f16() -> PreQuantMode F322F16, dst dtype FP16.
 // Precision: res_check, golden = (A@B) cast to f16.
 constexpr int GM = 32, GN = 32, GK = 32;

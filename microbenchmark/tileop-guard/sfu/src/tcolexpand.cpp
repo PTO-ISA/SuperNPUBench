@@ -6,7 +6,7 @@
 //   validCol=N (a 1 x N row, physical M x N tile with ValidRow=1). The emulator
 //   computes dst[i,j]=src[0,j], BUT the fill height equals the source ValidRow
 //   (pinned to 1), so the model only fills row 0 of dst — a degenerate "expand".
-//   Left run-only (no golden): the correct broadcast source now COMPILES + RUNS
+//   现已注册 golden（copyexpand，PASS）；correct broadcast source COMPILES + RUNS
 //   (previous run-fail fixed), but the degenerate fill height is not verified.
 constexpr int M = 16, N = 16, NE = M * N;
 using SrcTile = Tile<Location::Vec, float, M, N, BLayout::RowMajor, 1, N>;  // 1 x N broadcast row

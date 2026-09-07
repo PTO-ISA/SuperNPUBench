@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: TMATMUL_MX (CUBE) — FP16/BF16 pair, no scales.
-// Source: matrix-postprocess.md — TMATMUL_MX(Dst, A, B, options); // no scales
+// Source: options.md（+ pto-spec matrix-postprocess.asl） — TMATMUL_MX(Dst, A, B, options); // no scales
 //   MX 的 FP16/BF16 侧不得提供 scale；便捷重载省去 scale operand。
 // Precision: res_check, f16 A/B host-generated, independent numpy golden
 //   (fam='matmul': D = A(M,K) @ B(K,N)); MX f16 pair == plain matmul math.

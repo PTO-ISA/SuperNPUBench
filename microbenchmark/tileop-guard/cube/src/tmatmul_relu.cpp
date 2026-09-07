@@ -1,7 +1,7 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
 // TileOP-API doc guard: TMATMUL + fixp::f16().relu() — PreQuant + ReLU 链式。
-// Source: matrix-postprocess.md line 178 — TMATMUL(dst_fp16, a, b, fixp::f16().relu());
+// Source: options.md（+ pto-spec matrix-postprocess.asl） line 178 — TMATMUL(dst_fp16, a, b, fixp::f16().relu());
 // Precision: res_check, golden = relu(A@B) cast to f16.
 constexpr int GM = 32, GN = 32, GK = 32;
 static __half ha[GM * GK], hb[GK * GN], hd[GM * GN];
