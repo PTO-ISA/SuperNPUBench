@@ -7,7 +7,6 @@ PE_NUM ?= 4
 ifneq ($(PE_NUM),4)
 $(error group_norm_grad supports only the dynamic 4PE testcase)
 endif
-START_FILE = $(ROOT)/test/common/_start_multipe.s
 ifeq ($(TESTCASE), group_norm_grad)
 DEFINES += -DDType=$(DType) -DN_BATCH=$(N_BATCH) -DC_CH=$(C_CH)
 DEFINES += -DG_GRP=$(G_GRP) -DHxW_SZ=$(HxW_SZ) -DPE_NUM=$(PE_NUM)

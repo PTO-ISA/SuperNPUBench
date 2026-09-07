@@ -46,24 +46,8 @@ inline int64_t workspace_elems(int64_t N, int64_t C, int64_t G) {
     return 2 * N * C + 2 * N * G;
 }
 
-constexpr int kMaxPeCount = 64;
-static volatile uint32_t kPeBarrier[kMaxPeCount] = {};
-
 __attribute__((noinline)) inline uint32_t read_pe_id() {
     return get_thread_idx();
-}
-
-template <int peNum>
-__attribute__((noinline)) void pe_barrier(uint32_t phase) {
-    static_assert(peNum > 0 && peNum <= kMaxPeCount);
-    if constexpr (peNum > 1) {
-        const uint32_t pe = read_pe_id();
-        kPeBarrier[pe] = phase;
-        for (int participant = 0; participant < peNum; ++participant) {
-            while (kPeBarrier[participant] < phase) {
-            }
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -393,40 +377,31 @@ void group_norm_grad(dtype *dy, dtype *x, float *mean, float *rstd,
 
     const float s = 1.0f / static_cast<float>(D * HxW);
 
-    for (int64_t nc = tid; nc < N * C; nc += peNum) {
-        const int64_t n = nc / C;
-        const int64_t c = nc % C;
-        gn_grad::spatial_reduce_nc<dtype, gm_h, gm_f, tile_h, tile_f,
-                                   tile_v>(dy, x, ds, db, N, C, HxW,
-                                           tile_hw, n, c);
-    }
-    gn_grad::pe_barrier<peNum>(1);
-
-    for (int64_t ng = tid; ng < N * G; ng += peNum) {
-        const int64_t n = ng / G;
-        const int64_t g = ng % G;
-        gn_grad::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f,
-                                    tile_v>(gamma, mean, rstd, ds, db,
-                                            c2_buf, c3_buf, N, C, G, D, n, g,
-                                            s);
-    }
-    gn_grad::pe_barrier<peNum>(2);
-
-    for (int64_t nc = tid; nc < N * C; nc += peNum) {
-        const int64_t n = nc / C;
-        const int64_t c = nc % C;
-        gn_grad::dx_nc<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-            dy, x, gamma, rstd, c2_buf, c3_buf, dx, N, C, G, D, HxW,
-            tile_hw, n, c);
-    }
-
+    // Keep all dependent stages of a group on one PE. This avoids cross-PE
+    // workspace dependencies and does not require a software barrier.
     for (int64_t g = tid; g < G; g += peNum) {
+        const int64_t c0 = g * D;
+        for (int64_t n = 0; n < N; ++n) {
+            for (int64_t d = 0; d < D; ++d) {
+                gn_grad::spatial_reduce_nc<dtype, gm_h, gm_f, tile_h, tile_f,
+                                           tile_v>(dy, x, ds, db, N, C, HxW,
+                                                   tile_hw, n, c0 + d);
+            }
+            gn_grad::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f,
+                                        tile_v>(gamma, mean, rstd, ds, db,
+                                                c2_buf, c3_buf, N, C, G, D,
+                                                n, g, s);
+            for (int64_t d = 0; d < D; ++d) {
+                gn_grad::dx_nc<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
+                    dy, x, gamma, rstd, c2_buf, c3_buf, dx, N, C, G, D, HxW,
+                    tile_hw, n, c0 + d);
+            }
+        }
         gn_grad::dbeta_group<dtype, gm_h, gm_f, tile_h, tile_f>(db, dbeta, N,
                                                                 C, D, g);
         gn_grad::dgamma_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
             ds, db, mean, rstd, dgamma, N, C, G, D, g);
     }
-    gn_grad::pe_barrier<peNum>(3);
 }
 
 #endif // SUPERNPU_GROUP_NORM_GRAD_PTO_HPP

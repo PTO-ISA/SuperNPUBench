@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "benchmark.h"
 #include "fileop.h"
 #include "solution/normalization/rms_norm_binary/rms_norm_binary_pto.hpp"
 
@@ -67,9 +68,9 @@ int main() {
     const int64_t g_a = tiling_info[0];
     const int64_t g_r = tiling_info[1];
 
-    static dtype input_buf[G_A * G_R];
-    static dtype output_buf[G_A * G_R];
-    static float workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS];
+    alignas(4096) static dtype input_buf[G_A * G_R];
+    alignas(4096) static dtype output_buf[G_A * G_R];
+    alignas(4096) static float workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS];
     dtype *input = input_buf;
     dtype *output = output_buf;
     float *workspace = workspace_buf;
@@ -89,7 +90,9 @@ int main() {
     }
 #endif
 
+    BENCHSTART;
     rms_norm_binary<dtype, PE_NUM>(input, tiling_info, output, workspace, EPS);
+    BENCHEND;
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

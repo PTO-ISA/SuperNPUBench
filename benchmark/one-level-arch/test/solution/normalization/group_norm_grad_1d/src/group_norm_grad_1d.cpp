@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "benchmark.h"
 #include "fileop.h"
 #include "solution/normalization/group_norm_grad_1d/group_norm_grad_1d_pto.hpp"
 
@@ -57,14 +58,14 @@ int main() {
     const int64_t C = tiling_info[1];
     const int64_t G = tiling_info[2];
 
-    static dtype dy_buf[N_BATCH * C_CH];
-    static dtype x_buf[N_BATCH * C_CH];
-    static float mean_buf[N_BATCH * G_GRP];
-    static float rstd_buf[N_BATCH * G_GRP];
-    static dtype gamma_buf[C_CH];
-    static dtype dx_buf[N_BATCH * C_CH];
-    static dtype dgamma_buf[C_CH];
-    static dtype dbeta_buf[C_CH];
+    alignas(4096) static dtype dy_buf[N_BATCH * C_CH];
+    alignas(4096) static dtype x_buf[N_BATCH * C_CH];
+    alignas(4096) static float mean_buf[N_BATCH * G_GRP];
+    alignas(4096) static float rstd_buf[N_BATCH * G_GRP];
+    alignas(4096) static dtype gamma_buf[C_CH];
+    alignas(4096) static dtype dx_buf[N_BATCH * C_CH];
+    alignas(4096) static dtype dgamma_buf[C_CH];
+    alignas(4096) static dtype dbeta_buf[C_CH];
 
     dtype *dy = dy_buf;
     dtype *x = x_buf;
@@ -98,8 +99,10 @@ int main() {
     }
 #endif
 
+    BENCHSTART;
     group_norm_grad_1d<dtype, PE_NUM>(dy, x, mean, rstd, gamma, tiling_info,
                                       dx, dgamma, dbeta);
+    BENCHEND;
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;
