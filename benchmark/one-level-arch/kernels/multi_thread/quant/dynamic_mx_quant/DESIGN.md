@@ -331,7 +331,7 @@ TSTORE(gy, oq)
 
 ### 4.1 入口签名（4 个专门化 tail kernel）
 
-> **落地差异（当前实现，见 README「Tile 旋钮编译期推导」）**：`TileM`/`TileN`/`R_sub` **已从公开签名移除**，改由算子输入 + `InT` 预算 constexpr 推导（`max_tilem`/`pick_tilen`/`max_rsub`）；`InT` 既做预算感知，**又是真实数据路径**（`fp16(__half)`/`bf16(__bf16)`/`fp32(float)`，`if constexpr` 分派，`static_assert(InT ∈ {__bf16,__half,float})`，见 §3.4）。非尾轴入口 `if constexpr` 无合法 `TileN` 时**自动路由**到 `_bigbs` 方案 A（独立 bigbs TYPE 已删）。下方签名 `__bf16 *x` 是默认实参，实际形参为 `InT *x`；`TileM`/`TileN` 保留仅作**结构示意**。
+> **落地差异（当前实现，见 README「Tile 旋钮编译期推导」）**：`TileM`/`TileN` **已从公开签名移除**，改由算子输入 + `InT` 预算 constexpr 推导（`max_tilem`/`pick_tilen`）；`InT` 既做预算感知，**又是真实数据路径**（`fp16(__half)`/`bf16(__bf16)`/`fp32(float)`，`if constexpr` 分派，`static_assert(InT ∈ {__bf16,__half,float})`，见 §3.4）。非尾轴入口对大 BlockSize（`pick_tilen` 无解）**回退到 `TileN=对齐下界` 走 plain 单块**——方案 A `_bigbs` 与 `max_rsub` 已于 2026-09-08 退休（新工具链 tile 上限 256KB，单块可直接覆盖大 BS，见 README 顶部）。下方签名 `__bf16 *x` 是默认实参，实际形参为 `InT *x`；`TileM`/`TileN` 保留仅作**结构示意**。
 
 ```cpp
 template <int M, int K, int TileM=8, int BlockSize=32, typename OutT=__fp8_e4m3>

@@ -4,7 +4,9 @@
 
 ## 状态总览
 
-8 个目标配置 = {OCP-FP8, cuBLAS-FP8, OCP-FP4, DynRange-FP4} × {tail, nontail}；**另加 2 个大 BlockSize 专用模板**（方案 A 切分归约轴，规避非尾轴 TileN 上的对齐/TileSize 双重约束），见下文「大 BlockSize 变体」小节。
+8 个目标配置 = {OCP-FP8, cuBLAS-FP8, OCP-FP4, DynRange-FP4} × {tail, nontail}。
+
+> **⚠️ 2026-09-08 收敛：方案 A「大 BlockSize 专用模板」（`_bigbs`）已退休。** 新工具链头把 tile 大小上限从 8KB 抬到 256KB（`StorageBytes` 须为 [128B,256KB] 内 2 的幂，见 `pto_tile.hpp` TilesizeCode），非尾轴单块 load `[BlockSize, TileN]` 在大 BlockSize 下也合法（如 [128,64] bf16=16KB），当初逼出 `_bigbs`（切归约轴）的 tile-size 墙已消失。两个 `_bigbs.hpp` 已移入 `bak/`，非尾轴统一入口对大 BS 回退到 `TileN=对齐下界` 走 plain 单块。BS=128 plain 实测 gfrun 逐字节 == 旧 bigbs、全用例零回归。**下文「大 BlockSize 变体」及各处 `_bigbs` 描述为退休前的历史记录**，当前活代码只有 plain 路径。
 
 > **状态定义**（当前工具链不成熟，代码存在缺陷是必然的，故不以「零缺陷」为准，而以下述两态区分）：
 > - **已调试**：代码计算逻辑**基本正确**（逐 op 对齐 AscendC），且**所有已知问题都记录在 RECORD 中**。允许存在待工具链/ISA 补齐的已记录缺口（如 fp32→fp4 cast 语义待确认），只要它们被显式记录。（注：非尾轴 scale「parity 交织缺失」已于 2026-09-03 解除——PTO-ISA 规范 ADR-0101 定义 matmul 消费 planar scale，无需交织，见 RECORD 问题5。）
@@ -41,11 +43,11 @@
 
 **处置（2026-09-05）**：按"model spec-正确、golden 偏差"定性，**保持 golden 原样**（`MSE<0.1` 判据仍 pass，功能恢复已达成）。若需逐字节，只需把 gen 的 OCP 指数提取 fp16→bf16 从 `>>16` 截断改成 RNE（不动 kernel/model）。此处记录备查。
 
-## Tile 旋钮编译期推导 + 非尾轴 plain↔bigbs 自动路由
+## Tile 旋钮编译期推导 + 非尾轴单块 plain 路由（方案 A 已退休）
 
-**`TileM`/`TileN`/`R_sub` 不再是调用方模板参数**，改由算子输入 + 输入 dtype 预算**编译期推导**（`dynamic_mx_quant_common.hpp` 的 constexpr helper：`max_tilem` / `pick_tilen` / `max_rsub`）：
+**`TileM`/`TileN` 不再是调用方模板参数**，改由算子输入 + 输入 dtype 预算**编译期推导**（`dynamic_mx_quant_common.hpp` 的 constexpr helper：`max_tilem` / `pick_tilen`）：
 - **尾轴**：函数顶部 `TileM = max_tilem<M, Contig, InT, IsCublas>()`——`cublas` Contig=`BlockSize`、`ocp-fp4` Contig=`PW=⌈BlockSize/64⌉×64`（每 tile 一个补齐块，绑定 `TileM*PW`），夹在 `[tilem_min(≥512B tile), budget/Contig]` 与 `M`。
-- **非尾轴**：入口先 `TileN = pick_tilen<BlockSize, Post, OutT, InT, IsCublas>()`；`if constexpr (TileN >= 对齐下界)` 则走 plain 单遍路径，**否则（大 BS 无合法 TileN）自动路由到 `_bigbs` 方案 A**（`R_sub = max_rsub<...>()`）。`if constexpr` 保证未取分支不实例化，故 plain 的 `TileN=0` / bigbs 非法 `R_sub` 不触发 static_assert。
+- **非尾轴**：入口 `TileN0 = pick_tilen<BlockSize, Post, OutT, InT, IsCublas>()`；`TileN = (TileN0 >= 对齐下界) ? TileN0 : 对齐下界`，**恒走 plain 单块路径**。`pick_tilen` 在旧 8192B 软预算下对大 BS 返回 0（旧 `_bigbs` 触发条件），现回退到最小合法对齐块 `TileN=对齐下界`——因新工具链 tile 上限 256KB，单块 `[BlockSize, 对齐下界]` 合法（方案 A `_bigbs` 已退休、`max_rsub` 已删，见顶部收敛说明）。小 BS 保持首选 `TileN0` 不变→零回归。
 - **`InT` 现为真实数据路径**（`fp16(__half)` / `bf16(__bf16)` / `fp32(float)`，`if constexpr` 分派，镜像 AscendC `Compute()` line 920-940 的 `ComputeMaxExp{Ocp,Cublas}{Bf16,Half,Fp32}`）：`InT` 既作预算推导（更宽输入 dtype 缩小 tile），又贯通到 scale-归约与 data 两条路径。`static_assert(InT ∈ {__bf16,__half,float})`。类型差异集中在**输入正则化**一处（对齐 AscendC）：
   - **OCP** 有两条流：**值域归约新算法（`nontail_ocp_fp4` plain+bigbs、`tail_ocp_fp4` 已迁移）**——三类型均在输入值域 `TABS`+`TCOLMAX/TROWMAX` 求块 \|max\|（`TABS` 白名单仅 FP16/FP32，故 bf16 先 `TCVT→fp32`；half 走 half 域、fp32 走 fp32 域），归约**之后**才 `TCVT`→bf16 并 `reinterpret_tile<uint16_t>`+`TANDS` 取指数位，天然免输入正则化器与 scratch-HBM；**旧指数位域归约（仅剩 `nontail_ocp_fp8`）**：bf16 = 指针 reinterpret→uint16 直取指数位；half = `TCVT half→bf16`(TRUNC)→取指数位（`half_to_bf16bits`）；fp32 = `reinterpret f32→u32`→`TANDS(FP32_EXP_MASK)`→`TSHRS(16)`→narrow uint16（`f32_to_bf16expbits`）——先取指数位再 `TANDS`+`TCOLMAX`。
   - **cuBLAS**（归约统一到 fp32 amax）：三类型均在 InT 值域 `TABS`+`TROWMAX/TCOLMAX`；`if constexpr(InT==float)` 跳过 fp32 cast（已是 fp32），否则 `TCVT InT→fp32`。`compute_cublas_core` 不变。half 全程值域归约、无 half→bf16 前置 cast。
@@ -54,7 +56,9 @@
 - 预算模型：绑定 tile 8192B；OCP 绑定宽 `sizeof(InT)`、cuBLAS 当前经 fp32 scratch-HBM 往返（问题4）绑定宽 4B（`kRegBitcast` 置 true 后回落 `sizeof(InT)`）。elem 预算：bf16-OCP=4096、bf16-cuBLAS(当前)=2048。对齐下界：fp8 `TileN%32`、fp4 `TileN%64`。
 - **默认 `BS=32` 推导值与改造前一致**（tail-cublas TileM=8、tail-ocp-fp4 PW=64→TileM=8、nontail-cublas TileN=32、nontail-ocp-fp4 TileN=64），零行为回归。
 
-## 大 BlockSize 变体（方案 A：切分归约轴）
+## 大 BlockSize 变体（方案 A：切分归约轴）——【已退休 2026-09-08，以下为历史记录】
+
+> **本节描述的 `_bigbs` 方案 A 已退休、`.hpp` 已移入 `bak/`。** 触发它的唯一原因是旧工具链 8KB tile 上限使大 BlockSize 单块无合法 TileN；新工具链头把上限抬到 256KB（`StorageBytes` 2 的幂 ≤256KB），大 BS 单块 `[BlockSize, 对齐下界]` 直接合法，非尾轴统一入口对大 BS 回退到 plain 单块即可。保留本节仅为记录当初的动因与设计权衡。
 
 大 BlockSize 覆盖由上述**非尾轴统一入口自动路由**到下面 2 个 `_bigbs` impl（**已删除独立 driver / Makefile TYPE**，改为在统一 nontail driver 里额外发一个大 BS 调用做编译期实例化）。两个 `_bigbs.hpp` 作为路由目标保留，模板签名仍带 `TileN`/`R_sub`（由 dispatcher 按当前预算算出后传入）。
 
