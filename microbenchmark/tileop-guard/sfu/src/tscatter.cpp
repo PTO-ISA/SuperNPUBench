@@ -17,7 +17,9 @@ int main() {
     guard_read_bin(CHK_DIR "/in_a.bin", a, sizeof(a));
     guard_read_bin(CHK_DIR "/in_idx.bin", idx, sizeof(idx));
 #else
-    gfill_seq(a, NE); gfill_idx(idx, NE);
+    // spec: row index < ValidRow(M) 且每列单射(TSCATTER.asl)。用逐列 [0,M) 排列。
+    gfill_seq(a, NE);
+    for (int r = 0; r < M; ++r) for (int cc = 0; cc < N; ++cc) idx[r * N + cc] = (r + cc) % M;
 #endif
     gzero(c, NE);
     iter_t<float, M, N> gA((float *)a), gC(c);

@@ -8,8 +8,8 @@
 //   Doc prose: "只收集谓词恰为 1 的 lane，并用选定的 padding 值填充禁用的 lane" ->
 //   dst[i] = (mask[i]==1) ? base[off[i]//elem] : Pad. Example uses Pad=Zero,
 //   mask = Tile<Vec,uint8_t,...>.
-// NOTE(doc-gap): example offsets are uint16_t but the dtype table restricts index
-//   Tiles to S32/U32/S64/U64; we use U32 (详述 18). Mask stays uint8 per example.
+// NOTE(doc-gap 已修复, API 0566283): 早期示例 offset 用 uint16_t,与 dtype 表(S32/U32/S64/U64)矛盾;
+//   现 MGATHER_MASK.md:108 示例已改 uint32_t。本 demo 早用 U32,与修复后文档一致。Mask 仍 uint8。
 // Precision: res_check; golden = where(mask==1, base[off//4], 0.0).
 constexpr int BM = 8, BN = 1024, BNE = BM * BN;
 constexpr int OM = 8, ON = 32, ONE = OM * ON;

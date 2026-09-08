@@ -4,7 +4,12 @@
 // TileOP-API doc guard: TileArray region API — TileArray / TASSEMBLY (+ TCVT
 // slot producer). Source: docs/tileop-usage/range-modifiers.md "TileArray region
 // API" (NEW on remote branch linx, commit fa24eae).
-// NOTE(doc-gap): 文档示例不可直接落地:
+// NOTE(doc-gap 部分已修复, API 0566283): 文档示例已自洽(变量名统一 source_tile、TCVT 目的取
+//   TileArrayOutputRef 按值);运行期仍 run-fail 但报错已变——当前模型(49547742)为
+//   `illegal B.ASSEMBLE generation or descriptor contract`(非旧 `raw tile spill`)。已单独钉证:
+//   发射侧合规(carrier 按 parent 分配+B.ASSEMBLE offset/coverage 全对+INIT=parent 规范),多 writer
+//   (parent>writer)组装被 `PrepareLocalAssemble` 拒——证据指向模型侧,owner 待官方裁决;详见
+//   issues/ISSUE_ops-20260904_20260908_DRAFT-gfrun-region-tilearray.md。以下为早期(旧文档/旧模型)记录存档:
 //   (1) `TCVT(destinations[0][2], source_tile)` 用临时量,但 region TCVT 签名是
 //       `TCVT(TileArrayOutputRef& dst, In& src)`(非 const 左值引用),须先绑具名左值;
 //   (2) 示例源变量名 source(=TPARTVIEW 视图)与 TCVT 用的 source_tile 不一致;实测

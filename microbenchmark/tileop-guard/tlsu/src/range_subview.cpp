@@ -1,10 +1,21 @@
 #include "guard_common.hpp"
 #include "guard_io.h"
-// TileOP-API guard: range::subview — source-side range carrier over TSTORE.
-// Correct usage per range-modifiers-developer-guide.md: lowercase helper
-// range::subview(tile) (SizeCode/Offset/RegSrc auto-derived from the tile type);
-// the uppercase range::Subview<...> with hand-filled params is the low-level
-// compat interface the guide says NOT to use. subview of a full tile = identity.
+// TileOP-API guard: range::subview — source-side range carrier over TSTORE
+// （低层 subview 路径看护；CUBE 路径由 tpartview_subview.cpp 另行看护）。
+//
+// 写法本身合规：range-modifiers.md 状态清单列 "Implemented: Local source Subview
+// over TSTORE"，developer-guide 的 store_subview 示例即 `TSTORE(gm, range::subview(t))`。
+//
+// 但这是 **fail-closed witness**（API↔spec 缺口，非模型 bug、非写法错）：
+//  - API：`range::subview`+TSTORE 路径带 requires(!IsCubeLayout)，只对 **RowMajor**
+//    parent 发 B.SUBVIEW（本 demo 即此形式，Vec/RowMajor parent）。
+//  - 模型：`subview-descriptor.asl::BundleCubeSubviewDescriptorOf` 要求 parent
+//    location==Matrix && CUBE layout，非 CUBE 一律 Fault_TileLegality（ASL-correct）。
+//  → RowMajor subview 被模型正确拒（gfrun: illegal TSTORE operand or descriptor
+//    contract）。API 的 CUBE subview binder 尚未实现（range-modifiers.md line 118-123
+//    自述 "region producer ... intentionally limited to RowMajor+NoneBox ... until the
+//    Cube binder/CELL ordering path is implemented and validated"）。
+//  归属 = Linx-TileOP-API 未实现 cube subview；run-fail 作缺口 witness，无 golden。
 constexpr int M = 4, N = 8, NE = M * N;
 static float ha[NE], hc[NE];
 int main() {

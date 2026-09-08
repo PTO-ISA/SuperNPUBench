@@ -83,7 +83,7 @@
     return 0; }
 
 #define GUARD_COLEXPAND(DT, M, N, ...) \
-  static DT gA[(M) * (N)], gB[(M) * (N)], gC[(M) * (N)]; \
+  static DT gA[(M) * (N)], gB[1 * (N)], gC[(M) * (N)]; \
   int main() { \
     guard_read_bin(CHK_DIR "/in_a.bin", gA, sizeof(gA)); \
     guard_read_bin(CHK_DIR "/in_b.bin", gB, sizeof(gB)); \

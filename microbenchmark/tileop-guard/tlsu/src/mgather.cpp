@@ -7,11 +7,9 @@
 //   Example: GM=global_tensor<float,RowMajor<8,1024>>; dst=Tile<Vec,float,8,32>.
 //   Doc prose: "offset 中的每个元素是相对于 GM base 的字节位移" -> the addressed
 //   element is *(float*)((char*)base + offset[i]); dst collects them.
-// NOTE(doc-gap): the MGATHER.md *example* declares offsets as Tile<Vec,uint16_t,...>,
-//   but the SAME page's dtype table restricts the index Tile to S32/U32/S64/U64.
-//   The uint16 example is self-inconsistent: built verbatim it gfrun-rejects with
-//   "illegal MGATHER operand or descriptor contract". We follow the NORMATIVE
-//   dtype table (U32) instead of the buggy example. Recorded in REPORT.
+// NOTE(doc-gap 已修复, API 0566283): 早期 MGATHER.md 示例把 offset 声明为 Tile<Vec,uint16_t,...>,
+//   与同页 dtype 表(S32/U32/S64/U64)自相矛盾(逐字照抄 gfrun 拒)。现示例已改用
+//   Tile<Vec,uint32_t,...>(MGATHER.md:102),与 dtype 表一致——本 demo 早已用 U32,与修复后文档一致。
 // Non-trivial offsets (a strided permutation over the whole base), so the golden
 // really exercises the gather addressing rather than an identity copy.
 // Precision: res_check; host owns base + offsets; numpy golden = base[off//4].

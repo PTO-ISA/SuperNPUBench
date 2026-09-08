@@ -6,8 +6,8 @@
 //     void MSCATTER(gm_shape &dst, const tile_in &src, const tile_offset &offset);
 //   Doc prose: "offset 中的每个元素是相对于 GM base 的字节位移" -> the addressed
 //   slot base + offset[i] receives src[i]: base[off[i]//elem] = src[i].
-// NOTE(doc-gap): same as MGATHER — the example declares offsets uint16_t but the
-//   dtype table restricts index Tiles to S32/U32/S64/U64; we use U32 (详述 18).
+// NOTE(doc-gap 已修复, API 0566283): 同 MGATHER — 早期示例 offset 用 uint16_t 与 dtype 表矛盾;
+//   现 MSCATTER.md:98 示例已改 uint32_t。本 demo 早用 U32,与修复后文档一致。
 // Offsets are an INJECTIVE map (no two lanes hit the same slot), so the scatter
 //   is order-independent and the numpy golden is deterministic.
 // Precision: res_check. Output checked = the base array AFTER the scatter.

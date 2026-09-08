@@ -450,9 +450,8 @@ def gen(case, chkdir):
                  (np.float32(1.0) + np.cos(jj * np.float32(0.41)))).astype(np.float32)
         else:
             jj = np.arange(N, dtype=np.float32)
-            row0 = (np.float32(0.5) + np.float32(2.0) *
-                    (np.float32(1.0) + np.cos(jj * np.float32(0.41)))).astype(np.float32)
-            b = np.tile(row0, (M, 1)).reshape(-1)          # full MxN, every row = row0
+            b = (np.float32(0.5) + np.float32(2.0) *
+                 (np.float32(1.0) + np.cos(jj * np.float32(0.41)))).astype(np.float32)  # GENUINE 1 x N
         b.tofile(os.path.join(chkdir, 'in_b.bin'))
         return
     # --- copy-expand: match the demo's source read. row: demo loads an M x 1
@@ -466,8 +465,7 @@ def gen(case, chkdir):
             col.tofile(os.path.join(chkdir, 'in_a.bin'))
         else:
             row0 = ((np.arange(N, dtype=np.float32) + np.float32(1.0)) * np.float32(0.25))
-            full = np.tile(row0, (M, 1)).reshape(-1).astype(np.float32)   # every row = row0
-            full.tofile(os.path.join(chkdir, 'in_a.bin'))
+            row0.astype(np.float32).tofile(os.path.join(chkdir, 'in_a.bin'))   # GENUINE 1 x N
         return
     # --- ARGMAX/ARGMIN: src distinct per row & per col (double perm) ---
     if fam == 'argreduce':
@@ -1028,7 +1026,7 @@ def check_expandarith(case, chkdir):
     if s['foot'] == 'row':
         bc = braw[:M].reshape(M, 1)                 # per-row scalar, broadcast over cols
     else:
-        bc = braw.reshape(M, N)[0, :].reshape(1, N)  # per-col scalar (row 0), over rows
+        bc = braw[:N].reshape(1, N)                  # per-col scalar (GENUINE 1 x N), over rows
     fn = {'add': lambda x, y: x + y, 'sub': lambda x, y: x - y,
           'mul': lambda x, y: x * y, 'div': lambda x, y: x / y,
           'max': np.maximum, 'min': np.minimum,
@@ -1318,7 +1316,7 @@ def check_copyexpand(case, chkdir):
         col = raw[:M].reshape(M, 1)                             # M x 1 broadcast column
         ref = np.repeat(col, N, axis=1)                        # dst[r,c] = src[r]
     else:
-        row0 = raw.reshape(M, N)[0:1, :]                        # 1 x N broadcast row (valid row 0)
+        row0 = raw[:N].reshape(1, N)                           # GENUINE 1 x N broadcast row
         ref = np.repeat(row0, M, axis=0)                       # dst[r,c] = src[c]
     eps = np.float32(s.get('eps', 1e-4))
     atol = eps + eps * np.abs(ref)

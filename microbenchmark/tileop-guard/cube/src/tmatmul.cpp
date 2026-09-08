@@ -4,7 +4,8 @@
 // Source: docs/tileop-usage/cube.md + options.md（+ pto-spec matrix-postprocess.asl）.
 //   CubeTileM32<T,M,K> a; CubeTileN8<T,K,N> b; CubeAccumulatorM32<AccT,M,N> out;
 //   TMATMUL(out,a,b); GM 边界用 TLOAD_CUBE/TSTORE_CUBE。
-// NOTE(doc-gap): TLOAD_CUBE/TSTORE_CUBE 无 C++ 签名;(cube_tile, global_view) 推断。
+// NOTE(doc-gap 已修复, API 0566283): 早期 TLOAD_CUBE/TSTORE_CUBE 无 C++ 签名(当时推断)。
+//   现 TLOAD.md:21 / TSTORE.md:23 已给签名+参数序 (cube_tile, global_tensor),与本 demo 一致。
 // Precision: res_check, f16 A/B host-generated, independent numpy golden (f32 @).
 constexpr int GM = 32, GN = 32, GK = 32;
 static __half ha[GM * GK], hb[GK * GN];

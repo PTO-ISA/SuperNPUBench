@@ -228,12 +228,14 @@ void g_rowexpand(D *c, const D *a, const D *b, Op op) {
     TSTORE(gC0, tC);
 }
 
-// col-expand: src1 is a 1 x N row broadcast source (physical M x N, ValidRow=1).
+// col-expand: src1 is a GENUINE 1 x N row broadcast source (对齐 TCOLEXPAND.md 示例，
+// 与 g_rowexpand 的 M x 1 对称)。spec TCOLEXPAND.asl: 源逻辑 ValidRow==1/ValidCol==dst，
+// 物理 extents 由 layout 派生 —— 真 1 x N 合法(实测编译+跑通+结果正确)。
 template <typename D, int M, int N, typename Op>
 void g_colexpand(D *c, const D *a, const D *b, Op op) {
-    using BcastTile = Tile<Location::Vec, D, M, N, BLayout::RowMajor, 1, N>;
+    using BcastTile = vtile_t<D, 1, N>;                 // GENUINE 1 x N
     iter_t<D, M, N> gA((D *)a), gC(c);
-    global_iterator<gm_t<D, M, N>, BcastTile> gB((D *)b);
+    iter_t<D, 1, N> gB((D *)b);
     auto gA0 = gA(0, 0);
     auto gB0 = gB(0, 0);
     auto gC0 = gC(0, 0);
