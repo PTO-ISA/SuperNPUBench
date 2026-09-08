@@ -4,11 +4,13 @@
 #include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_nontail_cublas_fp8.hpp"
 using namespace supernpu::tile_isa::mxquant;
 
-// End-to-end RES_CHECK harness for the 方案A split-reduce _bigbs route. BlockSize=128
-// (>= 96) has NO legal plain TileN, so the unified public entry
-// dynamic_mx_quant_nontail_cublas_fp8<Axis, Post, BlockSize> auto-routes here via
-// `if constexpr (TileN < align_lower)`. Kept SEPARATE from nontail_cublas_fp8.cpp
-// (the plain BS=32 harness) so that already-verified plain path stays untouched.
+// End-to-end RES_CHECK harness for LARGE BlockSize (=128) non-tail cuBLAS-FP8.
+// Formerly routed to a 方案A split-reduce `_bigbs` kernel (now RETIRED); the unified
+// public entry dynamic_mx_quant_nontail_cublas_fp8<Axis, Post, BlockSize> loads the
+// whole [128,32] block in one tile (its 32b intermediates = 16KB, within the 256KB
+// TilesizeCode ceiling) — TileN falls back to align=32 for this large BlockSize.
+// Verified byte-exact == the old bigbs output. Kept SEPARATE from
+// nontail_cublas_fp8_4pe.cpp (the BS=32 harness) so the small-BS case stays distinct.
 //
 // nontail: reduce along rows (Axis), Post is the free column axis.
 //   Axis=128 (=1 reduce block, BlockSize=128), Post=32.
@@ -24,7 +26,7 @@ int main() {
     readBinaryFile(CHK_DIR "/input.bin", (uint8_t*)x, sizeof(x));
 #endif
 
-    // Axis=128, Post=32, BlockSize=128 -> routes to _bigbs (方案A split-reduce).
+    // Axis=128, Post=32, BlockSize=128 -> single-load plain (TileN=align=32).
     dynamic_mx_quant_nontail_cublas_fp8<128, 32, 128>(
         x, reinterpret_cast<__fp8_e4m3*>(y), scale);
 

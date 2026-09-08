@@ -151,8 +151,9 @@ constexpr int max_tilem() {
 
 // Non-tail: largest align-multiple TileN with BlockSize*TileN <= budget, further
 // capped at align-rounded Post so a small Post doesn't inflate TileN (N_tail covers
-// the remainder). Returns 0 when no legal TileN exists (< align lower bound) ->
-// caller routes to the bigbs split-reduce kernel.
+// the remainder). Returns 0 when no legal TileN fits this (legacy 8192B soft)
+// budget -> caller falls back to TileN=align for a single-load block (now legal
+// up to the 256KB TilesizeCode ceiling; 方案A split-reduce retired).
 template <int BlockSize, int Post, typename OutT, typename InT, bool IsCublas>
 constexpr int pick_tilen() {
     constexpr int align  = nontail_align_lower<OutT>();
@@ -163,19 +164,6 @@ constexpr int pick_tilen() {
     return (cap / align) * align;                       // floor to align (0 if cap < align)
 }
 
-// bigbs: largest divisor of BlockSize with R_sub*TileN <= budget (the CURRENT
-// budget, not the formal 4096 the bigbs kernel static_asserts against). R_sub |
-// BlockSize is required by 方案A (splits the reduce axis into R_sub-row sub-chunks).
-template <int BlockSize, int TileN, typename InT, bool IsCublas>
-constexpr int max_rsub() {
-    constexpr int budget = tile_elem_budget<InT, IsCublas>();
-    int cap = budget / TileN;
-    if (cap > BlockSize) cap = BlockSize;
-    for (int r = cap; r >= 1; --r) {
-        if (BlockSize % r == 0) return r;
-    }
-    return 1;
-}
 
 // ---------------------------------------------------------------------------
 // ================== 规避方案 (WORKAROUND) ==================

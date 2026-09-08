@@ -2,7 +2,6 @@
 #define SUPERNPU_DYNAMIC_MX_QUANT_NONTAIL_OCP_FP4_HPP
 
 #include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_common.hpp"
-#include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_nontail_ocp_fp4_bigbs.hpp"
 
 namespace supernpu::tile_isa::mxquant {
 
@@ -24,21 +23,21 @@ namespace supernpu::tile_isa::mxquant {
 // consumes plain RowMajor). NO parity interleave — AscendC's [ceil(numKb/2),
 // Post, 2] zip is an Ascend packing convention, not the PTO-ISA scale contract
 // (RECORD 问题5 dissolved 2026-09-03). See DESIGN §5.3 / README.
-// Supported BlockSize range (plain single-load path): BlockSize ∈ {32, 64}.
-// The whole [BlockSize, TileN] block is loaded in ONE tile, so the contiguous
-// axis TileN carries BOTH the fp4 32B alignment LOWER bound (TileN % 64 == 0,
-// i.e. TileN ≥ 64) and the TileSize UPPER bound (16b input tile:
-// BlockSize*TileN*2 ≤ 8192 → TileN ≤ 4096/BlockSize). A legal TileN exists iff
-// 64 ≤ 4096/BlockSize → BlockSize ≤ 64. BlockSize ≥ 96 (next multiple of 32:
-// 96*64=6144 > 4096) has NO legal TileN here → use
-// dynamic_mx_quant_nontail_ocp_fp4_bigbs (方案A, splits the reduce axis).
+// Supported BlockSize range: ALL block sizes (single-load path). The whole
+// [BlockSize, TileN] block is loaded in ONE tile. The fp4 output tile is plain
+// RowMajor NoneBox, so TileN carries the 32B store-granularity lower bound
+// (TileN % 64 == 0, one tile spans ≥2 MX blocks along Post). The former 8KB tile
+// ceiling that forced a split-reduce `_bigbs` kernel at large BlockSize is GONE:
+// the toolchain header now admits any tile whose StorageBytes is a power-of-2 in
+// [128B, 256KB] (pto_tile.hpp TilesizeCode), so a single [BlockSize, TileN] block
+// fits directly even at BlockSize=128 ([128,64] bf16 = 16KB). The 方案A
+// split-reduce kernel has been RETIRED — this plain path is the sole implementation
+// (BS=128 plain verified byte-exact == old bigbs, 2026-09-08).
 //
-// This is the PLAIN single-load implementation, kept behind an internal name.
-// The public entry `dynamic_mx_quant_nontail_ocp_fp4` (below) DERIVES TileN at
-// compile time from Post + the InT budget and AUTO-ROUTES to this plain path when
-// a legal TileN exists, or to the 方案A split-reduce `_bigbs` kernel when it does
-// not (large BlockSize). TileN stays an explicit param here so the dispatcher can
-// feed the derived value.
+// This is the single-load implementation, kept behind an internal name. The public
+// entry `dynamic_mx_quant_nontail_ocp_fp4` (below) DERIVES TileN at compile time
+// from Post + the InT budget and always routes here. TileN stays an explicit param
+// so the dispatcher can feed the derived value.
 template <int Axis, int Post, int BlockSize = 32, int TileN = 64, typename OutT = __fp4_e2m1x2,
           typename InT = __bf16, int kPeNum = 1>
 static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
@@ -50,17 +49,16 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
     static_assert(TileN % 64 == 0,
                   "fp4 output tile is plain RowMajor NoneBox: (TileN/2)*8 % 256 == 0 "
                   "requires TileN a multiple of 64 (>=2 MX blocks along Post)");
-    // BlockSize range: single-load path is capped at BlockSize ≤ 64. With
-    // TileN ≥ 64, the 16b input tile budget BlockSize*TileN ≤ 4096 forces
-    // BlockSize ≤ 64. BlockSize ≥ 96 -> no legal TileN; use the _bigbs kernel.
-    // The whole [BlockSize, TileN] input block is loaded in ONE tile (value-domain
-    // reduce), so the 16b input tile is the binding budget; large BS still needs
-    // _bigbs (split reduce axis).
-    static_assert(BlockSize * TileN <= 4096,
-                  "plain non-tail OCP-FP4 supports BlockSize ∈ {32,64} only (16b input "
-                  "tile BlockSize*TileN <= 4096, and TileN >= 64 forces BlockSize <= 64). "
-                  "For BlockSize >= 96 use dynamic_mx_quant_nontail_ocp_fp4_bigbs "
-                  "(方案A, split reduce axis).");
+    // Single-load tile-size ceiling: the largest live tile is the fp32 working
+    // copy [BlockSize, TileN] (32b), so BlockSize*TileN*4 must stay within the
+    // 256KB TilesizeCode ceiling AND be a power-of-2 (enforced by the Tile type's
+    // TilesizeCode). BlockSize*TileN <= 65536 keeps 32b tiles <= 256KB; BS=128,
+    // TileN=64 (8192) has ample margin. The old 4096 cap (8KB header ceiling) is
+    // retired along with the 方案A split-reduce kernel.
+    static_assert(BlockSize * TileN <= 65536,
+                  "non-tail OCP-FP4 single-load tile exceeds the 256KB TilesizeCode "
+                  "ceiling (BlockSize*TileN*4 <= 256KB). Reduce TileN or tile the "
+                  "reduce axis for BlockSize this large.");
 
     constexpr int numKb = Axis / BlockSize;
     constexpr int numN  = Post / TileN;
@@ -196,28 +194,25 @@ static void nontail_ocp_fp4_plain(InT *x, OutT *y, uint8_t *scale) {
 }
 
 // Public entry: TileN is NOT a caller knob. It is DERIVED at compile time from
-// Post + the InT budget (pick_tilen). If a legal TileN >= the fp4 64B lower bound
-// exists, route to the plain single-load path; otherwise (large BlockSize leaves
-// no legal TileN) auto-route to the 方案A split-reduce `_bigbs` kernel with a
-// budget-derived R_sub. `if constexpr` guarantees the untaken branch is not
-// instantiated. InT drives BOTH the budget AND the compute domain: scale-reduce and
-// data paths are InT-dispatched (bf16/half/fp32) via `if constexpr`.
+// Post + the InT budget (pick_tilen) and always routes to the single-load plain
+// path (方案A split-reduce retired — the 256KB TilesizeCode ceiling admits a single
+// [BlockSize, TileN] block at any BlockSize). pick_tilen returns the "preferred"
+// TileN under the legacy 8192B soft budget; when that yields no legal aligned TileN
+// (large BlockSize, the old bigbs trigger), fall back to the minimal legal aligned
+// tile TileN=align — BlockSize*align as a single block sits within 256KB. Small
+// BlockSize keeps its preferred TileN unchanged → existing cases see zero change.
+// InT drives BOTH the budget AND the compute domain: scale-reduce and data paths
+// are InT-dispatched (bf16/half/fp32) via `if constexpr`.
 template <int Axis, int Post, int BlockSize = 32, typename OutT = __fp4_e2m1x2,
           typename InT = __bf16, int kPeNum = 1>
 void dynamic_mx_quant_nontail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
     static_assert(std::is_same_v<InT, __bf16> || std::is_same_v<InT, __half> ||
                       std::is_same_v<InT, float>,
                   "InT must be one of {__bf16, __half, float}");
-    constexpr int TileN = pick_tilen<BlockSize, Post, OutT, InT, /*IsCublas=*/false>();
-    if constexpr (TileN >= nontail_align_lower<OutT>()) {
-        nontail_ocp_fp4_plain<Axis, Post, BlockSize, TileN, OutT, InT, kPeNum>(x, y, scale);
-    } else {
-        // 大 BlockSize 自动路由到 _bigbs（方案A 切归约轴）；bigbs 场景块行少、并行度有限,
-        // 不做 4-PE（与 nontail_cublas_fp8 一致，kPeNum 不透传）。
-        constexpr int BigTileN = nontail_align_lower<OutT>();
-        constexpr int Rsub = max_rsub<BlockSize, BigTileN, InT, /*IsCublas=*/false>();
-        dynamic_mx_quant_nontail_ocp_fp4_bigbs<Axis, Post, BlockSize, BigTileN, Rsub, OutT, InT>(x, y, scale);
-    }
+    constexpr int align  = nontail_align_lower<OutT>();
+    constexpr int TileN0 = pick_tilen<BlockSize, Post, OutT, InT, /*IsCublas=*/false>();
+    constexpr int TileN  = (TileN0 >= align) ? TileN0 : align;
+    nontail_ocp_fp4_plain<Axis, Post, BlockSize, TileN, OutT, InT, kPeNum>(x, y, scale);
 }
 
 } // namespace supernpu::tile_isa::mxquant
