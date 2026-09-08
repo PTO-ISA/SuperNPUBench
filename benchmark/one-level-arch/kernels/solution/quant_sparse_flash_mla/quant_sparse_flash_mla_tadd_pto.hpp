@@ -9,7 +9,7 @@
 //   正式五模式 / HIF8 / 4-PE 实现在 multi_thread/fa 中，与本文件独立。
 //
 //   切换方法: 在 test 文件中修改 include 和函数名:
-//     #include "single_thread/fa/quant_sparse_flash_mla_tadd_pto.hpp"
+//     #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_tadd_pto.hpp"
 //     quant_sparse_flash_mla_swa_tadd_pto<...>(...)
 //   现有测试入口: make ... TESTCASE=quant_sparse_flash_mla IMPL=tadd
 //                  QSMLA_DTYPE=FP16 Tm=32 Tk=32 Td_block=64
@@ -52,7 +52,7 @@
 
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
-#include <common/qsmla_config_pto.hpp>
+#include "qsmla_config_pto.hpp"
 #include <type_traits>
 
 using namespace pto;

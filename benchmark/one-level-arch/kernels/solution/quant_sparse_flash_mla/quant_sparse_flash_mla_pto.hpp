@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
-#include <common/qsmla_config_pto.hpp>
+#include "qsmla_config_pto.hpp"
 #include "qsmla_mode_pto.hpp"
 
 using namespace pto;
