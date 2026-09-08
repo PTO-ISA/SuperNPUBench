@@ -7,9 +7,9 @@
     defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
 #define QSMLA_USE_UNIFIED_TADD_4PE
-#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_pto.hpp"
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla.hpp"
 #else
-#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_tadd_pto.hpp"
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_tadd.hpp"
 #ifdef QSMLA_USE_HIF8
 #error "Single-PE tadd supports FP16 only; use the unified four-PE kernel for HIF8"
 #endif

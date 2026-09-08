@@ -1,11 +1,11 @@
-#ifndef QUANT_SPARSE_FLASH_MLA_PTO_HPP
-#define QUANT_SPARSE_FLASH_MLA_PTO_HPP
+#ifndef QUANT_SPARSE_FLASH_MLA_HPP
+#define QUANT_SPARSE_FLASH_MLA_HPP
 
 #include <type_traits>
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
-#include "qsmla_config_pto.hpp"
-#include "qsmla_mode_pto.hpp"
+#include "qsmla_config.hpp"
+#include "qsmla_mode.hpp"
 
 using namespace pto;
 
@@ -510,4 +510,4 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
     }
 }
 
-#endif // QUANT_SPARSE_FLASH_MLA_PTO_HPP
+#endif // QUANT_SPARSE_FLASH_MLA_HPP

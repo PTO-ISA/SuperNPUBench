@@ -1,5 +1,5 @@
-#ifndef QSMLA_CONFIG_PTO_HPP
-#define QSMLA_CONFIG_PTO_HPP
+#ifndef QSMLA_CONFIG_HPP
+#define QSMLA_CONFIG_HPP
 
 #include <cstddef>
 

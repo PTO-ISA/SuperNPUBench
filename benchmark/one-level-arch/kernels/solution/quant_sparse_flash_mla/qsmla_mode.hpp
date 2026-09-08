@@ -1,5 +1,5 @@
-#ifndef QSMLA_MODE_PTO_HPP
-#define QSMLA_MODE_PTO_HPP
+#ifndef QSMLA_MODE_HPP
+#define QSMLA_MODE_HPP
 
 enum class QsmlaMode { SWA, HCA, CSA, ORI_SPARSE, ORI_CMP_SPARSE };
 
@@ -112,4 +112,4 @@ struct QsmlaModeConfig {
                   "unused CMP dimensions must be non-negative");
 };
 
-#endif // QSMLA_MODE_PTO_HPP
+#endif // QSMLA_MODE_HPP

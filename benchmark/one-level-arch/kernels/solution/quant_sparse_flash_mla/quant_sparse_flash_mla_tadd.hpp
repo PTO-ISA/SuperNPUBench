@@ -1,15 +1,15 @@
-#ifndef QUANT_SPARSE_FLASH_MLA_TADD_PTO_HPP
-#define QUANT_SPARSE_FLASH_MLA_TADD_PTO_HPP
+#ifndef QUANT_SPARSE_FLASH_MLA_TADD_HPP
+#define QUANT_SPARSE_FLASH_MLA_TADD_HPP
 
 // =============================================================================
-// quant_sparse_flash_mla_tadd_pto.hpp
+// quant_sparse_flash_mla_tadd.hpp
 //   Quant Sparse Flash MLA (SWA mode) — TADD mask variant
 //
 //   保留的单 PE FP16 SWA 实现，使用 TADD 施加 mask。
 //   正式五模式 / HIF8 / 4-PE 实现在 multi_thread/fa 中，与本文件独立。
 //
 //   切换方法: 在 test 文件中修改 include 和函数名:
-//     #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_tadd_pto.hpp"
+//     #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_tadd.hpp"
 //     quant_sparse_flash_mla_swa_tadd_pto<...>(...)
 //   现有测试入口: make ... TESTCASE=quant_sparse_flash_mla IMPL=tadd
 //                  QSMLA_DTYPE=FP16 Tm=32 Tk=32 Td_block=64
@@ -52,7 +52,7 @@
 
 #include <common/pto_tileop.hpp>
 #include "template_asm.h"
-#include "qsmla_config_pto.hpp"
+#include "qsmla_config.hpp"
 #include <type_traits>
 
 using namespace pto;
