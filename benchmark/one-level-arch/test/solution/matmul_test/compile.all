@@ -1,0 +1,44 @@
+#!/bin/bash
+# matmul_test — dynamic-shape fp16 GEMM (fp16 in / fp32 acc / fp16 out).
+#
+# Single-PE (matmul_test): the template takes only tile sizes; M/N/K are
+# runtime parameters with leading dimensions. Tail tiles are zero-padded
+# (the PTO 0.58.3 CUBE CELL layout rejects dynamic valid shapes).
+# 4-PE (matmul_test_mt): cooperative variant with SharedMatrix A/B loads and
+# per-PE CubeAccumulator row slices; M/N/K must be divisible by the tiles.
+#
+# Run modes:
+#   matmul_test:     gfrun -t 1 -s softcore.multiThreadNum=1 -f <elf>
+#   matmul_test_mt:  gfrun -t 1 -f <elf>
+# Precision: res_check=on builds + src/verify_matmul_test.py, or
+# gfrun --dump-memory + host-side golden comparison.
+
+set -euo pipefail
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+# Aligned shapes.
+make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=256 N=256 K=256 tM=16 tN=16 tK=16 diss
+make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=512 N=256 K=512 tM=32 tN=32 tK=32 diss
+
+# Tail shapes (M/N/K not multiples of the tile sizes; power-of-two tails).
+make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=200 N=96 K=128 tM=16 tN=16 tK=16 diss
+make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=100 N=100 K=100 tM=16 tN=32 tK=16 diss
+
+# Non-power-of-two tails: M203 = 11/3/5, M105 = 9/3/7 (CUBE_M32 layout),
+# M101 = 5/3/14 with a 3-valid-column tN=32 tail tile.
+make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=203 N=99 K=101 tM=16 tN=16 tK=16 diss
+make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=105 N=99 K=103 tM=32 tN=32 tK=32 diss
+make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=101 N=99 K=110 tM=16 tN=32 tK=16 diss
+
+# 4-PE cooperative (M/N/K divisible by the tile sizes).
+make TESTCASE=matmul_test_mt COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=256 N=256 K=256 tM=128 tN=64 tK=64 diss
+make TESTCASE=matmul_test_mt COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=512 N=256 K=512 tM=128 tN=64 tK=64 diss
