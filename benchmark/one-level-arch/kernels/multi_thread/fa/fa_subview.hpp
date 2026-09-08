@@ -6,28 +6,28 @@
 
 using namespace pto;
 
-// 4-PE cooperative TMATMUL FlashAttention — optimized version (v2).
+// 4-PE cooperative TMATMUL FlashAttention — subview version.
 //
 // O = softmax((Q * K^T) / sqrt(scaleD)) * V
 //   Q: [Sq, qD], K: [Skv, qD], V: [Skv, vD], O: [Sq, vD]
 //
-// Improvements (v2, driven by review notes):
-//   1. Left matrix M physical rows are 128 or 64; ValidRow = actual kGroupM.
-//   2. kSharedKRowBytes (32 KB per-row limit) removed; SharedTile total ≤ 256 KB.
-//   3. P shard GM buffer deleted (unused without MX path).
-//   4. Vector state tiles (tileMax/tileSum/tileScale) use VecTileM32 (CubeM32
-//      layout) with vector_dtype.
-//   5. j==0 (first K block): tNewMax = tLocalMax directly (skip TMAX).
-//   6. XDim/YDim template parameters and arrays removed; single variables.
-//   7. TSUB+TEXP replaced by TROWEXPANDEXPDIF (fused exp(a-b)) in j!=0 branch.
-//   8. tW is CubeTileM32 (Left) instead of CubeAccumulatorM32 (Acc); used
-//      directly as PV TMATMUL left operand — eliminates TCVT for FP32.
-//   9. TRECIP+TROWEXPANDMUL replaced by TROWEXPANDDIV (fused division).
+// This variant is identical to fa_2d_unroll_gmma.hpp except for the reduction ops
+// (TROWMAX, TROWSUM).  The ISA limits reduction-source tiles to
+// 2048 bytes; when the QK result tile tW exceeds that capacity, the
+// reduction is performed on TPARTVIEW column sub-views and the partial
+// results are combined with TMAX (for row-max) or TADD (for row-sum).
+// All other tileops (TMATMUL, TCVT, expand ops, TLOAD/TSTORE) have no
+// 2048-byte constraint and operate on the full tile as in fa_2d_unroll_gmma.
 //
-// QK does not use transpose_b(): K's [Skv, qD] row-major buffer is described
-// as ColMajor<qD, Skv> so the CUBE reads K^T [qD, kTk] directly.
-// PV uses transpose_b(): the V tile is [kPVStoredChunk, vD] = [K, N]; TransB
-// makes the CUBE read B in K-major order, matching the matmul's B operand.
+// Inherits all optimisations from fa_2d_unroll_gmma v2:
+//   - Left matrix M physical rows are 128 or 64; ValidRow = actual kGroupM.
+//   - kSharedKRowBytes removed; SharedTile total ≤ 256 KB.
+//   - Vector state tiles use VecTileM32 (CubeM32 layout) with vector_dtype.
+//   - j==0: tNewMax = tLocalMax directly (skip TMAX).
+//   - TSUB+TEXP replaced by TROWEXPANDEXPDIF (fused exp(a-b)) in j!=0 branch.
+//   - tW is CubeTileM32 (Left) instead of CubeAccumulatorM32 (Acc).
+//   - TRECIP+TROWEXPANDMUL replaced by TROWEXPANDDIV (fused division).
+//   - PV j==0 TMATMUL uses Options+groupM overload.
 
 // Convert two logical scalar columns into one packed-x2 cube element.
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
@@ -53,6 +53,58 @@ inline void fa_tcvt_packed_x2(tile_shape_out &dst, tile_shape_in &src) {
           "r"(valid_col), "r"(valid_row), "i"(tile_shape_out::Cols));
 }
 
+// ── Partitioned reduction helpers ──────────────────────────────────
+// The ISA requires reduction-source tiles (TROWMAX, TROWSUM, …) to have
+// an allocated capacity ≤ 2048 bytes.  When the QK result tile tW is
+// larger than that, the reduction is split across column sub-views
+// created by TPARTVIEW and the partial results are combined pairwise.
+
+// Partitioned row-max: TROWMAX on each column sub-view, TMAX to combine.
+template <int Parts, typename OutTile, typename SubTileType,
+          typename ParentTile>
+inline void fa_subview_row_max(OutTile &out, ParentTile &parent) {
+    if constexpr (Parts <= 1) {
+        TROWMAX(out, parent);
+    } else {
+        auto parts = TPARTVIEW<SubTileType, 1, Parts>(parent);
+        OutTile partial;
+        auto part0 = parts[0][0];
+        TROWMAX(partial, part0);
+        out = partial;
+#pragma clang loop unroll(full)
+        for (int p = 1; p < Parts; ++p) {
+            auto part = parts[0][p];
+            TROWMAX(partial, part);
+            OutTile combined;
+            TMAX(combined, out, partial);
+            out = combined;
+        }
+    }
+}
+
+// Partitioned row-sum: TROWSUM on each column sub-view, TADD to combine.
+template <int Parts, typename OutTile, typename SubTileType,
+          typename ParentTile>
+inline void fa_subview_row_sum(OutTile &out, ParentTile &parent) {
+    if constexpr (Parts <= 1) {
+        TROWSUM(out, parent);
+    } else {
+        auto parts = TPARTVIEW<SubTileType, 1, Parts>(parent);
+        OutTile partial;
+        auto part0 = parts[0][0];
+        TROWSUM(partial, part0);
+        out = partial;
+#pragma clang loop unroll(full)
+        for (int p = 1; p < Parts; ++p) {
+            auto part = parts[0][p];
+            TROWSUM(partial, part);
+            OutTile combined;
+            TADD(combined, out, partial);
+            out = combined;
+        }
+    }
+}
+
 template <typename matrix_dtype, typename vector_dtype, int PackedFactor,
           int Sq, int Skv, int qD, int vD, int kTm, int kTk,
           int scaleD = qD>
@@ -66,9 +118,7 @@ void flash_attention_2d_unroll_shared_impl(
     constexpr int kStoredTk = kTk / PackedFactor;
     constexpr int kGroupM = kTm <= 128 ? kTm : 128;
     constexpr int kPeTm = kGroupM <= 64 ? 16 : 32;
-    // Change 1: physical Rows must be 128 or 64; ValidRow = actual kGroupM.
     constexpr int kTileRows = (kGroupM <= 64) ? 64 : 128;
-    // Change 2: chunk sizes = full K dimension (no 32 KB per-row chunking).
     constexpr int kQKStoredChunk = kStoredQD;
     constexpr int kPVStoredChunk = kStoredTk;
     static_assert(kTm % kGroupM == 0 && Sq % kGroupM == 0,
@@ -84,30 +134,21 @@ void flash_attention_2d_unroll_shared_impl(
     // K is physically [Skv, qD] row-major (head dim contiguous), described as
     // ColMajor<qD, Skv> so the CUBE reads K^T without a transpose_b flag.
     using gmQ = global_tensor<matrix_dtype, RowMajor<Sq, kStoredQD>>;
-    using gmK = global_tensor<matrix_dtype, RowMajor<Skv, kStoredQD>>;
+    using gmK = global_tensor<matrix_dtype, ColMajor<kStoredQD, Skv>>;
     using gmV = global_tensor<matrix_dtype, RowMajor<kStoredSkv, vD>>;
     using gmO = global_tensor<vector_dtype, RowMajor<Sq, vD>>;
 
-    // Change 1: SharedMatrixLeft uses kTileRows (128/64) for physical Rows,
-    // kGroupM for ValidRow.
     using tileQMatrix =
         SharedMatrixLeft<matrix_dtype, kTileRows, kQKStoredChunk,
                          kGroupM, kQKStoredChunk>;
-    // K tile [kQKStoredChunk, kTk] — K^T shape, no transpose_b needed.
     using tileKMatrix =
         SharedMatrixRight<matrix_dtype, kQKStoredChunk, kTk>;
-    // V tile [kPVStoredChunk, vD] — [K, N] shape. The PV TMATMUL uses
-    // transpose_b() so the CUBE reads B in K-major order.
     using tileVMatrix =
         SharedMatrixRight<matrix_dtype, kPVStoredChunk, vD>;
     using tileQ = SharedTile<tileQMatrix>;
     using tileK = SharedTile<tileKMatrix>;
     using tileV = SharedTile<tileVMatrix>;
 
-    // Change 8: tileW is a CubeTileM32/M16 (Location::Left) instead of
-    // CubeAccumulatorM32/M16 (Location::Acc). The QK TMATMUL writes directly
-    // to a Left tile, and tW is used as the PV TMATMUL left operand without
-    // any TCVT (for FP32). For packed types a Left->Left TCVT remains.
     using tileWM16 = CubeTileM16<vector_dtype, kPeTm, kTk>;
     using tileWM32 = CubeTileM32<vector_dtype, kPeTm, kTk>;
     using tileW = std::conditional_t<(kPeTm <= 16), tileWM16, tileWM32>;
@@ -118,9 +159,6 @@ void flash_attention_2d_unroll_shared_impl(
         std::conditional_t<(kPeTm <= 16), tilePVM16, tilePVM32>;
     using tileO = tilePVCube;
 
-    // P shard: local CUBE Left tile for non-FP32 type conversion.
-    // For FP32 (PackedFactor==1, matrix_dtype==float), tW is already a Left
-    // float tile and is used directly as the PV TMATMUL left operand.
     using tilePShardM16 = CubeTileM16<matrix_dtype, kPeTm, kStoredTk>;
     using tilePShardM32 = CubeTileM32<matrix_dtype, kPeTm, kStoredTk>;
     using tilePShard =
@@ -131,11 +169,27 @@ void flash_attention_2d_unroll_shared_impl(
     using tileOCast =
         std::conditional_t<(kPeTm <= 16), tileOCastM16, tileOCastM32>;
 
-    // Change 4: vector state tiles use VecTileM32 (CubeM32 layout) with
-    // vector_dtype.
     using tileMax = VecTileM32<vector_dtype, 32, 1, kPeTm, 1>;
     using tileSum = tileMax;
     using tileScale = tileMax;
+
+    // ── Reduction sub-view parameters ───────────────────────────────
+    // The ISA limits reduction-source tiles to 2048 bytes.  Compute the
+    // minimum number of column partitions so each sub-tile fits.
+    constexpr int kMaxReduceBytes = 2048;
+    constexpr int kTileWBytes = tileW::LogicalTileBytes;
+    constexpr int kReduceParts =
+        (kTileWBytes + kMaxReduceBytes - 1) / kMaxReduceBytes;
+    static_assert(kReduceParts >= 1, "at least one reduction part");
+    static_assert(kTk % kReduceParts == 0,
+                  "kTk must be divisible by the number of reduction parts");
+    constexpr int kReduceSubCols = kTk / kReduceParts;
+    using tileWSubM16 = CubeTileM16<vector_dtype, kPeTm, kReduceSubCols>;
+    using tileWSubM32 = CubeTileM32<vector_dtype, kPeTm, kReduceSubCols>;
+    using tileWSub =
+        std::conditional_t<(kPeTm <= 16), tileWSubM16, tileWSubM32>;
+    static_assert(tileWSub::LogicalTileBytes <= kMaxReduceBytes,
+                  "Reduction sub-tile must fit within the 2KB ISA limit");
 
     using itQ = global_iterator<gmQ, tileQMatrix>;
     using itK = global_iterator<gmK, tileKMatrix>;
@@ -147,7 +201,6 @@ void flash_attention_2d_unroll_shared_impl(
     itV gIterV(v_ptr);
     itO gIterO(out_ptr);
 
-    // Change 2: simplified SharedTReg budget (no MX scale tiles, no XDim/YDim).
     constexpr int kSharedTRegBytes = 256 * 1024;
     constexpr int kQKSharedBytes =
         tileQMatrix::LogicalTileBytes + tileKMatrix::LogicalTileBytes;
@@ -189,18 +242,18 @@ void flash_attention_2d_unroll_shared_impl(
 
             // --- Softmax ---
             tileMax tLocalMax;
-            TROWMAX(tLocalMax, tW);
+            // Sub-view row-max: partition tW by columns when it exceeds
+            // the 2048-byte reduction-source ISA limit.
+            fa_subview_row_max<kReduceParts, tileMax, tileWSub>(
+                tLocalMax, tW);
 
             tileMax tNewMax;
             tileScale tScale;
             if (j == 0) {
-                // Change 5: first block — use tLocalMax directly, no rescale
                 tNewMax = tLocalMax;
             } else {
                 TMAX(tNewMax, tMax, tLocalMax);
-                // Change 7: TROWEXPANDEXPDIF replaces TSUB+TEXP (j!=0 only)
                 TROWEXPANDEXPDIF(tScale, tMax, tNewMax);
-                // Rescale old output before PV accumulation
                 TROWEXPANDMUL(tO, tO, tScale);
             }
 
@@ -208,25 +261,26 @@ void flash_attention_2d_unroll_shared_impl(
             TROWEXPANDEXPDIF(tW, tW, tNewMax);
 
             tileSum tLocalSum;
-            TROWSUM(tLocalSum, tW);
+            // Sub-view row-sum: same partitioning as row-max above, but
+            // on the exponentiated tW.  Views are recreated after the
+            // in-place TROWEXPANDEXPDIF modifies tW.
+            fa_subview_row_sum<kReduceParts, tileSum, tileWSub>(
+                tLocalSum, tW);
 
             tileSum tNewSum;
             if (j == 0) {
                 tNewSum = tLocalSum;
             } else {
-                // Fused multiply-add: sum * scale + localSum
                 TFMA(tNewSum, tSum, tScale, tLocalSum);
             }
 
 #ifndef FA_DISABLE_CUBE_TSTORE
             // --- PV matmul ---
-            // Change 8: tW is already a Left tile — use directly as PV left
-            // operand (FP32). For packed types, TCVT to a local-Left shard.
             tileV tV;
             auto gV = gIterV(j, 0);
             TLOAD<tileVMatrix, 1>(tV, gV);
 
-            auto pvOptions = fixp::keep_acc().transpose_b();
+            auto pvOptions = fixp::keep_acc();
             if constexpr (PackedFactor == 1 &&
                           std::is_same_v<matrix_dtype, float>) {
                 // FP32: tW is already Left, float — no TCVT
@@ -256,7 +310,6 @@ void flash_attention_2d_unroll_shared_impl(
         }
 
 #ifndef FA_DISABLE_CUBE_TSTORE
-        // Change 9: TROWEXPANDDIV replaces TRECIP+TROWEXPANDMUL
         TROWEXPANDDIV(tO, tO, tSum);
         auto dstO = gIterO(i * kPeNum + tid, 0);
         if constexpr (std::is_same_v<vector_dtype, float>) {

@@ -79,8 +79,10 @@ else ifeq ($(TESTCASE),fa_2d_unroll_gmma_no_tstore)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_2d_unroll_gmma_no_tstore.cpp
 else ifeq ($(TESTCASE),fa_fixpipe)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_fixpipe.cpp
+else ifeq ($(TESTCASE),fa_subview)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_subview.cpp
 else
-$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma, fa_2d_unroll_gmma_no_tstore, or fa_fixpipe)
+$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma, fa_2d_unroll_gmma_no_tstore, fa_fixpipe, or fa_subview)
 endif
 
 ifeq ($(QD)_$(VD),128_128)

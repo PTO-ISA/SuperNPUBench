@@ -1,4 +1,4 @@
-#include "multi_thread/fa/fa_2d_unroll_gmma.hpp"
+#include "multi_thread/fa/fa_subview.hpp"
 
 #include <cstdint>
 
@@ -6,9 +6,9 @@
 #include "fileop.h"
 #include "multi_thread_res_check.h"
 
-// 4-PE cooperative TMATMUL FlashAttention driver (v2 optimized variant).
-// Natural V layout, transpose_b on PV, fused PV accumulation, TFMA for
-// scaled old-sum.
+// Subview FA driver — same I/O contract as fa_2d_unroll_gmma.cpp but includes the
+// fa_subview.hpp kernel (TPARTVIEW column sub-views for TROWMAX/TROWSUM
+// to satisfy the 2048-byte reduction-source ISA limit).
 
 #ifndef MATRIX_DTYPE
 #define MATRIX_DTYPE float
@@ -141,9 +141,6 @@ int main() {
     for (int i = 0; i < B; ++i) {
 #pragma clang loop unroll(full)
         for (int j = 0; j < H; ++j) {
-            // PE0 loads the full shared Q/K/V tiles (PEMask=1), which are
-            // then consumed cooperatively by all four PEs. The RES_CHECK I/O
-            // uses the same PE0 thread.
             flash_attention_2d_unroll_shared_impl<
                 matrix_dtype, vector_dtype, PACKED_FACTOR,
                 globSq, globSkv, qD, vD, kTm, kTk>(
