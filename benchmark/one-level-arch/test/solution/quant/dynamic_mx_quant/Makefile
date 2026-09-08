@@ -1,6 +1,8 @@
-# DynamicMxQuant solution test entries. 8 验证通过的正式 kernel（tail/nontail ×
-# OCP/cuBLAS × FP8/FP4，含 4-PE SPMD 与 bigbs 方案A 变体）。elf basename 固定为
-# dynamic_mx_quant_<variant>，使 dynamic_mx_quant_data_compare.py 按 basename 找
+# DynamicMxQuant solution test entries. 8 个验证通过的正式用例（tail/nontail ×
+# OCP/cuBLAS × FP8/FP4，含 4-PE SPMD 与大 BlockSize 变体），映射到 6 个 kernel 实现。
+# 注：两个 *_bigbs 用例是大 BlockSize 场景，现走 nontail plain 单块路径（方案A 切归约轴
+# 的 _bigbs kernel 已退休——新工具链 tile 上限 256KB，单块可直接覆盖大 BS）。elf basename
+# 固定为 dynamic_mx_quant_<variant>，使 dynamic_mx_quant_data_compare.py 按 basename 找
 # compare/<basename> 金标目录。4-PE 变体运行须 gfrun -s softcore.multiThreadNum=4。
 
 ifeq ($(TYPE), TAIL_OCP_FP8)

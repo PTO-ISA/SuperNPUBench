@@ -1,6 +1,9 @@
 #!/bin/bash
-# DynamicMxQuant solution 一键构建：为 8 个验证通过的正式 kernel 现场生成 golden
+# DynamicMxQuant solution 一键构建：为 8 个验证通过的正式用例现场生成 golden
 # （gen_dynamic_mx_quant_data.py，无需迁移 .bin）并用 res_check=on 编译。
+# 8 个用例映射到 6 个 kernel 实现（common + 4 tail + 2 nontail = 7 个头文件）：
+# 两个 *_bigbs 用例是大 BlockSize 场景，现走 nontail plain 单块路径
+# （方案A 切归约轴的 _bigbs kernel 已退休，见收敛提交）。
 #
 #   export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
 #   ./compile.all
@@ -42,4 +45,4 @@ for cfg in "${CONFIGS[@]}"; do
   make -C "$HERE" TESTCASE=dynamic_mx_quant TYPE="$TYPE" COMPILER_DIR="$COMPILER_DIR" res_check=on diss
 done
 
-echo "全部 8 个 kernel 已生成 golden + 编译完成。"
+echo "全部 8 个用例已生成 golden + 编译完成（6 个 kernel 实现；两个大 BS 用例复用 nontail plain，bigbs 已退休）。"
