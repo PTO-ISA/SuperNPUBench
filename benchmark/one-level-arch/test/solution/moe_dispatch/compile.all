@@ -1,0 +1,8 @@
+#!/bin/bash
+# MoE Dispatch — single-PE V2 + 4-PE SPMD compile tests.
+# Run the _mt ELF with: gfrun -t 1 -s softcore.multiThreadNum=4 -f <elf>
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+make TESTCASE=moe_dispatch_v2 COMPILER_DIR="$COMPILER_DIR" diss
+make TESTCASE=moe_dispatch_mt COMPILER_DIR="$COMPILER_DIR" diss
