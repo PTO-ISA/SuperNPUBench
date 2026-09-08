@@ -84,8 +84,5 @@ ifeq ($(TESTCASE), fa_2d_unroll_gmma)
    TARGET = $(ELF_HEAD)/$(TESTCASE)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk)_X$(X)_Y$(Y).elf
 endif
 
-include ../../common/Makefile.common
 
-clean:
-	@find $(OBJ_ROOT) -type f -name "*.o" -exec rm -rf {} \;
-	@rm -rf $(COMM_OBJ) $(LINK_SCRIPT)
+include ../../common/Makefile.common
