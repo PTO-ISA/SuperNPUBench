@@ -65,7 +65,12 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
     const int pe_id = static_cast<int>(get_thread_idx());
 
     using tileQMatrix = SharedMatrixLeft<qdtype, kGroupM, kTd>;
-    using tileKMatrix = SharedMatrixRight<kvdtype, kTd, kTk>;
+    // Keep K in its original [Tk,Td] RowMajor layout, like V. QK applies
+    // the logical transpose through Shared B's B.FPATR TransB control.
+    // Current ASL deletes standalone TTRANS (TEPL selector 0x06e); direct
+    // Shared TLOAD also avoids the legacy Local-to-Shared publish opcode.
+    // Neither a Local transposed tile nor a full transposed GM KV is needed.
+    using tileKMatrix = SharedMatrixRight<kvdtype, kTk, kTd>;
     using tilePMatrix = SharedMatrixLeft<qdtype, kGroupM, kTk>;
     using tileVMatrix = SharedMatrixRight<kvdtype, kTk, kTd>;
     using tileQShared = SharedTile<tileQMatrix>;
@@ -79,8 +84,6 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
     using tileMask = tileW;
     using tilePShard =
         Tile<Location::Vec, qdtype, kPeRows, kTk, BLayout::RowMajor>;
-    using tileKSrc =
-        Tile<Location::Vec, kvdtype, kTk, kTd, BLayout::RowMajor>;
     using tileO =
         Tile<Location::Vec, float, kPeRows, kTd, BLayout::RowMajor>;
     using tileOCast =
@@ -94,7 +97,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
     using gmGatherKV = global_tensor<kvdtype, RowMajor<kTk, Config::D>>;
     using gmO = global_tensor<odttype, RowMajor<kGroupM, Config::D>>;
     using itQ = global_iterator<gmQ, tileQMatrix>;
-    using itKSrc = global_iterator<gmGatherKV, tileKSrc>;
+    using itK = global_iterator<gmGatherKV, tileKMatrix>;
     using itV = global_iterator<gmGatherKV, tileVMatrix>;
     using itO = global_iterator<gmO, tileOCast>;
 
@@ -275,7 +278,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                                       logical_begin, valid_rows);
                 }
                 build_source_mask(valid_rows);
-                itKSrc gIterKSrc(tile_ptr);
+                itK gIterK(tile_ptr);
 
                 tileMax tMax;
                 tileSum tSum;
@@ -286,21 +289,18 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
 #pragma clang loop unroll(full)
                 for (int dd = 0; dd < kDb; ++dd) {
                     tileQShared tQShared;
-                    tileKSrc tKSrc;
-                    tileKMatrix tKLocal;
                     tileKShared tKShared;
                     auto gQ = gIterQ(0, dd);
-                    auto gK = gIterKSrc(0, dd);
+                    auto gK = gIterK(0, dd);
                     TLOAD<tileQMatrix, 1>(tQShared, gQ);
-                    TLOAD(tKSrc, gK);
-                    TTRANS(tKLocal, tKSrc);
-                    TMOV_L2S_PUBLISH(tKShared, tKLocal);
+                    TLOAD<tileKMatrix, 1>(tKShared, gK);
                     if (dd == 0) {
                         TMATMUL(tScoreCube, tQShared, tKShared,
-                                fixp::keep_acc());
+                                fixp::keep_acc().transpose_b());
                     } else {
                         TMATMUL_ACC(tScoreCube, tScoreCube,
-                                    tQShared, tKShared, fixp::keep_acc());
+                                    tQShared, tKShared,
+                                    fixp::keep_acc().transpose_b());
                     }
                 }
 
@@ -392,7 +392,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                                       logical_begin, valid_rows);
                 }
                 build_source_mask(valid_rows);
-                itKSrc gIterKSrc(tile_ptr);
+                itK gIterK(tile_ptr);
                 itV gIterV(tile_ptr);
 
                 tileMax tMax;
@@ -404,22 +404,18 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
 #pragma clang loop unroll(full)
                 for (int dd = 0; dd < kDb; ++dd) {
                     tileQShared tQShared;
-                    tileKSrc tKSrc;
-                    tileKMatrix tKLocal;
                     tileKShared tKShared;
                     auto gQ = gIterQ(0, dd);
-                    auto gK = gIterKSrc(0, dd);
+                    auto gK = gIterK(0, dd);
                     TLOAD<tileQMatrix, 1>(tQShared, gQ);
-                    TLOAD(tKSrc, gK);
-                    TTRANS(tKLocal, tKSrc);
-                    TMOV_L2S_PUBLISH(tKShared, tKLocal);
+                    TLOAD<tileKMatrix, 1>(tKShared, gK);
                     if (dd == 0) {
                         TMATMUL(tScoreCube, tQShared, tKShared,
-                                fixp::keep_acc());
+                                fixp::keep_acc().transpose_b());
                     } else {
                         TMATMUL_ACC(tScoreCube, tScoreCube,
                                     tQShared, tKShared,
-                                    fixp::keep_acc());
+                                    fixp::keep_acc().transpose_b());
                     }
                 }
 
