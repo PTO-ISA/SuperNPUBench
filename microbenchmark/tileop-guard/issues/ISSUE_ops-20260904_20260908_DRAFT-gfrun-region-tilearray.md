@@ -16,7 +16,7 @@
 | **SuperScalarModel（本 issue 目标）** | LinxISA/SuperScalarModel | `codex/consolidate-post-main-fixes-20260903` | `49547742` |
 | Linx-TileOP-API | LinxISA/Linx-TileOP-API | `linx` | `0566283` |
 | pto-spec（ISA 规范） | PTO-ISA/pto-spec | `main` | `dea0b75e`（0.58.6.0） |
-| SuperNPUBench(看护 demo) | [SuperNPUBench PR #96](https://github.com/PTO-ISA/SuperNPUBench/pull/96)（分支 `tileop-guard-batch1`） | — | `<PR#96 tip·push 后回填>` |
+| SuperNPUBench(看护 demo) | [SuperNPUBench PR #96](https://github.com/PTO-ISA/SuperNPUBench/pull/96)（分支 `tileop-guard-batch1`） | — | `ecbb281` |
 | llvm-project | LinxISA/llvm-project | `dev-llvm15_56` | `67d3ac9` |
 
 > 工具链指纹：clang++ md5 `e427d1429c0e`、gfrun md5 `0c433cd11c00`。
