@@ -6,8 +6,8 @@ the PTO v0.58 TileOP surface (`TLOAD/TSTORE`, `TLOAD_CUBE/TSTORE_CUBE`,
 family uses plain C + volatile to drive the GPR micro-ISA; the `fixp`
 family exercises the `B.FPATR` quantization/PostProcess options
 (scalar/vector quant, ReLU/PReLU, row/group-max, shared-right) on
-`TMATMUL`/`TGEMV`. The four generated families currently emit 278 unique active
-cases; the hand-maintained `fixp` family adds 94 active modes (372 configurations).
+`TMATMUL`/`TGEMV`. The four generated families currently emit 331 unique active
+cases; the hand-maintained `fixp` family adds 122 active modes (453 configurations).
 `coverage.json` records active and unsupported cases.
 
 ## Directory Structure
@@ -31,7 +31,7 @@ microbenchmark/
 ├── scalar/                  # GPR scalar family (BSTART.STD / FP)
 │   ├── scalar_bench.hpp     # bench_latency / bench_throughput / bench_store / bench_cv
 │   ├── Makefile / compile.all / src/*.cpp
-└── fixp/                    # hand-maintained FPATR/quant TMATMUL (one src, 94 active modes)
+└── fixp/                    # hand-maintained FPATR/quant CUBE tests (one src, 122 active modes)
     ├── src/fixp_tmatmul.cpp
     ├── Makefile / compile.all / report_fixp.py / fixp_report.md
 ```
@@ -40,12 +40,12 @@ microbenchmark/
 
 | family | covers | cases |
 | --- | --- | ---: |
-| matrix (CUBE direct) | TMATMUL / TMATMUL_ACC / TMATMUL_BIAS | 11 |
-| vector (TEPL) | elementwise / tile-scalar / expand / TCI sequence | 129 |
-| memory (TLSU) | TLOAD / TSTORE / MGATHER / MSCATTER | 14 |
+| matrix (CUBE direct) | representative TMATMUL / ACC / BIAS cases; all 12 CUBE names are also covered by fixp | 11 |
+| vector (TEPL) | all 77 PTO 0.58.6 TEPL operation names | 170 |
+| memory (TLSU) | 10 TileOP-exposed PTO operations; 18 new atomic names await API support | 26 |
 | scalar (GPR) | int ALU / load-store / float / conversion × throughput+latency | 124 |
-| fixp (FPATR/quant) | TMATMUL/TGEMV × `fixp::Options` (scalar/vector quant, relu/prelu, row/group-max, shared-right) | 94 |
-| **total** | | **372** |
+| fixp (FPATR/quant) | TMATMUL/TGEMV × `fixp::Options` (scalar/vector quant, relu/prelu, row/group-max, shared-right) | 122 |
+| **total** | | **453** |
 
 - tile dtypes: `bf16 / fp16 / fp32 / i8 / i16 / i32`; scalar dtypes: `i32 / i64 / fp32 / f64`.
 - tile sizes: vector/memory 16×16 (some 32×32); CUBE uses M16/M32 and N8 CELL layouts.
@@ -70,6 +70,24 @@ cd fixp   && bash compile.all
 ./compile_all.sh scalar
 ./compile_all.sh cube
 ```
+
+## PTO ISA coverage audit
+
+`audit_isa_coverage.py` compares three independent inventories: the current
+`pto-spec` operation catalog, named operations exposed by the installed
+`tileop-api/jcore/template_asm.hpp`, and this directory's `coverage.json`.
+
+```bash
+export COMPILER_DIR=/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
+python3 audit_isa_coverage.py --spec-root /Users/blacktraker/gitproj/DV4/pto-spec
+```
+
+For PTO ISA 0.58.6 the catalog contains 117 named Tile operations. All 117 are
+inventoried here: 99 are exposed by the installed TileOP API and have active
+operation coverage; the remaining 18 (`MGATHER_{EXCH,MAX,...}` and
+`MSCATTER_{MAX,...,POPC}` atomic variants) are explicitly marked unsupported
+until the API publishes named wrappers. Compatibility wrappers for retired
+operations may still exist in TileOP headers, but they are not active tests.
 
 Artifacts: `output/microbenchmark/<family>/elf/<family>/<case>.elf`.
 
@@ -254,21 +272,22 @@ live in `fixp/src/fixp_tmatmul.cpp`'s `#if` ladder, `fixp/compile.all`'s
 The generated corpus follows the PTO v0.58 operation surface exposed by the
 mandated main `linx-toolchain-build` checkout:
 
-- **`bench_reduce`** uses a 1-column output tile (`ValidCol==1`).
+- **reduction layouts** use `M x 1` outputs for row reductions and `1 x N`
+  outputs for column reductions.
 - **dtype fixes**: active `TABS` covers FP16/FP32; BF16 remains recorded but is
   unsupported because the main compiler crashes during instruction selection.
-- **unsupported cases** are explicit in `coverage.json`. TSELECT is absent from
-  the installed compiler headers, and generic TMOV currently reaches an
-  assembler `B.DATR` matcher error. TCMP/TCMPS/THISTOGRAM and masked gather/
-  scatter likewise remain explicit while their emitted encodings are rejected.
-  None of these operations is replaced by a fallback.
+- **current interfaces restored**: `TSEL` (not `TSELECT`), `TCMP/TCMPS`,
+  `TMOV`, and masked gather/scatter all compile with the current main compiler.
+- **remaining operation gaps** are the 18 PTO 0.58.6 named atomic gather/
+  scatter variants that the installed TileOP API does not yet expose. They are
+  explicit in `coverage.json`; no fallback operation is substituted.
 - **memory layout**: there is no synthetic `TLOAD_ND2NZ` operation. CUBE layout
   transport is tested through the real CUBE tile types and TLOAD_CUBE/TSTORE_CUBE.
 - **cube**: A uses CUBE_M16/M32, B uses CUBE_N8, and accumulator/output uses
   CUBE_M16/M32. M=64 is an operator tiling problem rather than one CUBE tile.
-- **MX** is not represented by an FP16 placeholder. It remains unsupported here
-  until a real MX input and E8M0-scale fixture with an oracle is added.
-- **fixp**: 94 modes are active; `LRELU_ONLY` is blocked by a toolchain `B.IOR`
+- **MX** uses real MX inputs and E8M0 scale Tiles in the fixp suite; all named
+  `TMATMUL_MX*` and `TGEMV_MX*` forms are represented.
+- **fixp**: 122 modes are active; `LRELU_ONLY` is blocked by a toolchain `B.IOR`
   matcher gap (see `fixp/issues/`). `report_fixp.py` decodes `B.FPATR`/`B.IOR`/
   `B.IOT`/`B.IOS` from each `.diss` into `fixp_report.md`.
 - scalar disassembly confirms lowering to scalar micro-ISA (e.g. `addw` chain).

@@ -111,4 +111,44 @@ void bench_scatter_mask(D *c, D *a, int32_t *idx, uint16_t *mask) {
     MSCATTER_MASK(gC0, tSrc, tIdx, tMask);
 }
 
+// Cache-line prefetch has no Tile destination.
+template <typename D, int M, int N>
+void bench_prefetch(D *, D *a) {
+    gm_t<D, M, N> gA(a);
+    TPREFETCH(gA, N, M);
+}
+
+// Atomic compare-and-swap gather. Byte displacements select the corresponding
+// element in the supplied GM array; expected/replacement are explicit tiles.
+template <typename D, int M, int N>
+void bench_gather_cas(D *c, D *a, int32_t *idx) {
+    using gmIdx = global_tensor<int32_t, RowMajor<M, N>>;
+    using tileIdx = Tile<Location::Vec, int32_t, M, N, BLayout::RowMajor>;
+    using itIdx = global_iterator<gmIdx, tileIdx>;
+    iter_t<D, M, N> gA(a), gC(c); itIdx gIdx(idx);
+    auto gA0 = gA(0, 0);
+    auto gC0 = gC(0, 0);
+    auto gI0 = gIdx(0, 0);
+    tile_t<D, M, N> tObserved, tExpected, tReplacement;
+    tileIdx tIdx;
+    TLOAD(tIdx, gI0);
+    TLOAD(tExpected, gA0);
+    TLOAD(tReplacement, gA0);
+    MGATHER_CAS(tObserved, reinterpret_cast<uint64_t>(a), tIdx,
+                tExpected, tReplacement, N, M);
+    TSTORE(gC0, tObserved);
+}
+
+// Peer-Tile move. The formal operation only accepts packed 4-bit element
+// types; peer_tid=0 keeps this as a deterministic single-PE encoding test.
+template <typename D, int M, int N>
+void bench_gmov(D *c, D *a) {
+    iter_t<D, M, N> gA(a), gC(c);
+    auto gA0 = gA(0, 0), gC0 = gC(0, 0);
+    tile_t<D, M, N> tA, tC;
+    TLOAD(tA, gA0);
+    GMOV(tC, 0, tA);
+    TSTORE(gC0, tC);
+}
+
 #endif

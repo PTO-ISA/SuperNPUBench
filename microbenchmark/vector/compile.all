@@ -26,6 +26,15 @@ run_case tands_i16_16x16
 run_case tands_i32_16x16
 run_case tci_i16_1x64
 run_case tci_i32_1x64
+run_case tcmp_fp16_16x16
+run_case tcmp_fp32_16x16
+run_case tcmp_i32_16x16
+run_case tcmps_fp16_16x16
+run_case tcmps_fp32_16x16
+run_case tcolargmax_fp16_16x16
+run_case tcolargmax_fp32_16x16
+run_case tcolargmin_fp16_16x16
+run_case tcolargmin_fp32_16x16
 run_case tcolexpand_fp16_16x16
 run_case tcolexpand_fp32_16x16
 run_case tcolexpandadd_fp16_16x16
@@ -42,8 +51,18 @@ run_case tcolexpandmul_fp16_16x16
 run_case tcolexpandmul_fp32_16x16
 run_case tcolexpandsub_fp16_16x16
 run_case tcolexpandsub_fp32_16x16
-run_case tconcat_fp16_16x16
-run_case tconcat_fp32_16x16
+run_case tcolmax_fp16_16x16
+run_case tcolmax_fp32_16x16
+run_case tcolmax_i32_16x16
+run_case tcolmin_fp16_16x16
+run_case tcolmin_fp32_16x16
+run_case tcolmin_i32_16x16
+run_case tcolprod_fp16_16x16
+run_case tcolprod_fp32_16x16
+run_case tcolprod_i32_16x16
+run_case tcolsum_fp16_16x16
+run_case tcolsum_fp32_16x16
+run_case tcolsum_i32_16x16
 run_case tcvt_fp16_16x16
 run_case tcvt_fp32_16x16
 run_case tdiv_fp16_16x16
@@ -56,6 +75,10 @@ run_case texp_fp16_16x16
 run_case texp_fp32_16x16
 run_case texpands_fp16_16x16
 run_case texpands_fp32_16x16
+run_case tfma_fp16_16x16
+run_case tfma_fp32_16x16
+run_case tgather_fp32_16x16
+run_case tgpr2t_u8_16x8
 run_case tlog_fp16_16x16
 run_case tlog_fp32_16x16
 run_case tmax_fp16_16x16
@@ -86,14 +109,8 @@ run_case tor_i16_16x16
 run_case tor_i32_16x16
 run_case tors_i16_16x16
 run_case tors_i32_16x16
-run_case tpartadd_fp16_16x16
-run_case tpartadd_fp32_16x16
-run_case tpartmax_fp16_16x16
-run_case tpartmax_fp32_16x16
-run_case tpartmin_fp16_16x16
-run_case tpartmin_fp32_16x16
-run_case tpartmul_fp16_16x16
-run_case tpartmul_fp32_16x16
+run_case tpack_u32_16x32
+run_case tpermute_fp32_16x32
 run_case trecip_fp16_16x16
 run_case trecip_fp32_16x16
 run_case trelu_fp16_16x16
@@ -103,6 +120,10 @@ run_case trem_fp32_16x16
 run_case trem_i32_16x16
 run_case trems_fp16_16x16
 run_case trems_fp32_16x16
+run_case trowargmax_fp16_16x16
+run_case trowargmax_fp32_16x16
+run_case trowargmin_fp16_16x16
+run_case trowargmin_fp32_16x16
 run_case trowexpand_fp16_16x16
 run_case trowexpand_fp32_16x16
 run_case trowexpandadd_fp16_16x16
@@ -119,8 +140,25 @@ run_case trowexpandmul_fp16_16x16
 run_case trowexpandmul_fp32_16x16
 run_case trowexpandsub_fp16_16x16
 run_case trowexpandsub_fp32_16x16
+run_case trowmax_fp16_16x16
+run_case trowmax_fp32_16x16
+run_case trowmax_i32_16x16
+run_case trowmin_fp16_16x16
+run_case trowmin_fp32_16x16
+run_case trowmin_i32_16x16
+run_case trowprod_fp16_16x16
+run_case trowprod_fp32_16x16
+run_case trowprod_i32_16x16
+run_case trowsum_fp16_16x16
+run_case trowsum_fp32_16x16
+run_case trowsum_i32_16x16
 run_case trsqrt_fp16_16x16
 run_case trsqrt_fp32_16x16
+run_case tscatter_fp32_16x16
+run_case tsel_fp16_16x16
+run_case tsel_fp32_16x16
+run_case tsels_fp16_16x16
+run_case tsels_fp32_16x16
 run_case tshl_i16_16x16
 run_case tshl_i32_16x16
 run_case tshls_i16_16x16
@@ -129,6 +167,7 @@ run_case tshr_i16_16x16
 run_case tshr_i32_16x16
 run_case tshrs_i16_16x16
 run_case tshrs_i32_16x16
+run_case tshuf_u32_16x32
 run_case tsqrt_fp16_16x16
 run_case tsqrt_fp32_16x16
 run_case tsub_fp16_16x16
@@ -137,6 +176,8 @@ run_case tsub_i16_16x16
 run_case tsub_i32_16x16
 run_case tsubs_fp16_16x16
 run_case tsubs_fp32_16x16
+run_case ttri_fp32_16x16
+run_case tunpack_u32_16x32
 run_case txor_i16_16x16
 run_case txor_i32_16x16
 run_case txors_i16_16x16
@@ -145,4 +186,4 @@ if [ "${#failures[@]}" -ne 0 ]; then
   echo "=== vector FAILED: ${failures[*]} ==="
   exit 1
 fi
-echo "=== vector completed: all 129 cases passed ==="
+echo "=== vector completed: all 170 cases passed ==="
