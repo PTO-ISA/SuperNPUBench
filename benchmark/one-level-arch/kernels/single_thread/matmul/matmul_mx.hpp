@@ -30,14 +30,133 @@
 using namespace pto;
 
 template <typename E_, int R_, int C_, int VR_=R_, int VC_=C_>
-using TileAcc = Tile<Location::Vec, E_, R_, C_, BLayout::RowMajor, VR_, VC_>;
+using CubeTileA = std::conditional_t<
+    (R_ <= 16), CubeTileM16<E_, R_, C_, VR_, VC_>,
+    CubeTileM32<E_, R_, C_, VR_, VC_>>;
+
+template <typename E_, int R_, int C_, int VR_=R_, int VC_=C_>
+using TileAcc = std::conditional_t<
+    (R_ <= 16), CubeAccumulatorM16<E_, R_, C_, VR_, VC_>,
+    CubeAccumulatorM32<E_, R_, C_, VR_, VC_>>;
+
+// Current HiF4 Matrix-MX contract.  Tile dimensions stay in logical lanes;
+// the __fp4_hif4x2 carrier only changes the number of bytes used in GM.
+// Local scale operands remain Location::Scaling/RowMajor, matching the
+// TileOP Matrix-MX interface: A scale is [M,K/64], B scale is [K/64,N].
+template <const int gM, const int gN, const int gK, const int tM,
+          const int tN, const int tK, bool ReuseA = false>
+void matmul_hif4x2_mx(float *dst, __fp4_hif4x2 *src0,
+                      __fp4_hif4x2 *src1, uint32_t *src0_mx,
+                      uint32_t *src1_mx) {
+  static_assert(gM % tM == 0 && gN % tN == 0 && gK % tK == 0,
+                "HiF4 single-thread matmul currently requires full tiles");
+  static_assert(tM == 16 || tM == 32,
+                "local CUBE matmul supports M16/M32 output cells");
+  static_assert(gK % 64 == 0 && tK % 64 == 0,
+                "HiF4 Matrix-MX uses U32 scales in groups of 64 K lanes");
+  static_assert(gK % 2 == 0 && tK % 2 == 0 && gN % 2 == 0,
+                "HiF4x2 packed storage requires even matrix extents");
+
+  constexpr int Mb = gM / tM;
+  constexpr int Nb = gN / tN;
+  constexpr int Kb = gK / tK;
+  constexpr int kScaleK = tK / 64;
+  constexpr int kGlobalScaleK = gK / 64;
+
+  using tileA = CubeTileA<__fp4_hif4x2, tM, tK>;
+  using tileB = CubeTileN8<__fp4_hif4x2, tK, tN>;
+  using tileC = TileAcc<float, tM, tN>;
+  using tileAScale =
+      Tile<Location::Scaling, uint32_t, tM, kScaleK,
+           BLayout::RowMajor>;
+  using tileBScale =
+      Tile<Location::Scaling, uint32_t, kScaleK, tN,
+           BLayout::RowMajor>;
+
+  using gmC = global_tensor<float, RowMajor<gM, gN>>;
+  using itC = global_iterator<gmC, tileC>;
+  itC gCIter(dst);
+
+  auto load_a = [&](tileA &a, tileAScale &sa, int i, int k) {
+    using gmABlock = global_tensor<
+        __fp4_hif4x2, MatrixLayout<tM, tK, gK, 1>>;
+    using gmAScaleBlock = global_tensor<
+        uint32_t, MatrixLayout<tM, kScaleK, kGlobalScaleK, 1>>;
+    // C++ pointers address packed bytes, while MatrixLayout strides and Tile
+    // dimensions are expressed in logical four-bit lanes.
+    gmABlock gA(src0 + (i * tM * gK + k * tK) / 2);
+    gmAScaleBlock gAS(src0_mx + i * tM * kGlobalScaleK +
+                      k * kScaleK);
+    TLOAD_CUBE(a, gA);
+    TLOAD(sa, gAS);
+  };
+
+  auto load_b = [&](tileB &b, tileBScale &sb, int j, int k) {
+    using gmBBlock = global_tensor<
+        __fp4_hif4x2, MatrixLayout<tK, tN, gN, 1>>;
+    using gmBScaleBlock = global_tensor<
+        uint32_t, MatrixLayout<kScaleK, tN, gN, 1>>;
+    gmBBlock gB(src1 + (k * tK * gN + j * tN) / 2);
+    gmBScaleBlock gBS(src1_mx + k * kScaleK * gN + j * tN);
+    TLOAD_CUBE(b, gB);
+    TLOAD(sb, gBS);
+  };
+
+#pragma clang loop unroll(full)
+  for (int i = 0; i < Mb; ++i) {
+    if constexpr (ReuseA) {
+      tileA cachedA[Kb];
+      tileAScale cachedAScale[Kb];
+#pragma clang loop unroll(full)
+      for (int k = 0; k < Kb; ++k)
+        load_a(cachedA[k], cachedAScale[k], i, k);
+
+#pragma clang loop unroll(full)
+      for (int j = 0; j < Nb; ++j) {
+        tileC c;
+#pragma clang loop unroll(full)
+        for (int k = 0; k < Kb; ++k) {
+          tileB b;
+          tileBScale sb;
+          load_b(b, sb, j, k);
+          if (k == 0)
+            TMATMUL_MX(c, cachedA[k], cachedAScale[k], b, sb,
+                       fixp::keep_acc());
+          else
+            TMATMUL_MX_ACC(c, c, cachedA[k], cachedAScale[k], b, sb,
+                           fixp::keep_acc());
+        }
+        auto gC = gCIter(i, j);
+        TSTORE_CUBE(gC, c);
+      }
+    } else {
+#pragma clang loop unroll(full)
+      for (int j = 0; j < Nb; ++j) {
+        tileC c;
+#pragma clang loop unroll(full)
+        for (int k = 0; k < Kb; ++k) {
+          tileA a;
+          tileAScale sa;
+          tileB b;
+          tileBScale sb;
+          load_a(a, sa, i, k);
+          load_b(b, sb, j, k);
+          if (k == 0)
+            TMATMUL_MX(c, a, sa, b, sb, fixp::keep_acc());
+          else
+            TMATMUL_MX_ACC(c, c, a, sa, b, sb, fixp::keep_acc());
+        }
+        auto gC = gCIter(i, j);
+        TSTORE_CUBE(gC, c);
+      }
+    }
+  }
+}
 
 // TODO, move to utils.cpp
 template <is_global_data_v GmOut, is_tile_data_v TileAcc>
 void store_acc_tile(GmOut &Gout, TileAcc &tAcc){
-    using TileAccOut = Tile<Location::Vec, typename TileAcc::DType, TileAcc::Rows, TileAcc::Cols, BLayout::RowMajor, TileAcc::ValidRow, TileAcc::ValidCol>;
-    TileAccOut tAccOut;
-    TSTORE(Gout, tAccOut);
+    TSTORE(Gout, tAcc);
 }
 
 // typeb_wfactor 表明typeA和typeB的位宽比例，比如fp8是fp4x2的两倍，
@@ -55,8 +174,8 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK, valid_row, tK>;
-  using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN, tK/typeb_wfactor, valid_col>;
+  using tile_shapeA = CubeTileA<dtypeA, tM, tK, valid_row, tK>;
+  using tile_shapeB = CubeTileN8<dtypeB, tK/typeb_wfactor, tN, tK/typeb_wfactor, valid_col>;
   using tile_shapeACC = TileAcc<float, tM, tN, valid_row, valid_col>;
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
   using itB = global_iterator<gm_shapeB, tile_shapeB>;
@@ -88,17 +207,17 @@ void matmul_mxfp(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, uint8
   const int rmd_N = gN % tN;
   const int rmd_K = gK % tK;
 
-  using tile_shapeA_trows = TileLeft<dtypeA, tM, tK,  valid_row, rmd_K>;
-  using tile_shapeA_tcols = TileLeft<dtypeA, tM, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft<dtypeA, tM, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows = CubeTileA<dtypeA, tM, tK,  valid_row, rmd_K>;
+  using tile_shapeA_tcols = CubeTileA<dtypeA, tM, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtypeA, tM, tK, rmd_M, rmd_K>;
 
   using tile_shapeAMX_trows = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, valid_row, rmd_K/smatrix_wfactor, SLayout::RowMajor>;
   using tile_shapeAMX_tcols = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, rmd_M, tK/smatrix_wfactor, SLayout::RowMajor>;
   using tile_shapeAMX_tcorner = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, rmd_M, rmd_K/smatrix_wfactor, SLayout::RowMajor>;
 
-  using tile_shapeB_trows = TileRight<dtypeB, tK, tN, tK, rmd_N>;
-  using tile_shapeB_tcols = TileRight<dtypeB, tK, tN, rmd_K, valid_col>;
-  using tile_shapeB_tcorner = TileRight<dtypeB, tK, tN, rmd_K, rmd_N>;
+  using tile_shapeB_trows = CubeTileN8<dtypeB, tK, tN, tK, rmd_N>;
+  using tile_shapeB_tcols = CubeTileN8<dtypeB, tK, tN, rmd_K, valid_col>;
+  using tile_shapeB_tcorner = CubeTileN8<dtypeB, tK, tN, rmd_K, rmd_N>;
 
   using tile_shapeBMX_trows = Tile<Location::Scaling, uint8_t, tK, tN, BLayout::ColMajor, tK/smatrix_wfactor, rmd_N, SLayout::ColMajor>;
   using tile_shapeBMX_tcols = Tile<Location::Scaling, uint8_t, tK, tN, BLayout::ColMajor, rmd_K/smatrix_wfactor, valid_col, SLayout::ColMajor>;
@@ -327,8 +446,8 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK, valid_row, tK/typeb_wfactor>;
-  using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN, tK/typeb_wfactor, valid_col>;
+  using tile_shapeA = CubeTileA<dtypeA, tM, tK, valid_row, tK/typeb_wfactor>;
+  using tile_shapeB = CubeTileN8<dtypeB, tK/typeb_wfactor, tN, tK/typeb_wfactor, valid_col>;
   using tile_shapeACC = TileAcc<float, tM, tN, valid_row, valid_col>;
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
   using itB = global_iterator<gm_shapeB, tile_shapeB>;
@@ -356,17 +475,17 @@ void matmul_mxfp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx
   const int rmd_N = gN % tN;
   const int rmd_K = gK % tK;
 
-  using tile_shapeA_trows = TileLeft<dtypeA, tM, tK,  valid_row, rmd_K>;
-  using tile_shapeA_tcols = TileLeft<dtypeA, tM, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft<dtypeA, tM, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows = CubeTileA<dtypeA, tM, tK,  valid_row, rmd_K>;
+  using tile_shapeA_tcols = CubeTileA<dtypeA, tM, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtypeA, tM, tK, rmd_M, rmd_K>;
 
   using tile_shapeAMX_trows = Tile<Location::Scaling, scale_dtype, tM, tK, BLayout::RowMajor, valid_row, rmd_K/smatrix_wfactor>;
   using tile_shapeAMX_tcols = Tile<Location::Scaling, scale_dtype, tM, tK, BLayout::RowMajor, rmd_M, tK/smatrix_wfactor>;
   using tile_shapeAMX_tcorner = Tile<Location::Scaling, scale_dtype, tM, tK, BLayout::RowMajor, rmd_M, rmd_K/smatrix_wfactor>;
 
-  using tile_shapeB_trows = TileRight<dtypeB, tK, tN, tK, rmd_N>;
-  using tile_shapeB_tcols = TileRight<dtypeB, tK, tN, rmd_K, valid_col>;
-  using tile_shapeB_tcorner = TileRight<dtypeB, tK, tN, rmd_K, rmd_N>;
+  using tile_shapeB_trows = CubeTileN8<dtypeB, tK, tN, tK, rmd_N>;
+  using tile_shapeB_tcols = CubeTileN8<dtypeB, tK, tN, rmd_K, valid_col>;
+  using tile_shapeB_tcorner = CubeTileN8<dtypeB, tK, tN, rmd_K, rmd_N>;
 
   using tile_shapeBMX_trows = Tile<Location::Scaling, scale_dtype, tK, tN, BLayout::RowMajor, tK/smatrix_wfactor, rmd_N>;
   using tile_shapeBMX_tcols = Tile<Location::Scaling, scale_dtype, tK, tN, BLayout::RowMajor, rmd_K/smatrix_wfactor, valid_col>;
@@ -623,8 +742,8 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK, valid_row, tK/typeb_wfactor>;
-  using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN, tK/typeb_wfactor, valid_col>;
+  using tile_shapeA = CubeTileA<dtypeA, tM, tK, valid_row, tK/typeb_wfactor>;
+  using tile_shapeB = CubeTileN8<dtypeB, tK/typeb_wfactor, tN, tK/typeb_wfactor, valid_col>;
   using tile_shapeACC = TileAcc<float, tM, tN, valid_row, valid_col>;
 
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -645,7 +764,9 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
   using itBMX = global_iterator<gm_shapeBMX, tile_shapeBMX>;
   itBMX gBMXIter(reinterpret_cast<scale_dtype *>(src1_mx));
 
-  constexpr int kLocalTileBytes = 64 * 1024;
+  // PTO v0.58 persistent Local CUBE descriptors use a 256 KiB capacity
+  // ceiling. Keep the reuse planner consistent with the active TileOP limit.
+  constexpr int kLocalTileBytes = 256 * 1024;
   constexpr int kResidentBytes = tile_shapeACC::LogicalTileBytes +
                                  tile_shapeB::LogicalTileBytes +
                                  tile_shapeBMX::LogicalTileBytes;
@@ -664,17 +785,17 @@ void matmul_mxfp_notcvt_reuseA(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *
   const int rmd_N = gN % tN;
   const int rmd_K = gK % tK;
 
-  using tile_shapeA_trows = TileLeft<dtypeA, tM, tK,  valid_row, rmd_K>;
-  using tile_shapeA_tcols = TileLeft<dtypeA, tM, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft<dtypeA, tM, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows = CubeTileA<dtypeA, tM, tK,  valid_row, rmd_K>;
+  using tile_shapeA_tcols = CubeTileA<dtypeA, tM, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtypeA, tM, tK, rmd_M, rmd_K>;
 
   using tile_shapeAMX_trows = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, valid_row, rmd_K/smatrix_wfactor>;
   using tile_shapeAMX_tcols = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, rmd_M, tK/smatrix_wfactor>;
   using tile_shapeAMX_tcorner = Tile<Location::Scaling, uint8_t, tM, tK, BLayout::RowMajor, rmd_M, rmd_K/smatrix_wfactor>;
 
-  using tile_shapeB_trows = TileRight<dtypeB, tK, tN, tK, rmd_N>;
-  using tile_shapeB_tcols = TileRight<dtypeB, tK, tN, rmd_K, valid_col>;
-  using tile_shapeB_tcorner = TileRight<dtypeB, tK, tN, rmd_K, rmd_N>;
+  using tile_shapeB_trows = CubeTileN8<dtypeB, tK, tN, tK, rmd_N>;
+  using tile_shapeB_tcols = CubeTileN8<dtypeB, tK, tN, rmd_K, valid_col>;
+  using tile_shapeB_tcorner = CubeTileN8<dtypeB, tK, tN, rmd_K, rmd_N>;
 
   using tile_shapeBMX_trows = Tile<Location::Scaling, uint8_t, tK, tN, BLayout::RowMajor, tK/smatrix_wfactor, rmd_N>;
   using tile_shapeBMX_tcols = Tile<Location::Scaling, uint8_t, tK, tN, BLayout::RowMajor, rmd_K/smatrix_wfactor, valid_col>;
@@ -1149,8 +1270,8 @@ void matmul_mxfp_notcvt_old(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK/typeb_wfactor>;
-  using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN>;
+  using tile_shapeA = CubeTileA<dtypeA, tM, tK/typeb_wfactor>;
+  using tile_shapeB = CubeTileN8<dtypeB, tK/typeb_wfactor, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
   using itB = global_iterator<gm_shapeB, tile_shapeB>;
@@ -1228,8 +1349,8 @@ void matmul_fp_notcvt(float *dst, dtypeA *src0, dtypeB *src1, uint8_t *src0_mx, 
   using gm_shapeB = global_tensor<dtypeB, RowMajor<gK/typeb_wfactor, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtypeA, tM, tK/typeb_wfactor>;
-  using tile_shapeB = TileRight<dtypeB, tK/typeb_wfactor, tN>;
+  using tile_shapeA = CubeTileA<dtypeA, tM, tK/typeb_wfactor>;
+  using tile_shapeB = CubeTileN8<dtypeB, tK/typeb_wfactor, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
   using itB = global_iterator<gm_shapeB, tile_shapeB>;
@@ -1312,8 +1433,10 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
   // 伪量化固定float, group 大小128， 128个fp4共享一个scaling factor, 128的partial sum* scale
   using gm_shape_scale = global_tensor<float, RowMajor<gK/128, gN>>;
   using gm_shapeACC = global_tensor<float, RowMajor<gM, gN>>;
-  using tile_shapeA = TileLeft<dtypeA, trow, tK, tM, tK>;
-  using tile_shapeB = TileRight<dtypeB, tK/width_factor, tcol, tK/width_factor, tcol>;
+  using tile_shapeA = CubeTileA<dtypeA, trow, tK, tM, tK>;
+  // Cube descriptors express K in logical scalar elements. Packed FP4x2
+  // changes GM storage density, but must not halve the matrix-contract K.
+  using tile_shapeB = CubeTileN8<dtypeB, tK, tcol, tK, tcol>;
   // A scale block has only one logical row when tK=128. Pad the physical
   // tile to 8 rows so TLOAD reaches the ISA minimum active size of 512 B.
   using tile_shape_scale =
@@ -1341,13 +1464,13 @@ void matmul_mp(float *acc_ptr, dtypeA *a_ptr, dtypeB *b_ptr, float *c_ptr) {
   const int rmd_N = gN % tN;
   const int rmd_K = gK % tK;
 
-  using tile_shapeA_trows = TileLeft<dtypeA, trow, tK,  tM, rmd_K>;
-  using tile_shapeA_tcols = TileLeft<dtypeA, trow, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft<dtypeA, trow, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows = CubeTileA<dtypeA, trow, tK,  tM, rmd_K>;
+  using tile_shapeA_tcols = CubeTileA<dtypeA, trow, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtypeA, trow, tK, rmd_M, rmd_K>;
 
-  using tile_shapeB_trows = TileRight<dtypeB, tK, tcol, tK, rmd_N>;
-  using tile_shapeB_tcols = TileRight<dtypeB, tK, tcol, rmd_K, tN>;
-  using tile_shapeB_tcorner = TileRight<dtypeB, tK, tcol, rmd_K, rmd_N>;
+  using tile_shapeB_trows = CubeTileN8<dtypeB, tK, tcol, tK, rmd_N>;
+  using tile_shapeB_tcols = CubeTileN8<dtypeB, tK, tcol, rmd_K, tN>;
+  using tile_shapeB_tcorner = CubeTileN8<dtypeB, tK, tcol, rmd_K, rmd_N>;
 
   using tile_shapeC_trows = TileAcc<float, trow, tcol, tM, rmd_N>;
   using tile_shapeC_tcols = TileAcc<float, trow, tcol, rmd_M, tN>;

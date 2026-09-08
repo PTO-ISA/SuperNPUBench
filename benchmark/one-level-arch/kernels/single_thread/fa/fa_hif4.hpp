@@ -2,328 +2,239 @@
 #define FA_HIF4_HPP
 
 #include <common/pto_tileop.hpp>
+#include <cmath>
 #include <cstdint>
+#include <type_traits>
 
 using namespace pto;
 
-template <typename E_, int R_, int C_, int VR_=R_, int VC_=C_>
-using TileAcc = Tile<Location::Vec, E_, R_, C_, BLayout::RowMajor, VR_, VC_>;
+template <typename T, int M, int K, int VM = M, int VK = K>
+using FaCubeLeft = std::conditional_t<
+    (M <= 16), CubeTileM16<T, M, K, VM, VK>,
+    CubeTileM32<T, M, K, VM, VK>>;
 
-template <typename SrcTile, typename CastTile, typename MaxTile, typename SumTile,
-          typename ScaleTile, int scaleD>
-void pto_flash_softmax_block(CastTile &src_exp, MaxTile &new_max, SumTile &new_sum,
-                             ScaleTile &rescale, SrcTile &src, MaxTile &old_max,
-                             SumTile &old_sum) {
-    SrcTile scaled_src;
-    TMULS(scaled_src, src, 1.0f / sqrt((float)scaleD));
+template <typename T, int M, int N, int VM = M, int VN = N>
+using FaCubeAcc = std::conditional_t<
+    (M <= 16), CubeAccumulatorM16<T, M, N, VM, VN>,
+    CubeAccumulatorM32<T, M, N, VM, VN>>;
 
-    MaxTile local_max;
-    TCOLMAX(local_max, scaled_src);
-    TMAX(new_max, old_max, local_max);
-
-    TSUB(rescale, old_max, new_max);
-    TEXP(rescale, rescale);
-
-    SumTile scaled_old_sum;
-    TMUL(scaled_old_sum, old_sum, rescale);
-
-    TCOLEXPANDSUB(scaled_src, scaled_src, new_max);
-    TEXP(scaled_src, scaled_src);
-
-    SumTile local_sum;
-    TCOLSUM(local_sum, scaled_src);
-    TADD(new_sum, scaled_old_sum, local_sum);
-
-    TCVT(src_exp, scaled_src);
+// Convert two logical scalar columns into one packed-x2 CUBE element. This is
+// the same active TileOP conversion used by the 4-PE FA kernel; the retired
+// TQUANT<MXFP4> interface must not be used for HIF4 probability packing.
+template <is_tile_data_v OutTile, is_tile_data_v InTile>
+inline void fa_single_tcvt_packed_x2(OutTile &dst, InTile &src) {
+    static_assert(OutTile::Rows == InTile::Rows,
+                  "packed conversion must preserve rows");
+    static_assert(InTile::Cols == OutTile::Cols * 2,
+                  "packed-x2 destination must have half as many columns");
+    const size_t valid_col = dst.GetValidCol();
+    const size_t valid_row = dst.GetValidRow();
+    asm volatile(
+        "BSTART.TEPL 27, %c1\n"
+        "B.DATR %c2, RNone\n"
+        "B.IOT %3, mask=15, last, ->%0<%Z4>\n"
+        "B.DIM %5, 0, ->lb0\n"
+        "B.DIM %6, 0, ->lb1\n"
+        "B.DIM zero, %c7, ->lb2\n"
+        : "=Tr"(dst.data())
+        : "i"(type_traits<typename InTile::DType>::TypeCode),
+          "i"(type_traits<typename OutTile::DType>::TypeCode),
+          "Tr"(src.data()),
+          "i"(tile_type_traits<typename OutTile::TileDType>::TilesizeCode),
+          "r"(valid_col), "r"(valid_row), "i"(OutTile::Cols));
 }
 
-template <typename OutTile, typename OldTile, typename PvTile, typename ScaleTile>
-void pto_online_update(OutTile &out, OldTile &old_out, PvTile &pv, ScaleTile &scale) {
-    TCOLEXPANDMUL(out, old_out, scale);
-    TADD(out, out, pv);
-}
+// Single-PE HIF4 FlashAttention using the current persistent CUBE layouts.
+// HIF4 is Matrix-MX-only: Q/K and V carry U32 scales (group size 64). The PV
+// probability operand is converted from the FP32 softmax tile to packed HIF4
+// and uses a unit U32 scale, avoiding the retired TQUANT interface.
+template <typename matrix_dtype, typename vector_dtype, int PackedFactor,
+          int Sq, int Skv, int qD, int vD, int kTm, int kTk,
+          int scaleD = qD>
+void flash_attention_hif4_single_impl(vector_dtype *out_ptr,
+                                      matrix_dtype *q_ptr,
+                                      matrix_dtype *k_ptr,
+                                      matrix_dtype *v_ptr,
+                                      uint32_t *q_scale_ptr,
+                                      uint32_t *k_scale_ptr,
+                                      uint32_t *v_scale_ptr) {
+    constexpr int kStoredQD = qD / PackedFactor;
+    constexpr int kStoredSkv = Skv / PackedFactor;
+    constexpr int kStoredTk = kTk / PackedFactor;
 
-template <typename OutTile, typename SumTile>
-void pto_normalize_by_sum(OutTile &out, SumTile &sum) {
-    SumTile inv_sum;
-    TRECIP(inv_sum, sum);
-    TCOLEXPANDMUL(out, out, inv_sum);
-}
+    static_assert(PackedFactor == 2,
+                  "HIF4 single-thread kernel expects packed-x2 storage");
+    static_assert(kTm == 16 || kTm == 32,
+                  "local CUBE HIF4 FA supports Tm=16 or Tm=32");
+    static_assert(Sq % kTm == 0 && Skv % kTk == 0,
+                  "single-thread HIF4 FA currently requires full tiles");
+    static_assert(qD % PackedFactor == 0 &&
+                      Skv % PackedFactor == 0 &&
+                      kTk % PackedFactor == 0,
+                  "packed dimensions must be divisible by two");
 
-template <typename QuantTile, typename SrcTile, typename ScaleTile>
-void pto_quantize_softmax_to_hif4(QuantTile &dst, ScaleTile &scale, SrcTile &src) {
-    TQUANT<QuantType::MXFP4>(dst, src, scale);
-}
+    using gmO = global_tensor<vector_dtype, RowMajor<Sq, vD>>;
 
-template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk,
-          uint32_t w_factor = 64 / 4, typename casttype = __bf16>
-void flash_attention_2d_unroll_hif4(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr,
-                                    dtype* v_ptr, uint8_t* scale_q,
-                                    uint8_t* scale_k, uint8_t* scale_v) {
-    static_assert(qD == vD);
+    using tileQ = FaCubeLeft<matrix_dtype, kTm, qD>;
+    using tileK = CubeTileN8<matrix_dtype, qD, kTk>;
+    using tileW = FaCubeLeft<float, kTm, kTk>;
+    using tileP = FaCubeLeft<matrix_dtype, kTm, kStoredTk>;
+    using tileV = CubeTileN8<matrix_dtype, kStoredTk, vD>;
+    using tileO = FaCubeAcc<float, kTm, vD>;
+    using tileOCast = FaCubeAcc<vector_dtype, kTm, vD>;
 
-    using gmQ = global_tensor<dtype, RowMajor<Sq, qD / 2>>;
-    using gmK = global_tensor<dtype, ColMajor<qD / 2, Skv>>;
-    using gmV = global_tensor<dtype, RowMajor<Skv, vD / 2>>;
-    using gmO = global_tensor<dtype, ColMajor<Sq, vD / 2>>;
+    constexpr int kQKScaleCols = (qD + 63) / 64;
+    constexpr int kPVScaleRows = (kStoredTk + 63) / 64;
+    using tileQScale =
+        Tile<Location::Vec, uint32_t, kTm, kQKScaleCols,
+             BLayout::RowMajor>;
+    using tileKScale =
+        Tile<Location::Vec, uint32_t, kQKScaleCols, kTk,
+             BLayout::RowMajor>;
+    using tileVScale =
+        Tile<Location::Vec, uint32_t, kPVScaleRows, vD,
+             BLayout::RowMajor>;
+    using tilePScale =
+        Tile<Location::Vec, uint32_t, kTm, kPVScaleRows,
+             BLayout::RowMajor>;
 
-    using gmQScale = global_tensor<uint8_t, RowMajor<Sq, qD / w_factor>>;
-    using gmKScale = global_tensor<uint8_t, ColMajor<qD / w_factor, Skv>>;
-    using gmVScale = global_tensor<uint8_t, RowMajor<Skv, vD / w_factor>>;
+    // Match the vector-state layout used by the multi-thread FA path. The
+    // physical M32 cell is retained while ValidRow selects this PE's rows.
+    using tileState = VecTileM32<float, 32, 1, kTm, 1>;
 
-    using tileQ = TileLeft<dtype, kTm, (qD == 192 ? 256 : qD) / 2, kTm, qD / 2>;
-    using tileK = TileRight<dtype, (qD == 192 ? 256 : qD) / 2, kTk, qD / 2, kTk>;
-    using tileV = TileRight<dtype, kTk, vD>;
-
-    using tileQScale = Tile<Location::Scaling, uint8_t, kTm, qD, BLayout::RowMajor,
-                            kTm, qD / w_factor, SLayout::NoneBox>;
-    using tileKScale = Tile<Location::Scaling, uint8_t, qD, kTk, BLayout::ColMajor,
-                            qD / w_factor, kTk, SLayout::NoneBox>;
-    using tileVScale = Tile<Location::Scaling, uint8_t, kTk, vD, BLayout::RowMajor,
-                            kTk, vD / w_factor, SLayout::NoneBox>;
-
-    using tileWAcc = TileAcc<float, kTm, kTk>;
-    using tileW = Tile<Location::Vec, float, kTm, kTk, BLayout::ColMajor>;
-    using tileWCast = Tile<Location::Vec, casttype, kTm, kTk, BLayout::ColMajor>;
-    using tilePScale = Tile<Location::Scaling, uint8_t, 1, kTm * kTk / w_factor,
-                            BLayout::RowMajor>;
-    using tilePHif4 = Tile<Location::Vec, __fp4_e1m2x2, kTm, kTk / 2, BLayout::ColMajor>;
-    using tilePLeft = TileLeft<dtype, kTm, kTk>;
-
-    using tileOAcc = TileAcc<float, kTm, vD>;
-    using tileO = Tile<Location::Vec, float, kTm, vD, BLayout::ColMajor>;
-    using tileOCast = Tile<Location::Vec, dtype, kTm, vD / 2, BLayout::ColMajor>;
-
-    using tileMax = Tile<Location::Vec, float, kTm, 8, BLayout::ColMajor, kTm, 1>;
-    using tileSum = Tile<Location::Vec, float, kTm, 8, BLayout::ColMajor, kTm, 1>;
-    using tileScale = Tile<Location::Vec, float, kTm, 8, BLayout::ColMajor, kTm, 1>;
-
-    using itQ = global_iterator<gmQ, tileQ>;
-    using itK = global_iterator<gmK, tileK>;
-    using itV = global_iterator<gmV, tileV>;
     using itO = global_iterator<gmO, tileOCast>;
-    using itQScale = global_iterator<gmQScale, tileQScale>;
-    using itKScale = global_iterator<gmKScale, tileKScale>;
-    using itVScale = global_iterator<gmVScale, tileVScale>;
 
-    itQ gIterQ(q_ptr);
-    itK gIterK(k_ptr);
-    itV gIterV(v_ptr);
     itO gIterO(out_ptr);
-    itQScale gIterQScale(scale_q);
-    itKScale gIterKScale(scale_k);
-    itVScale gIterVScale(scale_v);
 
-    const int Qb = (Sq + kTm - 1) / kTm;
-    const int Kb = (Skv + kTk - 1) / kTk;
+    constexpr int Qb = Sq / kTm;
+    constexpr int Kb = Skv / kTk;
+    const float score_scale = 1.0f / sqrt((float)scaleD);
 
-#ifdef _2D_UNROLL_PTO
-    static_assert(Qb % Xdim == 0, "Qb needs to be a multiple of Xdim");
-    static_assert(Kb % Ydim == 0, "Kb needs to be a multiple of Ydim");
-#endif
+#pragma clang loop unroll(full)
+    for (int i = 0; i < Qb; ++i) {
+        tileQ tQ;
+        using gmQBlock =
+            global_tensor<matrix_dtype, RowMajor<kTm, kStoredQD>>;
+        gmQBlock gQ(q_ptr + i * kTm * kStoredQD);
+        TLOAD_CUBE(tQ, gQ);
+        using gmQScaleBlock =
+            global_tensor<uint32_t, RowMajor<kTm, kQKScaleCols>>;
+        gmQScaleBlock gQS(q_scale_ptr + i * kTm * kQKScaleCols);
+        tileQScale tQScale;
+        TLOAD(tQScale, gQS);
 
-    for (int i = 0; i < Qb; i += Xdim) {
-        tileQ tQ[Xdim];
-        tileQScale tQScale[Xdim];
+        tileState tMax;
+        tileState tSum;
+        tileO tO;
 
-        #pragma clang loop unroll(full)
-        for (int x = 0; x < Xdim; ++x) {
-            TLOAD(tQ[x], gIterQ(i + x, 0));
-            TLOAD(tQScale[x], gIterQScale(i + x, 0));
+#pragma clang loop unroll(full)
+        for (int j = 0; j < Kb; ++j) {
+            tileK tK;
+            using gmKBlock = global_tensor<
+                matrix_dtype,
+                MatrixLayout<qD, kTk, 1, kStoredQD>>;
+            gmKBlock gK(k_ptr + j * kTk * kStoredQD);
+            TLOAD_CUBE(tK, gK);
+            using gmKScaleBlock = global_tensor<
+                uint32_t,
+                MatrixLayout<kQKScaleCols, kTk, 1, kQKScaleCols>>;
+            gmKScaleBlock gKS(k_scale_ptr + j * kTk * kQKScaleCols);
+            tileKScale tKScale;
+            TLOAD(tKScale, gKS);
+
+            tileW tW;
+            TMATMUL_MX(tW, tQ, tQScale, tK, tKScale,
+                       fixp::keep_acc());
+            TMULS(tW, tW, score_scale);
+
+            tileState tLocalMax;
+            tileState tNewMax;
+            tileState tScale;
+            TROWMAX(tLocalMax, tW);
+            if (j == 0) {
+                tNewMax = tLocalMax;
+            } else {
+                TMAX(tNewMax, tMax, tLocalMax);
+                TROWEXPANDEXPDIF(tScale, tMax, tNewMax);
+                TROWEXPANDMUL(tO, tO, tScale);
+            }
+
+            TROWEXPANDEXPDIF(tW, tW, tNewMax);
+            tileState tLocalSum;
+            tileState tNewSum;
+            TROWSUM(tLocalSum, tW);
+            if (j == 0) {
+                tNewSum = tLocalSum;
+            } else {
+                TFMA(tNewSum, tSum, tScale, tLocalSum);
+            }
+
+            tileP tP;
+            fa_single_tcvt_packed_x2(tP, tW);
+            tilePScale tPScale;
+            // Unit HiF4 scale carrier (two BF16 1.0 values). The probability
+            // conversion is a direct packed conversion, so no dynamic scale
+            // tensor is produced by the retired quantization operation.
+            TEXPANDS(tPScale, 0x3f803f80u);
+
+            tileV tV;
+            using gmVBlock =
+                global_tensor<matrix_dtype, RowMajor<kStoredTk, vD>>;
+            gmVBlock gV(v_ptr + j * kStoredTk * vD);
+            TLOAD_CUBE(tV, gV);
+            using gmVScaleBlock =
+                global_tensor<uint32_t, RowMajor<kPVScaleRows, vD>>;
+            gmVScaleBlock gVS(v_scale_ptr + (j * kTk / 64) * vD);
+            tileVScale tVScale;
+            TLOAD(tVScale, gVS);
+
+            if (j == 0) {
+                TMATMUL_MX(tO, tP, tPScale, tV, tVScale,
+                           fixp::keep_acc());
+            } else {
+                TMATMUL_MX_ACC(tO, tO, tP, tPScale, tV, tVScale,
+                               fixp::keep_acc());
+            }
+
+            tMax = tNewMax;
+            tSum = tNewSum;
         }
 
-        tileMax tMax[Xdim];
-        tileSum tSum[Xdim];
-        tileO tO[Xdim];
-        tileO tPV[Xdim];
-        tileScale tRescale[Xdim];
-
-        #pragma clang loop unroll(full)
-        for (int x = 0; x < Xdim; ++x) {
-            TEXPANDS(tMax[x], -1e30f);
-            TEXPANDS(tSum[x], 0.0f);
-        }
-
-        for (int j = 0; j < Kb; j += Ydim) {
-            tileK tK[Ydim];
-            tileKScale tKScale[Ydim];
-
-            #pragma clang loop unroll(full)
-            for (int y = 0; y < Ydim; ++y) {
-                TLOAD(tK[y], gIterK(0, j + y));
-                TLOAD(tKScale[y], gIterKScale(0, j + y));
-            }
-
-            tileW tW[Xdim][Ydim];
-            #pragma clang loop unroll(full)
-            for (int x = 0; x < Xdim; ++x) {
-                #pragma clang loop unroll(full)
-                for (int y = 0; y < Ydim; ++y) {
-                    TMATMUL_MX(tW[x][y], tQ[x], tQScale[x], tK[y], tKScale[y]);
-                }
-            }
-
-            tileMax tNewMax[Xdim];
-            tileSum tNewSum[Xdim];
-            tileWCast tExpW[Xdim][Ydim];
-            tilePHif4 tP[Xdim][Ydim];
-            tilePScale tPScale[Xdim][Ydim];
-
-            #pragma clang loop unroll(full)
-            for (int x = 0; x < Xdim; ++x) {
-                tileMax tLocalMax[Ydim];
-
-                #pragma clang loop unroll(full)
-                for (int y = 0; y < Ydim; ++y) {
-                    TCOLMAX(tLocalMax[y], tW[x][y]);
-                }
-
-#if Ydim == 1
-                TMAX(tNewMax[x], tMax[x], tLocalMax[0]);
-#elif Ydim == 2
-                tileMax tMax01;
-                TMAX(tMax01, tLocalMax[0], tLocalMax[1]);
-                TMAX(tNewMax[x], tMax[x], tMax01);
-#elif Ydim == 4
-                tileMax tMax01;
-                tileMax tMax23;
-                tileMax tMax0123;
-                TMAX(tMax01, tLocalMax[0], tLocalMax[1]);
-                TMAX(tMax23, tLocalMax[2], tLocalMax[3]);
-                TMAX(tMax0123, tMax01, tMax23);
-                TMAX(tNewMax[x], tMax[x], tMax0123);
-#else
-                static_assert(Ydim == 1 || Ydim == 2 || Ydim == 4,
-                              "PTO HIF4 FA currently supports Ydim 1/2/4");
-#endif
-
-                TSUB(tRescale[x], tMax[x], tNewMax[x]);
-                TEXP(tRescale[x], tRescale[x]);
-
-                tileSum tScaledOldSum;
-                TMUL(tScaledOldSum, tSum[x], tRescale[x]);
-
-                tileSum tLocalSum[Ydim];
-                #pragma clang loop unroll(full)
-                for (int y = 0; y < Ydim; ++y) {
-                    TCOLEXPANDSUB(tW[x][y], tW[x][y], tNewMax[x]);
-                    TEXP(tW[x][y], tW[x][y]);
-                    TCOLSUM(tLocalSum[y], tW[x][y]);
-                    TCVT(tExpW[x][y], tW[x][y]);
-                    pto_quantize_softmax_to_hif4(tP[x][y], tPScale[x][y], tExpW[x][y]);
-                }
-
-#if Ydim == 1
-                TADD(tNewSum[x], tScaledOldSum, tLocalSum[0]);
-#elif Ydim == 2
-                tileSum tSum01;
-                TADD(tSum01, tLocalSum[0], tLocalSum[1]);
-                TADD(tNewSum[x], tScaledOldSum, tSum01);
-#elif Ydim == 4
-                tileSum tSum01;
-                tileSum tSum23;
-                tileSum tSum0123;
-                TADD(tSum01, tLocalSum[0], tLocalSum[1]);
-                TADD(tSum23, tLocalSum[2], tLocalSum[3]);
-                TADD(tSum0123, tSum01, tSum23);
-                TADD(tNewSum[x], tScaledOldSum, tSum0123);
-#endif
-            }
-
-            tileV tV[Ydim];
-            tileVScale tVScale[Ydim];
-            #pragma clang loop unroll(full)
-            for (int y = 0; y < Ydim; ++y) {
-                TLOAD(tV[y], gIterV(j + y, 0));
-                TLOAD(tVScale[y], gIterVScale(j + y, 0));
-            }
-
-            #pragma clang loop unroll(full)
-            for (int x = 0; x < Xdim; ++x) {
-                #pragma clang loop unroll(full)
-                for (int y = 0; y < Ydim; ++y) {
-                    tilePLeft tPLeft;
-                    TMOV(tPLeft, tP[x][y]);
-                    if (y == 0) {
-                        TMATMUL_MX(tPV[x], tPLeft, tPScale[x][y], tV[y], tVScale[y]);
-                    } else {
-                        TMATMUL_MX(tPV[x], tPV[x], tPLeft, tPScale[x][y], tV[y], tVScale[y]);
-                    }
-                }
-
-                if (j == 0) {
-                    tO[x] = tPV[x];
-                } else {
-                    pto_online_update(tO[x], tO[x], tPV[x], tRescale[x]);
-                }
-            }
-
-            #pragma clang loop unroll(full)
-            for (int x = 0; x < Xdim; ++x) {
-                tMax[x] = tNewMax[x];
-                tSum[x] = tNewSum[x];
-            }
-        }
-
-        #pragma clang loop unroll(full)
-        for (int x = 0; x < Xdim; ++x) {
-            tileOCast tOCast;
-            pto_normalize_by_sum(tO[x], tSum[x]);
-            TCVT(tOCast, tO[x]);
-            TSTORE(gIterO(i + x, 0), tOCast);
-        }
+        TROWEXPANDDIV(tO, tO, tSum);
+        tileOCast tOCast;
+        TCVT(tOCast, tO);
+        auto gO = gIterO(i, 0);
+        TSTORE_CUBE(gO, tOCast);
     }
 }
 
 template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk,
           uint32_t w_factor = 64 / 4, typename casttype = __bf16>
-void flash_attention_2d_unroll_hif4_nogather(dtype* out_ptr, dtype* q_ptr, dtype* k_ptr,
-                                             dtype* v_ptr, uint8_t* scale_q,
-                                             uint8_t* scale_k, uint8_t* scale_v) {
-    flash_attention_2d_unroll_hif4<dtype, Sq, Skv, qD, vD, kTm, kTk, w_factor, casttype>(
-        out_ptr, q_ptr, k_ptr, v_ptr, scale_q, scale_k, scale_v);
+void flash_attention_2d_unroll_hif4(casttype *out_ptr, dtype *q_ptr,
+                                    dtype *k_ptr, dtype *v_ptr,
+                                    uint32_t *sq, uint32_t *sk, uint32_t *sv) {
+    (void)w_factor;
+    flash_attention_hif4_single_impl<dtype, casttype, 2, Sq, Skv, qD, vD,
+                                     kTm, kTk>(out_ptr, q_ptr, k_ptr, v_ptr,
+                                               sq, sk, sv);
 }
 
-template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk,
-          uint32_t w_factor = 64 / 4, typename casttype = __bf16>
-void flash_attention_2d_unroll_hif4_optsoftmax(dtype* out_ptr, dtype* q_ptr,
-                                               dtype* k_ptr, dtype* v_ptr,
-                                               uint8_t* scale_q, uint8_t* scale_k,
-                                               uint8_t* scale_v) {
-    flash_attention_2d_unroll_hif4<dtype, Sq, Skv, qD, vD, kTm, kTk, w_factor, casttype>(
-        out_ptr, q_ptr, k_ptr, v_ptr, scale_q, scale_k, scale_v);
+#define FA_HIF4_FORWARD(Name)                                                 \
+template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk, \
+          uint32_t w_factor = 64 / 4, typename casttype = __bf16>             \
+void Name(casttype *out_ptr, dtype *q_ptr, dtype *k_ptr, dtype *v_ptr,        \
+          uint32_t *sq, uint32_t *sk, uint32_t *sv) {                         \
+    flash_attention_2d_unroll_hif4<dtype, Sq, Skv, qD, vD, kTm, kTk,         \
+                                    w_factor, casttype>(                       \
+        out_ptr, q_ptr, k_ptr, v_ptr, sq, sk, sv);                            \
 }
 
-template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk,
-          uint32_t w_factor = 64 / 4, typename casttype = __bf16>
-void flash_attention_2d_unroll_hif4_optsoftmax_loadx2(dtype* out_ptr, dtype* q_ptr,
-                                                      dtype* k_ptr, dtype* v_ptr,
-                                                      uint8_t* scale_q, uint8_t* scale_k,
-                                                      uint8_t* scale_v) {
-    flash_attention_2d_unroll_hif4<dtype, Sq, Skv, qD, vD, kTm, kTk, w_factor, casttype>(
-        out_ptr, q_ptr, k_ptr, v_ptr, scale_q, scale_k, scale_v);
-}
+FA_HIF4_FORWARD(flash_attention_2d_unroll_hif4_nogather)
+FA_HIF4_FORWARD(flash_attention_2d_unroll_hif4_optsoftmax)
+FA_HIF4_FORWARD(flash_attention_2d_unroll_hif4_optsoftmax_loadx2)
+FA_HIF4_FORWARD(flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload)
+FA_HIF4_FORWARD(flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2)
 
-template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk,
-          uint32_t w_factor = 64 / 4, typename casttype = __bf16>
-void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload(dtype* out_ptr, dtype* q_ptr,
-                                                           dtype* k_ptr, dtype* v_ptr,
-                                                           uint8_t* scale_q,
-                                                           uint8_t* scale_k,
-                                                           uint8_t* scale_v) {
-    flash_attention_2d_unroll_hif4<dtype, Sq, Skv, qD, vD, kTm, kTk, w_factor, casttype>(
-        out_ptr, q_ptr, k_ptr, v_ptr, scale_q, scale_k, scale_v);
-}
-
-template <typename dtype, int Sq, int Skv, int qD, int vD, int kTm, int kTk,
-          uint32_t w_factor = 64 / 4, typename casttype = __bf16>
-void flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2(dtype* out_ptr, dtype* q_ptr,
-                                                            dtype* k_ptr, dtype* v_ptr,
-                                                            uint8_t* scale_q,
-                                                            uint8_t* scale_k,
-                                                            uint8_t* scale_v) {
-    flash_attention_2d_unroll_hif4<dtype, Sq, Skv, qD, vD, kTm, kTk, w_factor, casttype>(
-        out_ptr, q_ptr, k_ptr, v_ptr, scale_q, scale_k, scale_v);
-}
+#undef FA_HIF4_FORWARD
 
 #endif

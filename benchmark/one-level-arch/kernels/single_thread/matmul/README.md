@@ -19,9 +19,9 @@
 
 | Tile | 类型 | 用途 |
 |------|------|------|
-| `TileLeft<dtype, tM, tK>` | L0A, boxed 512B | A 操作数 |
-| `TileRight<dtype, tK, tN>` | L0B, boxed 512B | B 操作数 |
-| `TileAcc<float, tM, tN>` | L0C, boxed 1024B | C 累加器 (FP32) |
+| `CubeTileM16/M32<dtype, tM, tK>` | Local CUBE_M16/M32 | A 操作数；布局与输出 M 粒度一致 |
+| `CubeTileN8<dtype, tK, tN>` | Local CUBE_N8 | B 操作数 |
+| `CubeAccumulatorM16/M32<float, tM, tN>` | Local CUBE_M16/M32 | C 累加器 (FP32) |
 | `Tile<Vec, float, tM, tN>` | Vec | Acc→Vec 转换后存储 |
 
 Tail 变体使用 `ValidRow`/`ValidCol` 处理非整除维度。
@@ -30,13 +30,12 @@ Tail 变体使用 `ValidRow`/`ValidCol` 处理非整除维度。
 
 | 操作 | 说明 |
 |------|------|
-| `TLOAD` / `TCOPYIN` | 加载 A、B tile |
+| `TLOAD_CUBE` / `TLOAD` | GM→CUBE CELL 布局转换并加载 A、B tile |
 | `TMATMUL` | 首个 K 块: `C = A × B` |
 | `TMATMUL_ACC` | 后续 K 块: `C += A × B` |
-| `MATMULMX` / `MATMACCMX` | MX 混合精度 GEMM (带缩放因子) |
-| `ACCCVT` / `TCVT` | Acc → Vec 类型转换 |
+| `TMATMUL_MX` / `TMATMUL_MX_ACC` | MX 混合精度 GEMM (带缩放因子) |
 | `TADD` | OPT2 变体: Vec 寄存器累加 |
-| `TSTORE` / `TCOPYOUT` | 存储 C 到 global memory |
+| `TSTORE_CUBE` / `TSTORE` | CUBE CELL→GM 布局转换并存储 C |
 | `MGATHER` | MX 变体: 缩放因子 gather |
 
 ## 实现方式
@@ -47,10 +46,16 @@ Tail 变体使用 `ValidRow`/`ValidCol` 处理非整除维度。
 
 ### A-tile 复用 (`matmul_mask_reuseA`)
 预加载 `tA[R.m][R.k]` 寄存器数组，A tile 在 N 列方向复用，减少 TLOAD 次数。
-`R.m × R.k` 由 `constexpr find_reuseA()` 在 `MAX_TILE_NUM` 约束下搜索最优。
+`R.m × R.k` 由 `constexpr find_reuseA()` 在当前 256 KiB Local Tile
+容量约束下搜索最优。
 
 ### K 分块优化 (`matmul_mask_reuseA_OPT`)
 当 `Kb > R.k` 时，将剩余 K 轴分块处理。
+
+### HiF4 Matrix-MX (`matmul_hif4x2_mx`)
+HiF4 路径使用 `__fp4_hif4x2` packed-x2 主输入、U32/group-64 scale，
+Tile 的 M/N/K 均按逻辑元素计数。首个 K 块使用 `TMATMUL_MX`，后续块使用
+`TMATMUL_MX_ACC`；`ReuseA=true` 时预加载当前 M 块的 A 与 ScaleA，并沿 N 轴复用。
 
 ### Vec 寄存器累加 (`matmul_mask_reuseA_OPT2`)
 部分和驻留在 Vec tile (`tC_main[Mb][Nb]`) 中，用 `TCVT + TADD` 跨 K 块累加，

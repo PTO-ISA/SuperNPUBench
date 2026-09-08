@@ -22,7 +22,7 @@
 #define vD 128
 
 #ifndef Tm
-#define kTm 8
+#define kTm 16
 #else
 #define kTm Tm
 #endif
@@ -46,28 +46,33 @@
 #endif
 
 int main(){
-    // using typep = __half;
-    using typep = __fp4_e1m2x2;
-    typep qp[B*H*Sq*qD + 2*ALIGN];
-    typep kp[B*H*Skv*qD + 2*ALIGN];
-    typep vp[B*H*Skv*vD + 2*ALIGN];
-    typep outp[B*H*Sq*vD + 2*ALIGN];
-    uint8_t qmx[B*H*Sq*qD + 2*ALIGN];
-    uint8_t kmx[B*H*Sq*qD + 2*ALIGN];
-    uint8_t vmx[B*H*Sq*vD + 2*ALIGN];
+    // Match the active multi-thread HIF4 path: packed-x2 matrix operands and
+    // BF16 vector/output state. Packed storage halves the contiguous matrix
+    // dimension; CUBE descriptors retain the corresponding logical M/N/K.
+    using typep = __fp4_hif4x2;
+    using out_type = __bf16;
+    typep qp[B*H*Sq*(qD/2) + 2*ALIGN];
+    typep kp[B*H*Skv*(qD/2) + 2*ALIGN];
+    typep vp[B*H*(Skv/2)*vD + 2*ALIGN];
+    out_type outp[B*H*Sq*vD + 2*ALIGN];
+    // HiF4 Matrix-MX uses one raw U32 scale carrier per 64 logical K
+    // elements, matching the current matmul HIF4X2 contract.
+    uint32_t qmx[B*H*Sq*(qD/64) + 2*ALIGN];
+    uint32_t kmx[B*H*Skv*(qD/64) + 2*ALIGN];
+    uint32_t vmx[B*H*(Skv/64)*vD + 2*ALIGN];
 
     typep* q = (typep *)(((uint64_t)qp & ALIGN_MASK) + ALIGN);
     typep* k = (typep *)(((uint64_t)kp & ALIGN_MASK) + ALIGN);
     typep* v = (typep *)(((uint64_t)vp & ALIGN_MASK) + ALIGN);
-    typep* out = (typep *)(((uint64_t)outp & ALIGN_MASK) + ALIGN);
+    out_type* out = (out_type *)(((uint64_t)outp & ALIGN_MASK) + ALIGN);
 
     #ifdef RES_CHECK
     #define SRCQ_PATH CHK_DIR "/srcq.bin"
     #define SRCK_PATH CHK_DIR "/srck.bin"
     #define SRCV_PATH CHK_DIR "/srcv.bin"
-    readBinaryFile(SRCQ_PATH, (uint8_t*)q, B*H*S*qD*sizeof(__half));
-    readBinaryFile(SRCK_PATH, (uint8_t*)k, B*H*S*qD*sizeof(__half));
-    readBinaryFile(SRCV_PATH, (uint8_t*)v, B*H*S*vD*sizeof(__half));
+    readBinaryFile(SRCQ_PATH, (uint8_t*)q, B*H*Sq*(qD/2)*sizeof(typep));
+    readBinaryFile(SRCK_PATH, (uint8_t*)k, B*H*Skv*(qD/2)*sizeof(typep));
+    readBinaryFile(SRCV_PATH, (uint8_t*)v, B*H*(Skv/2)*vD*sizeof(typep));
     #endif
 
     // uint32_t a;
@@ -79,27 +84,26 @@ int main(){
     BENCHSTART;
     for(int i=0;i<B;i++){
         for(int j=0;j<H;j++){
+            typep *q_block = q + i*H*Sq*(qD/2) + j*Sq*(qD/2);
+            typep *k_block = k + i*H*Skv*(qD/2) + j*Skv*(qD/2);
+            typep *v_block = v + i*H*(Skv/2)*vD + j*(Skv/2)*vD;
+            out_type *o_block = out + i*H*Sq*vD + j*Sq*vD;
             #ifdef BF16
-            // Sq256_Skv8192_
-                flash_attention_2d_unroll_hif4<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4<typep, Sq, Skv, qD, vD, kTm, kTk, 16, out_type>(o_block, q_block, k_block, v_block, qmx, kmx, vmx);
             #elif defined(BF16x2)
-                flash_attention_2d_unroll_hif4<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4<typep, Sq, Skv, qD, vD, kTm, kTk, 16, out_type>(o_block, q_block, k_block, v_block, qmx, kmx, vmx);
             #elif defined(BF16x2_NOGATHER)
-                flash_attention_2d_unroll_hif4_nogather<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4_nogather<typep, Sq, Skv, qD, vD, kTm, kTk, 16, out_type>(o_block, q_block, k_block, v_block, qmx, kmx, vmx);
             #elif defined(BF16_NOGATHER)
-                flash_attention_2d_unroll_hif4_nogather<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4_nogather<typep, Sq, Skv, qD, vD, kTm, kTk, 16, out_type>(o_block, q_block, k_block, v_block, qmx, kmx, vmx);
             #elif defined(OPT)
-                // support X1 Y4
-                flash_attention_2d_unroll_hif4_optsoftmax<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4_optsoftmax<typep, Sq, Skv, qD, vD, kTm, kTk, 16, out_type>(o_block, q_block, k_block, v_block, qmx, kmx, vmx);
             #elif defined(OPT_LOAD)
-                // opt lhi -> lwi
-                flash_attention_2d_unroll_hif4_optsoftmax_loadx2<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4_optsoftmax_loadx2<typep, Sq, Skv, qD, vD, kTm, kTk, 16, out_type>(o_block, q_block, k_block, v_block, qmx, kmx, vmx);
             #elif defined(OPT_OFFLOAD)
-                // support X1 Y4
-                flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload<typep, Sq, Skv, qD, vD, kTm, kTk, 16, out_type>(o_block, q_block, k_block, v_block, qmx, kmx, vmx);
             #elif defined(OPT_OFFLOAD2)
-                // support X1 Y4
-                flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2<__fp4_e1m2x2, Sq, Skv, qD, vD, kTm, kTk, 16, __bf16x2>(out, q+i*H*Sq*qD+j*Sq*qD, k+i*H*Skv*qD+j*Skv*qD, v+i*H*Skv*vD+j*Skv*vD, qmx, kmx, vmx);
+                flash_attention_2d_unroll_hif4_optsoftmax_cubeoffload2<typep, Sq, Skv, qD, vD, kTm, kTk, 16, out_type>(o_block, q_block, k_block, v_block, qmx, kmx, vmx);
             
             #endif
         }
@@ -108,6 +112,6 @@ int main(){
 
     #ifdef RES_CHECK
     #define RES_PATH CHK_DIR "/res.bin"
-    writeBinaryFile(RES_PATH, (uint8_t*)out, B*H*S*vD*sizeof(__half));
+    writeBinaryFile(RES_PATH, (uint8_t*)out, B*H*Sq*vD*sizeof(out_type));
     #endif
 }

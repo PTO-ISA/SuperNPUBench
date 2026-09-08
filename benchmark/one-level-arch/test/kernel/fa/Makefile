@@ -4,7 +4,7 @@ ifeq ($(TESTCASE), sfa)
    SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/sfa.cpp
    Sq ?= 256
    Skv ?= 512
-   Tm ?= 8
+   Tm ?= 16
    Tk ?= 16
    DEFINES += -DTsq=$(Sq)
    DEFINES += -DTskv=$(Skv)
@@ -17,7 +17,7 @@ ifeq ($(TESTCASE), fa_HIF4_HIF4)
    SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_hif4.cpp
    Sq ?= 512
    Skv ?= 512
-   Tm ?= 8
+   Tm ?= 16
    Tk ?= 32
    X ?= 2
    Y ?= 4
@@ -41,7 +41,7 @@ ifeq ($(TESTCASE), fa_2d_unroll)
    SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_2d_unroll.cpp
    Sq ?= 512
    Skv ?= 512
-   Tm ?= 8
+   Tm ?= 16
    Tk ?= 16
    X ?= 1
    Y ?= 1
@@ -58,7 +58,7 @@ ifeq ($(TESTCASE), fa_softmax_pto)
    SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_softmax_pto.cpp
    Sq ?= 512
    Skv ?= 512
-   Tm ?= 8
+   Tm ?= 16
    Tk ?= 16
    DEFINES += -DTsq=$(Sq)
    DEFINES += -DTskv=$(Skv)

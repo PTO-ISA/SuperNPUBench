@@ -10,7 +10,9 @@
 using namespace pto;
 
 template <typename E_, int R_, int C_, int VR_=R_, int VC_=C_>
-using TileAcc = Tile<Location::Vec, E_, R_, C_, BLayout::RowMajor, VR_, VC_>;
+using TileAcc = std::conditional_t<
+    (R_ <= 16), CubeAccumulatorM16<E_, R_, C_, VR_, VC_>,
+    CubeAccumulatorM32<E_, R_, C_, VR_, VC_>>;
 
 template <typename E_, int R_, int C_, int VR_=R_, int VC_=C_>
 using CubeTileA = std::conditional_t<
@@ -256,8 +258,8 @@ void matmul_frac(float* dst, dtype* src0, dtype* src1){
     using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
     using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
     using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-    using tile_shapeA = TileLeft<dtype, tM, tK>;
-    using tile_shapeB = TileRight<dtype, tK, tN>;
+    using tile_shapeA = CubeTileA<dtype, tM, tK>;
+    using tile_shapeB = CubeTileN8<dtype, tK, tN>;
     using tile_shapeACC = TileAcc<float, tM, tN>;
     using itA = global_iterator<gm_shapeA, tile_shapeA>;
     using itB = global_iterator<gm_shapeB, tile_shapeB>;
@@ -354,10 +356,10 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-  using tile_shapeA = TileLeft<dtype, tM, tK>;
-  using tile_shapeB = TileRight<dtype, tK, tN>;
+  using tile_shapeA = CubeTileA<dtype, tM, tK>;
+  using tile_shapeB = CubeTileN8<dtype, tK, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
-  constexpr int kLocalTileBytes = 64 * 1024;
+  constexpr int kLocalTileBytes = 256 * 1024;
   constexpr int kReservedBytes = tile_shapeACC::LogicalTileBytes +
                                  tile_shapeB::LogicalTileBytes;
   constexpr int MAX_TILE_NUM =
@@ -381,13 +383,13 @@ void matmul_mask_reuseA(float *dst, dtype *src0, dtype *src1){
   const int rmd_N = gN % tN;
   const int rmd_K = gK % tK;
 
-  using tile_shapeA_trows = TileLeft<dtype, tM, tK,  tM, rmd_K>;
-  using tile_shapeA_tcols = TileLeft<dtype, tM, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft<dtype, tM, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows = CubeTileA<dtype, tM, tK,  tM, rmd_K>;
+  using tile_shapeA_tcols = CubeTileA<dtype, tM, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtype, tM, tK, rmd_M, rmd_K>;
 
-  using tile_shapeB_trows = TileRight<dtype, tK, tN, tK, rmd_N>;
-  using tile_shapeB_tcols = TileRight<dtype, tK, tN, rmd_K, tN>;
-  using tile_shapeB_tcorner = TileRight<dtype, tK, tN, rmd_K, rmd_N>;
+  using tile_shapeB_trows = CubeTileN8<dtype, tK, tN, tK, rmd_N>;
+  using tile_shapeB_tcols = CubeTileN8<dtype, tK, tN, rmd_K, tN>;
+  using tile_shapeB_tcorner = CubeTileN8<dtype, tK, tN, rmd_K, rmd_N>;
 
   using tile_shapeC_trows = TileAcc<float, tM, tN, tM, rmd_N>;
   using tile_shapeC_tcols = TileAcc<float, tM, tN, rmd_M, tN>;
@@ -754,8 +756,8 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-  using tile_shapeA = TileLeft<dtype, tM, tK>;
-  using tile_shapeB = TileRight<dtype, tK, tN>;
+  using tile_shapeA = CubeTileA<dtype, tM, tK>;
+  using tile_shapeB = CubeTileN8<dtype, tK, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
 
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -774,13 +776,13 @@ void matmul_mask_reuseA_OPT(float *dst, dtype *src0, dtype *src1){
   constexpr int rmd_N = gN % tN;
   constexpr int rmd_K = gK % tK;
 
-  using tile_shapeA_trows   = TileLeft<dtype,  tM, tK,  tM,    rmd_K>;
-  using tile_shapeA_tcols   = TileLeft<dtype,  tM, tK,  rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft<dtype,  tM, tK,  rmd_M, rmd_K>;
+  using tile_shapeA_trows   = CubeTileA<dtype,  tM, tK,  tM,    rmd_K>;
+  using tile_shapeA_tcols   = CubeTileA<dtype,  tM, tK,  rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtype,  tM, tK,  rmd_M, rmd_K>;
 
-  using tile_shapeB_trows   = TileRight<dtype, tK, tN,  tK,    rmd_N>;
-  using tile_shapeB_tcols   = TileRight<dtype, tK, tN,  rmd_K, tN>;
-  using tile_shapeB_tcorner = TileRight<dtype, tK, tN,  rmd_K, rmd_N>;
+  using tile_shapeB_trows   = CubeTileN8<dtype, tK, tN,  tK,    rmd_N>;
+  using tile_shapeB_tcols   = CubeTileN8<dtype, tK, tN,  rmd_K, tN>;
+  using tile_shapeB_tcorner = CubeTileN8<dtype, tK, tN,  rmd_K, rmd_N>;
 
   using tile_shapeC_trows   = TileAcc<float,   tM, tN,  tM,    rmd_N>;
   using tile_shapeC_tcols   = TileAcc<float,   tM, tN,  rmd_M, tN>;
@@ -1305,8 +1307,8 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, ColMajor<gM, gN>>;
 
-  using tile_shapeA   = TileLeft <dtype, tM, tK>;
-  using tile_shapeB   = TileRight<dtype, tK, tN>;
+  using tile_shapeA   = CubeTileA<dtype, tM, tK>;
+  using tile_shapeB   = CubeTileN8<dtype, tK, tN>;
   using tile_shapeACC = TileAcc  <float, tM, tN>;
 
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -1326,13 +1328,13 @@ void matmul_mask_reuseA_OPT2(float *dst, dtype *src0, dtype *src1){
   constexpr int rmd_K = gK % tK;
 
   // —— A / B 余块 ——
-  using tile_shapeA_trows   = TileLeft <dtype, tM, tK, tM,    rmd_K>;
-  using tile_shapeA_tcols   = TileLeft <dtype, tM, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft <dtype, tM, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows   = CubeTileA<dtype, tM, tK, tM,    rmd_K>;
+  using tile_shapeA_tcols   = CubeTileA<dtype, tM, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtype, tM, tK, rmd_M, rmd_K>;
 
-  using tile_shapeB_trows   = TileRight<dtype, tK, tN, tK,    rmd_N>;
-  using tile_shapeB_tcols   = TileRight<dtype, tK, tN, rmd_K, tN>;
-  using tile_shapeB_tcorner = TileRight<dtype, tK, tN, rmd_K, rmd_N>;
+  using tile_shapeB_trows   = CubeTileN8<dtype, tK, tN, tK,    rmd_N>;
+  using tile_shapeB_tcols   = CubeTileN8<dtype, tK, tN, rmd_K, tN>;
+  using tile_shapeB_tcorner = CubeTileN8<dtype, tK, tN, rmd_K, rmd_N>;
 
   // —— ACC 余块 ——
   using tile_shapeACC_trows   = TileAcc<float, tM, tN, tM,    rmd_N>;
@@ -1774,8 +1776,8 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, ColMajor<gM, gN>>;
 
-  using tile_shapeA   = TileLeft <dtype, tM, tK>;
-  using tile_shapeB   = TileRight<dtype, tK, tN>;
+  using tile_shapeA   = CubeTileA<dtype, tM, tK>;
+  using tile_shapeB   = CubeTileN8<dtype, tK, tN>;
   using tile_shapeACC = TileAcc  <float, tM, tN>;
 
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -1795,13 +1797,13 @@ void matmul_mask_reuseB_OPT2(float *dst, dtype *src0, dtype *src1){
   constexpr int rmd_K = gK % tK;
 
   // —— A / B 余块 ——
-  using tile_shapeA_trows   = TileLeft <dtype, tM, tK, tM,    rmd_K>;
-  using tile_shapeA_tcols   = TileLeft <dtype, tM, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft <dtype, tM, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows   = CubeTileA<dtype, tM, tK, tM,    rmd_K>;
+  using tile_shapeA_tcols   = CubeTileA<dtype, tM, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtype, tM, tK, rmd_M, rmd_K>;
 
-  using tile_shapeB_trows   = TileRight<dtype, tK, tN, tK,    rmd_N>;
-  using tile_shapeB_tcols   = TileRight<dtype, tK, tN, rmd_K, tN>;
-  using tile_shapeB_tcorner = TileRight<dtype, tK, tN, rmd_K, rmd_N>;
+  using tile_shapeB_trows   = CubeTileN8<dtype, tK, tN, tK,    rmd_N>;
+  using tile_shapeB_tcols   = CubeTileN8<dtype, tK, tN, rmd_K, tN>;
+  using tile_shapeB_tcorner = CubeTileN8<dtype, tK, tN, rmd_K, rmd_N>;
 
   // —— ACC 余块 ——
   using tile_shapeACC_trows   = TileAcc<float, tM, tN, tM,    rmd_N>;
@@ -2240,10 +2242,10 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-  using tile_shapeA = TileLeft<dtype, tM, tK>;
-  using tile_shapeB = TileRight<dtype, tK, tN>;
+  using tile_shapeA = CubeTileA<dtype, tM, tK>;
+  using tile_shapeB = CubeTileN8<dtype, tK, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
-  constexpr int kLocalTileBytes = 64 * 1024;
+  constexpr int kLocalTileBytes = 256 * 1024;
   constexpr int kReservedBytes = tile_shapeACC::LogicalTileBytes +
                                  tile_shapeA::LogicalTileBytes;
   constexpr int MAX_TILE_NUM =
@@ -2267,13 +2269,13 @@ void matmul_mask_reuseB(float *dst, dtype *src0, dtype *src1){
   const int rmd_N = gN % tN;
   const int rmd_K = gK % tK;
 
-  using tile_shapeA_trows = TileLeft<dtype, tM, tK,  tM, rmd_K>;
-  using tile_shapeA_tcols = TileLeft<dtype, tM, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft<dtype, tM, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows = CubeTileA<dtype, tM, tK,  tM, rmd_K>;
+  using tile_shapeA_tcols = CubeTileA<dtype, tM, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtype, tM, tK, rmd_M, rmd_K>;
 
-  using tile_shapeB_trows = TileRight<dtype, tK, tN, tK, rmd_N>;
-  using tile_shapeB_tcols = TileRight<dtype, tK, tN, rmd_K, tN>;
-  using tile_shapeB_tcorner = TileRight<dtype, tK, tN, rmd_K, rmd_N>;
+  using tile_shapeB_trows = CubeTileN8<dtype, tK, tN, tK, rmd_N>;
+  using tile_shapeB_tcols = CubeTileN8<dtype, tK, tN, rmd_K, tN>;
+  using tile_shapeB_tcorner = CubeTileN8<dtype, tK, tN, rmd_K, rmd_N>;
 
   using tile_shapeC_trows = TileAcc<float, tM, tN, tM, rmd_N>;
   using tile_shapeC_tcols = TileAcc<float, tM, tN, rmd_M, tN>;
@@ -2689,8 +2691,8 @@ void matmul_mask_reuseAB(float *dst, dtype *src0, dtype *src1){
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-  using tile_shapeA = TileLeft<dtype, tM, tK>;
-  using tile_shapeB = TileRight<dtype, tK, tN>;
+  using tile_shapeA = CubeTileA<dtype, tM, tK>;
+  using tile_shapeB = CubeTileN8<dtype, tK, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
 
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -2933,8 +2935,8 @@ void matmul_mask_multi4_B(float *dst, dtype *src0, dtype *src1){
     using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
     using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
     using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-    using tile_shapeA = TileLeft<dtype, tM, tK>;
-    using tile_shapeB = TileRight<dtype, tK, tN>;
+    using tile_shapeA = CubeTileA<dtype, tM, tK>;
+    using tile_shapeB = CubeTileN8<dtype, tK, tN>;
     using tile_shapeACC = TileAcc<float, tM, tN>;
 
     using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -2993,8 +2995,8 @@ void matmul_mask_multi4_AB(float *dst, dtype *src0, dtype *src1){
     using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
     using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
     using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-    using tile_shapeA = TileLeft<dtype, tM, tK>;
-    using tile_shapeB = TileRight<dtype, tK, tN>;
+    using tile_shapeA = CubeTileA<dtype, tM, tK>;
+    using tile_shapeB = CubeTileN8<dtype, tK, tN>;
     using tile_shapeACC = TileAcc<float, tM, tN>;
 
     using itA = global_iterator<gm_shapeA, tile_shapeA>;
@@ -3066,8 +3068,8 @@ __attribute__((noinline)) void matmul_dynamic_new(float* dst, dtype* src0, dtype
     using gm_shapeA = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_shapeB = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_shapeC = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_shapeA = TileLeft<dtype, tM, tK, -1, -1>;
-    using tile_shapeB = TileRight<dtype, tK, tN, -1, -1>;
+    using tile_shapeA = CubeTileA<dtype, tM, tK, -1, -1>;
+    using tile_shapeB = CubeTileN8<dtype, tK, tN, -1, -1>;
     using tile_shapeACC = TileAcc<float, tM, tN, -1, -1>;
 
     if (gM <= 0 || gN <= 0 || gK <= 0)
@@ -3109,8 +3111,8 @@ __attribute__((noinline)) void matmul_dynamic(float* dst, dtype* src0, dtype* sr
     using gm_shapeA = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_shapeB = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_shapeC = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_shapeA = TileLeft<dtype, tM, tK, -1, -1>;
-    using tile_shapeB = TileRight<dtype, tK, tN, -1, -1>;
+    using tile_shapeA = CubeTileA<dtype, tM, tK, -1, -1>;
+    using tile_shapeB = CubeTileN8<dtype, tK, tN, -1, -1>;
     using tile_shapeACC = TileAcc<float, tM, tN, -1, -1>;
 
     int Mb = (gM + tM - 1) / tM;
@@ -3176,8 +3178,8 @@ __attribute__((noinline)) void matmul_dynamic_reuseA(float* dst, dtype* src0, dt
     using gm_shapeA = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_shapeB = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_shapeC = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_shapeA = TileLeft<dtype, tM, tK, -1, -1>;
-    using tile_shapeB = TileRight<dtype, tK, tN, -1, -1>;
+    using tile_shapeA = CubeTileA<dtype, tM, tK, -1, -1>;
+    using tile_shapeB = CubeTileN8<dtype, tK, tN, -1, -1>;
     using tile_shapeACC = TileAcc<float, tM, tN, -1, -1>;
 
     int Mb = (gM + tM - 1) / tM;
@@ -3284,8 +3286,8 @@ __attribute__((noinline)) void matmul_dynamic_reuseB(float* dst, dtype* src0, dt
     using gm_shapeA = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_shapeB = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_shapeC = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_shapeA = TileLeft<dtype, tM, tK, -1, -1>;
-    using tile_shapeB = TileRight<dtype, tK, tN, -1, -1>;
+    using tile_shapeA = CubeTileA<dtype, tM, tK, -1, -1>;
+    using tile_shapeB = CubeTileN8<dtype, tK, tN, -1, -1>;
     using tile_shapeACC = TileAcc<float, tM, tN, -1, -1>;
 
     int Mb = (gM + tM - 1) / tM;
@@ -3398,8 +3400,8 @@ void matmul_mx(float *dst, dtype *src0, dtype *src1, uint8_t *src0_mx, uint8_t *
   using gm_shapeBMX = global_tensor<uint8_t, RowMajor<gK/32, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
 
-  using tile_shapeA = TileLeft<dtype, tM, tK>;
-  using tile_shapeB = TileRight<dtype, tK, tN>;
+  using tile_shapeA = CubeTileA<dtype, tM, tK>;
+  using tile_shapeB = CubeTileN8<dtype, tK, tN>;
   using tile_shapeAMX = Tile<Location::Scaling, uint8_t, tM, tK/32, BLayout::RowMajor, tM, tK/32, SLayout::NoneBox>;
   using tile_shapeBMX = Tile<Location::Scaling, uint8_t, tK/32, tN, BLayout::ColMajor, tK/32, tN, SLayout::NoneBox>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
@@ -3472,8 +3474,8 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
   using gm_shapeA = global_tensor<dtype, RowMajor<gM, gK>>;
   using gm_shapeB = global_tensor<dtype, RowMajor<gK, gN>>;
   using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-  using tile_shapeA = TileLeft<dtype, tM, tK>;
-  using tile_shapeB = TileRight<dtype, tK, tN>;
+  using tile_shapeA = CubeTileA<dtype, tM, tK>;
+  using tile_shapeB = CubeTileN8<dtype, tK, tN>;
   using tile_shapeACC = TileAcc<float, tM, tN>;
   using itA = global_iterator<gm_shapeA, tile_shapeA>;
   using itB = global_iterator<gm_shapeB, tile_shapeB>;
@@ -3491,13 +3493,13 @@ void matmul_mask_2lvl(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
   const int rmd_N = gN % tN;
   const int rmd_K = gK % tK;
 
-  using tile_shapeA_trows = TileLeft<dtype, tM, tK,  tM, rmd_K>;
-  using tile_shapeA_tcols = TileLeft<dtype, tM, tK, rmd_M, tK>;
-  using tile_shapeA_tcorner = TileLeft<dtype, tM, tK, rmd_M, rmd_K>;
+  using tile_shapeA_trows = CubeTileA<dtype, tM, tK,  tM, rmd_K>;
+  using tile_shapeA_tcols = CubeTileA<dtype, tM, tK, rmd_M, tK>;
+  using tile_shapeA_tcorner = CubeTileA<dtype, tM, tK, rmd_M, rmd_K>;
 
-  using tile_shapeB_trows = TileRight<dtype, tK, tN, tK, rmd_N>;
-  using tile_shapeB_tcols = TileRight<dtype, tK, tN, rmd_K, tN>;
-  using tile_shapeB_tcorner = TileRight<dtype, tK, tN, rmd_K, rmd_N>;
+  using tile_shapeB_trows = CubeTileN8<dtype, tK, tN, tK, rmd_N>;
+  using tile_shapeB_tcols = CubeTileN8<dtype, tK, tN, rmd_K, tN>;
+  using tile_shapeB_tcorner = CubeTileN8<dtype, tK, tN, rmd_K, rmd_N>;
 
   using tile_shapeC_trows = TileAcc<float, tM, tN, tM, rmd_N>;
   using tile_shapeC_tcols = TileAcc<float, tM, tN, rmd_M, tN>;
@@ -3682,9 +3684,10 @@ void matmul_vec(float* dst, float* src0, float* src1){
     using gm_shapeA = global_tensor<float, RowMajor<gM, gK>>;
     using gm_shapeB = global_tensor<float, RowMajor<gK, gN>>;
     using gm_shapeC = global_tensor<float, RowMajor<gM, gN>>;
-    using tile_shapeA = Tile<Location::Vec, float, tM, tK, BLayout::RowMajor>;
-    using tile_shapeB = Tile<Location::Vec, float, tK, tN, BLayout::RowMajor>;
-    using tile_shapeACC = Tile<Location::Vec, float, tM, tN, BLayout::RowMajor>;
+    static_assert(tM <= 32, "Local CUBE_M16/M32 matmul supports tM <= 32");
+    using tile_shapeA = CubeTileA<float, tM, tK>;
+    using tile_shapeB = CubeTileN8<float, tK, tN>;
+    using tile_shapeACC = TileAcc<float, tM, tN>;
     using gm_iteratorA = global_iterator<gm_shapeA, tile_shapeA>;
     using gm_iteratorB = global_iterator<gm_shapeB, tile_shapeB>;
     using gm_iteratorC = global_iterator<gm_shapeC, tile_shapeACC>;
@@ -3701,7 +3704,7 @@ void matmul_vec(float* dst, float* src0, float* src1){
         for(int j=0;j<Nb;j++){
             auto gC = gCIter(i, j);
 
-            tile_shapeACC tACC(0);
+            tile_shapeACC tACC;
             for(int k=0;k<Kb;k++){
                 auto gA = gAIter(i,k);
                 auto gB = gBIter(k,j);
@@ -3709,7 +3712,11 @@ void matmul_vec(float* dst, float* src0, float* src1){
                 tile_shapeB tB;
                 TLOAD(tA, gA);
                 TLOAD(tB, gB);
-                TMATMUL_ACC(tACC, tACC, tA, tB);
+                if (k == 0) {
+                    TMATMUL(tACC, tA, tB);
+                } else {
+                    TMATMUL_ACC(tACC, tACC, tA, tB);
+                }
             }
             TSTORE(gC, tACC);
         }
@@ -3722,9 +3729,10 @@ void matmul_tile_vec(float* dst, float* src0, float* src1) {
     using gm_shape_B = global_tensor<float, RowMajor<K, N>>;
     using gm_shape_C = global_tensor<float, RowMajor<M, N>>;
 
-    using tile_shape_A = Tile<Location::Vec, float, M, K, BLayout::RowMajor>;
-    using tile_shape_B = Tile<Location::Vec, float, K, N, BLayout::RowMajor>;
-    using tile_shape_C = Tile<Location::Vec, float, M, N, BLayout::RowMajor>;
+    static_assert(M <= 32, "Local CUBE_M16/M32 matmul supports M <= 32");
+    using tile_shape_A = CubeTileA<float, M, K>;
+    using tile_shape_B = CubeTileN8<float, K, N>;
+    using tile_shape_C = TileAcc<float, M, N>;
 
     gm_shape_A s0(src0);
     gm_shape_B s1(src1);
@@ -3746,8 +3754,8 @@ void matmul_tile_frac(float* dst, float* src0, float* src1) {
     using gm_shape_B = global_tensor<float, ColMajor<K, N>>;
     using gm_shape_C = global_tensor<float, RowMajor<M, N>>;
 
-    using tile_shape_A = TileLeft<float, M, K>;
-    using tile_shape_B = TileRight<float, K, N>;
+    using tile_shape_A = CubeTileA<float, M, K>;
+    using tile_shape_B = CubeTileN8<float, K, N>;
     using tile_shape_C = TileAcc<float, M, N>;
 
     gm_shape_A s0(src0);

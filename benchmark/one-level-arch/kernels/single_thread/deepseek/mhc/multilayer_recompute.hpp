@@ -1,6 +1,3 @@
-template <typename E_, int R_, int C_, int VR_=R_, int VC_=C_>
-using TileAcc = pto::Tile<pto::Location::Vec, E_, R_, C_, pto::BLayout::RowMajor, VR_, VC_>;
-
 // =============================================================================
 // multilayer_recompute.hpp — 多层重算 GEMM 累加链（tile 版）
 // =============================================================================
@@ -15,8 +12,7 @@ using TileAcc = pto::Tile<pto::Location::Vec, E_, R_, C_, pto::BLayout::RowMajor
 // 【迁移映射】
 //   T.gemm(C += A*B)          → TMATMUL_ACC(acc, A, B)（ACC 既输入又输出累加）
 //   T.gemm(C = A*B, 清零)    → TMATMUL(acc, A, B)（首层清零起算）
-//   ACC → 普通 tile            → ACCCVT（导出，含类型转换）
-//   A/B 须 boxed tile         → TileLeft / TileRight；C 须 TileAcc
+//   A/B/C persistent CELL     → CubeTileM16/M32 / CubeTileN8 / CubeAccumulator
 //   warp spec 软流水          → PTO 一层无对应，改显式 serial 层循环 + ACC 链式复用
 //   间接寻址(指针表)          → 标量核心从 ptrs[l] 取地址构造 global_tensor 视图
 //

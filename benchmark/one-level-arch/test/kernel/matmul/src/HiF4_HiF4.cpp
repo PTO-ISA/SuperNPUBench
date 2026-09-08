@@ -39,41 +39,34 @@
 
 
 int main() {
-  using fp4_t = __fp4_e1m2x2;
-  constexpr int globKv = globK / 2;
-  constexpr int tilKv = tilK / 2;
-  static_assert(tilM % 2 == 0); // 暂时假定tile是偶数的，方便取地址，奇数tile实现需要末尾padding 0对齐地址
-  static_assert(tilN % 2 == 0);
-  static_assert(tilKv % 2 == 0);
-  fp4_t src0p[(globM+1)/2*(globK+1)/2*4 + 2*ALIGN]; // 保证是偶数M,K,N,奇数MKN末尾pad0, ALGIN保证地址256B对齐
-  fp4_t src1p[(globK+1)/2*(globN+1)/2*4 + 2*ALIGN];
-  uint8_t src0_mxp[(globM+1)/2*(globK+1)/2*4/32 + 2*ALIGN];
-  uint8_t src1_mxp[(globM+1)/2*(globK+1)/2*4/32 + 2*ALIGN];
-  float      dstp[(globM+1)/2*(globN+1)/2*4];
-  fp4_t *src0 = (fp4_t *)(((uint64_t)src0p & ALIGN_MASK) + ALIGN);
-  fp4_t *src1 = (fp4_t *)(((uint64_t)src1p & ALIGN_MASK) + ALIGN);
-  uint8_t *src0_mx = (uint8_t *)(((uint64_t)src0_mxp & ALIGN_MASK) + ALIGN);
-  uint8_t *src1_mx = (uint8_t *)(((uint64_t)src1_mxp & ALIGN_MASK) + ALIGN);
-  float *dst  = (float*)(((uint64_t)dstp & ALIGN_MASK) + ALIGN);
+  using fp4_t = __fp4_hif4x2;
+  static_assert(globK % 64 == 0 && tilK % 64 == 0);
+  static_assert((globM * globK) % 2 == 0);
+  static_assert((globK * globN) % 2 == 0);
+
+  alignas(4096) static fp4_t src0[globM * globK / 2];
+  alignas(4096) static fp4_t src1[globK * globN / 2];
+  alignas(4096) static uint32_t src0_mx[globM * globK / 64];
+  alignas(4096) static uint32_t src1_mx[globK / 64 * globN];
+  alignas(4096) static float dst[globM * globN];
 
   #ifdef RES_CHECK
     #define SRC0_PATH CHK_DIR "/src0.bin"
     #define SRC1_PATH CHK_DIR "/src1.bin"
-    readBinaryFile(SRC0_PATH, (uint8_t*)src0, globM*globK*sizeof(fp4_t));
-    readBinaryFile(SRC1_PATH, (uint8_t*)src1, globK*globN*sizeof(fp4_t));
+    readBinaryFile(SRC0_PATH, (uint8_t*)src0, globM*globK/2);
+    readBinaryFile(SRC1_PATH, (uint8_t*)src1, globK*globN/2);
   #endif
 
   BENCHSTART;
-  #ifdef NOMX_NOGATHER
-    matmul_fp_notcvt<fp4_t, globM, globN, globKv, tilM, tilN, tilKv, fp4_t, 1, 16>(dst, src0, src1, src0_mx, src1_mx);
-  #elif MX_NOGATHER
-    matmul_mxfp_notcvt<fp4_t, globM, globN, globKv, tilM, tilN, tilKv, fp4_t, 1, 32>(dst, src0, src1, src0_mx, src1_mx);
+  #if defined(MX_NOGATHER)
+    matmul_hif4x2_mx<globM, globN, globK, tilM, tilN, tilK, false>(
+        dst, src0, src1, src0_mx, src1_mx);
   #elif MX_NOGATHER_REUSEA
-    matmul_mxfp_notcvt_reuseA<fp4_t, globM, globN, globKv, tilM, tilN, tilKv, fp4_t, 1, 32>(dst, src0, src1, src0_mx, src1_mx);
+    matmul_hif4x2_mx<globM, globN, globK, tilM, tilN, tilK, true>(
+        dst, src0, src1, src0_mx, src1_mx);
   #else
-    matmul_mxfp<fp4_t, globM, globN, globKv, tilM, tilN, tilKv, fp4_t, 1, 16>(dst, src0, src1, src0_mx, src1_mx);
+    #error "HiF4x2 requires Matrix-MX; select MX_NOGATHER or MX_NOGATHER_REUSEA"
   #endif
-  // matmul_mxfp_notcvt<fp4_t, globM, globN, globKv, tilM, tilN, tilKv, fp4_t, 1, 16>(dst, src0, src1, src0_mx, src1_mx);
   BENCHEND;
 
   #ifdef RES_CHECK

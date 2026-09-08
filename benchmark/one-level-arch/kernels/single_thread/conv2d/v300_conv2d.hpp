@@ -8,11 +8,6 @@ namespace supernpu::conv2d {
 
 using namespace pto;
 
-template <typename Element, int Rows, int Cols,
-          int ValidRows = Rows, int ValidCols = Cols>
-using AccTile = Tile<Location::Vec, Element, Rows, Cols,
-                     BLayout::RowMajor, ValidRows, ValidCols>;
-
 // A 1x1 NCHW convolution is a matrix multiplication:
 //   [H * W, C_in] x [C_in, C_out] -> [H * W, C_out].
 // ColMajor preserves the NCHW channel-major layout for input and output.
