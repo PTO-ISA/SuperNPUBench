@@ -2,7 +2,6 @@
 #define SUPERNPU_DYNAMIC_MX_QUANT_NONTAIL_CUBLAS_FP8_HPP
 
 #include "multi_thread/quant/dynamic_mx_quant/dynamic_mx_quant_common.hpp"
-#include "multi_thread/quant/dynamic_mx_quant/dynamic_mx_quant_nontail_cublas_fp8_bigbs.hpp"
 
 namespace supernpu::tile_isa::mxquant {
 
@@ -10,32 +9,22 @@ namespace supernpu::tile_isa::mxquant {
 // cuBLAS consumes the bf16 VALUE view (abs -> TCOLMAX -> fp32 amax, guarded
 // exponent extract). Two-pass structure keeps peak live tiles low.
 //
-// Supported BlockSize range (plain single-load path). The whole
-// [BlockSize, TileN] block is loaded in one tile, so the contiguous axis TileN
-// carries BOTH the fp8 32B alignment LOWER bound (TileN % 32 == 0, i.e.
-// TileN >= 32) and the TileSize UPPER bound. A legal TileN exists iff
-// lower <= upper. The upper bound has TWO values because cuBLAS extracts the
-// exponent in the fp32 domain via a scratch-HBM reinterpret roundtrip
-// (compute_cublas_core -> reinterpret_f32_to_u32, RECORD 问题4):
-//   - FORMAL (post-bitcast) model — the assert below encodes THIS: once the
-//     compiler exposes a register-level reinterpret, the 32b roundtrip
-//     disappears and the binding tile falls back to the 16b bf16 input, so the
-//     budget is BlockSize*TileN <= 4096 -> BlockSize <= 128 (BS=128 -> TileN=32).
-//   - CURRENT (workaround) model — the fp32 32b roundtrip tile binds a tighter
-//     IsValidActiveSize budget BlockSize*TileN <= 2048 -> effective BlockSize <= 64
-//     (BS=32 -> TileN in {32,64}; BS=64 -> only 32). For 64 < BlockSize <= 128 the
-//     assert passes but the build still stops at the toolchain IsValidActiveSize
-//     check until 问题4 is fixed. This tighter current limit is the documented gap.
-// For BlockSize >= 160 (formal) there is NO legal TileN even after the fix; that
-// large-BS range needs the 方案A split-reduce kernel (see
-// dynamic_mx_quant_nontail_ocp_fp4_bigbs for the analogous structure).
+// Supported BlockSize range: ALL block sizes (single-load path). The whole
+// [BlockSize, TileN] block is loaded in one tile; TileN carries the fp8 32B store
+// lower bound (TileN % 32 == 0). The former tile-size ceiling that forced a
+// split-reduce `_bigbs` kernel at large BlockSize is GONE: the toolchain header now
+// admits any tile whose StorageBytes is a power-of-2 in [128B, 256KB]
+// (pto_tile.hpp TilesizeCode). cuBLAS materializes 32b fp32/uint32 intermediates
+// [BlockSize, TileN]; at BS=128, TileN=32 that is 16KB, well within 256KB. The
+// old "2048/4096-element" caps were artifacts of the previous header whose
+// TilesizeCode enum topped out at 8KB — verified stale: [128,32] cuBLAS with its
+// 32b intermediates compiles AND runs byte-exact (BS=128 plain == old bigbs,
+// 2026-09-08). The 方案A split-reduce kernel has been RETIRED.
 //
-// This is the PLAIN single-load implementation, kept behind an internal name.
-// The public entry `dynamic_mx_quant_nontail_cublas_fp8` (below) DERIVES TileN at
-// compile time from Post + the InT budget and AUTO-ROUTES to this plain path when
-// a legal TileN exists, or to the 方案A split-reduce `_bigbs` kernel when it does
-// not (large BlockSize). TileN stays an explicit param here so the dispatcher can
-// feed the derived value.
+// This is the single-load implementation, kept behind an internal name. The public
+// entry `dynamic_mx_quant_nontail_cublas_fp8` (below) DERIVES TileN at compile time
+// from Post + the InT budget and always routes here. TileN stays an explicit param
+// so the dispatcher can feed the derived value.
 template <int Axis, int Post, int BlockSize = 32, int TileN = 32, typename OutT = __fp8_e4m3,
           typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu, int kPeNum = 1>
 static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
@@ -45,15 +34,16 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
     // Axis must be whole blocks (a block is exactly BlockSize along the quant
     // axis); Post need NOT be a multiple of TileN: full column tiles + N_tail.
     static_assert(Axis % BlockSize == 0, "Axis must be multiple of BlockSize");
-    // FORMAL (post-bitcast) TileSize bound: 16b bf16 input tile BlockSize*TileN
-    // <= 4096, and TileN >= 32 forces BlockSize <= 128. The CURRENT fp32 32b
-    // reinterpret roundtrip (问题4 workaround) further caps the toolchain at
-    // BlockSize <= 64; that tighter effective limit is documented above, not
-    // asserted, so the code already targets the fixed-compiler model.
-    static_assert(BlockSize * TileN <= 4096,
-                  "plain non-tail cuBLAS-FP8 supports BlockSize <= 128 (formal: 16b "
-                  "input tile BlockSize*TileN <= 4096, TileN >= 32). For BlockSize >= 160 "
-                  "use a 方案A split-reduce kernel (see nontail_ocp_fp4_bigbs).");
+    // Single-load tile-size ceiling: cuBLAS materializes 32b fp32/uint32 working
+    // tiles [BlockSize, TileN], so BlockSize*TileN*4 must stay within the 256KB
+    // TilesizeCode ceiling AND be a power-of-2 (enforced by the Tile type). BS*TileN
+    // <= 65536 keeps 32b tiles <= 256KB; BS=128, TileN=32 (4096) has ample margin.
+    // The old 4096/2048 caps (previous 8KB header ceiling) are retired along with
+    // the 方案A split-reduce kernel.
+    static_assert(BlockSize * TileN <= 65536,
+                  "non-tail cuBLAS-FP8 single-load tile exceeds the 256KB TilesizeCode "
+                  "ceiling (BlockSize*TileN*4 <= 256KB for the 32b intermediates). "
+                  "Reduce TileN or tile the reduce axis for BlockSize this large.");
 
     constexpr int numKb  = Axis / BlockSize;
     constexpr int numN   = Post / TileN;   // full column tiles
@@ -361,28 +351,25 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
 }
 
 // Public entry: TileN is NOT a caller knob. It is DERIVED at compile time from
-// Post + the InT budget (pick_tilen). If a legal TileN >= the fp8 32B lower bound
-// exists, route to the plain single-load path; otherwise (large BlockSize leaves
-// no legal TileN) auto-route to the 方案A split-reduce `_bigbs` kernel with a
-// budget-derived R_sub. `if constexpr` guarantees the untaken branch is not
-// instantiated, so plain's TileN=0 / bigbs's illegal R_sub never fire an assert.
-// InT drives BOTH the budget (a wider input dtype shrinks it) AND the compute domain:
-// scale-reduce and data paths are InT-dispatched (bf16/half/fp32) via `if constexpr`.
+// Post + the InT budget (pick_tilen) and always routes to the single-load plain
+// path (方案A split-reduce retired — the 256KB TilesizeCode ceiling admits a single
+// [BlockSize, TileN] block, incl. the 32b cuBLAS intermediates, at any BlockSize).
+// pick_tilen returns the "preferred" TileN under the legacy 8192B soft budget; when
+// that yields no legal aligned TileN (large BlockSize, the old bigbs trigger), fall
+// back to the minimal legal aligned tile TileN=align. Small BlockSize keeps its
+// preferred TileN unchanged → existing cases see zero change. InT drives BOTH the
+// budget AND the compute domain: scale-reduce and data paths are InT-dispatched
+// (bf16/half/fp32) via `if constexpr`.
 template <int Axis, int Post, int BlockSize = 32, typename OutT = __fp8_e4m3,
           typename InT = __bf16, uint32_t MaxLowBoundBits = 0x2b8cbcccu, int kPeNum = 1>
 void dynamic_mx_quant_nontail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
     static_assert(std::is_same_v<InT, __bf16> || std::is_same_v<InT, __half> ||
                       std::is_same_v<InT, float>,
                   "InT must be one of {__bf16, __half, float}");
-    constexpr int TileN = pick_tilen<BlockSize, Post, OutT, InT, /*IsCublas=*/true>();
-    if constexpr (TileN >= nontail_align_lower<OutT>()) {
-        nontail_cublas_fp8_plain<Axis, Post, BlockSize, TileN, OutT, InT, MaxLowBoundBits, kPeNum>(x, y, scale);
-    } else {
-        constexpr int BigTileN = nontail_align_lower<OutT>();
-        constexpr int Rsub = max_rsub<BlockSize, BigTileN, InT, /*IsCublas=*/true>();
-        dynamic_mx_quant_nontail_cublas_fp8_bigbs<Axis, Post, BlockSize, BigTileN, Rsub, OutT,
-                                                  InT, MaxLowBoundBits>(x, y, scale);
-    }
+    constexpr int align  = nontail_align_lower<OutT>();
+    constexpr int TileN0 = pick_tilen<BlockSize, Post, OutT, InT, /*IsCublas=*/true>();
+    constexpr int TileN  = (TileN0 >= align) ? TileN0 : align;
+    nontail_cublas_fp8_plain<Axis, Post, BlockSize, TileN, OutT, InT, MaxLowBoundBits, kPeNum>(x, y, scale);
 }
 
 } // namespace supernpu::tile_isa::mxquant

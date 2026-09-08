@@ -1,7 +1,7 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
 #include "fileop.h"
-#include "multi_thread/quant/dynamic_mx_quant/dynamic_mx_quant_nontail_ocp_fp4_bigbs.hpp"
+#include "multi_thread/quant/dynamic_mx_quant/dynamic_mx_quant_nontail_ocp_fp4.hpp"
 using namespace supernpu::tile_isa::mxquant;
 
 // Non-tail OCP-FP4, LARGE-BlockSize branch (方案A: split reduce axis). BlockSize
@@ -23,7 +23,7 @@ int main() {
     readBinaryFile(CHK_DIR "/input.bin", (uint8_t*)x, sizeof(x));
 #endif
 
-    dynamic_mx_quant_nontail_ocp_fp4_bigbs<128, 64, 128>(
+    dynamic_mx_quant_nontail_ocp_fp4<128, 64, 128, __fp4_e2m1x2, __bf16, /*kPeNum=*/1>(
         x, reinterpret_cast<__fp4_e2m1x2*>(y), scale);
 
 #ifdef RES_CHECK
