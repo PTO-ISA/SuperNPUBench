@@ -1,0 +1,1209 @@
+/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel/bin/gfsim -s softcore.multiThreadNum=4 --swimlane 1 --swimfile /tmp/fa_gmma_kchains_Sq128_Skv8192_trace/gfsim.swimlane.json -p 1 --pipefile /tmp/fa_gmma_kchains_Sq128_Skv8192_trace/gfsim.pipeview.log -f /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/output/kernel/multi_thread/fa/elf/kernel_multi_thread_fa_fa_gmma_kchains_Sq128_Skv8192_Tm128_Tk128_QKChainK32_X1_Y1_FP32_VECFP32.elf 
+[gfsim] ELF auto-detect: 4-PE collective instruction found; applying fourpe config bundle
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Override configurations:
+softcore.multiThreadNum=4
+core.threadCount=4
+core.stdPeCount=1
+core.cube_core_num=4
+core.cube_thread_num=1
+core.vec_core_num=4
+fourpe.pe_cluster_enable=true
+fourpe.pe_cluster_count=4
+fourpe.pe_cluster_frontend_thread_count=4
+fourpe.pe_cluster_aggregate_decode_width=8
+fourpe.pe_cluster_gpr_rename_partition_entries=128
+fourpe.pe_cluster_scalar_rob_partition_entries=128
+fourpe.pe_cluster_scalar_iq_partition_entries=128
+fourpe.pe_cluster_block_rob_partition_entries=256
+fourpe.pe_cluster_block_iq_partition_entries=88
+fourpe.pe_cluster_local_reg_partition_entries=88
+bfu.brq_depth=1024
+fourpe.pe_cluster_partition_borrow_enable=false
+fourpe.pe_cluster_eligible_rr_fairness_check=true
+fourpe.pe_cluster_group_contract_fatal=false
+dfx.swimCounterSampleInterval=8
+Memory: 0x10200 - 0x10258 (Size=0KB) [.rodata]
+Memory: 0x1025c - 0x10277 (Size=0KB) [.eh_frame_hdr]
+Memory: 0x10278 - 0x102cb (Size=0KB) [.eh_frame]
+Memory: 0x112cc - 0x1961b (Size=32KB) [.text]
+Memory: 0x1a620 - 0x1a62f (Size=0KB) [.init_array]
+Memory: 0x1a630 - 0x1a647 (Size=0KB) [.data.rel.ro]
+Memory: 0x1b648 - 0x85b673 (Size=8448KB) [.bss]
+Memory: 0x85b678 - 0x85b687 (Size=0KB) [.sbss]
+Memory: 0x85b690 - 0x886b690 (Size=131136KB) [stack mem]
+Memory: 0x4000802000 - 0x4008803000 (Size=131076KB) [map mem]
+tid: 0 Core@100000: Retired blocks 2716. BROB head info: B167 STID0 BPC 0x14414 [CUBE FALL] rdy:1  TMATMUL_ACC [group=GMMA], lb0:128, lb1:128, lb2:128  accChainId:0 FP32 T0[U#1 TileTag:82 addr:0xab000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0],T1[T#1 TileTag:50 addr:0x2f000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0], -> N TileTag:46 addr:0x1ec000 regCat:0 size:16384 ready:0 isZero: 0 cellTracked: 0
+tid: 1 Core@100000: Retired blocks 2716. BROB head info: B167 STID1 BPC 0x14414 [CUBE FALL] rdy:1  TMATMUL_ACC [group=GMMA], lb0:128, lb1:128, lb2:128  accChainId:0 FP32 T0[U#1 TileTag:82 addr:0xab000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0],T1[T#1 TileTag:50 addr:0x36000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0], -> N TileTag:46 addr:0x1ec000 regCat:0 size:16384 ready:0 isZero: 0 cellTracked: 0
+tid: 2 Core@100000: Retired blocks 2716. BROB head info: B167 STID2 BPC 0x14414 [CUBE FALL] rdy:1  TMATMUL_ACC [group=GMMA], lb0:128, lb1:128, lb2:128  accChainId:0 FP32 T0[U#1 TileTag:82 addr:0xb4000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0],T1[T#1 TileTag:50 addr:0x11000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0], -> N TileTag:46 addr:0x1e0000 regCat:0 size:16384 ready:0 isZero: 0 cellTracked: 0
+tid: 3 Core@100000: Retired blocks 2716. BROB head info: B167 STID3 BPC 0x14414 [CUBE FALL] rdy:1  TMATMUL_ACC [group=GMMA], lb0:128, lb1:128, lb2:128  accChainId:0 FP32 T0[U#1 TileTag:82 addr:0xb4000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0],T1[T#1 TileTag:50 addr:0x54000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0], -> N TileTag:46 addr:0x1e0000 regCat:0 size:16384 ready:0 isZero: 0 cellTracked: 0
+tid: 0 Core@200000: Retired blocks 5180. BROB head info: B15 STID0 BPC 0x170c4 [CUBE FALL] rdy:1  TMATMUL_ACC [group=GMMA], lb0:128, lb1:128, lb2:128  accChainId:0 FP32 T0[U#1 TileTag:31 addr:0xb8000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0],T1[T#1 TileTag:87 addr:0x28000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0], -> N TileTag:90 addr:0x1fc000 regCat:0 size:16384 ready:0 isZero: 0 cellTracked: 0
+tid: 1 Core@200000: Retired blocks 5180. BROB head info: B15 STID1 BPC 0x170c4 [CUBE FALL] rdy:1  TMATMUL_ACC [group=GMMA], lb0:128, lb1:128, lb2:128  accChainId:0 FP32 T0[U#1 TileTag:31 addr:0xb8000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0],T1[T#1 TileTag:87 addr:0xe000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0], -> N TileTag:90 addr:0x1fc000 regCat:0 size:16384 ready:0 isZero: 0 cellTracked: 0
+tid: 2 Core@200000: Retired blocks 5180. BROB head info: B15 STID2 BPC 0x170c4 [CUBE FALL] rdy:1  TMATMUL_ACC [group=GMMA], lb0:128, lb1:128, lb2:128  accChainId:0 FP32 T0[U#1 TileTag:31 addr:0xb0000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0],T1[T#1 TileTag:87 addr:0x1b000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0], -> N TileTag:90 addr:0x1fc000 regCat:0 size:16384 ready:0 isZero: 0 cellTracked: 0
+tid: 3 Core@200000: Retired blocks 5180. BROB head info: B15 STID3 BPC 0x170c4 [CUBE FALL] rdy:1  TMATMUL_ACC [group=GMMA], lb0:128, lb1:128, lb2:128  accChainId:0 FP32 T0[U#1 TileTag:31 addr:0xb0000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0],T1[T#1 TileTag:87 addr:0x12000 regCat:0 size:16384 ready:1 isZero: 0 cellTracked: 0], -> N TileTag:90 addr:0x200000 regCat:0 size:16384 ready:0 isZero: 0 cellTracked: 0
+Simulation time: 45s 
++-------------------------+--------------+
+| Block Control Config Name | Value        |
++-------------------------+--------------+
+| inst_decode_bw          | 4            |
+| block_rob_depth         | 256          |
+| BISQ:cube_isq_depth     | 32           |
+| BISQ:vector_isq_depth   | 32           |
++-------------------------+--------------+
++-------------------+--------------+
+| CUBE Config Name  | Value        |
++-------------------+--------------+
+| uop_isq_depth     | 32           |
+| tcvt_isq_depth    | 32           |
+| L0A_size          | 64           |
+| L0B_size          | 64           |
+| L0C_size          | 64           |
++-------------------+--------------+
+===================SuperScalar NPU Stats====================
+Total Cycles.....................................:    281991
+Sim Total Cycles.................................:    281991
+================SuperScalar Unified Top-Down================
+Retiring.........................................:      2.21%
+Bad Speculation..................................:      1.02%
+Frontend Bound...................................:      0.02%
+CMD Bound........................................:     90.87%
+Backend Bound....................................:      5.88%
+  |-- LD Retiring................................:      0.00%
+  |-- ST Retiring................................:      0.00%
+  |-- BR Retiring................................:      0.00%
+  |-- ALU Retiring...............................:      2.21%
+  |-- Other Retiring.............................:      0.00%
+  |-- Misprediction..............................:      0.00%
+  |-- Machine Clear..............................:      1.02%
+  |-- Fetch Latency..............................:      0.00%
+  |-- Fetch Bandwidth............................:      0.00%
+    |-- Branch Resteering........................:      0.00%
+    |-- ITLB/BTLB miss...........................:      0.00%
+    |-- BHC miss penalty.........................:      0.00%
+    |-- Other fetch lat..........................:      0.00%
+    |-- Decode Stall.............................:      0.00%
+    |-- Rename Stall.............................:      0.00%
+    |-- BROB Stall...............................:     10.48%
+    |-- SYS Block Stall..........................:      0.00%
+  |-- CMD queue backpressure.....................:     90.87%
+    |-- Operand not ready........................:      0.01%
+    |-- BIQ capacity full........................:     90.86%
+      |-- CUBE BIQ full..........................:     82.37%
+      |-- VECTOR BIQ full........................:      8.49%
+      |-- TLSU BIQ full..........................:      0.00%
+      |-- GROUP/SHU BIQ full.....................:      0.00%
+      |-- Other BIQ full.........................:      0.00%
+    |-- TileReg capacity full....................:      0.00%
+    |-- GPR LPV/no-cancel gate...................:      0.00%
+    |-- Other CMD queue block....................:      0.00%
+  |-- CMDPipe tile backpressure..................:      0.00%
+    |-- TileReg resource unavailable.............:      0.00%
+    |-- Other CMDPipe stall......................:      0.00%
+  |-- Other CMD control..........................:      0.00%
+  |-- Memory Bound...............................:      0.00%
+  |-- Core Bound.................................:      5.88%
+    |-- L1 Bound.................................:      0.00%
+    |-- L2 Bound.................................:      0.00%
+    |-- L3/DRAM Bound............................:      0.00%
+    |-- Store Bound..............................:      0.00%
+    |-- Scalar ALU...............................:      0.02%
+    |-- Cube.....................................:      4.48%
+    |-- Vector...................................:      0.91%
+    |-- TLSU Tload...............................:      0.42%
+    |-- TLSU Tstore..............................:      0.05%
+    |-- TLSU TMOV................................:      0.00%
+    |-- Idle.....................................:      0.00%
+    |-- Other Core...............................:      0.00%
+      |-- Simple ALU pipe full...................:      0.00%
+      |-- Complex INT busy.......................:      0.00%
+      |-- Branch port busy.......................:      0.01%
+===============Top-Down Boundary Attribution================
+IFU-OEX boundary observations (slots)............:   1127964
+  |-- Frontend supply bubble (F5)................:      4.54%
+  |-- Backend backpressure (F5)..................:     90.86%
+  |-- Delivered to OEX (F5)......................:      4.60%
+CMD queue/Pipe boundary observations (cycles)....:    281991
+  |-- CMD queue supply bubble....................:      4.53%
+  |-- CMD queue backpressure.....................:     90.87%
+  |-- CMD blocked union cycles...................:    256242
+  |-- CMD issued slots...........................:     44316
+  |-- CMDPipe tile backpressure events...........:         0
+===================superScalar Key Stats====================
+superScalar Tileop Total Cycles..................:   1127964
+  |--Cube Tileop Total Cycles....................:   1041300
+  |--Vector Tileop Total Cycles..................:     54724
+  |--TLSU Tileop Total Cycles....................:     36051
+superScalar Total Tileop Counter.................:      5888
+  |--Cube Execute Tileop Counter.................:      1280
+  |--Vector Execute Tileop Counter...............:      2300
+  |--TLSU Execute Tileop Counter.................:      2308
+superScalar Run Tileop Total Cycles..............:    281892
+  |--Cube Busy Cycles............................:   1119137
+  |--Vector Busy Cycles..........................:    293237
+  |--TLSU Busy Cycles (PE-summed)................:    117175
+    |--TLSU Tload Busy Cycles (PE-summed)........:    104494
+      |--write Blocked By Ring Cycles............:         0
+    |--TLSU Tstore Busy Cycles (PE-summed).......:     12696
+    |--TLSU Tmov Busy Cycles.....................:         0
+    |--TLSU Mgather Busy Cycles..................:         0
+    |--TLSU Mscatter Busy Cycles.................:         0
+    |--TLSU Vgather Busy Cycles..................:         0
+    |--TLSU Vscatter Busy Cycles.................:         0
+  |--All Cores Idle Cycles.......................:        99
+  |--Vector-Cube Cocurrent Cycles................:     82211
+  |--Vector-Cube Active Cycles...................:    281414
+  |--Cube-TLSU Concurrent Cycles (union).........:    115909
+  |--Cube-TLSU Active Cycles (union).............:    281880
+  |--Vector-TLSU Concurrent Cycles (union).......:     40617
+  |--Vector-TLSU Active Cycles (union)...........:    159569
+=============TileOp Efficiency (explicit units)=============
+PE0 CUBE ExecCycles/TileOp.......................:    860.65
+PE0 CUBE TileOpRate (ops/cycle)..................:      0.00
+PE0 CUBE Utilization.............................:      0.99
+PE1 CUBE ExecCycles/TileOp.......................:    867.31
+PE1 CUBE TileOpRate (ops/cycle)..................:      0.00
+PE1 CUBE Utilization.............................:      0.99
+PE2 CUBE ExecCycles/TileOp.......................:    872.60
+PE2 CUBE TileOpRate (ops/cycle)..................:      0.00
+PE2 CUBE Utilization.............................:      0.99
+PE3 CUBE ExecCycles/TileOp.......................:    853.74
+PE3 CUBE TileOpRate (ops/cycle)..................:      0.00
+PE3 CUBE Utilization.............................:      1.00
+PE0 VECTOR ReadLatency (cycles/op)...............:      5.17
+PE0 VECTOR TileOpRate (ops/cycle)................:      0.00
+PE0 VECTOR Utilization...........................:      0.12
+PE1 VECTOR ReadLatency (cycles/op)...............:      5.02
+PE1 VECTOR TileOpRate (ops/cycle)................:      0.00
+PE1 VECTOR Utilization...........................:      0.12
+PE2 VECTOR ReadLatency (cycles/op)...............:      5.02
+PE2 VECTOR TileOpRate (ops/cycle)................:      0.00
+PE2 VECTOR Utilization...........................:      0.12
+PE3 VECTOR ReadLatency (cycles/op)...............:      5.02
+PE3 VECTOR TileOpRate (ops/cycle)................:      0.00
+PE3 VECTOR Utilization...........................:      0.12
+PE0 TLSU Occupancy/Issue (cycles/event)..........:    605.38
+PE0 TLSU IssueRate (events/cycle)................:      0.00
+PE0 TLSU Utilization.............................:      0.42
+Vector-Cube overlap ratio........................:      0.29
+Vector-TLSU overlap ratio........................:      0.14
+============PROB Status Occupancy (entry-cycles)============
+  |--free........................................:         0
+  |--alloc.......................................: 119757920
+  |--renamed.....................................:         0
+  |--dispatched..................................:      2770
+  |--in_queue....................................:     15483
+  |--issued......................................:    133244
+  |--executing...................................:     47093
+  |--writeback...................................:      2600
+  |--completed...................................:  14193574
+  |--retired.....................................:     58846
+  |--fault.......................................:         0
+  |--need_flush..................................:         0
+===============Block Control Key Stats total================
+Average Outstanding Block Number.................:     17.14
+  |--Average Outstanding Cube Block Number.......:     14.91
+  |--Average Outstanding Vector Block Number.....:      1.06
+  |--Average Outstanding TLoad Number............:      1.16
+  |--Average Outstanding TStore Number...........:      0.00
+=============Block Control Key Stats SThread 0==============
+Average Outstanding Block Number.................:      3.84
+  |--Average Outstanding Cube Block Number.......:      3.57
+  |--Average Outstanding Vector Block Number.....:      0.27
+  |--Average Outstanding TLoad Number............:      0.00
+  |--Average Outstanding TStore Number...........:      0.00
+=============Block Control Key Stats SThread 1==============
+Average Outstanding Block Number.................:      3.91
+  |--Average Outstanding Cube Block Number.......:      3.65
+  |--Average Outstanding Vector Block Number.....:      0.27
+  |--Average Outstanding TLoad Number............:      0.00
+  |--Average Outstanding TStore Number...........:      0.00
+=============Block Control Key Stats SThread 2==============
+Average Outstanding Block Number.................:      3.98
+  |--Average Outstanding Cube Block Number.......:      3.72
+  |--Average Outstanding Vector Block Number.....:      0.27
+  |--Average Outstanding TLoad Number............:      0.00
+  |--Average Outstanding TStore Number...........:      0.00
+=============Block Control Key Stats SThread 3==============
+Average Outstanding Block Number.................:      5.41
+  |--Average Outstanding Cube Block Number.......:      3.98
+  |--Average Outstanding Vector Block Number.....:      0.27
+  |--Average Outstanding TLoad Number............:      1.16
+  |--Average Outstanding TStore Number...........:      0.00
+===================CubeCore 0 Statistics====================
+Cube core TFLOPS(1.65GHz)........................:      0.01
+Cube core alu utilization........................:    524288  185.92%
+Cube core utilization(Run TileOp, header)........:    278870   98.89%
+Cube core L0CWR ratio............................:    131072   47.00%
+Cube core load wait ratio........................:    147798   53.00%
+Cube core load port data channel utilization.....:         0     N/A
+Cube core uop load average used cycle............:     65.86
+Cube core load req average used cycle............:      9.60
+Cube core exe tileop count.......................:       320
+Cube core average acc slot use...................:      0.52
+Cube core average l0a entry use..................:     21.07
+Cube core average l0b entry use..................:     80.77
+Cube core average l0a entry use busy.............:     21.08
+Cube core average l0b entry use busy.............:     80.78
+Cube core average acc slot use busy..............:      1.02
+Cube core exe uop count..........................:    131072
+Cube core retired uop count......................:    131072
+Cube core total load count.......................:     98240
+Cube core total store count......................:         0
+  |--CellReg Load Count..........................:     24512
+    |--CellReg TileA Count.......................:      8192
+    |--CellReg TileB Count.......................:         0
+    |--CellReg TileC Count.......................:     16320
+    |--CellReg LeftScale Count...................:         0
+    |--CellReg RightScale Count..................:         0
+  |--CellReg Load Bytes..........................:   3137536
+    |--CellReg TileA Bytes.......................:   1048576
+    |--CellReg TileB Bytes.......................:         0
+    |--CellReg TileC Bytes.......................:   2088960
+    |--CellReg LeftScale Bytes...................:         0
+    |--CellReg RightScale Bytes..................:         0
+  |--CellReg Store Count.........................:     40960
+    |--CellReg TileC Count.......................:     40960
+  |--CellReg Store Bytes.........................:   5242880
+    |--CellReg TileC Bytes.......................:   5242880
+  |--ShareTReg Load Count........................:     73728
+    |--ShareTReg TileA Count.....................:      8192
+    |--ShareTReg TileB Count.....................:     65536
+  |--ShareTReg Load Bytes........................:   9437184
+    |--ShareTReg TileA Bytes.....................:   1048576
+    |--ShareTReg TileB Bytes.....................:   8388608
+Cube core cannot pick main chain uop ratio.......:         0    0.00%
+Cube core pick cub chain uop ratio...............:         0     N/A
+Cube busy cycle..................................:    278882
+Cube core mmad busy cycle........................:    186911   67.02%
+Cube core load busy cycle........................:     93713   33.60%
+Cube core store busy cycle.......................:     33280   11.93%
+Cube core tileop mmad cycle range................:    267109
+Cube core tileop load cycle range................:    276865
+Cube core tileop store cycle range...............:    245811
+Cube core load and mmad cycle overlap............:    265536   99.41%
+===================CubeCore 1 Statistics====================
+Cube core TFLOPS(1.65GHz)........................:      0.01
+Cube core alu utilization........................:    524288  185.92%
+Cube core utilization(Run TileOp, header)........:    279597   99.15%
+Cube core L0CWR ratio............................:    131072   46.88%
+Cube core load wait ratio........................:    148525   53.12%
+Cube core load port data channel utilization.....:         0     N/A
+Cube core uop load average used cycle............:     66.08
+Cube core load req average used cycle............:     15.87
+Cube core exe tileop count.......................:       320
+Cube core average acc slot use...................:      0.52
+Cube core average l0a entry use..................:     21.37
+Cube core average l0b entry use..................:     82.43
+Cube core average l0a entry use busy.............:     21.37
+Cube core average l0b entry use busy.............:     82.44
+Cube core average acc slot use busy..............:      1.02
+Cube core exe uop count..........................:    131072
+Cube core retired uop count......................:    131072
+Cube core total load count.......................:     98232
+Cube core total store count......................:         0
+  |--CellReg Load Count..........................:     24504
+    |--CellReg TileA Count.......................:      8184
+    |--CellReg TileB Count.......................:         0
+    |--CellReg TileC Count.......................:     16320
+    |--CellReg LeftScale Count...................:         0
+    |--CellReg RightScale Count..................:         0
+  |--CellReg Load Bytes..........................:   3136512
+    |--CellReg TileA Bytes.......................:   1047552
+    |--CellReg TileB Bytes.......................:         0
+    |--CellReg TileC Bytes.......................:   2088960
+    |--CellReg LeftScale Bytes...................:         0
+    |--CellReg RightScale Bytes..................:         0
+  |--CellReg Store Count.........................:     40960
+    |--CellReg TileC Count.......................:     40960
+  |--CellReg Store Bytes.........................:   5242880
+    |--CellReg TileC Bytes.......................:   5242880
+  |--ShareTReg Load Count........................:     73728
+    |--ShareTReg TileA Count.....................:      8192
+    |--ShareTReg TileB Count.....................:     65536
+  |--ShareTReg Load Bytes........................:   9437184
+    |--ShareTReg TileA Bytes.....................:   1048576
+    |--ShareTReg TileB Bytes.....................:   8388608
+Cube core cannot pick main chain uop ratio.......:         0    0.00%
+Cube core pick cub chain uop ratio...............:         0     N/A
+Cube busy cycle..................................:    279605
+Cube core mmad busy cycle........................:    183739   65.71%
+Cube core load busy cycle........................:    102417   36.63%
+Cube core store busy cycle.......................:     33280   11.90%
+Cube core tileop mmad cycle range................:    268969
+Cube core tileop load cycle range................:    277638
+Cube core tileop store cycle range...............:    247662
+Cube core load and mmad cycle overlap............:    267340   99.39%
+===================CubeCore 2 Statistics====================
+Cube core TFLOPS(1.65GHz)........................:      0.01
+Cube core alu utilization........................:    524288  185.92%
+Cube core utilization(Run TileOp, header)........:    280029   99.30%
+Cube core L0CWR ratio............................:    131072   46.81%
+Cube core load wait ratio........................:    148957   53.19%
+Cube core load port data channel utilization.....:         0     N/A
+Cube core uop load average used cycle............:     66.22
+Cube core load req average used cycle............:     22.34
+Cube core exe tileop count.......................:       320
+Cube core average acc slot use...................:      0.54
+Cube core average l0a entry use..................:     21.80
+Cube core average l0b entry use..................:     83.69
+Cube core average l0a entry use busy.............:     21.80
+Cube core average l0b entry use busy.............:     83.69
+Cube core average acc slot use busy..............:      1.02
+Cube core exe uop count..........................:    131072
+Cube core retired uop count......................:    131072
+Cube core total load count.......................:     98240
+Cube core total store count......................:         0
+  |--CellReg Load Count..........................:     24512
+    |--CellReg TileA Count.......................:      8192
+    |--CellReg TileB Count.......................:         0
+    |--CellReg TileC Count.......................:     16320
+    |--CellReg LeftScale Count...................:         0
+    |--CellReg RightScale Count..................:         0
+  |--CellReg Load Bytes..........................:   3137536
+    |--CellReg TileA Bytes.......................:   1048576
+    |--CellReg TileB Bytes.......................:         0
+    |--CellReg TileC Bytes.......................:   2088960
+    |--CellReg LeftScale Bytes...................:         0
+    |--CellReg RightScale Bytes..................:         0
+  |--CellReg Store Count.........................:     40960
+    |--CellReg TileC Count.......................:     40960
+  |--CellReg Store Bytes.........................:   5242880
+    |--CellReg TileC Bytes.......................:   5242880
+  |--ShareTReg Load Count........................:     73728
+    |--ShareTReg TileA Count.....................:      8192
+    |--ShareTReg TileB Count.....................:     65536
+  |--ShareTReg Load Bytes........................:   9437184
+    |--ShareTReg TileA Bytes.....................:   1048576
+    |--ShareTReg TileB Bytes.....................:   8388608
+Cube core cannot pick main chain uop ratio.......:         0    0.00%
+Cube core pick cub chain uop ratio...............:         0     N/A
+Cube busy cycle..................................:    280036
+Cube core mmad busy cycle........................:    182167   65.05%
+Cube core load busy cycle........................:    102895   36.74%
+Cube core store busy cycle.......................:     33280   11.88%
+Cube core tileop mmad cycle range................:    270377
+Cube core tileop load cycle range................:    278275
+Cube core tileop store cycle range...............:    250570
+Cube core load and mmad cycle overlap............:    268901   99.45%
+===================CubeCore 3 Statistics====================
+Cube core TFLOPS(1.65GHz)........................:      0.01
+Cube core alu utilization........................:    524288  185.92%
+Cube core utilization(Run TileOp, header)........:    280607   99.51%
+Cube core L0CWR ratio............................:    131072   46.71%
+Cube core load wait ratio........................:    149535   53.29%
+Cube core load port data channel utilization.....:         0     N/A
+Cube core uop load average used cycle............:     66.38
+Cube core load req average used cycle............:     33.67
+Cube core exe tileop count.......................:       320
+Cube core average acc slot use...................:      0.57
+Cube core average l0a entry use..................:     23.23
+Cube core average l0b entry use..................:     89.49
+Cube core average l0a entry use busy.............:     23.23
+Cube core average l0b entry use busy.............:     89.49
+Cube core average acc slot use busy..............:      1.03
+Cube core exe uop count..........................:    131072
+Cube core retired uop count......................:    131072
+Cube core total load count.......................:     98240
+Cube core total store count......................:         0
+  |--CellReg Load Count..........................:     24512
+    |--CellReg TileA Count.......................:      8192
+    |--CellReg TileB Count.......................:         0
+    |--CellReg TileC Count.......................:     16320
+    |--CellReg LeftScale Count...................:         0
+    |--CellReg RightScale Count..................:         0
+  |--CellReg Load Bytes..........................:   3137536
+    |--CellReg TileA Bytes.......................:   1048576
+    |--CellReg TileB Bytes.......................:         0
+    |--CellReg TileC Bytes.......................:   2088960
+    |--CellReg LeftScale Bytes...................:         0
+    |--CellReg RightScale Bytes..................:         0
+  |--CellReg Store Count.........................:     40960
+    |--CellReg TileC Count.......................:     40960
+  |--CellReg Store Bytes.........................:   5242880
+    |--CellReg TileC Bytes.......................:   5242880
+  |--ShareTReg Load Count........................:     73728
+    |--ShareTReg TileA Count.....................:      8192
+    |--ShareTReg TileB Count.....................:     65536
+  |--ShareTReg Load Bytes........................:   9437184
+    |--ShareTReg TileA Bytes.....................:   1048576
+    |--ShareTReg TileB Bytes.....................:   8388608
+Cube core cannot pick main chain uop ratio.......:         0    0.00%
+Cube core pick cub chain uop ratio...............:         0     N/A
+Cube busy cycle..................................:    280614
+Cube core mmad busy cycle........................:    173506   61.83%
+Cube core load busy cycle........................:    106721   38.03%
+Cube core store busy cycle.......................:     33280   11.86%
+Cube core tileop mmad cycle range................:    263166
+Cube core tileop load cycle range................:    279029
+Cube core tileop store cycle range...............:    243982
+Cube core load and mmad cycle overlap............:    261840   99.50%
+=============== TLSU tile-store STQ residency peId=0 ===============
+  resident entry-cycles ....................: 49481
+  |-- addr/interval not resolved ...........: 0  (0.00%)
+  |-- tile data (rename) not ready .........: 49477  (99.99%)
+  |-- BLOCKED BY NON-FLUSH POINTER .........: 0  (0.00%)
+  |-- older store still in STQ .............: 0  (0.00%)
+  |-- SCB full ............................: 0  (0.00%)
+  store_issue=12 scb_enter=12 stq_peak=4 scb_peak=1
+  invariants: stq_conservation=OK (created=8 destroyed=8) a3_tile_violation=0 scb_flush_hit=0 scb_waw_scalar=0 scb_waw_tile=0 nuke=0
+=============== TLOAD Sub-path peId=0 ===============
+  occupancy entry-cycles ..................: 327773 (86.77%)
+  issue events ............................: 612
+=============== TSTORE Sub-path peId=0 ===============
+  occupancy entry-cycles ..................: 49981 (13.23%)
+  issue events ............................: 12
+=============== TMOV Sub-path peId=0 ===============
+  occupancy entry-cycles ..................: 0 (0.00%)
+  issue events ............................: 0
+=====================Retired block Type=====================
+Retired Block Num................................:      7232
+  |--Retired STD Block Num.......................:      1344
+  |--Retired PARALLEL Block Num..................:      5888
+    |--Retired CUBE Block Num....................:      1280   21.74%
+    |--Retired VCALL Block Num...................:      2300   39.06%
+    |--Retired TLSU Block Num....................:      2308   39.20%
+  |--Retired SYS Block Num.......................:         0
+  |--Retired FP Block Num........................:         0
+  |--Retired TEMPLATE Block Num..................:         0
+    |--MEMSET TEMPLATE Block Num.................:         0
+    |--MEMCOPY TEMPLATE Block Num................:         0
+    |--FENTRY TEMPLATE Block Num.................:         8
+    |--FEXIT TEMPLATE Block Num..................:         0
+    |--FRET TEMPLATE Block Num...................:         8
+  |--Retired OTHER Block Num.....................:         0
+Retired Inst Number..............................:      1280
+  |--Retired Cube Inst Number....................:      1280
+  |--Retired Vec Inst Number.....................:         0
+BPC..............................................:      0.03
+IPC..............................................:      0.00
+Average BROB depth...............................:    983.92
+Effective window size............................:    185.03
+MPKB.............................................:      0.55
+MPKI.............................................:      3.12
+Simulation speed (Kilo Insts Per Second).........:      0.03
+Discontinuous BPC Count..........................:        16
+Average Continuous BPC Length....................:    452.00
+Average fetch minsts/header per cycle............:      9.15
+==========Block Control Detail Stats(Tile rename)===========
+Tile register average tag num....................:    430.45
+  |--T...........................................:    162.77
+  |--U...........................................:    108.26
+  |--M...........................................:     70.96
+  |--N...........................................:     88.46
+  |--ACC.........................................:      0.00
+  |--STK.........................................:      0.00
+  |--DEP.........................................:      0.00
+  |--MCALL_GPR...................................:      0.00
+  |--MCALL_STK...................................:      0.00
+Tile register average utilization(B).............:2076563.50
+  |--T...........................................:   1155678   55.65%
+  |--U...........................................:    404848   19.50%
+  |--M...........................................:     69691    3.36%
+  |--N...........................................:    446344   21.49%
+  |--ACC.........................................:         0    0.00%
+  |--STK.........................................:         0    0.00%
+  |--DEP.........................................:         0    0.00%
+  |--MCALL_GPR...................................:         0    0.00%
+  |--MCALL_STK...................................:         0    0.00%
+Tile register max size of T......................:    655360
+  |-- utilization................................:    348160   53.12%
+Tile register max size of U......................:    655360
+  |-- utilization................................:    131072   20.00%
+Tile register max size of M......................:    655360
+  |-- utilization................................:     57344    8.75%
+Tile register max size of N......................:    655360
+  |-- utilization................................:    167936   25.62%
+T MAPQ average occupied size.....................:      0.00
+U MAPQ average occupied size.....................:      0.00
+M MAPQ average occupied size.....................:      0.00
+N MAPQ average occupied size.....................:      0.00
+ACC MAPQ average occupied size...................:      0.00
+STK MAPQ average occupied size...................:      0.00
+DEP MAPQ average occupied size...................:      0.00
+MCALL_GPR MAPQ average occupied size.............:      0.00
+MCALL_STK MAPQ average occupied size.............:      0.00
+==============Block Control Stall Stats Total===============
+BRob Full Stall..................................:    236451
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:   1032346
+TileReg Full Stall ..............................:         0
+============Block Control Stall Stats SThread 0=============
+BRob Full Stall..................................:     59076
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:    258084
+TileReg Full Stall ..............................:         0
+============Block Control Stall Stats SThread 1=============
+BRob Full Stall..................................:     59119
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:    258085
+TileReg Full Stall ..............................:         0
+============Block Control Stall Stats SThread 2=============
+BRob Full Stall..................................:     59110
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:    258087
+TileReg Full Stall ..............................:         0
+============Block Control Stall Stats SThread 3=============
+BRob Full Stall..................................:     59146
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:    258090
+TileReg Full Stall ..............................:         0
+=====Block Control Detail Stats(Flush Statistics) Total=====
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:        57
+===Block Control Detail Stats(Flush Statistics) SThread 0===
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:        14
+===Block Control Detail Stats(Flush Statistics) SThread 1===
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:        14
+===Block Control Detail Stats(Flush Statistics) SThread 2===
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:        15
+===Block Control Detail Stats(Flush Statistics) SThread 3===
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:        14
+=====================SPE OOO&IEX stats======================
+decode inst bubble...............................:   2104366
+average decode bundle............................:      0.00
+Thread0 Pick Cnt.................................:     12580
+Thread1 Pick Cnt.................................:     12580
+Thread2 Pick Cnt.................................:     12580
+Thread3 Pick Cnt.................................:     12558
+Thread0 rob stall cnt............................:     65646
+Thread1 rob stall cnt............................:     65642
+Thread2 rob stall cnt............................:     65643
+Thread3 rob stall cnt............................:     65641
+decode pe rob stall..............................:         0
+decode local gpr stall...........................:         0
+inst buffer stall................................:         0
+predicate reg stall..............................:         0
+vector reg ptag stall............................:         0
+vector local scalar reg stall....................:         0
+retired ld inst..................................:        24
+retired st inst..................................:         8
+retired scalar inst..............................:     49815
+retired vector inst..............................:         0
+retired div/sqrt inst............................:         0
+MAPQ lg0 stall...................................:         0
+MAPQ lg1 stall...................................:         0
+MAPQ lg2 stall...................................:         0
+MAPQ lg3 stall...................................:         0
+ROB lg0 stall....................................:     65646
+ROB lg1 stall....................................:     65642
+ROB lg2 stall....................................:     65643
+ROB lg3 stall....................................:     65641
+Thread0 decode cycle.............................:     67319
+Thread1 decode cycle.............................:     67312
+Thread2 decode cycle.............................:     67313
+Thread3 decode cycle.............................:     67298
+Thread0 alloc cycle..............................:      1660
+Thread1 alloc cycle..............................:      1660
+Thread2 alloc cycle..............................:      1660
+Thread3 alloc cycle..............................:      1655
+Thread0 rename cycle.............................:      1655
+Thread1 rename cycle.............................:      1658
+Thread2 rename cycle.............................:      1656
+Thread3 rename cycle.............................:      1651
+Thread0 d2_s1 dispatch cnt.......................:      1491
+Thread1 d2_s1 dispatch cnt.......................:      1606
+Thread2 d2_s1 dispatch cnt.......................:      1648
+Thread3 d2_s1 dispatch cnt.......................:      1599
+Thread0 slots_total..............................:    538552
+Thread1 slots_total..............................:    538496
+Thread2 slots_total..............................:    538504
+Thread3 slots_total..............................:    538384
+Thread0 slots_rob_allocated......................:     12580
+Thread1 slots_rob_allocated......................:     12580
+Thread2 slots_rob_allocated......................:     12580
+Thread3 slots_rob_allocated......................:     12558
+Thread0 slots_fe_bubble..........................:    525972
+Thread1 slots_fe_bubble..........................:    525916
+Thread2 slots_fe_bubble..........................:    525924
+Thread3 slots_fe_bubble..........................:    525826
+Thread0 slots_idle...............................:         0
+Thread1 slots_idle...............................:         0
+Thread2 slots_idle...............................:         0
+Thread3 slots_idle...............................:         0
+Thread0 robStall.................................:    525168
+Thread1 robStall.................................:    525136
+Thread2 robStall.................................:    525144
+Thread3 robStall.................................:    525128
+Thread0 retired_load.............................:         6
+Thread1 retired_load.............................:         6
+Thread2 retired_load.............................:         6
+Thread3 retired_load.............................:         6
+Thread0 retired_store............................:         2
+Thread1 retired_store............................:         2
+Thread2 retired_store............................:         2
+Thread3 retired_store............................:         2
+Thread0 retired_innerJump........................:         0
+Thread1 retired_innerJump........................:         0
+Thread2 retired_innerJump........................:         0
+Thread3 retired_innerJump........................:         0
+Thread0 retiredAluInst...........................:     12448
+Thread1 retiredAluInst...........................:     12448
+Thread2 retiredAluInst...........................:     12448
+Thread3 retiredAluInst...........................:     12439
+Thread0 retiredSAluInst..........................:     12448
+Thread1 retiredSAluInst..........................:     12448
+Thread2 retiredSAluInst..........................:     12448
+Thread3 retiredSAluInst..........................:     12439
+Thread0 retiredVAluInst..........................:         0
+Thread1 retiredVAluInst..........................:         0
+Thread2 retiredVAluInst..........................:         0
+Thread3 retiredVAluInst..........................:         0
+Thread0 retiredScalar............................:     12456
+Thread1 retiredScalar............................:     12456
+Thread2 retiredScalar............................:     12456
+Thread3 retiredScalar............................:     12447
+Thread0 retiredVector............................:         0
+Thread1 retiredVector............................:         0
+Thread2 retiredVector............................:         0
+Thread3 retiredVector............................:         0
+Thread0 retiredDivSqrt...........................:         0
+Thread1 retiredDivSqrt...........................:         0
+Thread2 retiredDivSqrt...........................:         0
+Thread3 retiredDivSqrt...........................:         0
+====================Vector PMU Stats PE0====================
+PEId.............................................:         0
+TileopNum........................................:       575
+UopNum...........................................:     33087
+SplitCellCountMismatch...........................:         0
+SplitPartialCellUopCount.........................:         0
+SplitUopAvgPayloadBytes..........................:    128.00
+UopSplit dtype FP32..............................:     33087
+UopQDispatch.....................................:     33087
+UopQReadyBypass..................................:         0
+UopQDispatchSrcBufFullCycles.....................:     48241
+UopQDispatchSrcBufFullBlockedCycles..............:     47903
+VecSrcCellNotReadyCycles.........................:         0
+IPC(UOP).........................................:  0.117334
+RowExpandTileNum.................................:       191
+RowExpandUopSplit................................:     16447
+RowExpandSrc0CellRegReadNum......................:     16447
+RowExpandBroadcastCellRegReadNum.................:       191
+RowExpandBroadcastBufferHitNum...................:     16256
+RowExpandBroadcastOwnerDeliveryNum...............:       191
+RowExpandBroadcastCacheFillNum...................:       191
+RowExpandBroadcastWaitCycles.....................:      1030
+RowExpandReadPortWaitCycles......................:       111
+RowExpandSourceResponseWaitUopCycles.............:     68091
+RowExpandCompletedTileNum........................:       191
+RowExpandFlushedTileNum..........................:         0
+RowExpandStaleResponseNum........................:         0
+RowReduceTileNum.................................:         0
+ReadNum..........................................:     33085
+ReadLat..........................................:      5.17
+  |--LatLE5......................................:     27547
+  |--LatLE10.....................................:      5538
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+WriteNum.........................................:     33087
+WriteLat.........................................:      2.11
+  |--LatLE5......................................:     33086
+  |--LatLE10.....................................:         1
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+====================Vector PMU Stats PE1====================
+PEId.............................................:         1
+TileopNum........................................:       575
+UopNum...........................................:     33087
+SplitCellCountMismatch...........................:         0
+SplitPartialCellUopCount.........................:         0
+SplitUopAvgPayloadBytes..........................:    128.00
+UopSplit dtype FP32..............................:     33087
+UopQDispatch.....................................:     33087
+UopQReadyBypass..................................:         0
+UopQDispatchSrcBufFullCycles.....................:     48232
+UopQDispatchSrcBufFullBlockedCycles..............:     47894
+VecSrcCellNotReadyCycles.........................:         0
+IPC(UOP).........................................:  0.117334
+RowExpandTileNum.................................:       191
+RowExpandUopSplit................................:     16447
+RowExpandSrc0CellRegReadNum......................:     16447
+RowExpandBroadcastCellRegReadNum.................:       191
+RowExpandBroadcastBufferHitNum...................:     16256
+RowExpandBroadcastOwnerDeliveryNum...............:       191
+RowExpandBroadcastCacheFillNum...................:       191
+RowExpandBroadcastWaitCycles.....................:      1022
+RowExpandReadPortWaitCycles......................:       111
+RowExpandSourceResponseWaitUopCycles.............:     66988
+RowExpandCompletedTileNum........................:       191
+RowExpandFlushedTileNum..........................:         0
+RowExpandStaleResponseNum........................:         0
+RowReduceTileNum.................................:         0
+ReadNum..........................................:     33085
+ReadLat..........................................:      5.02
+  |--LatLE5......................................:     32371
+  |--LatLE10.....................................:       714
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+WriteNum.........................................:     33087
+WriteLat.........................................:      2.01
+  |--LatLE5......................................:     33087
+  |--LatLE10.....................................:         0
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+====================Vector PMU Stats PE2====================
+PEId.............................................:         2
+TileopNum........................................:       575
+UopNum...........................................:     33087
+SplitCellCountMismatch...........................:         0
+SplitPartialCellUopCount.........................:         0
+SplitUopAvgPayloadBytes..........................:    128.00
+UopSplit dtype FP32..............................:     33087
+UopQDispatch.....................................:     33087
+UopQReadyBypass..................................:         0
+UopQDispatchSrcBufFullCycles.....................:     48236
+UopQDispatchSrcBufFullBlockedCycles..............:     47900
+VecSrcCellNotReadyCycles.........................:         0
+IPC(UOP).........................................:  0.117334
+RowExpandTileNum.................................:       191
+RowExpandUopSplit................................:     16447
+RowExpandSrc0CellRegReadNum......................:     16447
+RowExpandBroadcastCellRegReadNum.................:       191
+RowExpandBroadcastBufferHitNum...................:     16256
+RowExpandBroadcastOwnerDeliveryNum...............:       191
+RowExpandBroadcastCacheFillNum...................:       191
+RowExpandBroadcastWaitCycles.....................:      1020
+RowExpandReadPortWaitCycles......................:       111
+RowExpandSourceResponseWaitUopCycles.............:     67057
+RowExpandCompletedTileNum........................:       191
+RowExpandFlushedTileNum..........................:         0
+RowExpandStaleResponseNum........................:         0
+RowReduceTileNum.................................:         0
+ReadNum..........................................:     33085
+ReadLat..........................................:      5.02
+  |--LatLE5......................................:     32379
+  |--LatLE10.....................................:       706
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+WriteNum.........................................:     33087
+WriteLat.........................................:      2.01
+  |--LatLE5......................................:     33087
+  |--LatLE10.....................................:         0
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+====================Vector PMU Stats PE3====================
+PEId.............................................:         3
+TileopNum........................................:       575
+UopNum...........................................:     33087
+SplitCellCountMismatch...........................:         0
+SplitPartialCellUopCount.........................:         0
+SplitUopAvgPayloadBytes..........................:    128.00
+UopSplit dtype FP32..............................:     33087
+UopQDispatch.....................................:     33087
+UopQReadyBypass..................................:         0
+UopQDispatchSrcBufFullCycles.....................:     48242
+UopQDispatchSrcBufFullBlockedCycles..............:     47906
+VecSrcCellNotReadyCycles.........................:         0
+IPC(UOP).........................................:  0.117334
+RowExpandTileNum.................................:       191
+RowExpandUopSplit................................:     16447
+RowExpandSrc0CellRegReadNum......................:     16447
+RowExpandBroadcastCellRegReadNum.................:       191
+RowExpandBroadcastBufferHitNum...................:     16256
+RowExpandBroadcastOwnerDeliveryNum...............:       191
+RowExpandBroadcastCacheFillNum...................:       191
+RowExpandBroadcastWaitCycles.....................:      1021
+RowExpandReadPortWaitCycles......................:       111
+RowExpandSourceResponseWaitUopCycles.............:     67029
+RowExpandCompletedTileNum........................:       191
+RowExpandFlushedTileNum..........................:         0
+RowExpandStaleResponseNum........................:         0
+RowReduceTileNum.................................:         0
+ReadNum..........................................:     33085
+ReadLat..........................................:      5.02
+  |--LatLE5......................................:     32400
+  |--LatLE10.....................................:       685
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+WriteNum.........................................:     33087
+WriteLat.........................................:      2.01
+  |--LatLE5......................................:     33087
+  |--LatLE10.....................................:         0
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+===============CellReg Bank Arbitration Stats===============
+Bank Active Cycles (>=1 pending).................:   1158111
+  |--Bank Conflict Cycles (>=2 pending)..........:     63756    5.51%
+  |--Bank Urgent(aged) Cycles....................:         0
+Bank Grants (winners) Total......................:    528216
+Bank Lose (non-winner waits) Total...............:    695234
+Bank Port-Yield (no free channel) Total..........:    653628
+Total Served Read Bytes..........................:  29699584
+Total Served Write Bytes.........................:  37912064
+  |--RQ_CUBE Win.................................:     98040
+  |--RQ_CUBE Lose................................:    683776   87.46%
+  |--RQ_CUBE PortYield...........................:    653628
+  |--RQ_CUBE Served Bytes........................:  12549120
+  |--RQ_VEC Win..................................:    133860
+  |--RQ_VEC Lose.................................:      7064    5.01%
+  |--RQ_VEC PortYield............................:         0
+  |--RQ_VEC Served Bytes.........................:  17134080
+  |--RQ_TLSU Win.................................:       128
+  |--RQ_TLSU Lose................................:         0    0.00%
+  |--RQ_TLSU PortYield...........................:         0
+  |--RQ_TLSU Served Bytes........................:     16384
+  |--WQ_CUBE Win.................................:    163840
+  |--WQ_CUBE Lose................................:         0    0.00%
+  |--WQ_CUBE PortYield...........................:         0
+  |--WQ_CUBE Served Bytes........................:  20971520
+  |--WQ_VEC Win..................................:    132348
+  |--WQ_VEC Lose.................................:      4394    3.21%
+  |--WQ_VEC PortYield............................:         0
+  |--WQ_VEC Served Bytes.........................:  16940544
+  |--WQ_TLSU Win.................................:         0
+  |--WQ_TLSU Lose................................:         0     N/A
+  |--WQ_TLSU PortYield...........................:         0
+  |--WQ_TLSU Served Bytes........................:         0
+==============CellReg CUBE Bank-Group Backlog===============
+WQ_CUBE active cycles............................:    163840
+  |--WQ_CUBE cross-group cycles..................:         0    0.00%
+RQ_CUBE active cycles............................:    130867
+  |--RQ_CUBE cross-group cycles..................:    108269   82.73%
+CUBE Rd+Wr concurrent cycles.....................:     32827
+  |--Rd/Wr different-group cycles................:     32824   99.99%
+  |--Wr-starved-by-Rd cycles (each owns a group).:      2679    1.64%
+===========CellReg Per-Bank Conflict Distribution===========
+  Bank[0] conflict cycles........................:      7397   11.60%
+  Bank[1] conflict cycles........................:      6994   10.97%
+  Bank[2] conflict cycles........................:      7464   11.71%
+  Bank[3] conflict cycles........................:      7830   12.28%
+  Bank[4] conflict cycles........................:      8533   13.38%
+  Bank[5] conflict cycles........................:      8318   13.05%
+  Bank[6] conflict cycles........................:      8603   13.49%
+  Bank[7] conflict cycles........................:      8617   13.52%
+================== Group Bring-up Path Stats ==================
+GroupEnabled................................: yes
+Classify GMMA.LD / GMMA / GMOV...............: 2304 / 1280 / 0
+Activate GMMA.LD (PGI, no GGC)...............: 2304
+Activate GMMA (Shared).......................: 1280
+  |-- of which Claimed GGC..................: 1280  (expect == Activate GMMA)
+GGC Stage-A count-- / Stage-B wake-up........: 1280 / 1280  (per participant: StageA == StageB == threadCount x groups)
+  |-- dispatch attempts deferred on Stage-B.: 335724
+Complete GMMA.LD (shareTReg write path)......: 1728
+Complete GMMA (functional GEMM)..............: 0
+shareTReg Write / MarkReady / Read...........: 98304 / 576 / 294912
+  |-- writes awaiting peer producers.........: 0  (Write == MarkReady + this)
+shareTReg Read-port sync (broadcast/RR)......: 8192 / 262144
+  |-- sync wait-peers stall cycles..........: 11655
+  |-- contract violation stall (expect 0)....: 0
+  (sanity: Read == CUBEs*Broadcast + RoundRobin; CUBEs == cube_core_num)
+shareTReg RAT alloc / release / rollback.....: 2304 / 2296 / 0
+  |-- alloc stalls (storage full)............: 0
+  |-- alloc deferred (rename order).........: 0
+  |-- RAT generation mismatch diagnostics...: 0
+Commit global-AND grant GMMA.LD / GMOV / GMMA: 2304 / 0 / 1280
+IQ host@Activate GMMA.LD→TLSU / GMMA→CUBE / →SHU: 0 / 1280 / 0
+SHU dispatch GMOV............................: 0
+GGC occupied (end)...........................: 0
+Commit registry occupied (end)...............: 0
+===============================================================
+======================Group Exec Trace======================
+[C:164    ][GROUP.NA  ]: SHARETREG_RENAME_ALLOC stid=3 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=1 | arch=0 -> phys=0 base_ssb=0 num=4
+[C:164    ][GROUP.NA  ]: ACTIVATE_GMMA_LD stid=3 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=1 | expect:PGI iq=TMA; peMask=0x8 skip=0
+[C:164    ][GROUP.NA  ]: SHARETREG_RENAME_ALLOC stid=2 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=1 | arch=0 -> phys=0 base_ssb=0 num=4
+[C:164    ][GROUP.NA  ]: ACTIVATE_GMMA_LD stid=2 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=1 | expect:PGI iq=TMA; peMask=0x8 skip=1
+[C:164    ][GROUP.NA  ]: SHARETREG_RENAME_ALLOC stid=0 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=1 | arch=0 -> phys=0 base_ssb=0 num=4
+[C:164    ][GROUP.NA  ]: ACTIVATE_GMMA_LD stid=0 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=1 | expect:PGI iq=TMA; peMask=0x8 skip=1
+[C:164    ][GROUP.NA  ]: SHARETREG_RENAME_ALLOC stid=1 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=1 | arch=0 -> phys=0 base_ssb=0 num=4
+[C:164    ][GROUP.NA  ]: ACTIVATE_GMMA_LD stid=1 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=1 | expect:PGI iq=TMA; peMask=0x8 skip=1
+[C:164    ][GROUP.NA  ]: COMPLETE_GMMA_LD stid=2 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=1 | skip peer: no GM access; next=PGI lockstep
+[C:165    ][GROUP.NA  ]: COMPLETE_GMMA_LD stid=0 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=1 | skip peer: no GM access; next=PGI lockstep
+[C:166    ][GROUP.NA  ]: COMPLETE_GMMA_LD stid=1 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=0 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=1 | skip peer: no GM access; next=PGI lockstep
+[C:170    ][GROUP.NA  ]: SHARETREG_RENAME_ALLOC stid=2 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=2 | arch=1 -> phys=1 base_ssb=4 num=4
+[C:170    ][GROUP.NA  ]: ACTIVATE_GMMA_LD stid=2 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=2 | expect:PGI iq=TMA; peMask=0x8 skip=1
+[C:170    ][GROUP.NA  ]: SHARETREG_RENAME_ALLOC stid=3 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=2 | arch=1 -> phys=1 base_ssb=4 num=4
+[C:170    ][GROUP.NA  ]: ACTIVATE_GMMA_LD stid=3 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=2 | expect:PGI iq=TMA; peMask=0x8 skip=0
+[C:171    ][GROUP.NA  ]: SHARETREG_RENAME_ALLOC stid=0 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=2 | arch=1 -> phys=1 base_ssb=4 num=4
+[C:171    ][GROUP.NA  ]: ACTIVATE_GMMA_LD stid=0 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=2 | expect:PGI iq=TMA; peMask=0x8 skip=1
+[C:171    ][GROUP.NA  ]: SHARETREG_RENAME_ALLOC stid=1 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=0 iq=TMA ggcOcc=0 cmtOcc=2 | arch=1 -> phys=1 base_ssb=4 num=4
+[C:171    ][GROUP.NA  ]: ACTIVATE_GMMA_LD stid=1 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=2 | expect:PGI iq=TMA; peMask=0x8 skip=1
+[C:171    ][GROUP.NA  ]: COMPLETE_GMMA_LD stid=2 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=2 | skip peer: no GM access; next=PGI lockstep
+[C:172    ][GROUP.NA  ]: COMPLETE_GMMA_LD stid=0 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=2 | skip peer: no GM access; next=PGI lockstep
+[C:173    ][GROUP.NA  ]: COMPLETE_GMMA_LD stid=1 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=1 shareRdy=0 skip=1 iq=TMA ggcOcc=0 cmtOcc=2 | skip peer: no GM access; next=PGI lockstep
+[C:173    ][GROUP.NA  ]: COMMIT_AND_WAIT_PGI stid=2 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=0 cmtOcc=2 | commit-AND wait: 1/4 tids ready
+[C:174    ][GROUP.NA  ]: COMMIT_AND_WAIT_PGI stid=0 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=0 cmtOcc=2 | commit-AND wait: 2/4 tids ready
+[C:174    ][GROUP.NA  ]: COMMIT_AND_WAIT_PGI stid=1 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=0 cmtOcc=2 | commit-AND wait: 3/4 tids ready
+[C:182    ][GROUP.NA  ]: ACTIVATE_GMMA stid=2 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=CUBE ggcOcc=1 cmtOcc=3 | expect:CGI lockstep ggc=0 iq=CUBE functionalGEMM; srcs=2 localMask=0x0 -> stageA gate local-only (B via Stage-B)
+[C:182    ][GROUP.NA  ]: ACTIVATE_GMMA stid=3 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=CUBE ggcOcc=1 cmtOcc=3 | expect:CGI lockstep ggc=0 iq=CUBE functionalGEMM; srcs=2 localMask=0x3 -> stageA gate includes own B
+[C:182    ][GROUP.NA  ]: GGC_STAGE_A_LOCAL_READY stid=2 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=CUBE ggcOcc=1 cmtOcc=3 | src_ready -> GGC count-- | lastSrc=none(ready-at-snapshot)
+[C:183    ][GROUP.NA  ]: ACTIVATE_GMMA stid=0 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=CUBE ggcOcc=1 cmtOcc=3 | expect:CGI lockstep ggc=0 iq=CUBE functionalGEMM; srcs=2 localMask=0x0 -> stageA gate local-only (B via Stage-B)
+[C:183    ][GROUP.NA  ]: ACTIVATE_GMMA stid=1 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=CUBE ggcOcc=1 cmtOcc=3 | expect:CGI lockstep ggc=0 iq=CUBE functionalGEMM; srcs=2 localMask=0x0 -> stageA gate local-only (B via Stage-B)
+[C:183    ][GROUP.NA  ]: GGC_STAGE_A_LOCAL_READY stid=0 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=CUBE ggcOcc=1 cmtOcc=3 | src_ready -> GGC count-- | lastSrc=none(ready-at-snapshot)
+[C:183    ][GROUP.NA  ]: GGC_STAGE_A_LOCAL_READY stid=1 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=0 skip=0 iq=CUBE ggcOcc=1 cmtOcc=3 | src_ready -> GGC count-- | lastSrc=none(ready-at-snapshot)
+[C:334    ][GROUP.NA  ]: COMMIT_AND_WAIT_PGI stid=3 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=0 iq=TMA ggcOcc=6 cmtOcc=18 | commit-AND wait: 4/4 tids ready
+[C:335    ][GROUP.NA  ]: COMMIT_AND_GRANT_PGI stid=0 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=6 cmtOcc=18 | commit-AND complete: 4/4 tids ready; PGI has no wake-up sync
+[C:335    ][GROUP.NA  ]: COMMIT_AND_WAIT_PGI stid=0 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=6 cmtOcc=18 | commit-AND wait: 1/4 tids ready
+[C:335    ][GROUP.NA  ]: COMMIT_AND_GRANT_PGI stid=1 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=6 cmtOcc=18 | commit-AND complete: 4/4 tids ready; PGI has no wake-up sync
+[C:335    ][GROUP.NA  ]: COMMIT_AND_WAIT_PGI stid=1 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=6 cmtOcc=18 | commit-AND wait: 2/4 tids ready
+[C:335    ][GROUP.NA  ]: COMMIT_AND_GRANT_PGI stid=2 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=6 cmtOcc=18 | commit-AND complete: 4/4 tids ready; PGI has no wake-up sync
+[C:335    ][GROUP.NA  ]: COMMIT_AND_WAIT_PGI stid=2 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=6 cmtOcc=18 | commit-AND wait: 3/4 tids ready
+[C:335    ][GROUP.NA  ]: COMMIT_AND_GRANT_PGI stid=3 bid=12 seq=1 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=0 iq=TMA ggcOcc=6 cmtOcc=17 | commit-AND complete: 4/4 tids ready; PGI has no wake-up sync
+[C:465    ][GROUP.NA  ]: GMMA_SRC_BREADY stid=0 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=8 cmtOcc=24 | all snapshotted shareTReg slots ready (local poll)
+[C:465    ][GROUP.NA  ]: GMMA_SRC_BREADY stid=1 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=8 cmtOcc=24 | all snapshotted shareTReg slots ready (local poll)
+[C:465    ][GROUP.NA  ]: GMMA_SRC_BREADY stid=2 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=8 cmtOcc=24 | all snapshotted shareTReg slots ready (local poll)
+[C:465    ][GROUP.NA  ]: GMMA_SRC_BREADY stid=3 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=8 cmtOcc=24 | all snapshotted shareTReg slots ready (local poll)
+[C:465    ][GROUP.NA  ]: GGC_STAGE_A_LOCAL_READY stid=3 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=7 cmtOcc=24 | src_ready -> GGC count-- | lastSrc=none(ready-at-snapshot)
+[C:465    ][GROUP.NA  ]: GGC_STAGE_B_WAKEUP stid=0 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=7 cmtOcc=24 | GGC count==0 -> direct wake-up via stored iqPtr
+[C:465    ][GROUP.NA  ]: GGC_STAGE_B_WAKEUP stid=1 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=7 cmtOcc=24 | GGC count==0 -> direct wake-up via stored iqPtr
+[C:465    ][GROUP.NA  ]: GGC_STAGE_B_WAKEUP stid=2 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=7 cmtOcc=24 | GGC count==0 -> direct wake-up via stored iqPtr
+[C:465    ][GROUP.NA  ]: GGC_STAGE_B_WAKEUP stid=3 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=7 cmtOcc=24 | GGC count==0 -> direct wake-up via stored iqPtr
+[C:465    ][GROUP.NA  ]: COMMIT_AND_WAIT_PGI stid=3 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=0 iq=TMA ggcOcc=7 cmtOcc=24 | commit-AND wait: 4/4 tids ready
+[C:466    ][GROUP.NA  ]: GMMA_LOCKSTEP_ISSUE stid=0 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=7 cmtOcc=24 | participants=4/4
+[C:466    ][GROUP.NA  ]: GMMA_LOCKSTEP_ISSUE stid=1 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=7 cmtOcc=24 | participants=4/4
+[C:466    ][GROUP.NA  ]: GMMA_LOCKSTEP_ISSUE stid=2 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=7 cmtOcc=24 | participants=4/4
+[C:466    ][GROUP.NA  ]: GMMA_LOCKSTEP_ISSUE stid=3 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=CUBE ggcOcc=7 cmtOcc=24 | participants=4/4
+[C:466    ][GROUP.NA  ]: COMMIT_AND_GRANT_PGI stid=0 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=7 cmtOcc=24 | commit-AND complete: 4/4 tids ready; PGI has no wake-up sync
+[C:466    ][GROUP.NA  ]: COMMIT_AND_GRANT_PGI stid=1 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=7 cmtOcc=24 | commit-AND complete: 4/4 tids ready; PGI has no wake-up sync
+[C:466    ][GROUP.NA  ]: COMMIT_AND_GRANT_PGI stid=2 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=1 iq=TMA ggcOcc=7 cmtOcc=24 | commit-AND complete: 4/4 tids ready; PGI has no wake-up sync
+[C:466    ][GROUP.NA  ]: COMMIT_AND_GRANT_PGI stid=3 bid=13 seq=2 op=GMMA.LD isCGI=0 ggcId=0 sharedTid=4294967295 shareRdy=1 skip=0 iq=TMA ggcOcc=7 cmtOcc=23 | commit-AND complete: 4/4 tids ready; PGI has no wake-up sync
+[C:889    ][GROUP.NA  ]: COMMIT_AND_WAIT_CGI stid=0 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=SHU ggcOcc=8 cmtOcc=25 | commit-AND wait: 1/4 tids ready
+[C:890    ][GROUP.NA  ]: COMMIT_AND_WAIT_CGI stid=1 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=SHU ggcOcc=8 cmtOcc=25 | commit-AND wait: 2/4 tids ready
+[C:891    ][GROUP.NA  ]: COMMIT_AND_WAIT_CGI stid=2 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=SHU ggcOcc=8 cmtOcc=25 | commit-AND wait: 3/4 tids ready
+[C:892    ][GROUP.NA  ]: COMMIT_AND_WAIT_CGI stid=3 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=SHU ggcOcc=7 cmtOcc=25 | commit-AND wait: 4/4 tids ready
+[C:893    ][GROUP.NA  ]: COMMIT_AND_GRANT_CGI stid=0 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=SHU ggcOcc=7 cmtOcc=25 | commit-AND complete: 4/4 tids ready; wake-up sync already released at GGC count==0
+[C:893    ][GROUP.NA  ]: COMMIT_AND_GRANT_CGI stid=1 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=SHU ggcOcc=7 cmtOcc=25 | commit-AND complete: 4/4 tids ready; wake-up sync already released at GGC count==0
+[C:893    ][GROUP.NA  ]: COMMIT_AND_GRANT_CGI stid=2 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=SHU ggcOcc=7 cmtOcc=25 | commit-AND complete: 4/4 tids ready; wake-up sync already released at GGC count==0
+[C:893    ][GROUP.NA  ]: COMMIT_AND_GRANT_CGI stid=3 bid=15 seq=3 op=GMMA isCGI=1 ggcId=0 sharedTid=0 shareRdy=1 skip=0 iq=SHU ggcOcc=7 cmtOcc=24 | commit-AND complete: 4/4 tids ready; wake-up sync already released at GGC count==0
+=====================Group Layer Stats======================
+Group Total Cycles...............................:    281828
+  |--Group Active Cycles (>=1 op in flight)......:    281420   99.86%
+  |--Group Idle Cycles...........................:       408
+Group Thread-Cycles In Flight (sum over tids)....:   1124844
+  |--tid0 peak concurrent group ops..............:        16
+  |--tid1 peak concurrent group ops..............:        16
+  |--tid2 peak concurrent group ops..............:        16
+  |--tid3 peak concurrent group ops..............:        25
+  |--EXEC zero-duration occupancy (drawn 1-cycle wide):         1
+  |--tid0 peak concurrent Stage-A waiters........:         8
+  |--tid1 peak concurrent Stage-A waiters........:         8
+  |--tid2 peak concurrent Stage-A waiters........:         8
+  |--tid3 peak concurrent Stage-A waiters........:         8
+  |--STGA zero-duration occupancy (drawn 1-cycle wide):         3
+  |--tid0 peak concurrent Stage-B waiters........:         4
+  |--tid1 peak concurrent Stage-B waiters........:         4
+  |--tid2 peak concurrent Stage-B waiters........:         3
+  |--tid3 peak concurrent Stage-B waiters........:         3
+  |--STGB zero-duration occupancy (drawn 1-cycle wide):       319
+Group Ops Activated (per participant)............:      3584
+  |--GMOV Activated..............................:         0
+  |--GMMA Activated..............................:      1280
+  |--TLOAD SHARED Activated......................:      2304
+  |--GMMA.MOV Activated..........................:         0
+Group Ops Completed (per participant)............:      3584
+  |--GMOV Completed..............................:         0
+  |--GMMA Completed..............................:      1280
+  |--TLOAD SHARED Completed......................:      2304
+  |--GMMA.MOV Completed..........................:         0
+GGC Claims Accepted..............................:      1280
+  |--Global Wake-ups Fired (count==0 groups).....:       320
+  |--Stage-A Local-Ready (per participant).......:      1280
+  |--Stage-B Wake-up Applied (per participant)...:      1280
+Commit-AND Grants (per participant)..............:      3584
+  |--entered commit wait window (not wait cycles):      3584  100.00%
+  |--GMOV Commit-AND Grants......................:         0
+  |--GMMA Commit-AND Grants......................:      1280
+  |--TLOAD SHARED Commit-AND Grants..............:      2304
+  |--GMMA.MOV Commit-AND Grants..................:         0
+GMOV Fabric Transfers............................:         0
+GMMA Lockstep Issue Groups.......................:       320
+  |--GMMA Lockstep Issue Participants............:      1280
+  |--GMMA Partial Issue Groups (expect 0)........:         0
+====================Group Stall Reasons=====================
+group_stage_a_src_wait (thread-cycles)...........:   1118430
+group_stage_b_global_wait (thread-cycles)........:    275540
+group_commit_lockstep_wait (thread-cycles).......:     93361
+group_fabric_busy (cycles).......................:         0    0.00%
+group_dispatch_backpressure (cycles).............:         0
+group_gmma_lockstep_wait (participant-cycles)....:   2173288
+Group Stall Retry Attempts (per-cycle re-attempts, NOT distinct episodes)
+  |--group_dispatch_gate_wait (retry attempts)...:         0
+  |--group_ggc_unavailable (retry attempts)......:         0
+  |--group_stage_a_src_wait (retry attempts).....:         0
+  |--group_stage_b_global_wait (retry attempts)..:    335724
+  |--group_fabric_busy (retry attempts)..........:         0
+  |--group_commit_lockstep_wait (retry attempts).:      3584
+  |--group_commit_registry_full (retry attempts).:         0
+  |--group_gmov_buf_unavailable (retry attempts).:         0
+  |--group_iq_shu_wait (retry attempts)..........:         0
+  |--group_cube_avail_wait (retry attempts)......:         0
+  |--group_gmma_ld_xfer_wait (retry attempts)....:         0
+  |--group_dsa_queue_rename_order_wait (retry attempts):     41274
+  |--group_dsa_queue_sharetreg_full (retry attempts):         0
+  |--group_dsa_queue_nsi_wait (retry attempts)...:         0
+  |--group_dsa_queue_cell_freelist_empty (retry attempts):         0
+  |--group_dsa_queue_downstream_iq_full (retry attempts):         0
+  |--group_gmma_lockstep_missing_participant_wait (retry attempts):      5829
+  |--group_gmma_lockstep_oldest_rob_wait (retry attempts):         0
+  |--group_gmma_lockstep_ready_wait (retry attempts):   2033341
+  |--group_gmma_lockstep_wakeup_wait (retry attempts):    124284
+  |--group_gmma_lockstep_cube_avail_wait (retry attempts):         0
+  |--group_gmma_lockstep_cube_credit_wait (retry attempts):         0
+  |--group_gmma_lockstep_dispatch_queue_wait (retry attempts):         0
+  |--group_gmma_lockstep_key_mismatch (retry attempts):         0
+=====================Group Sync Latency=====================
+Stage-A Wait (activate->local ready) Num.........:      1280
+  |--Avg (cycles)................................:   6491.69
+  |--Max (cycles)................................:     17042
+  |--LatLE8......................................:       207
+  |--LatLE32.....................................:         0
+  |--LatLE128....................................:        13
+  |--LatGT128....................................:      1060
+Stage-B Skew (local ready->wake-up) Num..........:      1280
+  |--Avg (cycles)................................:    262.12
+  |--Max (cycles)................................:      2121
+  |--LatLE8......................................:       368
+  |--LatLE32.....................................:         0
+  |--LatLE128....................................:        68
+  |--LatGT128....................................:       844
+Stage-B Critical Path (last local-ready) Num.....:       365
+  |--tid0 was critical...........................:        15    4.11%
+  |--tid1 was critical...........................:        21    5.75%
+  |--tid2 was critical...........................:        15    4.11%
+  |--tid3 was critical...........................:       314   86.03%
+Exec (activate->complete) Num....................:      3584
+  |--Avg (cycles)................................:   3689.02
+  |--Max (cycles)................................:     21442
+  |--LatLE8......................................:      1515
+  |--LatLE32.....................................:         0
+  |--LatLE128....................................:         0
+  |--LatGT128....................................:      2069
+Commit-AND Wait (head ready->grant) Num..........:      3584
+  |--Avg (cycles)................................:     26.05
+  |--Max (cycles)................................:      1198
+  |--LatLE8......................................:      3131
+  |--LatLE32.....................................:         0
+  |--LatLE128....................................:        16
+  |--LatGT128....................................:       437
+Commit-AND Critical Path (completed the AND) Num.:       896
+  |--tid0 was critical...........................:         0    0.00%
+  |--tid1 was critical...........................:         4    0.45%
+  |--tid2 was critical...........................:         0    0.00%
+  |--tid3 was critical...........................:       892   99.55%
+GMOV Fabric Transfer Num.........................:         0
+  |--Avg (cycles)................................:      0.00
+  |--Max (cycles)................................:         0
+  |--LatLE8......................................:         0
+  |--LatLE32.....................................:         0
+  |--LatLE128....................................:         0
+  |--LatGT128....................................:         0
+==================Group Resource Occupancy==================
+GGC Entries Avg..................................:      7.68
+  |--GGC Entries Max.............................:         8
+Commit Registry Entries Avg......................:     50.22
+  |--Commit Registry Entries Max.................:        59
+gmov_buf Entries Avg.............................:      0.00
+  |--gmov_buf Entries Max........................:         0
+SHU IQ Entries Avg...............................:      0.00
+  |--SHU IQ Entries Max..........................:         0
+================== Group Bring-up Path Stats ==================
+GroupEnabled................................: yes
+Classify GMMA.LD / GMMA / GMOV...............: 2304 / 1280 / 0
+Activate GMMA.LD (PGI, no GGC)...............: 2304
+Activate GMMA (Shared).......................: 1280
+  |-- of which Claimed GGC..................: 1280  (expect == Activate GMMA)
+GGC Stage-A count-- / Stage-B wake-up........: 1280 / 1280  (per participant: StageA == StageB == threadCount x groups)
+  |-- dispatch attempts deferred on Stage-B.: 335724
+Complete GMMA.LD (shareTReg write path)......: 1728
+Complete GMMA (functional GEMM)..............: 0
+shareTReg Write / MarkReady / Read...........: 98304 / 576 / 294912
+  |-- writes awaiting peer producers.........: 0  (Write == MarkReady + this)
+shareTReg Read-port sync (broadcast/RR)......: 8192 / 262144
+  |-- sync wait-peers stall cycles..........: 11655
+  |-- contract violation stall (expect 0)....: 0
+  (sanity: Read == CUBEs*Broadcast + RoundRobin; CUBEs == cube_core_num)
+shareTReg RAT alloc / release / rollback.....: 2304 / 2296 / 0
+  |-- alloc stalls (storage full)............: 0
+  |-- alloc deferred (rename order).........: 0
+  |-- RAT generation mismatch diagnostics...: 0
+Commit global-AND grant GMMA.LD / GMOV / GMMA: 2304 / 0 / 1280
+IQ host@Activate GMMA.LD→TLSU / GMMA→CUBE / →SHU: 0 / 1280 / 0
+SHU dispatch GMOV............................: 0
+GGC occupied (end)...........................: 0
+Commit registry occupied (end)...............: 0
+===============================================================
+==================SuperScalar Report Stop===================
