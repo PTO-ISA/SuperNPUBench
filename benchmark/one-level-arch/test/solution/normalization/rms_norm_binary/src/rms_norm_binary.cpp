@@ -24,13 +24,6 @@
 #ifndef G_R
 #define G_R 16384
 #endif
-// Must match rms_bin::kWsCols / kMaxLevels
-#ifndef K_WS_COLS
-#define K_WS_COLS 1
-#endif
-#ifndef K_MAX_LEVELS
-#define K_MAX_LEVELS 6
-#endif
 
 namespace {
 constexpr int64_t floor_power_of_two(int64_t value) {
@@ -69,10 +62,8 @@ int main() {
 
     static dtype input_buf[G_A * G_R];
     static dtype output_buf[G_A * G_R];
-    static float workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS];
     dtype *input = input_buf;
     dtype *output = output_buf;
-    float *workspace = workspace_buf;
 
 #ifdef RES_CHECK
 #ifndef CHK_DIR
@@ -89,7 +80,7 @@ int main() {
     }
 #endif
 
-    rms_norm_binary<dtype, PE_NUM>(input, tiling_info, output, workspace, EPS);
+    rms_norm_binary<dtype, PE_NUM>(input, tiling_info, output, EPS);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;
