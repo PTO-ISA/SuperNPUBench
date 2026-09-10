@@ -138,9 +138,14 @@ make diss TESTCASE=matmul_lowp_blockM LP_MODE=FP8 \
 
 # === 2D block: blockM × blockN (A shared across N, B shared across M) ===
 # Both axes batched simultaneously. blockM*blockN accumulators live across
-# the K loop. Use tK>=64 when blockM*blockN>=4 (gfsim scheduler limit, see
-# note above).
-# FP32: blockM=2 blockN=2, tK=64
+# the K loop. The compute loop uses nj-outer / mi-inner ordering so the
+# same B tile is reused by consecutive TMATMULs (avoids a gfsim scheduler
+# deadlock that occurs with the mi-outer / nj-inner ordering).
+# Note: gfsim deadlocks when blockM*blockN>=4 AND Kb is large (>=~16 for
+# FP32/BF16 tile sizes).  Keep K small (Kb<=4) for FP32/BF16 2D block, or
+# use MXFP4 (tiny tiles tolerate Kb=16).  1D block (blockM or blockN = 1)
+# has no such limit.
+# FP32: blockM=2 blockN=2, tK=64 (Kb=4)
 make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=64 tK=64 BLOCKM=2 BLOCKN=2
 
@@ -153,7 +158,12 @@ make diss TESTCASE=matmul_lowp_blockM LP_MODE=FP8 \
     COMPILER_DIR="$COMPILER_DIR" \
     B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=2 BLOCKN=2
 
-# MXFP4: blockM=2 blockN=2
+# MXFP4: blockM=2 blockN=2 (Kb=16, tiny FP4 tiles tolerate large Kb)
 make diss TESTCASE=matmul_lowp_blockM LP_MODE=MXFP4 \
     COMPILER_DIR="$COMPILER_DIR" \
     B=1 M=256 N=256 K=1024 tM=128 tN=64 tK=64 BLOCKM=2 BLOCKN=2
+
+# Large N-axis block: blockN=2 scales to large K (2 accumulators, no
+# gfsim limit).  Demonstrates A-shared-across-N at production scale.
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=2048 N=256 K=2048 tM=128 tN=128 tK=64 BLOCKN=2
