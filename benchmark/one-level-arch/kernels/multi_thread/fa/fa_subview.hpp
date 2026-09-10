@@ -130,19 +130,20 @@ void flash_attention_2d_unroll_shared_impl(
     static_assert(kGroupM >= 1 && kGroupM <= 128,
                   "cooperative group_M must be in the range 1..128");
 
-    // GM tensors. Q/V/O are RowMajor in their natural [rows, cols] orientation.
-    // K is physically [Skv, qD] row-major (head dim contiguous), described as
-    // ColMajor<qD, Skv> so the CUBE reads K^T without a transpose_b flag.
+    // GM tensors use their natural RowMajor shapes:
+    // Q [Sq, qD], K [Skv, qD], V [Skv, vD], O [Sq, vD].
     using gmQ = global_tensor<matrix_dtype, RowMajor<Sq, kStoredQD>>;
-    using gmK = global_tensor<matrix_dtype, ColMajor<kStoredQD, Skv>>;
+    using gmK = global_tensor<matrix_dtype, RowMajor<Skv, kStoredQD>>;
     using gmV = global_tensor<matrix_dtype, RowMajor<kStoredSkv, vD>>;
     using gmO = global_tensor<vector_dtype, RowMajor<Sq, vD>>;
 
     using tileQMatrix =
         SharedMatrixLeft<matrix_dtype, kTileRows, kQKStoredChunk,
                          kGroupM, kQKStoredChunk>;
+    // SharedTReg operands are also RowMajor. K is loaded as [Tk, qD] and
+    // transposed by the QK TMATMUL option to form the effective [qD, Tk] B.
     using tileKMatrix =
-        SharedMatrixRight<matrix_dtype, kQKStoredChunk, kTk>;
+        SharedMatrixRight<matrix_dtype, kTk, kQKStoredChunk>;
     using tileVMatrix =
         SharedMatrixRight<matrix_dtype, kPVStoredChunk, vD>;
     using tileQ = SharedTile<tileQMatrix>;
@@ -216,25 +217,25 @@ void flash_attention_2d_unroll_shared_impl(
 
 #pragma clang loop unroll(full)
     for (int i = 0; i < Qb; ++i) {
+        tileO tO;
         tileMax tMax;
         tileSum tSum;
-        tileO tO;
         TEXPANDS(tMax, -1e30f);
         TEXPANDS(tSum, 0.0f);
+        auto gQ = gIterQ(i, 0);
+        tileQ tQ;
+        TLOAD<tileQMatrix, 1>(tQ, gQ);
 
 #pragma clang loop unroll(full)
         for (int j = 0; j < Kb; ++j) {
             tileW tW;
 
             // --- QK matmul ---
-            tileQ tQ;
             tileK tK;
-            auto gQ = gIterQ(i, 0);
-            TLOAD<tileQMatrix, 1>(tQ, gQ);
-            auto gK = gIterK(0, j);
+            auto gK = gIterK(j, 0);
             TLOAD<tileKMatrix, 1>(tK, gK);
 
-            auto qkOptions = fixp::keep_acc();
+            auto qkOptions = fixp::keep_acc().transpose_b();
             TMATMUL(tW, tQ, tK, qkOptions);
 
             // Scale
@@ -287,7 +288,7 @@ void flash_attention_2d_unroll_shared_impl(
                 if (j == 0) {
                     TMATMUL(tO, tW, tV, pvOptions, kGroupM);
                 } else {
-                    TMATMUL_ACC(tO, tO, tW, tV, pvOptions);
+                    TMATMUL_ACC(tO, tO, tW, tV, pvOptions, kGroupM);
                 }
             } else {
                 // Non-FP32 or packed: TCVT to local-Left CUBE shard
@@ -300,7 +301,7 @@ void flash_attention_2d_unroll_shared_impl(
                 if (j == 0) {
                     TMATMUL(tO, tPShard, tV, pvOptions, kGroupM);
                 } else {
-                    TMATMUL_ACC(tO, tO, tPShard, tV, pvOptions);
+                    TMATMUL_ACC(tO, tO, tPShard, tV, pvOptions, kGroupM);
                 }
             }
 
