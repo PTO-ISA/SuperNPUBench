@@ -17,8 +17,12 @@ DEFAULT_COMPILER = Path("/Users/blacktraker/Programming/gitproj/DV4/linx-toolcha
 DEFAULT_GFRUN = Path("/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel/bin/gfrun")
 
 
-def expected_opcode(operation: str) -> str:
-    return operation.replace("_", ".").upper()
+def expected_opcode(case: dict) -> str:
+    # llvm 553b08045 recognizes the TIMG2COL encoding but still prints the
+    # generic TLSU function spelling rather than the standalone mnemonic.
+    if case.get("command_mnemonic") == "BSTART.TIMG2COL":
+        return "BSTART.TLSU 28"
+    return case["operation"].replace("_", ".").upper()
 
 
 def main() -> int:
@@ -58,7 +62,7 @@ def main() -> int:
             continue
         elf = matches[0]
         diss = Path(str(elf) + ".diss")
-        opcode = expected_opcode(case["operation"])
+        opcode = expected_opcode(case)
         check_opcode = family != "scalar"
         if not diss.exists() or (check_opcode and opcode not in diss.read_text(errors="replace").upper()):
             records.append({**case, "state": "DISS_MISSING_OPCODE", "elf": str(elf),
@@ -69,7 +73,9 @@ def main() -> int:
             continue
         try:
             command = [str(args.gfrun), "-t", "1"]
-            if family == "fixp" and case.get("mode") in {
+            if case.get("command_mnemonic") == "BSTART.TIMG2COL":
+                command += ["-s", "softcore.multiThreadNum=4"]
+            elif family == "fixp" and case.get("mode") in {
                     "shared", "s8_shared", "trans_a", "trans_b", "trans_ab"}:
                 command += ["-s", "softcore.multiThreadNum=4"]
             command += ["-f", str(elf)]

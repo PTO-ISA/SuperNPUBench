@@ -23,9 +23,11 @@ using namespace pto;
 //   8. tW is CubeTileM32 (Left) instead of CubeAccumulatorM32 (Acc); used
 //      directly as PV TMATMUL left operand — eliminates TCVT for FP32.
 //   9. TRECIP+TROWEXPANDMUL replaced by TROWEXPANDDIV (fused division).
+//  10. Loop-invariant ops hoisted: qkOptions/pvOptions outside both loops,
+//      Q load outside Kb loop (Q depends on i, not j).
 //
 // QK does not use transpose_b(): K's [Skv, qD] row-major buffer is described
-// as ColMajor<qD, Skv> so the CUBE reads K^T [qD, kTk] directly.
+// as RowMajor<Skv, qD> so the CUBE reads K^T [qD, kTk] directly.
 // PV uses transpose_b(): the V tile is [kPVStoredChunk, vD] = [K, N]; TransB
 // makes the CUBE read B in K-major order, matching the matmul's B operand.
 
@@ -82,7 +84,7 @@ void flash_attention_2d_unroll_shared_impl(
 
     // GM tensors. Q/V/O are RowMajor in their natural [rows, cols] orientation.
     // K is physically [Skv, qD] row-major (head dim contiguous), described as
-    // ColMajor<qD, Skv> so the CUBE reads K^T without a transpose_b flag.
+    // RowMajor<Skv, qD> so the CUBE reads K^T without a transpose_b flag.
     using gmQ = global_tensor<matrix_dtype, RowMajor<Sq, kStoredQD>>;
     using gmK = global_tensor<matrix_dtype, RowMajor<Skv, kStoredQD>>;
     using gmV = global_tensor<matrix_dtype, RowMajor<kStoredSkv, vD>>;
@@ -161,6 +163,10 @@ void flash_attention_2d_unroll_shared_impl(
     constexpr int Qb = Sq / kGroupM;
     constexpr int Kb = (Skv + kTk - 1) / kTk;
 
+    // Loop-invariant fixpipe options — hoisted outside both loops.
+    constexpr auto qkOptions = fixp::keep_acc();
+    constexpr auto pvOptions = fixp::keep_acc().transpose_b();
+
 #pragma clang loop unroll(full)
     for (int i = 0; i < Qb; ++i) {
         tileMax tMax;
@@ -169,19 +175,20 @@ void flash_attention_2d_unroll_shared_impl(
         TEXPANDS(tMax, -1e30f);
         TEXPANDS(tSum, 0.0f);
 
+        // Q is loop-invariant w.r.t. Kb — load once per Q block.
+        tileQ tQ;
+        auto gQ = gIterQ(i, 0);
+        TLOAD<tileQMatrix, 1>(tQ, gQ);
+
 #pragma clang loop unroll(full)
         for (int j = 0; j < Kb; ++j) {
             tileW tW;
 
             // --- QK matmul ---
-            tileQ tQ;
             tileK tK;
-            auto gQ = gIterQ(i, 0);
-            TLOAD<tileQMatrix, 1>(tQ, gQ);
             auto gK = gIterK(0, j);
             TLOAD<tileKMatrix, 1>(tK, gK);
 
-            auto qkOptions = fixp::keep_acc();
             TMATMUL(tW, tQ, tK, qkOptions);
 
             // Scale
@@ -218,7 +225,6 @@ void flash_attention_2d_unroll_shared_impl(
                 TFMA(tNewSum, tSum, tScale, tLocalSum);
             }
 
-#ifndef FA_DISABLE_CUBE_TSTORE
             // --- PV matmul ---
             // Change 8: tW is already a Left tile — use directly as PV left
             // operand (FP32). For packed types, TCVT to a local-Left shard.
@@ -226,14 +232,13 @@ void flash_attention_2d_unroll_shared_impl(
             auto gV = gIterV(j, 0);
             TLOAD<tileVMatrix, 1>(tV, gV);
 
-            auto pvOptions = fixp::keep_acc().transpose_b();
             if constexpr (PackedFactor == 1 &&
                           std::is_same_v<matrix_dtype, float>) {
                 // FP32: tW is already Left, float — no TCVT
                 if (j == 0) {
                     TMATMUL(tO, tW, tV, pvOptions, kGroupM);
                 } else {
-                    TMATMUL_ACC(tO, tO, tW, tV, pvOptions);
+                    TMATMUL_ACC(tO, tO, tW, tV, pvOptions, kGroupM);
                 }
             } else {
                 // Non-FP32 or packed: TCVT to local-Left CUBE shard
@@ -246,16 +251,14 @@ void flash_attention_2d_unroll_shared_impl(
                 if (j == 0) {
                     TMATMUL(tO, tPShard, tV, pvOptions, kGroupM);
                 } else {
-                    TMATMUL_ACC(tO, tO, tPShard, tV, pvOptions);
+                    TMATMUL_ACC(tO, tO, tPShard, tV, pvOptions, kGroupM);
                 }
             }
 
             tMax = tNewMax;
             tSum = tNewSum;
-#endif
         }
 
-#ifndef FA_DISABLE_CUBE_TSTORE
         // Change 9: TROWEXPANDDIV replaces TRECIP+TROWEXPANDMUL
         TROWEXPANDDIV(tO, tO, tSum);
         auto dstO = gIterO(i * kPeNum + tid, 0);
@@ -266,7 +269,6 @@ void flash_attention_2d_unroll_shared_impl(
             TCVT(tOCast, tO);
             TSTORE_CUBE(dstO, tOCast);
         }
-#endif
     }
 }
 

@@ -24,6 +24,7 @@ run_case mscatter_fp32_16x16
 run_case mscatter_i32_16x16
 run_case mscatter_mask_fp16_16x16
 run_case mscatter_mask_fp32_16x16
+run_case timg2col_fp32_64x8
 run_case tload_fp16_16x16
 run_case tload_fp16_32x32
 run_case tload_fp32_16x16
@@ -42,4 +43,4 @@ if [ "${#failures[@]}" -ne 0 ]; then
   echo "=== memory FAILED: ${failures[*]} ==="
   exit 1
 fi
-echo "=== memory completed: all 26 cases passed ==="
+echo "=== memory completed: all 27 cases passed ==="

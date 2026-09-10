@@ -15,7 +15,9 @@ set -euo pipefail
 # tM=128 but uses tN=64 below to stay within the aggregate SharedTReg limit.
 # FP32: tK=128; BF16/FP16: 2x; FP8: 4x; FP4: 8x.
 # Build the SharedTile kernel and the variant that reuses Shared B across all
-# M blocks in the same N block. FP32 (default): no ELF suffix.
+# M blocks in the same N block.  The reuseB FP32 configuration uses
+# tM=tN=tK=128, so A and B are both 64 KiB and the remaining 128 KiB of the
+# 256 KiB SharedTReg can keep two B tiles resident. FP32 has no ELF suffix.
 make diss TESTCASE=matmul_shared \
     COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=float B=1 M=256 N=256 K=256 \
@@ -24,7 +26,17 @@ make diss TESTCASE=matmul_shared \
 make diss TESTCASE=matmul_reuseB \
     COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=float B=1 M=256 N=256 K=256 \
-    tM=128 tN=256 tK=128
+    tM=128 tN=128 tK=128
+
+# Internal-accumulator K-chain matmul. The K reduction is split into
+# ChainK-wide pieces accumulated through the CUBE internal-accumulator path
+# (Begin/Middle/End); only the final piece publishes the architectural C tile.
+# Mirrors the QK K-chain of multi_thread/fa/fa_gmma_kchains.hpp. K=256 with
+# ChainK=32 yields 8 K-chain pieces.
+make diss TESTCASE=matmul_kchains \
+    COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=256 N=256 K=256 \
+    tM=128 tN=256 ChainK=32
 
 # BF16/FP16 inputs use twice the FP32 K tile extent.
 make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
@@ -60,4 +72,88 @@ make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=float B=1 M=1024 N=1024 K=1024 tM=128 tN=256 tK=128
 
 make diss TESTCASE=matmul_reuseB COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=1024 N=1024 K=1024 tM=128 tN=256 tK=128
+    DTYPE=float B=1 M=1024 N=1024 K=1024 tM=128 tN=128 tK=128
+
+# === M-axis block-tiled matmul (small tK + B shared within batch) ===
+# Loads blockM A tiles at once, shares one B tile across them.  Small tK
+# keeps tiles small so many A tiles fit in the 256 KiB SharedTReg pool.
+# Note: blockM requires gM >= blockM * kGroupM (= blockM * 128), so
+# blockM=4 needs M >= 512.
+# Note: tK=32 + blockM=4 causes gfsim deadlock (scheduler limitation with
+# 4 live C accumulators across 8 K-tiles).  Use tK>=64 for blockM=4, or
+# blockM<=3 for tK=32.
+# FP32: tK=32, blockM=2 and blockM=3
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=64 tK=32 BLOCKM=2
+
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=384 N=256 K=256 tM=128 tN=64 tK=32 BLOCKM=3
+
+# FP32: tK=64, larger tiles, blockM=2 and blockM=4
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=2
+
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=512 N=256 K=256 tM=128 tN=64 tK=64 BLOCKM=4
+
+# BF16: tK=32 blockM=2, tK=64 blockM=4
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=__bf16 B=1 M=256 N=256 K=256 tM=128 tN=128 tK=32 BLOCKM=2
+
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=__bf16 B=1 M=512 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=4
+
+# FP8 block: tK=64, blockM=4
+make diss TESTCASE=matmul_lowp_blockM LP_MODE=FP8 \
+    COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=512 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=4
+
+# MXFP4 block: tK=64, blockM=4
+make diss TESTCASE=matmul_lowp_blockM LP_MODE=MXFP4 \
+    COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=512 N=256 K=1024 tM=128 tN=64 tK=64 BLOCKM=4
+
+# Larger FP32 with blockM=2 (1024 problem size)
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=1024 N=1024 K=1024 tM=128 tN=128 tK=64 BLOCKM=2
+
+# === N-axis block-tiled matmul (A shared across N batch) ===
+# Loads blockN B tiles at once, shares one A tile across them.
+# FP32: blockN=2, small tK
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=64 tK=32 BLOCKN=2
+
+# FP32: blockN=2, larger tiles
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKN=2
+
+# BF16: blockN=2
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=__bf16 B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKN=2
+
+# FP8: blockN=2
+make diss TESTCASE=matmul_lowp_blockM LP_MODE=FP8 \
+    COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKN=2
+
+# === 2D block: blockM × blockN (A shared across N, B shared across M) ===
+# Both axes batched simultaneously. blockM*blockN accumulators live across
+# the K loop. Use tK>=64 when blockM*blockN>=4 (gfsim scheduler limit, see
+# note above).
+# FP32: blockM=2 blockN=2, tK=64
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=64 tK=64 BLOCKM=2 BLOCKN=2
+
+# BF16: blockM=2 blockN=2
+make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=__bf16 B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=2 BLOCKN=2
+
+# FP8: blockM=2 blockN=2
+make diss TESTCASE=matmul_lowp_blockM LP_MODE=FP8 \
+    COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=2 BLOCKN=2
+
+# MXFP4: blockM=2 blockN=2
+make diss TESTCASE=matmul_lowp_blockM LP_MODE=MXFP4 \
+    COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=256 N=256 K=1024 tM=128 tN=64 tK=64 BLOCKM=2 BLOCKN=2

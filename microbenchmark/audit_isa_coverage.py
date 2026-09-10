@@ -43,6 +43,9 @@ def main() -> int:
 
     catalog_path = args.spec_root / "spec/catalog/tile-operations.json"
     catalog = json.loads(catalog_path.read_text())
+    command_catalog = json.loads(
+        (args.spec_root / "spec/catalog/command-forms.json").read_text()
+    )
     coverage = json.loads(args.coverage.read_text())
     header_path = find_tileop_header(args.compiler_dir)
     header = header_path.read_text(errors="replace")
@@ -54,6 +57,17 @@ def main() -> int:
         item["operation"]
         for item in coverage["active"]
         if item["family"] != "scalar"
+        and item.get("catalog_kind", "tile-operation") == "tile-operation"
+    }
+    active_command_forms = {
+        item["command_mnemonic"]
+        for item in coverage["active"]
+        if item.get("catalog_kind") == "command-form"
+    }
+    spec_command_forms = {
+        item["mnemonic"]
+        for item in command_catalog["forms"]
+        if item.get("status") == "accepted"
     }
     unsupported = {item["operation"] for item in coverage["unsupported"]}
     inventoried = active | unsupported
@@ -88,7 +102,14 @@ def main() -> int:
             if values:
                 print("  " + ", ".join(sorted(values)))
 
-    errors = (spec_ops - inventoried) | (active - spec_ops)
+    print(f"active standalone command-form microbenchmarks: {len(active_command_forms)}")
+    if active_command_forms:
+        print("  " + ", ".join(sorted(active_command_forms)))
+    unknown_command_forms = active_command_forms - spec_command_forms
+    if unknown_command_forms:
+        print("unknown active command forms: " + ", ".join(sorted(unknown_command_forms)))
+
+    errors = (spec_ops - inventoried) | (active - spec_ops) | unknown_command_forms
     if errors:
         print("FAIL: coverage inventory is not aligned with pto-spec")
         return 1

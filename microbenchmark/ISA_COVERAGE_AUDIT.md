@@ -48,6 +48,10 @@ New generated cases cover the previously omitted current operations:
   `TUNPACK`, `TGPR2T`, using the required `CUBE_M16` carriers and control/index
   dtypes.
 - TLSU: `TPREFETCH`, `MGATHER_CAS`, `GMOV`.
+- Standalone TLSU command form: `BSTART.TIMG2COL`, covered by a
+  microbenchmark-local inline-assembly wrapper and an FP32 1x1/no-padding
+  numerical case. This is separate from the 117-name Tile operation catalog;
+  the retired TEPL selector `0x064` is not used.
 - Previously suppressed cases revalidated successfully with the current
   compiler: `TCMP`, `TCMPS`, `TMOV`, `MGATHER_MASK`, `MSCATTER_MASK`.
 - CUBE accounting now maps the existing fixp modes to their actual formal
@@ -71,7 +75,7 @@ These 18 operations exist in the newer PTO 0.58.6 catalog but not in the
 installed TileOP named-function surface. They should be moved from
 `unsupported` to active tests when those APIs are published.
 
-The resulting corpus contains 453 active configurations: 170 vector, 26
+The resulting corpus contains 454 active configurations: 170 vector, 27
 memory, 11 direct CUBE, 124 scalar, and 122 fixp.
 
 One dtype-specific compiler limitation remains: `TABS<BF16>` crashes during
@@ -84,7 +88,8 @@ All generated TEPL and TLSU cases were compiled and disassembled with the
 compiler baseline above, with build products redirected to `/tmp`:
 
 - vector: 170/170 active cases passed;
-- memory: 26/26 active cases passed;
+- memory: 27/27 active cases compiled and disassembled, including
+  `BSTART.TIMG2COL`;
 - excluded probe: `tabs_bf16_16x16` reproduced the known clang instruction-
   selection crash and remains an explicit unsupported variant.
 
@@ -96,6 +101,18 @@ prints the first four numerically and decodes selector 126 as the legacy name
 
 This validation is compile/disassembly coverage. It does not claim functional
 model support or numerical correctness for the newly added instructions.
+
+For `timg2col_fp32_64x8`, llvm `553b08045` does not yet parse the standalone
+`BSTART.TIMG2COL` mnemonic and incorrectly restricts the required
+`ND2M16/ND2M32` layout selectors to TLOAD/TSTORE. The local wrapper therefore
+emits the PTO-defined BSTART and B.DATR words directly; `llvm-objdump` confirms
+`BSTART.TLSU 28, FP32`, `B.DATR ND2M16.normal, Zero`, all three dimensions,
+the two contiguous B.IOR records, and a 512-byte Local destination per PE.
+The required four-PE run uses one shared static GM source, distributes 64 group
+rows as four 16-row M16 slices, and stores the slices to disjoint GM ranges.
+gfrun `9d4464dc` completes all four PEs and returns `R2 = 0` against the exact
+1x1/no-padding identity oracle. The remaining limitation is the compiler
+assembler/disassembler surface, not the encoded operation or model execution.
 
 ## Reproduce the inventory check
 

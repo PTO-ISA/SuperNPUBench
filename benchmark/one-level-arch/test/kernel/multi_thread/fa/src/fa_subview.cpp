@@ -141,6 +141,9 @@ int main() {
     for (int i = 0; i < B; ++i) {
 #pragma clang loop unroll(full)
         for (int j = 0; j < H; ++j) {
+            // PE0 loads the full shared Q/K/V tiles (PEMask=1), which are
+            // then consumed cooperatively by all four PEs. The RES_CHECK I/O
+            // uses the same PE0 thread.
             flash_attention_2d_unroll_shared_impl<
                 matrix_dtype, vector_dtype, PACKED_FACTOR,
                 globSq, globSkv, qD, vD, kTm, kTk>(

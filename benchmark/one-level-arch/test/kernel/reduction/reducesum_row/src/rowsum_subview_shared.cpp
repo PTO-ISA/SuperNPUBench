@@ -7,6 +7,13 @@
 
 using namespace pto;
 
+// rowsum_subview_shared: shared L1 tiles with RowMajor (ND) layout.
+// The input (128×16) is processed in 32-row chunks.  Each 32×16 block is
+// loaded from GM into a SharedTile (L1) via TLOAD<Matrix, 1>, partitioned
+// into four 32×4 column sub-views via TPARTVIEW, then TROWSUM reduces each
+// sub-view to a 32×1 local partial sum, and TADD combines the four
+// partials into the final row-sum stored back to GM.
+
 #ifndef ROWSUM_ROWS
 #define ROWSUM_ROWS 128
 #endif
@@ -23,13 +30,13 @@ using namespace pto;
 #define ALIGN (4 * 1024)
 
 template <int Rows, int Cols, int Parts>
-void rowsum_subview(float *out_ptr, float *in_ptr) {
+void rowsum_subview_shared(float *out_ptr, float *in_ptr) {
     static_assert(Cols % Parts == 0,
                   "Columns must be divisible by the number of subviews");
     static_assert(Parts == 4,
-                  "This example spells out four CUBE_M32 column views");
+                  "This example spells out four column views");
     static_assert(Rows % 32 == 0,
-                  "CUBE_M32 row subspace must be a multiple of 32 rows");
+                  "Row subspace must be a multiple of 32 rows");
     static_assert(32 * (Cols / Parts) * sizeof(float) >= 128,
                   "Each subview must contain at least one 128-byte CELL");
 
@@ -39,19 +46,24 @@ void rowsum_subview(float *out_ptr, float *in_ptr) {
 
     using gmIn = global_tensor<float, RowMajor<Rows, Cols>>;
     using gmOut = global_tensor<float, RowMajor<Rows, 1>>;
-    // CUBE_M32 is limited to 32 rows per tile; iterate over 32-row chunks.
-    using tileIn = Tile<Location::Left, float, kCubeRows, Cols,
-                        BLayout::RowMajor>;
-    using tileInPart = Tile<Location::Left, float, kCubeRows, kSubCols,
-                            BLayout::RowMajor>;
+
+    // Shared L1 tiles.  SharedMatrixLeft uses RowMajor (ND) layout — the
+    // correct storage format for shared tiles.  The parent and sub-tile
+    // are both SharedTile so locations match for TPARTVIEW.
+    using tileInMatrix = SharedMatrixLeft<float, kCubeRows, Cols>;
+    using tileInPartMatrix = SharedMatrixLeft<float, kCubeRows, kSubCols>;
+    using tileInShared = SharedTile<tileInMatrix>;
+    using tileInPartShared = SharedTile<tileInPartMatrix>;
+
+    // TROWSUM output is a local L0 Vec tile (single column).
     using tilePartSum = Tile<Location::Vec, float, kCubeRows, 1,
                              BLayout::RowMajor>;
 
-    static_assert(tileIn::LogicalTileBytes ==
-                      Parts * tileInPart::LogicalTileBytes,
+    static_assert(tileInMatrix::LogicalTileBytes ==
+                      Parts * tileInPartMatrix::LogicalTileBytes,
                   "Subviews must exactly cover the input tile");
 
-    using itIn = global_iterator<gmIn, tileIn>;
+    using itIn = global_iterator<gmIn, tileInMatrix>;
     using itOut = global_iterator<gmOut, tilePartSum>;
 
     itIn input_iter(in_ptr);
@@ -59,10 +71,10 @@ void rowsum_subview(float *out_ptr, float *in_ptr) {
 
     for (int c = 0; c < kNumCubes; ++c) {
         auto gIn = input_iter(c, 0);
-        tileIn input_tile;
-        TLOAD(input_tile, gIn);
+        tileInShared input_tile;
+        TLOAD<tileInMatrix, 1>(input_tile, gIn);
 
-        auto input_parts = TPARTVIEW<tileInPart, 1, Parts>(input_tile);
+        auto input_parts = TPARTVIEW<tileInPartShared, 1, Parts>(input_tile);
         auto input_part0 = input_parts[0][0];
         auto input_part1 = input_parts[0][1];
         auto input_part2 = input_parts[0][2];
@@ -108,7 +120,7 @@ int main() {
 #endif
 
     BENCHSTART;
-    rowsum_subview<ROWSUM_ROWS, ROWSUM_COLS, ROWSUM_PARTS>(output, input);
+    rowsum_subview_shared<ROWSUM_ROWS, ROWSUM_COLS, ROWSUM_PARTS>(output, input);
     BENCHEND;
 
 #ifdef RES_CHECK

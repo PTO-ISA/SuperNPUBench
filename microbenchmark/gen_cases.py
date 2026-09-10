@@ -158,6 +158,8 @@ for op, kind, dt, sz in [
     ("TPREFETCH", "prefetch", ("fp32",), M16),
     ("MGATHER_CAS", "gather_cas", ("fp32",), M16),
     ("GMOV", "gmov", ("s4x2",), M16),
+    # Standalone TLSU command form (not the retired TEPL selector 0x064).
+    ("TIMG2COL", "img2col", ("fp32",), (64, 8)),
 ]:
     ME.append(Case(op, kind, dt, sz))
 
@@ -434,9 +436,16 @@ def emit_memory(c: Case, dt: str) -> str:
     m, n = c.size
     name = case_name(c, dt)
     op = c.op
+    # Local-CUBE TIMG2COL is a four-PE collective.  Hosted gfrun gives each
+    # PE an independent stack, so its GM source/output arrays must have static
+    # storage to make every participant bind the same addresses.
+    storage = "static " if c.kind == "img2col" else ""
     init = ("for (int i=0;i<M*N;++i) { a[i].data = 0x11; c[i].data = 0; }\n"
             "    fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1);"
             if dt == "s4x2" else
+            "for (int i=0;i<M*N;++i) a[i] = (float)(i + 1); "
+            "fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);"
+            if c.kind == "img2col" else
             f"fill_const(a, M*N, ({ct})2); fill_idx(idx, M*N); "
             "fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);")
     head = f'''#include "memory_bench.hpp"
@@ -444,15 +453,15 @@ def emit_memory(c: Case, dt: str) -> str:
 // {op} ({c.kind}) {dt} {c.size[0]}x{c.size[1]}
 int main() {{
     constexpr int M = {m}, N = {n};
-    {ct} a[M*N], c[M*N];
-    int32_t idx[M*N]; uint16_t mask[M*N];
+    {storage}{ct} a[M*N], c[M*N];
+    {storage}int32_t idx[M*N]; {storage}uint16_t mask[M*N];
     {init}
     for (int i=0;i<M*N;++i) idx[i] *= sizeof({ct}); // gather/scatter offsets are bytes
     BENCHSTART;
 '''
     if c.kind == "prefetch":
         ref = "for(int i=0;i<M*N;++i) ref[i]=c[i];"
-    elif c.kind in ("load", "store", "mov", "gather", "gather_mask", "gather_cas", "gmov"):
+    elif c.kind in ("load", "store", "mov", "gather", "gather_mask", "gather_cas", "gmov", "img2col"):
         ref = f"for(int i=0;i<M*N;++i) ref[i]=a[idx[i]/sizeof({ct})];" if "gather" in c.kind else \
               "for(int i=0;i<M*N;++i) ref[i]=a[i];"
     else:
@@ -484,6 +493,8 @@ int main() {{
         body = f"    bench_gather_cas<{ct},M,N>(c,a,idx);\n"
     elif c.kind == "gmov":
         body = f"    bench_gmov<{ct},M,N>(c,a);\n"
+    elif c.kind == "img2col":
+        body = f"    bench_img2col_1x1<{ct},8,8>(c,a);\n"
     else:
         body = f"    // unhandled kind {c.kind}\n"
     return head + body + tail
@@ -724,9 +735,13 @@ def main():
         for case in cases:
             for dt in case.dtypes:
                 if dt in DTYPE:
-                    active.append({"name": case_name(case, dt), "family": family,
-                                   "operation": case.op, "dtype": dt,
-                                   "shape": list(case.size), "status": "active"})
+                    record = {"name": case_name(case, dt), "family": family,
+                              "operation": case.op, "dtype": dt,
+                              "shape": list(case.size), "status": "active"}
+                    if case.op == "TIMG2COL":
+                        record["catalog_kind"] = "command-form"
+                        record["command_mnemonic"] = "BSTART.TIMG2COL"
+                    active.append(record)
     active.extend({"name": name, "family": "scalar", "operation": name.split("_")[0],
                    "status": "active"}
                   for name in sorted(p[:-4] for p in os.listdir(os.path.join(ROOT, "scalar", "src"))
@@ -761,6 +776,7 @@ def main():
     with open(os.path.join(ROOT, "coverage.json"), "w") as f:
         json.dump({"schema_version": 1, "active": active, "unsupported": unsupported,
                    "notes": ["TLOAD_ND2NZ and TLOAD_CUBE are API helpers, not named PTO operations",
+                             "standalone BSTART.TIMG2COL coverage is tagged as a command-form",
                              "fixp modes are maintained separately in fixp/compile.all",
                              "active operation names follow pto-spec 0.58.6; retired TileOP compatibility wrappers are excluded"]},
                   f, indent=2)

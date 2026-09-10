@@ -7,6 +7,12 @@
 
 using namespace pto;
 
+// rowsum_subview_local: local L0 tiles with CubeM32 fractal layout.
+// The input (128×16) is processed in 32-row CUBE_M32 chunks.  Each 32×16
+// tile is partitioned into four 32×4 column sub-views via TPARTVIEW, then
+// TROWSUM reduces each sub-view to a 32×1 partial sum, and TADD combines
+// the four partials into the final row-sum.
+
 #ifndef ROWSUM_ROWS
 #define ROWSUM_ROWS 128
 #endif
@@ -23,7 +29,7 @@ using namespace pto;
 #define ALIGN (4 * 1024)
 
 template <int Rows, int Cols, int Parts>
-void rowsum_subview(float *out_ptr, float *in_ptr) {
+void rowsum_subview_local(float *out_ptr, float *in_ptr) {
     static_assert(Cols % Parts == 0,
                   "Columns must be divisible by the number of subviews");
     static_assert(Parts == 4,
@@ -39,13 +45,12 @@ void rowsum_subview(float *out_ptr, float *in_ptr) {
 
     using gmIn = global_tensor<float, RowMajor<Rows, Cols>>;
     using gmOut = global_tensor<float, RowMajor<Rows, 1>>;
-    // CUBE_M32 is limited to 32 rows per tile; iterate over 32-row chunks.
-    using tileIn = Tile<Location::Left, float, kCubeRows, Cols,
-                        BLayout::RowMajor>;
-    using tileInPart = Tile<Location::Left, float, kCubeRows, kSubCols,
-                            BLayout::RowMajor>;
-    using tilePartSum = Tile<Location::Vec, float, kCubeRows, 1,
-                             BLayout::RowMajor>;
+
+    // Local L0 tiles with CubeM32 fractal layout — the correct layout for
+    // local tile registers.  CubeM32 supports at most 32 rows per tile.
+    using tileIn = CubeTileM32<float, kCubeRows, Cols>;
+    using tileInPart = CubeTileM32<float, kCubeRows, kSubCols>;
+    using tilePartSum = VecTileM32<float, kCubeRows, 1>;
 
     static_assert(tileIn::LogicalTileBytes ==
                       Parts * tileInPart::LogicalTileBytes,
@@ -108,7 +113,7 @@ int main() {
 #endif
 
     BENCHSTART;
-    rowsum_subview<ROWSUM_ROWS, ROWSUM_COLS, ROWSUM_PARTS>(output, input);
+    rowsum_subview_local<ROWSUM_ROWS, ROWSUM_COLS, ROWSUM_PARTS>(output, input);
     BENCHEND;
 
 #ifdef RES_CHECK

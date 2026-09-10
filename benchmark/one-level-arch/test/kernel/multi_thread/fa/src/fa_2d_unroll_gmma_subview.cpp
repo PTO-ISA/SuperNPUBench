@@ -1,4 +1,4 @@
-#include "multi_thread/fa/fa_fixpipe.hpp"
+#include "multi_thread/fa/fa_2d_unroll_gmma_subview.hpp"
 
 #include <cstdint>
 
@@ -6,9 +6,9 @@
 #include "fileop.h"
 #include "multi_thread_res_check.h"
 
-// Fixpipe FA driver — same I/O contract as fa_2d_unroll_gmma.cpp but
-// includes the fa_fixpipe.hpp kernel (TROWMAX fused into QK TMATMUL via
-// fixp row_max post-processing, eliminating the standalone TROWMAX op).
+// 4-PE cooperative TMATMUL FlashAttention driver (v2 + subview reduction).
+// Same I/O contract as fa_2d_unroll_gmma.cpp but includes the subview
+// reduction kernel (TPARTVIEW column sub-views for TROWMAX/TROWSUM).
 
 #ifndef MATRIX_DTYPE
 #define MATRIX_DTYPE float
@@ -144,7 +144,7 @@ int main() {
             // PE0 loads the full shared Q/K/V tiles (PEMask=1), which are
             // then consumed cooperatively by all four PEs. The RES_CHECK I/O
             // uses the same PE0 thread.
-            flash_attention_fixpipe_impl<
+            flash_attention_2d_unroll_shared_impl<
                 matrix_dtype, vector_dtype, PACKED_FACTOR,
                 globSq, globSkv, qD, vD, kTm, kTk>(
                 out + i * H * globSq * vD + j * globSq * vD,

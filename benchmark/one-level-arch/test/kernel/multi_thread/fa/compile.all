@@ -1,7 +1,9 @@
 #!/bin/bash
 # Multi-thread GMMA FlashAttention precision variants.
 
-set -e
+# No set -e: HIF4_VECBF16 and some modes fail to compile (shared fp4+shared fp4
+# not accepted by matrix_input_pair_legal); the script must continue to compile
+# subsequent shape groups (fixpipe, subview, capacity-bound, Sq=1024, long-context).
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 
 # Multi-tile variants: stage two Q tiles and two K/V tiles per unrolled group.
@@ -31,6 +33,22 @@ for mode in \
     MXFP4_VECBF16 \
     HIF4_VECBF16; do
     make diss TESTCASE=fa_fixpipe \
+        COMPILER_DIR="$COMPILER_DIR" \
+        FA_MODE="$mode" Sq=256 Skv=256 Tm=128 Tk=128 \
+        X_dim=1 Y_dim=2
+done
+
+# fa_subview: same multi-tile configs as fa_2d_unroll_gmma.
+for mode in \
+    FP32_VECFP32 \
+    BF16_VECFP32 \
+    MXFP8_VECFP32 \
+    HIF8_VECFP32 \
+    FP8_VECFP32 \
+    FP8_VECBF16 \
+    MXFP4_VECBF16 \
+    HIF4_VECBF16; do
+    make diss TESTCASE=fa_subview \
         COMPILER_DIR="$COMPILER_DIR" \
         FA_MODE="$mode" Sq=256 Skv=256 Tm=128 Tk=128 \
         X_dim=1 Y_dim=2
@@ -124,6 +142,48 @@ for mode in \
         X_dim=1 Y_dim=1
 done
 
+# fa_subview: same capacity-bound configs as fa_2d_unroll_gmma.
+for mode in \
+    FP32_VECFP32 \
+    BF16_VECFP32 \
+    MXFP8_VECFP32 \
+    HIF8_VECFP32 \
+    FP8_VECFP32 \
+    FP8_VECBF16 \
+    MXFP4_VECBF16 \
+    HIF4_VECBF16; do
+    case "$mode" in
+        FP32_VECFP32)
+            cap_k=256
+            cap_n=128
+            ;;
+        BF16_VECFP32)
+            cap_k=512
+            cap_n=128
+            ;;
+        MXFP8_VECFP32)
+            cap_k=1024
+            cap_n=64
+            ;;
+        HIF8_VECFP32|FP8_VECFP32|FP8_VECBF16)
+            cap_k=1024
+            cap_n=128
+            ;;
+        MXFP4_VECBF16)
+            cap_k=2048
+            cap_n=64
+            ;;
+        HIF4_VECBF16)
+            cap_k=2048
+            cap_n=128
+            ;;
+    esac
+    make diss TESTCASE=fa_subview \
+        COMPILER_DIR="$COMPILER_DIR" FA_MODE="$mode" \
+        Sq=256 Skv=256 Tm=128 Tk="$cap_n" QD="$cap_k" VD=256 \
+        X_dim=1 Y_dim=1
+done
+
 # Larger sequence length (Sq=Skv=1024) to exercise deeper Q-block and K/V-block
 # loops. Tile extents unchanged from the multi-tile baseline (Tm=128 Tk=128,
 # X_dim=1 Y_dim=2); only the outer iteration counts grow.
@@ -156,4 +216,110 @@ for mode in \
         COMPILER_DIR="$COMPILER_DIR" \
         FA_MODE="$mode" Sq=1024 Skv=1024 Tm=128 Tk=128 \
         X_dim=1 Y_dim=2
+done
+
+# fa_subview: same large-sequence configs.
+for mode in \
+    FP32_VECFP32 \
+    BF16_VECFP32 \
+    MXFP8_VECFP32 \
+    HIF8_VECFP32 \
+    FP8_VECFP32 \
+    FP8_VECBF16 \
+    MXFP4_VECBF16 \
+    HIF4_VECBF16; do
+    make diss TESTCASE=fa_subview \
+        COMPILER_DIR="$COMPILER_DIR" \
+        FA_MODE="$mode" Sq=1024 Skv=1024 Tm=128 Tk=128 \
+        X_dim=1 Y_dim=2
+done
+
+# Long context (small Q, large KV): Sq=128 Skv=8192 exercises a deep K/V-block
+# loop with a single Q-block (Qb = Sq/kGroupM = 128/128 = 1). Tile extents
+# Tm=128 Tk=128, two K/V tiles staged (Y_dim=2), default head dims QD=VD=128.
+for mode in \
+    FP32_VECFP32 \
+    BF16_VECFP32 \
+    MXFP8_VECFP32 \
+    HIF8_VECFP32 \
+    FP8_VECFP32 \
+    FP8_VECBF16 \
+    MXFP4_VECBF16 \
+    HIF4_VECBF16; do
+    make diss TESTCASE=fa_2d_unroll_gmma \
+        COMPILER_DIR="$COMPILER_DIR" \
+        FA_MODE="$mode" Sq=128 Skv=8192 Tm=128 Tk=128 \
+        X_dim=1 Y_dim=2
+done
+
+# fa_fixpipe: same long-context configs.
+for mode in \
+    FP32_VECFP32 \
+    BF16_VECFP32 \
+    MXFP8_VECFP32 \
+    HIF8_VECFP32 \
+    FP8_VECFP32 \
+    FP8_VECBF16 \
+    MXFP4_VECBF16 \
+    HIF4_VECBF16; do
+    make diss TESTCASE=fa_fixpipe \
+        COMPILER_DIR="$COMPILER_DIR" \
+        FA_MODE="$mode" Sq=128 Skv=8192 Tm=128 Tk=128 \
+        X_dim=1 Y_dim=2
+done
+
+# fa_subview: same long-context configs.
+for mode in \
+    FP32_VECFP32 \
+    BF16_VECFP32 \
+    MXFP8_VECFP32 \
+    HIF8_VECFP32 \
+    FP8_VECFP32 \
+    FP8_VECBF16 \
+    MXFP4_VECBF16 \
+    HIF4_VECBF16; do
+    make diss TESTCASE=fa_subview \
+        COMPILER_DIR="$COMPILER_DIR" \
+        FA_MODE="$mode" Sq=128 Skv=8192 Tm=128 Tk=128 \
+        X_dim=1 Y_dim=2
+done
+
+# Variable Tk (tile-K) sweep. Tm is held at 128 throughout; Tk=64 exercises
+# a deeper K/V-block reduction loop, Tk=256 halves it (FP32 Tk=256 may
+# exceed SharedTReg capacity and is expected to fail — the script continues
+# to the next mode).  Tk=64 uses the same Y_dim=2 staging as the baseline;
+# Tk=256 uses Y_dim=1 and Skv=512 to keep at least two K/V blocks while
+# reducing SharedTReg pressure.
+for testcase in fa_2d_unroll_gmma fa_fixpipe fa_subview; do
+    for mode in \
+        FP32_VECFP32 \
+        BF16_VECFP32 \
+        MXFP8_VECFP32 \
+        HIF8_VECFP32 \
+        FP8_VECFP32 \
+        FP8_VECBF16 \
+        MXFP4_VECBF16 \
+        HIF4_VECBF16; do
+        make diss TESTCASE="$testcase" \
+            COMPILER_DIR="$COMPILER_DIR" \
+            FA_MODE="$mode" Sq=256 Skv=256 Tm=128 Tk=64 \
+            X_dim=1 Y_dim=2
+    done
+done
+
+for testcase in fa_2d_unroll_gmma fa_fixpipe fa_subview; do
+    for mode in \
+        FP32_VECFP32 \
+        BF16_VECFP32 \
+        MXFP8_VECFP32 \
+        HIF8_VECFP32 \
+        FP8_VECFP32 \
+        FP8_VECBF16 \
+        MXFP4_VECBF16 \
+        HIF4_VECBF16; do
+        make diss TESTCASE="$testcase" \
+            COMPILER_DIR="$COMPILER_DIR" \
+            FA_MODE="$mode" Sq=256 Skv=512 Tm=128 Tk=256 \
+            X_dim=1 Y_dim=1
+    done
 done

@@ -8,6 +8,7 @@ Tm ?= 16
 Tk ?= 16
 QD ?= 128
 VD ?= 128
+QKChainK ?= 32
 X_dim ?= 1
 Y_dim ?= 1
 
@@ -70,25 +71,34 @@ DEFINES += -DTm=$(Tm)
 DEFINES += -DTk=$(Tk)
 DEFINES += -DFA_QD=$(QD)
 DEFINES += -DFA_VD=$(VD)
+DEFINES += -DQK_CHAIN_K=$(QKChainK)
 DEFINES += -DFA_X_DIM=$(X_dim)
 DEFINES += -DFA_Y_DIM=$(Y_dim)
 
 ifeq ($(TESTCASE),fa_2d_unroll_gmma)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_2d_unroll_gmma.cpp
+else ifeq ($(TESTCASE),fa_gmma_kchains)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_gmma_kchains.cpp
 else ifeq ($(TESTCASE),fa_2d_unroll_gmma_no_tstore)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_2d_unroll_gmma_no_tstore.cpp
 else ifeq ($(TESTCASE),fa_fixpipe)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_fixpipe.cpp
 else ifeq ($(TESTCASE),fa_subview)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_subview.cpp
+else ifeq ($(TESTCASE),fa_2d_unroll_gmma_subview)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_2d_unroll_gmma_subview.cpp
 else
-$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma, fa_2d_unroll_gmma_no_tstore, fa_fixpipe, or fa_subview)
+$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma, fa_gmma_kchains, fa_2d_unroll_gmma_no_tstore, fa_fixpipe, fa_subview, or fa_2d_unroll_gmma_subview)
+endif
+
+ifeq ($(TESTCASE),fa_gmma_kchains)
+KCHAIN_SUFFIX = _QKChainK$(QKChainK)
 endif
 
 ifeq ($(QD)_$(VD),128_128)
-TARGET = $(ELF_HEAD)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk)_X$(X_dim)_Y$(Y_dim)_$(FA_MODE).elf
+TARGET = $(ELF_HEAD)_$(TESTCASE)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk)$(KCHAIN_SUFFIX)_X$(X_dim)_Y$(Y_dim)_$(FA_MODE).elf
 else
-TARGET = $(ELF_HEAD)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk)_qD$(QD)_vD$(VD)_X$(X_dim)_Y$(Y_dim)_$(FA_MODE).elf
+TARGET = $(ELF_HEAD)_$(TESTCASE)_Sq$(Sq)_Skv$(Skv)_Tm$(Tm)_Tk$(Tk)_qD$(QD)_vD$(VD)$(KCHAIN_SUFFIX)_X$(X_dim)_Y$(Y_dim)_$(FA_MODE).elf
 endif
 
 include ../../../common/Makefile.common

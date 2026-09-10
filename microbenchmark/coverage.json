@@ -2158,6 +2158,19 @@
       "status": "active"
     },
     {
+      "name": "timg2col_fp32_64x8",
+      "family": "memory",
+      "operation": "TIMG2COL",
+      "dtype": "fp32",
+      "shape": [
+        64,
+        8
+      ],
+      "status": "active",
+      "catalog_kind": "command-form",
+      "command_mnemonic": "BSTART.TIMG2COL"
+    },
+    {
       "name": "tmatmul_fp32_32x32x32",
       "family": "cube",
       "operation": "TMATMUL",
@@ -4660,6 +4673,7 @@
   ],
   "notes": [
     "TLOAD_ND2NZ and TLOAD_CUBE are API helpers, not named PTO operations",
+    "standalone BSTART.TIMG2COL coverage is tagged as a command-form",
     "fixp modes are maintained separately in fixp/compile.all",
     "active operation names follow pto-spec 0.58.6; retired TileOP compatibility wrappers are excluded"
   ]

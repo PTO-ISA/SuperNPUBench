@@ -6,8 +6,8 @@ the PTO v0.58 TileOP surface (`TLOAD/TSTORE`, `TLOAD_CUBE/TSTORE_CUBE`,
 family uses plain C + volatile to drive the GPR micro-ISA; the `fixp`
 family exercises the `B.FPATR` quantization/PostProcess options
 (scalar/vector quant, ReLU/PReLU, row/group-max, shared-right) on
-`TMATMUL`/`TGEMV`. The four generated families currently emit 331 unique active
-cases; the hand-maintained `fixp` family adds 122 active modes (453 configurations).
+`TMATMUL`/`TGEMV`. The four generated families currently emit 332 unique active
+cases; the hand-maintained `fixp` family adds 122 active modes (454 configurations).
 `coverage.json` records active and unsupported cases.
 
 ## Directory Structure
@@ -26,7 +26,8 @@ microbenchmark/
 │   ├── vector_bench.hpp     # bench_binary / unary / ternary / reduce / scalar ...
 │   ├── Makefile / compile.all / src/*.cpp
 ├── memory/                  # TLSU family (BSTART.TLSU)
-│   ├── memory_bench.hpp     # bench_load / mov / gather / scatter (+mask)
+│   ├── memory_bench.hpp     # load/move/gather/scatter and IMG2COL driver
+│   ├── timg2col_tileop.hpp  # PTO BSTART.TIMG2COL inline-assembly wrapper
 │   ├── Makefile / compile.all / src/*.cpp
 ├── scalar/                  # GPR scalar family (BSTART.STD / FP)
 │   ├── scalar_bench.hpp     # bench_latency / bench_throughput / bench_store / bench_cv
@@ -42,10 +43,10 @@ microbenchmark/
 | --- | --- | ---: |
 | matrix (CUBE direct) | representative TMATMUL / ACC / BIAS cases; all 12 CUBE names are also covered by fixp | 11 |
 | vector (TEPL) | all 77 PTO 0.58.6 TEPL operation names | 170 |
-| memory (TLSU) | 10 TileOP-exposed PTO operations; 18 new atomic names await API support | 26 |
+| memory (TLSU) | 10 named Tile operations + standalone `BSTART.TIMG2COL`; 18 new atomic names await API support | 27 |
 | scalar (GPR) | int ALU / load-store / float / conversion × throughput+latency | 124 |
 | fixp (FPATR/quant) | TMATMUL/TGEMV × `fixp::Options` (scalar/vector quant, relu/prelu, row/group-max, shared-right) | 122 |
-| **total** | | **453** |
+| **total** | | **454** |
 
 - tile dtypes: `bf16 / fp16 / fp32 / i8 / i16 / i32`; scalar dtypes: `i32 / i64 / fp32 / f64`.
 - tile sizes: vector/memory 16×16 (some 32×32); CUBE uses M16/M32 and N8 CELL layouts.
@@ -89,6 +90,18 @@ operation coverage; the remaining 18 (`MGATHER_{EXCH,MAX,...}` and
 until the API publishes named wrappers. Compatibility wrappers for retired
 operations may still exist in TileOP headers, but they are not active tests.
 
+`BSTART.TIMG2COL` is tracked separately as a standalone command form. Its
+microbenchmark-local wrapper packs the three PTO parameter words and emits the
+complete dense-GM to Local-CUBE bundle. With llvm `553b08045`, the integrated
+assembler does not yet accept the new `BSTART.TIMG2COL` mnemonic or its legal
+IMG2COL CUBE-layout attribute, so the wrapper emits those two normative 32-bit
+words directly and leaves DIM/IOR/IOT register operands to the compiler. The
+ELF compiles and disassembles correctly as `BSTART.TLSU 28, FP32`. The Local
+CUBE case uses the required four-PE collective form: one common static GM
+source, 64 group rows, and four 16-row M16 outputs stored to disjoint ranges.
+gfrun `9d4464dc` completes the test with `R2 = 0` against the exact 1x1
+IMG2COL identity reference.
+
 Artifacts: `output/microbenchmark/<family>/elf/<family>/<case>.elf`.
 
 ## Numerical validation
@@ -117,9 +130,9 @@ python3 run_all.py --res-check --category memory
    family's `compile.all`. Each case is compiled (`-DRES_CHECK`), linked with
    the toolchain sysroot, disassembled (`llvm-objdump -dl`), and placed under
    `output/res_check/microbenchmark/<family>/elf/`.
-2. **Run** — for every `.elf` found, runs `gfrun -t 1 -f <elf>` (fixp
-   Shared/transpose modes add `-s softcore.multiThreadNum=4`). A gfrun log is
-   written per case under `output/microbenchmark/report/logs/`.
+2. **Run** — for every `.elf` found, runs `gfrun -t 1 -f <elf>` (TIMG2COL and
+   fixp Shared/transpose modes add `-s softcore.multiThreadNum=4`). A gfrun
+   log is written per case under `output/microbenchmark/report/logs/`.
 3. **Classify** — `PASS` = gfrun rc 0 + `Reach the End of Benchmark` + `R2 = 0`;
    `NUMERIC_FAIL` = ended but `R2 ≠ 0`; `RUN_FAIL` = everything else (gfrun
    crash, timeout, non-zero rc). Results are written to

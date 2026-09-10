@@ -9,6 +9,7 @@
 #include <cstdint>
 #include "benchmark.h"
 #include "bench_utils.hpp"
+#include "timg2col_tileop.hpp"
 
 using namespace pto;
 
@@ -149,6 +150,34 @@ void bench_gmov(D *c, D *a) {
     TLOAD(tA, gA0);
     GMOV(tC, 0, tA);
     TSTORE(gC0, tC);
+}
+
+// A 1x1, stride-1, no-padding IMG2COL is an identity reshape from NHWC
+// [1,H,W,C0] to the standard Left matrix [H*W,C0]. Local-CUBE TIMG2COL is a
+// four-PE collective: LB1 carries the group-total rows and each PE materializes
+// one 16-row CUBE_M16 slice, which is stored to its non-overlapping GM range.
+template <typename D, int H, int W>
+void bench_img2col_1x1(D *c, D *a) {
+    constexpr int C0 = 32 / sizeof(D);
+    constexpr int GroupM = H * W;
+    constexpr int LocalM = 16;
+    static_assert(GroupM == 4 * LocalM,
+                  "the cooperative M16 microbenchmark requires 16 rows per PE");
+    using GMIn = global_tensor<D, RowMajor<GroupM, C0>>;
+    using GMOut = global_tensor<D, RowMajor<LocalM, C0>>;
+    using OutTile = CubeTileM16<D, LocalM, C0>;
+
+    const uint32_t pe = get_thread_idx();
+    GMIn gA(a);
+    GMOut gC(c + pe * LocalM * C0);
+    OutTile tC;
+    constexpr uint64_t param0 = microbench::PackTIMG2COLParam0(
+        H, W, C0, 1, 1);
+    constexpr uint64_t param1 = microbench::PackTIMG2COLParam1(
+        0, 0, 0, 0, 1, 1, 1, 1);
+    constexpr uint64_t param2 = microbench::PackTIMG2COLParam2(0, 0);
+    microbench::TIMG2COL_ASM<GroupM>(tC, gA, param0, param1, param2);
+    TSTORE_CUBE(gC, tC);
 }
 
 #endif
