@@ -21,10 +21,8 @@ namespace rms_bin {
 
 // Row-reduction results keep physical Columns=1 as required by TROWSUM.
 constexpr int kReductionCols = 1;
-// Eight 1 KiB fragments form one 8 KiB RowMajor parent tile.
-// Each cache scalar is replicated across its 32x8 FP32 fragment.
+// Eight native 128 B RowSum slots form one 1 KiB RowMajor parent tile.
 constexpr int kCacheSlots = 8;
-constexpr int kCacheFragmentCols = 8;
 
 
 inline int64_t GetCacheId(int64_t idx) {
@@ -105,22 +103,16 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e
     using tile_v = VecTileM32<float, 32, rms_bin::kReductionCols, 1,
                               rms_bin::kReductionCols>;
     using cache_fragment =
-        Tile<Location::Vec, float, 32, rms_bin::kCacheFragmentCols,
-             BLayout::RowMajor>;
+        Tile<Location::Vec, float, 32, 1, BLayout::RowMajor, 1, 1>;
     using cache_parent =
-        Tile<Location::Vec, float, 32,
-             rms_bin::kCacheSlots * rms_bin::kCacheFragmentCols,
-             BLayout::RowMajor>;
-    using cache_vec =
-        Tile<Location::Vec, float, 32, rms_bin::kCacheFragmentCols,
-             BLayout::RowMajor>;
-    using cache_column = VecTileM32<float, 32, 1>;
+        Tile<Location::Vec, float, 32, rms_bin::kCacheSlots,
+             BLayout::RowMajor, 1, rms_bin::kCacheSlots>;
     for (int64_t ia = 0; ia < gA; ++ia) {
         constexpr size_t active_a = 1;
         const size_t full_r = static_cast<size_t>(tile_r);
 
         tile_v cur, buf, sum, mean, denom, rms;
-        cache_vec zero_cache;
+        tile_v zero_cache;
         TEXPANDS(zero_cache, 0.0f);
         TileArray<cache_fragment, 1, rms_bin::kCacheSlots> initial_cache;
         TMULS(initial_cache[0][0], zero_cache, 1.0f);
@@ -146,11 +138,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e
         auto merge_slot = [&]<uint16_t Slot>() {                              \
             if (Slot < cid) {                                                 \
                 auto cached = cache_views[0][Slot];                           \
-                cache_vec copied;                                             \
-                TMULS(copied, cached, 1.0f);                                  \
-                cache_column cached_rows;                                     \
-                TROWMAX(cached_rows, copied);                                 \
-                TCOLMAX(buf, cached_rows);                                    \
+                TMULS(buf, cached, 1.0f);                                     \
                 TADD(cur, cur, buf);                                          \
             }                                                                \
         };                                                                    \
@@ -162,19 +150,13 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e
         merge_slot.template operator()<5>();                                  \
         merge_slot.template operator()<6>();                                  \
         merge_slot.template operator()<7>();                                  \
-        cache_column repeated_cur;                                            \
-        TCOLEXPAND(repeated_cur, cur);                                        \
-        cache_vec expanded_cur;                                                \
-        TROWEXPAND(expanded_cur, repeated_cur);                                \
         TileArray<cache_fragment, 1, rms_bin::kCacheSlots> next_cache;          \
         auto write_slot = [&]<uint16_t Slot>() {                               \
             if (Slot == cid) {                                                 \
-                TMULS(next_cache[0][Slot], expanded_cur, 1.0f);                 \
+                TMULS(next_cache[0][Slot], cur, 1.0f);                          \
             } else {                                                           \
                 auto cached = cache_views[0][Slot];                            \
-                cache_vec copied;                                              \
-                TMULS(copied, cached, 1.0f);                                   \
-                TMULS(next_cache[0][Slot], copied, 1.0f);                       \
+                TMULS(next_cache[0][Slot], cached, 1.0f);                       \
             }                                                                  \
         };                                                                     \
         write_slot.template operator()<0>();                                   \
@@ -269,11 +251,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e
             auto cache_views =
                 TPARTVIEW<cache_fragment, 1, rms_bin::kCacheSlots>(cache_tile);
             auto cached = cache_views[0][rid];
-            cache_vec copied;
-            TMULS(copied, cached, 1.0f);
-            cache_column cached_rows;
-            TROWMAX(cached_rows, copied);
-            TCOLMAX(sum, cached_rows);
+            TMULS(sum, cached, 1.0f);
         }
 
         TMULS(mean, sum, inv_r);
