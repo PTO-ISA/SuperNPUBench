@@ -1,0 +1,2 @@
+make TESTCASE=quant_batch_matmul_test_mxfp4 M=8192 N=4096 K=1600 tM=32 tN=32 tK=64 B=1 NBLOCKS=32 PLAT=linx COMPILER_DIR=/home/j00833640/v300/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
+make TESTCASE=quant_batch_matmul_test_hif4  M=8192 N=4096 K=1600 tM=32 tN=32 tK=64 B=1 NBLOCKS=32 PLAT=linx COMPILER_DIR=/home/j00833640/v300/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
