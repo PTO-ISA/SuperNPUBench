@@ -1,5 +1,5 @@
 // =============================================================================
-// group_norm_grad_1d_pto.hpp — GroupNorm backward, HxW == 1 (one-level PTO)
+// group_norm_grad_1d.hpp — GroupNorm backward, HxW == 1 (one-level PTO)
 // =============================================================================
 //
 // Matches PyTorch GroupNorm1dBackward

@@ -1,5 +1,5 @@
 // =============================================================================
-// group_norm_grad_pto.hpp — GroupNorm backward, HxW > 1 (one-level PTO)
+// group_norm_grad.hpp — GroupNorm backward, HxW > 1 (one-level PTO)
 // =============================================================================
 //
 // Matches PyTorch GroupNormBackwardKernelImplInternal
