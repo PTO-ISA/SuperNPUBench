@@ -1,9 +1,10 @@
 #!/bin/bash
-# DynamicMxQuant solution 一键构建：为 8 个验证通过的正式用例现场生成 golden
+# DynamicMxQuant solution 一键构建：为 15 个验证通过的正式用例现场生成 golden
 # （gen_dynamic_mx_quant_data.py，无需迁移 .bin）并用 res_check=on 编译。
-# 8 个用例映射到 6 个 kernel 实现（common + 4 tail + 2 nontail = 7 个头文件）：
-# 两个 *_bigbs 用例是大 BlockSize 场景，现走 nontail plain 单块路径
-# （方案A 切归约轴的 _bigbs kernel 已退休，见收敛提交）。
+# 8 个定尺用例 + 6 个运行期动态 shape（_dyn）用例，映射到 13 个 kernel 头
+# （common + 4 tail 定尺 + 2 nontail 定尺 + 6 个 _dyn）。
+# 两个 *_bs128 用例是大 BlockSize 场景，走 nontail plain 单块路径、统一 kPeNum=4 调用
+# （方案A 切归约轴的 _bigbs kernel 已退休，big-BS 合并进统一 4-PE kernel）。
 #
 #   export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
 #   ./compile.all
@@ -27,11 +28,21 @@ CONFIGS=(
   "TAIL_OCP_FP8:tail_ocp_fp8:512:256:32:fp16:OCP:tail:FP8"
   "TAIL_OCP_FP8_DYN:tail_ocp_fp8_dyn:512:256:32:fp16:OCP:tail:FP8"
   "TAIL_OCP_FP4:tail_ocp_fp4:512:256:32:bf16:OCP:tail:FP4"
+  # 大 shape 基准 [15360,1536]（~47MB，太大，默认不跑）：手动构建/验证用
+  #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4_BENCH res_check=on
+  # "TAIL_OCP_FP4_BENCH:tail_ocp_fp4_bench:15360:1536:32:bf16:OCP:tail:FP4"
   "TAIL_CUBLAS_FP8_4PE:tail_cublas_fp8_4pe:512:256:32:fp16:CUBLAS:tail:FP8"
   "NONTAIL_CUBLAS_FP8_4PE:nontail_cublas_fp8_4pe:512:256:32:fp16:CUBLAS:nontail:FP8"
-  "NONTAIL_CUBLAS_FP8_BIGBS:nontail_cublas_fp8_bigbs:128:32:128:bf16:CUBLAS:nontail:FP8"
+  "NONTAIL_CUBLAS_FP8_BS128:nontail_cublas_fp8_bs128:128:32:128:bf16:CUBLAS:nontail:FP8"
   "NONTAIL_OCP_FP4_4PE:nontail_ocp_fp4_4pe:512:64:32:fp16:OCP:nontail:FP4"
-  "NONTAIL_OCP_FP4_BIGBS:nontail_ocp_fp4_bigbs:128:64:128:bf16:OCP:nontail:FP4"
+  "NONTAIL_OCP_FP4_BS128:nontail_ocp_fp4_bs128:128:64:128:bf16:OCP:nontail:FP4"
+  # --- 运行期动态 shape（_dyn）家族：M/N（或 Axis/Post）运行期 tiling 传入，支持任意 N ---
+  "TAIL_OCP_FP4_DYN:tail_ocp_fp4_dyn:512:256:32:bf16:OCP:tail:FP4"
+  "TAIL_CUBLAS_FP8_DYN:tail_cublas_fp8_dyn:512:256:32:fp16:CUBLAS:tail:FP8"
+  "NONTAIL_CUBLAS_FP8_DYN:nontail_cublas_fp8_dyn:512:256:32:fp16:CUBLAS:nontail:FP8"
+  "NONTAIL_CUBLAS_FP8_SPLITN_DYN:nontail_cublas_fp8_splitN_dyn:512:256:32:fp16:CUBLAS:nontail:FP8"
+  "NONTAIL_OCP_FP4_DYN:nontail_ocp_fp4_dyn:512:64:32:fp16:OCP:nontail:FP4"
+  "NONTAIL_OCP_FP4_SPLITN_DYN:nontail_ocp_fp4_splitN_dyn:512:256:32:fp16:OCP:nontail:FP4"
 )
 
 for cfg in "${CONFIGS[@]}"; do
@@ -45,4 +56,4 @@ for cfg in "${CONFIGS[@]}"; do
   make -C "$HERE" TESTCASE=dynamic_mx_quant TYPE="$TYPE" COMPILER_DIR="$COMPILER_DIR" res_check=on diss
 done
 
-echo "全部 8 个用例已生成 golden + 编译完成（6 个 kernel 实现；两个大 BS 用例复用 nontail plain，bigbs 已退休）。"
+echo "全部 15 个用例已生成 golden + 编译完成（8 定尺 + 6 动态 shape；两个大 BS 用例复用 nontail plain 统一 4-PE，bigbs 已退休）。"

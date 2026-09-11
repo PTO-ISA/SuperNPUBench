@@ -17,16 +17,25 @@ constexpr int pow2_floor(int v) {
     return p;
 }
 // 最大可支持 TileM —— **仅由 blocksize 决定, 与 SubM 无关**：
-//   budgetMax = 8192/(BS*sizeof fp32)  —— data pass 的 fp32 中间量 tile <= 8KB (绑定约束)
-//   floorMin  = 512/(BS*sizeof half)   —— 物理 tile >= 512B (避免 LinxV5 sub-512B spill)
-//   TileMmax = pow2_floor(budgetMax) 抬到 floorMin。BS=32 -> 64。
-// SubM 只决定循环次数 (seg_full = SubM/TileMmax), 不改 TileM 本身 —— 不能把 SubM 当 tile 行
-// (SubM 可远大于 budgetMax, 直接当行数会爆 8KB)。
+//   physical 行高须 >= 128（floorRows）：reduce 输出下游有 e8m0 列向量 tile [TileM,1]，
+//     只占 TileM 字节；当 TileM*1B < 128B 最小 TSize 时被 padding 撑高 → 其 capacity 派生
+//     physical Row 翻倍，违反 pto-spec PTO-TILE-TCVT「ordinary TCVT 源/目的 physical Row
+//     相等」(Row = DerivedTileRows(capacity,Col,dtype)=cap*8/(Col*bits))，触发 TileOP #42
+//     的 static_assert(SrcDerivedRows==DstDerivedRows)。e8m0=8-bit → TileM >= 128B/1B = 128
+//     即最窄列 tile 恰达 128B、DerivedRows=TileM，与其它 16/32-bit 列 tile 全等 → 全链合法。
+//   上限受 fp32 数据 tile [TileM,BlockSize] <= 256KB 约束：BS=32 → [128,32]=16KB，安全。
+//   TileMmax = 满足上限的最大 2 的幂，但至少 floorRows(128)。BS=32 -> 128。
+// SubM 只决定循环次数 (seg_full = SubM/TileMmax), 不改 TileM 本身 —— 不能把 SubM 当 tile 行。
+// 注：TileM 由 32(旧 gfsim #605 规避的 4KB 预算) 提到 128 是为满足上述 TCVT physical-Row 契约;
+//     纯 tiling 参数，功能/精度逐字节不变。旧的「广播源 [TileM,1] 单-128B-CELL」#605 规避
+//     被此契约取代(dmxq 不在 gfsim pass-list，该 gfsim-only 权衡可接受)。
 constexpr int tilem_max(int blockSize) {
-    const int budgetMax = 8192 / (blockSize * static_cast<int>(sizeof(float)));   // 64 @ BS=32
-    const int floorMin  = (512 / static_cast<int>(sizeof(__half)) + blockSize - 1) / blockSize; // 8 @ BS=32
+    const int floorRows = 128;   // e8m0 列 tile [TileM,1] 达 128B 最小 TSize 的下限
+    const int budgetMax = 262144 / (blockSize * static_cast<int>(sizeof(float)));  // [TileM,BS]fp32<=256KB
     int t = pow2_floor(budgetMax);
-    if (t > 0 && t < floorMin) t = floorMin;
+    if (t < floorRows) t = floorRows;
+    // 数据集偏小时无需超大 tile：钉到 floorRows(128) 即满足契约，避免 boxed 尾块浪费容量。
+    if (t > floorRows) t = floorRows;
     return t;
 }
 } // namespace tail_ocp_fp8_detail

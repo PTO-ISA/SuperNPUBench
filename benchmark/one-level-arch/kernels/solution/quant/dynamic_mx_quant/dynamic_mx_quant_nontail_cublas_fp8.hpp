@@ -238,15 +238,19 @@ static void nontail_cublas_fp8_plain(InT *x, OutT *y, uint8_t *scale) {
         using tile_x_r      = Tile<Location::Vec, InT,      BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
         using tile_f_r      = Tile<Location::Vec, float,    BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
         using tile_o_r      = Tile<Location::Vec, OutT,     BlockSize, TileN, BLayout::RowMajor, BlockSize, N_tail>;
-        // colReduce 输出行向量：physical [1, N_tail]（physCol=validCol=N_tail，physRow=1，
-        //   模型 Block.cpp:2349 反推恰得 row=1；见 RECORD 问题22 补充）。
-        using tile_sred_r   = Tile<Location::Vec, uint16_t, 1, N_tail, BLayout::RowMajor, 1, N_tail>;
-        using tile_sstore_r = Tile<Location::Vec, uint8_t,  1, N_tail, BLayout::RowMajor, 1, N_tail>;
-        using tile_recip_bf1_r = Tile<Location::Vec, __bf16, 1, N_tail, BLayout::RowMajor, 1, N_tail>;
-        using tile_recip_f1_r  = Tile<Location::Vec, float,  1, N_tail, BLayout::RowMajor, 1, N_tail>;
-        // Inlined scale-compute intermediates (boxed valid row=1, valid col=N_tail).
-        using tile_in1_r   = Tile<Location::Vec, InT,      1, N_tail, BLayout::RowMajor, 1, N_tail>;
-        using tile_u32_1_r = Tile<Location::Vec, uint32_t, 1, N_tail, BLayout::RowMajor, 1, N_tail>;
+        // colReduce 输出行向量：**物理 Cols=TileN、ValidCol=N_tail**（与源 tile_x_r 物理
+        //   Cols 一致 → TCOLMAX 源/目的 physical Cols 相等；且最窄 [1,TileN] u8 = TileN 字节
+        //   >=128B 最小 TSize，DerivedRows 不被撑高，满足 pto-spec PTO-TILE-TCVT physical-Row
+        //   契约 (TileOP #42)）。physRow=1（模型 Block.cpp:2349 反推得 row=1）。boxed 只触碰
+        //   前 N_tail 有效列。**不能用 physical N_tail**——那会让 reduce 目的物理 Cols≠源、
+        //   且窄 dtype 被 padding 撑高 physical Row（问题根因）。
+        using tile_sred_r   = Tile<Location::Vec, uint16_t, 1, TileN, BLayout::RowMajor, 1, N_tail>;
+        using tile_sstore_r = Tile<Location::Vec, uint8_t,  1, TileN, BLayout::RowMajor, 1, N_tail>;
+        using tile_recip_bf1_r = Tile<Location::Vec, __bf16, 1, TileN, BLayout::RowMajor, 1, N_tail>;
+        using tile_recip_f1_r  = Tile<Location::Vec, float,  1, TileN, BLayout::RowMajor, 1, N_tail>;
+        // Inlined scale-compute intermediates (physical Cols=TileN, boxed valid col=N_tail).
+        using tile_in1_r   = Tile<Location::Vec, InT,      1, TileN, BLayout::RowMajor, 1, N_tail>;
+        using tile_u32_1_r = Tile<Location::Vec, uint32_t, 1, TileN, BLayout::RowMajor, 1, N_tail>;
 
         global_iterator<gm_x, tile_x_r> x_iter_r(x);
         global_iterator<gm_y, tile_o_r> y_iter_r(reinterpret_cast<uint8_t *>(y));
