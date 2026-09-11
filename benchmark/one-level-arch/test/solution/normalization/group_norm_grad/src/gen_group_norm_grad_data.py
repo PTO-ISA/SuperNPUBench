@@ -9,7 +9,7 @@ Bins:
   golden_dx / golden_dgamma / golden_dbeta : float16
 
 Math matches PyTorch GroupNormBackward (HxW>1): spatial ds/db then fused c2/c3.
-Default: N=1, C=64, G=8, HxW=1024 (D=8), tile_hw=min(HxW, 8192)=1024.
+Default: N=2, C=32, G=8, HxW=2024 (D=4), tile_hw=min(HxW, 8192)=2024.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
     / "solution_normalization_group_norm_grad_group_norm_grad"
-    "_DType__half_N1_C64_G8_HxW1024_PE4"
+    "_DType__half_N2_C32_G8_HxW2024_PE4"
 )
 
 
@@ -228,10 +228,10 @@ def gen_all(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--n", type=int, default=1)
-    parser.add_argument("--c", type=int, default=64)
+    parser.add_argument("--n", type=int, default=2)
+    parser.add_argument("--c", type=int, default=32)
     parser.add_argument("--g", type=int, default=8)
-    parser.add_argument("--hxw", type=int, default=1024)
+    parser.add_argument("--hxw", type=int, default=2024)
     parser.add_argument("--tile-hw", type=int, default=None)
     parser.add_argument("--eps", type=float, default=1e-5)
     parser.add_argument("--seed", type=int, default=123)
