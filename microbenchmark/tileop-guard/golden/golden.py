@@ -138,6 +138,10 @@ for name, op in [('trowsum','sum'),('trowmax','max'),('trowmin','min'),('trowpro
     REG[name] = R(fam='reduce', op=op, foot='row', M=16, N=16, dt=F32, eps=1e-3)
 for name, op in [('tcolsum','sum'),('tcolmax','max'),('tcolmin','min'),('tcolprod','prod')]:
     REG[name] = R(fam='reduce', op=op, foot='col', M=16, N=16, dt=F32, eps=1e-3)
+# boxed-col store witness: colReduce 直接输出 valid col(VN=40) < physical col(N=64), 直接 TSTORE 崩。
+# spec 预期语义(TCOLMAX.asl): dst valid=1×VN, out[0,j]=max_rows(src[:,j]) for j<VN; 物理 [VN:N] 为
+# Null padding(不校)。现为 run-fail witness(崩在 TSTORE 前无输出); 模型修好后 golden 自动校前 VN 列。
+REG['tcolmax_boxcol'] = R(fam='reduce', op='max', foot='col', M=16, N=64, VN=40, dt=F32, eps=1e-3)
 
 # ---- CUBE matmul family (f16 inputs, f32 accumulate; wide eps for f16 rounding) ----
 REG['tmatmul']        = R(fam='matmul', M=32, N=32, K=32, post='none', dt_out=F32, eps=2e-2)
@@ -690,8 +694,9 @@ def check_reduce(case, chkdir):
         red = fn(a, axis=1)                       # length M
         got = o[:M]                               # genuine M x 1 dst (ops-20260904)
     else:
-        red = fn(a, axis=0)                       # length N
-        got = o[:N]                               # genuine 1 x N dst (ops-20260904)
+        vn = s.get('VN', N)                       # boxed col: valid col(VN) < physical col(N)
+        red = fn(a[:, :vn], axis=0)               # length VN (仅有效列; TCOLMAX 归约 valid 区)
+        got = o[:vn]                              # 校前 VN 列; 物理 padding [VN:N] 为 Null(不校)
     eps = np.float32(s.get('eps', 1e-3))
     atol = eps + eps * np.abs(red.astype(np.float32))
     bad = np.flatnonzero(np.abs(got.astype(np.float32) - red.astype(np.float32)) > atol)
