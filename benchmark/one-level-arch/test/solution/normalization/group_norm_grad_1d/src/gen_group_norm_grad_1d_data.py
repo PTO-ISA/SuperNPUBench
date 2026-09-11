@@ -9,7 +9,7 @@ Bins written to --out-dir:
   golden_dx.bin / golden_dgamma.bin / golden_dbeta.bin : float16
 
 Math matches PyTorch GroupNorm1dBackward (fp32 accumulate, cast to fp16).
-Default: N=512, C=64, G=8 (D=8), tile_d=8.
+Default: N=256, C=256, G=8 (D=32), tile_d=min(D, 256)=32.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[5]
     / "compare"
-    / "solution_normalization_group_norm_grad_1d_group_norm_grad_1d_DType__half_N512_C64_G8_PE4"
+    / "solution_normalization_group_norm_grad_1d_group_norm_grad_1d_DType__half_N256_C256_G8_PE4"
 )
 
 
@@ -204,10 +204,10 @@ def gen_all(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--n", type=int, default=512)
-    parser.add_argument("--c", type=int, default=64)
+    parser.add_argument("--n", type=int, default=256)
+    parser.add_argument("--c", type=int, default=256)
     parser.add_argument("--g", type=int, default=8)
-    parser.add_argument("--tile-d", type=int, default=8)
+    parser.add_argument("--tile-d", type=int, default=None)
     parser.add_argument("--eps", type=float, default=1e-5)
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("-o", "--out-dir", type=Path, default=DEFAULT_CMP_DIR)
@@ -218,12 +218,18 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    gen_all(args.out_dir, args.n, args.c, args.g, args.tile_d, args.eps, args.seed)
+    if args.g <= 0 or args.c % args.g != 0:
+        parser.error("C must be divisible by positive G")
+    tile_d = min(args.c // args.g, 256) if args.tile_d is None else args.tile_d
+    if tile_d <= 0 or tile_d > min(args.c // args.g, 256):
+        parser.error("tile-d must be in [1, min(C/G, 256)]")
+
+    gen_all(args.out_dir, args.n, args.c, args.g, tile_d, args.eps, args.seed)
     if args.also_src_data:
         data_dir = SCRIPT_DIR / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
         (data_dir / "tiling_info.bin").write_bytes(
-            struct.pack("<4q", args.n, args.c, args.g, args.tile_d)
+            struct.pack("<4q", args.n, args.c, args.g, tile_d)
         )
         print(f"wrote {data_dir / 'tiling_info.bin'}")
 

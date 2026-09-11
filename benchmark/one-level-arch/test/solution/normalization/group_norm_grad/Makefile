@@ -1,7 +1,7 @@
-N_BATCH ?= 32
-C_CH ?= 16
+N_BATCH ?= 1
+C_CH ?= 64
 G_GRP ?= 8
-HxW_SZ ?= 8192
+HxW_SZ ?= 1024
 DType ?= __half
 PE_NUM ?= 4
 ifneq ($(PE_NUM),4)

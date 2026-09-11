@@ -66,6 +66,96 @@ __attribute__((noinline)) void pe_barrier(uint32_t phase) {
     }
 }
 
+
+// Scalar fallback for logical rows that are smaller than the minimum encodable
+// Tile active width. The data remains densely packed; no padded-storage ABI is
+// introduced. Work is still partitioned across all peNum participants.
+template <typename dtype, int peNum>
+void group_norm_grad_small(dtype *dy, dtype *x, float *mean, float *rstd,
+                           dtype *gamma, const int64_t *tiling, dtype *dx,
+                           dtype *dgamma, dtype *dbeta, float *workspace) {
+    static_assert(peNum == 4, "normalization kernels support only 4PE");
+    const int64_t N = tiling[0];
+    const int64_t C = tiling[1];
+    const int64_t G = tiling[2];
+    const int64_t HxW = tiling[3];
+    const uint32_t tid = read_pe_id();
+    if (N <= 0 || C <= 0 || G <= 0 || HxW <= 0 || C % G != 0 ||
+        tid >= static_cast<uint32_t>(peNum)) {
+        return;
+    }
+
+    const int64_t D = C / G;
+    const float s = 1.0f / static_cast<float>(D * HxW);
+    float *ds = workspace;
+    float *db = workspace + N * C;
+    float *c2_buf = workspace + 2 * N * C;
+    float *c3_buf = c2_buf + N * G;
+
+    for (int64_t nc = tid; nc < N * C; nc += peNum) {
+        const int64_t base = nc * HxW;
+        float ds_acc = 0.0f;
+        float db_acc = 0.0f;
+        for (int64_t hw = 0; hw < HxW; ++hw) {
+            const float dy_v = static_cast<float>(dy[base + hw]);
+            const float x_v = static_cast<float>(x[base + hw]);
+            ds_acc += dy_v * x_v;
+            db_acc += dy_v;
+        }
+        ds[nc] = ds_acc;
+        db[nc] = db_acc;
+    }
+    pe_barrier<peNum>(1);
+
+    for (int64_t ng = tid; ng < N * G; ng += peNum) {
+        const int64_t n = ng / G;
+        const int64_t g = ng % G;
+        const int64_t c0 = g * D;
+        float sum1 = 0.0f;
+        float sum2 = 0.0f;
+        for (int64_t d = 0; d < D; ++d) {
+            const int64_t nc = n * C + c0 + d;
+            const float gamma_v = static_cast<float>(gamma[c0 + d]);
+            sum1 += ds[nc] * gamma_v;
+            sum2 += db[nc] * gamma_v;
+        }
+        const float mean_v = mean[ng];
+        const float rstd_v = rstd[ng];
+        const float c2 = (sum2 * mean_v - sum1) * rstd_v * rstd_v *
+                         rstd_v * s;
+        const float c3 = -c2 * mean_v - sum2 * rstd_v * s;
+        c2_buf[ng] = c2;
+        c3_buf[ng] = c3;
+
+        for (int64_t d = 0; d < D; ++d) {
+            const int64_t c = c0 + d;
+            const int64_t base = (n * C + c) * HxW;
+            const float c1 = rstd_v * static_cast<float>(gamma[c]);
+            for (int64_t hw = 0; hw < HxW; ++hw) {
+                const float value = c1 * static_cast<float>(dy[base + hw]) +
+                                    c2 * static_cast<float>(x[base + hw]) + c3;
+                dx[base + hw] = static_cast<dtype>(value);
+            }
+        }
+    }
+    pe_barrier<peNum>(2);
+
+    for (int64_t c = tid; c < C; c += peNum) {
+        const int64_t g = c / D;
+        float dgamma_acc = 0.0f;
+        float dbeta_acc = 0.0f;
+        for (int64_t n = 0; n < N; ++n) {
+            const int64_t nc = n * C + c;
+            const int64_t ng = n * G + g;
+            dgamma_acc += (ds[nc] - db[nc] * mean[ng]) * rstd[ng];
+            dbeta_acc += db[nc];
+        }
+        dgamma[c] = static_cast<dtype>(dgamma_acc);
+        dbeta[c] = static_cast<dtype>(dbeta_acc);
+    }
+    pe_barrier<peNum>(3);
+}
+
 // ---------------------------------------------------------------------------
 // Step 1: spatial reduce for one (n, c) → ds[nc], db[nc]  (HxW R-split)
 //

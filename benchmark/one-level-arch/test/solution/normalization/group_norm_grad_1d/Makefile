@@ -1,5 +1,5 @@
-N_BATCH ?= 512
-C_CH ?= 64
+N_BATCH ?= 256
+C_CH ?= 256
 G_GRP ?= 8
 DType ?= __half
 PE_NUM ?= 4

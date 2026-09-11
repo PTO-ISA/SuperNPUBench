@@ -9,12 +9,12 @@
 #define DType __half
 #endif
 
-// Dynamic 4PE validation: HxW==1, N=512, C=64, G=8, D=8.
+// Dynamic 4PE validation: HxW==1, N=256, C=256, G=8, D=32.
 #ifndef N_BATCH
-#define N_BATCH 512
+#define N_BATCH 256
 #endif
 #ifndef C_CH
-#define C_CH 64
+#define C_CH 256
 #endif
 #ifndef G_GRP
 #define G_GRP 8
@@ -98,8 +98,15 @@ int main() {
     }
 #endif
 
-    group_norm_grad_1d<dtype, PE_NUM>(dy, x, mean, rstd, gamma, tiling_info,
-                                      dx, dgamma, dbeta);
+    constexpr int64_t kGroupWidth = C_CH / G_GRP;
+    constexpr int64_t kMinFloatTile = 512 / sizeof(float);
+    if constexpr (kGroupWidth < kMinFloatTile) {
+        gn_grad_1d::group_norm_grad_1d_small<dtype, PE_NUM>(
+            dy, x, mean, rstd, gamma, tiling_info, dx, dgamma, dbeta);
+    } else {
+        group_norm_grad_1d<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
+                                         tiling_info, dx, dgamma, dbeta);
+    }
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

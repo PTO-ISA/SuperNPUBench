@@ -39,6 +39,71 @@
 namespace gn_grad_1d {
 
 
+// Scalar fallback for group widths below the minimum encodable Tile active
+// width. It preserves the dense [N,C] ABI and partitions work across 4 PEs.
+template <typename dtype, int peNum>
+void group_norm_grad_1d_small(dtype *dy, dtype *x, float *mean, float *rstd,
+                              dtype *gamma, const int64_t *tiling, dtype *dx,
+                              dtype *dgamma, dtype *dbeta) {
+    static_assert(peNum == 4, "normalization kernels support only 4PE");
+    const int64_t N = tiling[0];
+    const int64_t C = tiling[1];
+    const int64_t G = tiling[2];
+    const uint32_t tid = get_thread_idx();
+    if (N <= 0 || C <= 0 || G <= 0 || C % G != 0 ||
+        tid >= static_cast<uint32_t>(peNum)) {
+        return;
+    }
+
+    const int64_t D = C / G;
+    const float s = 1.0f / static_cast<float>(D);
+    for (int64_t ng = tid; ng < N * G; ng += peNum) {
+        const int64_t n = ng / G;
+        const int64_t g = ng % G;
+        const int64_t c0 = g * D;
+        float sum1 = 0.0f;
+        float sum2 = 0.0f;
+        for (int64_t d = 0; d < D; ++d) {
+            const int64_t i = n * C + c0 + d;
+            const float dy_v = static_cast<float>(dy[i]);
+            const float x_v = static_cast<float>(x[i]);
+            const float gamma_v = static_cast<float>(gamma[c0 + d]);
+            sum1 += dy_v * x_v * gamma_v;
+            sum2 += dy_v * gamma_v;
+        }
+        const float mean_v = mean[ng];
+        const float rstd_v = rstd[ng];
+        const float c2 = (sum2 * mean_v - sum1) * rstd_v * rstd_v *
+                         rstd_v * s;
+        const float c3 = -c2 * mean_v - sum2 * rstd_v * s;
+        for (int64_t d = 0; d < D; ++d) {
+            const int64_t c = c0 + d;
+            const int64_t i = n * C + c;
+            const float value = rstd_v * static_cast<float>(gamma[c]) *
+                                    static_cast<float>(dy[i]) +
+                                c2 * static_cast<float>(x[i]) + c3;
+            dx[i] = static_cast<dtype>(value);
+        }
+    }
+
+    for (int64_t c = tid; c < C; c += peNum) {
+        const int64_t g = c / D;
+        float dgamma_acc = 0.0f;
+        float dbeta_acc = 0.0f;
+        for (int64_t n = 0; n < N; ++n) {
+            const int64_t i = n * C + c;
+            const int64_t ng = n * G + g;
+            const float dy_v = static_cast<float>(dy[i]);
+            dgamma_acc += dy_v * (static_cast<float>(x[i]) - mean[ng]) *
+                          rstd[ng];
+            dbeta_acc += dy_v;
+        }
+        dgamma[c] = static_cast<dtype>(dgamma_acc);
+        dbeta[c] = static_cast<dtype>(dbeta_acc);
+    }
+}
+
+
 // ---------------------------------------------------------------------------
 // Stage A1: channel reduce → c2/c3 for one (n, g)
 //   scratch[2] = {c2, c3}
