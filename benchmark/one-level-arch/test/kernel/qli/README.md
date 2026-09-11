@@ -4,22 +4,18 @@
 > Kernel：`kernels/qli/qli_pto_opt.hpp`（`qli_topk_radix`，多轮 MSD radix-select）。
 > 精度判据：**TopK set match**（无序集合一致）+ score cosine。
 
-## Environment requirements（SuperScalarModel 本地修复）
+## Environment requirements（当前工具链契约）
 
-本 demo 的多轮 `THISTOGRAM`（Byte2/1/0 前缀收窄）、UINT32 域
-`TROWSUM/TROWMAX/TROWARGMAX`、`TROWARGMAX` 提取依赖 SuperScalarModel 侧的
-**本地修复**（已在本地验证环境应用，见
-[`kernels/qli/qli_radix_issues_found.md`](../../../kernels/qli/qli_radix_issues_found.md)）：
-在 stock 仿真器上需先应用以下改动才能全功能运行：
+本 demo 已移植到 PTO v0.58.4 契约（TileOP `b8669ce` / llvm `553b08045` /
+gfrun `07e9c661`），**stock 工具链直接可跑**，无需本地修复：
 
-| 项 | 文件 | 内容 | 对应 issue |
-|---|---|---|---|
-| THISTOGRAM ByteId 解码 | `isa/Block.cpp` `HandleBDATR` | 从 bits[19:18] 读 selectedByte（而非 bits[28:27]），否则 Byte0/1/2 恒解码为 Byte3 | R1 |
-| UINT32 归约/argmax 门禁 | `emulator/engine/AccumulateBlockInfo.cpp` `IsReduceAndExpandTeplDataType` | 允许 UINT32/UINT16 用于 `TROWSUM/TROWMAX/TROWARGMAX`（B8） | R2/B8 |
-| TROWARGMAX 指令映射 | `isa/ISACommon/TileOpManager.h` `GetTeplTileOp` | `REDUCEANDBROADCAST_RESERVE_{1..4}` → TROWARGMAX/TROWARGMIN/TCOLARGMAX/TCOLARGMIN | R3（A4） |
-
-> 未应用上述修复时，ByteId<3 轮次会统计错误字节、UINT32 掩码归约会被门禁拒绝，
-> 导致 TopK 结果错误或中止——**请先按 issues_found.md 应用修复再运行本 demo**。
+- 行归约目的须物理单列 `[N,1]`，compare 结果为 UINT8 packed predicate
+  （以 `TSEL` 物化掩码，不可直接算术）；
+- `TCOLSUMX`（kernel 内自定义汇编）按源几何编码 B.DIM——规避 b8669ce 模板
+  LB1 绑定 dst.ValidRow=1 的缺陷（上游 f00b928/#101 已修）；
+- `THISTOGRAMX` 的 ByteId 编码在 B.DATR 的 **PadValue 助记符**
+  （Zero=0/Max=1/Min=2/Null=3，bits[28:27]），bits[19:18] 的 ByteId 槽被
+  canonical 解码器忽略。
 
 ## 预览
 
@@ -165,12 +161,10 @@ EOF
 
 要求：`indices_gm` 之后连续可写空间 ≥ `Sq*topK*4 + 8192 + Sq*Skv*4 + 1152`
 字节。demo 驱动（`qli_check_opt.cpp`）使用 map-memory 大区域满足该约束；
-作为 header 集成时调用方按此分配（详见
-[`qli_radix_issues_found.md` R 项 / kernel 源码注释）。
+作为 header 集成时调用方按此分配（详见 kernel 源码注释）。
 
 ## 参考
 
 - Kernel：`kernels/qli/qli_pto_opt.hpp`（`ql_topk_radix`）
 - 设计：`kernels/qli/qli_pto_opt_histogram_radix_design.md §14`
-- 已知问题：`kernels/qli/qli_radix_issues_found.md`
 - 关键历史结果：`qli_fix_record.md §16`（superScalar 根目录）

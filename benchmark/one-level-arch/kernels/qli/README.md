@@ -135,13 +135,6 @@ score[s1, s2] = scale_k[s2] * Σ_g ( W[s1,g] * scale_q[s1,g] * ReLU(QK[g,s1,s2])
 - 输出为无序 set；若下游需要按 score 降序，需追加最终排序。
 - `Skv` 须满足 `Skv%kTk==0`（Step1-6 限制）且 `Skv%8==0`（TopK）。
 
-## Known Issues
-
-本实现过程中发现的仿真器/工具链上层问题（本地修复/规避后验证通过）整理在
-[`qli_radix_issues_found.md`](qli_radix_issues_found.md)：
-THISTOGRAM ByteId 位域解码、TROWEXPAND 广播 tileInfo、tile 作函数参数编码、
-TCMPS UINT32 门禁等 R1–R4。
-
 ## 测试 / Test
 
 - 驱动：`test/kernel/qli/src/qli_check_opt.cpp`
@@ -160,17 +153,19 @@ make TESTCASE=qli_check_opt_dynamic QLI_DTYPE=FP8 Sq=4 Skv=128 topk=8 NPE=1
 # 运行（scores 行步长为 paddedSkv = ceil(Skv/2048)*2048，末 chunk 补 0）
 gfrun -f <elf> --dump-memory 0x4000802000:<size>:sim.bin
 
-# 4PE（编译/运行需 -s softcore.multiThreadNum=4；当前数值验证未通过，见下）
-make TESTCASE=qli_check_opt_dynamic QLI_DTYPE=FP8 Sq=4 Skv=128 topk=8 NPE=4
+# 4PE token 并行（运行需 -s softcore.multiThreadNum=4）
+# 已验证：Sq=4、Skv=128/2048/2080/8192、topk=128/512 全部 cosine=1.0 set=100%
+make TESTCASE=qli_check_opt_dynamic QLI_DTYPE=FP8 Sq=4 Skv=2048 topk=512 NPE=4
 ```
 
-**多 PE 已知限制（v0.58 仿真器）**：4PE 模式下 TMATMUL 为 cooperative 指令
-（B 操作数经 SharedTile + TMOV_L2S_PUBLISH），v0.58 要求 A/B 为 FP32 NORM 且
-Shared tile ≤8KB。动态版已实现 FP32 转换 + D 维拆分（[64,32] FP32=8KB）+
-TMATMUL/TMATMUL_ACC 两段累加的标准 cooperative 路径，但 gfrun 下数值验证
-未通过（Sq=4 NPE=4 仅 token 3 部分正确；TCVT FP8→FP32 单元测试通过，
-publish quarter 语义按 PTO-ISA #75 实现）。待上游确认 cooperative TMATMUL
-的 FP8/转换路径支持后重验。Sq 须为 numPEs 的倍数（集体指令同步要求）。
+**多 PE 架构（token 并行）**：每 PE 经 `get_thread_idx()` 认领
+`i = tid, tid+numPEs, ...` 的 token，全程私有 local CUBE tile + 每 PE 独立
+tmp16 槽/hist scratch（无 cooperative/SharedMatrix 指令）。Sq 须为 numPEs
+的倍数。
+
+> 注意：NPE=1 编译的 ELF 须配 `-s softcore.multiThreadNum=1` 运行——gfrun
+> 默认 4-PE 冗余执行会共享单一 tmp16 槽，Sq>1 时交叉污染。cooperative 数据
+> 并行（单 token 跨 PE 切分）仍属上游 v0.58 未支持项。
 
 ## 源文件 / Source Files
 
@@ -179,8 +174,7 @@ publish quarter 语义按 PTO-ISA #75 实现）。待上游确认 cooperative TM
 | `qli_pto.hpp` | Step1-6 基准 + TROWARGMAX TopK（baseline） |
 | `qli_pto_opt.hpp` | Step1-6 + 完整版 MSD radix-select TopK（含 THISTOGRAMX/NaN/-0/rev） |
 | `qli_pto_opt_simple.hpp` | **Step1-6 + 精简版 MSD radix-select TopK（本 README 主题，推荐）** |
-| `qli_pto_opt_dynamic.hpp` | 动态 shape（运行时 Sq/Skv/topK）+ 多 PE 接口（NPE=1 已验证，4PE 受 v0.58 限制） |
+| `qli_pto_opt_dynamic.hpp` | 动态 shape（运行时 Sq/Skv/topK）+ 多 PE 接口（NPE=1/4 均已验证，见下） |
 | `qli_pto_opt_histogram_radix_design.md` | radix 直方图方案设计与实施记录 |
-| `qli_radix_issues_found.md` | 已知问题罗列（R1–R4，可提 ISSUE） |
 
 > 注：历史实验变体（bucket、fused、tail、bf16 等）未随本 demo 提交。
