@@ -1,0 +1,93 @@
+# tileop-test common Makefile
+# Self-contained variant that lives under
+# benchmark/one-level-arch/test/solution/tileop-test/<sub> and adds the
+# tileop-test common include path. Does not touch sibling families.
+
+ROOT := $(shell echo $(CURDIR) | sed -E 's@(.*)/benchmark/one-level-arch/test/.*@\1@')
+TEST_ROOT := $(ROOT)/benchmark/one-level-arch/test
+GUARD_ROOT := $(TEST_ROOT)/solution/tileop-test
+# category = the sub dir under tileop-test (vec/sfu/tlsu/cube/fixp/misc)
+CATEGORY := $(shell echo $(CURDIR) | sed -E 's@.*/solution/tileop-test/([^/]+).*@\1@')
+CATEGORY_NAME := $(shell echo $(CATEGORY) | sed -e 's/\//_/g')
+OBJ_ROOT := $(shell realpath $(ROOT)/output 2>/dev/null || echo $(ROOT)/output)
+CASE_SRC_DIR := benchmark/one-level-arch/test/solution/tileop-test/$(CATEGORY)/src
+ELF_DIR := $(OBJ_ROOT)/tileop-test/$(CATEGORY)/elf
+SRC_DIR := $(shell dirname $(SRC_FILE))
+OBJ_DIR := $(OBJ_ROOT)/$(CASE_SRC_DIR)
+ELF_HEAD := $(ELF_DIR)/$(CATEGORY_NAME)
+
+# Platform settings
+PLAT ?= linx
+baremetal ?= off
+
+ifeq ($(PLAT), cpu)
+DEFINES += -D__cpu_sim__
+COMPILER_DIR ?= /usr/bin
+AS = $(COMPILER_DIR)/gcc
+CC = $(COMPILER_DIR)/gcc
+CXX = $(COMPILER_DIR)/g++
+LINK = $(COMPILER_DIR)/g++
+DUMP = $(COMPILER_DIR)/objdump
+CC_O = -g -c -O0
+CXX_VER ?= -std=c++20
+else ifeq ($(PLAT), linx)
+DEFINES += -D__linx
+ifndef COMPILER_DIR
+$(error COMPILER_DIR is not set. Export COMPILER_DIR pointing to the linx_blockisa_llvm_musl toolchain bin directory)
+endif
+AS = $(COMPILER_DIR)/clang
+CC = $(COMPILER_DIR)/clang
+CXX = $(COMPILER_DIR)/clang++
+LINK = $(COMPILER_DIR)/clang++
+DUMP = $(COMPILER_DIR)/llvm-objdump
+CC_O = -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true $(CFLAGS)
+CXX_VER ?= -std=c++20
+CC_LINK += -nostartfiles $(TEST_ROOT)/common/_start.s
+DEFINES += -DENABLE_TENSOR_INSTR
+# res_check precision path: bake the per-case compare dir + link the scalar
+# guard_io TU (fills/dump/read compiled WITHOUT matrix flags; see guard_io.h).
+DEFINES += -DRES_CHECK -DCHK_DIR=\"$(GUARD_ROOT)/compare/$(CATEGORY)/$(TESTCASE)\"
+GUARD_IO_OBJ := $(OBJ_ROOT)/tileop-test/guard_io.o
+endif
+
+# Include paths: test/common(+src) for benchmark.h etc. + tileop-test common
+INCLUDE += -I$(TEST_ROOT)/common -I$(TEST_ROOT)/common/src -I$(GUARD_ROOT)/common
+
+# Object file
+OBJ := $(patsubst %.cpp, %.o, $(subst $(SRC_DIR), $(OBJ_DIR), $(SRC_FILE)))
+
+CC_O_ALL = $(CC_O) $(CC_OPTS)
+CXX_O_ALL = $(CC_O) $(CXX_VER) $(CC_OPTS)
+
+.DEFAULT_GOAL := all
+
+all: pre_work $(TARGET)
+
+diss: pre_work $(TARGET)
+	$(DUMP) -dl $(TARGET) > $(TARGET).diss
+
+$(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
+	@mkdir -p $(shell dirname $@)
+	$(CXX) $(CXX_O_ALL) $(INCLUDE) $(DEFINES) $< -o $@
+
+# guard_io: scalar helper TU compiled WITHOUT matrix flags (-mlxbc -O2 only),
+# via clang++ ($(CXX)) since -mlxbc pulls in the C++-only linx_blkc.h header.
+$(GUARD_IO_OBJ): $(GUARD_ROOT)/common/guard_io.c
+	@mkdir -p $(shell dirname $@)
+	$(CXX) -mlxbc -O2 $(CXX_VER) $(INCLUDE) -c $< -o $@
+
+$(TARGET): $(OBJ) $(GUARD_IO_OBJ)
+	@mkdir -p $(shell dirname $@)
+	$(LINK) $(CC_LINK) $(OBJ) $(GUARD_IO_OBJ) -o $@
+
+pre_work:
+	@mkdir -p $(OBJ_DIR)
+	@mkdir -p $(ELF_DIR)
+
+clean:
+	@find $(OBJ_ROOT)/tileop-test -type f -name "*.o" -exec rm -rf {} \; 2>/dev/null || true
+
+clean_all:
+	@rm -rf $(OBJ_ROOT)/tileop-test
+
+.PHONY: all diss clean clean_all pre_work
