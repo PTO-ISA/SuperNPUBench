@@ -102,7 +102,12 @@ constexpr float inv_dst_max() {
 // NOTE: InT drives BOTH the tile budget AND the compute domain: every kernel now
 // dispatches its scale-reduce and data paths on InT via `if constexpr`
 // (bf16/half/fp32), mirroring AscendC ComputeMaxExp{Ocp,Cublas}{Bf16,Half,Fp32}.
-constexpr int  kTileBudgetBytes = 8192;
+// tile 中间量字节预算：旧值 8192(8KB) 源自早期 TilesizeCode 上限，现工具链上限已放宽到
+// 256KB(pto_tile.hpp)。抬到 256KB 后 pick_tilen 可为 nontail 选足够大的 TileN，使 scale
+// 行向量 [1,TileN] 的最窄 dtype(u8/e8m0) 自然达 128B 最小 TSize、不被 padding 撑高 →
+// 满足 pto-spec PTO-TILE-TCVT physical-Row 相等契约(TileOP #42)。TileN 仍受 Post 与
+// BlockSize*TileN<=65536 上界约束(单块 <=256KB)。
+constexpr int  kTileBudgetBytes = 262144;
 constexpr bool kRegBitcast = false; // flip true once 问题4 (reg reinterpret) lands
 
 template <typename InT, bool IsCublas>
@@ -138,43 +143,37 @@ constexpr int nontail_align_lower() {
 // boxes the valid rows, so a physical TileM > M is safe (valid rows = min(M, TileM)).
 template <int M, int Contig, typename InT, bool IsCublas>
 constexpr int max_tilem() {
-    constexpr int budget = tile_elem_budget<InT, IsCublas>();
-    constexpr int min_elems = 512 / static_cast<int>(sizeof(InT)); // >= 512B floor
-    constexpr int tilem_min = (min_elems + Contig - 1) / Contig;    // ceil
-    constexpr int tilem_max = budget / Contig;
-    int t = M;
-    if (t > tilem_max) t = tilem_max;
-    if (t < tilem_min) t = tilem_min;
+    // physical 行高须 >= 128（floorRows）：tail_cublas 的列向量 tile [TileM,1] 最窄 dtype
+    //   为 uint8 scale (8-bit)，TileM*1B < 128B 最小 TSize 时被 padding 撑高 → DerivedTileRows
+    //   翻倍，违反 pto-spec PTO-TILE-TCVT「源/目的 physical Row 相等」(TileOP #42 static_assert)。
+    //   TileM >= 128 使最窄列 tile 恰达 128B、DerivedRows=TileM，与其它列 tile 全等 → 合法。
+    //   physical TileM > M 安全（full/tail split 已 box valid rows = min(M,TileM)）。
+    //   仅 tail_cublas 调用 max_tilem。旧 4KB/#605 规避被此 TCVT physical-Row 契约取代。
+    constexpr int floorRows = 128;
+    // [TileM,Contig] fp32 中间量 <= 256KB TilesizeCode 上限 → TileM <= 262144/(Contig*4)。
+    constexpr int tilem_cap = 262144 / (Contig * static_cast<int>(sizeof(float)));  // BS=32: 2048
+    int t = floorRows;
+    if (t > tilem_cap) t = tilem_cap;   // 极大 Contig 才退让 (dmxq BS=32: cap=2048, 不触发)
     if (t < 1) t = 1;
     return t;
 }
 
-// Non-tail: largest align-multiple TileN with BlockSize*TileN <= budget, further
-// capped at align-rounded Post so a small Post doesn't inflate TileN (N_tail covers
-// the remainder). Returns 0 when no legal TileN exists (< align lower bound) ->
-// caller routes to the bigbs split-reduce kernel.
+// Non-tail: physical TileN —— **仅由 BlockSize 决定的编译期常量，与输入 Post/N 无关**
+// （对称于 tail 的 tilem_max）。判据 = 最小 tile 块 [1,TileN] 的最窄 dtype（scale 的
+// u8/e8m0 = 8-bit）= TileN 字节 >= 128B 最小 TSize，否则被 padding 撑高 physical Row →
+// 违反 pto-spec PTO-TILE-TCVT「源/目的 physical Row 相等」(TileOP #42)。故 TileN 取
+// >=128 的最小 align 倍数（fp4 align=64/fp8 align=32 → 均得 128）。上限受
+// [BlockSize,TileN] fp32 <= 256KB 约束。**不再用 Post 做 postcap**：Post 由调用方按 TileN
+// 分块（满块 + boxed N_tail 尾块），physical TileN 恒定，与 Post 是否整除无关。
 template <int BlockSize, int Post, typename OutT, typename InT, bool IsCublas>
 constexpr int pick_tilen() {
-    constexpr int align  = nontail_align_lower<OutT>();
-    constexpr int budget = tile_elem_budget<InT, IsCublas>();
-    int cap = budget / BlockSize;                       // TileSize upper on TileN
-    int postcap = ((Post + align - 1) / align) * align; // no need to exceed Post
-    if (postcap < cap) cap = postcap;
-    return (cap / align) * align;                       // floor to align (0 if cap < align)
-}
-
-// bigbs: largest divisor of BlockSize with R_sub*TileN <= budget (the CURRENT
-// budget, not the formal 4096 the bigbs kernel static_asserts against). R_sub |
-// BlockSize is required by 方案A (splits the reduce axis into R_sub-row sub-chunks).
-template <int BlockSize, int TileN, typename InT, bool IsCublas>
-constexpr int max_rsub() {
-    constexpr int budget = tile_elem_budget<InT, IsCublas>();
-    int cap = budget / TileN;
-    if (cap > BlockSize) cap = BlockSize;
-    for (int r = cap; r >= 1; --r) {
-        if (BlockSize % r == 0) return r;
-    }
-    return 1;
+    constexpr int align  = nontail_align_lower<OutT>();      // fp4=64, fp8=32
+    constexpr int floorN = 128;                              // [1,TileN] u8/e8m0 达 128B
+    constexpr int capN   = 262144 / (BlockSize * static_cast<int>(sizeof(float))); // fp32 tile<=256KB
+    int t = ((floorN + align - 1) / align) * align;         // >=128 的 align 倍数 = 128
+    if (t > capN) t = (capN / align) * align;                // 极大 BlockSize 才退让
+    (void)Post;                                              // physical TileN 与输入 N 无关
+    return t;
 }
 
 // ---------------------------------------------------------------------------
