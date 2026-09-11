@@ -50,6 +50,27 @@ using itOut_t = itSk_t;
 //   TLOAD<Matrix,1>，kGroupM=16、kPeM=16），TMATMUL 每 PE 得 CUBE [16,32]
 //   私有切片 → TSTORE_CUBE 桥接回 Vec。
 // 约束：Sq % numPEs == 0（各 PE 迭代次数一致，保证集体指令同步）。
+// TCOLSUMX — 列求和（本仓 b8669ce 模板 lb1 误绑 dst.ValidRow=1，只累加 1 行；
+// 按上游 f00b928 (#101) 的正确编码：B.DIM 描述源几何，LB1=源 ValidRow）
+template <typename tile_o, typename tile_i>
+void TCOLSUMX(tile_o& dst, tile_i& src) {
+  asm volatile(
+    "BSTART.TEPL 80, %D1\n"
+    "B.DIM zero, %c2, ->lb0\n"
+    "B.DIM zero, %c3, ->lb1\n"
+    "B.DIM zero, %c4, ->lb2\n"
+    "B.IOT %5, mask=1111, last, ->%0<%Z6>\n"
+    ""
+    : "=Tr"(dst.data())
+    : "i"(type_traits<typename tile_i::DType>::TypeCode),
+      "i"(tile_i::ValidCol),
+      "i"(tile_i::ValidRow),
+      "i"(tile_i::Cols),
+      "Tr"(src.data()),
+      "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode)
+  );
+}
+
 // PTO v0.58.4 CUBE cell-layout：A=SharedMatrixLeft、B=SharedMatrixRight、
 // D=CubeAccumulatorM16（kTm=16 → kGroupM=16、kPeM=16），TSTORE_CUBE 桥接回 Vec。
 template <typename dtype>
@@ -113,7 +134,7 @@ inline void qli_pto_dynamic(float* scores_ptr, dtype* q_ptr, dtype* k_ptr,
                     tileS_t tS; TLOAD(tS, gTmp);
                     tileS_t tZero; TEXPANDS(tZero, 0.0f); TMAX(tS, tS, tZero);
                     TMUL(tS, tS, tWb);
-                    tileSum_t tPartial; TCOLSUM(tPartial, tS);
+                    tileSum_t tPartial; TCOLSUMX(tPartial, tS);
                     if (gi == 0) { TADD(tSum, tZeroSum, tPartial); }
                     else { TADD(tSum, tSum, tPartial); }
                 }
@@ -175,7 +196,7 @@ inline void qli_pto_dynamic(float* scores_ptr, dtype* q_ptr, dtype* k_ptr,
                 tileS_t tS; TLOAD(tS, gTmpPe);
                 tileS_t tZero; TEXPANDS(tZero, 0.0f); TMAX(tS, tS, tZero);
                 TMUL(tS, tS, tWb);
-                tileSum_t tPartial; TCOLSUM(tPartial, tS);
+                tileSum_t tPartial; TCOLSUMX(tPartial, tS);
                 if (gi == 0) { TADD(tSum, tZeroSum, tPartial); }
                 else { TADD(tSum, tSum, tPartial); }
             }
@@ -187,12 +208,15 @@ inline void qli_pto_dynamic(float* scores_ptr, dtype* q_ptr, dtype* k_ptr,
 }
 
 // ========== THISTOGRAMX（同标准 THISTOGRAM，放宽 Idx shape 约束）==========
+// v0.58.4 编码契约：模型 canonical 解码器从 B.DATR 的 PadValue 字段
+// (bits[28:27]) 读 selectedByte；PadValue 助记符 Zero=0/Max=1/Min=2/Null=3
+// 承载 ByteId 0..3（bits[19:18] 的 ByteId 槽被解码器忽略）。
 template <typename tile_o, typename tile_s, typename tile_idx>
 void THISTOGRAMX(tile_o& dst, tile_s& src, tile_idx& idx, int ByteId) {
-#define THISTOGRAMX_ASM(BYTE_NAME)                                    \
+#define THISTOGRAMX_ASM(BYTE_NAME, PAD_NAME)                           \
   asm volatile(                                                        \
     "BSTART.TEPL 104, %D1\n"                                     \
-    "B.DATR %D1, " BYTE_NAME ", Zero\n"                                \
+    "B.DATR %D2, " BYTE_NAME ", " PAD_NAME "\n"                        \
     "B.DIM %3, 0, ->LB0\n"                                             \
     "B.DIM %4, 0, ->LB1\n"                                             \
     "B.DIM zero, %c5, ->LB2\n"                                         \
@@ -208,10 +232,10 @@ void THISTOGRAMX(tile_o& dst, tile_s& src, tile_idx& idx, int ByteId) {
       "Tr"(idx.data()),                                                \
       "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode))
   switch (ByteId) {
-    case 0: THISTOGRAMX_ASM("Byte0"); break;
-    case 1: THISTOGRAMX_ASM("Byte1"); break;
-    case 2: THISTOGRAMX_ASM("Byte2"); break;
-    default: THISTOGRAMX_ASM("Byte3"); break;
+    case 0: THISTOGRAMX_ASM("Byte0", "Zero"); break;
+    case 1: THISTOGRAMX_ASM("Byte1", "Max");  break;
+    case 2: THISTOGRAMX_ASM("Byte2", "Min");  break;
+    default: THISTOGRAMX_ASM("Byte3", "Null"); break;
   }
 #undef THISTOGRAMX_ASM
 }
@@ -248,8 +272,10 @@ inline void ChunkHist(RU* key_ptr, int byteId, RU* prefix, RU* hist) {
 }
 
 inline void PopN(TKey& mv, RU chunkBase, int32_t* out, int n) {
-    using t1  = Tile<Location::Vec, RU, 1, 32, BLayout::RowMajor, 1, 1>;
-    using t1i = Tile<Location::Vec, int32_t, 1, 32, BLayout::RowMajor, 1, 1>;
+    // v0.58.4 行归约契约：TROWARGMAX 目的须物理单列 [N,1]（Col==1）；
+    // 物理行数 32 维持 128B tile 尺寸下限，valid 仍为 [1,1]
+    using t1  = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
+    using t1i = Tile<Location::Vec, int32_t, 32, 1, BLayout::RowMajor, 1, 1>;
     TKey idxTile; TCI(idxTile, chunkBase);
     for (int k = 0; k < n; k++) {
         t1 best; TROWARGMAX(best, mv);
@@ -258,28 +284,39 @@ inline void PopN(TKey& mv, RU chunkBase, int32_t* out, int n) {
         { global_tensor<int32_t, RowMajor<1, 1>> gout(out + k); TSTORE(gout, besti); }
         RU bv = 0; gk1 gbv(&bv); TSTORE(gbv, bestg);
         TKey bbc; TEXPANDS(bbc, bv);
-        TKey isp; TCMP<CmpMode::EQ>(isp, idxTile, bbc);
-        TKey one; TEXPANDS(one, 1u);
-        TKey np; TSUB(np, one, isp);
-        TMUL(mv, mv, np);
+        // v0.58.4 predicate 契约：TCMP/TCMPS 结果为 packed predicate，
+        // 不可参与算术；消零改用 TSEL 条件覆盖。
+        // 用 TSUB 求差 + TCMPS==0 判等（tile-scalar，与 simple 版一致的
+        // 已验证模式；避免 tile-tile TCMP 的额外 8KB 广播 tile）
+        TKey diff; TSUB(diff, idxTile, bbc);
+        TKey isp; TCMPS<CmpMode::EQ>(isp, diff, 0u);
+        TKey zero; TEXPANDS(zero, 0u);
+        TSEL(mv, isp, zero);
     }
 }
 
 inline void Extract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase, int& outPos, int& needEq) {
-    using t1 = Tile<Location::Vec, RU, 1, 32, BLayout::RowMajor, 1, 1>;
-    gkRow g(key_ptr); TKey kthk; TEXPANDS(kthk, kthVal);
+    // v0.58.4 行归约契约：TROWSUM 目的须物理单列 [N,1]
+    using t1 = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
+    gkRow g(key_ptr);
+    // GT: key > kth（TCMPS tile-scalar，与 simple 版一致；避免 tile-tile
+    // TCMP + kth 广播 tile 的额外 8KB 活 tile 触发后端 TMOV 尺寸错配）
     { TKey key; TLOAD(key, g);
-      TKey isgt; TCMP<CmpMode::GT>(isgt, key, kthk);
-      t1 s; TROWSUM(s, isgt); RU cnt = 0; gk1 gcnt(&cnt); TSTORE(gcnt, s);
-      TKey cand; TMUL(cand, key, isgt);
+      TKey isgt; TCMPS<CmpMode::GT>(isgt, key, kthVal);
+      TKey one; TEXPANDS(one, 1u);
+      TKey sel1; TEXPANDS(sel1, 0u); TSEL(sel1, isgt, one);
+      t1 s; TROWSUM(s, sel1); RU cnt = 0; gk1 gcnt(&cnt); TSTORE(gcnt, s);
+      TKey cand; TEXPANDS(cand, 0u); TSEL(cand, isgt, key);
       PopN(cand, chunkBase, outBase + outPos, (int)cnt);
       outPos += (int)cnt; }
     if (needEq > 0) {
       TKey key; TLOAD(key, g);
-      TKey iseq; TCMP<CmpMode::EQ>(iseq, key, kthk);
-      t1 s; TROWSUM(s, iseq); RU cnt = 0; gk1 gcnt(&cnt); TSTORE(gcnt, s);
+      TKey iseq; TCMPS<CmpMode::EQ>(iseq, key, kthVal);
+      TKey one; TEXPANDS(one, 1u);
+      TKey sel1; TEXPANDS(sel1, 0u); TSEL(sel1, iseq, one);
+      t1 s; TROWSUM(s, sel1); RU cnt = 0; gk1 gcnt(&cnt); TSTORE(gcnt, s);
       int take = (int)cnt; if (take > needEq) take = needEq;
-      TKey cand; TMUL(cand, key, iseq);
+      TKey cand; TEXPANDS(cand, 0u); TSEL(cand, iseq, key);
       PopN(cand, chunkBase, outBase + outPos, take);
       outPos += take; needEq -= take; }
 }

@@ -64,7 +64,8 @@ int main() {
         for (int d = 0; d < 128; d++)
             for (int c = 0; c < 32; c++)
                 ktt[j * 128 * 32 + d * 32 + c] = k[(j * 32 + c) * 128 + d];
-    static float tmp16[16 * 32];
+    // 多 PE 路径每 PE 写 temp_gm + tid*kTm*kTk（512 floats/PE），须按 PE 数分配
+    static float tmp16[16 * 32 * numPEs];
 
     BENCHSTART;
     for (int i = 0; i < B; i++) {

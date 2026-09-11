@@ -102,6 +102,29 @@
 using namespace pto;
 
 // -----------------------------------------------------------------------------
+// TCOLSUMX — 列求和（本仓 b8669ce 模板 lb1 误绑 dst.ValidRow=1，只累加 1 行；
+// 按上游 f00b928 (#101) 的正确编码：B.DIM 描述源几何，LB1=源 ValidRow）
+// -----------------------------------------------------------------------------
+template <typename tile_o, typename tile_i>
+void TCOLSUMX(tile_o& dst, tile_i& src) {
+  asm volatile(
+    "BSTART.TEPL 80, %D1\n"
+    "B.DIM zero, %c2, ->lb0\n"
+    "B.DIM zero, %c3, ->lb1\n"
+    "B.DIM zero, %c4, ->lb2\n"
+    "B.IOT %5, mask=1111, last, ->%0<%Z6>\n"
+    ""
+    : "=Tr"(dst.data())
+    : "i"(type_traits<typename tile_i::DType>::TypeCode),
+      "i"(tile_i::ValidCol),
+      "i"(tile_i::ValidRow),
+      "i"(tile_i::Cols),
+      "Tr"(src.data()),
+      "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode)
+  );
+}
+
+// -----------------------------------------------------------------------------
 // qli_pto — QLI 核心计算（Step 1-6，NPU tile op 实现）
 // -----------------------------------------------------------------------------
 //
@@ -225,7 +248,7 @@ void qli_pto(float* scores_ptr,
                 TMUL(tS, tS, tWb);
 
                 tileSum tPartial;
-                TCOLSUM(tPartial, tS);
+                TCOLSUMX(tPartial, tS);
 
                 if (gi == 0) {
                     TADD(tSum, tZeroSum, tPartial);
@@ -244,13 +267,18 @@ void qli_pto(float* scores_ptr,
 
 // -----------------------------------------------------------------------------
 // THISTOGRAMX — 自研展开版 THISTOGRAM（允许 Idx 与 src 不同 shape）
+// v0.58.4 编码契约：模型 canonical 解码器从 B.DATR 的 PadValue 字段
+// (bits[28:27]) 读取 selectedByte，bits[19:18] 的 ByteId 槽被忽略；
+// PadValue 助记符 Zero=0/Max=1/Min=2/Null=3 恰好承载 ByteId 0..3。
+// （上游 TileOP 模板仍写死 Null=3，多轮 Byte0-2 会错位 —— 与 TCOLSUM
+//  lb1 问题同类的未暴露缺陷，见 f00b928）
 // -----------------------------------------------------------------------------
 template <typename tile_o, typename tile_s, typename tile_idx>
 void THISTOGRAMX(tile_o& dst, tile_s& src, tile_idx& idx, int ByteId) {
-#define THISTOGRAMX_ASM(BYTE_NAME)                                    \
+#define THISTOGRAMX_ASM(BYTE_NAME, PAD_NAME)                           \
   asm volatile(                                                        \
     "BSTART.TEPL 104, %D1\n"                                           \
-    "B.DATR %D1, " BYTE_NAME ", Zero\n"                                \
+    "B.DATR %D2, " BYTE_NAME ", " PAD_NAME "\n"                        \
     "B.DIM %3, 0, ->LB0\n"                                             \
     "B.DIM %4, 0, ->LB1\n"                                             \
     "B.DIM zero, %c5, ->LB2\n"                                         \
@@ -266,10 +294,10 @@ void THISTOGRAMX(tile_o& dst, tile_s& src, tile_idx& idx, int ByteId) {
       "Tr"(idx.data()),                                                \
       "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode))
   switch (ByteId) {
-    case 0: THISTOGRAMX_ASM("Byte0"); break;
-    case 1: THISTOGRAMX_ASM("Byte1"); break;
-    case 2: THISTOGRAMX_ASM("Byte2"); break;
-    default: THISTOGRAMX_ASM("Byte3"); break;
+    case 0: THISTOGRAMX_ASM("Byte0", "Zero"); break;
+    case 1: THISTOGRAMX_ASM("Byte1", "Max");  break;
+    case 2: THISTOGRAMX_ASM("Byte2", "Min");  break;
+    default: THISTOGRAMX_ASM("Byte3", "Null"); break;
   }
 #undef THISTOGRAMX_ASM
 }
@@ -325,8 +353,10 @@ inline void RadixChunkHist(RU* key_ptr, int byteId, RU* prefix, RU* hist) {
 // Step 3: 从 key tile pop n 个最大元素（TROWARGMAX + 索引消零）
 template <int CK, int CKV>
 inline void RadixPopN(TKey<CK, CKV>& mv, RU chunkBase, int32_t* out, int n) {
-    using t1  = Tile<Location::Vec, RU, 1, 32, BLayout::RowMajor, 1, 1>;
-    using t1i = Tile<Location::Vec, int32_t, 1, 32, BLayout::RowMajor, 1, 1>;
+    // v0.58.4 行归约契约：TROWARGMAX 目的须物理单列 [N,1]（Col==1）；
+    // 物理行数 32 维持 128B tile 尺寸下限，valid 仍为 [1,1]
+    using t1  = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
+    using t1i = Tile<Location::Vec, int32_t, 32, 1, BLayout::RowMajor, 1, 1>;
     using gi1 = global_tensor<RU, RowMajor<1, 1>>;
     using gi1i = global_tensor<int32_t, RowMajor<1, 1>>;
     TKey<CK, CKV> idxTile; TCI(idxTile, chunkBase);
@@ -337,13 +367,13 @@ inline void RadixPopN(TKey<CK, CKV>& mv, RU chunkBase, int32_t* out, int n) {
         gi1i gout(out + k); TSTORE(gout, besti);
         RU bv = 0; gi1 gbv(&bv); TSTORE(gbv, bestg);
         TKey<CK, CKV> bbc; TEXPANDS(bbc, bv);
-        // TCMP tile-tile 在 f94bc12 工具链不可用（cmode 助记符不同步）：
-        // 用 TSUB 求差 + TCMPS==0 判等价
+        // v0.58.4 predicate 契约：TCMPS 结果为 packed predicate（UINT8 存储），
+        // 不可参与算术（TSUB/TMUL）。索引消零改用 TSEL 条件覆盖：
+        // mv = (idx == best) ? 0 : mv（TSEL 读 dst 旧值作假分支，需先有值）
         TKey<CK, CKV> diff; TSUB(diff, idxTile, bbc);
         TKey<CK, CKV> isp; TCMPS<CmpMode::EQ>(isp, diff, 0u);
-        TKey<CK, CKV> one; TEXPANDS(one, 1u);
-        TKey<CK, CKV> np; TSUB(np, one, isp);
-        TMUL(mv, mv, np);
+        TKey<CK, CKV> zero; TEXPANDS(zero, 0u);
+        TSEL(mv, isp, zero);
     }
 }
 
@@ -351,16 +381,20 @@ inline void RadixPopN(TKey<CK, CKV>& mv, RU chunkBase, int32_t* out, int n) {
 template <int CK, int CKV>
 inline void RadixExtract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase, int& outPos, int& needEq) {
     using gk = global_tensor<RU, RowMajor<1, CKV>>;
-    using t1 = Tile<Location::Vec, RU, 1, 32, BLayout::RowMajor, 1, 1>;
+    // v0.58.4 行归约契约：TROWSUM 目的须物理单列 [N,1]
+    using t1 = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
     using gi1 = global_tensor<RU, RowMajor<1, 1>>;
     gk g(key_ptr);
 
-    // GT: key > kth（TCMPS 标量比较，f94bc12 工具链 TCMP tile-tile 不可用）
+    // GT: key > kth（TCMPS 标量比较；predicate 不可直接归约/相乘）
     {
         TKey<CK, CKV> key; TLOAD(key, g);
         TKey<CK, CKV> isgt; TCMPS<CmpMode::GT>(isgt, key, kthVal);
-        t1 s; TROWSUM(s, isgt); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
-        TKey<CK, CKV> cand; TMUL(cand, key, isgt);
+        // v0.58.4 predicate 契约：TSEL 物化 0/1 计数掩码与候选集
+        TKey<CK, CKV> one; TEXPANDS(one, 1u);
+        TKey<CK, CKV> sel1; TEXPANDS(sel1, 0u); TSEL(sel1, isgt, one);
+        t1 s; TROWSUM(s, sel1); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
+        TKey<CK, CKV> cand; TEXPANDS(cand, 0u); TSEL(cand, isgt, key);
         RadixPopN<CK, CKV>(cand, chunkBase, outBase + outPos, (int)cnt);
         outPos += (int)cnt;
     }
@@ -368,9 +402,11 @@ inline void RadixExtract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase,
     if (needEq > 0) {
         TKey<CK, CKV> key; TLOAD(key, g);
         TKey<CK, CKV> iseq; TCMPS<CmpMode::EQ>(iseq, key, kthVal);
-        t1 s; TROWSUM(s, iseq); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
+        TKey<CK, CKV> one; TEXPANDS(one, 1u);
+        TKey<CK, CKV> sel1; TEXPANDS(sel1, 0u); TSEL(sel1, iseq, one);
+        t1 s; TROWSUM(s, sel1); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
         int take = (int)cnt; if (take > needEq) take = needEq;
-        TKey<CK, CKV> cand; TMUL(cand, key, iseq);
+        TKey<CK, CKV> cand; TEXPANDS(cand, 0u); TSEL(cand, iseq, key);
         RadixPopN<CK, CKV>(cand, chunkBase, outBase + outPos, take);
         outPos += take; needEq -= take;
     }
