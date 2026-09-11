@@ -1,2 +1,7 @@
 # res_check runtime artifacts: host-generated inputs + dumped outputs per case.
 compare/
+
+# 内部工作文档(issue 分析/report):本地保留供看护报告生成,不提交
+issues/
+REPORT*.md
+NEEDS_UPDATE*.md
