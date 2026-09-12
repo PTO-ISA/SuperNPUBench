@@ -537,7 +537,7 @@ void qli_topk_radix(float* scores_gm, int32_t* indices_gm) {
     constexpr int TailPhy = (TailCols < 128) ? 128 : TailCols;
 
 // scratch 布局（紧随 indices 输出区，调用方须保证可写；契约见
-// test/kernel/qli/README.md "Scratch memory contract"）：
+// test/solution/qli/README.md "Scratch memory contract"）：
 //   indices 输出   : indices_gm[0 .. Sq*topK)             （int32）
 //   key_scratch    : indices_gm + Sq*topK*4 + 8192 起，Sq*Skv*4 字节
 //   temp_hist      : key_scratch 后 1KB（256*4B）

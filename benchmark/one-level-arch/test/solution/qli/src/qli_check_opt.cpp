@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
-#include "qli/qli_pto_opt_simple.hpp"
+#include "solution/qli/qli_pto_opt_simple.hpp"
 
 // P1 optimization: eliminate copy_bytes — pass .data segment absolute
 // addresses directly to the kernel. The kernel's global_tensor + TLOAD

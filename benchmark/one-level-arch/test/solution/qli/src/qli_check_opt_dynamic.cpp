@@ -1,6 +1,6 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
-#include "qli/qli_pto_opt_dynamic.hpp"
+#include "solution/qli/qli_pto_opt_dynamic.hpp"
 
 // 动态 shape + 多 PE 版 driver（地址由 fix_cpp_addrs.py 迭代更新）
 #define SRCQ_ADDR  0x0000000000014e20ULL

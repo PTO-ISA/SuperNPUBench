@@ -137,10 +137,10 @@ score[s1, s2] = scale_k[s2] * Σ_g ( W[s1,g] * scale_q[s1,g] * ReLU(QK[g,s1,s2])
 
 ## 测试 / Test
 
-- 驱动：`test/kernel/qli/src/qli_check_opt.cpp`
+- 驱动：`test/solution/qli/src/qli_check_opt.cpp`
 - 编译：`make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=64 Skv=128 topk=128`
-- golden：`test/kernel/qli/src/gen_qli_golden.py --mode gen|verify`（set-match 主判据）
-- 验证流程详见 `test/kernel/qli/README.md`
+- golden：`test/solution/qli/src/gen_qli_golden.py --mode gen|verify`（set-match 主判据）
+- 验证流程详见 `test/solution/qli/README.md`
 
 ### 动态 shape 版 / Dynamic-shape variant
 

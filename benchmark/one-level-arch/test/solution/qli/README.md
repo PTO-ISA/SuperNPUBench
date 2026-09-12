@@ -1,7 +1,7 @@
 # QLI radix-select TopK — 验证流程
 
 > QLI 量化闪电索引（Quant Lightning Indexer）TopK demo 的构建与精度验证流程。
-> Kernel：`kernels/qli/qli_pto_opt.hpp`（`qli_topk_radix`，多轮 MSD radix-select）。
+> Kernel：`kernels/solution/qli/qli_pto_opt.hpp`（`qli_topk_radix`，多轮 MSD radix-select）。
 > 精度判据：**TopK set match**（无序集合一致）+ score cosine。
 
 ## Environment requirements（当前工具链契约）
@@ -19,7 +19,7 @@ gfrun `07e9c661`），**stock 工具链直接可跑**，无需本地修复：
 
 ## 预览
 
-本目录是 `test/kernel/qli`，对应源文件在 `src/`：
+本目录是 `test/solution/qli`，对应源文件在 `src/`：
 
 | 文件 | 作用 |
 |---|---|
@@ -58,7 +58,7 @@ OUTDIR=../../../../../compare/qli_fp8_B1_Sq${SQ}_Skv${SKV}_g${G}_Tm${TM}_Tk${TK}
 ### 1. 生成输入与 golden（维度以 --sq/--skv/--topk 显式传入）
 
 ```bash
-cd test/kernel/qli/src
+cd test/solution/qli/src
 python3 gen_qli_golden.py --mode gen \
     --sq $SQ --skv $SKV --topk $TOPK --g $G --d 128 \
     --outdir $OUTDIR
@@ -76,7 +76,7 @@ python3 gen_qli_golden.py --mode gen \
 `qli_fp8_B1_Sq64_Skv128_g64_Tm16_Tk32`；验证其他配置时替换**整条路径前缀**：
 
 ```bash
-cd test/kernel/qli/src
+cd test/solution/qli/src
 # 生成 .incbin 路径（repo 相对 .s；此处直接以绝对路径为例，也可替换为自己 checkout 的 repo 根）
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo /path/your/checkout)
 # 确保 .incbin 使用当前机器上真实的 compare 路径：
@@ -91,14 +91,14 @@ sed -i "s|/home/z00947698/SuperNPUBench|$REPO_ROOT|g; \
 ### 3. 汇编数据对象
 
 ```bash
-cd test/kernel/qli/src
+cd test/solution/qli/src
 $COMPILER_DIR/clang -c -x assembler qli_check_data.s -o ../src/qli_check_data.o
 ```
 
 ### 4. 构建 ELF
 
 ```bash
-cd test/kernel/qli
+cd test/solution/qli
 make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=4 Skv=8192 topk=512 Tm=16 Tk=32
 ```
 
@@ -109,9 +109,12 @@ make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=4 Skv=8192 topk=512 Tm=16 Tk=32
 
 ```bash
 export NM=$COMPILER_DIR/llvm-nm
-ELF=../../output/kernel/qli/elf/kernel_qli/qli_check_opt_fp8_B1_Sq4_Skv8192_g64_Tm16_Tk32.elf
+ELF=../../output/solution/qli/elf/solution_qli/qli_check_opt_fp8_B1_Sq4_Skv8192_g64_Tm16_Tk32.elf
 # 循环：make → python3 src/fix_cpp_addrs.py src/qli_check_opt.cpp $ELF $NM → make
-# 直到两次 llvm-nm 的 srcq 地址一致（通常 1-2 轮收敛）
+# 收敛判据（重要）：驱动宏 == ELF 符号地址，即
+#   grep SRCQ_ADDR src/qli_check_opt.cpp 的值 == llvm-nm $ELF 的 _binary_srcq_data_start
+# 不要用"两次 nm 读数相同"作判据——增量构建下符号可稳定而宏仍差 8B（假收敛，
+# 实测输入整体偏移、scores 全零）。建议每轮删旧 .o 全量重编（通常 2 轮收敛）。
 ```
 
 ### 6. gfrun 运行 + 内存 dump
@@ -165,6 +168,6 @@ EOF
 
 ## 参考
 
-- Kernel：`kernels/qli/qli_pto_opt.hpp`（`ql_topk_radix`）
-- 设计：`kernels/qli/qli_pto_opt_histogram_radix_design.md §14`
+- Kernel：`kernels/solution/qli/qli_pto_opt.hpp`（`ql_topk_radix`）
+- 设计：`kernels/solution/qli/qli_pto_opt_histogram_radix_design.md §14`
 - 关键历史结果：`qli_fix_record.md §16`（superScalar 根目录）

@@ -2,7 +2,7 @@
 
 > 文档状态：新增方案说明
 >
-> 分析对象：`SuperNPUBench/benchmark/one-level-arch/kernels/qli/qli_pto_opt.hpp`
+> 分析对象：`SuperNPUBench/benchmark/one-level-arch/kernels/solution/qli/qli_pto_opt.hpp`
 >
 > 适用版本：P3 `THISTOGRAM` 直方图实现，基于 float32 score 与 uint32 sortable key
 >
@@ -76,7 +76,7 @@ qli_topk_histogram<Sq, Skv, topK>(...);
 
 调用位置为：
 
-- `SuperNPUBench/benchmark/one-level-arch/test/kernel/qli/src/qli_check_opt.cpp:78-96`
+- `SuperNPUBench/benchmark/one-level-arch/test/solution/qli/src/qli_check_opt.cpp:78-96`
 
 其中：
 
