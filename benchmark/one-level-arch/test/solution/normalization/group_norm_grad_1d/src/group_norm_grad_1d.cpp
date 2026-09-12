@@ -26,11 +26,7 @@
 namespace {
 template <typename dtype>
 constexpr int64_t group_norm_1d_tile_d(int64_t channels, int64_t groups) {
-    constexpr int64_t kDtypeCapacity =
-        (32768 + static_cast<int64_t>(sizeof(dtype)) - 1) /
-        static_cast<int64_t>(sizeof(dtype));
-    constexpr int64_t kTileCapacity =
-        kDtypeCapacity < 8192 ? kDtypeCapacity : 8192;
+    constexpr int64_t kTileCapacity = gn_grad_1d::data_columns<dtype>();
     const int64_t group_width = channels / groups;
     return group_width < kTileCapacity ? group_width : kTileCapacity;
 }
@@ -51,7 +47,7 @@ int main() {
     constexpr int64_t kTileD = group_norm_1d_tile_d<dtype>(C_CH, G_GRP);
     static_assert(N_BATCH > 0 && C_CH > 0 && G_GRP > 0);
     static_assert(C_CH % G_GRP == 0 && kTileD > 0);
-    // Small-D physical row stride is 256 FP32 elements: 32 KiB / 1024 = 32 rows.
+    // Small-D physical [32,256], FP32 32 KiB.
     constexpr int64_t kTileG = C_CH / G_GRP <= 256 ? (G_GRP < 32 ? G_GRP : 32) : 1;
     // Separate Stage B tiling, with optional validation overrides.
 #ifndef GB_TILE_D
@@ -83,7 +79,7 @@ int main() {
     static dtype dgamma_buf[C_CH];
     static dtype dbeta_buf[C_CH];
     // Contiguous planes: c2[N,G], followed by c3[N,G].
-    static float params_workspace[2 * N_BATCH * G_GRP];
+    static float params_workspace[gn_grad_1d::workspace_elems(N_BATCH, G_GRP)];
 
     dtype *dy = dy_buf;
     dtype *x = x_buf;

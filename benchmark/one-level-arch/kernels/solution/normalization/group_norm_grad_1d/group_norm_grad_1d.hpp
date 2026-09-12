@@ -13,7 +13,8 @@
 // Each PE writes its own parameters before consuming them in Stage A2.
 //
 // tiling[7] = {N, C, G, tile_d, tile_g, gb_tile_d, gb_tile_g}
-//   tile_d <= 0 → min(D, tD); channel R-split on dgamma/dbeta when D > tile_d.
+//   tile_d controls parameter/dx strips; gb_tile_d controls gamma/beta strips.
+//   tile_d <= 0 → min(D, tD); channel splitting continues when D exceeds the selected strip width.
 //   Stage A and B split arbitrary D into tiles, including partial tails.
 //
 // Data tiles: 8192 columns, FP32 32 KiB and FP16 16 KiB.
@@ -39,7 +40,28 @@
 
 namespace gn_grad_1d {
 // Caller-owned GM workspace [2,N*G]: all c2 values, then all c3 values.
-inline int64_t workspace_elems(int64_t N, int64_t G) { return 2 * N * G; }
+constexpr int64_t workspace_elems(int64_t N, int64_t G) { return 2 * N * G; }
+
+// Shared shape validation and physical Tile definitions for all three stages.
+template <typename dtype>
+constexpr int64_t data_columns() {
+    constexpr int64_t dtype_cols = (32768 + sizeof(dtype) - 1) / sizeof(dtype);
+    return dtype_cols < 8192 ? dtype_cols : 8192;
+}
+struct Shape {
+    int64_t N, C, G, D;
+    explicit Shape(const int64_t *t)
+        : N(t[0]), C(t[1]), G(t[2]), D(G > 0 ? C / G : 0) {}
+    bool valid() const { return N > 0 && C > 0 && G > 0 && C % G == 0; }
+};
+template <typename dtype, int Rows, int Cols>
+struct TileTypes {
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
+    using tile_h = Tile<Location::Vec, dtype, Rows, Cols, BLayout::RowMajor, -1, -1>;
+    using tile_f = Tile<Location::Vec, float, Rows, Cols, BLayout::RowMajor, -1, -1>;
+    using tile_v = Tile<Location::Vec, float, Rows, 1, BLayout::RowMajor, -1, 1>;
+};
 
 // ---------------------------------------------------------------------------
 // Stage A1: channel reduce → c2/c3 for one (n, g)
@@ -179,7 +201,6 @@ inline void dx_group(dtype *dy, dtype *x, float *rstd, dtype *gamma,
     }
 }
 
-// Small-D block: logical [active_g,D], physical [32,256] FP32 = 32 KiB.
 template <typename dtype>
 inline void dx_groups(dtype *dy, dtype *x, float *rstd, dtype *gamma,
                       float *workspace, dtype *dx, int64_t N, int64_t C, int64_t G,
@@ -223,8 +244,7 @@ inline void dx_groups(dtype *dy, dtype *x, float *rstd, dtype *gamma,
 //   N<=128: grid=ceil(C/256), block=256；每线程一个 c，循环 n
 //   N>128:  grid=ceil(C/32),  block=dim3(32,16)
 // ---------------------------------------------------------------------------
-template <typename dtype, typename gm_h, typename gm_f, typename tile_h,
-          typename tile_f, typename tile_v>
+template <typename dtype, typename gm_h, typename tile_h, typename tile_f>
 inline void dbeta_group(dtype *dy, dtype *dbeta, int64_t N, int64_t C,
                         int64_t D, int64_t tile_d, int64_t g) {
     const int64_t c0 = g * D;
@@ -308,8 +328,7 @@ inline void dgamma_group(dtype *dy, dtype *x, float *mean, float *rstd,
     }
 }
 
-// Stage B two-dimensional block: rows are groups, columns are channels within
-// a group. GM row stride remains D even for a partial channel tile.
+// Stage B logical [active_g,active_d], physical [32,256].
 template <typename dtype>
 inline void gamma_beta_groups(dtype *dy, dtype *x, float *mean, float *rstd,
                               dtype *dgamma, dtype *dbeta, int64_t N, int64_t C,
@@ -367,31 +386,23 @@ __attribute__((noinline)) void group_norm_grad_1d_fused_params(
     // TROWSUM source descriptor is limited to 2048 bytes in this model.
     // Keep this reduction strip at 512 FP32 elements; other stages use 32 KiB.
     constexpr int64_t tD = 512;
-    constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
 
-    const int64_t N = tiling[0];
-    const int64_t C = tiling[1];
-    const int64_t G = tiling[2];
+    const gn_grad_1d::Shape shape(tiling);
     const uint32_t tid = get_thread_idx();
-    if (N <= 0 || C <= 0 || G <= 0 || C % G != 0 ||
-        tid >= static_cast<uint32_t>(peNum)) {
-        return;
-    }
-    const int64_t D = C / G;
+    if (!shape.valid() || tid >= static_cast<uint32_t>(peNum)) return;
+    const auto [N, C, G, D] = shape;
     const int64_t requested_d = tiling[3] > 0 ? tiling[3] : D;
     const int64_t tile_d = requested_d < tD ? requested_d : tD;
     if (tile_d <= 0 || tile_d > tD) {
         return;
     }
 
-    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
-    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_h =
-        Tile<Location::Vec, dtype, 1, tD, BLayout::RowMajor, -1, -1>;
-    using tile_f =
-        Tile<Location::Vec, float, 1, tD, BLayout::RowMajor, -1, -1>;
-    using tile_v =
-        Tile<Location::Vec, float, 1, tV, BLayout::RowMajor, -1, 1>;
+    using Types = gn_grad_1d::TileTypes<dtype, 1, tD>;
+    using gm_h = typename Types::gm_h;
+    using gm_f = typename Types::gm_f;
+    using tile_h = typename Types::tile_h;
+    using tile_f = typename Types::tile_f;
+    using tile_v = typename Types::tile_v;
 
     const int64_t tile_g = tiling[4];
     if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1)) return;
@@ -415,34 +426,23 @@ __attribute__((noinline)) void group_norm_grad_1d_dx(
     const int64_t *tiling, float *workspace, dtype *dx) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     // FP32 Tile: 32 KiB (8192 columns); FP16: 16 KiB, matching TCVT shape.
-    constexpr int64_t tDDtype =
-        (32768 + static_cast<int64_t>(sizeof(dtype)) - 1) /
-        static_cast<int64_t>(sizeof(dtype));
-    constexpr int64_t tD = tDDtype < 8192 ? tDDtype : 8192;
-    constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
+    constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
-    const int64_t N = tiling[0];
-    const int64_t C = tiling[1];
-    const int64_t G = tiling[2];
+    const gn_grad_1d::Shape shape(tiling);
     const uint32_t tid = get_thread_idx();
-    if (N <= 0 || C <= 0 || G <= 0 || C % G != 0 ||
-        tid >= static_cast<uint32_t>(peNum)) {
-        return;
-    }
-    const int64_t D = C / G;
+    if (!shape.valid() || tid >= static_cast<uint32_t>(peNum)) return;
+    const auto [N, C, G, D] = shape;
     const int64_t tile_d = tiling[3] > 0 ? tiling[3] : (D < tD ? D : tD);
     if (tile_d <= 0 || tile_d > tD) {
         return;
     }
 
-    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
-    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_h =
-        Tile<Location::Vec, dtype, 1, tD, BLayout::RowMajor, -1, -1>;
-    using tile_f =
-        Tile<Location::Vec, float, 1, tD, BLayout::RowMajor, -1, -1>;
-    using tile_v =
-        Tile<Location::Vec, float, 1, tV, BLayout::RowMajor, -1, 1>;
+    using Types = gn_grad_1d::TileTypes<dtype, 1, tD>;
+    using gm_h = typename Types::gm_h;
+    using gm_f = typename Types::gm_f;
+    using tile_h = typename Types::tile_h;
+    using tile_f = typename Types::tile_f;
+    using tile_v = typename Types::tile_v;
 
     const int64_t tile_g = tiling[4];
     if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1)) return;
@@ -468,34 +468,23 @@ __attribute__((noinline)) void group_norm_grad_1d_gamma_beta(
     const int64_t *tiling, dtype *dgamma, dtype *dbeta) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     // FP32 Tile: 32 KiB (8192 columns); FP16: 16 KiB, matching TCVT shape.
-    constexpr int64_t tDDtype =
-        (32768 + static_cast<int64_t>(sizeof(dtype)) - 1) /
-        static_cast<int64_t>(sizeof(dtype));
-    constexpr int64_t tD = tDDtype < 8192 ? tDDtype : 8192;
-    constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
+    constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
-    const int64_t N = tiling[0];
-    const int64_t C = tiling[1];
-    const int64_t G = tiling[2];
+    const gn_grad_1d::Shape shape(tiling);
     const uint32_t tid = get_thread_idx();
-    if (N <= 0 || C <= 0 || G <= 0 || C % G != 0 ||
-        tid >= static_cast<uint32_t>(peNum)) {
-        return;
-    }
-    const int64_t D = C / G;
+    if (!shape.valid() || tid >= static_cast<uint32_t>(peNum)) return;
+    const auto [N, C, G, D] = shape;
     const int64_t tile_d = tiling[5] > 0 ? tiling[5] : (D < tD ? D : tD);
     if (tile_d <= 0 || tile_d > tD) {
         return;
     }
 
-    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
-    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_h =
-        Tile<Location::Vec, dtype, 1, tD, BLayout::RowMajor, -1, -1>;
-    using tile_f =
-        Tile<Location::Vec, float, 1, tD, BLayout::RowMajor, -1, -1>;
-    using tile_v =
-        Tile<Location::Vec, float, 1, tV, BLayout::RowMajor, -1, 1>;
+    using Types = gn_grad_1d::TileTypes<dtype, 1, tD>;
+    using gm_h = typename Types::gm_h;
+    using gm_f = typename Types::gm_f;
+    using tile_h = typename Types::tile_h;
+    using tile_f = typename Types::tile_f;
+    using tile_v = typename Types::tile_v;
 
     const int64_t tile_g = tiling[6];
     if (tile_g < 1 || tile_g > 32 || (tile_d > 256 && tile_g != 1)) return;
@@ -514,7 +503,7 @@ __attribute__((noinline)) void group_norm_grad_1d_gamma_beta(
         return;
     }
     for (int64_t g = tid; g < G; g += peNum) {
-        gn_grad_1d::dbeta_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
+        gn_grad_1d::dbeta_group<dtype, gm_h, tile_h, tile_f>(
             dy, dbeta, N, C, D, tile_d, g);
         gn_grad_1d::dgamma_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
             dy, x, mean, rstd, dgamma, N, C, G, D, tile_d, g);

@@ -2,7 +2,7 @@
 """Generate group_norm_grad host bins (HxW>1, pure Python, no numpy).
 
 Bins:
-  tiling_info.bin : 5 x int64 LE = (N, C, G, HxW, tile_hw)
+  tiling_info.bin : 10 x int64 LE = (N,C,G,HxW,reduce_hw,reduce_c,dx_hw,dx_c,gb_d,gb_g)
   dy.bin / x.bin  : N*C*HxW x float16
   mean/rstd.bin   : N*G x float32
   gamma.bin       : C x float16
@@ -62,11 +62,11 @@ def f16_bits_to_f32(h: int) -> float:
     exp = (h >> 10) & 0x1F
     mant = h & 0x3FF
     if exp == 0:
-        val = 0.0 if mant == 0 else math.ldexp(mant / 1024.0, -14)
+        val = 0.0 if mant == 0 else math.ldexp(mant / 512.0, -14)
     elif exp == 31:
         val = math.nan if mant else math.inf
     else:
-        val = math.ldexp(1.0 + mant / 1024.0, exp - 15)
+        val = math.ldexp(1.0 + mant / 512.0, exp - 15)
     return -val if sign else val
 
 
@@ -184,6 +184,15 @@ def group_norm_grad_ref(
     return dx, dgamma, dbeta
 
 
+def make_tiling(N, C, G, H, reduce_hw):
+    D = C // G
+    dx_hw = min(H, 8192)
+    gb_d = min(D, 8192)
+    return (N, C, G, H, reduce_hw, 1, dx_hw,
+            min(D, 32) if dx_hw <= 256 else 1, gb_d,
+            min(G, 32) if gb_d <= 256 else 1)
+
+
 def gen_all(
     out_dir: Path,
     N: int,
@@ -210,7 +219,7 @@ def gen_all(
     )
 
     (out_dir / "tiling_info.bin").write_bytes(
-        struct.pack("<5q", N, C, G, HxW, tile_hw)
+        struct.pack("<10q", *make_tiling(N, C, G, HxW, tile_hw))
     )
     (out_dir / "dy.bin").write_bytes(pack_f16(dy))
     (out_dir / "x.bin").write_bytes(pack_f16(x))
@@ -257,7 +266,7 @@ def main() -> None:
         data_dir = SCRIPT_DIR / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
         (data_dir / "tiling_info.bin").write_bytes(
-            struct.pack("<5q", args.n, args.c, args.g, args.hxw, tile_hw)
+            struct.pack("<10q", *make_tiling(args.n, args.c, args.g, args.hxw, tile_hw))
         )
         print(f"wrote {data_dir / 'tiling_info.bin'}")
 
