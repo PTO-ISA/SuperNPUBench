@@ -38,12 +38,12 @@
 #include <cstdint>
 
 namespace gn_grad_1d {
-// Caller-owned GM workspace [N*G,2]: c2,c3 for all groups.
+// Caller-owned GM workspace [2,N*G]: all c2 values, then all c3 values.
 inline int64_t workspace_elems(int64_t N, int64_t G) { return 2 * N * G; }
 
 // ---------------------------------------------------------------------------
 // Stage A1: channel reduce → c2/c3 for one (n, g)
-//   scratch[2] = {c2, c3}
+//   scratch points to c2[n,g]; c3[n,g] is at scratch + N*G.
 //
 // Torch: Compute1dBackwardFusedParamsCUDAKernel
 //   grid  = dim3(N, G)     // blockIdx.x=n, blockIdx.y=g；本函数 = 其中一个
@@ -66,7 +66,7 @@ inline void fused_params_group(dtype *dy, dtype *x, float *mean, float *rstd,
     gm_f gmean(mean + ng, static_cast<int>(N * G), 1);
     gm_f grstd(rstd + ng, static_cast<int>(N * G), 1);
     gm_f gc2(scratch + 0, 1, 1);
-    gm_f gc3(scratch + 1, 1, 1);
+    gm_f gc3(scratch + N * G, 1, 1);
 
     tile_v sum1(1), sum2(1);
     TEXPANDS(sum1, 0.0f);
@@ -141,7 +141,7 @@ inline void dx_group(dtype *dy, dtype *x, float *rstd, dtype *gamma,
         gm_h gdx(dx + offset, static_cast<int>(N), static_cast<int>(C));
         gm_f grstd(rstd + ng, static_cast<int>(N * G), 1);
         gm_f gc2(scratch + 0, 1, 1);
-        gm_f gc3(scratch + 1, 1, 1);
+        gm_f gc3(scratch + N * G, 1, 1);
 
         tile_h h0(1, active_d);
         tile_h h1(1, active_d);
@@ -182,7 +182,7 @@ inline void dx_group(dtype *dy, dtype *x, float *rstd, dtype *gamma,
 // Small-D block: logical [active_g,D], physical [32,256] FP32 = 32 KiB.
 template <typename dtype>
 inline void dx_groups(dtype *dy, dtype *x, float *rstd, dtype *gamma,
-                      float *workspace, dtype *dx, int64_t C, int64_t G,
+                      float *workspace, dtype *dx, int64_t N, int64_t C, int64_t G,
                       int64_t D, int64_t n, int64_t g0, int64_t active_g) {
     using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
@@ -196,8 +196,8 @@ inline void dx_groups(dtype *dy, dtype *x, float *rstd, dtype *gamma,
     gm_h gg(gamma + g0 * D, static_cast<int>(active_g), static_cast<int>(D));
     gm_h gout(dx + offset, static_cast<int>(active_g), static_cast<int>(D));
     gm_f gr(rstd + ng, static_cast<int>(active_g), 1);
-    gm_f gc2(workspace + 2 * ng, static_cast<int>(active_g), 2);
-    gm_f gc3(workspace + 2 * ng + 1, static_cast<int>(active_g), 2);
+    gm_f gc2(workspace + ng, static_cast<int>(active_g), 1);
+    gm_f gc3(workspace + N * G + ng, static_cast<int>(active_g), 1);
     htile h(active_g, D);
     ftile xf(active_g, D), dyf(active_g, D), gf(active_g, D), out(active_g, D);
     vtile r(active_g), c2(active_g), c3(active_g);
@@ -403,7 +403,7 @@ __attribute__((noinline)) void group_norm_grad_1d_fused_params(
         const int64_t end_g = g0 + tile_g < G ? g0 + tile_g : G;
         for (int64_t g = g0; g < end_g; ++g) {
             gn_grad_1d::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-                dy, x, mean, rstd, gamma, workspace + 2 * (n * G + g),
+                dy, x, mean, rstd, gamma, workspace + n * G + g,
                 N, C, G, D, n, g, s, tile_d);
         }
     }
@@ -453,10 +453,10 @@ __attribute__((noinline)) void group_norm_grad_1d_dx(
         const int64_t active_g = G - g0 < tile_g ? G - g0 : tile_g;
         if (D <= 256 && tile_g > 1) {
             gn_grad_1d::dx_groups(dy, x, rstd, gamma, workspace, dx,
-                                  C, G, D, n, g0, active_g);
+                                  N, C, G, D, n, g0, active_g);
         } else {
             gn_grad_1d::dx_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-                dy, x, rstd, gamma, workspace + 2 * (n * G + g0),
+                dy, x, rstd, gamma, workspace + n * G + g0,
                 dx, N, C, G, D, n, g0, tile_d);
         }
     }

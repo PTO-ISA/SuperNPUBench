@@ -29,7 +29,7 @@
 namespace {
 template <typename dtype>
 constexpr int64_t group_norm_tile_hw(int64_t spatial_size) {
-    constexpr int64_t kTileCapacity = 8192;
+    constexpr int64_t kTileCapacity = 512;
     return spatial_size < kTileCapacity ? spatial_size : kTileCapacity;
 }
 } // namespace
@@ -103,16 +103,8 @@ int main() {
     }
 #endif
 
-    constexpr int64_t kGroupWidth = C_CH / G_GRP;
-    constexpr int64_t kMinHalfTile = 512 / sizeof(dtype);
-    constexpr int64_t kMinFloatTile = 512 / sizeof(float);
-    if constexpr (HxW_SZ < kMinHalfTile || kGroupWidth < kMinFloatTile) {
-        gn_grad::group_norm_grad_small<dtype, PE_NUM>(
-            dy, x, mean, rstd, gamma, tiling_info, dx, dgamma, dbeta, workspace);
-    } else {
-        group_norm_grad<dtype, PE_NUM>(dy, x, mean, rstd, gamma, tiling_info,
+    group_norm_grad<dtype, PE_NUM>(dy, x, mean, rstd, gamma, tiling_info,
                                       dx, dgamma, dbeta, workspace);
-    }
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

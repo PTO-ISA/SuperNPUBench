@@ -9,7 +9,7 @@ Bins:
   golden_dx / golden_dgamma / golden_dbeta : float16
 
 Math matches PyTorch GroupNormBackward (HxW>1): spatial ds/db then fused c2/c3.
-Default: N=2, C=32, G=8, HxW=2024 (D=4), tile_hw=min(HxW, 8192)=2024.
+Default: N=2, C=32, G=8, HxW=2024 (D=4), tile_hw=min(HxW, 512)=512.
 """
 
 from __future__ import annotations
@@ -239,9 +239,9 @@ def main() -> None:
     parser.add_argument("--also-src-data", action="store_true")
     args = parser.parse_args()
 
-    tile_hw = min(args.hxw, 8192) if args.tile_hw is None else args.tile_hw
-    if tile_hw <= 0 or tile_hw > min(args.hxw, 8192):
-        parser.error("tile-hw must be in [1, min(HxW, 8192)]")
+    tile_hw = min(args.hxw, 512) if args.tile_hw is None else args.tile_hw
+    if tile_hw <= 0 or tile_hw > min(args.hxw, 512):
+        parser.error("tile-hw must be in [1, min(HxW, 512)]")
 
     gen_all(
         args.out_dir,
