@@ -9,15 +9,16 @@
 //   Stage B   dgamma / dbeta
 //
 // Layout: X/dY/dX [N,C]; mean/rstd [N,G] fp32; gamma/dgamma/dbeta [C]
-// All pointers required (dy,x,mean,rstd,gamma,dx,dgamma,dbeta).
+// All pointers required, including caller-owned workspace of 2*N*G floats.
+// Each PE writes its own parameters before consuming them in Stage A2.
 //
-// tiling[4] = {N, C, G, tile_d}
+// tiling[7] = {N, C, G, tile_d, tile_g, gb_tile_d, gb_tile_g}
 //   tile_d <= 0 → min(D, tD); channel R-split on dgamma/dbeta when D > tile_d.
-//   Stage A requires D <= tD (one tile).
+//   Stage A and B split arbitrary D into tiles, including partial tails.
 //
-// Tile capacity: logical tile >= 512B (TileOP IsValidActiveSize / TSize=1..7).
-//   fp16 → Cols>=256; fp32 data tiles → Cols>=128. Reduction/broadcast
-//   tile_v follows the hardware contract and uses physical Columns=1.
+// Data tiles: 8192 columns, FP32 32 KiB and FP16 16 KiB.
+// Parameter reduction uses 512-column strips (FP32 2 KiB).
+// Reduction/broadcast outputs retain physical Columns=1.
 // Reduce and dX are separate passes so large tiles do not stay live across both.
 //
 // Torch CUDA launch 总览 (NVIDIA, warp=32; HxW==1 特化):
@@ -37,72 +38,8 @@
 #include <cstdint>
 
 namespace gn_grad_1d {
-
-
-// Scalar fallback for group widths below the minimum encodable Tile active
-// width. It preserves the dense [N,C] ABI and partitions work across 4 PEs.
-template <typename dtype, int peNum>
-void group_norm_grad_1d_small(dtype *dy, dtype *x, float *mean, float *rstd,
-                              dtype *gamma, const int64_t *tiling, dtype *dx,
-                              dtype *dgamma, dtype *dbeta) {
-    static_assert(peNum == 4, "normalization kernels support only 4PE");
-    const int64_t N = tiling[0];
-    const int64_t C = tiling[1];
-    const int64_t G = tiling[2];
-    const uint32_t tid = get_thread_idx();
-    if (N <= 0 || C <= 0 || G <= 0 || C % G != 0 ||
-        tid >= static_cast<uint32_t>(peNum)) {
-        return;
-    }
-
-    const int64_t D = C / G;
-    const float s = 1.0f / static_cast<float>(D);
-    for (int64_t ng = tid; ng < N * G; ng += peNum) {
-        const int64_t n = ng / G;
-        const int64_t g = ng % G;
-        const int64_t c0 = g * D;
-        float sum1 = 0.0f;
-        float sum2 = 0.0f;
-        for (int64_t d = 0; d < D; ++d) {
-            const int64_t i = n * C + c0 + d;
-            const float dy_v = static_cast<float>(dy[i]);
-            const float x_v = static_cast<float>(x[i]);
-            const float gamma_v = static_cast<float>(gamma[c0 + d]);
-            sum1 += dy_v * x_v * gamma_v;
-            sum2 += dy_v * gamma_v;
-        }
-        const float mean_v = mean[ng];
-        const float rstd_v = rstd[ng];
-        const float c2 = (sum2 * mean_v - sum1) * rstd_v * rstd_v *
-                         rstd_v * s;
-        const float c3 = -c2 * mean_v - sum2 * rstd_v * s;
-        for (int64_t d = 0; d < D; ++d) {
-            const int64_t c = c0 + d;
-            const int64_t i = n * C + c;
-            const float value = rstd_v * static_cast<float>(gamma[c]) *
-                                    static_cast<float>(dy[i]) +
-                                c2 * static_cast<float>(x[i]) + c3;
-            dx[i] = static_cast<dtype>(value);
-        }
-    }
-
-    for (int64_t c = tid; c < C; c += peNum) {
-        const int64_t g = c / D;
-        float dgamma_acc = 0.0f;
-        float dbeta_acc = 0.0f;
-        for (int64_t n = 0; n < N; ++n) {
-            const int64_t i = n * C + c;
-            const int64_t ng = n * G + g;
-            const float dy_v = static_cast<float>(dy[i]);
-            dgamma_acc += dy_v * (static_cast<float>(x[i]) - mean[ng]) *
-                          rstd[ng];
-            dbeta_acc += dy_v;
-        }
-        dgamma[c] = static_cast<dtype>(dgamma_acc);
-        dbeta[c] = static_cast<dtype>(dbeta_acc);
-    }
-}
-
+// Caller-owned GM workspace [N*G,2]: c2,c3 for all groups.
+inline int64_t workspace_elems(int64_t N, int64_t G) { return 2 * N * G; }
 
 // ---------------------------------------------------------------------------
 // Stage A1: channel reduce → c2/c3 for one (n, g)
@@ -119,51 +56,45 @@ template <typename dtype, typename gm_h, typename gm_f, typename tile_h,
 inline void fused_params_group(dtype *dy, dtype *x, float *mean, float *rstd,
                                dtype *gamma, float *scratch, int64_t N,
                                int64_t C, int64_t G, int64_t D, int64_t n,
-                               int64_t g, float s) {
+                               int64_t g, float s, int64_t tile_d) {
     const int64_t ng = n * G + g;
     const int64_t c0 = g * D;
     const int64_t offset = n * C + c0;
-    const size_t active_d = static_cast<size_t>(D);
 
-    gm_h gdy(dy + offset, static_cast<int>(N), static_cast<int>(C));
-    gm_h gx(x + offset, static_cast<int>(N), static_cast<int>(C));
+
+
     gm_f gmean(mean + ng, static_cast<int>(N * G), 1);
     gm_f grstd(rstd + ng, static_cast<int>(N * G), 1);
     gm_f gc2(scratch + 0, 1, 1);
     gm_f gc3(scratch + 1, 1, 1);
 
-    tile_h h0(1, active_d);
-    tile_h h1(1, active_d);
-    tile_f x_f(1, active_d);
-    tile_f dy_f(1, active_d);
-    tile_f t0(1, active_d);
-    tile_f t1(1, active_d);
-    tile_v mean_t(1);
-    tile_v rstd_t(1);
-    tile_v sum1(1);
-    tile_v sum2(1);
-    tile_v c2(1);
-    tile_v c3(1);
-
-    // Torch: 各 thread 读本组一段通道；PTO 一次 Tile 覆盖整组 D
-    TLOAD(h0, gx);
-    TCVT(x_f, h0);
-    TLOAD(h0, gdy);
-    TCVT(dy_f, h0);
+    tile_v sum1(1), sum2(1);
+    TEXPANDS(sum1, 0.0f);
+    TEXPANDS(sum2, 0.0f);
+    for (int64_t d0 = 0; d0 < D; d0 += tile_d) {
+        const size_t vd = static_cast<size_t>(D - d0 < tile_d ? D - d0 : tile_d);
+        gm_h gdy(dy + offset + d0, static_cast<int>(N), static_cast<int>(C));
+        gm_h gx(x + offset + d0, static_cast<int>(N), static_cast<int>(C));
+        gm_h gg(gamma + c0 + d0, 1, static_cast<int>(C));
+        tile_h h(1, vd);
+        tile_f xf(1, vd), dyf(1, vd), gf(1, vd), prod(1, vd);
+        tile_v partial1(1), partial2(1);
+        TLOAD(h, gx);
+        TCVT(xf, h);
+        TLOAD(h, gdy);
+        TCVT(dyf, h);
+        TLOAD(h, gg);
+        TCVT(gf, h);
+        TMUL(prod, dyf, gf);
+        TROWSUM(partial2, prod);
+        TMUL(prod, prod, xf);
+        TROWSUM(partial1, prod);
+        TADD(sum1, sum1, partial1);
+        TADD(sum2, sum2, partial2);
+    }
+    tile_v mean_t(1), rstd_t(1), c2(1), c3(1);
     TLOAD(mean_t, gmean);
     TLOAD(rstd_t, grstd);
-
-    {
-        gm_h gg(gamma + c0, 1, static_cast<int>(C));
-        TLOAD(h1, gg);
-        TCVT(t0, h1); // gamma
-    }
-
-    // sum2 = Σ dy*gamma ; sum1 = Σ dy*gamma*x  ↔ thread 局部累加 + BlockReduce
-    TMUL(t1, dy_f, t0);
-    TROWSUM(sum2, t1);
-    TMUL(t1, t1, x_f);
-    TROWSUM(sum1, t1);
 
     // c2 = (sum2*mean - sum1) * rstd^3 * s   （归约后标量，通常 thread0 写）
     TMUL(c2, sum2, mean_t);
@@ -198,52 +129,91 @@ template <typename dtype, typename gm_h, typename gm_f, typename tile_h,
           typename tile_f, typename tile_v>
 inline void dx_group(dtype *dy, dtype *x, float *rstd, dtype *gamma,
                      float *scratch, dtype *dx, int64_t N, int64_t C,
-                     int64_t G, int64_t D, int64_t n, int64_t g) {
+                     int64_t G, int64_t D, int64_t n, int64_t g, int64_t tile_d) {
     const int64_t ng = n * G + g;
     const int64_t c0 = g * D;
-    const int64_t offset = n * C + c0;
-    const size_t active_d = static_cast<size_t>(D);
+    for (int64_t d0 = 0; d0 < D; d0 += tile_d) {
+        const int64_t offset = n * C + c0 + d0;
+        const size_t active_d = static_cast<size_t>(D - d0 < tile_d ? D - d0 : tile_d);
 
-    gm_h gdy(dy + offset, static_cast<int>(N), static_cast<int>(C));
-    gm_h gx(x + offset, static_cast<int>(N), static_cast<int>(C));
-    gm_h gdx(dx + offset, static_cast<int>(N), static_cast<int>(C));
-    gm_f grstd(rstd + ng, static_cast<int>(N * G), 1);
-    gm_f gc2(scratch + 0, 1, 1);
-    gm_f gc3(scratch + 1, 1, 1);
+        gm_h gdy(dy + offset, static_cast<int>(N), static_cast<int>(C));
+        gm_h gx(x + offset, static_cast<int>(N), static_cast<int>(C));
+        gm_h gdx(dx + offset, static_cast<int>(N), static_cast<int>(C));
+        gm_f grstd(rstd + ng, static_cast<int>(N * G), 1);
+        gm_f gc2(scratch + 0, 1, 1);
+        gm_f gc3(scratch + 1, 1, 1);
 
-    tile_h h0(1, active_d);
-    tile_h h1(1, active_d);
-    tile_f x_f(1, active_d);
-    tile_f dy_f(1, active_d);
-    tile_f t0(1, active_d);
-    tile_f t1(1, active_d);
-    tile_v rstd_t(1);
-    tile_v c2(1);
-    tile_v c3(1);
+        tile_h h0(1, active_d);
+        tile_h h1(1, active_d);
+        tile_f x_f(1, active_d);
+        tile_f dy_f(1, active_d);
+        tile_f t0(1, active_d);
+        tile_f t1(1, active_d);
+        tile_v rstd_t(1);
+        tile_v c2(1);
+        tile_v c3(1);
 
-    TLOAD(h0, gx);
-    TCVT(x_f, h0);
-    TLOAD(h0, gdy);
-    TCVT(dy_f, h0);
-    TLOAD(rstd_t, grstd);
+        TLOAD(h0, gx);
+        TCVT(x_f, h0);
+        TLOAD(h0, gdy);
+        TCVT(dy_f, h0);
+        TLOAD(rstd_t, grstd);
+        TLOAD(c2, gc2);
+        TLOAD(c3, gc3);
+
+        {
+            gm_h gg(gamma + c0 + d0, 1, static_cast<int>(C));
+            TLOAD(h1, gg);
+            TCVT(t0, h1); // gamma
+        }
+
+        // dX = (rstd*gamma)*dY + c2*X + c3
+        TROWEXPANDMUL(t1, t0, rstd_t);
+        TMUL(t1, t1, dy_f);
+        TROWEXPANDMUL(t0, x_f, c2);
+        TADD(t1, t1, t0);
+        TROWEXPANDADD(t1, t1, c3);
+
+        TCVT(h0, t1);
+        TSTORE(gdx, h0);
+    }
+}
+
+// Small-D block: logical [active_g,D], physical [32,256] FP32 = 32 KiB.
+template <typename dtype>
+inline void dx_groups(dtype *dy, dtype *x, float *rstd, dtype *gamma,
+                      float *workspace, dtype *dx, int64_t C, int64_t G,
+                      int64_t D, int64_t n, int64_t g0, int64_t active_g) {
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
+    using htile = Tile<Location::Vec, dtype, 32, 256, BLayout::RowMajor, -1, -1>;
+    using ftile = Tile<Location::Vec, float, 32, 256, BLayout::RowMajor, -1, -1>;
+    using vtile = Tile<Location::Vec, float, 32, 1, BLayout::RowMajor, -1, 1>;
+    const int64_t ng = n * G + g0;
+    const int64_t offset = n * C + g0 * D;
+    gm_h gx(x + offset, static_cast<int>(active_g), static_cast<int>(D));
+    gm_h gdy(dy + offset, static_cast<int>(active_g), static_cast<int>(D));
+    gm_h gg(gamma + g0 * D, static_cast<int>(active_g), static_cast<int>(D));
+    gm_h gout(dx + offset, static_cast<int>(active_g), static_cast<int>(D));
+    gm_f gr(rstd + ng, static_cast<int>(active_g), 1);
+    gm_f gc2(workspace + 2 * ng, static_cast<int>(active_g), 2);
+    gm_f gc3(workspace + 2 * ng + 1, static_cast<int>(active_g), 2);
+    htile h(active_g, D);
+    ftile xf(active_g, D), dyf(active_g, D), gf(active_g, D), out(active_g, D);
+    vtile r(active_g), c2(active_g), c3(active_g);
+    TLOAD(h, gx); TCVT(xf, h);
+    TLOAD(h, gdy); TCVT(dyf, h);
+    TLOAD(h, gg); TCVT(gf, h);
+    TLOAD(r, gr);
     TLOAD(c2, gc2);
     TLOAD(c3, gc3);
-
-    {
-        gm_h gg(gamma + c0, 1, static_cast<int>(C));
-        TLOAD(h1, gg);
-        TCVT(t0, h1); // gamma
-    }
-
-    // dX = (rstd*gamma)*dY + c2*X + c3
-    TROWEXPANDMUL(t1, t0, rstd_t);
-    TMUL(t1, t1, dy_f);
-    TROWEXPANDMUL(t0, x_f, c2);
-    TADD(t1, t1, t0);
-    TROWEXPANDADD(t1, t1, c3);
-
-    TCVT(h0, t1);
-    TSTORE(gdx, h0);
+    TROWEXPANDMUL(out, gf, r);
+    TMUL(out, out, dyf);
+    TROWEXPANDMUL(xf, xf, c2);
+    TADD(out, out, xf);
+    TROWEXPANDADD(out, out, c3);
+    TCVT(h, out);
+    TSTORE(gout, h);
 }
 
 // ---------------------------------------------------------------------------
@@ -338,23 +308,65 @@ inline void dgamma_group(dtype *dy, dtype *x, float *mean, float *rstd,
     }
 }
 
+// Stage B two-dimensional block: rows are groups, columns are channels within
+// a group. GM row stride remains D even for a partial channel tile.
+template <typename dtype>
+inline void gamma_beta_groups(dtype *dy, dtype *x, float *mean, float *rstd,
+                              dtype *dgamma, dtype *dbeta, int64_t N, int64_t C,
+                              int64_t G, int64_t D, int64_t g0, int64_t d0,
+                              int64_t active_g, int64_t active_d) {
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
+    using ht = Tile<Location::Vec, dtype, 32, 256, BLayout::RowMajor, -1, -1>;
+    using ft = Tile<Location::Vec, float, 32, 256, BLayout::RowMajor, -1, -1>;
+    using vt = Tile<Location::Vec, float, 32, 1, BLayout::RowMajor, -1, 1>;
+    ht h(active_g, active_d);
+    ft dyf(active_g, active_d), xf(active_g, active_d), tmp(active_g, active_d);
+    ft beta(active_g, active_d), grad(active_g, active_d);
+    vt m(active_g), r(active_g);
+    TEXPANDS(beta, 0.0f);
+    TEXPANDS(grad, 0.0f);
+    for (int64_t n = 0; n < N; ++n) {
+        const int64_t offset = n * C + g0 * D + d0;
+        gm_h gdy(dy + offset, static_cast<int>(active_g), static_cast<int>(D));
+        gm_h gx(x + offset, static_cast<int>(active_g), static_cast<int>(D));
+        gm_f gm(mean + n * G + g0, static_cast<int>(active_g), 1);
+        gm_f gr(rstd + n * G + g0, static_cast<int>(active_g), 1);
+        TLOAD(h, gdy);
+        TCVT(dyf, h);
+        TADD(beta, beta, dyf);
+        TLOAD(h, gx);
+        TCVT(xf, h);
+        TLOAD(m, gm);
+        TLOAD(r, gr);
+        // Preserve the original FP32 operation order for dgamma.
+        TROWEXPANDMUL(tmp, xf, r);
+        TMUL(tmp, tmp, dyf);
+        TROWEXPANDMUL(xf, dyf, m);
+        TROWEXPANDMUL(xf, xf, r);
+        TSUB(tmp, tmp, xf);
+        TADD(grad, grad, tmp);
+    }
+    gm_h gb(dbeta + g0 * D + d0, static_cast<int>(active_g), static_cast<int>(D));
+    gm_h gg(dgamma + g0 * D + d0, static_cast<int>(active_g), static_cast<int>(D));
+    TCVT(h, beta);
+    TSTORE(gb, h);
+    TCVT(h, grad);
+    TSTORE(gg, h);
+}
+
 } // namespace gn_grad_1d
 
-// tiling: [N, C, G, tile_d]
-//
-// 入口循环 ↔ Torch grid：
-//   for n,g fused_params + dx_group  ↔ grid=dim3(N,G) 再接 numel 上 gpu_kernel
-//   for g  dbeta/dgamma              ↔ Kernel1/2 按通道写回
+// Three separate 4PE kernels; tiling = [N, C, G, tile_d, tile_g, gb_tile_d, gb_tile_g].
+// Call stages in order with identical PE ownership for parameters and dx.
 template <typename dtype, int peNum>
-void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
-                        dtype *gamma, const int64_t *tiling, dtype *dx,
-                        dtype *dgamma, dtype *dbeta) {
+__attribute__((noinline)) void group_norm_grad_1d_fused_params(
+    dtype *dy, dtype *x, float *mean, float *rstd,
+    dtype *gamma, const int64_t *tiling, float *workspace) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
-    // Capacity in elements: every Tile buffer >= 512B (dtype strip + float strip).
-    constexpr int64_t tDDtype =
-        (512 + static_cast<int64_t>(sizeof(dtype)) - 1) /
-        static_cast<int64_t>(sizeof(dtype));
-    constexpr int64_t tD = tDDtype > 128 ? tDDtype : 128;
+    // TROWSUM source descriptor is limited to 2048 bytes in this model.
+    // Keep this reduction strip at 512 FP32 elements; other stages use 32 KiB.
+    constexpr int64_t tD = 512;
     constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
 
     const int64_t N = tiling[0];
@@ -366,8 +378,9 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
         return;
     }
     const int64_t D = C / G;
-    const int64_t tile_d = tiling[3] > 0 ? tiling[3] : (D < tD ? D : tD);
-    if (tile_d <= 0 || tile_d > tD || D > tD) {
+    const int64_t requested_d = tiling[3] > 0 ? tiling[3] : D;
+    const int64_t tile_d = requested_d < tD ? requested_d : tD;
+    if (tile_d <= 0 || tile_d > tD) {
         return;
     }
 
@@ -380,19 +393,126 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
     using tile_v =
         Tile<Location::Vec, float, 1, tV, BLayout::RowMajor, -1, 1>;
 
+    const int64_t tile_g = tiling[4];
+    if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1)) return;
+    const int64_t outer_g = (G + tile_g - 1) / tile_g;
     const float s = 1.0f / static_cast<float>(D);
-    float scratch[2]; // c2, c3 for one (n,g)
+    for (int64_t task = tid; task < N * outer_g; task += peNum) {
+        const int64_t n = task / outer_g;
+        const int64_t g0 = (task % outer_g) * tile_g;
+        const int64_t end_g = g0 + tile_g < G ? g0 + tile_g : G;
+        for (int64_t g = g0; g < end_g; ++g) {
+            gn_grad_1d::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
+                dy, x, mean, rstd, gamma, workspace + 2 * (n * G + g),
+                N, C, G, D, n, g, s, tile_d);
+        }
+    }
+}
 
-    for (int64_t ng = tid; ng < N * G; ng += peNum) {
-        const int64_t n = ng / G;
-        const int64_t g = ng % G;
-        gn_grad_1d::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f,
-                                       tile_v>(dy, x, mean, rstd, gamma,
-                                               scratch, N, C, G, D, n, g, s);
-        gn_grad_1d::dx_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-            dy, x, rstd, gamma, scratch, dx, N, C, G, D, n, g);
+template <typename dtype, int peNum>
+__attribute__((noinline)) void group_norm_grad_1d_dx(
+    dtype *dy, dtype *x, float *rstd, dtype *gamma,
+    const int64_t *tiling, float *workspace, dtype *dx) {
+    static_assert(peNum == 4, "normalization kernels support only 4PE");
+    // FP32 Tile: 32 KiB (8192 columns); FP16: 16 KiB, matching TCVT shape.
+    constexpr int64_t tDDtype =
+        (32768 + static_cast<int64_t>(sizeof(dtype)) - 1) /
+        static_cast<int64_t>(sizeof(dtype));
+    constexpr int64_t tD = tDDtype < 8192 ? tDDtype : 8192;
+    constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
+
+    const int64_t N = tiling[0];
+    const int64_t C = tiling[1];
+    const int64_t G = tiling[2];
+    const uint32_t tid = get_thread_idx();
+    if (N <= 0 || C <= 0 || G <= 0 || C % G != 0 ||
+        tid >= static_cast<uint32_t>(peNum)) {
+        return;
+    }
+    const int64_t D = C / G;
+    const int64_t tile_d = tiling[3] > 0 ? tiling[3] : (D < tD ? D : tD);
+    if (tile_d <= 0 || tile_d > tD) {
+        return;
     }
 
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
+    using tile_h =
+        Tile<Location::Vec, dtype, 1, tD, BLayout::RowMajor, -1, -1>;
+    using tile_f =
+        Tile<Location::Vec, float, 1, tD, BLayout::RowMajor, -1, -1>;
+    using tile_v =
+        Tile<Location::Vec, float, 1, tV, BLayout::RowMajor, -1, 1>;
+
+    const int64_t tile_g = tiling[4];
+    if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1)) return;
+    const int64_t outer_g = (G + tile_g - 1) / tile_g;
+    for (int64_t task = tid; task < N * outer_g; task += peNum) {
+        const int64_t n = task / outer_g;
+        const int64_t g0 = (task % outer_g) * tile_g;
+        const int64_t active_g = G - g0 < tile_g ? G - g0 : tile_g;
+        if (D <= 256 && tile_g > 1) {
+            gn_grad_1d::dx_groups(dy, x, rstd, gamma, workspace, dx,
+                                  C, G, D, n, g0, active_g);
+        } else {
+            gn_grad_1d::dx_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
+                dy, x, rstd, gamma, workspace + 2 * (n * G + g0),
+                dx, N, C, G, D, n, g0, tile_d);
+        }
+    }
+}
+
+template <typename dtype, int peNum>
+__attribute__((noinline)) void group_norm_grad_1d_gamma_beta(
+    dtype *dy, dtype *x, float *mean, float *rstd,
+    const int64_t *tiling, dtype *dgamma, dtype *dbeta) {
+    static_assert(peNum == 4, "normalization kernels support only 4PE");
+    // FP32 Tile: 32 KiB (8192 columns); FP16: 16 KiB, matching TCVT shape.
+    constexpr int64_t tDDtype =
+        (32768 + static_cast<int64_t>(sizeof(dtype)) - 1) /
+        static_cast<int64_t>(sizeof(dtype));
+    constexpr int64_t tD = tDDtype < 8192 ? tDDtype : 8192;
+    constexpr int64_t tV = 1; // row-reduction/broadcast physical Columns=1
+
+    const int64_t N = tiling[0];
+    const int64_t C = tiling[1];
+    const int64_t G = tiling[2];
+    const uint32_t tid = get_thread_idx();
+    if (N <= 0 || C <= 0 || G <= 0 || C % G != 0 ||
+        tid >= static_cast<uint32_t>(peNum)) {
+        return;
+    }
+    const int64_t D = C / G;
+    const int64_t tile_d = tiling[5] > 0 ? tiling[5] : (D < tD ? D : tD);
+    if (tile_d <= 0 || tile_d > tD) {
+        return;
+    }
+
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
+    using tile_h =
+        Tile<Location::Vec, dtype, 1, tD, BLayout::RowMajor, -1, -1>;
+    using tile_f =
+        Tile<Location::Vec, float, 1, tD, BLayout::RowMajor, -1, -1>;
+    using tile_v =
+        Tile<Location::Vec, float, 1, tV, BLayout::RowMajor, -1, 1>;
+
+    const int64_t tile_g = tiling[6];
+    if (tile_g < 1 || tile_g > 32 || (tile_d > 256 && tile_g != 1)) return;
+    if (tile_d <= 256) {
+        const int64_t outer_g = (G + tile_g - 1) / tile_g;
+        const int64_t outer_d = (D + tile_d - 1) / tile_d;
+        // Each PE owns complete output blocks; N is reduced locally.
+        for (int64_t task = tid; task < outer_g * outer_d; task += peNum) {
+            const int64_t g0 = (task / outer_d) * tile_g;
+            const int64_t d0 = (task % outer_d) * tile_d;
+            const int64_t vg = G - g0 < tile_g ? G - g0 : tile_g;
+            const int64_t vd = D - d0 < tile_d ? D - d0 : tile_d;
+            gn_grad_1d::gamma_beta_groups(dy, x, mean, rstd, dgamma, dbeta,
+                                         N, C, G, D, g0, d0, vg, vd);
+        }
+        return;
+    }
     for (int64_t g = tid; g < G; g += peNum) {
         gn_grad_1d::dbeta_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
             dy, dbeta, N, C, D, tile_d, g);
@@ -400,5 +520,6 @@ void group_norm_grad_1d(dtype *dy, dtype *x, float *mean, float *rstd,
             dy, x, mean, rstd, dgamma, N, C, G, D, tile_d, g);
     }
 }
+
 
 #endif // SUPERNPU_GROUP_NORM_GRAD_1D_PTO_HPP

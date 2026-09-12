@@ -27,10 +27,10 @@ namespace {
 template <typename dtype>
 constexpr int64_t group_norm_1d_tile_d(int64_t channels, int64_t groups) {
     constexpr int64_t kDtypeCapacity =
-        (512 + static_cast<int64_t>(sizeof(dtype)) - 1) /
+        (32768 + static_cast<int64_t>(sizeof(dtype)) - 1) /
         static_cast<int64_t>(sizeof(dtype));
     constexpr int64_t kTileCapacity =
-        kDtypeCapacity > 128 ? kDtypeCapacity : 128;
+        kDtypeCapacity < 8192 ? kDtypeCapacity : 8192;
     const int64_t group_width = channels / groups;
     return group_width < kTileCapacity ? group_width : kTileCapacity;
 }
@@ -47,11 +47,28 @@ volatile uint32_t output_written = 0;
 int main() {
     using dtype = DType;
 
-    // tiling: {N, C, G, tile_d}
+    // tiling: {N, C, G, tile_d, tile_g, gb_tile_d, gb_tile_g}
     constexpr int64_t kTileD = group_norm_1d_tile_d<dtype>(C_CH, G_GRP);
     static_assert(N_BATCH > 0 && C_CH > 0 && G_GRP > 0);
     static_assert(C_CH % G_GRP == 0 && kTileD > 0);
-    int64_t tiling_info[4] = {N_BATCH, C_CH, G_GRP, kTileD};
+    // Small-D physical row stride is 256 FP32 elements: 32 KiB / 1024 = 32 rows.
+    constexpr int64_t kTileG = C_CH / G_GRP <= 256 ? (G_GRP < 32 ? G_GRP : 32) : 1;
+    // Separate Stage B tiling, with optional validation overrides.
+#ifndef GB_TILE_D
+#define GB_TILE_D 0
+#endif
+#ifndef GB_TILE_G
+#define GB_TILE_G 0
+#endif
+    constexpr int64_t kGbTileD = GB_TILE_D > 0 ? GB_TILE_D : kTileD;
+    constexpr int64_t kGbRowCapacity = 32768 / (256 * sizeof(float));
+    constexpr int64_t kGbTileG = GB_TILE_G > 0 ? GB_TILE_G :
+        (kGbTileD <= 256 ? (G_GRP < kGbRowCapacity ? G_GRP : kGbRowCapacity) : 1);
+    static_assert(kGbTileD > 0 && kGbTileD <= 8192);
+    static_assert(kGbTileG > 0 && kGbTileG <= kGbRowCapacity);
+    static_assert(kGbTileD <= 256 || kGbTileG == 1);
+    int64_t tiling_info[7] = {N_BATCH, C_CH, G_GRP, kTileD, kTileG,
+                              kGbTileD, kGbTileG};
 
     const int64_t N = tiling_info[0];
     const int64_t C = tiling_info[1];
@@ -65,6 +82,7 @@ int main() {
     static dtype dx_buf[N_BATCH * C_CH];
     static dtype dgamma_buf[C_CH];
     static dtype dbeta_buf[C_CH];
+    static float params_workspace[2 * N_BATCH * G_GRP];
 
     dtype *dy = dy_buf;
     dtype *x = x_buf;
@@ -98,15 +116,14 @@ int main() {
     }
 #endif
 
-    constexpr int64_t kGroupWidth = C_CH / G_GRP;
-    constexpr int64_t kMinFloatTile = 512 / sizeof(float);
-    if constexpr (kGroupWidth < kMinFloatTile) {
-        gn_grad_1d::group_norm_grad_1d_small<dtype, PE_NUM>(
-            dy, x, mean, rstd, gamma, tiling_info, dx, dgamma, dbeta);
-    } else {
-        group_norm_grad_1d<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
-                                         tiling_info, dx, dgamma, dbeta);
-    }
+    group_norm_grad_1d_fused_params<dtype, PE_NUM>(
+        dy, x, mean, rstd, gamma, tiling_info, params_workspace);
+    // Each PE consumes only the parameter groups it produced above.
+    // Add a stage barrier if parameters and dx use different PE ownership.
+    group_norm_grad_1d_dx<dtype, PE_NUM>(
+        dy, x, rstd, gamma, tiling_info, params_workspace, dx);
+    group_norm_grad_1d_gamma_beta<dtype, PE_NUM>(
+        dy, x, mean, rstd, tiling_info, dgamma, dbeta);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;
@@ -121,6 +138,8 @@ int main() {
                         static_cast<size_t>(C) * sizeof(dtype));
         writeBinaryFile(CHK_DIR "/dbeta.bin", (uint8_t *)dbeta,
                         static_cast<size_t>(C) * sizeof(dtype));
+        writeBinaryFile(CHK_DIR "/fused_params.bin", (uint8_t *)params_workspace,
+                        static_cast<size_t>(2 * N * G) * sizeof(float));
         output_written = 1;
     } else {
         while (output_written == 0) {

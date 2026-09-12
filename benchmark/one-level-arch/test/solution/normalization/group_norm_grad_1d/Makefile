@@ -3,6 +3,9 @@ C_CH ?= 256
 G_GRP ?= 8
 DType ?= __half
 PE_NUM ?= 4
+GB_TILE_D ?= 0
+GB_TILE_G ?= 0
+DEFINES += -DGB_TILE_D=$(GB_TILE_D) -DGB_TILE_G=$(GB_TILE_G)
 ifneq ($(PE_NUM),4)
 $(error group_norm_grad_1d supports only the dynamic 4PE testcase)
 endif

@@ -2,14 +2,14 @@
 """Generate group_norm_grad_1d host bins (HxW==1, pure Python, no numpy).
 
 Bins written to --out-dir:
-  tiling_info.bin  : 4 x int64 LE = (N, C, G, tile_d)
+  tiling_info.bin  : 7 x int64 LE = (N, C, G, tile_d, tile_g, gb_tile_d, gb_tile_g)
   dy.bin / x.bin   : N*C x float16
   mean.bin/rstd.bin: N*G x float32
   gamma.bin        : C x float16
   golden_dx.bin / golden_dgamma.bin / golden_dbeta.bin : float16
 
 Math matches PyTorch GroupNorm1dBackward (fp32 accumulate, cast to fp16).
-Default: N=256, C=256, G=8 (D=32), tile_d=min(D, 256)=32.
+Default: N=256, C=256, G=8 (D=32), tile_d=min(D, 8192)=32.
 """
 
 from __future__ import annotations
@@ -175,6 +175,8 @@ def gen_all(
     tile_d: int,
     eps: float,
     seed: int,
+    gb_tile_d: int,
+    gb_tile_g: int,
 ) -> None:
     assert C % G == 0, "C must be divisible by G"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -187,7 +189,7 @@ def gen_all(
 
     dx, dgamma, dbeta = group_norm_grad_1d_ref(dy, x, mean, rstd, gamma, N, C, G)
 
-    (out_dir / "tiling_info.bin").write_bytes(struct.pack("<4q", N, C, G, tile_d))
+    (out_dir / "tiling_info.bin").write_bytes(struct.pack("<7q", N, C, G, tile_d, min(G, 32) if C // G <= 256 else 1, gb_tile_d, gb_tile_g))
     (out_dir / "dy.bin").write_bytes(pack_f16(dy))
     (out_dir / "x.bin").write_bytes(pack_f16(x))
     (out_dir / "mean.bin").write_bytes(pack_f32(mean))
@@ -198,7 +200,7 @@ def gen_all(
     (out_dir / "golden_dbeta.bin").write_bytes(pack_f16(dbeta))
 
     print(f"wrote {out_dir}")
-    print(f"  shape N={N} C={C} G={G} D={C // G} tile_d={tile_d}")
+    print(f"  shape N={N} C={C} G={G} D={C // G} tile_d={tile_d} gb_tile_d={gb_tile_d} gb_tile_g={gb_tile_g}")
     print(f"  elems: X/dY/dX={N * C}, mean/rstd={N * G}, gamma={C}")
 
 
@@ -208,6 +210,8 @@ def main() -> None:
     parser.add_argument("--c", type=int, default=256)
     parser.add_argument("--g", type=int, default=8)
     parser.add_argument("--tile-d", type=int, default=None)
+    parser.add_argument("--gb-tile-d", type=int, default=0)
+    parser.add_argument("--gb-tile-g", type=int, default=0)
     parser.add_argument("--eps", type=float, default=1e-5)
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("-o", "--out-dir", type=Path, default=DEFAULT_CMP_DIR)
@@ -220,16 +224,23 @@ def main() -> None:
 
     if args.g <= 0 or args.c % args.g != 0:
         parser.error("C must be divisible by positive G")
-    tile_d = min(args.c // args.g, 256) if args.tile_d is None else args.tile_d
-    if tile_d <= 0 or tile_d > min(args.c // args.g, 256):
-        parser.error("tile-d must be in [1, min(C/G, 256)]")
+    tile_d = min(args.c // args.g, 8192) if args.tile_d is None else args.tile_d
+    if tile_d <= 0 or tile_d > min(args.c // args.g, 8192):
+        parser.error("tile-d must be in [1, min(C/G, 8192)]")
 
-    gen_all(args.out_dir, args.n, args.c, args.g, tile_d, args.eps, args.seed)
+    gb_tile_d = args.gb_tile_d if args.gb_tile_d != 0 else tile_d
+    gb_tile_g = args.gb_tile_g if args.gb_tile_g != 0 else (min(args.g, 32) if gb_tile_d <= 256 else 1)
+    if not 1 <= gb_tile_d <= 8192 or not 1 <= gb_tile_g <= 32:
+        parser.error("gb-tile-d must be 1..8192; gb-tile-g must be 1..32")
+    if gb_tile_d > 256 and gb_tile_g != 1:
+        parser.error("gb-tile-g must be 1 when gb-tile-d exceeds 256")
+    gen_all(args.out_dir, args.n, args.c, args.g, tile_d, args.eps, args.seed,
+            gb_tile_d, gb_tile_g)
     if args.also_src_data:
         data_dir = SCRIPT_DIR / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
         (data_dir / "tiling_info.bin").write_bytes(
-            struct.pack("<4q", args.n, args.c, args.g, tile_d)
+            struct.pack("<7q", args.n, args.c, args.g, tile_d, min(args.g, 32) if args.c // args.g <= 256 else 1, gb_tile_d, gb_tile_g)
         )
         print(f"wrote {data_dir / 'tiling_info.bin'}")
 
