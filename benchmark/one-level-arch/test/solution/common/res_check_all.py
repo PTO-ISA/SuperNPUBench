@@ -107,13 +107,69 @@ _DMXQ = [
     ("nontail_ocp_fp4_bigbs",  "FP4", "compact", False),
 ]
 
+# ---- normalization 族（rms_norm / rms_norm_binary / group_norm_grad / group_norm_grad_1d）：
+#      compile.all 未集成 gen → prepare 调各自 gen 脚本生成 input+golden 到 case_dir；
+#      verify 调各自 compare 脚本（--cmp-dir case_dir，退出码 0=PASS）。gen/compare 默认参数
+#      已对齐 compile.all（rms_norm 由其 run_precision_check.py 佐证 ELF 名与目录约定）。----
+def make_prep_gen(gen_rel: str):
+    def _prep(case_dir):
+        gen = ROOT / "test/solution" / gen_rel
+        subprocess.run(["python3", str(gen), "-o", str(case_dir)],
+                       capture_output=True, timeout=180)
+        return None   # 无返回 golden → 走 verify 路径
+    return _prep
+
+
+def make_verify_cmpdir(compare_rel: str):
+    def _verify(case_dir, elf):
+        cmp = ROOT / "test/solution" / compare_rel
+        p = subprocess.run(["python3", str(cmp), "--cmp-dir", str(case_dir)],
+                           capture_output=True, text=True, timeout=120)
+        out = (p.stdout or "") + (p.stderr or "")
+        line = next((l.strip() for l in out.splitlines() if "precision:" in l), "")
+        if not line:
+            tail = out.strip().splitlines()
+            line = tail[-1] if tail else "no compare output"
+        return ("PASS" if p.returncode == 0 else "FAIL"), line[:120]
+    return _verify
+
+
+# name : 相对目录 : gen 脚本 : compare 脚本 : ELF basename(= gen 默认 -o 目录名 = CHK_DIR)
+_NORM = [
+    ("rms_norm", "normalization/rms_norm",
+     "normalization/rms_norm/src/gen_rms_norm_data.py",
+     "normalization/rms_norm/src/rms_norm_data_compare.py",
+     "solution_normalization_rms_norm_rms_norm_DType__half_gA512_gR8192_PE4"),
+    ("rms_norm_binary", "normalization/rms_norm_binary",
+     "normalization/rms_norm_binary/src/gen_rms_norm_binary_data.py",
+     "normalization/rms_norm_binary/src/rms_norm_binary_data_compare.py",
+     "solution_normalization_rms_norm_binary_rms_norm_binary_DType__half_gA16_gR16384_PE4"),
+    ("group_norm_grad", "normalization/group_norm_grad",
+     "normalization/group_norm_grad/src/gen_group_norm_grad_data.py",
+     "normalization/group_norm_grad/src/group_norm_grad_data_compare.py",
+     "solution_normalization_group_norm_grad_group_norm_grad_DType__half_N32_C16_G8_HxW8192_PE4"),
+    ("group_norm_grad_1d", "normalization/group_norm_grad_1d",
+     "normalization/group_norm_grad_1d/src/gen_group_norm_grad_1d_data.py",
+     "normalization/group_norm_grad_1d/src/group_norm_grad_1d_data_compare.py",
+     "solution_normalization_group_norm_grad_1d_group_norm_grad_1d_DType__half_N512_C64_G8_PE4"),
+]
+
+# matmul_test 暂不接入：其 verify_matmul_test.py 是**一体化驱动**（自己 prepare+gfrun+比对），
+# 与 res_check_all 的 run_case（先 gfrun 再 verify）两段式不契合；且无独立 gen、compile.all
+# 的 `diss` 目标缺失。接入需专门的一体化 Case 类型或改造 verify_matmul_test，后续单独处理。
+
 # ================================ CASES（算子侧维护）================================
-# 样板：dynamic_mx_quant 8 个 driver（B 范式，多输出 + verify 钩子；golden 由 compile.all 的
-# gen 脚本生成）。注：在缺 TileOP #63/#100 的发布版工具链上 kernel 编不过 → ELF 缺失 → SKIP。
+# 样板 A：dynamic_mx_quant 8 driver（多输出 + verify 钩子；golden 由 compile.all 集成 gen）。
+# 样板 B：normalization 4 个（prepare 调 gen + verify 调 compare；单/多输出均由自带 compare 处理）。
+# 注：缺相应 TileOP 修复的发布版工具链上这些 kernel 编不过 → ELF 缺失 → 如实 SKIP。
 CASES: list[Case] = [
     Case(f"dmxq_{drv}", f"{_DMXQ_DIR}/elf/dynamic_mx_quant_{drv}.elf",
          verify=make_verify_dmxq(dt, sl), four_pe=fp)
     for drv, dt, sl, fp in _DMXQ
+] + [
+    Case(nm, f"{rel}/elf/{elf}.elf",
+         prepare=make_prep_gen(gen), verify=make_verify_cmpdir(cmp), four_pe=True)
+    for nm, rel, gen, cmp, elf in _NORM
 ]
 
 
