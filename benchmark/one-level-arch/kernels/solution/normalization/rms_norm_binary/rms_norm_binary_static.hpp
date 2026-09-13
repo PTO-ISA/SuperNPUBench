@@ -1,29 +1,14 @@
-// =============================================================================
-// rms_norm_binary_pto.hpp — RMSNorm for g_r > tile_r (R-split)
-// =============================================================================
-//
-// tiling[5] = {g_a, g_r, tile_a, tile_r, pow_r}
-//
-// 每块 RowSum 后立刻 UpdateCache（workspace = cacheBuffer），对齐 AscendC：
-//   DataCopy(aReg, src);
-//   for (j = 0; j < cid; ++j) {
-//       DataCopy(bReg, cache + j * stride);
-//       Add(aReg, aReg, bReg);
-//   }
-//   DataCopy(cache + cid * stride, aReg);
-//   cid = GetCacheId(idx) = ctz(idx+1)
-//   sum = cache[GetCacheId(r-1)]   （r 为 2^k）
-//
-// workspace: [0, kMaxLevels) cache 档
-// =============================================================================
-#ifndef SUPERNPU_RMS_NORM_BINARY_PTO_HPP
-#define SUPERNPU_RMS_NORM_BINARY_PTO_HPP
+// rms_norm_binary_static: [16,16384].
+// Fixed-shape 4PE implementation with compile-time Tile valid dimensions.
+// Kernel entry points do not accept runtime tiling. Dynamic counterpart is unchanged.
+#ifndef SUPERNPU_RMS_NORM_BINARY_PTO_STATIC_HPP
+#define SUPERNPU_RMS_NORM_BINARY_PTO_STATIC_HPP
 
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
 
-namespace rms_bin {
+namespace rms_bin_static {
 
 // Row-reduction results have physical Columns=1. Workspace cache entries
 // must preserve that layout so TLOAD and TADD match the TROWSUM output.
@@ -50,19 +35,19 @@ inline void rsqrt_newton(TileVec &out, TileVec &a) {
     TMULS(out, x, 1.0f);
 }
 
-} // namespace rms_bin
+} // namespace rms_bin_static
 
 template <typename dtype, int peNum>
-void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
+void rms_norm_binary_static(dtype *x,  dtype *out,
                      float *workspace, float eps = 1e-6f) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     constexpr int64_t tA = 1;
     constexpr int64_t tR = 512;
 
-    const int64_t globalA = tiling[0];
-    const int64_t gR = tiling[1];
-    const int64_t tile_r = tiling[3] > 0 ? tiling[3] : tR;
-    const int64_t powR = tiling[4];
+    constexpr int64_t globalA = 16;
+    constexpr int64_t gR = 16384;
+    constexpr int64_t tile_r = 512;
+    constexpr int64_t powR = 8192;
     const uint32_t tid = get_thread_idx();
 
     if (globalA <= 0 || gR <= 1 || tile_r <= 0 || tile_r > tR ||
@@ -88,7 +73,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     x += pe_offset;
     out += pe_offset;
     // Workspace is level-major: [level][global row].
-    workspace += pe_start * rms_bin::kWsCols;
+    workspace += pe_start * rms_bin_static::kWsCols;
 
     const int64_t remR = gR - powR;
     const int64_t headR = powR - remR;
@@ -102,9 +87,9 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, -1, -1>;
-    using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, -1, -1>;
-    using tile_v = Tile<Location::Vec, float, tA, rms_bin::kWsCols,
+    using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, 1, 512>;
+    using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, 1, 512>;
+    using tile_v = Tile<Location::Vec, float, tA, rms_bin_static::kWsCols,
                         BLayout::RowMajor, 1, 1>;
 
     for (int64_t ia = 0; ia < gA; ++ia) {
@@ -114,11 +99,11 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
         tile_v cur, buf, sum, mean, denom, rms, zero;
         TEXPANDS(zero, 0.0f);
 
-        float *cache = workspace + ia * rms_bin::kWsCols;
-        const int64_t stride = globalA * rms_bin::kWsCols;
+        float *cache = workspace + ia * rms_bin_static::kWsCols;
+        const int64_t stride = globalA * rms_bin_static::kWsCols;
 
-        for (int64_t lv = 0; lv < rms_bin::kMaxLevels; ++lv) {
-            gm_f go(cache + lv * stride, 1, rms_bin::kWsCols);
+        for (int64_t lv = 0; lv < rms_bin_static::kMaxLevels; ++lv) {
+            gm_f go(cache + lv * stride, 1, rms_bin_static::kWsCols);
             TSTORE(go, zero);
         }
 
@@ -128,15 +113,15 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
 #define RMS_BIN_UPDATE_CACHE()                                                  \
     do {                                                                       \
         const uint16_t cid =                                                   \
-            static_cast<uint16_t>(rms_bin::GetCacheId(r));                     \
+            static_cast<uint16_t>(rms_bin_static::GetCacheId(r));                     \
         for (uint16_t j = 0; j < cid; ++j) {                                   \
             gm_f gj(cache + static_cast<int64_t>(j) * stride, 1,               \
-                    rms_bin::kWsCols);                                         \
+                    rms_bin_static::kWsCols);                                         \
             TLOAD(buf, gj);                                                    \
             TADD(cur, cur, buf);                                               \
         }                                                                      \
         gm_f gc(cache + static_cast<int64_t>(cid) * stride, 1,                 \
-                rms_bin::kWsCols);                                             \
+                rms_bin_static::kWsCols);                                             \
         TSTORE(gc, cur);                                                       \
         ++r;                                                                   \
     } while (0)
@@ -146,12 +131,12 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
             gm_t gi0(x + offset, static_cast<int>(gA), static_cast<int>(gR));
             gm_t gi1(x + offset + powR, static_cast<int>(gA),
                      static_cast<int>(gR));
-            tile_h src0_h(active_a, full_r);
-            tile_h src1_h(active_a, full_r);
-            tile_f src0(active_a, full_r);
-            tile_f src1(active_a, full_r);
-            tile_f sq0(active_a, full_r);
-            tile_f sq1(active_a, full_r);
+            tile_h src0_h;
+            tile_h src1_h;
+            tile_f src0;
+            tile_f src1;
+            tile_f sq0;
+            tile_f sq1;
 
             TLOAD(src0_h, gi0);
             TLOAD(src1_h, gi1);
@@ -164,97 +149,49 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
             RMS_BIN_UPDATE_CACHE();
         }
 
-        if (rem_tail > 0) {
-            const int64_t offset = ia * gR + n_rem_full * tile_r;
-            const size_t ar = static_cast<size_t>(rem_tail);
-            gm_t gi0(x + offset, static_cast<int>(gA), static_cast<int>(gR));
-            gm_t gi1(x + offset + powR, static_cast<int>(gA),
-                     static_cast<int>(gR));
-            tile_h src0_h(active_a, ar);
-            tile_h src1_h(active_a, ar);
-            tile_f src0(active_a, ar);
-            tile_f src1(active_a, ar);
-            tile_f sq0(active_a, ar);
-            tile_f sq1(active_a, ar);
 
-            TLOAD(src0_h, gi0);
-            TLOAD(src1_h, gi1);
-            TCVT(src0, src0_h);
-            TCVT(src1, src1_h);
-            TMUL(sq0, src0, src0);
-            TMUL(sq1, src1, src1);
-            TADD(sq0, sq0, sq1);
-            TROWSUM(cur, sq0);
-            RMS_BIN_UPDATE_CACHE();
-        }
 
         for (int64_t tr = 0; tr < n_head_full; ++tr) {
             const int64_t offset = ia * gR + remR + tr * tile_r;
             gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
-            tile_h src_h(active_a, full_r);
-            tile_f src(active_a, full_r);
-            tile_f sq(active_a, full_r);
+            tile_h src_h;
+            tile_f src;
+            tile_f sq;
             TLOAD(src_h, gi);
             TCVT(src, src_h);
             TMUL(sq, src, src);
             TROWSUM(cur, sq);
             RMS_BIN_UPDATE_CACHE();
         }
-        if (head_tail > 0) {
-            const int64_t offset = ia * gR + remR + n_head_full * tile_r;
-            const size_t ar = static_cast<size_t>(head_tail);
-            gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
-            tile_h src_h(active_a, ar);
-            tile_f src(active_a, ar);
-            tile_f sq(active_a, ar);
-            TLOAD(src_h, gi);
-            TCVT(src, src_h);
-            TMUL(sq, src, src);
-            TROWSUM(cur, sq);
-            RMS_BIN_UPDATE_CACHE();
-        }
+
 #undef RMS_BIN_UPDATE_CACHE
 
         {
-            const int64_t rid = r > 0 ? rms_bin::GetCacheId(r - 1) : 0;
-            gm_f gr(cache + rid * stride, 1, rms_bin::kWsCols);
+            const int64_t rid = r > 0 ? rms_bin_static::GetCacheId(r - 1) : 0;
+            gm_f gr(cache + rid * stride, 1, rms_bin_static::kWsCols);
             TLOAD(sum, gr);
         }
 
         TMULS(mean, sum, inv_r);
         TADDS(denom, mean, eps);
-        rms_bin::rsqrt_newton(rms, denom);
+        rms_bin_static::rsqrt_newton(rms, denom);
 
         for (int64_t tr = 0; tr < n_full; ++tr) {
             const int64_t offset = ia * gR + tr * tile_r;
             gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
             gm_t go(out + offset, static_cast<int>(gA), static_cast<int>(gR));
-            tile_h src_h(active_a, full_r);
-            tile_h dst_h(active_a, full_r);
-            tile_f src(active_a, full_r);
-            tile_f dst(active_a, full_r);
+            tile_h src_h;
+            tile_h dst_h;
+            tile_f src;
+            tile_f dst;
             TLOAD(src_h, gi);
             TCVT(src, src_h);
             TROWEXPANDMUL(dst, src, rms);
             TCVT(dst_h, dst);
             TSTORE(go, dst_h);
         }
-        if (tail_r > 0) {
-            const int64_t offset = ia * gR + n_full * tile_r;
-            const size_t ar = static_cast<size_t>(tail_r);
-            gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
-            gm_t go(out + offset, static_cast<int>(gA), static_cast<int>(gR));
-            tile_h src_h(active_a, ar);
-            tile_h dst_h(active_a, ar);
-            tile_f src(active_a, ar);
-            tile_f dst(active_a, ar);
-            TLOAD(src_h, gi);
-            TCVT(src, src_h);
-            TROWEXPANDMUL(dst, src, rms);
-            TCVT(dst_h, dst);
-            TSTORE(go, dst_h);
-        }
+
     }
 }
 
-#endif // SUPERNPU_RMS_NORM_BINARY_PTO_HPP
+#endif // SUPERNPU_RMS_NORM_BINARY_PTO_STATIC_HPP

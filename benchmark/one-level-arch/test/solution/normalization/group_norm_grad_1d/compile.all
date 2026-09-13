@@ -3,3 +3,6 @@
 set -euo pipefail
 : "${COMPILER_DIR:?Set COMPILER_DIR to the compiler bin directory}"
 make TESTCASE=group_norm_grad_1d COMPILER_DIR="$COMPILER_DIR" DType=__half N_BATCH=256 C_CH=256 G_GRP=8 PE_NUM=4 diss
+
+# Fixed-shape static 4PE counterpart.
+make TESTCASE=group_norm_grad_1d_static COMPILER_DIR="$COMPILER_DIR" DType=__half N_BATCH=256 C_CH=256 G_GRP=8 PE_NUM=4 diss

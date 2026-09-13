@@ -6,7 +6,7 @@ input.bin        : g_a * g_r x float16
 golden.bin       : same shape float16, out = x * rsqrt(mean(x^2)+eps)
                    (fp32 compute then cast to fp16, matching kernel pipeline)
 
-Default: g_a=512, g_r=8192, tile=(1,8192), eps=1e-6.
+Default: g_a=512, g_r=8192, tile=(1,512), eps=1e-6.
 """
 
 from __future__ import annotations
@@ -143,7 +143,7 @@ def main() -> None:
     parser.add_argument("--g-a", type=int, default=512)
     parser.add_argument("--g-r", type=int, default=8192)
     parser.add_argument("--tile-a", type=int, default=1)
-    parser.add_argument("--tile-r", type=int, default=8192)
+    parser.add_argument("--tile-r", type=int, default=512)
     parser.add_argument("--eps", type=float, default=1e-6)
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("-o", "--out-dir", type=Path, default=DEFAULT_CMP_DIR)
