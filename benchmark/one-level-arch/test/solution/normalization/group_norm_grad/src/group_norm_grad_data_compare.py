@@ -12,10 +12,10 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
-    SCRIPT_DIR.parents[5]
+    SCRIPT_DIR.parents[4]
     / "compare"
     / "solution_normalization_group_norm_grad_group_norm_grad"
-    "_DType__half_N32_C16_G8_HxW8192_PE4"
+    "_DType__half_N2_C32_G8_HxW2024_PE4"
 )
 
 

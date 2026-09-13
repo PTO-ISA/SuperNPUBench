@@ -3,7 +3,7 @@ name: rms-norm-binary
 description: >-
   Build, run, and debug the one-level rms_norm_binary kernel (R-split RMSNorm)
   with SuperNPUBench + run_op.py + gfrun/gfsim precision checks. Use when
-  editing rms_norm_binary_pto.hpp, rms_norm_binary tests, workspace/GetCacheId
+  editing rms_norm_binary_dynamic.hpp, rms_norm_binary tests, workspace/GetCacheId
   reduce, TADD cross-tile sum, or verifying [16,16384] fp16 binary RMSNorm.
   Shape dims are A (outer) and R (reduce): g_a/g_r, tile_a/tile_r, tA/tR.
 ---
@@ -39,8 +39,8 @@ Current default test shape: **`[1, 8192]`**, `tile_r=1024` → **`Rb=8`**, fp16.
 
 | Role | Path |
 |------|------|
-| Kernel | `$ROOT/SuperNPUBench/benchmark/one-level-arch/kernels/solution/normalization/rms_norm_binary/rms_norm_binary_pto.hpp` |
-| Reference (single-tile) | `.../kernels/solution/normalization/rms_norm/rms_norm_pto.hpp` |
+| Kernel | `$ROOT/SuperNPUBench/benchmark/one-level-arch/kernels/solution/normalization/rms_norm_binary/rms_norm_binary_dynamic.hpp` |
+| Reference (single-tile) | `.../kernels/solution/normalization/rms_norm/rms_norm_dynamic.hpp` |
 | Testcase | `.../test/solution/normalization/rms_norm_binary/` |
 | Host entry | `.../rms_norm_binary/src/rms_norm_binary.cpp` |
 | Gen golden | `.../rms_norm_binary/src/gen_rms_norm_binary_data.py` |
@@ -54,20 +54,20 @@ ELF after build:
 
 ```text
 .../output/solution/normalization/rms_norm_binary/elf/
-  solution_normalization_rms_norm_binary_rms_norm_binary_DType__half.elf
+  solution_normalization_rms_norm_binary_rms_norm_binary_dynamic_DType__half.elf
 ```
 
 Compare dir (precision):
 
 ```text
-.../compare/solution_normalization_rms_norm_binary_rms_norm_binary_DType__half/
+.../compare/solution_normalization_rms_norm_binary_rms_norm_binary_dynamic_DType__half/
   input.bin  golden.bin  output.bin  tiling_info.bin
 ```
 
 ## Kernel pipeline (current)
 
-File: `rms_norm_binary_pto.hpp`. **No `rms_norm_dyn_ops.hpp`.** TEPL style like
-`rms_norm_pto.hpp`.
+File: `rms_norm_binary_dynamic.hpp`. **No `rms_norm_dyn_ops.hpp`.** TEPL style like
+`rms_norm_dynamic.hpp`.
 
 ```text
 Pass1:
@@ -102,7 +102,7 @@ python3 run_op.py rms_norm_binary
 What `run_op.py` does:
 
 1. `gen_rms_norm_binary_data.py` → write `input.bin` / `golden.bin` / tiling
-2. `make TESTCASE=rms_norm_binary DType=__half res_check=on` → ELF with I/O
+2. `make TESTCASE=rms_norm_binary_dynamic DType=__half res_check=on` → ELF with I/O
 3. `gfrun` functional sim → writes `output.bin`
 4. `rms_norm_binary_data_compare.py` → atol/rtol vs golden
 5. Rebuild **without** `res_check` (res_check ELF often crashes `gfsim`)
@@ -124,7 +124,7 @@ Manual make (same case):
 
 ```bash
 cd $ROOT/SuperNPUBench/benchmark/one-level-arch/test/solution/normalization/rms_norm_binary
-make TESTCASE=rms_norm_binary DType=__half COMPILER_DIR=$COMPILER_DIR
+make TESTCASE=rms_norm_binary_dynamic DType=__half COMPILER_DIR=$COMPILER_DIR
 # or: bash compile.all
 ```
 

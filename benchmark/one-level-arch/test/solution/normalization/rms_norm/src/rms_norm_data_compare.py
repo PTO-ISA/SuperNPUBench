@@ -14,7 +14,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[5]
     / "compare"
-    / "solution_normalization_rms_norm_rms_norm_DType__half_gA512_gR8192_PE4"
+    / "solution_normalization_rms_norm_rms_norm_dynamic_DType__half_gA512_gR8192_PE4"
 )
 
 

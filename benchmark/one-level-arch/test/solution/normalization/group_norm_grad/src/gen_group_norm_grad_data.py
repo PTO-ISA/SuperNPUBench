@@ -2,14 +2,14 @@
 """Generate group_norm_grad host bins (HxW>1, pure Python, no numpy).
 
 Bins:
-  tiling_info.bin : 5 x int64 LE = (N, C, G, HxW, tile_hw)
+  tiling_info.bin : 10 x int64 LE = (N,C,G,HxW,reduce_hw,reduce_c,dx_hw,dx_c,gb_d,gb_g)
   dy.bin / x.bin  : N*C*HxW x float16
   mean/rstd.bin   : N*G x float32
   gamma.bin       : C x float16
   golden_dx / golden_dgamma / golden_dbeta : float16
 
 Math matches PyTorch GroupNormBackward (HxW>1): spatial ds/db then fused c2/c3.
-Default: N=32, C=16, G=8, HxW=8192 (D=2), tile_hw=8192.
+Default: N=2, C=32, G=8, HxW=2024 (D=4), tile_hw=min(HxW, 512)=512.
 """
 
 from __future__ import annotations
@@ -22,10 +22,10 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
-    SCRIPT_DIR.parents[5]
+    SCRIPT_DIR.parents[4]
     / "compare"
     / "solution_normalization_group_norm_grad_group_norm_grad"
-    "_DType__half_N32_C16_G8_HxW8192_PE4"
+    "_DType__half_N2_C32_G8_HxW2024_PE4"
 )
 
 
@@ -62,11 +62,11 @@ def f16_bits_to_f32(h: int) -> float:
     exp = (h >> 10) & 0x1F
     mant = h & 0x3FF
     if exp == 0:
-        val = 0.0 if mant == 0 else math.ldexp(mant / 1024.0, -14)
+        val = 0.0 if mant == 0 else math.ldexp(mant / 512.0, -14)
     elif exp == 31:
         val = math.nan if mant else math.inf
     else:
-        val = math.ldexp(1.0 + mant / 1024.0, exp - 15)
+        val = math.ldexp(1.0 + mant / 512.0, exp - 15)
     return -val if sign else val
 
 
@@ -184,6 +184,15 @@ def group_norm_grad_ref(
     return dx, dgamma, dbeta
 
 
+def make_tiling(N, C, G, H, reduce_hw):
+    D = C // G
+    dx_hw = min(H, 8192)
+    gb_d = min(D, 8192)
+    return (N, C, G, H, reduce_hw, 1, dx_hw,
+            min(D, 32) if dx_hw <= 256 else 1, gb_d,
+            min(G, 32) if gb_d <= 256 else 1)
+
+
 def gen_all(
     out_dir: Path,
     N: int,
@@ -210,7 +219,7 @@ def gen_all(
     )
 
     (out_dir / "tiling_info.bin").write_bytes(
-        struct.pack("<5q", N, C, G, HxW, tile_hw)
+        struct.pack("<10q", *make_tiling(N, C, G, HxW, tile_hw))
     )
     (out_dir / "dy.bin").write_bytes(pack_f16(dy))
     (out_dir / "x.bin").write_bytes(pack_f16(x))
@@ -228,16 +237,20 @@ def gen_all(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--n", type=int, default=32)
-    parser.add_argument("--c", type=int, default=16)
+    parser.add_argument("--n", type=int, default=2)
+    parser.add_argument("--c", type=int, default=32)
     parser.add_argument("--g", type=int, default=8)
-    parser.add_argument("--hxw", type=int, default=8192)
-    parser.add_argument("--tile-hw", type=int, default=8192)
+    parser.add_argument("--hxw", type=int, default=2024)
+    parser.add_argument("--tile-hw", type=int, default=None)
     parser.add_argument("--eps", type=float, default=1e-5)
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("-o", "--out-dir", type=Path, default=DEFAULT_CMP_DIR)
     parser.add_argument("--also-src-data", action="store_true")
     args = parser.parse_args()
+
+    tile_hw = min(args.hxw, 512) if args.tile_hw is None else args.tile_hw
+    if tile_hw <= 0 or tile_hw > min(args.hxw, 512):
+        parser.error("tile-hw must be in [1, min(HxW, 512)]")
 
     gen_all(
         args.out_dir,
@@ -245,7 +258,7 @@ def main() -> None:
         args.c,
         args.g,
         args.hxw,
-        args.tile_hw,
+        tile_hw,
         args.eps,
         args.seed,
     )
@@ -253,7 +266,7 @@ def main() -> None:
         data_dir = SCRIPT_DIR / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
         (data_dir / "tiling_info.bin").write_bytes(
-            struct.pack("<5q", args.n, args.c, args.g, args.hxw, args.tile_hw)
+            struct.pack("<10q", *make_tiling(args.n, args.c, args.g, args.hxw, tile_hw))
         )
         print(f"wrote {data_dir / 'tiling_info.bin'}")
 

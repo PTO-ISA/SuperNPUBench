@@ -1,5 +1,5 @@
 // =============================================================================
-// rms_norm_pto.hpp — RMSNorm (one-level PTO)
+// rms_norm_dynamic.hpp — RMSNorm (one-level PTO)
 // =============================================================================
 //
 // Shape dims: A (outer / row), R (reduce / col).
@@ -57,35 +57,33 @@ template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
 inline void rms_norm_tile(dtype *x, dtype *out, int64_t gA, int64_t gR,
                           int64_t a_off, int64_t active_a, int64_t active_r,
                           float inv_r, float eps) {
+    // Reduce the entire row using <=2 KiB FP32 strips, then normalize.
     const int64_t offset = a_off * gR;
-    gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
-    gm_t go(out + offset, static_cast<int>(gA), static_cast<int>(gR));
-
-    tile_h src_h(static_cast<size_t>(active_a),
-                 static_cast<size_t>(active_r));
-    tile_h dst_h(static_cast<size_t>(active_a),
-                 static_cast<size_t>(active_r));
-    tile_f src(static_cast<size_t>(active_a),
-               static_cast<size_t>(active_r));
-    tile_f squared(static_cast<size_t>(active_a),
-                   static_cast<size_t>(active_r));
-    tile_f dst(static_cast<size_t>(active_a),
-               static_cast<size_t>(active_r));
-    tile_v sqrsum(static_cast<size_t>(active_a));
-    tile_v mean(static_cast<size_t>(active_a));
-    tile_v denom(static_cast<size_t>(active_a));
-    tile_v rms(static_cast<size_t>(active_a));
-
-    TLOAD(src_h, gi);
-    TCVT(src, src_h);
-    TMUL(squared, src, src);
-    TROWSUM(sqrsum, squared);
-    TMULS(mean, sqrsum, inv_r);
+    tile_v sum(1), partial(1), mean(1), denom(1), rms(1);
+    TEXPANDS(sum, 0.0f);
+    for (int64_t col = 0; col < gR; col += active_r) {
+        const size_t width = gR-col < active_r ? gR-col : active_r;
+        gm_t gi(x+offset+col, 1, static_cast<int>(gR));
+        tile_h h(1, width);
+        tile_f src(1, width), squared(1, width);
+        TLOAD(h, gi); TCVT(src, h);
+        TMUL(squared, src, src);
+        TROWSUM(partial, squared);
+        TADD(sum, sum, partial);
+    }
+    TMULS(mean, sum, inv_r);
     TADDS(denom, mean, eps);
     rsqrt_newton(rms, denom);
-    TROWEXPANDMUL(dst, src, rms);
-    TCVT(dst_h, dst);
-    TSTORE(go, dst_h);
+    for (int64_t col = 0; col < gR; col += active_r) {
+        const size_t width = gR-col < active_r ? gR-col : active_r;
+        gm_t gi(x+offset+col, 1, static_cast<int>(gR));
+        gm_t go(out+offset+col, 1, static_cast<int>(gR));
+        tile_h h(1, width);
+        tile_f src(1, width), dst(1, width);
+        TLOAD(h, gi); TCVT(src, h);
+        TROWEXPANDMUL(dst, src, rms);
+        TCVT(h, dst); TSTORE(go, h);
+    }
 }
 
 } // namespace rms_detail
@@ -98,7 +96,7 @@ void rms_norm(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e-6f) {
     // Physical capacity (Rows×Cols); Valid comes from tiling (tile_a,tile_r).
     // Size must cover ValidRow×ValidCol; SoftCore should not require Rows≥ValidRow.
     constexpr int64_t tA = 1;
-    constexpr int64_t tR = 8192;
+    constexpr int64_t tR = 512;
 
     const int64_t globalA = tiling[0];
     const int64_t gR = tiling[1];
@@ -106,7 +104,7 @@ void rms_norm(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e-6f) {
     const int64_t tile_r = tiling[3] > 0 ? tiling[3] : gR;
     const uint32_t tid = get_thread_idx();
 
-    if (globalA <= 0 || gR <= 0 || tile_a <= 0 || tile_r <= 0 ||
+    if (globalA <= 0 || gR <= 0 || tile_a != 1 || tile_r <= 0 ||
         tile_r > tR || tid >= static_cast<uint32_t>(peNum)) {
         return;
     }

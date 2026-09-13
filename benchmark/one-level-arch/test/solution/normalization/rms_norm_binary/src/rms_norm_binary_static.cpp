@@ -1,9 +1,10 @@
+// Fixed-shape 4PE test: [16,16384].
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
 
 #include "fileop.h"
-#include "solution/normalization/rms_norm/rms_norm_pto.hpp"
+#include "solution/normalization/rms_norm_binary/rms_norm_binary_static.hpp"
 
 #ifndef DType
 #define DType __half
@@ -14,21 +15,34 @@
 #endif
 
 #ifndef PE_NUM
-#define PE_NUM 1
+#define PE_NUM 4
 #endif
+
+// Dynamic 4PE validation shape: [16, 16384], fp16.
 #ifndef G_A
-#define G_A 512
+#define G_A 16
 #endif
 #ifndef G_R
-#define G_R 8192
+#define G_R 16384
+#endif
+// Must match rms_bin_static::kWsCols / kMaxLevels
+#ifndef K_WS_COLS
+#define K_WS_COLS 1
+#endif
+#ifndef K_MAX_LEVELS
+#define K_MAX_LEVELS 6
 #endif
 
 namespace {
-constexpr int64_t rms_tile_a(int64_t global_a, int64_t pe_num) {
-    return global_a > 0 && pe_num > 0 ? 1 : 0;
+constexpr int64_t floor_power_of_two(int64_t value) {
+    int64_t result = 1;
+    while (result <= value / 2) {
+        result *= 2;
+    }
+    return result;
 }
-constexpr int64_t rms_tile_r(int64_t reduce_size) {
-    constexpr int64_t kMaxTileR = 8192;
+constexpr int64_t binary_tile_r(int64_t reduce_size) {
+    constexpr int64_t kMaxTileR = 512;
     return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
 }
 } // namespace
@@ -42,23 +56,25 @@ volatile uint32_t output_written = 0;
 #endif
 
 int main() {
+    static_assert(G_A == 16 && G_R == 16384, "static testcase has a fixed shape");
     using dtype = DType;
 
-    // tiling_info is always the host-visible full shape. PE partitioning is
-    // entirely owned by the kernel.
-    constexpr int64_t kTileA = rms_tile_a(G_A, PE_NUM);
-    constexpr int64_t kTileR = rms_tile_r(G_R);
-    static_assert(G_A > 0 && G_R > 0);
-    static_assert(kTileA > 0 && kTileR == G_R);
-    int64_t tiling_info[4] = {G_A, G_R, kTileA, kTileR};
+    constexpr int64_t kTileA = 1;
+    constexpr int64_t kTileR = binary_tile_r(G_R);
+    constexpr int64_t kPowR = floor_power_of_two(G_R - 1);
+    static_assert(G_A > 0 && G_R > 1);
+    static_assert(kPowR < G_R && G_R <= 2 * kPowR);
+    constexpr int64_t tiling_info[5] = {G_A, G_R, kTileA, kTileR, kPowR};
 
     const int64_t g_a = tiling_info[0];
     const int64_t g_r = tiling_info[1];
 
     static dtype input_buf[G_A * G_R];
     static dtype output_buf[G_A * G_R];
+    static float workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS];
     dtype *input = input_buf;
     dtype *output = output_buf;
+    float *workspace = workspace_buf;
 
 #ifdef RES_CHECK
 #ifndef CHK_DIR
@@ -75,7 +91,7 @@ int main() {
     }
 #endif
 
-    rms_norm<dtype, PE_NUM>(input, tiling_info, output, EPS);
+    rms_norm_binary_static<dtype, PE_NUM>(input,  output, workspace, EPS);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

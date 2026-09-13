@@ -1,5 +1,5 @@
 // =============================================================================
-// rms_norm_binary_pto.hpp — RMSNorm for g_r > tile_r (R-split)
+// rms_norm_binary_dynamic.hpp — RMSNorm for g_r > tile_r (R-split)
 // =============================================================================
 //
 // tiling[5] = {g_a, g_r, tile_a, tile_r, pow_r}
@@ -57,7 +57,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
                      float *workspace, float eps = 1e-6f) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     constexpr int64_t tA = 1;
-    constexpr int64_t tR = 8192;
+    constexpr int64_t tR = 512;
 
     const int64_t globalA = tiling[0];
     const int64_t gR = tiling[1];
