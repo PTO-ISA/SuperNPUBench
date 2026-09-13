@@ -3,10 +3,10 @@ G_A ?= 512
 G_R ?= 8192
 PE_NUM ?= 4
 ifneq ($(PE_NUM),4)
-$(error rms_norm supports only the dynamic 4PE testcase)
+$(error rms_norm supports only the 4PE testcases)
 endif
 START_FILE = $(ROOT)/test/common/_start_multipe.s
-ifneq ($(filter rms_norm rms_norm_static,$(TESTCASE)),)
+ifneq ($(filter rms_norm_dynamic rms_norm_static,$(TESTCASE)),)
 DEFINES += -DDType=$(DType) -DPE_NUM=$(PE_NUM) -DG_A=$(G_A) -DG_R=$(G_R)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_gA$(G_A)_gR$(G_R)_PE$(PE_NUM).elf
 endif

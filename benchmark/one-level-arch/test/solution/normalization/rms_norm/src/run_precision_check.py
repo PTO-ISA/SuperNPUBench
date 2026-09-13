@@ -18,7 +18,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 CASE_DIR = SCRIPT_DIR.parent  # .../rms_norm
 ONE_LEVEL = CASE_DIR.parents[3]  # .../one-level-arch
 SUPERSCALAR = ONE_LEVEL.parents[2]  # .../SuperScalar (workspace)
-ELF_NAME = "solution_normalization_rms_norm_rms_norm_DType__half_gA512_gR8192_PE4.elf"
+ELF_NAME = "solution_normalization_rms_norm_rms_norm_dynamic_DType__half_gA512_gR8192_PE4.elf"
 ELF_PATH = ONE_LEVEL / "output" / "solution" / "normalization" / "rms_norm" / "elf" / ELF_NAME
 CMP_DIR = ONE_LEVEL / "compare" / ELF_NAME.replace(".elf", "")
 DEFAULT_COMPILER = (
@@ -70,7 +70,7 @@ def main() -> int:
         run(
             [
                 "make",
-                "TESTCASE=rms_norm",
+                "TESTCASE=rms_norm_dynamic",
                 f"COMPILER_DIR={args.compiler_dir}",
                 "DType=__half",
                 "res_check=on",

@@ -1,5 +1,5 @@
 // =============================================================================
-// rms_norm_binary_pto.hpp — RMSNorm for g_r > tile_r (R-split)
+// rms_norm_binary_dynamic.hpp — RMSNorm for g_r > tile_r (R-split)
 // =============================================================================
 //
 // tiling[5] = {g_a, g_r, tile_a, tile_r, pow_r}

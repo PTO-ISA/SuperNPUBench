@@ -1,5 +1,5 @@
 // =============================================================================
-// rms_norm_pto.hpp — RMSNorm (one-level PTO)
+// rms_norm_dynamic.hpp — RMSNorm (one-level PTO)
 // =============================================================================
 //
 // Shape dims: A (outer / row), R (reduce / col).
