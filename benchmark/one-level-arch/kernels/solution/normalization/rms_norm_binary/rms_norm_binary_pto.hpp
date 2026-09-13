@@ -4,17 +4,10 @@
 //
 // tiling[5] = {g_a, g_r, tile_a, tile_r, pow_r}
 //
-// 每块 RowSum 后立刻 UpdateCache（workspace = cacheBuffer），对齐 AscendC：
-//   DataCopy(aReg, src);
-//   for (j = 0; j < cid; ++j) {
-//       DataCopy(bReg, cache + j * stride);
-//       Add(aReg, aReg, bReg);
-//   }
-//   DataCopy(cache + cid * stride, aReg);
-//   cid = GetCacheId(idx) = ctz(idx+1)
-//   sum = cache[GetCacheId(r-1)]   （r 为 2^k）
-//
-// workspace: [0, kMaxLevels) cache 档
+// RowSum partials are carry-merged in a tile parent split into subviews.
+// TPARTVIEW reads cache slots; TileArray + TASSEMBLY updates the parent.
+// A scalar is replicated inside each slot so region operations use legal
+// 128-byte-granular ranges. No GM workspace is used.
 // =============================================================================
 #ifndef SUPERNPU_RMS_NORM_BINARY_PTO_HPP
 #define SUPERNPU_RMS_NORM_BINARY_PTO_HPP
@@ -22,13 +15,14 @@
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
+#include <utility>
 
 namespace rms_bin {
 
-// Row-reduction results have physical Columns=1. Workspace cache entries
-// must preserve that layout so TLOAD and TADD match the TROWSUM output.
-constexpr int kWsCols = 1;
-constexpr int kMaxLevels = 6;
+// Row-reduction results keep physical Columns=1 as required by TROWSUM.
+constexpr int kReductionCols = 1;
+// Eight native 128 B RowSum slots form one 1 KiB RowMajor parent tile.
+constexpr int kCacheSlots = 8;
 
 
 inline int64_t GetCacheId(int64_t idx) {
@@ -53,8 +47,7 @@ inline void rsqrt_newton(TileVec &out, TileVec &a) {
 } // namespace rms_bin
 
 template <typename dtype, int peNum>
-void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
-                     float *workspace, float eps = 1e-6f) {
+void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out, float eps = 1e-6f) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     constexpr int64_t tA = 1;
     constexpr int64_t tR = 8192;
@@ -87,8 +80,6 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     const int64_t pe_offset = pe_start * gR;
     x += pe_offset;
     out += pe_offset;
-    // Workspace is level-major: [level][global row].
-    workspace += pe_start * rms_bin::kWsCols;
 
     const int64_t remR = gR - powR;
     const int64_t headR = powR - remR;
@@ -96,50 +87,90 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     const int64_t rem_tail = remR - n_rem_full * tile_r;
     const int64_t n_head_full = headR / tile_r;
     const int64_t head_tail = headR - n_head_full * tile_r;
+    const int64_t reduction_blocks =
+        n_rem_full + (rem_tail > 0 ? 1 : 0) + n_head_full +
+        (head_tail > 0 ? 1 : 0);
+    if (reduction_blocks > (int64_t{1} << rms_bin::kCacheSlots) - 1) {
+        return;
+    }
     const int64_t n_full = gR / tile_r;
     const int64_t tail_r = gR - n_full * tile_r;
     const float inv_r = 1.0f / static_cast<float>(gR);
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
-    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, -1, -1>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, -1, -1>;
-    using tile_v = Tile<Location::Vec, float, tA, rms_bin::kWsCols,
-                        BLayout::RowMajor, 1, 1>;
-
+    using tile_v = VecTileM32<float, 32, rms_bin::kReductionCols, 1,
+                              rms_bin::kReductionCols>;
+    using cache_fragment =
+        Tile<Location::Vec, float, 32, 1, BLayout::RowMajor, 1, 1>;
+    using cache_parent =
+        Tile<Location::Vec, float, 32, rms_bin::kCacheSlots,
+             BLayout::RowMajor, 1, rms_bin::kCacheSlots>;
     for (int64_t ia = 0; ia < gA; ++ia) {
         constexpr size_t active_a = 1;
         const size_t full_r = static_cast<size_t>(tile_r);
 
-        tile_v cur, buf, sum, mean, denom, rms, zero;
-        TEXPANDS(zero, 0.0f);
-
-        float *cache = workspace + ia * rms_bin::kWsCols;
-        const int64_t stride = globalA * rms_bin::kWsCols;
-
-        for (int64_t lv = 0; lv < rms_bin::kMaxLevels; ++lv) {
-            gm_f go(cache + lv * stride, 1, rms_bin::kWsCols);
-            TSTORE(go, zero);
-        }
+        tile_v cur, buf, sum, mean, denom, rms;
+        tile_v zero_cache;
+        TEXPANDS(zero_cache, 0.0f);
+        TileArray<cache_fragment, 1, rms_bin::kCacheSlots> initial_cache;
+        TMULS(initial_cache[0][0], zero_cache, 1.0f);
+        TMULS(initial_cache[0][1], zero_cache, 1.0f);
+        TMULS(initial_cache[0][2], zero_cache, 1.0f);
+        TMULS(initial_cache[0][3], zero_cache, 1.0f);
+        TMULS(initial_cache[0][4], zero_cache, 1.0f);
+        TMULS(initial_cache[0][5], zero_cache, 1.0f);
+        TMULS(initial_cache[0][6], zero_cache, 1.0f);
+        TMULS(initial_cache[0][7], zero_cache, 1.0f);
+        cache_parent cache_tile =
+            TASSEMBLY<cache_parent>(std::move(initial_cache));
 
         int64_t r = 0;
 
-        // UpdateCache（AscendC 同构）
+        // Carry-merge the reduction into subview-backed tile cache slots.
 #define RMS_BIN_UPDATE_CACHE()                                                  \
     do {                                                                       \
         const uint16_t cid =                                                   \
             static_cast<uint16_t>(rms_bin::GetCacheId(r));                     \
-        for (uint16_t j = 0; j < cid; ++j) {                                   \
-            gm_f gj(cache + static_cast<int64_t>(j) * stride, 1,               \
-                    rms_bin::kWsCols);                                         \
-            TLOAD(buf, gj);                                                    \
-            TADD(cur, cur, buf);                                               \
-        }                                                                      \
-        gm_f gc(cache + static_cast<int64_t>(cid) * stride, 1,                 \
-                rms_bin::kWsCols);                                             \
-        TSTORE(gc, cur);                                                       \
+        auto cache_views =                                                     \
+            TPARTVIEW<cache_fragment, 1, rms_bin::kCacheSlots>(cache_tile);     \
+        auto merge_slot = [&]<uint16_t Slot>() {                              \
+            if (Slot < cid) {                                                 \
+                auto cached = cache_views[0][Slot];                           \
+                TMULS(buf, cached, 1.0f);                                     \
+                TADD(cur, cur, buf);                                          \
+            }                                                                \
+        };                                                                    \
+        merge_slot.template operator()<0>();                                  \
+        merge_slot.template operator()<1>();                                  \
+        merge_slot.template operator()<2>();                                  \
+        merge_slot.template operator()<3>();                                  \
+        merge_slot.template operator()<4>();                                  \
+        merge_slot.template operator()<5>();                                  \
+        merge_slot.template operator()<6>();                                  \
+        merge_slot.template operator()<7>();                                  \
+        TileArray<cache_fragment, 1, rms_bin::kCacheSlots> next_cache;          \
+        auto write_slot = [&]<uint16_t Slot>() {                               \
+            if (Slot == cid) {                                                 \
+                TMULS(next_cache[0][Slot], cur, 1.0f);                          \
+            } else {                                                           \
+                auto cached = cache_views[0][Slot];                            \
+                TMULS(next_cache[0][Slot], cached, 1.0f);                       \
+            }                                                                  \
+        };                                                                     \
+        write_slot.template operator()<0>();                                   \
+        write_slot.template operator()<1>();                                   \
+        write_slot.template operator()<2>();                                   \
+        write_slot.template operator()<3>();                                   \
+        write_slot.template operator()<4>();                                   \
+        write_slot.template operator()<5>();                                   \
+        write_slot.template operator()<6>();                                   \
+        write_slot.template operator()<7>();                                   \
+        cache_tile = TASSEMBLY<cache_parent>(std::move(next_cache));            \
         ++r;                                                                   \
     } while (0)
+
 
         for (int64_t tr = 0; tr < n_rem_full; ++tr) {
             const int64_t offset = ia * gR + tr * tile_r;
@@ -217,8 +248,10 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
 
         {
             const int64_t rid = r > 0 ? rms_bin::GetCacheId(r - 1) : 0;
-            gm_f gr(cache + rid * stride, 1, rms_bin::kWsCols);
-            TLOAD(sum, gr);
+            auto cache_views =
+                TPARTVIEW<cache_fragment, 1, rms_bin::kCacheSlots>(cache_tile);
+            auto cached = cache_views[0][rid];
+            TMULS(sum, cached, 1.0f);
         }
 
         TMULS(mean, sum, inv_r);
