@@ -18,7 +18,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
-    SCRIPT_DIR.parents[5]
+    SCRIPT_DIR.parents[4]
     / "compare"
     / "solution_normalization_rms_norm_binary_rms_norm_binary_dynamic_DType__half_gA16_gR16384_PE4"
 )
