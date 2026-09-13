@@ -1,0 +1,132 @@
+#!/bin/bash
+# Conv2d 1x1 operator test cases (all variants, merged).
+#
+# TESTCASE selects the variant (see Makefile). Note: no set -e here because
+# some variants are known-broken under TileOP f94bc12 (conv2d / conv2d_rm_dyn /
+# conv2d_rm_shared fail the IsCubeLayout assert, conv2d_cm compiles but is
+# numerically wrong — see docs/conv2d_accuracy_verification.md §6).
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+
+ELF_DIR="../output/kernel/conv2d/elf"
+mkdir -p "$ELF_DIR"
+
+# ============================================
+# conv2d: legacy TileLeft/TileRight kernel (does not compile under f94bc12)
+# ============================================
+echo "Compiling conv2d 1x1 FP32 (14x14x64 -> 14x14x64)..."
+make TESTCASE=conv2d COMPILER_DIR="$COMPILER_DIR" \
+     TYPE=FP32 IN_H=14 IN_W=14 IN_C=64 OUT_C=64 tilM=16 tilN=16 tilK=16
+
+echo "Compiling conv2d 1x1 FP16 (14x14x64 -> 14x14x64)..."
+make TESTCASE=conv2d COMPILER_DIR="$COMPILER_DIR" \
+     TYPE=FP16 IN_H=14 IN_W=14 IN_C=64 OUT_C=64 tilM=16 tilN=16 tilK=16
+
+# ============================================
+# conv2d_rm_mt: multi-thread batch-of-4 (verified PASS)
+#
+# gM (= in_h*in_w) must be divisible by tM; gN (= out_c) by tN; gK (= in_c) by tK.
+# Tile byte limits: each PE A tile [tM, tK] and C tile [tM, tN], shared B tile
+# [tK, tN] must each be smaller than 8 KB.
+# gfrun SIMT limitation (see docs/conv2d_accuracy_verification.md §5):
+# keep Mb*Nb*Kb < ~64 to avoid the scalar-register TSTORE address issue.
+# ============================================
+
+# FP32 — small (4x4, K=16, single Kb, single Mb)
+make diss TESTCASE=conv2d_rm_mt \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=4 IN_W=4 IN_C=16 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+# FP32 — K=64 (four Kb, exercises TMATMUL_ACC)
+make diss TESTCASE=conv2d_rm_mt \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=4 IN_W=4 IN_C=64 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+# FP32 — multiple N blocks (Mb=1, Nb=4, Kb=4)
+make diss TESTCASE=conv2d_rm_mt \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=4 IN_W=4 IN_C=64 OUT_C=64 \
+    tilM=16 tilN=16 tilK=16
+
+# FP32 — multiple M blocks (Mb=4, Nb=1, Kb=1)
+make diss TESTCASE=conv2d_rm_mt \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=4 IN_W=16 IN_C=16 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+# FP32 — multiple M and N blocks with Kb=2 (Mb=4, Nb=4, Kb=2)
+make diss TESTCASE=conv2d_rm_mt \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=8 IN_W=8 IN_C=32 OUT_C=64 \
+    tilM=16 tilN=16 tilK=16
+
+# FP16 — small (4x4, K=16)
+make diss TESTCASE=conv2d_rm_mt \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP16 IN_H=4 IN_W=4 IN_C=16 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+# FP16 — K=64
+make diss TESTCASE=conv2d_rm_mt \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP16 IN_H=4 IN_W=4 IN_C=64 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+# ============================================
+# conv2d_rm_shared: multi-PE SharedTile variant (does not compile under f94bc12)
+#
+# tM must be divisible by 4 (the PE count).
+# gM (= in_h*in_w) must be divisible by tM; gN (= out_c) by tN; gK (= in_c) by tK.
+#
+# gfrun SIMT limitation: when the fully unrolled loop has too many total
+# iterations (Mb*Nb*Kb >= ~64) with multiple M and N blocks, the compiler
+# may use scalar registers for TSTORE address computation, causing all PEs
+# to write to the same address (only PE 0's output survives, 25% coverage).
+# Configurations below avoid this by keeping Mb*Nb*Kb < 64.
+# ============================================
+
+# FP32 — small (4x4, K=16, single Kb, single Mb)
+make diss TESTCASE=conv2d_rm_shared \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=4 IN_W=4 IN_C=16 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+# FP32 — K=64 (four Kb, exercises TMATMUL_ACC)
+make diss TESTCASE=conv2d_rm_shared \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=4 IN_W=4 IN_C=64 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+# FP32 — multiple N blocks (Mb=1, Nb=4, Kb=4)
+make diss TESTCASE=conv2d_rm_shared \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=4 IN_W=4 IN_C=64 OUT_C=64 \
+    tilM=16 tilN=16 tilK=16
+
+# FP32 — multiple M blocks (Mb=4, Nb=1, Kb=1)
+make diss TESTCASE=conv2d_rm_shared \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=4 IN_W=16 IN_C=16 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+# FP32 — multiple M and N blocks with Kb=2 (Mb=4, Nb=4, Kb=2)
+make diss TESTCASE=conv2d_rm_shared \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP32 IN_H=8 IN_W=8 IN_C=32 OUT_C=64 \
+    tilM=16 tilN=16 tilK=16
+
+# FP16 — small (4x4, K=16)
+make diss TESTCASE=conv2d_rm_shared \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP16 IN_H=4 IN_W=4 IN_C=16 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+# FP16 — K=64
+make diss TESTCASE=conv2d_rm_shared \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TYPE=FP16 IN_H=4 IN_W=4 IN_C=64 OUT_C=16 \
+    tilM=16 tilN=16 tilK=16
+
+echo "Conv2d compilation completed"
