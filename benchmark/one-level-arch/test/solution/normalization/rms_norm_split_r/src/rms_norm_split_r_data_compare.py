@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare rms_norm_binary output.bin vs golden.bin (float16)."""
+"""Compare rms_norm_split_r output.bin vs golden.bin (float16)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
-    / "solution_normalization_rms_norm_binary_rms_norm_binary_dynamic_DType__half_gA16_gR16384_PE4"
+    / "solution_normalization_rms_norm_split_r_rms_norm_split_r_dynamic_DType__half_gA16_gR16384_PE4"
 )
 
 
@@ -116,7 +116,7 @@ def main() -> int:
     )
     print(json.dumps(result, indent=2))
     print(
-        f"=== rms_norm_binary precision: {result['status'].upper()} "
+        f"=== rms_norm_split_r precision: {result['status'].upper()} "
         f"(max_abs={result.get('max_abs')}, mse={result.get('mse')}) ==="
     )
     return 0 if result["status"] == "pass" else 1

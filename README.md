@@ -718,7 +718,7 @@ microbench（one-level 金标准比对几乎全过）。**与精度容差无关*
 - multi_thread/fa：`compile.all` 有 `set -e`，FP8_VECBF16 模式触发 `TMATMUL destination dtype does not match PreQuantMode`（`is_fixp_output_type` / `matrix_output_type_legal` 静态断言，TileOP `b8669ce` B.DATR RMode 契约）后脚本退出，跳过 fa_fixpipe/fa_subview 全部变体 + 容量受限 / Sq=1024 / long-context 配置（~43 个变体跳过，7→5 ELF）。
 - multi_thread/reduction/reduceprod_row：`TROWPROD destination must be a single-column tile (N x 1)` 静态断言（TileOP 行归约 B.DIM 契约变更）。
 
-**solution 编译失败（5，本轮排除）**：group_token_vec、normalization/rms_norm、rms_norm_binary、group_norm_grad、group_norm_grad_1d。
+**solution 编译失败（5，本轮排除）**：group_token_vec、normalization/rms_norm、rms_norm_split_r、group_norm_grad、group_norm_grad_1d。
 
 **历史已知失败（不变）**：control `hashtable_lookup`（INT8/16 dtype 元组）、sort `topk`（运行 R2=1）。
 

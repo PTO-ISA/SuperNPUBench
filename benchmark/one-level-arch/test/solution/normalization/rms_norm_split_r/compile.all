@@ -1,0 +1,8 @@
+#!/bin/bash
+# Dynamic 4PE RMSNorm R-split [16,16384]; tiling is calculated from runtime shape.
+set -euo pipefail
+: "${COMPILER_DIR:?Set COMPILER_DIR to the compiler bin directory}"
+make TESTCASE=rms_norm_split_r_dynamic COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=16 G_R=16384 PE_NUM=4 diss
+
+# Fixed-shape static 4PE counterpart.
+make TESTCASE=rms_norm_split_r_static COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=16 G_R=16384 PE_NUM=4 diss

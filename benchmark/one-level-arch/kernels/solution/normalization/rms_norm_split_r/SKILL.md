@@ -1,14 +1,14 @@
 ---
-name: rms-norm-binary
+name: rms-norm-split-r
 description: >-
-  Build, run, and debug the one-level rms_norm_binary kernel (R-split RMSNorm)
+  Build, run, and debug the one-level rms_norm_split_r kernel (R-split RMSNorm)
   with SuperNPUBench + run_op.py + gfrun/gfsim precision checks. Use when
-  editing rms_norm_binary_dynamic.hpp, rms_norm_binary tests, workspace/GetCacheId
-  reduce, TADD cross-tile sum, or verifying [16,16384] fp16 binary RMSNorm.
+  editing rms_norm_split_r_dynamic.hpp, rms_norm_split_r tests, workspace/GetCacheId
+  reduce, TADD cross-tile sum, or verifying [16,16384] fp16 R-split RMSNorm.
   Shape dims are A (outer) and R (reduce): g_a/g_r, tile_a/tile_r, tA/tR.
 ---
 
-# rms_norm_binary — kernel & verification
+# rms_norm_split_r — kernel & verification
 
 Default root: `/home/wangyu/Code/SuperScalar`（下文 `$ROOT`）。
 
@@ -39,13 +39,13 @@ Current default test shape: **`[1, 8192]`**, `tile_r=1024` → **`Rb=8`**, fp16.
 
 | Role | Path |
 |------|------|
-| Kernel | `$ROOT/SuperNPUBench/benchmark/one-level-arch/kernels/solution/normalization/rms_norm_binary/rms_norm_binary_dynamic.hpp` |
+| Kernel | `$ROOT/SuperNPUBench/benchmark/one-level-arch/kernels/solution/normalization/rms_norm_split_r/rms_norm_split_r_dynamic.hpp` |
 | Reference (single-tile) | `.../kernels/solution/normalization/rms_norm/rms_norm_dynamic.hpp` |
-| Testcase | `.../test/solution/normalization/rms_norm_binary/` |
-| Host entry | `.../rms_norm_binary/src/rms_norm_binary.cpp` |
-| Gen golden | `.../rms_norm_binary/src/gen_rms_norm_binary_data.py` |
-| Compare | `.../rms_norm_binary/src/rms_norm_binary_data_compare.py` |
-| Runner | `$ROOT/run_op.py` preset `rms_norm_binary` |
+| Testcase | `.../test/solution/normalization/rms_norm_split_r/` |
+| Host entry | `.../rms_norm_split_r/src/rms_norm_split_r.cpp` |
+| Gen golden | `.../rms_norm_split_r/src/gen_rms_norm_split_r_data.py` |
+| Compare | `.../rms_norm_split_r/src/rms_norm_split_r_data_compare.py` |
+| Runner | `$ROOT/run_op.py` preset `rms_norm_split_r` |
 | Toolchain | `$ROOT/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin` → `COMPILER_DIR` |
 | Sims | `$ROOT/SuperScalarModel/bin/gfrun`, `gfsim` |
 | Related skill | `.../kernels/reduction/binary-accumulation-cache-id/SKILL.md` |
@@ -53,20 +53,20 @@ Current default test shape: **`[1, 8192]`**, `tile_r=1024` → **`Rb=8`**, fp16.
 ELF after build:
 
 ```text
-.../output/solution/normalization/rms_norm_binary/elf/
-  solution_normalization_rms_norm_binary_rms_norm_binary_dynamic_DType__half.elf
+.../output/solution/normalization/rms_norm_split_r/elf/
+  solution_normalization_rms_norm_split_r_rms_norm_split_r_dynamic_DType__half.elf
 ```
 
 Compare dir (precision):
 
 ```text
-.../compare/solution_normalization_rms_norm_binary_rms_norm_binary_dynamic_DType__half/
+.../compare/solution_normalization_rms_norm_split_r_rms_norm_split_r_dynamic_DType__half/
   input.bin  golden.bin  output.bin  tiling_info.bin
 ```
 
 ## Kernel pipeline (current)
 
-File: `rms_norm_binary_dynamic.hpp`. **No `rms_norm_dyn_ops.hpp`.** TEPL style like
+File: `rms_norm_split_r_dynamic.hpp`. **No `rms_norm_dyn_ops.hpp`.** TEPL style like
 `rms_norm_dynamic.hpp`.
 
 ```text
@@ -96,15 +96,15 @@ Important implementation notes:
 ```bash
 export COMPILER_DIR=$ROOT/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
 cd $ROOT
-python3 run_op.py rms_norm_binary
+python3 run_op.py rms_norm_split_r
 ```
 
 What `run_op.py` does:
 
-1. `gen_rms_norm_binary_data.py` → write `input.bin` / `golden.bin` / tiling
-2. `make TESTCASE=rms_norm_binary_dynamic DType=__half res_check=on` → ELF with I/O
+1. `gen_rms_norm_split_r_data.py` → write `input.bin` / `golden.bin` / tiling
+2. `make TESTCASE=rms_norm_split_r_dynamic DType=__half res_check=on` → ELF with I/O
 3. `gfrun` functional sim → writes `output.bin`
-4. `rms_norm_binary_data_compare.py` → atol/rtol vs golden
+4. `rms_norm_split_r_data_compare.py` → atol/rtol vs golden
 5. Rebuild **without** `res_check` (res_check ELF often crashes `gfsim`)
 6. `gfsim` performance / cycle sim
 7. After compile: write `<elf>.diss` via `llvm-objdump -dl` (disable: `--no-diss`)
@@ -112,19 +112,19 @@ What `run_op.py` does:
 Useful flags:
 
 ```bash
-python3 run_op.py rms_norm_binary --func-only          # gfrun + precision only
-python3 run_op.py rms_norm_binary --perf-only          # gfsim only
-python3 run_op.py rms_norm_binary --compile-only
-python3 run_op.py rms_norm_binary --no-check-precision
-python3 run_op.py rms_norm_binary --skip-compile
-python3 run_op.py rms_norm_binary --no-diss
+python3 run_op.py rms_norm_split_r --func-only          # gfrun + precision only
+python3 run_op.py rms_norm_split_r --perf-only          # gfsim only
+python3 run_op.py rms_norm_split_r --compile-only
+python3 run_op.py rms_norm_split_r --no-check-precision
+python3 run_op.py rms_norm_split_r --skip-compile
+python3 run_op.py rms_norm_split_r --no-diss
 ```
 
 Manual make (same case):
 
 ```bash
-cd $ROOT/SuperNPUBench/benchmark/one-level-arch/test/solution/normalization/rms_norm_binary
-make TESTCASE=rms_norm_binary_dynamic DType=__half COMPILER_DIR=$COMPILER_DIR
+cd $ROOT/SuperNPUBench/benchmark/one-level-arch/test/solution/normalization/rms_norm_split_r
+make TESTCASE=rms_norm_split_r_dynamic DType=__half COMPILER_DIR=$COMPILER_DIR
 # or: bash compile.all
 ```
 
@@ -155,7 +155,7 @@ Baseline `rms_norm` (no cross-tile accumulate / second R loop) usually **PASS**e
 
 ## Testcase layout
 
-`rms_norm_binary.cpp` defaults:
+`rms_norm_split_r.cpp` defaults:
 
 ```cpp
 G_A=1, G_R=8192, TILE_A=1, TILE_R=1024
@@ -164,7 +164,7 @@ workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS]  // K_WS_COLS=1
 
 Precision scripts default shape `--g-r 8192`, `--tile-r 1024`.
 
-`run_op.py` preset name is exactly **`rms_norm_binary`** (no size suffix).
+`run_op.py` preset name is exactly **`rms_norm_split_r`** (no size suffix).
 
 ## Agent checklist when changing the kernel
 
@@ -175,7 +175,7 @@ Precision scripts default shape `--g-r 8192`, `--tile-r 1024`.
    illegal spill).
 4. Do not mix `TROWSUM` u-reg lineage with `TLOAD` of small reduce tiles in the
    same hot path without verifying Match Instruction / gfsim.
-5. After edits: `python3 run_op.py rms_norm_binary` (or `--func-only` if only
+5. After edits: `python3 run_op.py rms_norm_split_r` (or `--func-only` if only
    checking correctness).
 6. If implementing true GetCacheId carry + workspace reload, also read
    `binary-accumulation-cache-id/SKILL.md` and expect toolchain/sim constraints
@@ -183,8 +183,8 @@ Precision scripts default shape `--g-r 8192`, `--tile-r 1024`.
 
 ## Anti-patterns
 
-- Naming the run_op preset `rms_norm_binary_1x8192` / `..._1x32768` — canonical
-  name is `rms_norm_binary`.
+- Naming the run_op preset `rms_norm_split_r_1x8192` / `..._1x32768` — canonical
+  name is `rms_norm_split_r`.
 - Treating gfsim FAIL as a precision bug when gfrun+compare already PASS.
 - Putting workspace spill between `rsqrt` and `TROWEXPANDMUL` (clobbers `rms`).
 - Using TEPL `TADD` with `Valid=-1` (`Match Instruction Error`).

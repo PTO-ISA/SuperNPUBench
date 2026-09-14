@@ -1,14 +1,14 @@
-// rms_norm_binary_static: [16,16384].
+// rms_norm_split_r_static: [16,16384].
 // Fixed-shape 4PE implementation with compile-time Tile valid dimensions.
 // Kernel entry points do not accept runtime tiling. Dynamic counterpart is unchanged.
-#ifndef SUPERNPU_RMS_NORM_BINARY_PTO_STATIC_HPP
-#define SUPERNPU_RMS_NORM_BINARY_PTO_STATIC_HPP
+#ifndef SUPERNPU_RMS_NORM_SPLIT_R_PTO_STATIC_HPP
+#define SUPERNPU_RMS_NORM_SPLIT_R_PTO_STATIC_HPP
 
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
 
-namespace rms_bin_static {
+namespace rms_split_r_static {
 
 // Row-reduction results have physical Columns=1. Workspace cache entries
 // must preserve that layout so TLOAD and TADD match the TROWSUM output.
@@ -35,10 +35,10 @@ inline void rsqrt_newton(TileVec &out, TileVec &a) {
     TMULS(out, x, 1.0f);
 }
 
-} // namespace rms_bin_static
+} // namespace rms_split_r_static
 
 template <typename dtype, int peNum>
-void rms_norm_binary_static(dtype *x,  dtype *out,
+void rms_norm_split_r_static(dtype *x,  dtype *out,
                      float *workspace, float eps = 1e-6f) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     constexpr int64_t tA = 1;
@@ -73,7 +73,7 @@ void rms_norm_binary_static(dtype *x,  dtype *out,
     x += pe_offset;
     out += pe_offset;
     // Workspace is level-major: [level][global row].
-    workspace += pe_start * rms_bin_static::kWsCols;
+    workspace += pe_start * rms_split_r_static::kWsCols;
 
     const int64_t remR = gR - powR;
     const int64_t headR = powR - remR;
@@ -88,20 +88,20 @@ void rms_norm_binary_static(dtype *x,  dtype *out,
     // 静态版不实现 tail 处理；断言 shape 恰好产生对齐的无尾块，
     // 且 block 数为 2 的幂、不超过 cache 档数（二分累加的结构性前提）。
     static_assert(rem_tail == 0 && head_tail == 0 && tail_r == 0,
-                  "static rms_norm_binary shape must produce aligned blocks "
+                  "static rms_norm_split_r shape must produce aligned blocks "
                   "(no tail blocks; this kernel omits tail handling)");
     static_assert(
         ((n_rem_full + n_head_full) & (n_rem_full + n_head_full - 1)) == 0,
         "binary accumulation requires a power-of-two block count");
     static_assert(n_rem_full + n_head_full <=
-                      (int64_t(1) << (rms_bin_static::kMaxLevels - 1)),
+                      (int64_t(1) << (rms_split_r_static::kMaxLevels - 1)),
                   "block count exceeds workspace cache levels");
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, 1, 512>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, 1, 512>;
-    using tile_v = Tile<Location::Vec, float, tA, rms_bin_static::kWsCols,
+    using tile_v = Tile<Location::Vec, float, tA, rms_split_r_static::kWsCols,
                         BLayout::RowMajor, 1, 1>;
 
     for (int64_t ia = 0; ia < gA; ++ia) {
@@ -111,11 +111,11 @@ void rms_norm_binary_static(dtype *x,  dtype *out,
         tile_v cur, buf, sum, mean, denom, rms, zero;
         TEXPANDS(zero, 0.0f);
 
-        float *cache = workspace + ia * rms_bin_static::kWsCols;
-        const int64_t stride = globalA * rms_bin_static::kWsCols;
+        float *cache = workspace + ia * rms_split_r_static::kWsCols;
+        const int64_t stride = globalA * rms_split_r_static::kWsCols;
 
-        for (int64_t lv = 0; lv < rms_bin_static::kMaxLevels; ++lv) {
-            gm_f go(cache + lv * stride, 1, rms_bin_static::kWsCols);
+        for (int64_t lv = 0; lv < rms_split_r_static::kMaxLevels; ++lv) {
+            gm_f go(cache + lv * stride, 1, rms_split_r_static::kWsCols);
             TSTORE(go, zero);
         }
 
@@ -125,15 +125,15 @@ void rms_norm_binary_static(dtype *x,  dtype *out,
 #define RMS_BIN_UPDATE_CACHE()                                                  \
     do {                                                                       \
         const uint16_t cid =                                                   \
-            static_cast<uint16_t>(rms_bin_static::GetCacheId(r));                     \
+            static_cast<uint16_t>(rms_split_r_static::GetCacheId(r));                     \
         for (uint16_t j = 0; j < cid; ++j) {                                   \
             gm_f gj(cache + static_cast<int64_t>(j) * stride, 1,               \
-                    rms_bin_static::kWsCols);                                         \
+                    rms_split_r_static::kWsCols);                                         \
             TLOAD(buf, gj);                                                    \
             TADD(cur, cur, buf);                                               \
         }                                                                      \
         gm_f gc(cache + static_cast<int64_t>(cid) * stride, 1,                 \
-                rms_bin_static::kWsCols);                                             \
+                rms_split_r_static::kWsCols);                                             \
         TSTORE(gc, cur);                                                       \
         ++r;                                                                   \
     } while (0)
@@ -179,14 +179,14 @@ void rms_norm_binary_static(dtype *x,  dtype *out,
 #undef RMS_BIN_UPDATE_CACHE
 
         {
-            const int64_t rid = r > 0 ? rms_bin_static::GetCacheId(r - 1) : 0;
-            gm_f gr(cache + rid * stride, 1, rms_bin_static::kWsCols);
+            const int64_t rid = r > 0 ? rms_split_r_static::GetCacheId(r - 1) : 0;
+            gm_f gr(cache + rid * stride, 1, rms_split_r_static::kWsCols);
             TLOAD(sum, gr);
         }
 
         TMULS(mean, sum, inv_r);
         TADDS(denom, mean, eps);
-        rms_bin_static::rsqrt_newton(rms, denom);
+        rms_split_r_static::rsqrt_newton(rms, denom);
 
         for (int64_t tr = 0; tr < n_full; ++tr) {
             const int64_t offset = ia * gR + tr * tile_r;
@@ -206,4 +206,4 @@ void rms_norm_binary_static(dtype *x,  dtype *out,
     }
 }
 
-#endif // SUPERNPU_RMS_NORM_BINARY_PTO_STATIC_HPP
+#endif // SUPERNPU_RMS_NORM_SPLIT_R_PTO_STATIC_HPP

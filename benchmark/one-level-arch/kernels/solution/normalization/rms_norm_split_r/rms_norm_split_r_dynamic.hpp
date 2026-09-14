@@ -1,5 +1,5 @@
 // =============================================================================
-// rms_norm_binary_dynamic.hpp — RMSNorm for g_r > tile_r (R-split)
+// rms_norm_split_r_dynamic.hpp — RMSNorm for g_r > tile_r (R-split)
 // =============================================================================
 //
 // tiling[6] = {g_a, g_r, tile_a, tile_r, pow_r, n_padded}
@@ -23,14 +23,14 @@
 //
 // workspace: [0, kMaxLevels) cache 档
 // =============================================================================
-#ifndef SUPERNPU_RMS_NORM_BINARY_PTO_HPP
-#define SUPERNPU_RMS_NORM_BINARY_PTO_HPP
+#ifndef SUPERNPU_RMS_NORM_SPLIT_R_PTO_HPP
+#define SUPERNPU_RMS_NORM_SPLIT_R_PTO_HPP
 
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
 
-namespace rms_bin {
+namespace rms_split_r {
 
 // Row-reduction results have physical Columns=1. Workspace cache entries
 // must preserve that layout so TLOAD and TADD match the TROWSUM output.
@@ -57,10 +57,10 @@ inline void rsqrt_newton(TileVec &out, TileVec &a) {
     TMULS(out, x, 1.0f);
 }
 
-} // namespace rms_bin
+} // namespace rms_split_r
 
 template <typename dtype, int peNum>
-void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
+void rms_norm_split_r(dtype *x, const int64_t *tiling, dtype *out,
                      float *workspace, float eps = 1e-6f) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     constexpr int64_t tA = 1;
@@ -96,7 +96,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     x += pe_offset;
     out += pe_offset;
     // Workspace is level-major: [level][global row].
-    workspace += pe_start * rms_bin::kWsCols;
+    workspace += pe_start * rms_split_r::kWsCols;
 
     const int64_t remR = gR - powR;
     const int64_t headR = powR - remR;
@@ -115,7 +115,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     // 必须是 2 的幂、覆盖全部实际块、不超过 cache 档容量（fail-closed）。
     if (nPadded < n_actual || nPadded <= 0 ||
         (nPadded & (nPadded - 1)) != 0 ||
-        nPadded > (int64_t(1) << (rms_bin::kMaxLevels - 1))) {
+        nPadded > (int64_t(1) << (rms_split_r::kMaxLevels - 1))) {
         return;
     }
 
@@ -123,7 +123,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, -1, -1>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, -1, -1>;
-    using tile_v = Tile<Location::Vec, float, tA, rms_bin::kWsCols,
+    using tile_v = Tile<Location::Vec, float, tA, rms_split_r::kWsCols,
                         BLayout::RowMajor, 1, 1>;
 
     for (int64_t ia = 0; ia < gA; ++ia) {
@@ -133,11 +133,11 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
         tile_v cur, buf, sum, mean, denom, rms, zero;
         TEXPANDS(zero, 0.0f);
 
-        float *cache = workspace + ia * rms_bin::kWsCols;
-        const int64_t stride = globalA * rms_bin::kWsCols;
+        float *cache = workspace + ia * rms_split_r::kWsCols;
+        const int64_t stride = globalA * rms_split_r::kWsCols;
 
-        for (int64_t lv = 0; lv < rms_bin::kMaxLevels; ++lv) {
-            gm_f go(cache + lv * stride, 1, rms_bin::kWsCols);
+        for (int64_t lv = 0; lv < rms_split_r::kMaxLevels; ++lv) {
+            gm_f go(cache + lv * stride, 1, rms_split_r::kWsCols);
             TSTORE(go, zero);
         }
 
@@ -147,15 +147,15 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
 #define RMS_BIN_UPDATE_CACHE()                                                  \
     do {                                                                       \
         const uint16_t cid =                                                   \
-            static_cast<uint16_t>(rms_bin::GetCacheId(r));                     \
+            static_cast<uint16_t>(rms_split_r::GetCacheId(r));                     \
         for (uint16_t j = 0; j < cid; ++j) {                                   \
             gm_f gj(cache + static_cast<int64_t>(j) * stride, 1,               \
-                    rms_bin::kWsCols);                                         \
+                    rms_split_r::kWsCols);                                         \
             TLOAD(buf, gj);                                                    \
             TADD(cur, cur, buf);                                               \
         }                                                                      \
         gm_f gc(cache + static_cast<int64_t>(cid) * stride, 1,                 \
-                rms_bin::kWsCols);                                             \
+                rms_split_r::kWsCols);                                             \
         TSTORE(gc, cur);                                                       \
         ++r;                                                                   \
     } while (0)
@@ -242,14 +242,14 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
 #undef RMS_BIN_UPDATE_CACHE
 
         {
-            const int64_t rid = r > 0 ? rms_bin::GetCacheId(r - 1) : 0;
-            gm_f gr(cache + rid * stride, 1, rms_bin::kWsCols);
+            const int64_t rid = r > 0 ? rms_split_r::GetCacheId(r - 1) : 0;
+            gm_f gr(cache + rid * stride, 1, rms_split_r::kWsCols);
             TLOAD(sum, gr);
         }
 
         TMULS(mean, sum, inv_r);
         TADDS(denom, mean, eps);
-        rms_bin::rsqrt_newton(rms, denom);
+        rms_split_r::rsqrt_newton(rms, denom);
 
         for (int64_t tr = 0; tr < n_full; ++tr) {
             const int64_t offset = ia * gR + tr * tile_r;
@@ -283,4 +283,4 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     }
 }
 
-#endif // SUPERNPU_RMS_NORM_BINARY_PTO_HPP
+#endif // SUPERNPU_RMS_NORM_SPLIT_R_PTO_HPP
