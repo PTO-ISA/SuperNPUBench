@@ -44,6 +44,13 @@ constexpr int64_t binary_tile_r(int64_t reduce_size) {
     constexpr int64_t kMaxTileR = 512;
     return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
 }
+constexpr int64_t next_power_of_two(int64_t value) {
+    int64_t result = 1;
+    while (result < value) {
+        result <<= 1;
+    }
+    return result;
+}
 } // namespace
 
 #ifdef RES_CHECK
@@ -62,7 +69,20 @@ int main() {
     constexpr int64_t kPowR = floor_power_of_two(G_R - 1);
     static_assert(G_A > 0 && G_R > 1);
     static_assert(kPowR < G_R && G_R <= 2 * kPowR);
-    int64_t tiling_info[5] = {G_A, G_R, kTileA, kTileR, kPowR};
+
+    // Host-side binary-accumulation tiling: compute the actual block count
+    // (rem full + rem tail + head full + head tail) and round it up to the
+    // next power of two so the kernel's AscendC-style cache tree always
+    // yields the full row sum. Guard against exceeding workspace levels.
+    constexpr int64_t kRemR = G_R - kPowR;
+    constexpr int64_t kHeadR = kPowR - kRemR;
+    constexpr int64_t kNActual =
+        kRemR / kTileR + (kRemR % kTileR > 0 ? 1 : 0) +
+        kHeadR / kTileR + (kHeadR % kTileR > 0 ? 1 : 0);
+    constexpr int64_t kNPadded = next_power_of_two(kNActual);
+    static_assert(kNPadded <= (int64_t(1) << (K_MAX_LEVELS - 1)),
+                  "padded block count exceeds workspace cache levels");
+    int64_t tiling_info[6] = {G_A, G_R, kTileA, kTileR, kPowR, kNPadded};
 
     const int64_t g_a = tiling_info[0];
     const int64_t g_r = tiling_info[1];

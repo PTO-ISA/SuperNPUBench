@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Generate rms_norm_binary host bins for [16, 16384] fp16.
 
-tiling_info.bin  : 5 x int64 LE = (g_a, g_r, tile_a, tile_r, pow_r)
+tiling_info.bin  : 6 x int64 LE = (g_a, g_r, tile_a, tile_r, pow_r, n_padded)
 input.bin        : g_a * g_r x float16
 golden.bin       : out = x * rsqrt(mean(x^2)+eps)  (fp32 compute → fp16)
 
 pow_r: power of two with pow_r < g_r <= 2 * pow_r (Pass1 split).
+n_padded: actual block count rounded up to the next power of two
+    (binary-accumulation cache tree requires a power-of-two partial count).
 """
 
 from __future__ import annotations
@@ -80,12 +82,31 @@ def rms_norm_rows(x_f16: list[float], g_a: int, g_r: int, eps: float) -> list[fl
     return y
 
 
+def compute_n_padded(g_r: int, tile_r: int, pow_r: int) -> int:
+    """Host-side binary-accumulation tiling: block count rounded up to 2^k."""
+    rem_r = g_r - pow_r
+    head_r = pow_r - rem_r
+    n_actual = (
+        rem_r // tile_r + (1 if rem_r % tile_r else 0)
+        + head_r // tile_r + (1 if head_r % tile_r else 0)
+    )
+    n_padded = 1
+    while n_padded < n_actual:
+        n_padded <<= 1
+    return n_padded
+
+
 def write_tiling_info(
     path: Path, g_a: int, g_r: int, tile_a: int, tile_r: int, pow_r: int
 ) -> None:
+    n_padded = compute_n_padded(g_r, tile_r, pow_r)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(struct.pack("<5q", g_a, g_r, tile_a, tile_r, pow_r))
-    print(f"wrote {path}  tiling=({g_a},{g_r},{tile_a},{tile_r},{pow_r})")
+    path.write_bytes(
+        struct.pack("<6q", g_a, g_r, tile_a, tile_r, pow_r, n_padded)
+    )
+    print(
+        f"wrote {path}  tiling=({g_a},{g_r},{tile_a},{tile_r},{pow_r},{n_padded})"
+    )
 
 
 def gen_all(

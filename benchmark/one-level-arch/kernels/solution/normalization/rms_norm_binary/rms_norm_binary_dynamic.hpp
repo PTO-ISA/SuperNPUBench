@@ -2,7 +2,7 @@
 // rms_norm_binary_dynamic.hpp — RMSNorm for g_r > tile_r (R-split)
 // =============================================================================
 //
-// tiling[5] = {g_a, g_r, tile_a, tile_r, pow_r}
+// tiling[6] = {g_a, g_r, tile_a, tile_r, pow_r, n_padded}
 //
 // 每块 RowSum 后立刻 UpdateCache（workspace = cacheBuffer），对齐 AscendC：
 //   DataCopy(aReg, src);
@@ -15,9 +15,11 @@
 //   sum = cache[ctz(n_padded)]   （n_padded 为 2^k，含补零块）
 //
 // 二分累加方案要求 partial 总数必须是 2 的幂（否则 cache[ctz(n)] 只包含
-// 末尾部分和）。本 kernel 将实际 partial 数向上补零到下一个 2 的幂：
-// 补零块对总和贡献为 0，不改变结果，但保证最终读取的 cache 档包含全和。
-// n_padded 最大为 2^(kMaxLevels-1)（cid 最大 kMaxLevels-1，不越界）。
+// 末尾部分和）。host 在 tiling 侧算好 n_padded（实际 partial 数向上补零
+// 到下一个 2 的幂）传入 kernel；kernel 只在块循环末尾补发 n_padded -
+// n_actual 个零 partial。补零块对总和贡献为 0，不改变结果，但保证最终
+// 读取的 cache 档包含全和。kernel 校验 n_padded 是 2 的幂且不超过
+// 2^(kMaxLevels-1)（cid 最大 kMaxLevels-1，不越界）。
 //
 // workspace: [0, kMaxLevels) cache 档
 // =============================================================================
@@ -68,6 +70,7 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     const int64_t gR = tiling[1];
     const int64_t tile_r = tiling[3] > 0 ? tiling[3] : tR;
     const int64_t powR = tiling[4];
+    const int64_t nPadded = tiling[5];
     const uint32_t tid = get_thread_idx();
 
     if (globalA <= 0 || gR <= 1 || tile_r <= 0 || tile_r > tR ||
@@ -108,13 +111,11 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     // 实际 partial 数（含 tail 块）
     const int64_t n_actual = n_rem_full + (rem_tail > 0 ? 1 : 0) +
                              n_head_full + (head_tail > 0 ? 1 : 0);
-    // 补零到下一个 2 的幂（二分累加的结构性要求）
-    int64_t n_padded = 1;
-    while (n_padded < n_actual) {
-        n_padded <<= 1;
-    }
-    // cache 档 0..kMaxLevels-1，cid 最大 log2(n_padded)，须 ≤ kMaxLevels-1
-    if (n_padded > (int64_t(1) << (rms_bin::kMaxLevels - 1))) {
+    // n_padded 由 host 在 tiling 侧算好传入；kernel 只做契约校验：
+    // 必须是 2 的幂、覆盖全部实际块、不超过 cache 档容量（fail-closed）。
+    if (nPadded < n_actual || nPadded <= 0 ||
+        (nPadded & (nPadded - 1)) != 0 ||
+        nPadded > (int64_t(1) << (rms_bin::kMaxLevels - 1))) {
         return;
     }
 
@@ -232,9 +233,9 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
             RMS_BIN_UPDATE_CACHE();
         }
 
-        // 补零块：partial 数补到 n_padded（2 的幂）。零块对总和贡献为 0，
-        // 但保证二分累加的最终 cache[ctz(n_padded)] 档包含全和。
-        for (int64_t p = n_actual; p < n_padded; ++p) {
+        // 补零块：partial 数补到 nPadded（2 的幂，host 传入）。零块对总和
+        // 贡献为 0，但保证二分累加的最终 cache[ctz(nPadded)] 档包含全和。
+        for (int64_t p = n_actual; p < nPadded; ++p) {
             TEXPANDS(cur, 0.0f);
             RMS_BIN_UPDATE_CACHE();
         }
