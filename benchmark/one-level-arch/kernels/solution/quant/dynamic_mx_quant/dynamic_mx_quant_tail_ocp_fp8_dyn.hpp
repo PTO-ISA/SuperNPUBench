@@ -94,19 +94,37 @@ void dynamic_mx_quant_tail_ocp_fp8_dyn(__half *x, __fp8_e4m3 *y, uint8_t *scale,
     using t_fb  = Tile<Location::Vec, float,      TileM, 1,         BLayout::RowMajor, -1, 1>;
     using t_f   = Tile<Location::Vec, float,      TileM, BlockSize, BLayout::RowMajor, -1, BlockSize>;
     using t_o   = Tile<Location::Vec, __fp8_e4m3, TileM, BlockSize, BLayout::RowMajor, -1, BlockSize>;
+    // #585 列分区归约类型（复用静态版 reduce_slice_cols）：源 [TileM,BlockSize]=half 超 2048B →
+    //   沿列切 nPart 个 [TileM,RSC] 子块各 <=2048B，逐块 TROWMAX→[TileM,1] partial，TMAX 合并。
+    constexpr int RSC   = tail_ocp_fp8_detail::reduce_slice_cols(TileM, sizeof(__half), BlockSize);
+    constexpr int nPart = BlockSize / RSC;
+    using t_hc  = Tile<Location::Vec, __half, TileM, RSC, BLayout::RowMajor, -1, RSC>;
 
     // 单个 tile-行块的完整计算（scale pass + data pass）。row0 = 全局起始行；
     //   validRows = 该 tile 活跃行数（full-tile: TileM；尾块: seg_tail<TileM）。
     //   全部 tile 用同一 Valid=-1 类型，ctor 传 vr（列静态 → 单参 ctor）。
     auto process_tile = [&](int64_t row0, int64_t validRows) {
         const size_t vr = static_cast<size_t>(validRows);
+        // 列分区 half 域 rowmax（#585）：切 nPart 个 [TileM,RSC] 子块累计 max 到 max_in。
+        auto col_part_rowmax = [&](int64_t colBase, t_hb &max_in) {
+            gm_x g0(x + row0 * N + colBase, static_cast<int>(M), static_cast<int>(N));
+            t_hc xs0(vr); TLOAD(xs0, g0);
+            t_hc as0(vr); TABS(as0, xs0);
+            TROWMAX(max_in, as0);
+            for (int p = 1; p < nPart; ++p) {
+                gm_x gp(x + row0 * N + colBase + p * RSC, static_cast<int>(M), static_cast<int>(N));
+                t_hc xsp(vr); TLOAD(xsp, gp);
+                t_hc asp(vr); TABS(asp, xsp);
+                t_hb pm(vr); TROWMAX(pm, asp);
+                TMAX(max_in, max_in, pm);
+            }
+        };
         for (int64_t kb = 0; kb < numKb; ++kb) {
             // === scale pass ===
             gm_x gx(x + row0 * N + kb * BlockSize,
                     static_cast<int>(M), static_cast<int>(N));
-            t_h  xh(vr);     TLOAD(xh, gx);
-            t_h  abs_h(vr);  TABS(abs_h, xh);
-            t_hb max_h(vr);  TROWMAX(max_h, abs_h);
+            t_h  xh(vr);     TLOAD(xh, gx);                      // 全宽 load 供 data pass 复用
+            t_hb max_h(vr);  col_part_rowmax(kb * BlockSize, max_h); // 列分区 half 域归约（#585）
             t_fb max_f(vr);  TCVT(max_f, max_h);                 // half -> fp32（精确）
             auto max_u32 = reinterpret_tile<uint32_t>(max_f);
             TANDS(max_u32, max_u32, FP32_EXP_MASK);              // floor 到 2^E_max

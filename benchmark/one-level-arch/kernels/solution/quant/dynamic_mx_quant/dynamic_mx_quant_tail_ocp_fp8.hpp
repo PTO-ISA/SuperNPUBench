@@ -16,6 +16,19 @@ constexpr int pow2_floor(int v) {
     while (p * 2 <= v) p *= 2;
     return p;
 }
+// row-reduce 源列切分粒度（#585 / ASL v0.58.6.0：row-reduce 源 tile 物理字节 <= 2048）。
+//   全宽 reduce 源 [TileMv, BlockSize] 常超 2048B（half [128,32]=8192B）→ 沿 BlockSize 切列成
+//   nPart 个 [TileMv, RSC] 子块（各 <=2048B），逐块 TROWMAX 出 [TileMv,1] partial，再 TMAX 合并。
+//   RSC = pow2_floor(2048/(TileMv*sizeof(InT)))，钳到 [1,BlockSize] 且整除 BlockSize。对齐官方
+//   标准归约 kernel reducemax_rowvec.hpp「切列 + TMAX 累积」（行归约不能拆行 subview：
+//   B.SUBVIEW/B.ASSEMBLE 仅 CUBE 布局，行 band 输出 <128B 非法分片）。
+constexpr int reduce_slice_cols(int tileM, int inBytes, int blockSize) {
+    int rc = pow2_floor(2048 / (tileM * inBytes));
+    if (rc < 1) rc = 1;
+    if (rc > blockSize) rc = pow2_floor(blockSize);
+    while (blockSize % rc != 0) rc /= 2;
+    return rc < 1 ? 1 : rc;
+}
 // 最大可支持 TileM —— **仅由 blocksize 决定, 与 SubM 无关**：
 //   physical 行高须 >= 128（floorRows）：reduce 输出下游有 e8m0 列向量 tile [TileM,1]，
 //     只占 TileM 字节；当 TileM*1B < 128B 最小 TSize 时被 padding 撑高 → 其 capacity 派生
@@ -126,13 +139,33 @@ void dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scale) {
         using t_f   = Tile<Location::Vec, float,      TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
         using t_o   = Tile<Location::Vec, __fp8_e4m3, TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
 
+        // #585 列分区归约（half 域）：源 [TileMv,BlockSize] 超 2048B → 沿列切 nPart 个 [TileMv,RSC]
+        //   子块各 <=2048B，逐块 TROWMAX→[TileMv,1] partial，TMAX 合并；输出满行、不触 #119。
+        constexpr int RSC   = tail_ocp_fp8_detail::reduce_slice_cols(TileMv, sizeof(__half), BlockSize);
+        constexpr int nPart = BlockSize / RSC;
+        using t_hc  = Tile<Location::Vec, __half, TileMv, RSC, BLayout::RowMajor, ValidRows, RSC>;
+        auto col_part_rowmax = [&](int colBase, t_hb &max_in) {
+            global_iterator<gm_x, t_hc> it0(x + row0 * N + colBase);
+            auto g0 = it0(0, 0);
+            t_hc xs0; TLOAD(xs0, g0);
+            t_hc as0; TABS(as0, xs0);
+            TROWMAX(max_in, as0);
+            for (int p = 1; p < nPart; ++p) {
+                global_iterator<gm_x, t_hc> itp(x + row0 * N + colBase + p * RSC);
+                auto gp = itp(0, 0);
+                t_hc xsp; TLOAD(xsp, gp);
+                t_hc asp; TABS(asp, xsp);
+                t_hb pm; TROWMAX(pm, asp);
+                TMAX(max_in, max_in, pm);
+            }
+        };
+
         for (int kb = 0; kb < numKb; ++kb) {
             // === scale pass ===
             global_iterator<gm_x, t_h> x_iter(x + row0 * N + kb * BlockSize);
             auto gx = x_iter(0, 0);
-            t_h xh;      TLOAD(xh, gx);
-            t_h abs_h;   TABS(abs_h, xh);
-            t_hb max_h;  TROWMAX(max_h, abs_h);
+            t_h xh;      TLOAD(xh, gx);                           // 全宽 load 供 data pass 复用
+            t_hb max_h;  col_part_rowmax(kb * BlockSize, max_h); // 列分区 half 域归约（#585）
             t_fb max_f;  TCVT(max_f, max_h);                     // half -> fp32（精确无舍入）
             auto max_u32 = reinterpret_tile<uint32_t>(max_f);
             TANDS(max_u32, max_u32, FP32_EXP_MASK);              // floor 到 2^E_max（清尾数+符号）

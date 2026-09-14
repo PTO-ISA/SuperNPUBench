@@ -76,11 +76,30 @@ void dynamic_mx_quant_tail_cublas_fp8_dyn(InT *x, OutT *y, uint8_t *scale,
     using tile_recip_f1 = Tile<Location::Vec, float,    TileM, 1, BLayout::RowMajor, -1, 1>;
     using tile_in1      = Tile<Location::Vec, InT,      TileM, 1, BLayout::RowMajor, -1, 1>;
     using tile_u32_1    = Tile<Location::Vec, uint32_t, TileM, 1, BLayout::RowMajor, -1, 1>;
+    // #585 列分区归约类型：源 [TileM,BlockSize] 超 2048B → 沿列切 nPart 个 [TileM,RSC] 子块各
+    //   <=2048B，逐块 TROWMAX→[TileM,1] partial，TMAX 合并（对齐官方 reducemax_rowvec 切列+TMAX）。
+    constexpr int RSC   = reduce_slice_cols(TileM, sizeof(InT), BlockSize);
+    constexpr int nPart = BlockSize / RSC;
+    using tile_xc = Tile<Location::Vec, InT, TileM, RSC, BLayout::RowMajor, -1, RSC>;
 
     // 单个 tile-行块的完整计算（scale pass + data pass）。row0 = 全局起始行；validRows =
     //   活跃行数（full-tile: TileM；尾块: seg_tail<TileM）。全部 tile 用同一 Valid=-1 类型。
     auto process_tile = [&](int64_t row0, int64_t validRows) {
         const size_t vr = static_cast<size_t>(validRows);
+        // 列分区 InT 域 rowmax（#585）：切 nPart 个 [TileM,RSC] 子块累计 max 到 max_in。
+        auto col_part_rowmax = [&](int64_t colBase, tile_in1 &max_in) {
+            gm_x g0(x + row0 * K + colBase, static_cast<int>(M), static_cast<int>(K));
+            tile_xc xs0(vr); TLOAD(xs0, g0);
+            tile_xc as0(vr); TABS(as0, xs0);
+            TROWMAX(max_in, as0);
+            for (int p = 1; p < nPart; ++p) {
+                gm_x gp(x + row0 * K + colBase + p * RSC, static_cast<int>(M), static_cast<int>(K));
+                tile_xc xsp(vr); TLOAD(xsp, gp);
+                tile_xc asp(vr); TABS(asp, xsp);
+                tile_in1 pm(vr); TROWMAX(pm, asp);
+                TMAX(max_in, max_in, pm);
+            }
+        };
         for (int64_t kb = 0; kb < numKb; ++kb) {
             gm_x gx(x + row0 * K + kb * BlockSize,
                     static_cast<int>(M), static_cast<int>(K));
@@ -89,20 +108,16 @@ void dynamic_mx_quant_tail_cublas_fp8_dyn(InT *x, OutT *y, uint8_t *scale,
             gm_s gs(scale + row0 * scaleCols + kb,
                     static_cast<int>(M), static_cast<int>(scaleCols));
 
-            // ComputeScale pass：InT 域归约 amax，仅把归约后的 per-row 标量转 fp32。
+            // ComputeScale pass：列分区 InT 域归约 amax（#585 源子块<=2048B），仅把归约后的
+            //   per-row 标量转 fp32。(amax reduce 用列分区重载子块；data pass 另 reload 全宽 xq。)
             tile_sred scale_byte(vr);
             tile_sred recip(vr);
-            tile_x    xq_s(vr);
-            TLOAD(xq_s, gx);
-            // -- compute_cublas_scale_tail：InT 域 TABS+TROWMAX --
-            tile_x abs_x(vr);
-            TABS(abs_x, xq_s);
             tile_recip_f1 max_f(vr);
             if constexpr (std::is_same_v<InT, float>) {
-                TROWMAX(max_f, abs_x);      // fp32：直接归约到 fp32（免前置 cast）
+                col_part_rowmax(kb * BlockSize, max_f);  // fp32：InT=float，列分区直接归约到 fp32
             } else {
                 tile_in1 max_r(vr);
-                TROWMAX(max_r, abs_x);      // reduce cols -> valid col=1（InT 域）
+                col_part_rowmax(kb * BlockSize, max_r);  // InT 域列分区归约 -> valid col=1
                 TCVT(max_f, max_r);         // bf16/half -> fp32（仅归约后的 per-row 标量）
             }
             // -- compute_cublas_core（IDEAL CmpMode 版）--
