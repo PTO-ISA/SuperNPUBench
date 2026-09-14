@@ -85,6 +85,18 @@ void rms_norm_binary_static(dtype *x,  dtype *out,
     const int64_t tail_r = gR - n_full * tile_r;
     const float inv_r = 1.0f / static_cast<float>(gR);
 
+    // 静态版不实现 tail 处理；断言 shape 恰好产生对齐的无尾块，
+    // 且 block 数为 2 的幂、不超过 cache 档数（二分累加的结构性前提）。
+    static_assert(rem_tail == 0 && head_tail == 0 && tail_r == 0,
+                  "static rms_norm_binary shape must produce aligned blocks "
+                  "(no tail blocks; this kernel omits tail handling)");
+    static_assert(
+        ((n_rem_full + n_head_full) & (n_rem_full + n_head_full - 1)) == 0,
+        "binary accumulation requires a power-of-two block count");
+    static_assert(n_rem_full + n_head_full <=
+                      (int64_t(1) << (rms_bin_static::kMaxLevels - 1)),
+                  "block count exceeds workspace cache levels");
+
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, 1, 512>;

@@ -12,7 +12,12 @@
 //   }
 //   DataCopy(cache + cid * stride, aReg);
 //   cid = GetCacheId(idx) = ctz(idx+1)
-//   sum = cache[GetCacheId(r-1)]   （r 为 2^k）
+//   sum = cache[ctz(n_padded)]   （n_padded 为 2^k，含补零块）
+//
+// 二分累加方案要求 partial 总数必须是 2 的幂（否则 cache[ctz(n)] 只包含
+// 末尾部分和）。本 kernel 将实际 partial 数向上补零到下一个 2 的幂：
+// 补零块对总和贡献为 0，不改变结果，但保证最终读取的 cache 档包含全和。
+// n_padded 最大为 2^(kMaxLevels-1)（cid 最大 kMaxLevels-1，不越界）。
 //
 // workspace: [0, kMaxLevels) cache 档
 // =============================================================================
@@ -99,6 +104,19 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
     const int64_t n_full = gR / tile_r;
     const int64_t tail_r = gR - n_full * tile_r;
     const float inv_r = 1.0f / static_cast<float>(gR);
+
+    // 实际 partial 数（含 tail 块）
+    const int64_t n_actual = n_rem_full + (rem_tail > 0 ? 1 : 0) +
+                             n_head_full + (head_tail > 0 ? 1 : 0);
+    // 补零到下一个 2 的幂（二分累加的结构性要求）
+    int64_t n_padded = 1;
+    while (n_padded < n_actual) {
+        n_padded <<= 1;
+    }
+    // cache 档 0..kMaxLevels-1，cid 最大 log2(n_padded)，须 ≤ kMaxLevels-1
+    if (n_padded > (int64_t(1) << (rms_bin::kMaxLevels - 1))) {
+        return;
+    }
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
@@ -211,6 +229,13 @@ void rms_norm_binary(dtype *x, const int64_t *tiling, dtype *out,
             TCVT(src, src_h);
             TMUL(sq, src, src);
             TROWSUM(cur, sq);
+            RMS_BIN_UPDATE_CACHE();
+        }
+
+        // 补零块：partial 数补到 n_padded（2 的幂）。零块对总和贡献为 0，
+        // 但保证二分累加的最终 cache[ctz(n_padded)] 档包含全和。
+        for (int64_t p = n_actual; p < n_padded; ++p) {
+            TEXPANDS(cur, 0.0f);
             RMS_BIN_UPDATE_CACHE();
         }
 #undef RMS_BIN_UPDATE_CACHE
