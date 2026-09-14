@@ -15,6 +15,20 @@ constexpr int pow2_floor(int v) {
     while (p * 2 <= v) p *= 2;
     return p;
 }
+// row-reduce 源列切分粒度（#585 / ASL v0.58.6.0：row-reduce 源 tile 物理字节 <= 2048）。
+//   全宽 reduce 源 [TileMv, BlockSize] 常超 2048B（bf16 [128,32]=8192B）→ 沿 BlockSize **切列**
+//   成若干 [TileMv, RSC] 子块，每块 <= 2048B，逐块 TROWMAX 出 [TileMv,1] partial 再 TMAX 合并。
+//   RSC = 满足 [TileMv,RSC]*sizeof(InT) <= 2048 的最大 2 的幂，且整除 BlockSize、钳到 [1,BlockSize]。
+//   不写死：由 2048 预算、TileMv、InT 宽度算出（bf16/TileMv=128 → RSC=8/4 分区；fp32 → RSC=4/8 分区）。
+//   对齐官方标准归约 kernel reducemax_rowvec.hpp 的"切列 + TMAX 累积"写法（行归约不能用
+//   subview 拆行：B.SUBVIEW/B.ASSEMBLE 仅支持 CUBE 布局，且行 band 输出 <128B 非法分片）。
+constexpr int reduce_slice_cols(int tileM, int inBytes, int blockSize) {
+    int rc = pow2_floor(2048 / (tileM * inBytes));   // <=2048B 允许的最大列数（取 2 的幂）
+    if (rc < 1) rc = 1;
+    if (rc > blockSize) rc = pow2_floor(blockSize);
+    while (blockSize % rc != 0) rc /= 2;             // 须整除 BlockSize（RSC 为 2 的幂时天然成立）
+    return rc < 1 ? 1 : rc;
+}
 // 最大 TileM —— 仅由 blockSize 决定，与 SubM 无关：
 //   physical 行高须 >= 128（floorRows）：reduce 输出下游有 e8m0 列向量 tile [TileM,1]，
 //     TileM*1B < 128B 最小 TSize 时被 padding 撑高 → DerivedTileRows 翻倍，违反 pto-spec
@@ -102,6 +116,31 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
         //   BytesOf(fp4) 打包两个 4bit/字节（SuperScalarModel 31f7a8f）。
         using t_o   = Tile<Location::Vec, OutT,       TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
 
+        // #585 列分区归约（见 detail::reduce_slice_cols 注释）：源全宽 [TileMv,BlockSize] 超 2048B，
+        //   沿列切 nPart 个 [TileMv,RSC] 子块（各 <=2048B），逐块 TROWMAX 出 InT 域 [TileMv,1] partial，
+        //   再 TMAX 逐元素合并。切列（非切行）→ partial 保持全 TileMv 行，合并后仍 [TileMv,1]，e8m0
+        //   输出行数不变、不触 #119。归约域 = InT（bf16/half/fp32 各自原生域），故子块与结果均为 InT。
+        constexpr int RSC   = tail_ocp_fp4_detail::reduce_slice_cols(TileMv, sizeof(InT), BlockSize);
+        constexpr int nPart = BlockSize / RSC;
+        using t_xc  = Tile<Location::Vec, InT, TileMv, RSC, BLayout::RowMajor, ValidRows, RSC>;
+        using t_inb = Tile<Location::Vec, InT, TileMv, 1,   BLayout::RowMajor, ValidRows, 1>;
+        // 列分区 InT 域 rowmax：colBase = 块起始列（kb*BlockSize），切 nPart 块累计 max 到 max_in。
+        auto col_part_rowmax = [&](int colBase, t_inb &max_in) {
+            global_iterator<gm_x, t_xc> it0(x + row0 * N + colBase);
+            auto g0 = it0(0, 0);                        // 具名 lvalue（TLOAD 第二参须 lvalue）
+            t_xc xs0; TLOAD(xs0, g0);
+            t_xc as0; TABS(as0, xs0);
+            TROWMAX(max_in, as0);                       // part 0 → max_in
+            for (int p = 1; p < nPart; ++p) {
+                global_iterator<gm_x, t_xc> itp(x + row0 * N + colBase + p * RSC);
+                auto gp = itp(0, 0);
+                t_xc xsp; TLOAD(xsp, gp);
+                t_xc asp; TABS(asp, xsp);
+                t_inb pm; TROWMAX(pm, asp);
+                TMAX(max_in, max_in, pm);               // 逐元素合并 partial（MAX 对列分区可分解）
+            }
+        };
+
         for (int kb = 0; kb < numKb; ++kb) {
             // === scale pass：value-domain reduce（InT 分派），floor 指数 ===
             // ⚠ 指数抽取 round-mode 缺口：块 |max| 恰落 2^k 正下方时，narrowing TCVT(_->bf16)
@@ -112,23 +151,21 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
             auto gx = x_iter(0, 0);
             t_x xin; TLOAD(xin, gx);
 
+            // reduce 走列分区（#585，源子块 <=2048B）；下游 floor/窄化保持不变。
             t_bfb max_bf;
             if constexpr (std::is_same_v<InT, __half>) {
-                t_x  abs_h;  TABS(abs_h, xin);
-                t_hb max_h;  TROWMAX(max_h, abs_h);            // half 域归约
+                t_inb max_h; col_part_rowmax(kb * BlockSize, max_h);  // half 域列分区归约
                 t_fb max_f;  TCVT(max_f, max_h);               // half -> fp32（精确加宽）
                 auto max_u32 = reinterpret_tile<uint32_t>(max_f);
                 TANDS(max_u32, max_u32, FP32_EXP_MASK);        // fp32 域 floor 到 2^E（无进位）
                 TCVT(max_bf, max_f);                           // fp32 -> bf16（尾数=0，精确）
             } else if constexpr (std::is_same_v<InT, float>) {
-                t_x  abs_f;  TABS(abs_f, xin);
-                t_fb max_f;  TROWMAX(max_f, abs_f);            // fp32 域归约
+                t_inb max_f; col_part_rowmax(kb * BlockSize, max_f); // fp32 域列分区归约
                 auto max_u32 = reinterpret_tile<uint32_t>(max_f);
                 TANDS(max_u32, max_u32, FP32_EXP_MASK);        // fp32 域 floor（无进位）
                 TCVT(max_bf, max_f);                           // fp32 -> bf16（尾数=0，精确）
             } else {
-                t_x  abs_bf; TABS(abs_bf, xin);                // bf16 原生
-                TROWMAX(max_bf, abs_bf);                       // bf16 域归约 -> max_bf
+                col_part_rowmax(kb * BlockSize, max_bf);       // bf16 域列分区归约 -> max_bf
                 auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
                 TANDS(max_u16, max_u16, BF16_EXP_MASK);        // 直接取指数（无转换->无进位）
             }

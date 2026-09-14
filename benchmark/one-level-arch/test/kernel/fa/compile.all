@@ -1,7 +1,7 @@
 #!/bin/bash
 # Flash Attention operator test cases
 
-set -euo pipefail
+set -u
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 
 # ============================================

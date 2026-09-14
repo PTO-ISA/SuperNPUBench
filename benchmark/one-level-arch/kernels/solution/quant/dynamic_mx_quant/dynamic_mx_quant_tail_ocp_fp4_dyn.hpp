@@ -90,35 +90,51 @@ void dynamic_mx_quant_tail_ocp_fp4_dyn(InT *x, OutT *y, uint8_t *scale,
     using t_fb  = Tile<Location::Vec, float,      TileM, 1,         BLayout::RowMajor, -1, 1>;
     using t_f   = Tile<Location::Vec, float,      TileM, BlockSize, BLayout::RowMajor, -1, BlockSize>;
     using t_o   = Tile<Location::Vec, OutT,       TileM, BlockSize, BLayout::RowMajor, -1, BlockSize>;
+    // #585 列分区归约类型（复用静态版 reduce_slice_cols）：源 [TileM,BlockSize] 超 2048B →
+    //   沿列切 nPart 个 [TileM,RSC] 子块各 <=2048B，逐块 TROWMAX→[TileM,1] partial，TMAX 合并。
+    constexpr int RSC   = tail_ocp_fp4_detail::reduce_slice_cols(TileM, sizeof(InT), BlockSize);
+    constexpr int nPart = BlockSize / RSC;
+    using t_xc  = Tile<Location::Vec, InT, TileM, RSC, BLayout::RowMajor, -1, RSC>;
+    using t_inb = Tile<Location::Vec, InT, TileM, 1,   BLayout::RowMajor, -1, 1>;
 
     // 单个 tile-行块的完整计算（scale pass + recip finalize + data pass）。row0 = 全局
     //   起始行；validRows = 活跃行数（full-tile: TileM；尾块: seg_tail<TileM）。全部 tile
     //   用同一 Valid=-1 类型，ctor 传 vr。
     auto process_tile = [&](int64_t row0, int64_t validRows) {
         const size_t vr = static_cast<size_t>(validRows);
+        // 列分区 InT 域 rowmax（#585）：切 nPart 个 [TileM,RSC] 子块累计 max 到 max_in。
+        auto col_part_rowmax = [&](int64_t colBase, t_inb &max_in) {
+            gm_x g0(x + row0 * N + colBase, static_cast<int>(M), static_cast<int>(N));
+            t_xc xs0(vr); TLOAD(xs0, g0);
+            t_xc as0(vr); TABS(as0, xs0);
+            TROWMAX(max_in, as0);
+            for (int p = 1; p < nPart; ++p) {
+                gm_x gp(x + row0 * N + colBase + p * RSC, static_cast<int>(M), static_cast<int>(N));
+                t_xc xsp(vr); TLOAD(xsp, gp);
+                t_xc asp(vr); TABS(asp, xsp);
+                t_inb pm(vr); TROWMAX(pm, asp);
+                TMAX(max_in, max_in, pm);
+            }
+        };
         for (int64_t kb = 0; kb < numKb; ++kb) {
-            // === scale pass：value-domain reduce（InT 分派），floor 指数 ===
+            // === scale pass：value-domain reduce（InT 分派，列分区#585），floor 指数 ===
             gm_x gx(x + row0 * N + kb * BlockSize,
                     static_cast<int>(M), static_cast<int>(N));
-            t_x xin(vr); TLOAD(xin, gx);
-
+            t_x xin(vr); TLOAD(xin, gx);                       // 全宽 load 供 data pass 复用
             t_bfb max_bf(vr);
             if constexpr (std::is_same_v<InT, __half>) {
-                t_x  abs_h(vr);  TABS(abs_h, xin);
-                t_hb max_h(vr);  TROWMAX(max_h, abs_h);       // half 域归约
+                t_hb max_h(vr);  col_part_rowmax(kb * BlockSize, max_h);  // half 域列分区归约
                 t_fb max_f(vr);  TCVT(max_f, max_h);          // half -> fp32（精确加宽）
                 auto max_u32 = reinterpret_tile<uint32_t>(max_f);
                 TANDS(max_u32, max_u32, FP32_EXP_MASK);       // fp32 域 floor 到 2^E（无进位）
                 TCVT(max_bf, max_f);                          // fp32 -> bf16（尾数=0，精确）
             } else if constexpr (std::is_same_v<InT, float>) {
-                t_x  abs_f(vr);  TABS(abs_f, xin);
-                t_fb max_f(vr);  TROWMAX(max_f, abs_f);       // fp32 域归约
+                t_fb max_f(vr);  col_part_rowmax(kb * BlockSize, max_f); // fp32 域列分区归约
                 auto max_u32 = reinterpret_tile<uint32_t>(max_f);
                 TANDS(max_u32, max_u32, FP32_EXP_MASK);       // fp32 域 floor（无进位）
                 TCVT(max_bf, max_f);                          // fp32 -> bf16（尾数=0，精确）
             } else {
-                t_x  abs_bf(vr); TABS(abs_bf, xin);           // bf16 原生
-                TROWMAX(max_bf, abs_bf);                      // bf16 域归约 -> max_bf
+                col_part_rowmax(kb * BlockSize, max_bf);      // bf16 域列分区归约 -> max_bf
                 auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
                 TANDS(max_u16, max_u16, BF16_EXP_MASK);       // 直接取指数（无转换->无进位）
             }

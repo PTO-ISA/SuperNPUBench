@@ -11,7 +11,7 @@
 #   - MX_NOGATHER: Implementation without gather
 #   - MX_NOGATHER_REUSEA: Optimized version with A tile reuse
 
-set -euo pipefail
+set -u
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 
 # ============================================

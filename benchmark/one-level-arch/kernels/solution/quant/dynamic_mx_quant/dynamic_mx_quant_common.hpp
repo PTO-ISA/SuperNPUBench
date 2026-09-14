@@ -158,6 +158,23 @@ constexpr int max_tilem() {
     return t;
 }
 
+// row-reduce 源列切分粒度（#585 / ASL v0.58.6.0：TROWMAX/TROWSUM/... 行归约源 tile 物理字节
+//   <= 2048）。全宽 reduce 源 [TileM, BlockSize] 常超限（half [128,32]=8192B）→ 沿 BlockSize
+//   **切列**成若干 [TileM, RSC] 子块（各 <=2048B），逐块 TROWMAX 出 [TileM,1] partial 再 TMAX
+//   合并。切列（非切行）→ partial 保持全 TileM 行、合并后仍 [TileM,1]，e8m0/scale 输出行数不变、
+//   不触 TCVT physical-Row 契约（#119）。对齐官方标准归约 kernel reducemax_rowvec.hpp「切列 +
+//   TMAX 累积」（行归约不能用 subview 拆行：B.SUBVIEW/B.ASSEMBLE 仅 CUBE 布局，行 band 输出
+//   <128B 是非法分片）。RSC = 满足 [TileM,RSC]*inBytes <= 2048 的最大 2 的幂，钳到 [1,BlockSize]
+//   且整除 BlockSize；不写死，由 2048 预算 / TileM / InT 宽度算出。
+constexpr int reduce_slice_cols(int tileM, int inBytes, int blockSize) {
+    int budget = 2048 / (tileM * inBytes);   // <=2048B 允许的最大列数
+    int rc = 1;
+    while (rc * 2 <= budget) rc *= 2;         // 向下取 2 的幂
+    if (rc > blockSize) { rc = 1; while (rc * 2 <= blockSize) rc *= 2; }
+    while (blockSize % rc != 0) rc /= 2;      // 须整除 BlockSize（2 的幂时天然成立）
+    return rc < 1 ? 1 : rc;
+}
+
 // Non-tail: physical TileN —— **仅由 BlockSize 决定的编译期常量，与输入 Post/N 无关**
 // （对称于 tail 的 tilem_max）。判据 = 最小 tile 块 [1,TileN] 的最窄 dtype（scale 的
 // u8/e8m0 = 8-bit）= TileN 字节 >= 128B 最小 TSize，否则被 padding 撑高 physical Row →

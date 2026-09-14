@@ -408,12 +408,115 @@ microbench（one-level 金标准比对几乎全过）。**与精度容差无关*
 > `/tmp/res_check_run/summary_corrected.tsv`（elf / 类别 / 状态 / rc / note）。
 
 
-> **当前验证基线**：2026-09-11（569 个已编译 ELF 全量 gfrun 复测，**排除 matmul/fa HIF4/HIF8**
-> （需 assemble 功能）；编译器更新后全量重编译 584 ELF——llvm `0a141cbd2`（B.DATR CCTRL union 消歧）
-> + TileOP-API `e93ef98`（reinterpret_tile 文档），gfrun 用 **SuperScalarModel-asl worktree**
-> `codex/gfrun-pto-0586-asl` `e7d883c9`（PTO v0.58.6 tile contracts + CUBE reduction subview 修复）；
-> 总 PASS 487，通过率 85.6%——编译器更新后 fixp +2 PASS（18→16 FAIL），新增 solution matmul_test ×3
-> （输出 >500MB FAIL），A16W4 matmul ×3 全部独立验证 PASS（1.07–1.36GB 输出），group_token_old_mt 独立验证 PASS
+> **当前验证基线**：2026-09-14（579 个已编译 ELF 全量 gfrun 复测，**排除 HIF4/HIF8**）；
+> TileOP-API 更新 `e93ef98`→`987d034`（矩阵 shape 校验加严：`AValidCols==BValidRows`、D valid shape、
+> MX ScaleB shape），导致单线程 fa_2d_unroll/sfa + matmul MASK_FP16/FP8/A16W4/HIF4 共 19 个 ELF 编译失败
+> （09-11 全 PASS）；gfrun 切换 `fix/gfrun-shared-tmatmul-layout-257` `ad972d21`（Shared TMATMUL layout 适配），
+> 导致 solution gather_v2 ×3 + view_copy ×3 回归 R2=1（结果不匹配）；新增 fa_gmma_kchains(+2)、
+> matmul_blockM/kchains/lowp_blockM(+19)、dynamic_mx_quant(+14)；输出截断 500MB→2GB，A16W4/group_token_old_mt
+> 不再需要独立验证。总 PASS 486，通过率 83.9%
+
+# gfrun 执行结果汇总 — 2026-09-14
+
+## 验证环境
+
+| 组件 | 分支/版本 | Commit |
+|---|---|---|
+| gfrun / SuperScalarModel-asl | `fix/gfrun-shared-tmatmul-layout-257` | `ad972d21` |
+| llvm-project | `dev-llvm15_56` | `4a3e0bdb5` |
+| Linx-TileOP-API | `linx` | `987d034` |
+| linx-toolchain-build | `main` | `e6a31ef` |
+| SuperNPUBench | `main` | `12fb94b` |
+
+编译器按 **AGENTS.md** 指定用主 `linx-toolchain-build` worktree：clang 15.0.4（clang hash `4a3e0bdb53c9b5dca7db14109d2449162a76246f`），target `linx64v5-unknown-linux-musl`，PTO **v0.58.6**。gfrun 用 **SuperScalarModel-asl worktree**（`fix/gfrun-shared-tmatmul-layout-257` `ad972d21`，Shared TMATMUL layout 适配）。执行：`gfrun -t 1 -f <elf>`，multi_thread 加 `-s softcore.multiThreadNum=4`，单 ELF 300s 超时 + **2GB 输出截断**（09-11 为 500MB）。PASS = `Reach the End of Benchmark` + `R2 = 0`。**排除 HIF4/HIF8**。
+
+## 关键变更（09-11→09-14）
+
+**1. gfrun 分支切换**
+- `codex/gfrun-pto-0586-asl` `e7d883c9` → `fix/gfrun-shared-tmatmul-layout-257` `ad972d21`（Shared TMATMUL layout 适配）。
+- 导致 solution gather_v2 ×3 + view_copy ×3 回归 R2=1（09-11 全 PASS，到达终点但结果不匹配）。
+
+**2. TileOP-API 加严矩阵 shape 校验**
+- `e93ef98` → `987d034`：新增 `AValidCols == BValidRows`（K 维匹配）、`Matrix D valid shape must match effective M x N`、`MX ScaleB valid shape must be ceil(K/groupB) x N` 静态断言。
+- 导致 **19 个 09-11 PASS 的单线程 ELF 编译失败**：fa_2d_unroll ×8 + sfa ×2（fa）+ matmul MASK_FP16 ×3 + MASK_FP8 ×3 + A16W4 ×3 + HIF4 ×4（matmul，HIF4 09-11 已排除）。
+- 仅 MASK_FP32 ×3 + fa_softmax_pto ×2 仍可编译（固定 `set -euo pipefail` 致首失败后脚本退出 → 改为 `set -u` 后恢复）。
+
+**3. llvm-project 小幅更新**
+- `0a141cbd2` → `4a3e0bdb5`。
+
+**4. 新增算子**
+- `fa_gmma_kchains`（+2 ELF）：GMMA k-chain FA 变体（QK_CHAIN_K=32），FP32_VECFP32 + BF16_VECFP32，全 PASS。
+- `matmul_blockM`（+13 ELF）：共享 blockM matmul，FP32/BF16/FP8/MXFP4 全模式，全 PASS。
+- `matmul_kchains`（+1 ELF）：k-chain matmul，PASS。
+- `matmul_lowp_blockM`（+5 ELF）：低精度 blockM，FP8/MXFP4，全 PASS。
+- `dynamic_mx_quant`（+14 ELF，solution/quant）：动态 MX 量化算子，2 PASS / 12 FAIL（`priorSources` 断言）。
+
+**5. 输出截断 500MB→2GB**
+- 09-11 的 500MB 截断导致 A16W4 matmul ×3、group_token_old_mt、concat_scatter 等大输出 ELF 的 PASS 标记被截断误判 FAIL，需逐一独立验证。
+- 本轮提升至 2GB，上述 ELF 在批量回归中即可正确判定 PASS，无需独立验证。
+- 仍有 6 个 ELF 输出超 2GB（topk、group_token_old、group_token_vec、matmul_test ×2、mega_moe_sim），维持 FAIL。
+
+**6. compile.all 修复**
+- 单线程 matmul/fa 的 `compile.all` 有 `set -euo pipefail`，HIF4 首失败即退出脚本，跳过后续 A16W4/MASK 变体。改为 `set -u` 后 MASK_FP32 ×3 + fa_softmax_pto ×2 恢复编译。
+
+## 总体结果
+
+| 范围 | ELF 数 | PASS | FAIL | TIMEOUT | 通过率 |
+|---|---:|---:|---:|---:|---:|
+| microbenchmark | 439 | 405 | 34 | 0 | 92.3% |
+| one-level-arch (kernel) | 108 | 72 | 36 | 0 | 66.7% |
+| solution | 32 | 9 | 23 | 0 | 28.1% |
+| **合计** | **579** | **486** | **93** | **0** | **83.9%** |
+
+> vs 09-11：+10 ELF（569→579），−1 PASS（487→486），+11 FAIL（82→93），通过率 85.6%→83.9%。ELF 增量来自 multi_thread/matmul +19（blockM/kchains/lowp）+ multi_thread/fa +2（fa_gmma_kchains）+ solution/quant +14（dynamic_mx_quant）；减量来自单线程 matmul −9 + fa −10（TileOP 编译失败）。PASS 减少主因：gather_v2/view_copy −6（gfrun 回归 R2=1）+ 单线程 matmul/fa −19（编译失败移除）+ dynamic_mx_quant +12 FAIL。
+
+## 算子通过率
+
+| 算子族 | ELF | PASS | FAIL | 通过率 | 说明 |
+|---|---:|---:|---:|---:|---|
+| micro/scalar | 124 | 124 | 0 | 100% | 全过 |
+| micro/memory | 27 | 27 | 0 | 100% | 全过 |
+| micro/cube | 11 | 11 | 0 | 100% | 全过 |
+| micro/fixp | 107 | 91 | 16 | 85.0% | MX scale dataType 断言（不变） |
+| micro/vector | 170 | 152 | 18 | 89.4% | TSTORE dtype/descriptor + compare/select（不变） |
+| one-level/fa | 2 | 2 | 0 | 100% | fa_softmax_pto ×2（fa_2d_unroll/sfa/HIF4 编译失败） |
+| one-level/matmul | 3 | 3 | 0 | 100% | MASK_FP32 ×3（FP16/FP8/A16W4/HIF4 编译失败） |
+| one-level/multi_thread/fa | 38 | 14 | 24 | 36.8% | fa_subview 12 + fa_gmma_kchains 2 PASS；fa_2d_unroll_gmma + fa_fixpipe 24 FAIL（validCol != 0） |
+| one-level/multi_thread/matmul | 29 | 29 | 0 | 100% | 全过（含 blockM +13、kchains +1、lowp_blockM +5） |
+| one-level/multi_thread/(其他) | 6 | 4 | 2 | 66.7% | reduction 2 FAIL（不变） |
+| one-level/broadcast | 4 | 3 | 1 | 75% | COPY expansion 断言（不变） |
+| one-level/concat | 4 | 4 | 0 | 100% | 全过（scatter half 2GB 输出已正确判定 PASS） |
+| one-level/control | 6 | 0 | 6 | 0% | MGATHER operand 非法（不变） |
+| one-level/reduction | 5 | 3 | 2 | 60% | validCol + TROWSUM 断言（不变） |
+| 其他（全过） | 10 | 10 | 0 | 100% | element_wise/gather/transpose/flashMLA/conv2d/vec 等 |
+| solution/moe_combine | 2 | 2 | 0 | 100% | mt + v2（全过） |
+| solution/moe_dispatch | 2 | 2 | 0 | 100% | mt + v2（全过） |
+| solution/group_token_old | 2 | 1 | 1 | 50% | mt PASS；单线程版输出 >2GB（疑似死循环） |
+| solution/group_token_vec | 1 | 0 | 1 | 0% | 输出 >2GB（疑似死循环） |
+| solution/matmul_test | 3 | 1 | 2 | 33% | B1_M200 PASS；B1_M256/B1_M512 输出 >2GB |
+| solution/mega_moe | 2 | 1 | 1 | 50% | sim_mt PASS；sim 输出 >2GB |
+| solution/quant | 14 | 2 | 12 | 14.3% | **新增** dynamic_mx_quant；12 FAIL（priorSources 断言） |
+| solution/gather_v2 | 3 | 0 | 3 | 0% | **回归** R2=1（09-11 PASS，gfrun 分支切换致结果不匹配） |
+| solution/view_copy | 3 | 0 | 3 | 0% | **回归** R2=1（09-11 PASS，gfrun 分支切换致结果不匹配） |
+| one-level/sort | 1 | 0 | 1 | 0% | topk 输出 >2GB（不变） |
+
+## 93 FAIL 按根因分组
+
+| 根因 | 数量 | 类别 | 说明 |
+|---|---:|---|---|
+| `validCol != 0` TSTORE 断言 | 28 | multi_thread/fa | fa_2d_unroll_gmma + fa_fixpipe 全模式（不变） |
+| MX scale dataType 断言 | 16 | micro/fixp | `fixp_tmatmul_*_mx_*`（不变） |
+| dynamic_mx_quant `priorSources` 断言 | 12 | solution/quant | **新增**；`priorSources == 0 && inst->srcs.size() == 2` predicate 契约 |
+| R2=1 结果不匹配 | 6 | solution/gather_v2 + view_copy | **回归**；gfrun 分支切换致结果不匹配（09-11 全 PASS） |
+| 输出 >2GB | 6 | solution + sort | topk、group_token_old、group_token_vec、matmul_test ×2、mega_moe_sim（疑似死循环/大输出） |
+| vector TSTORE dtype/descriptor | 13 | micro/vector | `cubeStore` dtype 不匹配 8 + `inst->srcs` descriptor 5（不变） |
+| vector compare/select TEPL | 4 | micro/vector | `IsCompareSelectTeplDataType` 断言（不变） |
+| control MGATHER operand | 6 | one-level/control | `hashtable_lookup`（不变） |
+| reduction validCol/TROWSUM | 2 | one-level/reduction + multi_thread/reduction | validCol 1 + TROWSUM 1（不变） |
+| broadcast COPY | 1 | one-level/broadcast | COPY expansion 断言（不变） |
+| reserved/deleted tile selector | 1 | micro/vector |（不变） |
+
+---
 
 # gfrun 执行结果汇总 — 2026-09-11
 
@@ -798,6 +901,7 @@ microbench（one-level 金标准比对几乎全过）。**与精度容差无关*
 
 | 日期 | gfrun (SuperScalarModel) | llvm / TileOP-API | 工具链 | ELF | PASS | FAIL | T/O | 通过率 | 关键变化 |
 |---|---|---|---|---:|---:|---:|---:|---:|---|
+| 09-14 | asl `fix/gfrun-shared-tmatmul-layout-257` `ad972d21` | `4a3e0bdb5` / `987d034` | AGENTS.md 主 worktree（PTO v0.58.6） | 579 | 486 | 93 | 0 | 83.9% | gfrun 分支切换（Shared TMATMUL layout）；TileOP 加严矩阵 shape 校验→单线程 fa/matmul 19 ELF 编译失败；新增 fa_gmma_kchains(+2)、matmul_blockM/kchains/lowp(+19)、dynamic_mx_quant(+14)；gather_v2/view_copy 回归 R2=1(−6 PASS)；输出截断 500MB→2GB；compile.all set -euo→set -u |
 | 09-11 | asl `codex/gfrun-pto-0586-asl` `e7d883c9` | `0a141cbd2` / `e93ef98` | AGENTS.md 主 worktree（PTO v0.58.6） | 569 | 487 | 82 | 0 | 85.6% | 编译器更新（llvm B.DATR CCTRL 消歧 + TileOP reinterpret_tile）；全量重编译 584 ELF；fixp +2 PASS（18→16 FAIL）；新增 solution matmul_test ×3（FAIL）；dynamic_mx_quant compile FAIL；A16W4 matmul ×3 全部独立验证 PASS（1.07–1.36GB）；group_token_old_mt 独立验证 PASS |
 | 09-10 | asl `codex/gfrun-pto-0586-asl` `e7d883c9` | `553b08045` / `b8669ce` | AGENTS.md 主 worktree（PTO v0.58.6） | 566 | 484 | 82 | 0 | 85.5% | gfrun 切换 asl worktree；multi_thread/fa 编译扩展（5→36，set -e 移除）；fa_subview 12 PASS；fa_2d_unroll_gmma/fa_fixpipe 24 FAIL（2048B 行归约限制）；vector +20 FAIL（compare/select TSTORE）；HIF4/HIF8 排除；fa_2d_unroll_gmma_subview 新算子；solution 树 16 ELF（11 PASS / 5 FAIL） |
 | 09-08 | fix/issue-558 `07e9c661` | `553b08045` / `b8669ce` | AGENTS.md 主 worktree（PTO v0.58.5） | 470 | 438 | 32 | 0 | 93.2% | FA/matmul CUBE 迁移（matmul +13 编译）；HIF8 convert 修复；MX scale 对齐 PTO 暴露 HIF4 断言（fixp +14 FAIL）；deepseek 移出 compile_all；solution 排除；−40 PASS vs 09-04 |
@@ -811,6 +915,7 @@ microbench（one-level 金标准比对几乎全过）。**与精度容差无关*
 
 **跨版本要点**：
 
+- **09-14 gfrun 分支切换 + TileOP 加严校验**：gfrun 从 `codex/gfrun-pto-0586-asl`(`e7d883c9`) 切换到 `fix/gfrun-shared-tmatmul-layout-257`(`ad972d21`)，Shared TMATMUL layout 适配。TileOP-API `e93ef98`→`987d034` 加严矩阵 shape 校验（`AValidCols==BValidRows`、D valid shape、MX ScaleB shape）→ 单线程 fa_2d_unroll/sfa ×10 + matmul MASK_FP16/FP8/A16W4 ×9 编译失败（09-11 全 PASS，仅 MASK_FP32 ×3 + fa_softmax_pto ×2 存活）。gfrun 分支切换致 solution gather_v2 ×3 + view_copy ×3 回归 R2=1（结果不匹配）。新增 fa_gmma_kchains(+2 PASS)、matmul_blockM/kchains/lowp_blockM(+19 PASS)、dynamic_mx_quant(+14，2 PASS / 12 FAIL)。输出截断 500MB→2GB，A16W4/concat_scatter/group_token_old_mt 不再需独立验证。compile.all `set -euo pipefail`→`set -u`（HIF4 失败不再阻塞后续变体）。net: 487→486 PASS，82→93 FAIL，85.6%→83.9%。
 - **09-11 编译器更新**：llvm-project `553b08045` → `0a141cbd2`（B.DATR CCTRL union 消歧，PTO-ISA #236），Linx-TileOP-API `b8669ce` → `e93ef98`（reinterpret_tile 文档 + 回归 fixture）。全量重编译 584 ELF。fixp +2 PASS（MX scale dataType 断言 18→16 FAIL，编译器修复）。新增 solution matmul_test ×3（输出 >500MB FAIL，疑似大输出/死循环）。dynamic_mx_quant 编译失败（09-10 为 FAIL，09-11 排除）。A16W4 matmul ×3 因 500MB 输出截断初始 FAIL/TIMEOUT，独立验证全部 PASS（1.07–1.36GB 输出，09-10 均 PASS）。group_token_old_mt 独立验证 PASS（662MB 输出，500MB 截断误判 FAIL）。gfrun 同 09-10（asl `e7d883c9`），无 gfrun 侧变化。
 - **09-10 gfrun 切换 asl worktree**：gfrun 从 `fix/issue-558-fp4-rne-zero`(`07e9c661`) 切换到 `codex/gfrun-pto-0586-asl`(`e7d883c9`)，PTO v0.58.5→v0.58.6。asl worktree 强制 PTO v0.58 行归约 source ≤2048 字节限制 → fa_2d_unroll_gmma/fa_fixpipe 24 FAIL（main gfrun 不强制此限制，09-08 全 PASS）；fa_subview 用 TPARTVIEW 分块规避，12/12 PASS。vector compare/select TSTORE 断言 +20 FAIL（asl gfrun 行为差异）。multi_thread/fa compile.all 移除 set -e → 5→36 ELF。gfsim 不支持 B.SUBVIEW 指令，fa_2d_unroll_gmma_subview 无法获取时序数据。solution 树 16 ELF 纳入验证（11 PASS / 5 FAIL——4 例 gfrun 超时疑似算子无限循环、1 例 validCol 断言）。
 - **09-08 MX scale 对齐 PTO 暴露 HIF4 断言**：gfrun `970ce7af` MX scale 处理对齐 PTO 后，HIF4 MX scale dataType 断言在 fixp（+14 FAIL）/ matmul（+4）/ fa（+1）暴露——09-04 这些全 PASS。叠加 fixp shared 15 例编译失败（TileOP B.DATR/PreQuant 契约）→ fixp 118→89 PASS（−29）。FA/matmul CUBE 迁移（`334737e`）正面抵消：matmul +13 编译 / +9 PASS。
