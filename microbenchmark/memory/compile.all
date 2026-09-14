@@ -13,7 +13,7 @@ run_case() {
   fi
 }
 run_case gmov_s4x2_16x16
-run_case mgather_cas_fp32_16x16
+run_case mgather_cas_u32_16x16
 run_case mgather_fp16_16x16
 run_case mgather_fp32_16x16
 run_case mgather_i32_16x16

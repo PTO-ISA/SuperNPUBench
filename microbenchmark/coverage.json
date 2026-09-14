@@ -2136,10 +2136,10 @@
       "status": "active"
     },
     {
-      "name": "mgather_cas_fp32_16x16",
+      "name": "mgather_cas_u32_16x16",
       "family": "memory",
       "operation": "MGATHER_CAS",
-      "dtype": "fp32",
+      "dtype": "u32",
       "shape": [
         16,
         16

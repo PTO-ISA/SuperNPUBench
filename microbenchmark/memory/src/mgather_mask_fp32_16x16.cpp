@@ -6,12 +6,12 @@ int main() {
     float a[M*N], c[M*N];
     int32_t idx[M*N]; uint16_t mask[M*N];
     fill_const(a, M*N, (float)2); fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);
-    for (int i=0;i<M*N;++i) idx[i] *= sizeof(float); // gather/scatter offsets are bytes
+    // MGATHER/MSCATTER indices are logical element indices.
     BENCHSTART;
     bench_gather_mask<float,M,N>(c,a,idx,mask);
     BENCHEND;
 #ifdef RES_CHECK
-    float ref[M*N]; zero(ref,M*N); for(int i=0;i<M*N;++i) ref[i]=a[idx[i]/sizeof(float)];
+    float ref[M*N]; zero(ref,M*N); for(int i=0;i<M*N;++i) ref[i]=a[idx[i]];
     return verify(c,ref,M*N,(float)verify_epsilon<float>(),(float)verify_epsilon<float>()) ? 0 : 1;
 #else
     return 0;
