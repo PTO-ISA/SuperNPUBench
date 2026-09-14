@@ -10,6 +10,8 @@
 
 namespace rms_split_r_static {
 
+constexpr float kEpsilon = 1e-6f;
+
 // Row-reduction results have physical Columns=1. Workspace cache entries
 // must preserve that layout so TLOAD and TADD match the TROWSUM output.
 constexpr int kWsCols = 1;
@@ -22,24 +24,37 @@ inline int64_t GetCacheId(int64_t idx) {
 }
 
 template <typename TileVec>
-inline void rsqrt_newton(TileVec &out, TileVec &a) {
-    TileVec x, t1, t2;
-    TRECIP(x, a);
-    for (int64_t i = 0; i < 4; ++i) {
-        TMUL(t1, x, x);
-        TMUL(t2, t1, a);
-        TMULS(t2, t2, -0.5f);
-        TADDS(t2, t2, 1.5f);
-        TMUL(x, x, t2);
-    }
-    TMULS(out, x, 1.0f);
+__attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out, TileVec &a) {
+    TileVec recip, y, tmp;
+    // Match the regbase formula: y=sqrt(1/a), one Newton step, then a
+    // compensated residual correction using the original reciprocal.
+    TRECIP(recip, a);
+    TSQRT(y, recip);
+
+    TMULS(tmp, a, -0.5f);
+    TMUL(tmp, tmp, y);
+    TMUL(tmp, tmp, y);
+    TADDS(tmp, tmp, 1.5f);
+    TMUL(y, y, tmp);
+
+    // residual = (1 - a*recip) + a*(recip - y*y)
+    TMULS(tmp, a, -1.0f);
+    TMUL(tmp, tmp, recip);
+    TADDS(out, tmp, 1.0f);
+    TMULS(tmp, y, -1.0f);
+    TMUL(tmp, tmp, y);
+    TADD(tmp, recip, tmp);
+    TMUL(tmp, a, tmp);
+    TADD(out, out, tmp);
+    TMUL(out, out, y);
+    TMULS(out, out, 0.5f);
+    TADD(out, y, out);
 }
 
 } // namespace rms_split_r_static
 
 template <typename dtype, int peNum>
-void rms_norm_split_r_static(dtype *x,  dtype *out,
-                     float *workspace, float eps = 1e-6f) {
+void rms_norm_split_r_static(dtype *x, dtype *out, float *workspace) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     constexpr int64_t tA = 1;
     constexpr int64_t tR = 512;
@@ -185,8 +200,8 @@ void rms_norm_split_r_static(dtype *x,  dtype *out,
         }
 
         TMULS(mean, sum, inv_r);
-        TADDS(denom, mean, eps);
-        rms_split_r_static::rsqrt_newton(rms, denom);
+        TADDS(denom, mean, rms_split_r_static::kEpsilon);
+        rms_split_r_static::rsqrt_regbase(rms, denom);
 
         for (int64_t tr = 0; tr < n_full; ++tr) {
             const int64_t offset = ia * gR + tr * tile_r;

@@ -2,7 +2,7 @@
 // rms_norm_split_r_dynamic.hpp — RMSNorm for g_r > tile_r (R-split)
 // =============================================================================
 //
-// tiling[6] = {g_a, g_r, tile_a, tile_r, pow_r, n_padded}
+// tiling = {g_a, g_r, tile_a, tile_r, pow_r, n_padded}
 //
 // 每块 RowSum 后立刻 UpdateCache（workspace = cacheBuffer），对齐 AscendC：
 //   DataCopy(aReg, src);
@@ -32,6 +32,17 @@
 
 namespace rms_split_r {
 
+struct RmsNormSplitRTilingData {
+    int64_t g_a;
+    int64_t g_r;
+    int64_t tile_a;
+    int64_t tile_r;
+    int64_t pow_r;
+    int64_t n_padded;
+};
+
+constexpr float kEpsilon = 1e-6f;
+
 // Row-reduction results have physical Columns=1. Workspace cache entries
 // must preserve that layout so TLOAD and TADD match the TROWSUM output.
 constexpr int kWsCols = 1;
@@ -44,33 +55,47 @@ inline int64_t GetCacheId(int64_t idx) {
 }
 
 template <typename TileVec>
-inline void rsqrt_newton(TileVec &out, TileVec &a) {
-    TileVec x, t1, t2;
-    TRECIP(x, a);
-    for (int64_t i = 0; i < 4; ++i) {
-        TMUL(t1, x, x);
-        TMUL(t2, t1, a);
-        TMULS(t2, t2, -0.5f);
-        TADDS(t2, t2, 1.5f);
-        TMUL(x, x, t2);
-    }
-    TMULS(out, x, 1.0f);
+__attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out, TileVec &a) {
+    TileVec recip, y, tmp;
+    // Match the regbase formula: y=sqrt(1/a), one Newton step, then a
+    // compensated residual correction using the original reciprocal.
+    TRECIP(recip, a);
+    TSQRT(y, recip);
+
+    TMULS(tmp, a, -0.5f);
+    TMUL(tmp, tmp, y);
+    TMUL(tmp, tmp, y);
+    TADDS(tmp, tmp, 1.5f);
+    TMUL(y, y, tmp);
+
+    // residual = (1 - a*recip) + a*(recip - y*y)
+    TMULS(tmp, a, -1.0f);
+    TMUL(tmp, tmp, recip);
+    TADDS(out, tmp, 1.0f);
+    TMULS(tmp, y, -1.0f);
+    TMUL(tmp, tmp, y);
+    TADD(tmp, recip, tmp);
+    TMUL(tmp, a, tmp);
+    TADD(out, out, tmp);
+    TMUL(out, out, y);
+    TMULS(out, out, 0.5f);
+    TADD(out, y, out);
 }
 
 } // namespace rms_split_r
 
 template <typename dtype, int peNum>
-void rms_norm_split_r(dtype *x, const int64_t *tiling, dtype *out,
-                     float *workspace, float eps = 1e-6f) {
+void rms_norm_split_r(dtype *x, const rms_split_r::RmsNormSplitRTilingData *tiling,
+                      dtype *out, float *workspace) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     constexpr int64_t tA = 1;
     constexpr int64_t tR = 512;
 
-    const int64_t globalA = tiling[0];
-    const int64_t gR = tiling[1];
-    const int64_t tile_r = tiling[3] > 0 ? tiling[3] : tR;
-    const int64_t powR = tiling[4];
-    const int64_t nPadded = tiling[5];
+    const int64_t globalA = tiling->g_a;
+    const int64_t gR = tiling->g_r;
+    const int64_t tile_r = tiling->tile_r > 0 ? tiling->tile_r : tR;
+    const int64_t powR = tiling->pow_r;
+    const int64_t nPadded = tiling->n_padded;
     const uint32_t tid = get_thread_idx();
 
     if (globalA <= 0 || gR <= 1 || tile_r <= 0 || tile_r > tR ||
@@ -248,8 +273,8 @@ void rms_norm_split_r(dtype *x, const int64_t *tiling, dtype *out,
         }
 
         TMULS(mean, sum, inv_r);
-        TADDS(denom, mean, eps);
-        rms_split_r::rsqrt_newton(rms, denom);
+        TADDS(denom, mean, rms_split_r::kEpsilon);
+        rms_split_r::rsqrt_regbase(rms, denom);
 
         for (int64_t tr = 0; tr < n_full; ++tr) {
             const int64_t offset = ia * gR + tr * tile_r;

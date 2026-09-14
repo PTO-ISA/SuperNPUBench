@@ -10,10 +10,6 @@
 #define DType __half
 #endif
 
-#ifndef EPS
-#define EPS 1e-6f
-#endif
-
 #ifndef PE_NUM
 #define PE_NUM 4
 #endif
@@ -64,10 +60,8 @@ int main() {
     constexpr int64_t kPowR = floor_power_of_two(G_R - 1);
     static_assert(G_A > 0 && G_R > 1);
     static_assert(kPowR < G_R && G_R <= 2 * kPowR);
-    constexpr int64_t tiling_info[5] = {G_A, G_R, kTileA, kTileR, kPowR};
-
-    const int64_t g_a = tiling_info[0];
-    const int64_t g_r = tiling_info[1];
+    constexpr int64_t g_a = G_A;
+    constexpr int64_t g_r = G_R;
 
     static dtype input_buf[G_A * G_R];
     static dtype output_buf[G_A * G_R];
@@ -91,7 +85,7 @@ int main() {
     }
 #endif
 
-    rms_norm_split_r_static<dtype, PE_NUM>(input,  output, workspace, EPS);
+    rms_norm_split_r_static<dtype, PE_NUM>(input, output, workspace);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

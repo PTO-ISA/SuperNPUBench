@@ -9,10 +9,6 @@
 #define DType __half
 #endif
 
-#ifndef EPS
-#define EPS 1e-6f
-#endif
-
 #ifndef PE_NUM
 #define PE_NUM 1
 #endif
@@ -82,10 +78,11 @@ int main() {
     constexpr int64_t kNPadded = next_power_of_two(kNActual);
     static_assert(kNPadded <= (int64_t(1) << (K_MAX_LEVELS - 1)),
                   "padded block count exceeds workspace cache levels");
-    int64_t tiling_info[6] = {G_A, G_R, kTileA, kTileR, kPowR, kNPadded};
+    rms_split_r::RmsNormSplitRTilingData tiling_info = {
+        G_A, G_R, kTileA, kTileR, kPowR, kNPadded};
 
-    const int64_t g_a = tiling_info[0];
-    const int64_t g_r = tiling_info[1];
+    const int64_t g_a = tiling_info.g_a;
+    const int64_t g_r = tiling_info.g_r;
 
     static dtype input_buf[G_A * G_R];
     static dtype output_buf[G_A * G_R];
@@ -109,7 +106,7 @@ int main() {
     }
 #endif
 
-    rms_norm_split_r<dtype, PE_NUM>(input, tiling_info, output, workspace, EPS);
+    rms_norm_split_r<dtype, PE_NUM>(input, &tiling_info, output, workspace);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

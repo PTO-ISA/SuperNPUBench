@@ -9,10 +9,6 @@
 #define DType __half
 #endif
 
-#ifndef EPS
-#define EPS 1e-6f
-#endif
-
 #ifndef PE_NUM
 #define PE_NUM 1
 #endif
@@ -50,10 +46,11 @@ int main() {
     constexpr int64_t kTileR = rms_tile_r(G_R);
     static_assert(G_A > 0 && G_R > 0);
     static_assert(kTileA > 0 && kTileR > 0 && kTileR <= 512);
-    int64_t tiling_info[4] = {G_A, G_R, kTileA, kTileR};
+    rms_detail::RmsNormTilingData tiling_info = {
+        G_A, G_R, kTileA, kTileR};
 
-    const int64_t g_a = tiling_info[0];
-    const int64_t g_r = tiling_info[1];
+    const int64_t g_a = tiling_info.g_a;
+    const int64_t g_r = tiling_info.g_r;
 
     static dtype input_buf[G_A * G_R];
     static dtype output_buf[G_A * G_R];
@@ -75,7 +72,7 @@ int main() {
     }
 #endif
 
-    rms_norm<dtype, PE_NUM>(input, tiling_info, output, EPS);
+    rms_norm<dtype, PE_NUM>(input, &tiling_info, output);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

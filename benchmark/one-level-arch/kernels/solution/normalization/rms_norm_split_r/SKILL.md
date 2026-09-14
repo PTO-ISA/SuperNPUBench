@@ -2,7 +2,7 @@
 name: rms-norm-split-r
 description: >-
   Build, run, and debug the one-level rms_norm_split_r kernel (R-split RMSNorm)
-  with SuperNPUBench + run_op.py + gfrun/gfsim precision checks. Use when
+  with SuperNPUBench + run_opDynamic tiling structs carry shape fields plus ; static tiling carries .py + gfrun/gfsim precision checks. Use when
   editing rms_norm_split_r_dynamic.hpp, rms_norm_split_r tests, workspace/GetCacheId
   reduce, TADD cross-tile sum, or verifying [16,16384] fp16 R-split RMSNorm.
   Shape dims are A (outer) and R (reduce): g_a/g_r, tile_a/tile_r, tA/tR.
@@ -20,7 +20,7 @@ Default root: `/home/wangyu/Code/SuperScalar`（下文 `$ROOT`）。
 | N / `g_n` / `tN` / `tile_n` | **R** / `g_r` / `tR` / `tile_r` | reduce / col |
 | `Nb` | `Rb` | `# R-tiles = ceil(g_r / tile_r)` |
 
-`tiling[4] = {g_a, g_r, tile_a, tile_r}`.
+Dynamic tiling structs carry shape fields only; all variants use kernel-local epsilon = 1e-6f.
 
 ## What it is
 
@@ -75,7 +75,7 @@ Pass1:
   per R-tile: TLOAD → TCVT → TMUL(x,x) → TROWSUM → TADD(sum, sum, cur)
 
 Pass1.5:
-  TMULS(mean, sum, 1/g_r) → TADDS(eps) → Newton rsqrt → rms
+  TMULS(mean, sum, 1/g_r) → TADDS(eps) → regbase rsqrt (TRECIP → TSQRT → one Newton step → compensated residual) → rms
 
 Pass2  (per R-tile):
   TLOAD → TCVT → TROWEXPANDMUL(x, rms) → TCVT → TSTORE
