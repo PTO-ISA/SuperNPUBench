@@ -48,6 +48,7 @@ compile_operator() {
 # Compile all operators
 compile_operator "$REPO_ROOT/test/kernel/matmul" "matmul"
 compile_operator "$REPO_ROOT/test/kernel/broadcast" "broadcast"
+compile_operator "$REPO_ROOT/test/kernel/conv2d" "conv2d"
 compile_operator "$REPO_ROOT/test/kernel/concat" "concat"
 compile_operator "$REPO_ROOT/test/kernel/gather" "gather"
 compile_operator "$REPO_ROOT/test/kernel/transpose" "transpose"
