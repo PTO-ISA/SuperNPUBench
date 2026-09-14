@@ -65,7 +65,7 @@ inline void process_view_copy_tile(
     TMULS(cycle_base, cycle, shape[dim]);
     TSUB(coordinate, quotient, cycle_base);
 
-    // PTO v0.58 MGATHER/MSCATTER take element indices.
+    // coordinate is in element units.
     TMULS(input_contribution, coordinate, input_global_stride[dim]);
     TMULS(output_contribution, coordinate, output_global_stride[dim]);
 
@@ -75,6 +75,11 @@ inline void process_view_copy_tile(
     logical_stride *= shape[dim];
   }
 
+  // MGATHER/MSCATTER take byte displacements, not element indices.
+  TMULS(input_offset_tile, input_offset_tile,
+         static_cast<std::uint32_t>(sizeof(DType)));
+  TMULS(output_offset_tile, output_offset_tile,
+         static_cast<std::uint32_t>(sizeof(DType)));
   MGATHER(output_tile, input_global, input_offset_tile);
   MSCATTER(output_global, output_tile, output_offset_tile);
 }
