@@ -37,32 +37,28 @@ constexpr int kBlock = 32;
 constexpr int kBlocksPerRow = kCols / kBlock;
 constexpr int kE4M3Max = 448;
 
-// Layout note: Vec + CubeM32 (VecTileM32) was tried and reverted — the API
-// rejects CubeM16/M32 fractals as TCVT operands unless the tile has a Matrix
-// location (template_asm.hpp "TCVT CUBE_M16/M32 destination must have Matrix
-// location"), so Vec M32 tiles can only be TLOADed/TSTOREd, not converted.
-// Until the API supports Vec-side M32 TCVT, compute tiles stay RowMajor.
-using InputTile = Tile<Location::Vec, __bf16, kRows, kCols, BLayout::RowMajor>;
-using BlockTile = Tile<Location::Vec, __bf16, kRows, kBlock, BLayout::RowMajor>;
-using RowMaxTile = Tile<Location::Vec, __bf16, kRows, 1, BLayout::RowMajor>;
+// PTO-ISA #291 / PR127 follow-up 1: compute tiles use the Vec-location
+// CUBE_M32 cell layout.  The TCVT location restriction that used to force
+// RowMajor is lifted on the codex Local-layout branch, so a VecTileM32 tile
+// can be TLOADed, converted, and stored directly.
+using InputTile = VecTileM32<__bf16, kRows, kCols>;
+using BlockTile = VecTileM32<__bf16, kRows, kBlock>;
+using RowMaxTile = VecTileM32<__bf16, kRows, 1>;
 // The RTM amax -> E8M0 convert below is written as FP16 -> E8M0, so the BF16
 // row max is widened first.  BF16->FP16 is an exact widening for this
 // kernel's amplitude range.  (Narrowing this to a direct BF16 -> E8M0 RTM
 // convert would drop one TCVT, but that source/dest pair is unverified
 // against the model.)
-using Fp16RowMaxTile = Tile<Location::Vec, __half, kRows, 1, BLayout::RowMajor>;
-using QuantizedTile =
-    Tile<Location::Vec, __fp8_e4m3, kRows, kCols, BLayout::RowMajor>;
+using Fp16RowMaxTile = VecTileM32<__half, kRows, 1>;
+using QuantizedTile = VecTileM32<__fp8_e4m3, kRows, kCols>;
 // One quantized MX block; run() stores the halves with strided TSTOREs
 // (gfsim does not model B.ASSEMBLE).
-using QuantBlockTile =
-    Tile<Location::Vec, __fp8_e4m3, kRows, kBlock, BLayout::RowMajor>;
+using QuantBlockTile = VecTileM32<__fp8_e4m3, kRows, kBlock>;
 
 // One E8M0 scale column per MX block.  Stored as [32,2] with ValidCol=1 so
 // BF16<->E8M0 TCVT keeps matching capacity-derived rows; TSTORE writes only
 // the valid column, so the GM layout stays the compact [32,2] form.
-using ScaleTile =
-    Tile<Location::Vec, __fp8_e8m0, kRows, 2, BLayout::RowMajor, kRows, 1>;
+using ScaleTile = VecTileM32<__fp8_e8m0, kRows, 4, kRows, 1>;
 
 // Same geometry and bytes as ScaleTile, but a native uint8_t tile: this is the
 // carrier the E8M0 exponent codes actually live in while they are being
@@ -81,8 +77,7 @@ using ScaleTile =
 //     and its view type does not expose IsCubeLayout, which TSTORE requires.
 // E8M0 and uint8_t are both 8 bit and TSTORE does not convert, so the bytes
 // landing in GM are identical either way.
-using ScaleCodeTile =
-    Tile<Location::Vec, uint8_t, kRows, 2, BLayout::RowMajor, kRows, 1>;
+using ScaleCodeTile = VecTileM32<uint8_t, kRows, 4, kRows, 1>;
 
 static_assert(ScaleCodeTile::TilesizeCode == ScaleTile::TilesizeCode,
               "the u8 scale carrier must occupy the same Tile capacity as the "
@@ -110,7 +105,6 @@ inline void tcvt_e8m0_ocp(ScaleCodeTile &dst, Fp16RowMaxTile &src) {
       "B.DATR %D[DstT], RTM\n"  // RTM = floor (LinxRMode 3)
       "B.DIM zero, %c[VCols], ->lb0\n"
       "B.DIM zero, %c[VRows], ->lb1\n"
-      "B.DIM zero, %c[Cols], ->lb2\n"
       "B.IOT %[Src], mask=1111, last, ->%[Dst]<%Z[Size]>\n"
       : [Dst] "=Tr"(amax_e8m0.data())
       : [SrcT] "i"(type_traits<__half>::TypeCode),
@@ -164,7 +158,6 @@ inline void tcvt_e8m0_code_to_bf16(RowMaxTile &dst, ScaleCodeTile &src) {
       "B.DATR %D[DstT], RNONE\n"
       "B.DIM zero, %c[VCols], ->lb0\n"
       "B.DIM zero, %c[VRows], ->lb1\n"
-      "B.DIM zero, %c[Cols], ->lb2\n"
       "B.IOT %[Src], mask=1111, last, ->%[Dst]<%Z[Size]>\n"
       : [Dst] "=Tr"(dst.data())
       : [SrcT] "i"(type_traits<__fp8_e8m0>::TypeCode),
