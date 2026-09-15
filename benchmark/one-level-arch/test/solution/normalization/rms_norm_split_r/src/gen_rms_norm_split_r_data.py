@@ -3,7 +3,8 @@
 
 tiling_info.bin  : C-layout {6 x int64}
 input.bin        : g_a * g_r x float16
-golden.bin       : out = x * rsqrt(mean(x^2)+eps)  (fp32 compute → fp16)
+gamma.bin        : g_r x float16 affine scale
+golden.bin       : out = x * rsqrt(mean(x^2)+eps) * gamma
 
 pow_r: power of two with pow_r < g_r <= 2 * pow_r (Pass1 split).
 n_padded: actual block count rounded up to the next power of two
@@ -72,13 +73,15 @@ def pack_f16_list(vals: list[float]) -> bytes:
     return b"".join(struct.pack("<H", f32_to_f16_bits(v)) for v in vals)
 
 
-def rms_norm_rows(x_f16: list[float], g_a: int, g_r: int, eps: float) -> list[float]:
+def rms_norm_rows(
+    x_f16: list[float], gamma_f16: list[float], g_a: int, g_r: int, eps: float
+) -> list[float]:
     y: list[float] = []
     for ia in range(g_a):
         row = x_f16[ia * g_r : (ia + 1) * g_r]
         mean_sq = sum(v * v for v in row) / g_r
         inv_rms = 1.0 / math.sqrt(mean_sq + eps)
-        y.extend(v * inv_rms for v in row)
+        y.extend(v * inv_rms * gamma_f16[r] for r, v in enumerate(row))
     return y
 
 
@@ -129,14 +132,21 @@ def gen_all(
         x_f32.append(max(min(z, 8.0), -8.0))
 
     x_f16 = [f16_bits_to_f32(f32_to_f16_bits(v)) for v in x_f32]
-    y_f32 = rms_norm_rows(x_f16, g_a, g_r, eps)
+    gamma_f16 = [
+        f16_bits_to_f32(f32_to_f16_bits(0.5 + rng.random()))
+        for _ in range(g_r)
+    ]
+    y_f32 = rms_norm_rows(x_f16, gamma_f16, g_a, g_r, eps)
 
     write_tiling_info(out_dir / "tiling_info.bin", g_a, g_r, tile_a, tile_r, pow_r, eps)
     in_bytes = pack_f16_list(x_f16)
+    gamma_bytes = pack_f16_list(gamma_f16)
     gold_bytes = pack_f16_list(y_f32)
     (out_dir / "input.bin").write_bytes(in_bytes)
+    (out_dir / "gamma.bin").write_bytes(gamma_bytes)
     (out_dir / "golden.bin").write_bytes(gold_bytes)
     print(f"wrote {out_dir / 'input.bin'}  elems={g_a * g_r} bytes={len(in_bytes)}")
+    print(f"wrote {out_dir / 'gamma.bin'} elems={g_r} bytes={len(gamma_bytes)}")
     print(f"wrote {out_dir / 'golden.bin'} elems={g_a * g_r} bytes={len(gold_bytes)}")
 
 

@@ -64,9 +64,11 @@ int main() {
     constexpr int64_t g_r = G_R;
 
     static dtype input_buf[G_A * G_R];
+    static dtype gamma_buf[G_R];
     static dtype output_buf[G_A * G_R];
     static float workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS];
     dtype *input = input_buf;
+    dtype *gamma = gamma_buf;
     dtype *output = output_buf;
     float *workspace = workspace_buf;
 
@@ -78,6 +80,8 @@ int main() {
     if (tid == 0) {
         readBinaryFile(CHK_DIR "/input.bin", (uint8_t *)input,
                        static_cast<size_t>(g_a) * g_r * sizeof(dtype));
+        readBinaryFile(CHK_DIR "/gamma.bin", (uint8_t *)gamma,
+                       static_cast<size_t>(g_r) * sizeof(dtype));
         input_ready = 1;
     } else {
         while (input_ready == 0) {
@@ -85,7 +89,8 @@ int main() {
     }
 #endif
 
-    rms_norm_split_r_static<dtype, PE_NUM>(input, output, workspace);
+    rms_norm_split_r_static<dtype, PE_NUM>(
+        input, gamma, output, workspace);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

@@ -4,10 +4,10 @@
 //
 // Shape dims: A (outer / row), R (reduce / col).
 //
-//   out[a] = x[a] * rsqrt(mean(x[a]^2) + eps)
+//   out[a, r] = x[a, r] * rsqrt(mean(x[a]^2) + eps) * gamma[r]
 //
 // Entry:
-//   rms_norm<dtype, peNum>(x, tiling, out);
+//   rms_norm<dtype, peNum>(x, gamma, tiling, out);
 //   peNum defaults to 1; PE partitioning stays inside the kernel.
 //   tiling = {g_a, g_r, tile_a, tile_r}
 //   tile_r <= 0 means use g_r (full-row tile).
@@ -76,7 +76,8 @@ __attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out, TileVec &
 
 template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
           typename tile_v>
-inline void rms_norm_tile(dtype *x, dtype *out, int64_t gA, int64_t gR,
+inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
+                          int64_t gA, int64_t gR,
                           int64_t a_off, int64_t active_a, int64_t active_r,
                           float inv_r) {
     // Reduce the entire row using <=2 KiB FP32 strips, then normalize.
@@ -99,11 +100,14 @@ inline void rms_norm_tile(dtype *x, dtype *out, int64_t gA, int64_t gR,
     for (int64_t col = 0; col < gR; col += active_r) {
         const size_t width = gR-col < active_r ? gR-col : active_r;
         gm_t gi(x+offset+col, 1, static_cast<int>(gR));
+        gm_t gg(const_cast<dtype *>(gamma)+col, 1, static_cast<int>(gR));
         gm_t go(out+offset+col, 1, static_cast<int>(gR));
-        tile_h h(1, width);
-        tile_f src(1, width), dst(1, width);
+        tile_h h(1, width), gamma_h(1, width);
+        tile_f src(1, width), normalized(1, width), gamma_f(1, width), dst(1, width);
         TLOAD(h, gi); TCVT(src, h);
-        TROWEXPANDMUL(dst, src, rms);
+        TLOAD(gamma_h, gg); TCVT(gamma_f, gamma_h);
+        TROWEXPANDMUL(normalized, src, rms);
+        TMUL(dst, normalized, gamma_f);
         TCVT(h, dst); TSTORE(go, h);
     }
 }
@@ -111,7 +115,8 @@ inline void rms_norm_tile(dtype *x, dtype *out, int64_t gA, int64_t gR,
 } // namespace rms_detail
 
 template <typename dtype, int peNum>
-void rms_norm(dtype *x, const rms_detail::RmsNormTilingData *tiling, dtype *out) {
+void rms_norm(dtype *x, const dtype *gamma,
+              const rms_detail::RmsNormTilingData *tiling, dtype *out) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
 
     // Physical capacity (Rows×Cols); Valid comes from tiling (tile_a,tile_r).
@@ -159,11 +164,11 @@ void rms_norm(dtype *x, const rms_detail::RmsNormTilingData *tiling, dtype *out)
     int64_t ia = 0;
     for (; ia + tile_a < peA; ia += tile_a) {
         rms_detail::rms_norm_tile<dtype, gm_t, tile_h, tile_f, tile_v>(
-            x, out, peA, gR, ia, tile_a, tile_r, inv_r);
+            x, gamma, out, peA, gR, ia, tile_a, tile_r, inv_r);
     }
     // Tail (or sole) block: ValidRow = remaining rows along A.
     rms_detail::rms_norm_tile<dtype, gm_t, tile_h, tile_f, tile_v>(
-        x, out, peA, gR, ia, peA - ia, tile_r, inv_r);
+        x, gamma, out, peA, gR, ia, peA - ia, tile_r, inv_r);
 }
 
 #endif // SUPERNPU_RMS_NORM_PTO_HPP

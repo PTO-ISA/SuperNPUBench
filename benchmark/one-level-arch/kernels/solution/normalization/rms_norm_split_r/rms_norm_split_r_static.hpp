@@ -54,7 +54,8 @@ __attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out, TileVec &
 } // namespace rms_split_r_static
 
 template <typename dtype, int peNum>
-void rms_norm_split_r_static(dtype *x, dtype *out, float *workspace) {
+void rms_norm_split_r_static(dtype *x, const dtype *gamma, dtype *out,
+                             float *workspace) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     constexpr int64_t tA = 1;
     constexpr int64_t tR = 512;
@@ -206,14 +207,22 @@ void rms_norm_split_r_static(dtype *x, dtype *out, float *workspace) {
         for (int64_t tr = 0; tr < n_full; ++tr) {
             const int64_t offset = ia * gR + tr * tile_r;
             gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
+            gm_t gg(const_cast<dtype *>(gamma) + tr * tile_r, 1,
+                    static_cast<int>(gR));
             gm_t go(out + offset, static_cast<int>(gA), static_cast<int>(gR));
             tile_h src_h;
+            tile_h gamma_h;
             tile_h dst_h;
             tile_f src;
+            tile_f normalized;
+            tile_f gamma_f;
             tile_f dst;
             TLOAD(src_h, gi);
             TCVT(src, src_h);
-            TROWEXPANDMUL(dst, src, rms);
+            TLOAD(gamma_h, gg);
+            TCVT(gamma_f, gamma_h);
+            TROWEXPANDMUL(normalized, src, rms);
+            TMUL(dst, normalized, gamma_f);
             TCVT(dst_h, dst);
             TSTORE(go, dst_h);
         }

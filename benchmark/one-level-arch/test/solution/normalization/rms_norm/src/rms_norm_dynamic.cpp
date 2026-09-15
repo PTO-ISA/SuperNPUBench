@@ -53,8 +53,10 @@ int main() {
     const int64_t g_r = tiling_info.g_r;
 
     static dtype input_buf[G_A * G_R];
+    static dtype gamma_buf[G_R];
     static dtype output_buf[G_A * G_R];
     dtype *input = input_buf;
+    dtype *gamma = gamma_buf;
     dtype *output = output_buf;
 
 #ifdef RES_CHECK
@@ -65,6 +67,8 @@ int main() {
     if (tid == 0) {
         readBinaryFile(CHK_DIR "/input.bin", (uint8_t *)input,
                        static_cast<size_t>(g_a) * g_r * sizeof(dtype));
+        readBinaryFile(CHK_DIR "/gamma.bin", (uint8_t *)gamma,
+                       static_cast<size_t>(g_r) * sizeof(dtype));
         input_ready = 1;
     } else {
         while (input_ready == 0) {
@@ -72,7 +76,7 @@ int main() {
     }
 #endif
 
-    rms_norm<dtype, PE_NUM>(input, &tiling_info, output);
+    rms_norm<dtype, PE_NUM>(input, gamma, &tiling_info, output);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

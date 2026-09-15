@@ -27,7 +27,7 @@ Dynamic tiling structs carry shape fields only; all variants use kernel-local ep
 One-level PTO RMSNorm when `g_r > tile_r`:
 
 ```text
-out[a] = x[a] * rsqrt(mean(x[a]^2) + eps)
+out[a, r] = x[a, r] * rsqrt(mean(x[a]^2) + eps) * gamma[r]
 ```
 
 R is split into `Rb = ceil(g_r / tile_r)` tiles. Each tile does local
@@ -61,7 +61,7 @@ Compare dir (precision):
 
 ```text
 .../compare/solution_normalization_rms_norm_split_r_rms_norm_split_r_dynamic_DType__half/
-  input.bin  golden.bin  output.bin  tiling_info.bin
+  input.bin  gamma.bin  golden.bin  output.bin  tiling_info.bin
 ```
 
 ## Kernel pipeline (current)

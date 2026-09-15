@@ -85,7 +85,8 @@ __attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out, TileVec &
 } // namespace rms_split_r
 
 template <typename dtype, int peNum>
-void rms_norm_split_r(dtype *x, const rms_split_r::RmsNormSplitRTilingData *tiling,
+void rms_norm_split_r(dtype *x, const dtype *gamma,
+                      const rms_split_r::RmsNormSplitRTilingData *tiling,
                       dtype *out, float *workspace) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
     constexpr int64_t tA = 1;
@@ -279,14 +280,20 @@ void rms_norm_split_r(dtype *x, const rms_split_r::RmsNormSplitRTilingData *tili
         for (int64_t tr = 0; tr < n_full; ++tr) {
             const int64_t offset = ia * gR + tr * tile_r;
             gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
+            gm_t gg(const_cast<dtype *>(gamma) + tr * tile_r, 1,
+                    static_cast<int>(gR));
             gm_t go(out + offset, static_cast<int>(gA), static_cast<int>(gR));
             tile_h src_h(active_a, full_r);
-            tile_h dst_h(active_a, full_r);
+            tile_h gamma_h(active_a, full_r), dst_h(active_a, full_r);
             tile_f src(active_a, full_r);
+            tile_f normalized(active_a, full_r), gamma_f(active_a, full_r);
             tile_f dst(active_a, full_r);
             TLOAD(src_h, gi);
             TCVT(src, src_h);
-            TROWEXPANDMUL(dst, src, rms);
+            TLOAD(gamma_h, gg);
+            TCVT(gamma_f, gamma_h);
+            TROWEXPANDMUL(normalized, src, rms);
+            TMUL(dst, normalized, gamma_f);
             TCVT(dst_h, dst);
             TSTORE(go, dst_h);
         }
@@ -294,14 +301,20 @@ void rms_norm_split_r(dtype *x, const rms_split_r::RmsNormSplitRTilingData *tili
             const int64_t offset = ia * gR + n_full * tile_r;
             const size_t ar = static_cast<size_t>(tail_r);
             gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
+            gm_t gg(const_cast<dtype *>(gamma) + n_full * tile_r, 1,
+                    static_cast<int>(gR));
             gm_t go(out + offset, static_cast<int>(gA), static_cast<int>(gR));
             tile_h src_h(active_a, ar);
-            tile_h dst_h(active_a, ar);
+            tile_h gamma_h(active_a, ar), dst_h(active_a, ar);
             tile_f src(active_a, ar);
+            tile_f normalized(active_a, ar), gamma_f(active_a, ar);
             tile_f dst(active_a, ar);
             TLOAD(src_h, gi);
             TCVT(src, src_h);
-            TROWEXPANDMUL(dst, src, rms);
+            TLOAD(gamma_h, gg);
+            TCVT(gamma_f, gamma_h);
+            TROWEXPANDMUL(normalized, src, rms);
+            TMUL(dst, normalized, gamma_f);
             TCVT(dst_h, dst);
             TSTORE(go, dst_h);
         }
