@@ -6,3 +6,6 @@ make TESTCASE=rms_norm_dynamic COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=512
 
 # Fixed-shape static 4PE counterpart.
 make TESTCASE=rms_norm_static COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=512 G_R=8192 PE_NUM=4 diss
+
+# Fixed-shape static 4PE counterpart with a 128-byte FP32 compute Tile.
+make TESTCASE=rms_norm_static_128b COMPILER_DIR=${COMPILER_DIR} DType=__half G_A=512 G_R=8192 PE_NUM=4 diss
