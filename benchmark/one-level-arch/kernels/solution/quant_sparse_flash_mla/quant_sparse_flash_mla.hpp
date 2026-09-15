@@ -296,11 +296,11 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                     TLOAD<tileKMatrix, 1>(tKShared, gK);
                     if (dd == 0) {
                         TMATMUL(tScoreCube, tQShared, tKShared,
-                                fixp::keep_acc().transpose_b());
+                                fixp::keep_acc());
                     } else {
                         TMATMUL_ACC(tScoreCube, tScoreCube,
                                     tQShared, tKShared,
-                                    fixp::keep_acc().transpose_b());
+                                    fixp::keep_acc());
                     }
                 }
 
@@ -411,11 +411,11 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                     TLOAD<tileKMatrix, 1>(tKShared, gK);
                     if (dd == 0) {
                         TMATMUL(tScoreCube, tQShared, tKShared,
-                                fixp::keep_acc().transpose_b());
+                                fixp::keep_acc());
                     } else {
                         TMATMUL_ACC(tScoreCube, tScoreCube,
                                     tQShared, tKShared,
-                                    fixp::keep_acc().transpose_b());
+                                    fixp::keep_acc());
                     }
                 }
 
@@ -467,7 +467,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto(
                     TLOAD<tileVMatrix, 1>(tVShared, gV);
                     tilePVCube tPVCube;
                     TMATMUL(tPVCube, tPShared, tVShared,
-                            fixp::keep_acc());
+                            fixp::keep_acc().transpose_b());
                     TSTORE_CUBE(gOState, tPVCube);
                     tileO tPV;
                     TLOAD(tPV, gOState);
