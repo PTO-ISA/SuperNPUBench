@@ -134,13 +134,18 @@ inline void process_gather_tile(
     if (dim == GatherDim) {
       OffsetTile index_offset;
       IndexTile index_tile;
-      TCVT(index_offset, coordinate);
+      // MGATHER consumes byte displacements. Convert the logical coordinate
+      // into a byte offset within the one-dimensional index array.
+      TMULS(index_offset, coordinate,
+            static_cast<std::uint32_t>(sizeof(IType)));
       MGATHER(index_tile, index_global, index_offset);
       TCVT(coordinate, index_tile);
     }
     
-    // PTO v0.58 MGATHER takes element indices.
-    TMULS(contribution, coordinate, input_stride);
+    // Convert the flattened input contribution from elements to bytes before
+    // passing the accumulated displacement to MGATHER.
+    TMULS(contribution, coordinate,
+          input_stride * static_cast<std::uint32_t>(sizeof(DType)));
 
     TADD(input_offset_tile, input_offset_tile, contribution);
 
@@ -158,7 +163,7 @@ inline void process_gather_tile(
 /**
  * Gather a one-dimensional index along GatherDim into a contiguous output.
  *
- * The generated MGATHER indices are expressed in elements. The caller must ensure
+ * The generated MGATHER indices are expressed in bytes. The caller must ensure
  * that the input/output shapes match outside GatherDim and that their products
  * equal InputElements and OutputElements respectively.
  */

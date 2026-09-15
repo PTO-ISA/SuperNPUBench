@@ -32,9 +32,10 @@ padding are included in the host comparison.
 - PE0 initializes static shared input/output/reference buffers. The existing
   `MultiThreadResCheckSync` protocol publishes inputs and waits for all four
   completion slots before PE0 checks results. Other PEs do not print results.
-- PTO v0.58 MGATHER/MSCATTER indices use **element units**. The kernels no
-  longer multiply these indices by dtype size. The view-copy public base
-  offsets still use bytes, and its public strides still use elements.
+- MGATHER/MSCATTER index Tiles use **byte displacements**. The kernels convert
+  logical element coordinates and public element strides by the corresponding
+  dtype size before issuing the instruction. View-copy public base offsets are
+  already expressed in bytes.
 - Both Makefiles disable `linxv5-enable-bfi-opt`: the validated compiler's
   symmetric-constant path produces incompatible HL.BFI immediates. In the
   failing view-copy case, `{4,4}` was constructed as `{132,0}`. This is an
