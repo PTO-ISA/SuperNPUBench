@@ -135,11 +135,14 @@ inline void process_gather_tile(
       OffsetTile index_offset;
       IndexTile index_tile;
       TCVT(index_offset, coordinate);
+      // MGATHER takes byte displacements; index array elements are IType.
+      TMULS(index_offset, index_offset,
+             static_cast<std::uint32_t>(sizeof(IType)));
       MGATHER(index_tile, index_global, index_offset);
       TCVT(coordinate, index_tile);
     }
-    
-    // PTO v0.58 MGATHER takes element indices.
+
+    // coordinate is in data-array element units.
     TMULS(contribution, coordinate, input_stride);
 
     TADD(input_offset_tile, input_offset_tile, contribution);
@@ -148,6 +151,9 @@ inline void process_gather_tile(
     input_stride *= input_shape[dim];
   }
 
+  // MGATHER takes byte displacements; convert accumulated element offset.
+  TMULS(input_offset_tile, input_offset_tile,
+         static_cast<std::uint32_t>(sizeof(DType)));
   MGATHER(output_tile, input_global, input_offset_tile);
   OutputGlobal tile_output_global(output_global.data() + linear_base);
   TSTORE(tile_output_global, output_tile);
