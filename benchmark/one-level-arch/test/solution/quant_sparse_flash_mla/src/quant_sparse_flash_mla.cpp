@@ -371,5 +371,12 @@ int main(){
 #endif
     BENCHEND;
 
+    // gfsim 判读通道（本地性能采集用，不入 PR）: test-finisher 0x10009000=0x5555
+    {
+        volatile uint32_t* finisher =
+            reinterpret_cast<volatile uint32_t*>(0x10009000ULL);
+        *finisher = 0x5555;
+    }
+
     return 0;
 }
