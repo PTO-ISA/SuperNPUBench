@@ -87,6 +87,15 @@ static void refSortByLocalExpId(const uint32_t *topkIndex,
 // ============================================================================
 int main()
 {
+    // direct-entry 运行时（solution/common/start.s）让 4 个 PE 同时进入 main()，
+    // 而本用例的内核按单线程设计：直方图/scatter 游标等共享 .bss 上的非幂等
+    // RMW 在 4 个 PE 冗余执行下交错竞态（gfrun 默认 4 线程下 R2=3；
+    // -s softcore.multiThreadNum=1 时 R2=0）。按 mega_moe_sim_mt 惯例非
+    // leader PE 直接返回，PE0 独占执行。
+    const uint32_t tid = get_thread_idx();
+    if (tid != 0U) {
+        return 0;
+    }
 #ifndef __linx
     printf("=== Group Token Vec Test (Tile-based Vector) ===\n");
     printf("BS=%u  TopK=%u  ExpertPerRank=%u  ExpertNum=%u\n",

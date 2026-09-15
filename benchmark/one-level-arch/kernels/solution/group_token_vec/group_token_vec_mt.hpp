@@ -244,7 +244,11 @@ static inline void sortKernel_mt_tile(
 
     // Phase 3a: FloorFunc via tile ops on this PE's disjoint rows
     using TilePerPE = Tile<Location::Vec, uint32_t, 4, kTileN, BLayout::RowMajor>;
-    using TileMinPE = Tile<Location::Vec, uint32_t, 4, 8, BLayout::RowMajor, 4, 1>;
+    // TROWMIN 目的 tile 必须是物理单列（PTO 契约: ValidCol==1 && Cols==1），
+    // 此前声明 Tile<..., 4, 8, RowMajor, 4, 1>（物理 4x8/有效 4x1）违反契约，
+    // 自 PR #74 合入起 vec_mt 一直无法编译。输出 GM 张量为 RowMajor<kBS, 1>，
+    // 物理形状直接取 4x1。
+    using TileMinPE = Tile<Location::Vec, uint32_t, 4, 1, BLayout::RowMajor>;
     using GmPerPE = global_tensor<uint32_t, RowMajor<kBS, kTopK>>;
     using GmMin = global_tensor<uint32_t, RowMajor<kBS, 1>>;
     using itPerPE = global_iterator<GmPerPE, TilePerPE>;

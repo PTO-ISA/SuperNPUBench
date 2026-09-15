@@ -98,6 +98,16 @@ static void refSortByLocalExpId(const uint32_t *topkIndex,
 // ============================================================================
 int main()
 {
+    // direct-entry 运行时（solution/common/start.s）让 4 个 PE 同时进入 main()，
+    // 而本用例的 Linx 标量路径按单线程设计：tokenPerExpertCnt[id]++、scatter
+    // 游标 expertSectionTokenCnt[s]++、sectionStarts 前缀和均为共享 .bss 上的
+    // 非幂等 RMW，4 个 PE 冗余执行会交错竞态（gfrun 默认 4 线程下 R2=3，
+    // Phase2 groupedTokenIds 校验失败；-s softcore.multiThreadNum=1 时 R2=0）。
+    // 按 mega_moe_sim_mt 惯例非 leader PE 直接返回，PE0 独占执行。
+    const uint32_t tid = get_thread_idx();
+    if (tid != 0U) {
+        return 0;
+    }
 #ifndef __linx
     printf("=== Group Token Old Test (3-phase MoE dispatch) ===\n");
     printf("BS=%u  TopK=%u  ExpertPerRank=%u  ExpertNum=%u\n",
