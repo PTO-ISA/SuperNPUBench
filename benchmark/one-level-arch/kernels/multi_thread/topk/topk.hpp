@@ -39,10 +39,12 @@
 // Remaining model gaps that shape the implementation:
 //  - GM atomics (MGATHER_ADD/MSCATTER_ADD, TLSU function 12/21) are still
 //    not implemented in gfrun (functions 4..8 only). Histogram accumulation,
-//    suffix cumsum, threshold search and slot allocation therefore run on
-//    the PE's scalar core over the PE-private GM histogram; per-chunk bins
-//    are produced by tile ops, TSTOREd to scratch, then accumulated scalar.
-//    Program order serializes duplicate bins exactly like the atomic RMW.
+//    threshold search and slot allocation therefore run on the PE's scalar
+//    core over the PE-private GM histogram; per-chunk bins are produced by
+//    tile ops, TSTOREd to scratch, then accumulated scalar. Program order
+//    serializes duplicate bins exactly like the atomic RMW. The 256-bin
+//    suffix cumsum does NOT need atomics and runs as pure tile ops per
+//    incoming/histogram_cumsum_m32.md (see suffix_cumsum below).
 //  - The FP16 payload is reinterpreted via a GM round trip
 //    (TSTORE fp16 -> TLOAD u16) instead of reinterpret_tile: the model tags
 //    each tile register with the dtype of its last writer and validates it
@@ -72,7 +74,8 @@ using I32Tile = VecTileM32<int32_t, kLane, 1>;
 using U8Tile = VecTileM32<uint8_t, kLane, 4, kLane, 1>;
 
 struct Scratch {
-    int32_t hist[257];      // hist[0:256] bins, hist[256] sentinel
+    int32_t hist[288];      // [0,256) bins; [256,288) zero pad for the
+                            // shifted cumsum window TLOADs, never written
     int32_t num[2];         // ping-pong candidate counts
     int32_t error;          // 0 ok, 1 candidate overflow, 2 empty range
     uint16_t bin16[kLane];
@@ -87,12 +90,119 @@ inline int32_t clamp_lo(int32_t v, int32_t lo) { return v < lo ? lo : v; }
 inline int32_t clamp_hi(int32_t v, int32_t hi) { return v > hi ? hi : v; }
 inline int32_t min_i32(int32_t a, int32_t b) { return a < b ? a : b; }
 
-// hist[bin] = sum_{j=bin..255} original_hist[j]; hist[256] stays 0.
+// 256-bin suffix cumsum as pure tile ops, per
+// incoming/histogram_cumsum_m32.md: 32 shifted window TLOADs, a 31-TADD
+// on-tile binary reduction (32 -> 16 -> ... -> 1), then a 7-step cross-cell
+// suffix accumulate from high bins to low bins and 8 cell TSTOREs.
+//
+// The grouped <8,32> histogram tile (eight S32 M32 CELLs, 1KB) cannot be
+// expressed with wrapper tiles: pto_tile.hpp caps CubeM32 Vec tiles at 32
+// rows, and its <32,8> alternative transposes the GM<->CELL mapping, which
+// breaks the shifted windows. The listing's T112[:,q:q+1] logical range
+// operand has no realization either (B.SUBVIEW parents must be Matrix
+// tiles; M32 ranges advance along columns). So the grouped tile is bound
+// through a raw 1KB linx_tile_carrier with hand-written blocks (mirroring
+// the disassembled wrapper forms), and the eight result cells are
+// materialized through hist itself: one grouped TSTORE + eight cell
+// TLOADs. An S32 <256,1> M32 tile is byte-contiguous (cellColumns=1, so
+// payload element e sits at byte 4e), which is exactly what makes the
+// shifted-window dataflow work. hist[256:288] is zero padding consumed by
+// the shifted windows in place of the listing's valid_col=256-k partial
+// fill; it is never written.
+//
+// Correctness: window k holds hist[k+e] at flattened position e (zero pad
+// past 255), so after the reduction T112[e] = sum_{k=0..31} hist[e+k]. Cell
+// q of T112 covers bins [32q, 32q+31] and spills into cell q+1's first i
+// bins at lane i, which exactly complements the clamped suffix of the
+// accumulated higher cells: Rq[i] = T112[q][i] + R(q+1)[i] gives
+// hist[bin] = sum_{j=bin..255} original_hist[j]. hist[256] stays 0.
+struct GroupTileS32 {
+    linx_tile_carrier<1024> carrier;
+    linx_tile_carrier<1024>::RegisterType &data() { return carrier.Register; }
+};
+
+// Block forms mirror the disassembled wrapper CUBE blocks, with
+// ValidRow=256 / 1KB SizeCode for the grouped tile.
+inline void group_tload(GroupTileS32 &dst, const int32_t *base) {
+    asm volatile(
+        "BSTART.TLSU TLOAD, %D[DataType]\n"
+        "B.DATR ND2M32, Zero\n"
+        "B.DIM zero, %c[ValidCol], ->lb0\n"
+        "B.DIM zero, %c[ValidRow], ->lb1\n"
+        "B.IOT mask=1111, last, ->%[dst]<%Z[TileSize]>\n"
+        "B.IOR [%[base], %[stride]], []\n"
+        : [dst] "=Tr"(dst.data())
+        : [base] "r"(base), [stride] "r"(sizeof(int32_t)),
+          [DataType] "i"(type_traits<int32_t>::TypeCode),
+          [TileSize] "i"(tile_type_traits<
+                           linx_tile_carrier<1024>>::TilesizeCode),
+          [ValidCol] "i"(1), [ValidRow] "i"(8 * kLane)
+        : "memory");
+}
+
+inline void group_tstore(int32_t *base, GroupTileS32 &src) {
+    asm volatile(
+        "BSTART.TLSU TSTORE, %D[DataType]\n"
+        "B.DATR M322ND, Null\n"
+        "B.DIM zero, %c[ValidCol], ->lb0\n"
+        "B.DIM zero, %c[ValidRow], ->lb1\n"
+        "B.IOT %[src], mask=1111, last\n"
+        "B.IOR [%[base], %[stride]], []\n"
+        :
+        : [base] "r"(base), [stride] "r"(sizeof(int32_t)),
+          [src] "Tr"(src.data()),
+          [DataType] "i"(type_traits<int32_t>::TypeCode),
+          [ValidCol] "i"(1), [ValidRow] "i"(8 * kLane)
+        : "memory");
+}
+
+inline void group_tadd(GroupTileS32 &dst, GroupTileS32 &a, GroupTileS32 &b) {
+    asm volatile(
+        "BSTART.TEPL 0, %D[DataType]\n"
+        "B.DATR CUBE_M32, Null\n"
+        "B.DIM zero, %c[ValidCol], ->lb0\n"
+        "B.DIM zero, %c[ValidRow], ->lb1\n"
+        "B.DIM zero, %c[Col], ->lb2\n"
+        "B.IOT %[a], %[b], mask=1111, last, ->%[dst]<%Z[TileSize]>\n"
+        : [dst] "=Tr"(dst.data())
+        : [a] "Tr"(a.data()), [b] "Tr"(b.data()),
+          [DataType] "i"(type_traits<int32_t>::TypeCode),
+          [TileSize] "i"(tile_type_traits<
+                           linx_tile_carrier<1024>>::TilesizeCode),
+          [ValidCol] "i"(1), [ValidRow] "i"(8 * kLane), [Col] "i"(1)
+        : "memory");
+}
+
 inline void suffix_cumsum(int32_t *hist) {
-    int32_t s = 0;
-    for (int b = 255; b >= 0; --b) {
-        s += hist[b];
-        hist[b] = s;
+    // Tile arrays only stay in registers when every index is constant, so
+    // all loops are fully unrolled (dynamic indexing demotes the array to
+    // the stack and each tile access becomes a 1KB spill/reload).
+    GroupTileS32 w[32];
+#pragma clang loop unroll(full)
+    for (int k = 0; k < 32; ++k) group_tload(w[k], hist + k);
+#pragma clang loop unroll(full)
+    for (int p = 0; p < 16; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
+#pragma clang loop unroll(full)
+    for (int p = 0; p < 8; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
+#pragma clang loop unroll(full)
+    for (int p = 0; p < 4; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
+#pragma clang loop unroll(full)
+    for (int p = 0; p < 2; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
+    group_tadd(w[0], w[0], w[1]);
+
+    group_tstore(hist, w[0]);
+    I32Tile c[8];
+#pragma clang loop unroll(full)
+    for (int q = 0; q < 8; ++q) {
+        global_tensor<int32_t, RowMajor<kLane, 1>> gq(hist + kLane * q);
+        TLOAD(c[q], gq);
+    }
+#pragma clang loop unroll(full)
+    for (int q = 6; q >= 0; --q) TADD(c[q], c[q], c[q + 1]);
+#pragma clang loop unroll(full)
+    for (int q = 0; q < 8; ++q) {
+        global_tensor<int32_t, RowMajor<kLane, 1>> gq(hist + kLane * q);
+        TSTORE(gq, c[q]);
     }
 }
 
@@ -301,7 +411,7 @@ inline void run(int32_t *output, int32_t *errors, const float *input,
         const float *row = input + bx * kCols;
         int32_t *out = output + bx * kTopK;
 
-        for (int i = 0; i < 257; ++i) sc.hist[i] = 0;
+        for (int i = 0; i < 288; ++i) sc.hist[i] = 0;
         sc.num[0] = 0;
         sc.num[1] = 0;
         sc.error = 0;
@@ -329,7 +439,7 @@ inline void run(int32_t *output, int32_t *errors, const float *input,
         for (int round = 0; round < 4 && rem > 0; ++round) {
             const int nr = (round & 1) ^ 1;
             const int32_t prefix = kTopK - rem;
-            for (int i = 0; i < 257; ++i) sc.hist[i] = 0;
+            for (int i = 0; i < 288; ++i) sc.hist[i] = 0;
             sc.num[nr] = 0;
             round_scan(row, round, false, 0, 0, out, sc);
             suffix_cumsum(sc.hist);
