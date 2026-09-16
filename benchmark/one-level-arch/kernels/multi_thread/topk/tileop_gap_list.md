@@ -97,10 +97,13 @@
 
 ## C. ISA / 伪代码层缺口（规范本身没有，或伪代码形式有坑）
 
-### C1. REDUCE_FIRST_TRUE 不是 ISA 指令
+### C1. REDUCE_FIRST_TRUE 不是 ISA 指令（伪代码已用 CTZ 消除）
 
-- 伪代码自述。出路本应是 TCMPS + CTZ（被 A2 阻断），现状用计数法
-  （见 A2 绕行）。
+- 伪代码 3.4 已把 first-true 改写为当前 ISA 可表达的
+  `TCMPS(GPR) + AND + CTZ`，不再使用 `REDUCE_FIRST_TRUE`；CTZ 本身是
+  真实存在的标量 ALU 指令（`isa/asl/scalar/alu/CTZ.asl`）。所以规范侧
+  无缺口，真正的阻断在 A2：gfrun 没有 TCMPS 的 GPR predicate 载体，
+  CTZ 没有可消费的 predicate GPR。现状用计数法（见 A2 绕行）。
 
 ### C2. B.SUBVIEW 逻辑 range 操作数无 M32 实现
 
