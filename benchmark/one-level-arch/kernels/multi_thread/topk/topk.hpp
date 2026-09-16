@@ -39,12 +39,14 @@
 // Remaining model gaps that shape the implementation:
 //  - GM atomics (MGATHER_ADD/MSCATTER_ADD, TLSU function 12/21) are still
 //    not implemented in gfrun (functions 4..8 only). Histogram accumulation
-//    and slot allocation therefore run on the PE's scalar core over the
+//    and the output slot allocation (hist[bin+1]++ RMW, including the round-3
+//    direct output) therefore run on the PE's scalar core over the
 //    PE-private GM histogram; per-chunk bins are produced by tile ops,
 //    TSTOREd to scratch, then accumulated scalar. Program order serializes
-//    duplicate bins exactly like the atomic RMW. The 256-bin suffix cumsum
-//    and the threshold search do NOT need atomics and run as tile ops (see
-//    suffix_cumsum and find_threshold below).
+//    duplicate bins exactly like the atomic RMW. The 256-bin suffix cumsum,
+//    the threshold search and the threshold-bin candidate compaction do NOT
+//    need atomics and run as tile ops (see suffix_cumsum, find_threshold and
+//    compact_candidates below).
 //  - The FP16 payload is reinterpreted via a GM round trip
 //    (TSTORE fp16 -> TLOAD u16) instead of reinterpret_tile: the model tags
 //    each tile register with the dtype of its last writer and validates it
@@ -81,6 +83,13 @@ struct Scratch {
     int32_t num[2];         // ping-pong candidate counts
     int32_t error;          // 0 ok, 1 candidate overflow, 2 empty range
     int32_t reduce[kLane];  // TCOLSUM landing pad for find_threshold
+    int32_t lane[kLane];    // constant 0..31 lane-index sequence, TLOAD'd
+                            // for the compaction keep mask (a TCI-produced
+                            // tile does not carry the <32,1> tileInfo the
+                            // compare validator requires)
+    uint32_t scan[2 * kLane];  // zero pad + publish area for the candidate
+                               // compaction prefix sum; the pad half stays
+                               // zero after the per-row clear
     uint16_t bin16[kLane];
     uint32_t word[kLane];
     uint32_t off[kLane];    // byte displacements for the indexed transfers
@@ -396,10 +405,79 @@ inline void scatter_masked(int32_t *out, Scratch &sc) {
     mscatter_mask_i32_m32(out, idx, off, msk);
 }
 
+// Hillis-Steele inclusive scan of acc over 32 lanes, published through
+// scan[0:2*kLane]: the pad half scan[0:kLane] stays zero, so windows shifted
+// past lane 0 read zeros. After the final TSTORE the inclusive totals live
+// in scan[kLane:2*kLane], so one TLOAD from scan+kLane-1 then yields the
+// exclusive scan and scan[2*kLane-1] is the grand total. Fully unrolled: a
+// loop-carried tile can make the register allocator emit TLSU TMOVs at the
+// back-edge, and gfrun rejects those.
+inline __attribute__((always_inline)) void scan_publish_u32(U32Tile &acc, uint32_t *scan) {
+    global_tensor<uint32_t, RowMajor<kLane, 1>> g(scan + kLane);
+    TSTORE(g, acc);
+#pragma clang loop unroll(full)
+    for (uint32_t s = 1; s < kLane; s <<= 1) {
+        global_tensor<uint32_t, RowMajor<kLane, 1>> gs(scan + kLane - s);
+        U32Tile w;
+        TLOAD(w, gs);
+        TADD(acc, acc, w);
+        TSTORE(g, acc);
+    }
+}
+
+// Append the lanes whose bin equals thr to cand, compacted in lane order,
+// as tile ops: eq predicate -> 0/1 mask -> exclusive prefix sum for the
+// byte displacements -> MSCATTER_MASK. Compaction needs no GM atomics; the
+// prefix sum replaces the scalar num++ per append, and MSCATTER_MASK only
+// writes where the mask is set, so the compacted positions must (and do)
+// come from the scan. Overflow keeps the source semantics: flag sc.error
+// and drop the chunk's appends by retargeting the scatter to the idx sink
+// with a zero bias (test inputs never overflow). Returns the chunk's
+// candidate count.
+//
+// The body is deliberately straight-line and keeps no tile alive across the
+// caller's chunk-loop back-edge: control-flow-dependent tile live ranges
+// make the register allocator emit TLSU TMOVs that gfrun rejects (Local TMOV
+// legality). All tile dims are the static 32-lane shape — gfrun's compare/
+// select validator requires the block dims to equal the tile metadata, so a
+// runtime vc in lb1 is rejected; the tail is masked explicitly instead by a
+// keep predicate (lane < vc) folded into the 0/1 mask with TMUL. mu8 is
+// converted before the publish consumes m.
+inline __attribute__((always_inline)) int32_t compact_candidates(int32_t *cand, U32Tile &bins, I32Tile &data,
+                                  uint32_t thr, int32_t vc, int32_t num,
+                                  Scratch &sc) {
+    I32Tile lane;
+    global_tensor<int32_t, RowMajor<kLane, 1>> gl(sc.lane);
+    TLOAD(lane, gl);  // 0..31, well-formed <32,1> tileInfo
+    U32Tile pred_eq, pred_keep, ones, m_eq, m_keep, m;
+    TCMPS<CmpMode::EQ>(pred_eq, bins, thr);    // bin == thr
+    TCMPS<CmpMode::LT>(pred_keep, lane, vc);   // valid-lane keep mask
+    TEXPANDS(ones, 1u);
+    TSELS(m_eq, pred_eq, 0u, ones);            // 1 where eq, else 0
+    TSELS(m_keep, pred_keep, 0u, ones);        // 1 in valid lanes, else 0
+    TMUL(m, m_eq, m_keep);                     // 0/1 mask, tail zeroed
+    U8Tile mu8;
+    TCVT(mu8, m);
+    scan_publish_u32(m, sc.scan);
+    const int32_t count = static_cast<int32_t>(sc.scan[2 * kLane - 1]);
+    const bool ok = num + count <= kCandCap;
+    if (!ok) sc.error = 1;  // scalar-only branch; no tile crosses the join
+    int32_t *dst = ok ? cand : sc.idx;
+    const uint32_t bias = ok ? static_cast<uint32_t>(num) * 4u : 0u;
+    U32Tile off;
+    global_tensor<uint32_t, RowMajor<kLane, 1>> ge(sc.scan + kLane - 1);
+    TLOAD(off, ge);  // exclusive prefix sums
+    TMULS(off, off, 4u);
+    TADDS(off, off, bias);
+    mscatter_mask_i32_m32(dst, data, off, mu8);  // all-zero mask: no writes
+    return count;
+}
+
 // Stage 1: bin = high 8 bits of the FP16 sortable key of each input element.
 // key16 = bits16 ^ (sign ? 0xFFFF : 0x8000), bin = key16 >> 8.
-// collect=false: histogram. collect=true: bin>thr -> out slot hist[bin+1]++;
-// bin==thr -> append to cand[0].
+// collect=false: histogram. collect=true: bin>thr -> out slot hist[bin+1]++
+// (scalar, needs the atomic RMW); bin==thr -> append to cand[0], compacted
+// by compact_candidates above.
 inline void stage1_scan(const float *row, int32_t base0, int32_t n, bool collect,
                         int32_t thr, int32_t *out, Scratch &sc) {
     for (int32_t ch = 0; ch * kLane < n; ++ch) {
@@ -423,6 +501,22 @@ inline void stage1_scan(const float *row, int32_t base0, int32_t n, bool collect
         TSHRS(bin, key, static_cast<uint16_t>(8));
         TSTORE(gu, bin);
 
+        if (collect) {
+            U32Tile bin32;
+            TCVT(bin32, bin);
+            I32Tile data;
+            {   // in_idx = base + lane, from the TLOAD'd lane sequence so
+                // the tile carries well-formed <32,1> tileInfo for MSCATTER
+                I32Tile lane;
+                global_tensor<int32_t, RowMajor<kLane, 1>> gl(sc.lane);
+                TLOAD(lane, gl);
+                TADDS(data, lane, base);
+            }
+            sc.num[0] += compact_candidates(sc.cand[0], bin32, data,
+                                            static_cast<uint32_t>(thr), vc,
+                                            sc.num[0], sc);
+        }
+
         bool any = false;
         for (int32_t lane = 0; lane < kLane; ++lane) {
             sc.msk[lane] = 0;
@@ -432,19 +526,11 @@ inline void stage1_scan(const float *row, int32_t base0, int32_t n, bool collect
                 sc.hist[b]++;
                 continue;
             }
-            const int32_t in_idx = base + lane;
             if (b > thr) {
                 sc.off[lane] = static_cast<uint32_t>(sc.hist[b + 1]++) * 4u;
-                sc.idx[lane] = in_idx;
+                sc.idx[lane] = base + lane;
                 sc.msk[lane] = 1;
                 any = true;
-            } else if (b == thr) {
-                const int32_t p = sc.num[0]++;
-                if (p < kCandCap) {
-                    sc.cand[0][p] = in_idx;
-                } else {
-                    sc.error = 1;
-                }
             }
         }
         if (collect && any) scatter_masked(out, sc);
@@ -453,9 +539,10 @@ inline void stage1_scan(const float *row, int32_t base0, int32_t n, bool collect
 
 // Stage 2 round: byte (24-8*round) of the FP32 sortable key of each candidate.
 // key32 = bits ^ (sign ? 0xFFFFFFFF : 0x80000000); sign = bits >> 31.
-// collect=false: histogram. collect=true: bin>thr -> out slot prefix+hist[bin+1]++;
-// bin==thr -> next-round candidate (rounds 0..2) or, on round 3, direct output
-// while pos < kTopK.
+// collect=false: histogram. collect=true: bin>thr -> out slot prefix+hist[bin+1]++
+// (scalar, needs the atomic RMW); bin==thr -> next-round candidate for rounds
+// 0..2 (compacted by compact_candidates) or, on round 3, direct output while
+// pos < kTopK (scalar, also a hist RMW).
 inline void round_scan(const float *row, int round, bool collect, int32_t thr,
                        int32_t prefix, int32_t *out, Scratch &sc) {
     const int r = round & 1;
@@ -480,6 +567,16 @@ inline void round_scan(const float *row, int round, bool collect, int32_t thr,
         global_tensor<uint32_t, RowMajor<kLane, 1>> gw(sc.word);
         TSTORE(gw, byte);
 
+        if (collect && round < 3) {
+            global_tensor<int32_t, RowMajor<kLane, 1>> gcd(
+                &sc.cand[r][t * kLane]);
+            I32Tile data;
+            TLOAD(data, gcd);  // candidate indices, S32 tag for MSCATTER
+            sc.num[nr] += compact_candidates(sc.cand[nr], byte, data,
+                                             static_cast<uint32_t>(thr), vc,
+                                             sc.num[nr], sc);
+        }
+
         bool any = false;
         for (int32_t lane = 0; lane < kLane; ++lane) {
             sc.msk[lane] = 0;
@@ -489,29 +586,19 @@ inline void round_scan(const float *row, int round, bool collect, int32_t thr,
                 sc.hist[b]++;
                 continue;
             }
-            const int32_t in_idx = sc.cand[r][t * kLane + lane];
             if (b > thr) {
                 const int32_t pos = prefix + sc.hist[b + 1]++;
                 sc.off[lane] = static_cast<uint32_t>(pos) * 4u;
-                sc.idx[lane] = in_idx;
+                sc.idx[lane] = sc.cand[r][t * kLane + lane];
                 sc.msk[lane] = 1;
                 any = true;
-            } else if (b == thr) {
-                if (round < 3) {
-                    const int32_t p = sc.num[nr]++;
-                    if (p < kCandCap) {
-                        sc.cand[nr][p] = in_idx;
-                    } else {
-                        sc.error = 1;
-                    }
-                } else {
-                    const int32_t pos = prefix + sc.hist[b + 1]++;
-                    if (pos < kTopK) {
-                        sc.off[lane] = static_cast<uint32_t>(pos) * 4u;
-                        sc.idx[lane] = in_idx;
-                        sc.msk[lane] = 1;
-                        any = true;
-                    }
+            } else if (b == thr && round == 3) {
+                const int32_t pos = prefix + sc.hist[b + 1]++;
+                if (pos < kTopK) {
+                    sc.off[lane] = static_cast<uint32_t>(pos) * 4u;
+                    sc.idx[lane] = sc.cand[r][t * kLane + lane];
+                    sc.msk[lane] = 1;
+                    any = true;
                 }
             }
         }
@@ -535,6 +622,8 @@ inline void run(int32_t *output, int32_t *errors, const float *input,
         sc.error = 0;
         tile_zero_i32(sc.cand[0], kCandCap);
         tile_zero_i32(sc.cand[1], kCandCap);
+        tile_zero_i32(reinterpret_cast<int32_t *>(sc.scan), 2 * kLane);
+        for (int32_t l = 0; l < kLane; ++l) sc.lane[l] = l;
 
         const int32_t x2 = clamp_lo(starts[bx], 0);
         const int32_t x3 = clamp_hi(ends[bx], kCols);

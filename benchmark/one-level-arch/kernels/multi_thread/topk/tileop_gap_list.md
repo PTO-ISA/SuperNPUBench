@@ -1,7 +1,7 @@
 # topk radix-select tile-op 化：不支持项与绕行清单
 
 算子：`benchmark/one-level-arch/kernels/multi_thread/topk/topk.hpp`
-（branch `topk-radix-select`，截至 `63c8842`）。
+（branch `topk-radix-select`，cand 追加 tile 化版本）。
 依据：`topk_scatter_atomic_add_tileop.md`、
 `histogram_cumsum_m32.md`（均为本目录伪代码）、gfrun（`model/emulator/`）、
 工具链头文件（`tileop-api/jcore/template_asm.hpp`、`common/pto_tile.hpp`）。
@@ -14,6 +14,9 @@
 - 256-bin suffix cumsum（32 窗口 TLOAD + 31 TADD 树 + 7 步 cell 后缀累加）
 - find_threshold（TCMPS + TSELS + TEXPANDS + TCOLSUM + cell TSTORE）
 - scratch 清零（TEXPANDS + 分组 TSTORE）
+- 候选追加紧凑化（TCMPS EQ/LT + TSELS + TMUL 得 0/1 mask → GM 上
+  Hillis-Steele 5 轮前缀和 → MSCATTER_MASK 按 exclusive scan 位移写
+  cand；不依赖任何原子操作）
 
 ---
 
@@ -27,13 +30,15 @@
   function 12/21）。
 - 被阻断的环节：
   - 直方图累加 `hist[bin]++`（stage1_scan / round_scan 的 collect=false 路径）；
-  - 槽位分配 `hist[bin+1]++` 的先取后增（collect=true 路径的输出位置）；
-  - 阈值桶候选的 scatter 追加。
+  - 槽位分配 `hist[bin+1]++` 的先取后增（collect=true 路径的输出位置）。
 - 现状绕行：PE 私有 GM 直方图 + 标量核 RMW；单 PE 程序序天然串行化重复
   bin，语义与原子 RMW 一致。这也是 kernel 里剩余标量 lane 循环的根因。
 - 解开后的收益：stage1_scan / round_scan 的 lane 循环可整体换成
   MSCATTER_ADD（直方图）+ MGATHER_ADD（槽位分配），msk/idx/off 的标量
   物化随之消失。
+- 注：候选追加曾是本项的第三个被阻断环节，现已用前缀和 +
+  MSCATTER_MASK  tile 化（见文首清单），紧凑排列的位移本来就要自己算，
+  整条链不需要原子。
 
 ### A2. TCMPS 的 GPR predicate 载体未实现
 
@@ -54,6 +59,18 @@
   变换的第一步）。
 - 现状绕行：GM 往返（TSTORE fp16 → TLOAD u16），每个块声明的 dtype 与
   标签一致。
+
+### A4. 比较/选择块的维度必须等于 tile 静态元数据
+
+- 证据：`AccumulateBlockInfo.cpp ValidateCompareSelectTepl` 要求
+  TCMP/TCMPS/TSELS 的块维度（lb0/lb1/lb2）与 src tile 元数据的
+  validRow/validCol/col 逐一相等；tile 元数据来自 C++ Tile 类型的静态
+  形状，因此 lb1 里放运行时 vc（尾部块屏蔽）在 tail chunk 上必然
+  断言。
+- 被阻断的环节：用运行时 validRow 让执行器自动屏蔽尾部的写法。
+- 现状绕行：所有比较/选择块用静态 32 lane 维度，尾部用显式 keep 谓词
+  （`TCMPS<LT>(lane, vc)`）与 eq 谓词各自 TSELS 物化成 0/1 后 TMUL
+  合并；尾部 lane 的垃圾 bin 不会进入前缀和与 scatter。
 
 ---
 
@@ -78,7 +95,9 @@
 ### B3. TCMPS / TSELS wrapper 不发 CUBE layout selector
 
 - 影响：M32 tile 上走 wrapper 时块里没有 CUBE_M32 DATR。
-- 现状绕行：手写块显式携带（TCMPS 用 `B.DATR Zero, GE`，TSELS 按
+- 现状：单 cell（\<32,1\>）M32 tile 已验证可直接走 wrapper（U32 单
+  cell payload 各布局字节一致，执行器不需要 DATR 寻址）；只有裸 1KB
+  分组 tile 仍需手写块显式携带（TCMPS 用 `B.DATR Zero, GE`，TSELS 按
   wrapper 形式无 DATR）。
 
 ### B4. TCOLSUM wrapper 的形状断言与分组 tile 不兼容
@@ -92,6 +111,32 @@
 - 现象：tile 数组一旦被动态下标访问即 demote 到栈，每次访问变成 1KB
   S64 NORM spill/reload。
 - 现状绕行：所有 tile 数组循环 `#pragma clang loop unroll(full)`。
+
+### B6. TCI 只收 RowMajor，且产出的 tile 不带 \<32,1\> tileInfo
+
+- 证据：wrapper `static_assert` 要求 unboxed RowMajor 且 ValidRow==1；
+  手写块绕过后，gfrun 执行器又硬编码 validRow=1 只写 validCol 个元素，
+  产物的 tileInfo 与 \<32,1\> M32 tile 的静态元数据不符，下游比较块被
+  A4 的校验拒收。
+- 现状绕行：lane 序列 0..31 在 GM scratch 里标量初始化一次，用cell
+  TLOAD 取回（TLOAD 产物 tileInfo 必然一致）；`base + lane` 用一条
+  TADDS 得到。
+
+### B7. tile 对象跨非内联函数边界被降级到栈
+
+- 现象：tile 对象经引用参数（或 struct 字段）跨非内联函数边界传递时被
+  demote 到栈，CUBE 标签 tile 的 spill 本身非法
+  （`RecordRawTileTransport` 断言）。
+- 现状绕行：所有经手 tile 的辅助函数 `__attribute__((always_inline))`，
+  需要跨阶段的值一律经 GM scratch 物化。
+
+### B8. 控制流依赖的 tile 活区间触发非法 TMOV
+
+- 现象：tile 的活区间若依赖控制流（条件块内定义、循环回边携带），
+  regalloc 会在 join/回边插 TLSU TMOV，gfrun 以 Local TMOV legality
+  断言拒绝。
+- 现状绕行：tile 代码保持直线型，循环全部展开；不在跨 chunk 迭代的
+  回边上持有 tile。
 
 ---
 
@@ -145,7 +190,7 @@
 |---|---|---|---|
 | 直方图累加 `hist[b]++` | stage1_scan / round_scan | A1 | 解开即 tile 化 |
 | 槽位分配 `hist[b+1]++` / off·idx·msk 物化 | 同上 collect 路径 | A1 | 解开即 tile 化 |
-| 候选追加 `cand[p] = in_idx` | 同上 | A1 | 本质是带计数的 scatter |
+| 候选追加 `cand[p] = in_idx` | 同上 | 无（已 tile 化） | 前缀和 + MSCATTER_MASK，见文首清单 |
 | `any` 检查（msk 的 OR 归约） | scatter_masked | 依附 A1 | lane 循环消失后可用 TCOLSUM |
 | `rem -= hist[thr+1]` 的 lw | run() | 无 | 伪代码 3.4 明确保持标量 lw |
 | starts/ends clamp、prefix、round 控制 | run() | 无 | 本质标量控制流 |
