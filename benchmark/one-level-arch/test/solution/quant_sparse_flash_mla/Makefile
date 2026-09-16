@@ -9,9 +9,22 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    N1 ?= 1
    N2 ?= 1
    D ?= 512
+   QSMLA_DTYPE ?= HIF8
+   # Single-PE compatibility: IMPL=tadd QSMLA_DTYPE=FP16.
+   # HIF8 remains the default dtype for the unified four-PE implementations.
+   IMPL ?= tadd
    Tm ?= 32
-   Tk ?= 32
-   Td_block ?= 64
+   ifeq ($(IMPL), tadd)
+      # Single-PE tadd requires square B tiles (Tk == Td_block, unpatched
+      # Local-B contract) and a row-reduction source <= 2048 bytes, so its
+      # defaults follow the validated Tk16 square profile instead of the
+      # legacy Tk=32/Td_block=64 pair (which now fails the kernel asserts).
+      Tk ?= 16
+      Td_block ?= 16
+   else
+      Tk ?= 32
+      Td_block ?= 64
+   endif
    softmax_scale ?= 0.125
    wleft ?= 1
    wright ?= 1
@@ -33,9 +46,8 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       cmp_kv_descale ?= 1.0
    endif
    # Single-PE compatibility: IMPL=tadd QSMLA_DTYPE=FP16.
-    # HIF8 remains the default dtype for the unified four-PE implementations.
-    IMPL ?= tadd
-    QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
+   # HIF8 remains the default dtype for the unified four-PE implementations.
+   QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
     QSMLA_1PE_IMPLS := csa_tadd_1pe
     # Dynamic-shape variant (v2): Vec tiles use DYNAMIC ValidRow/ValidCol.
     # Only valid for the unified four-PE IMPLs.
@@ -48,11 +60,11 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS)),)
       $(error unsupported QSMLA IMPL=$(IMPL); use tadd or a unified four-PE implementation)
    endif
-   ifeq ($(IMPL), tadd)
-      ifneq ($(QSMLA_DTYPE), FP16)
-         $(error single-PE tadd requires QSMLA_DTYPE=FP16; HIF8 uses a unified four-PE IMPL)
-      endif
-   endif
+    ifeq ($(IMPL), tadd)
+       ifneq ($(QSMLA_DTYPE), FP16)
+          $(error single-PE tadd requires QSMLA_DTYPE=FP16; HIF8 uses a unified four-PE IMPL)
+       endif
+    endif
    DEFINES += -DTbatch=$(B)
    DEFINES += -DTs1=$(s1)
    DEFINES += -DTs2=$(s2)

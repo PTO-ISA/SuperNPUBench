@@ -98,7 +98,11 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
     int* metadata,
     float* softmax_lse,
     int q_position = -1,
-    int q_sequence_length = -1)
+    int q_sequence_length = -1,
+    // Optional caller-owned [D, S2] transposed KV. When non-null the
+    // whole-sequence scalar transpose below is skipped and this buffer is
+    // used directly (the BSND dispatcher shares one transpose per batch).
+    kvdtype* ori_kv_t_ptr = nullptr)
 {
     constexpr int s1 = Config::S1;
     constexpr int s2 = Config::S2;
@@ -115,6 +119,11 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
     static_assert(kTk == kTd,
                   "unpatched-headers single-PE tadd requires square B "
                   "tiles (Tk == Td_block)");
+    static_assert(kTm * kTk * 4 <= 2048,
+                  "row-reduction source tW must be <= 2048 bytes "
+                  "(pto-spec 0.58.6); the [32,32] profile compiles but "
+                  "faults the model's runtime contract check, so build the "
+                  "default Tk=16/Td_block=16 square profile instead");
     static_assert(std::is_same_v<qdtype, __half> &&
                       std::is_same_v<kvdtype, __half> &&
                       std::is_same_v<odttype, __half>,
@@ -181,10 +190,16 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
     // into kv_t ([D, s2] RowMajor) with a scalar loop that runs before ANY
     // tile is live, and every QK^T block then loads straight from kv_t.
     // This keeps the instruction count near the retired TTRANS baseline.
-    alignas(64) kvdtype kv_t[D * s2];
-    for (int t = 0; t < s2; ++t)
-        for (int d = 0; d < D; ++d)
-            kv_t[d * s2 + t] = ori_kv_ptr[t * D + d];
+    // The BSND dispatcher passes a batch-shared transpose via ori_kv_t_ptr
+    // so the scratch here stays unused (it cannot be conditionally
+    // declared, but wasting it costs no instructions).
+    alignas(64) kvdtype kv_t_scratch[D * s2];
+    kvdtype* kv_t = ori_kv_t_ptr != nullptr ? ori_kv_t_ptr : kv_t_scratch;
+    if (ori_kv_t_ptr == nullptr) {
+        for (int t = 0; t < s2; ++t)
+            for (int d = 0; d < D; ++d)
+                kv_t[d * s2 + t] = ori_kv_ptr[t * D + d];
+    }
     using gmKt = global_tensor<kvdtype, RowMajor<D, s2>>;
     using itKt = global_iterator<gmKt, tileKRight>;
     itKt gIterKt(kv_t);
@@ -470,6 +485,16 @@ void quant_sparse_flash_mla_swa_tadd_bsnd_pto(
     static_assert(Config::N2 == 1,
                   "Stage-1 BSND dispatcher currently requires contiguous N2=1 KV");
 
+    // One whole-sequence K^T is shared by every work item of the same batch
+    // (N2 == 1 makes kv_work_offset depend only on batch), so transpose once
+    // per batch instead of once per config_pto call. Work items are decoded
+    // batch-major, so a change-detection retranspose suffices; without this
+    // the identical [D, S2] payload is re-transposed for every head chunk
+    // (e.g. 128 times for the B=8/S1=4/N1=128 shape) and scalar
+    // preprocessing dominates as S2 grows.
+    alignas(64) kvdtype batch_kv_t[Config::D * Config::S2];
+    int cached_batch = -1;
+
     auto run_full_rows = [&](int row_offset, const QsmlaWorkItem& work) {
         using WorkConfig = QsmlaConfig<
             1, Config::TileM, Config::S2, 1, 1, Config::D, Config::K,
@@ -483,7 +508,8 @@ void quant_sparse_flash_mla_swa_tadd_bsnd_pto(
             softmax_scale, ori_win_left, ori_win_right,
             q_descale, ori_kv_descale, ori_sparse_indices, ori_block_table,
             cu_seqlens_q, cu_seqlens_ori_kv, seqused_q, seqused_ori_kv,
-            sinks, metadata, softmax_lse, work.q_token, Config::S1);
+            sinks, metadata, softmax_lse,
+            work.q_token, Config::S1, batch_kv_t);
     };
 
     auto run_tail_rows = [&]<int Rows>(int row_offset, const QsmlaWorkItem& work) {
@@ -513,7 +539,8 @@ void quant_sparse_flash_mla_swa_tadd_bsnd_pto(
             softmax_scale, ori_win_left, ori_win_right,
             q_descale, ori_kv_descale, ori_sparse_indices, ori_block_table,
             cu_seqlens_q, cu_seqlens_ori_kv, seqused_q, seqused_ori_kv,
-            sinks, metadata, softmax_lse, work.q_token, Config::S1);
+            sinks, metadata, softmax_lse, work.q_token, Config::S1,
+            batch_kv_t);
 
         for (int row = 0; row < Rows; ++row) {
             for (int dim = 0; dim < Config::D; ++dim) {
@@ -531,6 +558,19 @@ void quant_sparse_flash_mla_swa_tadd_bsnd_pto(
 
     for (int work_id = 0; work_id < Config::WorkCount; ++work_id) {
         const QsmlaWorkItem work = Config::decode_work(work_id);
+        if (work.batch != cached_batch) {
+            // Batch-major work order: retranspose only when the batch
+            // changes (first item of each batch). The scalar loop stays
+            // ahead of every tile exactly like the in-function transpose.
+            const kvdtype* batch_kv = ori_kv_ptr +
+                static_cast<std::size_t>(work.batch) * Config::S2 *
+                Config::N2 * Config::D;
+            for (int t = 0; t < Config::S2; ++t)
+                for (int d = 0; d < Config::D; ++d)
+                    batch_kv_t[d * Config::S2 + t] =
+                        batch_kv[t * Config::D + d];
+            cached_batch = work.batch;
+        }
         if (work.m_real == Config::GSliceMax) {
             for (int chunk = 0; chunk < kFullSliceChunks; ++chunk) {
                 run_full_rows(chunk * Config::TileM, work);
