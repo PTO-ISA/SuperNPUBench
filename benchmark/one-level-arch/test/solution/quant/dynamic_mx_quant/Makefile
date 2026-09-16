@@ -15,15 +15,33 @@ ifeq ($(TYPE), TAIL_OCP_FP8_DYN)
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_dyn.elf
 endif
 
+# TAIL_OCP_FP8 网络基准用例 [7168,16384] BS=32 bf16 in（专用 driver=专用 .o，~234MB 太大默认不跑）。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench.elf
+endif
+
+# TAIL_OCP_FP8 缩小版网络基准 [64,16384] BS=32 bf16 in（专用 driver=默认 PM=64，可默认跑/喂 gfsim）。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small.elf
+endif
+
 ifeq ($(TYPE), TAIL_OCP_FP4)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp4.cpp
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp4.elf
 endif
 
-# TAIL_OCP_FP4 大 shape 基准用例 [15360,1536] BS=32（专用 driver=专用 .o，避免与 512×256 共享）。
+# TAIL_OCP_FP4 网络基准用例 [15360,1536] BS=32（专用 driver=专用 .o，避免与 512×256 共享）。
 ifeq ($(TYPE), TAIL_OCP_FP4_BENCH)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp4_bench.cpp
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp4_bench.elf
+endif
+
+# TAIL_OCP_FP4 缩小版网络基准 [256,1536] BS=32（专用 driver=默认 PM=256，可默认跑/喂 gfsim）。
+ifeq ($(TYPE), TAIL_OCP_FP4_BENCH_SMALL)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp4_bench_small.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp4_bench_small.elf
 endif
 
 ifeq ($(TYPE), TAIL_CUBLAS_FP8_4PE)

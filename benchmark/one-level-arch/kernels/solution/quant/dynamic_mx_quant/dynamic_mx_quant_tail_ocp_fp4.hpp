@@ -119,7 +119,7 @@ void dynamic_mx_quant_tail_ocp_fp4(InT *x, OutT *y, uint8_t *scale) {
         // #585 列分区归约（见 detail::reduce_slice_cols 注释）：源全宽 [TileMv,BlockSize] 超 2048B，
         //   沿列切 nPart 个 [TileMv,RSC] 子块（各 <=2048B），逐块 TROWMAX 出 InT 域 [TileMv,1] partial，
         //   再 TMAX 逐元素合并。切列（非切行）→ partial 保持全 TileMv 行，合并后仍 [TileMv,1]，e8m0
-        //   输出行数不变、不触 #119。归约域 = InT（bf16/half/fp32 各自原生域），故子块与结果均为 InT。
+        //   输出行数不变、不触 #42。归约域 = InT（bf16/half/fp32 各自原生域），故子块与结果均为 InT。
         constexpr int RSC   = tail_ocp_fp4_detail::reduce_slice_cols(TileMv, sizeof(InT), BlockSize);
         constexpr int nPart = BlockSize / RSC;
         using t_xc  = Tile<Location::Vec, InT, TileMv, RSC, BLayout::RowMajor, ValidRows, RSC>;

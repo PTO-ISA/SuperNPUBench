@@ -162,7 +162,7 @@ constexpr int max_tilem() {
 //   <= 2048）。全宽 reduce 源 [TileM, BlockSize] 常超限（half [128,32]=8192B）→ 沿 BlockSize
 //   **切列**成若干 [TileM, RSC] 子块（各 <=2048B），逐块 TROWMAX 出 [TileM,1] partial 再 TMAX
 //   合并。切列（非切行）→ partial 保持全 TileM 行、合并后仍 [TileM,1]，e8m0/scale 输出行数不变、
-//   不触 TCVT physical-Row 契约（#119）。对齐官方标准归约 kernel reducemax_rowvec.hpp「切列 +
+//   不触 TCVT physical-Row 契约（#42）。对齐官方标准归约 kernel reducemax_rowvec.hpp「切列 +
 //   TMAX 累积」（行归约不能用 subview 拆行：B.SUBVIEW/B.ASSEMBLE 仅 CUBE 布局，行 band 输出
 //   <128B 是非法分片）。RSC = 满足 [TileM,RSC]*inBytes <= 2048 的最大 2 的幂，钳到 [1,BlockSize]
 //   且整除 BlockSize；不写死，由 2048 预算 / TileM / InT 宽度算出。

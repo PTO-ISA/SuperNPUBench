@@ -1,6 +1,8 @@
 #!/bin/bash
 # DynamicMxQuant solution 一键构建：为 15 个验证通过的正式用例现场生成 golden
-# （gen_dynamic_mx_quant_data.py，无需迁移 .bin）并用 res_check=on 编译。
+# （gen_dynamic_mx_quant_data.py，无需迁移 .bin），默认 plain（非 res_check）编译，
+# 产出可直接喂 gfsim 的 ELF（res_check ELF 因 ssrset→ssrsetOrderQ 空指针会使 gfsim
+# 段错误，故此处不用；精度校验走 res_check 的 src/run_precision_check.py）。
 # 8 个定尺用例 + 6 个运行期动态 shape（_dyn）用例，映射到 13 个 kernel 头
 # （common + 4 tail 定尺 + 2 nontail 定尺 + 6 个 _dyn）。
 # 两个 *_bs128 用例是大 BlockSize 场景，走 nontail plain 单块路径、统一 kPeNum=4 调用
@@ -28,9 +30,16 @@ CONFIGS=(
   "TAIL_OCP_FP8:tail_ocp_fp8:512:256:32:fp16:OCP:tail:FP8"
   "TAIL_OCP_FP8_DYN:tail_ocp_fp8_dyn:512:256:32:fp16:OCP:tail:FP8"
   "TAIL_OCP_FP4:tail_ocp_fp4:512:256:32:bf16:OCP:tail:FP4"
-  # 大 shape 基准 [15360,1536]（~47MB，太大，默认不跑）：手动构建/验证用
+  # 网络基准用例 [15360,1536]（~47MB，太大，默认不跑）：手动构建/验证用
   #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4_BENCH res_check=on
   # "TAIL_OCP_FP4_BENCH:tail_ocp_fp4_bench:15360:1536:32:bf16:OCP:tail:FP4"
+  # 缩小版网络基准 [256,1536]（小，默认跑/供 gfsim）：其它同网络基准，仅 M 缩至 256
+  "TAIL_OCP_FP4_BENCH_SMALL:tail_ocp_fp4_bench_small:256:1536:32:bf16:OCP:tail:FP4"
+  # 网络基准用例(fp8) [7168,16384] bf16→fp8（~234MB，太大，默认不跑）：手动构建/验证用
+  #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP8_BENCH res_check=on
+  # "TAIL_OCP_FP8_BENCH:tail_ocp_fp8_bench:7168:16384:32:bf16:OCP:tail:FP8"
+  # 缩小版网络基准(fp8) [64,16384]（小，默认跑/供 gfsim）：其它同网络基准，仅 M 缩至 64
+  "TAIL_OCP_FP8_BENCH_SMALL:tail_ocp_fp8_bench_small:64:16384:32:bf16:OCP:tail:FP8"
   "TAIL_CUBLAS_FP8_4PE:tail_cublas_fp8_4pe:512:256:32:fp16:CUBLAS:tail:FP8"
   "NONTAIL_CUBLAS_FP8_4PE:nontail_cublas_fp8_4pe:512:256:32:fp16:CUBLAS:nontail:FP8"
   "NONTAIL_CUBLAS_FP8_BS128:nontail_cublas_fp8_bs128:128:32:128:bf16:CUBLAS:nontail:FP8"
@@ -53,7 +62,7 @@ for cfg in "${CONFIGS[@]}"; do
   python3 "$GEN" --M "$M" --K "$K" --block-size "$BS" --algo "$ALGO" \
       --kernel "$KERNEL" --dtype "$DTYPE" --in-dtype "$INDT" \
       --scale-layout compact --seed "$SEED" -o "$cmpdir"
-  make -C "$HERE" TESTCASE=dynamic_mx_quant TYPE="$TYPE" COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+  make -C "$HERE" TESTCASE=dynamic_mx_quant TYPE="$TYPE" COMPILER_DIR="$COMPILER_DIR" diss
 done
 
 echo "全部 15 个用例已生成 golden + 编译完成（8 定尺 + 6 动态 shape；两个大 BS 用例复用 nontail plain 统一 4-PE，bigbs 已退休）。"

@@ -54,10 +54,12 @@ constexpr int tilem_max(int blockSize) {
 } // namespace tail_ocp_fp8_detail
 
 // ===========================================================================
-// TAIL-OCP-FP8 正式 kernel (固定 SPMD 4-PE) —— half in / e4m3 out / e8m0 scale /
-// BlockSize=32 / 位补求倒数。逐元素算法与 single-PE 探针
-// probe_dynamic_mx_quant_tail_ocp_fp8_newcalc 完全一致，唯一区别：把外层 M-tile
-// 循环按 get_thread_idx() 切成 4 份，每个 PE-线程只算自己那 1/4 的 M 行。
+// TAIL-OCP-FP8 正式 kernel (固定 SPMD 4-PE) —— InT(bf16/half/fp32) in / e4m3 out / e8m0 scale /
+// BlockSize=32 / recip = 0x7F00 - shared 主路径 (TEXPANDS+TSUB，计算算法与 tail_ocp_fp4 统一)。
+// ⚠ 暂未补 fp4 的 inf/zero/special 三守卫 (TCMPS+TSEL)：随机基准数据不触发，output byte-exact；
+//   缺守卫的三种边界见下方 recip finalize 处 TODO。原逐元素算法源自 single-PE 探针
+//   probe_dynamic_mx_quant_tail_ocp_fp8_newcalc，唯一区别：外层 M-tile 循环按 get_thread_idx()
+//   切成 4 份，每个 PE-线程只算自己那 1/4 的 M 行。
 //
 // 动机 (源码确证)：单线程版把全部 full_m*numKb 个 tile-block 压在 Thread0/PE0 的一条私有
 //   Vector ALU 流水上 (Core.cpp: vecTops[i] 每 PE 私有 aluPipe/fmaPipe/lnexpPipe)，导致
@@ -87,13 +89,16 @@ constexpr int tilem_max(int blockSize) {
 //   reduce→TCVT 形状契约缺陷 (全 mx_quant 家族共有, 见 RECORD 问题22 /
 //   ISSUE_reduce_output_stride_tail.md)，该缺陷独立于本切分模型。
 // ===========================================================================
-template <int M, int N, int BlockSize = 32>
-void dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scale) {
+template <int M, int N, int BlockSize = 32, typename InT = __half>
+void dynamic_mx_quant_tail_ocp_fp8(InT *x, __fp8_e4m3 *y, uint8_t *scale) {
     static_assert(M > 0 && N > 0, "dim must be positive");
     static_assert(N % BlockSize == 0, "N must be multiple of BlockSize");
     static_assert(BlockSize % 32 == 0,
                   "fp8 block = BlockSize bytes; BlockSize must be a multiple of "
                   "32 so the output tile is 32B-column-aligned");
+    static_assert(std::is_same_v<InT, __bf16> || std::is_same_v<InT, __half> ||
+                      std::is_same_v<InT, float>,
+                  "InT must be one of {__bf16, __half, float}");
 
     using namespace pto;
 
@@ -102,20 +107,21 @@ void dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scale) {
     //   recip_emax_bits<__fp8_e4m3>() (common:77) = BF16_ONE(0x3f80) - FP8_E4M3_EMAX(0x0400)
     //     = 0x3b80 = bf16 位型 2^-8 (emax_dst=8)，等于原硬编码常量。
     constexpr uint16_t RECIP_EMAX = recip_emax_bits<__fp8_e4m3>(); // 0x3b80
-    // 倒数位补常量 (同单线程版): recip_bits = 0x7F00 - shared_bits, 分两步 TXORS(0xFFFF)+TSUBS(0x80FF)。
-    // 保持内联：common 走 finalize_recip_u16 的 TSUB 形式（含特殊值 TSEL），不提供这两步位补常量。
-    constexpr uint16_t RECIP_XOR_NOT   = 0xFFFF; // 按位取反 (int16: -1)
-    constexpr uint16_t RECIP_COMPL_SUB = 0x80FF; // 0xFFFF - 0x7F00 (int16 补码减法, 低16位不变)
+    // recip 主路径 = 0x7F00 - shared（TEXPANDS(BF16_EXP_BIAS)+TSUB，与 tail_ocp_fp4 统一）。
+    //   旧的两步位补 TXORS(0xFFFF)+TSUBS(0x80FF) 已弃用：算同一结果，但 int16 视图上的
+    //   TXORS/TSUBS 会触发 gfrun res_check openat 落盘缺陷（实证：换 TEXPANDS+TSUB 后 openat
+    //   恢复、output byte-exact）。BF16_EXP_BIAS(=0x7F00) 见 common.hpp。
 
     // TileM 不再全局推导 —— 移入 run_pe 按 per-PE SubM 推 (见 tail_ocp_fp8_detail::tilem_max)。
     constexpr int numKb     = N / BlockSize;
     constexpr int scaleCols = ((numKb + 1) / 2) * 2;
+    constexpr bool oddTail  = (numKb % 2) != 0;   // 奇尾 padding scale 列须写 0x00（与 fp4 统一）
     constexpr int kPeNum    = 4;  // SoftCore.h kCorePeCount，multiThreadNum 仅 1|4 合法
     const uint32_t tid = get_thread_idx();          // 0..3
 
     uint8_t *y_u8 = reinterpret_cast<uint8_t *>(y);
 
-    using gm_x = global_tensor<__half,     RowMajor<M, N>>;
+    using gm_x = global_tensor<InT,        RowMajor<M, N>>;
     using gm_y = global_tensor<uint8_t,    RowMajor<M, N>>;
     using gm_s = global_tensor<__fp8_e8m0, RowMajor<M, scaleCols>>;
 
@@ -131,8 +137,8 @@ void dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scale) {
         //   shapes」契约 (RECORD 问题22 / ISSUE_reduce_output_stride_tail.md)。0.58.3
         //   工具链头已删 32B 列对齐 static_assert，故 Cols=1 可直接构造。
         //   全宽 tile (t_h/t_f/t_o) 仍 physical Cols=BlockSize。
-        using t_h   = Tile<Location::Vec, __half,     TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
-        using t_hb  = Tile<Location::Vec, __half,     TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
+        using t_h   = Tile<Location::Vec, InT,        TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
+        using t_hb  = Tile<Location::Vec, InT,        TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
         using t_bfb = Tile<Location::Vec, __bf16,     TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
         using t_e8b = Tile<Location::Vec, __fp8_e8m0, TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
         using t_fb  = Tile<Location::Vec, float,      TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
@@ -140,10 +146,10 @@ void dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scale) {
         using t_o   = Tile<Location::Vec, __fp8_e4m3, TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
 
         // #585 列分区归约（half 域）：源 [TileMv,BlockSize] 超 2048B → 沿列切 nPart 个 [TileMv,RSC]
-        //   子块各 <=2048B，逐块 TROWMAX→[TileMv,1] partial，TMAX 合并；输出满行、不触 #119。
-        constexpr int RSC   = tail_ocp_fp8_detail::reduce_slice_cols(TileMv, sizeof(__half), BlockSize);
+        //   子块各 <=2048B，逐块 TROWMAX→[TileMv,1] partial，TMAX 合并；输出满行、不触 #42。
+        constexpr int RSC   = tail_ocp_fp8_detail::reduce_slice_cols(TileMv, sizeof(InT), BlockSize);
         constexpr int nPart = BlockSize / RSC;
-        using t_hc  = Tile<Location::Vec, __half, TileMv, RSC, BLayout::RowMajor, ValidRows, RSC>;
+        using t_hc  = Tile<Location::Vec, InT, TileMv, RSC, BLayout::RowMajor, ValidRows, RSC>;
         auto col_part_rowmax = [&](int colBase, t_hb &max_in) {
             global_iterator<gm_x, t_hc> it0(x + row0 * N + colBase);
             auto g0 = it0(0, 0);
@@ -161,32 +167,74 @@ void dynamic_mx_quant_tail_ocp_fp8(__half *x, __fp8_e4m3 *y, uint8_t *scale) {
         };
 
         for (int kb = 0; kb < numKb; ++kb) {
-            // === scale pass ===
+            // === scale pass：value-domain reduce（InT 分派），floor 指数（与 fp4 统一）===
+            // ⚠ round-mode 缺口：half/fp32 先在 fp32 域 mask floor 再窄化（避 narrowing 进位越
+            //   2^k）；bf16 原生无 narrowing，直接取指数天然与截断一致。
             global_iterator<gm_x, t_h> x_iter(x + row0 * N + kb * BlockSize);
             auto gx = x_iter(0, 0);
-            t_h xh;      TLOAD(xh, gx);                           // 全宽 load 供 data pass 复用
-            t_hb max_h;  col_part_rowmax(kb * BlockSize, max_h); // 列分区 half 域归约（#585）
-            t_fb max_f;  TCVT(max_f, max_h);                     // half -> fp32（精确无舍入）
-            auto max_u32 = reinterpret_tile<uint32_t>(max_f);
-            TANDS(max_u32, max_u32, FP32_EXP_MASK);              // floor 到 2^E_max（清尾数+符号）
-            t_bfb max_bf; TCVT(max_bf, max_f);                   // fp32 -> bf16（尾数=0，精确）
+            t_h xin; TLOAD(xin, gx);                             // 全宽 load 供 data pass 复用
+
+            t_bfb max_bf;
+            if constexpr (std::is_same_v<InT, __half>) {
+                t_hb max_h; col_part_rowmax(kb * BlockSize, max_h);  // half 域列分区归约（#585）
+                t_fb max_f; TCVT(max_f, max_h);                      // half -> fp32（精确加宽）
+                auto max_u32 = reinterpret_tile<uint32_t>(max_f);
+                TANDS(max_u32, max_u32, FP32_EXP_MASK);              // fp32 域 floor（无进位）
+                TCVT(max_bf, max_f);                                 // fp32 -> bf16（尾数=0，精确）
+            } else if constexpr (std::is_same_v<InT, float>) {
+                t_hb max_f; col_part_rowmax(kb * BlockSize, max_f);  // fp32 域列分区归约（t_hb=InT=fp32）
+                auto max_u32 = reinterpret_tile<uint32_t>(max_f);
+                TANDS(max_u32, max_u32, FP32_EXP_MASK);              // fp32 域 floor（无进位）
+                TCVT(max_bf, max_f);                                 // fp32 -> bf16（尾数=0，精确）
+            } else {  // bf16：原生取指数（无转换 -> 无进位）
+                col_part_rowmax(kb * BlockSize, max_bf);             // bf16 域列分区归约 -> max_bf
+                auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
+                TANDS(max_u16, max_u16, BF16_EXP_MASK);
+            }
+
+            // shared = max * 2^-emax = 2^(E_max - emax)
             t_bfb shared_bf;
-            TMULS(shared_bf, max_bf, __builtin_bit_cast(__bf16, RECIP_EMAX)); // 2^(E_max-8)
-            t_e8b scale_e8m0; TCVT(scale_e8m0, shared_bf);       // bf16 -> e8m0 直转
+            TMULS(shared_bf, max_bf, __builtin_bit_cast(__bf16, RECIP_EMAX));
+            t_e8b scale_e8m0; TCVT(scale_e8m0, shared_bf);       // bf16 -> e8m0 直转（须在 recip 前）
             global_iterator<gm_s, t_e8b> s_iter(
                 reinterpret_cast<__fp8_e8m0 *>(scale) + row0 * scaleCols + kb);
             auto gs = s_iter(0, 0); TSTORE(gs, scale_e8m0);
 
-            // === data pass (NEWCALC: 位补求倒数, 复用 xh) ===
-            auto sh_u16 = reinterpret_tile<int16_t>(shared_bf);
-            TXORS(sh_u16, sh_u16, RECIP_XOR_NOT);                // 0xFFFF - bits (重打 I16 标签)
-            TSUBS(sh_u16, sh_u16, RECIP_COMPL_SUB);              // -> 0x7F00 - bits = 2^(8-E_max)
-            t_fb recip_f; TCVT(recip_f, shared_bf);              // bf16 -> fp32
-            t_f xf;       TCVT(xf, xh);                          // half -> fp32 (复用 xh)
-            TROWEXPANDMUL(xf, xf, recip_f);                      // x * (1/scale)
-            t_o oq;       TCVT(oq, xf);                          // fp32 -> e4m3
+            // === recip finalize：主路径 recip = 0x7F00 - shared（TEXPANDS+TSUB，与 fp4 统一）===
+            // 写独立 recip_bf tile（不就地改 shared_bf），使 shared_u16/max_u16 可留给守卫读。
+            // TODO(inf/zero/special 三守卫)：fp4 在此处对三类特殊 max/shared 用 TCMPS+TSEL 写哨兵
+            //   （inf/nan max_exp==0x7F80 -> 0x7F81；全零块 max_exp==0 -> 0；shared==0x7F00 ->
+            //   0x0040）。本 kernel 暂不补。缺守卫的后果：① shared==0x7F00 饱和点主路径算出 0
+            //   -> 该 block 输出错；② inf/nan 输入 recip 错；③ 全零块防御缺失（output 仍 0）。
+            //   随机基准数据三者都不触发 -> output byte-exact。补齐只需照抄 fp4 的 6 行 TCMPS/TSEL。
+            auto shared_u16 = reinterpret_tile<uint16_t>(shared_bf);
+            t_bfb recip_bf, k_bf;
+            auto recip_u16 = reinterpret_tile<uint16_t>(recip_bf);
+            auto k_u16     = reinterpret_tile<uint16_t>(k_bf);
+            TEXPANDS(k_u16, BF16_EXP_BIAS);                      // 0x7F00
+            TSUB(recip_u16, k_u16, shared_u16);                  // 0x7F00 - shared = 2^(8-E_max)
+            t_fb recip_f; TCVT(recip_f, recip_bf);               // bf16 -> fp32
+
+            // === data pass（InT 分派，与 fp4 统一）===
+            t_o oq;
+            if constexpr (std::is_same_v<InT, float>) {
+                TROWEXPANDMUL(xin, xin, recip_f);                // fp32 域直乘（无预转）
+                TCVT(oq, xin);                                   // fp32 -> e4m3
+            } else {
+                t_f xf; TCVT(xf, xin);                           // bf16/half -> fp32
+                TROWEXPANDMUL(xf, xf, recip_f);                  // 逐行标量广播乘
+                TCVT(oq, xf);                                    // fp32 -> e4m3
+            }
             global_iterator<gm_y, t_o> y_iter(y_u8 + row0 * N + kb * BlockSize);
             auto gy = y_iter(0, 0); TSTORE(gy, oq);
+        }
+        // 奇尾 scale 列补 0x00 E8M0（golden _pad_to_even 用 2^-127 == E8M0 0x00）——与 fp4 统一。
+        if constexpr (oddTail) {
+            t_e8b zpad;
+            TEXPANDS(zpad, __builtin_bit_cast(__fp8_e8m0, static_cast<uint8_t>(0)));
+            global_iterator<gm_s, t_e8b> zs_iter(
+                reinterpret_cast<__fp8_e8m0 *>(scale) + row0 * scaleCols + numKb);
+            auto gzs = zs_iter(0, 0); TSTORE(gzs, zpad);
         }
     };
     // 单个 PE (编译期常量 Pe) 的驱动：算自己那段连续行 [row_begin, row_begin+my_rows)，
