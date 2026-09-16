@@ -291,6 +291,24 @@ inline void suffix_cumsum(int32_t *hist) {
     }
 }
 
+// Zero a GM word range with tile ops instead of scalar stores: one broadcast
+// zero tile, then grouped 1KB TSTOREs plus a 32-word cell TSTORE tail.
+// `words` must be a multiple of kLane.
+inline void tile_zero_i32(int32_t *base, int32_t words) {
+    GroupTileS32 z;
+    group_texpands(z, 0);
+    int32_t off = 0;
+    for (; off + 8 * kLane <= words; off += 8 * kLane) {
+        group_tstore(base + off, z);
+    }
+    if (off < words) {
+        I32Tile c;
+        TEXPANDS(c, 0);
+        global_tensor<int32_t, RowMajor<kLane, 1>> g(base + off);
+        TSTORE(g, c);
+    }
+}
+
 // Threshold search as tile ops (source 3.4). The source uses the TCMPS CUBE
 // GPR-predicate carrier (per-64-bin predicate bits merged in scalar GPRs with
 // AND/CTZ); gfrun only implements the PredicateCell carrier, so the crossing
@@ -511,14 +529,12 @@ inline void run(int32_t *output, int32_t *errors, const float *input,
         const float *row = input + bx * kCols;
         int32_t *out = output + bx * kTopK;
 
-        for (int i = 0; i < 288; ++i) sc.hist[i] = 0;
+        tile_zero_i32(sc.hist, 288);
         sc.num[0] = 0;
         sc.num[1] = 0;
         sc.error = 0;
-        for (int i = 0; i < kCandCap; ++i) {
-            sc.cand[0][i] = 0;
-            sc.cand[1][i] = 0;
-        }
+        tile_zero_i32(sc.cand[0], kCandCap);
+        tile_zero_i32(sc.cand[1], kCandCap);
 
         const int32_t x2 = clamp_lo(starts[bx], 0);
         const int32_t x3 = clamp_hi(ends[bx], kCols);
@@ -539,7 +555,7 @@ inline void run(int32_t *output, int32_t *errors, const float *input,
         for (int round = 0; round < 4 && rem > 0; ++round) {
             const int nr = (round & 1) ^ 1;
             const int32_t prefix = kTopK - rem;
-            for (int i = 0; i < 288; ++i) sc.hist[i] = 0;
+            tile_zero_i32(sc.hist, 288);
             sc.num[nr] = 0;
             round_scan(row, round, false, 0, 0, out, sc);
             suffix_cumsum(sc.hist);
