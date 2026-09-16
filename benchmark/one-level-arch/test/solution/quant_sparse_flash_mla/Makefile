@@ -36,6 +36,14 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    # HIF8 remains the default dtype for the unified four-PE implementations.
    IMPL ?= tadd
    QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
+   # Dynamic-shape variant (v2): Vec tiles use DYNAMIC ValidRow/ValidCol.
+   # Only valid for the unified four-PE IMPLs.
+   ifeq ($(QSMLA_DYNAMIC_SHAPE), on)
+      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS)),)
+         $(error QSMLA_DYNAMIC_SHAPE requires a unified four-PE IMPL)
+      endif
+      DEFINES += -DQSMLA_USE_DYNAMIC_SHAPE
+   endif
    ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS)),)
       $(error unsupported QSMLA IMPL=$(IMPL); use tadd or a unified four-PE implementation)
    endif
