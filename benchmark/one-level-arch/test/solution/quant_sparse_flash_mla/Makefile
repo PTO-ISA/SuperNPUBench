@@ -33,18 +33,19 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       cmp_kv_descale ?= 1.0
    endif
    # Single-PE compatibility: IMPL=tadd QSMLA_DTYPE=FP16.
-   # HIF8 remains the default dtype for the unified four-PE implementations.
-   IMPL ?= tadd
-   QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
-   # Dynamic-shape variant (v2): Vec tiles use DYNAMIC ValidRow/ValidCol.
-   # Only valid for the unified four-PE IMPLs.
-   ifeq ($(QSMLA_DYNAMIC_SHAPE), on)
-      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS)),)
-         $(error QSMLA_DYNAMIC_SHAPE requires a unified four-PE IMPL)
-      endif
-      DEFINES += -DQSMLA_USE_DYNAMIC_SHAPE
-   endif
-   ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS)),)
+    # HIF8 remains the default dtype for the unified four-PE implementations.
+    IMPL ?= tadd
+    QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
+    QSMLA_1PE_IMPLS := csa_tadd_1pe
+    # Dynamic-shape variant (v2): Vec tiles use DYNAMIC ValidRow/ValidCol.
+    # Only valid for the unified four-PE IMPLs.
+    ifeq ($(QSMLA_DYNAMIC_SHAPE), on)
+       ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS)),)
+          $(error QSMLA_DYNAMIC_SHAPE requires a unified four-PE IMPL)
+       endif
+       DEFINES += -DQSMLA_USE_DYNAMIC_SHAPE
+    endif
+   ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS)),)
       $(error unsupported QSMLA IMPL=$(IMPL); use tadd or a unified four-PE implementation)
    endif
    ifeq ($(IMPL), tadd)
@@ -113,6 +114,16 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL).elf
    endif
 
+   # Single-PE CSA (Local CUBE path, FP16, embedded input only).
+   ifeq ($(IMPL), csa_tadd_1pe)
+      ifneq ($(QSMLA_SPARSE_EMBED_INPUT), on)
+         $(error csa_tadd_1pe requires QSMLA_SPARSE_EMBED_INPUT=on (FP16 csa_small data))
+      endif
+      DEFINES += -DQSMLA_USE_CSA_TADD_1PE
+      QSMLA_SPARSE_CASE := csa_small
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_INPUTembedded.elf
+   endif
+
    ifeq ($(QSMLA_EMBED_INPUT), on)
       ifneq ($(B), 8)
          $(error QSMLA_EMBED_INPUT supports only B=8,S1=4,N1=128,N2=1,D=512)
@@ -155,8 +166,8 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    endif
 
    ifeq ($(QSMLA_SPARSE_EMBED_INPUT), on)
-      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS)),)
-         $(error QSMLA_SPARSE_EMBED_INPUT requires a unified four-PE IMPL)
+      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS)),)
+         $(error QSMLA_SPARSE_EMBED_INPUT requires a unified four-PE IMPL or csa_tadd_1pe)
       endif
       QSMLA_SPARSE_DATA_ROOT ?= /tmp/qsmla-sparse
       QSMLA_SPARSE_DATA_DIR := $(QSMLA_SPARSE_DATA_ROOT)/$(QSMLA_SPARSE_CASE)
@@ -174,11 +185,11 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       EXTRA_OBJ_FILES += $(QSMLA_Q_OBJ) $(QSMLA_ORI_KV_OBJ)
       DEFINES += -DQSMLA_USE_SPARSE_EMBEDDED_INPUT
 
-      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe),)
+      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
          QSMLA_CMP_KV_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_kv.o
          EXTRA_OBJ_FILES += $(QSMLA_CMP_KV_OBJ)
       endif
-      ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe),)
+      ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
          QSMLA_CMP_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_indices.o
          EXTRA_OBJ_FILES += $(QSMLA_CMP_INDEX_OBJ)
       endif

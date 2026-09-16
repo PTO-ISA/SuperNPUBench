@@ -107,6 +107,14 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
     constexpr int kTk = Config::TileK;
     constexpr int kTd = Config::TileD;
     static_assert(kTm <= 32, "single-PE Local CUBE supports TileM <= 32");
+    // Compatibility with the UNPATCHED TileOP headers: the compile-time
+    // check derives a Local B's contraction dim from ValidCol while the
+    // model's ValidateLocalCubeMatrixContract derives it from validRow. The
+    // two conventions only agree when B is SQUARE, so this kernel requires
+    // kTk == kTd (build with Td_block=32 for the default Tk=32).
+    static_assert(kTk == kTd,
+                  "unpatched-headers single-PE tadd requires square B "
+                  "tiles (Tk == Td_block)");
     static_assert(std::is_same_v<qdtype, __half> &&
                       std::is_same_v<kvdtype, __half> &&
                       std::is_same_v<odttype, __half>,
@@ -136,8 +144,9 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
     using tileQ      = std::conditional_t<
         (kTm <= 16), CubeTileM16<qdtype, kTm, kTd>,
         CubeTileM32<qdtype, kTm, kTd>>;
-    using tileKSrc   = Tile<Location::Vec, kvdtype, kTk, kTd, BLayout::RowMajor>;
-    using tileKTrans = Tile<Location::Vec, kvdtype, kTd, kTk, BLayout::RowMajor>;
+    // TTRANS retired (PTO-ISA 0.58.5): the K^T staging path below transposes
+    // the whole sequence once with scalar stores, so only the CUBE_N8 Right
+    // tile is needed. Local B keeps the logical [K, N] declaration.
     using tileKRight = CubeTileN8<kvdtype, kTd, kTk>;
     using tileScoreCube = std::conditional_t<
         (kTm <= 16), CubeAccumulatorM16<float, kTm, kTk>,
@@ -163,19 +172,31 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
     using tileSum    = tileMax;
 
     // Explicit Local CUBE <-> Vec conversion boundaries, reused per block.
-    // Single-PE scratch may live on this PE's stack; no shared workspace or
-    // whole-sequence K transpose is needed. TCVT alone is not a CELL conversion.
-    alignas(64) kvdtype k_trans_scratch[kTd * kTk];
+    // Single-PE scratch may live on this PE's stack; no shared workspace is
+    // needed. TCVT alone is not a CELL conversion.
+    //
+    // TTRANS is retired (PTO-ISA 0.58.5) and the TLSU row-stride-only
+    // addressing cannot express a transposed view, so no tile operation can
+    // transpose. Instead the whole KV sequence is transposed ONCE up front
+    // into kv_t ([D, s2] RowMajor) with a scalar loop that runs before ANY
+    // tile is live, and every QK^T block then loads straight from kv_t.
+    // This keeps the instruction count near the retired TTRANS baseline.
+    alignas(64) kvdtype kv_t[D * s2];
+    for (int t = 0; t < s2; ++t)
+        for (int d = 0; d < D; ++d)
+            kv_t[d * s2 + t] = ori_kv_ptr[t * D + d];
+    using gmKt = global_tensor<kvdtype, RowMajor<D, s2>>;
+    using itKt = global_iterator<gmKt, tileKRight>;
+    itKt gIterKt(kv_t);
+
     alignas(64) float score_scratch[kTm * kTk];
     alignas(64) qdtype prob_scratch[kTm * kTk];
     alignas(64) float pv_scratch[kTm * kTd];
-    global_tensor<kvdtype, RowMajor<kTd, kTk>> gKTrans(k_trans_scratch);
     global_tensor<float, RowMajor<kTm, kTk>> gScore(score_scratch);
     global_tensor<qdtype, RowMajor<kTm, kTk>> gProb(prob_scratch);
     global_tensor<float, RowMajor<kTm, kTd>> gPV(pv_scratch);
 
     using itQ    = global_iterator<gmQ,  tileQ>;
-    using itKSrc = global_iterator<gmKV, tileKSrc>;
     using itV    = global_iterator<gmKV, tileV>;
     using itO    = global_iterator<gmO,  tileO_cast>;
 
@@ -216,7 +237,6 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
         }
         kvdtype* clipped_kv_ptr =
             ori_kv_ptr + static_cast<std::size_t>(kv_blocks.begin) * kTk * D;
-        itKSrc gIterKSrc(clipped_kv_ptr);
         itV gIterV(clipped_kv_ptr);
 
         // ============================================================
@@ -236,14 +256,9 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
                 tileQ tQ;
                 auto gQ = gIterQ(i, dd);
                 TLOAD_CUBE(tQ, gQ);
-                tileKSrc tKSrc;
-                auto gK = gIterKSrc(j, dd);
-                TLOAD(tKSrc, gK);
-                tileKTrans tKTrans;
-                TTRANS(tKTrans, tKSrc);
-                TSTORE(gKTrans, tKTrans);
                 tileKRight tK;
-                TLOAD_CUBE(tK, gKTrans);
+                auto gK = gIterKt(dd, kv_blocks.begin + j);
+                TLOAD_CUBE(tK, gK);
                 tileScoreCube tScoreCube;
                 TMATMUL(tScoreCube, tQ, tK);
                 TSTORE_CUBE(gScore, tScoreCube);
@@ -326,14 +341,9 @@ void quant_sparse_flash_mla_swa_tadd_config_pto(
                     tileQ tQ;
                     auto gQ = gIterQ(i, dd2);
                     TLOAD_CUBE(tQ, gQ);
-                    tileKSrc tKSrc;
-                    auto gK = gIterKSrc(j, dd2);
-                    TLOAD(tKSrc, gK);
-                    tileKTrans tKTrans;
-                    TTRANS(tKTrans, tKSrc);
-                    TSTORE(gKTrans, tKTrans);
                     tileKRight tK;
-                    TLOAD_CUBE(tK, gKTrans);
+                    auto gK = gIterKt(dd2, kv_blocks.begin + j);
+                    TLOAD_CUBE(tK, gK);
                     tileScoreCube tScoreCube;
                     TMATMUL(tScoreCube, tQ, tK);
                     TSTORE_CUBE(gScore, tScoreCube);
