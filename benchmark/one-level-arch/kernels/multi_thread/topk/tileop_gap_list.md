@@ -2,8 +2,8 @@
 
 算子：`benchmark/one-level-arch/kernels/multi_thread/topk/topk.hpp`
 （branch `topk-radix-select`，截至 `63c8842`）。
-依据：`incoming/topk_pseudocode/topk_scatter_atomic_add_tileop.md`、
-`incoming/histogram_cumsum_m32.md`、gfrun（`model/emulator/`）、
+依据：`topk_scatter_atomic_add_tileop.md`、
+`histogram_cumsum_m32.md`（均为本目录伪代码）、gfrun（`model/emulator/`）、
 工具链头文件（`tileop-api/jcore/template_asm.hpp`、`common/pto_tile.hpp`）。
 
 已经跑在 tile op 上的部分（对照用，后文不再列）：

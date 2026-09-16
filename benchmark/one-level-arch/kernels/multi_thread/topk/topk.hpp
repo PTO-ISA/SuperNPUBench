@@ -4,7 +4,7 @@
 #include <cstdint>
 
 // Top-K radix select: FP16 coarse pass + four FP32 byte passes, per
-// incoming/topk_pseudocode/topk_scatter_atomic_add_tileop.md.
+// topk_scatter_atomic_add_tileop.md (same directory).
 //
 // Semantics: for each batch row bx, select the kTopK largest values of
 // input[bx, start:end) and write their in-row element indices to
@@ -93,8 +93,8 @@ inline int32_t clamp_lo(int32_t v, int32_t lo) { return v < lo ? lo : v; }
 inline int32_t clamp_hi(int32_t v, int32_t hi) { return v > hi ? hi : v; }
 inline int32_t min_i32(int32_t a, int32_t b) { return a < b ? a : b; }
 
-// 256-bin suffix cumsum as pure tile ops, per
-// incoming/histogram_cumsum_m32.md: 32 shifted window TLOADs, a 31-TADD
+// 256-bin suffix cumsum as pure tile ops, per histogram_cumsum_m32.md
+// (same directory): 32 shifted window TLOADs, a 31-TADD
 // on-tile binary reduction (32 -> 16 -> ... -> 1), then a 7-step cross-cell
 // suffix accumulate from high bins to low bins and 8 cell TSTOREs.
 //
