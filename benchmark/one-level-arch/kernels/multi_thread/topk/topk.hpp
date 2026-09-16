@@ -38,21 +38,23 @@
 //
 // Remaining model gaps that shape the implementation:
 //  - GM atomics (MGATHER_ADD/MSCATTER_ADD, TLSU function 12/21) are still
-//    not implemented in gfrun (functions 4..8 only). Histogram accumulation,
-//    threshold search and slot allocation therefore run on the PE's scalar
-//    core over the PE-private GM histogram; per-chunk bins are produced by
-//    tile ops, TSTOREd to scratch, then accumulated scalar. Program order
-//    serializes duplicate bins exactly like the atomic RMW. The 256-bin
-//    suffix cumsum does NOT need atomics and runs as pure tile ops per
-//    incoming/histogram_cumsum_m32.md (see suffix_cumsum below).
+//    not implemented in gfrun (functions 4..8 only). Histogram accumulation
+//    and slot allocation therefore run on the PE's scalar core over the
+//    PE-private GM histogram; per-chunk bins are produced by tile ops,
+//    TSTOREd to scratch, then accumulated scalar. Program order serializes
+//    duplicate bins exactly like the atomic RMW. The 256-bin suffix cumsum
+//    and the threshold search do NOT need atomics and run as tile ops (see
+//    suffix_cumsum and find_threshold below).
 //  - The FP16 payload is reinterpreted via a GM round trip
 //    (TSTORE fp16 -> TLOAD u16) instead of reinterpret_tile: the model tags
 //    each tile register with the dtype of its last writer and validates it
 //    on TSTORE (AccumulateBlockInfo.cpp ValidateLocalTlsu); the round trip
 //    keeps every block's declared dtype equal to the tag.
-//  - No TCMPS/TSEL predicates: sign masks come from bit arithmetic
-//    (key = bits ^ (sign ? ~0 : signbit)); wrappers for these also emit no
-//    CUBE layout selector today.
+//  - find_threshold uses TCMPS/TSELS with the PredicateCell carrier; the
+//    source 3.4 GPR-predicate carrier is not implemented in gfrun, and the
+//    wrappers emit no CUBE layout selector for these ops. The scan key sign
+//    masks still come from bit arithmetic
+//    (key = bits ^ (sign ? ~0 : signbit)).
 
 namespace topk_radix {
 
@@ -78,6 +80,7 @@ struct Scratch {
                             // shifted cumsum window TLOADs, never written
     int32_t num[2];         // ping-pong candidate counts
     int32_t error;          // 0 ok, 1 candidate overflow, 2 empty range
+    int32_t reduce[kLane];  // TCOLSUM landing pad for find_threshold
     uint16_t bin16[kLane];
     uint32_t word[kLane];
     uint32_t off[kLane];    // byte displacements for the indexed transfers
@@ -173,45 +176,142 @@ inline void group_tadd(GroupTileS32 &dst, GroupTileS32 &a, GroupTileS32 &b) {
         : "memory");
 }
 
-inline void suffix_cumsum(int32_t *hist) {
-    // Tile arrays only stay in registers when every index is constant, so
-    // all loops are fully unrolled (dynamic indexing demotes the array to
-    // the stack and each tile access becomes a 1KB spill/reload).
-    GroupTileS32 w[32];
-#pragma clang loop unroll(full)
-    for (int k = 0; k < 32; ++k) group_tload(w[k], hist + k);
-#pragma clang loop unroll(full)
-    for (int p = 0; p < 16; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
-#pragma clang loop unroll(full)
-    for (int p = 0; p < 8; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
-#pragma clang loop unroll(full)
-    for (int p = 0; p < 4; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
-#pragma clang loop unroll(full)
-    for (int p = 0; p < 2; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
-    group_tadd(w[0], w[0], w[1]);
+// find_threshold helpers, same raw-carrier convention as the cumsum blocks.
+// TCMPS (TEPL 45) compares against a scalar into a PredicateCell destination;
+// TEXPANDS (TEPL 59) broadcasts a scalar; TSELS (TEPL 58) selects tile/scalar
+// under a predicate; TCOLSUM (TEPL 80) folds the 256 rows into one. Block
+// forms mirror the disassembled wrappers (CUBE_M32 elementwise DATR, no DATR
+// for TSELS, PadValue+CMode DATR for TCMPS).
+inline void group_tcmps_ge(GroupTileS32 &pred, GroupTileS32 &src,
+                           int32_t scalar) {
+    asm volatile(
+        "BSTART.TEPL 45, %D[DataType]\n"
+        "B.DATR Zero, GE\n"
+        "B.DIM zero, %c[ValidCol], ->lb0\n"
+        "B.DIM zero, %c[ValidRow], ->lb1\n"
+        "B.DIM zero, %c[Col], ->lb2\n"
+        "B.IOT %[src], mask=1111, last, ->%[pred]<%Z[TileSize]>\n"
+        "B.IOR [%[scalar]],[]\n"
+        : [pred] "=Tr"(pred.data())
+        : [src] "Tr"(src.data()), [scalar] "r"(scalar),
+          [DataType] "i"(type_traits<int32_t>::TypeCode),
+          [TileSize] "i"(tile_type_traits<
+                           linx_tile_carrier<1024>>::TilesizeCode),
+          [ValidCol] "i"(1), [ValidRow] "i"(8 * kLane), [Col] "i"(1)
+        : "memory");
+}
 
-    group_tstore(hist, w[0]);
-    I32Tile c[8];
-#pragma clang loop unroll(full)
-    for (int q = 0; q < 8; ++q) {
-        global_tensor<int32_t, RowMajor<kLane, 1>> gq(hist + kLane * q);
-        TLOAD(c[q], gq);
-    }
-#pragma clang loop unroll(full)
-    for (int q = 6; q >= 0; --q) TADD(c[q], c[q], c[q + 1]);
-#pragma clang loop unroll(full)
-    for (int q = 0; q < 8; ++q) {
-        global_tensor<int32_t, RowMajor<kLane, 1>> gq(hist + kLane * q);
-        TSTORE(gq, c[q]);
+inline void group_texpands(GroupTileS32 &dst, int32_t scalar) {
+    // Anti-fold: keep a compile-time-constant scalar off the zero register so
+    // B.IOR [reg],[] still matches an instruction (wrapper convention).
+    asm("" : "+r"(scalar));
+    asm volatile(
+        "BSTART.TEPL 59, %D[DataType]\n"
+        "B.DATR CUBE_M32, Null\n"
+        "B.DIM zero, %c[ValidCol], ->lb0\n"
+        "B.DIM zero, %c[ValidRow], ->lb1\n"
+        "B.DIM zero, %c[Col], ->lb2\n"
+        "B.IOT mask=1111, last, ->%[dst]<%Z[TileSize]>\n"
+        "B.IOR [%[scalar]],[]\n"
+        : [dst] "=Tr"(dst.data())
+        : [scalar] "r"(scalar),
+          [DataType] "i"(type_traits<int32_t>::TypeCode),
+          [TileSize] "i"(tile_type_traits<
+                           linx_tile_carrier<1024>>::TilesizeCode),
+          [ValidCol] "i"(1), [ValidRow] "i"(8 * kLane), [Col] "i"(1)
+        : "memory");
+}
+
+inline void group_tsels(GroupTileS32 &dst, GroupTileS32 &pred,
+                        GroupTileS32 &src, int32_t scalar) {
+    asm("" : "+r"(scalar));
+    asm volatile(
+        "BSTART.TEPL 58, %D[DataType]\n"
+        "B.DIM zero, %c[ValidCol], ->lb0\n"
+        "B.DIM zero, %c[ValidRow], ->lb1\n"
+        "B.DIM zero, %c[Col], ->lb2\n"
+        "B.IOT %[pred], %[src], mask=1111, last, ->%[dst]<%Z[TileSize]>\n"
+        "B.IOR [%[scalar]],[]\n"
+        : [dst] "=Tr"(dst.data())
+        : [pred] "Tr"(pred.data()), [src] "Tr"(src.data()),
+          [scalar] "r"(scalar),
+          [DataType] "i"(type_traits<int32_t>::TypeCode),
+          [TileSize] "i"(tile_type_traits<
+                           linx_tile_carrier<1024>>::TilesizeCode),
+          [ValidCol] "i"(1), [ValidRow] "i"(8 * kLane), [Col] "i"(1)
+        : "memory");
+}
+
+inline void group_tcolsum(I32Tile &dst, GroupTileS32 &src) {
+    asm volatile(
+        "BSTART.TEPL 80, %D[DataType]\n"
+        "B.DATR CUBE_M32, Null\n"
+        "B.DIM zero, %c[ValidCol], ->lb0\n"
+        "B.DIM zero, %c[ValidRow], ->lb1\n"
+        "B.DIM zero, %c[Col], ->lb2\n"
+        "B.IOT %[src], mask=1111, last, ->%[dst]<%Z[DstSize]>\n"
+        : [dst] "=Tr"(dst.data())
+        : [src] "Tr"(src.data()),
+          [DataType] "i"(type_traits<int32_t>::TypeCode),
+          [DstSize] "i"(tile_type_traits<I32Tile::TileDType>::TilesizeCode),
+          [ValidCol] "i"(1), [ValidRow] "i"(8 * kLane), [Col] "i"(1)
+        : "memory");
+}
+
+inline void suffix_cumsum(int32_t *hist) {
+        // Tile arrays only stay in registers when every index is constant, so
+        // all loops are fully unrolled (dynamic indexing demotes the array to
+        // the stack and each tile access becomes a 1KB spill/reload).
+        GroupTileS32 w[32];
+    #pragma clang loop unroll(full)
+        for (int k = 0; k < 32; ++k) group_tload(w[k], hist + k);
+    #pragma clang loop unroll(full)
+        for (int p = 0; p < 16; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
+    #pragma clang loop unroll(full)
+        for (int p = 0; p < 8; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
+    #pragma clang loop unroll(full)
+        for (int p = 0; p < 4; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
+    #pragma clang loop unroll(full)
+        for (int p = 0; p < 2; ++p) group_tadd(w[p], w[2 * p], w[2 * p + 1]);
+        group_tadd(w[0], w[0], w[1]);
+    
+        group_tstore(hist, w[0]);
+        I32Tile c[8];
+    #pragma clang loop unroll(full)
+        for (int q = 0; q < 8; ++q) {
+            global_tensor<int32_t, RowMajor<kLane, 1>> gq(hist + kLane * q);
+            TLOAD(c[q], gq);
+        }
+    #pragma clang loop unroll(full)
+        for (int q = 6; q >= 0; --q) TADD(c[q], c[q], c[q + 1]);
+    #pragma clang loop unroll(full)
+        for (int q = 0; q < 8; ++q) {
+            global_tensor<int32_t, RowMajor<kLane, 1>> gq(hist + kLane * q);
+            TSTORE(gq, c[q]);
     }
 }
 
-// First bin with hist[bin] >= rem && hist[bin+1] < rem; default 0 (source 3.4).
-inline int find_threshold(const int32_t *hist, int32_t rem) {
-    for (int b = 0; b < 256; ++b) {
-        if (hist[b] >= rem && hist[b + 1] < rem) return b;
-    }
-    return 0;
+// Threshold search as tile ops (source 3.4). The source uses the TCMPS CUBE
+// GPR-predicate carrier (per-64-bin predicate bits merged in scalar GPRs with
+// AND/CTZ); gfrun only implements the PredicateCell carrier, so the crossing
+// is counted on tiles instead: TCMPS forms the hist[bin] >= rem predicate,
+// TSELS materializes it as 0/1, TCOLSUM sums it, and one cell TSTORE returns
+// the count to the scalar core. hist is non-increasing after suffix_cumsum
+// with hist[0] = n >= rem, so
+//   thr = #{bin : hist[bin] >= rem} - 1
+// is exactly the first bin with hist[bin] >= rem && hist[bin+1] < rem (the
+// source's no-crossing default of 0 is unreachable: bin 0 always counts).
+inline int find_threshold(Scratch &sc, int32_t rem) {
+    GroupTileS32 h, ones, pred, cond;
+    I32Tile sum;
+    group_tload(h, sc.hist);
+    group_texpands(ones, 1);
+    group_tcmps_ge(pred, h, rem);
+    group_tsels(cond, pred, ones, 0);
+    group_tcolsum(sum, cond);
+    global_tensor<int32_t, RowMajor<kLane, 1>> gred(sc.reduce);
+    TSTORE(gred, sum);
+    return sc.reduce[0] - 1;
 }
 
 // PR #313 form of MGATHER: byte-displacement IndexTile, BaseGPR-only B.IOR,
@@ -432,7 +532,7 @@ inline void run(int32_t *output, int32_t *errors, const float *input,
         int32_t rem = kTopK;
         stage1_scan(row, x2, n, false, 0, out, sc);
         suffix_cumsum(sc.hist);
-        int32_t thr = find_threshold(sc.hist, rem);
+        int32_t thr = find_threshold(sc, rem);
         rem -= sc.hist[thr + 1];
         stage1_scan(row, x2, n, true, thr, out, sc);
 
@@ -443,7 +543,7 @@ inline void run(int32_t *output, int32_t *errors, const float *input,
             sc.num[nr] = 0;
             round_scan(row, round, false, 0, 0, out, sc);
             suffix_cumsum(sc.hist);
-            thr = find_threshold(sc.hist, rem);
+            thr = find_threshold(sc, rem);
             rem -= sc.hist[thr + 1];
             round_scan(row, round, true, thr, prefix, out, sc);
         }
