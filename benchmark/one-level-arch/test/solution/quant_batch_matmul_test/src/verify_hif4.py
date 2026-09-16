@@ -45,7 +45,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 ONE_LEVEL_ROOT = SCRIPT_DIR.parents[3]
 COMPARE_ROOT = ONE_LEVEL_ROOT / "compare"
 
-DEFAULT_GFRUN = "/home/j00833640/v300/SuperScalarModel/bin/gfrun"
+DEFAULT_GFRUN = "/home/jtt/v300/SuperScalarModel/bin/gfrun"
 DEFAULT_GFRUN_ARGS = "-t 1 -s softcore.multiThreadNum=4 -f"
 
 DEFAULT_ATOL = 5e-2
@@ -53,33 +53,22 @@ DEFAULT_RTOL = 5e-2
 
 PACKED_FACTOR = 2      # __fp4_hif4x2: 2 logical elements per carrier byte
 SCALE_GROUP = 64       # HiF4 U32 scale: 64 logical K elements per U32 word
-# Carrier-scale group: 32 carriers (= 64 logical for FP4x2)
-CARRIER_SCALE_GROUP = SCALE_GROUP // PACKED_FACTOR  # 32
 
 
 # ---------------------------------------------------------------------------
-# HiF4 (E1M2) nibble decode (matches CubeCalculate::Hif4ToF32Bits)
+# HiF4 (E1M2) codebook — matches CubeEngine.cpp HIF4_VALUES lookup table
+# used by DataFormatCvt (the cooperative path's FP4→FP32 conversion).
+#   bit[3]=sign, bits[2:0]=magnitude index into {0,0.25,0.5,0.75,1,1.25,1.5,1.75}
 # ---------------------------------------------------------------------------
 
-def _hif4_decode_nibble(code):
-    """Decode HiF4 4-bit code to float32 (matches Hif4ToF32Bits).
-    bit[3]=sign, bit[2]=1-bit exponent (bias 1), bits[1:0]=2-bit mantissa.
-    Code 0 (all-zero magnitude) = 0.0 (special-cased).
-    """
-    code = int(code) & 0xF
-    sign = -1.0 if (code & 0x8) else 1.0
-    mag = code & 0x7
-    if mag == 0:
-        return 0.0 if sign > 0 else -0.0
-    exp_bit = (mag >> 2) & 0x1
-    mant = mag & 0x3
-    exp = exp_bit - 1
-    sig = 1.0 + ((mant >> 1) & 1) * 0.5 + (mant & 1) * 0.25
-    return sign * math.ldexp(sig, exp)
+_HIF4 = np.array([
+    0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75,
+    -0.0, -0.25, -0.5, -0.75, -1.0, -1.25, -1.5, -1.75,
+], dtype=np.float32)
 
 
 # ---------------------------------------------------------------------------
-# E6M2 decode (matches CubeCalculate::E6m2ToF32Bits)
+# E6M2 decode (matches CubeCalculate::E6m2ToF32Bits / MatrixScaleToFP32)
 # ---------------------------------------------------------------------------
 
 def _e6m2_decode_byte(base):
@@ -91,12 +80,6 @@ def _e6m2_decode_byte(base):
     mant = base & 0x3
     sig = 1.0 + ((mant >> 1) & 1) * 0.5 + (mant & 1) * 0.25
     return math.ldexp(sig, exp)
-
-
-# HiF4 codebook using the Hif4ToF32Bits formula decode
-_HIF4 = np.array([
-    _hif4_decode_nibble(c) for c in range(16)
-], dtype=np.float32)
 
 
 def _e6m2_encode(val):
@@ -117,37 +100,13 @@ def _e6m2_encode(val):
 
 
 # ---------------------------------------------------------------------------
-# U32 scale word decode (2-word-per-group layout used by cooperative path)
-#
-# ScaleLExtract/ScaleRExtract consume pairs of U32 words per group:
-#   word0: [7:0]=E6M2, [15:8]=E1_8 (8 single-bit exponents, 1 per 8 elems)
-#   word1: [31:0]=E1_16 (16 single-bit exponents, 1 per 4 elems)
-#
-# GetElementValue: result = HiF4_value * E6M2_value * 2^(E1_8_bit + E1_16_bit)
+# U32 scale word decode (matches CubeEngine.cpp MatrixScaleToFP32 for HIF4)
 # ---------------------------------------------------------------------------
 
-def _u32_scale_decode_2word(word0, word1, lane):
-    """Decode a 2-word U32 scale pair for a given lane (0..63 within group).
+def _u32_scale_decode(raw, lane):
+    """Decode a single U32 scale word for a given lane (0..63 within group).
 
-    Matches CubeEngine ScaleLExtract + GetElementValue:
-      ea = word0 & 0xFF  (E6M2)
-      eb = (word0 >> 8) >> (lane % 8) & 1  (E1_8)
-      ec = word1 >> (lane % 16) & 1  (E1_16)
-      scale = E6M2_value * 2^(eb + ec)
-    """
-    ea = word0 & 0xFF
-    if ea == 0xFF:
-        return float('nan')
-    e6m2_val = _e6m2_decode_byte(ea)
-    e1_8_bit = (word0 >> (8 + lane % 8)) & 1
-    e1_16_bit = (word1 >> (lane % 16)) & 1
-    return e6m2_val * math.ldexp(1.0, e1_8_bit + e1_16_bit)
-
-
-def _u32_scale_decode_1word(raw, lane):
-    """Decode a single U32 scale word for a given lane (0..63).
-
-    Matches CubeEngine.cpp MatrixScaleToFP32(DataType::HIF4, raw, lane):
+    Matches MatrixScaleToFP32(DataType::HIF4, raw, lane):
       base = raw & 0xFF (E6M2)
       e1_8_bit = (raw >> (8 + lane//8)) & 1
       e1_16_bit = (raw >> (16 + lane//4)) & 1
@@ -210,8 +169,6 @@ def parse_shape(elf):
         raise ValueError(f"cannot parse shape from ELF name: {name}")
     shape = {k: int(v) for k, v in m.groupdict().items()}
     shape["Kv"] = shape["K"] // PACKED_FACTOR  # packed carriers
-    # Carrier-scale groups: gKv / 32 = gK / 64
-    shape["Kblocks"] = shape["Kv"] // CARRIER_SCALE_GROUP
     shape["name"] = name
     return shape
 
@@ -225,7 +182,7 @@ def prepare_case(elf, shape, args):
     case_dir.mkdir(parents=True, exist_ok=True)
     M, N, K = shape["M"], shape["N"], shape["K"]
     Kv = shape["Kv"]
-    Kblocks = shape["Kblocks"]  # = K / 64 = Kv / 32
+    Kblocks = K // SCALE_GROUP  # = K / 64
 
     rng = np.random.default_rng(args.seed)
     if args.ones:
@@ -296,7 +253,7 @@ def prepare_case(elf, shape, args):
             for lane in range(SCALE_GROUP):
                 packed = int(A_packed[m, kb * (SCALE_GROUP // 2) + lane // 2])
                 code = (packed & 0xF) if (lane % 2 == 0) else ((packed >> 4) & 0xF)
-                sv = _u32_scale_decode_1word(int(A_scales[m, kb]), lane)
+                sv = _u32_scale_decode(int(A_scales[m, kb]), lane)
                 A_dec[m, kb * SCALE_GROUP + lane] = _HIF4[code] * sv
 
     B_dec = np.zeros((K, N), dtype=np.float32)
@@ -305,7 +262,7 @@ def prepare_case(elf, shape, args):
             for lane in range(SCALE_GROUP):
                 packed = int(B_packed[n, kb * (SCALE_GROUP // 2) + lane // 2])
                 code = (packed & 0xF) if (lane % 2 == 0) else ((packed >> 4) & 0xF)
-                sv = _u32_scale_decode_1word(int(B_scales[n, kb]), lane)
+                sv = _u32_scale_decode(int(B_scales[n, kb]), lane)
                 B_dec[kb * SCALE_GROUP + lane, n] = _HIF4[code] * sv
 
     golden = A_dec @ B_dec

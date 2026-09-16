@@ -48,9 +48,9 @@ DEFAULT_GFRUN_ARGS = "-t 1 -f"
 DEFAULT_ATOL = 2e-2
 DEFAULT_RTOL = 2e-2
 
-MX_BLOCK = 32  # smatrix_wfactor: scale group size in carrier units
+MX_BLOCK = 16  # carrier scale group (32 logical / PackedFactor=2)
 PACKED_FACTOR = 2  # __fp4_e2m1x2: 2 logical elements per carrier byte
-MX_BLOCK_LOGICAL = MX_BLOCK * PACKED_FACTOR  # 64 logical elements per scale group
+MX_BLOCK_LOGICAL = 32  # MX scale group: 32 logical K elements per E8M0 byte
 
 # fp4_e2m1x2 code -> float32
 _FP4 = np.array([
@@ -115,7 +115,7 @@ def prepare_case(elf, shape, args):
     case_dir = COMPARE_ROOT / shape["name"]
     case_dir.mkdir(parents=True, exist_ok=True)
     M, N, K = shape["M"], shape["N"], shape["K"]
-    Kv, Kb = shape["Kv"], shape["Kv"] // MX_BLOCK  # scale blocks in carrier K
+    Kv, Kb = shape["Kv"], K // MX_BLOCK_LOGICAL  # scale blocks in logical K
 
     rng = np.random.default_rng(args.seed)
     if args.ones:
