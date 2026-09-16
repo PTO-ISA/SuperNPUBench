@@ -8,6 +8,9 @@
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
 #define QSMLA_USE_UNIFIED_TADD_4PE
 #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla.hpp"
+#ifdef QSMLA_USE_DYNAMIC_SHAPE
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v2.hpp"
+#endif
 #else
 #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_tadd.hpp"
 #ifdef QSMLA_USE_HIF8
@@ -320,6 +323,17 @@ int main(){
 #ifdef QSMLA_USE_UNIFIED_TADD_4PE
     static_assert(N1 > 1,
                   "unified tadd 4pe is a BSND G-slice implementation");
+#ifdef QSMLA_USE_DYNAMIC_SHAPE
+    // v2: dynamic-shape variant (DYNAMIC ValidRow/ValidCol on Vec tiles)
+    quant_sparse_flash_mla_tadd_4pe_bsnd_pto_v2<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            score_scratch, prob_scratch, pv_scratch);
+#else
     quant_sparse_flash_mla_tadd_4pe_bsnd_pto<
         qdtype, kvdtype, odttype, ModeConfig>(
             out, q, kv, cmp_kv,
@@ -328,6 +342,7 @@ int main(){
             q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
             cmp_ratio, win_left, win_right,
             score_scratch, prob_scratch, pv_scratch);
+#endif // QSMLA_USE_DYNAMIC_SHAPE
 #else
     if constexpr (N1 == 1 && N2 == 1) {
         quant_sparse_flash_mla_swa_tadd_config_pto<
