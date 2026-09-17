@@ -42,11 +42,13 @@ __attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out,
 }
 
 template <typename gm_t, typename tile_h, typename tile_f, typename fragment_t, typename parent_t>
-inline void reduce_pairs(gm_t &base, int64_t tile_elems, int64_t tile_m, int64_t tile_r, parent_t &partial_matrix) {
+inline void reduce_pairs(gm_t &base, int64_t gR, int64_t tile_elems, int64_t tile_m, int64_t tile_r, parent_t &partial_matrix) {
     TileArray<fragment_t, 1, 8> fragments;
-    for (int64_t pair = 0; pair < 8; ++pair) {
+    const int64_t pair_count = ((gR + tile_elems - 1) / tile_elems + 1) / 2;
+    fragment_t zero; TEXPANDS(zero, 0.0f); for (int64_t i = pair_count; i < 8; ++i) { auto slot = fragments[0][i]; TCVT(slot, zero); }
+    for (int64_t pair = 0; pair < pair_count; ++pair) {
         gm_t g0(base.data() + pair * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
-        gm_t g1(base.data() + (pair + 8) * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
+        gm_t g1(base.data() + (pair + pair_count) * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
         tile_h h0, h1; tile_f x0, x1, sq0, sq1, sq_pair; fragment_t partial;
         TLOAD(h0, g0); TCVT(x0, h0); TMUL(sq0, x0, x0);
         TLOAD(h1, g1); TCVT(x1, h1); TMUL(sq1, x1, x1);
@@ -73,7 +75,7 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     // eight reduced [32,1] results by columns into one [32,8] Tile.
     tile_m_matrix partial_matrix;
     reduce_pairs<gm_t, tile_h, tile_f, tile_m_v, tile_m_matrix>(
-        input_row, tile_elems, tile_m, tile_r, partial_matrix);
+        input_row, gR, tile_elems, tile_m, tile_r, partial_matrix);
 
     tile_m_v sum_rows;
     TROWSUM(sum_rows, partial_matrix);
@@ -119,7 +121,7 @@ void rms_norm_simt_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingDa
     const int64_t tile_elems = tile_m * tile_r;
 
     const uint32_t tid = get_thread_idx();
-    if (globalA <= 0 || gR <= 0 || tile_r <= 0 || tile_r > 16 || gR % (tile_elems * 16) != 0 || tid >= static_cast<uint32_t>(peNum)) {
+    if (globalA <= 0 || gR <= 0 || tile_r <= 0 || tile_r > 16 || gR % (tile_elems * 2) != 0 || tid >= static_cast<uint32_t>(peNum)) {
         return;
     }
     const int64_t rows_per_pe = (globalA + peNum - 1) / peNum;
