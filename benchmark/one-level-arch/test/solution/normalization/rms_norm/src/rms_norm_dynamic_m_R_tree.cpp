@@ -26,7 +26,7 @@ constexpr int64_t rms_tile_a(int64_t global_a, int64_t pe_num) {
 }
 constexpr int64_t rms_pow_r(int64_t reduce_size) {
     int64_t p = 1;
-    while (p <= reduce_size / 2) p <<= 1;
+    while (p <= (reduce_size - 1) / 2) p <<= 1;
     return p;
 }
 constexpr int64_t rms_tile_r(int64_t reduce_size) {
