@@ -73,7 +73,7 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     gm_t input_row(x + offset, 1, static_cast<int>(gR));
 
     // Sequentially reduce every R block into one row-sum vector.
-    tile_m_v sum_rows(tile_m, 1);
+    tile_m_v sum_rows(tile_m);
     reduce_sequential<gm_t, tile_h, tile_f, tile_m_v>(
         input_row, pair_count, tile_elems, tile_m, tile_r, sum_rows);
     tile_s tile_sum, mean, denom, rms;
@@ -82,7 +82,7 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     TADDS(denom, mean, kEpsilon);
     rsqrt_regbase(rms, denom);
 
-    tile_v ones(tile_m, 1), rms_rows(tile_m, 1);
+    tile_v ones(tile_m), rms_rows(tile_m);
     TEXPANDS(ones, 1.0f);
     TCOLEXPANDMUL(rms_rows, ones, rms);
     for (int64_t r = 0; r < gR; r += tile_elems) {
@@ -150,15 +150,11 @@ void rms_norm_dynamic_m_R_simt(dtype *x, const dtype *gamma, const TilingData *t
                         BLayout::RowMajor, 1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
-    for (int64_t ia = 0; ia < peA; ia += tile_m) {
-        int64_t cur_tile_m = tile_m;
-        if (ia + cur_tile_m > peA) {
-            cur_tile_m = peA - ia;
-        }
+    for (int64_t ia = 0; ia < peA; ++ia) {
         rms_detail_simt_dynamic_m_R_simt::rms_norm_tile<
             dtype, gm_t, tile_h, tile_f, tile_m_v, tile_m_matrix, tile_v,
             tile_s>(
-            x, gamma, out, gR, pair_count, ia, cur_tile_m, tile_r, inv_r);
+            x, gamma, out, gR, pair_count, ia, tile_m, tile_r, inv_r);
     }
 }
 

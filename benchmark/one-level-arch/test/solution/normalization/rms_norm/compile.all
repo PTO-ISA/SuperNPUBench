@@ -13,3 +13,4 @@ make TESTCASE=rms_norm_static COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=512 
 
 # Dynamic SIMT R-tree with runtime shape and tiling.
 make TESTCASE=rms_norm_dynamic_m_R_tree DType=__half G_A=512 G_R=8192 PE_NUM=4 diss
+make TESTCASE=rms_norm_dynamic_m_R_simt COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=512 G_R=8192 PE_NUM=4 diss
