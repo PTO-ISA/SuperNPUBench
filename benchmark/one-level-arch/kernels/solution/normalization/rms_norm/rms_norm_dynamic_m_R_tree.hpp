@@ -149,7 +149,7 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingData *t
                         BLayout::RowMajor, 1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
-    for (int64_t ia = 0; ia < peA; ++ia) {
+    for (int64_t ia = 0; ia < peA; ia += tile_m) {
         int64_t cur_tile_m = tile_m;
         if (ia + cur_tile_m > peA) {
             cur_tile_m = peA - ia;
