@@ -1,4 +1,4 @@
-// rms_norm_simt_dynamic_m_R_tree: [512,8192].
+// rms_norm_dynamic_m_R_tree: [512,8192].
 // Fixed-shape 4PE implementation with R=[16,32,16], Tile=[32,16].
 #ifndef SUPERNPU_RMS_NORM_SIMT_DYNAMIC_M_R_TREE_HPP
 #define SUPERNPU_RMS_NORM_SIMT_DYNAMIC_M_R_TREE_HPP
@@ -108,7 +108,7 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
 } // namespace rms_detail_simt_dynamic_m_R_tree
 
 template <typename dtype, int peNum, typename TilingData>
-void rms_norm_simt_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingData *tiling, dtype *out) {
+void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingData *tiling, dtype *out) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
 
     const int64_t globalA = tiling->g_a;

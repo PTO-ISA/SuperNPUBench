@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "fileop.h"
-#include "solution/normalization/rms_norm/rms_norm_simt_dynamic_m_R_tree.hpp"
+#include "solution/normalization/rms_norm/rms_norm_dynamic_m_R_tree.hpp"
 
 #ifndef DType
 #define DType __half
@@ -77,7 +77,7 @@ int main() {
     }
 #endif
 
-    rms_norm_simt_dynamic_m_R_tree<dtype, PE_NUM>(input, gamma, &tiling_info, output);
+    rms_norm_dynamic_m_R_tree<dtype, PE_NUM>(input, gamma, &tiling_info, output);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;
