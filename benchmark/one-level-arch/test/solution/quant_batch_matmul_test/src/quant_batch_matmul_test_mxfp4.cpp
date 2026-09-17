@@ -51,6 +51,8 @@ int main()
     using fp4_t = __fp4_e2m1x2;
     constexpr int globKv = globK / 2;   // fp4 打包：K 逻辑元素 → carriers
     constexpr int tilKv   = tilK / 2;
+    // scale 块数 = ceil(globK / 32), 32 = smatrix_wfactor (logical)
+    constexpr int gScaleK = (globK + 32 - 1) / 32;
 
     static_assert(globM % NBLOCKS == 0);
     constexpr int blockM = globM / NBLOCKS;
@@ -61,8 +63,8 @@ int main()
     // 每组 block 拥有自己连续的 A/C + MX 区域
     fp4_t       src0p   [NBLOCKS * blockM * globKv + 2 * ALIGN];
     fp4_t       src1p   [globKv * globN + 2 * ALIGN];
-    __fp8_e8m0  src0_mxp[NBLOCKS * blockM * (globKv / 32) + 2 * ALIGN];
-    __fp8_e8m0  src1_mxp[(globKv / 32) * globN + 2 * ALIGN];
+    __fp8_e8m0  src0_mxp[NBLOCKS * blockM * gScaleK + 2 * ALIGN];
+    __fp8_e8m0  src1_mxp[gScaleK * globN + 2 * ALIGN];
     float       dstp    [NBLOCKS * blockM * globN + 2 * ALIGN];
 
     fp4_t      *src0    = (fp4_t      *)(((uint64_t)src0p    & ALIGN_MASK) + ALIGN);
@@ -78,8 +80,8 @@ int main()
 #define SRC1_MX_PATH CHK_DIR "/src1_mx.bin"
     readBinaryFile(SRC0_PATH,    (uint8_t *)src0,    NBLOCKS * blockM * globKv * sizeof(fp4_t));
     readBinaryFile(SRC1_PATH,    (uint8_t *)src1,    globKv * globN * sizeof(fp4_t));
-    readBinaryFile(SRC0_MX_PATH, (uint8_t *)src0_mx, NBLOCKS * blockM * (globKv / 32) * sizeof(__fp8_e8m0));
-    readBinaryFile(SRC1_MX_PATH, (uint8_t *)src1_mx, (globKv / 32) * globN * sizeof(__fp8_e8m0));
+    readBinaryFile(SRC0_MX_PATH, (uint8_t *)src0_mx, NBLOCKS * blockM * gScaleK * sizeof(__fp8_e8m0));
+    readBinaryFile(SRC1_MX_PATH, (uint8_t *)src1_mx, gScaleK * globN * sizeof(__fp8_e8m0));
 #endif
 
     BENCHSTART;
