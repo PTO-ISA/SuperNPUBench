@@ -47,7 +47,8 @@ inline void reduce_pairs(gm_t &base, int64_t gR, int64_t tile_elems, int64_t til
     for (int64_t pair = 0; pair < pair_count; ++pair) {
         gm_t g0(base.data() + pair * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
         gm_t g1(base.data() + (pair + pair_count) * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
-        tile_h h0, h1; tile_f x0, x1, sq0, sq1, sq_pair;
+        tile_h h0(tile_m, tile_r), h1(tile_m, tile_r);
+        tile_f x0(tile_m, tile_r), x1(tile_m, tile_r), sq0(tile_m, tile_r), sq1(tile_m, tile_r), sq_pair(tile_m, tile_r);
         TLOAD(h0, g0); TCVT(x0, h0); TMUL(sq0, x0, x0);
         TLOAD(h1, g1); TCVT(x1, h1); TMUL(sq1, x1, x1);
         TADD(sq_pair, sq0, sq1);
@@ -70,19 +71,19 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
 
     // First pair outer-R blocks (0,8), (1,9), ... (7,15). Assemble the
     // eight reduced [32,1] results by columns into one [32,8] Tile.
-    tile_m_matrix partial_matrix;
+    tile_m_matrix partial_matrix(tile_m, 8);
     reduce_pairs<gm_t, tile_h, tile_f, tile_m_matrix>(
         input_row, gR, tile_elems, tile_m, tile_r, partial_matrix);
 
-    tile_m_v sum_rows;
+    tile_m_v sum_rows(tile_m, 1);
     TROWSUM(sum_rows, partial_matrix);
-    tile_s tile_sum, mean, denom, rms;
+    tile_s tile_sum(1, 1), mean(1, 1), denom(1, 1), rms(1, 1);
     TCOLSUM(tile_sum, sum_rows);
     TMULS(mean, tile_sum, inv_r);
     TADDS(denom, mean, kEpsilon);
     rsqrt_regbase(rms, denom);
 
-    tile_v ones, rms_rows;
+    tile_v ones(tile_m, 1), rms_rows(tile_m, 1);
     TEXPANDS(ones, 1.0f);
     TCOLEXPANDMUL(rms_rows, ones, rms);
     for (int64_t r = 0; r < gR; r += tile_elems) {
@@ -92,8 +93,8 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
                 static_cast<int>(tile_m), static_cast<int>(tile_r));
         gm_t go(out + offset + r, static_cast<int>(tile_m),
                 static_cast<int>(tile_r));
-        tile_h h, gh;
-        tile_f src, gf, normalized, dst;
+        tile_h h(tile_m, tile_r), gh(tile_m, tile_r);
+        tile_f src(tile_m, tile_r), gf(tile_m, tile_r), normalized(tile_m, tile_r), dst(tile_m, tile_r) ;
         TLOAD(h, gi);
         TCVT(src, h);
         TLOAD(gh, gg);
@@ -135,24 +136,28 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingData *t
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, 32, 16,
-                        BLayout::RowMajor, 32, 16>;
+                        BLayout::RowMajor, -1, -1>;
     using tile_f = Tile<Location::Vec, float, 32, 16,
-                        BLayout::RowMajor, 32, 16>;
+                        BLayout::RowMajor, -1, -1>;
     using tile_m_v = Tile<Location::Vec, float, 32, 1,
-                          BLayout::RowMajor, 32, 1>;
+                          BLayout::RowMajor, -1, 1>;
     using tile_m_matrix = Tile<Location::Vec, float, 32, 8,
-                               BLayout::RowMajor, 32, 8>;
+                               BLayout::RowMajor, -1, 8>;
     using tile_v = Tile<Location::Vec, float, 32, 1,
-                        BLayout::RowMajor, 32, 1>;
+                        BLayout::RowMajor, -1, 1>;
     using tile_s = Tile<Location::Vec, float, 1, 1,
                         BLayout::RowMajor, 1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
     for (int64_t ia = 0; ia < peA; ++ia) {
+        int64_t cur_tile_m = tile_m;
+        if (ia + cur_tile_m > peA) {
+            cur_tile_m = peA - ia;
+        }
         rms_detail_simt_dynamic_m_R_tree::rms_norm_tile<
             dtype, gm_t, tile_h, tile_f, tile_m_v, tile_m_matrix, tile_v,
             tile_s>(
-            x, gamma, out, gR, ia, tile_m, tile_r, inv_r);
+            x, gamma, out, gR, ia, cur_tile_m, tile_r, inv_r);
     }
 }
 
