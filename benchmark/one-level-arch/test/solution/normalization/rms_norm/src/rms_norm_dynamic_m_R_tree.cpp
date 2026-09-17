@@ -20,9 +20,14 @@
 #endif
 
 namespace {
-struct RTreeTilingData { int64_t g_a; int64_t g_r; int64_t tile_a; int64_t tile_r; };
+struct RTreeTilingData { int64_t g_a; int64_t g_r; int64_t powR; int64_t tile_a; int64_t tile_r; };
 constexpr int64_t rms_tile_a(int64_t global_a, int64_t pe_num) {
     return global_a > 0 && pe_num > 0 ? 1 : 0;
+}
+constexpr int64_t rms_pow_r(int64_t reduce_size) {
+    int64_t p = 1;
+    while (p <= reduce_size / 2) p <<= 1;
+    return p;
 }
 constexpr int64_t rms_tile_r(int64_t reduce_size) {
     constexpr int64_t kMaxTileR = 16;
@@ -44,11 +49,12 @@ int main() {
     // tiling_info is always the host-visible full shape. PE partitioning is
     // entirely owned by the kernel.
     constexpr int64_t kTileA = rms_tile_a(G_A, PE_NUM);
+    constexpr int64_t kPowR = rms_pow_r(G_R);
     constexpr int64_t kTileR = rms_tile_r(G_R);
     static_assert(G_A > 0 && G_R > 0);
     static_assert(kTileA > 0 && kTileR > 0 && kTileR <= 512);
     RTreeTilingData tiling_info = {
-        G_A, G_R, kTileA, kTileR};
+        G_A, G_R, kPowR, kTileA, kTileR};
 
     const int64_t g_a = tiling_info.g_a;
     const int64_t g_r = tiling_info.g_r;

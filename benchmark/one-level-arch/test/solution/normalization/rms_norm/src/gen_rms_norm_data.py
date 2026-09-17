@@ -103,10 +103,10 @@ def rms_norm_rows(
 
 
 def write_tiling_info(
-    path: Path, g_a: int, g_r: int, tile_a: int, tile_r: int, eps: float
+    path: Path, g_a: int, g_r: int, pow_r: int, tile_a: int, tile_r: int, eps: float
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(struct.pack("<4q", g_a, g_r, tile_a, tile_r))
+    path.write_bytes(struct.pack("<5q", g_a, g_r, pow_r, tile_a, tile_r))
     print(f"wrote {path}  tiling=({g_a},{g_r},{tile_a},{tile_r}); fixed eps={eps}")
 
 
@@ -136,7 +136,7 @@ def gen_all(
     ]
     y_f32 = rms_norm_rows(x_f16, gamma_f16, g_a, g_r, eps)
 
-    write_tiling_info(out_dir / "tiling_info.bin", g_a, g_r, tile_a, tile_r, eps)
+    write_tiling_info(out_dir / "tiling_info.bin", g_a, g_r, 1 << (g_r.bit_length() - 1), tile_a, tile_r, eps)
     in_bytes = pack_f16_list(x_f16)
     gamma_bytes = pack_f16_list(gamma_f16)
     gold_bytes = pack_f16_list(y_f32)
@@ -173,6 +173,7 @@ def main() -> None:
             DATA_DIR / "tiling_info.bin",
             args.g_a,
             args.g_r,
+            1 << (args.g_r.bit_length() - 1),
             args.tile_a,
             args.tile_r,
             1e-6,
