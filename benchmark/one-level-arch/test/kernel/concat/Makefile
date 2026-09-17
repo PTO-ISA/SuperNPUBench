@@ -1,13 +1,12 @@
-ifeq ($(TESTCASE), concat_gather)
-DEFINES += -DDATA_TYPE=$(DType) -DMAX_DIMs=$(MAX_DIM) -DtMs=$(tM) -DIN_SHAPEs=$(IN_SHAPE) -DOUT_SHAPEs=$(OUT_SHAPE) -DDATA_DIMs=$(DATA_DIM) -DCONCAT_DIMs=$(CONCAT_DIM)  -DgIMs=$(gIM) -DgOMs=$(gOM)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_tM$(tM)_IN_SHAPE$(IN_SHAPE_NAME)_OUT_SHAPE$(OUT_SHAPE_NAME).elf
+TESTCASE ?= concat_gather
+
+ifeq ($(TESTCASE),concat_gather)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/concat_gather.cpp
+else ifeq ($(TESTCASE),concat_scatter)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/concat_scatter.cpp
+else
+$(error Unsupported TESTCASE=$(TESTCASE); expected concat_gather or concat_scatter)
 endif
 
-ifeq ($(TESTCASE), concat_scatter)
-DEFINES += -DDATA_TYPE=$(DType) -DMAX_DIMs=$(MAX_DIM) -DtMs=$(tM) -DIN_SHAPEs=$(IN_SHAPE) -DOUT_SHAPEs=$(OUT_SHAPE) -DDATA_DIMs=$(DATA_DIM) -DCONCAT_DIMs=$(CONCAT_DIM)  -DgIMs=$(gIM) -DgOMs=$(gOM)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_tM$(tM)_IN_SHAPE$(IN_SHAPE_NAME)_OUT_SHAPE$(OUT_SHAPE_NAME).elf
-endif
-
-#TARGET = $(ELF_HEAD)_$(TESTCASE).elf
-SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
+TARGET = $(ELF_HEAD)_$(TESTCASE)_PE4.elf
 include ../../common/Makefile.common

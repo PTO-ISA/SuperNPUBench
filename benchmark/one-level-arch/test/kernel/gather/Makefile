@@ -1,11 +1,10 @@
-ifeq ($(TESTCASE), gather)
-DEFINES += -DDATA_TYPE=$(DType) -DOType=$(OType) -DgKs=$(gKs) -DgMs=$(gMs) -DgNs=$(gNs) -DtMs=$(tMs) -DtNs=$(tNs)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_OType$(OType)_gKs$(gKs)_gMs$(gMs)_gNs$(gNs)_tMs$(tMs)_tNs$(tNs).elf
+TESTCASE ?= gather
+
+ifeq ($(TESTCASE),gather)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/gather.cpp
+TARGET = $(ELF_HEAD)_gather_PE4.elf
+else
+$(error Unsupported TESTCASE=$(TESTCASE); expected gather)
 endif
 
-# DEFINES += -DRES_CHECK
-# DEFINES += -DCHK_DIR="/remote/lms01/l00948608/project/jcore_benchmark/JanusCoreBench/test/broadcast/src/data"
-
-SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
-$(info  ===> SRC_FILE = $(SRC_FILE))
 include ../../common/Makefile.common

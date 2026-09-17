@@ -24,6 +24,7 @@ __pycache__/
 
 # Comparison / artifact directories
 benchmark/**/compare/
+benchmark/**/perf_runs/
 
 # Separate project (has its own .git)
 release-plan-site/

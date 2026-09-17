@@ -10,35 +10,51 @@
 
 namespace rms_detail_static {
 
+constexpr float kEpsilon = 1e-6f;
 
 template <typename TileVec>
-inline void rsqrt_newton(TileVec &out, TileVec &a) {
-    auto body = [&](auto &x, auto &t1, auto &t2) {
-        TRECIP(x, a);
-        for (int64_t i = 0; i < 4; ++i) {
-            TMUL(t1, x, x);
-            TMUL(t2, t1, a);
-            TMULS(t2, t2, -0.5f);
-            TADDS(t2, t2, 1.5f);
-            TMUL(x, x, t2);
-        }
-        TMULS(out, x, 1.0f);
+__attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out, TileVec &a) {
+    auto body = [&](auto &recip, auto &y, auto &tmp) __attribute__((always_inline)) {
+        // Match the regbase formula: y=sqrt(1/a), one Newton step, then a
+        // compensated residual correction using the original reciprocal.
+        TRECIP(recip, a);
+        TSQRT(y, recip);
+
+        TMULS(tmp, a, -0.5f);
+        TMUL(tmp, tmp, y);
+        TMUL(tmp, tmp, y);
+        TADDS(tmp, tmp, 1.5f);
+        TMUL(y, y, tmp);
+
+        // residual = (1 - a*recip) + a*(recip - y*y)
+        TMULS(tmp, a, -1.0f);
+        TMUL(tmp, tmp, recip);
+        TADDS(out, tmp, 1.0f);
+        TMULS(tmp, y, -1.0f);
+        TMUL(tmp, tmp, y);
+        TADD(tmp, recip, tmp);
+        TMUL(tmp, a, tmp);
+        TADD(out, out, tmp);
+        TMUL(out, out, y);
+        TMULS(out, out, 0.5f);
+        TADD(out, y, out);
     };
     if constexpr (TileVec::ValidRow > 0) {
-        TileVec x, t1, t2;
-        body(x, t1, t2);
+        TileVec recip, y, tmp;
+        body(recip, y, tmp);
     } else {
         const size_t vr = static_cast<size_t>(a.GetValidRow());
-        TileVec x, t1, t2;
-        body(x, t1, t2);
+        TileVec recip, y, tmp;
+        body(recip, y, tmp);
     }
 }
 
 template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
           typename tile_v>
-inline void rms_norm_tile_static(dtype *x, dtype *out, int64_t gA, int64_t gR,
+inline void rms_norm_tile_static(dtype *x, const dtype *gamma, dtype *out,
+                          int64_t gA, int64_t gR,
                           int64_t a_off, int64_t active_a, int64_t active_r,
-                          float inv_r, float eps) {
+                          float inv_r) {
     // Reduce the entire row using <=2 KiB FP32 strips, then normalize.
     const int64_t offset = a_off * gR;
     tile_v sum, partial, mean, denom, rms;
@@ -54,16 +70,19 @@ inline void rms_norm_tile_static(dtype *x, dtype *out, int64_t gA, int64_t gR,
         TADD(sum, sum, partial);
     }
     TMULS(mean, sum, inv_r);
-    TADDS(denom, mean, eps);
-    rsqrt_newton(rms, denom);
+    TADDS(denom, mean, rms_detail_static::kEpsilon);
+    rsqrt_regbase(rms, denom);
     for (int64_t col = 0; col < gR; col += active_r) {
         const size_t width = gR-col < active_r ? gR-col : active_r;
         gm_t gi(x+offset+col, 1, static_cast<int>(gR));
+        gm_t gg(const_cast<dtype *>(gamma)+col, 1, static_cast<int>(gR));
         gm_t go(out+offset+col, 1, static_cast<int>(gR));
-        tile_h h;
-        tile_f src, dst;
+        tile_h h, gamma_h;
+        tile_f src, normalized, gamma_f, dst;
         TLOAD(h, gi); TCVT(src, h);
-        TROWEXPANDMUL(dst, src, rms);
+        TLOAD(gamma_h, gg); TCVT(gamma_f, gamma_h);
+        TROWEXPANDMUL(normalized, src, rms);
+        TMUL(dst, normalized, gamma_f);
         TCVT(h, dst); TSTORE(go, h);
     }
 }
@@ -72,7 +91,7 @@ inline void rms_norm_tile_static(dtype *x, dtype *out, int64_t gA, int64_t gR,
 
 // Fixed shape [512,8192].
 template <typename dtype, int peNum>
-void rms_norm_static(dtype *x,  dtype *out, float eps = 1e-6f) {
+void rms_norm_static(dtype *x, const dtype *gamma, dtype *out) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
 
     // Physical and valid Tile shapes are compile-time constants.
@@ -120,11 +139,11 @@ void rms_norm_static(dtype *x,  dtype *out, float eps = 1e-6f) {
     int64_t ia = 0;
     for (; ia + tile_a < peA; ia += tile_a) {
         rms_detail_static::rms_norm_tile_static<dtype, gm_t, tile_h, tile_f, tile_v>(
-            x, out, peA, gR, ia, tile_a, tile_r, inv_r, eps);
+            x, gamma, out, peA, gR, ia, tile_a, tile_r, inv_r);
     }
     // Tail (or sole) block: ValidRow = remaining rows along A.
     rms_detail_static::rms_norm_tile_static<dtype, gm_t, tile_h, tile_f, tile_v>(
-        x, out, peA, gR, ia, peA - ia, tile_r, inv_r, eps);
+        x, gamma, out, peA, gR, ia, peA - ia, tile_r, inv_r);
 }
 
 #endif // SUPERNPU_RMS_NORM_PTO_STATIC_HPP

@@ -1,0 +1,22 @@
+#!/bin/bash
+# Multi-thread MX quantization [512, 256] (OCP MX v1.0 section 6.3).
+#
+#   export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
+#   ./compile.all
+#
+# Builds the variant with res_check=on, which is the verifying mode: PE0 reads
+# input.bin from CHK_DIR, derives the scalar golden from that same input, and
+# exports both.  Compare on the host with
+#   python3 src/run_mxquant_check.py --gfrun /path/to/gfrun
+# which generates the input and does the byte-exact comparison.
+#
+# The kernel is SPMD over four PEs:
+#   gfrun -s softcore.multiThreadNum=4 -f <elf>
+#
+# Build without res_check=on to get the kernel-only ELF for cycle simulation.
+
+set -euo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+
+make TESTCASE=mxquant COMPILER_DIR="$COMPILER_DIR" res_check=on diss

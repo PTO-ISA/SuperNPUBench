@@ -63,7 +63,7 @@ MX contract (`validate_matrix_scale_contract`) 要求 scale 的 dtype 必须是 
 
 ### 错误 3：`matmul_hif4x2_mx` 因此成为死代码
 
-`benchmark/one-level-arch/kernels/single_thread/matmul/matmul_mx.hpp:48` 中的 `matmul_hif4x2_mx` 函数模板使用 `CubeTileA<__fp4_hif4x2, ...>`，在该 TileOP API 版本下完全无法实例化。`HiF4_HiF4.cpp` 也因此无法编译。
+`benchmark/one-level-arch/kernels/multi_thread/matmul/matmul_mx.hpp:48` 中的 `matmul_hif4x2_mx` 函数模板使用 `CubeTileA<__fp4_hif4x2, ...>`，在该 TileOP API 版本下完全无法实例化。`HiF4_HiF4.cpp` 也因此无法编译。
 
 ## 影响范围
 

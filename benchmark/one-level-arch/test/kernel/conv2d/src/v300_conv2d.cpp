@@ -1,78 +1,38 @@
 #include "benchmark.h"
-#include "single_thread/conv2d/v300_conv2d.hpp"
-
-#ifndef CONV_IN_C
-#define CONV_IN_C 16
-#endif
-
-#ifndef CONV_IN_H
-#define CONV_IN_H 4
-#endif
-
-#ifndef CONV_IN_W
-#define CONV_IN_W 4
-#endif
-
-#ifndef CONV_OUT_C
-#define CONV_OUT_C 16
-#endif
-
-#ifndef CONV_TILE_M
-#define CONV_TILE_M 16
-#endif
-
-#ifndef CONV_TILE_N
-#define CONV_TILE_N 16
-#endif
-
-#ifndef CONV_TILE_K
-#define CONV_TILE_K 16
-#endif
+#include "fileop.h"
+#include "multi_thread_res_check.h"
+#include "basic_op/conv2d/v300_conv2d.hpp"
 
 namespace {
-
-constexpr int kInputElements = CONV_IN_C * CONV_IN_H * CONV_IN_W;
-constexpr int kWeightElements = CONV_OUT_C * CONV_IN_C;
-constexpr int kOutputElements = CONV_OUT_C * CONV_IN_H * CONV_IN_W;
-
-alignas(4096) float input[kInputElements];
-alignas(4096) float weight[kWeightElements];
-alignas(4096) float output[kOutputElements];
-
+alignas(4096) float input[16 * 8 * 8];
+alignas(4096) float weight[16 * 16];
+alignas(4096) float output[16 * 8 * 8];
+#ifdef RES_CHECK
+MultiThreadResCheckSync res_check_sync{};
+#endif
 }  // namespace
 
 int main() {
-#ifdef CONV_PATTERN_VERIFY
-    constexpr int kSpatialElements = CONV_IN_H * CONV_IN_W;
-    static_assert(CONV_IN_C == CONV_OUT_C,
-                  "pattern verification requires an identity weight matrix");
-    for (int channel = 0; channel < CONV_IN_C; ++channel) {
-        for (int spatial = 0; spatial < kSpatialElements; ++spatial) {
-            input[channel * kSpatialElements + spatial] =
-                static_cast<float>(channel * 100 + spatial);
-        }
+    const std::uint32_t tid = get_thread_idx();
+#ifdef RES_CHECK
+    if (tid == 0) {
+        readBinaryFile(CHK_DIR "/input.bin", reinterpret_cast<uint8_t *>(input),
+                       sizeof(input));
+        readBinaryFile(CHK_DIR "/weight.bin", reinterpret_cast<uint8_t *>(weight),
+                       sizeof(weight));
     }
-    for (int out_channel = 0; out_channel < CONV_OUT_C; ++out_channel) {
-        for (int in_channel = 0; in_channel < CONV_IN_C; ++in_channel) {
-            weight[out_channel * CONV_IN_C + in_channel] =
-                out_channel == in_channel ? 1.0f : 0.0f;
-        }
-    }
-#else
-    for (int i = 0; i < kInputElements; ++i) {
-        input[i] = 1.0f;
-    }
-    for (int i = 0; i < kWeightElements; ++i) {
-        weight[i] = 1.0f;
+    res_check_publish_inputs(res_check_sync, tid);
+#endif
+    BENCHSTART;
+    supernpu::multi_thread::conv2d::conv2d_1x1<
+        float, 16, 8, 8, 16, 16, 16, 16>(output, input, weight);
+    BENCHEND;
+#ifdef RES_CHECK
+    res_check_wait_for_all(res_check_sync, tid);
+    if (tid == 0) {
+        writeBinaryFile(CHK_DIR "/output.bin",
+                        reinterpret_cast<uint8_t *>(output), sizeof(output));
     }
 #endif
-
-    BENCHSTART;
-    supernpu::conv2d::conv2d_1x1<
-        float,
-        CONV_IN_C, CONV_IN_H, CONV_IN_W, CONV_OUT_C,
-        CONV_TILE_M, CONV_TILE_N, CONV_TILE_K>(output, input, weight);
-    BENCHEND;
-
     return 0;
 }

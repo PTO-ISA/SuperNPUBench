@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Numerical (precision) and workload/performance verification for the
-matmul_test kernel (benchmark/one-level-arch/test/kernel/matmul).
+matmul_test kernel (benchmark/one-level-arch/test/solution/matmul_test).
 
 matmul_test contract:
   * fp16 (__half) inputs A[M,K], B[K,N]; fp32 accumulate; fp16 output C[M,N]

@@ -1,10 +1,10 @@
 # 多 PE（4-PE）算子编程指南
 
-> 适用范围：`benchmark/one-level-arch/kernels/multi_thread/` 与
-> `test/kernel/multi_thread/` 下的四 PE 算子。
+> 适用范围：`benchmark/one-level-arch/kernels/basic_op/` 与
+> `test/kernel/` 下的四 PE 算子。
 > 依据：PTO-ISA v0.58.3/0.58.4（TileOP-API `linx` 分支 `docs/tileop-usage/`）、
 > SuperScalarModel `codex/pr-0.58.4-shared-model`（gfrun d8903938 实测）。
-> 实例来源：本仓 multi_thread 算子（matmul/fa/element_wise/...）的现有实现。
+> 实例来源：本仓 basic_op 算子（matmul/fa/element_wise/...）的现有实现。
 
 ## 1. 硬件与执行模型
 
@@ -132,7 +132,7 @@ scratch 每 PE 一片（≥ kPeM×tN float），由调用方提供。
 N 外 M 内循环序；B tiles 数组常驻 SharedTReg 跨 M 块复用，容量按
 `(256 KiB − 活跃 A/B) / tileB 字节数` 编译期计算驻留数（`matmul_shared_reuseB.hpp`）。
 
-## 5. 测试 harness（test/kernel/multi_thread/）
+## 5. 测试 harness（test/kernel/）
 
 当前 harness 同一份源码支持两条执行路径（见 `test/common/LIGHTWEIGHT_GROUP_RUNTIME.md`）：
 
@@ -195,11 +195,11 @@ int main() {
 
 | 需求 | 看 |
 |---|---|
-| 最简 SPMD elementwise | `kernels/multi_thread/element_wise/tadd_multithread.hpp` |
-| 标准 cooperative GEMM | `kernels/multi_thread/matmul/matmul_shared.hpp` |
-| 动态 shape cooperative GEMM（零填充 + scratch 往返） | `kernels/multi_thread/matmul/matmul_test_mt.hpp` |
-| B 驻留复用 | `kernels/multi_thread/matmul/matmul_shared_reuseB.hpp` |
-| 低精度/MX cooperative | `kernels/multi_thread/matmul/matmul_shared_lowp.hpp` |
-| 多阶段共享瓦物（Q/K/V staging） | `kernels/multi_thread/fa/fa_2d_unroll_gmma.hpp` |
-| 测试 harness（SPMD/group runtime 双路径） | `test/kernel/multi_thread/matmul/src/matmul_shared.cpp`、`matmul_test_mt.cpp` |
+| 最简 SPMD elementwise | `kernels/basic_op/element_wise/tadd_multithread.hpp` |
+| 标准 cooperative GEMM | `kernels/basic_op/matmul/matmul_shared.hpp` |
+| 动态 shape cooperative GEMM（零填充 + scratch 往返） | `kernels/basic_op/matmul/matmul_test_mt.hpp` |
+| B 驻留复用 | `kernels/basic_op/matmul/matmul_shared_reuseB.hpp` |
+| 低精度/MX cooperative | `kernels/basic_op/matmul/matmul_shared_lowp.hpp` |
+| 多阶段共享瓦物（Q/K/V staging） | `kernels/basic_op/fa/fa_2d_unroll_gmma.hpp` |
+| 测试 harness（SPMD/group runtime 双路径） | `test/kernel/matmul/src/matmul_shared.cpp`、`matmul_test_mt.cpp` |
 | 精度验证工具 | `Test/verify_matmul_test_hard.py`（fork 侧，非仓内） |

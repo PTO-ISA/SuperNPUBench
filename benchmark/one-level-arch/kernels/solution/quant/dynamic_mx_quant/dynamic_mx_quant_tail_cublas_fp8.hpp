@@ -81,6 +81,27 @@ void dynamic_mx_quant_tail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
         using tile_in1      = Tile<Location::Vec, InT,      TileMv, 1, BLayout::RowMajor, ValidRows, 1>;
         using tile_u32_1    = Tile<Location::Vec, uint32_t, TileMv, 1, BLayout::RowMajor, ValidRows, 1>;
 
+        // #585 列分区归约（InT 域）：源 [TileMv,BlockSize] 超 2048B → 沿列切 nPart 个 [TileMv,RSC]
+        //   子块各 <=2048B，逐块 TROWMAX→[TileMv,1] partial，TMAX 合并；输出满行、不触 #119。
+        constexpr int RSC   = reduce_slice_cols(TileMv, sizeof(InT), BlockSize);
+        constexpr int nPart = BlockSize / RSC;
+        using tile_xc = Tile<Location::Vec, InT, TileMv, RSC, BLayout::RowMajor, ValidRows, RSC>;
+        auto col_part_rowmax = [&](int colBase, tile_in1 &max_in) {
+            global_iterator<gm_x, tile_xc> it0(x + row0 * K + colBase);
+            auto g0 = it0(0, 0);
+            tile_xc xs0; TLOAD(xs0, g0);
+            tile_xc as0; TABS(as0, xs0);
+            TROWMAX(max_in, as0);
+            for (int p = 1; p < nPart; ++p) {
+                global_iterator<gm_x, tile_xc> itp(x + row0 * K + colBase + p * RSC);
+                auto gp = itp(0, 0);
+                tile_xc xsp; TLOAD(xsp, gp);
+                tile_xc asp; TABS(asp, xsp);
+                tile_in1 pm; TROWMAX(pm, asp);
+                TMAX(max_in, max_in, pm);
+            }
+        };
+
         for (int kb = 0; kb < numKb; ++kb) {
             global_iterator<gm_x, tile_x> x_iter(x + row0 * K + kb * BlockSize);
             auto gx = x_iter(0, 0);
@@ -105,15 +126,14 @@ void dynamic_mx_quant_tail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
             //   · reinterpret_f32_to_u32（scratch-HBM，问题4）→ reinterpret_tile<>（零指令视图）
             //   · GT/LT/NE 的 min/max+默认-EQ 模拟（问题3）→ 带 CmpMode 的原生 TCMPS
             // scale 无需交织（尾轴块行行内已连续，compact 平铺即等价，问题5）。
-            // -- compute_cublas_scale_tail：InT 域 TABS+TROWMAX，仅把归约量转 fp32 --
-            tile_x abs_x;
-            TABS(abs_x, xq_s);
+            // -- compute_cublas_scale_tail：列分区 InT 域 TABS+TROWMAX（#585 源子块<=2048B），
+            //    仅把归约量转 fp32 --
             tile_recip_f1 max_f;
             if constexpr (std::is_same_v<InT, float>) {
-                TROWMAX(max_f, abs_x);      // fp32：直接归约到 fp32（免前置 cast）
+                col_part_rowmax(kb * BlockSize, max_f);  // fp32：InT=float，列分区直接归约到 fp32
             } else {
                 tile_in1 max_r;
-                TROWMAX(max_r, abs_x);      // reduce cols -> valid col=1（InT 域）
+                col_part_rowmax(kb * BlockSize, max_r);  // InT 域列分区归约 -> valid col=1
                 TCVT(max_f, max_r);         // bf16/half -> fp32（仅归约后的 per-row 标量）
             }
             // -- compute_cublas_core（IDEAL CmpMode 版，对照 AscendC ComputeScaleCublas）--

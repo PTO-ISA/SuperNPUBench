@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Prepare inputs, run four-PE RES_CHECK ELFs, and compare with NumPy — solution 树版。
 
-与 test/kernel/multi_thread/res_check_all.py **对称**：同一套 host-golden 范式
+与 test/kernel/res_check_all.py **对称**：同一套 host-golden 范式
 （kernel 只做二进制 I/O：读 CHK_DIR/input.bin、写 CHK_DIR/output.bin；host 侧用 numpy
 造 golden 并比对），同一套 CLI 与 stdout 输出格式，供上层统一接入。
 
 差别（solution 树特性）：
-  1. ROOT/OUTPUT 指向 output/solution（非 output/kernel/multi_thread）。
+  1. ROOT/OUTPUT 指向 output/solution（非 output/kernel）。
   2. **自包含编译**：main 跑 CASES 前，对 CASES 涉及算子目录注入 `res_check=on` 编译。
   3. Case 支持两类算子（见下）：
      - **单输出 + numpy golden**（如 rms_norm）：给 `prepare` 写 input.bin + 返回 golden，
@@ -107,7 +107,7 @@ _DMXQ = [
     ("nontail_ocp_fp4_bigbs",  "FP4", "compact", False),
 ]
 
-# ---- normalization 族（rms_norm / rms_norm_binary / group_norm_grad / group_norm_grad_1d）：
+# ---- normalization 族（rms_norm / rms_norm_split_r / group_norm_grad / group_norm_grad_1d）：
 #      compile.all 未集成 gen → prepare 调各自 gen 脚本生成 input+golden 到 case_dir；
 #      verify 调各自 compare 脚本（--cmp-dir case_dir，退出码 0=PASS）。gen/compare 默认参数
 #      已对齐 compile.all（rms_norm 由其 run_precision_check.py 佐证 ELF 名与目录约定）。----
@@ -140,10 +140,10 @@ _NORM = [
      "normalization/rms_norm/src/gen_rms_norm_data.py",
      "normalization/rms_norm/src/rms_norm_data_compare.py",
      "solution_normalization_rms_norm_rms_norm_DType__half_gA512_gR8192_PE4"),
-    ("rms_norm_binary", "normalization/rms_norm_binary",
-     "normalization/rms_norm_binary/src/gen_rms_norm_binary_data.py",
-     "normalization/rms_norm_binary/src/rms_norm_binary_data_compare.py",
-     "solution_normalization_rms_norm_binary_rms_norm_binary_DType__half_gA16_gR16384_PE4"),
+    ("rms_norm_split_r", "normalization/rms_norm_split_r",
+     "normalization/rms_norm_split_r/src/gen_rms_norm_split_r_data.py",
+     "normalization/rms_norm_split_r/src/rms_norm_split_r_data_compare.py",
+     "solution_normalization_rms_norm_split_r_rms_norm_split_r_DType__half_gA16_gR16384_PE4"),
     ("group_norm_grad", "normalization/group_norm_grad",
      "normalization/group_norm_grad/src/gen_group_norm_grad_data.py",
      "normalization/group_norm_grad/src/group_norm_grad_data_compare.py",

@@ -1,30 +1,4 @@
-ifeq ($(TESTCASE), rowsum_subview)
-ROWSUM_ROWS ?= 128
-ROWSUM_COLS ?= 16
-ROWSUM_PARTS ?= 4
-DEFINES += -DROWSUM_ROWS=$(ROWSUM_ROWS) -DROWSUM_COLS=$(ROWSUM_COLS) \
-           -DROWSUM_PARTS=$(ROWSUM_PARTS)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_Rows$(ROWSUM_ROWS)_Cols$(ROWSUM_COLS)_Parts$(ROWSUM_PARTS).elf
-else ifeq ($(TESTCASE), rowsum_subview_local)
-ROWSUM_ROWS ?= 128
-ROWSUM_COLS ?= 16
-ROWSUM_PARTS ?= 4
-DEFINES += -DROWSUM_ROWS=$(ROWSUM_ROWS) -DROWSUM_COLS=$(ROWSUM_COLS) \
-           -DROWSUM_PARTS=$(ROWSUM_PARTS)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_Rows$(ROWSUM_ROWS)_Cols$(ROWSUM_COLS)_Parts$(ROWSUM_PARTS).elf
-else ifeq ($(TESTCASE), rowsum_subview_shared)
-ROWSUM_ROWS ?= 128
-ROWSUM_COLS ?= 16
-ROWSUM_PARTS ?= 4
-DEFINES += -DROWSUM_ROWS=$(ROWSUM_ROWS) -DROWSUM_COLS=$(ROWSUM_COLS) \
-           -DROWSUM_PARTS=$(ROWSUM_PARTS)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_Rows$(ROWSUM_ROWS)_Cols$(ROWSUM_COLS)_Parts$(ROWSUM_PARTS).elf
-else ifeq ($(TESTCASE), reducesum_row)
-DEFINES += -DRDType=$(DType) -DgIMs=$(gM_s) -DgINs=$(gN_s) -DtMs=$(tM_s) -DtNs=$(tN_s)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_tM$(tM_s)_tN$(tN_s)_GM$(gM_s)_GN$(gN_s).elf
-endif
-
-
-#TARGET = $(ELF_HEAD)_$(TESTCASE).elf
-SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
+TESTCASE ?= reducesum_row
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/reducesum_row.cpp
+TARGET = $(ELF_HEAD)_reducesum_row_PE4.elf
 include ../../../common/Makefile.common

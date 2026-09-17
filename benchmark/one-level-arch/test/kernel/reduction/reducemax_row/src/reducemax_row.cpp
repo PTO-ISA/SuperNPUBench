@@ -1,44 +1,35 @@
-#include <common/pto_tileop.hpp>
-
-#include <cstdint>
-#include <cstdio>
-
+#include "benchmark.h"
 #include "fileop.h"
-#include "single_thread/reduction/reducemax_rowvec.hpp"
+#include "multi_thread_res_check.h"
+#include "basic_op/reduction/reducemax_rowvec.hpp"
 
-
-
-#ifndef RDType
-#define RDType int32_t
+namespace {
+alignas(4096) float input[64 * 128];
+alignas(4096) float output[64];
+#ifdef RES_CHECK
+MultiThreadResCheckSync res_check_sync{};
 #endif
+}  // namespace
 
-#ifndef tMs
-#define tMs 128
-#endif
-
-#ifndef tNs
-#define tNs 64
-#endif
-
-#ifndef gIMs
-#define gIMs 1024
-#endif
-
-#ifndef gINs
-#define gINs 8192
-#endif    
-// ============================================================================
-// main
-// ============================================================================
 int main() {
-    using dtype = RDType;
-
-    dtype input[gIMs*gINs];
-    dtype output[gIMs*1];
-
-//    readBinaryFile("/remote/lms01/q50057645/jcore_project/JanusCoreBench/test/ascpp/reducesum_trowsum/src/data_256x256.bin", (uint8_t*)input, gIM * gIN * sizeof(dtype));
-//    readBinaryFile("/remote/lms01/q50057645/jcore_project/JanusCoreBench/test/ascpp/reducesum_trowsum/src/data_1024x8192.bin", (uint8_t*)input, gIM * gIN * sizeof(dtype));
-    reducemax_row_rand<dtype, gIMs, gINs, tMs, tNs>(input, output);
-//    writeBinaryFile("/remote/lms01/q50057645/jcore_project/JanusCoreBench/test/ascpp/reducesum_trowsum/src/result_rowsum.bin", (uint8_t*)output, gIM * sizeof(dtype));
-//每个tile只有前两个位置有数。
+    const std::uint32_t tid = get_thread_idx();
+#ifdef RES_CHECK
+    if (tid == 0) {
+        readBinaryFile(CHK_DIR "/input.bin", reinterpret_cast<uint8_t *>(input),
+                       sizeof(input));
+    }
+    res_check_publish_inputs(res_check_sync, tid);
+#endif
+    BENCHSTART;
+    supernpu::multi_thread::reducemax_rowvec<float, 64, 128, 16, 128>(
+        input, output);
+    BENCHEND;
+#ifdef RES_CHECK
+    res_check_wait_for_all(res_check_sync, tid);
+    if (tid == 0) {
+        writeBinaryFile(CHK_DIR "/output.bin",
+                        reinterpret_cast<uint8_t *>(output), sizeof(output));
+    }
+#endif
+    return 0;
 }

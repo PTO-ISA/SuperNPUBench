@@ -16,7 +16,7 @@
 //   执行: gfrun -f <ELF> -s softcore.multiThreadNum=1
 //
 // 【当前 Local CUBE 接口】
-//   参考 single_thread/fa/fa_2d_unroll.hpp：Left/Acc 使用 CUBE_M16/M32，
+//   参考 multi_thread/fa/fa_2d_unroll_gmma.hpp：Left/Acc 使用 CUBE_M16/M32，
 //   Right 使用 CUBE_N8。TLOAD_CUBE/TSTORE_CUBE 显式转换 GM ND 与 CELL 布局；
 //   不能把普通 Vec/旧 TileLeft/TileRight 直接交给当前 Local TMATMUL。
 //   K 仍按块 TTRANS；经小块 GM 缓冲加载到 CUBE，不分配完整转置 KV。

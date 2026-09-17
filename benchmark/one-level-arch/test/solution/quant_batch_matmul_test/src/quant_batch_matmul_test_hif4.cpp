@@ -79,20 +79,13 @@ extern "C" int __linx_group_worker_main(uint32_t peId, void *opaque) {
     constexpr int kGScaleK = globK / 64;  // 64 logical per U32
 
     BENCHSTART;
-    for (int b = 0; b < Batch; ++b) {
-        size_t bOffA  = (size_t)b * globM * kStoredGK;
-        size_t bOffB  = (size_t)b * globN * kStoredGK;
-        size_t bOffC  = (size_t)b * globM * globN;
-        size_t bOffAS = (size_t)b * globM * kGScaleK;
-        size_t bOffBS = (size_t)b * globN * kGScaleK;
-
-        quant_batch_matmul_hif4_mt<tilM, tilN, tilK, globM, globN, globK>(
-            context->dst + bOffC,
-            context->src0 + bOffA,
-            context->src1 + bOffB,
-            context->src0_mx + bOffAS,
-            context->src1_mx + bOffBS);
-    }
+    // The kernel itself iterates over Batch; pass batch-0 pointers only.
+    quant_batch_matmul_hif4_mt<tilM, tilN, tilK, globM, globN, globK>(
+        context->dst,
+        context->src0,
+        context->src1,
+        context->src0_mx,
+        context->src1_mx);
     BENCHEND;
     return 0;
 }

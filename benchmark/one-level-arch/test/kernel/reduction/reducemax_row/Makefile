@@ -1,9 +1,4 @@
-ifeq ($(TESTCASE), reducemax_row)
-DEFINES += -DRDType=$(DType) -DgIMs=$(gM_s) -DgINs=$(gN_s) -DtMs=$(tM_s) -DtNs=$(tN_s)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_tM$(tM_s)_tN$(tN_s)_GM$(gM_s)_GN$(gN_s).elf
-endif
-
-
-#TARGET = $(ELF_HEAD)_$(TESTCASE).elf
-SRC_FILE +=  $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
+TESTCASE ?= reducemax_row
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/reducemax_row.cpp
+TARGET = $(ELF_HEAD)_reducemax_row_PE4.elf
 include ../../../common/Makefile.common
