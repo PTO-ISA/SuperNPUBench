@@ -7,8 +7,11 @@ make TESTCASE=rms_norm_dynamic COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=512
 # Fixed-shape static 4PE counterpart.
 make TESTCASE=rms_norm_static COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=512 G_R=8192 PE_NUM=4 diss
 
-# Static SIMT: pair outer-R blocks and assemble eight [32,1] reductions into [32,8].
+# Static SIMT: pair outer-R blocks.
 make TESTCASE=rms_norm_simt_static_m_R_tree COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=512 G_R=8192 PE_NUM=4 diss
 
 # Static SIMT: reduce 32 M rows independently through a three-level R tree.
 make TESTCASE=rms_norm_simt_static_m_A_tree COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=512 G_R=8192 PE_NUM=4 diss
+
+# Dynamic SIMT R-tree with runtime shape and tiling.
+make TESTCASE=rms_norm_simt_dynamic_m_R_tree DType=__half G_A=512 G_R=8192 PE_NUM=4 diss
