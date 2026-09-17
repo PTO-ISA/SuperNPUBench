@@ -117,8 +117,9 @@ void rms_norm_simt_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingDa
     const int64_t tile_r = tiling->tile_r > 0 ? tiling->tile_r : (gR + 511) / 512;
     const int64_t tile_elems = tile_m * tile_r;
 
+    constexpr int64_t kMaxReduceR = 8192;
     const uint32_t tid = get_thread_idx();
-    if (globalA <= 0 || gR <= 0 || tile_r <= 0 || tile_r > 16 || gR % (tile_elems * 2) != 0 || tid >= static_cast<uint32_t>(peNum)) {
+    if (globalA <= 0 || gR <= 0 || gR > kMaxReduceR || tile_r <= 0 || tile_r > 16 || gR % (tile_elems * 2) != 0 || tid >= static_cast<uint32_t>(peNum)) {
         return;
     }
     const int64_t rows_per_pe = (globalA + peNum - 1) / peNum;
