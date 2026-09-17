@@ -1,12 +1,14 @@
 #!/bin/bash
-# DynamicMxQuant solution 一键构建：为 15 个验证通过的正式用例现场生成 golden
+# DynamicMxQuant solution 一键构建：为正式用例现场生成 golden
 # （gen_dynamic_mx_quant_data.py，无需迁移 .bin），默认 plain（非 res_check）编译，
 # 产出可直接喂 gfsim 的 ELF（res_check ELF 因 ssrset→ssrsetOrderQ 空指针会使 gfsim
 # 段错误，故此处不用；精度校验走 res_check 的 src/run_precision_check.py）。
-# 8 个定尺用例 + 6 个运行期动态 shape（_dyn）用例，映射到 13 个 kernel 头
-# （common + 4 tail 定尺 + 2 nontail 定尺 + 6 个 _dyn）。
-# 两个 *_bs128 用例是大 BlockSize 场景，走 nontail plain 单块路径、统一 kPeNum=4 调用
-# （方案A 切归约轴的 _bigbs kernel 已退休，big-BS 合并进统一 4-PE kernel）。
+# 用例分组（全部 4-PE SPMD kernel）：
+#   · 静态定尺 5：tail(ocp_fp8/ocp_fp4/cublas_fp8) + nontail(cublas_fp8/ocp_fp4)
+#   · 动态 shape 7：上述各自的 _dyn + 两个 nontail _splitN_dyn（M/N 运行期 tiling）
+#   · 缩小网络基准 2：tail ocp_fp4/ocp_fp8 的 bench_small（供 gfsim；小 M 为 boxed）
+#   · 完整网络基准 2：默认注释（太大），需手动 make 指定 TYPE
+# 注：big-BS 已合并进统一 4-PE kernel（旧 *_bs128 独立用例/_bigbs kernel 已退休删除）。
 #
 #   export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
 #   ./compile.all
@@ -27,31 +29,28 @@ SEED=42
 
 # TYPE : driver : M(Axis) : K(Post) : BS : in-dtype : algo : kernel : dtype
 CONFIGS=(
+  # ---- 静态定尺（全部 4-PE SPMD）----
   "TAIL_OCP_FP8:tail_ocp_fp8:512:256:32:fp16:OCP:tail:FP8"
-  "TAIL_OCP_FP8_DYN:tail_ocp_fp8_dyn:512:256:32:fp16:OCP:tail:FP8"
   "TAIL_OCP_FP4:tail_ocp_fp4:512:256:32:bf16:OCP:tail:FP4"
-  # 网络基准用例 [15360,1536]（~47MB，太大，默认不跑）：手动构建/验证用
-  #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4_BENCH res_check=on
-  # "TAIL_OCP_FP4_BENCH:tail_ocp_fp4_bench:15360:1536:32:bf16:OCP:tail:FP4"
-  # 缩小版网络基准 [256,1536]（小，默认跑/供 gfsim）：其它同网络基准，仅 M 缩至 256
-  "TAIL_OCP_FP4_BENCH_SMALL:tail_ocp_fp4_bench_small:256:1536:32:bf16:OCP:tail:FP4"
-  # 网络基准用例(fp8) [7168,16384] bf16→fp8（~234MB，太大，默认不跑）：手动构建/验证用
-  #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP8_BENCH res_check=on
-  # "TAIL_OCP_FP8_BENCH:tail_ocp_fp8_bench:7168:16384:32:bf16:OCP:tail:FP8"
-  # 缩小版网络基准(fp8) [64,16384]（小，默认跑/供 gfsim）：其它同网络基准，仅 M 缩至 64
-  "TAIL_OCP_FP8_BENCH_SMALL:tail_ocp_fp8_bench_small:64:16384:32:bf16:OCP:tail:FP8"
-  "TAIL_CUBLAS_FP8_4PE:tail_cublas_fp8_4pe:512:256:32:fp16:CUBLAS:tail:FP8"
-  "NONTAIL_CUBLAS_FP8_4PE:nontail_cublas_fp8_4pe:512:256:32:fp16:CUBLAS:nontail:FP8"
-  "NONTAIL_CUBLAS_FP8_BS128:nontail_cublas_fp8_bs128:128:32:128:bf16:CUBLAS:nontail:FP8"
-  "NONTAIL_OCP_FP4_4PE:nontail_ocp_fp4_4pe:512:64:32:fp16:OCP:nontail:FP4"
-  "NONTAIL_OCP_FP4_BS128:nontail_ocp_fp4_bs128:128:64:128:bf16:OCP:nontail:FP4"
-  # --- 运行期动态 shape（_dyn）家族：M/N（或 Axis/Post）运行期 tiling 传入，支持任意 N ---
+  "TAIL_CUBLAS_FP8:tail_cublas_fp8:512:256:32:fp16:CUBLAS:tail:FP8"
+  "NONTAIL_CUBLAS_FP8:nontail_cublas_fp8:512:256:32:fp16:CUBLAS:nontail:FP8"
+  "NONTAIL_OCP_FP4:nontail_ocp_fp4:512:64:32:fp16:OCP:nontail:FP4"
+  # ---- 运行期动态 shape（_dyn）：M/N 运行期 tiling 传入，支持任意 N ----
+  "TAIL_OCP_FP8_DYN:tail_ocp_fp8_dyn:512:256:32:fp16:OCP:tail:FP8"
   "TAIL_OCP_FP4_DYN:tail_ocp_fp4_dyn:512:256:32:bf16:OCP:tail:FP4"
   "TAIL_CUBLAS_FP8_DYN:tail_cublas_fp8_dyn:512:256:32:fp16:CUBLAS:tail:FP8"
   "NONTAIL_CUBLAS_FP8_DYN:nontail_cublas_fp8_dyn:512:256:32:fp16:CUBLAS:nontail:FP8"
   "NONTAIL_CUBLAS_FP8_SPLITN_DYN:nontail_cublas_fp8_splitN_dyn:512:256:32:fp16:CUBLAS:nontail:FP8"
   "NONTAIL_OCP_FP4_DYN:nontail_ocp_fp4_dyn:512:64:32:fp16:OCP:nontail:FP4"
   "NONTAIL_OCP_FP4_SPLITN_DYN:nontail_ocp_fp4_splitN_dyn:512:256:32:fp16:OCP:nontail:FP4"
+  # ---- 缩小版网络基准（供 gfsim；小 M 为 boxed，精度不作门禁）----
+  "TAIL_OCP_FP4_BENCH_SMALL:tail_ocp_fp4_bench_small:256:1536:32:bf16:OCP:tail:FP4"
+  "TAIL_OCP_FP8_BENCH_SMALL:tail_ocp_fp8_bench_small:64:16384:32:bf16:OCP:tail:FP8"
+  # ---- 完整网络基准（太大，默认注释；手动构建/验证）----
+  #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4_BENCH res_check=on   # [15360,1536] ~47MB
+  # "TAIL_OCP_FP4_BENCH:tail_ocp_fp4_bench:15360:1536:32:bf16:OCP:tail:FP4"
+  #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP8_BENCH res_check=on   # [7168,16384] ~234MB
+  # "TAIL_OCP_FP8_BENCH:tail_ocp_fp8_bench:7168:16384:32:bf16:OCP:tail:FP8"
 )
 
 for cfg in "${CONFIGS[@]}"; do
@@ -65,4 +64,4 @@ for cfg in "${CONFIGS[@]}"; do
   make -C "$HERE" TESTCASE=dynamic_mx_quant TYPE="$TYPE" COMPILER_DIR="$COMPILER_DIR" diss
 done
 
-echo "全部 15 个用例已生成 golden + 编译完成（8 定尺 + 6 动态 shape；两个大 BS 用例复用 nontail plain 统一 4-PE，bigbs 已退休）。"
+echo "全部 14 个用例已生成 golden + 编译完成（5 静态定尺 + 7 动态 shape + 2 缩小网络基准；完整网络基准默认注释、需手动构建）。"

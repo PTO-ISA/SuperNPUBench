@@ -8,7 +8,7 @@ using namespace supernpu::tile_isa::mxquant;
 // TAIL_CUBLAS_FP8 —— 运行期动态 shape 版 driver。kernel 编译期不知 M/K，靠运行期
 //   tiling={M,K} 传入（对照 tail_ocp_fp8_dyn driver 范式）。fp16(half) in -> e4m3 out,
 //   BlockSize=32, cuBLAS scale。用 fp16 输入规避 bf16 TROWMAX emulator 白名单缺陷2
-//   （同静态 tail_cublas_fp8_4pe）。
+//   （同静态 tail_cublas_fp8）。
 //
 // SPMD：PPE=4 时必须 4 线程跑 gfrun -s softcore.multiThreadNum=4；单线程只写 1/4。
 //   RES_CHECK：读 gen 的 fp16 input.bin，写 output.bin + scale_output.bin

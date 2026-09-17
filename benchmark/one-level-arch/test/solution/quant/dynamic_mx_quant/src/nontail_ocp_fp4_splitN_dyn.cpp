@@ -13,7 +13,7 @@ using namespace supernpu::tile_isa::mxquant;
 //     PPOST=64 时 numN=1、切 N 只有 PE0 干活，故 split-N 用更宽的 Post。PAXIS=512%32==0。
 //   RES_CHECK：读 gen（--kernel nontail --algo OCP --dtype FP4 --in-dtype fp16）input.bin，
 //   写 output.bin（每行 Post/2 打包字节）+ scale_output.bin。gen 约定 --M=Axis / --K=Post。
-//   注：fp4 data 路径基线存在模型侧写侧特征（见 nontail_ocp_fp4_4pe 注释），output 的 MaxAE 与
+//   注：fp4 data 路径基线存在模型侧写侧特征（见 nontail_ocp_fp4 注释），output 的 MaxAE 与
 //   静态版一致（非切分/动态化引入）。
 #ifndef PAXIS
 #define PAXIS 512

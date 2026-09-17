@@ -44,29 +44,19 @@ ifeq ($(TYPE), TAIL_OCP_FP4_BENCH_SMALL)
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp4_bench_small.elf
 endif
 
-ifeq ($(TYPE), TAIL_CUBLAS_FP8_4PE)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_cublas_fp8_4pe.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_cublas_fp8_4pe.elf
+ifeq ($(TYPE), TAIL_CUBLAS_FP8)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_cublas_fp8.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_cublas_fp8.elf
 endif
 
-ifeq ($(TYPE), NONTAIL_CUBLAS_FP8_4PE)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8_4pe.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_cublas_fp8_4pe.elf
+ifeq ($(TYPE), NONTAIL_CUBLAS_FP8)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_cublas_fp8.elf
 endif
 
-ifeq ($(TYPE), NONTAIL_CUBLAS_FP8_BS128)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8_bs128.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_cublas_fp8_bs128.elf
-endif
-
-ifeq ($(TYPE), NONTAIL_OCP_FP4_4PE)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_ocp_fp4_4pe.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_ocp_fp4_4pe.elf
-endif
-
-ifeq ($(TYPE), NONTAIL_OCP_FP4_BS128)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_ocp_fp4_bs128.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_ocp_fp4_bs128.elf
+ifeq ($(TYPE), NONTAIL_OCP_FP4)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_ocp_fp4.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_ocp_fp4.elf
 endif
 
 # --- 运行期动态 shape（_dyn）家族 ---
