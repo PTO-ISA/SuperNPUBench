@@ -6,7 +6,7 @@ ifneq ($(PE_NUM),4)
 $(error rms_norm supports only the 4PE testcases)
 endif
 START_FILE = $(ROOT)/test/common/_start_multipe.s
-ifneq ($(filter rms_norm_dynamic rms_norm_static rms_norm_simt_static_m_R_tree rms_norm_simt_dynamic_m_R_tree,$(TESTCASE)),)
+ifneq ($(filter rms_norm_dynamic rms_norm_static rms_norm_simt_dynamic_m_R_tree,$(TESTCASE)),)
 DEFINES += -DDType=$(DType) -DPE_NUM=$(PE_NUM) -DG_A=$(G_A) -DG_R=$(G_R)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_gA$(G_A)_gR$(G_R)_PE$(PE_NUM).elf
 endif
