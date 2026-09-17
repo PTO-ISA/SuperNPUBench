@@ -361,6 +361,22 @@ def _length_tensor(b, s1, n2, length):
     return [[[length for _ in range(n2)] for _ in range(s1)] for _ in range(b)]
 
 
+def _transpose_kv(kv):
+    """[B, S, N2, D] -> [B, D, S*N2] row-major transposed view.
+
+    The output flattens as element (d, t) at d*(S*N2) + t within each batch,
+    matching the single-PE CSA kernel's [D, S2] GM view for the BMM1 K^T
+    B-tile. Works for both decoded floats and raw HIF8 payloads.
+    """
+    return [
+        [[kv[b][t][n][d]
+          for t in range(len(kv[b]))
+          for n in range(len(kv[b][t]))]
+         for d in range(len(kv[b][0][0]))]
+        for b in range(len(kv))
+    ]
+
+
 def _flatten(values):
     if isinstance(values, (list, tuple)):
         for value in values:
@@ -424,11 +440,17 @@ def generate_case(case, output_root, dtype="HIF8"):
     if is_hif8:
         _write(output / "q.hif8.bin", "B", q_raw)
         _write(output / "ori_kv.hif8.bin", "B", ori_raw)
+        # qli-style pre-transposed ORI KV view [B, D, OriS2] (row-major per
+        # batch: element (d, t) at d*OriS2 + t) for the single-PE CSA BMM1
+        # B-tile contract (CUBE_N8 ND source). Raw payload is byte-rearranged
+        # without decoding.
+        _write(output / "ori_kv_t.hif8.bin", "B", _transpose_kv(ori_raw))
         if cmp_raw is not None:
             _write(output / "cmp_kv.hif8.bin", "B", cmp_raw)
     else:
         _write(output / "q.fp16.bin", "e", q)
         _write(output / "ori_kv.fp16.bin", "e", ori_kv)
+        _write(output / "ori_kv_t.fp16.bin", "e", _transpose_kv(ori_kv))
         if cmp_kv is not None:
             _write(output / "cmp_kv.fp16.bin", "e", cmp_kv)
     if ori_indices is not None:

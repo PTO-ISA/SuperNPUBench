@@ -161,6 +161,9 @@ extern "C" {
 #ifdef QSMLA_USE_HIF8
 extern const uint8_t _binary_q_hif8_start[];
 extern const uint8_t _binary_ori_kv_hif8_start[];
+#ifdef QSMLA_USE_CSA_TADD_1PE
+extern const uint8_t _binary_ori_kv_t_hif8_start[];
+#endif
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
@@ -170,6 +173,9 @@ extern const uint8_t _binary_cmp_kv_hif8_start[];
 #else
 extern const uint8_t _binary_q_fp16_start[];
 extern const uint8_t _binary_ori_kv_fp16_start[];
+#ifdef QSMLA_USE_CSA_TADD_1PE
+extern const uint8_t _binary_ori_kv_t_fp16_start[];
+#endif
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
@@ -237,6 +243,18 @@ int main(){
         const_cast<uint8_t*>(_binary_q_fp16_start));
     kvdtype* kv = reinterpret_cast<kvdtype*>(
         const_cast<uint8_t*>(_binary_ori_kv_fp16_start));
+#endif
+#ifdef QSMLA_USE_CSA_TADD_1PE
+    // qli-style pre-transposed ORI KV [D, S2] per batch (BMM1 K^T source)
+#ifdef QSMLA_USE_HIF8
+    kvdtype* ori_kv_t = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_ori_kv_t_hif8_start));
+#else
+    kvdtype* ori_kv_t = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_ori_kv_t_fp16_start));
+#endif
+#else
+    kvdtype* ori_kv_t = nullptr;
 #endif
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
@@ -334,7 +352,7 @@ int main(){
         Config, QsmlaMode::CSA, cmp_s2, 0, cmp_topk>;
     quant_sparse_flash_mla_csa_1pe_pto<
         qdtype, kvdtype, odttype, Config, ModeConfig>(
-            out, q, kv, cmp_kv,
+            out, q, kv, ori_kv_t, cmp_kv,
             cmp_indices, nullptr,   // cmp_topk_length（缺省 CmpTopK 全收集）
             softmax_scale_val,
             q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,

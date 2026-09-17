@@ -24,70 +24,75 @@
 //   - HIF8 量化契约（对齐官方算子）：P×16 → HIF8 → PV × kv_descale →
 //     输出 ×1/16（kHif8ProbabilityScale=16 与 hifp8ScaleValue 一致）
 //
-// 【单 PE 机制】（继承 tadd.hpp 的已验证方案）
-//   - TTRANS 已退役 → ORI 全序列一次性预转置 ori_t[D][S2]；CMP 一次性
-//     gather（行序 cmp_rows_buf[CmpTopK][D]，未选中行补零防 NaN 污染）
-//     + 转置（cmp_t[D][CmpTopK]）
-//     HIF8 下 gather 用 uint32 carrier（LinxV5 无法 legalize 分发散标量
-//     i8/HIF8 拷贝，4 字节保留原始 payload，D%4==0）
+// 【单 PE 机制】
+//   - 转置/gather 一律 MGATHER 索引搬运（方案 transpose，参考
+//     basic_op/transpose 的 tile_transpose_nd）：TTRANS 已退役（TEPL
+//     0x6E）且 TLOAD_CUBE 仅支持 ND 源（issue #17：ISA 能力缺口）
+//   - ORI 侧 qli 式输入预转置：K^T 布局由 ori_kv_t_ptr 直接提供
+//     （[D, S2] 每 batch），kernel 内零转置；V 保持原样 [S2, D]
+//   - CMP 侧 MGATHER 双链直出 batch_cmp（行序 + 转置序，dtype 无关）
+//   - mask tile 化（U32 位模式域 TCI/TCMPS/TSEL 链）
 //   - 方阵 kTk == kTd：未打补丁 TileOP 的 Local-B 双约定仅在方阵上一致
 //   - 行归约源 tW [kTm, kTk] FP32 ≤ 2048B（pto-spec 0.58.6 契约）
-//   - 所有标量循环（转置 / gather / mask 构造）先于一切 tile 指令执行
-//     （规避编译器 off-spec spill TMOV）
-//   - 平铺四段（pass1/pass2 × ORI/CMP），不用 lambda：泛型 lambda 按引用
-//     捕获跨源调用的 tile 变量会触发编译器 raw TSTORE 栈 spill（模型
-//     RecordRawTileTransport 断言，RawTileSourceFits 不匹配）
-//   - mask 行无关（同一 q_token 的全部 head 共享窗口/索引）→ 每块预构造
-//     [kTm, kTk] mask（行复制），tile 段保持无分支的固定指令序列
-//   - Acc↔Vec 经 GM scratch（TSTORE_CUBE/TLOAD，Acc 不能直读）
+//   - 主段 Db 循环 unroll_count(4)：unroll(full) 的 32 组在飞 tile
+//     峰值会打满 256KB tile 池（HIF8 轨迹，gfsim CheckAddrOverflow）
+//
+// 【函数化边界约束】（v2 kernel 同款先例）
+//   tile 对象必须保持函数局部：跨函数的 tile 引用/捕获会触发编译器
+//   raw TSTORE 栈 spill（模型 RecordRawTileTransport 断言）。因此
+//   辅助函数只封装"tile 全局部"的块，跨块状态一律经 GM scratch 传递
+//   （score/prob/pv 缓冲），online-softmax 状态更新（tMax/tSum）与
+//   Pass2 的 P 构造（tMax/tInvSum 依赖）有意保留在主函数内联。
 // =============================================================================
 
 #include <common/pto_tileop.hpp>
-#include "template_asm.h"
+// NOTE: 不 include bench 的 "template_asm.h"——它的旧式 MGATHER 封装
+// （BSTART.TMA 4，全局命名空间）与 TileOP-API 的活跃 MGATHER
+// （BSTART.TLSU MGATHER，namespace pto）同名且参数为非 const 引用，
+// 会在重载决议中遮蔽 API 版并触发 "Match Instruction Error"。
+// 本 kernel 的全部指令（含 MGATHER/TCI/TDIVS）都来自 pto_tileop.hpp。
 #include "qsmla_config.hpp"
 #include "qsmla_mode.hpp"
+#include <bit>
 #include <type_traits>
 
 using namespace pto;
 
+// =============================================================================
+// Section 1 — Tile 类型目录与编译期契约
+//
+// 单 PE Local CUBE 的全部 tile / GM 视图 / 迭代器类型与形状常量。
+// CUBE 操作数与累加器为 STATIC（PTO v0.58 拒绝动态 valid 形状）。
+// =============================================================================
 template <typename qdtype, typename kvdtype, typename odttype,
           typename Config, typename ModeConfig>
-void quant_sparse_flash_mla_csa_1pe_pto(
-    odttype* out_ptr,
-    qdtype* q_ptr,
-    kvdtype* ori_kv_ptr,
-    kvdtype* cmp_kv_ptr,
-    const int* cmp_sparse_indices,
-    const int* cmp_topk_length,
-    float softmax_scale,
-    float q_descale,
-    float ori_kv_descale,
-    float cmp_kv_descale,
-    int cmp_ratio,
-    int ori_win_left,
-    int ori_win_right)
-{
-    // ---- 编译期常量 ----
-    constexpr int kB = Config::B;
-    constexpr int s1 = Config::S1;
-    constexpr int s2 = Config::S2;             // ORI S2
-    constexpr int N1 = Config::N1;
-    constexpr int D = Config::D;
-    constexpr int kTm = Config::TileM;
-    constexpr int kTk = Config::TileK;
-    constexpr int kTd = Config::TileD;
-    constexpr int Db = D / kTd;
-    constexpr int kCmpS2 = ModeConfig::CmpS2;
-    constexpr int kCmpTopK = ModeConfig::CmpTopK;
+struct CsaTiles {
+    // ---- dtype 别名（供辅助函数以 Tiles::xxx 引用）----
+    using qdtype_alias = qdtype;
+    using kvdtype_alias = kvdtype;
+    using odttype_alias = odttype;
+
+    // ---- 形状常量 ----
+    static constexpr int kB = Config::B;
+    static constexpr int s1 = Config::S1;
+    static constexpr int s2 = Config::S2;          // ORI S2
+    static constexpr int N1 = Config::N1;
+    static constexpr int D = Config::D;
+    static constexpr int kTm = Config::TileM;
+    static constexpr int kTk = Config::TileK;
+    static constexpr int kTd = Config::TileD;
+    static constexpr int kDb = D / kTd;
+    static constexpr int kCmpS2 = ModeConfig::CmpS2;
+    static constexpr int kCmpTopK = ModeConfig::CmpTopK;
     // 转置/行缓冲的物理容量：向上对齐到 kTk 的倍数，保证 iterator
     // 分块（列宽 kTk）永不越过分配的行距边界。
-    constexpr int kCmpCap =
+    static constexpr int kCmpCap =
         (kCmpTopK + kTk - 1) / kTk * kTk;
-    constexpr int kOriBlkMax = (s2 + kTk - 1) / kTk;
-    constexpr int kCmpBlkMax = (kCmpTopK + kTk - 1) / kTk;
-    constexpr int kMBlockCount = N1 / kTm;     // M 维 = head（每 q_token）
+    static constexpr int kOriBlkMax = (s2 + kTk - 1) / kTk;
+    static constexpr int kCmpBlkMax = (kCmpTopK + kTk - 1) / kTk;
+    static constexpr int kMBlockCount = N1 / kTm;  // M 维 = head（每 q_token）
 
-    // ---- 编译期约束 ----
+    // ---- 编译期契约 ----
     static_assert((std::is_same_v<qdtype, __half> &&
                    std::is_same_v<kvdtype, __half> &&
                    std::is_same_v<odttype, __half>) ||
@@ -95,8 +100,6 @@ void quant_sparse_flash_mla_csa_1pe_pto(
                        std::is_same_v<kvdtype, __hif8> &&
                        std::is_same_v<odttype, __bf16>),
                   "single-PE CSA supports FP16 or HIF8 dtype sets");
-    static_assert(!std::is_same_v<kvdtype, __hif8> || D % 4 == 0,
-                  "HIF8 scalar loops use four-byte carriers");
     static_assert(Config::N2 == 1,
                   "single-PE CSA requires contiguous N2=1 KV");
     static_assert(kTk == kTd,
@@ -111,19 +114,19 @@ void quant_sparse_flash_mla_csa_1pe_pto(
     static_assert(kCmpTopK > 0, "CSA requires positive CmpTopK");
 
     // HIF8 量化契约（与 4-PE kUseHif8Probability / 官方 hifp8ScaleValue 对齐）
-    constexpr bool kUseHif8Probability = std::is_same_v<qdtype, __hif8>;
-    constexpr float kHif8ProbabilityScale = 16.0f;
-    // score 反量化缩放（FP16 下 descale 均为 1，数值不变）
-    const float ori_score_scale = softmax_scale * q_descale * ori_kv_descale;
-    const float cmp_score_scale = softmax_scale * q_descale * cmp_kv_descale;
+    static constexpr bool kUseHif8Probability =
+        std::is_same_v<qdtype, __hif8>;
+    static constexpr float kHif8ProbabilityScale = 16.0f;
 
-    // ---- Tile 类型（Tm=32, Tk=Td=16 全部合规）----
+    // ---- CUBE 操作数 / 累加器 ----
     using tileQ = CubeTileM32<qdtype, kTm, kTd>;            // A: Q [Tm, Td]
     using tileKRight = CubeTileN8<kvdtype, kTd, kTk>;       // B: K^T [Td, Tk]
     using tileV = CubeTileN8<kvdtype, kTk, kTd>;            // B: V   [Tk, Td]
     using tileWLeft = CubeTileM32<qdtype, kTm, kTk>;        // A: P   [Tm, Tk]
     using tileScoreCube = CubeAccumulatorM32<float, kTm, kTk>;
     using tilePVCube = CubeAccumulatorM32<float, kTm, kTd>;
+
+    // ---- Vec 引擎 tile ----
     using tileW = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
     using tileMask = tileW;
     using tileP = Tile<Location::Vec, qdtype, kTm, kTk, BLayout::RowMajor>;
@@ -150,26 +153,329 @@ void quant_sparse_flash_mla_csa_1pe_pto(
     using gmScore = global_tensor<float, RowMajor<kTm, kTk>>;
     using gmProb = global_tensor<qdtype, RowMajor<kTm, kTk>>;
     using gmPV = global_tensor<float, RowMajor<kTm, kTd>>;
+};
+
+// =============================================================================
+// Section 2 — CMP staging（MGATHER 双链）
+//
+// 逻辑行 i 的 byte 基址先查表成 row_bases（标量，kCmpCap 个），两条
+// MGATHER 链直接从 batch_cmp 产出：
+//   a) cmp_rows_buf [TopK, D] 行序 —— BMM2 的 V 源
+//   b) cmp_t [D, TopK] 转置序 —— BMM1 的 K^T 源
+// 未选中逻辑行取 batch_cmp 第 0 行：cmp mask 已把这些列的 P 压为精确 0
+//（exp(-1e30) 下溢），0×正常值 = 0，且 batch_cmp 无 NaN payload，不污染
+// exp / P 量化路径。dtype 无关：MGATHER 逐元素 byte offset，FP16/HIF8
+// 共用一份代码。
+// tile 全局部 → 可安全函数化（见文件头"函数化边界约束"）。
+// =============================================================================
+template <typename Tiles>
+static __attribute__((always_inline)) inline void csa_stage_cmp(
+    typename Tiles::kvdtype_alias* batch_cmp,
+    const int* cmp_selected,
+    int cmp_count,
+    typename Tiles::kvdtype_alias* cmp_rows_buf,
+    typename Tiles::kvdtype_alias* cmp_t)
+{
+    using kvdtype = typename Tiles::kvdtype_alias;
+    constexpr int D = Tiles::D;
+    constexpr int kCmpCap = Tiles::kCmpCap;
+    constexpr int kCmpS2 = Tiles::kCmpS2;
+
+    alignas(64) std::uint32_t row_bases[kCmpCap];
+    for (int i = 0; i < kCmpCap; ++i) {
+        const int row = i < cmp_count ? cmp_selected[i] : 0;
+        row_bases[i] =
+            static_cast<std::uint32_t>(row) *
+            static_cast<std::uint32_t>(D) *
+            static_cast<std::uint32_t>(sizeof(kvdtype));
+    }
+    using CmpGlobal = global_tensor<kvdtype, RowMajor<1, kCmpS2 * D>>;
+    using RowBaseGlobal =
+        global_tensor<std::uint32_t, RowMajor<1, kCmpCap>>;
+    using TransDataTile =
+        Tile<Location::Vec, kvdtype, 1, 512, BLayout::RowMajor>;
+    using TransOffsetTile =
+        Tile<Location::Vec, std::uint32_t, 1, 512, BLayout::RowMajor>;
+    static_assert(D * kCmpCap % 512 == 0 &&
+                      D * kCmpCap * sizeof(kvdtype) % 32 == 0,
+                  "MGATHER cmp staging requires 512-element tiles "
+                  "with 32-byte rows");
+    CmpGlobal cmp_src(batch_cmp);
+    RowBaseGlobal row_base_src(row_bases);
+    global_iterator<CmpGlobal, TransDataTile> rows_dst(cmp_rows_buf);
+    global_iterator<CmpGlobal, TransDataTile> trans_dst2(cmp_t);
+    constexpr int kCmpTiles = D * kCmpCap / 512;
+    for (int tile_index = 0; tile_index < kCmpTiles; ++tile_index) {
+        TransOffsetTile linear;
+        TCI(linear, static_cast<std::uint32_t>(tile_index) * 512u);
+
+        // ---- a) 行序：k = i * D + d ----
+        // tile 恰为一整逻辑行（tile 宽 512 == D）：行基址是标量
+        // row_bases[tile_index]，用 U32 TEXPANDS 广播 + TCI 列序 × sizeof
+        // 合成 offset（省去查表 MGATHER 与 4 个中间 tile）
+        TransOffsetTile row_base_a;
+        TEXPANDS(row_base_a, row_bases[tile_index]);
+        TransOffsetTile dseq;
+        TCI(dseq, 0u);
+        TMULS(dseq, dseq, static_cast<std::uint32_t>(sizeof(kvdtype)));
+        TransOffsetTile byte_off_a;
+        TADD(byte_off_a, row_base_a, dseq);
+        TransDataTile rows_data;
+        MGATHER(rows_data, cmp_src, byte_off_a);
+        auto rows_g = rows_dst(0, tile_index);
+        TSTORE(rows_g, rows_data);
+
+        // ---- b) 转置序：k' = d * kCmpCap + i ----
+        TransOffsetTile dpart_b;
+        TDIVS(dpart_b, linear, static_cast<std::uint32_t>(kCmpCap));
+        TransOffsetTile dscaled_b;
+        TMULS(dscaled_b, dpart_b, static_cast<std::uint32_t>(kCmpCap));
+        TransOffsetTile ipart_b;
+        TSUB(ipart_b, linear, dscaled_b);
+        TransOffsetTile ibytes_b;
+        TMULS(ibytes_b, ipart_b, static_cast<std::uint32_t>(4));
+        TransOffsetTile row_base_b;
+        MGATHER(row_base_b, row_base_src, ibytes_b);
+        TransOffsetTile dbytes_b;
+        TMULS(dbytes_b, dpart_b,
+              static_cast<std::uint32_t>(sizeof(kvdtype)));
+        TransOffsetTile byte_off_b;
+        TADD(byte_off_b, row_base_b, dbytes_b);
+        TransDataTile trans_data;
+        MGATHER(trans_data, cmp_src, byte_off_b);
+        auto trans_g = trans_dst2(0, tile_index);
+        TSTORE(trans_g, trans_data);
+    }
+}
+
+// =============================================================================
+// Section 3 — mask 构造（tile 化）
+//
+// 行无关（同一 q_token 的全部 head 共享窗口/索引）→ [1,kTk] 值行逐行
+// TSTORE kTm 份。链路（U32 位模式域，TSEL 只接受整数 dst——模型
+// IsLogicalIntegerTeplDataType；TCMPS 的 packed predicate 不能作数值
+// tile 的算术源）：
+//   TCI token 序列（U32）→ TCMPS 标量比较出 U8 predicate →
+//   TSEL 选 0x0 / bit_cast(-1e30f)（U32 域，位模式原样落 GM）→
+//   主段按 float 视图 TLOAD，位解释还原 0/-1e30f（与标量循环逐位一致）。
+// tile 全局部 → 可安全函数化。
+// =============================================================================
+template <typename Tiles>
+static __attribute__((always_inline)) inline void csa_build_masks(
+    const QsmlaSwaRange& ori_range,
+    int ori_blk_begin,
+    int ori_blk_count,
+    int cmp_blk_count,
+    int cmp_count,
+    float (*ori_masks)[Tiles::kTm * Tiles::kTk],
+    float (*cmp_masks)[Tiles::kTm * Tiles::kTk])
+{
+    constexpr int kTk = Tiles::kTk;
+    constexpr int kTm = Tiles::kTm;
+    using MaskIdxTile =
+        Tile<Location::Vec, std::uint32_t, 1, kTk, BLayout::RowMajor>;
+    using MaskPredTile =
+        Tile<Location::Vec, std::uint8_t, 1, kTk, BLayout::RowMajor>;
+    using gmMaskRowU32 = global_tensor<std::uint32_t, RowMajor<1, kTk>>;
+
+    const std::uint32_t kMaskNeg =
+        std::bit_cast<std::uint32_t>(-1.0e30f);
+    MaskIdxTile nbits;
+    TEXPANDS(nbits, kMaskNeg);
+
+    for (int j = 0; j < ori_blk_count; ++j) {
+        const std::uint32_t token_base =
+            static_cast<std::uint32_t>((ori_blk_begin + j) * kTk);
+        MaskIdxTile tseq;
+        TCI(tseq, token_base);
+        MaskPredTile mlo;
+        TCMPS<CmpMode::LT>(mlo, tseq,
+                           static_cast<std::uint32_t>(ori_range.begin));
+        MaskPredTile mhi;
+        TCMPS<CmpMode::GE>(mhi, tseq,
+                           static_cast<std::uint32_t>(ori_range.end));
+        MaskIdxTile mval;
+        TEXPANDS(mval, 0u);
+        TSEL(mval, mlo, nbits);
+        TSEL(mval, mhi, nbits);
+        for (int r = 0; r < kTm; ++r) {
+            gmMaskRowU32 gMaskRow(
+                reinterpret_cast<std::uint32_t*>(ori_masks[j] + r * kTk));
+            TSTORE(gMaskRow, mval);
+        }
+    }
+    for (int j = 0; j < cmp_blk_count; ++j) {
+        const std::uint32_t valid_cols =
+            static_cast<std::uint32_t>(cmp_count - j * kTk);
+        MaskIdxTile tcol;
+        TCI(tcol, 0u);
+        MaskPredTile mhi;
+        TCMPS<CmpMode::GE>(mhi, tcol, valid_cols);
+        MaskIdxTile mval;
+        TEXPANDS(mval, 0u);
+        TSEL(mval, mhi, nbits);
+        for (int r = 0; r < kTm; ++r) {
+            gmMaskRowU32 gMaskRow(
+                reinterpret_cast<std::uint32_t*>(cmp_masks[j] + r * kTk));
+            TSTORE(gMaskRow, mval);
+        }
+    }
+}
+
+// =============================================================================
+// Section 4 — MM1 score 块（Q @ K^T 的 D 维分段累加 + scale + mask）
+//
+// Db 个 D 切片累加进函数局部的 tW，乘 score_scale、加 mask 后落 GM
+// score scratch（调用者 TLOAD 续做 softmax / P 构造）。Pass1/Pass2 的
+// ORI/CMP 四处共用；tile 全局部（tW 不跨函数），跨块状态走 GM scratch。
+// =============================================================================
+template <typename Tiles, typename QIter, typename KIter>
+static __attribute__((always_inline)) inline void csa_mm1_score(
+    QIter& gIterQ,
+    int m_block,
+    KIter& k_iter,
+    int k_blk,
+    float score_scale,
+    float* mask_row,
+    typename Tiles::gmScore& gScore)
+{
+    using tileW = typename Tiles::tileW;
+    tileW tW;
+    TEXPANDS(tW, 0.0f);
+#pragma clang loop unroll_count(4)
+    for (int dd = 0; dd < Tiles::kDb; ++dd) {
+        typename Tiles::tileQ tQ;
+        auto gQ = gIterQ(m_block, dd);
+        TLOAD_CUBE(tQ, gQ);
+        typename Tiles::tileKRight tK;
+        auto gK = k_iter(dd, k_blk);
+        TLOAD_CUBE(tK, gK);
+        typename Tiles::tileScoreCube tScoreCube;
+        TMATMUL(tScoreCube, tQ, tK);
+        TSTORE_CUBE(gScore, tScoreCube);
+        tileW tWPartial;
+        TLOAD(tWPartial, gScore);
+        TADD(tW, tW, tWPartial);
+    }
+    TMULS(tW, tW, score_scale);
+    typename Tiles::tileMask tMask;
+    typename Tiles::gmMask gMaskBuf(mask_row);
+    auto gMask = gMaskBuf;
+    TLOAD(tMask, gMask);
+    TADD(tW, tW, tMask);
+    TSTORE(gScore, tW);
+}
+
+// =============================================================================
+// Section 5 — Pass2 的 P·V 块
+//
+// 消费已发布的 P（gProb，qdtype）与一个 V tile 视图，BMM2 + HIF8 的
+// PV×kv_descale 后落 GM pv scratch（调用者 TLOAD + TADD tO）。
+// Pass2 的 ORI/CMP 两处共用；tile 全局部。
+// =============================================================================
+template <typename Tiles>
+static __attribute__((always_inline)) inline void csa_pass2_pv(
+    typename Tiles::gmProb& gProb,
+    auto gV,
+    float kv_descale,
+    typename Tiles::gmPV& gPV)
+{
+    typename Tiles::tileWLeft tWLeft;
+    TLOAD_CUBE(tWLeft, gProb);
+    typename Tiles::tileV tV;
+    TLOAD_CUBE(tV, gV);
+    typename Tiles::tilePVCube tPVCube;
+    TMATMUL(tPVCube, tWLeft, tV);
+    TSTORE_CUBE(gPV, tPVCube);
+    typename Tiles::tileO tPV;
+    TLOAD(tPV, gPV);
+    if constexpr (Tiles::kUseHif8Probability) {
+        TMULS(tPV, tPV, kv_descale);
+    }
+    TSTORE(gPV, tPV);
+}
+
+// =============================================================================
+// Section 6 — 主 kernel
+//
+// 结构：batch → q_token（CMP staging + mask 构造）→ m_block（Pass1 归约
+// (m,l) + Pass2 逐 D 块累加 O）。online-softmax 状态更新（tMax/tSum）
+// 与 Pass2 的 P 构造（tMax/tInvSum 依赖）保持内联——见文件头
+// "函数化边界约束"。
+// =============================================================================
+template <typename qdtype, typename kvdtype, typename odttype,
+          typename Config, typename ModeConfig>
+void quant_sparse_flash_mla_csa_1pe_pto(
+    odttype* out_ptr,
+    qdtype* q_ptr,
+    kvdtype* ori_kv_ptr,
+    // qli-style pre-transposed ORI KV view: [D, S2] row-major per batch
+    // (BMM1 K^T B-tile source). The transpose is provided by the input
+    // layout instead of being performed in-kernel (TTRANS retired,
+    // TLOAD_CUBE is ND-only — TileOP-API issue #17); BMM2's V keeps the
+    // natural [S2, D] ori_kv_ptr layout.
+    kvdtype* ori_kv_t_ptr,
+    kvdtype* cmp_kv_ptr,
+    const int* cmp_sparse_indices,
+    const int* cmp_topk_length,
+    float softmax_scale,
+    float q_descale,
+    float ori_kv_descale,
+    float cmp_kv_descale,
+    int cmp_ratio,
+    int ori_win_left,
+    int ori_win_right)
+{
+    using Tiles = CsaTiles<qdtype, kvdtype, odttype, Config, ModeConfig>;
+    using tileW = typename Tiles::tileW;
+    using tileRowState = typename Tiles::tileRowState;
+    using tileP = typename Tiles::tileP;
+    using tileO = typename Tiles::tileO;
+    using tileOCast = typename Tiles::tileOCast;
+
+    constexpr int kB = Tiles::kB;
+    constexpr int s1 = Tiles::s1;
+    constexpr int s2 = Tiles::s2;
+    constexpr int N1 = Tiles::N1;
+    constexpr int D = Tiles::D;
+    constexpr int kTm = Tiles::kTm;
+    constexpr int kTk = Tiles::kTk;
+    constexpr int kTd = Tiles::kTd;
+    constexpr int kDb = Tiles::kDb;
+    constexpr int kCmpS2 = Tiles::kCmpS2;
+    constexpr int kCmpTopK = Tiles::kCmpTopK;
+    constexpr int kOriBlkMax = Tiles::kOriBlkMax;
+    constexpr int kMBlockCount = Tiles::kMBlockCount;
+    constexpr bool kUseHif8Probability = Tiles::kUseHif8Probability;
+    constexpr float kHif8ProbabilityScale = Tiles::kHif8ProbabilityScale;
+
+    // score 反量化缩放（FP16 下 descale 均为 1，数值不变）
+    const float ori_score_scale = softmax_scale * q_descale * ori_kv_descale;
+    const float cmp_score_scale = softmax_scale * q_descale * cmp_kv_descale;
 
     // ---- 栈 scratch ----
-    alignas(64) kvdtype ori_t[D * s2];                       // 128KB (FP16)
-    alignas(64) kvdtype cmp_rows_buf[kCmpCap * D];
-    alignas(64) kvdtype cmp_t[D * kCmpCap];
+    // 注：ORI 预转置缓冲不存在——K^T 布局由输入 ori_kv_t_ptr 直接提供
+    //（qli 式预转置，见签名注释）
+    alignas(64) kvdtype cmp_rows_buf[Tiles::kCmpCap * D];
+    alignas(64) kvdtype cmp_t[D * Tiles::kCmpCap];
     alignas(64) float ori_masks[kOriBlkMax][kTm * kTk];      // 16KB
-    alignas(64) float cmp_masks[kCmpBlkMax][kTm * kTk];      // 6KB
+    alignas(64) float cmp_masks[Tiles::kCmpBlkMax][kTm * kTk];  // 6KB
     alignas(64) float score_scratch[kTm * kTk];
     alignas(64) qdtype prob_scratch[kTm * kTk];
     alignas(64) float pv_scratch[kTm * kTd];
     int cmp_selected[kCmpTopK];
 
-    gmScore gScore(score_scratch);
-    gmProb gProb(prob_scratch);
-    gmPV gPV(pv_scratch);
+    typename Tiles::gmScore gScore(score_scratch);
+    typename Tiles::gmProb gProb(prob_scratch);
+    typename Tiles::gmPV gPV(pv_scratch);
 
     // ================= batch 循环 =================
     for (int b = 0; b < kB; ++b) {
         kvdtype* batch_ori =
             ori_kv_ptr + static_cast<std::size_t>(b) * s2 * D;
+        // 每 batch 的预转置 K^T 视图（[D, S2] 行主序，D*S2 元素）
+        kvdtype* batch_ori_t =
+            ori_kv_t_ptr + static_cast<std::size_t>(b) * s2 * D;
         kvdtype* batch_cmp =
             cmp_kv_ptr + static_cast<std::size_t>(b) * kCmpS2 * D;
         qdtype* batch_q =
@@ -177,14 +483,9 @@ void quant_sparse_flash_mla_csa_1pe_pto(
         odttype* batch_out =
             out_ptr + static_cast<std::size_t>(b) * s1 * N1 * D;
 
-        // ---- Phase S（纯标量，先于一切 tile）：ORI 全序列预转置 ----
-        for (int t = 0; t < s2; ++t)
-            for (int d = 0; d < D; ++d)
-                ori_t[d * s2 + t] = batch_ori[t * D + d];
-
         // ================= q_token 循环 =================
         for (int q_token = 0; q_token < s1; ++q_token) {
-            // ---- Phase T（纯标量）：CMP 索引收集 / gather / 转置 / mask ----
+            // ---- CMP 索引收集（标量）----
             const int cmp_valid_end = qsmla_csa_cmp_valid_end(
                 kCmpS2, s1, q_token, cmp_ratio);
             int cmp_count = 0;
@@ -204,47 +505,10 @@ void quant_sparse_flash_mla_csa_1pe_pto(
                             (b * s1 + q_token)) * kCmpTopK,
                     candidate_count, kCmpS2, cmp_valid_end);
             }
-            // CMP 行序 gather（逻辑序 i；未选中行补零防垃圾 NaN 污染）。
-            // HIF8：LinxV5 无法 legalize 分发散标量 i8/HIF8 拷贝，
-            // 按 uint32 carrier 逐字搬运保留原始 payload（D%4==0）。
-            if constexpr (std::is_same_v<kvdtype, __hif8>) {
-                auto* rows_words =
-                    reinterpret_cast<uint32_t*>(cmp_rows_buf);
-                for (int i = 0; i < kCmpCap; ++i) {
-                    const int row =
-                        i < cmp_count ? cmp_selected[i] : 0;
-                    const bool valid = i < cmp_count;
-                    const auto* source_words =
-                        reinterpret_cast<const uint32_t*>(
-                            batch_cmp +
-                            static_cast<std::size_t>(row) * D);
-                    for (int w = 0; w < D / 4; ++w) {
-                        rows_words[static_cast<std::size_t>(i) * (D / 4) +
-                                   w] =
-                            valid ? source_words[w] : 0U;
-                    }
-                }
-            } else {
-                for (int i = 0; i < kCmpCap; ++i) {
-                    const int row = i < cmp_count ? cmp_selected[i] : 0;
-                    const bool valid = i < cmp_count;
-                    for (int d = 0; d < D; ++d) {
-                        cmp_rows_buf[i * D + d] =
-                            valid
-                                ? batch_cmp[static_cast<std::size_t>(row) *
-                                                D +
-                                            d]
-                                : static_cast<kvdtype>(0.0f);
-                    }
-                }
-            }
-            // CMP 转置 [D, CmpTopK]（列 = 逻辑序，块对齐）
-            for (int d = 0; d < D; ++d)
-                for (int i = 0; i < kCmpCap; ++i)
-                    cmp_t[d * kCmpCap + i] = cmp_rows_buf[i * D + d];
+            csa_stage_cmp<Tiles>(batch_cmp, cmp_selected, cmp_count,
+                                 cmp_rows_buf, cmp_t);
 
-
-            // ORI 窗口与块范围（块对齐裁剪 + 边缘 mask，tadd 语义）
+            // ---- ORI 窗口与块范围（块对齐裁剪 + 边缘 mask，tadd 语义）----
             const QsmlaSwaRange ori_range = qsmla_swa_range(
                 s2, s1, q_token, ori_win_left, ori_win_right);
             const QsmlaSwaRange ori_blocks =
@@ -252,40 +516,19 @@ void quant_sparse_flash_mla_csa_1pe_pto(
             const int ori_blk_begin = ori_blocks.begin;
             const int ori_blk_count = ori_blocks.end - ori_blocks.begin;
             const int cmp_blk_count = (cmp_count + kTk - 1) / kTk;
+            csa_build_masks<Tiles>(ori_range, ori_blk_begin, ori_blk_count,
+                                   cmp_blk_count, cmp_count, ori_masks,
+                                   cmp_masks);
 
-            // mask 构造（行无关 → 每行同值复制 kTm 份）
-            for (int j = 0; j < ori_blk_count; ++j) {
-                const int token_base = (ori_blk_begin + j) * kTk;
-                for (int r = 0; r < kTm; ++r) {
-                    for (int c = 0; c < kTk; ++c) {
-                        const int token = token_base + c;
-                        ori_masks[j][r * kTk + c] =
-                            (token >= ori_range.begin &&
-                             token < ori_range.end)
-                                ? 0.0f
-                                : -1.0e30f;
-                    }
-                }
-            }
-            for (int j = 0; j < cmp_blk_count; ++j) {
-                const int valid_cols = cmp_count - j * kTk;
-                for (int r = 0; r < kTm; ++r) {
-                    for (int c = 0; c < kTk; ++c) {
-                        cmp_masks[j][r * kTk + c] =
-                            c < valid_cols ? 0.0f : -1.0e30f;
-                    }
-                }
-            }
-
-            // Q / O 迭代器（本 q_token 的 [N1, D] 视图）
-            itQ gIterQ(batch_q +
-                       static_cast<std::size_t>(q_token) * N1 * D);
-            itO gIterO(batch_out +
-                       static_cast<std::size_t>(q_token) * N1 * D);
-            itKtOri itOriT(ori_t);
-            itVOri itVOriGm(batch_ori);
-            itKtCmp itCmpT(cmp_t);
-            itVCmp itVCmpRows(cmp_rows_buf);
+            // Q / O / KV 迭代器（本 q_token 的 [N1, D] 视图）
+            typename Tiles::itQ gIterQ(
+                batch_q + static_cast<std::size_t>(q_token) * N1 * D);
+            typename Tiles::itO gIterO(
+                batch_out + static_cast<std::size_t>(q_token) * N1 * D);
+            typename Tiles::itKtOri itOriT(batch_ori_t);
+            typename Tiles::itVOri itVOriGm(batch_ori);
+            typename Tiles::itKtCmp itCmpT(cmp_t);
+            typename Tiles::itVCmp itVCmpRows(cmp_rows_buf);
 
             // ================= m_block（head 块）循环 =================
             for (int m_block = 0; m_block < kMBlockCount; ++m_block) {
@@ -298,29 +541,11 @@ void quant_sparse_flash_mla_csa_1pe_pto(
 
                 // ---- Pass 1 / ORI 源 ----
                 for (int j = 0; j < ori_blk_count; ++j) {
+                    csa_mm1_score<Tiles>(gIterQ, m_block, itOriT,
+                                         ori_blk_begin + j, ori_score_scale,
+                                         ori_masks[j], gScore);
                     tileW tW;
-                    TEXPANDS(tW, 0.0f);
-#pragma clang loop unroll(full)
-                    for (int dd = 0; dd < Db; ++dd) {
-                        tileQ tQ;
-                        auto gQ = gIterQ(m_block, dd);
-                        TLOAD_CUBE(tQ, gQ);
-                        tileKRight tK;
-                        auto gK = itOriT(dd, ori_blk_begin + j);
-                        TLOAD_CUBE(tK, gK);
-                        tileScoreCube tScoreCube;
-                        TMATMUL(tScoreCube, tQ, tK);
-                        TSTORE_CUBE(gScore, tScoreCube);
-                        tileW tWPartial;
-                        TLOAD(tWPartial, gScore);
-                        TADD(tW, tW, tWPartial);
-                    }
-                    TMULS(tW, tW, ori_score_scale);
-                    tileMask tMask;
-                    gmMask gMaskBuf(ori_masks[j]);
-                    auto gMask = gMaskBuf;
-                    TLOAD(tMask, gMask);
-                    TADD(tW, tW, tMask);
+                    TLOAD(tW, gScore);
                     tileRowState tLocalMax;
                     tileRowState tNewMax;
                     TROWMAX(tLocalMax, tW);
@@ -340,29 +565,11 @@ void quant_sparse_flash_mla_csa_1pe_pto(
 
                 // ---- Pass 1 / CMP 源 ----
                 for (int j = 0; j < cmp_blk_count; ++j) {
+                    csa_mm1_score<Tiles>(gIterQ, m_block, itCmpT, j,
+                                         cmp_score_scale, cmp_masks[j],
+                                         gScore);
                     tileW tW;
-                    TEXPANDS(tW, 0.0f);
-#pragma clang loop unroll(full)
-                    for (int dd = 0; dd < Db; ++dd) {
-                        tileQ tQ;
-                        auto gQ = gIterQ(m_block, dd);
-                        TLOAD_CUBE(tQ, gQ);
-                        tileKRight tK;
-                        auto gK = itCmpT(dd, j);
-                        TLOAD_CUBE(tK, gK);
-                        tileScoreCube tScoreCube;
-                        TMATMUL(tScoreCube, tQ, tK);
-                        TSTORE_CUBE(gScore, tScoreCube);
-                        tileW tWPartial;
-                        TLOAD(tWPartial, gScore);
-                        TADD(tW, tW, tWPartial);
-                    }
-                    TMULS(tW, tW, cmp_score_scale);
-                    tileMask tMask;
-                    gmMask gMaskBuf(cmp_masks[j]);
-                    auto gMask = gMaskBuf;
-                    TLOAD(tMask, gMask);
-                    TADD(tW, tW, tMask);
+                    TLOAD(tW, gScore);
                     tileRowState tLocalMax;
                     tileRowState tNewMax;
                     TROWMAX(tLocalMax, tW);
@@ -385,35 +592,18 @@ void quant_sparse_flash_mla_csa_1pe_pto(
                 TRECIP(tInvSum, tSum);
 
                 // dd 外层（tO 寿命单 D 块，tadd 结构）
-                for (int dd = 0; dd < Db; ++dd) {
+                for (int dd = 0; dd < kDb; ++dd) {
                     tileO tO;
                     TEXPANDS(tO, 0.0f);
 
                     // ---- Pass 2 / ORI 源 ----
                     for (int j = 0; j < ori_blk_count; ++j) {
+                        csa_mm1_score<Tiles>(gIterQ, m_block, itOriT,
+                                             ori_blk_begin + j,
+                                             ori_score_scale, ori_masks[j],
+                                             gScore);
                         tileW tW;
-                        TEXPANDS(tW, 0.0f);
-#pragma clang loop unroll(full)
-                        for (int dd2 = 0; dd2 < Db; ++dd2) {
-                            tileQ tQ;
-                            auto gQ = gIterQ(m_block, dd2);
-                            TLOAD_CUBE(tQ, gQ);
-                            tileKRight tK;
-                            auto gK = itOriT(dd2, ori_blk_begin + j);
-                            TLOAD_CUBE(tK, gK);
-                            tileScoreCube tScoreCube;
-                            TMATMUL(tScoreCube, tQ, tK);
-                            TSTORE_CUBE(gScore, tScoreCube);
-                            tileW tWPartial;
-                            TLOAD(tWPartial, gScore);
-                            TADD(tW, tW, tWPartial);
-                        }
-                        TMULS(tW, tW, ori_score_scale);
-                        tileMask tMask;
-                        gmMask gMaskBuf(ori_masks[j]);
-                        auto gMask = gMaskBuf;
-                        TLOAD(tMask, gMask);
-                        TADD(tW, tW, tMask);
+                        TLOAD(tW, gScore);
                         TROWEXPANDSUB(tW, tW, tMax);
                         TEXP(tW, tW);
                         TROWEXPANDMUL(tW, tW, tInvSum);
@@ -425,47 +615,21 @@ void quant_sparse_flash_mla_csa_1pe_pto(
                         tileP tP;
                         TCVT(tP, tW);
                         TSTORE(gProb, tP);
-                        tileWLeft tWLeft;
-                        TLOAD_CUBE(tWLeft, gProb);
-                        tileV tV;
-                        auto gV = itVOriGm(ori_blk_begin + j, dd);
-                        TLOAD_CUBE(tV, gV);
-                        tilePVCube tPVCube;
-                        TMATMUL(tPVCube, tWLeft, tV);
-                        TSTORE_CUBE(gPV, tPVCube);
+                        csa_pass2_pv<Tiles>(gProb,
+                                            itVOriGm(ori_blk_begin + j, dd),
+                                            ori_kv_descale, gPV);
                         tileO tPV;
                         TLOAD(tPV, gPV);
-                        if constexpr (kUseHif8Probability) {
-                            TMULS(tPV, tPV, ori_kv_descale);
-                        }
                         TADD(tO, tO, tPV);
                     }
 
                     // ---- Pass 2 / CMP 源 ----
                     for (int j = 0; j < cmp_blk_count; ++j) {
+                        csa_mm1_score<Tiles>(gIterQ, m_block, itCmpT, j,
+                                             cmp_score_scale, cmp_masks[j],
+                                             gScore);
                         tileW tW;
-                        TEXPANDS(tW, 0.0f);
-#pragma clang loop unroll(full)
-                        for (int dd2 = 0; dd2 < Db; ++dd2) {
-                            tileQ tQ;
-                            auto gQ = gIterQ(m_block, dd2);
-                            TLOAD_CUBE(tQ, gQ);
-                            tileKRight tK;
-                            auto gK = itCmpT(dd2, j);
-                            TLOAD_CUBE(tK, gK);
-                            tileScoreCube tScoreCube;
-                            TMATMUL(tScoreCube, tQ, tK);
-                            TSTORE_CUBE(gScore, tScoreCube);
-                            tileW tWPartial;
-                            TLOAD(tWPartial, gScore);
-                            TADD(tW, tW, tWPartial);
-                        }
-                        TMULS(tW, tW, cmp_score_scale);
-                        tileMask tMask;
-                        gmMask gMaskBuf(cmp_masks[j]);
-                        auto gMask = gMaskBuf;
-                        TLOAD(tMask, gMask);
-                        TADD(tW, tW, tMask);
+                        TLOAD(tW, gScore);
                         TROWEXPANDSUB(tW, tW, tMax);
                         TEXP(tW, tW);
                         TROWEXPANDMUL(tW, tW, tInvSum);
@@ -475,19 +639,10 @@ void quant_sparse_flash_mla_csa_1pe_pto(
                         tileP tP;
                         TCVT(tP, tW);
                         TSTORE(gProb, tP);
-                        tileWLeft tWLeft;
-                        TLOAD_CUBE(tWLeft, gProb);
-                        tileV tV;
-                        auto gV = itVCmpRows(j, dd);
-                        TLOAD_CUBE(tV, gV);
-                        tilePVCube tPVCube;
-                        TMATMUL(tPVCube, tWLeft, tV);
-                        TSTORE_CUBE(gPV, tPVCube);
+                        csa_pass2_pv<Tiles>(gProb, itVCmpRows(j, dd),
+                                            cmp_kv_descale, gPV);
                         tileO tPV;
                         TLOAD(tPV, gPV);
-                        if constexpr (kUseHif8Probability) {
-                            TMULS(tPV, tPV, cmp_kv_descale);
-                        }
                         TADD(tO, tO, tPV);
                     }
 

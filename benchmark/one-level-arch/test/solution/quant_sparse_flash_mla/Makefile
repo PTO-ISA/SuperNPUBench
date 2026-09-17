@@ -201,10 +201,18 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
          QSMLA_CMP_KV_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_kv.o
          EXTRA_OBJ_FILES += $(QSMLA_CMP_KV_OBJ)
       endif
-      ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
-         QSMLA_CMP_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_indices.o
-         EXTRA_OBJ_FILES += $(QSMLA_CMP_INDEX_OBJ)
-      endif
+       ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
+          QSMLA_CMP_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_indices.o
+          EXTRA_OBJ_FILES += $(QSMLA_CMP_INDEX_OBJ)
+       endif
+       ifeq ($(IMPL), csa_tadd_1pe)
+          # qli-style pre-transposed ORI KV view [D, S2] per batch: the
+          # single-PE CSA BMM1 B-tile (CUBE_N8 ND source) consumes K^T
+          # directly, so the transpose moves out of the kernel into the
+          # input layout (same contract as the qli test harness).
+          QSMLA_ORI_KV_T_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_kv_t.o
+          EXTRA_OBJ_FILES += $(QSMLA_ORI_KV_T_OBJ)
+       endif
       ifneq ($(filter $(IMPL),ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe),)
          QSMLA_ORI_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_indices.o
          QSMLA_ORI_LENGTH_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_length.o
@@ -221,9 +229,13 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
 	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol q_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_Q_BYTES) --exact-bytes
 
-      $(QSMLA_ORI_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
+       $(QSMLA_ORI_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
 	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
+
+       $(QSMLA_ORI_KV_T_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv_t.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_t_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
 
       $(QSMLA_CMP_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
