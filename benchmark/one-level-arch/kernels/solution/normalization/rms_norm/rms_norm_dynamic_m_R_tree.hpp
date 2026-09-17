@@ -42,8 +42,7 @@ __attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out,
 }
 
 template <typename gm_t, typename tile_h, typename tile_f, typename parent_t>
-inline void reduce_pairs(gm_t &base, int64_t gR, int64_t powR, int64_t tile_elems, int64_t tile_m, int64_t tile_r, parent_t &partial_matrix) {
-    const int64_t pair_count = powR / 512;
+inline void reduce_pairs(gm_t &base, int64_t gR, int64_t pair_count, int64_t tile_elems, int64_t tile_m, int64_t tile_r, parent_t &partial_matrix) {
     for (int64_t pair = 0; pair < pair_count; ++pair) {
         gm_t g0(base.data() + pair * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
         gm_t g1(base.data() + (pair + pair_count) * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
@@ -62,7 +61,7 @@ template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
           typename tile_m_v, typename tile_m_matrix, typename tile_v,
           typename tile_s>
 inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
-                                 int64_t gR, int64_t powR, int64_t a_off,
+                                 int64_t gR, int64_t pair_count, int64_t a_off,
                                  int64_t tile_m, int64_t tile_r,
                                  float inv_r) {
     const int64_t offset = a_off * gR;
@@ -71,9 +70,9 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
 
     // First pair outer-R blocks (0,8), (1,9), ... (7,15). Assemble the
     // eight reduced [32,1] results by columns into one [32,8] Tile.
-    tile_m_matrix partial_matrix(tile_m, 8);
+    tile_m_matrix partial_matrix(tile_m, pair_count);
     reduce_pairs<gm_t, tile_h, tile_f, tile_m_matrix>(
-        input_row, gR, powR, tile_elems, tile_m, tile_r, partial_matrix);
+        input_row, gR, pair_count, tile_elems, tile_m, tile_r, partial_matrix);
 
     tile_m_v sum_rows(tile_m, 1);
     TROWSUM(sum_rows, partial_matrix);
@@ -118,6 +117,7 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingData *t
     constexpr int64_t tile_m = 32;
     const int64_t tile_r = tiling->tile_r > 0 ? tiling->tile_r : (gR + 511) / 512;
     const int64_t tile_elems = tile_m * tile_r;
+    const int64_t pair_count = powR / 512;
 
     constexpr int64_t kMaxReduceR = 8192;
     const uint32_t tid = get_thread_idx();
@@ -158,7 +158,7 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingData *t
         rms_detail_simt_dynamic_m_R_tree::rms_norm_tile<
             dtype, gm_t, tile_h, tile_f, tile_m_v, tile_m_matrix, tile_v,
             tile_s>(
-            x, gamma, out, gR, powR, ia, cur_tile_m, tile_r, inv_r);
+            x, gamma, out, gR, pair_count, ia, cur_tile_m, tile_r, inv_r);
     }
 }
 
