@@ -40,24 +40,20 @@ __attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out,
     TileVec recip, y, tmp;
     body(recip, y, tmp);
 }
-
-template <typename gm_t, typename tile_h, typename tile_f, typename fragment_t, typename parent_t>
+template <typename gm_t, typename tile_h, typename tile_f, typename parent_t>
 inline void reduce_pairs(gm_t &base, int64_t tile_elems, int64_t tile_m, int64_t tile_r, parent_t &partial_matrix) {
-    TileArray<fragment_t, 1, 8> fragments;
     for (int64_t pair = 0; pair < 8; ++pair) {
         gm_t g0(base.data() + pair * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
         gm_t g1(base.data() + (pair + 8) * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
-        tile_h h0, h1; tile_f x0, x1, sq0, sq1, sq_pair; fragment_t partial;
+        tile_h h0, h1; tile_f x0, x1, sq0, sq1, sq_pair;
         TLOAD(h0, g0); TCVT(x0, h0); TMUL(sq0, x0, x0);
         TLOAD(h1, g1); TCVT(x1, h1); TMUL(sq1, x1, x1);
         TADD(sq_pair, sq0, sq1);
-        TROWSUM(partial, sq_pair);
-        auto slot = fragments[0][pair];
-        TCVT(slot, partial);
+        if (pair == 0) { auto rows = pto::range::assemble<1>(partial_matrix, pair); TROWSUM(rows, sq_pair); }
+        else if (pair == 7) { auto rows = pto::range::assemble_last<1>(partial_matrix, pair); TROWSUM_ASS(rows, sq_pair); }
+        else { auto rows = pto::range::assemble_middle<1>(partial_matrix, pair); TROWSUM_ASS(rows, sq_pair); }
     }
-    partial_matrix = TASSEMBLY<parent_t>(std::move(fragments));
 }
-
 template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
           typename tile_m_v, typename tile_m_matrix, typename tile_v,
           typename tile_s>
@@ -72,7 +68,7 @@ inline void rms_norm_tile_static(dtype *x, const dtype *gamma, dtype *out,
     // First pair outer-R blocks (0,8), (1,9), ... (7,15). Assemble the
     // eight reduced [32,1] results by columns into one [32,8] Tile.
     tile_m_matrix partial_matrix;
-    reduce_pairs<gm_t, tile_h, tile_f, tile_m_v, tile_m_matrix>(
+    reduce_pairs<gm_t, tile_h, tile_f, tile_m_matrix>(
         input_row, tile_elems, tile_m, tile_r, partial_matrix);
 
     tile_m_v sum_rows;
