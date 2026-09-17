@@ -1,3 +1,9 @@
-make TESTCASE=quant_batch_matmul_test_mxfp4 M=8192 N=4096 K=1600 tM=32 tN=32 tK=64 B=1 NBLOCKS=32 PLAT=linx COMPILER_DIR=/home/j00833640/v300/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
-make TESTCASE=quant_batch_matmul_test_mxfp4_mt M=256 N=256 K=256 tM=64 tN=32 tK=64 B=1 NBLOCKS=32 PLAT=linx COMPILER_DIR=/home/j00833640/v300/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
-make TESTCASE=quant_batch_matmul_test_hif4  M=256 N=256 K=256 tM=64 tN=32 tK=64 B=1 NBLOCKS=32 PLAT=linx COMPILER_DIR=/home/j00833640/v300/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
+#!/bin/bash
+# quant_batch_matmul_test solution compile cases
+set -euo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+make TESTCASE=quant_batch_matmul_test_mxfp4 M=8192 N=4096 K=1600 tM=32 tN=32 tK=64 B=1 NBLOCKS=32 PLAT=linx COMPILER_DIR="$COMPILER_DIR"
+make TESTCASE=quant_batch_matmul_test_mxfp4_mt M=256 N=256 K=256 tM=64 tN=32 tK=64 B=1 NBLOCKS=32 PLAT=linx COMPILER_DIR="$COMPILER_DIR"
+make TESTCASE=quant_batch_matmul_test_hif4  M=256 N=256 K=256 tM=64 tN=32 tK=64 B=1 NBLOCKS=32 PLAT=linx COMPILER_DIR="$COMPILER_DIR"
