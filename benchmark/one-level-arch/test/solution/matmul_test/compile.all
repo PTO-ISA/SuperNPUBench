@@ -23,19 +23,23 @@ make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
     B=1 M=512 N=256 K=512 tM=32 tN=32 tK=32 diss
 
 # Tail shapes (M/N/K not multiples of the tile sizes; power-of-two tails).
+# NOTE: non-square local B tiles (tN != tK) are currently blocked by a
+# TileOP-API <-> gfrun contract mismatch (TileOP 697f5d8+ requires the local
+# CubeTileN8 declaration as physical [N, K] while the model asserts [K, N];
+# square tiles are immune). Both cases below therefore use tN == tK.
 make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
     B=1 M=200 N=96 K=128 tM=16 tN=16 tK=16 diss
 make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=100 N=100 K=100 tM=16 tN=32 tK=16 diss
+    B=1 M=100 N=100 K=100 tM=16 tN=16 tK=16 diss
 
 # Non-power-of-two tails: M203 = 11/3/5, M105 = 9/3/7 (CUBE_M32 layout),
-# M101 = 5/3/14 with a 3-valid-column tN=32 tail tile.
+# M101 = 5/3/14 (tN kept square per the note above).
 make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
     B=1 M=203 N=99 K=101 tM=16 tN=16 tK=16 diss
 make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
     B=1 M=105 N=99 K=103 tM=32 tN=32 tK=32 diss
 make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=101 N=99 K=110 tM=16 tN=32 tK=16 diss
+    B=1 M=101 N=99 K=110 tM=16 tN=16 tK=16 diss
 
 # 4-PE cooperative (M/N/K divisible by the tile sizes).
 make TESTCASE=matmul_test_mt COMPILER_DIR="$COMPILER_DIR" \

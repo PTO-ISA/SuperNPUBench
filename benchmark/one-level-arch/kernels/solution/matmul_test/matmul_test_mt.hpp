@@ -99,10 +99,17 @@ void matmul_test_mt(__half *c_ptr, __half *a_ptr,
           tileBShared tBShared;
           TLOAD<tileAMatrix, 1>(tAShared, gA);
           TLOAD<tileBMatrix, 1>(tBShared, gB);
+          // PTO #257（TileOP 697f5d8 起）：非转置 Shared B 的物理存储约定为
+          // [N, K]。B 数据在 GM 中为自然 [K, N] 行优先，故声明
+          // SharedMatrixRight<tK, tN> 后必须带 TransB，模型才按 [K, N]
+          // 解读（与 matmul_shared 的 transpose_b() 适配等价；此处经 3 参
+          // 重载的模板参数传递——当前 llvm 对 Options 对象重载 + 动态循环
+          // 的组合会在寄存器合并 pass 崩溃，见验证记录 09-17）。
+          constexpr FixpAttr kMatmulOptions = FixpAttr{}.transpose_b();
           if (k == 0) {
-            TMATMUL(tACC, tAShared, tBShared);
+            TMATMUL<kMatmulOptions>(tACC, tAShared, tBShared);
           } else {
-            TMATMUL_ACC(tACC, tACC, tAShared, tBShared);
+            TMATMUL_ACC<kMatmulOptions>(tACC, tACC, tAShared, tBShared);
           }
         }
 

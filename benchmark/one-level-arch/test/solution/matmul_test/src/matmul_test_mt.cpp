@@ -130,8 +130,12 @@ int main() {
 #else
     // 功能跑通验证：hard 随机 fp16。SPMD（无 group runtime）时 4 线程各自
     // 填充同一份静态数据，值相同幂等；group runtime 时 main 仅 PE0 执行。
+#if PERF_NO_FILL
+    // 性能仿真专用（本地临时构建）：跳过 LCG 填充（同单线程版，见 matmul_test.cpp）。
+#else
     fill_hard_half(src0, Batch * globM, globK, 0x123456789ABCDEF0ull);
     fill_hard_half(src1, Batch * globK, globN, 0x0FEDCBA987654321ull);
+#endif
 #endif
 
     MatmulTestContext context{dst, src0, src1, scratch};

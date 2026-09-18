@@ -56,8 +56,11 @@ __attribute__((noinline)) void matmul_test(__half *dst, __half *src0,
   using gm_shapeScratch = global_tensor<float, RowMajor<tM, tN>>;
 
   // CUBE CELL layout 的静态满宽瓦片（TMATMUL 契约）。
+  // 注：PTO #257（TileOP 697f5d8 起）B 操作数声明其物理存储形状 [N, K]
+  // （首参数 = N），与 GM 逻辑 [K, N] 行优先数据经 ND2N8 装载重排；方阵瓦片
+  // 两种写法不可区分，非方阵（tN != tK）必须 N 在前。
   using tile_shapeA = MatmulTestCubeA<tM, tN, tK>;
-  using tile_shapeB = CubeTileN8<__half, tK, tN>;
+  using tile_shapeB = CubeTileN8<__half, tN, tK>;
   using tile_shapeACC = MatmulTestCubeAcc<tM, tN, tK>;
   // GM 往返 + TCVT 的 Vec 中转 tile。
   using tile_shapeAccVec = Tile<Location::Vec, float, tM, tN, BLayout::RowMajor>;

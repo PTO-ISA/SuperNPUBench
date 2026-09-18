@@ -123,8 +123,14 @@ int main() {
   // 相比旧的 %17/%13 对齐 pattern（所有中间值在 fp32/fp16 均可精确表示，
   // 完全不触发舍入），hard 随机值真正检验 fp32 累加舍入与 fp16 舍入路径。
   // 填充顺序：A 按逻辑 [gM,gK] 行优先、B 按逻辑 [gK,gN] 行优先；填充区恒 0。
+#if PERF_NO_FILL
+  // 性能仿真专用（本地临时构建）：跳过 LCG 填充，输入保持 memset 零。
+  // gfsim 计时与数据无关（GEMM 无数据依赖分支），填充仅消耗巨量 blocks
+  // （每元素 1 个标量存储 block，大 shape 会超 gfsim 规模阈值，见 ISSUE-009）。
+#else
   fill_hard_half(src0, gKpad, gMpad, globM, globK, 0x123456789ABCDEF0ull);
   fill_hard_half(src1, gNpad, gKpad, globK, globN, 0x0FEDCBA987654321ull);
+#endif
 #endif
 
   // 运行期 shape（动态）：内核模板只带 tile size。
