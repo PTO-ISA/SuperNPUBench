@@ -165,7 +165,8 @@ struct Mc2MoeContext {   // 源 1124 行 (2026-08 同步: kfcContextAddr + hccld
 // 三-补、exp 近似 (无 libm 依赖; SwiGLU silu 的 exp 组件, 源真机用 Ascend Exp 指令)
 //   exp(z), z∈[-5,5]: z = k*ln2 + r (|r|<=ln2/2), exp = 2^k * exp(r)
 // ============================================================================
-MM_INLINE inline float exp_approx(float z)
+// [修复] 删除 "MM_INLINE" 后多余的 inline 说明符, 消除 -Wduplicate-decl-specifier 告警。
+MM_INLINE float exp_approx(float z)
 {
     const float kLn2 = 0.69314718055994530941723212145818f;
     const float kInvLn2 = 1.4426950408889634073599246810019f;
@@ -185,7 +186,8 @@ MM_INLINE inline float exp_approx(float z)
 // 四、FP8 A8W8 量化解码 (E4M3FN + E8M0 scale) — 计算语义完整保留
 // ============================================================================
 // E4M3FN: bit7=符号, bit[6:3]=指数(偏置7), bit[2:0]=尾数; e==0 为次正规
-MM_INLINE inline float fp8_e4m3_to_f32(uint8_t raw)
+// [修复] 删除 "MM_INLINE" 后多余的 inline 说明符, 消除 -Wduplicate-decl-specifier 告警。
+MM_INLINE float fp8_e4m3_to_f32(uint8_t raw)
 {
     const uint32_t s = (raw >> 7U) & 1U;
     const uint32_t e = (raw >> 3U) & 0xFU;
@@ -208,7 +210,8 @@ MM_INLINE inline float fp8_e4m3_to_f32(uint8_t raw)
 }
 
 // E8M0: 纯指数 (偏置 127), scale = 2^(signed)
-MM_INLINE inline float fp8_e8m0_scale(uint8_t raw)
+// [修复] 删除 "MM_INLINE" 后多余的 inline 说明符, 消除 -Wduplicate-decl-specifier 告警。
+MM_INLINE float fp8_e8m0_scale(uint8_t raw)
 {
     const int32_t e = static_cast<int32_t>(static_cast<int8_t>(raw));
     float s = 1.0f;

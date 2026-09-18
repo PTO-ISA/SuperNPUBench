@@ -87,6 +87,9 @@ static void refSortByLocalExpId(const uint32_t *topkIndex,
 // ============================================================================
 int main()
 {
+    if (get_thread_idx() != 0) {
+        return 0;
+    }
 #ifndef __linx
     printf("=== Group Token Vec Test (Tile-based Vector) ===\n");
     printf("BS=%u  TopK=%u  ExpertPerRank=%u  ExpertNum=%u\n",
