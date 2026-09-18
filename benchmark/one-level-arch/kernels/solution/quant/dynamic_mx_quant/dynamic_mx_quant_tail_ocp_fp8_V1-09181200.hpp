@@ -119,9 +119,10 @@ void dynamic_mx_quant_tail_ocp_fp8(InT *x, __fp8_e4m3 *y, uint8_t *scale) {
     constexpr int kPeNum    = 4;  // SoftCore.h kCorePeCount，multiThreadNum 仅 1|4 合法
     const uint32_t tid = get_thread_idx();          // 0..3
 
-    // 【M32】TSTORE_CUBE 要求 GM 与 CUBE tile dtype 一致 → 输出 global 用 __fp8_e4m3（非 uint8 视图）。
+    uint8_t *y_u8 = reinterpret_cast<uint8_t *>(y);
+
     using gm_x = global_tensor<InT,        RowMajor<M, N>>;
-    using gm_y = global_tensor<__fp8_e4m3, RowMajor<M, N>>;
+    using gm_y = global_tensor<uint8_t,    RowMajor<M, N>>;
     using gm_s = global_tensor<__fp8_e8m0, RowMajor<M, scaleCols>>;
 
     // 单个 tile-行块的完整计算 (scale pass + data pass)。ValidRows = 该 tile 活跃行数
@@ -130,74 +131,119 @@ void dynamic_mx_quant_tail_ocp_fp8(InT *x, __fp8_e4m3 *y, uint8_t *scale) {
     //   ValidRow=ValidRows 只触碰活跃行。base 指针按 row0 偏移，段起点可非 TileM 对齐。
     // TileMv = 该 PE 的物理 tile 行高 (per-PE 编译期常量, 由 tilem_max 推得, 2 的幂)。
     auto process_tile = [&]<int TileMv, int ValidRows>(int row0) {
-        // 【M32 版】编译期 ValidRows（满足 TREDUCEPREFIXVIEW asm 立即数约束）。
-        //   #311 归约输出宽 carrier（physical Col=BlockSize、valid Col=1）→ TREDUCEPREFIXVIEW 取首个
-        //   128B CELL 窄视图 → TADD(zero+view) materialize 成普通窄 tile → 标量链全在窄 tile 上。
-        //   守卫（TCMPS/TSEL）M32 不支持，本版跳过（TODO）。参考 kernels/basic_op/fa/fa_lowp.hpp。
-        using t_blk = VecTileM32<InT,        TileMv, BlockSize, ValidRows, BlockSize>; // 输入/abs（宽）
-        using t_rw  = VecTileM32<InT,        TileMv, BlockSize, ValidRows, 1>;         // reduce 宽 carrier（#311）
-        using t_rin = VecTileM32<InT,        TileMv, 1,         ValidRows, 1>;         // 窄 InT（view SubTile + materialize）
-        using t_row = VecTileM32<__bf16,     TileMv, 1,         ValidRows, 1>;         // 窄 bf16（shared/recip）
-        using t_frw = VecTileM32<float,      TileMv, 1,         ValidRows, 1>;         // 窄 fp32（floor/recip_f）
-        using t_e8b = VecTileM32<__fp8_e8m0, TileMv, 1,         ValidRows, 1>;         // scale（窄）
-        using t_f   = VecTileM32<float,      TileMv, BlockSize, ValidRows, BlockSize>; // data-pass fp32
-        using t_o   = VecTileM32<__fp8_e4m3, TileMv, BlockSize, ValidRows, BlockSize>; // 输出
+        // 列向量中间 tile (reduce 输出及其下游) 声明 physical Cols=1 —— 匹配 model
+        //   d8903938 rowReduce 无条件 col=1 (Block.cpp:2069)，令 reduce→TCVT 两侧
+        //   physical Cols 全等，绕过 ValidateOperandContract「TCVT matching logical
+        //   shapes」契约 (RECORD 问题22 / ISSUE_reduce_output_stride_tail.md)。0.58.3
+        //   工具链头已删 32B 列对齐 static_assert，故 Cols=1 可直接构造。
+        //   全宽 tile (t_h/t_f/t_o) 仍 physical Cols=BlockSize。
+        using t_h   = Tile<Location::Vec, InT,        TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
+        using t_hb  = Tile<Location::Vec, InT,        TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
+        using t_bfb = Tile<Location::Vec, __bf16,     TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
+        using t_e8b = Tile<Location::Vec, __fp8_e8m0, TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
+        using t_fb  = Tile<Location::Vec, float,      TileMv, 1,         BLayout::RowMajor, ValidRows, 1>;
+        using t_f   = Tile<Location::Vec, float,      TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
+        using t_o   = Tile<Location::Vec, __fp8_e4m3, TileMv, BlockSize, BLayout::RowMajor, ValidRows, BlockSize>;
+
+        // #585 列分区归约（half 域）：源 [TileMv,BlockSize] 超 2048B → 沿列切 nPart 个 [TileMv,RSC]
+        //   子块各 <=2048B，逐块 TROWMAX→[TileMv,1] partial，TMAX 合并；输出满行、不触 #42。
+        constexpr int RSC   = tail_ocp_fp8_detail::reduce_slice_cols(TileMv, sizeof(InT), BlockSize);
+        constexpr int nPart = BlockSize / RSC;
+        using t_hc  = Tile<Location::Vec, InT, TileMv, RSC, BLayout::RowMajor, ValidRows, RSC>;
+        auto col_part_rowmax = [&](int colBase, t_hb &max_in) {
+            global_iterator<gm_x, t_hc> it0(x + row0 * N + colBase);
+            auto g0 = it0(0, 0);
+            t_hc xs0; TLOAD(xs0, g0);
+            t_hc as0; TABS(as0, xs0);
+            TROWMAX(max_in, as0);
+            for (int p = 1; p < nPart; ++p) {
+                global_iterator<gm_x, t_hc> itp(x + row0 * N + colBase + p * RSC);
+                auto gp = itp(0, 0);
+                t_hc xsp; TLOAD(xsp, gp);
+                t_hc asp; TABS(asp, xsp);
+                t_hb pm; TROWMAX(pm, asp);
+                TMAX(max_in, max_in, pm);
+            }
+        };
 
         for (int kb = 0; kb < numKb; ++kb) {
-            // === scale pass：M32 全宽 load 一次（[TileMv,BlockSize]=2048B 免 #585 切片），行归约 ===
-            global_iterator<gm_x, t_blk> x_iter(x + row0 * N + kb * BlockSize);
+            // === scale pass：value-domain reduce（InT 分派），floor 指数（与 fp4 统一）===
+            // ⚠ round-mode 缺口：half/fp32 先在 fp32 域 mask floor 再窄化（避 narrowing 进位越
+            //   2^k）；bf16 原生无 narrowing，直接取指数天然与截断一致。
+            global_iterator<gm_x, t_h> x_iter(x + row0 * N + kb * BlockSize);
             auto gx = x_iter(0, 0);
-            t_blk xin; TLOAD(xin, gx);                           // 全宽 load 供 data pass 复用
-            t_blk absx; TABS(absx, xin);                         // |x|
+            t_h xin; TLOAD(xin, gx);                             // 全宽 load 供 data pass 复用
 
-            // #311 归约 + TREDUCEPREFIXVIEW 消费（照 fa_lowp）：宽 carrier 归约 → 零拷贝窄视图 →
-            //   TADD(zero+view) materialize 成普通窄 InT tile。
-            t_rw  max_w; TROWMAX(max_w, absx);                   // 宽 carrier 归约（#311 ✓）
-            auto  max_view = TREDUCEPREFIXVIEW<t_rin>(max_w);    // 零拷贝窄视图（首个 128B CELL）
-            t_rin zero_in;  TEXPANDS(zero_in, static_cast<InT>(0.0f));
-            t_rin max_in;   TADD(max_in, zero_in, max_view);     // materialize → 普通窄 InT（view 不能被 reinterpret，必需）
-
-            // floor 指数 → shared（bf16 原生取指数；half/fp32 走 fp32 域 floor 再窄化）。
-            t_row shared_bf;
-            if constexpr (std::is_same_v<InT, __bf16>) {
-                auto max_u16 = reinterpret_tile<uint16_t>(max_in);
-                TANDS(max_u16, max_u16, BF16_EXP_MASK);          // bf16 floor
-                TMULS(shared_bf, max_in, __builtin_bit_cast(__bf16, RECIP_EMAX)); // 2^(E_max-8)
-            } else {
-                t_frw max_f; TCVT(max_f, max_in);                // half/fp32 -> 窄 fp32
+            t_bfb max_bf;
+            if constexpr (std::is_same_v<InT, __half>) {
+                t_hb max_h; col_part_rowmax(kb * BlockSize, max_h);  // half 域列分区归约（#585）
+                t_fb max_f; TCVT(max_f, max_h);                      // half -> fp32（精确加宽）
                 auto max_u32 = reinterpret_tile<uint32_t>(max_f);
-                TANDS(max_u32, max_u32, FP32_EXP_MASK);          // fp32 域 floor
-                t_row max_bf; TCVT(max_bf, max_f);               // 窄 fp32 -> 窄 bf16（尾数=0）
-                TMULS(shared_bf, max_bf, __builtin_bit_cast(__bf16, RECIP_EMAX));
+                TANDS(max_u32, max_u32, FP32_EXP_MASK);              // fp32 域 floor（无进位）
+                TCVT(max_bf, max_f);                                 // fp32 -> bf16（尾数=0，精确）
+            } else if constexpr (std::is_same_v<InT, float>) {
+                t_hb max_f; col_part_rowmax(kb * BlockSize, max_f);  // fp32 域列分区归约（t_hb=InT=fp32）
+                auto max_u32 = reinterpret_tile<uint32_t>(max_f);
+                TANDS(max_u32, max_u32, FP32_EXP_MASK);              // fp32 域 floor（无进位）
+                TCVT(max_bf, max_f);                                 // fp32 -> bf16（尾数=0，精确）
+            } else {  // bf16：原生取指数（无转换 -> 无进位）
+                col_part_rowmax(kb * BlockSize, max_bf);             // bf16 域列分区归约 -> max_bf
+                auto max_u16 = reinterpret_tile<uint16_t>(max_bf);
+                TANDS(max_u16, max_u16, BF16_EXP_MASK);
             }
-            t_e8b scale_e8m0; TCVT(scale_e8m0, shared_bf);       // bf16 -> e8m0
+
+            // shared = max * 2^-emax = 2^(E_max - emax)
+            t_bfb shared_bf;
+            TMULS(shared_bf, max_bf, __builtin_bit_cast(__bf16, RECIP_EMAX));
+            t_e8b scale_e8m0; TCVT(scale_e8m0, shared_bf);       // bf16 -> e8m0 直转（须在 recip 前）
             global_iterator<gm_s, t_e8b> s_iter(
                 reinterpret_cast<__fp8_e8m0 *>(scale) + row0 * scaleCols + kb);
             auto gs = s_iter(0, 0); TSTORE(gs, scale_e8m0);
 
-            // === recip finalize：主路径 recip = 0x7F00 - shared（TEXPANDS+TSUB）===
-            // ⚠ 三守卫（TCMPS/TSEL）M32 不支持 → 本版跳过（TODO）。
+            // === recip finalize：主路径 recip = 0x7F00 - shared + inf/zero/special 三守卫（TCMPS+TSEL，与 fp4 统一）===
+            //   主路径二元 TSUB(0x7F00 - shared)，再对三类特殊 max/shared 用 TSEL 写回哨兵：
+            //     inf/nan (max_exp==BF16_EXP_MASK 0x7F80) -> BF16_NAN_PATTERN 0x7F81；
+            //     全零块 (max_exp==0)                    -> 0；
+            //     special (shared==BF16_EXP_BIAS 0x7F00) -> BF16_SPECIAL_EXP 0x0040（主路径此点算出 0，须修正）。
+            //   eq_inf/eq_zero 读 floor 后 max_bf 的位型（TMULS 只写 shared_bf，未改 max_bf）；TCMPS 默认
+            //   EQ、允许 out≠in；TSUB/TSEL 三参同 shape（TSEL 三参就地）。守卫是 fp4/OCP 原有语义（AscendC
+            //   ComputeScaleOcp），fp8 之前缺守卫是缺陷。TCMPS 带 reinterpret carrier 需 model 侧
+            //   compare-select carrier 放宽（本地 workaround，见 SuperScalarModel issue #569）。
+            auto max_u16    = reinterpret_tile<uint16_t>(max_bf);
             auto shared_u16 = reinterpret_tile<uint16_t>(shared_bf);
-            t_row recip_bf, k_bf;
-            auto recip_u16 = reinterpret_tile<uint16_t>(recip_bf);
-            auto k_u16     = reinterpret_tile<uint16_t>(k_bf);
-            TEXPANDS(k_u16, BF16_EXP_BIAS);                      // 0x7F00
+            t_bfb recip_bf, eqinf_bf, eqzero_bf, eqspc_bf, k_bf;
+            auto recip_u16  = reinterpret_tile<uint16_t>(recip_bf);
+            auto eq_inf     = reinterpret_tile<uint16_t>(eqinf_bf);
+            auto eq_zero    = reinterpret_tile<uint16_t>(eqzero_bf);
+            auto eq_special = reinterpret_tile<uint16_t>(eqspc_bf);
+            auto k_u16      = reinterpret_tile<uint16_t>(k_bf);
+            TCMPS(eq_inf,     max_u16,    BF16_EXP_MASK);        // NOT finite (max_exp==0x7F80)
+            TCMPS(eq_zero,    max_u16,    static_cast<uint16_t>(0));  // all-zero block
+            TCMPS(eq_special, shared_u16, BF16_EXP_BIAS);        // shared==0x7F00
+            TEXPANDS(k_u16, BF16_EXP_BIAS);
             TSUB(recip_u16, k_u16, shared_u16);                  // 0x7F00 - shared = 2^(8-E_max)
-            t_frw recip_f; TCVT(recip_f, recip_bf);              // 窄 bf16 -> 窄 fp32
+            TEXPANDS(k_u16, BF16_NAN_PATTERN);
+            TSEL(recip_u16, eq_inf, k_u16);                      // inf/nan -> 0x7F81
+            TEXPANDS(k_u16, static_cast<uint16_t>(0));
+            TSEL(recip_u16, eq_zero, k_u16);                     // all-zero -> 0
+            TEXPANDS(k_u16, BF16_SPECIAL_EXP);
+            TSEL(recip_u16, eq_special, k_u16);                  // special -> 0x0040
+            t_fb recip_f; TCVT(recip_f, recip_bf);               // bf16 -> fp32
 
-            // === data pass（InT 分派）===
+            // === data pass（InT 分派，与 fp4 统一）===
             t_o oq;
             if constexpr (std::is_same_v<InT, float>) {
-                TROWEXPANDMUL(xin, xin, recip_f);                // fp32 域直乘
+                TROWEXPANDMUL(xin, xin, recip_f);                // fp32 域直乘（无预转）
                 TCVT(oq, xin);                                   // fp32 -> e4m3
             } else {
                 t_f xf; TCVT(xf, xin);                           // bf16/half -> fp32
                 TROWEXPANDMUL(xf, xf, recip_f);                  // 逐行标量广播乘
                 TCVT(oq, xf);                                    // fp32 -> e4m3
             }
-            global_iterator<gm_y, t_o> y_iter(y + row0 * N + kb * BlockSize);
+            global_iterator<gm_y, t_o> y_iter(y_u8 + row0 * N + kb * BlockSize);
             auto gy = y_iter(0, 0); TSTORE(gy, oq);
         }
+        // 奇尾 scale 列补 0x00 E8M0（golden _pad_to_even 用 2^-127 == E8M0 0x00）——与 fp4 统一。
         if constexpr (oddTail) {
             t_e8b zpad;
             TEXPANDS(zpad, __builtin_bit_cast(__fp8_e8m0, static_cast<uint8_t>(0)));
@@ -223,7 +269,7 @@ void dynamic_mx_quant_tail_ocp_fp8(InT *x, __fp8_e4m3 *y, uint8_t *scale) {
         // L2: TileM = blocksize 决定的固定上限 (与 SubM 无关)；SubM 只决定循环次数。
         //     SubM=0 (M<kPeNum 时的空 PE) -> 不发 tile。
         if constexpr (SubM > 0) {
-            constexpr int TileM    = 32;  // 【M32】CUBE_M32 cell 行高固定 32
+            constexpr int TileM    = tail_ocp_fp8_detail::tilem_max(BlockSize);  // BS=32 -> 64
             constexpr int seg_full = SubM / TileM;   // SubM>TileM 时循环多个 full-tile
             constexpr int seg_tail = SubM % TileM;   // 余行 (< TileM), boxed 尾块
             for (int lm = 0; lm < seg_full; ++lm) {

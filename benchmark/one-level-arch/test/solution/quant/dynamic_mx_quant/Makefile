@@ -27,6 +27,11 @@ ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL)
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small.elf
 endif
 
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_STATIC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_static.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_static.elf
+endif
+
 ifeq ($(TYPE), TAIL_OCP_FP4)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp4.cpp
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp4.elf
