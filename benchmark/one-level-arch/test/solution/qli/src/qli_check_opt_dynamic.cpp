@@ -3,11 +3,11 @@
 #include "solution/qli/qli_pto_opt_dynamic.hpp"
 
 // 动态 shape + 多 PE 版 driver（地址由 fix_cpp_addrs.py 迭代更新）
-#define SRCQ_ADDR  0x0000000000014e20ULL
-#define SRCK_ADDR  0x000000000001ce20ULL
-#define SRCW_ADDR  0x0000000000020e20ULL
-#define SRCSQ_ADDR  0x0000000000021220ULL
-#define SRCSK_ADDR  0x0000000000021620ULL
+#define SRCQ_ADDR  0x0000000000014708ULL
+#define SRCK_ADDR  0x000000000001c708ULL
+#define SRCW_ADDR  0x000000000005d708ULL
+#define SRCSQ_ADDR  0x000000000005db08ULL
+#define SRCSK_ADDR  0x000000000005df08ULL
 
 #define OUT_SCORES  0x4000802000ULL
 // scores 行步长为 paddedSkv = ceil(Skv/2048)*2048（TopK 整块读取契约）

@@ -207,46 +207,15 @@ inline void qli_pto_dynamic(float* scores_ptr, dtype* q_ptr, dtype* k_ptr,
     }
 }
 
-// ========== THISTOGRAMX（同标准 THISTOGRAM，放宽 Idx shape 约束）==========
-// v0.58.4 编码契约：模型 canonical 解码器从 B.DATR 的 PadValue 字段
-// (bits[28:27]) 读 selectedByte；PadValue 助记符 Zero=0/Max=1/Min=2/Null=3
-// 承载 ByteId 0..3（bits[19:18] 的 ByteId 槽被解码器忽略）。
-template <typename tile_o, typename tile_s, typename tile_idx>
-void THISTOGRAMX(tile_o& dst, tile_s& src, tile_idx& idx, int ByteId) {
-#define THISTOGRAMX_ASM(BYTE_NAME, PAD_NAME)                           \
-  asm volatile(                                                        \
-    "BSTART.TEPL 104, %D1\n"                                     \
-    "B.DATR %D2, " BYTE_NAME ", " PAD_NAME "\n"                        \
-    "B.DIM %3, 0, ->LB0\n"                                             \
-    "B.DIM %4, 0, ->LB1\n"                                             \
-    "B.DIM zero, %c5, ->LB2\n"                                         \
-    "B.IOT %6, %7, mask=1111, last, ->%0<%Z8>\n"                       \
-    ""                                                                  \
-    : "=Tr"(dst.data())                                                \
-    : "i"(type_traits<typename tile_s::DType>::TypeCode),              \
-      "i"(type_traits<typename tile_o::DType>::TypeCode),              \
-      "r"(dst.GetValidCol()),                                          \
-      "r"(src.GetValidRow()),                                          \
-      "i"(tile_o::Cols),                                               \
-      "Tr"(src.data()),                                                \
-      "Tr"(idx.data()),                                                \
-      "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode))
-  switch (ByteId) {
-    case 0: THISTOGRAMX_ASM("Byte0", "Zero"); break;
-    case 1: THISTOGRAMX_ASM("Byte1", "Max");  break;
-    case 2: THISTOGRAMX_ASM("Byte2", "Min");  break;
-    default: THISTOGRAMX_ASM("Byte3", "Null"); break;
-  }
-#undef THISTOGRAMX_ASM
-}
-
-// ========== Step 7: 动态 shape + 多 PE TopK ==========
 namespace qli_radix_dyn {
 
 using RU = uint32_t;
+
+// tile→标量读回（noinline 强制 block 边界，见 simple 版注释）
+__attribute__((noinline)) RU TileScalarRb(RU* slot) { return *slot; }
+
 using TKey = Tile<Location::Vec, RU, 1, MaxTileCol, BLayout::RowMajor, 1, MaxTileCol>;
 using gkRow = global_tensor<RU, RowMajor<1, MaxSkv>>;
-using gk1 = global_tensor<RU, RowMajor<1, 1>>;
 
 inline void MakeKey(RU* dst, const RU* src) {
     gkRow gs(const_cast<RU*>(src)); TKey bits; TLOAD(bits, gs);
@@ -260,68 +229,61 @@ inline void MakeKey(RU* dst, const RU* src) {
     gkRow gd(dst); TSTORE(gd, key);
 }
 
-inline void ChunkHist(RU* key_ptr, int byteId, RU* prefix, RU* hist) {
-    using tidx = Tile<Location::Vec, RU, 4, 8, BLayout::RowMajor>;
-    using gidx = global_tensor<RU, RowMajor<4, 8>>;
-    using th = Tile<Location::Vec, RU, 1, 256, BLayout::RowMajor>;
-    using gh = global_tensor<RU, RowMajor<1, 256>>;
-    gkRow g(key_ptr); TKey key; TLOAD(key, g);
-    tidx idxTile; { gidx gi(prefix); TLOAD(idxTile, gi); }
-    th hist_tile; THISTOGRAMX(hist_tile, key, idxTile, byteId);
-    gh gout(hist); TSTORE(gout, hist_tile);
-}
-
-inline void PopN(TKey& mv, RU chunkBase, int32_t* out, int n) {
+__attribute__((always_inline)) inline void PopN(RU* mv_gm, RU chunkBase, int32_t* out, int n) {
     // v0.58.4 行归约契约：TROWARGMAX 目的须物理单列 [N,1]（Col==1）；
     // 物理行数 32 维持 128B tile 尺寸下限，valid 仍为 [1,1]
     using t1  = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
     using t1i = Tile<Location::Vec, int32_t, 32, 1, BLayout::RowMajor, 1, 1>;
-    TKey idxTile; TCI(idxTile, chunkBase);
+    using gmv_t = global_tensor<RU, RowMajor<1, MaxTileCol>>;
+    gmv_t gmv(mv_gm);
+    // 标量消零（见 simple 版注释：绕过 llvm 73cbdf34 循环内 tile 链隔轮陈旧回归）
+    TKey cur; t1 best;
     for (int k = 0; k < n; k++) {
-        t1 best; TROWARGMAX(best, mv);
+        TLOAD(cur, gmv);
+        TROWARGMAX(best, cur);
         t1 bestg; TADDS(bestg, best, chunkBase);
         t1i besti; TCVT(besti, bestg);
         { global_tensor<int32_t, RowMajor<1, 1>> gout(out + k); TSTORE(gout, besti); }
-        RU bv = 0; gk1 gbv(&bv); TSTORE(gbv, bestg);
-        TKey bbc; TEXPANDS(bbc, bv);
-        // v0.58.4 predicate 契约：TCMP/TCMPS 结果为 packed predicate，
-        // 不可参与算术；消零改用 TSEL 条件覆盖。
-        // 用 TSUB 求差 + TCMPS==0 判等（tile-scalar，与 simple 版一致的
-        // 已验证模式；避免 tile-tile TCMP 的额外 8KB 广播 tile）
-        TKey diff; TSUB(diff, idxTile, bbc);
-        TKey isp; TCMPS<CmpMode::EQ>(isp, diff, 0u);
-        TKey zero; TEXPANDS(zero, 0u);
-        TSEL(mv, isp, zero);
+        RU bv = TileScalarRb(reinterpret_cast<RU*>(out + k));
+        if (bv >= chunkBase && bv - chunkBase < (RU)MaxTileCol)
+            *reinterpret_cast<volatile RU*>(mv_gm + (bv - chunkBase)) = 0;
     }
 }
 
-inline void Extract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase, int& outPos, int& needEq) {
-    // v0.58.4 行归约契约：TROWSUM 目的须物理单列 [N,1]
-    using t1 = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
+inline void Extract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase, int& outPos, int& needEq, int nGt, RU* mv_gm) {
+    // GT 弹出不依赖过滤（GT 集合 = top-nGt key，见 simple 版注释）；
+    // 被调函数内 TSEL predicate 陈旧绑定 + 计数读回需 block 边界保护，
+    // 计数由调用方内联宏计算后以 nGt 实参传入
     gkRow g(key_ptr);
-    // GT: key > kth（TCMPS tile-scalar，与 simple 版一致；避免 tile-tile
-    // TCMP + kth 广播 tile 的额外 8KB 活 tile 触发后端 TMOV 尺寸错配）
     { TKey key; TLOAD(key, g);
-      TKey isgt; TCMPS<CmpMode::GT>(isgt, key, kthVal);
-      TKey one; TEXPANDS(one, 1u);
-      TKey sel1; TEXPANDS(sel1, 0u); TSEL(sel1, isgt, one);
-      t1 s; TROWSUM(s, sel1); RU cnt = 0; gk1 gcnt(&cnt); TSTORE(gcnt, s);
-      TKey cand; TEXPANDS(cand, 0u); TSEL(cand, isgt, key);
-      PopN(cand, chunkBase, outBase + outPos, (int)cnt);
-      outPos += (int)cnt; }
+      global_tensor<RU, RowMajor<1, MaxTileCol>> gw(mv_gm); TSTORE(gw, key);
+      PopN(mv_gm, chunkBase, outBase + outPos, nGt);
+      outPos += nGt; }
     if (needEq > 0) {
-      TKey key; TLOAD(key, g);
-      TKey iseq; TCMPS<CmpMode::EQ>(iseq, key, kthVal);
-      TKey one; TEXPANDS(one, 1u);
-      TKey sel1; TEXPANDS(sel1, 0u); TSEL(sel1, iseq, one);
-      t1 s; TROWSUM(s, sel1); RU cnt = 0; gk1 gcnt(&cnt); TSTORE(gcnt, s);
-      int take = (int)cnt; if (take > needEq) take = needEq;
-      TKey cand; TEXPANDS(cand, 0u); TSEL(cand, iseq, key);
-      PopN(cand, chunkBase, outBase + outPos, take);
-      outPos += take; needEq -= take; }
+      // 纯标量扫描（见 simple 版注释：TSTORE→TLOAD 往返错位规避）
+      const RU* kgm = reinterpret_cast<const RU*>(key_ptr);
+      for (RU i = 0; i < (RU)MaxTileCol && needEq > 0; ++i) {
+        if (kgm[i] == kthVal) {
+          outBase[outPos++] = (int32_t)(i + chunkBase);
+          --needEq;
+        }
+      } }
 }
 
 }  // namespace qli_radix_dyn
+
+// 位下降计数探测(活跃指令, 见 simple 版说明)
+#define QLI_DYN_CNT_KEY(_CK, _CKV, _KP, _TH, _CM, _TOT) do { \
+    global_tensor<RU, RowMajor<1, _CKV>> _gc((_KP)); \
+    Tile<Location::Vec, RU, 1, _CK, BLayout::RowMajor, 1, _CKV> _kc; TLOAD(_kc, _gc); \
+    Tile<Location::Vec, RU, 1, _CK, BLayout::RowMajor, 1, _CKV> _ic; TCMPS<CmpMode::_CM>(_ic, _kc, (_TH)); \
+    Tile<Location::Vec, RU, 1, _CK, BLayout::RowMajor, 1, _CKV> _one; TEXPANDS(_one, 1u); \
+    Tile<Location::Vec, RU, 1, _CK, BLayout::RowMajor, 1, _CKV> _sel; TEXPANDS(_sel, 0u); TSEL(_sel, _ic, _one); \
+    Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1> _sc; \
+    TROWSUM(_sc, _sel); \
+    global_tensor<RU, RowMajor<1, 1>> _gcnt(reinterpret_cast<RU*>(cnt_slot)); TSTORE(_gcnt, _sc); \
+    (_TOT) += TileScalarRb(reinterpret_cast<RU*>(cnt_slot)); \
+} while (0)
 
 inline void qli_topk_radix_dynamic(float* scores_gm, int32_t* indices_gm,
                                    int Sq, int Skv, int topK, int numPEs,
@@ -332,11 +294,13 @@ inline void qli_topk_radix_dynamic(float* scores_gm, int32_t* indices_gm,
     int paddedSkv = NumChunks * MaxTileCol;
     const uint32_t tid = get_thread_idx();
 
-    // 每 PE 独立的 hist/prefix scratch（256 + 32 uint32 = 1152B）
-    // 多 PE 并行时共享同一 buffer 会互相覆盖（直方图数据竞争）
+    // 每 PE 独立的标量回读槽（bv/cnt，原 hist 区 288 words）
     uint32_t* hist_scratch = key_scratch + (uint64_t)Sq * paddedSkv
                            + (uint64_t)tid * 288;
-    uint32_t* prefix_buf = hist_scratch + 256;
+    // per-PE GM pop 工作区（每 PE MaxTileCol words = 8KB，绕过编译器循环携带 tile 回归；不可挤在 288 间隔内）
+    uint32_t* pop_mv = key_scratch + (uint64_t)Sq * paddedSkv
+                     + (uint64_t)numPEs * 288
+                     + (uint64_t)tid * MaxTileCol;
 
     for (int i = tid; i < Sq; i += numPEs) {
         const RU* row = (const RU*)(scores_gm) + (uint64_t)i * paddedSkv;
@@ -353,44 +317,30 @@ inline void qli_topk_radix_dynamic(float* scores_gm, int32_t* indices_gm,
             for (int p = 0; p < MaxTileCol - padStart; p++) pad[p] = 0;
         }
 
-        // Step 2: 4 轮 MSD radix → kth_value
+        // Step 2: 32 位逐位下降 → kth_value（THISTOGRAM 已退役，见 simple 版注释）
+        RU* cnt_slot = hist_scratch;
         RU kth_value = 0;
-        int remaining = topK;
-        for (int w = 0; w < 32; w++) prefix_buf[w] = 0;
-
-        for (int r = 3; r >= 0; r--) {
-            RU per_bin[256] = {0};
-            if (r < 3) {
-                volatile RU* pb = (volatile RU*)prefix_buf;
-                RU b3 = (kth_value >> 24) & 0xFFu;
-                RU b2 = (kth_value >> 16) & 0xFFu;
-                RU b1 = (kth_value >> 8) & 0xFFu;
-                for (int cc = 0; cc < 8; cc++) {
-                    pb[0*8+cc] = b3; pb[1*8+cc] = b2;
-                    pb[2*8+cc] = b1; pb[3*8+cc] = 0;
-                }
-            }
-            for (int c = 0; c < NumChunks; c++) {
-                ChunkHist(krow + c * MaxTileCol, r, prefix_buf, hist_scratch);
-                volatile RU* rh = (volatile RU*)hist_scratch;
-                RU prev = 0;
-                for (int b = 0; b < 256; b++) { RU cum = rh[b]; per_bin[b] += (cum - prev); prev = cum; }
-            }
-            RU cum = 0; int kth_byte = 0;
-            for (int b = 255; b >= 0; b--) {
-                cum += per_bin[b];
-                if (cum >= (RU)remaining) { kth_byte = b; break; }
-            }
-            remaining -= (int)(cum - per_bin[kth_byte]);
-            kth_value |= ((RU)kth_byte) << (r * 8);
+        for (int bit = 31; bit >= 0; bit--) {
+            RU candidate = kth_value | ((RU)1 << bit);
+            RU total = 0;
+            for (int c = 0; c < NumChunks; c++)
+                QLI_DYN_CNT_KEY(MaxTileCol, MaxTileCol, krow + c * MaxTileCol, candidate, GE, total);
+            if (total >= (RU)topK) kth_value = candidate;
         }
-
-        // Step 3: 提取 topK 索引
-        int outPos = 0;
-        int needEq = remaining;
+        RU gt = 0;
         for (int c = 0; c < NumChunks; c++)
+            QLI_DYN_CNT_KEY(MaxTileCol, MaxTileCol, krow + c * MaxTileCol, kth_value, GT, gt);
+
+        // Step 3: 提取 topK 索引（GT 计数在被调函数内不可靠，逐 chunk 在
+        // 调用方重算并以 nGt 实参传入；pop 走 per-PE GM 工作区）
+        int outPos = 0;
+        int needEq = topK - (int)gt;
+        for (int c = 0; c < NumChunks; c++) {
+            RU cntc = 0;
+            QLI_DYN_CNT_KEY(MaxTileCol, MaxTileCol, krow + c * MaxTileCol, kth_value, GT, cntc);
             Extract(krow + c * MaxTileCol, kth_value, (RU)c * MaxTileCol,
-                    indices_gm + i * topK, outPos, needEq);
+                    indices_gm + i * topK, outPos, needEq, (int)cntc, pop_mv);
+        }
     }
 }
 

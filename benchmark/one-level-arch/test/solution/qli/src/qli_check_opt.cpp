@@ -8,11 +8,11 @@
 // that generated ~1.14M STD blocks (92.8% of total).
 //
 // Addresses updated via llvm-nm after each relink (same as qli_check.cpp).
-#define SRCQ_ADDR  0x0000000000014608ULL
-#define SRCK_ADDR  0x0000000000094608ULL
-#define SRCW_ADDR  0x0000000000098608ULL
-#define SRCSQ_ADDR  0x000000000009c608ULL
-#define SRCSK_ADDR  0x00000000000a0608ULL
+#define SRCQ_ADDR  0x00000000000143c0ULL
+#define SRCK_ADDR  0x000000000001c3c0ULL
+#define SRCW_ADDR  0x000000000005d3c0ULL
+#define SRCSQ_ADDR  0x000000000005d7c0ULL
+#define SRCSK_ADDR  0x000000000005dbc0ULL
 
 #define OUT_SCORES  0x4000802000ULL
 // indices 紧随 scores 之后，避免大 Sq*Skv 时与 scores 区域重叠

@@ -266,55 +266,16 @@ void qli_pto(float* scores_ptr,
 }
 
 // -----------------------------------------------------------------------------
-// THISTOGRAMX — 自研展开版 THISTOGRAM（允许 Idx 与 src 不同 shape）
-// v0.58.4 编码契约：模型 canonical 解码器从 B.DATR 的 PadValue 字段
-// (bits[28:27]) 读取 selectedByte，bits[19:18] 的 ByteId 槽被忽略；
-// PadValue 助记符 Zero=0/Max=1/Min=2/Null=3 恰好承载 ByteId 0..3。
-// （上游 TileOP 模板仍写死 Null=3，多轮 Byte0-2 会错位 —— 与 TCOLSUM
-//  lb1 问题同类的未暴露缺陷，见 f00b928）
-// -----------------------------------------------------------------------------
-template <typename tile_o, typename tile_s, typename tile_idx>
-void THISTOGRAMX(tile_o& dst, tile_s& src, tile_idx& idx, int ByteId) {
-#define THISTOGRAMX_ASM(BYTE_NAME, PAD_NAME)                           \
-  asm volatile(                                                        \
-    "BSTART.TEPL 104, %D1\n"                                           \
-    "B.DATR %D2, " BYTE_NAME ", " PAD_NAME "\n"                        \
-    "B.DIM %3, 0, ->LB0\n"                                             \
-    "B.DIM %4, 0, ->LB1\n"                                             \
-    "B.DIM zero, %c5, ->LB2\n"                                         \
-    "B.IOT %6, %7, mask=1111, last, ->%0<%Z8>\n"                       \
-    ""                                                                 \
-    : "=Tr"(dst.data())                                                \
-    : "i"(type_traits<typename tile_s::DType>::TypeCode),              \
-      "i"(type_traits<typename tile_o::DType>::TypeCode),              \
-      "r"(dst.GetValidCol()),                                          \
-      "r"(src.GetValidRow()),                                          \
-      "i"(tile_o::Cols),                                               \
-      "Tr"(src.data()),                                                \
-      "Tr"(idx.data()),                                                \
-      "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode))
-  switch (ByteId) {
-    case 0: THISTOGRAMX_ASM("Byte0", "Zero"); break;
-    case 1: THISTOGRAMX_ASM("Byte1", "Max");  break;
-    case 2: THISTOGRAMX_ASM("Byte2", "Min");  break;
-    default: THISTOGRAMX_ASM("Byte3", "Null"); break;
-  }
-#undef THISTOGRAMX_ASM
-}
-
-// -----------------------------------------------------------------------------
-// qli_topk_radix — 4 轮 MSD radix-select TopK（Step 7，模板函数风格）
-// -----------------------------------------------------------------------------
-// 【算法】
-//   1. float→uint32 sortable key（仅符号翻转，7 tile op）
-//      key = (sign) ? ~bits : (bits | 0x80000000)
-//   2. 逐字节 MSD radix（Byte3→Byte0）→ kth_value
-//   3. 提取：key > kth 全部入选，key == kth 边界并列补足
-//      每轮提取 = TROWARGMAX + 索引消零（TMUL，无标量 store）
 // -----------------------------------------------------------------------------
 namespace qli_radix {
 
 using RU = uint32_t;
+
+// tile→标量读回：tile op 在 VLIW block 末尾提交，若标量 load 被调度进
+// TSTORE 同一 block（llvm bundle 打包），将读到落地前的旧值（gfrun trace
+// 实证：lwi 与 TSTORE 同 block 读 0/上一轮值）。PTO ISA 无显式 fence，
+// noinline 调用强制 block 边界，保证读回发生在 TSTORE block 提交之后。
+__attribute__((noinline)) RU TileScalarRb(RU* slot) { return *slot; }
 
 template <int CK, int CKV = CK>
 using TKey = Tile<Location::Vec, RU, 1, CK, BLayout::RowMajor, 1, CKV>;
@@ -323,8 +284,7 @@ using TKey = Tile<Location::Vec, RU, 1, CK, BLayout::RowMajor, 1, CKV>;
 template <int CK, int CKV>
 inline void RadixMakeKey(RU* dst, const RU* src) {
     using gk = global_tensor<RU, RowMajor<1, CKV>>;
-    gk gs(const_cast<RU*>(src));
-    TKey<CK, CKV> bits; TLOAD(bits, gs);
+    gk gs(const_cast<RU*>(src)); TKey<CK, CKV> bits; TLOAD(bits, gs);
     TKey<CK, CKV> sign; TANDS(sign, bits, 0x80000000u);
     TKey<CK, CKV> neg;  TNOT(neg, bits);
     TKey<CK, CKV> pos;  TORS(pos, bits, 0x80000000u);
@@ -335,96 +295,72 @@ inline void RadixMakeKey(RU* dst, const RU* src) {
     gk gd(dst); TSTORE(gd, key);
 }
 
-// Step 2: 单 chunk 直方图（THISTOGRAMX + Idx 前缀）
-template <int CK, int CKV>
-inline void RadixChunkHist(RU* key_ptr, int byteId, RU* prefix, RU* hist) {
-    using gk = global_tensor<RU, RowMajor<1, CKV>>;
-    using tidx = Tile<Location::Vec, RU, 4, 8, BLayout::RowMajor>;
-    using gidx = global_tensor<RU, RowMajor<4, 8>>;
-    using th = Tile<Location::Vec, RU, 1, 256, BLayout::RowMajor>;
-    using gh = global_tensor<RU, RowMajor<1, 256>>;
-    gk g(key_ptr);
-    TKey<CK, CKV> key; TLOAD(key, g);
-    tidx idxTile; { gidx gi(prefix); TLOAD(idxTile, gi); }
-    th hist_tile; THISTOGRAMX(hist_tile, key, idxTile, byteId);
-    gh gout(hist); TSTORE(gout, hist_tile);
-}
 
 // Step 3: 从 key tile pop n 个最大元素（TROWARGMAX + 索引消零）
 template <int CK, int CKV>
-inline void RadixPopN(TKey<CK, CKV>& mv, RU chunkBase, int32_t* out, int n) {
-    // v0.58.4 行归约契约：TROWARGMAX 目的须物理单列 [N,1]（Col==1）；
+__attribute__((always_inline)) inline void RadixPopN(RU* mv_gm, RU chunkBase, int32_t* out, int n) {
+    // v0.58.4 行归约契约：TROWARGMAX 目的须物理单列 [N,1]；
     // 物理行数 32 维持 128B tile 尺寸下限，valid 仍为 [1,1]
     using t1  = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
     using t1i = Tile<Location::Vec, int32_t, 32, 1, BLayout::RowMajor, 1, 1>;
-    using gi1 = global_tensor<RU, RowMajor<1, 1>>;
     using gi1i = global_tensor<int32_t, RowMajor<1, 1>>;
-    TKey<CK, CKV> idxTile; TCI(idxTile, chunkBase);
+    using gk = global_tensor<RU, RowMajor<1, CKV>>;
+    gk gmv(mv_gm);
+    // 消零用纯标量 GM 写。llvm dev-llvm15_56@73cbdf34 起，循环内 TSEL 等
+    // tile-op 链式更新存在隔轮陈旧绑定回归（in-place/双缓冲/GM 往返 TSEL
+    // 版均实测索引重复弹出；旧 llvm 553b08045 编译同一份代码正确）。
+    // 循环内只保留无相互依赖的单发 tile op（TLOAD/ARGMAX/TSTORE），它们
+    // 与 MakeKey 链同构（已验证可靠）；消零走标量写，彻底绕开 tile 寄存器链。
+    TKey<CK, CKV> cur; t1 best;
     for (int k = 0; k < n; k++) {
-        t1 best; TROWARGMAX(best, mv);
+        TLOAD(cur, gmv);
+        TROWARGMAX(best, cur);
         t1 bestg; TADDS(bestg, best, chunkBase);
         t1i besti; TCVT(besti, bestg);
         gi1i gout(out + k); TSTORE(gout, besti);
-        RU bv = 0; gi1 gbv(&bv); TSTORE(gbv, bestg);
-        TKey<CK, CKV> bbc; TEXPANDS(bbc, bv);
-        // v0.58.4 predicate 契约：TCMPS 结果为 packed predicate（UINT8 存储），
-        // 不可参与算术（TSUB/TMUL）。索引消零改用 TSEL 条件覆盖：
-        // mv = (idx == best) ? 0 : mv（TSEL 读 dst 旧值作假分支，需先有值）
-        TKey<CK, CKV> diff; TSUB(diff, idxTile, bbc);
-        TKey<CK, CKV> isp; TCMPS<CmpMode::EQ>(isp, diff, 0u);
-        TKey<CK, CKV> zero; TEXPANDS(zero, 0u);
-        TSEL(mv, isp, zero);
+        // 被弹索引自读回（out[k] 即本轮 ARGMAX 结果，已证明可靠），标量清零
+        RU bv = TileScalarRb(reinterpret_cast<RU*>(out + k));
+        if (bv >= chunkBase && bv - chunkBase < (RU)CKV)
+            *reinterpret_cast<volatile RU*>(mv_gm + (bv - chunkBase)) = 0;
     }
 }
 
 // Step 3（单 chunk）: 先 pop GT 再 pop EQ 补足
+// GT 弹出不依赖过滤：GT 集合恰为全行 key 的 top-gt 前缀，把原始 key 拷入
+// 工作区后弹前 nGt 个即得 GT 集合（即使 TSEL 过滤失效亦正确）。
+// llvm 73cbdf34 下被调（未内联）函数内 TSEL predicate 存在陈旧绑定
+// （sel1/cand 恒取"全部"），且 tile→标量计数读回需 block 边界保护
+// （见 TileScalarRb），故 GT 计数上移到调用方内联宏、以 nGt 实参传入。
 template <int CK, int CKV>
-inline void RadixExtract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase, int& outPos, int& needEq) {
+inline void RadixExtract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase, int& outPos, int& needEq, int nGt, RU* mv_gm) {
     using gk = global_tensor<RU, RowMajor<1, CKV>>;
-    // v0.58.4 行归约契约：TROWSUM 目的须物理单列 [N,1]
-    using t1 = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
-    using gi1 = global_tensor<RU, RowMajor<1, 1>>;
     gk g(key_ptr);
 
-    // GT: key > kth（TCMPS 标量比较；predicate 不可直接归约/相乘）
+    // GT: 原始 key 拷入工作区（单发无依赖 tile op，与 MakeKey 链同构）
     {
         TKey<CK, CKV> key; TLOAD(key, g);
-        TKey<CK, CKV> isgt; TCMPS<CmpMode::GT>(isgt, key, kthVal);
-        // v0.58.4 predicate 契约：TSEL 物化 0/1 计数掩码与候选集
-        TKey<CK, CKV> one; TEXPANDS(one, 1u);
-        TKey<CK, CKV> sel1; TEXPANDS(sel1, 0u); TSEL(sel1, isgt, one);
-        t1 s; TROWSUM(s, sel1); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
-        TKey<CK, CKV> cand; TEXPANDS(cand, 0u); TSEL(cand, isgt, key);
-        RadixPopN<CK, CKV>(cand, chunkBase, outBase + outPos, (int)cnt);
-        outPos += (int)cnt;
+        gk gw(mv_gm); TSTORE(gw, key);
+        RadixPopN<CK, CKV>(mv_gm, chunkBase, outBase + outPos, nGt);
+        outPos += nGt;
     }
-    // EQ: key == kth（补足剩余名额）
+    // EQ: key == kth（补足剩余名额）。cand 物化的 TSTORE→TLOAD 往返在
+    // 新工具链下读写错位（GT 段标量消零已绕开；EQ 段并列元素极少），
+    // 改为纯标量扫描 key GM，与 golden 语义一致（从小到大取并列索引）。
     if (needEq > 0) {
-        TKey<CK, CKV> key; TLOAD(key, g);
-        TKey<CK, CKV> iseq; TCMPS<CmpMode::EQ>(iseq, key, kthVal);
-        TKey<CK, CKV> one; TEXPANDS(one, 1u);
-        TKey<CK, CKV> sel1; TEXPANDS(sel1, 0u); TSEL(sel1, iseq, one);
-        t1 s; TROWSUM(s, sel1); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
-        int take = (int)cnt; if (take > needEq) take = needEq;
-        TKey<CK, CKV> cand; TEXPANDS(cand, 0u); TSEL(cand, iseq, key);
-        RadixPopN<CK, CKV>(cand, chunkBase, outBase + outPos, take);
-        outPos += take; needEq -= take;
+        const RU* kgm = reinterpret_cast<const RU*>(key_ptr);
+        for (RU i = 0; i < (RU)CKV && needEq > 0; ++i) {
+            if (kgm[i] == kthVal) {
+                outBase[outPos++] = (int32_t)(i + chunkBase);
+                --needEq;
+            }
+        }
     }
-}
-
-// 单个 chunk 的直方图 + 差分合并到 per_bin
-template <int CK, int CKV>
-inline void HistMergeChunk(RU* krow, int c, int stride, int r, RU* prefix, RU* hist, RU* per_bin) {
-    RadixChunkHist<CK, CKV>(krow + c * stride, r, prefix, hist);
-    volatile RU* rh = reinterpret_cast<volatile RU*>(hist);
-    RU prev = 0;
-    for (int b = 0; b < 256; b++) { RU cum = rh[b]; per_bin[b] += (cum - prev); prev = cum; }
 }
 
 // 单个 chunk 的提取（调用 RadixExtract，stride = MaxTileCol）
 template <int CK, int CKV>
-inline void ExtractChunk(RU* krow, int c, int stride, RU kthVal, int32_t* outBase, int& outPos, int& needEq) {
-    RadixExtract<CK, CKV>(krow + c * stride, kthVal, (RU)c * stride, outBase, outPos, needEq);
+inline void ExtractChunk(RU* krow, int c, int stride, RU kthVal, int32_t* outBase, int& outPos, int& needEq, int nGt, RU* mv_gm) {
+    RadixExtract<CK, CKV>(krow + c * stride, kthVal, (RU)c * stride, outBase, outPos, needEq, nGt, mv_gm);
 }
 
 }  // namespace qli_radix
@@ -463,58 +399,75 @@ void qli_topk_radix(float* scores_gm, int32_t* indices_gm) {
                 RadixMakeKey<MaxTileCol, MaxTileCol>(krow + c * MaxTileCol, row + c * MaxTileCol);
         }
 
-        // ---- Step 2: 4 轮 MSD radix → kth_value ----
+        // ---- Step 2: 32 位逐位下降 → kth_value ----
+        // THISTOGRAM 于 PTO 0.58.5 退役（pto-spec edcbd8b），改用位下降二分：
+        // 自高比特起试探性置位，count(key >= candidate) >= topK 则保留该比特。
+        // 计数序列以宏内联（函数边界处 tile 寄存器分配在 73cbdf34 后端有
+        // 分配到保留寄存器 0 的缺陷，见 TROWSUM dst [0x0] trace 证据）。
+#define QLI_CNT_KEY(_CK, _CKV, _KP, _TH, _CM, _TOT) do { \
+    global_tensor<RU, RowMajor<1, _CKV>> gc((_KP)); \
+    TKey<_CK, _CKV> kc; TLOAD(kc, gc); \
+    TKey<_CK, _CKV> ic; TCMPS<CmpMode::_CM>(ic, kc, (_TH)); \
+    TKey<_CK, _CKV> onec; TEXPANDS(onec, 1u); \
+    TKey<_CK, _CKV> selc; TEXPANDS(selc, 0u); TSEL(selc, ic, onec); \
+    Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1> sc; \
+    TROWSUM(sc, selc); RU cntc = 0; \
+    global_tensor<RU, RowMajor<1, 1>> gcntc(&cntc); TSTORE(gcntc, sc); \
+    (_TOT) += TileScalarRb(&cntc); \
+} while (0)
         RU kth_value = 0;
-        int remaining = topK;
-        for (int w = 0; w < 32; w++) prefix_buf[w] = 0;
-
-        for (int r = 3; r >= 0; r--) {
-            RU per_bin[256] = {0};
-            // 前缀: 已定高位字节（ByteId<3 时生效）
-            if (r < 3) {
-                volatile RU* pb = reinterpret_cast<volatile RU*>(prefix_buf);
-                RU b3 = (kth_value >> 24) & 0xFFu;
-                RU b2 = (kth_value >> 16) & 0xFFu;
-                RU b1 = (kth_value >> 8) & 0xFFu;
-                for (int cc = 0; cc < 8; cc++) {
-                    pb[0*8+cc] = b3; pb[1*8+cc] = b2;
-                    pb[2*8+cc] = b1; pb[3*8+cc] = 0;
-                }
-            }
-            // 直方图（每 chunk 1×THISTOGRAM）+ 差分合并
+        for (int bit = 31; bit >= 0; bit--) {
+            RU candidate = kth_value | ((RU)1 << bit);
+            RU total = 0;
             if constexpr (NumChunks == 1) {
-                HistMergeChunk<SinglePhy, Skv>(krow, 0, MaxTileCol, r, prefix_buf, hist_scratch, per_bin);
+                QLI_CNT_KEY(SinglePhy, Skv, krow, candidate, GE, total);
             } else if constexpr (TailCols != MaxTileCol) {
                 for (int c = 0; c < NumChunks - 1; c++)
-                    HistMergeChunk<MaxTileCol, MaxTileCol>(krow, c, MaxTileCol, r, prefix_buf, hist_scratch, per_bin);
-                HistMergeChunk<TailPhy, TailCols>(krow, NumChunks - 1, MaxTileCol, r, prefix_buf, hist_scratch, per_bin);
+                    QLI_CNT_KEY(MaxTileCol, MaxTileCol, krow + c * MaxTileCol, candidate, GE, total);
+                QLI_CNT_KEY(TailPhy, TailCols, krow + (NumChunks - 1) * MaxTileCol, candidate, GE, total);
             } else {
                 for (int c = 0; c < NumChunks; c++)
-                    HistMergeChunk<MaxTileCol, MaxTileCol>(krow, c, MaxTileCol, r, prefix_buf, hist_scratch, per_bin);
+                    QLI_CNT_KEY(MaxTileCol, MaxTileCol, krow + c * MaxTileCol, candidate, GE, total);
             }
-
-            // 高桶向下累计 → kth_byte
-            RU cum = 0; int kth_byte = 0;
-            for (int b = 255; b >= 0; b--) {
-                cum += per_bin[b];
-                if (cum >= (RU)remaining) { kth_byte = b; break; }
-            }
-            remaining -= (int)(cum - per_bin[kth_byte]);
-            kth_value |= ((RU)kth_byte) << (r * 8);
+            if (total >= (RU)topK) kth_value = candidate;
         }
+        // GT 计数 → needEq（topK 中需由 ==kth_value 的并列元素补足的数量）。
+        // 逐 chunk 保留计数并作为 Extract 的 nGt 实参（被调函数内 TSEL
+        // predicate 陈旧绑定，见 RadixExtract 注释）
+        RU cntv[NumChunks];
+        if constexpr (NumChunks == 1) {
+            cntv[0] = 0;
+            QLI_CNT_KEY(SinglePhy, Skv, krow, kth_value, GT, cntv[0]);
+        } else if constexpr (TailCols != MaxTileCol) {
+            for (int c = 0; c < NumChunks - 1; c++) {
+                cntv[c] = 0;
+                QLI_CNT_KEY(MaxTileCol, MaxTileCol, krow + c * MaxTileCol, kth_value, GT, cntv[c]);
+            }
+            cntv[NumChunks - 1] = 0;
+            QLI_CNT_KEY(TailPhy, TailCols, krow + (NumChunks - 1) * MaxTileCol, kth_value, GT, cntv[NumChunks - 1]);
+        } else {
+            for (int c = 0; c < NumChunks; c++) {
+                cntv[c] = 0;
+                QLI_CNT_KEY(MaxTileCol, MaxTileCol, krow + c * MaxTileCol, kth_value, GT, cntv[c]);
+            }
+        }
+        RU gt = 0;
+        for (int c = 0; c < NumChunks; c++) gt += cntv[c];
+#undef QLI_CNT_KEY
 
         // ---- Step 3: 提取 topK 索引（每 chunk: 先 GT 后 EQ）----
+        RU* pop_mv = hist_scratch + 512;        // GM pop 工作区 [MaxTileCol]（绕过编译器循环携带 tile 回归）
         int outPos = 0;
-        int needEq = remaining;
+        int needEq = topK - (int)gt;
         if constexpr (NumChunks == 1) {
-            ExtractChunk<SinglePhy, Skv>(krow, 0, MaxTileCol, kth_value, indices_gm + i * topK, outPos, needEq);
+            ExtractChunk<SinglePhy, Skv>(krow, 0, MaxTileCol, kth_value, indices_gm + i * topK, outPos, needEq, (int)cntv[0], pop_mv);
         } else if constexpr (TailCols != MaxTileCol) {
             for (int c = 0; c < NumChunks - 1; c++)
-                ExtractChunk<MaxTileCol, MaxTileCol>(krow, c, MaxTileCol, kth_value, indices_gm + i * topK, outPos, needEq);
-            ExtractChunk<TailPhy, TailCols>(krow, NumChunks - 1, MaxTileCol, kth_value, indices_gm + i * topK, outPos, needEq);
+                ExtractChunk<MaxTileCol, MaxTileCol>(krow, c, MaxTileCol, kth_value, indices_gm + i * topK, outPos, needEq, (int)cntv[c], pop_mv);
+            ExtractChunk<TailPhy, TailCols>(krow, NumChunks - 1, MaxTileCol, kth_value, indices_gm + i * topK, outPos, needEq, (int)cntv[NumChunks - 1], pop_mv);
         } else {
             for (int c = 0; c < NumChunks; c++)
-                ExtractChunk<MaxTileCol, MaxTileCol>(krow, c, MaxTileCol, kth_value, indices_gm + i * topK, outPos, needEq);
+                ExtractChunk<MaxTileCol, MaxTileCol>(krow, c, MaxTileCol, kth_value, indices_gm + i * topK, outPos, needEq, (int)cntv[c], pop_mv);
         }
     }
 }
