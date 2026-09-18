@@ -82,9 +82,8 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     TADDS(denom, mean, kEpsilon);
     rsqrt_regbase(rms, denom);
 
-    tile_v ones(tile_m, 1), rms_rows(tile_m, 1);
-    TEXPANDS(ones, 1.0f);
-    TCOLEXPANDMUL(rms_rows, ones, rms);
+    tile_v rms_rows(tile_m, 1);
+    TCOLEXPAND(rms_rows, rms);
     for (int64_t r = 0; r < gR; r += tile_elems) {
         gm_t gi(x + offset + r, static_cast<int>(tile_m),
                 static_cast<int>(tile_r));
