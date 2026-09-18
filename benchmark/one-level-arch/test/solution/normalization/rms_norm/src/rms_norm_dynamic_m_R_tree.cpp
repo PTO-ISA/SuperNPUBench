@@ -30,7 +30,9 @@ constexpr int64_t rms_pow_r(int64_t reduce_size) {
     return p;
 }
 constexpr int64_t rms_tile_r(int64_t reduce_size) {
-    constexpr int64_t kMaxTileR = 16;
+    // tile_r denotes the total number of elements in one linear R block. The
+    // kernel maps 512 elements to the physical [32,16] Tile.
+    constexpr int64_t kMaxTileR = 512;
     return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
 }
 } // namespace
@@ -51,8 +53,16 @@ int main() {
     constexpr int64_t kTileA = rms_tile_a(G_A, PE_NUM);
     constexpr int64_t kPowR = rms_pow_r(G_R);
     constexpr int64_t kTileR = rms_tile_r(G_R);
+    constexpr int64_t kPairCount = kPowR / kTileR;
+    constexpr int64_t kWorkspaceTileM = 32;
+    constexpr int64_t kWorkspacePairCapacity = 8;
+    constexpr int64_t kRowsPerPe = (G_A + PE_NUM - 1) / PE_NUM;
+    constexpr int64_t kWorkspaceRowsPerPe =
+        ((kRowsPerPe + kWorkspaceTileM - 1) / kWorkspaceTileM) *
+        kWorkspaceTileM;
     static_assert(G_A > 0 && G_R > 0);
     static_assert(kTileA > 0 && kTileR > 0 && kTileR <= 512);
+    static_assert(kPairCount > 0 && kPairCount <= 8);
     RTreeTilingData tiling_info = {
         G_A, G_R, kPowR, kTileA, kTileR};
 
@@ -62,9 +72,12 @@ int main() {
     static dtype input_buf[G_A * G_R];
     static dtype gamma_buf[G_R];
     static dtype output_buf[G_A * G_R];
+    static float partial_workspace_buf[
+        PE_NUM * kWorkspaceRowsPerPe * kWorkspacePairCapacity];
     dtype *input = input_buf;
     dtype *gamma = gamma_buf;
     dtype *output = output_buf;
+    float *partial_workspace = partial_workspace_buf;
 
 #ifdef RES_CHECK
 #ifndef CHK_DIR
@@ -83,7 +96,8 @@ int main() {
     }
 #endif
 
-    rms_norm_dynamic_m_R_tree<dtype, PE_NUM>(input, gamma, &tiling_info, output);
+    rms_norm_dynamic_m_R_tree<dtype, PE_NUM>(
+        input, gamma, &tiling_info, output, partial_workspace);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

@@ -10,6 +10,8 @@
 namespace rms_detail_simt_dynamic_m_R_tree {
 
 constexpr float kEpsilon = 1e-6f;
+constexpr int64_t kTileM = 32;
+constexpr int64_t kMaxPairCount = 8;
 
 template <typename TileVec>
 __attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out,
@@ -41,8 +43,11 @@ __attribute__((always_inline)) inline void rsqrt_regbase(TileVec &out,
     body(recip, y, tmp);
 }
 
-template <typename gm_t, typename tile_h, typename tile_f, typename parent_t>
-inline void reduce_pairs(gm_t &base, int64_t gR, int64_t pair_count, int64_t tile_elems, int64_t tile_m, int64_t tile_r, parent_t &partial_matrix) {
+template <typename gm_t, typename gm_f_col, typename tile_h, typename tile_f,
+          typename tile_m_v>
+inline void reduce_pairs(gm_t &base, int64_t gR, int64_t pair_count,
+                         int64_t tile_elems, int64_t tile_m,
+                         int64_t tile_r, float *partial_workspace) {
     for (int64_t pair = 0; pair < pair_count; ++pair) {
         gm_t g0(base.data() + pair * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
         gm_t g1(base.data() + (pair + pair_count) * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
@@ -51,30 +56,44 @@ inline void reduce_pairs(gm_t &base, int64_t gR, int64_t pair_count, int64_t til
         TLOAD(h0, g0); TCVT(x0, h0); TMUL(sq0, x0, x0);
         TLOAD(h1, g1); TCVT(x1, h1); TMUL(sq1, x1, x1);
         TADD(sq_pair, sq0, sq1);
-        if (pair == 0) { auto rows = pto::range::assemble<1>(partial_matrix, pair); TROWSUM(rows, sq_pair); }
-        else if (pair + 1 == pair_count) { auto rows = pto::range::assemble_last<1>(partial_matrix, pair); TROWSUM_ASS(rows, sq_pair); }
-        else { auto rows = pto::range::assemble_middle<1>(partial_matrix, pair); TROWSUM_ASS(rows, sq_pair); }
+        tile_m_v partial_rows(tile_m, 1);
+        TROWSUM(partial_rows, sq_pair);
+
+        // Store each [tile_m,1] result as one contiguous column. The complete
+        // workspace tile is therefore a ColMajor [tile_m,pair_count] matrix.
+        gm_f_col partial_out(partial_workspace + pair * kTileM);
+        TSTORE(partial_out, partial_rows);
     }
 }
 
-template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
+template <typename dtype, typename gm_t, typename gm_f_col,
+          typename gm_f_matrix, typename tile_h, typename tile_f,
           typename tile_m_v, typename tile_m_matrix, typename tile_v,
           typename tile_s>
 inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
-                                 int64_t gR, int64_t pair_count, int64_t a_off,
-                                 int64_t tile_m, int64_t tile_r,
-                                 float inv_r) {
+                          float *workspace, int64_t gR, int64_t pair_count,
+                          int64_t a_off, int64_t tile_r, float inv_r) {
     const int64_t offset = a_off * gR;
-    const int64_t tile_elems = tile_m * tile_r;
+    // tile_r is the number of elements in one linear R block. Map that block
+    // onto the physical [32,16] Tile independently from the outer A axis.
+    const int64_t curtile_factal_r = (tile_r + 31) / 32;
+    const int64_t curtile_factal_a =
+        (tile_r + curtile_factal_r - 1) / curtile_factal_r;
     gm_t input_row(x + offset, 1, static_cast<int>(gR));
 
-    // First pair outer-R blocks (0,8), (1,9), ... (7,15). Assemble the
-    // eight reduced [32,1] results by columns into one [32,8] Tile.
-    tile_m_matrix partial_matrix(tile_m, pair_count);
-    reduce_pairs<gm_t, tile_h, tile_f, tile_m_matrix>(
-        input_row, gR, pair_count, tile_elems, tile_m, tile_r, partial_matrix);
+    // First pair outer-R blocks (0,8), (1,9), ... (7,15). Spill the eight
+    // reduced [32,1] results to GM, then load them as one [32,8] Tile for the
+    // second row reduction.
+    float *partial_workspace = workspace + a_off * kMaxPairCount;
+    reduce_pairs<gm_t, gm_f_col, tile_h, tile_f, tile_m_v>(
+        input_row, gR, pair_count, tile_r, curtile_factal_a,
+        curtile_factal_r, partial_workspace);
 
-    tile_m_v sum_rows(tile_m, 1);
+    gm_f_matrix partial_gm(partial_workspace);
+    tile_m_matrix partial_matrix(curtile_factal_a, pair_count);
+    TLOAD(partial_matrix, partial_gm);
+
+    tile_m_v sum_rows(curtile_factal_a, 1);
     TROWSUM(sum_rows, partial_matrix);
     tile_s tile_sum, mean, denom, rms;
     TCOLSUM(tile_sum, sum_rows);
@@ -82,17 +101,22 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     TADDS(denom, mean, kEpsilon);
     rsqrt_regbase(rms, denom);
 
-    tile_v rms_rows(tile_m, 1);
+    tile_v rms_rows(curtile_factal_a, 1);
     TCOLEXPAND(rms_rows, rms);
-    for (int64_t r = 0; r < gR; r += tile_elems) {
-        gm_t gi(x + offset + r, static_cast<int>(tile_m),
-                static_cast<int>(tile_r));
+    for (int64_t r = 0; r < gR; r += tile_r) {
+        gm_t gi(x + offset + r, static_cast<int>(curtile_factal_a),
+                static_cast<int>(curtile_factal_r));
         gm_t gg(const_cast<dtype *>(gamma) + r,
-                static_cast<int>(tile_m), static_cast<int>(tile_r));
-        gm_t go(out + offset + r, static_cast<int>(tile_m),
-                static_cast<int>(tile_r));
-        tile_h h(tile_m, tile_r), gh(tile_m, tile_r);
-        tile_f src(tile_m, tile_r), gf(tile_m, tile_r), normalized(tile_m, tile_r), dst(tile_m, tile_r) ;
+                static_cast<int>(curtile_factal_a),
+                static_cast<int>(curtile_factal_r));
+        gm_t go(out + offset + r, static_cast<int>(curtile_factal_a),
+                static_cast<int>(curtile_factal_r));
+        tile_h h(curtile_factal_a, curtile_factal_r),
+            gh(curtile_factal_a, curtile_factal_r);
+        tile_f src(curtile_factal_a, curtile_factal_r),
+            gf(curtile_factal_a, curtile_factal_r),
+            normalized(curtile_factal_a, curtile_factal_r),
+            dst(curtile_factal_a, curtile_factal_r);
         TLOAD(h, gi);
         TCVT(src, h);
         TLOAD(gh, gg);
@@ -107,20 +131,25 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
 } // namespace rms_detail_simt_dynamic_m_R_tree
 
 template <typename dtype, int peNum, typename TilingData>
-void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingData *tiling, dtype *out) {
+void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma,
+                               const TilingData *tiling, dtype *out,
+                               float *workspace) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
 
     const int64_t globalA = tiling->g_a;
     const int64_t gR = tiling->g_r;
     const int64_t powR = tiling->powR;
-    constexpr int64_t tile_m = 32;
     const int64_t tile_r = tiling->tile_r > 0 ? tiling->tile_r : (gR + 511) / 512;
-    const int64_t tile_elems = tile_m * tile_r;
-    const int64_t pair_count = powR / 512;
+    const int64_t pair_count = tile_r > 0 ? powR / tile_r : 0;
 
     constexpr int64_t kMaxReduceR = 8192;
     const uint32_t tid = get_thread_idx();
-    if (globalA <= 0 || gR <= 0 || powR <= 0 || powR > gR || gR > kMaxReduceR || tile_r <= 0 || tile_r > 16 || gR % (tile_elems * 2) != 0 || tid >= static_cast<uint32_t>(peNum)) {
+    if (globalA <= 0 || gR <= 0 || powR <= 0 || powR > gR ||
+        gR > kMaxReduceR || tile_r <= 0 || tile_r > 512 ||
+        pair_count <= 0 ||
+        pair_count > rms_detail_simt_dynamic_m_R_tree::kMaxPairCount ||
+        gR % (tile_r * 2) != 0 || pair_count * tile_r * 2 != gR ||
+        tid >= static_cast<uint32_t>(peNum)) {
         return;
     }
     const int64_t rows_per_pe = (globalA + peNum - 1) / peNum;
@@ -133,8 +162,19 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingData *t
         remaining < rows_per_pe ? remaining : rows_per_pe;
     x += pe_start * gR;
     out += pe_start * gR;
+    const int64_t workspace_rows_per_pe =
+        ((rows_per_pe + rms_detail_simt_dynamic_m_R_tree::kTileM - 1) /
+         rms_detail_simt_dynamic_m_R_tree::kTileM) *
+        rms_detail_simt_dynamic_m_R_tree::kTileM;
+    workspace += static_cast<int64_t>(tid) * workspace_rows_per_pe *
+                 rms_detail_simt_dynamic_m_R_tree::kMaxPairCount;
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
+    using gm_f_col = global_tensor<
+        float, ColMajor<rms_detail_simt_dynamic_m_R_tree::kTileM, 1>>;
+    using gm_f_matrix = global_tensor<
+        float, ColMajor<rms_detail_simt_dynamic_m_R_tree::kTileM,
+                        rms_detail_simt_dynamic_m_R_tree::kMaxPairCount>>;
     using tile_h = Tile<Location::Vec, dtype, 32, 16,
                         BLayout::RowMajor, -1, -1>;
     using tile_f = Tile<Location::Vec, float, 32, 16,
@@ -149,15 +189,11 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma, const TilingData *t
                         BLayout::RowMajor, 1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
-    for (int64_t ia = 0; ia < peA; ia += tile_m) {
-        int64_t cur_tile_m = tile_m;
-        if (ia + cur_tile_m > peA) {
-            cur_tile_m = peA - ia;
-        }
+    for (int64_t ia = 0; ia < peA; ++ia) {
         rms_detail_simt_dynamic_m_R_tree::rms_norm_tile<
-            dtype, gm_t, tile_h, tile_f, tile_m_v, tile_m_matrix, tile_v,
-            tile_s>(
-            x, gamma, out, gR, pair_count, ia, cur_tile_m, tile_r, inv_r);
+            dtype, gm_t, gm_f_col, gm_f_matrix, tile_h, tile_f, tile_m_v,
+            tile_m_matrix, tile_v, tile_s>(
+            x, gamma, out, workspace, gR, pair_count, ia, tile_r, inv_r);
     }
 }
 

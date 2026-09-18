@@ -66,33 +66,37 @@ template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
           typename tile_s>
 inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
                                  int64_t gR, int64_t pair_count, int64_t a_off,
-                                 int64_t tile_m, int64_t tile_r,
-                                 float inv_r) {
+                                 int64_t tile_r, float inv_r) {
     const int64_t offset = a_off * gR;
-    const int64_t tile_elems = tile_m * tile_r;
+    // tile_r is the number of elements in one linear R block. Map that block
+    // onto the physical [32,16] Tile without sharing the outer-A tile size.
+    const int64_t curtile_factal_r = (tile_r + 31) / 32;
+    const int64_t curtile_factal_a =
+        (tile_r + curtile_factal_r - 1) / curtile_factal_r;
     gm_t input_row(x + offset, 1, static_cast<int>(gR));
 
     // Sequentially reduce every R block into one row-sum vector.
-    tile_m_v sum_rows(tile_m);
+    tile_m_v sum_rows(curtile_factal_a);
     reduce_sequential<gm_t, tile_h, tile_f, tile_m_v>(
-        input_row, pair_count, tile_elems, tile_m, tile_r, sum_rows);
+        input_row, pair_count, tile_r, curtile_factal_a,
+        curtile_factal_r, sum_rows);
     tile_s tile_sum, mean, denom, rms;
     TCOLSUM(tile_sum, sum_rows);
     TMULS(mean, tile_sum, inv_r);
     TADDS(denom, mean, kEpsilon);
     rsqrt_regbase(rms, denom);
 
-    tile_v rms_rows(tile_m);
+    tile_v rms_rows(curtile_factal_a);
     TCOLEXPAND(rms_rows, rms);
-    for (int64_t r = 0; r < gR; r += tile_elems) {
-        gm_t gi(x + offset + r, static_cast<int>(tile_m),
-                static_cast<int>(tile_r));
+    for (int64_t r = 0; r < gR; r += tile_r) {
+        gm_t gi(x + offset + r, static_cast<int>(curtile_factal_a),
+                static_cast<int>(curtile_factal_r));
         gm_t gg(const_cast<dtype *>(gamma) + r,
-                static_cast<int>(tile_m), static_cast<int>(tile_r));
-        gm_t go(out + offset + r, static_cast<int>(tile_m),
-                static_cast<int>(tile_r));
-        tile_h h(tile_m, tile_r), gh(tile_m, tile_r);
-        tile_f src(tile_m, tile_r), gf(tile_m, tile_r), normalized(tile_m, tile_r), dst(tile_m, tile_r) ;
+                static_cast<int>(curtile_factal_a), static_cast<int>(curtile_factal_r));
+        gm_t go(out + offset + r,
+            static_cast<int>(curtile_factal_a), static_cast<int>(curtile_factal_r));
+        tile_h h(curtile_factal_a, curtile_factal_r), gh(curtile_factal_a, curtile_factal_r);
+        tile_f src(curtile_factal_a, curtile_factal_r), gf(curtile_factal_a, curtile_factal_r), normalized(curtile_factal_a, curtile_factal_r), dst(curtile_factal_a, curtile_factal_r) ;
         TLOAD(h, gi);
         TCVT(src, h);
         TLOAD(gh, gg);
@@ -113,14 +117,16 @@ void rms_norm_dynamic_m_R_simt(dtype *x, const dtype *gamma, const TilingData *t
     const int64_t globalA = tiling->g_a;
     const int64_t gR = tiling->g_r;
     const int64_t powR = tiling->powR;
-    constexpr int64_t tile_m = 32;
     const int64_t tile_r = tiling->tile_r > 0 ? tiling->tile_r : (gR + 511) / 512;
-    const int64_t tile_elems = tile_m * tile_r;
-    const int64_t pair_count = powR / 512;
+    const int64_t pair_count = tile_r > 0 ? powR / tile_r : 0;
 
     constexpr int64_t kMaxReduceR = 8192;
     const uint32_t tid = get_thread_idx();
-    if (globalA <= 0 || gR <= 0 || powR <= 0 || powR > gR || gR > kMaxReduceR || tile_r <= 0 || tile_r > 16 || gR % (tile_elems * 2) != 0 || tid >= static_cast<uint32_t>(peNum)) {
+    if (globalA <= 0 || gR <= 0 || powR <= 0 || powR > gR ||
+        gR > kMaxReduceR || tile_r <= 0 || tile_r > 512 ||
+        pair_count <= 0 || gR % (tile_r * 2) != 0 ||
+        pair_count * tile_r * 2 != gR ||
+        tid >= static_cast<uint32_t>(peNum)) {
         return;
     }
     const int64_t rows_per_pe = (globalA + peNum - 1) / peNum;
@@ -153,7 +159,7 @@ void rms_norm_dynamic_m_R_simt(dtype *x, const dtype *gamma, const TilingData *t
         rms_detail_simt_dynamic_m_R_simt::rms_norm_tile<
             dtype, gm_t, tile_h, tile_f, tile_m_v, tile_m_matrix, tile_v,
             tile_s>(
-            x, gamma, out, gR, pair_count, ia, tile_m, tile_r, inv_r);
+            x, gamma, out, gR, pair_count, ia, tile_r, inv_r);
     }
 }
 
