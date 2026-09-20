@@ -60,9 +60,9 @@ inline void reduce_pairs(gm_t &base, int64_t gR, int64_t pair_count,
         tile_m_v partial_rows(tile_m);
         TROWSUM(partial_rows, sq_pair);
 
-        // Store each [tile_m,1] result as one contiguous column. The complete
-        // workspace tile is therefore a ColMajor [tile_m,pair_count] matrix.
-        gm_f_col partial_out(partial_workspace + pair * kTileM);
+        // Store column pair in a row-major matrix with kMaxPairCount stride.
+        // The source valid shape [tile_m,1] limits each row to one element.
+        gm_f_col partial_out(partial_workspace + pair);
         TSTORE(partial_out, partial_rows);
     }
 }
@@ -172,11 +172,10 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma,
                  rms_detail_simt_dynamic_m_R_tree::kMaxPairCount;
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
-    using gm_f_col = global_tensor<
-        float, ColMajor<rms_detail_simt_dynamic_m_R_tree::kTileM, 1>>;
     using gm_f_matrix = global_tensor<
-        float, ColMajor<rms_detail_simt_dynamic_m_R_tree::kTileM,
+        float, RowMajor<rms_detail_simt_dynamic_m_R_tree::kTileM,
                         rms_detail_simt_dynamic_m_R_tree::kMaxPairCount>>;
+    using gm_f_col = gm_f_matrix;
     using tile_h = Tile<Location::Vec, dtype, 32, 16,
                         BLayout::RowMajor, -1, -1>;
     using tile_f = Tile<Location::Vec, float, 32, 16,
