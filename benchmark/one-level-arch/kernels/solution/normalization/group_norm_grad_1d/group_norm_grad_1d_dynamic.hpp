@@ -35,6 +35,7 @@
 #define SUPERNPU_GROUP_NORM_GRAD_1D_PTO_HPP
 
 #include <common/pto_tileop.hpp>
+#include "../m32_utils.hpp"
 
 #include <cstdint>
 
@@ -45,8 +46,9 @@ constexpr int64_t workspace_elems(int64_t N, int64_t G) { return 2 * N * G; }
 // Shared shape validation and physical Tile definitions for all three stages.
 template <typename dtype>
 constexpr int64_t data_columns() {
-    constexpr int64_t dtype_cols = (32768 + sizeof(dtype) - 1) / sizeof(dtype);
-    return dtype_cols < 8192 ? dtype_cols : 8192;
+    // M32 always allocates 32 physical rows, even for one logical row.
+    constexpr int64_t dtype_cols = 32768 / (32 * sizeof(dtype));
+    return dtype_cols < 256 ? dtype_cols : 256;
 }
 struct Shape {
     int64_t N, C, G, D;
@@ -58,9 +60,9 @@ template <typename dtype, int Rows, int Cols>
 struct TileTypes {
     using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_h = Tile<Location::Vec, dtype, Rows, Cols, BLayout::RowMajor, -1, -1>;
-    using tile_f = Tile<Location::Vec, float, Rows, Cols, BLayout::RowMajor, -1, -1>;
-    using tile_v = Tile<Location::Vec, float, Rows, 1, BLayout::RowMajor, -1, 1>;
+    using tile_h = Tile<Location::Vec, dtype, Rows, Cols, BLayout::CubeM32, -1, -1>;
+    using tile_f = Tile<Location::Vec, float, Rows, Cols, BLayout::CubeM32, -1, -1>;
+    using tile_v = Tile<Location::Vec, float, Rows, 1, BLayout::CubeM32, -1, 1>;
 };
 
 // ---------------------------------------------------------------------------
@@ -108,9 +110,9 @@ inline void fused_params_group(dtype *dy, dtype *x, float *mean, float *rstd,
         TLOAD(h, gg);
         TCVT(gf, h);
         TMUL(prod, dyf, gf);
-        TROWSUM(partial2, prod);
+        normalization_m32::row_sum(partial2, prod);
         TMUL(prod, prod, xf);
-        TROWSUM(partial1, prod);
+        normalization_m32::row_sum(partial1, prod);
         TADD(sum1, sum1, partial1);
         TADD(sum2, sum2, partial2);
     }
@@ -207,9 +209,9 @@ inline void dx_groups(dtype *dy, dtype *x, float *rstd, dtype *gamma,
                       int64_t D, int64_t n, int64_t g0, int64_t active_g) {
     using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using htile = Tile<Location::Vec, dtype, 32, 256, BLayout::RowMajor, -1, -1>;
-    using ftile = Tile<Location::Vec, float, 32, 256, BLayout::RowMajor, -1, -1>;
-    using vtile = Tile<Location::Vec, float, 32, 1, BLayout::RowMajor, -1, 1>;
+    using htile = Tile<Location::Vec, dtype, 32, 256, BLayout::CubeM32, -1, -1>;
+    using ftile = Tile<Location::Vec, float, 32, 256, BLayout::CubeM32, -1, -1>;
+    using vtile = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, -1, 1>;
     const int64_t ng = n * G + g0;
     const int64_t offset = n * C + g0 * D;
     gm_h gx(x + offset, static_cast<int>(active_g), static_cast<int>(D));
@@ -336,9 +338,9 @@ inline void gamma_beta_groups(dtype *dy, dtype *x, float *mean, float *rstd,
                               int64_t active_g, int64_t active_d) {
     using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using ht = Tile<Location::Vec, dtype, 32, 256, BLayout::RowMajor, -1, -1>;
-    using ft = Tile<Location::Vec, float, 32, 256, BLayout::RowMajor, -1, -1>;
-    using vt = Tile<Location::Vec, float, 32, 1, BLayout::RowMajor, -1, 1>;
+    using ht = Tile<Location::Vec, dtype, 32, 256, BLayout::CubeM32, -1, -1>;
+    using ft = Tile<Location::Vec, float, 32, 256, BLayout::CubeM32, -1, -1>;
+    using vt = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, -1, 1>;
     ht h(active_g, active_d);
     ft dyf(active_g, active_d), xf(active_g, active_d), tmp(active_g, active_d);
     ft beta(active_g, active_d), grad(active_g, active_d);
@@ -383,8 +385,8 @@ __attribute__((noinline)) void group_norm_grad_1d_fused_params(
     dtype *dy, dtype *x, float *mean, float *rstd,
     dtype *gamma, const int64_t *tiling, float *workspace) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
-    // TROWSUM source descriptor is limited to 2048 bytes in this model.
-    // Keep this reduction strip at 512 FP32 elements; other stages use 32 KiB.
+    // 512 logical columns occupy 64 KiB after M32 pads to 32 rows.
+    // Other data stages use 256 columns (32 KiB FP32).
     constexpr int64_t tD = 512;
 
     const gn_grad_1d::Shape shape(tiling);
@@ -425,14 +427,15 @@ __attribute__((noinline)) void group_norm_grad_1d_dx(
     dtype *dy, dtype *x, float *rstd, dtype *gamma,
     const int64_t *tiling, float *workspace, dtype *dx) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
-    // FP32 Tile: 32 KiB (8192 columns); FP16: 16 KiB, matching TCVT shape.
+    // M32 FP32: 32 physical rows x 256 columns = 32 KiB.
     constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
     const gn_grad_1d::Shape shape(tiling);
     const uint32_t tid = get_thread_idx();
     if (!shape.valid() || tid >= static_cast<uint32_t>(peNum)) return;
     const auto [N, C, G, D] = shape;
-    const int64_t tile_d = tiling[3] > 0 ? tiling[3] : (D < tD ? D : tD);
+    const int64_t requested_d = tiling[3] > 0 ? tiling[3] : D;
+    const int64_t tile_d = requested_d < tD ? requested_d : tD;
     if (tile_d <= 0 || tile_d > tD) {
         return;
     }
@@ -467,14 +470,15 @@ __attribute__((noinline)) void group_norm_grad_1d_gamma_beta(
     dtype *dy, dtype *x, float *mean, float *rstd,
     const int64_t *tiling, dtype *dgamma, dtype *dbeta) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
-    // FP32 Tile: 32 KiB (8192 columns); FP16: 16 KiB, matching TCVT shape.
+    // M32 FP32: 32 physical rows x 256 columns = 32 KiB.
     constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
     const gn_grad_1d::Shape shape(tiling);
     const uint32_t tid = get_thread_idx();
     if (!shape.valid() || tid >= static_cast<uint32_t>(peNum)) return;
     const auto [N, C, G, D] = shape;
-    const int64_t tile_d = tiling[5] > 0 ? tiling[5] : (D < tD ? D : tD);
+    const int64_t requested_d = tiling[5] > 0 ? tiling[5] : D;
+    const int64_t tile_d = requested_d < tD ? requested_d : tD;
     if (tile_d <= 0 || tile_d > tD) {
         return;
     }
