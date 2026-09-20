@@ -1,0 +1,4 @@
+# 构建产物：qli_check_data.o 在源码树内生成（.incbin 嵌入数据的目标文件）
+src/*.o
+# 生成的 golden/输入数据（由 compile.all 调 gen_qli_golden.py 产生）
+compare/
