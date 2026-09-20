@@ -27,7 +27,6 @@
 #define SUPERNPU_RMS_NORM_SPLIT_R_PTO_HPP
 
 #include <common/pto_tileop.hpp>
-#include "../m32_utils.hpp" // Dynamic short-strip compatibility only.
 
 #include <cstdint>
 
@@ -100,7 +99,9 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
     const int64_t nPadded = tiling->n_padded;
     const uint32_t tid = get_thread_idx();
 
-    if (globalA <= 0 || gR <= 1 || tile_r <= 0 || tile_r > tR ||
+    // Only complete 512-column strips are supported by this M32 path.
+    if (globalA <= 0 || gR <= 1 || tile_r != tR ||
+        gR % tR != 0 || powR % tR != 0 ||
         powR <= 0 || powR >= gR || gR > 2 * powR ||
         tid >= static_cast<uint32_t>(peNum)) {
         return;
@@ -128,16 +129,12 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
     const int64_t remR = gR - powR;
     const int64_t headR = powR - remR;
     const int64_t n_rem_full = remR / tile_r;
-    const int64_t rem_tail = remR - n_rem_full * tile_r;
     const int64_t n_head_full = headR / tile_r;
-    const int64_t head_tail = headR - n_head_full * tile_r;
     const int64_t n_full = gR / tile_r;
-    const int64_t tail_r = gR - n_full * tile_r;
     const float inv_r = 1.0f / static_cast<float>(gR);
 
-    // 实际 partial 数（含 tail 块）
-    const int64_t n_actual = n_rem_full + (rem_tail > 0 ? 1 : 0) +
-                             n_head_full + (head_tail > 0 ? 1 : 0);
+    // Full-strip partial count; R-axis tails are outside this path's contract.
+    const int64_t n_actual = n_rem_full + n_head_full;
     // n_padded 由 host 在 tiling 侧算好传入；kernel 只做契约校验：
     // 必须是 2 的幂、覆盖全部实际块、不超过 cache 档容量（fail-closed）。
     if (nPadded < n_actual || nPadded <= 0 ||
@@ -209,54 +206,11 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TMUL(sq1, src1, src1);
             TADD(sq0, sq0, sq1);
             reduce_row row_sum;
-            if (full_r == tR) {
-                TROWSUM(row_sum, sq0);
-                TCOLSUM(cur, row_sum);
-            } else {
-                // Short strips need runtime physical columns in LB2.
-                using scalar = Tile<Location::Vec, float, 1, 1,
-                                    BLayout::CubeM32, 1, 1>;
-                scalar tail_sum;
-                normalization_m32::row_sum(tail_sum, sq0);
-                TCOLEXPAND(cur, tail_sum);
-            }
+            TROWSUM(row_sum, sq0);
+            TCOLSUM(cur, row_sum);
             RMS_BIN_UPDATE_CACHE();
         }
 
-        if (rem_tail > 0) {
-            const int64_t offset = ia * gR + n_rem_full * tile_r;
-            const size_t ar = static_cast<size_t>(rem_tail);
-            gm_t gi0(x + offset, static_cast<int>(gA), static_cast<int>(gR));
-            gm_t gi1(x + offset + powR, static_cast<int>(gA),
-                     static_cast<int>(gR));
-            tile_h src0_h(active_a, ar);
-            tile_h src1_h(active_a, ar);
-            tile_f src0(active_a, ar);
-            tile_f src1(active_a, ar);
-            tile_f sq0(active_a, ar);
-            tile_f sq1(active_a, ar);
-
-            TLOAD(src0_h, gi0);
-            TLOAD(src1_h, gi1);
-            TCVT(src0, src0_h);
-            TCVT(src1, src1_h);
-            TMUL(sq0, src0, src0);
-            TMUL(sq1, src1, src1);
-            TADD(sq0, sq0, sq1);
-            reduce_row row_sum;
-            if (ar == tR) {
-                TROWSUM(row_sum, sq0);
-                TCOLSUM(cur, row_sum);
-            } else {
-                // Short strips need runtime physical columns in LB2.
-                using scalar = Tile<Location::Vec, float, 1, 1,
-                                    BLayout::CubeM32, 1, 1>;
-                scalar tail_sum;
-                normalization_m32::row_sum(tail_sum, sq0);
-                TCOLEXPAND(cur, tail_sum);
-            }
-            RMS_BIN_UPDATE_CACHE();
-        }
 
         for (int64_t tr = 0; tr < n_head_full; ++tr) {
             const int64_t offset = ia * gR + remR + tr * tile_r;
@@ -268,41 +222,8 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TCVT(src, src_h);
             TMUL(sq, src, src);
             reduce_row row_sum;
-            if (full_r == tR) {
-                TROWSUM(row_sum, sq);
-                TCOLSUM(cur, row_sum);
-            } else {
-                // Short strips need runtime physical columns in LB2.
-                using scalar = Tile<Location::Vec, float, 1, 1,
-                                    BLayout::CubeM32, 1, 1>;
-                scalar tail_sum;
-                normalization_m32::row_sum(tail_sum, sq);
-                TCOLEXPAND(cur, tail_sum);
-            }
-            RMS_BIN_UPDATE_CACHE();
-        }
-        if (head_tail > 0) {
-            const int64_t offset = ia * gR + remR + n_head_full * tile_r;
-            const size_t ar = static_cast<size_t>(head_tail);
-            gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
-            tile_h src_h(active_a, ar);
-            tile_f src(active_a, ar);
-            tile_f sq(active_a, ar);
-            TLOAD(src_h, gi);
-            TCVT(src, src_h);
-            TMUL(sq, src, src);
-            reduce_row row_sum;
-            if (ar == tR) {
-                TROWSUM(row_sum, sq);
-                TCOLSUM(cur, row_sum);
-            } else {
-                // Short strips need runtime physical columns in LB2.
-                using scalar = Tile<Location::Vec, float, 1, 1,
-                                    BLayout::CubeM32, 1, 1>;
-                scalar tail_sum;
-                normalization_m32::row_sum(tail_sum, sq);
-                TCOLEXPAND(cur, tail_sum);
-            }
+            TROWSUM(row_sum, sq);
+            TCOLSUM(cur, row_sum);
             RMS_BIN_UPDATE_CACHE();
         }
 
@@ -335,27 +256,6 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             tile_f src(active_a, full_r);
             tile_f normalized(active_a, full_r), gamma_f(active_a, full_r);
             tile_f dst(active_a, full_r);
-            TLOAD(src_h, gi);
-            TCVT(src, src_h);
-            TLOAD(gamma_h, gg);
-            TCVT(gamma_f, gamma_h);
-            TROWEXPANDMUL(normalized, src, rms);
-            TMUL(dst, normalized, gamma_f);
-            TCVT(dst_h, dst);
-            TSTORE(go, dst_h);
-        }
-        if (tail_r > 0) {
-            const int64_t offset = ia * gR + n_full * tile_r;
-            const size_t ar = static_cast<size_t>(tail_r);
-            gm_t gi(x + offset, static_cast<int>(gA), static_cast<int>(gR));
-            gm_t gg(const_cast<dtype *>(gamma) + n_full * tile_r, 1,
-                    static_cast<int>(gR));
-            gm_t go(out + offset, static_cast<int>(gA), static_cast<int>(gR));
-            tile_h src_h(active_a, ar);
-            tile_h gamma_h(active_a, ar), dst_h(active_a, ar);
-            tile_f src(active_a, ar);
-            tile_f normalized(active_a, ar), gamma_f(active_a, ar);
-            tile_f dst(active_a, ar);
             TLOAD(src_h, gi);
             TCVT(src, src_h);
             TLOAD(gamma_h, gg);

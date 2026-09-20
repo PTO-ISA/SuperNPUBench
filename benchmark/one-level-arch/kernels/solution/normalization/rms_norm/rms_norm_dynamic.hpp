@@ -23,7 +23,6 @@
 #define SUPERNPU_RMS_NORM_PTO_HPP
 
 #include <common/pto_tileop.hpp>
-#include "../m32_utils.hpp" // Dynamic short-strip compatibility only.
 
 #include <cstdint>
 
@@ -86,7 +85,7 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     tile_v sum(1), partial(1), mean(1), denom(1), rms(1);
     TEXPANDS(sum, 0.0f);
     for (int64_t col = 0; col < gR; col += active_r) {
-        const size_t width = gR-col < active_r ? gR-col : active_r;
+        const size_t width = active_r;
         gm_t gi(x+offset+col, 1, static_cast<int>(gR));
         tile_h h(1, width);
         tile_f src(1, width), squared(1, width);
@@ -95,25 +94,15 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
         using reduce_row = Tile<Location::Vec, float, 1, tile_f::Cols,
                                 BLayout::CubeM32, 1, 1>;
         reduce_row row_sum;
-        if (width == tile_f::Cols) {
-            TROWSUM(row_sum, squared);
-            TCOLSUM(partial, row_sum);
-        } else {
-            // Native TROWSUM currently encodes allocation columns in LB2.
-            // Keep the runtime-column workaround only for short strips.
-            using scalar = Tile<Location::Vec, float, 1, 1,
-                                BLayout::CubeM32, 1, 1>;
-            scalar tail_sum;
-            normalization_m32::row_sum(tail_sum, squared);
-            TCOLEXPAND(partial, tail_sum);
-        }
+        TROWSUM(row_sum, squared);
+        TCOLSUM(partial, row_sum);
         TADD(sum, sum, partial);
     }
     TMULS(mean, sum, inv_r);
     TADDS(denom, mean, rms_detail::kEpsilon);
     rsqrt_regbase(rms, denom);
     for (int64_t col = 0; col < gR; col += active_r) {
-        const size_t width = gR-col < active_r ? gR-col : active_r;
+        const size_t width = active_r;
         gm_t gi(x+offset+col, 1, static_cast<int>(gR));
         gm_t gg(const_cast<dtype *>(gamma)+col, 1, static_cast<int>(gR));
         gm_t go(out+offset+col, 1, static_cast<int>(gR));
@@ -145,8 +134,10 @@ void rms_norm(dtype *x, const dtype *gamma,
     const int64_t tile_r = tiling->tile_r > 0 ? tiling->tile_r : gR;
     const uint32_t tid = get_thread_idx();
 
-    if (globalA <= 0 || gR <= 0 || tile_a != 1 || tile_r <= 0 ||
-        tile_r > tR || tid >= static_cast<uint32_t>(peNum)) {
+    // This M32 path currently supports complete 512-column strips only.
+    if (globalA <= 0 || gR <= 0 || tile_a != 1 ||
+        tile_r != tR || gR % tR != 0 ||
+        tid >= static_cast<uint32_t>(peNum)) {
         return;
     }
 
