@@ -27,6 +27,7 @@
 #define SUPERNPU_RMS_NORM_SPLIT_R_PTO_HPP
 
 #include <common/pto_tileop.hpp>
+#include "../m32_utils.hpp" // M32 row-reduction carrier compaction.
 
 #include <cstdint>
 
@@ -147,10 +148,10 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, -1, -1>;
-    using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, -1, -1>;
+    using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::CubeM32, -1, -1>;
+    using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::CubeM32, -1, -1>;
     using tile_v = Tile<Location::Vec, float, tA, rms_split_r::kWsCols,
-                        BLayout::RowMajor, 1, 1>;
+                        BLayout::CubeM32, 1, 1>;
 
     for (int64_t ia = 0; ia < gA; ++ia) {
         constexpr size_t active_a = 1;
@@ -205,7 +206,7 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TMUL(sq0, src0, src0);
             TMUL(sq1, src1, src1);
             TADD(sq0, sq0, sq1);
-            TROWSUM(cur, sq0);
+            normalization_m32::row_sum(cur, sq0);
             RMS_BIN_UPDATE_CACHE();
         }
 
@@ -229,7 +230,7 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TMUL(sq0, src0, src0);
             TMUL(sq1, src1, src1);
             TADD(sq0, sq0, sq1);
-            TROWSUM(cur, sq0);
+            normalization_m32::row_sum(cur, sq0);
             RMS_BIN_UPDATE_CACHE();
         }
 
@@ -242,7 +243,7 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TLOAD(src_h, gi);
             TCVT(src, src_h);
             TMUL(sq, src, src);
-            TROWSUM(cur, sq);
+            normalization_m32::row_sum(cur, sq);
             RMS_BIN_UPDATE_CACHE();
         }
         if (head_tail > 0) {
@@ -255,7 +256,7 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TLOAD(src_h, gi);
             TCVT(src, src_h);
             TMUL(sq, src, src);
-            TROWSUM(cur, sq);
+            normalization_m32::row_sum(cur, sq);
             RMS_BIN_UPDATE_CACHE();
         }
 

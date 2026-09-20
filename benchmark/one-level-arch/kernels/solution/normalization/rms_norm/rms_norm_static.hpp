@@ -5,6 +5,7 @@
 #define SUPERNPU_RMS_NORM_PTO_STATIC_HPP
 
 #include <common/pto_tileop.hpp>
+#include "../m32_utils.hpp" // M32 row-reduction carrier compaction.
 
 #include <cstdint>
 
@@ -66,7 +67,7 @@ inline void rms_norm_tile_static(dtype *x, const dtype *gamma, dtype *out,
         tile_f src, squared;
         TLOAD(h, gi); TCVT(src, h);
         TMUL(squared, src, src);
-        TROWSUM(partial, squared);
+        normalization_m32::row_sum(partial, squared);
         TADD(sum, sum, partial);
     }
     TMULS(mean, sum, inv_r);
@@ -128,10 +129,10 @@ void rms_norm_static(dtype *x, const dtype *gamma, dtype *out) {
     out += pe_offset;
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
-    using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::RowMajor, 1, 512>;
-    using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::RowMajor, 1, 512>;
+    using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::CubeM32, 1, 512>;
+    using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::CubeM32, 1, 512>;
     // Row-reduction output and row-broadcast input use physical Columns=1.
-    using tile_v = Tile<Location::Vec, float, tA, 1, BLayout::RowMajor, 1, 1>;
+    using tile_v = Tile<Location::Vec, float, tA, 1, BLayout::CubeM32, 1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
 
