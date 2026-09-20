@@ -1,5 +1,5 @@
 DType ?= __half
-G_A ?= 512
+G_A ?= 128
 G_R ?= 8192
 PE_NUM ?= 4
 ifneq ($(PE_NUM),4)

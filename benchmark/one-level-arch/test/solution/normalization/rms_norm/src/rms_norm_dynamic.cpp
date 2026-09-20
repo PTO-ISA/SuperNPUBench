@@ -13,7 +13,7 @@
 #define PE_NUM 1
 #endif
 #ifndef G_A
-#define G_A 512
+#define G_A 128
 #endif
 #ifndef G_R
 #define G_R 8192

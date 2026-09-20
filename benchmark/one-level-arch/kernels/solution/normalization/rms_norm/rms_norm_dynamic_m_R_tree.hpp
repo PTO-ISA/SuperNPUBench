@@ -1,4 +1,4 @@
-// rms_norm_dynamic_m_R_tree: [512,8192].
+// rms_norm_dynamic_m_R_tree: default test shape [128,8192].
 // Fixed-shape 4PE implementation with R=[16,32,16], Tile=[32,16].
 #ifndef SUPERNPU_RMS_NORM_SIMT_DYNAMIC_M_R_TREE_HPP
 #define SUPERNPU_RMS_NORM_SIMT_DYNAMIC_M_R_TREE_HPP

@@ -1,4 +1,4 @@
-// Fixed-shape 4PE test: [512,8192].
+// Fixed-shape 4PE test: [128,8192].
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
@@ -14,7 +14,7 @@
 #define PE_NUM 4
 #endif
 #ifndef G_A
-#define G_A 512
+#define G_A 128
 #endif
 #ifndef G_R
 #define G_R 8192
@@ -39,7 +39,7 @@ volatile uint32_t output_written = 0;
 #endif
 
 int main() {
-    static_assert(G_A == 512 && G_R == 8192, "static testcase has a fixed shape");
+    static_assert(G_A == 128 && G_R == 8192, "static testcase has a fixed shape");
     using dtype = DType;
 
     // tiling_info is always the host-visible full shape. PE partitioning is

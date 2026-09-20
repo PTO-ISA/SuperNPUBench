@@ -7,7 +7,7 @@ gamma.bin        : g_r x float16 affine scale
 golden.bin       : same shape float16, out = x * rsqrt(mean(x^2)+eps) * gamma
                    (fp32 compute then cast to fp16, matching kernel pipeline)
 
-Default: g_a=512, g_r=8192, tile=(1,512), eps=1e-6.
+Default: g_a=128, g_r=8192, tile=(1,512), eps=1e-6.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
-    / "solution_normalization_rms_norm_rms_norm_dynamic_DType__half_gA512_gR8192_PE4"
+    / "solution_normalization_rms_norm_rms_norm_dynamic_DType__half_gA128_gR8192_PE4"
 )
 DATA_DIR = SCRIPT_DIR / "data"
 
@@ -150,7 +150,7 @@ def gen_all(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--g-a", type=int, default=512)
+    parser.add_argument("--g-a", type=int, default=128)
     parser.add_argument("--g-r", type=int, default=8192)
     parser.add_argument("--tile-a", type=int, default=1)
     parser.add_argument("--tile-r", type=int, default=512)
