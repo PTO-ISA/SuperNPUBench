@@ -9,7 +9,7 @@ Bins written to --out-dir:
   golden_dx.bin / golden_dgamma.bin / golden_dbeta.bin : float16
 
 Math matches PyTorch GroupNorm1dBackward (fp32 accumulate, cast to fp16).
-Default: N=256, C=256, G=8 (D=32), tile_d=min(D, 8192)=32.
+Default: N=256, C=4096, G=8 (D=512), tile_d=min(D, 8192)=512.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
-    / "solution_normalization_group_norm_grad_1d_group_norm_grad_1d_dynamic_DType__half_N256_C256_G8_PE4"
+    / "solution_normalization_group_norm_grad_1d_group_norm_grad_1d_dynamic_DType__half_N256_C4096_G8_PE4"
 )
 
 
@@ -207,7 +207,7 @@ def gen_all(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n", type=int, default=256)
-    parser.add_argument("--c", type=int, default=256)
+    parser.add_argument("--c", type=int, default=4096)
     parser.add_argument("--g", type=int, default=8)
     parser.add_argument("--tile-d", type=int, default=None)
     parser.add_argument("--gb-tile-d", type=int, default=0)
@@ -228,7 +228,7 @@ def main() -> None:
     if tile_d <= 0 or tile_d > min(args.c // args.g, 8192):
         parser.error("tile-d must be in [1, min(C/G, 8192)]")
 
-    gb_tile_d = args.gb_tile_d if args.gb_tile_d != 0 else tile_d
+    gb_tile_d = args.gb_tile_d if args.gb_tile_d != 0 else min(tile_d, 256)
     gb_tile_g = args.gb_tile_g if args.gb_tile_g != 0 else (min(args.g, 32) if gb_tile_d <= 256 else 1)
     if not 1 <= gb_tile_d <= 8192 or not 1 <= gb_tile_g <= 32:
         parser.error("gb-tile-d must be 1..8192; gb-tile-g must be 1..32")

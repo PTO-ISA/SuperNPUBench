@@ -9,7 +9,7 @@
 #define DType __half
 #endif
 
-// Dynamic 4PE validation: N=2, C=32, G=8, HxW=2024.
+// Dynamic 4PE validation: N=2, C=32, G=8, HxW=2048.
 #ifndef N_BATCH
 #define N_BATCH 2
 #endif
@@ -20,7 +20,7 @@
 #define G_GRP 8
 #endif
 #ifndef HxW_SZ
-#define HxW_SZ 2024
+#define HxW_SZ 2048
 #endif
 #ifndef PE_NUM
 #define PE_NUM 1

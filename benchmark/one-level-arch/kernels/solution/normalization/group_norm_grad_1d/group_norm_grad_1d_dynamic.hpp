@@ -91,7 +91,8 @@ inline void fused_params_group(dtype *dy, dtype *x, float *mean, float *rstd,
     gm_f gc2(scratch + 0, 1, 1);
     gm_f gc3(scratch + N * G, 1, 1);
 
-    tile_v sum1(1), sum2(1);
+    using scalar_tile = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, 1, 1>;
+    scalar_tile sum1, sum2, loaded1, loaded2;
     TEXPANDS(sum1, 0.0f);
     TEXPANDS(sum2, 0.0f);
     for (int64_t d0 = 0; d0 < D; d0 += tile_d) {
@@ -110,12 +111,17 @@ inline void fused_params_group(dtype *dy, dtype *x, float *mean, float *rstd,
         TCVT(gf, h);
         TMUL(prod, dyf, gf);
         TROWSUM(partial2, prod);
+        // Private (n,g) c2/c3 slots hold partials until final parameters replace them.
+        TSTORE(gc3, partial2);
         TMUL(prod, prod, xf);
         TROWSUM(partial1, prod);
-        TADD(sum1, sum1, partial1);
-        TADD(sum2, sum2, partial2);
+        TSTORE(gc2, partial1);
+        TLOAD(loaded1, gc2);
+        TLOAD(loaded2, gc3);
+        TADD(sum1, sum1, loaded1);
+        TADD(sum2, sum2, loaded2);
     }
-    tile_v mean_t(1), rstd_t(1), c2(1), c3(1);
+    scalar_tile mean_t, rstd_t, c2, c3;
     TLOAD(mean_t, gmean);
     TLOAD(rstd_t, grstd);
 

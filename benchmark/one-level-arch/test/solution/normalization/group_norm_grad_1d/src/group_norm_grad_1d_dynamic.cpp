@@ -9,12 +9,12 @@
 #define DType __half
 #endif
 
-// Dynamic 4PE validation: HxW==1, N=256, C=256, G=8, D=32.
+// Dynamic 4PE validation: HxW==1, N=256, C=4096, G=8, D=512.
 #ifndef N_BATCH
 #define N_BATCH 256
 #endif
 #ifndef C_CH
-#define C_CH 256
+#define C_CH 4096
 #endif
 #ifndef G_GRP
 #define G_GRP 8
@@ -26,7 +26,7 @@
 namespace {
 template <typename dtype>
 constexpr int64_t group_norm_1d_tile_d(int64_t channels, int64_t groups) {
-    constexpr int64_t kTileCapacity = gn_grad_1d::data_columns<dtype>();
+    constexpr int64_t kTileCapacity = 512;
     const int64_t group_width = channels / groups;
     return group_width < kTileCapacity ? group_width : kTileCapacity;
 }
@@ -56,7 +56,7 @@ int main() {
 #ifndef GB_TILE_G
 #define GB_TILE_G 0
 #endif
-    constexpr int64_t kGbTileD = GB_TILE_D > 0 ? GB_TILE_D : kTileD;
+    constexpr int64_t kGbTileD = GB_TILE_D > 0 ? GB_TILE_D : (kTileD < 256 ? kTileD : 256);
     constexpr int64_t kGbRowCapacity = 32768 / (256 * sizeof(float));
     constexpr int64_t kGbTileG = GB_TILE_G > 0 ? GB_TILE_G :
         (kGbTileD <= 256 ? (G_GRP < kGbRowCapacity ? G_GRP : kGbRowCapacity) : 1);
