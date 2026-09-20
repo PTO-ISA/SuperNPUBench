@@ -56,7 +56,13 @@ CONFIGS = [
     ("NONTAIL_OCP_FP4_SPLITN_DYN",   "nontail_ocp_fp4_splitN_dyn",   512, 256, 32, "fp16", "OCP",    "nontail", "FP4", 4),
     # ---- 缩小版网络基准（boxed 小 M，scale 精度受 model boxed/e8m0 缺陷影响，预期 FAIL，仅作观测）----
     ("TAIL_OCP_FP4_BENCH_SMALL",     "tail_ocp_fp4_bench_small",     256, 1536, 32, "bf16", "OCP",    "tail",    "FP4", 4),
-    ("TAIL_OCP_FP8_BENCH_SMALL",     "tail_ocp_fp8_bench_small",      64,16384, 32, "bf16", "OCP",    "tail",    "FP8", 4),
+    # ---- 动态 shape 版 bench_small：V1(RowMajor) / V2(Cube_M32) 并列对比（同规格同 golden）----
+    #   V1_dyn(RowMajor)：不依赖在研 issue，恒 PASS。
+    #   V2_dyn(Cube_M32 + 动态 shape)：当前编译阻塞——TileOP reduction-prefix 发射只实现立即数维度、
+    #   缺 TCVT 已有的 ValidRow<0→寄存器 B.DIM 分支（ISA/B.DIM 本支持寄存器维度，故为 Linx-TileOP-API
+    #   缺口、可修）。补齐前预期编译失败，作 witness（M32+reduction-prefix 暂只能静态，见 V2_static）。
+    ("TAIL_OCP_FP8_BENCH_SMALL_V1_DYN","tail_ocp_fp8_bench_small_V1_dyn",64,16384,32,"bf16","OCP","tail","FP8",4),
+    ("TAIL_OCP_FP8_BENCH_SMALL_V2_DYN","tail_ocp_fp8_bench_small_V2_dyn",64,16384,32,"bf16","OCP","tail","FP8",4),
     # ---- 静态形状版 bench_small：V1(RowMajor) / V2(Cube_M32) 并列对比（同规格同 golden）----
     #   V1 不依赖 #180/#749，恒 PASS，作 V2 对照基准。
     #   V2 依赖 Linx-TileOP-API#180（编译期 B.DATR NORM）+ SuperScalarModel#749（gfrun TCVT carrier）；

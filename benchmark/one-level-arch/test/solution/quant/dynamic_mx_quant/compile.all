@@ -45,7 +45,9 @@ CONFIGS=(
   "NONTAIL_OCP_FP4_SPLITN_DYN:nontail_ocp_fp4_splitN_dyn:512:256:32:fp16:OCP:nontail:FP4"
   # ---- 缩小版网络基准（供 gfsim；小 M 为 boxed，精度不作门禁）----
   "TAIL_OCP_FP4_BENCH_SMALL:tail_ocp_fp4_bench_small:256:1536:32:bf16:OCP:tail:FP4"
-  "TAIL_OCP_FP8_BENCH_SMALL:tail_ocp_fp8_bench_small:64:16384:32:bf16:OCP:tail:FP8"
+  # bench_small dyn 版取 V1（RowMajor，可编可喂 gfsim）；V2_dyn(Cube_M32) 当前编译阻塞（TileOP
+  # reduction-prefix 缺动态维度分支，可修），不进 compile.all。
+  "TAIL_OCP_FP8_BENCH_SMALL_V1_DYN:tail_ocp_fp8_bench_small_V1_dyn:64:16384:32:bf16:OCP:tail:FP8"
   # ---- 完整网络基准（太大，默认注释；手动构建/验证）----
   #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4_BENCH res_check=on   # [15360,1536] ~47MB
   # "TAIL_OCP_FP4_BENCH:tail_ocp_fp4_bench:15360:1536:32:bf16:OCP:tail:FP4"

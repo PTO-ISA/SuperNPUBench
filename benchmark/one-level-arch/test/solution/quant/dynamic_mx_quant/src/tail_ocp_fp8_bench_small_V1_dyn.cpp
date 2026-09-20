@@ -2,18 +2,17 @@
 #include <cstdint>
 #include "fileop.h"
 #include "multi_thread_res_check.h"  // 官方 4-PE 收尾协议（输入/输出屏障 + PE0 落盘）
-#include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp8_dyn.hpp"
+#include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp8_dyn_V1-09181200.hpp"  // V1：RowMajor dyn
 using namespace supernpu::tile_isa::mxquant;
 
-// TAIL_OCP_FP8 缩小版网络基准用例：[M=64, N=16384], BlockSize=32, **bf16** in -> e4m3 out。
-//   与 tail_ocp_fp8_bench.cpp 完全同一 kernel/算法/结构，仅把默认 M 从 7168 缩到 64（专用
-//   driver = 专用 .o）。缩小版足够小（bf16 64×16384×2≈2MB），可进 compile.all 默认跑、直接
-//   喂 gfsim 做网络形状（N=16384）时序。固定 SPMD 4-PE：M 按 tid 切 4 份，每 PE 16 行 = boxed
-//   尾块（16 < TileM=128，seg_full=0）。numKb = 16384/32 = 512。必须 4 线程跑：
-//   gfrun -s softcore.multiThreadNum=4。
-//   RES_CHECK：读 gen（--M 64 --K 16384 --block-size 32 --algo OCP --kernel tail --dtype FP8
-//   --in-dtype bf16 --scale-layout compact）的 input.bin，写 output.bin（1 字节/元素 e4m3）+
-//   scale_output.bin（compact uint8 E8M0，scaleCols = evenAlign(N/32) = 512）。
+// TAIL_OCP_FP8 bench_small 的 **V1（RowMajor 布局）动态 shape** 版：[M=64, N=16384], BS=32,
+//   bf16 in -> e4m3 out。与 V2（tail_ocp_fp8_bench_small_V2_dyn.cpp，Cube_M32 dyn）同规格/同数据/
+//   同 golden，仅 kernel 布局不同：V1 走 RowMajor（Tile<>/TileM=128 + #585 列切归约），M/N 运行期传入。
+//   调动态 shape kernel dynamic_mx_quant_tail_ocp_fp8_dyn<BS,PE,InT>（此处解析到 V1 备份头里的
+//   RowMajor 实现）。V1 不依赖任何在研 issue，官方基线即 PASS，可进 compile.all 喂 gfsim。
+//   与静态 V1（tail_ocp_fp8_bench_small_V1_static.cpp）算法一致，仅 shape 编译期 vs 运行期之别。
+//   gen 同 V2：--M 64 --K 16384 --block-size 32 --algo OCP --kernel tail --dtype FP8
+//   --in-dtype bf16 --scale-layout compact。
 #ifndef PM
 #define PM 64
 #endif
