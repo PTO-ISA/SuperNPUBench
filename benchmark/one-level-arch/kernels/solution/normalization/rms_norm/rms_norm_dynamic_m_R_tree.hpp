@@ -56,7 +56,8 @@ inline void reduce_pairs(gm_t &base, int64_t gR, int64_t pair_count,
         TLOAD(h0, g0); TCVT(x0, h0); TMUL(sq0, x0, x0);
         TLOAD(h1, g1); TCVT(x1, h1); TMUL(sq1, x1, x1);
         TADD(sq_pair, sq0, sq1);
-        tile_m_v partial_rows(tile_m, 1);
+        // ValidCol is static: (value, row) would select the fill constructor.
+        tile_m_v partial_rows(tile_m);
         TROWSUM(partial_rows, sq_pair);
 
         // Store each [tile_m,1] result as one contiguous column. The complete
@@ -84,7 +85,8 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     // First pair outer-R blocks (0,8), (1,9), ... (7,15). Spill the eight
     // reduced [32,1] results to GM, then load them as one [32,8] Tile for the
     // second row reduction.
-    float *partial_workspace = workspace + a_off * kMaxPairCount;
+    // Each PE processes rows sequentially; reuse its private scratch matrix.
+    float *partial_workspace = workspace;
     reduce_pairs<gm_t, gm_f_col, tile_h, tile_f, tile_m_v>(
         input_row, gR, pair_count, tile_r, curtile_factal_a,
         curtile_factal_r, partial_workspace);
@@ -93,7 +95,7 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     tile_m_matrix partial_matrix(curtile_factal_a, pair_count);
     TLOAD(partial_matrix, partial_gm);
 
-    tile_m_v sum_rows(curtile_factal_a, 1);
+    tile_m_v sum_rows(curtile_factal_a);
     TROWSUM(sum_rows, partial_matrix);
     tile_s tile_sum, mean, denom, rms;
     TCOLSUM(tile_sum, sum_rows);
@@ -101,7 +103,7 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     TADDS(denom, mean, kEpsilon);
     rsqrt_regbase(rms, denom);
 
-    tile_v rms_rows(curtile_factal_a, 1);
+    tile_v rms_rows(curtile_factal_a);
     TCOLEXPAND(rms_rows, rms);
     for (int64_t r = 0; r < gR; r += tile_r) {
         gm_t gi(x + offset + r, static_cast<int>(curtile_factal_a),
@@ -182,7 +184,7 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma,
     using tile_m_v = Tile<Location::Vec, float, 32, 1,
                           BLayout::RowMajor, -1, 1>;
     using tile_m_matrix = Tile<Location::Vec, float, 32, 8,
-                               BLayout::RowMajor, -1, 8>;
+                               BLayout::RowMajor, -1, -1>;
     using tile_v = Tile<Location::Vec, float, 32, 1,
                         BLayout::RowMajor, -1, 1>;
     using tile_s = Tile<Location::Vec, float, 1, 1,

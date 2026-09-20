@@ -76,7 +76,8 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     gm_t input_row(x + offset, 1, static_cast<int>(gR));
 
     // Sequentially reduce every R block into one row-sum vector.
-    tile_m_v sum_rows(curtile_factal_a, 1);
+    // ValidCol is static: the one-argument constructor sets ValidRow.
+    tile_m_v sum_rows(curtile_factal_a);
     reduce_sequential<gm_t, tile_h, tile_f, tile_m_v>(
         input_row, pair_count, tile_r, curtile_factal_a,
         curtile_factal_r, sum_rows);
@@ -86,7 +87,7 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     TADDS(denom, mean, kEpsilon);
     rsqrt_regbase(rms, denom);
 
-    tile_v rms_rows(curtile_factal_a, 1);
+    tile_v rms_rows(curtile_factal_a);
     TCOLEXPAND(rms_rows, rms);
     for (int64_t r = 0; r < gR; r += tile_r) {
         gm_t gi(x + offset + r, static_cast<int>(curtile_factal_a),
