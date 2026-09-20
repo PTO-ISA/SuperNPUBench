@@ -81,20 +81,10 @@ inline void fused_params_group(dtype *gamma, float *mean, float *rstd,
     TLOAD(h0, gg);
     TCVT(gamma_f, h0);
     TMUL(t0, ds_f, gamma_f);
-    {
-      using reduce_row = Tile<Location::Vec, float, 1, decltype(t0)::Cols, BLayout::CubeM32, 1, 1>;
-      reduce_row rows;
-      TROWSUM(rows, t0);
-      TCOLSUM(partial, rows);
-    }
+    TROWSUM(partial, t0);
     TADD(sum1, sum1, partial);
     TMUL(t0, db_f, gamma_f);
-    {
-      using reduce_row = Tile<Location::Vec, float, 1, decltype(t0)::Cols, BLayout::CubeM32, 1, 1>;
-      reduce_row rows;
-      TROWSUM(rows, t0);
-      TCOLSUM(partial, rows);
-    }
+    TROWSUM(partial, t0);
     TADD(sum2, sum2, partial);
   }
 
@@ -156,12 +146,7 @@ inline void dx_nc(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2_buf,
     tile_v gv(1);
     TLOAD(hg, gg);
     TCVT(gf, hg);
-    {
-      using reduce_row = Tile<Location::Vec, float, 1, decltype(gf)::Cols, BLayout::CubeM32, 1, 1>;
-      reduce_row rows;
-      TROWSUM(rows, gf);
-      TCOLSUM(gv, rows);
-    }
+    TROWSUM(gv, gf);
     TMUL(c1, gv, rstd_t);
   }
 
@@ -215,19 +200,9 @@ inline void spatial_block(dtype *dy, dtype *x, float *ds, float *db, int64_t C,
     TLOAD(v, gy);
     TCVT(yf, v);
     TMUL(prod, xf, yf);
-    {
-      using reduce_row = Tile<Location::Vec, float, 1, decltype(prod)::Cols, BLayout::CubeM32, 1, 1>;
-      reduce_row rows;
-      TROWSUM(rows, prod);
-      TCOLSUM(cur, rows);
-    }
+    TROWSUM(cur, prod);
     TADD(sa, sa, cur);
-    {
-      using reduce_row = Tile<Location::Vec, float, 1, decltype(yf)::Cols, BLayout::CubeM32, 1, 1>;
-      reduce_row rows;
-      TROWSUM(rows, yf);
-      TCOLSUM(cur, rows);
-    }
+    TROWSUM(cur, yf);
     TADD(ba, ba, cur);
   }
   GF gs(ds + n * C + c, 1, 1), gb(db + n * C + c, 1, 1);

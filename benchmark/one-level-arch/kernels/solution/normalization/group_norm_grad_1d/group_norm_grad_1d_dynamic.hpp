@@ -109,19 +109,9 @@ inline void fused_params_group(dtype *dy, dtype *x, float *mean, float *rstd,
         TLOAD(h, gg);
         TCVT(gf, h);
         TMUL(prod, dyf, gf);
-        {
-          using reduce_row = Tile<Location::Vec, float, 1, decltype(prod)::Cols, BLayout::CubeM32, 1, 1>;
-          reduce_row rows;
-          TROWSUM(rows, prod);
-          TCOLSUM(partial2, rows);
-        }
+        TROWSUM(partial2, prod);
         TMUL(prod, prod, xf);
-        {
-          using reduce_row = Tile<Location::Vec, float, 1, decltype(prod)::Cols, BLayout::CubeM32, 1, 1>;
-          reduce_row rows;
-          TROWSUM(rows, prod);
-          TCOLSUM(partial1, rows);
-        }
+        TROWSUM(partial1, prod);
         TADD(sum1, sum1, partial1);
         TADD(sum2, sum2, partial2);
     }
