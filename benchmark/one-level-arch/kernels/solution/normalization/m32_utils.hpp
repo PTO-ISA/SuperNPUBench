@@ -13,12 +13,44 @@ __attribute__((always_inline)) inline void row_sum(Out &out, In &in) {
     static_assert(Out::Rows == 1 && Out::Cols == 1);
     static_assert(In::Rows == 1);
     static_assert(In::BFractal == pto::BLayout::CubeM32);
+    static_assert(std::is_same_v<typename In::DType, float>);
+    static_assert(std::is_same_v<typename Out::DType, float>);
     using Wide = pto::Tile<pto::Location::Vec, float, 1, In::Cols,
                            pto::BLayout::CubeM32, 1, 1>;
     using Row = pto::Tile<pto::Location::Vec, float, 1, 1,
                           pto::BLayout::CubeM32, 1, 1>;
     Wide wide;
-    TROWSUM(wide, in);
+    // TCVT/elementwise produce compact M32 FP32 descriptors: one column
+    // per CELL, so physical columns equal the runtime valid columns.
+    // The current TileOP TROWSUM wrapper instead emits In::Cols into LB2,
+    // which is allocation capacity and is wrong for short strips/tails.
+    // Emit the same row-reduction instruction with runtime LB2; keep the
+    // allocated destination large enough for the maximum supported strip.
+    const size_t columns = in.GetValidCol();
+    if constexpr (In::ValidCol > 0) {
+        asm volatile(
+            "BSTART.TEPL 64, %D1\n"
+            "B.DATR CUBE_M32, Null\n"
+            "B.DIM zero, %c2, ->lb0\n"
+            "B.DIM zero, 1, ->lb1\n"
+            "B.DIM zero, %c2, ->lb2\n"
+            "B.IOT %3, mask=1111, last, ->%0<%Z4>\n"
+            : "=Tr"(wide.data())
+            : "i"(type_traits<float>::TypeCode), "i"(In::ValidCol),
+              "Tr"(in.data()),
+              "i"(tile_type_traits<typename Wide::TileDType>::TilesizeCode));
+    } else {
+    asm volatile(
+        "BSTART.TEPL 64, %D1\n"
+        "B.DATR CUBE_M32, Null\n"
+        "B.DIM %2, 0, ->lb0\n"
+        "B.DIM zero, 1, ->lb1\n"
+        "B.DIM %2, 0, ->lb2\n"
+        "B.IOT %3, mask=1111, last, ->%0<%Z4>\n"
+        : "=Tr"(wide.data())
+        : "i"(type_traits<float>::TypeCode), "r"(columns), "Tr"(in.data()),
+          "i"(tile_type_traits<typename Wide::TileDType>::TilesizeCode));
+    }
     auto prefix = pto::TREDUCEPREFIXVIEW<Row>(wide);
     Row compact;
     TMULS(compact, prefix, 1.0f);
