@@ -32,7 +32,6 @@
 #define SUPERNPU_GROUP_NORM_GRAD_PTO_HPP
 
 #include <common/pto_tileop.hpp>
-#include "../m32_utils.hpp"
 
 #include <cstdint>
 
@@ -82,10 +81,10 @@ inline void fused_params_group(dtype *gamma, float *mean, float *rstd,
     TLOAD(h0, gg);
     TCVT(gamma_f, h0);
     TMUL(t0, ds_f, gamma_f);
-    normalization_m32::row_sum(partial, t0);
+    TROWSUM(partial, t0);
     TADD(sum1, sum1, partial);
     TMUL(t0, db_f, gamma_f);
-    normalization_m32::row_sum(partial, t0);
+    TROWSUM(partial, t0);
     TADD(sum2, sum2, partial);
   }
 
@@ -142,12 +141,12 @@ inline void dx_nc(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2_buf,
   // Convert gamma through matching small Tiles before reducing to one value.
   {
     gm_h gg(gamma + c, 1, 1);
-    Tile<Location::Vec, dtype, 1, 512, BLayout::CubeM32, -1, -1> hg(1, 1);
-    Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, -1> gf(1, 1);
+    Tile<Location::Vec, dtype, 1, 512, BLayout::RowMajor, -1, -1> hg(1, 1);
+    Tile<Location::Vec, float, 1, 512, BLayout::RowMajor, -1, -1> gf(1, 1);
     tile_v gv(1);
     TLOAD(hg, gg);
     TCVT(gf, hg);
-    normalization_m32::row_sum(gv, gf);
+    TROWSUM(gv, gf);
     TMUL(c1, gv, rstd_t);
   }
 
@@ -184,9 +183,9 @@ inline void spatial_block(dtype *dy, dtype *x, float *ds, float *db, int64_t C,
                           int64_t tile_hw) {
   using GM = global_tensor<dtype, RowMajor<-1, -1>>;
   using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::CubeM32, -1, -1>;
-  using TF = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, -1>;
-  using TV = Tile<Location::Vec, float, 1, 1, BLayout::CubeM32, -1, 1>;
+  using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::RowMajor, -1, -1>;
+  using TF = Tile<Location::Vec, float, 1, 512, BLayout::RowMajor, -1, -1>;
+  using TV = Tile<Location::Vec, float, 1, 1, BLayout::RowMajor, -1, 1>;
   TV sa(1), ba(1), cur(1);
   TEXPANDS(sa, 0.0f);
   TEXPANDS(ba, 0.0f);
@@ -201,9 +200,9 @@ inline void spatial_block(dtype *dy, dtype *x, float *ds, float *db, int64_t C,
     TLOAD(v, gy);
     TCVT(yf, v);
     TMUL(prod, xf, yf);
-    normalization_m32::row_sum(cur, prod);
+    TROWSUM(cur, prod);
     TADD(sa, sa, cur);
-    normalization_m32::row_sum(cur, yf);
+    TROWSUM(cur, yf);
     TADD(ba, ba, cur);
   }
   GF gs(ds + n * C + c, 1, 1), gb(db + n * C + c, 1, 1);
@@ -219,18 +218,20 @@ inline void dx_block(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2,
                      int64_t tile_hw) {
   using GH = global_tensor<dtype, RowMajor<-1, -1>>;
   using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 32, 256, BLayout::CubeM32, -1, -1>;
-  using TF = Tile<Location::Vec, float, 32, 256, BLayout::CubeM32, -1, -1>;
-  using TV = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, -1, 1>;
-  using SV = Tile<Location::Vec, float, 1, 1, BLayout::CubeM32, -1, 1>;
-  Tile<Location::Vec, dtype, 32, 1, BLayout::CubeM32, -1, 1> gh(rows);
+  using TH = Tile<Location::Vec, dtype, 32, 256, BLayout::RowMajor, -1, -1>;
+  using TF = Tile<Location::Vec, float, 32, 256, BLayout::RowMajor, -1, -1>;
+  using TV = Tile<Location::Vec, float, 32, 1, BLayout::RowMajor, -1, 1>;
+  using SV = Tile<Location::Vec, float, 1, 1, BLayout::RowMajor, -1, 1>;
+  Tile<Location::Vec, dtype, 32, 16, BLayout::RowMajor, -1, -1> gh(rows, 1);
+  Tile<Location::Vec, float, 32, 16, BLayout::RowMajor, -1, -1> gf(rows, 1);
   GH gm_gamma(gamma + c, rows, 1);
   GF gm_r(rstd + n * G + g, 1, 1), gm_c2(c2 + n * G + g, 1, 1),
       gm_c3(c3 + n * G + g, 1, 1);
   SV rs(1), s2(1), s3(1);
   TV gv(rows), v2(rows), v3(rows), ones(rows);
   TLOAD(gh, gm_gamma);
-  TCVT(gv, gh);
+  TCVT(gf, gh);
+  TROWSUM(gv, gf);
   TLOAD(rs, gm_r);
   TLOAD(s2, gm_c2);
   TLOAD(s3, gm_c3);
@@ -265,9 +266,9 @@ inline void gamma_beta_block(float *ds, float *db, float *mean, float *rstd,
                              int64_t rows, int64_t cols) {
   using GF = global_tensor<float, RowMajor<-1, -1>>;
   using GH = global_tensor<dtype, RowMajor<-1, -1>>;
-  using TF = Tile<Location::Vec, float, Rows, Cols, BLayout::CubeM32, -1, -1>;
-  using TH = Tile<Location::Vec, dtype, Rows, Cols, BLayout::CubeM32, -1, -1>;
-  using TV = Tile<Location::Vec, float, Rows, 1, BLayout::CubeM32, -1, 1>;
+  using TF = Tile<Location::Vec, float, Rows, Cols, BLayout::RowMajor, -1, -1>;
+  using TH = Tile<Location::Vec, dtype, Rows, Cols, BLayout::RowMajor, -1, -1>;
+  using TV = Tile<Location::Vec, float, Rows, 1, BLayout::RowMajor, -1, 1>;
   TF sf(rows, cols), bf(rows, cols), t(rows, cols), ga(rows, cols),
       ba(rows, cols);
   TV m(rows), r(rows);
@@ -299,11 +300,7 @@ struct Config {
   int64_t N, C, G, H, rh, rc, dh, dc, bd, bg, D;
   explicit Config(const int64_t *t)
       : N(t[0]), C(t[1]), G(t[2]), H(t[3]), rh(t[4]), rc(t[5]), dh(t[6]),
-        dc(t[7]), bd(t[8]), bg(t[9]), D(G > 0 ? C / G : 0) {
-    // Keep M32 data carriers <=32 KiB; strip loops cover the remainder.
-    if (dh > 256) dh = 256;
-    if (bd > 256) bd = 256;
-  }
+        dc(t[7]), bd(t[8]), bg(t[9]), D(G > 0 ? C / G : 0) {}
   bool valid() const {
     return N > 0 && C > 0 && G > 0 && H > 0 && C % G == 0 && rh > 0 &&
            rh <= 512 && rc == 1 && dh > 0 && dh <= 8192 && dc > 0 &&
@@ -341,9 +338,9 @@ group_norm_grad_fused_params(dtype *gamma, float *mean, float *rstd,
     return;
   using GH = global_tensor<dtype, RowMajor<-1, -1>>;
   using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::CubeM32, -1, -1>;
-  using TF = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, -1>;
-  using TV = Tile<Location::Vec, float, 1, 1, BLayout::CubeM32, -1, 1>;
+  using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::RowMajor, -1, -1>;
+  using TF = Tile<Location::Vec, float, 1, 512, BLayout::RowMajor, -1, -1>;
+  using TV = Tile<Location::Vec, float, 1, 1, BLayout::RowMajor, -1, 1>;
   float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
   for (int64_t ng = tid; ng < t.N * t.G; ng += peNum)
     gn_grad::fused_params_group<dtype, GH, GF, TH, TF, TV>(
@@ -362,9 +359,9 @@ group_norm_grad_dx(dtype *dy, dtype *x, dtype *gamma, float *rstd,
     return;
   using GH = global_tensor<dtype, RowMajor<-1, -1>>;
   using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 1, 256, BLayout::CubeM32, -1, -1>;
-  using TF = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, -1>;
-  using TV = Tile<Location::Vec, float, 1, 1, BLayout::CubeM32, -1, 1>;
+  using TH = Tile<Location::Vec, dtype, 1, 8192, BLayout::RowMajor, -1, -1>;
+  using TF = Tile<Location::Vec, float, 1, 8192, BLayout::RowMajor, -1, -1>;
+  using TV = Tile<Location::Vec, float, 1, 1, BLayout::RowMajor, -1, 1>;
   float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
   for (int64_t ng = tid; ng < t.N * t.G; ng += peNum) {
     const int64_t n = ng / t.G, g = ng % t.G;
@@ -400,7 +397,7 @@ group_norm_grad_gamma_beta(float *mean, float *rstd, const int64_t *tiling,
           workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N, t.C,
           t.G, t.D, g, d, rows, cols);
     else
-      gn_grad::gamma_beta_block<dtype, 1, 256>(
+      gn_grad::gamma_beta_block<dtype, 1, 8192>(
           workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N, t.C,
           t.G, t.D, g, d, rows, cols);
   }

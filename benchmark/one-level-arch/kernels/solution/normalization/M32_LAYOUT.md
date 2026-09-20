@@ -1,38 +1,31 @@
-# Normalization Local Tile layout
+# RMS Norm CubeM32 layout
 
-All ten normalization kernel implementations use CubeM32 for Local Tiles.
-GM tensors remain row-major; TLOAD/TSTORE perform the layout conversion.
-Logical shape and physical capacity are distinct: M32 always stores 32 rows.
+This change covers RMS Norm dynamic/static, split-R dynamic/static, and
+dynamic R-tree/R-simt only. GroupNormGrad changes are in a separate PR.
+Local Tiles use CubeM32; GM tensors remain row-major.
 
-- A logical one-row FP32 strip with 512 physical columns allocates 64 KiB,
-  not the 2 KiB used by its former RowMajor representation.
-- GroupNormGrad data strips are limited to 256 physical columns (32 KiB
-  FP32 / 16 KiB FP16). Larger spatial/channel axes are processed in loops.
-  The static H=2024 path uses seven 256-column blocks and one 232-column tail.
-- One-row reductions use m32_utils.hpp: a wide carrier preserves the source
-  physical columns, then TREDUCEPREFIXVIEW and TMULS(1) materialize a single
-  FP32 CELL for accumulation/broadcast/GM cache reload. This is tile-only
-  computation, not a scalar fallback. The helper requires one logical row.
-- Split-R GM cache remains one float per row/level; M32 physical padding is
-  not part of the externally allocated workspace.
-- R-tree and R-simt retain their explicit wide multi-row reduction carriers.
+## Reduction paths
 
-## Validation at this change
+- Ordinary RMS and split-R full-width strips use native TROWSUM followed
+  by TCOLSUM, with wide physical carriers and one valid output column.
+- Static RMS and split-R no longer include m32_utils.hpp.
+- Dynamic short strips still use m32_utils.hpp to encode runtime columns
+  in LB2. The native TROWSUM wrapper currently encodes allocation columns.
+- The split-R GM workspace still stores one float per row/cache level.
+- R-tree/R-simt retain their existing multi-row reduction paths.
 
-All ten default FP16/4PE RES_CHECK builds compile with LLVM
-3a9b70d00aacb1739122c460a989e06af3412b42 (dev-llvm15_56) and TileOP
-b1545cef9cf001c9bbf30d35a880dda57793029d.
+## Validation
 
-Runtime validation is NOT passing with SuperScalarModel
-8d7d3cdb19d4b895aef168b4eba4bc13a80ec1c9:
-gfrun stops at CUBE descriptor, row-reduction or broadcast checks before
-precision comparison. The newly encountered descriptor/reduction failures
-still need field-level diagnosis; they must not all be presumed model bugs.
-R-tree/R-simt gfsim also abort before producing valid performance results.
+Model PR #764, commit 3e91790ba7ec9ec8f8f6e3de7878da8b92a6c4da:
+all six default FP16/4PE cases run successfully and pass golden comparison.
+RMS and R-tree/R-simt use [128,8192]; split-R uses [16,16384].
+Maximum absolute error is 0.001953125 for all six.
+The four ordinary RMS/split-R cases were rebuilt and rechecked after the
+native reduction refactor (badd494). Tree/SIMT were unchanged.
 
-Known tracking:
-- https://github.com/LinxISA/SuperScalarModel/issues/762 (gfrun TCOLEXPAND)
-- https://github.com/LinxISA/SuperScalarModel/issues/760 (gfsim CUBE elementwise)
+Compiler: dev-llvm15_56 at 3a9b70d00aacb1739122c460a989e06af3412b42.
+TileOP: linx at b1545cef9cf001c9bbf30d35a880dda57793029d.
 
-Compilation alone is not an accuracy pass. Re-run every affected case and
-its golden comparator after runtime blockers are resolved.
+This is not an all-shape or gfsim pass claim. Dynamic [5,3333] tests still
+stop at the row-expansion descriptor check; the pre-refactor ordinary RMS
+also fails that check. R-tree/R-simt gfsim remains tracked in model #760.
