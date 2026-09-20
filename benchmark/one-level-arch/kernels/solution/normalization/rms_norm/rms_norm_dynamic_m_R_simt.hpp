@@ -143,17 +143,17 @@ void rms_norm_dynamic_m_R_simt(dtype *x, const dtype *gamma, const TilingData *t
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, 32, 16,
-                        BLayout::RowMajor, -1, -1>;
+                        BLayout::CubeM32, -1, -1>;
     using tile_f = Tile<Location::Vec, float, 32, 16,
-                        BLayout::RowMajor, -1, -1>;
-    using tile_m_v = Tile<Location::Vec, float, 32, 1,
-                          BLayout::RowMajor, -1, 1>;
+                        BLayout::CubeM32, -1, -1>;
+    using tile_m_v = Tile<Location::Vec, float, 32, 16,
+                          BLayout::CubeM32, -1, 1>;
     using tile_m_matrix = Tile<Location::Vec, float, 32, 8,
-                               BLayout::RowMajor, -1, 8>;
-    using tile_v = Tile<Location::Vec, float, 32, 1,
-                        BLayout::RowMajor, -1, 1>;
-    using tile_s = Tile<Location::Vec, float, 1, 1,
-                        BLayout::RowMajor, 1, 1>;
+                               BLayout::CubeM32, -1, 8>;
+    using tile_v = Tile<Location::Vec, float, 32, 16,
+                        BLayout::CubeM32, -1, 1>;
+    using tile_s = Tile<Location::Vec, float, 1, 16,
+                        BLayout::CubeM32, 1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
     for (int64_t ia = 0; ia < peA; ++ia) {

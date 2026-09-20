@@ -95,7 +95,10 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     tile_m_matrix partial_matrix(curtile_factal_a, pair_count);
     TLOAD(partial_matrix, partial_gm);
 
-    tile_m_v sum_rows(curtile_factal_a);
+    // M32 row reductions retain the source physical columns.
+    using tile_sum_rows = Tile<Location::Vec, float, 32, 8,
+                               BLayout::CubeM32, -1, 1>;
+    tile_sum_rows sum_rows(curtile_factal_a);
     TROWSUM(sum_rows, partial_matrix);
     tile_s tile_sum, mean, denom, rms;
     TCOLSUM(tile_sum, sum_rows);
@@ -177,17 +180,17 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma,
                         rms_detail_simt_dynamic_m_R_tree::kMaxPairCount>>;
     using gm_f_col = gm_f_matrix;
     using tile_h = Tile<Location::Vec, dtype, 32, 16,
-                        BLayout::RowMajor, -1, -1>;
+                        BLayout::CubeM32, -1, -1>;
     using tile_f = Tile<Location::Vec, float, 32, 16,
-                        BLayout::RowMajor, -1, -1>;
-    using tile_m_v = Tile<Location::Vec, float, 32, 1,
-                          BLayout::RowMajor, -1, 1>;
+                        BLayout::CubeM32, -1, -1>;
+    using tile_m_v = Tile<Location::Vec, float, 32, 16,
+                          BLayout::CubeM32, -1, 1>;
     using tile_m_matrix = Tile<Location::Vec, float, 32, 8,
-                               BLayout::RowMajor, -1, -1>;
-    using tile_v = Tile<Location::Vec, float, 32, 1,
-                        BLayout::RowMajor, -1, 1>;
-    using tile_s = Tile<Location::Vec, float, 1, 1,
-                        BLayout::RowMajor, 1, 1>;
+                               BLayout::CubeM32, -1, -1>;
+    using tile_v = Tile<Location::Vec, float, 32, 8,
+                        BLayout::CubeM32, -1, 1>;
+    using tile_s = Tile<Location::Vec, float, 1, 8,
+                        BLayout::CubeM32, 1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
     for (int64_t ia = 0; ia < peA; ++ia) {
