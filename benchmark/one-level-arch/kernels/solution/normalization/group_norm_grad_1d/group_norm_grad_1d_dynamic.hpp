@@ -35,7 +35,6 @@
 #define SUPERNPU_GROUP_NORM_GRAD_1D_PTO_HPP
 
 #include <common/pto_tileop.hpp>
-#include "../m32_utils.hpp"
 
 #include <cstdint>
 
@@ -62,7 +61,7 @@ struct TileTypes {
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, Rows, Cols, BLayout::CubeM32, -1, -1>;
     using tile_f = Tile<Location::Vec, float, Rows, Cols, BLayout::CubeM32, -1, -1>;
-    using tile_v = Tile<Location::Vec, float, Rows, 1, BLayout::CubeM32, -1, 1>;
+    using tile_v = Tile<Location::Vec, float, Rows, Cols, BLayout::CubeM32, -1, 1>;
 };
 
 // ---------------------------------------------------------------------------
@@ -110,9 +109,19 @@ inline void fused_params_group(dtype *dy, dtype *x, float *mean, float *rstd,
         TLOAD(h, gg);
         TCVT(gf, h);
         TMUL(prod, dyf, gf);
-        normalization_m32::row_sum(partial2, prod);
+        {
+          using reduce_row = Tile<Location::Vec, float, 1, decltype(prod)::Cols, BLayout::CubeM32, 1, 1>;
+          reduce_row rows;
+          TROWSUM(rows, prod);
+          TCOLSUM(partial2, rows);
+        }
         TMUL(prod, prod, xf);
-        normalization_m32::row_sum(partial1, prod);
+        {
+          using reduce_row = Tile<Location::Vec, float, 1, decltype(prod)::Cols, BLayout::CubeM32, 1, 1>;
+          reduce_row rows;
+          TROWSUM(rows, prod);
+          TCOLSUM(partial1, rows);
+        }
         TADD(sum1, sum1, partial1);
         TADD(sum2, sum2, partial2);
     }
