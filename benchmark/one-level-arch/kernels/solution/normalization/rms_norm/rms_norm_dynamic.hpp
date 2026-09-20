@@ -23,7 +23,7 @@
 #define SUPERNPU_RMS_NORM_PTO_HPP
 
 #include <common/pto_tileop.hpp>
-#include "../m32_utils.hpp" // M32 row-reduction carrier compaction.
+#include "../m32_utils.hpp" // Dynamic short-strip compatibility only.
 
 #include <cstdint>
 
@@ -92,7 +92,21 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
         tile_f src(1, width), squared(1, width);
         TLOAD(h, gi); TCVT(src, h);
         TMUL(squared, src, src);
-        normalization_m32::row_sum(partial, squared);
+        using reduce_row = Tile<Location::Vec, float, 1, tile_f::Cols,
+                                BLayout::CubeM32, 1, 1>;
+        reduce_row row_sum;
+        if (width == tile_f::Cols) {
+            TROWSUM(row_sum, squared);
+            TCOLSUM(partial, row_sum);
+        } else {
+            // Native TROWSUM currently encodes allocation columns in LB2.
+            // Keep the runtime-column workaround only for short strips.
+            using scalar = Tile<Location::Vec, float, 1, 1,
+                                BLayout::CubeM32, 1, 1>;
+            scalar tail_sum;
+            normalization_m32::row_sum(tail_sum, squared);
+            TCOLEXPAND(partial, tail_sum);
+        }
         TADD(sum, sum, partial);
     }
     TMULS(mean, sum, inv_r);
@@ -156,8 +170,8 @@ void rms_norm(dtype *x, const dtype *gamma,
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::CubeM32, -1, -1>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::CubeM32, -1, -1>;
-    // Row-reduction output and row-broadcast input use physical Columns=1.
-    using tile_v = Tile<Location::Vec, float, tA, 1, BLayout::CubeM32, -1, 1>;
+    // TCOLSUM materializes the scalar, as in R-tree/R-simt.
+    using tile_v = Tile<Location::Vec, float, tA, tR, BLayout::CubeM32, -1, 1>;
 
     const float inv_r = 1.0f / static_cast<float>(gR);
 

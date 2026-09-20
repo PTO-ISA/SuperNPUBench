@@ -27,7 +27,7 @@
 #define SUPERNPU_RMS_NORM_SPLIT_R_PTO_HPP
 
 #include <common/pto_tileop.hpp>
-#include "../m32_utils.hpp" // M32 row-reduction carrier compaction.
+#include "../m32_utils.hpp" // Dynamic short-strip compatibility only.
 
 #include <cstdint>
 
@@ -44,8 +44,8 @@ struct RmsNormSplitRTilingData {
 
 constexpr float kEpsilon = 1e-6f;
 
-// Row-reduction results have physical Columns=1. Workspace cache entries
-// must preserve that layout so TLOAD and TADD match the TROWSUM output.
+// Only one FP32 value is stored per GM cache entry. The local reduction
+// carrier may be wider; padding is not part of the workspace layout.
 constexpr int kWsCols = 1;
 constexpr int kMaxLevels = 6;
 
@@ -150,7 +150,9 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, tA, tR, BLayout::CubeM32, -1, -1>;
     using tile_f = Tile<Location::Vec, float, tA, tR, BLayout::CubeM32, -1, -1>;
-    using tile_v = Tile<Location::Vec, float, tA, rms_split_r::kWsCols,
+    using reduce_row = Tile<Location::Vec, float, tA, tR,
+                            BLayout::CubeM32, 1, 1>;
+    using tile_v = Tile<Location::Vec, float, tA, tR,
                         BLayout::CubeM32, 1, 1>;
 
     for (int64_t ia = 0; ia < gA; ++ia) {
@@ -206,7 +208,18 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TMUL(sq0, src0, src0);
             TMUL(sq1, src1, src1);
             TADD(sq0, sq0, sq1);
-            normalization_m32::row_sum(cur, sq0);
+            reduce_row row_sum;
+            if (full_r == tR) {
+                TROWSUM(row_sum, sq0);
+                TCOLSUM(cur, row_sum);
+            } else {
+                // Short strips need runtime physical columns in LB2.
+                using scalar = Tile<Location::Vec, float, 1, 1,
+                                    BLayout::CubeM32, 1, 1>;
+                scalar tail_sum;
+                normalization_m32::row_sum(tail_sum, sq0);
+                TCOLEXPAND(cur, tail_sum);
+            }
             RMS_BIN_UPDATE_CACHE();
         }
 
@@ -230,7 +243,18 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TMUL(sq0, src0, src0);
             TMUL(sq1, src1, src1);
             TADD(sq0, sq0, sq1);
-            normalization_m32::row_sum(cur, sq0);
+            reduce_row row_sum;
+            if (ar == tR) {
+                TROWSUM(row_sum, sq0);
+                TCOLSUM(cur, row_sum);
+            } else {
+                // Short strips need runtime physical columns in LB2.
+                using scalar = Tile<Location::Vec, float, 1, 1,
+                                    BLayout::CubeM32, 1, 1>;
+                scalar tail_sum;
+                normalization_m32::row_sum(tail_sum, sq0);
+                TCOLEXPAND(cur, tail_sum);
+            }
             RMS_BIN_UPDATE_CACHE();
         }
 
@@ -243,7 +267,18 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TLOAD(src_h, gi);
             TCVT(src, src_h);
             TMUL(sq, src, src);
-            normalization_m32::row_sum(cur, sq);
+            reduce_row row_sum;
+            if (full_r == tR) {
+                TROWSUM(row_sum, sq);
+                TCOLSUM(cur, row_sum);
+            } else {
+                // Short strips need runtime physical columns in LB2.
+                using scalar = Tile<Location::Vec, float, 1, 1,
+                                    BLayout::CubeM32, 1, 1>;
+                scalar tail_sum;
+                normalization_m32::row_sum(tail_sum, sq);
+                TCOLEXPAND(cur, tail_sum);
+            }
             RMS_BIN_UPDATE_CACHE();
         }
         if (head_tail > 0) {
@@ -256,7 +291,18 @@ void rms_norm_split_r(dtype *x, const dtype *gamma,
             TLOAD(src_h, gi);
             TCVT(src, src_h);
             TMUL(sq, src, src);
-            normalization_m32::row_sum(cur, sq);
+            reduce_row row_sum;
+            if (ar == tR) {
+                TROWSUM(row_sum, sq);
+                TCOLSUM(cur, row_sum);
+            } else {
+                // Short strips need runtime physical columns in LB2.
+                using scalar = Tile<Location::Vec, float, 1, 1,
+                                    BLayout::CubeM32, 1, 1>;
+                scalar tail_sum;
+                normalization_m32::row_sum(tail_sum, sq);
+                TCOLEXPAND(cur, tail_sum);
+            }
             RMS_BIN_UPDATE_CACHE();
         }
 
