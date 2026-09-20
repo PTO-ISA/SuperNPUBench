@@ -27,9 +27,16 @@ ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL)
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small.elf
 endif
 
-ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_STATIC)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_static.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_static.elf
+# bench_small 静态形状版分 V1（RowMajor）/ V2（Cube_M32）两个 driver，同规格同 golden，供并列对比。
+# V1 不依赖 #180/#749 恒 PASS；V2 依赖 Linx-TileOP-API#180 + SuperScalarModel#749（未落地前预期 FAIL）。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V1_STATIC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V1_static.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V1_static.elf
+endif
+
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V2_static.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V2_static.elf
 endif
 
 ifeq ($(TYPE), TAIL_OCP_FP4)

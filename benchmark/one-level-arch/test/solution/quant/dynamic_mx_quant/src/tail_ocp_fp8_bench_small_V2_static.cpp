@@ -2,14 +2,16 @@
 #include <cstdint>
 #include "fileop.h"
 #include "multi_thread_res_check.h"  // 官方 4-PE 收尾协议（输入/输出屏障 + PE0 落盘）
-#include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp8.hpp"  // 静态 M32 版
+#include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp8.hpp"  // V2：Cube_M32 版
 using namespace supernpu::tile_isa::mxquant;
 
-// TAIL_OCP_FP8 bench_small 的**静态形状**版：[M=64, N=16384], BlockSize=32, bf16 in -> e4m3 out。
-//   与 tail_ocp_fp8_bench_small.cpp 同规格/同数据，唯一区别：调**静态编译期形状** kernel
-//   dynamic_mx_quant_tail_ocp_fp8<M,N,BS,InT>（编译期 M/N/ValidRows），供 M32 + TREDUCEPREFIXVIEW
-//   范式测试（该范式的 asm 要编译期 ValidRow，运行期 _dyn 用不了）。固定 SPMD 4-PE。
-//   gen 同 bench_small：--M 64 --K 16384 --block-size 32 --algo OCP --kernel tail --dtype FP8
+// TAIL_OCP_FP8 bench_small 的 **V2（Cube_M32 布局）静态形状**版：[M=64, N=16384], BS=32,
+//   bf16 in -> e4m3 out。与 V1（tail_ocp_fp8_bench_small_V1_static.cpp，RowMajor）**同规格/同数据/
+//   同 golden**，唯一区别是 kernel 布局：V2 走 CUBE_M32（VecTileM32 + #311 归约 + TREDUCEPREFIXVIEW）。
+//   调静态编译期形状 kernel dynamic_mx_quant_tail_ocp_fp8<M,N,BS,InT>。固定 SPMD 4-PE。
+//   ⚠ 依赖：需 Linx-TileOP-API#180（B.DATR NORM，编译期）+ SuperScalarModel#749（gfrun TCVT
+//   carrier）。官方基线未解决前本 V2 预期 FAIL；两依赖落地后与 V1 同为 PASS（逐字节一致）。
+//   gen 同 V1：--M 64 --K 16384 --block-size 32 --algo OCP --kernel tail --dtype FP8
 //   --in-dtype bf16 --scale-layout compact。
 #ifndef PM
 #define PM 64

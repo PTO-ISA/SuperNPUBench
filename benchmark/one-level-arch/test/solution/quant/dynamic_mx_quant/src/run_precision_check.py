@@ -57,8 +57,12 @@ CONFIGS = [
     # ---- 缩小版网络基准（boxed 小 M，scale 精度受 model boxed/e8m0 缺陷影响，预期 FAIL，仅作观测）----
     ("TAIL_OCP_FP4_BENCH_SMALL",     "tail_ocp_fp4_bench_small",     256, 1536, 32, "bf16", "OCP",    "tail",    "FP4", 4),
     ("TAIL_OCP_FP8_BENCH_SMALL",     "tail_ocp_fp8_bench_small",      64,16384, 32, "bf16", "OCP",    "tail",    "FP8", 4),
-    # ---- 静态形状版 bench_small（M32 + TREDUCEPREFIXVIEW 测试；编译期 M/N/ValidRows）----
-    ("TAIL_OCP_FP8_BENCH_SMALL_STATIC","tail_ocp_fp8_bench_small_static",64,16384,32,"bf16","OCP",   "tail",    "FP8", 4),
+    # ---- 静态形状版 bench_small：V1(RowMajor) / V2(Cube_M32) 并列对比（同规格同 golden）----
+    #   V1 不依赖 #180/#749，恒 PASS，作 V2 对照基准。
+    #   V2 依赖 Linx-TileOP-API#180（编译期 B.DATR NORM）+ SuperScalarModel#749（gfrun TCVT carrier）；
+    #   官方基线未落地前预期 FAIL，两依赖解决后与 V1 逐字节一致 PASS。
+    ("TAIL_OCP_FP8_BENCH_SMALL_V1_STATIC","tail_ocp_fp8_bench_small_V1_static",64,16384,32,"bf16","OCP","tail","FP8",4),
+    ("TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC","tail_ocp_fp8_bench_small_V2_static",64,16384,32,"bf16","OCP","tail","FP8",4),
 ]
 
 
