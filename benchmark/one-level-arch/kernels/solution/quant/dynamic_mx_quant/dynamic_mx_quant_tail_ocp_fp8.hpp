@@ -176,7 +176,13 @@ void dynamic_mx_quant_tail_ocp_fp8(InT *x, __fp8_e4m3 *y, uint8_t *scale) {
             auto gs = s_iter(0, 0); TSTORE(gs, scale_e8m0);
 
             // === recip finalize：主路径 recip = 0x7F00 - shared（TEXPANDS+TSUB）===
-            // ⚠ 三守卫（TCMPS/TSEL）M32 不支持 → 本版跳过（TODO）。
+            // ⚠ 三守卫（inf/zero/special via TCMPS+TSEL）本版跳过（TODO）。原因（2026-09-20 实证更正）：
+            //   TCMPS/TSEL 在 CUBE_M32 上**编译已通**，但 gfrun 崩 —— compare-select 校验器
+            //   IsCompatibleOperationDataTile（emulator/engine/AccumulateBlockInfo.cpp:1240）用 RowMajor 式
+            //   `source->col == physicalCol`，CUBE_M32 的 cell 对齐物理列(bf16→2)≠RowMajor physicalCol(1)→
+            //   "TCMPS requires one compatible Tile source" 断言崩。即 gfrun/model 的 compare-select 族缺
+            //   CUBE-M 几何路径（与 gfsim scalar-elementwise #760 同族）。bench_small 数据无 inf/0/special、
+            //   跳守卫不影响逐字节；待 model 补 CUBE-M compare-select 后可补回（照 V1 RowMajor 守卫）。
             auto shared_u16 = reinterpret_tile<uint16_t>(shared_bf);
             t_row recip_bf, k_bf;
             auto recip_u16 = reinterpret_tile<uint16_t>(recip_bf);

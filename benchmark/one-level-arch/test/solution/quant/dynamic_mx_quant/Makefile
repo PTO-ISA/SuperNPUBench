@@ -22,8 +22,8 @@ ifeq ($(TYPE), TAIL_OCP_FP8_BENCH)
 endif
 
 # TAIL_OCP_FP8 缩小版网络基准 [64,16384] BS=32 bf16 in（动态 shape）分 V1（RowMajor）/ V2（Cube_M32）。
-# V1_DYN：RowMajor，恒 PASS，可喂 gfsim。V2_DYN：Cube_M32 + 动态 shape 当前编译阻塞（Linx-TileOP-API
-# 缺口：reduction-prefix 发射缺 ValidRow<0→寄存器 B.DIM 分支，可修），预期编译失败，作 witness，不进 compile.all。
+# V1_DYN：RowMajor，可喂 gfsim。V2_DYN：Cube_M32 动态，依赖 Linx-TileOP-API#187（reduction-prefix
+# 动态 ValidRow 寄存器 B.DIM）已合入上游 → 现编译+gfrun 逐字节 PASS。（V2 M32 上不了 gfsim：#760）
 ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V1_DYN)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V1_dyn.cpp
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V1_dyn.elf
@@ -35,7 +35,7 @@ ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V2_DYN)
 endif
 
 # bench_small 静态形状版分 V1（RowMajor）/ V2（Cube_M32）两个 driver，同规格同 golden，供并列对比。
-# V1 不依赖 #180/#749 恒 PASS；V2 依赖 Linx-TileOP-API#180 + SuperScalarModel#749（未落地前预期 FAIL）。
+# V1 恒 PASS；V2 依赖 Linx-TileOP-API#180 + SuperScalarModel#749，均已合入上游 → 现 gfrun 逐字节 PASS。
 ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V1_STATIC)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V1_static.cpp
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V1_static.elf

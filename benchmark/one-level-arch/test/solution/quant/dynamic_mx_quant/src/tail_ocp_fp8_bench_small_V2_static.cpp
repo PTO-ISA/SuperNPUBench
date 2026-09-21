@@ -9,8 +9,8 @@ using namespace supernpu::tile_isa::mxquant;
 //   bf16 in -> e4m3 out。与 V1（tail_ocp_fp8_bench_small_V1_static.cpp，RowMajor）**同规格/同数据/
 //   同 golden**，唯一区别是 kernel 布局：V2 走 CUBE_M32（VecTileM32 + #311 归约 + TREDUCEPREFIXVIEW）。
 //   调静态编译期形状 kernel dynamic_mx_quant_tail_ocp_fp8<M,N,BS,InT>。固定 SPMD 4-PE。
-//   ⚠ 依赖：需 Linx-TileOP-API#180（B.DATR NORM，编译期）+ SuperScalarModel#749（gfrun TCVT
-//   carrier）。官方基线未解决前本 V2 预期 FAIL；两依赖落地后与 V1 同为 PASS（逐字节一致）。
+//   依赖 Linx-TileOP-API#180（B.DATR NORM，编译期，PR#191）+ SuperScalarModel#749（gfrun TCVT
+//   carrier），均已合入上游 main → 现 gfrun 4-PE 逐字节 PASS，与 V1 一致（曾在依赖未落地时预期 FAIL）。
 //   gen 同 V1：--M 64 --K 16384 --block-size 32 --algo OCP --kernel tail --dtype FP8
 //   --in-dtype bf16 --scale-layout compact。
 #ifndef PM

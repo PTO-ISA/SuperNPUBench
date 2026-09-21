@@ -8,14 +8,10 @@ using namespace supernpu::tile_isa::mxquant;
 // TAIL_OCP_FP8 bench_small 的 **V2（Cube_M32 布局）动态 shape** 版：[M=64, N=16384], BS=32,
 //   bf16 in -> e4m3 out。与 V1（tail_ocp_fp8_bench_small_V1_dyn.cpp，RowMajor dyn）同规格/同数据/
 //   同 golden，仅 kernel 布局不同：V2 走 CUBE_M32（VecTileM32 + #311 归约 + TREDUCEPREFIXVIEW）。
-//   ⚠ 已知**编译阻塞**（Linx-TileOP-API 缺口，非 ISA/规范限制，可修）：M32 的 #311 归约结果只能靠
-//   TREDUCEPREFIXVIEW 消费；而 TileOP 头的 reduction-prefix 发射路径（pto_tile_region_inline_asm.hpp）
-//   只实现了**立即数维度** `B.DIM zero, %c(ValidRow)`（并 static_assert(ValidRow>0)），缺 TCVT 头已有的
-//   **动态分支**（ValidRow<0 → `B.DIM %[reg],0` + `"r"(src.GetValidRow())`）。动态 shape 传 ValidRow=-1
-//   塞进无符号 uimm → 发出 `B.DIM zero, -1` → `Match Instruction Error`。ISA 层 B.DIM 本支持寄存器维度
-//   （V1_dyn / TCVT 都在用），故此为 TileOP 头 reduction-prefix 未接动态维度的缺口，补上该分支即可。
-//   在补齐前，M32 + reduction-prefix 只能做**静态** kernel（见 tail_ocp_fp8_bench_small_V2_static.cpp）。
-//   本 V2_dyn 作为该 TileOP 缺口的 witness 保留，**当前预期编译失败**；不进 compile.all。
+//   依赖 Linx-TileOP-API#187（reduction-prefix 发射补上动态 ValidRow 的寄存器 B.DIM 分支
+//   `B.DIM %[reg],0` + `"r"(src.GetValidRow())`，PR#189）+ #180（B.DATR NORM）+ SuperScalarModel#749，
+//   均已合入上游 main → 现编译 + gfrun 4-PE 逐字节 PASS，与 V1 一致。（曾在 #187 未落地时因动态
+//   ValidRow=-1 塞进无符号 uimm 发出 `B.DIM zero, -1` → Match Instruction Error 编译阻塞，作 witness。）
 //   固定 SPMD 4-PE：M 按 tid 切 4 份，每 PE 16 行。numKb = 16384/32 = 512。必须 4 线程跑：
 //   gfrun -s softcore.multiThreadNum=4。
 //   RES_CHECK：读 gen（--M 64 --K 16384 --block-size 32 --algo OCP --kernel tail --dtype FP8
