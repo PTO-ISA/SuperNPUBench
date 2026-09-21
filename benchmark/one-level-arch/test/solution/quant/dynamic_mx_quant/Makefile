@@ -23,7 +23,7 @@ endif
 
 # TAIL_OCP_FP8 缩小版网络基准 [64,16384] BS=32 bf16 in（动态 shape）分 V1（RowMajor）/ V2（Cube_M32）。
 # V1_DYN：RowMajor，可喂 gfsim。V2_DYN：Cube_M32 动态，依赖 Linx-TileOP-API#187（reduction-prefix
-# 动态 ValidRow 寄存器 B.DIM）已合入上游 → 现编译+gfrun 逐字节 PASS。（V2 M32 上不了 gfsim：#760）
+# 动态 ValidRow 寄存器 B.DIM）已合入上游 → 现编译+gfrun 逐字节 PASS，gfsim 亦可仿真（#760 由 #775 修复）。
 ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V1_DYN)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V1_dyn.cpp
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V1_dyn.elf

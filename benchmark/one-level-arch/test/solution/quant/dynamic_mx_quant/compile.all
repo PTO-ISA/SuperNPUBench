@@ -11,7 +11,8 @@
 #   · 完整网络基准 2：默认注释（太大），需手动 make 指定 TYPE
 # 注：big-BS 已合并进统一 4-PE kernel（旧 *_bs128 独立用例/_bigbs kernel 已退休删除）。
 # 注：V2(Cube_M32) 依赖 Linx-TileOP-API#180/#187 已合入上游 → 现四组合齐编。脚本仍去 set -e（防御性：
-#     单个用例失败不中断后续、末尾汇总）。注：V2 M32 编过但上不了 gfsim（model #760/#605 既有缺口）。
+#     单个用例失败不中断后续、末尾汇总）。注：V2 M32 现 gfrun 全量 PASS + gfsim 可仿真（gfsim CUBE-M
+#     scalar-elementwise 缺口 #760 已由 #775 修复；三守卫的 compare-select CUBE-M 几何由 #785 修复）。
 #
 #   export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
 #   ./compile.all
@@ -52,7 +53,7 @@ CONFIGS=(
   # tail_ocp_fp8 bench_small：V1(RowMajor)/V2(Cube_M32) × static/dyn 四种正交组合（同规格同 golden）。
   #   V1_* RowMajor 不依赖在研 issue，恒编过、可喂 gfsim。
   #   V2_* Cube_M32 依赖 #180(B.DATR NORM)/#187(reduction-prefix 动态维度) 已合入上游 → 现编过；
-  #   （V2 M32 编过但上不了 gfsim：model #760/#605 既有缺口，非本 PR 引入）。
+  #   V2 M32 gfrun 全量 PASS + gfsim 可仿真（gfsim #760 由 #775 修复；三守卫 compare-select 由 #785 修复）。
   "TAIL_OCP_FP8_BENCH_SMALL_V1_STATIC:tail_ocp_fp8_bench_small_V1_static:64:16384:32:bf16:OCP:tail:FP8"
   "TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC:tail_ocp_fp8_bench_small_V2_static:64:16384:32:bf16:OCP:tail:FP8"
   "TAIL_OCP_FP8_BENCH_SMALL_V1_DYN:tail_ocp_fp8_bench_small_V1_dyn:64:16384:32:bf16:OCP:tail:FP8"
