@@ -2,13 +2,13 @@
 // measured on the cycle model (gfsim) without the rest of the topk kernel.
 //
 // A single per-PE hist[384] is initialized once, then
-// histogram_cumsum_m32::suffix_cumsum is called kIters times between
-// BENCHSTART/BENCHEND.  The kernel only measures the cumsum block stream.
+// histogram_cumsum_m32::suffix_cumsum runs between BENCHSTART/BENCHEND.  One
+// call already computes the complete 256-bin cumsum, so the default is a
+// single pass; CUMSUM_ITERS can repeat it to lengthen the trace (the values
+// then grow and the block stream stays value-independent).
 //
-// hist[0:256] is the histogram; hist[256:384] is the zero pad the shifted
-// TLOAD windows read past the sentinel.  The values grow across iterations
-// (each call re-suffix-sums the previous result); the block stream and hence
-// the timing are value-independent.
+// hist[0:256] is the histogram; hist[256:384] is the zero pad the grouped
+// TLOAD reads past the sentinel.
 
 #include <cstdint>
 
@@ -18,7 +18,7 @@
 namespace {
 
 #ifndef CUMSUM_ITERS
-#define CUMSUM_ITERS 32
+#define CUMSUM_ITERS 1
 #endif
 constexpr int kIters = CUMSUM_ITERS;
 
@@ -34,16 +34,20 @@ int main() {
     const std::uint32_t tid = get_thread_idx();
     if (tid != 0) return 0;
 
+    // g_buf is zero-initialized .bss; the operator's block stream is
+    // value-independent, so no input setup is needed and gfsim's whole-run
+    // Total Cycles is the operator cost.
     int32_t *hist = g_buf.hist;
-    for (int i = 0; i < 256; ++i) hist[i] = (i % 7) + 1;
-    for (int i = 256; i < 384; ++i) hist[i] = 0;
-
-    volatile int iters = kIters;
 
     BENCHSTART;
+#if CUMSUM_ITERS > 1
+    volatile int iters = kIters;
     for (int k = 0; k < iters; ++k) {
         histogram_cumsum_m32::suffix_cumsum(hist);
     }
+#else
+    histogram_cumsum_m32::suffix_cumsum(hist);
+#endif
     BENCHEND;
 
     return 0;

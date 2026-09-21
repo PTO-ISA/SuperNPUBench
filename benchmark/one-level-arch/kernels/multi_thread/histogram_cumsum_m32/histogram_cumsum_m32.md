@@ -71,7 +71,9 @@ cd benchmark/one-level-arch/test/kernel/multi_thread/histogram_cumsum_m32 && ./c
 cd benchmark/one-level-arch && python3 test/kernel/multi_thread/histogram_cumsum_m32/src/run_histogram_cumsum_m32_check.py \
     --gfrun <model>/bin/gfrun
 
-# Cycle timing + SwimLane (one per-PE hist, CUMSUM_ITERS calls).
+# Cycle timing + SwimLane. One call already computes the complete cumsum, so
+# the perf entry defaults to a single pass; CUMSUM_ITERS may repeat it to
+# lengthen the trace.
 python3 test/common/run_swimlane.py \
     --gfsim <model>/bin/gfsim --elf <perf-elf> \
     --outdir test/kernel/multi_thread/suffix_cumsum_perf/perf_runs/<run_id> --name cumsum
