@@ -1,0 +1,8 @@
+#!/bin/bash
+# export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin; ./compile.all;
+# python3 src/run_histogram_cumsum_m32_check.py --gfrun /path/to/gfrun
+set -euo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+
+make TESTCASE=histogram_cumsum_m32 COMPILER_DIR="$COMPILER_DIR" res_check=on diss
