@@ -15,8 +15,11 @@
 //
 // Remaining (being fixed upstream):
 //   * MGATHER.ADD (histogram / slot atom add) is still a hand-written block
-//     because the GM atom/red wrapper does not emit B.DATR.Layout yet:
-//     LinxISA/Linx-TileOP-API#185.
+//     because, although the GM atom/red wrapper emits B.DATR.Layout since
+//     LinxISA/Linx-TileOP-API#185 (PR #209), the LinxV5 backend folds the
+//     default LB0/LB2 on every TLSU head while gfrun's gm-atom-red contract
+//     requires an explicit LB0. The hand-written block uses literal 1s so the
+//     dims survive the fold.
 //   * find_threshold uses the TCMPS CUBE GPR carrier, which needs the
 //     canonical B.IOR RegDst position fix (ASL: RegDst = bits[11:7]):
 //     LinxISA/SuperScalarModel#806.
@@ -28,11 +31,27 @@ namespace topk_tiled {
 
 using namespace pto;
 
-constexpr int kBatch = 4;
-constexpr int kCols = 8192;
-constexpr int kTopK = 512;
-constexpr int kCandCap = 4096;
+// Tile geometry and the radix stay compile-time PTO contracts: kLane is the
+// M32 cell width / tile-op width, and the 256-bin radix is the algorithm.  The
+// outer shape (batch x cols, top-k) is runtime and validated against these
+// maxima — same pattern as fa_gmma_dynamic's FaGmmaTilingData.
 constexpr int kLane = 32;
+constexpr int kBatchMax = 4;
+constexpr int kColsMax = 131072;
+constexpr int kTopKMax = 1024;
+constexpr int kCandCap = 65536;
+
+// Boundary-bucket refinement.  true  -> the four FP32 key bytes give the exact
+// FP32 top-k.  false -> the single FP16 key low byte gives the exact top-k of
+// the FP16-rounded values (no FP32 pass; ties in the full 16-bit FP16 key are
+// broken arbitrarily).  Compile-time so the two dataflows never coexist.
+constexpr bool kFp32Refine = true;
+
+struct TopkTilingData {
+    int64_t batch;
+    int64_t cols;
+    int64_t topk;
+};
 
 using I32Tile = VecTileM32<int32_t, kLane, 1>;
 using U32Tile = VecTileM32<uint32_t, kLane, 1>;
@@ -47,6 +66,11 @@ using PredM32 = VecTileM32<uint8_t, kLane, 1>;
 
 struct Scratch {
     int32_t hist[256];       // 256 bins, flat in GM; H[bin]
+    // hist_cumsum's grouped load reads hist[256:384] as its zero boundary, and
+    // round_write allocates the top-byte (0xFF) slot through H[256].  Both need
+    // hist[256] to be a real, per-round-cleared word, so it must not overlap
+    // num[0].  hist_clear zeroes this pad together with hist.
+    int32_t hist_pad[256];
     int32_t num[2];          // ping-pong candidate counts, GM
     int32_t error;           // 0 ok, 1 candidate overflow, 2 empty range
     int32_t cand[2][kCandCap];
@@ -105,6 +129,7 @@ inline __attribute__((always_inline)) void hist_clear(Scratch &sc) {
     GroupTileS32 zero;
     group_texpands(zero, 0);
     group_tstore(sc.hist, zero);
+    group_tstore(sc.hist_pad, zero);
 }
 
 // Forward declarations: the histogram helpers use the lane loader and the
@@ -174,7 +199,7 @@ inline __attribute__((always_inline)) int32_t find_threshold(Scratch &sc,
 inline __attribute__((always_inline)) void mgather_u32_m32(U32Tile &dst,
                                                            const float *base,
                                                            U32Tile &index) {
-    global_tensor<uint32_t, RowMajor<kCols, 1>> g(
+    global_tensor<uint32_t, RowMajor<kColsMax, 1>> g(
         reinterpret_cast<const uint32_t *>(base));
     MGATHER(dst, g, index);
 }
@@ -274,40 +299,32 @@ inline __attribute__((always_inline)) void stage1_collect(I32Tile &bin,
     mscatter_mask_i32_m32(out, index, goldB, gamask);
 
     // EQ lanes: eq = num[0]++ ; cand[0][eq] = index.
-    PredM32 emask, eamask;
-    I32Tile e01, eact, zeroIdx, eq;
+    // The append is gated by eq < kCandCap so the buffer is never overrun; if
+    // the window produces more candidates than kCandCap, run() flags
+    // errors[bx] = 1 instead of corrupting memory.
+    PredM32 emask, eamask, capmask;
+    I32Tile e01, eact, zeroIdx, eq, cap01, eactcap;
     TCMPS<CmpMode::EQ>(emask, bin, thr);
     TCVT(e01, emask);
     TAND(eact, e01, v01);
     TCVT(eamask, eact);
     TEXPANDS(zeroIdx, 0);
     mgather_add_s32_m32(eq, sc.num, zeroIdx, eact);
+    TCMPS<CmpMode::LT>(capmask, eq, static_cast<int32_t>(kCandCap));
+    TCVT(cap01, capmask);
+    TAND(eactcap, eact, cap01);
+    TCVT(eamask, eactcap);
     I32Tile eqB;
     TMULS(eqB, eq, 4u);
     mscatter_mask_i32_m32(sc.cand[0], index, eqB, eamask);
 }
 
-// ---- section 4: FP32 tail rounds ----------------------------------------
-
-// key32 = bits ^ (sign ? ~0 : 0x80000000); byte = (key32 >> (24-8*round))&0xFF
-inline __attribute__((always_inline)) I32Tile candidate_byte(const float *row,
-                                                            U32Tile &cand,
-                                                            int round,
-                                                            Scratch &sc) {
-    U32Tile off, bits, sign, scaled, key, shf, b;
-    TMULS(off, cand, 4u);  // byte displacement
-    mgather_u32_m32(bits, row, off);
-    TSHRS(sign, bits, 31u);
-    TMULS(scaled, sign, 0x7FFFFFFFu);
-    TADDS(scaled, scaled, 0x80000000u);
-    TXOR(key, bits, scaled);
-    TSHRS(shf, key, static_cast<uint32_t>(24 - 8 * round));
-    TANDS(b, shf, 0xFFu);
-    I32Tile byte;
-    TCVT(byte, b);
-    (void)sc;
-    return byte;
-}
+// ---- section 4: boundary refinement -------------------------------------
+//
+// The tail that turns the bin16 == thr bucket into an exact top-k lives in the
+// variant header selected by kFp32Refine, included after round_write below:
+//   topk_tail_fp32.hpp  exact FP32, four key bytes
+//   topk_tail_fp16.hpp  exact FP16, one key low byte
 
 // tail histogram of one candidate tile: H[byte]++ per valid lane.
 // Tile version of the old scalar workaround (llvm-project#105 is fixed).
@@ -324,7 +341,7 @@ inline __attribute__((always_inline)) void round_write(int32_t *out, int round,
                                                        U32Tile &candU,
                                                        I32Tile &byte,
                                                        int32_t vc, int32_t thr,
-                                                       int32_t prefix,
+                                                       int32_t prefix, int32_t topk,
                                                        Scratch &sc) {
     const int nr = (round & 1) ^ 1;
 
@@ -381,12 +398,12 @@ inline __attribute__((always_inline)) void round_write(int32_t *out, int round,
         TMULS(eqB, eq, 4u);
         mscatter_mask_i32_m32(sc.cand[nr], candI, eqB, eamask);
     } else {
-        // round 3: pos = hist[bin+1]++ + prefix ; out[pos] if pos < kTopK.
+        // round 3: pos = hist[bin+1]++ + prefix ; out[pos] if pos < topk.
         PredM32 posmask, okmask;
         I32Tile gold2, pos, pos01, ok;
         mgather_add_s32_m32(gold2, sc.hist, idx, eact);
         TADDS(pos, gold2, prefix);
-        TCMPS<CmpMode::LT>(posmask, pos, kTopK);
+        TCMPS<CmpMode::LT>(posmask, pos, topk);
         TCVT(pos01, posmask);
         TAND(ok, pos01, eact);
         TCVT(okmask, ok);
@@ -396,17 +413,37 @@ inline __attribute__((always_inline)) void round_write(int32_t *out, int round,
     }
 }
 
+}  // namespace topk_tiled
+
+// The two boundary-refinement tails share the core above; kFp32Refine picks
+// which one run() calls.  Both are cheap to compile in; the unused one is
+// dropped by if constexpr.
+#include "multi_thread/topk/topk_tail_fp32.hpp"
+#include "multi_thread/topk/topk_tail_fp16.hpp"
+
+namespace topk_tiled {
+
 // ---- run ----------------------------------------------------------------
 
 inline __attribute__((always_inline)) void run(int32_t *output, int32_t *errors, const float *input,
-                const int32_t *starts, const int32_t *ends, Scratch *scratches) {
+                const int32_t *starts, const int32_t *ends, Scratch *scratches,
+                const TopkTilingData *tiling) {
     const uint32_t tid = get_thread_idx();
     if (tid >= 4) return;
 
-    for (int bx = static_cast<int>(tid); bx < kBatch; bx += 4) {
+    // Runtime outer shape, validated against the compile-time maxima.
+    const int32_t batch = static_cast<int32_t>(tiling->batch);
+    const int32_t cols = static_cast<int32_t>(tiling->cols);
+    const int32_t topk = static_cast<int32_t>(tiling->topk);
+    if (batch <= 0 || batch > kBatchMax || cols <= 0 || cols > kColsMax ||
+        topk <= 0 || topk > kTopKMax) {
+        return;
+    }
+
+    for (int bx = static_cast<int>(tid); bx < batch; bx += 4) {
         Scratch &sc = scratches[bx];
-        const float *row = input + bx * kCols;
-        int32_t *out = output + bx * kTopK;
+        const float *row = input + bx * cols;
+        int32_t *out = output + bx * topk;
 
         for (int32_t l = 0; l < kLane; ++l) sc.lane[l] = l;
         hist_clear(sc);
@@ -415,9 +452,9 @@ inline __attribute__((always_inline)) void run(int32_t *output, int32_t *errors,
         sc.error = 0;
 
         const int32_t x2 = clamp_lo(starts[bx], 0);
-        const int32_t x3 = clamp_hi(ends[bx], kCols);
+        const int32_t x3 = clamp_hi(ends[bx], cols);
         const int32_t n = clamp_lo(x3 - x2, 0);
-        if (n < kTopK) {
+        if (n < topk) {
             sc.error = 2;
             errors[bx] = sc.error;
             continue;
@@ -431,7 +468,7 @@ inline __attribute__((always_inline)) void run(int32_t *output, int32_t *errors,
         }
         hist_cumsum(sc);
 
-        int32_t rem = kTopK;
+        int32_t rem = topk;
         int32_t thr = find_threshold(sc, rem);
         rem -= sc.hist[thr + 1];
 
@@ -446,39 +483,20 @@ inline __attribute__((always_inline)) void run(int32_t *output, int32_t *errors,
             stage1_collect(bin, index, vc, thr, out, sc);
         }
 
-        // tail rounds: ping-pong cand[r]/cand[nr], num[r]/num[nr]
-        for (int round = 0; round < 4 && rem > 0; ++round) {
-            const int r = round & 1;
-            const int32_t prefix = kTopK - rem;
-            const int32_t count = sc.num[r];
-            hist_clear(sc);
-            for (int32_t t = 0; t * kLane < count; ++t) {
-                const int32_t vc = min_i32(kLane, count - t * kLane);
-                global_tensor<uint32_t, RowMajor<kLane, 1>> gc(
-                    reinterpret_cast<const uint32_t *>(&sc.cand[r][t * kLane]));
-                U32Tile candU;
-                TLOAD(candU, gc);
-                I32Tile byte = candidate_byte(row, candU, round, sc);
-                round_hist(byte, vc, sc);
-            }
-            hist_cumsum(sc);
-            thr = find_threshold(sc, rem);
-            rem -= sc.hist[thr + 1];
+        // Candidate overflow: stage1_collect gated the append so the buffer is
+        // intact, but a window with more than kCandCap ==thr elements cannot be
+        // refined.  Flag it (errors.bin != 0) instead of publishing a bad top-k.
+        if (sc.num[0] > kCandCap) {
+            sc.error = 1;
+            errors[bx] = sc.error;
+            continue;
+        }
 
-            // round_write appends the EQ candidates into the ping-pong buffer
-            // for the next round; its counter starts empty each round.
-            const int32_t nr = (round & 1) ^ 1;
-            sc.num[nr] = 0;
-            const int32_t c2 = sc.num[r];
-            for (int32_t t = 0; t * kLane < c2; ++t) {
-                const int32_t vc = min_i32(kLane, c2 - t * kLane);
-                global_tensor<uint32_t, RowMajor<kLane, 1>> gc(
-                    reinterpret_cast<const uint32_t *>(&sc.cand[r][t * kLane]));
-                U32Tile candU;
-                TLOAD(candU, gc);
-                I32Tile byte = candidate_byte(row, candU, round, sc);
-                round_write(out, round, candU, byte, vc, thr, prefix, sc);
-            }
+        // tail refinement of the bin16 == thr candidates.
+        if constexpr (kFp32Refine) {
+            tail_fp32(out, row, thr, rem, topk, sc);
+        } else {
+            tail_fp16(out, row, thr, rem, topk, sc);
         }
         errors[bx] = sc.error;
     }

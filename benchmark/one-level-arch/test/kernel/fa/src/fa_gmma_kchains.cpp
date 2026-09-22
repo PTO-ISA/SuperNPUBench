@@ -50,10 +50,6 @@
 #define kTk Tk
 #endif
 
-#ifndef PV_CHAIN_K
-#define PV_CHAIN_K kTk
-#endif
-
 #define B 1
 #define H 1
 #define ALIGN_MASK 0xfffffffffffff000ull
@@ -99,7 +95,7 @@ int main() {
     BENCHSTART;
     flash_attention_gmma_kchains_impl<
         MatrixDType, VectorDType, PACKED_FACTOR, globSq, globSkv,
-        FA_QD, FA_VD, kTm, kTk, PV_CHAIN_K>(out, q, k, v);
+        FA_QD, FA_VD, kTm, kTk>(out, q, k, v);
     BENCHEND;
 
 #ifdef RES_CHECK

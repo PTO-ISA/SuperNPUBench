@@ -207,39 +207,6 @@ inline void qli_pto_dynamic(float* scores_ptr, dtype* q_ptr, dtype* k_ptr,
     }
 }
 
-// ========== THISTOGRAMX（同标准 THISTOGRAM，放宽 Idx shape 约束）==========
-// v0.58.4 编码契约：模型 canonical 解码器从 B.DATR 的 PadValue 字段
-// (bits[28:27]) 读 selectedByte；PadValue 助记符 Zero=0/Max=1/Min=2/Null=3
-// 承载 ByteId 0..3（bits[19:18] 的 ByteId 槽被解码器忽略）。
-template <typename tile_o, typename tile_s, typename tile_idx>
-void THISTOGRAMX(tile_o& dst, tile_s& src, tile_idx& idx, int ByteId) {
-#define THISTOGRAMX_ASM(BYTE_NAME, PAD_NAME)                           \
-  asm volatile(                                                        \
-    "BSTART.TEPL 104, %D1\n"                                     \
-    "B.DATR %D2, " BYTE_NAME ", " PAD_NAME "\n"                        \
-    "B.DIM %3, 0, ->LB0\n"                                             \
-    "B.DIM %4, 0, ->LB1\n"                                             \
-    "B.DIM zero, %c5, ->LB2\n"                                         \
-    "B.IOT %6, %7, mask=1111, last, ->%0<%Z8>\n"                       \
-    ""                                                                  \
-    : "=Tr"(dst.data())                                                \
-    : "i"(type_traits<typename tile_s::DType>::TypeCode),              \
-      "i"(type_traits<typename tile_o::DType>::TypeCode),              \
-      "r"(dst.GetValidCol()),                                          \
-      "r"(src.GetValidRow()),                                          \
-      "i"(tile_o::Cols),                                               \
-      "Tr"(src.data()),                                                \
-      "Tr"(idx.data()),                                                \
-      "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode))
-  switch (ByteId) {
-    case 0: THISTOGRAMX_ASM("Byte0", "Zero"); break;
-    case 1: THISTOGRAMX_ASM("Byte1", "Max");  break;
-    case 2: THISTOGRAMX_ASM("Byte2", "Min");  break;
-    default: THISTOGRAMX_ASM("Byte3", "Null"); break;
-  }
-#undef THISTOGRAMX_ASM
-}
-
 // ========== Step 7: 动态 shape + 多 PE TopK ==========
 namespace qli_radix_dyn {
 
@@ -258,17 +225,6 @@ inline void MakeKey(RU* dst, const RU* src) {
     TMUL(diff, diff, s01);
     TKey key;  TADD(key, pos, diff);
     gkRow gd(dst); TSTORE(gd, key);
-}
-
-inline void ChunkHist(RU* key_ptr, int byteId, RU* prefix, RU* hist) {
-    using tidx = Tile<Location::Vec, RU, 4, 8, BLayout::RowMajor>;
-    using gidx = global_tensor<RU, RowMajor<4, 8>>;
-    using th = Tile<Location::Vec, RU, 1, 256, BLayout::RowMajor>;
-    using gh = global_tensor<RU, RowMajor<1, 256>>;
-    gkRow g(key_ptr); TKey key; TLOAD(key, g);
-    tidx idxTile; { gidx gi(prefix); TLOAD(idxTile, gi); }
-    th hist_tile; THISTOGRAMX(hist_tile, key, idxTile, byteId);
-    gh gout(hist); TSTORE(gout, hist_tile);
 }
 
 inline void PopN(TKey& mv, RU chunkBase, int32_t* out, int n) {
@@ -321,6 +277,28 @@ inline void Extract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase, int&
       outPos += take; needEq -= take; }
 }
 
+// ---- 计数原语：count(key CMP thr)，用于阈值二分找第 k 大（替代退休的 THISTOGRAM）----
+// 与 Extract 同款在册算子（TCMPS/TSEL/TEXPANDS/TROWSUM）。填充区 key=0 对
+// count_gt(T>=0) 恒不计入，不影响结果。
+template <CmpMode M>
+inline RU CountChunk(const RU* key_ptr, RU thr) {
+    using t1 = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
+    gkRow g(const_cast<RU*>(key_ptr));
+    TKey key; TLOAD(key, g);
+    TKey ism; TCMPS<M>(ism, key, thr);
+    TKey one; TEXPANDS(one, 1u);
+    TKey sel1; TEXPANDS(sel1, 0u); TSEL(sel1, ism, one);
+    t1 s; TROWSUM(s, sel1); RU cnt = 0; gk1 gc(&cnt); TSTORE(gc, s);
+    return cnt;
+}
+template <CmpMode M>
+inline RU CountAll(const RU* krow, int NumChunks, RU thr) {
+    RU cnt = 0;
+    for (int c = 0; c < NumChunks; c++)
+        cnt += CountChunk<M>(krow + (uint64_t)c * MaxTileCol, thr);
+    return cnt;
+}
+
 }  // namespace qli_radix_dyn
 
 inline void qli_topk_radix_dynamic(float* scores_gm, int32_t* indices_gm,
@@ -331,12 +309,6 @@ inline void qli_topk_radix_dynamic(float* scores_gm, int32_t* indices_gm,
     int NumChunks = (Skv + MaxTileCol - 1) / MaxTileCol;
     int paddedSkv = NumChunks * MaxTileCol;
     const uint32_t tid = get_thread_idx();
-
-    // 每 PE 独立的 hist/prefix scratch（256 + 32 uint32 = 1152B）
-    // 多 PE 并行时共享同一 buffer 会互相覆盖（直方图数据竞争）
-    uint32_t* hist_scratch = key_scratch + (uint64_t)Sq * paddedSkv
-                           + (uint64_t)tid * 288;
-    uint32_t* prefix_buf = hist_scratch + 256;
 
     for (int i = tid; i < Sq; i += numPEs) {
         const RU* row = (const RU*)(scores_gm) + (uint64_t)i * paddedSkv;
@@ -353,37 +325,18 @@ inline void qli_topk_radix_dynamic(float* scores_gm, int32_t* indices_gm,
             for (int p = 0; p < MaxTileCol - padStart; p++) pad[p] = 0;
         }
 
-        // Step 2: 4 轮 MSD radix → kth_value
-        RU kth_value = 0;
-        int remaining = topK;
-        for (int w = 0; w < 32; w++) prefix_buf[w] = 0;
-
-        for (int r = 3; r >= 0; r--) {
-            RU per_bin[256] = {0};
-            if (r < 3) {
-                volatile RU* pb = (volatile RU*)prefix_buf;
-                RU b3 = (kth_value >> 24) & 0xFFu;
-                RU b2 = (kth_value >> 16) & 0xFFu;
-                RU b1 = (kth_value >> 8) & 0xFFu;
-                for (int cc = 0; cc < 8; cc++) {
-                    pb[0*8+cc] = b3; pb[1*8+cc] = b2;
-                    pb[2*8+cc] = b1; pb[3*8+cc] = 0;
-                }
-            }
-            for (int c = 0; c < NumChunks; c++) {
-                ChunkHist(krow + c * MaxTileCol, r, prefix_buf, hist_scratch);
-                volatile RU* rh = (volatile RU*)hist_scratch;
-                RU prev = 0;
-                for (int b = 0; b < 256; b++) { RU cum = rh[b]; per_bin[b] += (cum - prev); prev = cum; }
-            }
-            RU cum = 0; int kth_byte = 0;
-            for (int b = 255; b >= 0; b--) {
-                cum += per_bin[b];
-                if (cum >= (RU)remaining) { kth_byte = b; break; }
-            }
-            remaining -= (int)(cum - per_bin[kth_byte]);
-            kth_value |= ((RU)kth_byte) << (r * 8);
+        // Step 2: 阈值二分找第 topK 大 key（TCMPS<GT>+TROWSUM，替代已退休 THISTOGRAM）
+        // kth_value = 最小 T 满足 count(key>T) < topK；仅用 Step3 同款在册算子，
+        // 无 THISTOGRAM / 无 256 桶扫描 / 无 Idx 前缀。填充区 key=0 不影响 count_gt(T>=0)。
+        RU lo = 0u, hi = 0xFFFFFFFFu;
+        while (lo < hi) {
+            RU mid = lo + (RU)((hi - lo) >> 1);
+            RU gt = CountAll<CmpMode::GT>(krow, NumChunks, mid);
+            if (gt < (RU)topK) hi = mid; else lo = mid + 1u;
         }
+        RU kth_value = lo;
+        RU gtCount = CountAll<CmpMode::GT>(krow, NumChunks, kth_value);
+        int remaining = topK - (int)gtCount;   // 从 == kth_value 组补足的名额
 
         // Step 3: 提取 topK 索引
         int outPos = 0;

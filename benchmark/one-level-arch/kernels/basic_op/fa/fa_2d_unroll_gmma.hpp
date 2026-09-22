@@ -104,10 +104,9 @@ void flash_attention_2d_unroll_shared_impl(
     using tileK = SharedTile<tileKMatrix>;
     using tileV = SharedTile<tileVMatrix>;
 
-    // Change 8: tileW is a CubeTileM32/M16 (Location::Left) instead of
-    // CubeAccumulatorM32/M16 (Location::Acc). The QK TMATMUL writes directly
-    // to a Left tile, and tW is used as the PV TMATMUL left operand without
-    // any TCVT (for FP32). For packed types a Left->Left TCVT remains.
+    // tileW is a CubeTileM32/M16 (Location::Left). QK writes it directly:
+    // keep_acc for FP32 vector math, or fixpipe BF16 conversion otherwise.
+    // This avoids the intermediate FP32 QK tile and standalone TCVT.
     using tileWM16 = CubeTileM16<vector_dtype, kPeTm, kTk>;
     using tileWM32 = CubeTileM32<vector_dtype, kPeTm, kTk>;
     using tileW = std::conditional_t<(kPeTm <= 16), tileWM16, tileWM32>;
@@ -148,6 +147,10 @@ void flash_attention_2d_unroll_shared_impl(
         std::conditional_t<(kPeTm <= 16), tileMaxM16, tileMaxM32>;
     using tileSum = tileMax;
     using tileScale = tileMax;
+    using tileRowFp32M16 = VecTileM16<float, kPeTm, 1, kPeTm, 1>;
+    using tileRowFp32M32 = VecTileM32<float, kPeTm, 1, kPeTm, 1>;
+    using tileRowFp32 =
+        std::conditional_t<(kPeTm <= 16), tileRowFp32M16, tileRowFp32M32>;
 
     using itQ = global_iterator<gmQ, tileQMatrix>;
     using itK = global_iterator<gmK, tileKMatrix>;
@@ -174,7 +177,8 @@ void flash_attention_2d_unroll_shared_impl(
     constexpr int Kb = (Skv + kTk - 1) / kTk;
 
     // Loop-invariant fixpipe options — hoisted outside both loops.
-    constexpr auto qkOptions = fixp::keep_acc();
+    constexpr auto qkFp32Options = fixp::keep_acc();
+    constexpr auto qkBf16Options = fixp::bf16();
     constexpr auto pvOptions = fixp::keep_acc().transpose_b();
 
 #pragma clang loop unroll(full)
@@ -199,7 +203,13 @@ void flash_attention_2d_unroll_shared_impl(
             auto gK = gIterK(j, 0);
             TLOAD<tileKMatrix, 1>(tK, gK);
 
-            TMATMUL(tW, tQ, tK, qkOptions);
+            if constexpr (std::is_same_v<vector_dtype, float>) {
+                TMATMUL(tW, tQ, tK, qkFp32Options);
+            } else {
+                static_assert(std::is_same_v<vector_dtype, __bf16>,
+                              "QK fixpipe output supports FP32 or BF16 vector dtype");
+                TMATMUL(tW, tQ, tK, qkBf16Options);
+            }
 
             // Scale
             TMULS(tW, tW, scale);
@@ -218,7 +228,13 @@ void flash_attention_2d_unroll_shared_impl(
                 // Change 7: TROWEXPANDEXPDIF replaces TSUB+TEXP (j!=0 only)
                 TROWEXPANDEXPDIF(tScale, tMax, tNewMax);
                 // Rescale old output before PV accumulation
-                TROWEXPANDMUL(tO, tO, tScale);
+                if constexpr (std::is_same_v<vector_dtype, float>) {
+                    TROWEXPANDMUL(tO, tO, tScale);
+                } else {
+                    tileRowFp32 tScaleFp32;
+                    TCVT(tScaleFp32, tScale);
+                    TROWEXPANDMUL(tO, tO, tScaleFp32);
+                }
             }
 
             // Exponentiate current scores (common to both branches)
@@ -248,8 +264,9 @@ void flash_attention_2d_unroll_shared_impl(
             TLOAD<tileVMatrix, 1>(tV, gV);
 
             if constexpr (PackedFactor == 1 &&
-                          std::is_same_v<matrix_dtype, float>) {
-                // FP32: tW is already Left, float — no TCVT
+                          std::is_same_v<matrix_dtype, vector_dtype>) {
+                // The softmax probability already matches the configured
+                // CUBE input dtype, so it can feed PV directly.
                 if (j == 0) {
                     TMATMUL(tO, tW, tV, pvOptions, kGroupM);
                 } else {
@@ -275,7 +292,13 @@ void flash_attention_2d_unroll_shared_impl(
         }
 
         // Change 9: TROWEXPANDDIV replaces TRECIP+TROWEXPANDMUL
-        TROWEXPANDDIV(tO, tO, tSum);
+        if constexpr (std::is_same_v<vector_dtype, float>) {
+            TROWEXPANDDIV(tO, tO, tSum);
+        } else {
+            tileRowFp32 tSumFp32;
+            TCVT(tSumFp32, tSum);
+            TROWEXPANDDIV(tO, tO, tSumFp32);
+        }
         auto dstO = gIterO(i * kPeNum + tid, 0);
         if constexpr (std::is_same_v<vector_dtype, float>) {
             TSTORE_CUBE(dstO, tO);

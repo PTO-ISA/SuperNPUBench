@@ -66,7 +66,7 @@ extern "C" int __linx_group_worker_main(uint32_t peId, void *opaque) {
                       tilM, tilN, tilK>(
             context->dst + b * globM * globN,
             context->src0 + b * globM * globK,
-            context->src1 + b * globK * globN);
+            context->src1 + b * globN * globK);
     }
     BENCHEND;
     return 0;
@@ -81,7 +81,8 @@ int main() {
                   "global M must be divisible by the PE count");
 
     static dtype src0p[Batch * globM * globK + 2 * ALIGN];
-    static dtype src1p[Batch * globK * globN + 2 * ALIGN];
+    // B is stored B-major as [Batch, N, K].
+    static dtype src1p[Batch * globN * globK + 2 * ALIGN];
     static float dstp[Batch * globM * globN + 2 * ALIGN];
 
     dtype *src0 = (dtype *)(((uint64_t)src0p & ALIGN_MASK) + ALIGN);
@@ -96,7 +97,7 @@ int main() {
         readBinaryFile(SRC0_PATH, (uint8_t *)src0,
                        Batch * globM * globK * sizeof(dtype));
         readBinaryFile(SRC1_PATH, (uint8_t *)src1,
-                       Batch * globK * globN * sizeof(dtype));
+                       Batch * globN * globK * sizeof(dtype));
     }
 #ifndef LINX_GROUP_RUNTIME
     res_check_publish_inputs(res_check_sync, tid);

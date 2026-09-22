@@ -156,12 +156,9 @@ __attribute__((noinline)) bool fa_gmma_dynamic(
 
         TROWEXPANDDIV(out, out, sum);
 #else
-        // The timing simulator currently cannot decode a reduction-prefix
-        // view as TFMA's addend. It can decode the same value after it is
-        // copied into a regular one-column tile. Ping-pong max/sum tiles also
-        // avoid the loop-carried tile TMOV emitted for `max = newMax` and
-        // `sum = newSum`, which does not make progress in the timing model.
-        // This path preserves the runtime loop bound and the fused sum update.
+        // Ping-pong max/sum tiles avoid the loop-carried tile TMOV emitted for
+        // `max = newMax` and `sum = newSum`. Reduction-prefix views are
+        // consumed directly by TFMA through B.SUBVIEW.
         stateTile maxA;
         stateTile sumA;
         stateTile maxB;
@@ -220,11 +217,7 @@ __attribute__((noinline)) bool fa_gmma_dynamic(
                 reduceTile localSumR;
                 TROWSUM(localSumR, score);
                 auto localSum = TREDUCEPREFIXVIEW<stateTile>(localSumR);
-                stateTile zero;
-                stateTile localSumTile;
-                TEXPANDS(zero, 0.0f);
-                TADD(localSumTile, zero, localSum);
-                TFMA(sumA, sumB, oldScale, localSumTile);
+                TFMA(sumA, sumB, oldScale, localSum);
                 vTile v;
                 auto gV = gIterV(static_cast<int>(j), 0);
                 TLOAD<vMatrix, 1>(v, gV);
@@ -254,11 +247,7 @@ __attribute__((noinline)) bool fa_gmma_dynamic(
                 reduceTile localSumR;
                 TROWSUM(localSumR, score);
                 auto localSum = TREDUCEPREFIXVIEW<stateTile>(localSumR);
-                stateTile zero;
-                stateTile localSumTile;
-                TEXPANDS(zero, 0.0f);
-                TADD(localSumTile, zero, localSum);
-                TFMA(sumB, sumA, oldScale, localSumTile);
+                TFMA(sumB, sumA, oldScale, localSum);
                 vTile v;
                 auto gV = gIterV(static_cast<int>(j + 1), 0);
                 TLOAD<vMatrix, 1>(v, gV);
@@ -291,11 +280,7 @@ __attribute__((noinline)) bool fa_gmma_dynamic(
             reduceTile localSumR;
             TROWSUM(localSumR, score);
             auto localSum = TREDUCEPREFIXVIEW<stateTile>(localSumR);
-            stateTile zero;
-            stateTile localSumTile;
-            TEXPANDS(zero, 0.0f);
-            TADD(localSumTile, zero, localSum);
-            TFMA(sumA, sumB, oldScale, localSumTile);
+            TFMA(sumA, sumB, oldScale, localSum);
             vTile v;
             auto gV = gIterV(static_cast<int>(j), 0);
             TLOAD<vMatrix, 1>(v, gV);

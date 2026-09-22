@@ -1,7 +1,10 @@
-# MegaMoe A8W8 (full device pipeline) — single-PE sim drivers and true 4-PE variant.
+# MegaMoe A8W8 (full device pipeline) — single-PE sim drivers, true 4-PE variant
+# and 4-PE dynamic-shape variant.
 # Default sim spec 16x32x64 (matches compile.all; verified on gfsim).
 # Single-PE:     mega_moe_sim / mega_moe_full_sim   (gfrun default)
 # 4-PE:          mega_moe_sim_mt                    (gfrun -s softcore.multiThreadNum=4)
+# 4-PE dyn:      mega_moe_sim_mt_dyn                (gfrun -s softcore.multiThreadNum=4;
+#                 runtime tiling = {bs,h,hiddenDim,expertPerRank,topK}, 2 shape configs)
 
 TESTCASE ?= mega_moe_sim
 
@@ -28,10 +31,13 @@ else ifeq ($(TESTCASE),mega_moe_full_sim)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/mega_moe_full_sim.cpp
 TARGET = $(ELF_HEAD)_$(TESTCASE).elf
 else ifeq ($(TESTCASE),mega_moe_sim_mt)
-SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/mega_moe_sim_mt.cpp
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
 TARGET = $(ELF_HEAD)_$(TESTCASE)_BS$(BS)_H$(H)_HD$(HIDDEN).elf
+else ifeq ($(TESTCASE),mega_moe_sim_mt_dyn)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/mega_moe_sim_mt_dyn.cpp
+TARGET = $(ELF_HEAD)_$(TESTCASE).elf
 else
-$(error Unsupported TESTCASE=$(TESTCASE); expected mega_moe_sim, mega_moe_full_sim or mega_moe_sim_mt)
+$(error Unsupported TESTCASE=$(TESTCASE); expected mega_moe_sim, mega_moe_full_sim, mega_moe_sim_mt or mega_moe_sim_mt_dyn)
 endif
 
 include ../../common/Makefile.common

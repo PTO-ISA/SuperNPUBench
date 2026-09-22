@@ -6,9 +6,12 @@
 # 用例分组（全部 4-PE SPMD kernel）：
 #   · 静态定尺 5：tail(ocp_fp8/ocp_fp4/cublas_fp8) + nontail(cublas_fp8/ocp_fp4)
 #   · 动态 shape 7：上述各自的 _dyn + 两个 nontail _splitN_dyn（M/N 运行期 tiling）
-#   · 缩小网络基准 2：tail ocp_fp4/ocp_fp8 的 bench_small（供 gfsim；小 M 为 boxed）
+#   · 缩小网络基准 5：tail ocp_fp4 bench_small + tail ocp_fp8 bench_small 的
+#     V1(RowMajor)/V2(Cube_M32) × static/dyn 四种正交组合（供 gfsim；小 M 为 boxed）
 #   · 完整网络基准 2：默认注释（太大），需手动 make 指定 TYPE
 # 注：big-BS 已合并进统一 4-PE kernel（旧 *_bs128 独立用例/_bigbs kernel 已退休删除）。
+# 注：V2(Cube_M32) 依赖 Linx-TileOP-API#180/#187 已合入上游 → 现四组合齐编。脚本仍去 set -e（防御性：
+#     单个用例失败不中断后续、末尾汇总）。注：V2 M32 编过但上不了 gfsim（model #760/#605 既有缺口）。
 #
 #   export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
 #   ./compile.all
@@ -17,7 +20,8 @@
 # golden 落 ROOT/compare/dynamic_mx_quant_<driver>/，与 ELF basename 同名，供
 # dynamic_mx_quant_data_compare.py 按 basename 取用。4-PE 变体运行须
 #   gfrun -s softcore.multiThreadNum=4。
-set -euo pipefail
+# 注意：不用 set -e —— 单个用例编译失败不应中断后续用例；失败会被收集到末尾汇总。保留 -u 和 pipefail。
+set -uo pipefail
 : "${COMPILER_DIR:?Set COMPILER_DIR to the linx_blockisa_llvm_musl bin directory}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -45,7 +49,14 @@ CONFIGS=(
   "NONTAIL_OCP_FP4_SPLITN_DYN:nontail_ocp_fp4_splitN_dyn:512:256:32:fp16:OCP:nontail:FP4"
   # ---- 缩小版网络基准（供 gfsim；小 M 为 boxed，精度不作门禁）----
   "TAIL_OCP_FP4_BENCH_SMALL:tail_ocp_fp4_bench_small:256:1536:32:bf16:OCP:tail:FP4"
-  "TAIL_OCP_FP8_BENCH_SMALL:tail_ocp_fp8_bench_small:64:16384:32:bf16:OCP:tail:FP8"
+  # tail_ocp_fp8 bench_small：V1(RowMajor)/V2(Cube_M32) × static/dyn 四种正交组合（同规格同 golden）。
+  #   V1_* RowMajor 不依赖在研 issue，恒编过、可喂 gfsim。
+  #   V2_* Cube_M32 依赖 #180(B.DATR NORM)/#187(reduction-prefix 动态维度) 已合入上游 → 现编过；
+  #   （V2 M32 编过但上不了 gfsim：model #760/#605 既有缺口，非本 PR 引入）。
+  "TAIL_OCP_FP8_BENCH_SMALL_V1_STATIC:tail_ocp_fp8_bench_small_V1_static:64:16384:32:bf16:OCP:tail:FP8"
+  "TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC:tail_ocp_fp8_bench_small_V2_static:64:16384:32:bf16:OCP:tail:FP8"
+  "TAIL_OCP_FP8_BENCH_SMALL_V1_DYN:tail_ocp_fp8_bench_small_V1_dyn:64:16384:32:bf16:OCP:tail:FP8"
+  "TAIL_OCP_FP8_BENCH_SMALL_V2_DYN:tail_ocp_fp8_bench_small_V2_dyn:64:16384:32:bf16:OCP:tail:FP8"
   # ---- 完整网络基准（太大，默认注释；手动构建/验证）----
   #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4_BENCH res_check=on   # [15360,1536] ~47MB
   # "TAIL_OCP_FP4_BENCH:tail_ocp_fp4_bench:15360:1536:32:bf16:OCP:tail:FP4"
@@ -53,6 +64,8 @@ CONFIGS=(
   # "TAIL_OCP_FP8_BENCH:tail_ocp_fp8_bench:7168:16384:32:bf16:OCP:tail:FP8"
 )
 
+OK_CASES=()
+FAILED_CASES=()
 for cfg in "${CONFIGS[@]}"; do
   IFS=: read -r TYPE DRIVER M K BS INDT ALGO KERNEL DTYPE <<<"$cfg"
   cmpdir="$CMP_ROOT/dynamic_mx_quant_${DRIVER}"
@@ -61,7 +74,17 @@ for cfg in "${CONFIGS[@]}"; do
   python3 "$GEN" --M "$M" --K "$K" --block-size "$BS" --algo "$ALGO" \
       --kernel "$KERNEL" --dtype "$DTYPE" --in-dtype "$INDT" \
       --scale-layout compact --seed "$SEED" -o "$cmpdir"
-  make -C "$HERE" TESTCASE=dynamic_mx_quant TYPE="$TYPE" COMPILER_DIR="$COMPILER_DIR" diss
+  if make -C "$HERE" TESTCASE=dynamic_mx_quant TYPE="$TYPE" COMPILER_DIR="$COMPILER_DIR" diss; then
+    OK_CASES+=("$TYPE")
+  else
+    echo "  !! 编译失败: $TYPE（不中断，继续后续用例）"
+    FAILED_CASES+=("$TYPE")
+  fi
 done
 
-echo "全部 14 个用例已生成 golden + 编译完成（5 静态定尺 + 7 动态 shape + 2 缩小网络基准；完整网络基准默认注释、需手动构建）。"
+echo
+echo "======== compile.all 汇总 ========"
+echo "编译成功 ${#OK_CASES[@]} 个：${OK_CASES[*]}"
+if ((${#FAILED_CASES[@]})); then
+  echo "编译失败 ${#FAILED_CASES[@]} 个：${FAILED_CASES[*]}"
+fi

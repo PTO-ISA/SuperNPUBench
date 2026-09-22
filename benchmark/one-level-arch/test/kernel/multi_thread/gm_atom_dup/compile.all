@@ -1,0 +1,8 @@
+#!/bin/bash
+# export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin; ./compile.all;
+# python3 src/run_gm_atom_dup_check.py --gfrun /path/to/gfrun
+set -euo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+
+make TESTCASE=gm_atom_dup COMPILER_DIR="$COMPILER_DIR" res_check=on diss

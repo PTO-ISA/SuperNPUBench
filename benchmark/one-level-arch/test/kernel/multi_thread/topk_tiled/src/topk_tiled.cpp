@@ -15,7 +15,8 @@ int main() {
 
     BENCHSTART;
     topk_tiled::run(buffers.output, buffers.errors, buffers.input,
-                    buffers.starts, buffers.ends, buffers.scratch);
+                    buffers.starts, buffers.ends, buffers.scratch,
+                    &buffers.tiling);
     BENCHEND;
 
     return topk_tiled_test::finish(buffers, res_check_sync, tid);

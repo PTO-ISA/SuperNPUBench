@@ -24,10 +24,12 @@ struct MatmulReuseBStorage<TileT, 0> {};
 //       for each K block
 //         load A for the current M block
 //         load B only for the first M block, then reuse it
-//         accumulate C = A * B
+//         accumulate C = A * B^T
 //
 // A and B are cooperative SharedTile operands. Each PE owns one contiguous
 // CUBE row slice of the [group_M, tN] FP32 output tile.
+// The external operand contract matches matmul_shared: A is [M,K], B is
+// B-major [N,K], and C = A * B^T.
 template <typename dtype, int gM, int gN, int gK, int tM, int tN, int tK>
 void matmul_shared_reuseB(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
     constexpr int kPeNum = 4;
@@ -51,15 +53,15 @@ void matmul_shared_reuseB(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
     // K chain: single=0, begin=raw_acc, middle=raw_acc|acc_hint, end=acc_hint.
     // C remains explicit; gfsim also needs cube.enable_internal_acc=true.
-    constexpr auto matmulOptions = fixp::keep_acc().transpose_b();
+    constexpr auto matmulOptions = fixp::keep_acc();
     const uint32_t tid = get_thread_idx();
 
     using gmA = global_tensor<dtype, RowMajor<gM, gK>>;
-    using gmB = global_tensor<dtype, RowMajor<gK, gN>>;
+    using gmB = global_tensor<dtype, RowMajor<gN, gK>>;
     using gmC = global_tensor<float, RowMajor<gM, gN>>;
 
     using tileAMatrix = SharedMatrixLeft<dtype, kTileRows, tK, kValidRowM, tK>;
-    using tileBMatrix = SharedMatrixRight<dtype, tK, tN>;
+    using tileBMatrix = SharedMatrixRight<dtype, tN, tK>;
     using tileAShared = SharedTile<tileAMatrix>;
     using tileBShared = SharedTile<tileBMatrix>;
     using tileCM16 = CubeAccumulatorM16<float, kPeM, tN>;
@@ -112,7 +114,7 @@ void matmul_shared_reuseB(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
                     TLOAD<tileAMatrix, 1>(tAShared, gA);
 
                     if (i == 0) {
-                        auto gB = gIterB(k, j);
+                        auto gB = gIterB(j, k);
                         TLOAD<tileBMatrix, 1>(tBReuse[k], gB);
                     }
 
@@ -136,7 +138,7 @@ void matmul_shared_reuseB(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
                     tileAShared tAShared;
                     tileBShared tBShared;
                     auto gA = gIterA(i, k);
-                    auto gB = gIterB(k, j);
+                    auto gB = gIterB(j, k);
                     TLOAD<tileAMatrix, 1>(tAShared, gA);
                     TLOAD<tileBMatrix, 1>(tBShared, gB);
                     if constexpr (Kb == 1) {

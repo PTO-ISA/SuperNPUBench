@@ -165,7 +165,8 @@ struct Mc2MoeContext {   // 源 1124 行 (2026-08 同步: kfcContextAddr + hccld
 // 三-补、exp 近似 (无 libm 依赖; SwiGLU silu 的 exp 组件, 源真机用 Ascend Exp 指令)
 //   exp(z), z∈[-5,5]: z = k*ln2 + r (|r|<=ln2/2), exp = 2^k * exp(r)
 // ============================================================================
-MM_INLINE inline float exp_approx(float z)
+// [修复] 删除 "MM_INLINE" 后多余的 inline 说明符, 消除 -Wduplicate-decl-specifier 告警。
+MM_INLINE float exp_approx(float z)
 {
     const float kLn2 = 0.69314718055994530941723212145818f;
     const float kInvLn2 = 1.4426950408889634073599246810019f;
@@ -185,7 +186,8 @@ MM_INLINE inline float exp_approx(float z)
 // 四、FP8 A8W8 量化解码 (E4M3FN + E8M0 scale) — 计算语义完整保留
 // ============================================================================
 // E4M3FN: bit7=符号, bit[6:3]=指数(偏置7), bit[2:0]=尾数; e==0 为次正规
-MM_INLINE inline float fp8_e4m3_to_f32(uint8_t raw)
+// [修复] 删除 "MM_INLINE" 后多余的 inline 说明符, 消除 -Wduplicate-decl-specifier 告警。
+MM_INLINE float fp8_e4m3_to_f32(uint8_t raw)
 {
     const uint32_t s = (raw >> 7U) & 1U;
     const uint32_t e = (raw >> 3U) & 0xFU;
@@ -208,9 +210,10 @@ MM_INLINE inline float fp8_e4m3_to_f32(uint8_t raw)
 }
 
 // E8M0: 纯指数 (偏置 127), scale = 2^(signed)
-MM_INLINE inline float fp8_e8m0_scale(uint8_t raw)
+// [修复] 删除 "MM_INLINE" 后多余的 inline 说明符, 消除 -Wduplicate-decl-specifier 告警。
+MM_INLINE float fp8_e8m0_scale(uint8_t raw)
 {
-    const int32_t e = static_cast<int32_t>(static_cast<int8_t>(raw));
+    const int32_t e = static_cast<int32_t>(raw) - 127;
     float s = 1.0f;
     if (e >= 0) {
         for (int32_t i = 0; i < e; ++i) s *= 2.0f;
@@ -218,6 +221,240 @@ MM_INLINE inline float fp8_e8m0_scale(uint8_t raw)
         for (int32_t i = 0; i < -e; ++i) s *= 0.5f;
     }
     return s;
+}
+
+// ============================================================================
+// 四a、tile 计算核心 (issue #180 迁移; sim / sim_mt / sim_mt_dyn 三入口共用)
+// ============================================================================
+// GMM = 逐 token TGEMV_MX/TGEMV_MX_ACC (MX FP16 pair —— pto-spec: FP16/BF16 侧
+// 免 scale; K/N-tile=32, fp32 CUBE 累加); SwiGLU/x 量化/Combine = VEC tile 链;
+// FP8 权重 = 每 PE 私有 tile 化解码 (TLOAD(E4M3[32,32]) → TCVT(fp16) →
+// TMULS(k 组 scale 折叠) → TSTORE), 产物为 fp16 权重副本 —— 无标量 bit-twiddle /
+// fp32 workspace / 跨 PE 权重栅栏。
+//
+// 注: B 侧 E4M3+E8M0 的 MX 原地消费 (TGEMV_MX 带 ScaleB) 在当前工具链/模型
+// 组合下不可用 —— 编译期契约要求 Local ScaleB 为 RowMajor [ceil(K/32),N], 而
+// TLOAD 发射的 scale 操作数无 CUBE_M32 布局描述符, 运行时模型断言要求
+// CUBE_M32 [N,ceil(K/32)] (isa/Block.cpp TMATMUL_MX right-scale 校验)。待模型
+// 侧统一载体契约后可平滑切换。
+//
+// 权重 scale 布局 (bench 自控, 每 PE 解码时 TMULS 折叠):
+//   w1Scale[e][k/32]  (epr × h/32 个 E8M0 标量, k ∈ [0, h))
+//   w2Scale[e][k/32]  (epr × (hd/2)/32 个 E8M0 标量, k ∈ [0, hd/2))
+// 调用契约: h % 32 == 0 且 hiddenDim % 64 == 0 (GMM2 的 K=hd/2 须整除 32)。
+
+using MxGemvVec = CubeTileM16<__half, 1, 32>;
+using MxGemvMtx = CubeTileN8<__half, 32, 32>;
+using MxGemvDst = CubeAccumulatorM16<float, 1, 32>;
+// VEC 链 tile: 物理列 64 使 fp32/fp16 两侧 TCVT 派生行数一致 (128B 下限)
+using MxChainF32 = Tile<Location::Vec, float, 1, 64, BLayout::RowMajor, 1, 32>;
+using MxChainF16 = Tile<Location::Vec, __half, 1, 64, BLayout::RowMajor, 1, 32>;
+using MxDecSrc = Tile<Location::Vec, __fp8_e4m3, 32, 32>;
+using MxDecDst = Tile<Location::Vec, __half, 32, 32>;
+
+// 每 PE 私有 scratch 布局: w1F16[epr*h*hd] + w2F16[epr*(hd/2)*h] + xf16[h] +
+// y1[hd]f32 + y2f16[hd/2] + y3[h]f32
+struct MxTileScratch {
+    __half* w1F16;
+    __half* w2F16;
+    __half* xf16;
+    float* y1;
+    __half* y2f16;
+    float* y3;
+};
+
+// 去掉inline，修复编译告警
+MM_INLINE uint32_t mx_tile_scratch_bytes(uint32_t epr, uint32_t h, uint32_t hd)
+{
+    return (epr * h * hd + epr * (hd / 2U) * h) * 2U   // fp16 权重副本
+         + h * 2U + hd * 4U + hd * 2U + h * 4U;        // xf16/y1/y2f16/y3
+}
+// 去掉inline，修复编译告警
+MM_INLINE MxTileScratch mx_tile_scratch_at(uint8_t* base, uint32_t pe,
+                                                   uint32_t epr, uint32_t h, uint32_t hd)
+{
+    MxTileScratch s;
+    uint8_t* p = base + pe * mx_tile_scratch_bytes(epr, h, hd);
+    s.w1F16 = reinterpret_cast<__half*>(p);
+    s.w2F16 = s.w1F16 + epr * h * hd;
+    s.xf16 = s.w2F16 + epr * (hd / 2U) * h;
+    s.y1 = reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(s.xf16) + h * 2U);
+    s.y2f16 = reinterpret_cast<__half*>(reinterpret_cast<uint8_t*>(s.y1) + hd * 4U);
+    s.y3 = reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(s.y2f16) + hd * 2U);
+    return s;
+}
+
+// FP8 权重 tile 化解码 (每 PE 私有, 免栅栏):
+//   wF16[e][k][n] = fp16(E4M3) * 2^(scale[e][k/32]-127), 逐 [32,32] tile
+// 去掉inline，修复编译告警
+MM_INLINE void mx_decode_weights_tile(MxTileScratch& s,
+                                              uint32_t epr, uint32_t h, uint32_t hd)
+{
+    for (uint32_t e = 0U; e < epr; ++e) {
+        for (uint32_t k0 = 0U; k0 < h; k0 += 32U) {
+            const float s1 = fp8_e8m0_scale(
+                g_mmWeightScales1[e * (h / 32U) + k0 / 32U]);
+            for (uint32_t n0 = 0U; n0 < hd; n0 += 32U) {
+                MxDecSrc ws;
+                global_tensor<__fp8_e4m3, RowMajor<-1, -1>> gWS(
+                    reinterpret_cast<__fp8_e4m3*>(
+                        g_mmWeight1 + e * h * hd + k0 * hd + n0),
+                    32, hd);
+                TLOAD(ws, gWS);
+                MxDecDst wd;
+                TCVT(wd, ws);
+                TMULS(wd, wd, s1);
+                global_tensor<__half, RowMajor<-1, -1>> gWD(
+                    s.w1F16 + e * h * hd + k0 * hd + n0, 32, hd);
+                TSTORE(gWD, wd);
+            }
+        }
+        for (uint32_t k0 = 0U; k0 < hd / 2U; k0 += 32U) {
+            const float s2 = fp8_e8m0_scale(
+                g_mmWeightScales2[e * ((hd / 2U) / 32U) + k0 / 32U]);
+            for (uint32_t n0 = 0U; n0 < h; n0 += 32U) {
+                MxDecSrc ws;
+                global_tensor<__fp8_e4m3, RowMajor<-1, -1>> gWS(
+                    reinterpret_cast<__fp8_e4m3*>(
+                        g_mmWeight2 + e * (hd / 2U) * h + k0 * h + n0),
+                    32, h);
+                TLOAD(ws, gWS);
+                MxDecDst wd;
+                TCVT(wd, ws);
+                TMULS(wd, wd, s2);
+                global_tensor<__half, RowMajor<-1, -1>> gWD(
+                    s.w2F16 + e * (hd / 2U) * h + k0 * h + n0, 32, h);
+                TSTORE(gWD, wd);
+            }
+        }
+    }
+}
+
+// 单 token 单 topK 槽位 tile 计算:
+//   x 量化(fp32→fp16) → GMM1(TGEMV_MX) → SwiGLU(VEC 链) → GMM2 → Combine
+// (k=0 块剥离循环外: 消除运行期 TGEMV_MX/ACC 分支的 tile 跨分支 PHI)
+// kk==0 时 combineRow 直接写, kk>0 时读-累加-写 (topK 通用)。
+// 去掉inline，修复编译告警
+MM_INLINE void mx_token_compute(const MxTileScratch& s,
+                                        const float* xRow, uint32_t h, uint32_t hd,
+                                        uint32_t epr, uint32_t expert, float weight,
+                                        uint32_t kk, float* combineRow)
+{
+    // x 行 fp32 → fp16 (VEC TCVT; MX A 侧 fp16 免 scale)
+    for (uint32_t c = 0U; c < h; c += 32U) {
+        MxChainF32 xf;
+        global_tensor<float, RowMajor<1, 32>> gX(
+            const_cast<float*>(xRow) + c);
+        TLOAD(xf, gX);
+        MxChainF16 xh;
+        TCVT(xh, xf);
+        global_tensor<__half, RowMajor<1, 32>> gXH(s.xf16 + c);
+        TSTORE(gXH, xh);
+    }
+
+    // GMM1 (源 ProcessGmm1Wave): y1[n] = Σ_k x[k]·w1[e][k][n]
+    for (uint32_t n0 = 0U; n0 < hd; n0 += 32U) {
+        MxGemvDst d;
+        {
+            MxGemvVec v;
+            global_tensor<__half, RowMajor<1, 32>> gV(s.xf16);
+            TLOAD_CUBE(v, gV);
+            MxGemvMtx m;
+            global_tensor<__half, RowMajor<-1, -1>> gM(
+                s.w1F16 + expert * h * hd + n0, 32, hd);
+            TLOAD_CUBE(m, gM);
+            TGEMV_MX(d, m, v, fixp::keep_acc());
+        }
+        for (uint32_t k0 = 32U; k0 < h; k0 += 32U) {
+            MxGemvVec v;
+            global_tensor<__half, RowMajor<1, 32>> gV(s.xf16 + k0);
+            TLOAD_CUBE(v, gV);
+            MxGemvMtx m;
+            global_tensor<__half, RowMajor<-1, -1>> gM(
+                s.w1F16 + expert * h * hd + k0 * hd + n0, 32, hd);
+            TLOAD_CUBE(m, gM);
+            TGEMV_MX_ACC(d, d, m, v, fixp::keep_acc());
+        }
+        global_tensor<float, RowMajor<1, 32>> gY1(s.y1 + n0);
+        TSTORE_CUBE(gY1, d);
+    }
+
+    // SwiGLU (源 Gmm1SwigluState): y2 = silu(y1[:hd/2]) * y1[hd/2:]  (VEC 链)
+    for (uint32_t c = 0U; c < hd / 2U; c += 32U) {
+        MxChainF32 a, b;
+        global_tensor<float, RowMajor<1, 32>> gA(s.y1 + c);
+        TLOAD(a, gA);
+        global_tensor<float, RowMajor<1, 32>> gB(s.y1 + hd / 2U + c);
+        TLOAD(b, gB);
+        MxChainF32 neg, e, one, r, sig;
+        TMULS(neg, a, -1.0f);
+        TEXP(e, neg);
+        TADDS(one, e, 1.0f);
+        TRECIP(r, one);
+        TMUL(sig, a, r);
+        TMUL(sig, sig, b);
+        MxChainF16 h16;
+        TCVT(h16, sig);
+        global_tensor<__half, RowMajor<1, 32>> gY2(s.y2f16 + c);
+        TSTORE(gY2, h16);
+    }
+
+    // GMM2 (源 ProcessGmm2Wave): y3[n] = Σ_k y2[k]·w2[e][k][n]
+    for (uint32_t n0 = 0U; n0 < h; n0 += 32U) {
+        MxGemvDst d;
+        {
+            MxGemvVec v;
+            global_tensor<__half, RowMajor<1, 32>> gV(s.y2f16);
+            TLOAD_CUBE(v, gV);
+            MxGemvMtx m;
+            global_tensor<__half, RowMajor<-1, -1>> gM(
+                s.w2F16 + expert * (hd / 2U) * h + n0, 32, h);
+            TLOAD_CUBE(m, gM);
+            TGEMV_MX(d, m, v, fixp::keep_acc());
+        }
+        for (uint32_t k0 = 32U; k0 < hd / 2U; k0 += 32U) {
+            MxGemvVec v;
+            global_tensor<__half, RowMajor<1, 32>> gV(s.y2f16 + k0);
+            TLOAD_CUBE(v, gV);
+            MxGemvMtx m;
+            global_tensor<__half, RowMajor<-1, -1>> gM(
+                s.w2F16 + expert * (hd / 2U) * h + k0 * h + n0, 32, h);
+            TLOAD_CUBE(m, gM);
+            TGEMV_MX_ACC(d, d, m, v, fixp::keep_acc());
+        }
+        global_tensor<float, RowMajor<1, 32>> gY3(s.y3 + n0);
+        TSTORE_CUBE(gY3, d);
+    }
+
+    // Combine (源 ProcessCombineExperts): yAcc = Σ_kk weight·y3 (VEC tile)
+    for (uint32_t c = 0U; c < h; c += 32U) {
+        MxChainF32 t;
+        global_tensor<float, RowMajor<1, 32>> gT(s.y3 + c);
+        TLOAD(t, gT);
+        TMULS(t, t, weight);
+        global_tensor<float, RowMajor<1, 32>> gAcc(combineRow + c);
+        if (kk == 0U) {
+            TSTORE(gAcc, t);
+        } else {
+            MxChainF32 acc;
+            TLOAD(acc, gAcc);
+            TADD(acc, acc, t);
+            TSTORE(gAcc, acc);
+        }
+    }
+}
+
+// VEC tile 行拷贝 (UnpermuteTokens 用)
+// 去掉inline，修复编译告警
+MM_INLINE void mx_copy_row_tile(const float* src, float* dst, uint32_t h)
+{
+    for (uint32_t c = 0U; c < h; c += 32U) {
+        MxChainF32 v;
+        global_tensor<float, RowMajor<1, 32>> gSrc(const_cast<float*>(src) + c);
+        TLOAD(v, gSrc);
+        global_tensor<float, RowMajor<1, 32>> gDst(dst + c);
+        TSTORE(gDst, v);
+    }
 }
 
 // ============================================================================
@@ -640,13 +877,12 @@ void mega_moe_sim_kernel(float* yOut, float* xIn, int64_t* tokOut)
     tilingData.mGroupsPerWave = 1;
     tilingData.isPerExpertWeightTensor = false;
 
-    // workspace 布局 (与 MegaMoeWave::Init 一致)
-    const uint32_t w1F32Offset = 0U;
-    const uint32_t w2F32Offset = w1F32Offset + tilingData.moeExpertPerRank * tilingData.h * tilingData.hiddenDim * 4U;
-    const uint32_t dispatchOffset = w2F32Offset + tilingData.moeExpertPerRank * (tilingData.hiddenDim / 2U) * tilingData.h * 4U;
+    // workspace 布局 (MX 路径: 无 fp32 权重缓存; 每 PE tile scratch 见四a)
+    const uint32_t dispatchOffset = 0U;
     const uint32_t maskOffset = dispatchOffset + tilingData.moeExpertPerRank * tilingData.bs * 4U;
     const uint32_t combineOffset = maskOffset + tilingData.moeExpertPerRank * tilingData.bs * 1U;
     const uint32_t statsOffset = combineOffset + tilingData.bs * tilingData.h * 4U;
+    const uint32_t yScratchOffset = statsOffset + kBlockAivNum * tilingData.moeExpertPerRank * 4U;
 
 #ifdef MEGA_MOE_SIM_FAKE
     // ============ 源 10321-10374 camodel 仿真快路径 (保留全部 tile 原语) ============
@@ -692,36 +928,18 @@ void mega_moe_sim_kernel(float* yOut, float* xIn, int64_t* tokOut)
             }
         }
     }
-    // QuantizeLocalTokens (3754): A8W8 权重 E4M3→fp32 × E8M0 scale
-    {
-        float* w1 = reinterpret_cast<float*>(g_mmWorkspace + w1F32Offset);
-        for (uint32_t e = 0; e < tilingData.moeExpertPerRank; ++e) {
-            for (uint32_t k = 0; k < tilingData.h; ++k) {
-                for (uint32_t n = 0; n < tilingData.hiddenDim; ++n) {
-                    const uint32_t flat = e * tilingData.h * tilingData.hiddenDim + k * tilingData.hiddenDim + n;
-                    const uint32_t group = (k * tilingData.hiddenDim + n) / 32U;
-                    const uint32_t scaleIdx = e * (tilingData.h * tilingData.hiddenDim / 32U) + group;
-                    const uint32_t scaleStride = (tilingData.h / 32U) * 2U * 2U * 2U;
-                    w1[flat] = fp8_e4m3_to_f32(g_mmWeight1[flat]) *
-                               fp8_e8m0_scale(g_mmWeightScales1[scaleIdx % scaleStride]);
-                }
-            }
-        }
-        const uint32_t k2 = tilingData.hiddenDim / 2U;
-        float* w2 = reinterpret_cast<float*>(g_mmWorkspace + w2F32Offset);
-        for (uint32_t e = 0; e < tilingData.moeExpertPerRank; ++e) {
-            for (uint32_t k = 0; k < k2; ++k) {
-                for (uint32_t n = 0; n < tilingData.h; ++n) {
-                    const uint32_t flat = e * k2 * tilingData.h + k * tilingData.h + n;
-                    const uint32_t group = (k * tilingData.h + n) / 32U;
-                    const uint32_t scaleIdx = e * (k2 * tilingData.h / 32U) + group;
-                    const uint32_t scaleStride = (tilingData.h / 32U) * 2U * 2U * 2U;
-                    w2[flat] = fp8_e4m3_to_f32(g_mmWeight2[flat]) *
-                               fp8_e8m0_scale(g_mmWeightScales2[scaleIdx % scaleStride]);
-                }
-            }
-        }
-    }
+    // QuantizeLocalTokens (3754) — MX 路径: 每 PE 私有 tile 化解码
+    // (TLOAD(E4M3[32,32]) → TCVT(fp16) → TMULS(k 组 scale 折叠) → TSTORE);
+    // issue #180: 标量 bit-twiddle / fp32 workspace 全删; 幂等冗余执行模型下
+    // 每 PE 写自己的 scratch 副本 (同值, 写不相交)
+    static_assert(kHiddenDim % 32 == 0, "h must be a multiple of the 32-wide MX K-tile");
+    static_assert(kMoeHiddenDim % 64 == 0, "hiddenDim/2 must cover whole MX scale groups");
+    const uint32_t mxTid = get_thread_idx();
+    MxTileScratch mx = mx_tile_scratch_at(
+        g_mmWorkspace + yScratchOffset, mxTid,
+        tilingData.moeExpertPerRank, tilingData.h, tilingData.hiddenDim);
+    mx_decode_weights_tile(mx, tilingData.moeExpertPerRank,
+                           tilingData.h, tilingData.hiddenDim);
     // GatherAndSendExpertMasks (3934): 自回环本地 mask 表
     {
         uint8_t* mask = g_mmWorkspace + maskOffset;
@@ -741,83 +959,43 @@ void mega_moe_sim_kernel(float* yOut, float* xIn, int64_t* tokOut)
     }
 
     // ---- 阶段 2: 共享专家输入准备 (源 PrepareSharedExpertInput, sharedExpertNum==0 跳过) ----
-    // tilingData.sharedExpertNum == 0: 不启用
 
     // ---- 阶段 3: MoE 专家流水 (ProcessMoeExpertStages → ProcessGmmPipeline) ----
-    // InitTokenUnpermuteBuffers: combine 区不再预清零 —— Combine 阶段已改为
-    // 按 token 直接赋值 (topK==1 时与源 "+=" 累加等价), 消除多 PE 清零/累加交错竞态
-
-    // 16 伪核全量循环: 与线程数解耦 (单线程/多线程均覆盖全部伪核, 结果幂等;
-    // 修正原 "tid*4+lc" 分片在线程数 != 4 时覆盖不足导致的 R2 失败)
-    // ceil 分片: bs < 16 核时每核至多 1 token, 尾部核空转 (bs % 16 == 0 时
-    // 与源 bs/16 连续分片逐 token 一致)
+    // tile 计算核心 (issue #180): GMM1/GMM2 = TGEMV_MX (MX FP16 pair),
+    // SwiGLU = VEC 链, Combine = VEC tile (详见本文件四a 共享段)
+    // 16 伪核全量循环: 与线程数解耦 (单线程/多线程均覆盖全部伪核, 结果幂等)
+    // ceil 分片: bs < 16 核时每核至多 1 token, 尾部核空转
     const uint32_t perCore = (tilingData.bs + kBlockAivNum - 1U) / kBlockAivNum;
     {
-        float y1[kMoeHiddenDim];
-        float y2[kMoeHiddenDim / 2U];
-        float y3[kMoeH];
+        float* const combineBase = reinterpret_cast<float*>(
+            g_mmWorkspace + combineOffset);
         for (uint32_t lc = 0U; lc < kBlockAivNum; ++lc) {
             const uint32_t coreIdx = lc;
             for (uint32_t i = 0; i < perCore; ++i) {
                 const uint32_t token = coreIdx * perCore + i;
                 if (token >= tilingData.bs) break;  // bs < 16 核时尾核空转
 
-                // 路由 (源 expert 分配): topkIds[token*topK]
-                const int32_t expert = g_mmTopkIds[token * tilingData.topK];
-                const float weight = g_mmTopkWeights[token * tilingData.topK];
-
-                // GMM1 (源 ProcessGmm1Wave): y1[n] = Σ_k x[k]·w1[e][k][n]
-                {
-                    const float* w1 = reinterpret_cast<const float*>(g_mmWorkspace + w1F32Offset);
-                    const float* xRow = xIn + token * tilingData.h;
-                    const float* wRowBase = w1 + static_cast<uint32_t>(expert) * tilingData.h * tilingData.hiddenDim;
-                    for (uint32_t n = 0; n < tilingData.hiddenDim; ++n) {
-                        float acc = 0.0f;
-                        for (uint32_t k = 0; k < tilingData.h; ++k) {
-                            acc += xRow[k] * wRowBase[k * tilingData.hiddenDim + n];
-                        }
-                        y1[n] = acc;
-                    }
-                }
-                // SwiGLU (源 Gmm1SwigluState): y2 = silu(y1[:k]) * y1[k:], silu(z)=z·sigmoid(z)
-                for (uint32_t k = 0; k < tilingData.hiddenDim / 2U; ++k) {
-                    const float z = y1[k];
-                    const float sig = 1.0f / (1.0f + exp_approx(-z));
-                    y2[k] = z * sig * y1[k + tilingData.hiddenDim / 2U];
-                }
-                // GMM2 (源 ProcessGmm2Wave): y3[n] = Σ_k y2[k]·w2[e][k][n]
-                {
-                    const uint32_t k2 = tilingData.hiddenDim / 2U;
-                    const float* w2 = reinterpret_cast<const float*>(g_mmWorkspace + w2F32Offset);
-                    const float* wRowBase = w2 + static_cast<uint32_t>(expert) * k2 * tilingData.h;
-                    for (uint32_t n = 0; n < tilingData.h; ++n) {
-                        float acc = 0.0f;
-                        for (uint32_t k = 0; k < k2; ++k) {
-                            acc += y2[k] * wRowBase[k * tilingData.h + n];
-                        }
-                        y3[n] = acc;
-                    }
-                }
-                // Combine (源 ProcessCombineExperts): y[token] = topkWeight * y3
-                // 注: 源为 "+=" (topK>1 时同 token 多专家累加); 本用例 topK==1,
-                //     改为直接赋值以消除多 PE 对同一 combine 槽的累加竞态
-                {
-                    float* combine = reinterpret_cast<float*>(g_mmWorkspace + combineOffset);
-                    float* yBase = combine + token * tilingData.h;
-                    for (uint32_t n = 0; n < tilingData.h; ++n) {
-                        yBase[n] = weight * y3[n];
-                    }
+                for (uint32_t kk = 0U; kk < tilingData.topK; ++kk) {
+                    const uint32_t slot = token * tilingData.topK + kk;
+                    const uint32_t expert =
+                        static_cast<uint32_t>(g_mmTopkIds[slot]);
+                    const float weight = g_mmTopkWeights[slot];
+                    mx_token_compute(mx,
+                                     xIn + token * tilingData.h,
+                                     tilingData.h, tilingData.hiddenDim,
+                                     tilingData.moeExpertPerRank, expert,
+                                     weight, kk,
+                                     combineBase + token * tilingData.h);
                 }
             }
         }
     }
-    // UnpermuteTokens (9163): combine 缓冲按 token 序写回 y
+    // UnpermuteTokens (9163): combine 缓冲按 token 序写回 y (VEC tile 拷贝)
     {
         const float* combine = reinterpret_cast<const float*>(g_mmWorkspace + combineOffset);
         for (uint32_t t = 0; t < tilingData.bs; ++t) {
-            for (uint32_t n = 0; n < tilingData.h; ++n) {
-                yOut[t * tilingData.h + n] = combine[t * tilingData.h + n];
-            }
+            mx_copy_row_tile(combine + t * tilingData.h,
+                             yOut + t * tilingData.h, tilingData.h);
         }
     }
 

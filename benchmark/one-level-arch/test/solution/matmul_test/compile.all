@@ -41,8 +41,15 @@ make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
 make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
     B=1 M=101 N=99 K=110 tM=16 tN=16 tK=16 diss
 
-# 4-PE cooperative (M/N/K divisible by the tile sizes).
+# 4-PE cooperative (K must be divisible by tK; M/N are zero-padded to tile
+# multiples; tM/tN/tK must be powers of two - the model rejects non-pow2
+# cooperative dims, see the kernel header).
+# Requested shapes M=160/K=1536/N=320 (tM=80 tK=128 tN=320) and
+# M=120/K=1536/N=256 (tM=128 tK=128 tN=192) use non-pow2 tiles and are
+# blocked by the model (ADR-0100 powersOfTwo + shared TLOAD row granularity,
+# see Test/ISSUE-013); the closest legal configs below keep the requested
+# M/K/N shapes and adjust only the tile sizes.
 make TESTCASE=matmul_test_mt COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=256 N=256 K=256 tM=128 tN=64 tK=64 diss
+    B=1 M=160 N=320 K=1536 tM=64 tN=512 tK=128 diss
 make TESTCASE=matmul_test_mt COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=512 N=256 K=512 tM=128 tN=64 tK=64 diss
+    B=1 M=120 N=256 K=1536 tM=128 tN=256 tK=128 diss

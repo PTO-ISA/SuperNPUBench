@@ -62,7 +62,7 @@ extern "C" int __linx_group_worker_main(uint32_t pe_id, void *opaque) {
         context->scale + b * globM * kScaleCols,
         context->c_scratch + b * globM * globN,
         context->src0 + b * globM * globK,
-        context->src1 + b * globK * globN);
+        context->src1 + b * globN * globK);
   }
   BENCHEND;
   return 0;
@@ -73,7 +73,8 @@ int main() {
   const uint32_t tid = get_thread_idx();
 
   static dtype src0_storage[Batch * globM * globK + 2 * ALIGN];
-  static dtype src1_storage[Batch * globK * globN + 2 * ALIGN];
+  // B is stored B-major as [Batch, N, K].
+  static dtype src1_storage[Batch * globN * globK + 2 * ALIGN];
   static float c_storage[Batch * globM * globN + 2 * ALIGN];
   // TCVT/TSTORE packs two logical HiF4 lanes per byte.
   static uint8_t data_storage[Batch * globM * globN / 2 + 2 * ALIGN];
@@ -97,7 +98,7 @@ int main() {
     readBinaryFile(CHK_DIR "/src0.bin", reinterpret_cast<uint8_t *>(src0),
                    Batch * globM * globK * sizeof(dtype));
     readBinaryFile(CHK_DIR "/src1.bin", reinterpret_cast<uint8_t *>(src1),
-                   Batch * globK * globN * sizeof(dtype));
+                   Batch * globN * globK * sizeof(dtype));
   }
 #ifndef LINX_GROUP_RUNTIME
   res_check_publish_inputs(res_check_sync, tid);

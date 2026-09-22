@@ -56,7 +56,18 @@ CONFIGS = [
     ("NONTAIL_OCP_FP4_SPLITN_DYN",   "nontail_ocp_fp4_splitN_dyn",   512, 256, 32, "fp16", "OCP",    "nontail", "FP4", 4),
     # ---- 缩小版网络基准（boxed 小 M，scale 精度受 model boxed/e8m0 缺陷影响，预期 FAIL，仅作观测）----
     ("TAIL_OCP_FP4_BENCH_SMALL",     "tail_ocp_fp4_bench_small",     256, 1536, 32, "bf16", "OCP",    "tail",    "FP4", 4),
-    ("TAIL_OCP_FP8_BENCH_SMALL",     "tail_ocp_fp8_bench_small",      64,16384, 32, "bf16", "OCP",    "tail",    "FP8", 4),
+    # ---- 动态 shape 版 bench_small：V1(RowMajor) / V2(Cube_M32) 并列对比（同规格同 golden）----
+    #   V1_dyn(RowMajor)：不依赖在研 issue，恒 PASS。
+    #   V2_dyn(Cube_M32 + 动态 shape)：依赖 Linx-TileOP-API#187（reduction-prefix 动态 ValidRow 寄存器
+    #   B.DIM，PR#189）——已合入上游 main → 现编译 + gfrun 逐字节 PASS（曾在 #187 未落地时编译阻塞）。
+    ("TAIL_OCP_FP8_BENCH_SMALL_V1_DYN","tail_ocp_fp8_bench_small_V1_dyn",64,16384,32,"bf16","OCP","tail","FP8",4),
+    ("TAIL_OCP_FP8_BENCH_SMALL_V2_DYN","tail_ocp_fp8_bench_small_V2_dyn",64,16384,32,"bf16","OCP","tail","FP8",4),
+    # ---- 静态形状版 bench_small：V1(RowMajor) / V2(Cube_M32) 并列对比（同规格同 golden）----
+    #   V1 不依赖在研 issue，恒 PASS，作 V2 对照基准。
+    #   V2 依赖 Linx-TileOP-API#180（B.DATR NORM）+ SuperScalarModel#749（gfrun TCVT carrier），均已
+    #   合入上游 main → 现与 V1 逐字节一致 PASS（曾在依赖未落地时预期 FAIL）。
+    ("TAIL_OCP_FP8_BENCH_SMALL_V1_STATIC","tail_ocp_fp8_bench_small_V1_static",64,16384,32,"bf16","OCP","tail","FP8",4),
+    ("TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC","tail_ocp_fp8_bench_small_V2_static",64,16384,32,"bf16","OCP","tail","FP8",4),
 ]
 
 

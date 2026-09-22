@@ -149,8 +149,11 @@ void flash_attention_lowp_impl(
     using Bf16ScoreGroupTile = CubeTileM32<__bf16, kPeM, kMxGroup>;
     using WideBf16GroupReductionTile =
         VecTileM32<__bf16, kPeM, kMxGroup, kPeM, 1>;
-    // P is quantized group-by-group.  PBlock contains 32 logical E2M1 values
-    // per row; PScaleFragmentFp8E8M0 contains one valid E8M0 scale.
+    // P is quantized group-by-group.  PBlock contains kMxGroup logical E2M1
+    // values per row; PScaleFragmentFp8E8M0 contains one valid E8M0 scale.
+    // __fp4_e2m1x2 already packs two logical 4-bit values in one byte, so the
+    // Tile column count remains the logical column count and must not be
+    // doubled to account for the carrier representation.
     //
     // The scale uses the same M32 layout as its BF16 source.  It is physically
     // padded to four columns (the 128 B minimum), while only the first column

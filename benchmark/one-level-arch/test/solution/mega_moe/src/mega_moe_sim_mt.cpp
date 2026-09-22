@@ -35,13 +35,18 @@ using uint32 = uint32_t;
 using int64 = int64_t;
 constexpr uint32 kHiddenDim = mega_moe::kMoeHiddenDim;
 constexpr uint32 kTotalWorkspace = 2U * 2U * 2U * 2U * 8U;
+// MX tile 路径 (issue #180): 无 fp32 权重缓存; 每 PE scratch =
+// w1F16[epr*h*hd] + w2F16[epr*(hd/2)*h] + xf16[h] + y1[hd]f32 +
+// y2f16[hd/2] + y3[h]f32 (kernel 头文件契约; 4 PE 槽位)
+constexpr uint32 kScratchBytes = 4U * (
+    (2U * kH * kHiddenDim + 2U * (kHiddenDim / 2U) * kH) * 2U +
+    kH * 2U + kHiddenDim * 4U + kHiddenDim * 2U + kH * 4U);
 constexpr uint32 kWorkspaceBytes =
-    2U * kH * kHiddenDim * 4U +                    // w1 fp32
-    2U * (kHiddenDim / 2U) * kH * 4U +             // w2 fp32
     2U * kBS * 4U +                                // dispatch 表
     2U * kBS +                                     // mask
     kBS * kH * 4U +                                // combine 缓冲
     16U * 2U * 4U +                                // 核内统计
+    kScratchBytes +                                // 每 PE tile scratch
     4096U;
 
 // ==== GM 全局缓冲 (声明顺序 = bss 地址顺序; 全部置于高地址区 —
@@ -54,8 +59,10 @@ __attribute__((aligned(4096))) int32_t g_mmTopkIds[kBS];
 __attribute__((aligned(4096))) float g_mmTopkWeights[kBS];
 __attribute__((aligned(4096))) uint8_t g_mmWeight1[2U * kH * kHiddenDim];
 __attribute__((aligned(4096))) uint8_t g_mmWeight2[2U * (kHiddenDim / 2U) * kH];
-__attribute__((aligned(4096))) uint8_t g_mmWeightScales1[2U * (kH * kHiddenDim / 32U + 4U)];
-__attribute__((aligned(4096))) uint8_t g_mmWeightScales2[2U * (kH * kHiddenDim / 32U + 4U)];
+// 权重 scale (E8M0 标量, 每 expert × 每 k 组一个; kernel tile 解码时 TMULS 折叠):
+//   w1Scale[e][k/32] (k ∈ [0, h)), w2Scale[e][k/32] (k ∈ [0, hd/2))
+__attribute__((aligned(4096))) uint8_t g_mmWeightScales1[2U * (kH / 32U)];
+__attribute__((aligned(4096))) uint8_t g_mmWeightScales2[2U * (kHiddenDim / 64U)];
 __attribute__((aligned(4096))) float g_mmY[kBS * kH];
 __attribute__((aligned(4096))) int64 g_mmExpertTokenNums[2];
 __attribute__((aligned(4096))) uint8_t g_mmWorkspace[kWorkspaceBytes];
@@ -92,7 +99,9 @@ static double exp2_approx(double p)
 
 static double ref_wscale(uint8_t raw)
 {
-    const int32_t e = (int32_t)(int8_t)raw;
+    // E8M0: scale = 2^(raw-127) — issue #180 修正 (原 (int8_t)raw 偏置解码
+    // 语义错误; tile 路径 kernel/golden 统一为正确 E8M0)
+    const int32_t e = (int32_t)raw - 127;
     double s = 1.0;
     if (e >= 0) {
         for (int32_t i = 0; i < e; ++i) s *= 2.0;
@@ -120,21 +129,17 @@ static double ref_fp8_e4m3(double raw)
 static double ref_w1(uint32_t e, uint32_t k, uint32_t n)
 {
     const uint32_t flat = e * kH * kHiddenDim + k * kHiddenDim + n;
-    const uint32_t group = (k * kHiddenDim + n) / 32U;
-    const uint32_t scaleIdx = e * (kH * kHiddenDim / 32U) + group;
-    const uint8_t raw = g_mmWeight1[flat];
-    const uint8_t sc = g_mmWeightScales1[scaleIdx % (kH / 32U * 2U * 2U * 2U)];
-    return ref_fp8_e4m3(raw) * ref_wscale(sc);
+    // 每 k 组标量 scale: w1Scale[e][k/32]
+    const uint8_t sc = g_mmWeightScales1[e * (kH / 32U) + k / 32U];
+    return ref_fp8_e4m3(g_mmWeight1[flat]) * ref_wscale(sc);
 }
 
 static double ref_w2(uint32_t e, uint32_t k, uint32_t n)
 {
     const uint32_t flat = e * (kHiddenDim / 2U) * kH + k * kH + n;
-    const uint32_t group = (k * kH + n) / 32U;
-    const uint32_t scaleIdx = e * ((kHiddenDim / 2U) * kH / 32U) + group;
-    const uint8_t raw = g_mmWeight2[flat];
-    const uint8_t sc = g_mmWeightScales2[scaleIdx % (kH / 32U * 2U * 2U * 2U)];
-    return ref_fp8_e4m3(raw) * ref_wscale(sc);
+    // 每 k 组标量 scale: w2Scale[e][k/32] (k ∈ [0, hd/2))
+    const uint8_t sc = g_mmWeightScales2[e * (kHiddenDim / 64U) + k / 32U];
+    return ref_fp8_e4m3(g_mmWeight2[flat]) * ref_wscale(sc);
 }
 
 // 完整 MoE 参考前向 (gen_data.compute_golden 语义)

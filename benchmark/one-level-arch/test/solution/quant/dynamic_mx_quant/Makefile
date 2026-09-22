@@ -21,10 +21,29 @@ ifeq ($(TYPE), TAIL_OCP_FP8_BENCH)
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench.elf
 endif
 
-# TAIL_OCP_FP8 缩小版网络基准 [64,16384] BS=32 bf16 in（专用 driver=默认 PM=64，可默认跑/喂 gfsim）。
-ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small.elf
+# TAIL_OCP_FP8 缩小版网络基准 [64,16384] BS=32 bf16 in（动态 shape）分 V1（RowMajor）/ V2（Cube_M32）。
+# V1_DYN：RowMajor，可喂 gfsim。V2_DYN：Cube_M32 动态，依赖 Linx-TileOP-API#187（reduction-prefix
+# 动态 ValidRow 寄存器 B.DIM）已合入上游 → 现编译+gfrun 逐字节 PASS。（V2 M32 上不了 gfsim：#760）
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V1_DYN)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V1_dyn.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V1_dyn.elf
+endif
+
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V2_DYN)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V2_dyn.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V2_dyn.elf
+endif
+
+# bench_small 静态形状版分 V1（RowMajor）/ V2（Cube_M32）两个 driver，同规格同 golden，供并列对比。
+# V1 恒 PASS；V2 依赖 Linx-TileOP-API#180 + SuperScalarModel#749，均已合入上游 → 现 gfrun 逐字节 PASS。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V1_STATIC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V1_static.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V1_static.elf
+endif
+
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V2_static.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V2_static.elf
 endif
 
 ifeq ($(TYPE), TAIL_OCP_FP4)

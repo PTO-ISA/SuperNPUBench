@@ -90,12 +90,30 @@ int main() {
                 shapes[c].sq % kGroupM != 0 || shapes[c].skv % Tk != 0)
                 shape_invalid = 1;
         }
-        // Fill deterministic inputs for the numerical check below: only Q's
-        // first head element is 1; K's first element varies by row; every V
-        // column has the same row-dependent value. The resulting output has
-        // a simple weighted-average reference for both runtime shapes.
-#ifndef FA_TRACE_ONLY
+        // Trace builds only need each shared-load region to be materialized;
+        // touching one nonzero element per tile avoids a long scalar setup.
+        // Numerical builds fill the complete deterministic reference input.
         if (shape_invalid == 0) for (int c = 0; c < kCaseCount; ++c) {
+#ifdef FA_TRACE_ONLY
+            if constexpr (std::is_same_v<matrix_dtype, __fp8_e4m3>) {
+                auto *qBits = reinterpret_cast<uint8_t *>(q[c]);
+                auto *kBits = reinterpret_cast<uint8_t *>(k[c]);
+                auto *vBits = reinterpret_cast<uint8_t *>(v[c]);
+                for (int row = 0; row < shapes[c].sq; row += kGroupM)
+                    qBits[row * kStoredQD] = 0x38;
+                for (int row = 0; row < shapes[c].skv; row += Tk) {
+                    kBits[row * kStoredQD] = 0x38;
+                    vBits[row * FA_VD] = 0x38;
+                }
+            } else {
+                for (int row = 0; row < shapes[c].sq; row += kGroupM)
+                    q[c][row * kStoredQD] = static_cast<matrix_dtype>(1.0f);
+                for (int row = 0; row < shapes[c].skv; row += Tk) {
+                    k[c][row * kStoredQD] = static_cast<matrix_dtype>(1.0f);
+                    v[c][row * FA_VD] = static_cast<matrix_dtype>(1.0f);
+                }
+            }
+#else
             if constexpr (std::is_same_v<matrix_dtype, __fp8_e4m3>) {
                 // Avoid unsupported scalar float->FP8 code generation in the
                 // test driver. These are exact positive E4M3 encodings 0..6.
@@ -123,8 +141,8 @@ int main() {
                     }
                 }
             }
-        }
 #endif
+        }
         inputs_ready = 1;
     } else {
         while (inputs_ready == 0) {}
