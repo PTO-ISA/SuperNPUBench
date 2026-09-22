@@ -13,19 +13,17 @@
 // through the TileOP API.  Every helper is always_inline and keeps few tiles
 // live, so the backend emits no tile spills.
 //
-// Remaining (being fixed upstream):
-//   * MGATHER.ADD (histogram / slot atom add) is still a hand-written block
-//     because, although the GM atom/red wrapper emits B.DATR.Layout since
-//     LinxISA/Linx-TileOP-API#185 (PR #209), the LinxV5 backend folds the
-//     default LB0/LB2 on every TLSU head while gfrun's gm-atom-red contract
-//     requires an explicit LB0. The hand-written block uses literal 1s so the
-//     dims survive the fold.
-//   * find_threshold uses the TCMPS CUBE GPR carrier, which needs the
-//     canonical B.IOR RegDst position fix (ASL: RegDst = bits[11:7]):
-//     LinxISA/SuperScalarModel#806.
+// The GM atom add (histogram / slot allocation) uses the TileOP MGATHER_ADD
+// wrapper: it emits B.DATR CUBE_M32 (LinxISA/Linx-TileOP-API#185, PR #209) and
+// the backend folds its default lb0, which gfrun accepts as effective one since
+// LinxISA/SuperScalarModel#818 (linx-isa#202).
 //
-// Depends on LinxISA/Linx-TileOP-API#207 / #208 and LinxISA/SuperScalarModel
-// PR #785 (CUBE predicate carriers).
+// find_threshold uses the TCMPS CUBE GPR carrier, which needs the canonical
+// B.IOR RegDst position fix (ASL: RegDst = bits[11:7]):
+// LinxISA/SuperScalarModel#806.
+//
+// Depends on LinxISA/Linx-TileOP-API#207 / #208 / #209 and
+// LinxISA/SuperScalarModel PR #785 / #818.
 
 namespace topk_tiled {
 
@@ -211,29 +209,13 @@ inline __attribute__((always_inline)) void mscatter_mask_i32_m32(
     MSCATTER_MASK(g, data, index, mask);
 }
 
-// GM atomic add.  Verified end-to-end by test/kernel/mgather_add_m32.  B.DATR
-// must match the CUBE_M32 index/value tiles and LB0 must be explicit for
-// gfrun's gm-atom-red descriptor contract.
+// GM atomic add.  The TileOP wrapper emits B.DATR CUBE_M32 from the M32
+// index/value tiles (TileOP API #209) and relies on the backend folding its
+// default lb0, which gfrun resolves to one since SuperScalarModel#818.
 inline __attribute__((always_inline)) void mgather_add_s32_m32(
     I32Tile &old, int32_t *base, I32Tile &index, I32Tile &value) {
-    asm volatile(
-        "BSTART.TLSU MGATHER.ADD, %D[DataType]\n"
-        "B.DATR CUBE_M32, Zero\n"
-        // Literal 1s (not "i" operands): the backend's
-        // omitDefaultInlineAsmDims folds a placeholder LB0/LB2 whose value is
-        // 1 on any TLSU head, but gfrun's gm-atom-red contract requires an
-        // explicit LB0. Hardcoding keeps it in the stream.
-        "B.DIM zero, 1, ->lb0\n"
-        "B.DIM zero, %c[VROW], ->lb1\n"
-        "B.DIM zero, 1, ->lb2\n"
-        "B.IOT %[Idx], %[Val], mask=1111, last, ->%[Dst]<%Z[DstSize]>\n"
-        "B.IOR [%[Base]], []\n"
-        : [Dst] "=&Tr"(old.data())
-        : [Idx] "Tr"(index.data()), [Val] "Tr"(value.data()),
-          [Base] "r"(base),
-          [DataType] "i"(type_traits<int32_t>::TypeCode),
-          [VROW] "i"(I32Tile::ValidRow), [DstSize] "i"(I32Tile::TilesizeCode)
-        : "memory");
+    MGATHER_ADD(old, reinterpret_cast<uint64_t>(base), index, value,
+                static_cast<uint32_t>(I32Tile::ValidCol));
 }
 
 // A CUBE TCMPS already publishes the predicate directly (U8 PredicateCell),

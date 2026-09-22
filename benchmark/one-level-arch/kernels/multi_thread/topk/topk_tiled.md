@@ -35,36 +35,30 @@ Why only 131072: it is the first size whose `[127.5, 128)` mass makes FP32
 `byte1 == 0xFF` a GT lane in round 1 (65536 and below pass). Fixed by inserting
 a per-round-cleared `hist_pad[256]` between `hist` and `num`.
 
-## Why the GM atom add is still hand-written
+## GM atom add
 
-`mgather_add_s32_m32` keeps an explicit `BSTART.TLSU MGATHER.ADD` block with
-literal `1`s for LB0/LB2 instead of the TileOP `MGATHER_ADD` wrapper, even
-though LinxISA/Linx-TileOP-API#185 (PR #209) now emits `B.DATR CUBE_M32`:
-
-- the LinxV5 backend folds any value-1 dimension on a TLSU head
-  (`LinxV5ExpandPseudoInsts.cpp`: `bundleHeadMayOmitLB0` /
-  `omitDefaultInlineAsmDims`), so the wrapper's placeholder LB0 disappears;
-- gfrun's gm-atom-red legality still requires an explicit LB0
-  (`AccumulateBlockInfo.cpp`, `bdimMask & 1`), so the folded bundle is rejected
-  with `illegal MGATHER_ADD operand or descriptor contract`.
-
-That contradicts linx-isa#202 (an omitted LB0 has effective value one; legality
-must not require presence), tracked by LinxISA/SuperScalarModel#816. The
-literal `1`s survive the fold, so this block is retained until #816 lands; it
-can then be replaced by the one-line `MGATHER_ADD` wrapper call.
+`mgather_add_s32_m32` (histogram bumps and slot allocation) goes through the
+TileOP `MGATHER_ADD` wrapper.  The wrapper emits `B.DATR CUBE_M32` from the M32
+index / value tiles (LinxISA/Linx-TileOP-API#185, PR #209) and the LinxV5
+backend folds its default `lb0`; gfrun resolves an omitted `LB0` to one since
+LinxISA/SuperScalarModel#818 (`linx-isa#202`).  `topk_tiled.hpp` /
+`topk_tail_fp32.hpp` / `topk_tail_fp16.hpp` contain no hand-written asm.
 
 ## Dependencies
 
 - **LinxISA/Linx-TileOP-API** `#207` (CUBE_M32 layout for the indexed
-  `MGATHER` / `MSCATTER.MASK` wrappers) and `#208` (TCMPS CUBE GPR predicate
-  output). These are required to build.
-- `#185` / PR `#209` (GM atom/red `B.DATR.Layout`) is **not** required: the GM
-  atom add stays a hand-written block (see above), so nothing here depends on it.
-- **LinxISA/SuperScalarModel** PR `#785` (CUBE predicate carriers) and the
-  canonical `B.IOR` RegDst fix (`#806`), needed by the TCMPS GPR threshold.
-- Open follow-up: `LinxISA/SuperScalarModel#816` (gfrun must treat an omitted
-  LB0 as one, per linx-isa#202). Not needed while the GM atom add is
-  hand-written; once it lands the block can switch to the `MGATHER_ADD` wrapper.
+  `MGATHER` / `MSCATTER.MASK` wrappers), `#208` (TCMPS CUBE GPR predicate
+  output) and `#209` (GM atom/red `B.DATR.Layout`, used by `MGATHER_ADD`).
+- **LinxISA/SuperScalarModel** PR `#785` (CUBE predicate carriers), the
+  canonical `B.IOR` RegDst fix (`#806`), and PR `#818` (honor omitted bundle
+  dimension defaults: an omitted `LB0` has effective value one, per
+  `linx-isa#202`).  #818 closes the `SuperScalarModel#816` follow-up.
+
+Note: the operator also uses `histogram_cumsum_m32.hpp` (the grouped
+`suffix_cumsum` and `hist_clear`), which is where the remaining hand-written
+asm lives — those regional assemble / `B.SUBVIEW` patterns have no TileOP
+wrapper yet.  `find_threshold` reads the TCMPS CUBE GPR carrier into a GPR and
+does `ctz` on it (the intended mechanism, not a scalar workaround).
 
 ## Build / run
 
