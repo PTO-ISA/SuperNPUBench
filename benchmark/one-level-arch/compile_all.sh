@@ -57,6 +57,7 @@ compile_operator "$REPO_ROOT/test/solution/normalization/group_norm_grad" "solut
 compile_operator "$REPO_ROOT/test/solution/normalization/group_norm_grad_1d" "solution/normalization/group_norm_grad_1d"
 compile_operator "$REPO_ROOT/test/solution/view_copy" "solution/view_copy"
 compile_operator "$REPO_ROOT/test/solution/gather_v2" "solution/gather_v2"
+compile_operator "$REPO_ROOT/test/solution/conv2d" "solution/conv2d"
 compile_operator "$REPO_ROOT/test/kernel/vec" "vec"
 compile_operator "$REPO_ROOT/test/kernel/broadcast" "broadcast"
 compile_operator "$REPO_ROOT/test/kernel/concat" "concat"
