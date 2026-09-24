@@ -162,7 +162,27 @@ struct Mc2MoeContext {   // 源 1124 行 (2026-08 同步: kfcContextAddr + hccld
 };
 
 // ============================================================================
-// 三-补、exp 近似 (无 libm 依赖; SwiGLU silu 的 exp 组件, 源真机用 Ascend Exp 指令)
+// 三-补、2^k 位级 O(1) 构造 (替换原 O(|k|) 标量连乘循环 —— 那是全算子仅存的
+//   标量热点: E8M0 scale 为 0x00 时单次调用迭代 127 次, 占 kernel 标量块的大头。
+//   位级构造与连乘结果在全部定义域逐位一致 (含上溢 +inf / 下溢次正规 / 全下溢 0))
+// ============================================================================
+MM_INLINE float mx_exp2i_f32(int32_t k)
+{
+    union { uint32_t u; float f; } cvt;
+    if (k >= 128) {
+        cvt.u = 0x7F800000u;                          // +inf (连乘同上溢)
+    } else if (k >= -126) {
+        cvt.u = static_cast<uint32_t>(k + 127) << 23; // 规格数域
+    } else if (k >= -149) {
+        cvt.u = 1u << (k + 149);                      // 次正规域 (至 2^-149)
+    } else {
+        cvt.u = 0u;                                   // 完全下溢 (连乘同得 0)
+    }
+    return cvt.f;
+}
+
+// ============================================================================
+// 三-补b、exp 近似 (无 libm 依赖; SwiGLU silu 的 exp 组件, 源真机用 Ascend Exp 指令)
 //   exp(z), z∈[-5,5]: z = k*ln2 + r (|r|<=ln2/2), exp = 2^k * exp(r)
 // ============================================================================
 // [修复] 删除 "MM_INLINE" 后多余的 inline 说明符, 消除 -Wduplicate-decl-specifier 告警。
@@ -173,13 +193,7 @@ MM_INLINE float exp_approx(float z)
     long k = (long)(z * kInvLn2 + (z < 0 ? -0.5f : 0.5f));
     const float r = z - (float)k * kLn2;
     float e = 1.0f + r * (1.0f + r * (0.5f + r * (1.0f / 6.0f + r * (1.0f / 24.0f + r * (1.0f / 120.0f)))));
-    float twoK = 1.0f;
-    if (k >= 0) {
-        for (long j = 0; j < k; ++j) twoK *= 2.0f;
-    } else {
-        for (long j = 0; j < -k; ++j) twoK *= 0.5f;
-    }
-    return twoK * e;
+    return mx_exp2i_f32(static_cast<int32_t>(k)) * e;
 }
 
 // ============================================================================
@@ -196,31 +210,20 @@ MM_INLINE float fp8_e4m3_to_f32(uint8_t raw)
     if (e == 0U) {
         val = static_cast<float>(m) / 8.0f * 0.015625f;      // 2^-6 * m/8
     } else {
-        float frac = 1.0f + static_cast<float>(m) / 8.0f;
-        float exp2 = 1.0f;
-        int32_t bias = static_cast<int32_t>(e) - 7;
-        if (bias >= 0) {
-            for (int32_t i = 0; i < bias; ++i) exp2 *= 2.0f;
-        } else {
-            for (int32_t i = 0; i < -bias; ++i) exp2 *= 0.5f;
-        }
-        val = frac * exp2;
+        // e ∈ [1,15] → k = e-7 ∈ [-6,8], 全在规格数域, 位级结果与连乘逐位一致
+        val = (1.0f + static_cast<float>(m) / 8.0f) *
+              mx_exp2i_f32(static_cast<int32_t>(e) - 7);
     }
     return s ? -val : val;
 }
 
-// E8M0: 纯指数 (偏置 127), scale = 2^(signed)
+// E8M0: 纯指数 (偏置 127), scale = 2^(raw-127)
+// [perf] 位级 O(1) 构造替换 O(|raw-127|) 连乘循环 (raw=0x00 时 127 次迭代/调用,
+//       是 mx_decode_weights_tile 标量块的主要来源; 结果逐位一致)
 // [修复] 删除 "MM_INLINE" 后多余的 inline 说明符, 消除 -Wduplicate-decl-specifier 告警。
 MM_INLINE float fp8_e8m0_scale(uint8_t raw)
 {
-    const int32_t e = static_cast<int32_t>(raw) - 127;
-    float s = 1.0f;
-    if (e >= 0) {
-        for (int32_t i = 0; i < e; ++i) s *= 2.0f;
-    } else {
-        for (int32_t i = 0; i < -e; ++i) s *= 0.5f;
-    }
-    return s;
+    return mx_exp2i_f32(static_cast<int32_t>(raw) - 127);
 }
 
 // ============================================================================
