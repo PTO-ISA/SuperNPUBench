@@ -145,12 +145,16 @@ void flash_attention_2d_unroll_shared_impl(
     using tileMaxM32 = VecTileM32<vector_dtype, kPeTm, 1, kPeTm, 1>;
     using tileMax =
         std::conditional_t<(kPeTm <= 16), tileMaxM16, tileMaxM32>;
-    using tileSum = tileMax;
     using tileScale = tileMax;
     using tileRowFp32M16 = VecTileM16<float, kPeTm, 1, kPeTm, 1>;
     using tileRowFp32M32 = VecTileM32<float, kPeTm, 1, kPeTm, 1>;
     using tileRowFp32 =
         std::conditional_t<(kPeTm <= 16), tileRowFp32M16, tileRowFp32M32>;
+    // Local max/sum reductions follow vector_dtype, but the persistent online
+    // softmax denominator is always FP32. This keeps cross-KV-block global
+    // accumulation in FP32 when the score/vector path uses BF16.
+    using tileLocalSum = tileMax;
+    using tileSum = tileRowFp32;
 
     using itQ = global_iterator<gmQ, tileQMatrix>;
     using itK = global_iterator<gmK, tileKMatrix>;
@@ -221,6 +225,7 @@ void flash_attention_2d_unroll_shared_impl(
 
             tileMax tNewMax;
             tileScale tScale;
+            tileRowFp32 tScaleFp32;
             // tMax starts at the softmax sentinel, so TMAX can consume the
             // reduction prefix directly for both the first and later blocks.
             TMAX(tNewMax, tMax, tLocalMax);
@@ -231,7 +236,6 @@ void flash_attention_2d_unroll_shared_impl(
                 if constexpr (std::is_same_v<vector_dtype, float>) {
                     TROWEXPANDMUL(tO, tO, tScale);
                 } else {
-                    tileRowFp32 tScaleFp32;
                     TCVT(tScaleFp32, tScale);
                     TROWEXPANDMUL(tO, tO, tScaleFp32);
                 }
@@ -242,18 +246,32 @@ void flash_attention_2d_unroll_shared_impl(
 
             tileReduce tLocalSumR;
             TROWSUM(tLocalSumR, tW);
-            auto tLocalSum = TREDUCEPREFIXVIEW<tileSum>(tLocalSumR);
 
             tileSum tNewSum;
-            if (j == 0) {
-                TADD(tNewSum, tSum, tLocalSum);
+            if constexpr (std::is_same_v<vector_dtype, float>) {
+                auto tLocalSum = TREDUCEPREFIXVIEW<tileSum>(tLocalSumR);
+                if (j == 0) {
+                    TADD(tNewSum, tSum, tLocalSum);
+                } else {
+                    TFMA(tNewSum, tSum, tScale, tLocalSum);
+                }
             } else {
-                // There is no TFMA reduction-prefix overload yet.  Preserve
-                // the zero-copy localSum path with separate MUL and ADD; this
-                // uses separate rather than fused rounding.
-                tileSum tScaledSum;
-                TMUL(tScaledSum, tSum, tScale);
-                TADD(tNewSum, tScaledSum, tLocalSum);
+                // Materialize the reduction prefix as a compact BF16 tile
+                // before TCVT: both functional and timing models require the
+                // conversion operands to be independent CELL descriptors.
+                auto tLocalSumView =
+                    TREDUCEPREFIXVIEW<tileLocalSum>(tLocalSumR);
+                tileLocalSum tLocalSumZero;
+                tileLocalSum tLocalSumCompact;
+                TEXPANDS(tLocalSumZero, 0.0f);
+                TADD(tLocalSumCompact, tLocalSumZero, tLocalSumView);
+                tileSum tLocalSumFp32;
+                TCVT(tLocalSumFp32, tLocalSumCompact);
+                if (j == 0) {
+                    TADD(tNewSum, tSum, tLocalSumFp32);
+                } else {
+                    TFMA(tNewSum, tSum, tScaleFp32, tLocalSumFp32);
+                }
             }
 
             // --- PV matmul ---
@@ -291,21 +309,15 @@ void flash_attention_2d_unroll_shared_impl(
             tSum = tNewSum;
         }
 
-        // Change 9: TROWEXPANDDIV replaces TRECIP+TROWEXPANDMUL
-        if constexpr (std::is_same_v<vector_dtype, float>) {
-            TROWEXPANDDIV(tO, tO, tSum);
-        } else {
-            tileRowFp32 tSumFp32;
-            TCVT(tSumFp32, tSum);
-            TROWEXPANDDIV(tO, tO, tSumFp32);
-        }
+        // tSum is persistently FP32 for both vector modes.
+        TROWEXPANDDIV(tO, tO, tSum);
         auto dstO = gIterO(i * kPeNum + tid, 0);
         if constexpr (std::is_same_v<vector_dtype, float>) {
-            TSTORE_CUBE(dstO, tO);
+            TSTORE(dstO, tO);
         } else {
             tileOCast tOCast;
             TCVT(tOCast, tO);
-            TSTORE_CUBE(dstO, tOCast);
+            TSTORE(dstO, tOCast);
         }
     }
 }

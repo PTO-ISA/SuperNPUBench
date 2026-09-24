@@ -6,7 +6,7 @@
 #include "fileop.h"
 #include "multi_thread_res_check.h"
 
-// 4-PE FlashAttention: two Q blocks share each K/V load.
+// 4-PE FlashAttention: K-chain scheduling with QK fixpipe row-max fusion.
 
 #ifndef MATRIX_DTYPE
 #define MATRIX_DTYPE float
@@ -165,4 +165,3 @@ int main() {
 
     return 0;
 }
-

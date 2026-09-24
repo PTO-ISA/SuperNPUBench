@@ -36,7 +36,7 @@ inline void fa_kchains_tcvt_packed_x2(TileOut &dst, TileIn &src) {
 // both numerator and denominator use the quantized old-state multiplier.
 template <typename MatrixDType, typename VectorDType, int PackedFactor,
           int Sq, int Skv, int qD, int vD, int kTm, int kTk,
-          int scaleD = qD>
+          int scaleD = qD, bool FuseQKRowMax = false>
 void flash_attention_gmma_kchains_impl(
     VectorDType *outPtr, MatrixDType *qPtr, MatrixDType *kPtr,
     MatrixDType *vPtr) {
@@ -120,6 +120,10 @@ void flash_attention_gmma_kchains_impl(
     using TileRowM32 = VecTileM32<VectorDType, kPeTm, 1, kPeTm, 1>;
     using TileRow =
         std::conditional_t<(kPeTm <= 16), TileRowM16, TileRowM32>;
+    // QK fixpipe always reports row-max in FP32, independently of the
+    // configured vector precision. fa_gmma_opt enables this path so the
+    // standalone TROWMAX pass over the score tile can be removed.
+    using TileFixpipeRowMax = VecTileM32<float, 32, 1, kPeTm, 1>;
     using TileRowFp32M16 = VecTileM16<float, kPeTm, 1, kPeTm, 1>;
     using TileRowFp32M32 = VecTileM32<float, kPeTm, 1, kPeTm, 1>;
     using TileRowFp32 =
@@ -173,29 +177,51 @@ void flash_attention_gmma_kchains_impl(
             TileK tK;
             auto gK = gIterK(j, 0);
             TLOAD<TileKMatrix, 1>(tK, gK);
-            if constexpr (std::is_same_v<VectorDType, float>) {
-                TMATMUL(tW, tQ, tK, qkOptions);
-            } else {
-                TileQKOut tWFloat;
-                TMATMUL(tWFloat, tQ, tK, qkOptions);
-                TCVT(tW, tWFloat);
-            }
-
-            TMULS(tW, tW, scale);
-
-            TileReduce tLocalMaxR;
-            TROWMAX(tLocalMaxR, tW);
-            // PTO #311 keeps the one-column reduction result in the prefix
-            // CELL of the wide carrier.  The dedicated reduction-prefix view
-            // lets TMAX consume that CELL through B.SUBVIEW without the old
-            // wide-to-compact TCVT copy.
-            auto tLocalMax = TREDUCEPREFIXVIEW<TileRow>(tLocalMaxR);
             TileRow tNewMax;
+            if constexpr (FuseQKRowMax) {
+                TileFixpipeRowMax tLocalMaxFp32;
+                TileRow tLocalMax;
+                if constexpr (std::is_same_v<VectorDType, float>) {
+                    auto qkRowMaxOptions =
+                        fixp::keep_acc().row_max(tLocalMaxFp32);
+                    TMATMUL(tW, tQ, tK, qkRowMaxOptions);
+                } else {
+                    static_assert(std::is_same_v<VectorDType, __bf16>,
+                                  "fused QK row-max supports FP32/BF16 vector precision");
+                    auto qkRowMaxOptions =
+                        fixp::bf16().row_max(tLocalMaxFp32);
+                    TMATMUL(tW, tQ, tK, qkRowMaxOptions);
+                }
+                TMULS(tW, tW, scale);
+                TMULS(tLocalMaxFp32, tLocalMaxFp32, scale);
+                if constexpr (std::is_same_v<TileRow,
+                                             TileFixpipeRowMax>) {
+                    tLocalMax = tLocalMaxFp32;
+                } else {
+                    TCVT(tLocalMax, tLocalMaxFp32);
+                }
+                TMAX(tNewMax, tMax, tLocalMax);
+            } else {
+                if constexpr (std::is_same_v<VectorDType, float>) {
+                    TMATMUL(tW, tQ, tK, qkOptions);
+                } else {
+                    TileQKOut tWFloat;
+                    TMATMUL(tWFloat, tQ, tK, qkOptions);
+                    TCVT(tW, tWFloat);
+                }
+
+                TMULS(tW, tW, scale);
+
+                TileReduce tLocalMaxR;
+                TROWMAX(tLocalMaxR, tW);
+                auto tLocalMax =
+                    TREDUCEPREFIXVIEW<TileRow>(tLocalMaxR);
+                TMAX(tNewMax, tMax, tLocalMax);
+            }
             TileRow tScale;
             TileCScale tCScale;
             // tMax starts at the softmax sentinel, so the same TMAX is valid
             // for the first block and all subsequent online-max updates.
-            TMAX(tNewMax, tMax, tLocalMax);
             if (j != 0) {
                 // alpha = exp(oldMax-newMax); u = -log2(alpha).
                 // Compute u directly to avoid exp/log underflow and extra ops.

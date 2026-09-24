@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <utility>
 
-// Full MXFP4 FlashAttention
+// PMU-optimized MXFP4 FlashAttention
 // =========================
 //
 // Tensor contract:
@@ -34,22 +34,33 @@
 //
 //   4. Assemble and multiply P * V
 //      TASSEMBLY joins all data fragments into the complete local P tile and
-//      independently joins the scale fragments into the complete P-scale
-//      matrix.  P and V are then consumed by a second TMATMUL_MX.  Each PV
-//      result, the online weighted-value sum, and final normalization all
-//      remain BF16; the normalized BF16 Tile is stored directly as O.
+//      TPACK compacts four E8M0 scale bytes into the complete P-scale matrix.
+//      P and V are then consumed by a second TMATMUL_MX.  Each PV result, the
+//      online weighted-value sum, and final normalization all remain BF16;
+//      the normalized BF16 Tile is stored directly as O.
+//
+// Scheduling changes relative to fa_lowp.hpp:
+//
+//   * V and V-scale TLOADs are issued as soon as QK releases the K shared
+//     operands.  Their memory latency can then overlap the online-softmax and
+//     P-quantization vector pipeline instead of sitting directly in front of
+//     the PV TMATMUL_MX critical path.
+//
+//   * The constant E8M0 reciprocal bias (254) is materialized once per Q
+//     block and shared by every group-32 quantizer in the fully-unrolled KV
+//     loop.  The reference kernel materializes the same 128-B vector four
+//     times per KV block.
 //
 // Current TileOP API notes and compromises:
 //
 //   * PTO #311 makes a CUBE row-reduction result logically [M,1] but requires
 //     a wide physical carrier matching the source columns.  The updated API's
 //     TREDUCEPREFIXVIEW exposes its first [M,1] CELL without a copy; mixed
-//     TMAX/TADD overloads consume that view directly.  TFMA still has no such
-//     overload, so the online-sum update is expressed as TMUL plus TADD.
+//     TMAX/TADD/TFMA overloads consume that view directly.
 //
 //   * Per-group amax uses the same reduction-prefix view. TMULS consumes its
 //     prefix directly, avoiding a wide-to-compact reduction TCVT or copy.
-namespace fa_lowp {
+namespace fa_mxfp4_opt {
 using namespace pto;
 
 constexpr int kPeNum = 4;       // One cooperative QK/PV matmul uses four PEs.
@@ -58,7 +69,7 @@ constexpr int kPackedFactor = 2;  // E2M1x2 packs two logical FP4 values/byte.
 
 template <int Sq, int Skv, int qD, int vD, int kTm, int kTk,
           int scaleD = qD, bool kBf16RecipFromE8M0 = false>
-void flash_attention_lowp_impl(
+void flash_attention_mxfp4_opt_impl(
     __bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
     const __fp4_e2m1x2 *kPtr, const __fp4_e2m1x2 *vPtr,
     const __fp8_e8m0 *qScalePtr, const __fp8_e8m0 *kScalePtr,
@@ -67,7 +78,6 @@ void flash_attention_lowp_impl(
     constexpr int kPeM = 32;
     constexpr int kStoredQD = qD / kPackedFactor;
     constexpr int kStoredTk = kTk / kPackedFactor;
-    constexpr int kStoredVD = vD / kPackedFactor;
     constexpr int kQScaleCols = qD / kMxGroup;
     constexpr int kPScaleCols = kTk / kMxGroup;
     constexpr int kPaddedQScaleCols = ((kQScaleCols + 31) / 32) * 32;
@@ -79,7 +89,7 @@ void flash_attention_lowp_impl(
     // This first implementation intentionally fixes the cooperative shape to
     // 128 rows: four PEs each own one 32-row CUBE_M32 result shard.
     static_assert(kGroupM == 128,
-                  "fa_lowp requires a 128-row cooperative Q tile");
+                  "fa_mxfp4_opt requires a 128-row cooperative Q tile");
     static_assert(Sq % kGroupM == 0 && Skv % kTk == 0);
     static_assert(qD % kMxGroup == 0 && kTk % kMxGroup == 0);
     static_assert((kPScaleCols & (kPScaleCols - 1)) == 0,
@@ -87,15 +97,13 @@ void flash_attention_lowp_impl(
 
     // Packed GM data layouts.  The stored K dimension is divided by two
     // because every E2M1x2 byte contains two adjacent logical K values.
-    // V is the physically transposed Shared-B operand [K,N].  Packed-X2
-    // ordinary RowMajor storage pairs adjacent columns within each row, so
-    // its GM carrier shape is [K,N/2].
+    // V is packed along its reduction/K dimension as [Skv/2, vD].
     using QSlice = global_tensor<__fp4_e2m1x2,
                                  RowMajor<kGroupM, kStoredQD>>;
     using KSlice = global_tensor<__fp4_e2m1x2,
                                  RowMajor<kTk, kStoredQD>>;
     using VSlice = global_tensor<__fp4_e2m1x2,
-                                 RowMajor<kTk, kStoredVD>>;// [kTk, vd/2]
+                                 RowMajor<kStoredTk, vD>>;
     // MX scale layouts follow the logical matrix-multiply K dimension:
     // Q scale [Sq,qD/32], K scale [Skv,qD/32], V scale [vD,Skv/32].
     using GmQScale = global_tensor<__fp8_e8m0,
@@ -186,7 +194,7 @@ void flash_attention_lowp_impl(
     static_assert(P::LogicalTileBytes ==
                   PBlock::LogicalTileBytes * kPScaleCols);
     static_assert(kPScaleCols == 4,
-                  "fa_lowp currently packs exactly four group-32 scales");
+                  "fa_mxfp4_opt currently packs exactly four group-32 scales");
     static_assert(PScale::LogicalTileBytes == PScaleWordU32::LogicalTileBytes,
                   "packed U32 words and E8M0 scale tile must share one cell");
 
@@ -228,6 +236,14 @@ void flash_attention_lowp_impl(
         TLOAD<QMatrix, 1>(q, gQ);
         TLOAD<QScaleMatrix, 1>(qScale, gQS);
 
+        // Keep one reciprocal-bias Tile alive across the fully-unrolled KV
+        // loop. The compiler uses cheap hand-to-hand TMOVs when necessary;
+        // this still costs less than rematerializing the vector per group.
+        PScaleExponentU8 exponent254;
+        if constexpr (!kBf16RecipFromE8M0) {
+            TEXPANDS(exponent254, static_cast<uint8_t>(254));
+        }
+
 #pragma clang loop unroll(full)
         for (int kb = 0; kb < kKVBlocks; ++kb) {
             // Load the next [kTk,qD] K block and its group-32 E8M0 scales.
@@ -244,6 +260,21 @@ void flash_attention_lowp_impl(
             // output; there is intentionally no FP4 conversion here.
             Bf16ScoreTile probability;
             TMATMUL_MX<3>(probability, q, qScale, k, kScale, qkOptions);
+
+            // QK has consumed S2/S3 (K/K-scale), so reuse those shared
+            // handles immediately for V/V-scale.  Keeping these loads ahead
+            // of the long BF16 softmax/quantization chain exposes their
+            // latency to TLSU/Vector overlap; PV still depends on them in the
+            // usual way and therefore needs no explicit barrier here.
+            VTile v;
+            VScaleTile vScale;
+            VSlice gV(const_cast<__fp4_e2m1x2 *>(vPtr) +
+                      kb * kStoredTk * vD);
+            GmVScale gVS(const_cast<__fp8_e8m0 *>(vScalePtr) +
+                         kb * kPScaleCols);
+            TLOAD<VMatrix, 1>(v, gV);
+            TLOAD<VScaleMatrix, 1>(vScale, gVS);
+
             TMULS(probability, probability, qkScale);
 
             // Row max for numerically stable online softmax.  PTO #311 keeps
@@ -320,9 +351,7 @@ void flash_attention_lowp_impl(
                 } else {
                     // E8M0 code e represents 2^(e-127), so its reciprocal
                     // code is 254-e for finite e (0..254).
-                    PScaleExponentU8 exponent254;
                     PScaleExponentU8 reciprocalCode;
-                    TEXPANDS(exponent254, static_cast<uint8_t>(254));
                     TSUB(reciprocalCode, exponent254, scaleCode);
                     auto reciprocalAsE8M0 =
                         reinterpret_tile<__fp8_e8m0>(reciprocalCode);
@@ -372,18 +401,6 @@ void flash_attention_lowp_impl(
             // PV matrix stage.  V is an external MXFP4 tensor with its own
             // E8M0 scales.  P uses the just-generated dynamic scales.  V is
             // physically [K,N], hence transpose_b() in pvOptions.
-            VTile v;
-            VScaleTile vScale;
-            VSlice gV(const_cast<__fp4_e2m1x2 *>(vPtr) +
-                      kb * kStoredTk * vD);
-            // VScaleMatrix is padded from kPScaleCols columns to
-            // kPaddedPScaleCols columns in SharedTReg, while GM V scales are
-            // densely stored as [vD, Skv/32].  Select this KV block's first
-            // group column and preserve the full-GM row pitch.
-            GmVScale gVS(const_cast<__fp8_e8m0 *>(vScalePtr) +
-                         kb * kPScaleCols);
-            TLOAD<VMatrix, 1>(v, gV);
-            TLOAD<VScaleMatrix, 1>(vScale, gVS);
             Bf16PvTile blockPvBf16;
             TMATMUL_MX<3>(blockPvBf16, p, pScale, v, vScale,
                           pvOptions, kGroupM);
@@ -402,4 +419,4 @@ void flash_attention_lowp_impl(
         TSTORE_CUBE(gOut, weightedValueSum);
     }
 }
-}  // namespace fa_lowp
+}  // namespace fa_mxfp4_opt

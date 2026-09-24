@@ -5,6 +5,21 @@
 #include <cstdint>
 #include <utility>
 
+// Experimental large-Tk variant of fa_lowp.hpp.
+//
+// Keep large P-scale packing and long TileArray assembly experiments here so
+// the stable four-scale-column kernel remains unchanged.  Tk=512 needs the
+// backend Tile clock-hand allocator (enabled by this testcase's Makefile): a
+// 16-writer TASSEMBLY cannot keep one Local generation live using only the
+// default M-hand allocation sequence.
+//
+// The PTO ISA permits a 32-KiB per-PE Local destination, but the current
+// timing model does not make forward progress when one GMMA TMATMUL_MX writes
+// the complete [32,512] BF16 QK shard.  Split only that QK write into two
+// [32,256] destinations.  The two halves still form one Tk=512 online-softmax
+// update and one Tk=512 PV, so this is not equivalent to changing the outer
+// KV blocking back to Tk=256.
+
 // Full MXFP4 FlashAttention
 // =========================
 //
@@ -44,17 +59,50 @@
 //   * PTO #311 makes a CUBE row-reduction result logically [M,1] but requires
 //     a wide physical carrier matching the source columns.  The updated API's
 //     TREDUCEPREFIXVIEW exposes its first [M,1] CELL without a copy; mixed
-//     TMAX/TADD overloads consume that view directly.  TFMA still has no such
-//     overload, so the online-sum update is expressed as TMUL plus TADD.
+//     TMAX/TADD overloads consume that view directly, and TFMA consumes the
+//     prefix as its fused addend during the online-sum update.
 //
 //   * Per-group amax uses the same reduction-prefix view. TMULS consumes its
 //     prefix directly, avoiding a wide-to-compact reduction TCVT or copy.
-namespace fa_lowp {
+namespace fa_lowp_ltile {
 using namespace pto;
 
 constexpr int kPeNum = 4;       // One cooperative QK/PV matmul uses four PEs.
 constexpr int kMxGroup = 32;    // OCP MX scale granularity along matrix K.
 constexpr int kPackedFactor = 2;  // E2M1x2 packs two logical FP4 values/byte.
+
+template <int Word, int WordCount, typename ScaleExponentTile,
+          typename ScaleWordTile, typename PackedScaleWordsGm,
+          typename QuantizeGroup>
+__attribute__((always_inline)) inline void pack_p_scale_words(
+    QuantizeGroup &quantizeGroup, uint32_t *packedScaleScratch) {
+    constexpr int kFirstGroup = Word * 4;
+    ScaleExponentTile scaleCode0, scaleCode1, scaleCode2, scaleCode3;
+    quantizeGroup.template operator()<kFirstGroup + 0>(scaleCode0);
+    quantizeGroup.template operator()<kFirstGroup + 1>(scaleCode1);
+    quantizeGroup.template operator()<kFirstGroup + 2>(scaleCode2);
+    quantizeGroup.template operator()<kFirstGroup + 3>(scaleCode3);
+
+    ScaleWordTile scaleWord0, scaleWord1, scaleWord2, scaleWord3;
+    TCVT(scaleWord0, scaleCode0);
+    TCVT(scaleWord1, scaleCode1);
+    TCVT(scaleWord2, scaleCode2);
+    TCVT(scaleWord3, scaleCode3);
+
+    ScaleWordTile scalePair01, scalePair23, packedScaleWord;
+    TPACK(scalePair01, scaleWord0, scaleWord1, 0x00000101);
+    TPACK(scalePair23, scaleWord2, scaleWord3, 0x00000101);
+    TPACK(packedScaleWord, scalePair01, scalePair23, 0x00000202);
+
+    PackedScaleWordsGm packedWordsGm(packedScaleScratch + Word);
+    TSTORE_CUBE(packedWordsGm, packedScaleWord);
+
+    if constexpr (Word + 1 < WordCount) {
+        pack_p_scale_words<Word + 1, WordCount, ScaleExponentTile,
+                           ScaleWordTile, PackedScaleWordsGm>(
+            quantizeGroup, packedScaleScratch);
+    }
+}
 
 template <int Sq, int Skv, int qD, int vD, int kTm, int kTk,
           int scaleD = qD, bool kBf16RecipFromE8M0 = false>
@@ -70,10 +118,13 @@ void flash_attention_lowp_impl(
     constexpr int kStoredVD = vD / kPackedFactor;
     constexpr int kQScaleCols = qD / kMxGroup;
     constexpr int kPScaleCols = kTk / kMxGroup;
+    constexpr int kPScaleWordCols = kPScaleCols / 4;
     constexpr int kPaddedQScaleCols = ((kQScaleCols + 31) / 32) * 32;
     constexpr int kPaddedPScaleCols = ((kPScaleCols + 31) / 32) * 32;
     constexpr int kQBlocks = Sq / kGroupM;
     constexpr int kKVBlocks = Skv / kTk;
+    constexpr int kQkHalfTk = kTk / 2;
+    constexpr int kPScaleColsPerHalf = kQkHalfTk / kMxGroup;
     const uint32_t tid = get_thread_idx();
 
     // This first implementation intentionally fixes the cooperative shape to
@@ -84,6 +135,10 @@ void flash_attention_lowp_impl(
     static_assert(qD % kMxGroup == 0 && kTk % kMxGroup == 0);
     static_assert((kPScaleCols & (kPScaleCols - 1)) == 0,
                   "P scale packing requires a power-of-two block count");
+    static_assert(kPScaleCols >= 4 && kPScaleCols % 4 == 0,
+                  "P scale packing requires a multiple of four groups");
+    static_assert(kTk % (2 * kMxGroup) == 0,
+                  "split QK halves must contain complete MX groups");
 
     // Packed GM data layouts.  The stored K dimension is divided by two
     // because every E2M1x2 byte contains two adjacent logical K values.
@@ -92,10 +147,10 @@ void flash_attention_lowp_impl(
     // its GM carrier shape is [K,N/2].
     using QSlice = global_tensor<__fp4_e2m1x2,
                                  RowMajor<kGroupM, kStoredQD>>;
-    using KSlice = global_tensor<__fp4_e2m1x2,
-                                 RowMajor<kTk, kStoredQD>>;
+    using KHalfSlice = global_tensor<__fp4_e2m1x2,
+                                     RowMajor<kQkHalfTk, kStoredQD>>;
     using VSlice = global_tensor<__fp4_e2m1x2,
-                                 RowMajor<kTk, kStoredVD>>;// [kTk, vd/2]
+                                 RowMajor<kTk, kStoredVD>>;
     // MX scale layouts follow the logical matrix-multiply K dimension:
     // Q scale [Sq,qD/32], K scale [Skv,qD/32], V scale [vD,Skv/32].
     using GmQScale = global_tensor<__fp8_e8m0,
@@ -113,10 +168,11 @@ void flash_attention_lowp_impl(
     // [kTk,qD].  PV: V arrives as physical [K,N], hence pvOptions below sets
     // TransB and VMatrix is [kTk,vD].
     using QMatrix = SharedMatrixLeft<__fp4_e2m1x2, 128, qD, 128, qD>;
-    using KMatrix = SharedMatrixRight<__fp4_e2m1x2, kTk, qD>;
+    using KHalfMatrix =
+        SharedMatrixRight<__fp4_e2m1x2, kQkHalfTk, qD>;
     using VMatrix = SharedMatrixRight<__fp4_e2m1x2, kTk, vD>;
     using QTile = SharedTile<QMatrix>;
-    using KTile = SharedTile<KMatrix>;
+    using KHalfTile = SharedTile<KHalfMatrix>;
     using VTile = SharedTile<VMatrix>;
 
     // Shared scale tiles are padded to the minimum legal physical matrix
@@ -124,21 +180,22 @@ void flash_attention_lowp_impl(
     // TMATMUL_MX validates and consumes the valid shapes, not the padding.
     using QScaleMatrix = SharedMatrixLeft<
         __fp8_e8m0, 128, kPaddedQScaleCols, 128, kQScaleCols>;
-    using KScaleMatrix = SharedMatrixRight<
-        __fp8_e8m0, kTk, kPaddedQScaleCols, kTk, kQScaleCols>;
+    using KHalfScaleMatrix = SharedMatrixRight<
+        __fp8_e8m0, kQkHalfTk, kPaddedQScaleCols,
+        kQkHalfTk, kQScaleCols>;
     using VScaleMatrix = SharedMatrixRight<
         __fp8_e8m0, vD, kPaddedPScaleCols, vD, kPScaleCols>;
     using QScaleTile = SharedTile<QScaleMatrix>;
-    using KScaleTile = SharedTile<KScaleMatrix>;
+    using KHalfScaleTile = SharedTile<KHalfScaleMatrix>;
     using VScaleTile = SharedTile<VScaleMatrix>;
 
     // Per-PE QK/softmax tiles.  A reduction carrier keeps the source's
     // physical column span but has only one valid value per row (PTO #311).
     // A row-value tile is the compact, one-CELL form of those row scalars:
     // one valid column, two physical BF16 columns in CUBE_M32.
-    using Bf16ScoreTile = CubeTileM32<__bf16, kPeM, kTk>;
+    using Bf16ScoreHalfTile = CubeTileM32<__bf16, kPeM, kQkHalfTk>;
     using WideBf16RowReductionTile =
-        VecTileM32<__bf16, kPeM, kTk, kPeM, 1>;
+        VecTileM32<__bf16, kPeM, kQkHalfTk, kPeM, 1>;
     using Bf16RowValueTile = VecTileM32<__bf16, kPeM, 2, kPeM, 1>;
     using Bf16ScoreGroupTile = CubeTileM32<__bf16, kPeM, kMxGroup>;
     using WideBf16GroupReductionTile =
@@ -149,11 +206,12 @@ void flash_attention_lowp_impl(
     // Tile column count remains the logical column count and must not be
     // doubled to account for the carrier representation.
     //
-    // Four 32x1 raw scale-code columns are packed byte-wise into one 32x1 U32
-    // CUBE_M32 cell.  The same 128 B payload is then consumed as a compact
-    // 32x4 E8M0 scale tile by TMATMUL_MX.  TASSEMBLY cannot be used here: it
-    // would concatenate four padded 128 B fragments and place their live
-    // columns at physical offsets 0/4/8/12 instead of compact columns 0..3.
+    // Every four 32x1 raw scale-code columns are packed byte-wise into one
+    // 32x1 U32 CUBE_M32 cell.  The packed words are stored with row stride
+    // kPScaleWordCols and reloaded as the byte-equivalent compact
+    // [32,kPScaleCols] E8M0 scale tile required by TMATMUL_MX.  TASSEMBLY
+    // cannot concatenate the raw U8 fragments directly: each fragment is
+    // padded to 128 B, which would place live columns at 0/4/8/12...
     using PBlock = CubeTileM32<__fp4_e2m1x2, kPeM, kMxGroup>;
     using P = CubeTileM32<__fp4_e2m1x2, kPeM, kTk>;
     using PScaleExponentU8 = Tile<Location::Scaling, uint8_t,
@@ -161,34 +219,34 @@ void flash_attention_lowp_impl(
     using PScaleWordU32 = Tile<Location::Scaling, uint32_t,
         kPeM, 1, BLayout::CubeM32, kPeM, 1>;
     using PScale = Tile<Location::Scaling, __fp8_e8m0,
-        kPeM, 4, BLayout::CubeM32, kPeM, kPScaleCols>;
+        kPeM, kPScaleCols, BLayout::CubeM32, kPeM, kPScaleCols>;
     using GmPackedPScaleWords =
-        global_tensor<uint32_t, RowMajor<kPeM, 1>>;
+        global_tensor<uint32_t, RowMajor<kPeM, kPScaleWordCols>>;
     using GmPackedPScaleE8M0 =
         global_tensor<__fp8_e8m0, RowMajor<kPeM, kPScaleCols>>;
     using Bf16WeightedValueTile = CubeAccumulatorM32<__bf16, kPeM, vD>;
     using Bf16PvTile = Bf16WeightedValueTile;
 
     using QScaleIter = global_iterator<GmQScale, QScaleMatrix>;
-    using KScaleIter = global_iterator<GmKScale, KScaleMatrix>;
+    using KHalfScaleIter = global_iterator<GmKScale, KHalfScaleMatrix>;
     using OIter = global_iterator<GmO, Bf16WeightedValueTile>;
     QScaleIter qScaleIter(const_cast<__fp8_e8m0 *>(qScalePtr));
-    KScaleIter kScaleIter(const_cast<__fp8_e8m0 *>(kScalePtr));
+    KHalfScaleIter kHalfScaleIter(const_cast<__fp8_e8m0 *>(kScalePtr));
     OIter outIter(outPtr);
 
     // Shared Q/K and their scales coexist during QK; V and its scale coexist
     // during PV.  Each phase must fit the 256-KiB cooperative SharedTReg pool.
-    static_assert(QMatrix::LogicalTileBytes + KMatrix::LogicalTileBytes +
+    static_assert(QMatrix::LogicalTileBytes +
+                      2 * KHalfMatrix::LogicalTileBytes +
                       QScaleMatrix::LogicalTileBytes +
-                      KScaleMatrix::LogicalTileBytes <= 256 * 1024);
+                      2 * KHalfScaleMatrix::LogicalTileBytes <= 256 * 1024);
     static_assert(VMatrix::LogicalTileBytes +
                       VScaleMatrix::LogicalTileBytes <= 256 * 1024);
     static_assert(P::LogicalTileBytes ==
                   PBlock::LogicalTileBytes * kPScaleCols);
-    static_assert(kPScaleCols == 4,
-                  "fa_lowp currently packs exactly four group-32 scales");
-    static_assert(PScale::LogicalTileBytes == PScaleWordU32::LogicalTileBytes,
-                  "packed U32 words and E8M0 scale tile must share one cell");
+    static_assert(PScale::LogicalTileBytes ==
+                      PScaleWordU32::LogicalTileBytes * kPScaleWordCols,
+                  "packed U32 words and E8M0 scale tile must share storage");
 
     // TPACK is specified to produce a U32 Tile.  A C++ bit_cast/reinterpret
     // changes only the source-level type and does not retag the architectural
@@ -196,7 +254,7 @@ void flash_attention_lowp_impl(
     // E8M0 directly.  Use one private 128 B stack slot as a storage-preserving
     // U32 -> E8M0 retag bridge until TileOP provides a cross-element-width
     // storage reinterpret operation.
-    alignas(128) uint32_t packedPScaleScratch[kPeM];
+    alignas(128) uint32_t packedPScaleScratch[kPeM * kPScaleWordCols];
 
     // E2M1 has maximum exponent emax=2.  MX scaling is based on the exponent
     // bound 2^emax=4, not on the maximum finite E2M1 value 6:
@@ -230,29 +288,47 @@ void flash_attention_lowp_impl(
 
 #pragma clang loop unroll(full)
         for (int kb = 0; kb < kKVBlocks; ++kb) {
-            // Load the next [kTk,qD] K block and its group-32 E8M0 scales.
-            KTile k;
-            KScaleTile kScale;
-            KSlice gK(const_cast<__fp4_e2m1x2 *>(kPtr) +
-                      kb * kTk * kStoredQD);
-            auto gKS = kScaleIter(kb, 0);
-            TLOAD<KMatrix, 1>(k, gK);
-            TLOAD<KScaleMatrix, 1>(kScale, gKS);
+            // Load the two physical halves of this logical Tk=512 K block.
+            // Each half has its own Shared generation and produces a 16-KiB
+            // per-PE BF16 score tile.  The full K/V blocking remains 512.
+            KHalfTile kLo, kHi;
+            KHalfScaleTile kScaleLo, kScaleHi;
+            KHalfSlice gKLo(const_cast<__fp4_e2m1x2 *>(kPtr) +
+                            kb * kTk * kStoredQD);
+            KHalfSlice gKHi(const_cast<__fp4_e2m1x2 *>(kPtr) +
+                            kb * kTk * kStoredQD +
+                            kQkHalfTk * kStoredQD);
+            auto gKSLo = kHalfScaleIter(kb * 2, 0);
+            auto gKSHi = kHalfScaleIter(kb * 2 + 1, 0);
+            TLOAD<KHalfMatrix, 1>(kLo, gKLo);
+            TLOAD<KHalfScaleMatrix, 1>(kScaleLo, gKSLo);
+            TLOAD<KHalfMatrix, 1>(kHi, gKHi);
+            TLOAD<KHalfScaleMatrix, 1>(kScaleHi, gKSHi);
 
-            // QK matrix stage.  TMATMUL_MX dequantizes Q/K using both scale
-            // matrices.  fixp::bf16() makes probability BF16 at the matrix
-            // output; there is intentionally no FP4 conversion here.
-            Bf16ScoreTile probability;
-            TMATMUL_MX<3>(probability, q, qScale, k, kScale, qkOptions);
-            TMULS(probability, probability, qkScale);
+            // QK matrix stage.  Splitting the destination avoids the current
+            // timing-model deadlock on one [32,512] BF16 Local write.  Both
+            // halves use the same Q tile and are combined before the online
+            // softmax state is updated.
+            Bf16ScoreHalfTile probabilityLo, probabilityHi;
+            TMATMUL_MX<3>(probabilityLo, q, qScale, kLo, kScaleLo,
+                          qkOptions);
+            TMATMUL_MX<3>(probabilityHi, q, qScale, kHi, kScaleHi,
+                          qkOptions);
+            TMULS(probabilityLo, probabilityLo, qkScale);
+            TMULS(probabilityHi, probabilityHi, qkScale);
 
             // Row max for numerically stable online softmax.  PTO #311 keeps
-            // the [32,1] result in the prefix CELL of a wide carrier; expose
-            // that CELL as a zero-copy reduction-prefix view.
-            WideBf16RowReductionTile localMaxWide;
-            TROWMAX(localMaxWide, probability);
-            // subview提取出dst tile中valid 一列
-            auto localMax = TREDUCEPREFIXVIEW<Bf16RowValueTile>(localMaxWide);
+            // each [32,1] result in the prefix CELL of a wide carrier.  First
+            // merge the two QK halves, then merge with the running maximum.
+            WideBf16RowReductionTile localMaxLoWide, localMaxHiWide;
+            TROWMAX(localMaxLoWide, probabilityLo);
+            TROWMAX(localMaxHiWide, probabilityHi);
+            auto localMaxLo =
+                TREDUCEPREFIXVIEW<Bf16RowValueTile>(localMaxLoWide);
+            auto localMaxHi =
+                TREDUCEPREFIXVIEW<Bf16RowValueTile>(localMaxHiWide);
+            Bf16RowValueTile localMax;
+            TMAX(localMax, localMaxLo, localMaxHi);
             // Online max update.  If the max changes, oldScale computes
             // exp(runningMax-newMax) and rescales the already accumulated PV
             // contribution.  Both the row scale and weighted-value sum are
@@ -265,14 +341,20 @@ void flash_attention_lowp_impl(
             }
 
             // In-place stable exponentiation: probability = exp(score-newMax).
-            TROWEXPANDEXPDIF(probability, probability, newMax);
+            TROWEXPANDEXPDIF(probabilityLo, probabilityLo, newMax);
+            TROWEXPANDEXPDIF(probabilityHi, probabilityHi, newMax);
 
             // Same PTO #311 carrier as row max. Keep localSum as a zero-copy
             // prefix view; TADD/TFMA consume it through B.SUBVIEW.
-            WideBf16RowReductionTile localSumWide;
-            TROWSUM(localSumWide, probability);
-            // subview提取出dst tile中valid 一列
-            auto localSum = TREDUCEPREFIXVIEW<Bf16RowValueTile>(localSumWide);
+            WideBf16RowReductionTile localSumLoWide, localSumHiWide;
+            TROWSUM(localSumLoWide, probabilityLo);
+            TROWSUM(localSumHiWide, probabilityHi);
+            auto localSumLo =
+                TREDUCEPREFIXVIEW<Bf16RowValueTile>(localSumLoWide);
+            auto localSumHi =
+                TREDUCEPREFIXVIEW<Bf16RowValueTile>(localSumHiWide);
+            Bf16RowValueTile localSum;
+            TADD(localSum, localSumLo, localSumHi);
             Bf16RowValueTile newSum;
             if (kb == 0) {
                 TADD(newSum, runningSum, localSum);
@@ -285,10 +367,21 @@ void flash_attention_lowp_impl(
             // Partition the BF16 exp result along K into independent 32-value
             // MX groups.  E2M1 data fragments use TASSEMBLY; the four E8M0
             // scale-code columns are compacted separately with TPACK.
-            auto blocks = TPARTVIEW<Bf16ScoreGroupTile, 1, kPScaleCols>(probability);
+            auto blocksLo =
+                TPARTVIEW<Bf16ScoreGroupTile, 1,
+                          kPScaleColsPerHalf>(probabilityLo);
+            auto blocksHi =
+                TPARTVIEW<Bf16ScoreGroupTile, 1,
+                          kPScaleColsPerHalf>(probabilityHi);
             TileArray<PBlock, 1, kPScaleCols> pFragments;
             auto quantizeGroup = [&]<int Block>(PScaleExponentU8 &scaleCode) {
-                auto pBlockView = blocks[0][Block];
+                auto pBlockView = [&]() {
+                    if constexpr (Block < kPScaleColsPerHalf) {
+                        return blocksLo[0][Block];
+                    } else {
+                        return blocksHi[0][Block - kPScaleColsPerHalf];
+                    }
+                }();
 
                 // Quantize one [32,32] BF16 probability block:
                 //   amax  = rowmax(pBlock)             (no TABS: pBlock >= 0)
@@ -338,32 +431,20 @@ void flash_attention_lowp_impl(
             };
 
             // One group-32 scale column is produced by each unrolled call.
-            // Keep the raw E8M0 exponent bytes in U8 carriers so TCVT can
-            // widen them value-preservingly before TPACK.
-            PScaleExponentU8 scaleCode0, scaleCode1, scaleCode2, scaleCode3;
-            quantizeGroup.template operator()<0>(scaleCode0);
-            quantizeGroup.template operator()<1>(scaleCode1);
-            quantizeGroup.template operator()<2>(scaleCode2);
-            quantizeGroup.template operator()<3>(scaleCode3);
-
-            PScaleWordU32 scaleWord0, scaleWord1, scaleWord2, scaleWord3;
-            TCVT(scaleWord0, scaleCode0);
-            TCVT(scaleWord1, scaleCode1);
-            TCVT(scaleWord2, scaleCode2);
-            TCVT(scaleWord3, scaleCode3);
-
-            PScaleWordU32 scalePair01, scalePair23, packedScaleWords;
-            TPACK(scalePair01, scaleWord0, scaleWord1, 0x00000101);
-            TPACK(scalePair23, scaleWord2, scaleWord3, 0x00000101);
-            TPACK(packedScaleWords, scalePair01, scalePair23, 0x00000202);
+            // Pack each consecutive group of four E8M0 bytes into one U32
+            // word per row, then store that word into its compact GM column.
+            // This named always-inline recursion avoids a separate expansion
+            // lambda/call frame, which would force the still-live QK tile to
+            // spill through an S64 carrier.
+            pack_p_scale_words<0, kPScaleWordCols, PScaleExponentU8,
+                               PScaleWordU32, GmPackedPScaleWords>(
+                quantizeGroup, packedPScaleScratch);
 
             // Finish the E2M1 payload assembly.  The packed scale word has the
-            // desired byte order [group0, group1, group2, group3], but TPACK
-            // leaves a U32 architectural descriptor.  Store/reload the same
-            // 128 bytes to obtain the E8M0 [32,4] descriptor required by PV.
+            // desired byte order [group0, group1, ...], but TPACK leaves U32
+            // architectural descriptors.  Reload the same bytes to obtain
+            // the compact E8M0 [32,kPScaleCols] descriptor required by PV.
             P p = TASSEMBLY<P>(std::move(pFragments));
-            GmPackedPScaleWords packedWordsGm(packedPScaleScratch);
-            TSTORE_CUBE(packedWordsGm, packedScaleWords);
             PScale pScale;
             GmPackedPScaleE8M0 packedScaleGm(
                 reinterpret_cast<__fp8_e8m0 *>(packedPScaleScratch));
@@ -402,4 +483,4 @@ void flash_attention_lowp_impl(
         TSTORE_CUBE(gOut, weightedValueSum);
     }
 }
-}  // namespace fa_lowp
+}  // namespace fa_lowp_ltile
