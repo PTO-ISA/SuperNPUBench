@@ -133,7 +133,8 @@ void dynamic_mx_quant_tail_ocp_fp8(InT *x, __fp8_e4m3 *y, uint8_t *scale) {
         // 【M32 版】编译期 ValidRows（满足 TREDUCEPREFIXVIEW asm 立即数约束）。
         //   #311 归约输出宽 carrier（physical Col=BlockSize、valid Col=1）→ TREDUCEPREFIXVIEW 取首个
         //   128B CELL 窄视图 → TADD(zero+view) materialize 成普通窄 tile → 标量链全在窄 tile 上。
-        //   守卫（TCMPS/TSEL）M32 不支持，本版跳过（TODO）。参考 kernels/basic_op/fa/fa_lowp.hpp。
+        //   inf/zero/special 三守卫（TCMPS/TSEL）见下方 recip finalize；CUBE_M32 上的 compare-select
+        //   CELL 几何已由 SuperScalarModel #785 修复，守卫功能完整。参考 kernels/basic_op/fa/fa_lowp.hpp。
         using t_blk = VecTileM32<InT,        TileMv, BlockSize, ValidRows, BlockSize>; // 输入/abs（宽）
         using t_rw  = VecTileM32<InT,        TileMv, BlockSize, ValidRows, 1>;         // reduce 宽 carrier（#311）
         using t_rin = VecTileM32<InT,        TileMv, 1,         ValidRows, 1>;         // 窄 InT（view SubTile + materialize）
@@ -157,17 +158,24 @@ void dynamic_mx_quant_tail_ocp_fp8(InT *x, __fp8_e4m3 *y, uint8_t *scale) {
             t_rin zero_in;  TEXPANDS(zero_in, static_cast<InT>(0.0f));
             t_rin max_in;   TADD(max_in, zero_in, max_view);     // materialize → 普通窄 InT（view 不能被 reinterpret，必需）
 
-            // floor 指数 → shared（bf16 原生取指数；half/fp32 走 fp32 域 floor 再窄化）。
-            t_row shared_bf;
+            // floor 指数 → shared + 收集 inf/zero 守卫 predicate（读 floor 后 max 位型；OCP/fp4 统一）。
+            t_row shared_bf, eqinf_bf, eqzero_bf;
+            auto eq_inf  = reinterpret_tile<uint16_t>(eqinf_bf);
+            auto eq_zero = reinterpret_tile<uint16_t>(eqzero_bf);
             if constexpr (std::is_same_v<InT, __bf16>) {
                 auto max_u16 = reinterpret_tile<uint16_t>(max_in);
                 TANDS(max_u16, max_u16, BF16_EXP_MASK);          // bf16 floor
+                TCMPS(eq_inf,  max_u16, BF16_EXP_MASK);          // NOT finite (max_exp==0x7F80)
+                TCMPS(eq_zero, max_u16, static_cast<uint16_t>(0)); // all-zero block
                 TMULS(shared_bf, max_in, __builtin_bit_cast(__bf16, RECIP_EMAX)); // 2^(E_max-8)
             } else {
                 t_frw max_f; TCVT(max_f, max_in);                // half/fp32 -> 窄 fp32
                 auto max_u32 = reinterpret_tile<uint32_t>(max_f);
                 TANDS(max_u32, max_u32, FP32_EXP_MASK);          // fp32 域 floor
                 t_row max_bf; TCVT(max_bf, max_f);               // 窄 fp32 -> 窄 bf16（尾数=0）
+                auto maxbf_u16 = reinterpret_tile<uint16_t>(max_bf);
+                TCMPS(eq_inf,  maxbf_u16, BF16_EXP_MASK);
+                TCMPS(eq_zero, maxbf_u16, static_cast<uint16_t>(0));
                 TMULS(shared_bf, max_bf, __builtin_bit_cast(__bf16, RECIP_EMAX));
             }
             t_e8b scale_e8m0; TCVT(scale_e8m0, shared_bf);       // bf16 -> e8m0
@@ -175,20 +183,26 @@ void dynamic_mx_quant_tail_ocp_fp8(InT *x, __fp8_e4m3 *y, uint8_t *scale) {
                 reinterpret_cast<__fp8_e8m0 *>(scale) + row0 * scaleCols + kb);
             auto gs = s_iter(0, 0); TSTORE(gs, scale_e8m0);
 
-            // === recip finalize：主路径 recip = 0x7F00 - shared（TEXPANDS+TSUB）===
-            // ⚠ 三守卫（inf/zero/special via TCMPS+TSEL）本版跳过（TODO）。原因（2026-09-20 实证更正）：
-            //   TCMPS/TSEL 在 CUBE_M32 上**编译已通**，但 gfrun 崩 —— compare-select 校验器
-            //   IsCompatibleOperationDataTile（emulator/engine/AccumulateBlockInfo.cpp:1240）用 RowMajor 式
-            //   `source->col == physicalCol`，CUBE_M32 的 cell 对齐物理列(bf16→2)≠RowMajor physicalCol(1)→
-            //   "TCMPS requires one compatible Tile source" 断言崩。即 gfrun/model 的 compare-select 族缺
-            //   CUBE-M 几何路径（与 gfsim scalar-elementwise #760 同族）。bench_small 数据无 inf/0/special、
-            //   跳守卫不影响逐字节；待 model 补 CUBE-M compare-select 后可补回（照 V1 RowMajor 守卫）。
+            // === recip finalize：主路径 recip = 0x7F00 - shared（TEXPANDS+TSUB）+ inf/zero/special 三守卫 ===
+            //   与 V1(RowMajor)/tail_ocp_fp4 统一：inf/nan->0x7F81 / 全零->0 / special(shared==0x7F00)->0x0040。
+            //   CUBE_M32 上的 TCMPS/TSEL：早期 gfrun compare-select 校验器用 RowMajor `col==physicalCol`
+            //     拒 CUBE_M32 cell 对齐列而崩；已由 SuperScalarModel #785（按 ASL 实现 CUBE PredicateCell）
+            //     修复，全量 dmxq gfrun 逐用例 PASS。bench_small 数据无特殊值，守卫为 compute-only
+            //     （TLSU-bound 下不增墙钟）。
             auto shared_u16 = reinterpret_tile<uint16_t>(shared_bf);
-            t_row recip_bf, k_bf;
-            auto recip_u16 = reinterpret_tile<uint16_t>(recip_bf);
-            auto k_u16     = reinterpret_tile<uint16_t>(k_bf);
+            t_row recip_bf, eqspc_bf, k_bf;
+            auto recip_u16  = reinterpret_tile<uint16_t>(recip_bf);
+            auto eq_special = reinterpret_tile<uint16_t>(eqspc_bf);
+            auto k_u16      = reinterpret_tile<uint16_t>(k_bf);
+            TCMPS(eq_special, shared_u16, BF16_EXP_BIAS);        // shared==0x7F00
             TEXPANDS(k_u16, BF16_EXP_BIAS);                      // 0x7F00
             TSUB(recip_u16, k_u16, shared_u16);                  // 0x7F00 - shared = 2^(8-E_max)
+            TEXPANDS(k_u16, BF16_NAN_PATTERN);
+            TSEL(recip_u16, eq_inf, k_u16);                      // inf/nan -> 0x7F81
+            TEXPANDS(k_u16, static_cast<uint16_t>(0));
+            TSEL(recip_u16, eq_zero, k_u16);                     // all-zero -> 0
+            TEXPANDS(k_u16, BF16_SPECIAL_EXP);
+            TSEL(recip_u16, eq_special, k_u16);                  // special -> 0x0040
             t_frw recip_f; TCVT(recip_f, recip_bf);              // 窄 bf16 -> 窄 fp32
 
             // === data pass（InT 分派）===
