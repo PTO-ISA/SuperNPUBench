@@ -57,6 +57,14 @@ int main() {
         readBinaryFile(CHK_DIR "/srck_scale.bin", reinterpret_cast<uint8_t *>(ks), Tskv * (FA_QD / 32));
         readBinaryFile(CHK_DIR "/srcv_scale.bin", reinterpret_cast<uint8_t *>(vs), (Tskv / 32) * FA_VD);
     }
+    if (tid == 0) {
+        writeBinaryFile(CHK_DIR "/srcq_readback.bin", reinterpret_cast<uint8_t *>(q), Tsq * (FA_QD / 2));
+        writeBinaryFile(CHK_DIR "/srck_readback.bin", reinterpret_cast<uint8_t *>(k), Tskv * (FA_QD / 2));
+        writeBinaryFile(CHK_DIR "/srcv_readback.bin", reinterpret_cast<uint8_t *>(v), (Tskv / 2) * FA_VD);
+        writeBinaryFile(CHK_DIR "/srcq_scale_readback.bin", reinterpret_cast<uint8_t *>(qs), Tsq * (FA_QD / 32));
+        writeBinaryFile(CHK_DIR "/srck_scale_readback.bin", reinterpret_cast<uint8_t *>(ks), Tskv * (FA_QD / 32));
+        writeBinaryFile(CHK_DIR "/srcv_scale_readback.bin", reinterpret_cast<uint8_t *>(vs), (Tskv / 32) * FA_VD);
+    }
     res_check_publish_inputs(sync, tid);
 #endif
     BENCHSTART;

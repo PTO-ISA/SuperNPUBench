@@ -8,7 +8,7 @@
 
 ## 当前可交付结果
 
-代码开关在 `benchmark/benchmark/one-level-arch/kernels/basic_op/fa/fa_lowp_algB.hpp`：
+代码开关在 `benchmark/benchmark/one-level-arch/kernels/multi_thread/fa_lowp_algB/fa_lowp_algB.hpp`：
 
 - `FA_ALGB_ALGO_C=0`：Algo B；
 - `FA_ALGB_ALGO_C=1`：Algo C（默认）；
@@ -27,71 +27,37 @@ Tk=128 的一次基准结果（`bctrl.vec_cell_sched_enable=false`）：
 
 ## 如何复现实验
 
-下面命令以 `Sq=128, Skv=8192, Tm=128, Tk=128` 为例。切换 `FA_ALGB_ALGO_C`
-或 `FA_ALGB_GM_FUSED` 时，先删除对应目标文件，避免 `make` 复用旧的 `.o`。
+从仓库根目录执行。`COMPILER_DIR` 指向 Linx 工具链 bin，`MODEL` 指向含本地修复的模型目录。
+测试入口、Makefile、输入生成和 B/C golden checker 均在 `test/kernel/multi_thread/fa_lowp_algB/`。
 
 ```bash
-export ROOT=/data/xxr/feishu/workspace/superscalar_v5
-export BM=$ROOT/benchmark/benchmark/one-level-arch
-export COMPILER_DIR=$ROOT/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
-export MODEL=$ROOT/model_pto339_342
-cd $BM/test/kernel/fa
+export COMPILER_DIR=/data/xxr/feishu/workspace/superscalar_v5/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
+export MODEL=/data/xxr/feishu/workspace/superscalar_v5/model_pto339_342
+TEST=benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB
 
-# Algo B：FA_ALGB_ALGO_C=0
-rm -f $BM/output/kernel/fa/src/fa_lowp_algB.o
-make all TESTCASE=fa_lowp_algB COMPILER_DIR=$COMPILER_DIR \
-  FA_MODE=MXFP4_VECBF16 Sq=128 Skv=8192 Tm=128 Tk=128 X_dim=1 Y_dim=2 \
-  CFLAGS="-DFA_ALGB_ALGO_C=0 -DFA_ALGB_GM_FUSED=0"
+# Sq=Skv=256、Tk=128：有输入 readback 的数值检查，错误返回非零。
+python3 "$TEST/run.py" --algorithm B --run-id check_b
+python3 "$TEST/run.py" --algorithm C --run-id check_c
 
-# Algo C：FA_ALGB_ALGO_C=1
-rm -f $BM/output/kernel/fa/src/fa_lowp_algB.o
-make all TESTCASE=fa_lowp_algB COMPILER_DIR=$COMPILER_DIR \
-  FA_MODE=MXFP4_VECBF16 Sq=128 Skv=8192 Tm=128 Tk=128 X_dim=1 Y_dim=2 \
-  CFLAGS="-DFA_ALGB_ALGO_C=1 -DFA_ALGB_GM_FUSED=0"
+# Sq=128、Skv=8192：性能实验均关闭 vec_cell_sched 并输出 SwimLane。
+python3 "$TEST/run.py" --mode perf --algorithm B --sq 128 --skv 8192 --run-id perf_b
+python3 "$TEST/run.py" --mode perf --algorithm C --sq 128 --skv 8192 --run-id perf_c
+python3 "$TEST/run.py" --mode perf --algorithm C --sq 128 --skv 8192 --vecq 64 --run-id perf_c_q64
+
+# fixp GroupMaxOut 路径：仍含 BF16→FP32→BF16 workaround，并非零额外指令目标。
+python3 "$TEST/run.py" --algorithm C --gm-fused 1 --run-id check_c_fused
+
+# Tk=256 编译阻塞回归；失败看 build.log。
+python3 "$TEST/run.py" --mode build --algorithm C --sq 128 --skv 8192 --tk 256 --run-id build_c_tk256
 ```
 
-生成的 ELF 在 `$BM/output/kernel/fa/elf/`，文件名包含
-`fa_lowp_algB_Sq128_Skv8192_Tm128_Tk128`。用 gfrun 做功能和数值检查：
-
-```bash
-cd $MODEL
-./bin/gfrun -s softcore.multiThreadNum=4 -f <ELF>
-```
-
-用 gfsim 做时序检查时也必须在模型目录运行，因为它需要相对路径下的
-`configs/fourpe.conf`：
-
-```bash
-cd $MODEL
-./bin/gfsim -s bctrl.vec_cell_sched_enable=false -f <ELF>
-```
-
-每次性能实验都用 SwimLane helper，并保留三个产物：
-
-```bash
-RUN=$BM/test/kernel/fa/perf_runs/<run_id>
-python3 $BM/test/common/run_swimlane.py \
-  --gfsim $MODEL/bin/gfsim --elf <ELF> --outdir $RUN --name algC \
-  --conf fourpe
-```
-
-输出包括 `algC_swim.log`、`algC.json` 和可在 Perfetto 打开的
-`algC_nocounters.json`；从 `algC_swim.log` 记录 `Total Cycles`。
-
-测试 Vector issue queue 加深到 64：
-
-```bash
-cd $MODEL
-./bin/gfsim -s bctrl.vec_cell_sched_enable=false \
-  -s bctrl.vecIssueQDepth=64 -f <Algo-C ELF>
-```
-
-目标数据流（fixp GroupMaxOut 直接作为 `TROWEXPANDEXPDIF` 输入）用
-`-DFA_ALGB_GM_FUSED=1` 编译；它目前用于验证 ISA/TileOP/model 缺口，不能代替默认
-`FA_ALGB_GM_FUSED=0` 的可交付 fallback。
-
-Tk=256 只需把上述编译命令中的 `Tk=128` 改为 `Tk=256`；当前预期首先在 LLVM
-issue #112 处失败，不能把失败误判成 gfsim 运行问题。
+每次使用新的 `--run-id`。脚本固定 `make -j4`，删除旧算子对象文件后重新编译，
+将 ELF、参数和原始日志保存到测试目录的 `perf_runs/<run-id>/`。
+`check` 模式生成非零随机输入并逐字节核对六个输入的 readback，检查对应算法的 golden；
+默认容差为 `atol=0.05, rtol=0.05`。`perf` 模式不做数值判断，调用公共 SwimLane helper，
+保存 `algoC_swim.log`、`algoC.json`、`algoC_nocounters.json`（B 同理）；打开最后一个文件，
+同时记录日志中的 `Total Cycles`。历史 cycle 属于当时的工具链/模型及原测试入口，
+新版本的 cycle 以实际复测为准。
 
 ## Algo B/C 的算法和实现意图
 
@@ -139,3 +105,11 @@ BF16x2 CellReg/subview 限制。
 2. LLVM 先处理 #112；用完整 Tk=256 FA case 验证，不能只看独立 TU。
 3. #112 解决后，立即回归模型 #839；同时确认 #873/#874 的本地修复是否能进入模型版本。
 4. #224、#207、STG_A/带宽属于后续路径，不作为当前交付前置条件。
+
+## 独立分支验证（2026-09-27）
+
+测试入口迁入 multi_thread 后，Sq=Skv=256、Tk=128、GM_FUSED=0：
+Algo B/C 均通过数值检查（各 65536 字节输出，bad=0/32768），六个输入 readback 均匹配。
+将 Algo C 输出首元素改为 infinity 后，checker 报 bad=1/32768 并返回 1；原始结果已恢复。
+数值执行命令由 run.py 记录，实际使用 `gfrun -s softcore.multiThreadNum=4 -f <check ELF>`。
+`compile.all` 可顺序执行 B/C 数值检查及非检查版编译。

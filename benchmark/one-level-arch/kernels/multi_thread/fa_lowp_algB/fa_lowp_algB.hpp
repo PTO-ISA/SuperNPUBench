@@ -7,7 +7,7 @@
 // =====================================================================
 // Per 32-column MX group (no algorithm-A / no debug branches):
 //
-//   G   = groupmax(s)                     (fused B.FPATR GroupMax, raw FP32 acc)
+//   G   = groupmax(s)                     (fused B.FPATR GroupMax, final BF16 D)
 //   P3  = G - ln4
 //   P4  = exp(s - P3) = 4*exp(s - G)      (data; group peak exactly 4 -> no E2M1 sat)
 //   P5  = exp(P3 - R) = exp(G - R - ln4)  (scale before E8M0; R = online row max)
@@ -386,7 +386,7 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
 
         }
 
-        // Normalize the Cube PV result by the vector-side V' denominator.
+        // Normalize the Cube PV result by the selected B (Vector) / C (Cube) denominator.
         Fp32RowValueTile runningSumF32;
 #if FA_ALGB_ALGO_C
         TCVT(runningSumF32, weightedDenom);
