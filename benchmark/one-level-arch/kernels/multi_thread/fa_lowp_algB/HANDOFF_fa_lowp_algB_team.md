@@ -5,7 +5,7 @@
 - `Sq=128, Skv=8192, bctrl.vec_cell_sched_enable=false` 下，Tk=128 的 Algo B/C 已能跑通：gfrun 数值检查通过，gfsim 也已完成。
 - Algo C 已使用最终 Cube 分母路径：`TMATMUL_MX` / `TMATMUL_MX_ACC` 累加 `P×V'`，不再用 Vector 计算分母。
 - **Tk=256**：B 编译不过，因 live `B.ASSEMBLE` parent 拷贝触发 LLVM #112；C 编译及 gfsim 能过（含本地模型修复，50,907 cycles），gfrun 数值通过。
-- **Vector 指令尚未如期减少到仅 `TROWEXPANDEXPDIF/TCVT`**：fixp GroupMax 的 BF16x2 广播 slot 选择尚缺（ISA #207），默认路径仍用 `TROWMAX`；online max/CScale、`G-ln4`、C 分母重标定和最终归一化尚未融合，仍需 `TMAX/TSUB(S)/TMULS/TROWEXPANDMUL/DIV`。B 另保留 Vector 分母归约与累加。
+- **Vector 主路径仅保留 `TROWEXPANDEXPDIF/TCVT` 的目标尚未达成**：ISA #207 是必要前置条件，使算子直接消费 fixp GroupMaxOut，消除额外 TROWMAX 或转换/提取。#207 不是充分条件：online max/CScale、`G-ln4`、C 分母重标定等仍有额外 Vector 指令，进一步融合方案尚待明确；B 另保留 Vector 分母归约与累加。
 
 ## 当前可交付结果
 
@@ -77,8 +77,10 @@ BF16x2 CellReg/subview 限制。
   `TROWEXPANDMUL` 施加旧分母的 online scale，再用 `TMATMUL_MX_ACC` 累加。PV numerator
   同样用 `TMATMUL_MX_ACC` 和 CScale 做 Cube 内重标定，最后只做一次 Vector 除法归一化。
 
-因此，当前真正待补的是 GroupMaxOut 的 BF16x2 直接消费能力；不是重新设计 Algo B/C，
-也不是再增加一条数学 `TMULS` 指令。
+验收目标是直接消费 fixp GroupMaxOut，且 Vector 主路径仅保留 `TROWEXPANDEXPDIF/TCVT`。
+ISA #207 是实现该目标的必要前置条件；缺少它就必须额外执行 TROWMAX 或转换/提取。
+当前 workaround 跑通只证明可运行，不代表目标已完成。#207 也不是充分条件，
+其余参数计算及重标定的融合方案仍需明确。
 
 ## 不同组件情况说明
 
@@ -88,8 +90,8 @@ BF16x2 CellReg/subview 限制。
 | **gfrun** | Tk=128 ELF 执行与数值检查 | 当前无阻塞；B/C 均已通过。 |
 | **gfsim / SuperScalarModel** | #866 aux effective-D；#868 assembled-parent descriptor；#869 Shared-B/no-ScaleB 的 cscale source；#839 Tk=256 多 writer；#873 TPARTVIEW 的 row-expand descriptor；#874 RAS sparse restore | #873、#874 已新提 issue，并已有本地修复；#866/#868/#869 是真实模型问题，本地有 workaround；#839 是 Tk=256 的后续硬阻塞。未提交的本地模型修改不能丢。 |
 | **LLVM / compiler** | #112：Tk=256 活跃 `B.ASSEMBLE` parent 被 KV loop 重用时 ICE | 完整 Tk=256 复测：B 仍 ICE，当前 C 已编译通过；上游/本地编译器均为 af743c28。#112 仍真实，不能再把它列为当前 C 的编译阻塞。#109 的 compiler-side TROWEXPAND 问题当前已由版本修复，不再重复改 issue。 |
-| **TileOP API** | #224：CUBE subview → TCVT | issue 仍 open，本地 API 已是最新 commit；probe 仍失败。只影响 `FA_ALGB_GM_FUSED=1` 的可选路径，不阻塞默认交付。 |
-| **PTO ISA** | #207：允许 BF16/FP16 x2 的 row-broadcast source 以 `validCol=2` 携带一个 CellReg，并按 slot 选择其中的逻辑值；扩展到 `TROWEXPAND*` | 这是一个真实的 ISA 表达能力缺口，但不阻塞 Tk=128，也不是当前 Tk=256 第一阻塞；建议在现有 #207 下补充 `TROWEXPANDEXPDIF`、MXFP4 FA 和 HiF4/MXQuant 用例。这里不是放宽到 `[M,G]`，而是只接受 BF16/FP16 x2 的两列物理载体。 |
+| **TileOP API** | #224：CUBE subview → TCVT | issue 仍 open，本地 API 已是最新 commit；probe 仍失败。影响 `FA_ALGB_GM_FUSED=1` 的转换绕行路径；默认 fallback 可运行不等于 fixp GroupMax 直接消费目标已达成。 |
+| **PTO ISA** | #207：允许 BF16/FP16 x2 的 row-broadcast source 以 `validCol=2` 携带一个 CellReg，并按 slot 选择其中的逻辑值；扩展到 `TROWEXPAND*` | **目标实现的必要 ISA 前置条件**：必须覆盖 `TROWEXPANDEXPDIF`，使算子直接消费 fixp GroupMaxOut，避免额外 TROWMAX 或转换/提取；仅放宽到 BF16/FP16 x2 的 `validCol=2` 载体并选择 slot，不放宽到 `[M,G]`。用例及请求已补充到 #207。当前 workaround 可运行，但不满足目标指令序列；还需 TileOP API 与模型同步支持。 |
 
 ## Issue 完整性
 
@@ -102,10 +104,10 @@ BF16x2 CellReg/subview 限制。
 
 ## 建议交接顺序
 
-1. 先交付 Tk=128 B/C 分支，并保留已验证的本地模型 workaround 和 SwimLane 结果。
+1. 先交接可运行的 B/C 实验分支，保留本地模型 workaround 和 SwimLane；明确这不是目标指令序列的最终交付。
 2. LLVM 处理 Algo B 的 #112；当前 Algo C 已可进入 Tk=256 运行验证。
 3. 用 Algo C Tk=256 ELF 验证功能/时序并回归历史模型 #839；确认 #873/#874 的本地修复是否进入模型版本。
-4. #224、#207、STG_A/带宽属于后续路径，不作为当前交付前置条件。
+4. 达到目标指令序列必须推进 ISA #207 及 TileOP API/模型配套支持，再验证 fixp GroupMaxOut 直接消费和无额外 TROWMAX/转换提取；其余参数计算与重标定的融合方案也需明确。#224 跟踪转换绕行路径，STG_A/带宽实验另行推进。
 
 ## 独立分支验证（2026-09-27）
 
