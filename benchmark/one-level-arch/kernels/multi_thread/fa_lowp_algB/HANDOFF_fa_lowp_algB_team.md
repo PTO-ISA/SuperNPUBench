@@ -127,3 +127,12 @@ model_pto339_342；不代表未经修补的上游模型或 fixp GroupMax 直连�
 max_abs=9.293e-3，mean_abs=1.604e-3（atol=0.05，rtol=0.05）。
 检查版 ELF、gfrun 原始日志和 check.log 在 `perf_runs/algc_tk256_gfrun_check/`；
 性能 SwimLane 使用不含输入输出校验开销的 checkoff ELF。
+
+## Queue=96 追加结果
+
+Sq=128、Skv=8192、GM_FUSED=0、vec_cell_sched_enable=false：Tk128=29,068 cycles，Tk256=31,317 cycles。
+Tk256 相比queue64无变化。queue96下Tk256的SharedTReg物理读服务次数少20.9%，Q侧TileA读量减半；
+收益被更多Cube写回等待与no-tile空档抵消。随机存储模型对照（soc_random=true、seed=1）为
+65,637→50,273 cycles，Tk256快23.4%；这是不同存储时延配置，不与baseline混算。
+运行脚本已支持 `--vecq 96`。完整日志/trace/逐块统计保留在测试目录
+`perf_runs/tk128_vs_tk256_analysis/`，详细说明见其中REPORT.md。

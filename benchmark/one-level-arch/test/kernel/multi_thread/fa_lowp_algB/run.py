@@ -13,7 +13,7 @@ p.add_argument('--gm-fused', type=int, choices=[0, 1], default=0)
 p.add_argument('--sq', type=int, default=256)
 p.add_argument('--skv', type=int, default=256)
 p.add_argument('--tk', type=int, default=128)
-p.add_argument('--vecq', type=int, choices=[32, 64], default=32)
+p.add_argument('--vecq', type=int, choices=[32, 64, 96], default=32)
 p.add_argument('--run-id', required=True)
 a = p.parse_args()
 test = Path(__file__).resolve().parent
