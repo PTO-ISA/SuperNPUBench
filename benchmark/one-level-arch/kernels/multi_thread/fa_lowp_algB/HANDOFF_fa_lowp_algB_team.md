@@ -4,7 +4,7 @@
 
 - `Sq=128, Skv=8192, bctrl.vec_cell_sched_enable=false` 下，Tk=128 的 Algo B/C 已能跑通：gfrun 数值检查通过，gfsim 也已完成。
 - Algo C 已使用最终 Cube 分母路径：`TMATMUL_MX` / `TMATMUL_MX_ACC` 累加 `P×V'`，不再用 Vector 计算分母。
-- **Tk=256**：B 编译不过，因 live `B.ASSEMBLE` parent 拷贝触发 LLVM #112；C 编译及 gfsim 能过（含本地模型修复，50,907 cycles），数值待验证。
+- **Tk=256**：B 编译不过，因 live `B.ASSEMBLE` parent 拷贝触发 LLVM #112；C 编译及 gfsim 能过（含本地模型修复，50,907 cycles），gfrun 数值通过。
 - **Vector 指令尚未如期减少到仅 `TROWEXPANDEXPDIF/TCVT`**：fixp GroupMax 的 BF16x2 广播 slot 选择尚缺（ISA #207），默认路径仍用 `TROWMAX`；online max/CScale、`G-ln4`、C 分母重标定和最终归一化尚未融合，仍需 `TMAX/TSUB(S)/TMULS/TROWEXPANDMUL/DIV`。B 另保留 Vector 分母归约与累加。
 
 ## 当前可交付结果
@@ -121,3 +121,9 @@ Algo B/C 均通过数值检查（各 65536 字节输出，bad=0/32768），六�
 正常完成，Total Cycles=50,907。ELF 与完整/去计数器 SwimLane、原始日志在测试目录
 `perf_runs/algc_tk256_gfsim_recheck/`。这是 GM_FUSED=0 fallback，使用含本地修复的
 model_pto339_342；不代表未经修补的上游模型或 fixp GroupMax 直连已验证。
+
+同形状 gfrun 验证：`run.py --mode check --algorithm C --sq 128 --skv 8192 --tk 256 --run-id algc_tk256_gfrun_check`。
+输出 32768 字节，六个输入 readback 全部匹配；Algo C golden 对比 bad=0/16384，
+max_abs=9.293e-3，mean_abs=1.604e-3（atol=0.05，rtol=0.05）。
+检查版 ELF、gfrun 原始日志和 check.log 在 `perf_runs/algc_tk256_gfrun_check/`；
+性能 SwimLane 使用不含输入输出校验开销的 checkoff ELF。
