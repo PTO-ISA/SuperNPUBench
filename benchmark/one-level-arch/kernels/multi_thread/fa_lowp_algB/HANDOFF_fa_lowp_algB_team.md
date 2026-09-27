@@ -4,7 +4,8 @@
 
 - `Sq=128, Skv=8192, bctrl.vec_cell_sched_enable=false` 下，Tk=128 的 Algo B/C 已能跑通：gfrun 数值检查通过，gfsim 也已完成。
 - Algo C 已使用最终 Cube 分母路径：`TMATMUL_MX` / `TMATMUL_MX_ACC` 累加 `P×V'`，不再用 Vector 计算分母。
-- **Tk=256 复核更正（2026-09-27）**：当前 Algo B 仍复现 [LLVM #112](https://github.com/LinxISA/llvm-project/issues/112) 的 live `B.ASSEMBLE` parent ICE；当前 Algo C 已生成 ELF，原编译参数也通过。编译器仍为 `af743c28`（与上游 dev-llvm15_56 HEAD 相同），因此不能据 C 通过认定 #112 已修。Algo C Tk=256 的 gfsim 已完成：Sq=128、Skv=8192、GM_FUSED=0、vec_cell_sched_enable=false、vecIssueQDepth=32，Total Cycles=50,907；本地含 workaround 的模型未复现 #839。数值正确性仍待单独验证。
+- **Tk=256**：B 编译不过，因 live `B.ASSEMBLE` parent 拷贝触发 LLVM #112；C 编译及 gfsim 能过（含本地模型修复，50,907 cycles），数值待验证。
+- **Vector 指令尚未如期减少到仅 `TROWEXPANDEXPDIF/TCVT`**：fixp GroupMax 的 BF16x2 广播 slot 选择尚缺（ISA #207），默认路径仍用 `TROWMAX`；online max/CScale、`G-ln4`、C 分母重标定和最终归一化尚未融合，仍需 `TMAX/TSUB(S)/TMULS/TROWEXPANDMUL/DIV`。B 另保留 Vector 分母归约与累加。
 
 ## 当前可交付结果
 
