@@ -4,7 +4,7 @@
 
 - `Sq=128, Skv=8192, bctrl.vec_cell_sched_enable=false` 下，Tk=128 的 Algo B/C 已能跑通：gfrun 数值检查通过，gfsim 也已完成。
 - Algo C 已使用最终 Cube 分母路径：`TMATMUL_MX` / `TMATMUL_MX_ACC` 累加 `P×V'`，不再用 Vector 计算分母。
-- **Tk=256 复核更正（2026-09-27）**：当前 Algo B 仍复现 [LLVM #112](https://github.com/LinxISA/llvm-project/issues/112) 的 live `B.ASSEMBLE` parent ICE；当前 Algo C 已生成 ELF，原编译参数也通过。编译器仍为 `af743c28`（与上游 dev-llvm15_56 HEAD 相同），因此不能据 C 通过认定 #112 已修。Algo C 的 Tk=256 功能/时序尚待验证；[模型 #839](https://github.com/LinxISA/SuperScalarModel/issues/839) 作为历史风险待回归，不能预先断言必然触发。
+- **Tk=256 复核更正（2026-09-27）**：当前 Algo B 仍复现 [LLVM #112](https://github.com/LinxISA/llvm-project/issues/112) 的 live `B.ASSEMBLE` parent ICE；当前 Algo C 已生成 ELF，原编译参数也通过。编译器仍为 `af743c28`（与上游 dev-llvm15_56 HEAD 相同），因此不能据 C 通过认定 #112 已修。Algo C Tk=256 的 gfsim 已完成：Sq=128、Skv=8192、GM_FUSED=0、vec_cell_sched_enable=false、vecIssueQDepth=32，Total Cycles=50,907；本地含 workaround 的模型未复现 #839。数值正确性仍待单独验证。
 
 ## 当前可交付结果
 
@@ -113,3 +113,10 @@ Algo B/C 均通过数值检查（各 65536 字节输出，bad=0/32768），六�
 将 Algo C 输出首元素改为 infinity 后，checker 报 bad=1/32768 并返回 1；原始结果已恢复。
 数值执行命令由 run.py 记录，实际使用 `gfrun -s softcore.multiThreadNum=4 -f <check ELF>`。
 `compile.all` 可顺序执行 B/C 数值检查及非检查版编译。
+
+## Algo C Tk=256 gfsim 复测
+
+2026-09-27：`run.py --mode perf --algorithm C --sq 128 --skv 8192 --tk 256 --run-id algc_tk256_gfsim_recheck`
+正常完成，Total Cycles=50,907。ELF 与完整/去计数器 SwimLane、原始日志在测试目录
+`perf_runs/algc_tk256_gfsim_recheck/`。这是 GM_FUSED=0 fallback，使用含本地修复的
+model_pto339_342；不代表未经修补的上游模型或 fixp GroupMax 直连已验证。
