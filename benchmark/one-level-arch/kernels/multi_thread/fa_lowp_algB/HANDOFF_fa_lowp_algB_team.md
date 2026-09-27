@@ -4,7 +4,7 @@
 
 - `Sq=128, Skv=8192, bctrl.vec_cell_sched_enable=false` 下，Tk=128 的 Algo B/C 已能跑通：gfrun 数值检查通过，gfsim 也已完成。
 - Algo C 已使用最终 Cube 分母路径：`TMATMUL_MX` / `TMATMUL_MX_ACC` 累加 `P×V'`，不再用 Vector 计算分母。
-- 当前交付仍卡在 **Tk=256**。第一处阻塞是 LLVM 的 Tk=256 `B.ASSEMBLE` 编译 ICE（[llvm-project #112](https://github.com/LinxISA/llvm-project/issues/112)）；编译器问题解决后，预计还会撞到模型的多 writer assembled-parent 问题（[SuperScalarModel #839](https://github.com/LinxISA/SuperScalarModel/issues/839)）。因此“Tk=256 尚未完成”是正确判断。
+- **Tk=256 复核更正（2026-09-27）**：当前 Algo B 仍复现 [LLVM #112](https://github.com/LinxISA/llvm-project/issues/112) 的 live `B.ASSEMBLE` parent ICE；当前 Algo C 已生成 ELF，原编译参数也通过。编译器仍为 `af743c28`（与上游 dev-llvm15_56 HEAD 相同），因此不能据 C 通过认定 #112 已修。Algo C 的 Tk=256 功能/时序尚待验证；[模型 #839](https://github.com/LinxISA/SuperScalarModel/issues/839) 作为历史风险待回归，不能预先断言必然触发。
 
 ## 当前可交付结果
 
@@ -47,7 +47,7 @@ python3 "$TEST/run.py" --mode perf --algorithm C --sq 128 --skv 8192 --vecq 64 -
 # fixp GroupMaxOut 路径：仍含 BF16→FP32→BF16 workaround，并非零额外指令目标。
 python3 "$TEST/run.py" --algorithm C --gm-fused 1 --run-id check_c_fused
 
-# Tk=256 编译阻塞回归；失败看 build.log。
+# Tk=256 编译回归：当前 C 已通过；改 --algorithm B 仍复现 #112。
 python3 "$TEST/run.py" --mode build --algorithm C --sq 128 --skv 8192 --tk 256 --run-id build_c_tk256
 ```
 
@@ -86,7 +86,7 @@ BF16x2 CellReg/subview 限制。
 | **FA kernel** | B/C 算法实现、P-scale 组装、fixp GroupMaxOut → `TROWEXPANDEXPDIF` 数据流 | Tk=128 已验证。最终意图是直接使用 fixp/CUBE 产生的 GroupMaxOut，不额外执行 `TROWMAX`；当前 `FA_ALGB_GM_FUSED=0` 只是 gfsim 可跑的 fallback。剩余 `TMULS` 是数学缩放（`tQ/tRg/tDiff`），不是分母未实现。 |
 | **gfrun** | Tk=128 ELF 执行与数值检查 | 当前无阻塞；B/C 均已通过。 |
 | **gfsim / SuperScalarModel** | #866 aux effective-D；#868 assembled-parent descriptor；#869 Shared-B/no-ScaleB 的 cscale source；#839 Tk=256 多 writer；#873 TPARTVIEW 的 row-expand descriptor；#874 RAS sparse restore | #873、#874 已新提 issue，并已有本地修复；#866/#868/#869 是真实模型问题，本地有 workaround；#839 是 Tk=256 的后续硬阻塞。未提交的本地模型修改不能丢。 |
-| **LLVM / compiler** | #112：Tk=256 活跃 `B.ASSEMBLE` parent 被 KV loop 重用时 ICE | 这是 Tk=256 的第一处阻塞。现有独立最小 TU 在当前 clang 上可编译，不能据此宣布 full-kernel 问题已修复；需用完整 FA Tk=256 case 回归。#109 的 compiler-side TROWEXPAND 问题当前已由版本修复，不再重复改 issue。 |
+| **LLVM / compiler** | #112：Tk=256 活跃 `B.ASSEMBLE` parent 被 KV loop 重用时 ICE | 完整 Tk=256 复测：B 仍 ICE，当前 C 已编译通过；上游/本地编译器均为 af743c28。#112 仍真实，不能再把它列为当前 C 的编译阻塞。#109 的 compiler-side TROWEXPAND 问题当前已由版本修复，不再重复改 issue。 |
 | **TileOP API** | #224：CUBE subview → TCVT | issue 仍 open，本地 API 已是最新 commit；probe 仍失败。只影响 `FA_ALGB_GM_FUSED=1` 的可选路径，不阻塞默认交付。 |
 | **PTO ISA** | #207：允许 BF16/FP16 x2 的 row-broadcast source 以 `validCol=2` 携带一个 CellReg，并按 slot 选择其中的逻辑值；扩展到 `TROWEXPAND*` | 这是一个真实的 ISA 表达能力缺口，但不阻塞 Tk=128，也不是当前 Tk=256 第一阻塞；建议在现有 #207 下补充 `TROWEXPANDEXPDIF`、MXFP4 FA 和 HiF4/MXQuant 用例。这里不是放宽到 `[M,G]`，而是只接受 BF16/FP16 x2 的两列物理载体。 |
 
@@ -102,8 +102,8 @@ BF16x2 CellReg/subview 限制。
 ## 建议交接顺序
 
 1. 先交付 Tk=128 B/C 分支，并保留已验证的本地模型 workaround 和 SwimLane 结果。
-2. LLVM 先处理 #112；用完整 Tk=256 FA case 验证，不能只看独立 TU。
-3. #112 解决后，立即回归模型 #839；同时确认 #873/#874 的本地修复是否能进入模型版本。
+2. LLVM 处理 Algo B 的 #112；当前 Algo C 已可进入 Tk=256 运行验证。
+3. 用 Algo C Tk=256 ELF 验证功能/时序并回归历史模型 #839；确认 #873/#874 的本地修复是否进入模型版本。
 4. #224、#207、STG_A/带宽属于后续路径，不作为当前交付前置条件。
 
 ## 独立分支验证（2026-09-27）
