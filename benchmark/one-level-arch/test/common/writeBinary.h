@@ -24,8 +24,10 @@ bool writeBinaryFile(const char * filename, const uint8_t* data, size_t size) {
     }
 
     close(fd);
+#ifndef GFSIM
     printf("data write to file done: %s\n", filename);
     fflush(stdout);
+#endif
     return true;
 #else
     return true;
