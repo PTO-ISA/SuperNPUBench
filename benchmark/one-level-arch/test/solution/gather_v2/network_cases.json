@@ -1,0 +1,42 @@
+[
+  {
+    "name": "embedding_vocab_shard", "scenario": "Embedding lookup: 128 token IDs from a 4096-row vocabulary shard, hidden size 768",
+    "dtype": "fp16", "input_shape": [4096,768], "output_shape": [128,768],
+    "axis": 0, "index_pattern": "hashed", "tile": 512
+  },
+  {
+    "name": "beam_search_kv_reorder", "scenario": "Beam search: reorder four beam KV tensors, including duplicate parent beams",
+    "dtype": "fp16", "input_shape": [4,12,128,64], "output_shape": [4,12,128,64],
+    "axis": 0, "indices": [1,1,3,0], "tile": 256
+  },
+  {
+    "name": "beam_search_kv_reorder_short", "scenario": "Beam search short-context counterpart: four beams, 16 cached tokens, duplicate parents",
+    "dtype": "fp16", "input_shape": [4,12,16,64], "output_shape": [4,12,16,64],
+    "axis": 0, "indices": [1,1,3,0], "tile": 512
+  },
+  {
+    "name": "vit_token_pruning_tail", "scenario": "ViT-sized token pruning: retain 65 of 197 tokens, hidden size 768, partial final tile",
+    "dtype": "fp16", "input_shape": [1,197,768], "output_shape": [1,65,768],
+    "axis": 1, "index_pattern": "permuted", "tile": 512
+  },
+  {
+    "name": "moe_expert_token_pack", "scenario": "One MoE expert: pack 127 selected tokens from a 512-token microbatch, hidden size 1024",
+    "dtype": "fp16", "input_shape": [512,1024], "output_shape": [127,1024],
+    "axis": 0, "index_pattern": "permuted", "tile": 1024
+  },
+  {
+    "name": "moe_expert_token_pack_small", "scenario": "Smaller MoE expert load: pack 31 selected tokens from the same 512-token microbatch",
+    "dtype": "fp16", "input_shape": [512,1024], "output_shape": [31,1024],
+    "axis": 0, "index_pattern": "permuted", "tile": 512
+  },
+  {
+    "name": "cnn_channel_selection", "scenario": "CNN channel pruning: select 24 of 64 channels in an NCHW feature map",
+    "dtype": "fp32", "input_shape": [1,64,28,28], "output_shape": [1,24,28,28],
+    "axis": 1, "index_pattern": "permuted", "tile": 512
+  },
+  {
+    "name": "llm_logits_shortlist_tail", "scenario": "Shared vocabulary shortlist: select 1001 logits for each of two sequences, partial final tile",
+    "dtype": "fp32", "input_shape": [2,32000], "output_shape": [2,1001],
+    "axis": 1, "index_pattern": "permuted", "tile": 512
+  }
+]

@@ -32,19 +32,22 @@ padding are included in the host comparison.
 - PE0 initializes static shared input/output/reference buffers. The existing
   `MultiThreadResCheckSync` protocol publishes inputs and waits for all four
   completion slots before PE0 checks results. Other PEs do not print results.
-- PTO v0.58 MGATHER/MSCATTER indices use **element units**. The kernels no
-  longer multiply these indices by dtype size. The view-copy public base
-  offsets still use bytes, and its public strides still use elements.
-- Both Makefiles disable `linxv5-enable-bfi-opt`: the validated compiler's
-  symmetric-constant path produces incompatible HL.BFI immediates. In the
-  failing view-copy case, `{4,4}` was constructed as `{132,0}`. This is an
-  explicit build compatibility setting, not a compiler/model source fix.
+- Current PTO 0.58.4+ MGATHER/MSCATTER indices use **byte displacements**.
+  Both kernels multiply logical element offsets by the transfer dtype size;
+  gather's index-buffer lookup separately scales by the index dtype size.
+  The view-copy public base offsets use bytes and public strides use elements.
+  This restores correctness with the current model; the historical 09-07
+  model below used element indices and is incompatible with these kernels.
+- Both Makefiles and the network runner retain `linxv5-enable-bfi-opt=false`:
+  the original compiler's symmetric-constant path produced incompatible
+  HL.BFI immediates (`{4,4}` became `{132,0}`). This is an explicit compatibility
+  setting, not a compiler/model source fix or a fresh diagnosis of the new compiler.
 - Integer fixtures generate integers directly. Floating-to-integer rounding
   in the existing environment differed from C++ truncation; guest-only
   references hid the discrepancy. FP16/FP32 fixtures retain fractional data.
-- Success messages use literal strings; the bundled libc's formatted numeric
-  output also encounters the old HL.BFI behavior. Numeric acceptance comes
-  from the host dump comparison and the guest return value.
+- Success messages use literal strings because the original bundled libc's
+  formatted numeric output also encountered that HL.BFI behavior. Numeric
+  acceptance comes from the host dump comparison and the guest return value.
 
 ## Validated result (2026-09-07)
 
@@ -61,3 +64,86 @@ Local checkout baselines: LLVM `611105f2be11`, TileOP `a795b973020d`,
 SuperScalarModel `a5dca25a5a68`. Existing installed compiler and gfrun binaries
 were used; those external repositories were not changed or rebuilt. This is
 functional correctness validation, not a timing-model or performance result.
+
+## Network-inspired cases and gfsim
+
+The two `network_cases.json` manifests add six view-copy and eight gather cases.
+They are synthetic operator scenarios using network-like shapes, not traces
+captured from a full network:
+
+- `view_copy`: attention split/merge heads, fused QKV K extraction, a GQA KV
+  window, NCHW-to-NHWC conversion, and strided KV cache update.
+- `gather_v2`: embedding vocabulary shard, beam KV reorder with duplicate
+  parents, ViT token pruning, one MoE expert's token pack, CNN channel selection,
+  and shared logits shortlist. Beam reorder and MoE pack each have two sizes.
+  Includes non-power-of-two shapes and tail tiles.
+
+Run from the repository root (Python 3.10+ and NumPy required):
+
+```sh
+python3 benchmark/one-level-arch/test/solution/common/run_network_cases.py \
+  --compiler-dir /path/to/linx_blockisa_llvm_musl/bin \
+  --model-dir /path/to/SuperScalarModel \
+  --output benchmark/one-level-arch/output/solution/network_cases
+```
+
+Use `--operator view_copy` / `--operator gather_v2`, or repeat `--case NAME`
+to select individual manifest entries. `--build-only` needs no simulator.
+Each operator also has a `compile.network` wrapper; the original `compile.all`
+and its six-case checker remain the small functional regression suite.
+
+The runner links host-generated input/index/output data into each ELF. There
+is no executed initialization, scalar reference, output printing, or host I/O
+in the benchmark. gfrun and gfsim run the **same kernel ELF** on four PEs with
+disjoint stacks; simulator termination observes all PEs. Functional acceptance
+requires exit 0, R2=0 and exact agreement with an independent NumPy golden,
+including prefix/suffix guards and all unwritten holes in strided output.
+Only functionally passing cases proceed to gfsim.
+
+Timing acceptance requires exit 0, one `Total Cycles` field and the final
+`SuperScalar Report Stop` marker. Total cycles include kernel and entry/exit;
+there is no empty-baseline subtraction or precise instruction-level ROI.
+`--clock-mhz 1650` is an explicit time-conversion assumption;
+cycles are the primary result. **Effective data read+write GB/s** uses selected
+input bytes plus output bytes (`2 * output_elements * dtype_bytes / time`).
+The CSV also keeps payload-only throughput and two gather index conventions:
+count the uint32 index vector once (`4 * index_count` bytes), or count the
+current generic kernel's lookup per output lane (`4 * output_elements` bytes).
+These are logical effective bandwidths, not physical traffic, whole-device
+bandwidth or measured hardware results. CellReg byte counters in the simulator
+log are register-file traffic and must not be labeled HBM/SL2 bandwidth.
+Index/layout timing sensitivity is not calibrated by these runs.
+
+An initial empty-baseline pilot on model `ed5b1d9e` aborted inside
+`ReportTopdown`. Its cycle count is not accepted or subtracted from any
+performance result.
+
+The output directory contains `REPORT.md`, `results.csv`, `results.json`,
+`provenance.json`, and per-case ELF, disassembly, commands/logs, binary inputs,
+goldens and output dumps. Timeout/failure returns nonzero and does not publish
+a valid timing. Reports, logs and intermediate artifacts are local run outputs;
+use the generated `provenance.json` to identify the exact measured versions.
+
+## gfsim regression mode
+
+The six original fixtures now also support an explicit quiet timing build:
+
+```sh
+python3 benchmark/one-level-arch/test/solution/common/check_gfrun.py \
+  --compiler-dir /path/to/compiler/bin \
+  --gfrun /path/to/SuperScalarModel/bin/gfrun \
+  --gfsim /path/to/SuperScalarModel/bin/gfsim \
+  --output /path/to/results
+```
+
+`--gfsim` builds with `gfsim=on` / `GFSIM`, suppressing guest printf/puts because
+this model does not support stdout/stderr syscalls. Scalar checks and return
+values remain present. The runner first requires gfrun exit 0, R2=0 and exact
+host golden agreement for that **same ELF**, then requires gfsim exit 0 and a
+complete cycle report. It saves the ELFs and returns nonzero for any failure.
+The default gfrun-only mode retains its guest PASS message requirement.
+
+A completed gfsim report is a liveness/timing result, not a gfsim accuracy
+claim. In particular its process exit code does not validate guest `main`'s
+return value. For these fixture ELFs, timing also includes initialization and
+scalar checks; use the network runner for kernel-focused timing.
