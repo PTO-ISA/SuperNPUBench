@@ -2,6 +2,7 @@
 
 #include <common/pto_tileop.hpp>
 #include <cstdint>
+#include <utility>
 
 // fa_lowp log-domain softmax + MXFP4 quantization — algorithms B/C.
 // =====================================================================
@@ -33,6 +34,8 @@ using namespace pto;
 #endif
 
 // 组 max 来源（设计意图）：
+//   FA_ALGB_GM_FUSED=2 : Algo C direct BF16 CELL/byte-slot broadcast (PTO #358).
+//                        Requires the dual-subview/valid-column TileOP fix.
 //   FA_ALGB_GM_FUSED=1 : 直接使用 fixp/CUBE 产生的 GroupMaxOut；每个 group
 //                        的值作为 TROWEXPANDEXPDIF 的 row-broadcast 输入，不能
 //                        额外重算 TROWMAX。
@@ -41,6 +44,9 @@ using namespace pto;
 #ifndef FA_ALGB_GM_FUSED
 #define FA_ALGB_GM_FUSED 0
 #endif
+static_assert(FA_ALGB_GM_FUSED >= 0 && FA_ALGB_GM_FUSED <= 2);
+static_assert(FA_ALGB_GM_FUSED != 2 || FA_ALGB_ALGO_C,
+              "direct GroupMax mode currently requires Algo C");
 
 constexpr int kPeNum = 4;
 constexpr int kMxGroup = 32;
@@ -76,6 +82,9 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
                   "fa_lowp_algB requires a 128-row cooperative Q tile");
     static_assert(Sq % kGroupM == 0 && Skv % kTk == 0);
     static_assert(qD % kMxGroup == 0 && kTk % kMxGroup == 0);
+    // Tk=256 currently trips the model's raw tile spill carrier check.
+    static_assert(FA_ALGB_GM_FUSED != 2 || kTk == 128,
+                  "direct GroupMax mode is currently validated only for Tk=128");
     static_assert((kPScaleCols & (kPScaleCols - 1)) == 0,
                   "group partitioning requires a power-of-two block count");
 
@@ -268,7 +277,9 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             // 把 [M, kTk] 的 score 沿 K 切成 kPScaleCols 个 32 列一组（一个 MX group）
             auto blocks =
                 TPARTVIEW<Bf16ScoreGroupTile, 1, kPScaleCols>(score);
-#if FA_ALGB_GM_FUSED
+            Bf16GroupMaxTile p3Group;
+            TSUBS(p3Group, tGroupMaxB, static_cast<__bf16>(kLn4));
+#if FA_ALGB_GM_FUSED == 1
             // 组 max 取 fused GroupMaxOut：bf16 [M,G] 拓成 fp32（fp32 CELL=1 列，
             // TPARTVIEW 才能把单组干净切开；bf16→fp32 无损），再降回 bf16。
             Fp32GroupMaxTile gMaxF32;
@@ -282,6 +293,26 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             Bf16RowValueTile localSum;
             TEXPANDS(localSum, static_cast<__bf16>(0.0f));
 #endif
+#if FA_ALGB_GM_FUSED == 2
+            // A BF16 M32 CELL contains two group maxima. Bind that CELL,
+            // then select the group using its byte offset (0 or 2).
+            using Bf16GroupPair = VecTileM32<__bf16, kPeM, 2>;
+            auto groupPairs =
+                TPARTVIEW<Bf16GroupPair, 1, kPScaleCols / 2>(p3Group);
+            auto quantizeGroup = [&]<size_t Group>() {
+                auto scoreView = blocks[0][Group];
+                auto maxView = groupPairs[0][Group / 2];
+                Bf16ScoreGroupTile p4;
+                TROWEXPANDEXPDIF<Bf16ScoreGroupTile,
+                    Bf16ScoreTile, Bf16ScoreGroupTile,
+                    Bf16GroupMaxTile, Bf16GroupPair, 2 * (Group % 2)>(
+                        p4, scoreView, maxView);
+                TCVT(pFragments[0][Group], p4);
+            };
+            [&]<size_t... Groups>(std::index_sequence<Groups...>) {
+                (quantizeGroup.template operator()<Groups>(), ...);
+            }(std::make_index_sequence<kPScaleCols>{});
+#else
 #pragma clang loop unroll(full)
             for (int block = 0; block < kPScaleCols; ++block) {
                 auto sView = blocks[0][block];
@@ -319,16 +350,15 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
                 TADD(localSum, localSum, contrib);
 #endif
             }
+#endif
             P p = TASSEMBLY<P>(std::move(pFragments));
 
             // P scale E8M0 = floor_pow2(exp(P3 - R)) for every group at once.
             // Keeping the four valid scales in a single [M,G] CELL gives the
             // contiguous-valid layout TMATMUL_MX expects (see the PScale note).
             // 一次性给所有组算 E8M0 scale：E = floor_pow2(m/4) = floor_pow2(exp(G-R-ln4))
-            Bf16GroupMaxTile p3Group;
             Bf16GroupMaxTile p5Group;
             PScale pScale;
-            TSUBS(p3Group, tGroupMaxB, static_cast<__bf16>(kLn4));  // 所有组的 G-ln4
             TROWEXPANDEXPDIF(p5Group, p3Group, runningMaxGrid);            // 所有组的 m/4
             TCVT<LINX_RDN>(pScale, p5Group);                        // E8M0（单 CELL）
 
