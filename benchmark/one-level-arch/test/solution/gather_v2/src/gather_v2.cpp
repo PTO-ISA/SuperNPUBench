@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "multi_thread_res_check.h"
+#include "../../common/test_log.h"
 #include "solution/gather_v2/gather_v2.hpp"
 
 #ifndef GATHER_DTYPE
@@ -90,13 +91,13 @@ int main() {
   for (int dim = 0; dim < RANKs; ++dim) {
     if (input_shape[dim] == 0 || output_shape[dim] == 0) {
       if (get_thread_idx() == 0) {
-        printf("FAIL: shape[%d] must be positive\n", dim);
+        SOLUTION_TEST_PRINTF("FAIL: shape[%d] must be positive\n", dim);
       }
       return 2;
     }
     if (dim != GATHER_DIMs && input_shape[dim] != output_shape[dim]) {
       if (get_thread_idx() == 0) {
-        printf("FAIL: non-gather dimension %d differs (%u vs %u)\n", dim,
+        SOLUTION_TEST_PRINTF("FAIL: non-gather dimension %d differs (%u vs %u)\n", dim,
                input_shape[dim], output_shape[dim]);
       }
       return 2;
@@ -109,7 +110,7 @@ int main() {
       output_shape_elements != static_cast<std::uint64_t>(OUTPUT_ELEMENTSs) ||
       output_shape[GATHER_DIMs] != INDEX_ELEMENTSs) {
     if (get_thread_idx() == 0) {
-      printf("FAIL: inconsistent test shape or element count\n");
+      SOLUTION_TEST_PRINTF("FAIL: inconsistent test shape or element count\n");
     }
     return 2;
   }
@@ -184,7 +185,7 @@ int main() {
 
     if (has_nan || difference > tolerance) {
       if (mismatch_count < 8) {
-        printf("Mismatch[%d]: actual=%f expected=%f diff=%f tol=%f\n", i,
+        SOLUTION_TEST_PRINTF("Mismatch[%d]: actual=%f expected=%f diff=%f tol=%f\n", i,
                actual, expected, difference, tolerance);
       }
       ++mismatch_count;
@@ -192,10 +193,10 @@ int main() {
   }
 
   if (mismatch_count != 0) {
-    printf("FAIL: gather_v2 found %d mismatches\n", mismatch_count);
+    SOLUTION_TEST_PRINTF("FAIL: gather_v2 found %d mismatches\n", mismatch_count);
     return 1;
   }
 
-  puts("PASS: gather_v2 all output elements checked");
+  SOLUTION_TEST_PUTS("PASS: gather_v2 all output elements checked");
   return 0;
 }

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+script_dir=$(cd -- "$(dirname -- "$0")" && pwd)
+python3 "$script_dir/../common/run_network_cases.py" \
+    --compiler-dir "$COMPILER_DIR" --operator view_copy --build-only "$@"

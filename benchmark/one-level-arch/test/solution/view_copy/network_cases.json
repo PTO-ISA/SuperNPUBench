@@ -1,0 +1,35 @@
+[
+  {
+    "name": "bert_attention_split_heads", "scenario": "BERT-sized attention: [B,S,H,D] to contiguous [B,H,S,D]",
+    "dtype": "fp16", "shape": [1,12,128,64],
+    "input_stride": [98304,64,768,1], "output_stride": [98304,8192,64,1], "tile": 512
+  },
+  {
+    "name": "bert_attention_merge_heads", "scenario": "Attention output: [B,H,S,D] to contiguous [B,S,H,D]",
+    "dtype": "fp16", "shape": [1,128,12,64],
+    "input_stride": [98304,64,8192,1], "output_stride": [98304,768,64,1], "tile": 512
+  },
+  {
+    "name": "bert_fused_qkv_extract_k", "scenario": "Materialize K slice from a fused [B,S,3,H,D] projection",
+    "dtype": "fp16", "shape": [1,128,12,64],
+    "input_stride": [294912,2304,64,1], "output_stride": [98304,768,64,1],
+    "input_offset_bytes": 1536, "tile": 512
+  },
+  {
+    "name": "gqa_kv_window_127", "scenario": "GQA: materialize a 127-token window at position 1024 in [1,8,2048,128] KV cache",
+    "dtype": "fp16", "shape": [1,8,127,128],
+    "input_stride": [2097152,262144,128,1], "output_stride": [130048,16256,128,1],
+    "input_offset_bytes": 262144, "tile": 512
+  },
+  {
+    "name": "cnn_nchw_to_nhwc", "scenario": "CNN feature map [1,64,28,28] NCHW to NHWC",
+    "dtype": "fp32", "shape": [1,28,28,64],
+    "input_stride": [50176,28,1,784], "output_stride": [50176,1792,64,1], "tile": 512
+  },
+  {
+    "name": "gqa_kv_cache_update", "scenario": "Copy 16 new tokens into positions 2032:2048 of [1,8,2048,128] KV cache",
+    "dtype": "fp16", "shape": [1,8,16,128],
+    "input_stride": [16384,2048,128,1], "output_stride": [2097152,262144,128,1],
+    "output_offset_bytes": 520192, "tile": 512
+  }
+]
