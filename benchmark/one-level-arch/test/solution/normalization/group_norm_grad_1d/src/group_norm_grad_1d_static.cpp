@@ -115,14 +115,8 @@ int main() {
     }
 #endif
 
-    group_norm_grad_1d_fused_params_static<dtype, PE_NUM>(
-        dy, x, mean, rstd, gamma,  params_workspace);
-    // Each PE consumes only the parameter groups it produced above.
-    // Add a stage barrier if parameters and dx use different PE ownership.
-    group_norm_grad_1d_dx_static<dtype, PE_NUM>(
-        dy, x, rstd, gamma,  params_workspace, dx);
-    group_norm_grad_1d_gamma_beta_static<dtype, PE_NUM>(
-        dy, x, mean, rstd,  dgamma, dbeta);
+  group_norm_grad_1d_static<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
+      params_workspace, dx, dgamma, dbeta);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

@@ -14,8 +14,8 @@
 // All pointers required (dy,x,mean,rstd,gamma,dx,dgamma,dbeta,workspace).
 // tiling[10]: N,C,G,HxW,reduce_hw,reduce_c,dx_hw,dx_c,gb_d,gb_g.
 // Data Tiles use 32 KiB FP32 / 16 KiB FP16. Row-reduction sources <=2 KiB.
-// Spatial, parameter and dx kernels share (n,g) ownership.
-// The test calls all four stages in order without an inter-stage PE barrier.
+// One kernel runs all four stages; each PE owns complete groups across N.
+// Every workspace read has a producer on the same PE; no inter-PE barrier.
 //
 // Torch CUDA launch 总览 (NVIDIA, warp=32):
 //   Step1 ComputeInternalGradientsCUDAKernel
@@ -324,109 +324,106 @@ struct Config {
 } // namespace gn_grad
 
 template <typename dtype, int peNum>
-__attribute__((noinline)) void group_norm_grad_spatial(dtype *dy, dtype *x,
-                                                       const int64_t *tiling,
-                                                       float *workspace) {
-  static_assert(peNum == 4);
-  gn_grad::Config t(tiling);
-  const uint32_t tid = get_thread_idx();
-  if (!t.valid() || tid >= peNum)
-    return;
-  for (int64_t ng = tid; ng < t.N * t.G; ng += peNum) {
-    const int64_t n = ng / t.G, g = ng % t.G;
-    for (int64_t d = 0; d < t.D; d += t.rc)
-      gn_grad::spatial_block(dy, x, workspace, workspace + t.N * t.C, t.C, t.H,
-                             n, g * t.D + d, t.rh);
-  }
-}
-
-template <typename dtype, int peNum>
 __attribute__((noinline)) void
-group_norm_grad_fused_params(dtype *gamma, float *mean, float *rstd,
-                             const int64_t *tiling, float *workspace) {
+group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
+                        dtype *gamma, const int64_t *tiling, float *workspace,
+                        dtype *dx, dtype *dgamma, dtype *dbeta) {
   static_assert(peNum == 4);
-  gn_grad::Config t(tiling);
+  const gn_grad::Config t(tiling);
   const uint32_t tid = get_thread_idx();
   if (!t.valid() || tid >= peNum)
     return;
-  using GH = global_tensor<dtype, RowMajor<-1, -1>>;
-  using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::CubeM32, -1, -1>;
-  using TF = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, -1>;
-  using TV = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, 1>;
-  float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
-  for (int64_t ng = tid; ng < t.N * t.G; ng += peNum) {
-    if (t.D == 4) {
-      using H4 = Tile<Location::Vec, dtype, 32, 4, BLayout::CubeM32, -1, -1>;
-      using F4 = Tile<Location::Vec, float, 32, 4, BLayout::CubeM32, -1, -1>;
-      using V4 = Tile<Location::Vec, float, 32, 4, BLayout::CubeM32, -1, 1>;
-      gn_grad::fused_params_group<dtype, GH, GF, H4, F4, V4>(
-          gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N, t.C,
-          t.G, t.D, ng / t.G, ng % t.G, 1.0f / static_cast<float>(t.D * t.H));
-      continue;
-    }
-    gn_grad::fused_params_group<dtype, GH, GF, TH, TF, TV>(
-        gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N, t.C,
-        t.G, t.D, ng / t.G, ng % t.G, 1.0f / static_cast<float>(t.D * t.H));
+  // One PE owns a complete group range across every batch and all stages.
+  // gamma/beta only consume ds/db written by this PE; no cross-PE barrier.
+  const int64_t groups_per_pe = (t.G + peNum - 1) / peNum;
+  const int64_t group_begin = tid * groups_per_pe;
+  const int64_t group_end =
+      group_begin + groups_per_pe < t.G ? group_begin + groups_per_pe : t.G;
+  // Stage 1: spatial.
+  {
+    for (int64_t batch = 0; batch < t.N; ++batch)
+      for (int64_t ng = batch * t.G + group_begin; ng < batch * t.G + group_end;
+           ++ng) {
+        const int64_t n = ng / t.G, g = ng % t.G;
+        for (int64_t d = 0; d < t.D; d += t.rc)
+          gn_grad::spatial_block(dy, x, workspace, workspace + t.N * t.C, t.C,
+                                 t.H, n, g * t.D + d, t.rh);
+      }
   }
-}
-
-template <typename dtype, int peNum>
-__attribute__((noinline)) void
-group_norm_grad_dx(dtype *dy, dtype *x, dtype *gamma, float *rstd,
-                   const int64_t *tiling, float *workspace, dtype *dx) {
-  static_assert(peNum == 4);
-  gn_grad::Config t(tiling);
-  const uint32_t tid = get_thread_idx();
-  if (!t.valid() || tid >= peNum)
-    return;
-  using GH = global_tensor<dtype, RowMajor<-1, -1>>;
-  using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 1, 256, BLayout::CubeM32, -1, -1>;
-  using TF = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, -1>;
-  using TV = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, 1>;
-  float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
-  for (int64_t ng = tid; ng < t.N * t.G; ng += peNum) {
-    const int64_t n = ng / t.G, g = ng % t.G;
-    for (int64_t d = 0; d < t.D; d += t.dc) {
-      const int64_t rows = t.D - d < t.dc ? t.D - d : t.dc;
-      if (t.dc > 1)
-        gn_grad::dx_block(dy, x, gamma, rstd, c2, c3, dx, t.C, t.G, t.H, n, g,
-                          g * t.D + d, rows, t.dh);
-      else
-        gn_grad::dx_nc<dtype, GH, GF, TH, TF, TV>(dy, x, gamma, rstd, c2, c3,
-                                                  dx, t.N, t.C, t.G, t.D, t.H,
-                                                  t.dh, n, g * t.D + d);
-    }
+  // Stage 2: fused parameters.
+  {
+    using GH = global_tensor<dtype, RowMajor<-1, -1>>;
+    using GF = global_tensor<float, RowMajor<-1, -1>>;
+    using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::CubeM32, -1, -1>;
+    using TF = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, -1>;
+    using TV = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, 1>;
+    float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
+    for (int64_t batch = 0; batch < t.N; ++batch)
+      for (int64_t ng = batch * t.G + group_begin; ng < batch * t.G + group_end;
+           ++ng) {
+        if (t.D == 4) {
+          using H4 =
+              Tile<Location::Vec, dtype, 32, 4, BLayout::CubeM32, -1, -1>;
+          using F4 =
+              Tile<Location::Vec, float, 32, 4, BLayout::CubeM32, -1, -1>;
+          using V4 = Tile<Location::Vec, float, 32, 4, BLayout::CubeM32, -1, 1>;
+          gn_grad::fused_params_group<dtype, GH, GF, H4, F4, V4>(
+              gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N,
+              t.C, t.G, t.D, ng / t.G, ng % t.G,
+              1.0f / static_cast<float>(t.D * t.H));
+          continue;
+        }
+        gn_grad::fused_params_group<dtype, GH, GF, TH, TF, TV>(
+            gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N,
+            t.C, t.G, t.D, ng / t.G, ng % t.G,
+            1.0f / static_cast<float>(t.D * t.H));
+      }
   }
-}
-
-template <typename dtype, int peNum>
-__attribute__((noinline)) void
-group_norm_grad_gamma_beta(float *mean, float *rstd, const int64_t *tiling,
-                           float *workspace, dtype *dgamma, dtype *dbeta) {
-  static_assert(peNum == 4);
-  gn_grad::Config t(tiling);
-  const uint32_t tid = get_thread_idx();
-  if (!t.valid() || tid >= peNum)
-    return;
-  const int64_t og = (t.G + t.bg - 1) / t.bg, od = (t.D + t.bd - 1) / t.bd;
-  for (int64_t task = tid; task < og * od; task += peNum) {
-    const int64_t g = task / od * t.bg, d = task % od * t.bd;
-    const int64_t rows = t.G - g < t.bg ? t.G - g : t.bg,
-                  cols = t.D - d < t.bd ? t.D - d : t.bd;
-    if (cols == 4)
-      gn_grad::gamma_beta_block<dtype, 32, 4>(
-          workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N, t.C,
-          t.G, t.D, g, d, rows, cols);
-    else if (t.bd <= 256)
-      gn_grad::gamma_beta_block<dtype, 32, 256>(
-          workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N, t.C,
-          t.G, t.D, g, d, rows, cols);
-    else
-      gn_grad::gamma_beta_block<dtype, 1, 256>(
-          workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N, t.C,
-          t.G, t.D, g, d, rows, cols);
+  // Stage 3: dx.
+  {
+    using GH = global_tensor<dtype, RowMajor<-1, -1>>;
+    using GF = global_tensor<float, RowMajor<-1, -1>>;
+    using TH = Tile<Location::Vec, dtype, 1, 256, BLayout::CubeM32, -1, -1>;
+    using TF = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, -1>;
+    using TV = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, 1>;
+    float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
+    for (int64_t batch = 0; batch < t.N; ++batch)
+      for (int64_t ng = batch * t.G + group_begin; ng < batch * t.G + group_end;
+           ++ng) {
+        const int64_t n = ng / t.G, g = ng % t.G;
+        for (int64_t d = 0; d < t.D; d += t.dc) {
+          const int64_t rows = t.D - d < t.dc ? t.D - d : t.dc;
+          if (t.dc > 1)
+            gn_grad::dx_block(dy, x, gamma, rstd, c2, c3, dx, t.C, t.G, t.H, n,
+                              g, g * t.D + d, rows, t.dh);
+          else
+            gn_grad::dx_nc<dtype, GH, GF, TH, TF, TV>(
+                dy, x, gamma, rstd, c2, c3, dx, t.N, t.C, t.G, t.D, t.H, t.dh,
+                n, g * t.D + d);
+        }
+      }
+  }
+  // Stage 4: gamma/beta.
+  {
+    const int64_t od = (t.D + t.bd - 1) / t.bd;
+    for (int64_t g = group_begin; g < group_end; g += t.bg)
+      for (int64_t di = 0; di < od; ++di) {
+        const int64_t d = di * t.bd;
+        const int64_t rows = group_end - g < t.bg ? group_end - g : t.bg,
+                      cols = t.D - d < t.bd ? t.D - d : t.bd;
+        if (cols == 4)
+          gn_grad::gamma_beta_block<dtype, 32, 4>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
+              t.C, t.G, t.D, g, d, rows, cols);
+        else if (t.bd <= 256)
+          gn_grad::gamma_beta_block<dtype, 32, 256>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
+              t.C, t.G, t.D, g, d, rows, cols);
+        else
+          gn_grad::gamma_beta_block<dtype, 1, 256>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
+              t.C, t.G, t.D, g, d, rows, cols);
+      }
   }
 }
 #endif

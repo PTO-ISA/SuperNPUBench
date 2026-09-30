@@ -100,13 +100,8 @@ int main() {
   }
 #endif
 
-  group_norm_grad_spatial_static<dtype, PE_NUM>(dy, x,  workspace);
-  group_norm_grad_fused_params_static<dtype, PE_NUM>(gamma, mean, rstd,
-                                              workspace);
-  group_norm_grad_dx_static<dtype, PE_NUM>(dy, x, gamma, rstd,  workspace,
-                                    dx);
-  group_norm_grad_gamma_beta_static<dtype, PE_NUM>(mean, rstd,  workspace,
-                                            dgamma, dbeta);
+  group_norm_grad_static<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
+      workspace, dx, dgamma, dbeta);
 
 #ifdef RES_CHECK
   kernel_done[tid] = 1;

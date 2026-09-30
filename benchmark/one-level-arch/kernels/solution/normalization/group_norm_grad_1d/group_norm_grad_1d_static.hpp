@@ -353,139 +353,144 @@ inline void gamma_beta_groups(dtype *dy, dtype *x, float *mean, float *rstd,
 
 } // namespace gn_grad_1d_static
 
-// Three separate fixed-shape 4PE kernels.
-// Call stages in order with identical PE ownership for parameters and dx.
+// One fixed-shape 4PE kernel, executing all three stages in order.
+// Parameters and dx retain identical PE ownership.
 template <typename dtype, int peNum>
-__attribute__((noinline)) void group_norm_grad_1d_fused_params_static(
-    dtype *dy, dtype *x, float *mean, float *rstd,
-    dtype *gamma,  float *workspace) {
-    static_assert(peNum == 4, "normalization kernels support only 4PE");
-    // 512 logical columns occupy 64 KiB after M32 pads to 32 rows.
-    // Other data stages use 256 columns (32 KiB FP32).
-    constexpr int64_t tD = 512;
+__attribute__((noinline)) void
+group_norm_grad_1d_static(dtype *dy, dtype *x, float *mean, float *rstd,
+                          dtype *gamma, float *workspace, dtype *dx,
+                          dtype *dgamma, dtype *dbeta) {
+    // Parameters and dx retain identical (n, group-block) ownership.
+    // gamma/beta read only immutable inputs, not another PE's workspace.
+    // Stage 1: fused parameters.
+    {
+        static_assert(peNum == 4, "normalization kernels support only 4PE");
+        // 512 logical columns occupy 64 KiB after M32 pads to 32 rows.
+        // Other data stages use 256 columns (32 KiB FP32).
+        constexpr int64_t tD = 512;
 
-
-    const uint32_t tid = get_thread_idx();
-    if (tid >= static_cast<uint32_t>(peNum)) return;
-    constexpr int64_t N=256,C=4096,G=8,D=512;
-    constexpr int64_t requested_d = 512;
-    const int64_t tile_d = requested_d < tD ? requested_d : tD;
-    if (tile_d <= 0 || tile_d > tD) {
-        return;
-    }
-
-    using Types = gn_grad_1d_static::TileTypes<dtype, 1, tD>;
-    using gm_h = typename Types::gm_h;
-    using gm_f = typename Types::gm_f;
-    using tile_h = typename Types::tile_h;
-    using tile_f = typename Types::tile_f;
-    using tile_v = typename Types::tile_v;
-
-    constexpr int64_t tile_g = D <= 256 ? 8 : 1;
-    if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1)) return;
-    const int64_t outer_g = (G + tile_g - 1) / tile_g;
-    const float s = 1.0f / static_cast<float>(D);
-    for (int64_t task = tid; task < N * outer_g; task += peNum) {
-        const int64_t n = task / outer_g;
-        const int64_t g0 = (task % outer_g) * tile_g;
-        const int64_t end_g = g0 + tile_g < G ? g0 + tile_g : G;
-        for (int64_t g = g0; g < end_g; ++g) {
-            gn_grad_1d_static::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-                dy, x, mean, rstd, gamma, workspace + n * G + g,
-                N, C, G, D, n, g, s, tile_d);
+        const uint32_t tid = get_thread_idx();
+        if (tid >= static_cast<uint32_t>(peNum))
+            return;
+        constexpr int64_t N = 256, C = 4096, G = 8, D = 512;
+        constexpr int64_t requested_d = 512;
+        const int64_t tile_d = requested_d < tD ? requested_d : tD;
+        if (tile_d <= 0 || tile_d > tD) {
+            return;
         }
-    }
-}
 
-template <typename dtype, int peNum>
-__attribute__((noinline)) void group_norm_grad_1d_dx_static(
-    dtype *dy, dtype *x, float *rstd, dtype *gamma,
-     float *workspace, dtype *dx) {
-    static_assert(peNum == 4, "normalization kernels support only 4PE");
-    // M32 FP32: 32 physical rows x 256 columns = 32 KiB.
-    constexpr int64_t tD = gn_grad_1d_static::data_columns<dtype>();
+        using Types = gn_grad_1d_static::TileTypes<dtype, 1, tD>;
+        using gm_h = typename Types::gm_h;
+        using gm_f = typename Types::gm_f;
+        using tile_h = typename Types::tile_h;
+        using tile_f = typename Types::tile_f;
+        using tile_v = typename Types::tile_v;
 
-
-    const uint32_t tid = get_thread_idx();
-    if (tid >= static_cast<uint32_t>(peNum)) return;
-    constexpr int64_t N=256,C=4096,G=8,D=512;
-    constexpr int64_t tile_d = 256;
-    if (tile_d <= 0 || tile_d > tD) {
-        return;
-    }
-
-    using Types = gn_grad_1d_static::TileTypes<dtype, 1, tD>;
-    using gm_h = typename Types::gm_h;
-    using gm_f = typename Types::gm_f;
-    using tile_h = typename Types::tile_h;
-    using tile_f = typename Types::tile_f;
-    using tile_v = typename Types::tile_v;
-
-    constexpr int64_t tile_g = D <= 256 ? 8 : 1;
-    if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1)) return;
-    const int64_t outer_g = (G + tile_g - 1) / tile_g;
-    for (int64_t task = tid; task < N * outer_g; task += peNum) {
-        const int64_t n = task / outer_g;
-        const int64_t g0 = (task % outer_g) * tile_g;
-        const int64_t active_g = G - g0 < tile_g ? G - g0 : tile_g;
-        if constexpr (D <= 256 && tile_g > 1) {
-            gn_grad_1d_static::dx_groups(dy, x, rstd, gamma, workspace, dx,
-                                  N, C, G, D, n, g0, active_g);
-        } else {
-            gn_grad_1d_static::dx_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-                dy, x, rstd, gamma, workspace + n * G + g0,
-                dx, N, C, G, D, n, g0, tile_d);
-        }
-    }
-}
-
-template <typename dtype, int peNum>
-__attribute__((noinline)) void group_norm_grad_1d_gamma_beta_static(
-    dtype *dy, dtype *x, float *mean, float *rstd,
-     dtype *dgamma, dtype *dbeta) {
-    static_assert(peNum == 4, "normalization kernels support only 4PE");
-    // M32 FP32: 32 physical rows x 256 columns = 32 KiB.
-    constexpr int64_t tD = gn_grad_1d_static::data_columns<dtype>();
-
-
-    const uint32_t tid = get_thread_idx();
-    if (tid >= static_cast<uint32_t>(peNum)) return;
-    constexpr int64_t N=256,C=4096,G=8,D=512;
-    constexpr int64_t tile_d = 256;
-    if (tile_d <= 0 || tile_d > tD) {
-        return;
-    }
-
-    using Types = gn_grad_1d_static::TileTypes<dtype, 1, tD>;
-    using gm_h = typename Types::gm_h;
-    using gm_f = typename Types::gm_f;
-    using tile_h = typename Types::tile_h;
-    using tile_f = typename Types::tile_f;
-    using tile_v = typename Types::tile_v;
-
-    constexpr int64_t tile_g = 8;
-    if (tile_g < 1 || tile_g > 32 || (tile_d > 256 && tile_g != 1)) return;
-    if (tile_d <= 256) {
+        constexpr int64_t tile_g = D <= 256 ? 8 : 1;
+        if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1))
+            return;
         const int64_t outer_g = (G + tile_g - 1) / tile_g;
-        const int64_t outer_d = (D + tile_d - 1) / tile_d;
-        // Each PE owns complete output blocks; N is reduced locally.
-        for (int64_t task = tid; task < outer_g * outer_d; task += peNum) {
-            const int64_t g0 = (task / outer_d) * tile_g;
-            const int64_t d0 = (task % outer_d) * tile_d;
-            const int64_t vg = G - g0 < tile_g ? G - g0 : tile_g;
-            const int64_t vd = D - d0 < tile_d ? D - d0 : tile_d;
-            gn_grad_1d_static::gamma_beta_groups(dy, x, mean, rstd, dgamma, dbeta,
-                                         N, C, G, D, g0, d0, vg, vd);
+        const float s = 1.0f / static_cast<float>(D);
+        for (int64_t task = tid; task < N * outer_g; task += peNum) {
+            const int64_t n = task / outer_g;
+            const int64_t g0 = (task % outer_g) * tile_g;
+            const int64_t end_g = g0 + tile_g < G ? g0 + tile_g : G;
+            for (int64_t g = g0; g < end_g; ++g) {
+              gn_grad_1d_static::fused_params_group<dtype, gm_h, gm_f, tile_h,
+                                                    tile_f, tile_v>(
+                  dy, x, mean, rstd, gamma, workspace + n * G + g, N, C, G, D,
+                  n, g, s, tile_d);
+            }
         }
-        return;
     }
-    for (int64_t g = tid; g < G; g += peNum) {
-        gn_grad_1d_static::dbeta_group<dtype, gm_h, tile_h, tile_f>(
-            dy, dbeta, N, C, D, tile_d, g);
-        gn_grad_1d_static::dgamma_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-            dy, x, mean, rstd, dgamma, N, C, G, D, tile_d, g);
+    // Stage 2: dx.
+    {
+        static_assert(peNum == 4, "normalization kernels support only 4PE");
+        // M32 FP32: 32 physical rows x 256 columns = 32 KiB.
+        constexpr int64_t tD = gn_grad_1d_static::data_columns<dtype>();
+
+        const uint32_t tid = get_thread_idx();
+        if (tid >= static_cast<uint32_t>(peNum))
+            return;
+        constexpr int64_t N = 256, C = 4096, G = 8, D = 512;
+        constexpr int64_t tile_d = 256;
+        if (tile_d <= 0 || tile_d > tD) {
+            return;
+        }
+
+        using Types = gn_grad_1d_static::TileTypes<dtype, 1, tD>;
+        using gm_h = typename Types::gm_h;
+        using gm_f = typename Types::gm_f;
+        using tile_h = typename Types::tile_h;
+        using tile_f = typename Types::tile_f;
+        using tile_v = typename Types::tile_v;
+
+        constexpr int64_t tile_g = D <= 256 ? 8 : 1;
+        if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1))
+            return;
+        const int64_t outer_g = (G + tile_g - 1) / tile_g;
+        for (int64_t task = tid; task < N * outer_g; task += peNum) {
+            const int64_t n = task / outer_g;
+            const int64_t g0 = (task % outer_g) * tile_g;
+            const int64_t active_g = G - g0 < tile_g ? G - g0 : tile_g;
+            if constexpr (D <= 256 && tile_g > 1) {
+              gn_grad_1d_static::dx_groups(dy, x, rstd, gamma, workspace, dx, N,
+                                           C, G, D, n, g0, active_g);
+            } else {
+              gn_grad_1d_static::dx_group<dtype, gm_h, gm_f, tile_h, tile_f,
+                                          tile_v>(dy, x, rstd, gamma,
+                                                  workspace + n * G + g0, dx, N,
+                                                  C, G, D, n, g0, tile_d);
+            }
+        }
+    }
+    // Stage 3: gamma/beta.
+    {
+        static_assert(peNum == 4, "normalization kernels support only 4PE");
+        // M32 FP32: 32 physical rows x 256 columns = 32 KiB.
+        constexpr int64_t tD = gn_grad_1d_static::data_columns<dtype>();
+
+        const uint32_t tid = get_thread_idx();
+        if (tid >= static_cast<uint32_t>(peNum))
+            return;
+        constexpr int64_t N = 256, C = 4096, G = 8, D = 512;
+        constexpr int64_t tile_d = 256;
+        if (tile_d <= 0 || tile_d > tD) {
+            return;
+        }
+
+        using Types = gn_grad_1d_static::TileTypes<dtype, 1, tD>;
+        using gm_h = typename Types::gm_h;
+        using gm_f = typename Types::gm_f;
+        using tile_h = typename Types::tile_h;
+        using tile_f = typename Types::tile_f;
+        using tile_v = typename Types::tile_v;
+
+        constexpr int64_t tile_g = 8;
+        if (tile_g < 1 || tile_g > 32 || (tile_d > 256 && tile_g != 1))
+            return;
+        if (tile_d <= 256) {
+            const int64_t outer_g = (G + tile_g - 1) / tile_g;
+            const int64_t outer_d = (D + tile_d - 1) / tile_d;
+            // Each PE owns complete output blocks; N is reduced locally.
+            for (int64_t task = tid; task < outer_g * outer_d; task += peNum) {
+              const int64_t g0 = (task / outer_d) * tile_g;
+              const int64_t d0 = (task % outer_d) * tile_d;
+              const int64_t vg = G - g0 < tile_g ? G - g0 : tile_g;
+              const int64_t vd = D - d0 < tile_d ? D - d0 : tile_d;
+              gn_grad_1d_static::gamma_beta_groups(
+                  dy, x, mean, rstd, dgamma, dbeta, N, C, G, D, g0, d0, vg, vd);
+            }
+            return;
+        }
+        for (int64_t g = tid; g < G; g += peNum) {
+            gn_grad_1d_static::dbeta_group<dtype, gm_h, tile_h, tile_f>(
+                dy, dbeta, N, C, D, tile_d, g);
+            gn_grad_1d_static::dgamma_group<dtype, gm_h, gm_f, tile_h, tile_f,
+                                            tile_v>(dy, x, mean, rstd, dgamma,
+                                                    N, C, G, D, tile_d, g);
+        }
     }
 }
-
 
 #endif // SUPERNPU_GROUP_NORM_GRAD_1D_PTO_STATIC_HPP
