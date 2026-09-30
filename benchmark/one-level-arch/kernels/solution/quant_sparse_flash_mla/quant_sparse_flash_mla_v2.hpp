@@ -10,14 +10,25 @@
 //      Tile(VR, VC) 构造函数按 KV 块设定有效区域，因此 B.DIM 编码的是
 //      寄存器形式（"B.DIM %[reg], 0"）而非立即数形式
 //      （"B.DIM zero, %c[imm]"）。
-//   2. tileW 的 ValidCol 跟踪每个块内实际有效 KV token 数（而非全宽
-//      kTk）。行归约（TROWMAX / TROWSUM）与广播因此作用于真实有效区域
-//      ——软件 mask 为 pass2 PV 正确性而保留，但硬件现在也能看到正确
-//      的几何形状。
+//   2. Vec tile 类型保留 DYNAMIC ValidRow/ValidCol（寄存器形式 B.DIM），
+//      但 tW / tMask / tPShard 的运行时 valid 固定为全宽 kTk：CUBE 载体
+//      上 TLOAD_CUBE 不编码 lb2 且链上生产者的物理 col 均由 valid 派生，
+//      与行归约（TROWMAX / TROWSUM）lb2 的静态 Cols 在部分块时不一致
+//      （模型 Block.cpp 行归约描述符契约拒绝）。软件 mask（-1e30）保证
+//      全宽处理数值逐位等价；待上游补齐 CUBE 物理列编码后恢复动态
+//      ValidCol。
 //   3. Shared tile（协作 TMATMUL 操作数）与 Cube 累加器 tile 保持静态
 //      ——PTO v0.58 要求协作矩阵操作使用编译期有效形状（TMATMUL
 //      static_assert）。
 //   4. gmGatherKV / 迭代器不变（它们消费物理形状）。
+//   5. Vec tile 使用 M32 CELL 格式（BLayout::CubeM32，PTO-ISA #291）：
+//      物理 carrier 为 32 行 CELL 列阵（128B/CELL），elementwise /
+//      TCVT / TLOAD / TSTORE 经 B.DATR CUBE_M32 与 ND2M32 / M322ND
+//      自动编码。行归约遵循 PTO #311：目的地是保持源物理列跨度的
+//      宽载体（tileMaxWide / tileSumWide，valid [kPeRows, 1]），随后用
+//      TREDUCEPREFIXVIEW 借出首个 128B CELL 作为紧凑行值视图参与
+//      后续算术（TMAX / TADD 等带 reduction-prefix 重载）。行状态
+//      tile（m / l）的有效行恒为 kPeRows，故为静态 valid。
 //
 // 文件结构（自上而下）：
 //   Section 1 — QsmlaV2Tiles：共享类型目录（tile / GM tensor /
@@ -69,44 +80,53 @@ struct QsmlaV2Tiles {
     static constexpr bool kUseHif8Probability =
         std::is_same_v<qdtype, __hif8>;
 
-    // ---- 静态 Shared 操作数（协作 TMATMUL）----
-    using tileQMatrix = SharedMatrixLeft<qdtype, kGroupM, kTd>;
+    // ---- 协作 TMATMUL 操作数与累加器 ----
+    // B（K/V）保持 Shared（SharedMatrixRight，四 PE 共享一次加载）；
+    // A（Q/P）改为 per-PE 本地 CUBE_M32 Left 分片 [kPeRows, ·]——
+    // CubeOutputLayout 跟随本地 A 的布局，使累加器得以使用
+    // CubeAccumulatorM32（纯 Shared A/B 时模型按 localM=16 强制派生
+    // CUBE_M16，与 M32 载体的 TSTORE_CUBE M322ND 冲突）。Local-A /
+    // Shared-B 协作形式要求显式传入 core-total group_M（TMATMUL 五参
+    // 重载，LB0 编码 group_M 而非分片行数）。
     using tileKMatrix = SharedMatrixRight<kvdtype, kTk, kTd>;
-    using tilePMatrix = SharedMatrixLeft<qdtype, kGroupM, kTk>;
     using tileVMatrix = SharedMatrixRight<kvdtype, kTk, kTd>;
-    using tileQShared = SharedTile<tileQMatrix>;
     using tileKShared = SharedTile<tileKMatrix>;
-    using tilePShared = SharedTile<tilePMatrix>;
     using tileVShared = SharedTile<tileVMatrix>;
-    using tileScoreCube = CubeAccumulatorM16<float, kPeRows, kTk>;
-    using tilePVCube = CubeAccumulatorM16<float, kPeRows, kTd>;
+    using tileQLocal = CubeTileM32<qdtype, kPeRows, kTd>;   // per-PE Q 分片
+    using tilePLocal = CubeTileM32<qdtype, kPeRows, kTk>;   // per-PE P 分片
+    using tileScoreCube = CubeAccumulatorM32<float, kPeRows, kTk>;
+    using tilePVCube = CubeAccumulatorM32<float, kPeRows, kTd>;
 
-    // ---- 动态 Vec tile ----
-    // 物理形状仍为编译期 [kPeRows, kTk]（寄存器分配），但有效区域在
-    // 运行时设定。动态维度的 B.DIM 使用寄存器形式（"B.DIM %[reg], 0"）。
+    // ---- 动态 Vec tile（M32 CELL 格式）----
+    // 物理形状仍为编译期 [kPeRows, kTk] 的 M32 CELL 列阵（存储行高恒为
+    // 32，128B/CELL），但有效区域在运行时设定。动态维度的 B.DIM 使用
+    // 寄存器形式（"B.DIM %[reg], 0"）。
     using tileW =
-        Tile<Location::Vec, float, kPeRows, kTk, BLayout::RowMajor,
-             DYNAMIC, DYNAMIC>;
+        VecTileM32<float, kPeRows, kTk, DYNAMIC, DYNAMIC>;
     using tileMask = tileW;
     using tilePShard =
-        Tile<Location::Vec, qdtype, kPeRows, kTk, BLayout::RowMajor,
-             DYNAMIC, DYNAMIC>;
+        VecTileM32<qdtype, kPeRows, kTk, DYNAMIC, DYNAMIC>;
     using tileO =
-        Tile<Location::Vec, float, kPeRows, kTd, BLayout::RowMajor,
-             DYNAMIC, DYNAMIC>;
+        VecTileM32<float, kPeRows, kTd, DYNAMIC, DYNAMIC>;
     using tileOCast =
-        Tile<Location::Vec, odttype, kPeRows, kTd, BLayout::RowMajor,
-             DYNAMIC, DYNAMIC>;
-    using tileMax =
-        Tile<Location::Vec, float, kPeRows, 1, BLayout::RowMajor,
-             DYNAMIC, 1>;
+        VecTileM32<odttype, kPeRows, kTd, DYNAMIC, DYNAMIC>;
+    // 行状态（m / l）：有效形状恒为 [kPeRows, 1]，静态声明——
+    // TREDUCEPREFIXVIEW 的 SubTile 与宽载体 ValidRow 必须一致，且
+    // view 的 GetValidRow() 返回编译期常量，DYNAMIC 会得到 -1。
+    using tileMax = VecTileM32<float, kPeRows, 1, kPeRows, 1>;
     using tileSum = tileMax;
+    // PTO #311 行归约宽载体：物理保持源的列跨度 [32, kTk]，有效区域
+    // [kPeRows, 1]；归约结果落在首个 CELL，由 TREDUCEPREFIXVIEW 借出。
+    using tileMaxWide = VecTileM32<float, kPeRows, kTk, kPeRows, 1>;
+    using tileSumWide = tileMaxWide;
 
     // ---- GM tensor 与迭代器（物理形状）----
     using gmQ = global_tensor<qdtype, RowMajor<kGroupM, Config::D>>;
     using gmGatherKV = global_tensor<kvdtype, RowMajor<kTk, Config::D>>;
     using gmO = global_tensor<odttype, RowMajor<kGroupM, Config::D>>;
-    using itQ = global_iterator<gmQ, tileQMatrix>;
+    // Q 的 per-PE 分片迭代器：[kGroupM, D] 按 [kPeRows, kTd] 分块，
+    // (pe_id, dd) 即本 PE 的 Q 行分片。
+    using itQLocal = global_iterator<gmQ, tileQLocal>;
     using itK = global_iterator<gmGatherKV, tileKMatrix>;
     using itV = global_iterator<gmGatherKV, tileVMatrix>;
     using itO = global_iterator<gmO, tileOCast>;
@@ -116,7 +136,9 @@ struct QsmlaV2Tiles {
     using gmPVScratch = global_tensor<float, RowMajor<kPeRows, Config::D>>;
     using gmRowState = global_tensor<float, RowMajor<kPeRows, 1>>;
     using itProbShard = global_iterator<gmProbScratch, tilePShard>;
-    using itPShared = global_iterator<gmProbScratch, tilePMatrix>;
+    // P 分片的本地读回迭代器：prob_scratch [kGroupM, kTk] 按
+    // [kPeRows, kTk] 分块，(pe_id, 0) 即本 PE 写入的 P 分片。
+    using itPLocal = global_iterator<gmProbScratch, tilePLocal>;
     using itPVScratch = global_iterator<gmPVScratch, tileO>;
     using itRowState = global_iterator<gmRowState, tileMax>;
     using gmMask = global_tensor<float, RowMajor<kPeRows, kTk>>;
@@ -305,7 +327,7 @@ struct QsmlaV2PassEnv {
     typename Tiles::itRowState gIterMax;     // (m) 行状态
     typename Tiles::itRowState gIterSum;     // (l) 行状态
     typename Tiles::itProbShard gIterProb;   // P staging 的 PE 分片
-    typename Tiles::itPShared gIterP;        // 全宽 P staging 视图
+    typename Tiles::itPLocal gIterPLocal;     // 本 PE 的 P 分片读回视图
     typename Tiles::itPVScratch gIterPV;     // PE 私有 O 累加器
 
     // kernel 级不变量。
@@ -323,9 +345,8 @@ template <typename Env>
 static __attribute__((always_inline)) inline void qsmla_v2_init_row_state(Env& env)
 {
     using Tiles = typename Env::Tiles;
-    constexpr int kPeRows = Tiles::kPeRows;
-    typename Tiles::tileMax tMax(kPeRows);
-    typename Tiles::tileSum tSum(kPeRows);
+    typename Tiles::tileMax tMax;
+    typename Tiles::tileSum tSum;
     TEXPANDS(tMax, -1e30f);
     TEXPANDS(tSum, 0.0f);
     auto gMaxState = env.gIterMax(0, 0);
@@ -339,11 +360,10 @@ template <typename Env>
 static __attribute__((always_inline)) inline void qsmla_v2_recip_row_state(Env& env)
 {
     using Tiles = typename Env::Tiles;
-    constexpr int kPeRows = Tiles::kPeRows;
     auto gSumState = env.gIterSum(0, 0);
-    typename Tiles::tileSum tFinalSum(kPeRows);
+    typename Tiles::tileSum tFinalSum;
     TLOAD(tFinalSum, gSumState);
-    typename Tiles::tileSum tInvSum(kPeRows);
+    typename Tiles::tileSum tInvSum;
     TRECIP(tInvSum, tFinalSum);
     TSTORE(gSumState, tInvSum);
 }
@@ -368,9 +388,10 @@ static __attribute__((always_inline)) inline void qsmla_v2_reset_o_state(Env& en
 // =============================================================================
 // Section 5 — Score tile（Q @ K^T）
 //
-// 把 Q 与当前 KV 块经 Shared tile 送入协作 TMATMUL，将 kDb 个 D 切片
-// 累加进一个 Cube score tile，再落到 PE 的 score scratch。pass1 与
-// pass2 共用（两趟方案会重算同一条 QK^T 链）。
+// 本 PE 的 Q 分片（本地 CUBE_M32 Left，[kPeRows, kTd]）与当前 KV 块的
+// Shared K 送入 Local-A/Shared-B 协作 TMATMUL（显式 group_M = kGroupM），
+// 把 kDb 个 D 切片累加进一个 M32 Cube score tile，再落到 PE 的 score
+// scratch。pass1 与 pass2 共用（两趟方案会重算同一条 QK^T 链）。
 // =============================================================================
 template <typename Env, typename QIter, typename KIter>
 static __attribute__((always_inline)) inline void qsmla_v2_compute_score_tile(
@@ -378,22 +399,22 @@ static __attribute__((always_inline)) inline void qsmla_v2_compute_score_tile(
 {
     using Tiles = typename Env::Tiles;
     constexpr int kDb = Tiles::kDb;
+    constexpr int kGroupM = Tiles::kGroupM;
     typename Tiles::tileScoreCube tScoreCube;
 #pragma clang loop unroll(full)
     for (int dd = 0; dd < kDb; ++dd) {
-        typename Tiles::tileQShared tQShared;
+        typename Tiles::tileQLocal tQLocal;
         typename Tiles::tileKShared tKShared;
-        auto gQ = q_iter(0, dd);
+        auto gQ = q_iter(env.pe_id, dd);
         auto gK = k_iter(0, dd);
-        TLOAD<typename Tiles::tileQMatrix, 1>(tQShared, gQ);
+        TLOAD_CUBE(tQLocal, gQ);
         TLOAD<typename Tiles::tileKMatrix, 1>(tKShared, gK);
         if (dd == 0) {
-            TMATMUL(tScoreCube, tQShared, tKShared,
-                    fixp::keep_acc());
+            TMATMUL(tScoreCube, tQLocal, tKShared,
+                    fixp::keep_acc(), kGroupM);
         } else {
-            TMATMUL_ACC(tScoreCube, tScoreCube,
-                        tQShared, tKShared,
-                        fixp::keep_acc());
+            TMATMUL_ACC(tScoreCube, tScoreCube, tQLocal, tKShared,
+                        fixp::keep_acc(), kGroupM);
         }
     }
 
@@ -433,38 +454,48 @@ static __attribute__((always_inline)) inline void qsmla_v2_visit_source_pass1(
             range_begin, logical_begin, logical_count, allow_direct);
         typename Tiles::itK gIterK(kv.tile_ptr);
 
-        typename Tiles::tileMax tMax(kPeRows);
-        typename Tiles::tileSum tSum(kPeRows);
+        typename Tiles::tileMax tMax;
+        typename Tiles::tileSum tSum;
         TLOAD(tMax, gMaxState);
         TLOAD(tSum, gSumState);
 
         qsmla_v2_compute_score_tile(env, q_iter, gIterK);
 
-        // 动态 tileW：ValidCol = valid_rows（实际 KV token 数）。
-        // 下面的 TROWMAX / TROWSUM 作用于真实几何——寄存器形式的
-        // B.DIM 告诉硬件有多少列是有意义的。
-        typename Tiles::tileW tW(kPeRows, kv.valid_rows);
+        // M32 载体按全宽 valid 运行（kTk）：TLOAD_CUBE 不编码 lb2，CUBE
+        // 链上所有生产者的物理 col 都从 valid 区域派生，而 TROWMAX /
+        // TROWSUM 的 lb2 用 tile 类型的静态 Cols——部分块时两者不一致
+        // 会被模型的行归约描述符契约拒绝（Block.cpp:2536）。软件 mask
+        //（-1e30）保证全宽处理数值逐位等价：exp(-1e30 - m) 下溢为精确
+        // 0，行 max 由有效列主导。动态 ValidCol 待上游补齐 CUBE 加载
+        // 的物理列编码后恢复。
+        typename Tiles::tileW tW(kPeRows, kTk);
         TLOAD(tW, env.gScore);
         TMULS(tW, tW, score_scale);
         typename Tiles::itMask gIterMask(env.mask_buf);
-        typename Tiles::tileMask tMask(kPeRows, kv.valid_rows);
+        typename Tiles::tileMask tMask(kPeRows, kTk);
         auto gMask = gIterMask(0, 0);
         TLOAD(tMask, gMask);
         TADD(tW, tW, tMask);
 
-        typename Tiles::tileMax tLocalMax(kPeRows);
-        typename Tiles::tileMax tNewMax(kPeRows);
-        TROWMAX(tLocalMax, tW);
+        // PTO #311：行归约写入保持源物理列跨度的宽载体，再用
+        // TREDUCEPREFIXVIEW 借出首个 CELL 作为紧凑行值参与算术。
+        typename Tiles::tileMaxWide tLocalMaxWide;
+        TROWMAX(tLocalMaxWide, tW);
+        auto tLocalMax =
+            TREDUCEPREFIXVIEW<typename Tiles::tileMax>(tLocalMaxWide);
+        typename Tiles::tileMax tNewMax;
         TMAX(tNewMax, tMax, tLocalMax);
-        typename Tiles::tileMax tScale(kPeRows);
+        typename Tiles::tileMax tScale;
         TSUB(tScale, tMax, tNewMax);
         TEXP(tScale, tScale);
-        typename Tiles::tileSum tScaledOldSum(kPeRows);
+        typename Tiles::tileSum tScaledOldSum;
         TMUL(tScaledOldSum, tSum, tScale);
         TROWEXPANDSUB(tW, tW, tNewMax);
         TEXP(tW, tW);
-        typename Tiles::tileSum tLocalSum(kPeRows);
-        TROWSUM(tLocalSum, tW);
+        typename Tiles::tileSumWide tLocalSumWide;
+        TROWSUM(tLocalSumWide, tW);
+        auto tLocalSum =
+            TREDUCEPREFIXVIEW<typename Tiles::tileSum>(tLocalSumWide);
         TADD(tSum, tScaledOldSum, tLocalSum);
         tMax = tNewMax;
         TSTORE(gMaxState, tMax);
@@ -485,6 +516,7 @@ static __attribute__((always_inline)) inline void qsmla_v2_visit_source_pass2(
     constexpr int kTd = Tiles::kTd;
     constexpr int kPeRows = Tiles::kPeRows;
     constexpr int kDb = Tiles::kDb;
+    constexpr int kGroupM = Tiles::kGroupM;
     const float score_scale =
         env.softmax_scale * env.q_descale * kv_descale;
     const int block_count = (logical_count + kTk - 1) / kTk;
@@ -498,19 +530,20 @@ static __attribute__((always_inline)) inline void qsmla_v2_visit_source_pass2(
         typename Tiles::itK gIterK(kv.tile_ptr);
         typename Tiles::itV gIterV(kv.tile_ptr);
 
-        typename Tiles::tileMax tMax(kPeRows);
-        typename Tiles::tileSum tInvSum(kPeRows);
+        typename Tiles::tileMax tMax;
+        typename Tiles::tileSum tInvSum;
         TLOAD(tMax, gMaxState);
         TLOAD(tInvSum, gSumState);
 
         qsmla_v2_compute_score_tile(env, q_iter, gIterK);
 
-        // 动态 tileW，ValidCol 为实际有效 token 数。
-        typename Tiles::tileW tW(kPeRows, kv.valid_rows);
+        // 全宽 tileW（见 pass1 注释：CUBE 部分有效列与行归约 lb2 契约
+        // 不兼容，mask 保证等价）。
+        typename Tiles::tileW tW(kPeRows, kTk);
         TLOAD(tW, env.gScore);
         TMULS(tW, tW, score_scale);
         typename Tiles::itMask gIterMask(env.mask_buf);
-        typename Tiles::tileMask tMask(kPeRows, kv.valid_rows);
+        typename Tiles::tileMask tMask(kPeRows, kTk);
         auto gMask = gIterMask(0, 0);
         TLOAD(tMask, gMask);
         TADD(tW, tW, tMask);
@@ -521,8 +554,9 @@ static __attribute__((always_inline)) inline void qsmla_v2_visit_source_pass2(
             TMULS(tW, tW, Tiles::kHif8ProbabilityScale);
         }
 
-        // 动态 tilePShard，ValidCol 为实际有效 token 数。
-        typename Tiles::tilePShard tPShard(kPeRows, kv.valid_rows);
+        // 全宽 tilePShard：P 在无效列上为精确 0（mask 下溢），写满
+        // prob_scratch 本块区域，避免残留列被 Shared 全宽读回。
+        typename Tiles::tilePShard tPShard(kPeRows, kTk);
         TCVT(tPShard, tW);
         auto gProbShard = env.gIterProb(env.pe_id, 0);
         TSTORE(gProbShard, tPShard);
@@ -535,15 +569,17 @@ static __attribute__((always_inline)) inline void qsmla_v2_visit_source_pass2(
             auto gOState = env.gIterPV(0, out_dd);
             typename Tiles::tileO tO(kPeRows, kTd);
             TLOAD(tO, gOState);
-            typename Tiles::tilePShared tPShared;
-            auto gP = env.gIterP(0, 0);
-            TLOAD<typename Tiles::tilePMatrix, 1>(tPShared, gP);
+            // P 走本地 M32 Left 分片（本 PE 写入的 [kPeRows, kTk]），
+            // 与 Shared V 做 Local-A/Shared-B 协作 PV。
+            typename Tiles::tilePLocal tPLocal;
+            auto gPShard = env.gIterPLocal(env.pe_id, 0);
+            TLOAD_CUBE(tPLocal, gPShard);
             typename Tiles::tileVShared tVShared;
             auto gV = gIterV(0, out_dd);
             TLOAD<typename Tiles::tileVMatrix, 1>(tVShared, gV);
             typename Tiles::tilePVCube tPVCube;
-            TMATMUL(tPVCube, tPShared, tVShared,
-                    fixp::keep_acc().transpose_b());
+            TMATMUL(tPVCube, tPLocal, tVShared,
+                    fixp::keep_acc().transpose_b(), kGroupM);
             TSTORE_CUBE(gOState, tPVCube);
             typename Tiles::tileO tPV(kPeRows, kTd);
             TLOAD(tPV, gOState);
@@ -655,7 +691,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto_v2(
         typename Tiles::itRowState(pe_score_scratch),
         typename Tiles::itRowState(pe_score_scratch + kPeRows),
         typename Tiles::itProbShard(prob_scratch),
-        typename Tiles::itPShared(prob_scratch),
+        typename Tiles::itPLocal(prob_scratch),
         typename Tiles::itPVScratch(
             pv_scratch +
             qsmla_full_o_scratch_pe_offset(pe_id, kPeRows, Config::D)),
@@ -670,7 +706,7 @@ void quant_sparse_flash_mla_tadd_4pe_bsnd_pto_v2(
         const QsmlaWorkItem work = Config::decode_work(work_id);
         qdtype* work_q = q_ptr + Config::q_work_offset(work);
         const std::size_t work_out_offset = Config::out_work_offset(work);
-        typename Tiles::itQ q_iter(work_q);
+        typename Tiles::itQLocal q_iter(work_q);
 
         kvdtype* work_ori = ori_kv_ptr +
             ((static_cast<std::size_t>(work.batch) * ModeConfig::OriS2)
