@@ -1,0 +1,6 @@
+#!/bin/bash
+# DynamicHiF4Quant solution 编译入口(编译门禁)。仅列普通编译命令,不带 res_check=on:
+# test/solution/common/res_check_all.py 扫描本清单时会自行注入 res_check=on 做精度验证。
+# 独立数值验证(gen golden + res_check=on 编译 + gfrun 单-PE + 重建 MSE 比对)见
+# src/run_hif4_precision.py。COMPILER_DIR 由环境提供。
+make TESTCASE=dynamic_hi_f4_quant TYPE=HIF4_RES_CHECK diss
