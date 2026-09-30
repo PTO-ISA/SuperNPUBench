@@ -1,0 +1,14 @@
+operation	static_count	logical_shape
+TCVT	639	256 x BF16->FP4 [32,32]; 64 x BF16->E8M0 [32,4]; 318 x [32,1]; 1 x FP32->BF16 [32,128]
+TROWEXPANDEXPDIF	383	256 x [32,32]; 64 x [32,4]; 63 x [32,1] (BF16 carrier [32,2])
+TROWEXPANDMUL	63	FP32 [32,2], broadcast [32,1]
+TMULS	191	BF16 valid [32,1], carrier [32,2]
+TSUBS	64	BF16 [32,4]
+TSUB	63	BF16 valid [32,1], carrier [32,2]
+TMAX	63	BF16 valid [32,1], carrier [32,2]
+TEXPANDS	4	1 x FP32 [32,128]; 1 x FP32 [32,2]; 2 x BF16 valid [32,1]
+TROWEXPANDDIV	1	FP32 [32,128], broadcast [32,1]
+TMATMUL_MX (normalized)	66	64 x QK (M,N,K)=(128,128,128); 1 x PV (128,128,128); 1 x PVprime (128,2,128)
+TMATMUL_MX_ACC (normalized)	126	63 x PV (128,128,128); 63 x PVprime (128,2,128)
+TLOAD	260	129 x FP4 valid [128,128]; 129 x E8M0 valid [128,4]; 1 x Vprime FP4 [128,2]; 1 x Vprime scale E8M0 [2,4]
+TSTORE	1	BF16 [32,128]

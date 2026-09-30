@@ -160,10 +160,15 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
     // V' denominator stays in a Cube tile across kb.  This is an ordinary
     // TileReg accumulation (no acc_hint/cscale and therefore no internal-ACC
     // K-chain); online rescaling is applied directly to the Cube tile.
-    using VPrimeMatrix = SharedMatrixRight<__bf16, kTk, 1>;
+    // Two logical N columns share one FP4 byte; both encode exact one.
+    using VPrimeMatrix = SharedMatrixRight<__fp4_e2m1x2, kTk, 2>;
+    using VPrimeScaleMatrix = SharedMatrixRight<
+        __fp8_e8m0, 2, kPaddedPScaleCols, 2, kPScaleCols>;
+    using VPrimeScaleTile = SharedTile<VPrimeScaleMatrix>;
+    using VPrimeScaleGm = global_tensor<__fp8_e8m0, RowMajor<2, kPScaleCols>>;
     using VPrimeTile = SharedTile<VPrimeMatrix>;
-    using VPrimeGm = global_tensor<__bf16, RowMajor<kTk, 1>>;
-    using Fp32DenomTile = CubeAccumulatorM32<float, kPeM, 1>;
+    using VPrimeGm = global_tensor<__fp4_e2m1x2, RowMajor<kTk, 1>>;
+    using Fp32DenomTile = CubeAccumulatorM32<float, kPeM, 2>;
     using QScaleIter = global_iterator<GmQScale, QScaleMatrix>;
     using KScaleIter = global_iterator<GmKScale, KScaleMatrix>;
     using OIter = global_iterator<GmO, Bf16StoreTile>;
@@ -191,13 +196,20 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
         TEXPANDS(weightedDenom, 0.0f);
         // V' is GM ND -> SharedTReg ND.  It is read by each non-ACC P×V'
         // instruction, but never retained in internalACC.
-        static __bf16 kVPrimeOnes[kTk];
+        static __fp4_e2m1x2 kVPrimeOnes[kTk];
+        static __fp8_e8m0 kVPrimeScales[2 * kPScaleCols];
 #pragma clang loop unroll(full)
         for (int i = 0; i < kTk; ++i)
-            kVPrimeOnes[i] = static_cast<__bf16>(1.0f);
+            kVPrimeOnes[i].data = 0x22; // two E2M1 ones
+#pragma clang loop unroll(full)
+        for (int i = 0; i < 2 * kPScaleCols; ++i)
+            kVPrimeScales[i].data = 0x7f; // E8M0 one
         VPrimeTile vPrime;
         VPrimeGm gVPrime(kVPrimeOnes);
         TLOAD<VPrimeMatrix, 1>(vPrime, gVPrime);
+        VPrimeScaleTile vPrimeScale;
+        VPrimeScaleGm gVPrimeScale(kVPrimeScales);
+        TLOAD<VPrimeScaleMatrix, 1>(vPrimeScale, gVPrimeScale);
 #endif
 
         QTile q;
@@ -371,16 +383,15 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             // V' denominator: Cube performs the K reduction and keeps the
             // cross-kb result in the same ordinary TileReg accumulator.
 #if FA_ALGB_ALGO_C
-            pto_matmul_detail::NoScaleOperand noVPrimeScale;
             if (kb == 0) {
-                TMATMUL_MX<1>(weightedDenom, p, pScale, vPrime,
-                              noVPrimeScale, denomOptions, kGroupM);
+                TMATMUL_MX<3>(weightedDenom, p, pScale, vPrime,
+                              vPrimeScale, denomOptions, kGroupM);
             } else {
                 Fp32RowValueTile oldScaleF32;
                 TCVT(oldScaleF32, oldScale);
                 TROWEXPANDMUL(weightedDenom, weightedDenom, oldScaleF32);
-                TMATMUL_MX_ACC<1>(weightedDenom, weightedDenom,
-                                  p, pScale, vPrime, noVPrimeScale,
+                TMATMUL_MX_ACC<3>(weightedDenom, weightedDenom,
+                                  p, pScale, vPrime, vPrimeScale,
                                   denomOptions, kGroupM);
             }
 #endif
@@ -419,7 +430,11 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
         // Normalize the Cube PV result by the selected B (Vector) / C (Cube) denominator.
         Fp32RowValueTile runningSumF32;
 #if FA_ALGB_ALGO_C
-        TCVT(runningSumF32, weightedDenom);
+        // Rescale both FP32 columns throughout the loop, then consume column 0.
+        using DenomColumn = CubeAccumulatorM32<float, kPeM, 1>;
+        auto denomColumns = TPARTVIEW<DenomColumn, 1, 2>(weightedDenom);
+        auto denomFirst = denomColumns[0][0];
+        TCVT(runningSumF32, denomFirst);
 #else
         TCVT(runningSumF32, runningSum);
 #endif

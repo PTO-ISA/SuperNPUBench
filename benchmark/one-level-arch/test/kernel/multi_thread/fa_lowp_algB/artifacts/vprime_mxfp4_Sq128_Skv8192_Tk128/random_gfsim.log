@@ -1,0 +1,121 @@
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim -s bctrl.vec_cell_sched_enable=false bctrl.vecIssueQDepth=64 core.soc_random=true -f /data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/vprime_mxfp4_subview_acc/kernel_multi_thread_fa_lowp_algB_C1_GM2_Sq128_Skv8192_Tk128_checkoff.elf --swimlane 1 --swimfile /data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/vprime_mxfp4_subview_acc/random/vprime --conf fourpe 
+[gfsim] explicit PE config present; skipping ELF auto-detection
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Override configurations:
+bctrl.vec_cell_sched_enable=false
+bctrl.vecIssueQDepth=64
+core.soc_random=true
+core.threadCount=4
+core.stdPeCount=1
+core.cube_core_num=4
+core.cube_thread_num=1
+core.vec_core_num=4
+fourpe.pe_cluster_enable=true
+fourpe.pe_cluster_count=4
+fourpe.pe_cluster_frontend_thread_count=4
+fourpe.pe_cluster_aggregate_decode_width=8
+fourpe.pe_cluster_gpr_rename_partition_entries=128
+fourpe.pe_cluster_scalar_rob_partition_entries=128
+fourpe.pe_cluster_scalar_iq_partition_entries=128
+fourpe.pe_cluster_block_rob_partition_entries=256
+fourpe.pe_cluster_block_iq_partition_entries=88
+fourpe.pe_cluster_local_reg_partition_entries=88
+bfu.brq_depth=1024
+fourpe.pe_cluster_partition_borrow_enable=false
+fourpe.pe_cluster_eligible_rr_fairness_check=true
+fourpe.pe_cluster_group_contract_fatal=false
+dfx.swimCounterSampleInterval=8
+[gfsim] caught std::exception: ASSERTION FAILED: srcTile.size() == 1 && dstTile.size() == 1 && srcTile[0] && dstTile[0] && srcTile[0]->tileInfo && dstTile[0]->tileInfo && TCVTSourceViewCompatible( srcTile[0]->tileInfo->dataType, dataType) && (gfrunPto291Tcvt || (!srcTile[0]->tileInfo->subview && !dstTile[0]->tileInfo->subview)) && (bdimMask & (1u << 2)) == 0 && (gfrunPto291Tcvt ? (blockAttr == nullptr || blockAttr->layout == TileDataLayout::NORM) : (blockAttr && blockAttr->layout == TileDataLayout::NORM)) && dstTile[0]->tileInfo->layout == srcTile[0]->tileInfo->layout && srcTile[0]->tileInfo->validRow <= srcTile[0]->tileInfo->row && srcTile[0]->tileInfo->validCol <= srcTile[0]->tileInfo->col && dstTile[0]->tileInfo->validRow <= dstTile[0]->tileInfo->row && dstTile[0]->tileInfo->validCol <= dstTile[0]->tileInfo->col && CubeCellDescribePhysical(srcTile[0]->tileInfo->layout, srcTile[0]->tileInfo->dataType, srcTile[0]->tileInfo->row, srcTile[0]->tileInfo->col, sourceShape) && CubeCellDescribePhysical(dstTile[0]->tileInfo->layout, dstTile[0]->tileInfo->dataType, dstTile[0]->tileInfo->row, dstTile[0]->tileInfo->col, destinationShape) && srcTile[0]->size >= sourceShape.requiredBytes && dstTile[0]->size >= destinationShape.requiredBytes && "PTO 0.58 CUBE M-format TCVT requires independently legal CELL descriptors"
+, func ValidateOperandContract, file /data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/isa/Block.cpp:3089
+stack:
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x92235f) [0x5646d9ba735f]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x924f0c) [0x5646d9ba9f0c]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x7fcedd) [0x5646d9a81edd]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x3f4afb) [0x5646d9679afb]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x3f5dce) [0x5646d967adce]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x403900) [0x5646d9688900]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x3a60c7) [0x5646d962b0c7]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x5fbf24) [0x5646d9880f24]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0xb602a) [0x5646d933b02a]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90) [0x7fd2c3e6fd90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80) [0x7fd2c3e6fe40]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x1a2ec5) [0x5646d9427ec5]
+
+std::terminate called (unhandled exception or exception during unwinding)
+
+FATAL: gfsim received signal 6
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x1a2fc5)[0x5646d9427fc5]
+/lib/x86_64-linux-gnu/libc.so.6(+0x42520)[0x7fd2c3e88520]
+/lib/x86_64-linux-gnu/libc.so.6(pthread_kill+0x12c)[0x7fd2c3edc9bc]
+/lib/x86_64-linux-gnu/libc.so.6(raise+0x16)[0x7fd2c3e88476]
+/lib/x86_64-linux-gnu/libc.so.6(abort+0xd3)[0x7fd2c3e6e7f3]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x1a3068)[0x5646d9428068]
+/lib/x86_64-linux-gnu/libstdc++.so.6(+0xae20c)[0x7fd2c422420c]
+/lib/x86_64-linux-gnu/libstdc++.so.6(+0xae277)[0x7fd2c4224277]
+/lib/x86_64-linux-gnu/libstdc++.so.6(__cxa_rethrow+0x4b)[0x7fd2c422452b]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x37a28)[0x5646d92bca28]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7fd2c3e6fd90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7fd2c3e6fe40]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/gm_direct_20260930/model/bin/gfsim(+0x1a2ec5)[0x5646d9427ec5]

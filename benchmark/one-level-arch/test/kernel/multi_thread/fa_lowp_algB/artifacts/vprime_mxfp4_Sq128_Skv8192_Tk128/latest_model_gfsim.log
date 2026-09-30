@@ -1,0 +1,123 @@
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim -s bctrl.vec_cell_sched_enable=false bctrl.vecIssueQDepth=64 -f /data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/vprime_mxfp4_subview_acc/kernel_multi_thread_fa_lowp_algB_C1_GM2_Sq128_Skv8192_Tk128_checkoff.elf --swimlane 1 --swimfile /data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/vprime_mxfp4_subview_acc/latest_model/vprime --conf fourpe 
+[gfsim] explicit PE config present; skipping ELF auto-detection
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Override configurations:
+bctrl.vec_cell_sched_enable=false
+bctrl.vecIssueQDepth=64
+core.threadCount=4
+core.stdPeCount=1
+core.cube_core_num=4
+core.cube_thread_num=1
+core.vec_core_num=4
+fourpe.pe_cluster_enable=true
+fourpe.pe_cluster_count=4
+fourpe.pe_cluster_frontend_thread_count=4
+fourpe.pe_cluster_aggregate_decode_width=8
+fourpe.pe_cluster_gpr_rename_partition_entries=128
+fourpe.pe_cluster_scalar_rob_partition_entries=128
+fourpe.pe_cluster_scalar_iq_partition_entries=128
+fourpe.pe_cluster_block_rob_partition_entries=256
+fourpe.pe_cluster_block_iq_partition_entries=88
+fourpe.pe_cluster_local_reg_partition_entries=88
+bfu.brq_depth=1024
+fourpe.pe_cluster_partition_borrow_enable=false
+fourpe.pe_cluster_eligible_rr_fairness_check=true
+fourpe.pe_cluster_group_contract_fatal=false
+dfx.swimCounterSampleInterval=8
+[gfsim] caught std::exception: ASSERTION FAILED: (!leftNeedsScale || (leftScaleShared ? scaleInfoLegal(leftScaleShared, leftScalePhysicalRows, leftScalePhysicalCols, MatrixScaleCarrierType(leftType)) : true)) && (!rightNeedsScale || scaleInfoLegal( rightScaleShared, rightScalePhysicalRows, rightScalePhysicalCols, MatrixScaleCarrierType(rightType))) && "cooperative TMATMUL MX scale descriptor is illegal"
+, func ExecuteOrSuspendCollective, file /data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/emulator/SoftCore.cpp:2619
+stack:
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x1fe5ab) [0x55adf86925ab]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x2129c7) [0x55adf86a69c7]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x212e0b) [0x55adf86a6e0b]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x219649) [0x55adf86ad649]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x61b38e) [0x55adf8aaf38e]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0xb7133) [0x55adf854b133]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90) [0x7f806880cd90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80) [0x7f806880ce40]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x1a5a95) [0x55adf8639a95]
+
+std::terminate called (unhandled exception or exception during unwinding)
+
+FATAL: gfsim received signal 6
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x1a5b95)[0x55adf8639b95]
+/lib/x86_64-linux-gnu/libc.so.6(+0x42520)[0x7f8068825520]
+/lib/x86_64-linux-gnu/libc.so.6(pthread_kill+0x12c)[0x7f80688799bc]
+/lib/x86_64-linux-gnu/libc.so.6(raise+0x16)[0x7f8068825476]
+/lib/x86_64-linux-gnu/libc.so.6(abort+0xd3)[0x7f806880b7f3]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x1a5c38)[0x55adf8639c38]
+/lib/x86_64-linux-gnu/libstdc++.so.6(+0xae20c)[0x7f8068bc120c]
+/lib/x86_64-linux-gnu/libstdc++.so.6(+0xae277)[0x7f8068bc1277]
+/lib/x86_64-linux-gnu/libstdc++.so.6(__cxa_rethrow+0x4b)[0x7f8068bc152b]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x37c23)[0x55adf84cbc23]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7f806880cd90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7f806880ce40]
+/data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/test/kernel/multi_thread/fa_lowp_algB/perf_runs/latest_stack_20260930/model/bin/gfsim(+0x1a5a95)[0x55adf8639a95]

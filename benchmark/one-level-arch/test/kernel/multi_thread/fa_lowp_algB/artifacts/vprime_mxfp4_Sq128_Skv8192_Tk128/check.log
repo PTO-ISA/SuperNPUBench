@@ -1,0 +1,2 @@
+wrote bins + golden to /data/xxr/feishu/workspace/superscalar_v5/fa_lowp_handoff_branch/benchmark/one-level-arch/compare/kernel_multi_thread_fa_lowp_algB_C1_GM2_Sq128_Skv256_Tk128_checkon
+algoC: PASS  max_abs=5.225e-02 mean_abs=7.709e-03 bad=0/16384

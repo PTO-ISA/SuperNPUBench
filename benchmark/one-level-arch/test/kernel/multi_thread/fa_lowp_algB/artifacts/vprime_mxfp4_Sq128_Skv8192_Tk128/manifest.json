@@ -1,0 +1,23 @@
+{
+  "shape": {
+    "Sq": 128,
+    "Skv": 8192,
+    "Tk": 128,
+    "qD": 128,
+    "vD": 128
+  },
+  "mode": "Algo C, GM2, res_check=off",
+  "llvm": "ae7d91cd0018c5835e774f8ab0b80b938b79a8a1",
+  "tileop_api": "3c94cd3 (local fix atop upstream 49b5d80)",
+  "kernel_sha256": "afb85f48f9df46c6f262c8db63edfc9a2baefd5c7f0c74d6a2217936f4920c61",
+  "count_scope": "Static logical accelerator operations; full ELF mnemonic counts separately; PE participants are not multiplied",
+  "numerical_check": "Sq128 Skv256: 32768 bytes, nonzero output and golden, bad=0/16384; workaround gfrun",
+  "latest_model": "d6c3bcd9: scale descriptor assertion; not a passing performance run",
+  "gfsim_results": {
+    "baseline_workaround": "failed: FP32 subview TCVT descriptor validation",
+    "soc_random_true_workaround": "failed: FP32 subview TCVT descriptor validation",
+    "latest_model": "failed: cooperative TMATMUL MX scale descriptor"
+  },
+  "cycles": null,
+  "swimlane": "Not produced: simulator aborted before trace flush"
+}
