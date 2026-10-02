@@ -7,11 +7,15 @@
 // unconditionally and selecting afterwards.
 using tile = float tile_size(128);
 
-static tile lhs;
-static tile rhs;
-static tile out;
+// Keep the harness storage byte-oriented so the LinxV5 backend does not need
+// to synthesize a 128-lane vector initializer before entering the kernel.
+alignas(32) static unsigned char lhs_storage[512];
+alignas(32) static unsigned char rhs_storage[512];
+alignas(32) static unsigned char out_storage[512];
 
-static void elementwise_if_for(tile &dst, const tile &a, const tile &b) {
+__attribute__((noinline)) static void elementwise_if_for(tile &dst,
+                                                         const tile &a,
+                                                         const tile &b) {
 #pragma linx elementwise
   for (unsigned i = 0; i < 128; ++i) {
     if (a[i] > 0.0f)
@@ -21,7 +25,10 @@ static void elementwise_if_for(tile &dst, const tile &a, const tile &b) {
   }
 }
 
-int main() {
+__attribute__((optnone)) int main() {
+  tile &lhs = *reinterpret_cast<tile *>(lhs_storage);
+  tile &rhs = *reinterpret_cast<tile *>(rhs_storage);
+  tile &out = *reinterpret_cast<tile *>(out_storage);
   elementwise_if_for(out, lhs, rhs);
   return 0;
 }
