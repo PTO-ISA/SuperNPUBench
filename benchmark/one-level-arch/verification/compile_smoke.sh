@@ -1,6 +1,6 @@
 #!/bin/bash
 # SuperNPUBench — 精简测试编译脚本（芯片核心功能验证）
-# 16 个用例覆盖：CUBE/TEPL/TLSU/GPR + 多线程 + 全部 ISA 族
+# 精简用例覆盖：CUBE/TEPL/TLSU/GPR + 多线程 + 全部 ISA 族
 
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 export COMPILER_DIR
@@ -81,6 +81,18 @@ smoke "hashtable_lookup" \
 # --- 12. sort (TEPL: radix 直方图) ---
 smoke "topk" \
     make -C "$REPO_ROOT/test/kernel/sort" TESTCASE=topk clean all
+
+if [[ ${ELEMENT_ATOMIC_TOPK:-off} == on ]]; then
+    : "${LINX_RUNTIME_ROOT:?Set LINX_RUNTIME_ROOT for ELEMENT_ATOMIC_TOPK=on}"
+    : "${API_INCLUDE:?Set API_INCLUDE for ELEMENT_ATOMIC_TOPK=on}"
+    TARGET_TRIPLE=${TARGET_TRIPLE:-linx64v5-unknown-linux-musl}
+    SYSROOT=${SYSROOT:-"$LINX_RUNTIME_ROOT/sysroot"}
+    RESOURCE_DIR=${RESOURCE_DIR:-"$LINX_RUNTIME_ROOT/lib/clang/15.0.4"}
+    smoke "element_atomic_topk" \
+        make -C "$REPO_ROOT/test/kernel/sort" TESTCASE=element_atomic_topk \
+            TARGET_TRIPLE="$TARGET_TRIPLE" SYSROOT="$SYSROOT" \
+            RESOURCE_DIR="$RESOURCE_DIR" API_INCLUDE="$API_INCLUDE" clean all
+fi
 
 # --- 13. multi_thread/matmul (CUBE: 共享 tile) ---
 smoke "multi_thread/matmul" \

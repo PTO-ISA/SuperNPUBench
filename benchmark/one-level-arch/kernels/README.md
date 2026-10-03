@@ -56,6 +56,9 @@ Header-only PTO operator implementations are separated by PE execution model:
 
 ### 10. Sort — `single_thread/sort/`
 - `topk.hpp` / `topk.hpp` — Top-K via radix-bucket histogram.
+- `element_atomic_topk.hpp` — two-level radix Top-K mixing M32
+  `TPARTVIEW`, whole-Tile digit extraction, and standard-C element-wise
+  indexed atomics lowered through TLEA.
 
 ### 11. DeepSeek 迁移算子 — `single_thread/deepseek/`
 - 19 个从 TileKernels (TileLang DSL) 迁移的 tile 版算子:

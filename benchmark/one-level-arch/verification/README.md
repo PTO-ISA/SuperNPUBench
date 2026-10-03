@@ -19,14 +19,25 @@ python3 verify_all.py --kernel rms_norm --print
 
 # Export binary files for offline comparison
 python3 verify_all.py --kernel matmul --export ./golden
+
+# Compile and run the TLEA element-wise atomic Top-K on both models
+COMPILER_DIR=/path/to/fresh-llvm-build/bin \
+LINX_RUNTIME_ROOT=/path/to/linx_blockisa_llvm_musl \
+API_INCLUDE=/path/to/Linx-TileOP-API/include \
+SSM=/path/to/SuperScalarModel ./run_element_atomic_topk.sh
 ```
+
+Each run writes a unique evidence directory with a content ID. The directory
+contains exact command identities, per-stage exit status, disassembly checks,
+model logs, memory dumps, independent goldens, and repository/tool hashes.
 
 ## Layout
 
 ```
 verification/
 ├── README.md           ← this file
-└── verify_all.py       ← all kernel reference functions
+├── verify_all.py       ← all kernel reference functions
+└── run_element_atomic_topk.sh ← compile/disassembly/gfrun/gfsim gate
 ```
 
 ## Covered Kernels (37 functions)

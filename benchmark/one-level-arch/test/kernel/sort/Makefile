@@ -4,7 +4,33 @@ TARGET = $(ELF_HEAD)_$(TESTCASE).elf
 ifeq ($(TESTCASE), topk)
 TARGET = $(ELF_DIR)/topk.elf
 endif
+ifeq ($(TESTCASE), element_atomic_topk)
+TARGET = $(ELF_DIR)/element_atomic_topk.elf
+SRC_FILE += $(TEST_ROOT)/$(CATEGORY)/src/element_atomic_topk.cpp
+DEFINES += -DSUPERNPUBENCH_LINX_TILE_SIZE -DLINX_ELEMENTWISE_AVAILABLE
+TARGET_TRIPLE ?= linx64v5-unknown-linux-musl
+ifndef SYSROOT
+$(error SYSROOT is required for element_atomic_topk)
+endif
+ifndef RESOURCE_DIR
+$(error RESOURCE_DIR is required for element_atomic_topk)
+endif
+ifndef API_INCLUDE
+$(error API_INCLUDE is required for element_atomic_topk)
+endif
+TLEA_TARGET_FLAGS := --target=$(TARGET_TRIPLE) --sysroot=$(SYSROOT) \
+	-resource-dir=$(RESOURCE_DIR)
+CC_OPTS += $(TLEA_TARGET_FLAGS)
+# Keep ordinary setup/verification loops scalar.  The requested Tile work is
+# explicit in the kernel; generic loop vectorization otherwise creates TMOV
+# carrier blocks that obscure the TLEA/atomic path in both models.
+CC_OPTS += -fno-vectorize -fno-slp-vectorize
+CC_LINK += $(TLEA_TARGET_FLAGS) -fuse-ld=lld
+INCLUDE += -I$(API_INCLUDE)
+endif
+ifneq ($(TESTCASE), element_atomic_topk)
 SRC_FILE +=  $(TEST_ROOT)/$(CATEGORY)/$(TESTCASE)/$(TESTCASE).cpp
+endif
 
 # Special handling for topk - embed data as object files
 EXTRA_OBJ_FILES :=

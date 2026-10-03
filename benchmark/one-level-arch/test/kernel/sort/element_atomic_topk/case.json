@@ -1,0 +1,41 @@
+{
+  "name": "element_atomic_topk_u16_domain_u32_carrier",
+  "elf": "benchmark/one-level-arch/output/kernel/sort/elf/element_atomic_topk.elf",
+  "input": {
+    "dtype": "u32",
+    "logical_domain": "u16",
+    "count": 777,
+    "padded_count": 896,
+    "generator": "element_atomic_topk/generate_case.py"
+  },
+  "output": {
+    "dtype": "u32",
+    "count": 37,
+    "oracle": "direct insertion Top-K plus independent scalar histograms"
+  },
+  "memory_results": [
+    "element_atomic_topk_input[896]",
+    "element_atomic_topk_high_hist[256]",
+    "element_atomic_topk_low_hist[256]",
+    "element_atomic_topk_output[37]",
+    "element_atomic_topk_status[8]"
+  ],
+  "runtime_order_observations": [
+    "element_atomic_topk_old_high[896]",
+    "element_atomic_topk_old_low[896]"
+  ],
+  "required_instructions": [
+    "TLEA",
+    "B.SUBVIEW",
+    "TSHRS",
+    "TANDS",
+    "TCI",
+    "TCMPS GPR",
+    "scalar predicate AND",
+    "MGATHER.ADD with ExecMaskPresent and old-value result"
+  ],
+  "models": [
+    "gfrun",
+    "gfsim"
+  ]
+}
