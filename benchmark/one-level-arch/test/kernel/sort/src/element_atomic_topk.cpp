@@ -13,6 +13,8 @@ constexpr std::size_t kPaddedCount =
     ((kCount + kParentLanes - 1) / kParentLanes) * kParentLanes;
 constexpr std::size_t kRequestedK = 37;
 constexpr std::size_t kRadix = 256;
+constexpr std::size_t kCoherenceProbeCount = 2;
+constexpr std::size_t kCoherenceProbePaddedCount = kParentLanes;
 
 extern "C" {
 alignas(4096) uint32_t element_atomic_topk_input[kPaddedCount];
@@ -22,6 +24,11 @@ alignas(4096) uint32_t element_atomic_topk_old_high[kPaddedCount];
 alignas(4096) uint32_t element_atomic_topk_old_low[kPaddedCount];
 alignas(4096) uint32_t element_atomic_topk_output[kRequestedK];
 alignas(32) uint32_t element_atomic_topk_status[8];
+alignas(4096) uint32_t
+    element_atomic_topk_coherence_input[kCoherenceProbePaddedCount];
+alignas(4096) uint32_t element_atomic_topk_coherence_hist[kRadix];
+alignas(4096) uint32_t
+    element_atomic_topk_coherence_old[kCoherenceProbePaddedCount];
 }
 
 namespace {
@@ -39,6 +46,12 @@ alignas(4096) static uint32_t high_bins[kPaddedCount];
 alignas(4096) static uint32_t low_bins[kPaddedCount];
 constexpr std::size_t kOldSeenBytes = (kCount + 7U) / 8U;
 alignas(4096) static uint8_t old_seen[kRadix][kOldSeenBytes];
+
+struct CoherenceProbeResult {
+  uint32_t initial = 0;
+  uint32_t after_atomic = 0;
+  uint32_t after_scalar = 0;
+};
 
 void make_input() {
   for (std::size_t i = 0; i < kPaddedCount; ++i) {
@@ -152,6 +165,28 @@ int verify_atomic_old_values(const uint32_t *old_values, const uint32_t *bins,
   return failures;
 }
 
+CoherenceProbeResult run_coherence_probe() {
+  volatile uint32_t *const scalar_hist =
+      element_atomic_topk_coherence_hist;
+  CoherenceProbeResult result;
+
+  // Prime scalar L1 with the zero-initialized line, then leave a dirty value
+  // for the tile atomic path to acquire through real coherence.
+  result.initial = scalar_hist[0];
+  scalar_hist[0] = 7U;
+  histogram_high8(element_atomic_topk_coherence_input,
+                  kCoherenceProbeCount,
+                  element_atomic_topk_coherence_hist,
+                  element_atomic_topk_coherence_old);
+  result.after_atomic = scalar_hist[0];
+
+  // A later scalar store must supersede the tile commit. The following
+  // scalar load observes the final architectural value used by the check.
+  scalar_hist[0] = 10U;
+  result.after_scalar = scalar_hist[0];
+  return result;
+}
+
 } // namespace
 
 int main() {
@@ -163,6 +198,7 @@ int main() {
   clear(old_low, kPaddedCount);
 
   BENCHSTART;
+  const CoherenceProbeResult coherence_probe = run_coherence_probe();
   histogram_high8(input, kCount, high_hist, old_high);
 
   std::size_t greater_high = 0;
@@ -229,6 +265,23 @@ int main() {
   failures += old_high_failures + old_low_failures;
   failure_mask |= old_high_failures != 0 ? 0x4U : 0U;
   failure_mask |= old_low_failures != 0 ? 0x8U : 0U;
+
+  int coherence_failures = 0;
+  coherence_failures += coherence_probe.initial != 0U;
+  coherence_failures += element_atomic_topk_coherence_old[0] != 7U;
+  coherence_failures += element_atomic_topk_coherence_old[kLanes] != 8U;
+  coherence_failures += coherence_probe.after_atomic != 9U;
+  coherence_failures += coherence_probe.after_scalar != 10U;
+  for (std::size_t i = 0; i < kCoherenceProbePaddedCount; ++i) {
+    if (i != 0U && i != kLanes) {
+      coherence_failures += element_atomic_topk_coherence_old[i] != 0U;
+    }
+  }
+  for (std::size_t bin = 1; bin < kRadix; ++bin) {
+    coherence_failures += element_atomic_topk_coherence_hist[bin] != 0U;
+  }
+  failures += coherence_failures;
+  failure_mask |= coherence_failures != 0 ? 0x20U : 0U;
 
   // Compare multisets, including a cutoff tie, without depending on which
   // equal-key positions were selected.

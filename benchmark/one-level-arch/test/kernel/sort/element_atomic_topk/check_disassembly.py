@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the ordered native lowering of both histogram helpers."""
+"""Validate the ordered native lowering of all three histogram invocations."""
 
 from __future__ import annotations
 
@@ -136,8 +136,8 @@ def validate(text: str) -> None:
         )
         if end is not None:
             segments.append(instructions[start : end + 1])
-    if len(segments) != 2:
-        raise CheckError(f"expected exactly two histogram helper bodies, found {len(segments)}")
+    if len(segments) != 3:
+        raise CheckError(f"expected exactly three histogram helper bodies, found {len(segments)}")
     for ordinal, segment in enumerate(segments):
         validate_segment(segment, ordinal)
 

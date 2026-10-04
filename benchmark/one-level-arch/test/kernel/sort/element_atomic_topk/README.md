@@ -21,6 +21,16 @@ permutation `0..count-1`; unused and padded tail lanes must remain zero. The
 boundary and ends in a partial 128-element parent Tile whose inactive storage
 contains values outside the documented key domain.
 
+The same ELF also runs a dedicated coherence probe that does not alter the five
+exported golden segments. A volatile scalar load first caches a zero histogram
+line, a volatile scalar store makes bin zero dirty with value 7, and a
+two-element call to `histogram_high8` performs two native masked atomic adds.
+Their old-value Tile stores must contain 7 at column-buffer offset 0 and 8 at
+offset 32, every inactive old-value lane must remain zero, and the histogram
+must become 9. A later volatile scalar store/load pair must observe 10, proving
+that the later scalar writer supersedes the queued tile commit. Any mismatch
+sets status failure bit `0x20`.
+
 The portable reference test also covers `K=0`, `K=1`, `K=N`, duplicate hot
 bins, cutoff ties, an all-equal input, and partial-tile tails:
 
@@ -35,11 +45,12 @@ dependent and are verified inside the ELF as exact per-bin permutations.
 
 The end-to-end harness combines a freshly built compiler/backend with an
 installed Linx musl runtime and current TileOP headers. It rejects an ELF
-without B.SUBVIEW, TSHRS/TANDS, TCI, TCMPS, scalar predicate AND, TLEA,
-MGATHER.ADD, and the native execution-mask binder. Both gfrun and gfsim must
-then run as one logical thread/PE and match the independently generated input,
-histogram, Top-K, and status memory segments. UART text is diagnostic only and
-is not used as the correctness oracle:
+whose three histogram invocations do not each contain B.SUBVIEW, TSHRS/TANDS,
+TCI, TCMPS, scalar predicate AND, exactly one TLEA, MGATHER.ADD, and the native
+execution-mask binder. Both gfrun and gfsim must then run as one logical
+thread/PE and match the independently generated input, histogram, Top-K, and
+status memory segments. UART text is diagnostic only and is not used as the
+correctness oracle:
 
 ```sh
 COMPILER_DIR=/path/to/fresh-llvm-build/bin \
