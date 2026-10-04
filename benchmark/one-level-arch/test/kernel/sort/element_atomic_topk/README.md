@@ -17,12 +17,13 @@ The target test validates all 256 bins at both radix levels, exactly 37 output
 elements, the complete Top-K multiset across a tied cutoff, and the returned
 old value from every atomic. The old values for each bin must be exactly the
 permutation `0..count-1`; unused and padded tail lanes must remain zero. The
-777-element input crosses every 256-element tile
-boundary and ends in a partial 128-element parent Tile whose inactive storage
+777-element input crosses six full 128-element parent Tiles
+and ends in a partial parent Tile whose inactive storage
 contains values outside the documented key domain.
 
-The same ELF also runs a dedicated coherence probe that does not alter the five
-exported golden segments. A volatile scalar load first caches a zero histogram
+The same ELF also runs a dedicated coherence probe. Four additional exported
+golden segments contain its input, final histogram, old-value array, and scalar
+observations `[initial, after_atomic, after_scalar, failures] = [0, 9, 10, 0]`. A volatile scalar load first caches a zero histogram
 line, a volatile scalar store makes bin zero dirty with value 7, and a
 two-element call to `histogram_high8` performs two native masked atomic adds.
 Their old-value Tile stores must contain 7 at column-buffer offset 0 and 8 at
@@ -39,8 +40,8 @@ benchmark/one-level-arch/test/kernel/sort/element_atomic_topk/check_reference.sh
 ```
 
 `generate_case.py --out <dir>` independently emits little-endian U32 input,
-both histogram levels, sorted Top-K output, status goldens, and a manifest that
-maps them to stable ELF symbols. Atomic old-value arrays remain runtime-order
+both histogram levels, sorted Top-K output, status, the four coherence probe
+goldens, and a manifest mapping all nine segments to stable ELF symbols. Atomic old-value arrays remain runtime-order
 dependent and are verified inside the ELF as exact per-bin permutations.
 
 The end-to-end harness combines a freshly built compiler/backend with an
@@ -49,7 +50,7 @@ whose three histogram invocations do not each contain B.SUBVIEW, TSHRS/TANDS,
 TCI, TCMPS, scalar predicate AND, exactly one TLEA, MGATHER.ADD, and the native
 execution-mask binder. Both gfrun and gfsim must then run as one logical
 thread/PE and match the independently generated input, histogram, Top-K, and
-status memory segments. UART text is diagnostic only and is not used as the
+status and coherence memory segments. UART text is diagnostic only and is not used as the
 correctness oracle:
 
 ```sh

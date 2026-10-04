@@ -78,6 +78,10 @@ def main() -> int:
         "element_atomic_topk_low_hist": "low_hist_u32.bin",
         "element_atomic_topk_output": "topk_u32.bin",
         "element_atomic_topk_status": "status_u32.bin",
+        "element_atomic_topk_coherence_input": "coherence_input_u32.bin",
+        "element_atomic_topk_coherence_hist": "coherence_hist_u32.bin",
+        "element_atomic_topk_coherence_old": "coherence_old_u32.bin",
+        "element_atomic_topk_coherence_state": "coherence_state_u32.bin",
     }
     write_u32(args.out / files["element_atomic_topk_input"], padded_input)
     write_u32(args.out / files["element_atomic_topk_high_hist"], high_hist)
@@ -96,6 +100,13 @@ def main() -> int:
             high_hist[0],
         ],
     )
+
+    write_u32(args.out / files["element_atomic_topk_coherence_input"], [0] * 128)
+    write_u32(args.out / files["element_atomic_topk_coherence_hist"], [10] + [0] * 255)
+    coherence_old = [0] * 128
+    coherence_old[0], coherence_old[32] = 7, 8
+    write_u32(args.out / files["element_atomic_topk_coherence_old"], coherence_old)
+    write_u32(args.out / files["element_atomic_topk_coherence_state"], [0, 9, 10, 0])
 
     manifest = {
         "case": "element_atomic_topk_u16_domain_u32_carrier",

@@ -29,6 +29,7 @@ alignas(4096) uint32_t
 alignas(4096) uint32_t element_atomic_topk_coherence_hist[kRadix];
 alignas(4096) uint32_t
     element_atomic_topk_coherence_old[kCoherenceProbePaddedCount];
+alignas(32) uint32_t element_atomic_topk_coherence_state[4];
 }
 
 namespace {
@@ -280,6 +281,10 @@ int main() {
   for (std::size_t bin = 1; bin < kRadix; ++bin) {
     coherence_failures += element_atomic_topk_coherence_hist[bin] != 0U;
   }
+  element_atomic_topk_coherence_state[0] = coherence_probe.initial;
+  element_atomic_topk_coherence_state[1] = coherence_probe.after_atomic;
+  element_atomic_topk_coherence_state[2] = coherence_probe.after_scalar;
+  element_atomic_topk_coherence_state[3] = static_cast<uint32_t>(coherence_failures);
   failures += coherence_failures;
   failure_mask |= coherence_failures != 0 ? 0x20U : 0U;
 
