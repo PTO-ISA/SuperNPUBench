@@ -10,11 +10,11 @@ using namespace element_atomic_topk_kernel;
 
 constexpr std::size_t kCount = 777;
 constexpr std::size_t kPaddedCount =
-    ((kCount + kParentLanes - 1) / kParentLanes) * kParentLanes;
+    ((kCount + kBlockElements - 1) / kBlockElements) * kBlockElements;
 constexpr std::size_t kRequestedK = 37;
 constexpr std::size_t kRadix = 256;
 constexpr std::size_t kCoherenceProbeCount = 2;
-constexpr std::size_t kCoherenceProbePaddedCount = kParentLanes;
+constexpr std::size_t kCoherenceProbePaddedCount = kBlockElements;
 
 extern "C" {
 alignas(4096) uint32_t element_atomic_topk_input[kPaddedCount];
@@ -77,20 +77,6 @@ void clear(uint32_t *values, std::size_t count, uint32_t fill = 0) {
   }
 }
 
-uint8_t descending_bucket(const uint32_t *hist, std::size_t k,
-                          std::size_t *greater) {
-  std::size_t accumulated = 0;
-  for (int bucket = 255; bucket >= 0; --bucket) {
-    if (accumulated + hist[bucket] >= k) {
-      *greater = accumulated;
-      return static_cast<uint8_t>(bucket);
-    }
-    accumulated += hist[bucket];
-  }
-  *greater = accumulated;
-  return 0;
-}
-
 void independent_golden() {
   clear(expected_high_hist, kRadix);
   for (std::size_t i = 0; i < kCount; ++i) {
@@ -122,13 +108,6 @@ void independent_golden() {
 int verify_atomic_old_values(const uint32_t *old_values, const uint32_t *bins,
                              const uint32_t *histogram, bool selected_only,
                              uint32_t selected_high) {
-  const auto old_storage_index = [](std::size_t logical_index) {
-    const std::size_t parent = logical_index / kParentLanes;
-    const std::size_t in_parent = logical_index % kParentLanes;
-    const std::size_t part = in_parent % kParts;
-    const std::size_t lane = in_parent / kParts;
-    return parent * kParentLanes + part * kLanes + lane;
-  };
   int failures = 0;
   for (std::size_t bin = 0; bin < kRadix; ++bin) {
     for (std::size_t byte = 0; byte < kOldSeenBytes; ++byte) {
@@ -138,7 +117,7 @@ int verify_atomic_old_values(const uint32_t *old_values, const uint32_t *bins,
   for (std::size_t i = 0; i < kCount; ++i) {
     const bool selected =
         !selected_only || (((input[i] >> 8) & 0xffu) == selected_high);
-    const uint32_t old = old_values[old_storage_index(i)];
+    const uint32_t old = old_values[i];
     if (!selected) {
       failures += old != 0;
       continue;
@@ -161,7 +140,7 @@ int verify_atomic_old_values(const uint32_t *old_values, const uint32_t *bins,
     }
   }
   for (std::size_t i = kCount; i < kPaddedCount; ++i) {
-    failures += old_values[old_storage_index(i)] != 0;
+    failures += old_values[i] != 0;
   }
   return failures;
 }
@@ -175,10 +154,29 @@ CoherenceProbeResult run_coherence_probe() {
   // for the tile atomic path to acquire through real coherence.
   result.initial = scalar_hist[0];
   scalar_hist[0] = 7U;
-  histogram_high8(element_atomic_topk_coherence_input,
-                  kCoherenceProbeCount,
-                  element_atomic_topk_coherence_hist,
-                  element_atomic_topk_coherence_old);
+  ElementTile<uint32_t, kBlockElements> keys;
+  TLOAD(keys, element_atomic_topk_coherence_input, kCoherenceProbeCount);
+  auto parts = TPARTVIEW<kPartElements>(keys, kCoherenceProbeCount);
+  uint32_t *histogram = element_atomic_topk_coherence_hist;
+  for (std::size_t part = 0; part < parts.size(); ++part) {
+    auto view = parts.part(part);
+    ElementTile<uint32_t, kPartElements> values, bins, old;
+    TADDS(values, view, 0u);
+    TSHRS(bins, values, 8u);
+    auto &bucket_elements = TPARTELEMENT(bins);
+    auto &old_elements = TPARTELEMENT(old);
+    const uint32_t valid_elements = parts.valid_size(part);
+#pragma linx elementwise
+    for (unsigned element = 0; element < kPartElements; ++element) {
+      if (element < valid_elements) {
+        old_elements[element] = __atomic_fetch_add(
+            &histogram[bucket_elements[element]], 1u, __ATOMIC_RELAXED);
+      } else {
+        old_elements[element] = 0u;
+      }
+    }
+    TSTORE(element_atomic_topk_coherence_old, old, parts, part);
+  }
   result.after_atomic = scalar_hist[0];
 
   // A later scalar store must supersede the tile commit. The following
@@ -200,38 +198,12 @@ int main() {
 
   BENCHSTART;
   const CoherenceProbeResult coherence_probe = run_coherence_probe();
-  histogram_high8(input, kCount, high_hist, old_high);
-
-  std::size_t greater_high = 0;
-  const uint8_t selected_high =
-      descending_bucket(high_hist, kRequestedK, &greater_high);
-  histogram_selected_low8(input, kCount, selected_high, low_hist, old_low);
-
-  std::size_t greater_low = 0;
-  const uint8_t selected_low =
-      descending_bucket(low_hist, kRequestedK - greater_high, &greater_low);
-  const uint16_t cutoff = static_cast<uint16_t>(
-      (static_cast<uint16_t>(selected_high) << 8) | selected_low);
-  const std::size_t strictly_greater = greater_high + greater_low;
-  std::size_t equal_remaining = kRequestedK - strictly_greater;
-  std::size_t output_count = 0;
-  for (std::size_t i = 0; i < kCount; ++i) {
-    if (input[i] > cutoff) {
-      if (output_count < kRequestedK) {
-        output[output_count] = input[i];
-      }
-      ++output_count;
-    }
-  }
-  for (std::size_t i = 0; i < kCount && equal_remaining != 0; ++i) {
-    if (input[i] == cutoff) {
-      if (output_count < kRequestedK) {
-        output[output_count] = input[i];
-      }
-      ++output_count;
-      --equal_remaining;
-    }
-  }
+  const TopKResult result = topk16(
+      input, kCount, kRequestedK, output,
+      {high_hist, low_hist, old_high, old_low});
+  const uint8_t selected_high = result.selected_high;
+  const uint16_t cutoff = result.cutoff;
+  const std::size_t output_count = result.output_count;
   BENCHEND;
 
   clear(expected_low_hist, kRadix);
@@ -245,7 +217,7 @@ int main() {
 
   int failures = 0;
   uint32_t failure_mask = 0U;
-  const int shape_failures = output_count != kRequestedK || equal_remaining != 0;
+  const int shape_failures = output_count != kRequestedK;
   failures += shape_failures;
   failure_mask |= shape_failures != 0 ? 0x1U : 0U;
   int histogram_failures = 0;
@@ -270,11 +242,11 @@ int main() {
   int coherence_failures = 0;
   coherence_failures += coherence_probe.initial != 0U;
   coherence_failures += element_atomic_topk_coherence_old[0] != 7U;
-  coherence_failures += element_atomic_topk_coherence_old[kLanes] != 8U;
+  coherence_failures += element_atomic_topk_coherence_old[1] != 8U;
   coherence_failures += coherence_probe.after_atomic != 9U;
   coherence_failures += coherence_probe.after_scalar != 10U;
   for (std::size_t i = 0; i < kCoherenceProbePaddedCount; ++i) {
-    if (i != 0U && i != kLanes) {
+    if (i != 0U && i != 1U) {
       coherence_failures += element_atomic_topk_coherence_old[i] != 0U;
     }
   }

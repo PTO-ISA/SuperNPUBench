@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the ordered native lowering of all three histogram invocations."""
+"""Validate the native coherence, full histogram, and selected histogram sites."""
 
 from __future__ import annotations
 
@@ -53,6 +53,7 @@ def destination(operands: str) -> str:
 
 
 def validate_segment(segment: list[Instruction], ordinal: int) -> None:
+    expected_compares = (1, 1, 2)[ordinal]
     def positions(mnemonic: str) -> list[int]:
         return [index for index, inst in enumerate(segment) if inst.mnemonic == mnemonic]
 
@@ -72,31 +73,34 @@ def validate_segment(segment: list[Instruction], ordinal: int) -> None:
     ]
     if len(tci) < 2:
         raise CheckError(f"helper {ordinal}: expected lane and one-value TCI")
-    if len(compares) != 2:
-        raise CheckError(f"helper {ordinal}: expected exactly two TCMPS GPR producers")
-    if len(scalar_and) != 1:
-        raise CheckError(f"helper {ordinal}: expected exactly one scalar predicate AND")
+    if len(compares) != expected_compares:
+        raise CheckError(f"helper {ordinal}: wrong number of TCMPS GPR producers")
+    if len(scalar_and) != expected_compares - 1:
+        raise CheckError(f"helper {ordinal}: wrong number of scalar predicate AND operations")
     if len(tlea) != 1:
         raise CheckError(f"helper {ordinal}: expected exactly one TLEA")
     if len(atomic) != 1:
         raise CheckError(f"helper {ordinal}: expected exactly one MGATHER.ADD")
 
-    and_index = scalar_and[0]
-    if not (tci[0] < compares[0] < compares[1] < and_index < tlea[0] < atomic[0]):
-        raise CheckError(f"helper {ordinal}: lowering order is not TCI/TCMPS/AND/TLEA/atomic")
-
     compare_dsts = [destination(segment[index].operands) for index in compares]
     if any(not GPR.fullmatch(value) for value in compare_dsts):
-        raise CheckError(f"helper {ordinal}: TCMPS destination is not a scalar GPR")
-    and_match = re.search(
-        r"^([^,]+),\s*([^,]+),\s*->\s*([^\s,]+)", segment[and_index].operands
-    )
-    if not and_match:
-        raise CheckError(f"helper {ordinal}: malformed scalar AND")
-    and_sources = {and_match.group(1).strip(), and_match.group(2).strip()}
-    and_dst = and_match.group(3).strip()
-    if and_sources != set(compare_dsts) or not GPR.fullmatch(and_dst):
-        raise CheckError(f"helper {ordinal}: AND does not combine the two TCMPS GPRs")
+        raise CheckError(f"site {ordinal}: TCMPS destination is not a scalar GPR")
+    if not (tci[0] < compares[0] <= compares[-1] < tlea[0] < atomic[0]):
+        raise CheckError(f"site {ordinal}: invalid TCI/compare/TLEA/atomic order")
+    mask_dst = compare_dsts[0]
+    if expected_compares == 2:
+        and_index = scalar_and[0]
+        if not (compares[-1] < and_index < tlea[0]):
+            raise CheckError(f"site {ordinal}: predicate AND is out of order")
+        and_match = re.search(
+            r"^([^,]+),\s*([^,]+),\s*->\s*([^\s,]+)", segment[and_index].operands
+        )
+        if not and_match:
+            raise CheckError(f"site {ordinal}: malformed scalar AND")
+        and_sources = {and_match.group(1).strip(), and_match.group(2).strip()}
+        mask_dst = and_match.group(3).strip()
+        if and_sources != set(compare_dsts) or not GPR.fullmatch(mask_dst):
+            raise CheckError(f"site {ordinal}: AND does not combine the compare GPRs")
 
     atomic_index = atomic[0]
     datr = next(
@@ -117,8 +121,8 @@ def validate_segment(segment: list[Instruction], ordinal: int) -> None:
     if not binder:
         raise CheckError(f"helper {ordinal}: malformed masked atomic B.IOR")
     base, mask, unused = (value.strip() for value in binder.groups())
-    if not GPR.fullmatch(base) or mask != and_dst or unused != "zero":
-        raise CheckError(f"helper {ordinal}: B.IOR is not [base, AND-mask, zero]")
+    if not GPR.fullmatch(base) or mask != mask_dst or unused != "zero":
+        raise CheckError(f"helper {ordinal}: B.IOR is not [base, active-mask, zero]")
 
     body = "\n".join(inst.line for inst in segment)
     if "CUBE_M32" not in body or not re.search(r"C\.B\.DIMI\s+32", body):
@@ -137,7 +141,7 @@ def validate(text: str) -> None:
         if end is not None:
             segments.append(instructions[start : end + 1])
     if len(segments) != 3:
-        raise CheckError(f"expected exactly three histogram helper bodies, found {len(segments)}")
+        raise CheckError(f"expected exactly three histogram atomic sites, found {len(segments)}")
     for ordinal, segment in enumerate(segments):
         validate_segment(segment, ordinal)
 

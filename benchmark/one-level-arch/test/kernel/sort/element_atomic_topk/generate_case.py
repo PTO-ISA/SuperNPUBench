@@ -104,7 +104,7 @@ def main() -> int:
     write_u32(args.out / files["element_atomic_topk_coherence_input"], [0] * 128)
     write_u32(args.out / files["element_atomic_topk_coherence_hist"], [10] + [0] * 255)
     coherence_old = [0] * 128
-    coherence_old[0], coherence_old[32] = 7, 8
+    coherence_old[0], coherence_old[1] = 7, 8
     write_u32(args.out / files["element_atomic_topk_coherence_old"], coherence_old)
     write_u32(args.out / files["element_atomic_topk_coherence_state"], [0, 9, 10, 0])
 

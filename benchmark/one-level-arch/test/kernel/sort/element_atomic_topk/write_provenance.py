@@ -86,6 +86,12 @@ def main() -> int:
         args.runtime_root / "sysroot/usr/lib/libunwind.a",
     ]
     golden_files = sorted(path for path in args.golden_dir.iterdir() if path.is_file())
+    installed_api_root = args.resource_dir / "include/tileop-api"
+    installed_api_files = sorted(path for path in installed_api_root.rglob("*")
+                                 if path.is_file())
+    if not installed_api_root.is_dir() or not installed_api_files:
+        raise RuntimeError("missing installed TileOp API headers: " +
+                           str(installed_api_root))
     identity: dict[str, object] = {
         "created_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "target": {
@@ -121,6 +127,12 @@ def main() -> int:
             "gfsim": sha256_file(args.gfsim),
             "runtime": {str(path): sha256_file(path) for path in runtime_files},
             "api_header": sha256_file(args.api_include / "common/pto_tileop.hpp"),
+            # -mlxbc preincludes the installed TileOp API. Record that actual
+            # header tree as well as the explicitly supplied include checkout.
+            "installed_tileop_headers": {
+                str(path.relative_to(args.resource_dir)): sha256_file(path)
+                for path in installed_api_files
+            },
             "goldens": {path.name: sha256_file(path) for path in golden_files},
         },
         "repositories": {

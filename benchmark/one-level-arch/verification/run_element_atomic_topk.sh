@@ -70,7 +70,7 @@ dump_range=$(python3 "$case_dir/element_atomic_topk/compare_memory.py" \
     --golden "$artifact_dir/golden" --print-range)
 dump_base=${dump_range%%:*}
 
-for step in disassembly gfrun gfrun-memory gfsim gfsim-memory; do
+for step in disassembly gfrun gfrun-memory gfsim gfsim-invariants gfsim-memory; do
     printf '%s\n' 125 > "$artifact_dir/$step.exit"
 done
 
@@ -164,6 +164,16 @@ if (( gfsim_status != 0 )); then
     exit "$gfsim_status"
 fi
 grep -Eq 'Total Cycles|total cycles|cycle_count' "$artifact_dir/gfsim.log"
+if grep -Eq 'invariants:.*stq_conservation=OK.*a3_tile_violation=0([[:space:]]|$)' \
+    "$artifact_dir/gfsim.log" &&
+    ! grep -Eq 'LOG_ERROR|ASSERTION FAILED|a3_tile_violation peId=' \
+        "$artifact_dir/gfsim.log"; then
+    printf '0\n' > "$artifact_dir/gfsim-invariants.exit"
+else
+    printf '1\n' > "$artifact_dir/gfsim-invariants.exit"
+    echo "gfsim architectural invariant check failed" >&2
+    exit 1
+fi
 printf '%s\n' \
     'gfsim does not emit an R2 register line; exit status and the independently checked status memory segment establish completion without --test-finisher 1.' \
     > "$artifact_dir/gfsim-r2-contract.txt"

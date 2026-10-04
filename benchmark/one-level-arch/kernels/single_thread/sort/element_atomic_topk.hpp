@@ -5,134 +5,147 @@
 #include <cstddef>
 #include <cstdint>
 
+#ifndef PTO_TILEOP_API_HAS_ELEMENT_TILE
+#error "Install the public TileOp ElementTile API before building this kernel"
+#endif
+
 namespace element_atomic_topk_kernel {
-
-using namespace pto;
-
-constexpr std::size_t kLanes = 32;
+using pto::ElementTile;
+using pto::TPARTVIEW;
+using pto::TPARTELEMENT;
+constexpr std::size_t kPartElements = 32;
 constexpr std::size_t kParts = 4;
-constexpr std::size_t kParentLanes = kLanes * kParts;
+constexpr std::size_t kBlockElements = 128;
 
-using ParentTile = CubeTileM32<uint32_t, 32, 4>;
-using PartTile = CubeTileM32<uint32_t, 32, 1>;
-using LaneTile = PartTile;
+struct TopKWorkspace {
+  uint32_t *high_hist;
+  uint32_t *low_hist;
+  uint32_t *old_high;
+  uint32_t *old_low;
+};
 
-#ifdef __linx
-using LaneCarrier = uint32_t tile_size(kLanes);
+struct TopKResult {
+  std::size_t output_count;
+  uint16_t cutoff;
+  uint8_t selected_high;
+  std::size_t strictly_greater;
+  std::size_t equal_needed;
+};
 
-inline void atomic_selected_low8(LaneCarrier &old_values,
-                                 const LaneCarrier &high8,
-                                 const LaneCarrier &low8,
-                                 uint32_t selected_high, uint32_t *histogram,
-                                 uint32_t valid_lanes) {
-#ifdef LINX_ELEMENTWISE_AVAILABLE
+// U32 storage for keys in 0..65535. Histogram buffers hold 256 counters;
+// diagnostic old-value buffers hold round_up(count, 128) elements.
+// Input need not be padded. Output is an unordered Top-K multiset.
+inline TopKResult topk16(const uint32_t *input, std::size_t count,
+                        std::size_t requested_k, uint32_t *output,
+                        TopKWorkspace workspace) {
+  const std::size_t k = requested_k < count ? requested_k : count;
+  const std::size_t padded_count = ((count + 127) / 128) * 128;
+  for (std::size_t bin = 0; bin < 256; ++bin) {
+    workspace.high_hist[bin] = 0;
+    workspace.low_hist[bin] = 0;
+  }
+  for (std::size_t element = 0; element < padded_count; ++element) {
+    workspace.old_high[element] = 0;
+    workspace.old_low[element] = 0;
+  }
+
+  // Histogram all high digits.
+  uint32_t *high_hist = workspace.high_hist;
+  for (std::size_t begin = 0; begin < count; begin += kBlockElements) {
+    const std::size_t valid = count - begin < kBlockElements
+                                ? count - begin : kBlockElements;
+    ElementTile<uint32_t, kBlockElements> keys;
+    TLOAD(keys, input + begin, valid);
+    auto parts = TPARTVIEW<kPartElements>(keys, valid);
+    for (std::size_t part = 0; part < parts.size(); ++part) {
+      ElementTile<uint32_t, kPartElements> values, buckets, old;
+      auto view = parts.part(part);
+      TADDS(values, view, 0u);
+      TSHRS(buckets, values, 8u);
+      auto &bucket_elements = TPARTELEMENT(buckets);
+      auto &old_elements = TPARTELEMENT(old);
+      const uint32_t valid_elements = static_cast<uint32_t>(parts.valid_size(part));
 #pragma linx elementwise
-#endif
-  for (unsigned lane = 0; lane < 32; ++lane) {
-    if (lane < valid_lanes && high8[lane] == selected_high) {
-      old_values[lane] =
-          __atomic_fetch_add(&histogram[low8[lane]], 1u, __ATOMIC_RELAXED);
-    } else {
-      old_values[lane] = 0;
+      for (unsigned element = 0; element < kPartElements; ++element) {
+        if (element < valid_elements) {
+          old_elements[element] = __atomic_fetch_add(
+              &high_hist[bucket_elements[element]], 1u, __ATOMIC_RELAXED);
+        } else {
+          old_elements[element] = 0;
+        }
+      }
+      TSTORE(workspace.old_high + begin, old, parts, part);
     }
   }
-}
-#endif
+  if (k == 0)
+    return {0, UINT16_MAX, 255, 0, 0};
 
-inline void histogram_high8(const uint32_t *input, std::size_t element_count,
-                            uint32_t *histogram, uint32_t *old_values) {
-#ifdef __linx
-  const std::size_t parent_count =
-      (element_count + kParentLanes - 1) / kParentLanes;
-  for (std::size_t parent_index = 0; parent_index < parent_count;
-       ++parent_index) {
-    ParentTile parent;
-    global_tensor<uint32_t, RowMajor<32, 4>> source(
-        const_cast<uint32_t *>(input + parent_index * kParentLanes));
-    TLOAD_CUBE(parent, source);
-    auto parts = TPARTVIEW<PartTile, 1, kParts>(parent);
+  std::size_t remaining = k;
+  uint32_t selected_high = 255;
+  for (int bin = 255; bin >= 0; --bin) {
+    if (remaining <= high_hist[bin]) {
+      selected_high = static_cast<uint32_t>(bin);
+      break;
+    }
+    remaining -= high_hist[bin];
+  }
 
-    for (std::size_t part_index = 0; part_index < kParts; ++part_index) {
-      auto part = parts[0][part_index];
-      LaneTile logical_part;
-      LaneTile high8;
-      LaneTile always_selected;
-      LaneTile old;
-      // Materialize the M32 column view without changing its layout.
-      TADDS(logical_part, part, 0u);
-      TSHRS(high8, logical_part, 8u);
-      TANDS(always_selected, logical_part, 0u);
-      const std::size_t lane_base = parent_index * kParentLanes + part_index;
-      const uint32_t valid_lanes = static_cast<uint32_t>(
-          lane_base >= element_count ? 0
-              : ((element_count - lane_base + kParts - 1) / kParts < kLanes
-                     ? (element_count - lane_base + kParts - 1) / kParts
-                     : kLanes));
-      atomic_selected_low8(old.data(), always_selected.data(), high8.data(),
-                           0u, histogram, valid_lanes);
-      global_tensor<uint32_t, RowMajor<32, 1>> destination(
-          old_values + parent_index * kParentLanes + part_index * kLanes);
-      TSTORE_CUBE(destination, old);
+  // Histogram low digits only for elements in the selected high bucket.
+  uint32_t *low_hist = workspace.low_hist;
+  for (std::size_t begin = 0; begin < count; begin += kBlockElements) {
+    const std::size_t valid = count - begin < kBlockElements
+                                ? count - begin : kBlockElements;
+    ElementTile<uint32_t, kBlockElements> keys;
+    TLOAD(keys, input + begin, valid);
+    auto parts = TPARTVIEW<kPartElements>(keys, valid);
+    for (std::size_t part = 0; part < parts.size(); ++part) {
+      ElementTile<uint32_t, kPartElements> values, buckets, predicate, old;
+      auto view = parts.part(part);
+      TADDS(values, view, 0u);
+      TSHRS(predicate, values, 8u);
+      TANDS(buckets, values, 0xffu);
+      auto &bucket_elements = TPARTELEMENT(buckets);
+      auto &predicate_elements = TPARTELEMENT(predicate);
+      auto &old_elements = TPARTELEMENT(old);
+      const uint32_t valid_elements = static_cast<uint32_t>(parts.valid_size(part));
+#pragma linx elementwise
+      for (unsigned element = 0; element < kPartElements; ++element) {
+        if (element < valid_elements && predicate_elements[element] == selected_high) {
+          old_elements[element] = __atomic_fetch_add(
+              &low_hist[bucket_elements[element]], 1u, __ATOMIC_RELAXED);
+        } else {
+          old_elements[element] = 0;
+        }
+      }
+      TSTORE(workspace.old_low + begin, old, parts, part);
     }
   }
-#else
-  for (std::size_t i = 0; i < element_count; ++i) {
-    const uint32_t bin = (input[i] >> 8) & 0xffu;
-    old_values[i] = histogram[bin]++;
+
+  uint32_t selected_low = 255;
+  for (int bin = 255; bin >= 0; --bin) {
+    if (remaining <= low_hist[bin]) {
+      selected_low = static_cast<uint32_t>(bin);
+      break;
+    }
+    remaining -= low_hist[bin];
   }
-#endif
-}
-
-inline void histogram_selected_low8(const uint32_t *input,
-                                    std::size_t element_count,
-                                    uint32_t selected_high, uint32_t *histogram,
-                                    uint32_t *old_values) {
-#ifdef __linx
-  const std::size_t parent_count =
-      (element_count + kParentLanes - 1) / kParentLanes;
-  for (std::size_t parent_index = 0; parent_index < parent_count;
-       ++parent_index) {
-    ParentTile parent;
-    global_tensor<uint32_t, RowMajor<32, 4>> source(
-        const_cast<uint32_t *>(input + parent_index * kParentLanes));
-    TLOAD_CUBE(parent, source);
-    auto parts = TPARTVIEW<PartTile, 1, kParts>(parent);
-
-    for (std::size_t part_index = 0; part_index < kParts; ++part_index) {
-      auto part = parts[0][part_index];
-      LaneTile logical_part;
-      LaneTile high8;
-      LaneTile low8;
-      LaneTile old;
-      TADDS(logical_part, part, 0u);
-      TSHRS(high8, logical_part, 8u);
-      TANDS(low8, logical_part, 0xffu);
-      const std::size_t lane_base = parent_index * kParentLanes + part_index;
-      const uint32_t valid_lanes = static_cast<uint32_t>(
-          lane_base >= element_count ? 0
-              : ((element_count - lane_base + kParts - 1) / kParts < kLanes
-                     ? (element_count - lane_base + kParts - 1) / kParts
-                     : kLanes));
-      atomic_selected_low8(old.data(), high8.data(), low8.data(), selected_high,
-                           histogram, valid_lanes);
-      global_tensor<uint32_t, RowMajor<32, 1>> destination(
-          old_values + parent_index * kParentLanes + part_index * kLanes);
-      TSTORE_CUBE(destination, old);
+  const uint16_t cutoff = static_cast<uint16_t>(
+      (selected_high << 8) | selected_low);
+  const std::size_t equal_needed = remaining;
+  std::size_t written = 0;
+  for (std::size_t element = 0; element < count; ++element) {
+    if (input[element] > cutoff)
+      output[written++] = input[element];
+  }
+  for (std::size_t element = 0; element < count && remaining != 0; ++element) {
+    if (input[element] == cutoff) {
+      output[written++] = input[element];
+      --remaining;
     }
   }
-#else
-  for (std::size_t i = 0; i < element_count; ++i) {
-    const uint32_t high = (input[i] >> 8) & 0xffu;
-    if (high == selected_high) {
-      const uint32_t low = input[i] & 0xffu;
-      old_values[i] = histogram[low]++;
-    } else {
-      old_values[i] = 0;
-    }
-  }
-#endif
+  return {written, cutoff, static_cast<uint8_t>(selected_high),
+          k - equal_needed, equal_needed};
 }
 
 } // namespace element_atomic_topk_kernel
-
 #endif

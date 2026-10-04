@@ -5,18 +5,26 @@ are carried as `uint32_t` but are restricted to the unsigned 16-bit key domain.
 The representation avoids an unrelated narrow-integer conversion dependency
 while keeping the two-level radix algorithm identical to a `uint16_t` Top-K.
 
-Each 128-element input chunk is loaded as one `CUBE_M32` Tile and split with
-`TPARTVIEW` into four 32-element views. `TSHRS` and `TANDS` consume the views to
-form the high and low radix digits. A canonical `#pragma linx elementwise` loop
-then performs a normal C conditional and
-`__atomic_fetch_add(&histogram[index], 1u, __ATOMIC_RELAXED)`. The compiler is
-responsible for lowering the logical U32 index through TLEA to a U64 byte
-offset before the indexed atomic memory operation.
+The complete `topk16` kernel is in
+[`element_atomic_topk.hpp`](../../../../../kernels/single_thread/sort/element_atomic_topk.hpp).
+It contains histogram construction, cutoff selection and collection in one
+function. It includes only the public `<common/pto_tileop.hpp>` API and uses
+`ElementTile<uint32_t, Elements>`, `TPARTVIEW`, `TPARTELEMENT`, ordinary element
+indices and relaxed atomic fetch-add. The API owns physical storage, safe
+partial loads and logical-order stores; the benchmark defines no private Tile
+classes or copied arithmetic backend. The requested public extension is kept
+in existing TileOp API headers and requires `PTO_TILEOP_API_HAS_ELEMENT_TILE`.
+
+TileOps prepare radix digits. The element-wise loop performs histogram updates,
+then TileOp stores return old values in logical input element order. The compiler
+converts logical U32 histogram indices through exactly one TLEA to U64 byte
+offsets before masked MGATHER.ADD. Top-K results are an unordered multiset; the
+independent verification stage sorts them for comparison only.
 
 The target test validates all 256 bins at both radix levels, exactly 37 output
 elements, the complete Top-K multiset across a tied cutoff, and the returned
 old value from every atomic. The old values for each bin must be exactly the
-permutation `0..count-1`; unused and padded tail lanes must remain zero. The
+permutation `0..count-1`; unused and padded tail elements must remain zero. The
 777-element input crosses six full 128-element parent Tiles
 and ends in a partial parent Tile whose inactive storage
 contains values outside the documented key domain.
@@ -25,9 +33,9 @@ The same ELF also runs a dedicated coherence probe. Four additional exported
 golden segments contain its input, final histogram, old-value array, and scalar
 observations `[initial, after_atomic, after_scalar, failures] = [0, 9, 10, 0]`. A volatile scalar load first caches a zero histogram
 line, a volatile scalar store makes bin zero dirty with value 7, and a
-two-element call to `histogram_high8` performs two native masked atomic adds.
-Their old-value Tile stores must contain 7 at column-buffer offset 0 and 8 at
-offset 32, every inactive old-value lane must remain zero, and the histogram
+two-element Tile/element-wise region performs two native masked atomic adds.
+Their old-value Tile stores must contain 7 at logical element 0 and 8 at
+logical element 1, every inactive old-value element must remain zero, and the histogram
 must become 9. A later volatile scalar store/load pair must observe 10, proving
 that the later scalar writer supersedes the queued tile commit. Any mismatch
 sets status failure bit `0x20`.
@@ -46,9 +54,11 @@ dependent and are verified inside the ELF as exact per-bin permutations.
 
 The end-to-end harness combines a freshly built compiler/backend with an
 installed Linx musl runtime and current TileOP headers. It rejects an ELF
-whose three histogram invocations do not each contain B.SUBVIEW, TSHRS/TANDS,
-TCI, TCMPS, scalar predicate AND, exactly one TLEA, MGATHER.ADD, and the native
-execution-mask binder. Both gfrun and gfsim must then run as one logical
+whose three static atomic sites lack B.SUBVIEW, Tile digit operations,
+TCI, GPR predicate production, exactly one TLEA, masked MGATHER.ADD and Tile
+stores. Full histograms use a tail predicate; the selected histogram combines
+tail and digit predicates with scalar AND. Four negative disassembly canaries
+prove these checks can reject corrupted instructions. Both gfrun and gfsim must then run as one logical
 thread/PE and match the independently generated input, histogram, Top-K, and
 status and coherence memory segments. UART text is diagnostic only and is not used as the
 correctness oracle:
@@ -75,3 +85,8 @@ revisions/diff hashes, runtime-library hashes, and the TileOP header hash.
 The general sort `compile.all` and repository compile smoke keep their legacy
 behavior. Set `ELEMENT_ATOMIC_TOPK=on` together with `LINX_RUNTIME_ROOT` and
 `API_INCLUDE` to opt this draft PTO 0.59 case into those broader scripts.
+
+The additional native [Tile/element-wise suite](../../element_wise/tile_element_suite/README.md)
+covers standalone histogram, selected radix histogram, and actual Top-K boundary
+calls with independent goldens on gfrun and gfsim. Host reference tests are an
+independent oracle, not an alternative TileOp implementation.
