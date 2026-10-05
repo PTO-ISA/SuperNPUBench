@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #include "fileop.h"
-#include "solution/normalization/rms_norm/rms_norm_static.hpp"
+#include "solution/normalization/rms_norm/V0/rms_norm_static.hpp"
 
 #ifndef DType
 #define DType __half

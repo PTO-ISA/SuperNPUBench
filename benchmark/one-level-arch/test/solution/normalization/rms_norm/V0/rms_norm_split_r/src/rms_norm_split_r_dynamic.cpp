@@ -1,17 +1,16 @@
-// Fixed-shape 4PE test: [16,16384].
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
 
 #include "fileop.h"
-#include "solution/normalization/rms_norm_split_r/rms_norm_split_r_static.hpp"
+#include "solution/normalization/rms_norm/V0/rms_norm_split_r/rms_norm_split_r_dynamic.hpp"
 
 #ifndef DType
 #define DType __half
 #endif
 
 #ifndef PE_NUM
-#define PE_NUM 4
+#define PE_NUM 1
 #endif
 
 // Dynamic 4PE validation shape: [16, 16384], fp16.
@@ -21,7 +20,7 @@
 #ifndef G_R
 #define G_R 16384
 #endif
-// Must match rms_split_r_static::kWsCols / kMaxLevels
+// Must match rms_split_r::kWsCols / kMaxLevels
 #ifndef K_WS_COLS
 #define K_WS_COLS 1
 #endif
@@ -41,6 +40,13 @@ constexpr int64_t split_tile_r(int64_t reduce_size) {
     constexpr int64_t kMaxTileR = 512;
     return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
 }
+constexpr int64_t next_power_of_two(int64_t value) {
+    int64_t result = 1;
+    while (result < value) {
+        result <<= 1;
+    }
+    return result;
+}
 } // namespace
 
 #ifdef RES_CHECK
@@ -52,7 +58,6 @@ volatile uint32_t output_written = 0;
 #endif
 
 int main() {
-    static_assert(G_A == 16 && G_R == 16384, "static testcase has a fixed shape");
     using dtype = DType;
 
     constexpr int64_t kTileA = 1;
@@ -60,8 +65,24 @@ int main() {
     constexpr int64_t kPowR = floor_power_of_two(G_R - 1);
     static_assert(G_A > 0 && G_R > 1);
     static_assert(kPowR < G_R && G_R <= 2 * kPowR);
-    constexpr int64_t g_a = G_A;
-    constexpr int64_t g_r = G_R;
+
+    // Host-side binary-accumulation tiling: compute the actual block count
+    // (rem full + rem tail + head full + head tail) and round it up to the
+    // next power of two so the kernel's AscendC-style cache tree always
+    // yields the full row sum. Guard against exceeding workspace levels.
+    constexpr int64_t kRemR = G_R - kPowR;
+    constexpr int64_t kHeadR = kPowR - kRemR;
+    constexpr int64_t kNActual =
+        kRemR / kTileR + (kRemR % kTileR > 0 ? 1 : 0) +
+        kHeadR / kTileR + (kHeadR % kTileR > 0 ? 1 : 0);
+    constexpr int64_t kNPadded = next_power_of_two(kNActual);
+    static_assert(kNPadded <= (int64_t(1) << (K_MAX_LEVELS - 1)),
+                  "padded block count exceeds workspace cache levels");
+    rms_split_r::RmsNormSplitRTilingData tiling_info = {
+        G_A, G_R, kTileA, kTileR, kPowR, kNPadded};
+
+    const int64_t g_a = tiling_info.g_a;
+    const int64_t g_r = tiling_info.g_r;
 
     static dtype input_buf[G_A * G_R];
     static dtype gamma_buf[G_R];
@@ -89,8 +110,8 @@ int main() {
     }
 #endif
 
-    rms_norm_split_r_static<dtype, PE_NUM>(
-        input, gamma, output, workspace);
+    rms_norm_split_r<dtype, PE_NUM>(
+        input, gamma, &tiling_info, output, workspace);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

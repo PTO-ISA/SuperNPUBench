@@ -112,5 +112,6 @@ def main() -> int:
     return rc
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+# V0 (archived, backup only): rms_norm_dynamic is no longer built, entry disabled.
+# if __name__ == "__main__":
+#     sys.exit(main())
