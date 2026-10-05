@@ -1,13 +1,13 @@
-// rms_norm_dynamic_m_R_tree: default test shape [128,8192].
+// rms_norm_dynamic_tree: default test shape [128,8192].
 // Fixed-shape 4PE implementation with R=[16,32,16], Tile=[32,16].
-#ifndef SUPERNPU_RMS_NORM_SIMT_DYNAMIC_M_R_TREE_HPP
-#define SUPERNPU_RMS_NORM_SIMT_DYNAMIC_M_R_TREE_HPP
+#ifndef SUPERNPU_RMS_NORM_SIMT_DYNAMIC_TREE_HPP
+#define SUPERNPU_RMS_NORM_SIMT_DYNAMIC_TREE_HPP
 
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
 
-namespace rms_detail_simt_dynamic_m_R_tree {
+namespace rms_detail_simt_dynamic_tree {
 
 constexpr float kEpsilon = 1e-6f;
 constexpr int64_t kTileM = 32;
@@ -133,10 +133,10 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
     }
 }
 
-} // namespace rms_detail_simt_dynamic_m_R_tree
+} // namespace rms_detail_simt_dynamic_tree
 
 template <typename dtype, int peNum, typename TilingData>
-void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma,
+void rms_norm_dynamic_tree(dtype *x, const dtype *gamma,
                                const TilingData *tiling, dtype *out,
                                float *workspace) {
     static_assert(peNum == 4, "normalization kernels support only 4PE");
@@ -152,7 +152,7 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma,
     if (globalA <= 0 || gR <= 0 || powR <= 0 || powR > gR ||
         gR > kMaxReduceR || tile_r <= 0 || tile_r > 512 ||
         pair_count <= 0 ||
-        pair_count > rms_detail_simt_dynamic_m_R_tree::kMaxPairCount ||
+        pair_count > rms_detail_simt_dynamic_tree::kMaxPairCount ||
         gR % (tile_r * 2) != 0 || pair_count * tile_r * 2 != gR ||
         tid >= static_cast<uint32_t>(peNum)) {
         return;
@@ -168,16 +168,16 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma,
     x += pe_start * gR;
     out += pe_start * gR;
     const int64_t workspace_rows_per_pe =
-        ((rows_per_pe + rms_detail_simt_dynamic_m_R_tree::kTileM - 1) /
-         rms_detail_simt_dynamic_m_R_tree::kTileM) *
-        rms_detail_simt_dynamic_m_R_tree::kTileM;
+        ((rows_per_pe + rms_detail_simt_dynamic_tree::kTileM - 1) /
+         rms_detail_simt_dynamic_tree::kTileM) *
+        rms_detail_simt_dynamic_tree::kTileM;
     workspace += static_cast<int64_t>(tid) * workspace_rows_per_pe *
-                 rms_detail_simt_dynamic_m_R_tree::kMaxPairCount;
+                 rms_detail_simt_dynamic_tree::kMaxPairCount;
 
     using gm_t = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f_matrix = global_tensor<
-        float, RowMajor<rms_detail_simt_dynamic_m_R_tree::kTileM,
-                        rms_detail_simt_dynamic_m_R_tree::kMaxPairCount>>;
+        float, RowMajor<rms_detail_simt_dynamic_tree::kTileM,
+                        rms_detail_simt_dynamic_tree::kMaxPairCount>>;
     using gm_f_col = gm_f_matrix;
     using tile_h = Tile<Location::Vec, dtype, 32, 16,
                         BLayout::CubeM32, -1, -1>;
@@ -194,11 +194,11 @@ void rms_norm_dynamic_m_R_tree(dtype *x, const dtype *gamma,
 
     const float inv_r = 1.0f / static_cast<float>(gR);
     for (int64_t ia = 0; ia < peA; ++ia) {
-        rms_detail_simt_dynamic_m_R_tree::rms_norm_tile<
+        rms_detail_simt_dynamic_tree::rms_norm_tile<
             dtype, gm_t, gm_f_col, gm_f_matrix, tile_h, tile_f, tile_m_v,
             tile_m_matrix, tile_v, tile_s>(
             x, gamma, out, workspace, gR, pair_count, ia, tile_r, inv_r);
     }
 }
 
-#endif // SUPERNPU_RMS_NORM_SIMT_DYNAMIC_M_R_TREE_HPP
+#endif // SUPERNPU_RMS_NORM_SIMT_DYNAMIC_TREE_HPP

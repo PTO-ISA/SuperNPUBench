@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "fileop.h"
-#include "solution/normalization/rms_norm/rms_norm_dynamic_m_R_simt.hpp"
+#include "solution/normalization/rms_norm/rms_norm_dynamic_simt_32k.hpp"
 
 #ifndef DType
 #define DType __half
@@ -31,8 +31,8 @@ constexpr int64_t rms_pow_r(int64_t reduce_size) {
 }
 constexpr int64_t rms_tile_r(int64_t reduce_size) {
     // tile_r denotes the total number of elements in one linear R block. The
-    // kernel maps 512 elements to the physical [32,16] Tile.
-    constexpr int64_t kMaxTileR = 512;
+    // kernel maps 8192 elements to the physical [32,256] Tile.
+    constexpr int64_t kMaxTileR = 8192;
     return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
 }
 } // namespace
@@ -53,8 +53,9 @@ int main() {
     constexpr int64_t kTileA = rms_tile_a(G_A, PE_NUM);
     constexpr int64_t kPowR = rms_pow_r(G_R);
     constexpr int64_t kTileR = rms_tile_r(G_R);
-    static_assert(G_A > 0 && G_R > 0);
-    static_assert(kTileA > 0 && kTileR > 0 && kTileR <= 512);
+    static_assert(G_A > 0 && G_R >= 8192 && G_R <= 16 * 8192);
+    static_assert(G_R % 8192 == 0, "32k kernels require full 8192-element R blocks");
+    static_assert(kTileA > 0 && kTileR > 0 && kTileR == 8192);
     SimtTilingData tiling_info = {
         G_A, G_R, kPowR, kTileA, kTileR};
 
@@ -85,7 +86,7 @@ int main() {
     }
 #endif
 
-    rms_norm_dynamic_m_R_simt<dtype, PE_NUM>(input, gamma, &tiling_info, output);
+    rms_norm_dynamic_simt_32k<dtype, PE_NUM>(input, gamma, &tiling_info, output);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;
