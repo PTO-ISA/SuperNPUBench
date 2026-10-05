@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "fileop.h"
-#include "solution/normalization/rms_norm/V0/rms_norm_split_r/rms_norm_split_r_dynamic.hpp"
+#include "solution/normalization/rms_norm/V0/rms_norm_split_r_dynamic.hpp"
 
 #ifndef DType
 #define DType __half
