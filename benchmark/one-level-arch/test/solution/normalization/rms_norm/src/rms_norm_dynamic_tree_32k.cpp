@@ -60,6 +60,10 @@ int main() {
     constexpr int64_t kWorkspaceRowsPerPe =
         ((kRowsPerPe + kWorkspaceTileM - 1) / kWorkspaceTileM) *
         kWorkspaceTileM;
+    // The kernel only touches the workspace when R spans more than one block.
+    constexpr int64_t kWorkspaceElems =
+        G_R > kTileR ? PE_NUM * kWorkspaceRowsPerPe * kWorkspacePairCapacity
+                     : 1;
     static_assert(G_A > 0 && G_R >= 8192 && G_R <= 16 * 8192);
     static_assert(G_R % 8192 == 0, "32k kernels require full 8192-element R blocks");
     static_assert(kTileA > 0 && kTileR > 0 && kTileR == 8192);
@@ -73,8 +77,7 @@ int main() {
     static dtype input_buf[G_A * G_R];
     static dtype gamma_buf[G_R];
     static dtype output_buf[G_A * G_R];
-    static float partial_workspace_buf[
-        PE_NUM * kWorkspaceRowsPerPe * kWorkspacePairCapacity];
+    static float partial_workspace_buf[kWorkspaceElems];
     dtype *input = input_buf;
     dtype *gamma = gamma_buf;
     dtype *output = output_buf;
