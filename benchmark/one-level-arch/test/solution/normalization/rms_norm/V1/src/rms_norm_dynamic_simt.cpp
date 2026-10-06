@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "fileop.h"
-#include "solution/normalization/rms_norm/rms_norm_dynamic_tree.hpp"
+#include "solution/normalization/rms_norm/V1/rms_norm_dynamic_simt.hpp"
 
 #ifndef DType
 #define DType __half
@@ -20,7 +20,7 @@
 #endif
 
 namespace {
-struct RTreeTilingData { int64_t g_a; int64_t g_r; int64_t powR; int64_t tile_a; int64_t tile_r; };
+struct SimtTilingData { int64_t g_a; int64_t g_r; int64_t powR; int64_t tile_a; int64_t tile_r; };
 constexpr int64_t rms_tile_a(int64_t global_a, int64_t pe_num) {
     return global_a > 0 && pe_num > 0 ? 1 : 0;
 }
@@ -53,17 +53,9 @@ int main() {
     constexpr int64_t kTileA = rms_tile_a(G_A, PE_NUM);
     constexpr int64_t kPowR = rms_pow_r(G_R);
     constexpr int64_t kTileR = rms_tile_r(G_R);
-    constexpr int64_t kPairCount = kPowR / kTileR;
-    constexpr int64_t kWorkspaceTileM = 32;
-    constexpr int64_t kWorkspacePairCapacity = 8;
-    constexpr int64_t kRowsPerPe = (G_A + PE_NUM - 1) / PE_NUM;
-    constexpr int64_t kWorkspaceRowsPerPe =
-        ((kRowsPerPe + kWorkspaceTileM - 1) / kWorkspaceTileM) *
-        kWorkspaceTileM;
     static_assert(G_A > 0 && G_R > 0);
     static_assert(kTileA > 0 && kTileR > 0 && kTileR <= 512);
-    static_assert(kPairCount > 0 && kPairCount <= 8);
-    RTreeTilingData tiling_info = {
+    SimtTilingData tiling_info = {
         G_A, G_R, kPowR, kTileA, kTileR};
 
     const int64_t g_a = tiling_info.g_a;
@@ -72,12 +64,9 @@ int main() {
     static dtype input_buf[G_A * G_R];
     static dtype gamma_buf[G_R];
     static dtype output_buf[G_A * G_R];
-    static float partial_workspace_buf[
-        PE_NUM * kWorkspaceRowsPerPe * kWorkspacePairCapacity];
     dtype *input = input_buf;
     dtype *gamma = gamma_buf;
     dtype *output = output_buf;
-    float *partial_workspace = partial_workspace_buf;
 
 #ifdef RES_CHECK
 #ifndef CHK_DIR
@@ -96,8 +85,7 @@ int main() {
     }
 #endif
 
-    rms_norm_dynamic_tree<dtype, PE_NUM>(
-        input, gamma, &tiling_info, output, partial_workspace);
+    rms_norm_dynamic_simt<dtype, PE_NUM>(input, gamma, &tiling_info, output);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;
