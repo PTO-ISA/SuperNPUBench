@@ -159,6 +159,28 @@ int main() {
                 }
             }
 #endif
+#ifdef FA_TRACE_ONLY
+            // Static storage already supplies the zero mask for valid KV
+            // columns.  In timing-only builds, touch only an actual tail;
+            // filling every valid element with zero would add O(MaxSkv*Tk)
+            // scalar setup work to gfsim's reported total cycles.
+            const int traceBlocks =
+                (static_cast<int>(shapes[c].skv) + Tk - 1) / Tk;
+            for (int block = 0; block < traceBlocks; ++block) {
+                const int64_t remaining =
+                    shapes[c].skv - static_cast<int64_t>(block) * Tk;
+                const int validCol = remaining <= 0 ? 0 : static_cast<int>(
+                    remaining < Tk ? remaining : Tk);
+                if (validCol == Tk) continue;
+                vector_dtype *blockMask =
+                    mask[c] + block * kPeTm * Tk;
+                for (int row = 0; row < kPeTm; ++row) {
+                    for (int col = validCol; col < Tk; ++col)
+                        blockMask[row * Tk + col] =
+                            static_cast<vector_dtype>(-1.0e4f);
+                }
+            }
+#else
             for (int block = 0; block < kMaxKvBlocks; ++block) {
                 const int64_t remaining =
                     shapes[c].skv - static_cast<int64_t>(block) * Tk;
@@ -175,6 +197,7 @@ int main() {
                     }
                 }
             }
+#endif
         }
         inputs_ready = 1;
     } else {
