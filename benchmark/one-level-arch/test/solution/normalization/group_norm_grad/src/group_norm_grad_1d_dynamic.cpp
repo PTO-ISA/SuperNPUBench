@@ -1,10 +1,9 @@
-// Fixed-shape 4PE test: N=256,C=4096,G=8,D=512.
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
 
 #include "fileop.h"
-#include "solution/normalization/group_norm_grad_1d/group_norm_grad_1d_static.hpp"
+#include "solution/normalization/group_norm_grad/group_norm_grad_1d_dynamic.hpp"
 
 #ifndef DType
 #define DType __half
@@ -21,7 +20,7 @@
 #define G_GRP 8
 #endif
 #ifndef PE_NUM
-#define PE_NUM 4
+#define PE_NUM 1
 #endif
 
 namespace {
@@ -42,7 +41,6 @@ volatile uint32_t output_written = 0;
 #endif
 
 int main() {
-    static_assert(N_BATCH == 256 && C_CH == 4096 && G_GRP == 8, "static testcase has a fixed shape");
     using dtype = DType;
 
     // tiling: {N, C, G, tile_d, tile_g, gb_tile_d, gb_tile_g}
@@ -65,7 +63,7 @@ int main() {
     static_assert(kGbTileD > 0 && kGbTileD <= 8192);
     static_assert(kGbTileG > 0 && kGbTileG <= kGbRowCapacity);
     static_assert(kGbTileD <= 256 || kGbTileG == 1);
-    constexpr int64_t tiling_info[7] = {N_BATCH, C_CH, G_GRP, kTileD, kTileG,
+    int64_t tiling_info[7] = {N_BATCH, C_CH, G_GRP, kTileD, kTileG,
                               kGbTileD, kGbTileG};
 
     const int64_t N = tiling_info[0];
@@ -81,7 +79,7 @@ int main() {
     static dtype dgamma_buf[C_CH];
     static dtype dbeta_buf[C_CH];
     // Contiguous planes: c2[N,G], followed by c3[N,G].
-    static float params_workspace[gn_grad_1d_static::workspace_elems(N_BATCH, G_GRP)];
+    static float params_workspace[gn_grad_1d::workspace_elems(N_BATCH, G_GRP)];
 
     dtype *dy = dy_buf;
     dtype *x = x_buf;
@@ -115,8 +113,8 @@ int main() {
     }
 #endif
 
-  group_norm_grad_1d_static<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
-      params_workspace, dx, dgamma, dbeta);
+  group_norm_grad_1d_dynamic<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
+      tiling_info, params_workspace, dx, dgamma, dbeta);
 
 #ifdef RES_CHECK
     kernel_done[tid] = 1;

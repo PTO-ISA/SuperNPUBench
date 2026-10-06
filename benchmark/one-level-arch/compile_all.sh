@@ -55,7 +55,6 @@ compile_operator "$REPO_ROOT/test/solution/normalization/rms_norm" "solution/nor
 # V0 (archived, backup only): rms_norm_split_r moved to test/solution/normalization/rms_norm/V0/, not built.
 # compile_operator "$REPO_ROOT/test/solution/normalization/rms_norm_split_r" "solution/normalization/rms_norm_split_r"
 compile_operator "$REPO_ROOT/test/solution/normalization/group_norm_grad" "solution/normalization/group_norm_grad"
-compile_operator "$REPO_ROOT/test/solution/normalization/group_norm_grad_1d" "solution/normalization/group_norm_grad_1d"
 compile_operator "$REPO_ROOT/test/solution/view_copy" "solution/view_copy"
 compile_operator "$REPO_ROOT/test/solution/gather_v2" "solution/gather_v2"
 compile_operator "$REPO_ROOT/test/solution/quant_sparse_flash_mla" "solution/quant_sparse_flash_mla"
