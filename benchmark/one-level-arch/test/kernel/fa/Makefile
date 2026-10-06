@@ -119,6 +119,8 @@ else ifeq ($(TESTCASE),fa_fixpipe)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_fixpipe.cpp
 else ifeq ($(TESTCASE),fa_lowp)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_lowp.cpp
+else ifeq ($(TESTCASE),fa_lowp_algC_final)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_lowp_algC_final.cpp
 else ifeq ($(TESTCASE),fa_lowp_ltile)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_lowp_ltile.cpp
 # A Tk=512 TileArray keeps one Local B.ASSEMBLE generation open across 16
@@ -131,7 +133,7 @@ else ifeq ($(TESTCASE),fa_lowp_recip)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_lowp_recip.cpp
 DEFINES += -DFA_LOWP_RECIP=1
 else
-$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma, fa_gmma_opt, fa_gmma_dynamic, fa_gmma_kchains, fa_2d_unroll_gmma_no_tstore, fa_fixpipe, fa_lowp, fa_lowp_ltile, fa_mxfp4_opt, or fa_lowp_recip)
+$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma, fa_gmma_opt, fa_gmma_dynamic, fa_gmma_kchains, fa_2d_unroll_gmma_no_tstore, fa_fixpipe, fa_lowp, fa_lowp_algC_final, fa_lowp_ltile, fa_mxfp4_opt, or fa_lowp_recip)
 endif
 
 ifeq ($(TESTCASE),fa_gmma_dynamic)

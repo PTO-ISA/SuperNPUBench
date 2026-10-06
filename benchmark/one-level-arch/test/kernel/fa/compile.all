@@ -37,6 +37,16 @@ make diss TESTCASE=fa_lowp_recip \
     FA_MODE=MXFP4_VECBF16 Sq=256 Skv=256 Tm=128 Tk=128 \
     X_dim=1 Y_dim=2
 
+# fa_lowp_algC_final: the finalized algC lowp variant (MXFP4 matrix +
+# BF16 vector). Full shape set mirroring the other fa testcases, all X1/Y1.
+for cfg in "256 256 128" "1024 1024 128" "128 8192 128" "256 512 256"; do
+    set -- $cfg
+    make diss TESTCASE=fa_lowp_algC_final \
+        COMPILER_DIR="$COMPILER_DIR" \
+        FA_MODE=MXFP4_VECBF16 Sq="$1" Skv="$2" Tm=128 Tk="$3" \
+        X_dim=1 Y_dim=1
+done
+
 make diss TESTCASE=fa_lowp_recip \
     COMPILER_DIR="$COMPILER_DIR" \
     FA_MODE=MXFP4_VECBF16 Sq=128 Skv=8192 Tm=128 Tk=128 \

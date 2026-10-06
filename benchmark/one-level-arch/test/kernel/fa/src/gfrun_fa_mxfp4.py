@@ -4,7 +4,9 @@
 The ELF must be built with ``res_check=on``.  This script generates exact
 E2M1x2 payload bytes and non-uniform group-32 E8M0 scales for Q/K/V, decodes
 those same bytes to FP32 for the host reference, runs four-PE gfrun, and
-compares the BF16 result with ``softmax(Q @ K.T / sqrt(QD)) @ V``.
+compares the BF16 result with ``softmax(Q @ K.T / sqrt(QD)) @ V`` by default.
+``--unscaled-qk`` selects ``softmax(Q @ K.T) @ V`` for kernels that
+intentionally omit the usual attention scale.
 """
 
 import argparse
@@ -59,7 +61,7 @@ INPUT_CODES = np.array([1, 2, 3, 9, 10, 11], dtype=np.uint8)
 
 def extract_case(elf: Path) -> dict:
     match = re.search(
-        r"(?:fa_lowp(?:_recip|_ltile)?|fa_mxfp4_opt)_Sq(?P<Sq>\d+)_Skv(?P<Skv>\d+)"
+        r"(?:fa_lowp(?:_recip|_ltile|_algC_final)?|fa_mxfp4_opt)_Sq(?P<Sq>\d+)_Skv(?P<Skv>\d+)"
         r"_Tm(?P<Tm>\d+)_Tk(?P<Tk>\d+)"
         r"(?:_qD(?P<QD>\d+)_vD(?P<VD>\d+))?"
         r"_X(?P<X>\d+)_Y(?P<Y>\d+)_CubeMXFP4_VectorBF16$",
@@ -67,7 +69,8 @@ def extract_case(elf: Path) -> dict:
     )
     if not match:
         raise ValueError(
-            "expected an fa_lowp/fa_lowp_recip/fa_lowp_ltile/fa_mxfp4_opt "
+            "expected an fa_lowp/fa_lowp_algC_final/fa_lowp_recip/"
+            "fa_lowp_ltile/fa_mxfp4_opt "
             "CubeMXFP4_VectorBF16 ELF; "
             f"got {elf.name}"
         )
@@ -158,8 +161,11 @@ def prepare_case(case: dict, args) -> tuple[Path, np.ndarray]:
     q_t = torch.from_numpy(np.ascontiguousarray(q, dtype=np.float32))
     k_t = torch.from_numpy(np.ascontiguousarray(k, dtype=np.float32))
     v_t = torch.from_numpy(np.ascontiguousarray(v, dtype=np.float32))
-    scale = torch.sqrt(torch.tensor(float(case["QD"]), dtype=torch.float32))
-    golden = torch.softmax(torch.matmul(q_t, k_t.T) / scale, dim=-1) @ v_t
+    logits = torch.matmul(q_t, k_t.T)
+    if not args.unscaled_qk:
+        scale = torch.sqrt(torch.tensor(float(case["QD"]), dtype=torch.float32))
+        logits = logits / scale
+    golden = torch.softmax(logits, dim=-1) @ v_t
     golden_np = golden.numpy().astype(np.float32, copy=False)
 
     pack_e2m1x2(q_codes, axis=1).tofile(case_dir / "srcq.bin")
@@ -306,6 +312,11 @@ def main() -> int:
     parser.add_argument("--atol", type=float, default=5e-2)
     parser.add_argument("--rtol", type=float, default=5e-2)
     parser.add_argument("--timeout", type=int, default=300)
+    parser.add_argument(
+        "--unscaled-qk",
+        action="store_true",
+        help="use softmax(Q @ K.T) @ V without the usual 1/sqrt(QD) scale",
+    )
     parser.add_argument(
         "--prepare-only",
         action="store_true",
