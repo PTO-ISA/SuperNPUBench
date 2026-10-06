@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "output/kernel"
 COMPARE = ROOT / "compare"
 
@@ -36,6 +36,69 @@ def prep_broadcast(case_dir: Path) -> np.ndarray:
     x = np.arange(128, dtype=np.float32)
     write(case_dir, "input.bin", x)
     return np.tile(x, 4)
+
+
+def prep_broadcast_vec(case_dir: Path) -> np.ndarray:
+    x = (np.arange(8192 * 16, dtype=np.float32) % 997).astype(np.float16)
+    x = x.reshape(8192, 1, 16)
+    write(case_dir, "input.bin", x)
+    return np.repeat(x, 8, axis=1).reshape(-1)
+
+
+def prep_broadcast_vec_2d(case_dir: Path) -> np.ndarray:
+    x = (np.arange(1334, dtype=np.float32) % 997).astype(np.float16)
+    write(case_dir, "input.bin", x)
+    return np.repeat(x[:, None], 129, axis=1).reshape(-1)
+
+
+def murmur_hash_key(key: int) -> int:
+    mask = 0xFFFFFFFF
+    bits = key & 0xFFFFFFFFFFFFFFFF
+    h = 0
+    for half in range(2):
+        k = (bits >> (half * 32)) & mask
+        k = (k * 0xCC9E2D51) & mask
+        k = ((k << 15) | (k >> 17)) & mask
+        k = (k * 0x1B873593) & mask
+        h ^= k
+        h = ((h << 13) | (h >> 19)) & mask
+        h = (h * 5 + 0xE6546B64) & mask
+    h ^= 8
+    h ^= h >> 16
+    h = (h * 0x85EBCA6B) & mask
+    h ^= h >> 13
+    h = (h * 0xC2B2AE35) & mask
+    h ^= h >> 16
+    return h & mask
+
+
+def prep_hashtable_lookup(case_dir: Path) -> np.ndarray:
+    capacity = 65536
+    count = 6144
+    table = np.zeros(capacity, dtype=[("key", "<i8"), ("value", "<i4"),
+                                      ("padding", "<i4")])
+    occupied = np.zeros(capacity, dtype=np.bool_)
+    inserted: list[int] = []
+    candidate = 0x102030405060708
+    while len(inserted) < count:
+        key = candidate & 0x7FFFFFFFFFFFFFFF
+        candidate = (candidate + 0x9E3779B97F4A7C15) & 0x7FFFFFFFFFFFFFFF
+        slot = murmur_hash_key(key) & (capacity - 1)
+        probe = 0
+        while probe < 8 and occupied[slot]:
+            probe += 1
+            slot = (slot + 1) & (capacity - 1)
+        if probe == 8:
+            continue
+        occupied[slot] = True
+        value = len(inserted) * 17 + 3
+        table[slot] = (key, value, 0)
+        inserted.append(key)
+    queries = np.asarray(inserted, dtype=np.int64)
+    golden = (np.arange(count, dtype=np.int32) * 17 + 3).astype(np.int32)
+    write(case_dir, "table.bin", table)
+    write(case_dir, "queries.bin", queries)
+    return golden
 
 
 def prep_concat_gather(case_dir: Path) -> np.ndarray:
@@ -112,6 +175,24 @@ def prep_rows(case_dir: Path, operation: str) -> np.ndarray:
     return np.sum(x, axis=1, dtype=np.float32)
 
 
+def prep_cols(case_dir: Path, operation: str) -> np.ndarray:
+    rng = np.random.default_rng(5)
+    x = rng.uniform(-1.0, 0.0, (8192, 1024)).astype(np.float32)
+    write(case_dir, "input.bin", x)
+    if operation == "max":
+        return np.max(x, axis=0).astype(np.float32)
+    return np.sum(x, axis=0, dtype=np.float32)
+
+
+def prep_3dcols(case_dir: Path, operation: str) -> np.ndarray:
+    rng = np.random.default_rng(6)
+    x = rng.uniform(-1.0, 0.0, (381, 120, 8)).astype(np.float16)
+    write(case_dir, "input.bin", x)
+    if operation == "max":
+        return np.max(x, axis=1).astype(np.float16).reshape(-1)
+    return np.sum(x, axis=1, dtype=np.float16).reshape(-1)
+
+
 def prep_transpose(case_dir: Path) -> np.ndarray:
     x = np.arange(64 * 64, dtype=np.int32).reshape(64, 64)
     write(case_dir, "input.bin", x)
@@ -164,19 +245,27 @@ def prep_fa(case_dir: Path) -> np.ndarray:
 
 CASES = [
     Case("broadcast", "broadcast/elf/kernel_broadcast_broadcast_PE4.elf", prep_broadcast),
+    Case("broadcast_vec", "broadcast_vec/elf/kernel_broadcast_vec_broadcast_vec_PE4.elf", prep_broadcast_vec, output_dtype=np.float16, atol=0.0, rtol=0.0),
+    Case("broadcast_vec_2d", "broadcast_vec/elf/kernel_broadcast_vec_broadcast_vec_2d_1334_129_PE4.elf", prep_broadcast_vec_2d, output_dtype=np.float16, atol=0.0, rtol=0.0),
     Case("concat_gather", "concat/elf/kernel_concat_concat_gather_PE4.elf", prep_concat_gather),
     Case("concat_scatter", "concat/elf/kernel_concat_concat_scatter_PE4.elf", prep_concat_scatter),
     Case("conv2d", "conv2d/elf/kernel_conv2d_v300_conv2d_PE4.elf", prep_conv2d, atol=2e-3, rtol=2e-3),
     Case("gelu", "element_wise/gelu/elf/kernel_element_wise_gelu_gelu_PE4.elf", prep_gelu, output_dtype=np.float16, atol=2e-2, rtol=2e-2),
     Case("fa", "fa/elf/kernel_fa_Sq256_Skv256_Tm128_Tk128_X1_Y2_FP32_VECFP32.elf", prep_fa, output_name="res.bin", atol=3e-2, rtol=3e-2),
     Case("gather", "gather/elf/kernel_gather_gather_PE4.elf", prep_gather),
+    Case("hashtable_lookup_simd", "hashtable_lookup/elf/kernel_hashtable_lookup_hashtable_lookup_simd_kNum6144_kMaxProbe8_knum_col256_PE4.elf", prep_hashtable_lookup, output_dtype=np.int32, atol=0.0, rtol=0.0),
+    Case("hashtable_lookup_simt", "hashtable_lookup/elf/kernel_hashtable_lookup_hashtable_lookup_simt_kNum6144_kNumThreads6144_kMaxProbe8_PE4.elf", prep_hashtable_lookup, output_dtype=np.int32, atol=0.0, rtol=0.0),
     Case("matmul_shared", "matmul/elf/kernel_matmul_matmul_shared_B1_M256_N256_K256_tM128_tN256_tK128.elf", prep_matmul, output_name="res.bin", atol=1e-3, rtol=1e-3),
-    Case("matmul_reuseB", "matmul/elf/kernel_matmul_matmul_reuseB_B1_M256_N256_K256_tM128_tN256_tK128.elf", prep_matmul, output_name="res.bin", atol=1e-3, rtol=1e-3),
+    Case("matmul_reuseA", "matmul/elf/kernel_matmul_matmul_reuseA_B1_M256_N256_K256_tM128_tN256_tK128.elf", prep_matmul, output_name="res.bin", atol=1e-3, rtol=1e-3),
     Case("matmul_lowp_fp8", "matmul/elf/kernel_matmul_matmul_lowp_FP8_B1_M256_N256_K512_tM128_tN256_tK512.elf", prep_matmul_lowp, output_name="res.bin"),
     Case("cumsum_row", "reduction/cumsum_row/elf/kernel_reduction_cumsum_row_cumsum_row_PE4.elf", lambda p: prep_rows(p, "cumsum"), atol=2e-3, rtol=2e-3),
     Case("reducemax_row", "reduction/reducemax_row/elf/kernel_reduction_reducemax_row_reducemax_row_PE4.elf", lambda p: prep_rows(p, "max")),
     Case("reduceprod_row", "reduction/reduceprod_row/elf/kernel_reduction_reduceprod_row_reduceprod_row_PE4.elf", lambda p: prep_rows(p, "prod"), atol=2e-3, rtol=2e-3),
     Case("reducesum_row", "reduction/reducesum_row/elf/kernel_reduction_reducesum_row_reducesum_row_PE4.elf", lambda p: prep_rows(p, "sum"), atol=2e-3, rtol=2e-3),
+    Case("reducemax_col", "reduction/reducemax_col/elf/kernel_reduction_reducemax_col_reducemax_col_PE4.elf", lambda p: prep_cols(p, "max")),
+    Case("reducesum_col", "reduction/reducesum_col/elf/kernel_reduction_reducesum_col_reducesum_col_PE4.elf", lambda p: prep_cols(p, "sum"), atol=2e-2, rtol=2e-3),
+    Case("reducemax_3dcol", "reduction/reducemax_3dcol/elf/kernel_reduction_reducemax_3dcol_reducemax_3dcol_PE4.elf", lambda p: prep_3dcols(p, "max"), output_dtype=np.float16, atol=0.0, rtol=0.0),
+    Case("reducesum_3dcol", "reduction/reducesum_3dcol/elf/kernel_reduction_reducesum_3dcol_reducesum_3dcol_PE4.elf", lambda p: prep_3dcols(p, "sum"), output_dtype=np.float16, atol=2e-1, rtol=2e-2),
     Case("transpose", "transpose/elf/kernel_transpose_transpose_PE4.elf", prep_transpose, output_dtype=np.int32, atol=0.0, rtol=0.0),
     Case("tadd", "vec/elf/kernel_vec_Rows16_Cols16.elf", prep_tadd, output_name="vec_out.bin"),
 ]

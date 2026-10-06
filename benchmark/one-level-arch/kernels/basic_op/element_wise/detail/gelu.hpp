@@ -148,10 +148,9 @@ namespace gelu_coeffs {
 //   out = (half)y
 // ----------------------------------------------------------------------------
 template<typename tile_shapeData, typename tile_shapeFP32>
-void gelu_impl(
+__attribute__((always_inline)) inline void gelu_impl(
     tile_shapeData  &inTile,
-    tile_shapeData  &outTile,
-    tile_shapeFP32  &tmpCvt          // TCVT 需要的临时 tile
+    tile_shapeData  &outTile
 ) {
     using fp_t = typename tile_shapeFP32::DType;   // float
 
@@ -248,9 +247,7 @@ void gelu(
     itOut gOIter(out_ptr);
 
     tile_shapeData inTile, outTile;
-    tile_shapeFP32 tmpCvt;                          // TCVT 临时 tile
     tile_shapeData_rmd inTile_rmd, outTile_rmd;
-    tile_shapeFP32_rmd tmpCvt_rmd;
 
     for (int i = 0; i < Mb; ++i) {
         auto gI = gIIter(0, i);
@@ -260,7 +257,9 @@ void gelu(
         // [当前编译器] 名为 TCOPYIN, jcore 为 __vec__
         TLOAD(inTile, gI);
 
-        gelu_impl<tile_shapeData, tile_shapeFP32>(inTile, outTile, tmpCvt);
+        // Keep the chain in one function.  A call boundary spills the BF16
+        // tile through an S64 stack view, which is not a legal TCVT source.
+        gelu_impl<tile_shapeData, tile_shapeFP32>(inTile, outTile);
 
         // TSTORE: UB -> GM
         // [当前编译器] 名为 TCOPYOUT, jcore 为 __vec__
@@ -271,7 +270,7 @@ void gelu(
         auto gO = gOIter(0, Mb);
 
         TLOAD(inTile_rmd, gI);
-        gelu_impl<tile_shapeData_rmd, tile_shapeFP32_rmd>(inTile_rmd, outTile_rmd, tmpCvt_rmd);
+        gelu_impl<tile_shapeData_rmd, tile_shapeFP32_rmd>(inTile_rmd, outTile_rmd);
         TSTORE(gO, outTile_rmd);
     }
 }

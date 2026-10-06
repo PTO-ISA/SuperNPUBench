@@ -120,13 +120,11 @@
 //            TADD   out += tmp
 //          stride *= in_shape[i]
 //
-// 注意: PTO ISA MGATHER<Coalesce::Elem> 使用元素索引 (非字节偏移),
-//       所以这里不再乘 sizeof(dtype)。
-//       原始 broadcast.hpp 的 __vec__ 版本需要乘 sizeof(dtype) 是因为
-//       template_asm.h 里的旧 MGATHER 按字节偏移取数。
+// 注意: 当前 one-level MGATHER 的 offset tile 使用相对 GM base 的字节偏移，
+//       所以每个非广播维的元素 stride 必须乘 sizeof(dtype)。
 // ----------------------------------------------------------------------------
 template<typename dtype, typename tile_shapeOffset, size_t MAX_DIM, size_t IN_DIM, size_t OUT_DIM>
-void gen_offset_pto(
+__attribute__((always_inline)) inline void gen_offset_pto(
     tile_shapeOffset &out,
     const size_t *in_shape,
     const size_t *out_shape,
@@ -140,7 +138,6 @@ void gen_offset_pto(
 
     tile_shapeOffset idxTile;     // 当前正在分解的线性索引
     tile_shapeOffset coordTile;   // 当前输出维坐标
-    tile_shapeOffset tmpTile;     // TREMS 需要 (A2A3 要求 tmp >= 1 行, 列数 >= dst)
 
     // ---- Step 1: TCI 生成索引序列 [base, base+1, ..., base+N-1] ----
     // [当前编译器] TCI 在 pto_tileop.hpp 有声明，但 jcore 实现为 __vec__ (二层)
@@ -170,20 +167,20 @@ void gen_offset_pto(
         int i = d - (int)(OUT_DIM - IN_DIM);
         if (i >= 0) {
             if (in_shape[i] != 1) {            // 非广播维才累加
-                // TMULS: tmp = coord * stride
+                // Reuse coordTile to keep the U32 chain in tile registers.
+                // MGATHER consumes byte offsets, not element indexes.
+                TMULS(coordTile, coordTile,
+                      (off_t)(stride * sizeof(dtype)));
+                // TADD: out += byte_offset
                 // [当前编译器] API 有，jcore 为 __vec__
-                TMULS(tmpTile, coordTile, (off_t)stride);
-                // TADD: out += tmp
-                // [当前编译器] API 有，jcore 为 __vec__
-                TADD(out, out, tmpTile);
+                TADD(out, out, coordTile);
             }
             stride *= in_shape[i];             // stride 更新 (广播维 ==1 不变)
         }
     }
 
-    // 不再乘 sizeof(dtype):
-    //   PTO ISA MGATHER<Coalesce::Elem> 按"元素索引"取数 (dst[i,j] = src[idx[i,j]])，
-    //   而非旧 MGATHER 的字节偏移。
+    // Each stride contribution was converted to bytes above, matching the
+    // one-level MGATHER descriptor contract.
 }
 
 
@@ -225,15 +222,13 @@ void broadcast(
     for (int i = 0; i < Mb; ++i) {
         auto gO = gOIter(0, i);
 
-        // 计算偏移 tile (元素索引)
+        // 计算偏移 tile（相对 inGm base 的字节偏移）
         gen_offset_pto<dtype, tile_shapeOffset, MAX_DIM, IN_DIM, OUT_DIM>(
             offsetTile, in_shape, out_shape, base, total_elements);
         base += total_elements;
 
-        // MGATHER: 按 offsetTile 中的元素索引从 inGm 取数
-        // [当前编译器] template_asm.h 的 MGATHER 已用 asm volatile (一层)，
-        //             但不支持 Coalesce::Elem 模板参数；
-        //             且旧实现按字节偏移取数，与 PTO ISA 的元素索引语义不同。
+        // MGATHER: 按 offsetTile 中的字节偏移从 inGm 取数。
+        // [当前编译器] template_asm.hpp 用 TLSU MGATHER 一层指令实现。
         MGATHER(outTile, inGm, offsetTile);
 
         // TSTORE: 将 outTile 写回 global memory
