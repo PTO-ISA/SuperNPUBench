@@ -1,0 +1,431 @@
+{
+  "schema_version": 1,
+  "scope": "all active one-level indexed/sparse/histogram application access paths; raw conformance and historical sources tracked separately",
+  "canonical_pragma": "#pragma pto element for",
+  "entries": [
+    {
+      "id": "gather",
+      "source": "benchmark/one-level-arch/kernels/single_thread/gather/gather.hpp",
+      "access_kind": "indexed_gm_load",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "concat_gather",
+      "source": "benchmark/one-level-arch/kernels/single_thread/concat/concat_gather.hpp",
+      "access_kind": "indexed_gm_load",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "concat_scatter",
+      "source": "benchmark/one-level-arch/kernels/single_thread/concat/concat_scatter.hpp",
+      "access_kind": "indexed_gm_store",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "broadcast",
+      "source": "benchmark/one-level-arch/kernels/single_thread/broadcast/broadcast.hpp",
+      "access_kind": "affine_indexed_load",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "broadcast_inline",
+      "source": "benchmark/one-level-arch/kernels/single_thread/broadcast/broadcast_inline.hpp",
+      "access_kind": "affine_indexed_load",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "transpose",
+      "source": "benchmark/one-level-arch/kernels/single_thread/transpose/transpose.hpp",
+      "access_kind": "permuted_indexed_load",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "hashtable_lookup_simd",
+      "source": "benchmark/one-level-arch/kernels/single_thread/control/hashtable_lookup_simd.hpp",
+      "access_kind": "data_dependent_probe",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "group_count_aux_fi",
+      "source": "benchmark/one-level-arch/kernels/single_thread/deepseek/moe/group_count_aux_fi.hpp",
+      "access_kind": "histogram_reduction",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "matmul_mx_scale_access",
+      "source": "benchmark/one-level-arch/kernels/single_thread/matmul/matmul_mx.hpp",
+      "access_kind": "indexed_scale_rearrangement",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "gather_v2",
+      "source": "benchmark/one-level-arch/kernels/solution/gather_v2/gather_v2.hpp",
+      "access_kind": "general_rank_indexed_load",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "view_copy",
+      "source": "benchmark/one-level-arch/kernels/solution/view_copy/view_copy.hpp",
+      "access_kind": "strided_gather_scatter",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "qli_simple",
+      "source": "benchmark/one-level-arch/kernels/solution/qli/qli_pto_opt_simple.hpp",
+      "access_kind": "histogram_radix_selection",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "qli_dynamic",
+      "source": "benchmark/one-level-arch/kernels/solution/qli/qli_pto_opt_dynamic.hpp",
+      "access_kind": "histogram_radix_selection",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "quant_sparse_flash_mla",
+      "source": "benchmark/one-level-arch/kernels/solution/quant_sparse_flash_mla/quant_sparse_flash_mla.hpp",
+      "access_kind": "sparse_kv_access",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "qsmla_sparse_index_collection",
+      "source": "benchmark/one-level-arch/kernels/solution/quant_sparse_flash_mla/qsmla_mode.hpp",
+      "access_kind": "sparse_index_filter",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "element_atomic_topk",
+      "source": "benchmark/one-level-arch/kernels/single_thread/sort/element_atomic_topk.hpp",
+      "access_kind": "atomic_histogram_topk",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "histogram_tile_element",
+      "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/histogram_tile_element.cpp",
+      "access_kind": "atomic_histogram",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "selected_radix_tile_element",
+      "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/selected_radix_tile_element.cpp",
+      "access_kind": "conditional_atomic_histogram",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "elementwise_if_for",
+      "source": "benchmark/one-level-arch/test/solution/tileop-test/vec/src/elementwise_if_for.cpp",
+      "access_kind": "masked_arithmetic",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "elementwise_atomic_histogram",
+      "source": "benchmark/one-level-arch/test/solution/tileop-test/vec/src/elementwise_atomic_histogram.cpp",
+      "access_kind": "atomic_histogram",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "elementwise_masked_gather_scatter",
+      "source": "benchmark/one-level-arch/test/solution/tileop-test/vec/src/elementwise_masked_gather_scatter.cpp",
+      "access_kind": "masked_indexed_memory",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "same_elf_gfsim",
+        "zero_model_invariants"
+      ],
+      "evidence": null
+    }
+  ],
+  "multi_thread_wrappers": [
+    "benchmark/one-level-arch/kernels/multi_thread/broadcast/broadcast.hpp",
+    "benchmark/one-level-arch/kernels/multi_thread/concat/concat_gather.hpp",
+    "benchmark/one-level-arch/kernels/multi_thread/concat/concat_scatter.hpp",
+    "benchmark/one-level-arch/kernels/multi_thread/gather/gather.hpp"
+  ],
+  "raw_conformance_companions": [
+    "mgather",
+    "mscatter",
+    "mgather_mask",
+    "mscatter_mask",
+    "mgather_cas",
+    "tgather",
+    "tscatter"
+  ],
+  "historical_accounting": {
+    "root": "benchmark/two-level-arch",
+    "policy": "record explicitly; do not silently claim active one-level ISA execution for archived two-level semantics",
+    "retired_histogram": "benchmark/one-level-arch/test/solution/tileop-test/retired/thistogram.cpp"
+  },
+  "pointwise_expression_requirements": [
+    "add",
+    "subtract",
+    "multiply",
+    "divide",
+    "remainder",
+    "bitwise_and",
+    "bitwise_or",
+    "bitwise_xor",
+    "shift_left",
+    "shift_right",
+    "negate",
+    "bitwise_not",
+    "compare",
+    "select",
+    "min",
+    "max",
+    "cast",
+    "basic_math_unary"
+  ],
+  "closure": "Every active workload, applicable dtype/shape configuration and named operation must have independent compile/IR/object/model evidence. Parsing the pragma, retaining old scalar code, or one histogram result does not close the scope.",
+  "foundation_expression_profile": {
+    "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/element_expression_chain.cpp",
+    "types": [
+      "U32"
+    ],
+    "logical_shape": [
+      32,
+      1
+    ],
+    "operators": [
+      "add",
+      "subtract",
+      "multiply",
+      "divide",
+      "remainder",
+      "bitwise_and",
+      "bitwise_or",
+      "bitwise_xor",
+      "shift_left",
+      "shift_right",
+      "negate",
+      "bitwise_not"
+    ],
+    "status": "implemented; final commit-scoped evidence is recorded in PR #202",
+    "does_not_close_application_inventory": true
+  }
+}

@@ -166,7 +166,8 @@ CoherenceProbeResult run_coherence_probe() {
     auto &bucket_elements = TPARTELEMENT(bins);
     auto &old_elements = TPARTELEMENT(old);
     const uint32_t valid_elements = parts.valid_size(part);
-#pragma linx elementwise
+// 此循环按元素生成谓词和 Tile 指令；未选中的元素不触发原子访存。
+#pragma pto element for
     for (unsigned element = 0; element < kPartElements; ++element) {
       if (element < valid_elements) {
         old_elements[element] = __atomic_fetch_add(

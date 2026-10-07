@@ -90,3 +90,5 @@ The additional native [Tile/element-wise suite](../../element_wise/tile_element_
 covers standalone histogram, selected radix histogram, and actual Top-K boundary
 calls with independent goldens on gfrun and gfsim. Host reference tests are an
 independent oracle, not an alternative TileOp implementation.
+
+应用中的 element array 下标表示逻辑元素。`#pragma pto element for` 要求编译器分析紧随其后的 for 循环；不能忽略 pragma 并退化成普通标量代码。

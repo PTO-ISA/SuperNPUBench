@@ -3,7 +3,8 @@ $(error TESTCASE is required)
 endif
 
 SUPPORTED_CASES := histogram_tile_element selected_radix_tile_element \
-	topk_boundaries topk_boundaries_0 topk_boundaries_1 topk_boundaries_2
+	element_expression_chain topk_boundaries topk_boundaries_0 \
+	topk_boundaries_1 topk_boundaries_2
 ifeq ($(filter $(TESTCASE),$(SUPPORTED_CASES)),)
 $(error unsupported TESTCASE=$(TESTCASE); choose $(SUPPORTED_CASES))
 endif
@@ -40,8 +41,17 @@ DEFINES += -DTOPK_BOUNDARY_SHARED_WORKSPACE=1
 endif
 TARGET = $(ELF_DIR)/$(TESTCASE).elf
 DEFINES += -DSUPERNPUBENCH_LINX_TILE_SIZE -DLINX_ELEMENTWISE_AVAILABLE
-CC_OPTS += $(TARGET_FLAGS) -fno-vectorize -fno-slp-vectorize
+CC_OPTS += $(TARGET_FLAGS) -fno-vectorize -fno-slp-vectorize \
+	-Werror=unknown-pragmas
 CC_LINK += $(TARGET_FLAGS) -fuse-ld=lld
 INCLUDE += -I$(API_INCLUDE)
 
 include ../../../common/Makefile.common
+
+ir: pre_work
+	@test -n "$(IR_TARGET)" || \
+		(echo "IR_TARGET is required for the ir target" >&2; exit 1)
+	$(CXX) $(CXX_O_ALL) $(INCLUDE) $(DEFINES) -S -emit-llvm \
+		$(SRC_FILE) -o $(IR_TARGET)
+
+.PHONY: ir

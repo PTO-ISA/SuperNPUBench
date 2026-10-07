@@ -74,7 +74,16 @@ def main() -> int:
                 (i for i, pair in enumerate(zip(actual, expected)) if pair[0] != pair[1]),
                 min(len(actual), len(expected)),
             )
-            print(f"{item['symbol']}: mismatch at byte {first}")
+            detail = ""
+            if first + 4 <= len(actual) and first + 4 <= len(expected):
+                word = first // 4
+                actual_word = struct.unpack_from("<I", actual, word * 4)[0]
+                expected_word = struct.unpack_from("<I", expected, word * 4)[0]
+                detail = (
+                    f", u32 element {word}: actual=0x{actual_word:08x} "
+                    f"expected=0x{expected_word:08x}"
+                )
+            print(f"{item['symbol']}: mismatch at byte {first}{detail}")
             failures += 1
         else:
             print(f"{item['symbol']}: PASS ({len(actual)} bytes)")

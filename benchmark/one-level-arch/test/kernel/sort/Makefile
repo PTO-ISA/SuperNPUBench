@@ -24,7 +24,7 @@ CC_OPTS += $(TLEA_TARGET_FLAGS)
 # Keep ordinary setup/verification loops scalar.  The requested Tile work is
 # explicit in the kernel; generic loop vectorization otherwise creates TMOV
 # carrier blocks that obscure the TLEA/atomic path in both models.
-CC_OPTS += -fno-vectorize -fno-slp-vectorize
+CC_OPTS += -fno-vectorize -fno-slp-vectorize -Werror=unknown-pragmas
 CC_LINK += $(TLEA_TARGET_FLAGS) -fuse-ld=lld
 INCLUDE += -I$(API_INCLUDE)
 endif

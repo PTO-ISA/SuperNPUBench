@@ -52,6 +52,7 @@ selected_radix_tile_element(const uint32_t *input, std::size_t count,
       TSHRS(high_digits, values, 8u);
       TANDS(low_digits, values, 0xffu);
 
+      // 下标表示当前分区内的逻辑元素；物理布局由正式 API 和编译器管理。
       auto &predicate_elements = TPARTELEMENT(high_digits);
       auto &bucket_elements = TPARTELEMENT(low_digits);
       auto &old_elements = TPARTELEMENT(atomic_old);
@@ -59,7 +60,8 @@ selected_radix_tile_element(const uint32_t *input, std::size_t count,
       const uint32_t valid_elements =
           static_cast<uint32_t>(parts.valid_size(part));
 
-#pragma linx elementwise
+// 此循环按元素生成谓词和 Tile 指令；未选中的元素不触发原子访存。
+#pragma pto element for
       for (unsigned element = 0; element < kPartElements; ++element) {
         if (element < valid_elements &&
             predicate_elements[element] == selected) {
@@ -70,6 +72,7 @@ selected_radix_tile_element(const uint32_t *input, std::size_t count,
         }
       }
 
+      // 与上面的 element-wise 区域交替：这里继续对整块 Tile 做运算。
       TADDS(transformed_old, atomic_old, 7u);
       TSTORE(old_plus_seven + begin, transformed_old, parts, part);
     }

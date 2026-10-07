@@ -67,6 +67,7 @@ run_case() {
     local elf="$case_artifact/$case_name.elf"
     local disassembly="$case_artifact/$case_name.diss"
     local symbols="$case_artifact/$case_name.symbols"
+    local ir="$case_artifact/$case_name.ll"
     mkdir -p "$golden"
 
     python3 "$case_dir/generate_case.py" --case "$case_name" --out "$golden"
@@ -78,12 +79,28 @@ run_case() {
         API_INCLUDE="$installed_api_include" \
         clean all 2>&1 | tee "$case_artifact/build.log"
     cp "$built_dir/$case_name.elf" "$elf"
-    "$COMPILER_DIR/llvm-objdump" -dl "$elf" > "$disassembly"
+    if [[ "$case_name" == element_expression_chain ]]; then
+        make -B -C "$case_dir" TESTCASE="$case_name" \
+            COMPILER_DIR="$COMPILER_DIR" \
+            TARGET_TRIPLE="$TARGET_TRIPLE" \
+            SYSROOT="$SYSROOT" \
+            RESOURCE_DIR="$RESOURCE_DIR" \
+            API_INCLUDE="$installed_api_include" \
+            IR_TARGET="$ir" ir 2>&1 | tee "$case_artifact/ir-build.log"
+    fi
+    "$COMPILER_DIR/llvm-objdump" -dl \
+        --disassembler-options=no-tile-macros "$elf" > "$disassembly"
     "$COMPILER_DIR/llvm-objdump" -t "$elf" > "$symbols"
 
-    python3 "$case_dir/check_disassembly.py" \
-        --case "$case_name" --dis "$disassembly" --self-test \
-        2>&1 | tee "$case_artifact/disassembly.log"
+    if [[ "$case_name" == element_expression_chain ]]; then
+        python3 "$case_dir/check_disassembly.py" \
+            --case "$case_name" --dis "$disassembly" --ir "$ir" \
+            --self-test 2>&1 | tee "$case_artifact/disassembly.log"
+    else
+        python3 "$case_dir/check_disassembly.py" \
+            --case "$case_name" --dis "$disassembly" --self-test \
+            2>&1 | tee "$case_artifact/disassembly.log"
+    fi
 
     local dump_range
     dump_range=$(python3 "$case_dir/compare_memory.py" \
@@ -160,13 +177,14 @@ run_case() {
 
 run_case histogram_tile_element
 run_case selected_radix_tile_element
+run_case element_expression_chain
 run_case topk_boundaries_0
 run_case topk_boundaries_1
 run_case topk_boundaries_2
 run_case topk_boundaries
 
 printf '%s\n' \
-    'All six fresh TileOp ELFs passed disassembly, gfrun, gfrun memory, gfsim invariants, and gfsim memory checks.' \
+    'All seven fresh TileOp ELFs passed disassembly, gfrun, gfrun memory, gfsim invariants, and gfsim memory checks.' \
     > "$artifact_dir/PASS"
 printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$artifact_dir/FROZEN"
 hash_manifest="$artifact_dir/.SHA256SUMS.tmp"

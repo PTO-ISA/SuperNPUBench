@@ -86,12 +86,78 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--case", required=True, choices=(
         "histogram_tile_element", "selected_radix_tile_element",
+        "element_expression_chain",
         "topk_boundaries", "topk_boundaries_0", "topk_boundaries_1",
         "topk_boundaries_2",
     ))
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.case == "element_expression_chain":
+        mask32 = 0xFFFFFFFF
+        active = []
+        for element in range(COUNT):
+            value = (element * 2654435761 + 0x01234567) & mask32
+            value ^= ((element // 7) * 0x00010101) & mask32
+            active.append(value)
+        input_values = active + [0xDEADBEEF] * (PADDED_COUNT - COUNT)
+        loaded_values = active + [0] * (PADDED_COUNT - COUNT)
+
+        arithmetic = []
+        bitwise = []
+        unary = []
+        for value in loaded_values:
+            biased = (value + 19) & mask32
+            multiplied = (biased * 13) & mask32
+            reduced = (multiplied - 7) & mask32
+            divided = reduced // 5
+            arithmetic.append(divided % 251)
+
+            shifted_left = (value << 3) & mask32
+            shifted_right = shifted_left >> 2
+            masked = shifted_right & 0xFFFFFFF0
+            merged = masked | 0x00000105
+            mixed = (merged ^ 0x0055AA11) & mask32
+            bitwise.append((mixed ^ shifted_left) & mask32)
+
+            negated = (-value) & mask32
+            unary.append((~negated) & mask32)
+
+        status = [
+            COUNT,
+            0,
+            sum(arithmetic) & mask32,
+            sum(bitwise) & mask32,
+            sum(unary) & mask32,
+            PADDED_COUNT,
+            10,
+            0x45585052,
+        ]
+        files = {
+            "element_expression_chain_input": ("input_u32.bin", input_values),
+            "element_expression_chain_arithmetic": (
+                "arithmetic_u32.bin", arithmetic
+            ),
+            "element_expression_chain_bitwise": ("bitwise_u32.bin", bitwise),
+            "element_expression_chain_unary": ("unary_u32.bin", unary),
+            "element_expression_chain_status": ("status_u32.bin", status),
+        }
+        for filename, values in files.values():
+            write_u32(args.out / filename, values)
+        manifest = {
+            "case": args.case,
+            "count": COUNT,
+            "padded_count": PADDED_COUNT,
+            "segments": [
+                {"symbol": symbol, "kind": "exact", "file": filename}
+                for symbol, (filename, _values) in files.items()
+            ],
+        }
+        (args.out / "manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        return 0
 
     if args.case == "histogram_tile_element":
         active = histogram_input()

@@ -47,12 +47,14 @@ histogram_tile_element(const uint32_t *input, std::size_t count,
       TADDS(values, input_elements, 0u);
       TANDS(buckets, values, 0xffu);
 
+      // element array 是 Tile 的逻辑元素引用，不是复制到主存的数组。
       auto &bucket_elements = TPARTELEMENT(buckets);
       auto &old_elements = TPARTELEMENT(atomic_old);
       const uint32_t valid_elements =
           static_cast<uint32_t>(parts.valid_size(part));
 
-#pragma linx elementwise
+// 此循环按元素生成谓词和 Tile 指令；未选中的元素不触发原子访存。
+#pragma pto element for
       for (unsigned element = 0; element < kPartElements; ++element) {
         if (element < valid_elements) {
           old_elements[element] = __atomic_fetch_add(
@@ -62,6 +64,7 @@ histogram_tile_element(const uint32_t *input, std::size_t count,
         }
       }
 
+      // element-wise 区域返回 Tile 值，继续用 TileOp 做后处理。
       TADDS(transformed_old, atomic_old, 1u);
       TSTORE(old_plus_one + begin, transformed_old, parts, part);
     }
