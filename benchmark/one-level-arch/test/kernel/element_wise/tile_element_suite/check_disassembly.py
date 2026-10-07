@@ -56,19 +56,22 @@ def validate_expression(text: str, ir_text: str | None) -> None:
         "TSHL": 1,
         "TSHR": 1,
     }
+    # LLVM can legally fold ~(-x) into x - 1 under U32 modulo arithmetic.
+    # Accept only those two exact native forms; the optimized form also needs
+    # the matching source/UINT32_MAX dataflow proof below.
+    optimized_expected = dict(expected, TADD=2, TSUB=1, TXOR=2)
     binary_indices: list[int] = []
+    counts: dict[str, int] = {}
     for mnemonic, count in expected.items():
         matches = [
             index
             for index, line in enumerate(lines)
             if re.search(rf"\bBSTART\.TEPL\s+{mnemonic}, U32\b", line)
         ]
-        if len(matches) != count:
-            raise CheckError(
-                f"expected exactly {count} {mnemonic} element operations, "
-                f"found {len(matches)}"
-            )
+        counts[mnemonic] = len(matches)
         binary_indices.extend(matches)
+    if counts not in (expected, optimized_expected):
+        raise CheckError(f"unexpected native expression operation counts: {counts}")
 
     for index in sorted(binary_indices):
         bundle = lines[index : index + 5]
@@ -114,9 +117,10 @@ def validate_expression(text: str, ir_text: str | None) -> None:
     for selector in range(10):
         if selector not in selectors:
             raise CheckError(f"missing compiler element-binary selector {selector}")
-    if len(selectors) != 13:
+    expected_calls = sum(counts.values())
+    if len(selectors) != expected_calls:
         raise CheckError(
-            f"expected 13 native element expression operations, found {len(selectors)}"
+            f"expected {expected_calls} native expression operations, found {len(selectors)}"
         )
     calls = re.findall(
         r"^\s*(%[-.a-zA-Z0-9]+) = call <32 x i32> "
@@ -128,10 +132,29 @@ def validate_expression(text: str, ir_text: str | None) -> None:
         re.M,
     )
     producer = {result: index for index, (result, _op, _lhs, _rhs) in enumerate(calls)}
+    if expected_calls == 12:
+        maximum_splats = {
+            result
+            for result, scalar in re.findall(
+                r"^\s*(%[-.a-zA-Z0-9]+) = call <32 x i32> "
+                r"@llvm\.linx\.experimental\.ew\.tci[^\n]*"
+                r"\(i64 32, i64 1, i64 25, i64 29, i64 (-?[0-9]+), i64 0\)",
+                ir_body, re.M,
+            )
+            if int(scalar) in (-1, 0xFFFFFFFF)
+        }
+        if len(calls) != 12 or int(calls[-1][1]) != 0:
+            raise CheckError("optimized unary region must finish with native TADD")
+        _result, _op, lhs, rhs = calls[-1]
+        original_input = calls[0][2]
+        if not ((lhs == original_input and rhs in maximum_splats) or
+                (rhs == original_input and lhs in maximum_splats)):
+            raise CheckError("optimized unary region is missing exact input + UINT32_MAX")
+    required_span = 5 if expected_calls == 13 else 4
     has_long_lived_value = any(
         int(op) == 7
         and any(
-            operand in producer and index - producer[operand] >= 5
+            operand in producer and index - producer[operand] >= required_span
             for operand in (lhs, rhs)
         )
         for index, (_result, op, lhs, rhs) in enumerate(calls)
@@ -368,6 +391,25 @@ def main() -> int:
                         count=1,
                     ),
                 )
+                if len(re.findall(r"call <32 x i32> @llvm\.linx\.experimental\.ew\.tbinary",
+                                  ir_text or "")) == 12:
+                    rejected(
+                        "incorrect optimized unary constant", text, args.case,
+                        (ir_text or "").replace("i64 4294967295, i64 0",
+                                                "i64 4294967294, i64 0"),
+                    )
+                    unary_calls = list(re.finditer(
+                        r"call <32 x i32> @llvm\.linx\.experimental\.ew\.tbinary[^\n]*",
+                        ir_text or "",
+                    ))
+                    last_call = unary_calls[-1]
+                    altered = last_call.group(0).replace("i64 29, i64 0,",
+                                                       "i64 29, i64 1,", 1)
+                    rejected(
+                        "incorrect optimized unary operation", text, args.case,
+                        (ir_text or "")[:last_call.start()] + altered +
+                        (ir_text or "")[last_call.end():],
+                    )
                 print(f"{args.case}: disassembly check PASS")
                 return 0
             rejected("missing TLEA", text.replace("TLEA, U32", "TLEA_REMOVED, U32", 1), args.case)

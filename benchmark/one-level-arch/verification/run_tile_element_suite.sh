@@ -14,10 +14,11 @@ default_cases=(
 if (( $# == 0 )); then
     cases=("${default_cases[@]}")
 elif (( $# == 2 )) && [[ $1 == --case ]] && \
-     [[ $2 == indexed_gather_tile_element ]]; then
-    cases=(indexed_gather_tile_element)
+     [[ $2 == indexed_gather_tile_element || \
+        $2 == element_expression_chain ]]; then
+    cases=("$2")
 else
-    echo "usage: $0 [--case indexed_gather_tile_element]" >&2
+    echo "usage: $0 [--case indexed_gather_tile_element|element_expression_chain]" >&2
     exit 2
 fi
 

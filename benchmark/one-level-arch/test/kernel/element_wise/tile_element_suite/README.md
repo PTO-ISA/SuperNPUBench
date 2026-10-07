@@ -89,10 +89,15 @@ eight ELFs: four standalone kernels, one required unsharded 17-call Top-K
 boundary benchmark, and three focused shards of that boundary table. The two
 atomic standalone ELFs each contain one TLEA and one masked `MGATHER.ADD`
 static site; every Top-K ELF contains exactly two of each. The expression ELF
-must contain all ten native Tile binary selectors, the two extra binary
-operations used to lower unary expressions, one extra XOR that reuses an early
-SSA value, three native `TSTORE` sites, and no scalar
+must contain all ten native Tile binary selectors, one extra XOR that reuses
+an early SSA value, three native `TSTORE` sites, and no scalar
 `extractelement`/`insertelement` fallback in compiler IR.
+The checker accepts two exact forms: 13 operations when unary expressions stay
+separate, or 12 after standard LLVM folds U32 `~(-x)` to `x + UINT32_MAX`.
+The optimized form must prove that exact input and constant in IR. Both forms
+retain their own long-lived SSA checks and corruption canaries; independent
+goldens verify the arithmetic rather than forcing the compiler to undo a valid
+optimization.
 
 The indexed-gather ELF must contain one ordinary masked `MGATHER` and no
 `MGATHER.ADD`, plus one U32 `TLEA` whose IR contract scales 32-bit element
