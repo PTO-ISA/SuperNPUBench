@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -115,7 +116,7 @@ def make_prep_gen(gen_rel: str, gen_args: tuple[str, ...] = ()):
     def _prep(case_dir):
         gen = ROOT / "test/solution" / gen_rel
         subprocess.run(["python3", str(gen), *gen_args, "-o", str(case_dir)],
-                       capture_output=True, timeout=180)
+                       capture_output=True, text=True, timeout=180, check=True)
         return None   # 无返回 golden → 走 verify 路径
     return _prep
 
@@ -213,13 +214,16 @@ def compile_units(cases: list[Case], compiler_dir: Path, timeout: int) -> None:
         unit_dir = ROOT / "test/solution" / rel
         ca = unit_dir / "compile.all"
         if not ca.is_file():
-            continue
+            raise FileNotFoundError(f"missing compile script: {ca}")
         script = ca.read_text()
         if "res_check=on" not in script:
             script = script.replace("make ", "make res_check=on ")   # 只动没自带 res_check 的
         subprocess.run(["bash", "-c", script], cwd=unit_dir, env=env,
-                       timeout=timeout * 30, stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL)
+                       timeout=timeout * 30, check=True)
+    for case in cases:
+        elf = OUTPUT / case.elf
+        if not elf.is_file():
+            raise FileNotFoundError(f"missing ELF after compilation: {elf}")
 
 
 def run_case(case: Case, gfrun: Path, timeout: int) -> tuple[str, str]:
@@ -232,7 +236,14 @@ def run_case(case: Case, gfrun: Path, timeout: int) -> tuple[str, str]:
     case_dir.mkdir(parents=True, exist_ok=True)
     golden = None
     if case.prepare is not None:
-        golden = case.prepare(case_dir)
+        try:
+            golden = case.prepare(case_dir)
+        except subprocess.CalledProcessError as exc:
+            log = case_dir / "prepare.log"
+            log.write_text((exc.stdout or "") + (exc.stderr or ""), encoding="utf-8")
+            return "FAIL", f"prepare rc={exc.returncode}: {log}"
+        except subprocess.TimeoutExpired:
+            return "TIMEOUT", "prepare timed out"
         if golden is not None:
             golden = np.asarray(golden).reshape(-1)
             np.zeros(golden.size, dtype=case.output_dtype).tofile(case_dir / case.output_name)
@@ -283,7 +294,11 @@ def main() -> int:
                      f"aliases: {' '.join(CASE_ALIASES)}")
     active = [c for c in CASES if not args.cases or c.name in selected]
     if args.compiler_dir:
-        compile_units(active, args.compiler_dir, args.timeout)
+        try:
+            compile_units(active, args.compiler_dir, args.timeout)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+            print(f"FAIL compilation: {exc}", file=sys.stderr, flush=True)
+            return 1
 
     results = []
     for case in active:

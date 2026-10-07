@@ -62,11 +62,11 @@ def f16_bits_to_f32(h: int) -> float:
     exp = (h >> 10) & 0x1F
     mant = h & 0x3FF
     if exp == 0:
-        val = 0.0 if mant == 0 else math.ldexp(mant / 512.0, -14)
+        val = 0.0 if mant == 0 else math.ldexp(mant / 1024.0, -14)
     elif exp == 31:
         val = math.nan if mant else math.inf
     else:
-        val = math.ldexp(1.0 + mant / 512.0, exp - 15)
+        val = math.ldexp(1.0 + mant / 1024.0, exp - 15)
     return -val if sign else val
 
 
