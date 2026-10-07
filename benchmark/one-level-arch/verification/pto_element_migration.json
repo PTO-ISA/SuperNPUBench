@@ -425,7 +425,7 @@
       "negate",
       "bitwise_not"
     ],
-    "status": "implemented; final commit-scoped evidence is recorded in PR #202",
+    "status": "standard CFG/SSA P1a implemented; current-source same-ELF gfrun/gfsim proof passed; clean-head provenance rerun pending",
     "does_not_close_application_inventory": true
   },
   "foundation_gather_profile": {
@@ -439,7 +439,7 @@
       32,
       1
     ],
-    "status": "same ELF compile/IR/object/gfrun/gfsim proof passed; clean-head full suite pending",
+    "status": "prior AST foundation passed same-ELF dual-model proof; standard CFG/SSA P1b replacement pending",
     "does_not_close_application_inventory": true,
     "does_not_prove_generic_cfg_compiler": true,
     "cases": [
@@ -447,5 +447,5 @@
       "257-element probe with three wholly inactive poisoned parts"
     ]
   },
-  "compiler_architecture_status": "AST matcher foundation; required normal CFG/SSA LLVM region compiler replacement is open, reusing proven linx-simt analyses"
+  "compiler_architecture_status": "P1a normal C++ CFG/SSA required LLVM region compiler implemented and locally reviewed; U32/M32/32 straight-line profile passes fresh same-ELF dual-model evidence. CFG gather, predicates/atomics, typed profiles and full applications remain open."
 }

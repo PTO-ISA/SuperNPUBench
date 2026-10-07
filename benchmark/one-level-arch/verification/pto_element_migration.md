@@ -11,15 +11,14 @@ Tile，中文注释解释有效元素、条件访存和输出顺序；每个应�
 
 ## 当前缺口
 
-- 用户要求标准编译器路径：`element for` 进入正常 C++ CFG/SSA，复用 Linx SIMT
-  的循环/控制流分析，再用现有 Tile 后端降低。当前 AST 模式匹配仍是 foundation，
-  不能把某一种 `if` 或表达式写法当作通用编译能力。Astra/xhigh 已完成实现方案审查；
-  通用 region pass、依赖分析和 typed view 扩展仍待实现。
-
-- 当前前端支持 U32 histogram atomic-if、一种 FP32 add/sub 分支，以及纯 U32
-  的十种二元表达式和一元负号/补码。纯表达式先无副作用地验证完整 AST，再生成
-  32-element Tile SSA；局部临时变量复用现有寄存器分配。其他 dtype、一般条件、
-  casts/math 和普通指针索引仍有缺口，不能称为通用 element-wise。
+- `element for` 已进入正常 C++ CFG/SSA，由必需的 LLVM region pass 降低；
+  Astra/xhigh 的 linx-simt 复用方案已落实第一阶段：U32/M32/32 的直线算术、
+  SSA 临时值和证明过的 carrier transport。旧 AST body matcher 已删除。
+  当前源代码的 expression kernel 已通过独立 review、11 个 lit 测试和同一 ELF
+  在 gfrun/gfsim 的五区段 golden；提交后 clean-head provenance 正在重跑。
+- 标准 CFG 路径尚未支持条件 gather、一般 predicate/PHI、atomic、cast 和其他
+  dtype；这些边界明确诊断。历史九个 foundation ELF 是旧路径检查点，不能
+  推断新路径已跑通整个 suite。O0 也因 typed spill/reload 尚未闭合而明确拒绝。
 - 既有 masked gather/scatter intrinsic 的布局合同不足以直接接 M32 element
   carrier；条件 mask 的 basis type 也必须与 widened byte index 合法匹配。
   这些需要在编译器/模型边界闭合，不能靠删除 legality 检查绕过。
