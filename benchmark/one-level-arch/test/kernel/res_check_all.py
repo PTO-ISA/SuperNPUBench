@@ -219,6 +219,10 @@ def main() -> int:
     parser.add_argument("cases", nargs="*", help="case names; default: all")
     args = parser.parse_args()
     selected = set(args.cases)
+    unknown = sorted(selected - {c.name for c in CASES})
+    if unknown:
+        parser.error(f"unknown case(s): {' '.join(unknown)}\n"
+                     f"known cases: {' '.join(c.name for c in CASES)}")
     results = []
     for case in CASES:
         if selected and case.name not in selected:

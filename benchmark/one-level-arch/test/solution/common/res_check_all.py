@@ -180,6 +180,28 @@ CASES: list[Case] = [
     for nm, rel, gen, cmp, elf, args in _NORM
 ]
 
+# 拆分前的旧用例名 → 现用例名，外部脚本沿用旧名时展开成全部变体，避免匹配不到而空跑。
+CASE_ALIASES: dict[str, list[str]] = {
+    "rms_norm": [nm for nm, *_ in _NORM if nm.startswith("rms_norm_")],
+    "group_norm_grad": ["group_norm_grad_dynamic", "group_norm_grad_static"],
+    "group_norm_grad_1d": ["group_norm_grad_1d_dynamic", "group_norm_grad_1d_static"],
+}
+
+
+def resolve_case_names(names: list[str]) -> tuple[set[str], list[str]]:
+    """把 CLI 用例名解析成 CASES 名集合；返回 (selected, unknown)。"""
+    known = {c.name for c in CASES}
+    selected: set[str] = set()
+    unknown: list[str] = []
+    for name in names:
+        if name in known:
+            selected.add(name)
+        elif name in CASE_ALIASES:
+            selected.update(CASE_ALIASES[name])
+        else:
+            unknown.append(name)
+    return selected, unknown
+
 
 def compile_units(cases: list[Case], compiler_dir: Path, timeout: int) -> None:
     """自包含：对 CASES 涉及的算子目录跑 compile.all（注入 res_check=on），产出带 I/O 桩的
@@ -250,11 +272,16 @@ def main() -> int:
                         help="Linx 工具链 bin 目录；给了则自包含 res_check=on 编译，"
                              "不给则依赖外部已编好（上层 run_precision 统一编译前置的场景）")
     parser.add_argument("--timeout", type=int, default=120)
-    parser.add_argument("cases", nargs="*", help="case names; default: all")
+    parser.add_argument("cases", nargs="*",
+                        help="case names or aliases (" + ", ".join(CASE_ALIASES) + "); default: all")
     args = parser.parse_args()
 
-    selected = set(args.cases)
-    active = [c for c in CASES if not selected or c.name in selected]
+    selected, unknown = resolve_case_names(args.cases)
+    if unknown:
+        parser.error(f"unknown case(s): {' '.join(unknown)}\n"
+                     f"known cases: {' '.join(c.name for c in CASES)}\n"
+                     f"aliases: {' '.join(CASE_ALIASES)}")
+    active = [c for c in CASES if not args.cases or c.name in selected]
     if args.compiler_dir:
         compile_units(active, args.compiler_dir, args.timeout)
 
