@@ -425,8 +425,23 @@
       "negate",
       "bitwise_not"
     ],
-    "status": "standard CFG/SSA P1a implemented; current-source same-ELF gfrun/gfsim proof passed; clean-head provenance rerun pending",
-    "does_not_close_application_inventory": true
+    "status": "standard CFG/SSA P1a implemented; clean-head same-ELF gfrun/gfsim proof passed",
+    "does_not_close_application_inventory": true,
+    "evidence": {
+      "compiler": "e46b264d74e08d310b8c1dc4f7153dd75e44ec99",
+      "benchmark": "c783149249aba07eff140d301b18506115cb9233",
+      "tileop_api": "ee70623efe220094e7d4ce42d1d336164f6b72eb",
+      "model": "34a3d79945a5d49bdf2959ad5073ce16c9bd643f",
+      "artifact": "tile_element_suite/20261007T115532Z-57281",
+      "content_id": "9823f817ccf60ce771726032aa59aa7318547c19d69ec9ddbec7c56087064905",
+      "elf_sha256": "3b0d5b47856d22884fd7f53d64fd480706f32b873abc68cb774a50b7c5f51500",
+      "verified_hash_count": 30,
+      "golden_segments_per_model": 5,
+      "lit_passed": 11,
+      "gfsim_queue_created": 1786,
+      "gfsim_queue_destroyed": 1786,
+      "gfsim_a3": 0
+    }
   },
   "foundation_gather_profile": {
     "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/indexed_gather_tile_element.cpp",

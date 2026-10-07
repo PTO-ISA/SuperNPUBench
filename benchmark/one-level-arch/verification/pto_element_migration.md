@@ -15,7 +15,9 @@ Tile，中文注释解释有效元素、条件访存和输出顺序；每个应�
   Astra/xhigh 的 linx-simt 复用方案已落实第一阶段：U32/M32/32 的直线算术、
   SSA 临时值和证明过的 carrier transport。旧 AST body matcher 已删除。
   当前源代码的 expression kernel 已通过独立 review、11 个 lit 测试和同一 ELF
-  在 gfrun/gfsim 的五区段 golden；提交后 clean-head provenance 正在重跑。
+  在 gfrun/gfsim 的五区段 golden；提交后 rebuilt Clang 的版本为 e46b264，clean-head provenance 也已通过。
+  精确四 repo heads、ELF/content ID 和 frozen artifact 路径见 JSON 中
+  `foundation_expression_profile.evidence`；该记录不关闭原应用清单。
 - 标准 CFG 路径尚未支持条件 gather、一般 predicate/PHI、atomic、cast 和其他
   dtype；这些边界明确诊断。历史九个 foundation ELF 是旧路径检查点，不能
   推断新路径已跑通整个 suite。O0 也因 typed spill/reload 尚未闭合而明确拒绝。
