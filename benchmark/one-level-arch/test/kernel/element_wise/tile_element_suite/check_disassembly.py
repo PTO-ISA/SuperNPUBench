@@ -104,6 +104,11 @@ def validate_expression(text: str, ir_text: str | None) -> None:
     if ir_body_match is None:
         raise CheckError("missing expression kernel in LLVM IR")
     ir_body = ir_body_match.group(0)
+    if re.search(
+        r"\bcall\b[^\n]*@llvm\.linx\.experimental\.element\.(region|view)\b",
+        ir_body,
+    ):
+        raise CheckError("required element region/view contract survived lowering")
     selectors = [
         int(selector)
         for selector in re.findall(
@@ -217,6 +222,11 @@ def validate_indexed_gather(text: str, ir_text: str | None) -> None:
     if ir_body_match is None:
         raise CheckError("missing ordinary indexed gather kernel in LLVM IR")
     ir_body = ir_body_match.group(0)
+    if re.search(
+        r"\bcall\b[^\n]*@llvm\.linx\.experimental\.element\.(region|view)\b",
+        ir_body,
+    ):
+        raise CheckError("required element region/view contract survived lowering")
     tlea_call = re.search(
         r"call <32 x i64> "
         r"@llvm\.linx\.experimental\.ew\.tlea[^\n]*\("
@@ -311,6 +321,19 @@ def main() -> int:
     try:
         validate(text, args.case, ir_text)
         if args.self_test:
+            if args.case in ("element_expression_chain", "indexed_gather_tile_element"):
+                for marker in ("region", "view"):
+                    rejected(
+                        f"residual element {marker} contract",
+                        text,
+                        args.case,
+                        re.sub(
+                            rf"(define[^\n]*{args.case}[^\n]*\n)",
+                            rf"\1  call void @llvm.linx.experimental.element.{marker}()\n",
+                            ir_text or "",
+                            count=1,
+                        ),
+                    )
             if args.case == "indexed_gather_tile_element":
                 rejected(
                     "missing execution mask",
