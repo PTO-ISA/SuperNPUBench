@@ -86,13 +86,78 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--case", required=True, choices=(
         "histogram_tile_element", "selected_radix_tile_element",
-        "element_expression_chain",
+        "element_expression_chain", "indexed_gather_tile_element",
         "topk_boundaries", "topk_boundaries_0", "topk_boundaries_1",
         "topk_boundaries_2",
     ))
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.case == "indexed_gather_tile_element":
+        mask32 = 0xFFFFFFFF
+        table = [
+            0x80000000 | ((element * 0x01020305 + 0x10203040) & 0x7FFFFFFF)
+            for element in range(257)
+        ]
+        indices = []
+        for element in range(PADDED_COUNT):
+            if element >= COUNT:
+                indices.append(mask32)
+                continue
+            index = (element * 73 + (element // 5) * 19) % 257
+            if element % 11 < 4:
+                index = 42
+            if element == 0:
+                index = 0
+            if element == COUNT - 1:
+                index = 256
+            indices.append(index)
+
+        gathered = [
+            (table[indices[element]] + 3) & mask32
+            if element < COUNT else 3
+            for element in range(PADDED_COUNT)
+        ]
+        guard = [0x6A09E667] * 16
+        output = guard + gathered + guard
+        status = [
+            COUNT,
+            0,
+            sum(gathered[:COUNT]) & mask32,
+            sum(gathered) & mask32,
+            0,
+            len(table),
+            PADDED_COUNT,
+            0x47415448,
+            257,
+            0,
+            0,
+            0,
+        ]
+        files = {
+            "indexed_gather_tile_element_table": ("table_u32.bin", table),
+            "indexed_gather_tile_element_indices": (
+                "indices_u32.bin", indices
+            ),
+            "indexed_gather_tile_element_output": ("output_u32.bin", output),
+            "indexed_gather_tile_element_status": ("status_u32.bin", status),
+        }
+        for filename, values in files.values():
+            write_u32(args.out / filename, values)
+        manifest = {
+            "case": args.case,
+            "count": COUNT,
+            "padded_count": PADDED_COUNT,
+            "segments": [
+                {"symbol": symbol, "kind": "exact", "file": filename}
+                for symbol, (filename, _values) in files.items()
+            ],
+        }
+        (args.out / "manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        return 0
 
     if args.case == "element_expression_chain":
         mask32 = 0xFFFFFFFF

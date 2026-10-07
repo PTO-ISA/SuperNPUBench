@@ -11,6 +11,11 @@ Tile，中文注释解释有效元素、条件访存和输出顺序；每个应�
 
 ## 当前缺口
 
+- 用户要求标准编译器路径：`element for` 进入正常 C++ CFG/SSA，复用 Linx SIMT
+  的循环/控制流分析，再用现有 Tile 后端降低。当前 AST 模式匹配仍是 foundation，
+  不能把某一种 `if` 或表达式写法当作通用编译能力。Astra/xhigh 已完成实现方案审查；
+  通用 region pass、依赖分析和 typed view 扩展仍待实现。
+
 - 当前前端支持 U32 histogram atomic-if、一种 FP32 add/sub 分支，以及纯 U32
   的十种二元表达式和一元负号/补码。纯表达式先无副作用地验证完整 AST，再生成
   32-element Tile SSA；局部临时变量复用现有寄存器分配。其他 dtype、一般条件、
@@ -50,4 +55,4 @@ Tile，中文注释解释有效元素、条件访存和输出顺序；每个应�
 - [集成 issue #370](https://github.com/PTO-ISA/pto-spec/issues/370)
 
 整个目标尚未完成。后续每个变更都必须让这份全量清单中的真实应用路径更接近
-最终表达与执行要求，不能把任务缩减为当前八个 ELF 的兼容性改名。
+最终表达与执行要求，不能把任务缩减为当前九个 foundation ELF（八个 suite case 和独立主 Top-K） 的兼容性改名。

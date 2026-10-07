@@ -427,5 +427,25 @@
     ],
     "status": "implemented; final commit-scoped evidence is recorded in PR #202",
     "does_not_close_application_inventory": true
-  }
+  },
+  "foundation_gather_profile": {
+    "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/indexed_gather_tile_element.cpp",
+    "types": [
+      "U32 values",
+      "U32 logical indices",
+      "U64 byte offsets"
+    ],
+    "logical_shape": [
+      32,
+      1
+    ],
+    "status": "same ELF compile/IR/object/gfrun/gfsim proof passed; clean-head full suite pending",
+    "does_not_close_application_inventory": true,
+    "does_not_prove_generic_cfg_compiler": true,
+    "cases": [
+      "263-element result with guarded padded output",
+      "257-element probe with three wholly inactive poisoned parts"
+    ]
+  },
+  "compiler_architecture_status": "AST matcher foundation; required normal CFG/SSA LLVM region compiler replacement is open, reusing proven linx-simt analyses"
 }

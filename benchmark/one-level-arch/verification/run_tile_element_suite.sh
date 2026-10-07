@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+default_cases=(
+    histogram_tile_element
+    selected_radix_tile_element
+    element_expression_chain
+    topk_boundaries_0
+    topk_boundaries_1
+    topk_boundaries_2
+    topk_boundaries
+    indexed_gather_tile_element
+)
+if (( $# == 0 )); then
+    cases=("${default_cases[@]}")
+elif (( $# == 2 )) && [[ $1 == --case ]] && \
+     [[ $2 == indexed_gather_tile_element ]]; then
+    cases=(indexed_gather_tile_element)
+else
+    echo "usage: $0 [--case indexed_gather_tile_element]" >&2
+    exit 2
+fi
+
 : "${COMPILER_DIR:?set COMPILER_DIR to the fresh Linx compiler bin directory}"
 : "${SSM:?set SSM to the SuperScalarModel checkout or build root}"
 : "${LINX_RUNTIME_ROOT:?set LINX_RUNTIME_ROOT to a complete Linx musl toolchain root}"
@@ -79,7 +99,8 @@ run_case() {
         API_INCLUDE="$installed_api_include" \
         clean all 2>&1 | tee "$case_artifact/build.log"
     cp "$built_dir/$case_name.elf" "$elf"
-    if [[ "$case_name" == element_expression_chain ]]; then
+    if [[ "$case_name" == element_expression_chain || \
+          "$case_name" == indexed_gather_tile_element ]]; then
         make -B -C "$case_dir" TESTCASE="$case_name" \
             COMPILER_DIR="$COMPILER_DIR" \
             TARGET_TRIPLE="$TARGET_TRIPLE" \
@@ -92,7 +113,8 @@ run_case() {
         --disassembler-options=no-tile-macros "$elf" > "$disassembly"
     "$COMPILER_DIR/llvm-objdump" -t "$elf" > "$symbols"
 
-    if [[ "$case_name" == element_expression_chain ]]; then
+    if [[ "$case_name" == element_expression_chain || \
+          "$case_name" == indexed_gather_tile_element ]]; then
         python3 "$case_dir/check_disassembly.py" \
             --case "$case_name" --dis "$disassembly" --ir "$ir" \
             --self-test 2>&1 | tee "$case_artifact/disassembly.log"
@@ -175,16 +197,12 @@ run_case() {
     echo "$case_name: PASS"
 }
 
-run_case histogram_tile_element
-run_case selected_radix_tile_element
-run_case element_expression_chain
-run_case topk_boundaries_0
-run_case topk_boundaries_1
-run_case topk_boundaries_2
-run_case topk_boundaries
+for case_name in "${cases[@]}"; do
+    run_case "$case_name"
+done
 
 printf '%s\n' \
-    'All seven fresh TileOp ELFs passed disassembly, gfrun, gfrun memory, gfsim invariants, and gfsim memory checks.' \
+    "All ${#cases[@]} selected fresh TileOp ELFs passed disassembly, gfrun, gfrun memory, gfsim invariants, and gfsim memory checks." \
     > "$artifact_dir/PASS"
 printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$artifact_dir/FROZEN"
 hash_manifest="$artifact_dir/.SHA256SUMS.tmp"

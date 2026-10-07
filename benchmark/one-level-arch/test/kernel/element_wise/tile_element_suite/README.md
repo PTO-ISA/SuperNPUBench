@@ -36,6 +36,20 @@ allocates the intermediate Tiles.
 物理 Tile 布局。最后一个不足 32 个元素的分区由 `TLOAD` 补零，三个输出仍显式
 写满 384 个位置，因此尾部语义也包含在独立 golden 中。
 
+[`indexed_gather_tile_element.cpp`](indexed_gather_tile_element.cpp) demonstrates
+an ordinary indexed U32 load rather than an atomic update. It loads all 384
+indices, including `UINT32_MAX` poison in the padded tail, copies each logical
+part with `TADDS`, and writes `table[index_elements[element]]` only when the
+element is active. The compiler converts element indices to byte offsets with
+`TLEA` and applies the tail as a GPR execution mask to `MGATHER`. A second
+`TADDS` adds three to the gathered Tile before `TSTORE`; therefore inactive
+elements have the observable padded value three. The source includes only
+`<common/pto_tileop.hpp>` and uses the public `ElementTile`, `TPARTVIEW`, and
+`TPARTELEMENT` interfaces. Before the final 263-element observation, the same
+kernel runs with count 257. The last block then contains three wholly inactive
+32-element parts whose indices are all `UINT32_MAX`; exact status fields require
+that empty-mask probe and both output guards to pass.
+
 Both diagnostic output arrays preserve logical input element order, so
 `output[element]` always describes `input[element]`; application indexing does
 not expose a physical partition mapping.
@@ -71,7 +85,7 @@ bash verification/run_tile_element_suite.sh
 
 The script first installs the selected public API branch into the isolated
 resource directory with its official `make install` target. It then builds
-seven ELFs: three standalone kernels, one required unsharded 17-call Top-K
+eight ELFs: four standalone kernels, one required unsharded 17-call Top-K
 boundary benchmark, and three focused shards of that boundary table. The two
 atomic standalone ELFs each contain one TLEA and one masked `MGATHER.ADD`
 static site; every Top-K ELF contains exactly two of each. The expression ELF
@@ -79,6 +93,14 @@ must contain all ten native Tile binary selectors, the two extra binary
 operations used to lower unary expressions, one extra XOR that reuses an early
 SSA value, three native `TSTORE` sites, and no scalar
 `extractelement`/`insertelement` fallback in compiler IR.
+
+The indexed-gather ELF must contain one ordinary masked `MGATHER` and no
+`MGATHER.ADD`, plus one U32 `TLEA` whose IR contract scales 32-bit element
+indices to byte offsets. Its negative canaries reject a lost execution mask,
+layout, scaling operand, scalar vector-element fallback, or atomic opcode
+substitution. The default command still runs all seven pre-existing ELFs and
+adds this gather ELF. During focused development, append
+`--case indexed_gather_tile_element` to run only the new case.
 
 Every ELF runs unchanged on `gfrun` and `gfsim`. Both memory dumps are checked
 against separately generated input, histogram, output, and status goldens plus

@@ -144,7 +144,85 @@ def validate_expression(text: str, ir_text: str | None) -> None:
         raise CheckError("element loop fell back to scalar vector element access")
 
 
+def validate_indexed_gather(text: str, ir_text: str | None) -> None:
+    body = function_body(text, "indexed_gather_tile_element")
+    lines = instruction_lines(body)
+
+    def sites(pattern: str) -> list[int]:
+        return [
+            index for index, line in enumerate(lines)
+            if re.search(pattern, line)
+        ]
+
+    tload = sites(r"\bTLOAD\b")
+    tadds = sites(r"\bTADDS\b")
+    tlea = sites(r"\bBSTART\.TEPL\s+TLEA, U32\b")
+    gather = sites(r"\bBSTART\.TLSU\s+MGATHER, U32\b")
+    tstore = sites(r"\bTSTORE\b")
+    if len(tload) != 1:
+        raise CheckError(f"expected one static TLOAD, found {len(tload)}")
+    if len(tadds) != 2:
+        raise CheckError(f"expected two static TADDS sites, found {len(tadds)}")
+    if len(tlea) != 1:
+        raise CheckError(f"expected one U32 TLEA site, found {len(tlea)}")
+    if len(gather) != 1:
+        raise CheckError(
+            f"expected one ordinary U32 MGATHER site, found {len(gather)}"
+        )
+    if len(tstore) != 1:
+        raise CheckError(f"expected one static TSTORE, found {len(tstore)}")
+    if not (tload[0] < tadds[0] < tlea[0] < gather[0] < tadds[1] < tstore[0]):
+        raise CheckError("kernel does not alternate TileOp/gather/TileOp in order")
+    if "MGATHER.ADD" in body:
+        raise CheckError("ordinary indexed load was replaced by an atomic opcode")
+    if not sites(r"\bB\.SUBVIEW\b"):
+        raise CheckError("missing TPARTVIEW/B.SUBVIEW lowering")
+    masked_ior = [
+        line for line in lines
+        if re.search(r"\bB\.IOR\b", line) and "ExecMaskPresent" in line
+    ]
+    if len(masked_ior) != 1:
+        raise CheckError("ordinary gather is missing its GPR execution mask")
+    if "CUBE_M32" not in body or not sites(r"C\.B\.DIMI\s+32,"):
+        raise CheckError("ordinary gather lost the ElementTile M32 geometry")
+
+    if ir_text is None:
+        raise CheckError("ordinary indexed gather requires LLVM IR evidence")
+    ir_body_match = re.search(
+        r"define[^\n]*indexed_gather_tile_element.*?^}", ir_text, re.M | re.S
+    )
+    if ir_body_match is None:
+        raise CheckError("missing ordinary indexed gather kernel in LLVM IR")
+    ir_body = ir_body_match.group(0)
+    tlea_call = re.search(
+        r"call <32 x i64> "
+        r"@llvm\.linx\.experimental\.ew\.tlea[^\n]*\("
+        r"i64 32, i64 1, i64 25, i64 29, <32 x i32>[^\n]*i64 32\)",
+        ir_body,
+    )
+    if tlea_call is None:
+        raise CheckError("TLEA IR lost U32-to-byte scaling or M32 geometry")
+    if "@llvm.linx.experimental.ew.tcmps.gpr" not in ir_body:
+        raise CheckError("tail condition did not produce a GPR execution mask")
+    gather_call = re.search(
+        r"call <32 x i32> "
+        r"@llvm\.linx\.experimental\.ew\.mgather\.gpr\.masked[^\n]*\("
+        r"i64 32, i64 1, i64 25, i64 0, i64 29, i64 24, ptr [^,]+, "
+        r"<32 x i64> [^,]+, i64 %[-.a-zA-Z0-9]+, i64 0, i64 0, i64 1\)",
+        ir_body,
+    )
+    if gather_call is None:
+        raise CheckError("missing ordinary GPR-masked MGATHER intrinsic contract")
+    if "mgather.add" in ir_body:
+        raise CheckError("ordinary indexed load emitted an atomic intrinsic")
+    if "extractelement" in ir_body or "insertelement" in ir_body:
+        raise CheckError("indexed gather fell back to scalar vector element access")
+
+
 def validate(text: str, case: str, ir_text: str | None = None) -> None:
+    if case == "indexed_gather_tile_element":
+        validate_indexed_gather(text, ir_text)
+        return
     if case == "element_expression_chain":
         validate_expression(text, ir_text)
         return
@@ -210,6 +288,51 @@ def main() -> int:
     try:
         validate(text, args.case, ir_text)
         if args.self_test:
+            if args.case == "indexed_gather_tile_element":
+                rejected(
+                    "missing execution mask",
+                    text.replace("ExecMaskPresent", "NoExecMask", 1),
+                    args.case,
+                    ir_text,
+                )
+                rejected(
+                    "non-M32 gather carrier",
+                    text.replace("CUBE_M32", "CUBE_M16"),
+                    args.case,
+                    ir_text,
+                )
+                rejected(
+                    "wrong TLEA element width",
+                    text,
+                    args.case,
+                    re.sub(
+                        r"(@llvm\.linx\.experimental\.ew\.tlea[^\n]*"
+                        r"i64 32\))",
+                        lambda match: match.group(1).replace("i64 32)",
+                                                              "i64 16)"),
+                        ir_text or "",
+                        count=1,
+                    ),
+                )
+                rejected(
+                    "scalar extract fallback",
+                    text,
+                    args.case,
+                    re.sub(
+                        r"(define[^\n]*indexed_gather_tile_element[^\n]*\n)",
+                        r"\1  %bad = extractelement <32 x i32> undef, i32 0\n",
+                        ir_text or "",
+                        count=1,
+                    ),
+                )
+                rejected(
+                    "atomic opcode substitution",
+                    text.replace("MGATHER, U32", "MGATHER.ADD, U32", 1),
+                    args.case,
+                    ir_text,
+                )
+                print(f"{args.case}: disassembly check PASS")
+                return 0
             if args.case == "element_expression_chain":
                 rejected(
                     "missing TREM",
