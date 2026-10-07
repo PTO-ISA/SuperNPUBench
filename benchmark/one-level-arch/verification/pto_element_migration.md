@@ -11,10 +11,10 @@ Tile，中文注释解释有效元素、条件访存和输出顺序；每个应�
 
 ## 当前缺口
 
-- 既有前端只识别 U32 histogram atomic-if 和一种 FP32 add/sub 分支。普通
-  element 赋值及局部临时表达式目前被诊断拒绝，不能称为通用 element-wise。
-- 正在补齐纯 U32 表达式 DAG：先无副作用地验证完整 AST，再生成有类型、形状和
-  布局的 Tile SSA。中间变量复用现有寄存器分配，不在 benchmark 重建算子或 Tile。
+- 当前前端支持 U32 histogram atomic-if、一种 FP32 add/sub 分支，以及纯 U32
+  的十种二元表达式和一元负号/补码。纯表达式先无副作用地验证完整 AST，再生成
+  32-element Tile SSA；局部临时变量复用现有寄存器分配。其他 dtype、一般条件、
+  casts/math 和普通指针索引仍有缺口，不能称为通用 element-wise。
 - 既有 masked gather/scatter intrinsic 的布局合同不足以直接接 M32 element
   carrier；条件 mask 的 basis type 也必须与 widened byte index 合法匹配。
   这些需要在编译器/模型边界闭合，不能靠删除 legality 检查绕过。
@@ -50,4 +50,4 @@ Tile，中文注释解释有效元素、条件访存和输出顺序；每个应�
 - [集成 issue #370](https://github.com/PTO-ISA/pto-spec/issues/370)
 
 整个目标尚未完成。后续每个变更都必须让这份全量清单中的真实应用路径更接近
-最终表达与执行要求，不能把任务缩减为当前七个 ELF 的兼容性改名。
+最终表达与执行要求，不能把任务缩减为当前八个 ELF 的兼容性改名。
