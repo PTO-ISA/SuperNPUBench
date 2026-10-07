@@ -18,7 +18,54 @@
         "same_elf_gfsim",
         "zero_model_invariants"
       ],
-      "evidence": null
+      "evidence": null,
+      "configuration_source": "benchmark/one-level-arch/test/kernel/gather/compile.all",
+      "configurations": [
+        {
+          "dtype": "FP32",
+          "index_dtype": "U32",
+          "gK": 200000,
+          "gM": 202,
+          "gN": 97,
+          "tM": 128,
+          "tN": 128,
+          "source_status": "documented",
+          "migration_status": "pending"
+        },
+        {
+          "dtype": "FP32",
+          "index_dtype": "U32",
+          "gK": 875000,
+          "gM": 8192,
+          "gN": 1,
+          "tM": 128,
+          "tN": 128,
+          "source_status": "documented",
+          "migration_status": "pending"
+        },
+        {
+          "dtype": "FP32",
+          "index_dtype": "U32",
+          "gK": 754,
+          "gM": 640,
+          "gN": 17,
+          "tM": 128,
+          "tN": 128,
+          "source_status": "documented",
+          "migration_status": "pending"
+        },
+        {
+          "dtype": "FP32",
+          "index_dtype": "U32",
+          "gK": 131072,
+          "gM": 32,
+          "gN": 256,
+          "tM": 32,
+          "tN": 64,
+          "source_status": "active",
+          "migration_status": "pending"
+        }
+      ]
     },
     {
       "id": "concat_gather",
@@ -35,7 +82,44 @@
         "same_elf_gfsim",
         "zero_model_invariants"
       ],
-      "evidence": null
+      "evidence": null,
+      "configuration_source": "benchmark/one-level-arch/test/kernel/concat/compile.all",
+      "configurations": [
+        {
+          "dtype": "S32",
+          "gIM": 128000,
+          "gOM": 128000,
+          "tM": 512,
+          "input_shape": [
+            64,
+            2
+          ],
+          "output_shape": [
+            64,
+            2000
+          ],
+          "data_dim": 2,
+          "concat_dim": 1,
+          "migration_status": "pending"
+        },
+        {
+          "dtype": "FP16",
+          "gIM": 8192000,
+          "gOM": 2048000,
+          "tM": 512,
+          "input_shape": [
+            256,
+            8
+          ],
+          "output_shape": [
+            256,
+            8000
+          ],
+          "data_dim": 2,
+          "concat_dim": 1,
+          "migration_status": "pending"
+        }
+      ]
     },
     {
       "id": "concat_scatter",
@@ -52,7 +136,44 @@
         "same_elf_gfsim",
         "zero_model_invariants"
       ],
-      "evidence": null
+      "evidence": null,
+      "configuration_source": "benchmark/one-level-arch/test/kernel/concat/compile.all",
+      "configurations": [
+        {
+          "dtype": "S32",
+          "gIM": 128000,
+          "gOM": 128000,
+          "tM": 512,
+          "input_shape": [
+            64,
+            2
+          ],
+          "output_shape": [
+            64,
+            2000
+          ],
+          "data_dim": 2,
+          "concat_dim": 1,
+          "migration_status": "pending"
+        },
+        {
+          "dtype": "FP16",
+          "gIM": 8192000,
+          "gOM": 2048000,
+          "tM": 512,
+          "input_shape": [
+            256,
+            8
+          ],
+          "output_shape": [
+            256,
+            8000
+          ],
+          "data_dim": 2,
+          "concat_dim": 1,
+          "migration_status": "pending"
+        }
+      ]
     },
     {
       "id": "broadcast",
@@ -428,16 +549,16 @@
     "status": "standard CFG/SSA P1a implemented; clean-head same-ELF gfrun/gfsim proof passed",
     "does_not_close_application_inventory": true,
     "evidence": {
-      "compiler": "e46b264d74e08d310b8c1dc4f7153dd75e44ec99",
-      "benchmark": "c783149249aba07eff140d301b18506115cb9233",
-      "tileop_api": "ee70623efe220094e7d4ce42d1d336164f6b72eb",
+      "compiler": "34ade53ebfe81975a91512568e337bacb91ad27d",
+      "benchmark": "d4fabe03a9d27560728d528671de2ae5a3febede",
+      "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
       "model": "34a3d79945a5d49bdf2959ad5073ce16c9bd643f",
-      "artifact": "tile_element_suite/20261007T115532Z-57281",
-      "content_id": "9823f817ccf60ce771726032aa59aa7318547c19d69ec9ddbec7c56087064905",
-      "elf_sha256": "3b0d5b47856d22884fd7f53d64fd480706f32b873abc68cb774a50b7c5f51500",
+      "artifact": "tile_element_suite/20261007T125327Z-78937",
+      "content_id": "44d411602764ba0db4cb1c5862a3379eec677095cfa25826a805742d10cbae52",
+      "elf_sha256": "94589bf4627ce397e807eb698681ac348f6cbbfd1898f9c8131e57e3eb9a8919",
       "verified_hash_count": 30,
       "golden_segments_per_model": 5,
-      "lit_passed": 11,
+      "lit_passed": 15,
       "gfsim_queue_created": 1786,
       "gfsim_queue_destroyed": 1786,
       "gfsim_a3": 0
@@ -454,13 +575,28 @@
       32,
       1
     ],
-    "status": "prior AST foundation passed same-ELF dual-model proof; standard CFG/SSA P1b replacement pending",
+    "status": "standard CFG/SSA P1b implemented; clean-head same-ELF gfrun/gfsim proof passed",
     "does_not_close_application_inventory": true,
-    "does_not_prove_generic_cfg_compiler": true,
     "cases": [
       "263-element result with guarded padded output",
       "257-element probe with three wholly inactive poisoned parts"
-    ]
+    ],
+    "compiler_scope": "U32/M32/32, zero inactive else, IV ULT invariant i32 bound; optional invariant outer predicate; other CFG/cast/type/memory effects reject",
+    "evidence": {
+      "compiler": "34ade53ebfe81975a91512568e337bacb91ad27d",
+      "benchmark": "d4fabe03a9d27560728d528671de2ae5a3febede",
+      "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+      "model": "34a3d79945a5d49bdf2959ad5073ce16c9bd643f",
+      "artifact": "tile_element_suite/20261007T125248Z-78397",
+      "content_id": "c6f5eccb96f421d0b1a62d1e7ac302fb7cd9dde18ed1719a4aca736f866df10e",
+      "elf_sha256": "e05d020e5b84e2ce447a3187adaf0dd5f9e9e5d94272dddc667685d88e9acb64",
+      "verified_hash_count": 29,
+      "golden_segments_per_model": 4,
+      "lit_passed": 15,
+      "gfsim_a3": 0,
+      "gfsim_queue_created": 1593,
+      "gfsim_queue_destroyed": 1593
+    }
   },
-  "compiler_architecture_status": "P1a normal C++ CFG/SSA required LLVM region compiler implemented and locally reviewed; U32/M32/32 straight-line profile passes fresh same-ELF dual-model evidence. CFG gather, predicates/atomics, typed profiles and full applications remain open."
+  "compiler_architecture_status": "P1a arithmetic and P1b zero-inactive gather use required normal C++ CFG/SSA LLVM region passes, with AA/MemorySSA and negative tests. Exact-head dual-model goldens pass. P2 atomic/predicate profile is in development; marked S32/F32, general select/cast/scatter and all21 applications remain open."
 }

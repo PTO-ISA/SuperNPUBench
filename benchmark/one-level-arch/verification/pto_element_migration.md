@@ -11,21 +11,24 @@ Tile，中文注释解释有效元素、条件访存和输出顺序；每个应�
 
 ## 当前缺口
 
-- `element for` 已进入正常 C++ CFG/SSA，由必需的 LLVM region pass 降低；
-  Astra/xhigh 的 linx-simt 复用方案已落实第一阶段：U32/M32/32 的直线算术、
-  SSA 临时值和证明过的 carrier transport。旧 AST body matcher 已删除。
-  当前源代码的 expression kernel 已通过独立 review、11 个 lit 测试和同一 ELF
-  在 gfrun/gfsim 的五区段 golden；提交后 rebuilt Clang 的版本为 e46b264，clean-head provenance 也已通过。
-  精确四 repo heads、ELF/content ID 和 frozen artifact 路径见 JSON 中
-  `foundation_expression_profile.evidence`；该记录不关闭原应用清单。
-- 标准 CFG 路径尚未支持条件 gather、一般 predicate/PHI、atomic、cast 和其他
-  dtype；这些边界明确诊断。历史九个 foundation ELF 是旧路径检查点，不能
-  推断新路径已跑通整个 suite。O0 也因 typed spill/reload 尚未闭合而明确拒绝。
-- 既有 masked gather/scatter intrinsic 的布局合同不足以直接接 M32 element
-  carrier；条件 mask 的 basis type 也必须与 widened byte index 合法匹配。
-  这些需要在编译器/模型边界闭合，不能靠删除 legality 检查绕过。
-- `ElementTile` 首版仅 U32；其他 dtype 的物理 carrier 并不自动成为 typed
-  element array。更多位宽和浮点必须先实现正确视图和独立测试。
+- 标准 CFG/SSA 编译器已闭合 P1a U32/M32/32 算术与 P1b 零 inactive gather。
+  LLVM34ade53 的 rebuilt Clang 与 APIb223de6、benchd4fabe0、model34a3d799
+  均为 clean head。15 个 focused lit 通过；同一 expression ELF 的五段及 gather
+  ELF 的四段独立 golden 在 gfrun/gfsim 均通过。gather 保留263输出、257全空
+  poison分区和guards。精确 heads、ELF/content ID、29/30 hash 的 frozen artifact
+  记录在 JSON 的 foundation profiles；这些记录不关闭原应用清单。
+- P1b 只接受 U32 索引、i32有效数与证明过的 CFG 零值合流。宽界限、非零else、
+  不安全cast、错误分支方向、clobber和额外load等边界明确诊断。P2 正推进
+  tail/equality predicate 与 relaxed atomic；O0 marked region 的 typed spill、
+  一般PHI/select、cast/math、scatter/dynamic probe 仍有缺口。
+- 正式 ElementTile 已在既有 API headers 支持 U32/S32/F32 的32/128 typed
+  storage/view/transport，clean API native10/10与hostmakecheck通过；三dtype
+  transport另有同ELF双模型七区段golden。编译器尚不接受 marked S32/F32 region，
+  不能用 API 类型存在来宣称该dtype的元素循环已可执行。默认Tile存储保持一致，
+  追加profile参数改变C++ mangled type identity，依赖接口需要重新编译。
+- gather原应用仍需rank-2 FP32行索引/广播与原四配置；不能以U32一维foundation
+  代替。concat原配置含S32与FP16/512元素，完整输入容量与运行时shape映射均须
+  保留，不能为了第一阶段把512改成32或缩小原数据集。JSON已明确登记配置。
 - QLI 中的私有 histogram 汇编、稀疏 MLA 的主存 spill/标量索引阶段和哈希查找的
   动态探测需要各自的完整迁移，不能用新建的小型 histogram 代替原 workload。
 

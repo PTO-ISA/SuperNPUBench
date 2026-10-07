@@ -72,14 +72,15 @@ results as a permutation.
 
 ## End-to-end verification
 
-The standard CFG/SSA compiler checkpoint `e46b264` currently proves the
-complete `element_expression_chain` kernel only. Its rebuilt clean-head run
-`20261007T115532Z-57281` passes all five independent golden segments on both
-models, 30 artifact hashes and queue/A3 invariants. Focus this case with
-`--case element_expression_chain`. Conditional gather, histogram and Top-K
-are still being moved to the same standard compiler; the earlier nine-ELF
-AST checkpoint does not establish a current all-suite pass. The migration
-inventory remains open for all 21 original sources and applicable configurations.
+The standard CFG/SSA compiler checkpoint `34ade53` proves the complete U32
+expression and zero-inactive gather kernels, with clean API `b223de6`.
+Their exact-head frozen runs `20261007T125327Z-78937` and
+`20261007T125248Z-78397` pass five and four independent golden segments on
+both models. Focus either case using `--case element_expression_chain` or
+`--case indexed_gather_tile_element`. Atomic histogram and Top-K are still
+being moved to the same standard compiler; the earlier nine-ELF AST checkpoint
+does not establish a current all-suite pass. All 21 original application
+entries and their applicable configurations remain open.
 
 Run from the `benchmark/one-level-arch` directory with fresh tool paths:
 
