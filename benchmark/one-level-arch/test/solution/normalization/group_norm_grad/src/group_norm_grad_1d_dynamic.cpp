@@ -26,7 +26,7 @@
 namespace {
 template <typename dtype>
 constexpr int64_t group_norm_1d_tile_d(int64_t channels, int64_t groups) {
-    constexpr int64_t kTileCapacity = 512;
+    constexpr int64_t kTileCapacity = 256;
     const int64_t group_width = channels / groups;
     return group_width < kTileCapacity ? group_width : kTileCapacity;
 }

@@ -365,9 +365,8 @@ group_norm_grad_1d_static(dtype *dy, dtype *x, float *mean, float *rstd,
     // Stage 1: fused parameters.
     {
         static_assert(peNum == 4, "normalization kernels support only 4PE");
-        // 512 logical columns occupy 64 KiB after M32 pads to 32 rows.
-        // Other data stages use 256 columns (32 KiB FP32).
-        constexpr int64_t tD = 512;
+        // CubeM32 FP32: 32 physical rows x 256 columns = 32 KiB.
+        constexpr int64_t tD = gn_grad_1d_static::data_columns<dtype>();
 
         const uint32_t tid = get_thread_idx();
         if (tid >= static_cast<uint32_t>(peNum))

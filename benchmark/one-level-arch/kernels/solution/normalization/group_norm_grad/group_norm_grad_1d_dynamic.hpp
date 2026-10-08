@@ -17,8 +17,8 @@
 //   tile_d <= 0 → min(D, tD); channel splitting continues when D exceeds the selected strip width.
 //   Stage A and B split arbitrary D into tiles, including partial tails.
 //
-// Data tiles: 8192 columns, FP32 32 KiB and FP16 16 KiB.
-// Parameter reduction uses 512-column strips (FP32 2 KiB).
+// Data tiles cap at 256 CubeM32 columns: FP32 32 KiB, FP16 16 KiB.
+// Stage A1 uses the same 32 KiB cap (splits D>256 into strips).
 // Reduction/broadcast outputs retain physical Columns=1.
 // Reduce and dX are separate passes so large tiles do not stay live across both.
 //
@@ -396,9 +396,8 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     // Stage 1: fused parameters.
     {
         static_assert(peNum == 4, "normalization kernels support only 4PE");
-        // 512 logical columns occupy 64 KiB after M32 pads to 32 rows.
-        // Other data stages use 256 columns (32 KiB FP32).
-        constexpr int64_t tD = 512;
+        // CubeM32 FP32: 32 physical rows x 256 columns = 32 KiB.
+        constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
         const gn_grad_1d::Shape shape(tiling);
         const uint32_t tid = get_thread_idx();
