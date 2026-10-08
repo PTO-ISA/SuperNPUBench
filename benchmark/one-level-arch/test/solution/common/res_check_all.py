@@ -154,8 +154,8 @@ _NORM = [
     #  "normalization/rms_norm_split_r/src/rms_norm_split_r_data_compare.py",
     #  "solution_normalization_rms_norm_split_r_rms_norm_split_r_DType__half_gA16_gR16384_PE4"),
     *((f"group_norm_grad_{v}", "normalization/group_norm_grad", _GNG_GEN, _GNG_CMP,
-       f"solution_normalization_group_norm_grad_group_norm_grad_{v}_DType__half_N2_C16_G8_HxW1024_PE4",
-       ("--n", "2", "--c", "16", "--g", "8", "--hxw", "1024"))
+       f"solution_normalization_group_norm_grad_group_norm_grad_{v}_DType__half_N2_C16_G8_HxW2048_PE4",
+       ("--n", "2", "--c", "16", "--g", "8", "--hxw", "2048"))
       for v in ("dynamic", "static")),
     *((f"group_norm_grad_1d_{v}", "normalization/group_norm_grad", _GNG1D_GEN, _GNG1D_CMP,
        f"solution_normalization_group_norm_grad_group_norm_grad_1d_{v}_DType__half_N256_C512_G8_PE4",

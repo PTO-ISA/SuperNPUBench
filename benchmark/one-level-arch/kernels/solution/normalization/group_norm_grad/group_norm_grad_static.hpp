@@ -1,4 +1,4 @@
-// group_norm_grad_static: N=2,C=16,G=8,HxW=1024.
+// group_norm_grad_static: N=2,C=16,G=8,HxW=2048.
 // Fixed-shape 4PE implementation with compile-time Tile valid dimensions.
 // One kernel entry; each PE owns two complete groups across all batches.
 #ifndef SUPERNPU_GROUP_NORM_GRAD_PTO_STATIC_HPP
@@ -148,7 +148,7 @@ inline void dx_nc(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2_buf,
     TCVT(h0, dx_f);
     TSTORE(gdx, h0);
   };
-  for (int64_t hw0 = 0; hw0 < 1024; hw0 += 256)
+  for (int64_t hw0 = 0; hw0 < 2048; hw0 += 256)
     process.template operator()<256>(hw0);
 }
 
@@ -160,7 +160,7 @@ inline void spatial_piece(dtype *dy, dtype *x, SpatialSum &sa, SpatialSum &ba,
   using GM=global_tensor<dtype,RowMajor<-1,-1>>;
   using TH=Tile<Location::Vec,dtype,1,512,BLayout::CubeM32,1,Width>;
   using TF=Tile<Location::Vec,float,1,512,BLayout::CubeM32,1,Width>;
-  GM gx(x,1,1024),gy(dy,1,1024);
+  GM gx(x,1,2048),gy(dy,1,2048);
   TH h;
   TF xf,yf,prod;
   Tile<Location::Vec,float,1,512,BLayout::CubeM32,1,1> cur;
@@ -179,8 +179,8 @@ inline void spatial_block(dtype *dy,dtype *x,float *ds,float *db,
                           int64_t C,int64_t H,int64_t n,int64_t c,int64_t tile_hw) {
   SpatialSum sa,ba;
   TEXPANDS(sa,0.0f); TEXPANDS(ba,0.0f);
-  const int64_t off=(n*C+c)*1024;
-  for(int64_t h=0;h<1024;h+=512)
+  const int64_t off=(n*C+c)*2048;
+  for(int64_t h=0;h<2048;h+=512)
     spatial_piece<dtype,512>(dy+off+h,x+off+h,sa,ba,ds+n*C+c);
   global_tensor<float,RowMajor<-1,-1>> gs(ds+n*C+c,1,1),gb(db+n*C+c,1,1);
   TSTORE(gs,sa); TSTORE(gb,ba);
@@ -271,8 +271,8 @@ inline void gamma_beta_block(float *ds, float *db, float *mean, float *rstd,
 
 // Tiling: N,C,G,H,reduce_hw,reduce_c,dx_hw,dx_c,gb_d,gb_g.
 struct Config {
-  static constexpr int64_t N=2,C=16,G=8,H=1024,D=2;
-  static constexpr int64_t rh=512,rc=1,dh=1024,dc=1,bd=2,bg=8;
+  static constexpr int64_t N=2,C=16,G=8,H=2048,D=2;
+  static constexpr int64_t rh=512,rc=1,dh=2048,dc=1,bd=2,bg=8;
   constexpr bool valid() const { return true; }
 };
 } // namespace gn_grad_static
