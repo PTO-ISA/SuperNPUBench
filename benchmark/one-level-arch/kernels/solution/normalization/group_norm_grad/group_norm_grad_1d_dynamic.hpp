@@ -17,9 +17,9 @@
 //   tile_d <= 0 → min(D, tD); channel splitting continues when D exceeds the selected strip width.
 //   Stage A and B split arbitrary D into tiles, including partial tails.
 //
-// Data tiles cap at 256 CubeM32 columns: FP32 32 KiB, FP16 16 KiB.
-// Stage A1 uses the same 32 KiB cap (splits D>256 into strips).
-// Reduction/broadcast outputs retain physical Columns=1.
+// Four PEs share one 256 KiB tile-register pool. Cap strips at 64 CubeM32
+// columns (FP32 8 KiB, FP16 4 KiB) and keep broadcast tiles at Columns=1
+// so peak live tiles stay inside that pool. D>64 is split into strips.
 // Reduce and dX are separate passes so large tiles do not stay live across both.
 //
 // Torch CUDA launch 总览 (NVIDIA, warp=32; HxW==1 特化):
@@ -43,11 +43,15 @@ namespace gn_grad_1d {
 constexpr int64_t workspace_elems(int64_t N, int64_t G) { return 2 * N * G; }
 
 // Shared shape validation and physical Tile definitions for all three stages.
+// CubeM32 always allocates 32 physical rows. 64 columns => 8 KiB FP32.
+constexpr int kPhysRows = 32;
+constexpr int kPhysCols = 64;
+constexpr int64_t kTileBytes = 8192;
+
 template <typename dtype>
 constexpr int64_t data_columns() {
-    // M32 always allocates 32 physical rows, even for one logical row.
-    constexpr int64_t dtype_cols = 32768 / (32 * sizeof(dtype));
-    return dtype_cols < 256 ? dtype_cols : 256;
+    constexpr int64_t dtype_cols = kTileBytes / (32 * sizeof(dtype));
+    return dtype_cols < kPhysCols ? dtype_cols : kPhysCols;
 }
 struct Shape {
     int64_t N, C, G, D;
@@ -61,7 +65,7 @@ struct TileTypes {
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
     using tile_h = Tile<Location::Vec, dtype, Rows, Cols, BLayout::CubeM32, -1, -1>;
     using tile_f = Tile<Location::Vec, float, Rows, Cols, BLayout::CubeM32, -1, -1>;
-    using tile_v = Tile<Location::Vec, float, Rows, Cols, BLayout::CubeM32, -1, 1>;
+    using tile_v = Tile<Location::Vec, float, Rows, 1, BLayout::CubeM32, -1, 1>;
 };
 
 // ---------------------------------------------------------------------------
@@ -102,7 +106,9 @@ inline void fused_params_group(dtype *dy, dtype *x, float *mean, float *rstd,
         gm_h gg(gamma + c0 + d0, 1, static_cast<int>(C));
         tile_h h(1, vd);
         tile_f xf(1, vd), dyf(1, vd), gf(1, vd), prod(1, vd);
-        tile_v partial1(1), partial2(1);
+        // PTO #311: TROWSUM dest keeps the source physical columns, ValidCols=1.
+        using tile_red = Tile<Location::Vec, float, 32, tile_f::Cols, BLayout::CubeM32, -1, 1>;
+        tile_red partial1(1), partial2(1);
         TLOAD(h, gx);
         TCVT(xf, h);
         TLOAD(h, gdy);
@@ -214,8 +220,8 @@ inline void dx_groups(dtype *dy, dtype *x, float *rstd, dtype *gamma,
                       int64_t D, int64_t n, int64_t g0, int64_t active_g) {
     using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using htile = Tile<Location::Vec, dtype, 32, 256, BLayout::CubeM32, -1, -1>;
-    using ftile = Tile<Location::Vec, float, 32, 256, BLayout::CubeM32, -1, -1>;
+    using htile = Tile<Location::Vec, dtype, kPhysRows, kPhysCols, BLayout::CubeM32, -1, -1>;
+    using ftile = Tile<Location::Vec, float, kPhysRows, kPhysCols, BLayout::CubeM32, -1, -1>;
     using vtile = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, -1, 1>;
     const int64_t ng = n * G + g0;
     const int64_t offset = n * C + g0 * D;
@@ -335,7 +341,8 @@ inline void dgamma_group(dtype *dy, dtype *x, float *mean, float *rstd,
     }
 }
 
-// Stage B logical [active_g,active_d], physical [32,256].
+// Stage B logical [active_g,active_d], physical [32,64]. Separate N reductions
+// so dbeta and dgamma do not keep five FP32 tiles live together.
 template <typename dtype>
 inline void gamma_beta_groups(dtype *dy, dtype *x, float *mean, float *rstd,
                               dtype *dgamma, dtype *dbeta, int64_t N, int64_t C,
@@ -343,42 +350,52 @@ inline void gamma_beta_groups(dtype *dy, dtype *x, float *mean, float *rstd,
                               int64_t active_g, int64_t active_d) {
     using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
     using gm_f = global_tensor<float, RowMajor<-1, -1>>;
-    using ht = Tile<Location::Vec, dtype, 32, 256, BLayout::CubeM32, -1, -1>;
-    using ft = Tile<Location::Vec, float, 32, 256, BLayout::CubeM32, -1, -1>;
-    using vt = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, -1, 1>;
+    using ht = Tile<Location::Vec, dtype, kPhysRows, kPhysCols, BLayout::CubeM32, -1, -1>;
+    using ft = Tile<Location::Vec, float, kPhysRows, kPhysCols, BLayout::CubeM32, -1, -1>;
+    using vt = Tile<Location::Vec, float, kPhysRows, 1, BLayout::CubeM32, -1, 1>;
     ht h(active_g, active_d);
-    ft dyf(active_g, active_d), xf(active_g, active_d), tmp(active_g, active_d);
-    ft beta(active_g, active_d), grad(active_g, active_d);
+    ft acc(active_g, active_d), a(active_g, active_d), b(active_g, active_d);
     vt m(active_g), r(active_g);
-    TEXPANDS(beta, 0.0f);
-    TEXPANDS(grad, 0.0f);
+
+    TEXPANDS(acc, 0.0f);
     for (int64_t n = 0; n < N; ++n) {
         const int64_t offset = n * C + g0 * D + d0;
         gm_h gdy(dy + offset, static_cast<int>(active_g), static_cast<int>(D));
+        TLOAD(h, gdy);
+        TCVT(a, h);
+        TADD(acc, acc, a);
+    }
+    {
+        gm_h gb(dbeta + g0 * D + d0, static_cast<int>(active_g), static_cast<int>(D));
+        TCVT(h, acc);
+        TSTORE(gb, h);
+    }
+
+    TEXPANDS(acc, 0.0f);
+    for (int64_t n = 0; n < N; ++n) {
+        const int64_t offset = n * C + g0 * D + d0;
         gm_h gx(x + offset, static_cast<int>(active_g), static_cast<int>(D));
+        gm_h gdy(dy + offset, static_cast<int>(active_g), static_cast<int>(D));
         gm_f gm(mean + n * G + g0, static_cast<int>(active_g), 1);
         gm_f gr(rstd + n * G + g0, static_cast<int>(active_g), 1);
-        TLOAD(h, gdy);
-        TCVT(dyf, h);
-        TADD(beta, beta, dyf);
         TLOAD(h, gx);
-        TCVT(xf, h);
-        TLOAD(m, gm);
+        TCVT(a, h);
         TLOAD(r, gr);
-        // Preserve the original FP32 operation order for dgamma.
-        TROWEXPANDMUL(tmp, xf, r);
-        TMUL(tmp, tmp, dyf);
-        TROWEXPANDMUL(xf, dyf, m);
-        TROWEXPANDMUL(xf, xf, r);
-        TSUB(tmp, tmp, xf);
-        TADD(grad, grad, tmp);
+        TROWEXPANDMUL(a, a, r);
+        TLOAD(h, gdy);
+        TCVT(b, h);
+        TMUL(a, a, b);
+        TLOAD(m, gm);
+        TROWEXPANDMUL(b, b, m);
+        TROWEXPANDMUL(b, b, r);
+        TSUB(a, a, b);
+        TADD(acc, acc, a);
     }
-    gm_h gb(dbeta + g0 * D + d0, static_cast<int>(active_g), static_cast<int>(D));
-    gm_h gg(dgamma + g0 * D + d0, static_cast<int>(active_g), static_cast<int>(D));
-    TCVT(h, beta);
-    TSTORE(gb, h);
-    TCVT(h, grad);
-    TSTORE(gg, h);
+    {
+        gm_h gg(dgamma + g0 * D + d0, static_cast<int>(active_g), static_cast<int>(D));
+        TCVT(h, acc);
+        TSTORE(gg, h);
+    }
 }
 
 } // namespace gn_grad_1d
@@ -396,7 +413,7 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     // Stage 1: fused parameters.
     {
         static_assert(peNum == 4, "normalization kernels support only 4PE");
-        // CubeM32 FP32: 32 physical rows x 256 columns = 32 KiB.
+        // CubeM32 FP32: 32 physical rows x 64 columns = 8 KiB.
         constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
         const gn_grad_1d::Shape shape(tiling);
@@ -418,7 +435,7 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         using tile_v = typename Types::tile_v;
 
         const int64_t tile_g = tiling[4];
-        if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1))
+        if (tile_g < 1 || tile_g > 32 || (D > gn_grad_1d::kPhysCols && tile_g != 1))
             return;
         const int64_t outer_g = (G + tile_g - 1) / tile_g;
         const float s = 1.0f / static_cast<float>(D);
@@ -437,7 +454,7 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     // Stage 2: dx.
     {
         static_assert(peNum == 4, "normalization kernels support only 4PE");
-        // M32 FP32: 32 physical rows x 256 columns = 32 KiB.
+        // CubeM32 FP32: 32 physical rows x 64 columns = 8 KiB.
         constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
         const gn_grad_1d::Shape shape(tiling);
@@ -459,14 +476,14 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         using tile_v = typename Types::tile_v;
 
         const int64_t tile_g = tiling[4];
-        if (tile_g < 1 || tile_g > 32 || (D > 256 && tile_g != 1))
+        if (tile_g < 1 || tile_g > 32 || (D > gn_grad_1d::kPhysCols && tile_g != 1))
             return;
         const int64_t outer_g = (G + tile_g - 1) / tile_g;
         for (int64_t task = tid; task < N * outer_g; task += peNum) {
             const int64_t n = task / outer_g;
             const int64_t g0 = (task % outer_g) * tile_g;
             const int64_t active_g = G - g0 < tile_g ? G - g0 : tile_g;
-            if (D <= 256 && tile_g > 1) {
+            if (D <= gn_grad_1d::kPhysCols && tile_g > 1) {
               gn_grad_1d::dx_groups(dy, x, rstd, gamma, workspace, dx, N, C, G,
                                     D, n, g0, active_g);
             } else {
@@ -479,7 +496,7 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     // Stage 3: gamma/beta.
     {
         static_assert(peNum == 4, "normalization kernels support only 4PE");
-        // M32 FP32: 32 physical rows x 256 columns = 32 KiB.
+        // CubeM32 FP32: 32 physical rows x 64 columns = 8 KiB.
         constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
         const gn_grad_1d::Shape shape(tiling);
@@ -501,9 +518,9 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         using tile_v = typename Types::tile_v;
 
         const int64_t tile_g = tiling[6];
-        if (tile_g < 1 || tile_g > 32 || (tile_d > 256 && tile_g != 1))
+        if (tile_g < 1 || tile_g > 32 || (tile_d > gn_grad_1d::kPhysCols && tile_g != 1))
             return;
-        if (tile_d <= 256) {
+        if (tile_d <= gn_grad_1d::kPhysCols) {
             const int64_t outer_g = (G + tile_g - 1) / tile_g;
             const int64_t outer_d = (D + tile_d - 1) / tile_d;
             // Each PE owns complete output blocks; N is reduced locally.

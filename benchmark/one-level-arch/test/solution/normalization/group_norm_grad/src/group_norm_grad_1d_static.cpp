@@ -27,19 +27,19 @@
 namespace {
 template <typename dtype>
 constexpr int64_t group_norm_1d_tile_d(int64_t channels, int64_t groups) {
-    constexpr int64_t kTileCapacity = 256;
+    constexpr int64_t kTileCapacity = 64;
     const int64_t group_width = channels / groups;
     return group_width < kTileCapacity ? group_width : kTileCapacity;
 }
 } // namespace
 
-#ifdef RES_CHECK
 namespace {
-volatile uint32_t input_ready = 0;
 volatile uint32_t kernel_done[PE_NUM] = {};
+#ifdef RES_CHECK
+volatile uint32_t input_ready = 0;
 volatile uint32_t output_written = 0;
-} // namespace
 #endif
+} // namespace
 
 int main() {
     static_assert(N_BATCH == 256 && C_CH == 4096 && G_GRP == 8, "static testcase has a fixed shape");
@@ -49,8 +49,8 @@ int main() {
     constexpr int64_t kTileD = group_norm_1d_tile_d<dtype>(C_CH, G_GRP);
     static_assert(N_BATCH > 0 && C_CH > 0 && G_GRP > 0);
     static_assert(C_CH % G_GRP == 0 && kTileD > 0);
-    // Small-D physical [32,256], FP32 32 KiB.
-    constexpr int64_t kTileG = C_CH / G_GRP <= 256 ? (G_GRP < 32 ? G_GRP : 32) : 1;
+    // Small-D physical [32,64], FP32 8 KiB.
+    constexpr int64_t kTileG = C_CH / G_GRP <= 64 ? (G_GRP < 32 ? G_GRP : 32) : 1;
     // Separate Stage B tiling, with optional validation overrides.
 #ifndef GB_TILE_D
 #define GB_TILE_D 0
@@ -58,13 +58,13 @@ int main() {
 #ifndef GB_TILE_G
 #define GB_TILE_G 0
 #endif
-    constexpr int64_t kGbTileD = GB_TILE_D > 0 ? GB_TILE_D : (kTileD < 256 ? kTileD : 256);
-    constexpr int64_t kGbRowCapacity = 32768 / (256 * sizeof(float));
+    constexpr int64_t kGbTileD = GB_TILE_D > 0 ? GB_TILE_D : (kTileD < 64 ? kTileD : 64);
+    constexpr int64_t kGbRowCapacity = 8192 / (64 * sizeof(float));
     constexpr int64_t kGbTileG = GB_TILE_G > 0 ? GB_TILE_G :
-        (kGbTileD <= 256 ? (G_GRP < kGbRowCapacity ? G_GRP : kGbRowCapacity) : 1);
+        (kGbTileD <= 64 ? (G_GRP < kGbRowCapacity ? G_GRP : kGbRowCapacity) : 1);
     static_assert(kGbTileD > 0 && kGbTileD <= 8192);
     static_assert(kGbTileG > 0 && kGbTileG <= kGbRowCapacity);
-    static_assert(kGbTileD <= 256 || kGbTileG == 1);
+    static_assert(kGbTileD <= 64 || kGbTileG == 1);
     constexpr int64_t tiling_info[7] = {N_BATCH, C_CH, G_GRP, kTileD, kTileG,
                               kGbTileD, kGbTileG};
 
@@ -92,11 +92,11 @@ int main() {
     dtype *dgamma = dgamma_buf;
     dtype *dbeta = dbeta_buf;
 
+    const uint32_t tid = get_thread_idx();
 #ifdef RES_CHECK
 #ifndef CHK_DIR
 #error "CHK_DIR must be set when RES_CHECK is enabled"
 #endif
-    const uint32_t tid = get_thread_idx();
     if (tid == 0) {
         readBinaryFile(CHK_DIR "/dy.bin", (uint8_t *)dy,
                        static_cast<size_t>(N) * C * sizeof(dtype));
@@ -118,13 +118,13 @@ int main() {
   group_norm_grad_1d_static<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
       params_workspace, dx, dgamma, dbeta);
 
-#ifdef RES_CHECK
     kernel_done[tid] = 1;
-    if (tid == 0) {
-        for (int pe = 0; pe < PE_NUM; ++pe) {
-            while (kernel_done[pe] == 0) {
-            }
+    for (int pe = 0; pe < PE_NUM; ++pe) {
+        while (kernel_done[pe] == 0) {
         }
+    }
+#ifdef RES_CHECK
+    if (tid == 0) {
         writeBinaryFile(CHK_DIR "/dx.bin", (uint8_t *)dx,
                         static_cast<size_t>(N) * C * sizeof(dtype));
         writeBinaryFile(CHK_DIR "/dgamma.bin", (uint8_t *)dgamma,
