@@ -3,7 +3,7 @@ $(error TESTCASE is required)
 endif
 
 SUPPORTED_CASES := histogram_tile_element selected_radix_tile_element \
-	element_expression_chain indexed_gather_tile_element \
+	element_expression_chain signed_element_expression indexed_gather_tile_element \
 	topk_boundaries topk_boundaries_0 \
 	topk_boundaries_1 topk_boundaries_2
 ifeq ($(filter $(TESTCASE),$(SUPPORTED_CASES)),)

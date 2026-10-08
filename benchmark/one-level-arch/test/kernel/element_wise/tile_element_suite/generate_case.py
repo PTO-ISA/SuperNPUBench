@@ -86,13 +86,49 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--case", required=True, choices=(
         "histogram_tile_element", "selected_radix_tile_element",
-        "element_expression_chain", "indexed_gather_tile_element",
+        "element_expression_chain", "signed_element_expression", "indexed_gather_tile_element",
         "topk_boundaries", "topk_boundaries_0", "topk_boundaries_1",
         "topk_boundaries_2",
     ))
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.case == "signed_element_expression":
+        active = [(element * 7919 + 12345) % 65535 - 32767
+                  for element in range(COUNT)]
+        active[0:2] = [-7, 7]
+        input_values = active + [-559038737] * (PADDED_COUNT - COUNT)
+        loaded = active + [0] * (PADDED_COUNT - COUNT)
+        guard = [-1234567] * 16
+        # C++ truncates division toward zero. The remainder keeps the
+        # dividend sign; Python's signed % would implement the wrong rule.
+        quotient = []
+        remainder = []
+        for value in loaded:
+            numerator = (value + 19) * 3 - 7
+            quotient.append((1 if numerator >= 0 else -1) * (abs(numerator) // 3))
+            remainder.append((1 if value >= 0 else -1) * (abs(value) % 3))
+        assert remainder[0:2] == [-1, 1]
+        shifted = [-(((value >> 2) ^ 0x555) & 0xFF) for value in loaded]
+        arrays = {
+            "signed_element_input": ("input_s32.bin", input_values),
+            "signed_element_quotient": ("quotient_s32.bin", guard + quotient + guard),
+            "signed_element_remainder": ("remainder_s32.bin", guard + remainder + guard),
+            "signed_element_shift": ("shift_s32.bin", guard + shifted + guard),
+        }
+        for filename, values in arrays.values():
+            (args.out / filename).write_bytes(struct.pack(f"<{len(values)}i", *values))
+        status = [COUNT, 0, 0, PADDED_COUNT, 0xFFFFFFFF, 1, 3, 0x53333245]
+        write_u32(args.out / "status_u32.bin", status)
+        manifest = {"case": args.case, "count": COUNT,
+                    "padded_count": PADDED_COUNT, "segments": [
+            {"symbol": symbol, "kind": "exact", "file": filename}
+            for symbol, (filename, _) in arrays.items()]
+                    + [{"symbol": "signed_element_status", "kind": "exact",
+                        "file": "status_u32.bin"}]}
+        (args.out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        return 0
 
     if args.case == "indexed_gather_tile_element":
         mask32 = 0xFFFFFFFF

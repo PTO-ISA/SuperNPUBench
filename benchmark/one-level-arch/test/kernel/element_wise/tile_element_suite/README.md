@@ -36,6 +36,18 @@ allocates the intermediate Tiles.
 物理 Tile 布局。最后一个不足 32 个元素的分区由 `TLOAD` 补零，三个输出仍显式
 写满 384 个位置，因此尾部语义也包含在独立 golden 中。
 
+[`signed_element_expression.cpp`](signed_element_expression.cpp) runs a complete
+S32 TileOp/element/TileOp kernel over 263 input elements with padded 384 output
+and 16-element guards. Three marked loops cover signed arithmetic/division,
+C++ signed remainder and right-shift/bitwise/negation. The independent oracle
+locks `-7 % 3 == -1` and `7 % 3 == 1`; direct PTO TREM would produce the wrong
+negative-input result. Source arithmetic stays within int32 limits. Compiler
+IR must use truncating TDIV/TMUL/TSUB for remainder, and the checker proves
+that dataflow plus exact S32 transport. LLVM's legal logical-right-shift fold
+under a low-bit mask uses a U32 operation view while retaining S32 storage.
+The default suite includes this case; focus it with
+`--case signed_element_expression`.
+
 [`indexed_gather_tile_element.cpp`](indexed_gather_tile_element.cpp) demonstrates
 an ordinary indexed U32 load rather than an atomic update. It loads all 384
 indices, including `UINT32_MAX` poison in the padded tail, copies each logical
@@ -95,7 +107,7 @@ bash verification/run_tile_element_suite.sh
 
 The script first installs the selected public API branch into the isolated
 resource directory with its official `make install` target. It then builds
-eight ELFs: four standalone kernels, one required unsharded 17-call Top-K
+nine ELFs: five standalone kernels, one required unsharded 17-call Top-K
 boundary benchmark, and three focused shards of that boundary table. The two
 atomic standalone ELFs each contain one TLEA and one masked `MGATHER.ADD`
 static site; every Top-K ELF contains exactly two of each. The expression ELF
@@ -113,8 +125,8 @@ The indexed-gather ELF must contain one ordinary masked `MGATHER` and no
 `MGATHER.ADD`, plus one U32 `TLEA` whose IR contract scales 32-bit element
 indices to byte offsets. Its negative canaries reject a lost execution mask,
 layout, scaling operand, scalar vector-element fallback, or atomic opcode
-substitution. The default command still runs all seven pre-existing ELFs and
-adds this gather ELF. During focused development, append
+substitution. The default command runs the seven pre-existing ELFs plus the signed-expression
+and indexed-gather ELFs (nine total). During focused development, append
 `--case indexed_gather_tile_element` to run only the new case.
 
 Every ELF runs unchanged on `gfrun` and `gfsim`. Both memory dumps are checked

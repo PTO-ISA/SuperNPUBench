@@ -5,6 +5,7 @@ default_cases=(
     histogram_tile_element
     selected_radix_tile_element
     element_expression_chain
+    signed_element_expression
     topk_boundaries_0
     topk_boundaries_1
     topk_boundaries_2
@@ -15,10 +16,10 @@ if (( $# == 0 )); then
     cases=("${default_cases[@]}")
 elif (( $# == 2 )) && [[ $1 == --case ]] && \
      [[ $2 == indexed_gather_tile_element || \
-        $2 == element_expression_chain ]]; then
+        $2 == element_expression_chain || $2 == signed_element_expression ]]; then
     cases=("$2")
 else
-    echo "usage: $0 [--case indexed_gather_tile_element|element_expression_chain]" >&2
+    echo "usage: $0 [--case indexed_gather_tile_element|element_expression_chain|signed_element_expression]" >&2
     exit 2
 fi
 
@@ -100,7 +101,8 @@ run_case() {
         API_INCLUDE="$installed_api_include" \
         clean all 2>&1 | tee "$case_artifact/build.log"
     cp "$built_dir/$case_name.elf" "$elf"
-    if [[ "$case_name" == element_expression_chain || \
+    if [[ "$case_name" == signed_element_expression ||
+          "$case_name" == element_expression_chain || \
           "$case_name" == indexed_gather_tile_element ]]; then
         make -B -C "$case_dir" TESTCASE="$case_name" \
             COMPILER_DIR="$COMPILER_DIR" \
@@ -114,7 +116,8 @@ run_case() {
         --disassembler-options=no-tile-macros "$elf" > "$disassembly"
     "$COMPILER_DIR/llvm-objdump" -t "$elf" > "$symbols"
 
-    if [[ "$case_name" == element_expression_chain || \
+    if [[ "$case_name" == signed_element_expression ||
+          "$case_name" == element_expression_chain || \
           "$case_name" == indexed_gather_tile_element ]]; then
         python3 "$case_dir/check_disassembly.py" \
             --case "$case_name" --dis "$disassembly" --ir "$ir" \

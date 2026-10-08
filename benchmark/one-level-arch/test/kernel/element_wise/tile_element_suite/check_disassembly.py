@@ -172,6 +172,56 @@ def validate_expression(text: str, ir_text: str | None) -> None:
         raise CheckError("element loop fell back to scalar vector element access")
 
 
+def validate_signed_expression(text: str, ir_text: str | None) -> None:
+    body = function_body(text, "signed_element_expression")
+    lines = instruction_lines(body)
+    for mnemonic, dtype, count in (("TADD", "S32", 2), ("TMUL", "S32", 2),
+            ("TDIV", "S32", 2), ("TSUB", "S32", 1), ("TAND", "S32", 1),
+            ("TXOR", "S32", 1), ("TSHR", "U32", 1)):
+        if sum(bool(re.search(rf"\bBSTART\.TEPL\s+{mnemonic}, {dtype}\b", line))
+               for line in lines) != count:
+            raise CheckError(f"signed expression lost {mnemonic}/{dtype} count {count}")
+    if "TREM" in body:
+        raise CheckError("C++ signed remainder cannot lower directly to PTO TREM")
+    for mnemonic, count in (("TLOAD", 1), ("TSTORE", 3)):
+        sites = [line for line in lines
+                 if re.search(rf"\bBSTART\.TLSU\s+{mnemonic},", line)]
+        if len(sites) != count or any(
+                not re.search(rf"\b{mnemonic}, S32\b", line) for line in sites):
+            raise CheckError(f"signed expression needs exactly {count} total {mnemonic}/S32 sites")
+    if "CUBE_M32" not in body or "M322ND" not in body or "ND2M32" not in body:
+        raise CheckError("signed expression lost typed M32 transport")
+    if ir_text is None:
+        raise CheckError("signed expression requires LLVM IR evidence")
+    match = re.search(r"define[^\n]*signed_element_expression.*?^}", ir_text, re.M | re.S)
+    if match is None:
+        raise CheckError("missing signed expression kernel in IR")
+    ir = match.group(0)
+    if re.search(r"extractelement|insertelement|@llvm\.linx\.experimental\.element\.(region|view)", ir):
+        raise CheckError("signed expression contains residual scalar/view lowering")
+    calls = re.findall(
+        r"^\s*(%[-.a-zA-Z0-9]+) = call <32 x i32> "
+        r"@llvm\.linx\.experimental\.ew\.tbinary[^\n]*\("
+        r"i64 32, i64 1, i64 (17|25), i64 29, i64 ([0-9]+), "
+        r"<32 x i32> (%[-.a-zA-Z0-9]+), <32 x i32> (%[-.a-zA-Z0-9]+)\)", ir, re.M)
+    if len(calls) != 10 or any(dtype != ("25" if op == "9" else "17")
+                              for _, dtype, op, _, _ in calls):
+        raise CheckError("signed expression IR lost exact operation dtype/shape")
+    operations = {result: (dtype, op, lhs, rhs) for result, dtype, op, lhs, rhs in calls}
+    proves_remainder = False
+    for _, dtype, op, lhs, rhs in calls:
+        if dtype != "17" or op != "1" or rhs not in operations:
+            continue
+        _, multiply, quotient, divisor = operations[rhs]
+        if multiply != "2" or quotient not in operations:
+            continue
+        qdtype, divide, dividend, qdivisor = operations[quotient]
+        proves_remainder |= (qdtype == "17" and divide == "3" and
+                             dividend == lhs and qdivisor == divisor)
+    if not proves_remainder:
+        raise CheckError("signed % lost exact dividend - trunc_quotient * divisor dataflow")
+
+
 def validate_indexed_gather(text: str, ir_text: str | None) -> None:
     body = function_body(text, "indexed_gather_tile_element")
     lines = instruction_lines(body)
@@ -253,6 +303,9 @@ def validate_indexed_gather(text: str, ir_text: str | None) -> None:
 
 
 def validate(text: str, case: str, ir_text: str | None = None) -> None:
+    if case == "signed_element_expression":
+        validate_signed_expression(text, ir_text)
+        return
     if case == "indexed_gather_tile_element":
         validate_indexed_gather(text, ir_text)
         return
@@ -321,7 +374,7 @@ def main() -> int:
     try:
         validate(text, args.case, ir_text)
         if args.self_test:
-            if args.case in ("element_expression_chain", "indexed_gather_tile_element"):
+            if args.case in ("element_expression_chain", "signed_element_expression", "indexed_gather_tile_element"):
                 for marker in ("region", "view"):
                     rejected(
                         f"residual element {marker} contract",
@@ -334,6 +387,22 @@ def main() -> int:
                             count=1,
                         ),
                     )
+            if args.case == "signed_element_expression":
+                rejected("unsigned load transport", text.replace("TLOAD, S32", "TLOAD, U32", 1), args.case, ir_text)
+                rejected("unsigned store transport", text.replace("TSTORE, S32", "TSTORE, U32", 1), args.case, ir_text)
+                for mnemonic in ("TLOAD", "TSTORE"):
+                    site = next(line for line in text.splitlines()
+                                if re.search(rf"BSTART\.TLSU\s+{mnemonic}, S32", line))
+                    rejected(f"extra unsigned {mnemonic} site",
+                             text.replace(site, site + "\n" + site.replace("S32", "U32"), 1),
+                             args.case, ir_text)
+                rejected("unsigned division", text.replace("TDIV, S32", "TDIV, U32", 1), args.case, ir_text)
+                rejected("direct floor TREM", text.replace("TSUB, S32", "TREM, S32", 1), args.case, ir_text)
+                rejected("wrong shift dtype", text.replace("TSHR, U32", "TSHR, S32", 1), args.case, ir_text)
+                rejected("wrong remainder dataflow", text, args.case,
+                         re.sub(r"(i64 17, i64 29, )i64 1,", r"\1i64 0,", ir_text or "", count=1))
+                print(f"{args.case}: disassembly check PASS")
+                return 0
             if args.case == "indexed_gather_tile_element":
                 rejected(
                     "missing execution mask",
