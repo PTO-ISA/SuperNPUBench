@@ -1,4 +1,4 @@
-// group_norm_grad_1d_static: N=256,C=4096,G=8,D=512.
+// group_norm_grad_1d_static: N=256,C=512,G=8,D=64.
 // Fixed-shape 4PE implementation with compile-time Tile valid dimensions.
 // Kernel entry points do not accept runtime tiling. Dynamic counterpart is unchanged.
 #ifndef SUPERNPU_GROUP_NORM_GRAD_1D_PTO_STATIC_HPP
@@ -388,8 +388,8 @@ group_norm_grad_1d_static(dtype *dy, dtype *x, float *mean, float *rstd,
         const uint32_t tid = get_thread_idx();
         if (tid >= static_cast<uint32_t>(peNum))
             return;
-        constexpr int64_t N = 256, C = 4096, G = 8, D = 512;
-        constexpr int64_t requested_d = 512;
+        constexpr int64_t N = 256, C = 512, G = 8, D = 64;
+        constexpr int64_t requested_d = 64;
         const int64_t tile_d = requested_d < tD ? requested_d : tD;
         if (tile_d <= 0 || tile_d > tD) {
             return;
@@ -428,7 +428,7 @@ group_norm_grad_1d_static(dtype *dy, dtype *x, float *mean, float *rstd,
         const uint32_t tid = get_thread_idx();
         if (tid >= static_cast<uint32_t>(peNum))
             return;
-        constexpr int64_t N = 256, C = 4096, G = 8, D = 512;
+        constexpr int64_t N = 256, C = 512, G = 8, D = 64;
         constexpr int64_t tile_d = gn_grad_1d_static::kPhysCols;
         if (tile_d <= 0 || tile_d > tD) {
             return;
@@ -469,7 +469,7 @@ group_norm_grad_1d_static(dtype *dy, dtype *x, float *mean, float *rstd,
         const uint32_t tid = get_thread_idx();
         if (tid >= static_cast<uint32_t>(peNum))
             return;
-        constexpr int64_t N = 256, C = 4096, G = 8, D = 512;
+        constexpr int64_t N = 256, C = 512, G = 8, D = 64;
         constexpr int64_t tile_d = gn_grad_1d_static::kPhysCols;
         if (tile_d <= 0 || tile_d > tD) {
             return;

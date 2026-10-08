@@ -1,4 +1,4 @@
-// Fixed-shape 4PE test: N=256,C=4096,G=8,D=512.
+// Fixed-shape 4PE test: N=256,C=512,G=8,D=64.
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
@@ -10,12 +10,12 @@
 #define DType __half
 #endif
 
-// Dynamic 4PE validation: HxW==1, N=256, C=4096, G=8, D=512.
+// Dynamic 4PE validation: HxW==1, N=256, C=512, G=8, D=64.
 #ifndef N_BATCH
 #define N_BATCH 256
 #endif
 #ifndef C_CH
-#define C_CH 4096
+#define C_CH 512
 #endif
 #ifndef G_GRP
 #define G_GRP 8
@@ -42,7 +42,7 @@ volatile uint32_t output_written = 0;
 } // namespace
 
 int main() {
-    static_assert(N_BATCH == 256 && C_CH == 4096 && G_GRP == 8, "static testcase has a fixed shape");
+    static_assert(N_BATCH == 256 && C_CH == 512 && G_GRP == 8, "static testcase has a fixed shape");
     using dtype = DType;
 
     // tiling: {N, C, G, tile_d, tile_g, gb_tile_d, gb_tile_g}

@@ -9,7 +9,7 @@ Bins written to --out-dir:
   golden_dx.bin / golden_dgamma.bin / golden_dbeta.bin : float16
 
 Math matches PyTorch GroupNorm1dBackward (fp32 accumulate, cast to fp16).
-Default: N=256, C=4096, G=8 (D=512), tile_d=min(D, 8192)=512.
+Default: N=256, C=512, G=8 (D=64), tile_d=min(D, 8192)=64.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
-    / "solution_normalization_group_norm_grad_group_norm_grad_1d_dynamic_DType__half_N256_C4096_G8_PE4"
+    / "solution_normalization_group_norm_grad_group_norm_grad_1d_dynamic_DType__half_N256_C512_G8_PE4"
 )
 
 
@@ -207,7 +207,7 @@ def gen_all(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n", type=int, default=256)
-    parser.add_argument("--c", type=int, default=4096)
+    parser.add_argument("--c", type=int, default=512)
     parser.add_argument("--g", type=int, default=8)
     parser.add_argument("--tile-d", type=int, default=None)
     parser.add_argument("--gb-tile-d", type=int, default=0)

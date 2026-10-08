@@ -373,6 +373,18 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
               1.0f / static_cast<float>(t.D * t.H));
           continue;
         }
+        if (t.D == 2) {
+          using H2 =
+              Tile<Location::Vec, dtype, 32, 2, BLayout::CubeM32, -1, -1>;
+          using F2 =
+              Tile<Location::Vec, float, 32, 2, BLayout::CubeM32, -1, -1>;
+          using V2 = Tile<Location::Vec, float, 32, 2, BLayout::CubeM32, -1, 1>;
+          gn_grad::fused_params_group<dtype, GH, GF, H2, F2, V2>(
+              gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N,
+              t.C, t.G, t.D, ng / t.G, ng % t.G,
+              1.0f / static_cast<float>(t.D * t.H));
+          continue;
+        }
         gn_grad::fused_params_group<dtype, GH, GF, TH, TF, TV>(
             gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N,
             t.C, t.G, t.D, ng / t.G, ng % t.G,
@@ -413,6 +425,10 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
                       cols = t.D - d < t.bd ? t.D - d : t.bd;
         if (cols == 4)
           gn_grad::gamma_beta_block<dtype, 32, 4>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
+              t.C, t.G, t.D, g, d, rows, cols);
+        else if (cols == 2)
+          gn_grad::gamma_beta_block<dtype, 32, 2>(
               workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
               t.C, t.G, t.D, g, d, rows, cols);
         else if (t.bd <= 256)
