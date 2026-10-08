@@ -17,7 +17,7 @@
 //   2. Per-PE tiles are disjoint: PE tid owns rows [4*tid, 4*tid+3] of every
 //      16-row block. No duplicated TLOAD traffic.
 //   3. 直方图 = TCMPS<GE> 守卫 (非法 lane value 置 0 / index 钳 0) +
-//      MSCATTER_ADD (数字编码 TLSU 21, 字节位移 index, tile 内重复下标
+//      MSCATTER_ADD (数字编码 TLSU 21, 元素下标 index [PTO v0.58.6], tile 内重复下标
 //      row-major 顺序 RMW) —— 旧注释 "TCMP/TCMPS u32 被汇编器拒绝" 已过时
 //      ([C1], qli #177 与探针双重实证)。
 //   4. Cross-PE hand-offs are guarded by mtBarrier.
@@ -259,7 +259,7 @@ static inline void calTokenPerExpertCnt_mt_tile(
 //   写指针 old 值 ([C3], 替代标量 mySectionCnt[min]++), 计数器终值 =
 //   perPeSectionCnt 输出
 //   offE = minRow*(4*kBsPerPE) + tid*kBsPerPE + rank (TMULS/TADDS/TADD) →
-//   TSHLS(<<2) → MSCATTER(perPegroupedIds, TCI(16*blk+4*tid), offB)
+//   offE (元素下标) → MSCATTER(perPegroupedIds, TCI(16*blk+4*tid), offE)
 //   podInfo: poE = offE*superPodNum + p → MSCATTER(perPePodInfo, flagRow_p)
 // ============================================================================
 static inline void groupToken_mt_tile(
@@ -366,21 +366,17 @@ static inline void groupToken_mt_tile(
         TSUBS(rankRow, rankRow, 1u);
 
         // 5. perPegroupedIds[min*sectStride + peBase + base + rank] = token
-        TCol4 minIdx;
-        TSHLS(minIdx, minRow, 2u);
         TCol4 base;
-        MGATHER(base, gCnt, minIdx);     // 平 MGATHER 查 per-PE 写指针
+        MGATHER(base, gCnt, minRow);     // 平 MGATHER 查 per-PE 写指针
         TCol4 minB;
         TMULS(minB, minRow, sectStride);
         TADDS(minB, minB, peBase);
         TCol4 offE;
         TADD(offE, minB, base);
         TADD(offE, offE, rankRow);
-        TCol4 offB;
-        TSHLS(offB, offE, 2u);
         TCol4 tok;
         TCI(tok, blk * kTileM + tid * 4u);
-        MSCATTER(gIds, tok, offB);
+        MSCATTER(gIds, tok, offE);
 
         // 6. perPePodInfo[(...)*spn + p] = podFlag_p
         for (uint32_t p = 0; p < superPodNum; ++p) {
@@ -390,9 +386,7 @@ static inline void groupToken_mt_tile(
             TCol4 po;
             TMULS(po, offE, superPodNum);
             TADDS(po, po, p);
-            TCol4 poB;
-            TSHLS(poB, po, 2u);
-            MSCATTER(gPodInfo, flagRow, poB);
+            MSCATTER(gPodInfo, flagRow, po);
         }
 
         // 7. 块末进位: mySectionCnt[s] += #{本块 min==s} (计数链 [C10],
@@ -599,17 +593,13 @@ static inline void sortKernel_mt_tile(
             TLOAD(rankRow, gRankR);
             TSUBS(rankRow, rankRow, 1u);
 
-            T1x32 sIdx;
-            TSHLS(sIdx, sRow, 2u);
             T1x32 base;
-            MGATHER(base, gWP, sIdx);
+            MGATHER(base, gWP, sRow);
             T1x32 pos;
             TADD(pos, base, rankRow);
-            T1x32 posB;
-            TSHLS(posB, pos, 2u);
             T1x32 tok;
             TCI(tok, tb * 32u);
-            MSCATTER(gSorted, tok, posB);
+            MSCATTER(gSorted, tok, pos);
 
             // writePos 进位 (计数链, sRow2 重物化)
             for (uint32_t e = 0; e < expertPerRank; ++e) {
