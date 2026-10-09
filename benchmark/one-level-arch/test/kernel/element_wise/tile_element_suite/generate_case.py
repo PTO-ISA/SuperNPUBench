@@ -87,13 +87,90 @@ def main() -> int:
     parser.add_argument("--case", required=True, choices=(
         "histogram_tile_element", "selected_radix_tile_element",
         "element_expression_chain", "signed_element_expression", "indexed_gather_tile_element",
-        "generic_predicated_cfg_i32",
+        "generic_predicated_cfg_i32", "generic_typed_tile_cfg_i32",
         "topk_boundaries", "topk_boundaries_0", "topk_boundaries_1",
         "topk_boundaries_2",
     ))
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.case == "generic_typed_tile_cfg_i32":
+        element_count = 263
+        padded_count = 384
+        guard_elements = 16
+        guard_value = 0x5A5A6B6B
+        mask32 = 0xFFFFFFFF
+
+        def signed32(value: int) -> int:
+            value &= mask32
+            return value if value < 0x80000000 else value - 0x100000000
+
+        def trunc_div(dividend: int, divisor: int) -> int:
+            quotient = abs(dividend) // abs(divisor)
+            return -quotient if dividend < 0 else quotient
+
+        input_values = []
+        for element in range(padded_count):
+            value = 0x1234567
+            if element < element_count:
+                value = (element * 7919 + 12345) % 200001 - 100000
+            input_values.append(value)
+        input_values[0:4] = [-3, -4, 0, 100]
+
+        output = []
+        retained = 0
+        for element in range(padded_count):
+            source = input_values[element] if element < element_count else 0
+            prepared = source + 3
+            if prepared < 0:
+                selected = trunc_div(prepared, 3)
+            elif prepared == 0:
+                selected = 7
+            else:
+                selected = signed32(prepared ^ 5)
+            result = selected + 11
+            assert result != 0
+            if result < -100:
+                result = signed32(result ^ 0x55)
+            elif result > 100:
+                result -= 4
+            else:
+                retained += 1
+            output.append(signed32(result))
+
+        guarded_output = ([guard_value] * guard_elements + output +
+                          [guard_value] * guard_elements)
+        checksum = sum(value & mask32 for value in output) & mask32
+        status = [
+            element_count, padded_count, 0, 0, checksum,
+            output[0] & mask32, output[1] & mask32, output[2] & mask32,
+            retained, 2, 0, 0x54594346,
+        ]
+        (args.out / "input_s32.bin").write_bytes(
+            struct.pack(f"<{len(input_values)}i", *input_values)
+        )
+        (args.out / "output_s32.bin").write_bytes(
+            struct.pack(f"<{len(guarded_output)}i", *guarded_output)
+        )
+        write_u32(args.out / "status_u32.bin", status)
+        manifest = {
+            "case": args.case,
+            "count": element_count,
+            "padded_count": padded_count,
+            "segments": [
+                {"symbol": "generic_typed_tile_cfg_i32_input",
+                 "kind": "exact", "file": "input_s32.bin"},
+                {"symbol": "generic_typed_tile_cfg_i32_output",
+                 "kind": "exact", "file": "output_s32.bin"},
+                {"symbol": "generic_typed_tile_cfg_i32_status",
+                 "kind": "exact", "file": "status_u32.bin"},
+            ],
+        }
+        (args.out / "manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        return 0
 
     if args.case == "generic_predicated_cfg_i32":
         elements = 32

@@ -58,9 +58,20 @@ lanes carry a zero divisor, while a separate all-inactive call passes null GM
 pointers. The observable outputs therefore prove masked signed division and
 that an empty domain performs no GM load, division, or store. A third branch-only
 kernel writes the signed division result directly, without a PHI merge, so its
-output independently requires an S32 MSCATTER descriptor. This is explicitly
-a GM-array compiler test; it does not claim the unavailable typed-view bridge
-between a public `ElementTile` and a generic element region.
+output independently requires an S32 MSCATTER descriptor. This case is
+explicitly the GM-array compiler path; the following benchmark separately
+tests the typed-view bridge between a public `ElementTile` and generic regions.
+
+[`generic_typed_tile_cfg_i32.cpp`](generic_typed_tile_cfg_i32.cpp) exercises
+that typed bridge in one complete, readable S32 kernel. `TLOAD` loads a logical
+128-element Tile and `TPARTVIEW<32>` presents logical 32-element partitions.
+After `TADDS`, the first marked loop uses ordinary nested `if`, signed division,
+and XOR. Its result flows through `TADDS` and `TMOV` into a second marked loop.
+That loop conditionally replaces only some elements; all other elements retain
+the nonzero value copied by `TMOV`. A final `TSTORE` publishes the same carrier.
+The source exposes no physical layout, lane identifier, mask Tile, or compiler
+temporary. Exact input, padded output, guards, checksums, and retained-element
+counts come from an independent Python golden.
 
 [`indexed_gather_tile_element.cpp`](indexed_gather_tile_element.cpp) demonstrates
 an ordinary indexed U32 load rather than an atomic update. It loads all 384
@@ -121,7 +132,7 @@ bash verification/run_tile_element_suite.sh
 
 The script first installs the selected public API branch into the isolated
 resource directory with its official `make install` target. It then builds
-nine ELFs: five standalone kernels, one required unsharded 17-call Top-K
+eleven ELFs: seven standalone kernels, one required unsharded 17-call Top-K
 boundary benchmark, and three focused shards of that boundary table. The two
 atomic standalone ELFs each contain one TLEA and one masked `MGATHER.ADD`
 static site; every Top-K ELF contains exactly two of each. The expression ELF
@@ -140,9 +151,11 @@ The indexed-gather ELF must contain one ordinary masked `MGATHER` and no
 indices to byte offsets. Its negative canaries reject a lost execution mask,
 layout, scaling operand, scalar vector-element fallback, or atomic opcode
 substitution. The default command runs the seven pre-existing ELFs plus the
-signed-expression, indexed-gather, and generic-CFG ELFs (ten total). During
+signed-expression, indexed-gather, generic GM-CFG, and generic typed-CFG ELFs
+(eleven total). During
 focused development, append `--case indexed_gather_tile_element` or
-`--case generic_predicated_cfg_i32` to run one new case.
+`--case generic_predicated_cfg_i32` or `--case generic_typed_tile_cfg_i32` to
+run one new case.
 
 Every ELF runs unchanged on `gfrun` and `gfsim`. Both memory dumps are checked
 against separately generated input, histogram, output, and status goldens plus

@@ -185,6 +185,68 @@ def validate_generic_predicated_cfg(text: str, ir_text: str | None) -> None:
             raise CheckError(f"{name} lost raw-U32/M32 GPR value merges")
 
 
+def validate_generic_typed_tile_cfg(text: str, ir_text: str | None) -> None:
+    body = function_body(text, "generic_typed_tile_cfg_i32")
+    lines = instruction_lines(body)
+
+    def sites(pattern: str) -> list[int]:
+        return [index for index, line in enumerate(lines) if re.search(pattern, line)]
+
+    tload = sites(r"\bBSTART\.TLSU\s+TLOAD, S32\b")
+    subview = sites(r"\bB\.SUBVIEW\b")
+    tadds = sites(r"\bTADDS\b")
+    tmov = sites(r"\bBSTART\.TLSU\s+TMOV, S32\b")
+    tstore = sites(r"\bBSTART\.TLSU\s+TSTORE, S32\b")
+    if len(tload) != 1 or not subview:
+        raise CheckError("typed CFG lost TLOAD128/TPARTVIEW32 lowering")
+    if len(tadds) != 2 or len(tmov) != 1 or len(tstore) != 1:
+        raise CheckError("typed CFG lost its exact TileOp bridge shape")
+    if not (tload[0] < tadds[0] < tadds[1] < tmov[0] < tstore[0]):
+        raise CheckError("typed CFG no longer alternates TileOp/element/TileOp in order")
+    if not (tload[0] < subview[0] < tstore[0]):
+        raise CheckError("typed CFG moved TPARTVIEW outside the Tile lifetime")
+    # The generic path implements truncating signed division through absolute
+    # values, one masked U32 TDIV, and a sign restore. This avoids PTO's floor
+    # remainder/division ambiguity while preserving C++ semantics.
+    if sum(bool(re.search(r"\bBSTART\.TEPL\s+TDIV, U32\b", line))
+           for line in lines) != 1:
+        raise CheckError("typed CFG lost its masked signed division")
+    if sum(bool(re.search(r"\bBSTART\.TEPL\s+TXOR, U32\b", line))
+           for line in lines) < 2:
+        raise CheckError("typed CFG lost one of its ordinary C++ XOR expressions")
+    if sum("ExecMaskPresent" in line for line in lines) < 4:
+        raise CheckError("typed CFG operations lost predicate execution masks")
+    if "CUBE_M32" not in body or "M322ND" not in body or "ND2M32" not in body:
+        raise CheckError("typed CFG lost S32 M32 typed transport")
+
+    if ir_text is None:
+        raise CheckError("typed CFG case requires LLVM IR evidence")
+    ir = ir_function_body(ir_text, "generic_typed_tile_cfg_i32")
+    if re.search(
+        r"extractelement|insertelement|"
+        r"@llvm\.linx\.experimental\.element\.(region|view)",
+        ir,
+    ):
+        raise CheckError("typed CFG contains residual scalar/region/view lowering")
+    binary_calls = re.findall(
+        r"call <32 x i32> "
+        r"@llvm\.linx\.experimental\.ew\.tbinary\.gpr\.masked[^\n]*",
+        ir,
+    )
+    select_calls = re.findall(
+        r"call <32 x i32> @llvm\.linx\.experimental\.ew\.tsel\.gpr[^\n]*",
+        ir,
+    )
+    compare_calls = re.findall(
+        r"call i64 @llvm\.linx\.experimental\.ew\.tcmps\.gpr[^\n]*",
+        ir,
+    )
+    if len(binary_calls) < 5 or len(select_calls) < 2 or len(compare_calls) < 3:
+        raise CheckError("typed CFG lost generic masked CFG operations or value merges")
+    if "llvm.linx.experimental.ew.tdiv" in ir:
+        raise CheckError("typed CFG used a non-generic unmasked division path")
+
+
 def validate_expression(text: str, ir_text: str | None) -> None:
     body = function_body(text, "element_expression_chain")
     lines = instruction_lines(body)
@@ -447,6 +509,9 @@ def validate_indexed_gather(text: str, ir_text: str | None) -> None:
 
 
 def validate(text: str, case: str, ir_text: str | None = None) -> None:
+    if case == "generic_typed_tile_cfg_i32":
+        validate_generic_typed_tile_cfg(text, ir_text)
+        return
     if case == "generic_predicated_cfg_i32":
         validate_generic_predicated_cfg(text, ir_text)
         return
@@ -521,7 +586,7 @@ def main() -> int:
     try:
         validate(text, args.case, ir_text)
         if args.self_test:
-            if args.case in ("element_expression_chain", "signed_element_expression", "indexed_gather_tile_element", "generic_predicated_cfg_i32"):
+            if args.case in ("element_expression_chain", "signed_element_expression", "indexed_gather_tile_element", "generic_predicated_cfg_i32", "generic_typed_tile_cfg_i32"):
                 for marker in ("region", "view"):
                     rejected(
                         f"residual element {marker} contract",
@@ -534,6 +599,26 @@ def main() -> int:
                             count=1,
                         ),
                     )
+            if args.case == "generic_typed_tile_cfg_i32":
+                rejected(
+                    "missing TMOV seed",
+                    text.replace("TMOV, S32", "TMOV_REMOVED, S32", 1),
+                    args.case,
+                    ir_text,
+                )
+                rejected(
+                    "scalar insert fallback",
+                    text,
+                    args.case,
+                    re.sub(
+                        r"(define[^\n]*generic_typed_tile_cfg_i32[^\n]*\n)",
+                        r"\1  %bad = insertelement <32 x i32> undef, i32 0, i32 0\n",
+                        ir_text or "",
+                        count=1,
+                    ),
+                )
+                print(f"{args.case}: disassembly check PASS")
+                return 0
             if args.case == "generic_predicated_cfg_i32":
                 rejected(
                     "unmasked binary substitution",
