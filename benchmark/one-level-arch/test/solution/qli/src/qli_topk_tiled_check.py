@@ -53,15 +53,26 @@ def fp16_key_vec(arr):
     return np.where(bits >> 15, bits ^ 0xFFFF, bits ^ 0x8000).astype(np.uint32)
 
 
-def gen_case(case_dir, sq, skv, topk, seed):
+def gen_case(case_dir, sq, skv, topk, seed, dup=1, neg=False):
     rng = np.random.default_rng(seed)
     q_f32 = rng.standard_normal((sq * G, D), dtype=np.float32)
     k_f32 = rng.standard_normal((skv, D), dtype=np.float32)
+    if dup > 1:
+        # 并列压力：每个 K token 精确重复 dup 次（scale_k 同步），每个分数值出现 dup 次
+        k_f32 = np.repeat(k_f32, dup, axis=0)
     q8 = q_f32.astype(float8_e4m3fn)
     k8 = k_f32.astype(float8_e4m3fn)
     w = rng.standard_normal(sq * G, dtype=np.float32)
+    if neg:
+        # 全负分数压力：wq 全负 × relu>=0 × scale_k>0 => 所有分数 <= 0
+        w = -np.abs(w)
     scale_q = (rng.standard_normal(sq * G, dtype=np.float32) * 0.01).astype(np.float32)
     scale_k = (rng.standard_normal(skv, dtype=np.float32) * 0.01).astype(np.float32)
+    if neg:
+        scale_k = np.abs(scale_k)
+    if dup > 1:
+        scale_k = np.repeat(scale_k, dup)
+    skv = skv * dup  # 有效列数（与 ELF 的 Skv 实例化一致）
 
     # kernel 读的是量化后的 fp8 字节；golden 同样用量化后的值计算
     q8f = q8.astype(np.float32).reshape(sq, G, D)
@@ -92,7 +103,8 @@ def gen_case(case_dir, sq, skv, topk, seed):
 
 
 def run_check(args):
-    tag = f"qli_topk_tiled_{args.mode}_B1_Sq{args.sq}_Skv{args.skv}"
+    skv_eff = args.skv * args.dup  # ELF 的 Skv 实例化 = 有效列数
+    tag = f"qli_topk_tiled_{args.mode}_B1_Sq{args.sq}_Skv{skv_eff}"
     elf = ELF_DIR / f"{tag}.elf"
     if not elf.exists():
         return "SKIP", f"missing {elf}"
@@ -100,7 +112,8 @@ def run_check(args):
     for stale in ("output.bin", "errors.bin", "scores_readback.bin"):
         (case_dir / stale).unlink(missing_ok=True)
 
-    scores, ref_idx, ref_val = gen_case(case_dir, args.sq, args.skv, args.topk, args.seed)
+    scores, ref_idx, ref_val = gen_case(case_dir, args.sq, args.skv, args.topk,
+                                        args.seed, args.dup, args.neg)
     if not np.any(scores):
         return "FAIL", "golden scores all zero (vacuous)"
 
@@ -122,14 +135,14 @@ def run_check(args):
 
     # 分数链路
     sim_scores = np.fromfile(case_dir / "scores_readback.bin",
-                             dtype=np.float32).reshape(args.sq, args.skv)
+                             dtype=np.float32).reshape(args.sq, skv_eff)
     cos = float(np.dot(sim_scores.ravel(), scores.ravel()) /
                 (np.linalg.norm(sim_scores.ravel()) * np.linalg.norm(scores.ravel())))
     max_abs = float(np.abs(sim_scores - scores).max())
 
     # TopK 输出
     out = np.fromfile(case_dir / "output.bin", dtype=np.int32).reshape(args.sq, args.topk)
-    in_range = bool(np.all((out >= 0) & (out < args.skv)))
+    in_range = bool(np.all((out >= 0) & (out < skv_eff)))
     distinct = all(len(set(row.tolist())) == args.topk for row in out)
     setm = sum(1 for r in range(args.sq) if set(out[r].tolist()) == set(ref_idx[r].tolist()))
 
@@ -137,36 +150,34 @@ def run_check(args):
         return "FAIL", (f"index sanity: in_range={in_range} distinct={distinct}; "
                         f"log: {case_dir / 'gfrun.log'}")
 
-    if args.mode == "fp32":
-        # 选中值多重集 vs golden topk 值多重集（tie 容忍的精确性判据）
-        val_ok = True
-        worst = 0.0
-        for r in range(args.sq):
-            sv = np.sort(sim_scores[r, out[r]])[::-1]
-            rv = np.sort(ref_val[r])[::-1]
-            d = float(np.abs(sv - rv).max()) if sv.shape == rv.shape else float("inf")
-            worst = max(worst, d)
-            if sv.shape != rv.shape or not np.allclose(sv, rv, atol=1e-5, rtol=0):
-                val_ok = False
-        score_ok = cos > 0.999999 and max_abs < 1e-4
-        ok = val_ok and score_ok
-        return ("PASS" if ok else "FAIL"), (
-            f"cosine={cos:.6f} max_abs={max_abs:.3e} val-multiset "
-            f"{'OK' if val_ok else 'MISMATCH'} (worst {worst:.3e}) set={setm}/{args.sq}")
-
-    # fp16 模式：FP16 sortable-key 多重集
-    key_ok = True
+    # 引擎精确性判定基准 = 设备自己算出的分数（scores_readback）：
+    # 分数是设备侧计算的，与 numpy golden 有 <=1e-8 的浮点差异；落在 fp16 舍入
+    # 中点上的值会因 1-ulp 差异翻转到相邻 key（golden 侧 key 可能全窗不存在）。
+    # 故 topk 精确性以 sim_scores 自身为基准（与上游 checker 语义一致——其参考
+    # 就是设备读过的同一输入）；分数链路的正确性由上面的 cosine/max_abs 独立把关。
+    # fp32 模式：选中值有序多重集 == sim_scores 的 topk 值多重集（逐位精确）。
+    # fp16 模式：选中 FP16-key 多重集 == sim_scores 的 topk FP16-key 多重集（精确）。
+    exact_ok = True
     for r in range(args.sq):
-        sim_keys = np.sort(fp16_key_vec(sim_scores[r, out[r]]))[::-1]
-        ref_keys = np.sort(fp16_key_vec(ref_val[r]))[::-1]
-        if sim_keys.shape != ref_keys.shape or not np.array_equal(sim_keys, ref_keys):
-            key_ok = False
-            break
+        row = sim_scores[r]
+        if args.mode == "fp32":
+            sel = np.sort(row[out[r]])[::-1]
+            top = np.sort(np.partition(row, -args.topk)[-args.topk:])[::-1]
+            if not np.array_equal(sel, top):
+                exact_ok = False
+        else:
+            keys = fp16_key_vec(row)
+            sel = np.sort(keys[out[r]])[::-1]
+            top = np.sort(np.partition(keys, -args.topk)[-args.topk:])[::-1]
+            if not np.array_equal(sel, top):
+                exact_ok = False
     score_ok = cos > 0.999999 and max_abs < 1e-4
-    ok = key_ok and score_ok
+    ok = exact_ok and score_ok
+    judge = ("val-multiset(exact)" if args.mode == "fp32"
+             else "fp16-key-multiset(exact)")
     return ("PASS" if ok else "FAIL"), (
-        f"cosine={cos:.6f} max_abs={max_abs:.3e} fp16-key-multiset "
-        f"{'OK' if key_ok else 'MISMATCH'} set={setm}/{args.sq}")
+        f"cosine={cos:.6f} max_abs={max_abs:.3e} {judge} "
+        f"{'OK' if exact_ok else 'MISMATCH'} set={setm}/{args.sq}")
 
 
 def main():
@@ -177,6 +188,10 @@ def main():
     ap.add_argument("--topk", type=int, default=1024)
     ap.add_argument("--mode", choices=["fp32", "fp16"], default="fp32")
     ap.add_argument("--seed", type=int, default=123)
+    ap.add_argument("--dup", type=int, default=1,
+                    help="并列压力：每个 K token 重复 N 次（ELF 的 Skv 须为 skv*N）")
+    ap.add_argument("--neg", action="store_true",
+                    help="全负分数压力（w 取 -|w|、scale_k 取 |.|）")
     ap.add_argument("--timeout", type=int, default=3600)
     args = ap.parse_args()
     status, detail = run_check(args)
