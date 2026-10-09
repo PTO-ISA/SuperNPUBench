@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <utility>
 
-// fa_lowp log-domain softmax + MXFP4 quantization — algorithms B/C.
+// fa_lowp log-domain softmax + MXFP4 quantization — algorithms B/C/D.
 // =====================================================================
 // Per 32-column MX group (no algorithm-A / no debug branches):
 //
@@ -32,6 +32,18 @@ using namespace pto;
 #ifndef FA_ALGB_ALGO_C
 #define FA_ALGB_ALGO_C 1
 #endif
+
+// D keeps one denominator accumulator per group slot across KV blocks.
+// Its reference is the CURRENT p3, not a historical maximum:
+//   acc[g] = acc[g] * exp(oldP3[g] - p3[g]) + rowsum(p4[g]).
+// This costs three Vector operations per group after initialization. The
+// final block aligns each accumulator to runningMaxGrid and sums the groups.
+// Like B, D uses the unquantized denominator (unlike C). Moving references
+// permit scales > 1; extreme score swings can overflow the BF16 state.
+#ifndef FA_ALGB_ALGO_D
+#define FA_ALGB_ALGO_D 0
+#endif
+static_assert(!(FA_ALGB_ALGO_C && FA_ALGB_ALGO_D), "select only one algorithm");
 
 // 组 max 来源（设计意图）：
 //   FA_ALGB_GM_FUSED=2 : Algo C direct BF16 CELL/byte-slot broadcast (PTO #358).
@@ -190,6 +202,10 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
         TEXPANDS(runningMaxGrid, static_cast<__bf16>(-1.0e30f));
         Bf16RowValueTile runningSum;  // cross-kb V' denominator in Vector
         Bf16RowValueTile oldScale;    // exact-power-of-two online rescale
+#if FA_ALGB_ALGO_D
+        Bf16RowValueTile groupSums[kPScaleCols];
+        Bf16RowValueTile groupReferences[kPScaleCols];
+#endif
         TEXPANDS(runningSum, static_cast<__bf16>(0.0f));
 #if FA_ALGB_ALGO_C
         Fp32DenomTile weightedDenom;
@@ -275,7 +291,9 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             } else {
                 // 后续块：newR = max(旧R, 本块R)
                 TMAX(tNewMaxB, runningMaxGrid, tRg);
+#if !FA_ALGB_ALGO_D
                 TROWEXPANDEXPDIF(oldScale, runningMaxGrid, tNewMaxB);
+#endif
                 // CScale = (新R - 旧R)/ln2，取整；C *= 2^-CScale 即 online 重标定
                 TSUB(tDiff, tNewMaxB, runningMaxGrid);
                 TMULS(tDiff, tDiff, static_cast<__bf16>(kInvLn2));
@@ -301,9 +319,16 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             // P is a read-only assembled parent shared by the two Cube
             // consumers (PV' and PV).
             TileArray<PBlock, 1, kPScaleCols> pFragments;
+#if FA_ALGB_ALGO_D
+            // Finish denominator work before opening the assembled P parent.
+            Bf16ScoreGroupTile groupProbabilities[kPScaleCols];
+#endif
 #if !FA_ALGB_ALGO_C
             Bf16RowValueTile localSum;
-            TEXPANDS(localSum, static_cast<__bf16>(0.0f));
+#if FA_ALGB_ALGO_D
+            if (kb == kKVBlocks - 1)
+#endif
+                TEXPANDS(localSum, static_cast<__bf16>(0.0f));
 #endif
 #if FA_ALGB_GM_FUSED == 2
             // A BF16 M32 CELL contains two group maxima. Bind that CELL,
@@ -350,8 +375,34 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
                 // P4 是量化数据：组内峰值恰为 4，不会碰到 E2M1 的 6 上限
                 Bf16ScoreGroupTile p4;
                 TROWEXPANDEXPDIF(p4, sView, p3);
+#if FA_ALGB_ALGO_D
+                groupProbabilities[block] = p4;
+#else
                 TCVT(pFragments[0][block], p4);
-#if !FA_ALGB_ALGO_C
+#endif
+#if FA_ALGB_ALGO_D
+                WideBf16GroupReductionTile sumWide;
+                TROWSUM(sumWide, p4);
+                auto sum4 = TREDUCEPREFIXVIEW<Bf16RowValueTile>(sumWide);
+                auto &acc = groupSums[block];
+                auto &reference = groupReferences[block];
+                if (kb == 0) {
+                    // Materialize the reduction prefix only on initialization.
+                    TMULS(acc, sum4, static_cast<__bf16>(1.0f));
+                } else {
+                    Bf16RowValueTile scale, next;
+                    TROWEXPANDEXPDIF(scale, reference, p3);
+                    TFMA(next, acc, scale, sum4);
+                    acc = next;
+                }
+                reference = p3;
+                if (kb == kKVBlocks - 1) {
+                    Bf16RowValueTile finalScale, next;
+                    TROWEXPANDEXPDIF(finalScale, p3, runningMaxGrid);
+                    TFMA(next, acc, finalScale, localSum);
+                    localSum = next;
+                }
+#elif !FA_ALGB_ALGO_C
                 Bf16RowValueTile p5;
                 TROWEXPANDEXPDIF(p5, p3, runningMaxGrid);
                 WideBf16GroupReductionTile sumWide;
@@ -362,6 +413,11 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
                 TADD(localSum, localSum, contrib);
 #endif
             }
+#endif
+#if FA_ALGB_ALGO_D
+#pragma clang loop unroll(full)
+            for (int block = 0; block < kPScaleCols; ++block)
+                TCVT(pFragments[0][block], groupProbabilities[block]);
 #endif
             P p = TASSEMBLY<P>(std::move(pFragments));
 
@@ -374,7 +430,9 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             TROWEXPANDEXPDIF(p5Group, p3Group, runningMaxGrid);            // 所有组的 m/4
             TCVT<LINX_RDN>(pScale, p5Group);                        // E8M0（单 CELL）
 
-#if !FA_ALGB_ALGO_C
+#if FA_ALGB_ALGO_D
+            if (kb == kKVBlocks - 1) runningSum = localSum;
+#elif !FA_ALGB_ALGO_C
             Bf16RowValueTile newSum;
             if (kb == 0) TADD(newSum, runningSum, localSum);
             else         TFMA(newSum, runningSum, oldScale, localSum);
@@ -421,7 +479,7 @@ void fa_lowp_algB_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
                                   p, pScale, v, vScale, pvOptC, kGroupM);
             }
 
-#if !FA_ALGB_ALGO_C
+#if !FA_ALGB_ALGO_C && !FA_ALGB_ALGO_D
             runningSum = newSum;
 #endif
 

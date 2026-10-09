@@ -76,20 +76,63 @@ def quant_group(vals):
     return byte, [f32_to_e2m1(float(v) / scale) for v in vals]
 
 
+def algd_reference_weights(scores, tk):
+    """Model the shared P quantization, independently sum the denominator.
+
+    Do not repeat D's moving-reference recurrence here: direct FP64 summation
+    must catch a reversed expdif, a dropped group, or a broken update.
+    E8M0 quantization is NOT invariant to an arbitrary reference shift, so the
+    numerator must use the kernel's BF16 ln2 lattice, not the exact row max.
+    """
+    def bf(x):
+        return bf16_bits_to_f32(f32_to_bf16_bits(x))
+
+    scores = [bf(x) for x in scores]
+    ln2, invln2, ln4 = bf(math.log(2)), bf(1 / math.log(2)), bf(math.log(4))
+    references, shifts = [], []
+    for start in range(0, len(scores), tk):
+        current = bf(bf(math.floor(bf(max(scores[start:start + tk]) * invln2))) * ln2)
+        previous = references[-1] if references else current
+        current = max(previous, current)
+        references.append(current)
+        shifts.append(int(round(bf(bf(current - previous) * invln2))))
+    future_shift = [0] * len(references)
+    for block in range(len(references) - 2, -1, -1):
+        future_shift[block] = future_shift[block + 1] + shifts[block + 1]
+    weights = []
+    for start in range(0, len(scores), GROUP):
+        block = start // tk
+        group = scores[start:start + GROUP]
+        p3 = bf(max(group) - ln4)
+        p5 = bf(math.exp(bf(p3 - references[block])))
+        scale = math.ldexp(1.0, math.floor(math.log2(p5)) - future_shift[block])
+        weights.extend(e2m1_to_f32(f32_to_e2m1(bf(math.exp(bf(x - p3))))) * scale
+                       for x in group)
+    denominator = sum(math.exp(x - references[-1]) for x in scores)
+    return weights, denominator
+
+
 def main():
     global SQ, SKV
     ap = argparse.ArgumentParser()
     ap.add_argument("--outdir", required=True)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--check", action="store_true")
-    ap.add_argument("--algorithm", choices=["B", "C"], default="C")
-    ap.add_argument("--atol", type=float, default=5e-2)
-    ap.add_argument("--rtol", type=float, default=5e-2)
+    ap.add_argument("--algorithm", choices=["B", "C", "D"], default="C")
+    ap.add_argument("--atol", type=float, default=None)
+    ap.add_argument("--rtol", type=float, default=None)
     ap.add_argument("--positive", action="store_true")
     ap.add_argument("--sq", type=int, default=SQ)
     ap.add_argument("--skv", type=int, default=SKV)
+    ap.add_argument("--tk", type=int, default=128)
     args = ap.parse_args()
+    if args.atol is None:
+        args.atol = 1e-3 if args.algorithm == "D" else 5e-2
+    if args.rtol is None:
+        args.rtol = 2e-2 if args.algorithm == "D" else 5e-2
     SQ, SKV = args.sq, args.skv
+    if args.tk <= 0 or args.tk % GROUP or SKV % args.tk:
+        ap.error("tk must be a positive multiple of 32 and divide skv")
     out = Path(args.outdir)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -214,6 +257,7 @@ def main():
     # by the *quantized* sum zp=sum(phat).  Both share the same phat.
     oB = [[0.0] * VD for _ in range(SQ)]
     oC = [[0.0] * VD for _ in range(SQ)]
+    oD = [[0.0] * VD for _ in range(SQ)] if args.algorithm == "D" else None
     for r in range(SQ):
         srow = [0.0] * SKV
         for c in range(SKV):
@@ -234,6 +278,8 @@ def main():
                 code = f32_to_e2m1(4.0 * tv / mg) if mg > 0 else 0
                 phat[g * GROUP + j] = e2m1_to_f32(code) * sc
         zp = sum(phat)
+        if oD is not None:
+            weightsD, denominatorD = algd_reference_weights(srow, args.tk)
         for c in range(SKV):
             vc = vd[c]
             pcB = phat[c] / zt
@@ -241,6 +287,10 @@ def main():
             for n in range(VD):
                 oB[r][n] += pcB * vc[n]
                 oC[r][n] += pcC * vc[n]
+            if oD is not None:
+                pcD = weightsD[c] / denominatorD
+                for n in range(VD):
+                    oD[r][n] += pcD * vc[n]
     goldB = bytearray(SQ * VD * 2)
     for i, x in enumerate([oB[r][n] for r in range(SQ) for n in range(VD)]):
         struct.pack_into("<H", goldB, 2 * i, f32_to_bf16_bits(x))
@@ -250,17 +300,28 @@ def main():
         struct.pack_into("<H", goldC, 2 * i, f32_to_bf16_bits(x))
     (out / "goldenC_bf16.bin").write_bytes(bytes(goldC))
 
+    goldD = bytearray(SQ * VD * 2)
+    if oD is not None:
+        for r in range(SQ):
+            for n in range(VD):
+                struct.pack_into("<H", goldD, 2 * (r * VD + n), f32_to_bf16_bits(oD[r][n]))
+        (out / "goldenD_bf16.bin").write_bytes(goldD)
+
     print(f"wrote bins + golden to {out}")
 
     if args.check:
         for name in ("srcq", "srck", "srcv", "srcq_scale", "srck_scale", "srcv_scale"):
             if (out / (name + ".bin")).read_bytes() != (out / (name + "_readback.bin")).read_bytes():
                 raise SystemExit("FAIL input readback: " + name)
+        print("input readback: all six buffers match")
         res = (out / "res.bin").read_bytes()
+        if len(res) != SQ * VD * 2:
+            raise SystemExit(f"FAIL output bytes: {len(res)} != {SQ * VD * 2}")
+        print(f"output bytes: {len(res)}/{SQ * VD * 2}")
         act = [bf16_bits_to_f32(struct.unpack_from("<H", res, 2 * i)[0])
                for i in range(len(res) // 2)]
         for name, blob in (("exactFA", golden), ("algoB", goldB),
-                           ("algoC", goldC)):
+                           ("algoC", goldC), ("algoD", goldD)):
             if name != "algo" + args.algorithm:
                 continue
             ref = [bf16_bits_to_f32(struct.unpack_from("<H", blob, 2 * i)[0])

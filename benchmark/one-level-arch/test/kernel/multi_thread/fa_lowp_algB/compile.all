@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 : "${MODEL:?Set MODEL to the SuperScalarModel directory}"
 run_tag="$(date +%Y%m%d_%H%M%S)_$$"
-for algorithm in B C; do
+for algorithm in B C D; do
     python3 run.py --algorithm "$algorithm" --run-id "${run_tag}_${algorithm}_check"
     python3 run.py --mode build --algorithm "$algorithm" --run-id "${run_tag}_${algorithm}_build"
 done

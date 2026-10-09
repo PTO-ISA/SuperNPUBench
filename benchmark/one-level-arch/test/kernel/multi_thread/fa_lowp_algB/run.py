@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and run experimental FA B/C. Requires COMPILER_DIR and MODEL env vars."""
+"""Build and run experimental FA B/C/D. Requires COMPILER_DIR and MODEL env vars."""
 import argparse
 import os
 from pathlib import Path
@@ -8,8 +8,8 @@ import sys
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--mode', choices=['check', 'perf', 'build'], default='check')
-p.add_argument('--algorithm', choices=['B', 'C'], default='C')
-p.add_argument('--gm-fused', type=int, choices=[0, 1, 2], default=0)
+p.add_argument('--algorithm', choices=['B', 'C', 'D'], default='C')
+p.add_argument('--gm-fused', type=int, choices=[0, 1, 2], default=None, help='default: D=1 (fixp GroupMax), B/C=0')
 p.add_argument('--sq', type=int, default=256)
 p.add_argument('--skv', type=int, default=256)
 p.add_argument('--tk', type=int, default=128)
@@ -17,6 +17,8 @@ p.add_argument('--vecq', type=int, choices=[32, 64, 96], default=32)
 p.add_argument('--clang-resource', type=Path, help='isolated clang resource directory containing the required TileOP API')
 p.add_argument('--run-id', required=True)
 a = p.parse_args()
+if a.gm_fused is None:
+    a.gm_fused = 1 if a.algorithm == 'D' else 0
 if a.gm_fused == 2 and a.algorithm != 'C':
     p.error('--gm-fused 2 requires --algorithm C')
 if a.gm_fused == 2 and a.tk != 128:
@@ -29,10 +31,12 @@ run = test / 'perf_runs' / a.run_id
 run.mkdir(parents=True, exist_ok=False)
 check = 'on' if a.mode == 'check' else 'off'
 c = int(a.algorithm == 'C')
-stem = f'kernel_multi_thread_fa_lowp_algB_C{c}_GM{a.gm_fused}_Sq{a.sq}_Skv{a.skv}_Tk{a.tk}_check{check}'
+d = int(a.algorithm == 'D')
+d_suffix = '_D1' if d else ''
+stem = f'kernel_multi_thread_fa_lowp_algB{d_suffix}_C{c}_GM{a.gm_fused}_Sq{a.sq}_Skv{a.skv}_Tk{a.tk}_check{check}'
 obj = bm / 'output/kernel/multi_thread/fa_lowp_algB/src/fa_lowp_algB.o'
 obj.unlink(missing_ok=True)
-cmd = ['make', '-j4', 'all', f'COMPILER_DIR={compiler}', f'Sq={a.sq}', f'Skv={a.skv}', f'Tk={a.tk}', f'ALGO_C={c}', f'GM_FUSED={a.gm_fused}', f'res_check={check}']
+cmd = ['make', '-j4', 'all', f'COMPILER_DIR={compiler}', f'Sq={a.sq}', f'Skv={a.skv}', f'Tk={a.tk}', f'ALGO_C={c}', f'ALGO_D={d}', f'GM_FUSED={a.gm_fused}', f'res_check={check}']
 if a.clang_resource:
     import shlex
     cmd.append('CFLAGS=-resource-dir ' + shlex.quote(str(a.clang_resource.resolve())))
@@ -46,7 +50,7 @@ shutil.copy2(elf, saved)
 print('ELF:', saved, flush=True)
 if a.mode == 'check':
     data = bm / 'compare' / stem
-    verify = [sys.executable, str(test / 'verify_fa_lowp.py'), '--outdir', str(data), '--sq', str(a.sq), '--skv', str(a.skv), '--algorithm', a.algorithm]
+    verify = [sys.executable, str(test / 'verify_fa_lowp.py'), '--outdir', str(data), '--sq', str(a.sq), '--skv', str(a.skv), '--tk', str(a.tk), '--algorithm', a.algorithm]
     subprocess.run(verify, check=True)
     (data / 'res.bin').unlink(missing_ok=True)
     with (run / 'gfrun.log').open('w') as log:
