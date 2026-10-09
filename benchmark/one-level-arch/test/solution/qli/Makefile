@@ -36,6 +36,32 @@ ifeq ($(TESTCASE), qli_check_opt)
    TARGET = $(ELF_HEAD)/$(TESTCASE)$(DT_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv)_g$(g)_Tm$(Tm)_Tk$(Tk).elf
 endif
 
+ifeq ($(TESTCASE),qli_topk_tiled)
+   # QLI 分数阶段 + topk_tiled 引擎（kernels/multi_thread/topk）端到端。
+   # Skv 可达 131072（128K->1024 DeepSeek-v4 场景），topk 运行时（shape.bin，<=1024），
+   # fp32/fp16 精度为编译期开关（TOPK_PREC=fp32|fp16）。4-PE hosted res_check。
+   SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/qli_topk_tiled.cpp
+   B ?= 1
+   Sq ?= 1
+   Skv ?= 131072
+   g ?= 64
+   Tm ?= 16
+   Tk ?= 32
+   TOPK_PREC ?= fp32
+   DEFINES += -DBatch=$(B) -DTsq=$(Sq) -DTskv=$(Skv) -DTg=$(g) -DTm=$(Tm) -DTk=$(Tk)
+   DEFINES += -DQLI_DTYPE_FP8
+   ifeq ($(TOPK_PREC),fp16)
+      DEFINES += -DTOPK_TILED_FP32_REFINE=0
+      PREC_TAG = _fp16
+   else ifeq ($(TOPK_PREC),fp32)
+      DEFINES += -DTOPK_TILED_FP32_REFINE=1
+      PREC_TAG = _fp32
+   else
+      $(error Unsupported TOPK_PREC='$(TOPK_PREC)'; expected fp32 or fp16)
+   endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)$(PREC_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv).elf
+endif
+
 ifeq ($(TESTCASE), qli_check_opt_dynamic)
    SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/qli_check_opt_dynamic.cpp
    EXTRA_OBJ_FILES += $(TEST_ROOT)/$(CASE_SRC_DIR)/qli_check_data.o
