@@ -203,6 +203,10 @@ void rms_norm_dynamic_tree_32k(dtype *x, const dtype *gamma,
     const int64_t globalA = tiling->g_a;
     const int64_t gR = tiling->g_r;
     const int64_t tile_r = tiling->tile_r;
+    // The PE split is computed on the host and carried by the tiling info;
+    // the kernel only validates and applies it.
+    const int64_t rows_per_pe = tiling->rows_per_pe;
+    const int64_t workspace_rows_per_pe = tiling->workspace_rows_per_pe;
     const int64_t block_count = tile_r > 0 ? gR / tile_r : 0;
     const int64_t pair_count = (block_count + 1) / 2;
 
@@ -213,10 +217,13 @@ void rms_norm_dynamic_tree_32k(dtype *x, const dtype *gamma,
         pair_count <= 0 ||
         pair_count > rms_detail_simt_dynamic_tree_32k::kMaxPairCount ||
         gR % tile_r != 0 ||
+        rows_per_pe <= 0 || rows_per_pe * peNum < globalA ||
+        workspace_rows_per_pe < rows_per_pe ||
+        workspace_rows_per_pe %
+                rms_detail_simt_dynamic_tree_32k::kTileM != 0 ||
         tid >= static_cast<uint32_t>(peNum)) {
         return;
     }
-    const int64_t rows_per_pe = (globalA + peNum - 1) / peNum;
     const int64_t pe_start = static_cast<int64_t>(tid) * rows_per_pe;
     if (pe_start >= globalA) {
         return;
@@ -247,10 +254,6 @@ void rms_norm_dynamic_tree_32k(dtype *x, const dtype *gamma,
         return;
     }
 
-    const int64_t workspace_rows_per_pe =
-        ((rows_per_pe + rms_detail_simt_dynamic_tree_32k::kTileM - 1) /
-         rms_detail_simt_dynamic_tree_32k::kTileM) *
-        rms_detail_simt_dynamic_tree_32k::kTileM;
     workspace += static_cast<int64_t>(tid) * workspace_rows_per_pe *
                  rms_detail_simt_dynamic_tree_32k::kMaxPairCount;
 

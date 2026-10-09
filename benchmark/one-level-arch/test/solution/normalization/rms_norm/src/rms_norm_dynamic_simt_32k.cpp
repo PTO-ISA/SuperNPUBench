@@ -20,9 +20,19 @@
 #endif
 
 namespace {
-struct SimtTilingData { int64_t g_a; int64_t g_r; int64_t powR; int64_t tile_a; int64_t tile_r; };
+struct SimtTilingData {
+    int64_t g_a;
+    int64_t g_r;
+    int64_t powR;
+    int64_t tile_a;
+    int64_t tile_r;
+    int64_t rows_per_pe;
+};
 constexpr int64_t rms_tile_a(int64_t global_a, int64_t pe_num) {
     return global_a > 0 && pe_num > 0 ? 1 : 0;
+}
+constexpr int64_t rms_rows_per_pe(int64_t global_a, int64_t pe_num) {
+    return (global_a + pe_num - 1) / pe_num;
 }
 constexpr int64_t rms_pow_r(int64_t reduce_size) {
     int64_t p = 1;
@@ -48,16 +58,18 @@ volatile uint32_t output_written = 0;
 int main() {
     using dtype = DType;
 
-    // tiling_info is always the host-visible full shape. PE partitioning is
-    // entirely owned by the kernel.
+    // tiling_info carries the full shape plus the host-computed PE split.
+    // The kernel only validates and applies rows_per_pe.
     constexpr int64_t kTileA = rms_tile_a(G_A, PE_NUM);
     constexpr int64_t kPowR = rms_pow_r(G_R);
     constexpr int64_t kTileR = rms_tile_r(G_R);
+    constexpr int64_t kRowsPerPe = rms_rows_per_pe(G_A, PE_NUM);
     static_assert(G_A > 0 && G_R >= 8192 && G_R <= 16 * 8192);
     static_assert(G_R % 8192 == 0, "32k kernels require full 8192-element R blocks");
     static_assert(kTileA > 0 && kTileR > 0 && kTileR == 8192);
+    static_assert(kRowsPerPe > 0 && kRowsPerPe * PE_NUM >= G_A);
     SimtTilingData tiling_info = {
-        G_A, G_R, kPowR, kTileA, kTileR};
+        G_A, G_R, kPowR, kTileA, kTileR, kRowsPerPe};
 
     const int64_t g_a = tiling_info.g_a;
     const int64_t g_r = tiling_info.g_r;

@@ -118,6 +118,9 @@ void rms_norm_dynamic_simt_32k(dtype *x, const dtype *gamma, const TilingData *t
     const int64_t globalA = tiling->g_a;
     const int64_t gR = tiling->g_r;
     const int64_t tile_r = tiling->tile_r;
+    // The PE split is computed on the host and carried by the tiling info;
+    // the kernel only validates and applies it.
+    const int64_t rows_per_pe = tiling->rows_per_pe;
     const int64_t block_count = tile_r > 0 ? gR / tile_r : 0;
 
     constexpr int64_t kMaxReduceR = 16 * 8192;
@@ -125,10 +128,10 @@ void rms_norm_dynamic_simt_32k(dtype *x, const dtype *gamma, const TilingData *t
     if (globalA <= 0 || gR <= 0 ||
         gR > kMaxReduceR || tile_r != 8192 ||
         block_count <= 0 || gR % tile_r != 0 ||
+        rows_per_pe <= 0 || rows_per_pe * peNum < globalA ||
         tid >= static_cast<uint32_t>(peNum)) {
         return;
     }
-    const int64_t rows_per_pe = (globalA + peNum - 1) / peNum;
     const int64_t pe_start = static_cast<int64_t>(tid) * rows_per_pe;
     if (pe_start >= globalA) {
         return;
