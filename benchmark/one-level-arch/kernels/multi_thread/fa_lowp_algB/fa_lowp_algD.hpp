@@ -26,18 +26,7 @@
 namespace fa_lowp_logdomain {
 using namespace pto;
 
-// 组 max 来源（设计意图）：
-//   FA_ALGB_GM_FUSED=2 : Algo C/D direct BF16 CELL/byte-slot broadcast (PTO #358).
-//                        Requires the dual-subview/valid-column TileOP fix.
-//   FA_ALGB_GM_FUSED=1 : 直接使用 fixp/CUBE 产生的 GroupMaxOut；每个 group
-//                        的值作为 TROWEXPANDEXPDIF 的 row-broadcast 输入，不能
-//                        额外重算 TROWMAX。
-//   FA_ALGB_GM_FUSED=0 : 当前 gfsim 可验证的 fallback，会用 TROWMAX 重算；
-//                        这不是最终数据流，只是绕开 BF16x2 CellReg/subview 限制。
-#ifndef FA_ALGB_GM_FUSED
-#define FA_ALGB_GM_FUSED 0
-#endif
-static_assert(FA_ALGB_GM_FUSED >= 0 && FA_ALGB_GM_FUSED <= 2);
+// GroupMax comes directly from the fused BF16 CUBE CELL output (GM2).
 
 constexpr int kPeNum = 4;
 constexpr int kMxGroup = 32;
@@ -45,12 +34,6 @@ constexpr int kPackedFactor = 2;
 constexpr float kLn4 = 1.3862943611198906f;    // ln(4)
 constexpr float kInvLn2 = 1.4426950408889634f;  // 1/ln(2)
 constexpr float kLn2 = 0.6931471805599453f;     // ln(2)
-
-template <typename Out, typename Parent, typename Sub>
-inline void materialize_subview(Out &dst, region::SubTileView<Parent, Sub> &src,
-                                typename Sub::DType scalar) {
-    TMULS(dst, src, scalar);
-}
 
 template <int Sq, int Skv, int qD, int vD, int kTm, int kTk>
 void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
@@ -74,7 +57,7 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
     static_assert(Sq % kGroupM == 0 && Skv % kTk == 0);
     static_assert(qD % kMxGroup == 0 && kTk % kMxGroup == 0);
     // Tk=256 currently trips the model's raw tile spill carrier check.
-    static_assert(FA_ALGB_GM_FUSED != 2 || kTk == 128,
+    static_assert(kTk == 128,
                   "direct GroupMax mode is currently validated only for Tk=128");
     static_assert((kPScaleCols & (kPScaleCols - 1)) == 0,
                   "group partitioning requires a power-of-two block count");
@@ -115,17 +98,8 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
     using IntRowTile = VecTileM32<int32_t, kPeM, 1, kPeM, 1>;
     // Fused-aux outputs: PTO #346 / TileOP #227 reduce the final encoded D, so
     // RowMax/GroupMax carry the effective D dtype (BF16 here, not AccType).
-    // The per-group [M,1] fragment mirrors the Fp32RowTile geometry.
-    // Fused GroupMaxOut (final D dtype).  The intended data path consumes this
-    // [M,G] BF16 tile directly for each group's TROWEXPANDEXPDIF input.  The
-    // fallback path below recomputes group max with TROWMAX only because the
-    // current BF16x2 CellReg/subview contract cannot expose one group cleanly.
+    // Fused GroupMaxOut is consumed directly as packed BF16 CELLs.
     using Bf16GroupMaxTile = VecTileM32<__bf16, kPeM, kPScaleCols>;
-    // FP32 carrier for the fused GroupMaxOut so a per-group TPARTVIEW can
-    // isolate one group (FP32 CUBE_M32 CELL = 1 column; bf16 CELL = 2 columns,
-    // which would pack two groups per CELL and block the partition).
-    using Fp32GroupMaxTile = VecTileM32<float, kPeM, kPScaleCols>;
-    using Fp32RowTile = VecTileM32<float, kPeM, 1, kPeM, 1>;
     using WideBf16GroupReductionTile =
         VecTileM32<__bf16, kPeM, kMxGroup, kPeM, 1>;
     // CScale: U8 CUBE_M32 Mx1 raw exponent (one 128 B CELL).  C *= 2^-CScale.
@@ -148,18 +122,6 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
     // FP32 PV accumulator so TMATMUL_MX_ACC folds the add + CScale rescale.
     using Fp32PvTile = CubeAccumulatorM32<float, kPeM, vD>;
     using Bf16StoreTile = CubeAccumulatorM32<__bf16, kPeM, vD>;
-    // V' denominator stays in a Cube tile across kb.  This is an ordinary
-    // TileReg accumulation (no acc_hint/cscale and therefore no internal-ACC
-    // K-chain); online rescaling is applied directly to the Cube tile.
-    // Two logical N columns share one FP4 byte; both encode exact one.
-    using VPrimeMatrix = SharedMatrixRight<__fp4_e2m1x2, kTk, 2>;
-    using VPrimeScaleMatrix = SharedMatrixRight<
-        __fp8_e8m0, 2, kPaddedPScaleCols, 2, kPScaleCols>;
-    using VPrimeScaleTile = SharedTile<VPrimeScaleMatrix>;
-    using VPrimeScaleGm = global_tensor<__fp8_e8m0, RowMajor<2, kPScaleCols>>;
-    using VPrimeTile = SharedTile<VPrimeMatrix>;
-    using VPrimeGm = global_tensor<__fp4_e2m1x2, RowMajor<kTk, 1>>;
-    using Fp32DenomTile = CubeAccumulatorM32<float, kPeM, 2>;
     using QScaleIter = global_iterator<GmQScale, QScaleMatrix>;
     using KScaleIter = global_iterator<GmKScale, KScaleMatrix>;
     using OIter = global_iterator<GmO, Bf16StoreTile>;
@@ -171,7 +133,6 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
     static_assert(PScale::ValidCol == kPScaleCols);
 
     constexpr auto pvOptions = fixp::keep_acc().transpose_b();
-    constexpr auto denomOptions = fixp::keep_acc().transpose_b();
 
 #pragma clang loop unroll(full)
     for (int qb = 0; qb < kQBlocks; ++qb) {
@@ -257,19 +218,12 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             }
             // runningMaxGrid 即本块更新后的行 max，下面 exp(s - R) 直接用它。
 
-            // --- algorithm B quantization (per 32-column group) --------------
+            // --- per-group MXFP4 quantization (per 32-column group) --------------
             // 把 [M, kTk] 的 score 沿 K 切成 kPScaleCols 个 32 列一组（一个 MX group）
             auto blocks =
                 TPARTVIEW<Bf16ScoreGroupTile, 1, kPScaleCols>(score);
             Bf16GroupMaxTile p3Group;
             TSUBS(p3Group, tGroupMaxB, static_cast<__bf16>(kLn4));
-#if FA_ALGB_GM_FUSED == 1
-            // 组 max 取 fused GroupMaxOut：bf16 [M,G] 拓成 fp32（fp32 CELL=1 列，
-            // TPARTVIEW 才能把单组干净切开；bf16→fp32 无损），再降回 bf16。
-            Fp32GroupMaxTile gMaxF32;
-            TCVT(gMaxF32, tGroupMaxB);
-            auto gmaxBlocks = TPARTVIEW<Fp32RowTile, 1, kPScaleCols>(gMaxF32);
-#endif
             // P is a read-only assembled parent shared by the two Cube
             // consumers (PV' and PV).
             TileArray<PBlock, 1, kPScaleCols> pFragments;
@@ -278,7 +232,6 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             Bf16RowValueTile localSum;
             if (kb == kKVBlocks - 1)
                 TEXPANDS(localSum, static_cast<__bf16>(0.0f));
-#if FA_ALGB_GM_FUSED == 2
             // A BF16 M32 CELL contains two group maxima. Bind that CELL,
             // then select the group using its byte offset (0 or 2).
             using Bf16GroupPair = VecTileM32<__bf16, kPeM, 2>;
@@ -324,56 +277,6 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             [&]<size_t... Groups>(std::index_sequence<Groups...>) __attribute__((always_inline)) {
                 (quantizeGroup.template operator()<Groups>(), ...);
             }(std::make_index_sequence<kPScaleCols>{});
-#else
-#pragma clang loop unroll(full)
-            for (int block = 0; block < kPScaleCols; ++block) {
-                auto sView = blocks[0][block];
-
-                // P3 = G - ln4
-                Bf16RowValueTile p3;
-#if FA_ALGB_GM_FUSED
-                // G 取 fused GroupMaxOut（fp32 载体逐组切开）
-                Fp32RowTile gF32;
-                auto gView = gmaxBlocks[0][block];
-                materialize_subview(gF32, gView, 1.0f);
-                Bf16RowValueTile gB;
-                TCVT(gB, gF32);
-                TSUBS(p3, gB, static_cast<__bf16>(kLn4));
-#else
-                // G 用向量 TROWMAX 重算（gfrun/gfsim 均可）
-                WideBf16GroupReductionTile gWide;
-                TROWMAX(gWide, sView);
-                auto gView = TREDUCEPREFIXVIEW<Bf16RowValueTile>(gWide);
-                TSUBS(p3, gView, static_cast<__bf16>(kLn4));
-#endif
-                // P4 = exp(s - P3) = 4*exp(s - G)  ->  fp4 = E2M1(P4)
-                // P4 是量化数据：组内峰值恰为 4，不会碰到 E2M1 的 6 上限
-                Bf16ScoreGroupTile p4;
-                TROWEXPANDEXPDIF(p4, sView, p3);
-                groupProbabilities[block] = p4;
-                WideBf16GroupReductionTile sumWide;
-                TROWSUM(sumWide, p4);
-                auto sum4 = TREDUCEPREFIXVIEW<Bf16RowValueTile>(sumWide);
-                auto &acc = groupSums[block];
-                auto &reference = groupReferences[block];
-                if (kb == 0) {
-                    // Materialize the reduction prefix only on initialization.
-                    TMULS(acc, sum4, static_cast<__bf16>(1.0f));
-                } else {
-                    Bf16RowValueTile scale, next;
-                    TROWEXPANDEXPDIF(scale, reference, p3);
-                    TFMA(next, acc, scale, sum4);
-                    acc = next;
-                }
-                reference = p3;
-                if (kb == kKVBlocks - 1) {
-                    Bf16RowValueTile finalScale, next;
-                    TROWEXPANDEXPDIF(finalScale, p3, runningMaxGrid);
-                    TFMA(next, acc, finalScale, localSum);
-                    localSum = next;
-                }
-            }
-#endif
 #pragma clang loop unroll(full)
             for (int block = 0; block < kPScaleCols; ++block)
                 TCVT(pFragments[0][block], groupProbabilities[block]);

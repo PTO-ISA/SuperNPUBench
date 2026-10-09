@@ -9,7 +9,7 @@ import sys
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--mode', choices=['check', 'perf', 'build'], default='check')
 p.add_argument('--algorithm', choices=['B', 'C', 'D'], default='C')
-p.add_argument('--gm-fused', type=int, choices=[0, 1, 2], default=None, help='default: D=1 (fixp GroupMax), B/C=0')
+p.add_argument('--gm-fused', type=int, choices=[0, 1, 2], default=None, help='C/D require 2; B defaults to 0')
 p.add_argument('--sq', type=int, default=256)
 p.add_argument('--skv', type=int, default=256)
 p.add_argument('--tk', type=int, default=128)
@@ -18,7 +18,9 @@ p.add_argument('--clang-resource', type=Path, help='isolated clang resource dire
 p.add_argument('--run-id', required=True)
 a = p.parse_args()
 if a.gm_fused is None:
-    a.gm_fused = 1 if a.algorithm == 'D' else 0
+    a.gm_fused = 2 if a.algorithm in ('C', 'D') else 0
+if a.algorithm in ('C', 'D') and a.gm_fused != 2:
+    p.error('C/D retain only --gm-fused 2')
 if a.gm_fused == 2 and a.algorithm not in ('C', 'D'):
     p.error('--gm-fused 2 requires --algorithm C or D')
 if a.gm_fused == 2 and a.tk != 128:

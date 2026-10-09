@@ -5,7 +5,14 @@ Tm ?= 128
 Tk ?= 128
 ALGO_C ?= 1
 ALGO_D ?= 0
+ifneq ($(filter 1,$(ALGO_C) $(ALGO_D)),)
+GM_FUSED ?= 2
+ifneq ($(GM_FUSED),2)
+$(error C/D retain only GM_FUSED=2)
+endif
+else
 GM_FUSED ?= 0
+endif
 DEFINES += -DTsq=$(Sq) -DTskv=$(Skv) -DTm=$(Tm) -DTk=$(Tk)
 DEFINES += -DFA_ALGB_ALGO_D=$(ALGO_D) -DFA_ALGB_ALGO_C=$(ALGO_C) -DFA_ALGB_GM_FUSED=$(GM_FUSED)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_lowp_algB.cpp
