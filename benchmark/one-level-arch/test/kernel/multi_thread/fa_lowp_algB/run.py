@@ -19,8 +19,8 @@ p.add_argument('--run-id', required=True)
 a = p.parse_args()
 if a.gm_fused is None:
     a.gm_fused = 1 if a.algorithm == 'D' else 0
-if a.gm_fused == 2 and a.algorithm != 'C':
-    p.error('--gm-fused 2 requires --algorithm C')
+if a.gm_fused == 2 and a.algorithm not in ('C', 'D'):
+    p.error('--gm-fused 2 requires --algorithm C or D')
 if a.gm_fused == 2 and a.tk != 128:
     p.error('--gm-fused 2 is currently validated only for --tk 128')
 test = Path(__file__).resolve().parent

@@ -68,7 +68,13 @@ int main() {
     res_check_publish_inputs(sync, tid);
 #endif
     BENCHSTART;
+#if FA_ALGB_ALGO_C
+    fa_lowp_logdomain::fa_lowp_algC_impl<
+#elif FA_ALGB_ALGO_D
+    fa_lowp_logdomain::fa_lowp_algD_impl<
+#else
     fa_lowp_logdomain::fa_lowp_algB_impl<
+#endif
         Tsq, Tskv, FA_QD, FA_VD, Tm, Tk>(out, q, k, v, qs, ks, vs);
     BENCHEND;
 #ifdef RES_CHECK
