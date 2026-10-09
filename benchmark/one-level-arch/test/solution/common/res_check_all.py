@@ -147,7 +147,7 @@ _NORM = [
     *((f"rms_norm_{v}_32k_r{r // 1024}k", "normalization/rms_norm", _RMS_GEN, _RMS_CMP,
        f"solution_normalization_rms_norm_rms_norm_dynamic_{v}_32k_DType__half_gA{a}_gR{r}_PE4",
        ("--g-a", str(a), "--g-r", str(r)))
-      for v in ("simt", "tree") for a, r in ((128, 8192), (16, 16384))),
+      for v in ("simt", "tree") for a, r in ((128, 8192), (32, 16384))),
     # V0 (archived, backup only): rms_norm_split_r moved to normalization/rms_norm/V0/, not run.
     # ("rms_norm_split_r", "normalization/rms_norm_split_r",
     #  "normalization/rms_norm_split_r/src/gen_rms_norm_split_r_data.py",

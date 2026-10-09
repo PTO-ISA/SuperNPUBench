@@ -14,9 +14,9 @@ set -euo pipefail
 # make TESTCASE=rms_norm_dynamic_tree DType=__half G_A=128 G_R=8192 PE_NUM=4 diss
 # make TESTCASE=rms_norm_dynamic_simt COMPILER_DIR="$COMPILER_DIR" DType=__half G_A=128 G_R=8192 PE_NUM=4 diss
 
-# 32 KiB FP32 data tiles: one-block [128,8192] and paired-block [16,16384] R coverage.
+# 32 KiB FP32 data tiles: one-block [128,8192] and paired-block [32,16384] R coverage.
 for testcase in rms_norm_dynamic_simt_32k rms_norm_dynamic_tree_32k; do
-    for shape in 128:8192 16:16384; do
+    for shape in 128:8192 32:16384; do
         make TESTCASE="$testcase" COMPILER_DIR="$COMPILER_DIR" DType=__half G_A="${shape%%:*}" G_R="${shape##*:}" PE_NUM=4 diss
     done
 done
