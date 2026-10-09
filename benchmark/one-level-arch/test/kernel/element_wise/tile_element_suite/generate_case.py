@@ -87,12 +87,110 @@ def main() -> int:
     parser.add_argument("--case", required=True, choices=(
         "histogram_tile_element", "selected_radix_tile_element",
         "element_expression_chain", "signed_element_expression", "indexed_gather_tile_element",
+        "generic_predicated_cfg_i32",
         "topk_boundaries", "topk_boundaries_0", "topk_boundaries_1",
         "topk_boundaries_2",
     ))
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.case == "generic_predicated_cfg_i32":
+        elements = 32
+        valid_elements = 29
+        guard_elements = 8
+        guard_value = 0x5A5A6B6B
+        mask32 = 0xFFFFFFFF
+
+        def signed32(value: int) -> int:
+            value &= mask32
+            return value if value < 0x80000000 else value - 0x100000000
+
+        def trunc_div(dividend: int, divisor: int) -> int:
+            quotient = abs(dividend) // abs(divisor)
+            return -quotient if (dividend < 0) != (divisor < 0) else quotient
+
+        input_values = [element * 7919 + 12345 - 131071
+                        for element in range(elements)]
+        input_values[0] = -100
+        input_values[3] = 100
+        control = [element % 3 - 1 for element in range(elements)]
+        divisor = [
+            (-5 if element & 1 else 3) if control[element] < 0 else 0
+            for element in range(elements)
+        ]
+        output = []
+        for element in range(elements):
+            if element >= valid_elements:
+                output.append(guard_value)
+                continue
+            value = input_values[element]
+            selector = control[element]
+            if selector < 0:
+                result = trunc_div(value + 21, divisor[element])
+            elif selector == 0:
+                result = value * 3 - 17
+            else:
+                result = signed32((value & mask32) ^ 0x13579BDF) + 9
+            output.append(signed32(result))
+        guarded_output = ([guard_value] * guard_elements + output +
+                          [guard_value] * guard_elements)
+        direct = []
+        for element in range(elements):
+            if element < valid_elements and control[element] < 0:
+                direct.append(trunc_div(
+                    input_values[element] + 21, divisor[element]
+                ))
+            else:
+                direct.append(guard_value)
+        guarded_direct = ([guard_value] * guard_elements + direct +
+                          [guard_value] * guard_elements)
+        checksum = sum(value & mask32 for value in output) & mask32
+        direct_checksum = sum(value & mask32 for value in direct) & mask32
+        status = [
+            elements, valid_elements, 0, 0, checksum, checksum,
+            direct_checksum, output[0] & mask32, output[3] & mask32,
+            direct[0] & mask32, 3, 3,
+            sum(1 for element in range(valid_elements)
+                if control[element] < 0),
+            0, 0, 0x47434647,
+        ]
+        signed_files = {
+            "generic_predicated_cfg_i32_input": ("input_s32.bin", input_values),
+            "generic_predicated_cfg_i32_control": ("control_s32.bin", control),
+            "generic_predicated_cfg_i32_divisor": ("divisor_s32.bin", divisor),
+            "generic_predicated_cfg_i32_nested": (
+                "nested_s32.bin", guarded_output
+            ),
+            "generic_predicated_cfg_i32_reversed": (
+                "reversed_s32.bin", guarded_output
+            ),
+            "generic_predicated_cfg_i32_direct": (
+                "direct_s32.bin", guarded_direct
+            ),
+        }
+        for filename, values in signed_files.values():
+            (args.out / filename).write_bytes(
+                struct.pack(f"<{len(values)}i", *values)
+            )
+        write_u32(args.out / "status_u32.bin", status)
+        manifest = {
+            "case": args.case,
+            "count": elements,
+            "valid_count": valid_elements,
+            "segments": [
+                {"symbol": symbol, "kind": "exact", "file": filename}
+                for symbol, (filename, _values) in signed_files.items()
+            ] + [{
+                "symbol": "generic_predicated_cfg_i32_status",
+                "kind": "exact",
+                "file": "status_u32.bin",
+            }],
+        }
+        (args.out / "manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        return 0
 
     if args.case == "signed_element_expression":
         active = [(element * 7919 + 12345) % 65535 - 32767

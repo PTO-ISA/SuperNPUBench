@@ -48,6 +48,20 @@ under a low-bit mask uses a U32 operation view while retaining S32 storage.
 The default suite includes this case; focus it with
 `--case signed_element_expression`.
 
+[`generic_predicated_cfg_i32.cpp`](generic_predicated_cfg_i32.cpp) exercises
+the compiler's GM-array generic element path without typed Tile views. Two
+ordinary C++ kernels implement the same three-way S32 expression with different
+CFG shapes: a nested branch and an inverted guard with `continue`. Active elements
+read `a[element]`, `control[element]`, and the division-only
+`divisor[element]`, then write `output[element]` in source order. Non-division
+lanes carry a zero divisor, while a separate all-inactive call passes null GM
+pointers. The observable outputs therefore prove masked signed division and
+that an empty domain performs no GM load, division, or store. A third branch-only
+kernel writes the signed division result directly, without a PHI merge, so its
+output independently requires an S32 MSCATTER descriptor. This is explicitly
+a GM-array compiler test; it does not claim the unavailable typed-view bridge
+between a public `ElementTile` and a generic element region.
+
 [`indexed_gather_tile_element.cpp`](indexed_gather_tile_element.cpp) demonstrates
 an ordinary indexed U32 load rather than an atomic update. It loads all 384
 indices, including `UINT32_MAX` poison in the padded tail, copies each logical
@@ -125,9 +139,10 @@ The indexed-gather ELF must contain one ordinary masked `MGATHER` and no
 `MGATHER.ADD`, plus one U32 `TLEA` whose IR contract scales 32-bit element
 indices to byte offsets. Its negative canaries reject a lost execution mask,
 layout, scaling operand, scalar vector-element fallback, or atomic opcode
-substitution. The default command runs the seven pre-existing ELFs plus the signed-expression
-and indexed-gather ELFs (nine total). During focused development, append
-`--case indexed_gather_tile_element` to run only the new case.
+substitution. The default command runs the seven pre-existing ELFs plus the
+signed-expression, indexed-gather, and generic-CFG ELFs (ten total). During
+focused development, append `--case indexed_gather_tile_element` or
+`--case generic_predicated_cfg_i32` to run one new case.
 
 Every ELF runs unchanged on `gfrun` and `gfsim`. Both memory dumps are checked
 against separately generated input, histogram, output, and status goldens plus

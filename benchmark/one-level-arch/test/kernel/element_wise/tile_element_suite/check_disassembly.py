@@ -41,6 +41,150 @@ def function_body(text: str, symbol_fragment: str) -> str:
     return "\n".join(lines[start:end])
 
 
+def ir_function_body(text: str, symbol_fragment: str) -> str:
+    match = re.search(
+        r"define[^\n]*" + re.escape(symbol_fragment) + r".*?^}",
+        text,
+        re.M | re.S,
+    )
+    if match is None:
+        raise CheckError(f"missing IR function containing {symbol_fragment}")
+    return match.group(0)
+
+
+def validate_generic_predicated_cfg(text: str, ir_text: str | None) -> None:
+    if ir_text is None:
+        raise CheckError("generic predicated CFG case requires LLVM IR evidence")
+
+    for name in ("nested_three_way", "reversed_continue", "direct_signed_store"):
+        direct_store = name == "direct_signed_store"
+        body = function_body(text, name)
+        lines = instruction_lines(body)
+        gathers = [
+            line for line in lines
+            if re.search(r"\bBSTART\.TLSU\s+MGATHER, U32\b", line)
+        ]
+        scatters = [
+            line for line in lines
+            if re.search(
+                r"\bBSTART\.TLSU\s+MSCATTER, "
+                + (r"S32\b" if direct_store else r"U32\b"), line
+            )
+        ]
+        if len(gathers) < 3:
+            raise CheckError(f"{name} needs affine U32 MGATHER sites for all inputs")
+        if not scatters or "MSCATTER.MASK" in body:
+            raise CheckError(f"{name} needs an ordinary U32 MSCATTER site")
+        if sum(bool(re.search(r"\bBSTART\.TEPL\s+TDIV, S32\b", line))
+               for line in lines) != 1:
+            raise CheckError(f"{name} lost its single masked signed division")
+        if not any(re.search(r"\bBSTART\.TEPL\s+TCMPS, (S32|U32)\b", line)
+                   for line in lines):
+            raise CheckError(f"{name} is missing scalar GPR predicate comparisons")
+        select_sites = [
+            line for line in lines
+            if re.search(r"\bBSTART\.TEPL\s+TSEL, U32\b", line)
+        ]
+        if (direct_store and select_sites) or (not direct_store and not select_sites):
+            raise CheckError(f"{name} is missing GPR predicate value merges")
+        masked_binary_sites = sum(
+            bool(re.search(r"\bBSTART\.TEPL\s+"
+                           r"(TADD|TSUB|TMUL|TDIV|TXOR),", line))
+            for line in lines
+        )
+        if sum("ExecMaskPresent" in line for line in lines) < (
+            len(gathers) + len(scatters) + masked_binary_sites
+        ):
+            raise CheckError(f"{name} lost required operation execution masks")
+
+        ir = ir_function_body(ir_text, name)
+        if re.search(
+            r"extractelement|insertelement|"
+            r"@llvm\.linx\.experimental\.element\.(region|view)",
+            ir,
+        ):
+            raise CheckError(f"{name} contains residual scalar/region lowering")
+
+        def calls(stem: str) -> list[str]:
+            return re.findall(
+                r"call [^\n]*@llvm\.linx\.experimental\.ew\."
+                + re.escape(stem) + r"[^\n]*",
+                ir,
+            )
+
+        gather_calls = calls("mgather.gpr.masked")
+        scatter_calls = calls("mscatter.gpr.masked")
+        binary_calls = calls("tbinary.gpr.masked")
+        compare_calls = calls("tcmps.gpr")
+        select_calls = calls("tsel.gpr")
+        if len(gather_calls) < 3 or not scatter_calls:
+            raise CheckError(f"{name} lost its three-load/one-store GM shape")
+        if len(binary_calls) < (2 if direct_store else 5):
+            raise CheckError(f"{name} has too few semantic Tile binary operations")
+        operations = [
+            (int(dtype), int(opcode))
+            for call in binary_calls
+            for dtype, opcode in re.findall(
+                r"i64 32,\s*i64 1,\s*i64 (17|25),\s*i64 29,\s*"
+                r"i64 ([0-9]+),",
+                call,
+            )
+        ]
+        # `value * 3 - 17` may canonically fold to add(-17), so opcode 1 is
+        # optional. The remaining operations cannot disappear without changing
+        # one of the three source-level arms.
+        required_opcodes = (0, 3) if direct_store else (0, 2, 3, 7)
+        for opcode in required_opcodes:
+            if not any(candidate == opcode for _dtype, candidate in operations):
+                raise CheckError(f"{name} is missing masked tbinary opcode {opcode}")
+        if any(opcode == 4 for _dtype, opcode in operations):
+            raise CheckError(f"{name} unexpectedly emitted remainder opcode 4")
+        if len(operations) != len(binary_calls):
+            raise CheckError(f"{name} has a non-i32/M32 masked tbinary ABI")
+        if any((dtype == 17) != (opcode == 3)
+               for dtype, opcode in operations):
+            raise CheckError(f"{name} lost signed-division/raw-U32 opcode typing")
+        for call in gather_calls:
+            if not re.search(
+                r"i64 32,\s*i64 1,\s*i64 25,\s*i64 0,\s*"
+                r"i64 29,\s*i64 24,.*i64 0,\s*i64 0,\s*i64 1\)",
+                call,
+            ):
+                raise CheckError(f"{name} MGATHER lost M32/PadZero/ZERO1 ABI")
+        for call in scatter_calls:
+            scatter_type = 17 if direct_store else 25
+            if not re.search(
+                rf"i64 32,\s*i64 1,\s*i64 {scatter_type},\s*i64 29,\s*"
+                r"i64 24,.*i64 0,\s*i64 0,\s*i64 0\)",
+                call,
+            ):
+                raise CheckError(f"{name} MSCATTER lost M32/ZERO0 ABI")
+        minimum_compares = 2 if direct_store else 3
+        if len(compare_calls) < minimum_compares or any(
+            not re.search(r"i64 32,\s*i64 1,\s*i64 (17|24|25),\s*i64 29,", call)
+            for call in compare_calls
+        ):
+            raise CheckError(f"{name} lost i32/M32 scalar GPR comparisons")
+        compare_types = {
+            int(dtype)
+            for call in compare_calls
+            for dtype in re.findall(
+                r"i64 32,\s*i64 1,\s*i64 (17|24|25),\s*i64 29,", call
+            )
+        }
+        required_compare_types = {17, 24} if direct_store else {17, 25}
+        if not required_compare_types.issubset(compare_types):
+            raise CheckError(f"{name} lost signed and raw-U32 branch tests")
+        if direct_store:
+            if select_calls:
+                raise CheckError(f"{name} unexpectedly introduced a value merge")
+        elif len(select_calls) < 2 or any(
+                not re.search(
+                    r"i64 32,\s*i64 1,\s*i64 25,\s*i64 29,", call
+                ) for call in select_calls):
+            raise CheckError(f"{name} lost raw-U32/M32 GPR value merges")
+
+
 def validate_expression(text: str, ir_text: str | None) -> None:
     body = function_body(text, "element_expression_chain")
     lines = instruction_lines(body)
@@ -303,6 +447,9 @@ def validate_indexed_gather(text: str, ir_text: str | None) -> None:
 
 
 def validate(text: str, case: str, ir_text: str | None = None) -> None:
+    if case == "generic_predicated_cfg_i32":
+        validate_generic_predicated_cfg(text, ir_text)
+        return
     if case == "signed_element_expression":
         validate_signed_expression(text, ir_text)
         return
@@ -374,7 +521,7 @@ def main() -> int:
     try:
         validate(text, args.case, ir_text)
         if args.self_test:
-            if args.case in ("element_expression_chain", "signed_element_expression", "indexed_gather_tile_element"):
+            if args.case in ("element_expression_chain", "signed_element_expression", "indexed_gather_tile_element", "generic_predicated_cfg_i32"):
                 for marker in ("region", "view"):
                     rejected(
                         f"residual element {marker} contract",
@@ -387,6 +534,32 @@ def main() -> int:
                             count=1,
                         ),
                     )
+            if args.case == "generic_predicated_cfg_i32":
+                rejected(
+                    "unmasked binary substitution",
+                    text,
+                    args.case,
+                    (ir_text or "").replace("tbinary.gpr.masked", "tbinary", 1),
+                )
+                rejected(
+                    "missing masked scatter",
+                    text.replace("MSCATTER, U32", "MSCATTER_REMOVED, U32", 1),
+                    args.case,
+                    ir_text,
+                )
+                rejected(
+                    "scalar extract fallback",
+                    text,
+                    args.case,
+                    re.sub(
+                        r"(define[^\n]*nested_three_way[^\n]*\n)",
+                        r"\1  %bad = extractelement <32 x i32> undef, i32 0\n",
+                        ir_text or "",
+                        count=1,
+                    ),
+                )
+                print(f"{args.case}: disassembly check PASS")
+                return 0
             if args.case == "signed_element_expression":
                 rejected("unsigned load transport", text.replace("TLOAD, S32", "TLOAD, U32", 1), args.case, ir_text)
                 rejected("unsigned store transport", text.replace("TSTORE, S32", "TSTORE, U32", 1), args.case, ir_text)

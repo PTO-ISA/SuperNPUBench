@@ -4,6 +4,7 @@ endif
 
 SUPPORTED_CASES := histogram_tile_element selected_radix_tile_element \
 	element_expression_chain signed_element_expression indexed_gather_tile_element \
+	generic_predicated_cfg_i32 \
 	topk_boundaries topk_boundaries_0 \
 	topk_boundaries_1 topk_boundaries_2
 ifeq ($(filter $(TESTCASE),$(SUPPORTED_CASES)),)
@@ -44,6 +45,9 @@ TARGET = $(ELF_DIR)/$(TESTCASE).elf
 DEFINES += -DSUPERNPUBENCH_LINX_TILE_SIZE -DLINX_ELEMENTWISE_AVAILABLE
 CC_OPTS += $(TARGET_FLAGS) -fno-vectorize -fno-slp-vectorize \
 	-Werror=unknown-pragmas
+ifeq ($(TESTCASE),generic_predicated_cfg_i32)
+CC_OPTS += -mllvm -linxv5-enable-generic-element=true
+endif
 CC_LINK += $(TARGET_FLAGS) -fuse-ld=lld
 INCLUDE += -I$(API_INCLUDE)
 

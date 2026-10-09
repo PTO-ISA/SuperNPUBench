@@ -6,6 +6,7 @@ default_cases=(
     selected_radix_tile_element
     element_expression_chain
     signed_element_expression
+    generic_predicated_cfg_i32
     topk_boundaries_0
     topk_boundaries_1
     topk_boundaries_2
@@ -16,10 +17,11 @@ if (( $# == 0 )); then
     cases=("${default_cases[@]}")
 elif (( $# == 2 )) && [[ $1 == --case ]] && \
      [[ $2 == indexed_gather_tile_element || \
-        $2 == element_expression_chain || $2 == signed_element_expression ]]; then
+        $2 == element_expression_chain || $2 == signed_element_expression || \
+        $2 == generic_predicated_cfg_i32 ]]; then
     cases=("$2")
 else
-    echo "usage: $0 [--case indexed_gather_tile_element|element_expression_chain|signed_element_expression]" >&2
+    echo "usage: $0 [--case indexed_gather_tile_element|element_expression_chain|signed_element_expression|generic_predicated_cfg_i32]" >&2
     exit 2
 fi
 
@@ -102,6 +104,7 @@ run_case() {
         clean all 2>&1 | tee "$case_artifact/build.log"
     cp "$built_dir/$case_name.elf" "$elf"
     if [[ "$case_name" == signed_element_expression ||
+          "$case_name" == generic_predicated_cfg_i32 ||
           "$case_name" == element_expression_chain || \
           "$case_name" == indexed_gather_tile_element ]]; then
         make -B -C "$case_dir" TESTCASE="$case_name" \
@@ -117,6 +120,7 @@ run_case() {
     "$COMPILER_DIR/llvm-objdump" -t "$elf" > "$symbols"
 
     if [[ "$case_name" == signed_element_expression ||
+          "$case_name" == generic_predicated_cfg_i32 ||
           "$case_name" == element_expression_chain || \
           "$case_name" == indexed_gather_tile_element ]]; then
         python3 "$case_dir/check_disassembly.py" \
