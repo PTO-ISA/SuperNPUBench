@@ -143,7 +143,7 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
         Bf16RowValueTile runningSum;  // final combined group denominator
         Bf16RowValueTile oldScale;    // exact-power-of-two online rescale
         Bf16RowValueTile groupSums[kPScaleCols];
-        Bf16RowValueTile groupReferences[kPScaleCols];
+        Bf16GroupMaxTile previousGroupReference;
         TEXPANDS(runningSum, static_cast<__bf16>(0.0f));
 
         QTile q;
@@ -224,6 +224,10 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
                 TPARTVIEW<Bf16ScoreGroupTile, 1, kPScaleCols>(score);
             Bf16GroupMaxTile p3Group;
             TSUBS(p3Group, tGroupMaxB, static_cast<__bf16>(kLn4));
+            Bf16GroupMaxTile groupUpdateScale, p5Group;
+            if (kb != 0)
+                TEXPDIF(groupUpdateScale, previousGroupReference, p3Group);
+            TROWEXPANDEXPDIF(p5Group, p3Group, runningMaxGrid);
             // P is a read-only assembled parent shared by the two Cube
             // consumers (PV' and PV).
             TileArray<PBlock, 1, kPScaleCols> pFragments;
@@ -237,8 +241,10 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             using Bf16GroupPair = VecTileM32<__bf16, kPeM, 2>;
             auto groupPairs =
                 TPARTVIEW<Bf16GroupPair, 1, kPScaleCols / 2>(p3Group);
-            Bf16RowValueTile groupOnes;
-            TEXPANDS(groupOnes, static_cast<__bf16>(1.0f));
+            auto updatePairs =
+                TPARTVIEW<Bf16GroupPair, 1, kPScaleCols / 2>(groupUpdateScale);
+            auto finalPairs =
+                TPARTVIEW<Bf16GroupPair, 1, kPScaleCols / 2>(p5Group);
             auto quantizeGroup = [&]<size_t Group>() __attribute__((always_inline)) {
                 auto scoreView = blocks[0][Group];
                 auto maxView = groupPairs[0][Group / 2];
@@ -248,35 +254,39 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
                     Bf16GroupMaxTile, Bf16GroupPair, 2 * (Group % 2)>(
                         p4, scoreView, maxView);
                 groupProbabilities[Group] = p4;
-                // D still needs a materialized reference for its next block.
-                Bf16RowValueTile p3;
-                TROWEXPANDMUL<Bf16RowValueTile, Bf16RowValueTile,
-                    Bf16GroupMaxTile, Bf16GroupPair, 2 * (Group % 2)>(
-                        p3, groupOnes, maxView);
                 WideBf16GroupReductionTile sumWide;
                 TROWSUM(sumWide, p4);
                 auto sum4 = TREDUCEPREFIXVIEW<Bf16RowValueTile>(sumWide);
                 auto &acc = groupSums[Group];
-                auto &reference = groupReferences[Group];
                 if (kb == 0) {
+                    // TFMA accepts the reduction prefix directly; assignment
+                    // cannot retain this borrowed wide reduction as row state.
                     TMULS(acc, sum4, static_cast<__bf16>(1.0f));
                 } else {
-                    Bf16RowValueTile scale, next;
-                    TROWEXPANDEXPDIF(scale, reference, p3);
-                    TFMA(next, acc, scale, sum4);
+                    auto scaleView = updatePairs[0][Group / 2];
+                    Bf16RowValueTile scaled, next;
+                    // TFMA has no broadcast-byte-offset operand. This MUL
+                    // performs the actual rescale, without unpacking scale.
+                    TROWEXPANDMUL<Bf16RowValueTile, Bf16RowValueTile,
+                        Bf16GroupMaxTile, Bf16GroupPair, 2 * (Group % 2)>(
+                            scaled, acc, scaleView);
+                    TADD(next, scaled, sum4);
                     acc = next;
                 }
-                reference = p3;
                 if (kb == kKVBlocks - 1) {
-                    Bf16RowValueTile finalScale, next;
-                    TROWEXPANDEXPDIF(finalScale, p3, runningMaxGrid);
-                    TFMA(next, acc, finalScale, localSum);
+                    auto scaleView = finalPairs[0][Group / 2];
+                    Bf16RowValueTile scaled, next;
+                    TROWEXPANDMUL<Bf16RowValueTile, Bf16RowValueTile,
+                        Bf16GroupMaxTile, Bf16GroupPair, 2 * (Group % 2)>(
+                            scaled, acc, scaleView);
+                    TADD(next, scaled, localSum);
                     localSum = next;
                 }
             };
             [&]<size_t... Groups>(std::index_sequence<Groups...>) __attribute__((always_inline)) {
                 (quantizeGroup.template operator()<Groups>(), ...);
             }(std::make_index_sequence<kPScaleCols>{});
+            previousGroupReference = p3Group;
 #pragma clang loop unroll(full)
             for (int block = 0; block < kPScaleCols; ++block)
                 TCVT(pFragments[0][block], groupProbabilities[block]);
@@ -286,9 +296,7 @@ void fa_lowp_algD_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             // Keeping the four valid scales in a single [M,G] CELL gives the
             // contiguous-valid layout TMATMUL_MX expects (see the PScale note).
             // 一次性给所有组算 E8M0 scale：E = floor_pow2(m/4) = floor_pow2(exp(G-R-ln4))
-            Bf16GroupMaxTile p5Group;
             PScale pScale;
-            TROWEXPANDEXPDIF(p5Group, p3Group, runningMaxGrid);            // 所有组的 m/4
             TCVT<LINX_RDN>(pScale, p5Group);                        // E8M0（单 CELL）
 
             if (kb == kKVBlocks - 1) runningSum = localSum;
