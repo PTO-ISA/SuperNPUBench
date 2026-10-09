@@ -1,8 +1,10 @@
-// rms_norm_dynamic_tree_32k: default test shape [128,8192].
+// rms_norm_dynamic_tree_32k: default test shapes [128,8192] and [32,16384].
 // Dynamic 4PE implementation with FP32 Tile=[32,256] (32 KiB).
 // Full 8192-element R blocks; up to 16 blocks. Original 2 KiB kernel is unchanged.
-// R <= 8192: one block, reduced entirely in Tiles (no workspace).
-// R >  8192: paired blocks, partial row sums spilled to the workspace.
+// R <= 8192:  one block, reduced entirely in Tiles (no workspace).
+// R == 16384: two blocks, both kept resident in Tiles (no workspace); the
+//             two output stores use distinct fp16 Tiles so they overlap.
+// R >  16384: paired blocks, partial row sums spilled to the workspace.
 #ifndef SUPERNPU_RMS_NORM_SIMT_DYNAMIC_TREE_32K_HPP
 #define SUPERNPU_RMS_NORM_SIMT_DYNAMIC_TREE_32K_HPP
 
@@ -149,33 +151,94 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
 template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
           typename tile_m_v, typename tile_s_wide>
 inline void rms_norm_tile_single_block(dtype *x, const dtype *gamma,
-                                       dtype *out, int64_t gR, int64_t a_off,
+                                       dtype *out, int64_t gR, int64_t peA,
                                        float inv_r) {
-    const int64_t offset = a_off * gR;
     const int64_t curtile_factal_r = (gR + 31) / 32;
     const int64_t curtile_factal_a =
         (gR + curtile_factal_r - 1) / curtile_factal_r;
-    gm_t gi(x + offset, static_cast<int>(curtile_factal_a),
-            static_cast<int>(curtile_factal_r));
+    // Gamma is identical for every row. Load it once here so the FP32 tile
+    // and the per-row TMUL destination share this function's M carrier.
     gm_t gg(const_cast<dtype *>(gamma), static_cast<int>(curtile_factal_a),
             static_cast<int>(curtile_factal_r));
-    gm_t go(out + offset, static_cast<int>(curtile_factal_a),
-            static_cast<int>(curtile_factal_r));
-    tile_h h(curtile_factal_a, curtile_factal_r),
-        gh(curtile_factal_a, curtile_factal_r);
-    tile_f src(curtile_factal_a, curtile_factal_r),
-        sq(curtile_factal_a, curtile_factal_r),
-        gf(curtile_factal_a, curtile_factal_r),
-        normalized(curtile_factal_a, curtile_factal_r),
-        dst(curtile_factal_a, curtile_factal_r);
-    TLOAD(h, gi);
-    TCVT(src, h);
-    TMUL(sq, src, src);
+    tile_f gf(curtile_factal_a, curtile_factal_r);
+    {
+        tile_h gh(curtile_factal_a, curtile_factal_r);
+        TLOAD(gh, gg);
+        TCVT(gf, gh);
+    }
+    for (int64_t ia = 0; ia < peA; ++ia) {
+        const int64_t offset = ia * gR;
+        gm_t gi(x + offset, static_cast<int>(curtile_factal_a),
+                static_cast<int>(curtile_factal_r));
+        gm_t go(out + offset, static_cast<int>(curtile_factal_a),
+                static_cast<int>(curtile_factal_r));
+        // h_in and h_out are distinct Tiles: the next row's TLOAD must not WAW
+        // against this row's in-flight TSTORE.
+        tile_h h_in(curtile_factal_a, curtile_factal_r),
+            h_out(curtile_factal_a, curtile_factal_r);
+        tile_f src(curtile_factal_a, curtile_factal_r),
+            sq(curtile_factal_a, curtile_factal_r),
+            dst(curtile_factal_a, curtile_factal_r);
+        TLOAD(h_in, gi);
+        TCVT(src, h_in);
+        TMUL(sq, src, src);
 
-    // TCOLSUM requires the destination to keep the source physical columns,
-    // so the scalar lives in a [1,256] Tile here instead of [1,8].
+        // TCOLSUM requires the destination to keep the source physical columns,
+        // so the scalar lives in a [1,256] Tile here instead of [1,8].
+        tile_m_v row_sums(curtile_factal_a);
+        TROWSUM(row_sums, sq);
+        tile_s_wide tile_sum, mean, denom, rms;
+        TCOLSUM(tile_sum, row_sums);
+        TMULS(mean, tile_sum, inv_r);
+        TADDS(denom, mean, kEpsilon);
+        rsqrt_regbase(rms, denom);
+
+        tile_m_v rms_rows(curtile_factal_a);
+        TCOLEXPAND(rms_rows, rms);
+        TROWEXPANDMUL(dst, src, rms_rows);
+        TMUL(dst, dst, gf);
+        TCVT(h_out, dst);
+        TSTORE(go, h_out);
+    }
+}
+
+// Two full R blocks: keep both blocks resident in Tiles and reduce without
+// any workspace round-trip. The two output stores target distinct fp16
+// Tiles so the second block's compute overlaps the first block's TSTORE.
+template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
+          typename tile_m_v, typename tile_s_wide>
+inline void rms_norm_tile_two_block(dtype *x, const dtype *gamma, dtype *out,
+                                    int64_t gR, int64_t tile_r, int64_t a_off,
+                                    float inv_r) {
+    const int64_t offset = a_off * gR;
+    const int64_t curtile_factal_r = (tile_r + 31) / 32;
+    const int64_t curtile_factal_a =
+        (tile_r + curtile_factal_r - 1) / curtile_factal_r;
+    const int fa = static_cast<int>(curtile_factal_a);
+    const int fr = static_cast<int>(curtile_factal_r);
+    gm_t gi0(x + offset, fa, fr);
+    gm_t gi1(x + offset + tile_r, fa, fr);
+    gm_t gg0(const_cast<dtype *>(gamma), fa, fr);
+    gm_t gg1(const_cast<dtype *>(gamma) + tile_r, fa, fr);
+    gm_t go0(out + offset, fa, fr);
+    gm_t go1(out + offset + tile_r, fa, fr);
+
+    tile_h h0(curtile_factal_a, curtile_factal_r),
+        h1(curtile_factal_a, curtile_factal_r);
+    tile_f x0(curtile_factal_a, curtile_factal_r),
+        x1(curtile_factal_a, curtile_factal_r),
+        sq0(curtile_factal_a, curtile_factal_r),
+        sq1(curtile_factal_a, curtile_factal_r);
+    TLOAD(h0, gi0);
+    TCVT(x0, h0);
+    TMUL(sq0, x0, x0);
+    TLOAD(h1, gi1);
+    TCVT(x1, h1);
+    TMUL(sq1, x1, x1);
+    TADD(sq0, sq0, sq1);
+
     tile_m_v row_sums(curtile_factal_a);
-    TROWSUM(row_sums, sq);
+    TROWSUM(row_sums, sq0);
     tile_s_wide tile_sum, mean, denom, rms;
     TCOLSUM(tile_sum, row_sums);
     TMULS(mean, tile_sum, inv_r);
@@ -184,12 +247,25 @@ inline void rms_norm_tile_single_block(dtype *x, const dtype *gamma,
 
     tile_m_v rms_rows(curtile_factal_a);
     TCOLEXPAND(rms_rows, rms);
-    TLOAD(gh, gg);
+
+    // Normalize both resident blocks; distinct output Tiles per block.
+    tile_h gh(curtile_factal_a, curtile_factal_r),
+        h_out0(curtile_factal_a, curtile_factal_r),
+        h_out1(curtile_factal_a, curtile_factal_r);
+    tile_f gf(curtile_factal_a, curtile_factal_r),
+        dst(curtile_factal_a, curtile_factal_r);
+    TLOAD(gh, gg0);
     TCVT(gf, gh);
-    TROWEXPANDMUL(normalized, src, rms_rows);
-    TMUL(dst, normalized, gf);
-    TCVT(h, dst);
-    TSTORE(go, h);
+    TROWEXPANDMUL(dst, x0, rms_rows);
+    TMUL(dst, dst, gf);
+    TCVT(h_out0, dst);
+    TSTORE(go0, h_out0);
+    TLOAD(gh, gg1);
+    TCVT(gf, gh);
+    TROWEXPANDMUL(dst, x1, rms_rows);
+    TMUL(dst, dst, gf);
+    TCVT(h_out1, dst);
+    TSTORE(go1, h_out1);
 }
 
 } // namespace rms_detail_simt_dynamic_tree_32k
@@ -246,10 +322,20 @@ void rms_norm_dynamic_tree_32k(dtype *x, const dtype *gamma,
     if (gR <= tile_r) {
         using tile_s_wide = Tile<Location::Vec, float, 1, 256,
                                  BLayout::CubeM32, 1, 1>;
+        rms_detail_simt_dynamic_tree_32k::rms_norm_tile_single_block<
+            dtype, gm_t, tile_h, tile_f, tile_m_v, tile_s_wide>(
+            x, gamma, out, gR, peA, inv_r);
+        return;
+    }
+
+    if (block_count == 2) {
+        // Both blocks stay resident in Tiles; no workspace round-trip.
+        using tile_s_wide = Tile<Location::Vec, float, 1, 256,
+                                 BLayout::CubeM32, 1, 1>;
         for (int64_t ia = 0; ia < peA; ++ia) {
-            rms_detail_simt_dynamic_tree_32k::rms_norm_tile_single_block<
+            rms_detail_simt_dynamic_tree_32k::rms_norm_tile_two_block<
                 dtype, gm_t, tile_h, tile_f, tile_m_v, tile_s_wide>(
-                x, gamma, out, gR, ia, inv_r);
+                x, gamma, out, gR, tile_r, ia, inv_r);
         }
         return;
     }
