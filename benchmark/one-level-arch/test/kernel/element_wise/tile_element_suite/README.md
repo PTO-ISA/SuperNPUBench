@@ -29,7 +29,9 @@ result Tile, which is stored before the next element-expression region. The
 source contains no physical layout type and no helper implementing the
 operations. The bitwise region reuses an early shift result after four later
 temporaries, so the compiler must preserve a non-linear SSA value while it
-allocates the intermediate Tiles.
+allocates the intermediate Tiles. This case now opts into the generic CFG
+compiler: every ordinary LLVM operation becomes a masked Tile operation, and
+all three typed publications return to the public TileOp dataflow.
 
 三个表达式循环里的 `element` 是当前分区中的逻辑元素编号，不是硬件 lane。
 局部临时变量由编译器转换为 SSA 并分配 intermediate Tile；程序员不需要声明
@@ -42,9 +44,11 @@ and 16-element guards. Three marked loops cover signed arithmetic/division,
 C++ signed remainder and right-shift/bitwise/negation. The independent oracle
 locks `-7 % 3 == -1` and `7 % 3 == 1`; direct PTO TREM would produce the wrong
 negative-input result. Source arithmetic stays within int32 limits. Compiler
-IR must use truncating TDIV/TMUL/TSUB for remainder, and the checker proves
-that dataflow plus exact S32 transport. LLVM's legal logical-right-shift fold
-under a low-bit mask uses a U32 operation view while retaining S32 storage.
+IR must implement remainder as dividend minus truncating quotient times divisor;
+the generic path uses signed `TDIV`, raw-bit `TMUL`/`TSUB`, then an explicit S32
+typed publication. The checker proves that dataflow, all execution masks, and
+exact S32 transport. LLVM's legal logical-right-shift fold under a low-bit mask
+uses a U32 operation view while retaining S32 storage.
 The default suite includes this case; focus it with
 `--case signed_element_expression`.
 
@@ -109,15 +113,15 @@ results as a permutation.
 
 ## End-to-end verification
 
-The standard CFG/SSA compiler checkpoint `34ade53` proves the complete U32
-expression and zero-inactive gather kernels, with clean API `b223de6`.
-Their exact-head frozen runs `20261007T125327Z-78937` and
-`20261007T125248Z-78397` pass five and four independent golden segments on
-both models. Focus either case using `--case element_expression_chain` or
-`--case indexed_gather_tile_element`. Atomic histogram and Top-K are still
-being moved to the same standard compiler; the earlier nine-ELF AST checkpoint
-does not establish a current all-suite pass. All 21 original application
-entries and their applicable configurations remain open.
+The generic CFG compiler now covers the complete U32 expression kernel, the
+three-region signed expression kernel, the GM-array predication kernel, and the
+two-region typed-carrier kernel. Each selected gate freshly compiles its source,
+rejects residual region/view/extract/insert IR, and runs the same ELF on both
+models against independent goldens. The indexed gather remains a separate
+standard CFG checkpoint. Atomic histogram and Top-K are still being moved to
+the same compiler; the earlier nine-ELF AST checkpoint does not establish a
+current all-suite pass. All 21 original application entries and their
+applicable configurations remain open.
 
 Run from the `benchmark/one-level-arch` directory with fresh tool paths:
 
@@ -137,7 +141,8 @@ boundary benchmark, and three focused shards of that boundary table. The two
 atomic standalone ELFs each contain one TLEA and one masked `MGATHER.ADD`
 static site; every Top-K ELF contains exactly two of each. The expression ELF
 must contain all ten native Tile binary selectors, one extra XOR that reuses
-an early SSA value, three native `TSTORE` sites, and no scalar
+an early SSA value, three native `TSTORE` sites, a native execution mask on
+every compiler-generated operation, and no scalar
 `extractelement`/`insertelement` fallback in compiler IR.
 The checker accepts two exact forms: 13 operations when unary expressions stay
 separate, or 12 after standard LLVM folds U32 `~(-x)` to `x + UINT32_MAX`.
@@ -145,6 +150,13 @@ The optimized form must prove that exact input and constant in IR. Both forms
 retain their own long-lived SSA checks and corruption canaries; independent
 goldens verify the arithmetic rather than forcing the compiler to undo a valid
 optimization.
+
+The signed-expression ELF must contain twelve masked generic operations. Its
+checker locks signed division, the quotient/multiply/subtract remainder graph,
+the two S32 publication retags, typed `TLOAD`/`TSTORE`, and the logical-shift
+fold. Negative canaries reject unsigned division, direct PTO floor remainder,
+wrong shift typing, broken remainder dataflow, or mixed signed/unsigned memory
+transport.
 
 The indexed-gather ELF must contain one ordinary masked `MGATHER` and no
 `MGATHER.ADD`, plus one U32 `TLEA` whose IR contract scales 32-bit element

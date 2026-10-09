@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import re
+from collections import Counter
 from pathlib import Path
 
 
@@ -333,26 +334,47 @@ def validate_expression(text: str, ir_text: str | None) -> None:
         raise CheckError(
             f"expected {expected_calls} native expression operations, found {len(selectors)}"
         )
+    if sum("ExecMaskPresent" in line for line in lines) != expected_calls:
+        raise CheckError("generic expression operations lost their execution masks")
     calls = re.findall(
         r"^\s*(%[-.a-zA-Z0-9]+) = call <32 x i32> "
-        r"@llvm\.linx\.experimental\.ew\.tbinary[^\n]*"
+        r"@llvm\.linx\.experimental\.ew\.tbinary\.gpr\.masked[^\n]*"
         r"i64 29,\s*i64 ([0-9]+),\s*"
         r"<32 x i32> (%[-.a-zA-Z0-9]+),\s*"
-        r"<32 x i32> (%[-.a-zA-Z0-9]+)\)",
+        r"<32 x i32> (%[-.a-zA-Z0-9]+)[^)\n]*\)",
         ir_body,
         re.M,
     )
     producer = {result: index for index, (result, _op, _lhs, _rhs) in enumerate(calls)}
     if expected_calls == 12:
+        minus_one_values = {
+            result
+            for result, scalar in re.findall(
+                r"^\s*(%[-.a-zA-Z0-9]+) = freeze i32 (-?[0-9]+)$",
+                ir_body, re.M,
+            )
+            if int(scalar) in (-1, 0xFFFFFFFF)
+        }
+        minus_one_values.update(
+            result
+            for result, source in re.findall(
+                r"^\s*(%[-.a-zA-Z0-9]+) = zext i32 "
+                r"(%[-.a-zA-Z0-9]+) to i64$",
+                ir_body, re.M,
+            )
+            if source in minus_one_values
+        )
         maximum_splats = {
             result
             for result, scalar in re.findall(
                 r"^\s*(%[-.a-zA-Z0-9]+) = call <32 x i32> "
                 r"@llvm\.linx\.experimental\.ew\.tci[^\n]*"
-                r"\(i64 32, i64 1, i64 25, i64 29, i64 (-?[0-9]+), i64 0\)",
+                r"\(i64 32, i64 1, i64 25, i64 29, i64 "
+                r"(%[-.a-zA-Z0-9]+|-?[0-9]+), i64 0\)",
                 ir_body, re.M,
             )
-            if int(scalar) in (-1, 0xFFFFFFFF)
+            if scalar in minus_one_values or
+            (not scalar.startswith("%") and int(scalar) in (-1, 0xFFFFFFFF))
         }
         if len(calls) != 12 or int(calls[-1][1]) != 0:
             raise CheckError("optimized unary region must finish with native TADD")
@@ -381,9 +403,12 @@ def validate_expression(text: str, ir_text: str | None) -> None:
 def validate_signed_expression(text: str, ir_text: str | None) -> None:
     body = function_body(text, "signed_element_expression")
     lines = instruction_lines(body)
-    for mnemonic, dtype, count in (("TADD", "S32", 2), ("TMUL", "S32", 2),
-            ("TDIV", "S32", 2), ("TSUB", "S32", 1), ("TAND", "S32", 1),
-            ("TXOR", "S32", 1), ("TSHR", "U32", 1)):
+    for mnemonic, dtype, count in (
+        ("TADD", "S32", 2), ("TADD", "U32", 2),
+        ("TMUL", "U32", 2), ("TDIV", "S32", 2),
+        ("TSUB", "U32", 1), ("TAND", "U32", 1),
+        ("TXOR", "U32", 1), ("TSHR", "U32", 1),
+    ):
         if sum(bool(re.search(rf"\bBSTART\.TEPL\s+{mnemonic}, {dtype}\b", line))
                for line in lines) != count:
             raise CheckError(f"signed expression lost {mnemonic}/{dtype} count {count}")
@@ -397,6 +422,8 @@ def validate_signed_expression(text: str, ir_text: str | None) -> None:
             raise CheckError(f"signed expression needs exactly {count} total {mnemonic}/S32 sites")
     if "CUBE_M32" not in body or "M322ND" not in body or "ND2M32" not in body:
         raise CheckError("signed expression lost typed M32 transport")
+    if sum("ExecMaskPresent" in line for line in lines) != 12:
+        raise CheckError("signed generic operations lost their execution masks")
     if ir_text is None:
         raise CheckError("signed expression requires LLVM IR evidence")
     match = re.search(r"define[^\n]*signed_element_expression.*?^}", ir_text, re.M | re.S)
@@ -407,19 +434,29 @@ def validate_signed_expression(text: str, ir_text: str | None) -> None:
         raise CheckError("signed expression contains residual scalar/view lowering")
     calls = re.findall(
         r"^\s*(%[-.a-zA-Z0-9]+) = call <32 x i32> "
-        r"@llvm\.linx\.experimental\.ew\.tbinary[^\n]*\("
+        r"@llvm\.linx\.experimental\.ew\.tbinary\.gpr\.masked[^\n]*\("
         r"i64 32, i64 1, i64 (17|25), i64 29, i64 ([0-9]+), "
-        r"<32 x i32> (%[-.a-zA-Z0-9]+), <32 x i32> (%[-.a-zA-Z0-9]+)\)", ir, re.M)
-    if len(calls) != 10 or any(dtype != ("25" if op == "9" else "17")
-                              for _, dtype, op, _, _ in calls):
+        r"<32 x i32> (%[-.a-zA-Z0-9]+), <32 x i32> (%[-.a-zA-Z0-9]+)"
+        r"[^)\n]*\)", ir, re.M)
+    expected_operations = Counter({
+        ("25", "0"): 2,
+        ("17", "0"): 2,
+        ("25", "1"): 1,
+        ("25", "2"): 2,
+        ("17", "3"): 2,
+        ("25", "5"): 1,
+        ("25", "7"): 1,
+        ("25", "9"): 1,
+    })
+    if Counter((dtype, op) for _, dtype, op, _, _ in calls) != expected_operations:
         raise CheckError("signed expression IR lost exact operation dtype/shape")
     operations = {result: (dtype, op, lhs, rhs) for result, dtype, op, lhs, rhs in calls}
     proves_remainder = False
     for _, dtype, op, lhs, rhs in calls:
-        if dtype != "17" or op != "1" or rhs not in operations:
+        if dtype != "25" or op != "1" or rhs not in operations:
             continue
-        _, multiply, quotient, divisor = operations[rhs]
-        if multiply != "2" or quotient not in operations:
+        mdtype, multiply, quotient, divisor = operations[rhs]
+        if mdtype != "25" or multiply != "2" or quotient not in operations:
             continue
         qdtype, divide, dividend, qdivisor = operations[quotient]
         proves_remainder |= (qdtype == "17" and divide == "3" and
@@ -655,10 +692,11 @@ def main() -> int:
                              text.replace(site, site + "\n" + site.replace("S32", "U32"), 1),
                              args.case, ir_text)
                 rejected("unsigned division", text.replace("TDIV, S32", "TDIV, U32", 1), args.case, ir_text)
-                rejected("direct floor TREM", text.replace("TSUB, S32", "TREM, S32", 1), args.case, ir_text)
+                rejected("direct floor TREM", text.replace("TSUB, U32", "TREM, U32", 1), args.case, ir_text)
                 rejected("wrong shift dtype", text.replace("TSHR, U32", "TSHR, S32", 1), args.case, ir_text)
                 rejected("wrong remainder dataflow", text, args.case,
-                         re.sub(r"(i64 17, i64 29, )i64 1,", r"\1i64 0,", ir_text or "", count=1))
+                         re.sub(r"(i64 32, i64 1, i64 25, i64 29, i64 )1,",
+                                r"\g<1>0,", ir_text or "", count=1))
                 print(f"{args.case}: disassembly check PASS")
                 return 0
             if args.case == "indexed_gather_tile_element":
@@ -745,8 +783,12 @@ def main() -> int:
                                   ir_text or "")) == 12:
                     rejected(
                         "incorrect optimized unary constant", text, args.case,
-                        (ir_text or "").replace("i64 4294967295, i64 0",
-                                                "i64 4294967294, i64 0"),
+                        ((ir_text or "").replace("freeze i32 -1",
+                                                 "freeze i32 -2", 1)
+                         if "freeze i32 -1" in (ir_text or "")
+                         else (ir_text or "").replace(
+                             "i64 4294967295, i64 0",
+                             "i64 4294967294, i64 0", 1)),
                     )
                     unary_calls = list(re.finditer(
                         r"call <32 x i32> @llvm\.linx\.experimental\.ew\.tbinary[^\n]*",

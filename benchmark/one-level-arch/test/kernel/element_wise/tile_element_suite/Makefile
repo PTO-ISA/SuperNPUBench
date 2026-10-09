@@ -45,7 +45,8 @@ TARGET = $(ELF_DIR)/$(TESTCASE).elf
 DEFINES += -DSUPERNPUBENCH_LINX_TILE_SIZE -DLINX_ELEMENTWISE_AVAILABLE
 CC_OPTS += $(TARGET_FLAGS) -fno-vectorize -fno-slp-vectorize \
 	-Werror=unknown-pragmas
-ifneq ($(filter generic_predicated_cfg_i32 generic_typed_tile_cfg_i32,$(TESTCASE)),)
+ifneq ($(filter element_expression_chain signed_element_expression \
+	generic_predicated_cfg_i32 generic_typed_tile_cfg_i32,$(TESTCASE)),)
 CC_OPTS += -mllvm -linxv5-enable-generic-element=true
 endif
 CC_LINK += $(TARGET_FLAGS) -fuse-ld=lld
