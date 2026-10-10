@@ -9,6 +9,9 @@ default_cases=(
     generic_predicated_cfg_i32
     generic_typed_tile_cfg_i32
     generic_atomic_cfg_i32
+    elementwise_atomic_histogram
+    concat_gather_s32_original
+    concat_gather_s32_alias_probe
     topk_boundaries_0
     topk_boundaries_1
     topk_boundaries_2
@@ -20,12 +23,14 @@ if (( $# == 0 )); then
 elif (( $# == 2 )) && [[ $1 == --case ]] && \
      [[ $2 == indexed_gather_tile_element || $2 == histogram_tile_element || \
         $2 == selected_radix_tile_element || $2 == generic_atomic_cfg_i32 || \
+        $2 == elementwise_atomic_histogram || $2 == concat_gather_s32_original || \
+        $2 == concat_gather_s32_alias_probe || \
         $2 == element_expression_chain || $2 == signed_element_expression || \
         $2 == generic_predicated_cfg_i32 || $2 == generic_typed_tile_cfg_i32 || \
         $2 == topk_boundaries* ]]; then
     cases=("$2")
 else
-    echo "usage: $0 [--case histogram_tile_element|selected_radix_tile_element|indexed_gather_tile_element|element_expression_chain|signed_element_expression|generic_predicated_cfg_i32|generic_typed_tile_cfg_i32|generic_atomic_cfg_i32|topk_boundaries[_0|_1|_2]]" >&2
+    echo "usage: $0 [--case histogram_tile_element|selected_radix_tile_element|indexed_gather_tile_element|element_expression_chain|signed_element_expression|generic_predicated_cfg_i32|generic_typed_tile_cfg_i32|generic_atomic_cfg_i32|elementwise_atomic_histogram|concat_gather_s32_original|concat_gather_s32_alias_probe|topk_boundaries[_0|_1|_2]]" >&2
     exit 2
 fi
 
@@ -114,6 +119,9 @@ run_case() {
           "$case_name" == generic_predicated_cfg_i32 ||
           "$case_name" == generic_typed_tile_cfg_i32 ||
           "$case_name" == generic_atomic_cfg_i32 ||
+          "$case_name" == elementwise_atomic_histogram ||
+          "$case_name" == concat_gather_s32_original ||
+          "$case_name" == concat_gather_s32_alias_probe ||
           "$case_name" == histogram_tile_element ||
           "$case_name" == selected_radix_tile_element ||
           "$case_name" == element_expression_chain || \
@@ -135,6 +143,9 @@ run_case() {
           "$case_name" == generic_predicated_cfg_i32 ||
           "$case_name" == generic_typed_tile_cfg_i32 ||
           "$case_name" == generic_atomic_cfg_i32 ||
+          "$case_name" == elementwise_atomic_histogram ||
+          "$case_name" == concat_gather_s32_original ||
+          "$case_name" == concat_gather_s32_alias_probe ||
           "$case_name" == histogram_tile_element ||
           "$case_name" == selected_radix_tile_element ||
           "$case_name" == element_expression_chain || \

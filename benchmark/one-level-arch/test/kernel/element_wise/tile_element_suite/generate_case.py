@@ -88,13 +88,87 @@ def main() -> int:
         "histogram_tile_element", "selected_radix_tile_element",
         "element_expression_chain", "signed_element_expression", "indexed_gather_tile_element",
         "generic_predicated_cfg_i32", "generic_typed_tile_cfg_i32",
-        "generic_atomic_cfg_i32",
+        "generic_atomic_cfg_i32", "elementwise_atomic_histogram", "concat_gather_s32_original",
+        "concat_gather_s32_alias_probe",
         "topk_boundaries", "topk_boundaries_0", "topk_boundaries_1",
         "topk_boundaries_2",
     ))
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.case in ("concat_gather_s32_original", "concat_gather_s32_alias_probe"):
+        input_count, rows, columns, tensors = 128000, 64, 2, 1000
+        alias = args.case == "concat_gather_s32_alias_probe"
+        output_count = 512 if alias else 128000
+        guard = 0x5A5A6B6B
+        original = [(element * 104729 + 12345) & 0x7FFFFFFF
+                    for element in range(input_count)]
+        # Independent reference concatenates each tensor's two-value row;
+        # it does not reuse the kernel's flattened inverse-index expression.
+        concatenated = []
+        for row in range(rows):
+            for tensor in range(tensors):
+                start = tensor * rows * columns + row * columns
+                concatenated.extend(original[start:start + columns])
+        actual_input = original.copy()
+        if alias:
+            # One full512 snapshot is taken before any overlapping output.
+            actual_input[2049:2049 + 512] = concatenated[:512]
+            output = [guard] * (output_count + 32)
+        else:
+            output = [guard] * 16 + concatenated + [guard] * 16
+        prefix = "concat_gather_s32_original_"
+        data = {
+            "input": actual_input,
+            "output": output,
+            "status": [0, 0, 0, 0, 0, input_count, output_count,
+                       512, 64, 2, 2000, 0x43475332],
+        }
+        segments = []
+        for name, values in data.items():
+            filename = name + ".bin"
+            write_u32(args.out / filename, values)
+            segments.append({"symbol": prefix + name, "kind": "exact",
+                             "file": filename})
+        for name, shape in (("in_shape", [64, 2] + [0] * 6),
+                            ("out_shape", [64, 2000] + [0] * 6)):
+            filename = name + ".bin"
+            (args.out / filename).write_bytes(struct.pack("<8Q", *shape))
+            segments.append({"symbol": prefix + name, "kind": "exact",
+                             "file": filename})
+        (args.out / "manifest.json").write_text(json.dumps({
+            "case": args.case, "input_count": input_count,
+            "output_count": output_count, "logical_batch": 512,
+            "alias_offset": 2049 if alias else None, "segments": segments,
+        }, indent=2) + "\n")
+        return 0
+
+    if args.case == "elementwise_atomic_histogram":
+        # Original smoke:128 signed values of1, eight repeated bins,
+        # byte masks all1. All atomic parts complete before readonly gathers.
+        prefix = "elementwise_atomic_histogram_"
+        data = {
+            "values": [1] * 128,
+            "indices": [element % 8 for element in range(128)],
+            "bins": [16] * 8,
+            "observed": [16] * 128,
+            "status": [128, 8, 0, 128, 2048, 128, 4, 0x41544853],
+        }
+        segments = []
+        for name, values in data.items():
+            filename = name + ".bin"
+            write_u32(args.out / filename, values)
+            segments.append({"symbol": prefix + name, "kind": "exact",
+                             "file": filename})
+        (args.out / "active.bin").write_bytes(bytes([1]) * 128)
+        segments.append({"symbol": prefix + "active", "kind": "exact",
+                         "file": "active.bin"})
+        (args.out / "manifest.json").write_text(json.dumps({
+            "case": args.case, "count": 128, "bins": 8,
+            "segments": segments,
+        }, indent=2) + "\n")
+        return 0
 
     if args.case == "generic_atomic_cfg_i32":
         elements = 128

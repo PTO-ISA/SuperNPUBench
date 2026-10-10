@@ -627,7 +627,75 @@ def validate_generic_atomic(text: str, ir_text: str | None) -> None:
         raise CheckError("nested atomic CFG lost element/tail/poison predicates")
 
 
+def validate_original_atomic(text: str, ir_text: str | None) -> None:
+    if ir_text is None:
+        raise CheckError("original atomic histogram requires LLVM IR evidence")
+    body = function_body(text, "elementwise_atomic_histogram")
+    ir = ir_function_body(ir_text, "elementwise_atomic_histogram")
+    if re.search(r"atomicrmw|extractelement|insertelement|llvm\.vp\.|"
+                 r"llvm\.linx\.experimental\.element\.(region|view)", ir):
+        raise CheckError("original atomic histogram has residual lowering")
+    atomics = re.findall(r"call <32 x i32> @llvm\.linx\.experimental\.ew\.mgather\.add\.masked[^\n]*", ir)
+    reads = re.findall(r"call <32 x i32> @llvm\.linx\.experimental\.ew\.mgather\.gpr\.masked[^\n]*", ir)
+    offsets = re.findall(r"call <32 x i64> @llvm\.linx\.experimental\.ew\.tlea[^\n]*", ir)
+    if len(atomics) != 1 or len(reads) != 1 or len(offsets) != 2:
+        raise CheckError("original histogram lost its two ordered memory phases")
+    if ir.index(atomics[0]) >= ir.index(reads[0]):
+        raise CheckError("histogram gather precedes atomic phase")
+    if not all("i64 17, i64 29, <32 x i32>" in c and c.endswith("i64 32)") for c in offsets):
+        raise CheckError("original signed B32 indices must produce B64 byte offsets")
+    if not atomics[0].endswith("i64 0, i64 0, i64 1)") or not reads[0].endswith("i64 0, i64 0, i64 1)"):
+        raise CheckError("original histogram lost defined inactive memory results")
+    if len(re.findall(r"BSTART\.TLSU\s+MGATHER\.ADD, U32", body)) != 1:
+        raise CheckError("original histogram needs native atomic addition")
+    if len(re.findall(r"BSTART\.TLSU\s+MGATHER, U32", body)) != 1:
+        raise CheckError("original histogram needs native indexed gather")
+    native = "\n".join(instruction_lines(body))
+    memory_bundles = re.findall(r"BSTART\.TLSU\s+MGATHER(?:\.ADD)?, U32.*?(?=BSTART|$)", native, re.S)
+    if len(memory_bundles) != 2 or not all("ExecMaskPresent" in b for b in memory_bundles):
+        raise CheckError("both original memory phases require execution masks")
+    if len(re.findall(r"BSTART\.TEPL\s+TLEA, S32", native)) != 2:
+        raise CheckError("original histogram lost signed B32 native addressing")
+    if not all(op in body for op in ("TLOAD", "B.SUBVIEW", "TSTORE")):
+        raise CheckError("original histogram lost official Tile transport")
+
+
+def validate_concat_original(text: str, ir_text: str | None) -> None:
+    if ir_text is None:
+        raise CheckError("original concat requires LLVM IR evidence")
+    body = function_body(text, "concat_gather")
+    ir = ir_function_body(ir_text, "concat_gather")
+    if re.search(r"extractelement|insertelement|freeze <32 x|llvm\.vp\.|"
+                 r"llvm\.linx\.experimental\.element\.(region|view)", ir):
+        raise CheckError("concat contains residual generic lowering")
+    reads = re.findall(r"call <32 x i32> @llvm\.linx\.experimental\.ew\.mgather\.gpr\.masked[^\n]*", ir)
+    offsets = re.findall(r"call <32 x i64> @llvm\.linx\.experimental\.ew\.tlea[^\n]*", ir)
+    if len(reads) != 1 or len(offsets) != 1 or "i64 25, i64 29, <32 x i32>" not in offsets[0]:
+        raise CheckError("concat needs a native B32-indexed readonly gather")
+    if not offsets[0].endswith("i64 32)") or not reads[0].endswith("i64 0, i64 0, i64 1)"):
+        raise CheckError("concat lost B64 byte offsets or defined memory results")
+    if not re.search(r"<512 x i32>[^\n]*i64 64, i32 17, i32 16, i32 32", ir):
+        raise CheckError("concat lost its whole 512-element S32 store")
+    native = "\n".join(instruction_lines(body))
+    if len(re.findall(r"BSTART\.TLSU\s+MGATHER, U32", native)) != 1:
+        raise CheckError("concat lost its indexed read")
+    if len(re.findall(r"BSTART\.TLSU\s+TSTORE, S32", native)) != 1:
+        raise CheckError("concat must publish one complete batch")
+    if "M322ND" not in native or "B.ASSEMBLE" not in native:
+        raise CheckError("concat lost zero-copy assembly or parent transport")
+    if not re.search(r"B\.ASSEMBLE\s+1, 0,", native) or not re.search(r"B\.ASSEMBLE\s+0, 1,", native):
+        raise CheckError("concat lost INIT/LAST publication")
+    if "<2KB>" not in native:
+        raise CheckError("concat parent allocation no longer preserves 512 elements")
+
+
 def validate(text: str, case: str, ir_text: str | None = None) -> None:
+    if case in ("concat_gather_s32_original", "concat_gather_s32_alias_probe"):
+        validate_concat_original(text, ir_text)
+        return
+    if case == "elementwise_atomic_histogram":
+        validate_original_atomic(text, ir_text)
+        return
     if case == "generic_typed_tile_cfg_i32":
         validate_generic_typed_tile_cfg(text, ir_text)
         return
@@ -742,9 +810,20 @@ def main() -> int:
     try:
         validate(text, args.case, ir_text)
         if args.self_test:
+            if args.case in ("concat_gather_s32_original", "concat_gather_s32_alias_probe"):
+                rejected("missing assembly completion", text.replace("B.ASSEMBLE", "B.ASSEMBLE_REMOVED"), args.case, ir_text)
+                rejected("shrunk logical batch", text.replace("<2KB>", "<128B>"), args.case, ir_text)
+                rejected("wrong byte-offset dtype", text, args.case,
+                         (ir_text or "").replace("call <32 x i64> @llvm.linx.experimental.ew.tlea", "call <32 x i32> @llvm.linx.experimental.ew.tlea", 1))
+                for marker in ("region", "view"):
+                    rejected("residual element " + marker, text, args.case,
+                             re.sub(r"(define[^\n]*concat_gather[^\n]*\n)",
+                                    rf"\1  call void @llvm.linx.experimental.element.{marker}()\n", ir_text or "", count=1))
+                print(f"{args.case}: disassembly check PASS")
+                return 0
             is_topk = (args.case == "topk_boundaries" or
                        args.case.startswith("topk_boundaries_"))
-            if args.case in ("element_expression_chain", "signed_element_expression", "indexed_gather_tile_element", "generic_predicated_cfg_i32", "generic_typed_tile_cfg_i32", "generic_atomic_cfg_i32", "histogram_tile_element", "selected_radix_tile_element"):
+            if args.case in ("element_expression_chain", "signed_element_expression", "indexed_gather_tile_element", "generic_predicated_cfg_i32", "generic_typed_tile_cfg_i32", "generic_atomic_cfg_i32", "histogram_tile_element", "selected_radix_tile_element", "elementwise_atomic_histogram"):
                 for marker in ("region", "view"):
                     rejected(
                         f"residual element {marker} contract",
@@ -757,6 +836,13 @@ def main() -> int:
                             count=1,
                         ),
                     )
+            if args.case == "elementwise_atomic_histogram":
+                rejected("missing atomic effect", text.replace("MGATHER.ADD, U32", "MGATHER, U32", 1), args.case, ir_text)
+                rejected("missing memory masks", text.replace("ExecMaskPresent", "NoExecMask"), args.case, ir_text)
+                rejected("wrong index signedness", text.replace("TLEA, S32", "TLEA, U32", 1), args.case,
+                         (ir_text or "").replace("i64 17, i64 29, <32 x i32>", "i64 25, i64 29, <32 x i32>", 1))
+                print(f"{args.case}: disassembly check PASS")
+                return 0
             if args.case == "generic_atomic_cfg_i32":
                 rejected(
                     "missing one atomic execution mask",

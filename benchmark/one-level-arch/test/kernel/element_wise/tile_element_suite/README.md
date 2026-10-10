@@ -115,6 +115,23 @@ Both diagnostic output arrays preserve logical input element order, so
 `output[element]` always describes `input[element]`; application indexing does
 not expose a physical partition mapping.
 
+The suite also compiles the original
+[`elementwise_atomic_histogram.cpp`](../../../solution/tileop-test/vec/src/elementwise_atomic_histogram.cpp)
+with its 128 S32 values, eight bins and original byte mask input. Four logical
+parts complete their atomic updates before four readonly gather parts observe
+the final bins. Official TileOps surround ordinary marked element expressions;
+six independent memory segments include the previously unobserved gather result.
+The original vec Makefile forwards this case to the same compiler lane.
+
+[`concat_gather_s32_original.cpp`](concat_gather_s32_original.cpp) calls the
+actual concat template with its original 128000-element S32 configuration and
+512-element batches. Sixteen logical parts perform ordinary indexed reads,
+then existing `TCVT`/`TASSEMBLY` publish one whole-batch `TSTORE`. The independent
+golden concatenates each input tensor's rows. An additional alias fixture writes
+one batch into `input + 2049` and checks the complete input plus an untouched
+sentinel buffer; it detects writes that precede the complete batch snapshot.
+This closes neither the FP16 concat configuration nor concat scatter.
+
 [`topk_boundaries.cpp`](topk_boundaries.cpp) invokes the actual `topk16`
 kernel across empty input, K=0/1/N/>N, counts around 32- and 128-element
 boundaries, cutoff ties, and all-equal keys. It uses fixed native arrays and
@@ -161,7 +178,7 @@ bash verification/run_tile_element_suite.sh
 
 The script first installs the selected public API branch into the isolated
 resource directory with its official `make install` target. It then builds
-twelve ELFs: eight standalone kernels, one required unsharded 17-call Top-K
+fifteen ELFs: eleven standalone configurations, one required unsharded 17-call Top-K
 boundary benchmark, and three focused shards of that boundary table. Histogram
 and selected radix each contain one U32 `TLEA` and one masked `MGATHER.ADD`.
 The generic atomic ELF contains one shared S32 B32-to-B64 `TLEA` stream and
