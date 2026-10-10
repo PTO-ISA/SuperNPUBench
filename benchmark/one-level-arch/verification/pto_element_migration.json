@@ -383,7 +383,7 @@
       "id": "element_atomic_topk",
       "source": "benchmark/one-level-arch/kernels/single_thread/sort/element_atomic_topk.hpp",
       "access_kind": "atomic_histogram_topk",
-      "status": "pending",
+      "status": "verified_profile",
       "requirements": [
         "canonical_pto_element_for",
         "logical_element_arrays",
@@ -394,13 +394,49 @@
         "same_elf_gfsim",
         "zero_model_invariants"
       ],
-      "evidence": null
+      "evidence": {
+        "compiler": "482b4207e88adf312fd1b1a8a567b83f5a4e207b",
+        "benchmark": "9076bd082544e273cdb93f39675df42510d8c071",
+        "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+        "model": "8e8d8ac7b1becc8937e77989c2762139f946b8af",
+        "artifact": "element_atomic_topk/20261010-element-atomic-topk-integrated",
+        "elf_sha256": "81b23b4afd4c95bb8781a7886f614de6983b58dc41d1e1472a5a9ca2831a5a2e",
+        "content_id": "d99f460053725969727b4fc1d1d93988c7285addd700a04c45a85194a8c495e6",
+        "golden_segments_per_model": 9,
+        "gfsim_queue_created": 11050,
+        "gfsim_queue_destroyed": 11050,
+        "gfsim_a3": 0,
+        "source_sha256": "bfa433749e6ebc79bf868701fb24fc1ce0d39070369848bc4dcb26307b4e1449",
+        "boundary_cases": {
+          "topk_boundaries_0": "d9d4dca1fcba7b71fe1267ecf44bfd9eaa6ffee46837fb3f9dec031e9738a904",
+          "topk_boundaries_1": "5b9522a00613f8b26bc26560403fbf1c9cacd7f62fc237cdb2fa72c96e6dec99",
+          "topk_boundaries_2": "0a6bd65dd806c12ece45ec606b2dd9aead499f8c76e4d9519fed2cd38c4eb902",
+          "topk_boundaries": "5c8eac46334e8d4e76540c59280ced313e2d90ae84e50eb6cc43e4dcb16cfe7b"
+        }
+      },
+      "validated_profile": {
+        "value_dtype": "U32",
+        "element_index_dtype": "U32",
+        "byte_offset_dtype": "U64",
+        "part_elements": 32,
+        "execution": "generic CFG/LLVM SSA; same ELF on gfrun/gfsim with independent goldens",
+        "input_elements": 777,
+        "requested_k": 37,
+        "boundaries": "17 calls, three shard ELFs and one unsharded shared-workspace ELF",
+        "coherence_probe": [
+          0,
+          9,
+          10,
+          0
+        ]
+      },
+      "closure_scope": "Only the recorded source/configurations; does not close other inventory entries or multithread wrappers."
     },
     {
       "id": "histogram_tile_element",
       "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/histogram_tile_element.cpp",
       "access_kind": "atomic_histogram",
-      "status": "pending",
+      "status": "verified_profile",
       "requirements": [
         "canonical_pto_element_for",
         "logical_element_arrays",
@@ -411,13 +447,36 @@
         "same_elf_gfsim",
         "zero_model_invariants"
       ],
-      "evidence": null
+      "evidence": {
+        "compiler": "482b4207e88adf312fd1b1a8a567b83f5a4e207b",
+        "benchmark": "9076bd082544e273cdb93f39675df42510d8c071",
+        "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+        "model": "8e8d8ac7b1becc8937e77989c2762139f946b8af",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/histogram_tile_element",
+        "elf_sha256": "642fbfa222d41e1c25224ac5f1f8591ceaca6a97d9f92444c14e0e29ae1dd7a6",
+        "content_id": "5c0e29b4f01c25e2e29d2610d1d43ccb6606ebc2fdb8bdbeff260bcf6f96b089",
+        "golden_segments_per_model": 4,
+        "gfsim_queue_created": 1310,
+        "gfsim_queue_destroyed": 1310,
+        "gfsim_a3": 0,
+        "source_sha256": "e278a922e6b6393e486b0ebc09265ca25b45f4116e5463e9c9941ec83cf4081b"
+      },
+      "validated_profile": {
+        "value_dtype": "U32",
+        "element_index_dtype": "U32",
+        "byte_offset_dtype": "U64",
+        "part_elements": 32,
+        "execution": "generic CFG/LLVM SSA; same ELF on gfrun/gfsim with independent goldens",
+        "input_elements": 263,
+        "histogram_bins": 256
+      },
+      "closure_scope": "Only the recorded source/configurations; does not close other inventory entries or multithread wrappers."
     },
     {
       "id": "selected_radix_tile_element",
       "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/selected_radix_tile_element.cpp",
       "access_kind": "conditional_atomic_histogram",
-      "status": "pending",
+      "status": "verified_profile",
       "requirements": [
         "canonical_pto_element_for",
         "logical_element_arrays",
@@ -428,7 +487,30 @@
         "same_elf_gfsim",
         "zero_model_invariants"
       ],
-      "evidence": null
+      "evidence": {
+        "compiler": "482b4207e88adf312fd1b1a8a567b83f5a4e207b",
+        "benchmark": "9076bd082544e273cdb93f39675df42510d8c071",
+        "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+        "model": "8e8d8ac7b1becc8937e77989c2762139f946b8af",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/selected_radix_tile_element",
+        "elf_sha256": "b7e4636a01ee7508933ea440034b3fe397fedba125bd866a3ad50996a838ee1e",
+        "content_id": "d561e8e3b59c8249fbafe16070642497d5ba33b3320c0ea127b0a8daa3b638a5",
+        "golden_segments_per_model": 4,
+        "gfsim_queue_created": 1449,
+        "gfsim_queue_destroyed": 1449,
+        "gfsim_a3": 0,
+        "source_sha256": "95d5cd6065c58abb46f501ca54dd31a68ae25c3067d5b6669af0890743fa6ae1"
+      },
+      "validated_profile": {
+        "value_dtype": "U32",
+        "element_index_dtype": "U32",
+        "byte_offset_dtype": "U64",
+        "part_elements": 32,
+        "execution": "generic CFG/LLVM SSA; same ELF on gfrun/gfsim with independent goldens",
+        "input_elements": 263,
+        "histogram_bins": 256
+      },
+      "closure_scope": "Only the recorded source/configurations; does not close other inventory entries or multithread wrappers."
     },
     {
       "id": "elementwise_if_for",
@@ -598,5 +680,98 @@
       "gfsim_queue_destroyed": 1593
     }
   },
-  "compiler_architecture_status": "P1a arithmetic and P1b zero-inactive gather use required normal C++ CFG/SSA LLVM region passes, with AA/MemorySSA and negative tests. Exact-head dual-model goldens pass. P2 atomic/predicate profile is in development; marked S32/F32, general select/cast/scatter and all21 applications remain open."
+  "compiler_architecture_status": "Generic CFG/LLVM SSA supports 32-element S32/U32 physical carriers, nested if/continue and edge-mask PHIs, official TileOp -> element -> TileOp views, B32 indices -> B64 byte offsets, readonly indexed i32 gather, proven injective ordinary i32 scatter, and nonvolatile aligned System/Monotonic i32 atomic add. Exact verified profiles are recorded independently; varying inner loops, FP32/FP16 or wider physical carriers, O0 typed spills and remaining original workloads/wrappers are pending.",
+  "generic_cfg_verified_profiles": {
+    "compiler": "482b4207e88adf312fd1b1a8a567b83f5a4e207b",
+    "benchmark": "9076bd082544e273cdb93f39675df42510d8c071",
+    "model": "8e8d8ac7b1becc8937e77989c2762139f946b8af",
+    "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+    "suite_hash_count": 323,
+    "cases": {
+      "element_expression_chain": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/element_expression_chain.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/element_expression_chain",
+        "elf_sha256": "5ed7a6b5e4f84c7936894efaa8617666606d4fe5b0c4da113f7efb31b1457843",
+        "content_id": "6c47dc7d111d4e9343905ab6df54561469eec6149fd18d4f237042061c6847fa",
+        "does_not_close_other_application_entries": true
+      },
+      "generic_atomic_cfg_i32": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/generic_atomic_cfg_i32.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/generic_atomic_cfg_i32",
+        "elf_sha256": "f977d9449c3019e52ff7e2ec571635d90794b635ab5bdc42792abdbbc95a2284",
+        "content_id": "82467f808819191bdbba5948d28c3a0627ec8eaec4c11e73ee9eed488a6d382e",
+        "does_not_close_other_application_entries": true
+      },
+      "generic_predicated_cfg_i32": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/generic_predicated_cfg_i32.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/generic_predicated_cfg_i32",
+        "elf_sha256": "b32275a42db8905426ff89db6a459970d690f261ae6c99052147806dd91264bc",
+        "content_id": "6371bdc35b3a27f78eb931d645ec1ca919a718bb234edeae79b83448db9ca200",
+        "does_not_close_other_application_entries": true
+      },
+      "generic_typed_tile_cfg_i32": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/generic_typed_tile_cfg_i32.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/generic_typed_tile_cfg_i32",
+        "elf_sha256": "b393875549d395d292e27157afca1b5718765732084027abd702890d80e150f4",
+        "content_id": "d32a036ec61792f9415c5c590f52a7925b40244563bf14d30d118c240eeaa90d",
+        "does_not_close_other_application_entries": true
+      },
+      "histogram_tile_element": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/histogram_tile_element.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/histogram_tile_element",
+        "elf_sha256": "642fbfa222d41e1c25224ac5f1f8591ceaca6a97d9f92444c14e0e29ae1dd7a6",
+        "content_id": "5c0e29b4f01c25e2e29d2610d1d43ccb6606ebc2fdb8bdbeff260bcf6f96b089",
+        "does_not_close_other_application_entries": true
+      },
+      "indexed_gather_tile_element": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/indexed_gather_tile_element.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/indexed_gather_tile_element",
+        "elf_sha256": "982647be20c960ff8d015a82dbcd469cc8224ccfc31bed76971a33050307b379",
+        "content_id": "00cb25db5556866c9aef98080c786d2242ef7151f28277c2a2737f172edaba33",
+        "does_not_close_other_application_entries": true
+      },
+      "selected_radix_tile_element": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/selected_radix_tile_element.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/selected_radix_tile_element",
+        "elf_sha256": "b7e4636a01ee7508933ea440034b3fe397fedba125bd866a3ad50996a838ee1e",
+        "content_id": "d561e8e3b59c8249fbafe16070642497d5ba33b3320c0ea127b0a8daa3b638a5",
+        "does_not_close_other_application_entries": true
+      },
+      "signed_element_expression": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/signed_element_expression.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/signed_element_expression",
+        "elf_sha256": "8c2ade3e174c1de4fa45203d30da122f0455a2ea61a186b86a2e16079d6e7ea9",
+        "content_id": "9d9f177e07abb2c1e46fce0fef7ae494924bc456ab4398fc84d825b233af2a9d",
+        "does_not_close_other_application_entries": true
+      },
+      "topk_boundaries": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/topk_boundaries.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/topk_boundaries",
+        "elf_sha256": "5c8eac46334e8d4e76540c59280ced313e2d90ae84e50eb6cc43e4dcb16cfe7b",
+        "content_id": "70a3898e1e1ada20590b68df3a5d0bebc3f56b7ad56dbc0a969ca0421b5490ed",
+        "does_not_close_other_application_entries": true
+      },
+      "topk_boundaries_0": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/topk_boundaries.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/topk_boundaries_0",
+        "elf_sha256": "d9d4dca1fcba7b71fe1267ecf44bfd9eaa6ffee46837fb3f9dec031e9738a904",
+        "content_id": "1e2fbed0eaf566714079dece10e62e1890b84febc125cecf9c8e08304a647be4",
+        "does_not_close_other_application_entries": true
+      },
+      "topk_boundaries_1": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/topk_boundaries.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/topk_boundaries_1",
+        "elf_sha256": "5b9522a00613f8b26bc26560403fbf1c9cacd7f62fc237cdb2fa72c96e6dec99",
+        "content_id": "d1dcfd9e37f8d5669fc83e9a556f86b142483740724809863c717fba27783d0f",
+        "does_not_close_other_application_entries": true
+      },
+      "topk_boundaries_2": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/topk_boundaries.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/topk_boundaries_2",
+        "elf_sha256": "0a6bd65dd806c12ece45ec606b2dd9aead499f8c76e4d9519fed2cd38c4eb902",
+        "content_id": "f6b02ea99617b042ac73d598443deb5ad096f98acaa75072ea6c0a093af03f1c",
+        "does_not_close_other_application_entries": true
+      }
+    }
+  }
 }
