@@ -2,7 +2,7 @@
 #include <cstdint>
 #include "fileop.h"
 #include "multi_thread_res_check.h"  // 官方 4-PE 收尾协议（输入/输出屏障 + PE0 落盘）
-#include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp8.hpp"  // V2：Cube_M32 版
+#include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp8_V2-10101002.hpp"  // V2：Cube_M32 版（时间戳存档，canonical 头留给后续优化）
 using namespace supernpu::tile_isa::mxquant;
 
 // TAIL_OCP_FP8 bench_small 的 **V2（Cube_M32 布局）静态形状**版：[M=64, N=16384], BS=32,
