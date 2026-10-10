@@ -68,6 +68,9 @@ CONFIGS = [
     #   合入上游 main → 现与 V1 逐字节一致 PASS（曾在依赖未落地时预期 FAIL）。
     ("TAIL_OCP_FP8_BENCH_SMALL_V1_STATIC","tail_ocp_fp8_bench_small_V1_static",64,16384,32,"bf16","OCP","tail","FP8",4),
     ("TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC","tail_ocp_fp8_bench_small_V2_static",64,16384,32,"bf16","OCP","tail","FP8",4),
+    # ---- V3（优化版）：include canonical 头（优化落点），与 V1/V2 同规格同 golden 并列对比 ----
+    ("TAIL_OCP_FP8_BENCH_SMALL_V3_STATIC","tail_ocp_fp8_bench_small_V3_static",64,16384,32,"bf16","OCP","tail","FP8",4),
+    ("TAIL_OCP_FP8_BENCH_SMALL_V3_DYN","tail_ocp_fp8_bench_small_V3_dyn",64,16384,32,"bf16","OCP","tail","FP8",4),
 ]
 
 

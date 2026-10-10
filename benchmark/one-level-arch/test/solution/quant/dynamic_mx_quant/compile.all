@@ -58,6 +58,9 @@ CONFIGS=(
   "TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC:tail_ocp_fp8_bench_small_V2_static:64:16384:32:bf16:OCP:tail:FP8"
   "TAIL_OCP_FP8_BENCH_SMALL_V1_DYN:tail_ocp_fp8_bench_small_V1_dyn:64:16384:32:bf16:OCP:tail:FP8"
   "TAIL_OCP_FP8_BENCH_SMALL_V2_DYN:tail_ocp_fp8_bench_small_V2_dyn:64:16384:32:bf16:OCP:tail:FP8"
+  # ---- V3（优化版）：include canonical 头（优化落点），与 V1/V2 同规格同 golden 并列对比 ----
+  "TAIL_OCP_FP8_BENCH_SMALL_V3_STATIC:tail_ocp_fp8_bench_small_V3_static:64:16384:32:bf16:OCP:tail:FP8"
+  "TAIL_OCP_FP8_BENCH_SMALL_V3_DYN:tail_ocp_fp8_bench_small_V3_dyn:64:16384:32:bf16:OCP:tail:FP8"
   # ---- 完整网络基准（太大，默认注释；手动构建/验证）----
   #   make TESTCASE=dynamic_mx_quant TYPE=TAIL_OCP_FP4_BENCH res_check=on   # [15360,1536] ~47MB
   # "TAIL_OCP_FP4_BENCH:tail_ocp_fp4_bench:15360:1536:32:bf16:OCP:tail:FP4"

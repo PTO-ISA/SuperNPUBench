@@ -46,6 +46,18 @@ ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC)
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V2_static.elf
 endif
 
+# V3（优化版）静态形状 driver：include canonical 头（优化落点），同规格同 golden 与 V1/V2 并列。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V3_STATIC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V3_static.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V3_static.elf
+endif
+
+# V3（优化版）动态 shape driver：include canonical dyn 头（优化落点）。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V3_DYN)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V3_dyn.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V3_dyn.elf
+endif
+
 ifeq ($(TYPE), TAIL_OCP_FP4)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp4.cpp
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp4.elf
