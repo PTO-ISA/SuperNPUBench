@@ -452,15 +452,13 @@ static inline void rank_dstpos_tile(const int32_t* expertIds, int segBegin,
         TADD(idx, ids, zero);
         TSEL(idx, oob, zero);
         TSEL(idx, neg, zero);
-        TI1x32 idxB;
-        TSHLS(idxB, idx, 2u);
         TI1x32 carry;
         global_tensor<int32_t, RowMajor<1, MoeExpertNum>> gCnt(rankCnt);
-        MGATHER(carry, gCnt, idxB);
+        MGATHER(carry, gCnt, idx);
         TI1x32 starts;
         global_tensor<int32_t, RowMajor<1, MoeExpertNum>> gStarts(
             const_cast<int32_t*>(expertStarts));
-        MGATHER(starts, gStarts, idxB);
+        MGATHER(starts, gStarts, idx);
         TI1x32 pos;
         TADD(pos, starts, carry);
         TADD(pos, pos, rankRow);
@@ -544,15 +542,13 @@ static inline void rank_dstpos_tile(const int32_t* expertIds, int segBegin,
         TADD(idx, ids, zero);
         TSEL(idx, oob, zero);
         TSEL(idx, neg, zero);
-        TIRem idxB;
-        TSHLS(idxB, idx, 2u);
         TIRem carry;
         global_tensor<int32_t, RowMajor<1, MoeExpertNum>> gCnt(rankCnt);
-        MGATHER(carry, gCnt, idxB);
+        MGATHER(carry, gCnt, idx);
         TIRem starts;
         global_tensor<int32_t, RowMajor<1, MoeExpertNum>> gStarts(
             const_cast<int32_t*>(expertStarts));
-        MGATHER(starts, gStarts, idxB);
+        MGATHER(starts, gStarts, idx);
         TIRem pos;
         TADD(pos, starts, carry);
         TADD(pos, pos, rankRow);

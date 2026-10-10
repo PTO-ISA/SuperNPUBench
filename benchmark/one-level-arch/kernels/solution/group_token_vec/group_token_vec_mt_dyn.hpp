@@ -294,11 +294,9 @@ __attribute__((noinline)) static inline void gt_dyn_p2_rank_scatter(
     TLOAD(rankRow, gRankR);
     TSUBS(rankRow, rankRow, 1u);
 
-    TCol4 minIdx;
-    TSHLS(minIdx, minRow, 2u);
     global_tensor<uint32_t, RowMajor<1, kEprCap>> gCnt(sectionCnt);
     TCol4 base;
-    MGATHER(base, gCnt, minIdx);
+    MGATHER(base, gCnt, minRow);
     TCol4 minB;
     TMULS(minB, minRow, sectStride);
     TADDS(minB, minB, peBase);
@@ -307,12 +305,10 @@ __attribute__((noinline)) static inline void gt_dyn_p2_rank_scatter(
     TADD(offE, offE, rankRow);
     G4x1 gOffW(offEScratch);
     TSTORE(gOffW, offE);                  // GM 交接给 podinfo 分体
-    TCol4 offB;
-    TSHLS(offB, offE, 2u);
     TCol4 tok;
     TCI(tok, tokBase);
     GFlat gIds(groupedIds, static_cast<int>(idsLen), 1);
-    MSCATTER(gIds, tok, offB);
+    MSCATTER(gIds, tok, offE);
 }
 
 // P2-d: podInfo 散射 — poE = offE*superPodNum + p
@@ -332,9 +328,7 @@ __attribute__((noinline)) static inline void gt_dyn_p2_podinfo(
         TCol4 po;
         TMULS(po, offE2, superPodNum);
         TADDS(po, po, p);
-        TCol4 poB;
-        TSHLS(poB, po, 2u);
-        MSCATTER(gPodInfo, flagRow, poB);
+        MSCATTER(gPodInfo, flagRow, po);
     }
 }
 
@@ -418,19 +412,15 @@ __attribute__((noinline)) static inline void gt_dyn_p3b_scatter1(
     G1x32 gRankR(rankBuf);
     TLOAD(rankRow, gRankR);
     TSUBS(rankRow, rankRow, 1u);
-    T1x32 sIdx;
-    TSHLS(sIdx, sRow, 2u);
     global_tensor<uint32_t, RowMajor<1, kEprCap>> gWP(writePos);
     T1x32 base;
-    MGATHER(base, gWP, sIdx);
+    MGATHER(base, gWP, sRow);
     T1x32 pos;
     TADD(pos, base, rankRow);
-    T1x32 posB;
-    TSHLS(posB, pos, 2u);
     T1x32 tok;
     TCI(tok, tokBase);
     GFlat gSorted(sortedTokenIds, static_cast<int>(bsLen), 1);
-    MSCATTER(gSorted, tok, posB);
+    MSCATTER(gSorted, tok, pos);
 }
 
 // P3b-c: 单 tile writePos 进位 (计数链 + volatile RMW)

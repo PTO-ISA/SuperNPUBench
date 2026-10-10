@@ -386,16 +386,14 @@ void moe_dispatch_v2(
             TADD(idx, ids, zero);      // 预填 dst = ids (TSEL 假分支, [C7])
             TSEL(idx, oob, zero);      // eid >= E → 0
             TSEL(idx, neg, zero);      // eid < 0  → 0
-            TI1x32 idxB;
-            TSHLS(idxB, idx, 2u);      // 元素下标 → s32 字节位移
 
             TI1x32 carry;
             global_tensor<int32_t, RowMajor<1, MoeExpertNum>> gCnt(rankCnt);
-            MGATHER(carry, gCnt, idxB);
+            MGATHER(carry, gCnt, idx);
             TI1x32 starts;
             global_tensor<int32_t, RowMajor<1, MoeExpertNum>> gStarts(
                 const_cast<int32_t *>(expertStarts));
-            MGATHER(starts, gStarts, idxB);
+            MGATHER(starts, gStarts, idx);
             TI1x32 pos;
             TADD(pos, starts, carry);
             TADD(pos, pos, rankRow);
