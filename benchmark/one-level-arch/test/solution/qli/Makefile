@@ -33,7 +33,19 @@ ifeq ($(TESTCASE), qli_check_opt)
       DEFINES += -DQLI_DTYPE_FP8
       DT_TAG = _fp8
    endif
-   TARGET = $(ELF_HEAD)/$(TESTCASE)$(DT_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv)_g$(g)_Tm$(Tm)_Tk$(Tk).elf
+   # TopK 阶段精度（topk_tiled 引擎，4-PE 运行）：
+   #   fp32（默认，ELF 名不变）：四轮 FP32 key 字节，精确 FP32 top-k
+   #   fp16：单轮 FP16 key 低字节，FP16 舍入值的精确 top-k（ELF 名加 _fp16 后缀）
+   TOPK_PREC ?= fp32
+   ifeq ($(TOPK_PREC),fp16)
+      DEFINES += -DTOPK_TILED_FP32_REFINE=0
+      PREC_TAG = _fp16
+   else ifeq ($(TOPK_PREC),fp32)
+      PREC_TAG =
+   else
+      $(error Unsupported TOPK_PREC='$(TOPK_PREC)'; expected fp32 or fp16)
+   endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)$(DT_TAG)$(PREC_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv)_g$(g)_Tm$(Tm)_Tk$(Tk).elf
 endif
 
 ifeq ($(TESTCASE), qli_check_opt_dynamic)
