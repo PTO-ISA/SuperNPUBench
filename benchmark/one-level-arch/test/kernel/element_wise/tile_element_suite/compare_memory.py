@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import struct
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -147,6 +148,104 @@ def main() -> int:
             print(
                 f"{observation['symbol']}: PASS "
                 "(order-independent per-bin permutation)"
+            )
+        failures += observation_failures
+
+    for observation in (
+        item for item in segments if item["kind"] == "atomic_pair_trace_mod32"
+    ):
+        observation_failures = 0
+        mask32 = 0xFFFFFFFF
+        indices = list(struct.unpack(
+            f"<{len(segment_bytes(observation['index_symbol'])) // 4}i",
+            segment_bytes(observation["index_symbol"]),
+        ))
+        histogram = u32(segment_bytes(observation["histogram_symbol"]))
+        first_stored = u32(segment_bytes(observation["symbol"]))
+        second_stored = u32(segment_bytes(observation["second_symbol"]))
+        combined_stored = u32(segment_bytes(observation["combined_symbol"]))
+        initial = u32((args.golden / observation["initial_histogram_file"]).read_bytes())
+        first_adds = u32((args.golden / observation["first_add_file"]).read_bytes())
+        second_adds = u32((args.golden / observation["second_add_file"]).read_bytes())
+        valid = manifest["valid_count"]
+        count = manifest["count"]
+        center = manifest["center"]
+        first_old = [
+            (value - observation["first_post_add"]) & mask32
+            for value in first_stored
+        ]
+        second_old = [
+            (value - observation["second_post_add"]) & mask32
+            for value in second_stored
+        ]
+        combined = [
+            (value - observation["combined_post_add"]) & mask32
+            for value in combined_stored
+        ]
+
+        for element in range(valid):
+            expected_combined = (
+                first_old[element]
+                ^ ((second_old[element] + observation["combined_bias"]) & mask32)
+            )
+            if combined[element] != expected_combined:
+                print(
+                    f"{observation['combined_symbol']}: element {element} does not "
+                    "use both observed atomic old values"
+                )
+                observation_failures += 1
+        for element in range(valid, count):
+            if (first_stored[element] != observation["first_post_add"] or
+                    second_stored[element] != observation["second_post_add"] or
+                    combined_stored[element] != observation["combined_post_add"]):
+                print(
+                    f"{observation['symbol']}: inactive element {element} did not "
+                    "retain its seeded values"
+                )
+                observation_failures += 1
+                break
+
+        for bin_index in range(len(histogram)):
+            elements = [
+                element for element in range(valid)
+                if indices[element] + center == bin_index
+            ]
+            all_done = (1 << len(elements)) - 1
+
+            @lru_cache(maxsize=None)
+            def reachable(current: int, first_done: int, second_done: int) -> bool:
+                if second_done == all_done:
+                    return current == histogram[bin_index]
+                for local, element in enumerate(elements):
+                    bit = 1 << local
+                    if not first_done & bit and first_old[element] == current:
+                        if reachable(
+                            (current + first_adds[element]) & mask32,
+                            first_done | bit,
+                            second_done,
+                        ):
+                            return True
+                    if (first_done & bit and not second_done & bit and
+                            second_old[element] == current):
+                        if reachable(
+                            (current + second_adds[element]) & mask32,
+                            first_done,
+                            second_done | bit,
+                        ):
+                            return True
+                return False
+
+            if not reachable(initial[bin_index], 0, 0):
+                print(
+                    f"{observation['symbol']}: bin {bin_index} old values cannot "
+                    "form a modulo-2^32 atomic order that preserves each "
+                    "element's first-before-second dependency"
+                )
+                observation_failures += 1
+        if observation_failures == 0:
+            print(
+                f"{observation['symbol']}: PASS (order-independent paired "
+                "atomic trace modulo 2^32)"
             )
         failures += observation_failures
     return 0 if failures == 0 else 1

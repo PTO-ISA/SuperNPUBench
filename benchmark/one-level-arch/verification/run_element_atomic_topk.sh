@@ -63,6 +63,14 @@ make -C "$case_dir" TESTCASE=element_atomic_topk \
     clean all 2>&1 | tee "$artifact_dir/build.log"
 elf="$artifact_dir/element_atomic_topk.elf"
 cp "$built_elf" "$elf"
+ir="$artifact_dir/element_atomic_topk.ll"
+make -B -C "$case_dir" TESTCASE=element_atomic_topk \
+    COMPILER_DIR="$COMPILER_DIR" \
+    TARGET_TRIPLE="$TARGET_TRIPLE" \
+    SYSROOT="$SYSROOT" \
+    RESOURCE_DIR="$RESOURCE_DIR" \
+    API_INCLUDE="$API_INCLUDE" \
+    IR_TARGET="$ir" ir 2>&1 | tee "$artifact_dir/ir-build.log"
 "$COMPILER_DIR/llvm-objdump" -dl "$elf" > "$artifact_dir/element_atomic_topk.diss"
 "$COMPILER_DIR/llvm-objdump" -t "$elf" > "$artifact_dir/element_atomic_topk.symbols"
 dump_range=$(python3 "$case_dir/element_atomic_topk/compare_memory.py" \
@@ -100,7 +108,7 @@ trap write_final_provenance EXIT
 
 set +e
 python3 "$case_dir/element_atomic_topk/check_disassembly.py" \
-    --dis "$artifact_dir/element_atomic_topk.diss" --self-test \
+    --dis "$artifact_dir/element_atomic_topk.diss" --ir "$ir" --self-test \
     > >(tee "$artifact_dir/disassembly.log") 2>&1
 disassembly_status=$?
 set -e

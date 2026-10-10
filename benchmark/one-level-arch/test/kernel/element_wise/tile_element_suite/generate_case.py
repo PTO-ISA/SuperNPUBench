@@ -88,12 +88,125 @@ def main() -> int:
         "histogram_tile_element", "selected_radix_tile_element",
         "element_expression_chain", "signed_element_expression", "indexed_gather_tile_element",
         "generic_predicated_cfg_i32", "generic_typed_tile_cfg_i32",
+        "generic_atomic_cfg_i32",
         "topk_boundaries", "topk_boundaries_0", "topk_boundaries_1",
         "topk_boundaries_2",
     ))
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.case == "generic_atomic_cfg_i32":
+        elements = 128
+        valid_elements = 125
+        bins = 32
+        center = 16
+        mask32 = 0xFFFFFFFF
+        poison_seed = 0x6C8E9CF5
+
+        indices: list[int] = []
+        deltas: list[int] = []
+        first_adds: list[int] = []
+        second_adds: list[int] = []
+        for element in range(elements):
+            if element >= valid_elements:
+                indices.append(-0x80000000)
+                deltas.append(-0x80000000)
+                first_adds.append(0)
+                second_adds.append(0)
+                continue
+            index = (element * 5 + 3) % bins - center
+            delta = (element * 7 + 2) % 17 - 8
+            indices.append(index)
+            deltas.append(delta)
+            if index < 0:
+                if delta < 0:
+                    first_add, second_add = delta & mask32, 5
+                else:
+                    first_add, second_add = (delta + 2) & mask32, (-3) & mask32
+            elif index & 1 == 0:
+                first_add, second_add = (delta - 4) & mask32, 9
+            else:
+                first_add, second_add = (delta + 6) & mask32, (-7) & mask32
+            first_adds.append(first_add)
+            second_adds.append(second_add)
+
+        initial_histogram = [
+            (0x10203040 + bin_index * 0x101) & mask32
+            for bin_index in range(bins)
+        ]
+        histogram = initial_histogram.copy()
+        for element in range(valid_elements):
+            bin_index = indices[element] + center
+            histogram[bin_index] = (
+                histogram[bin_index] + first_adds[element]
+                + second_adds[element]
+            ) & mask32
+        poison = [poison_seed + 1] * elements
+        status = [
+            elements, valid_elements, 0, sum(histogram) & mask32,
+            sum(poison) & mask32, bins, 2, 0x41544D43,
+        ]
+
+        signed_files = {
+            "indices_s32.bin": indices,
+            "deltas_s32.bin": deltas,
+        }
+        for filename, values in signed_files.items():
+            (args.out / filename).write_bytes(
+                struct.pack(f"<{len(values)}i", *values)
+            )
+        unsigned_files = {
+            "gates_u32.bin": [0] * elements,
+            "initial_histogram_u32.bin": initial_histogram,
+            "histogram_u32.bin": histogram,
+            "first_adds_u32.bin": first_adds,
+            "second_adds_u32.bin": second_adds,
+            "poison_u32.bin": poison,
+            "status_u32.bin": status,
+        }
+        for filename, values in unsigned_files.items():
+            write_u32(args.out / filename, values)
+
+        manifest = {
+            "case": args.case,
+            "count": elements,
+            "valid_count": valid_elements,
+            "center": center,
+            "segments": [
+                {"symbol": "generic_atomic_cfg_i32_indices", "kind": "exact",
+                 "file": "indices_s32.bin"},
+                {"symbol": "generic_atomic_cfg_i32_deltas", "kind": "exact",
+                 "file": "deltas_s32.bin"},
+                {"symbol": "generic_atomic_cfg_i32_gates", "kind": "exact",
+                 "file": "gates_u32.bin"},
+                {"symbol": "generic_atomic_cfg_i32_histogram", "kind": "exact",
+                 "file": "histogram_u32.bin"},
+                {"symbol": "generic_atomic_cfg_i32_poison", "kind": "exact",
+                 "file": "poison_u32.bin"},
+                {"symbol": "generic_atomic_cfg_i32_status", "kind": "exact",
+                 "file": "status_u32.bin"},
+                {
+                    "symbol": "generic_atomic_cfg_i32_first",
+                    "kind": "atomic_pair_trace_mod32",
+                    "second_symbol": "generic_atomic_cfg_i32_second",
+                    "combined_symbol": "generic_atomic_cfg_i32_combined",
+                    "index_symbol": "generic_atomic_cfg_i32_indices",
+                    "histogram_symbol": "generic_atomic_cfg_i32_histogram",
+                    "initial_histogram_file": "initial_histogram_u32.bin",
+                    "first_add_file": "first_adds_u32.bin",
+                    "second_add_file": "second_adds_u32.bin",
+                    "first_post_add": 11,
+                    "second_post_add": 13,
+                    "combined_post_add": 17,
+                    "combined_bias": 0x13579BDF,
+                },
+            ],
+        }
+        (args.out / "manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        return 0
 
     if args.case == "generic_typed_tile_cfg_i32":
         element_count = 263

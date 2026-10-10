@@ -25,6 +25,7 @@ CC_OPTS += $(TLEA_TARGET_FLAGS)
 # explicit in the kernel; generic loop vectorization otherwise creates TMOV
 # carrier blocks that obscure the TLEA/atomic path in both models.
 CC_OPTS += -fno-vectorize -fno-slp-vectorize -Werror=unknown-pragmas
+CC_OPTS += -mllvm -linxv5-enable-generic-element=true
 CC_LINK += $(TLEA_TARGET_FLAGS) -fuse-ld=lld
 INCLUDE += -I$(API_INCLUDE)
 endif
@@ -65,3 +66,11 @@ TARGET = $(ELF_HEAD)_$(TESTCASE)_OPT.elf
 endif
 
 include ../../common/Makefile.common
+
+ir: pre_work
+	@test -n "$(IR_TARGET)" || \
+		(echo "IR_TARGET is required for the ir target" >&2; exit 1)
+	$(CXX) $(CXX_O_ALL) $(INCLUDE) $(DEFINES) -S -emit-llvm \
+		$(SRC_FILE) -o $(IR_TARGET)
+
+.PHONY: ir

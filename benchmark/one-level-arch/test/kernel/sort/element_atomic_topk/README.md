@@ -1,6 +1,6 @@
 # Element-wise atomic Top-K histogram
 
-This test covers the standard-C lowering path requested for TLEA. Input values
+This test covers the generic CFG lowering path requested for TLEA. Input values
 are carried as `uint32_t` but are restricted to the unsigned 16-bit key domain.
 The representation avoids an unrelated narrow-integer conversion dependency
 while keeping the two-level radix algorithm identical to a `uint16_t` Top-K.
@@ -17,9 +17,11 @@ in existing TileOp API headers and requires `PTO_TILEOP_API_HAS_ELEMENT_TILE`.
 
 TileOps prepare radix digits. The element-wise loop performs histogram updates,
 then TileOp stores return old values in logical input element order. The compiler
-converts logical U32 histogram indices through exactly one TLEA to U64 byte
-offsets before masked MGATHER.ADD. Top-K results are an unordered multiset; the
-independent verification stage sorts them for comparison only.
+converts each logical U32 histogram index stream through one B32-to-B64 TLEA
+before masked MGATHER.ADD. Top-K results are an unordered multiset; the
+independent verification stage sorts them for comparison only. Optimized IR
+must contain the three semantic atomic sites and no residual region/view,
+`atomicrmw`, scalar extract/insert, or GM roundtrip.
 
 The target test validates all 256 bins at both radix levels, exactly 37 output
 elements, the complete Top-K multiset across a tied cutoff, and the returned
@@ -56,9 +58,11 @@ The end-to-end harness combines a freshly built compiler/backend with an
 installed Linx musl runtime and current TileOP headers. It rejects an ELF
 whose three static atomic sites lack B.SUBVIEW, Tile digit operations,
 TCI, GPR predicate production, exactly one TLEA, masked MGATHER.ADD and Tile
-stores. Full histograms use a tail predicate; the selected histogram combines
-tail and digit predicates with scalar AND. Four negative disassembly canaries
-prove these checks can reject corrupted instructions. Both gfrun and gfsim must then run as one logical
+stores. It also checks optimized generic IR and rejects narrow index fallback
+or residual scalar element lowering. Full histograms use a tail predicate; the
+selected histogram combines tail and digit predicates through generic CFG mask
+construction. Negative disassembly and IR canaries prove these checks reject
+corrupted instructions. Both gfrun and gfsim must then run as one logical
 thread/PE and match the independently generated input, histogram, Top-K, and
 status and coherence memory segments. UART text is diagnostic only and is not used as the
 correctness oracle:

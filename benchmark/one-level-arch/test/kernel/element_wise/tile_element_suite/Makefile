@@ -4,7 +4,7 @@ endif
 
 SUPPORTED_CASES := histogram_tile_element selected_radix_tile_element \
 	element_expression_chain signed_element_expression indexed_gather_tile_element \
-	generic_predicated_cfg_i32 generic_typed_tile_cfg_i32 \
+	generic_predicated_cfg_i32 generic_typed_tile_cfg_i32 generic_atomic_cfg_i32 \
 	topk_boundaries topk_boundaries_0 \
 	topk_boundaries_1 topk_boundaries_2
 ifeq ($(filter $(TESTCASE),$(SUPPORTED_CASES)),)
@@ -46,7 +46,10 @@ DEFINES += -DSUPERNPUBENCH_LINX_TILE_SIZE -DLINX_ELEMENTWISE_AVAILABLE
 CC_OPTS += $(TARGET_FLAGS) -fno-vectorize -fno-slp-vectorize \
 	-Werror=unknown-pragmas
 ifneq ($(filter element_expression_chain signed_element_expression \
-	generic_predicated_cfg_i32 generic_typed_tile_cfg_i32,$(TESTCASE)),)
+	indexed_gather_tile_element histogram_tile_element \
+	selected_radix_tile_element generic_predicated_cfg_i32 \
+	generic_typed_tile_cfg_i32 generic_atomic_cfg_i32 topk_boundaries \
+	topk_boundaries_0 topk_boundaries_1 topk_boundaries_2,$(TESTCASE)),)
 CC_OPTS += -mllvm -linxv5-enable-generic-element=true
 endif
 CC_LINK += $(TARGET_FLAGS) -fuse-ld=lld

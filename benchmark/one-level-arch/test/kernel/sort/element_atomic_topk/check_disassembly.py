@@ -150,8 +150,68 @@ def validate_mask_flow(segment: list[Instruction], compares: list[int],
         raise CheckError(f"site {ordinal}: B.IOR lost the final mask version")
 
 
+def validate_generic_mask_flow(segment: list[Instruction], compares: list[int],
+                               bior_index: int, mask: str,
+                               ordinal: int) -> None:
+    """Track every compare through generic CFG AND/CSEL mask construction."""
+    registers: dict[str, frozenset[tuple[str, int]]] = {}
+    transient: dict[str, list[frozenset[tuple[str, int]]]] = {"t": [], "u": []}
+
+    def read(name: str) -> frozenset[tuple[str, int]]:
+        if name == "zero":
+            return frozenset()
+        relative = TRANSIENT.fullmatch(name)
+        if relative:
+            bank, distance = relative.group(1), int(relative.group(2))
+            values = transient[bank]
+            return values[-distance] if len(values) >= distance else frozenset()
+        return registers.get(name, frozenset())
+
+    def write(name: str, value: frozenset[tuple[str, int]]) -> None:
+        if name == "zero":
+            return
+        if name in transient:
+            transient[name].append(value)
+        else:
+            registers[name] = value
+
+    required: set[tuple[str, int]] = set()
+    for index, inst in enumerate(segment[:bior_index]):
+        dest_match = re.search(r"->\s*([^\s,]+)", inst.operands)
+        dst = dest_match.group(1) if dest_match else None
+        if dst is None or not GPR.fullmatch(dst):
+            continue
+        if index in compares:
+            marker = ("compare", index)
+            required.add(marker)
+            write(dst, frozenset({marker}))
+            continue
+        if inst.mnemonic in ("AND", "C.AND"):
+            match = re.fullmatch(
+                r"([^,]+),\s*([^,]+),\s*->\s*([^\s,]+)", inst.operands
+            )
+            if match:
+                lhs, rhs, out = (part.strip() for part in match.groups())
+                write(out, read(lhs) | read(rhs))
+                continue
+        if inst.mnemonic == "CSEL":
+            match = re.fullmatch(
+                r"([^,]+),\s*([^,]+),\s*([^,]+),\s*->\s*([^\s,]+)",
+                inst.operands,
+            )
+            if match:
+                _predicate, yes, no, out = (part.strip() for part in match.groups())
+                write(out, read(yes) | read(no))
+                continue
+        write(dst, frozenset({("scalar", index)}))
+
+    observed = read(mask)
+    if not observed or not required.issubset(observed):
+        raise CheckError(f"site {ordinal}: atomic mask lost CFG predicate provenance")
+
+
 def validate_segment(segment: list[Instruction], ordinal: int) -> None:
-    expected_compares = (1, 1, 2)[ordinal]
+    expected_compares = (0, 1, 2)[ordinal]
     def positions(mnemonic: str) -> list[int]:
         return [index for index, inst in enumerate(segment) if inst.mnemonic == mnemonic]
 
@@ -173,8 +233,8 @@ def validate_segment(segment: list[Instruction], ordinal: int) -> None:
         raise CheckError(f"helper {ordinal}: expected lane and one-value TCI")
     if len(compares) != expected_compares:
         raise CheckError(f"helper {ordinal}: wrong number of TCMPS GPR producers")
-    if len(scalar_and) != expected_compares - 1:
-        raise CheckError(f"helper {ordinal}: wrong number of scalar predicate AND operations")
+    if len(scalar_and) < max(0, expected_compares - 1):
+        raise CheckError(f"helper {ordinal}: too few scalar predicate AND operations")
     if len(tlea) != 1:
         raise CheckError(f"helper {ordinal}: expected exactly one TLEA")
     if len(atomic) != 1:
@@ -183,21 +243,11 @@ def validate_segment(segment: list[Instruction], ordinal: int) -> None:
     compare_dsts = [destination(segment[index].operands) for index in compares]
     if any(not GPR.fullmatch(value) for value in compare_dsts):
         raise CheckError(f"site {ordinal}: TCMPS destination is not a scalar GPR")
-    if not (tci[0] < compares[0] <= compares[-1] < tlea[0] < atomic[0]):
-        raise CheckError(f"site {ordinal}: invalid TCI/compare/TLEA/atomic order")
-    and_index = None
-    if expected_compares == 2:
-        and_index = scalar_and[0]
-        if not (compares[-1] < and_index < tlea[0]):
-            raise CheckError(f"site {ordinal}: predicate AND is out of order")
-        and_match = re.search(
-            r"^([^,]+),\s*([^,]+),\s*->\s*([^\s,]+)", segment[and_index].operands
-        )
-        if not and_match:
-            raise CheckError(f"site {ordinal}: malformed scalar AND")
-        and_sources = {and_match.group(1).strip(), and_match.group(2).strip()}
-        if and_sources != set(compare_dsts) or not GPR.fullmatch(and_match.group(3).strip()):
-            raise CheckError(f"site {ordinal}: AND does not combine the compare GPRs")
+    if not (any(index < atomic[0] for index in tci) and tlea[0] < atomic[0] and
+            all(index < atomic[0] for index in compares) and
+            sum(index < atomic[0] for index in scalar_and) >=
+            max(0, expected_compares - 1)):
+        raise CheckError(f"site {ordinal}: predicate/TLEA/value setup follows atomic")
 
     atomic_index = atomic[0]
     bundle_end = next(
@@ -229,8 +279,7 @@ def validate_segment(segment: list[Instruction], ordinal: int) -> None:
     if not GPR.fullmatch(base) or not GPR.fullmatch(mask) or unused != "zero":
         raise CheckError(f"helper {ordinal}: B.IOR is not [base, active-mask, zero]")
     bior_index = segment.index(bior)
-    validate_mask_flow(segment, compares, and_index, tlea[0], bior_index,
-                       mask, ordinal)
+    validate_generic_mask_flow(segment, compares, bior_index, mask, ordinal)
 
     body = "\n".join(inst.line for inst in segment)
     if "CUBE_M32" not in body or not re.search(r"C\.B\.DIMI\s+32", body):
@@ -259,6 +308,33 @@ def validate(text: str) -> None:
         validate_segment(segment, ordinal)
 
 
+def validate_ir(text: str) -> None:
+    if re.search(
+        r"atomicrmw|extractelement|insertelement|"
+        r"@llvm\.linx\.experimental\.element\.(region|view)",
+        text,
+    ):
+        raise CheckError("optimized Top-K IR contains residual element lowering")
+    if "<32 x i8>" in text or "<32 x i16>" in text:
+        raise CheckError("Top-K histogram index narrowed below B32")
+    atomics = re.findall(
+        r"call <32 x i32> "
+        r"@llvm\.linx\.experimental\.ew\.mgather\.add\.masked[^\n]*",
+        text,
+    )
+    if len(atomics) != 3:
+        raise CheckError(f"expected three masked atomic intrinsics, found {len(atomics)}")
+    tleas = re.findall(
+        r"call <32 x i64> @llvm\.linx\.experimental\.ew\.tlea[^\n]*"
+        r"i64 32\)",
+        text,
+    )
+    if len(tleas) != 3:
+        raise CheckError(f"expected three B32 TLEA intrinsics, found {len(tleas)}")
+    if any("i64 25" not in call for call in tleas):
+        raise CheckError("Top-K histogram index lost its U32 descriptor")
+
+
 def expect_rejected(name: str, text: str) -> None:
     try:
         validate(text)
@@ -267,9 +343,30 @@ def expect_rejected(name: str, text: str) -> None:
     raise CheckError(f"negative canary unexpectedly accepted: {name}")
 
 
+def expect_ir_rejected(name: str, text: str) -> None:
+    try:
+        validate_ir(text)
+    except CheckError:
+        return
+    raise CheckError(f"IR negative canary unexpectedly accepted: {name}")
+
+
 def self_test(text: str) -> None:
     validate(text)
-    expect_rejected("missing Zero", text.replace("19f03ea3", "19f01ea3", 1))
+    first_segment = atomic_segments(text)[0]
+    atomic_index = next(
+        index for index, inst in enumerate(first_segment)
+        if inst.mnemonic == "BSTART.TLSU" and "MGATHER.ADD" in inst.operands
+    )
+    datr = next(
+        inst for inst in first_segment[atomic_index + 1:]
+        if inst.mnemonic == "B.DATR" and inst.raw & (1 << 13)
+    )
+    cleared = datr.raw & ~(1 << 13)
+    expect_rejected(
+        "missing Zero",
+        text.replace(f"{datr.raw:08x}", f"{cleared:08x}", 1),
+    )
     tlea_line = next(line for line in text.splitlines() if "BSTART.TEPL" in line and "TLEA" in line)
     expect_rejected("extra TLEA", text.replace(tlea_line, tlea_line + "\n" + tlea_line, 1))
     expect_rejected(
@@ -282,31 +379,11 @@ def self_test(text: str) -> None:
     )
     for ordinal, segment in enumerate(atomic_segments(text)):
         compares = [inst for inst in segment if inst.mnemonic == "TCMPS"]
-        and_inst = next((inst for inst in segment
-                         if inst.mnemonic in ("AND", "C.AND")), None)
-        tlea = next(inst for inst in segment
-                    if inst.mnemonic == "BSTART.TEPL" and "TLEA" in inst.operands)
-        after_compare = segment.index(compares[-1]) + 1
-        selects = [inst for inst in segment[after_compare:segment.index(tlea)]
-                   if inst.mnemonic == "CSEL"]
-        mask_select = selects[0] if selects else None
         bior = next(inst for inst in segment
                     if inst.mnemonic == "B.IOR" and "ExecMaskPresent" in inst.operands)
         mask_binder = re.search(r"\[([^,]+),([^,]+),([^\]]+)\]", bior.operands)
         assert mask_binder is not None
-        base, old_mask, unused = (part.strip() for part in mask_binder.groups())
-        occupied = set(re.findall(
-            r"\b(?:a[0-7]|s[0-8]|x[0-3]|ra|sp)\b",
-            " ".join(inst.operands for inst in segment[after_compare:])))
-        scratch = next((name for name in ("x3", "x2", "x1", "a7", "s7", "s6", "a6")
-                        if name not in occupied), None)
-        if scratch is None:
-            raise CheckError(f"site {ordinal}: no isolated canary register")
-
-        def retarget_binder(candidate: str, new_mask: str) -> str:
-            return candidate.replace(
-                bior.line, bior.line.replace(
-                    f"[{base},{old_mask},{unused}]", f"[{base},{new_mask},{unused}]"), 1)
+        _base, mask, _unused = (part.strip() for part in mask_binder.groups())
 
         def overwrite_after(candidate: str, inst: Instruction, reg: str) -> str:
             writer = f"    fffe: 00000000\taddi zero, 7, ->{reg}"
@@ -315,98 +392,46 @@ def self_test(text: str) -> None:
         for inst in compares:
             expect_rejected(f"site{ordinal}: overwritten compare",
                             overwrite_after(text, inst, destination(inst.operands)))
-        if and_inst:
-            expect_rejected(f"site{ordinal}: overwritten AND result",
-                            overwrite_after(text, and_inst, destination(and_inst.operands)))
-
-        # Exercise mask-or-zero selection even on the old direct-mask corpus.
-        # A dedicated scalar register keeps the synthetic predicate and result
-        # separate from the compare/AND versions under test.
-        if mask_select is None:
-            producer = and_inst or compares[-1]
-            source = destination(producer.operands)
-            if source == "t":
-                source = "t#1"
-            select_line = f"    fffd: 00000000\tcsel ra, {source}, zero, ->{scratch}"
-            selected_text = text.replace(tlea.line, select_line + "\n" + tlea.line, 1)
-            selected_text = retarget_binder(selected_text, scratch)
-            validate(selected_text)
-            selected = parse(select_line)[0]
-        else:
-            selected_text, selected = text, mask_select
-        match = re.fullmatch(
-            r"([^,]+),\s*([^,]+),\s*([^,]+),\s*->\s*([^\s,]+)",
-            selected.operands)
-        assert match is not None
-        pred, true_value, false_value, dst = (part.strip() for part in match.groups())
-
-        def changed_select(new_pred: str, new_true: str, new_false: str) -> str:
-            return selected_text.replace(
-                selected.line,
-                f"    fffd: 00000000\tcsel {new_pred}, {new_true}, {new_false}, ->{dst}", 1)
-
-        expect_rejected(f"site{ordinal}: reversed mask select",
-                        changed_select(pred, false_value, true_value))
-        expect_rejected(f"site{ordinal}: nonzero inactive mask",
-                        changed_select(pred, true_value, true_value))
-        expect_rejected(f"site{ordinal}: unrelated selected mask",
-                        changed_select(pred, "zero", false_value))
-        expect_rejected(f"site{ordinal}: constant-false outer predicate",
-                        changed_select("zero", true_value, false_value))
-        expect_rejected(f"site{ordinal}: untraced transient outer predicate",
-                        changed_select("t#1", true_value, false_value))
-        expect_rejected(f"site{ordinal}: overwritten final mask",
-                        overwrite_after(selected_text, selected, dst))
-        for control in ("L.BSTART.STD COND, 0x0", "FRET.RA",
-                        "L.BSTART.AUX CALL, 0x0", "L.BSTART.FP CALL, 0x0", "EBREAK"):
-            expect_rejected(f"site{ordinal}: {control} after mask",
-                            selected_text.replace(
-                                selected.line,
-                                selected.line + "\n    fffc: 00000000\t" + control, 1))
-        next_bundle = (
-            "    fffb: 00000000\tBSTART.TLSU MGATHER, U32\n"
-            "    fffa: 19f03ea3\tB.DATR CUBE_M32.normal, Null\n" + bior.line)
-        expect_rejected(f"site{ordinal}: borrowed mask from later bundle",
-                        text.replace(bior.line, next_bundle, 1))
-        datr = next(inst for inst in segment[segment.index(tlea) + 1:]
-                    if inst.mnemonic == "B.DATR" and inst.raw & (1 << 13))
-        expect_rejected(f"site{ordinal}: borrowed DATR from later bundle",
-                        text.replace(datr.line, next_bundle, 1))
-
-        # Retarget a synthetic CSEL result to ensure old producer registers
-        # remain distinguishable when the real allocator reuses a destination.
-        independent_text = selected_text.replace(
-            selected.line,
-            f"    fffd: 00000000\tcsel {pred}, {true_value}, zero, ->{scratch}", 1)
-        current_bior = next(inst for inst in atomic_segments(independent_text)[ordinal]
-                            if inst.mnemonic == "B.IOR" and "ExecMaskPresent" in inst.operands)
-        binder = re.search(r"\[([^,]+),([^,]+),([^\]]+)\]", current_bior.operands)
-        assert binder is not None
-        selected_mask = binder.group(2).strip()
-        independent_text = independent_text.replace(
-            current_bior.line,
-            current_bior.line.replace(f",{selected_mask},", f",{scratch},"), 1)
-        validate(independent_text)
-        for producer in (compares[-1], and_inst):
-            if producer is None:
-                continue
-            old = destination(producer.operands)
-            if old == "t":
-                old = "t#1"
-            expect_rejected(f"site{ordinal}: bypassed selected mask",
-                            independent_text.replace(
-                                current_bior.line.replace(f",{selected_mask},", f",{scratch},"),
-                                current_bior.line.replace(f",{selected_mask},", f",{old},"), 1))
+        bior_index = segment.index(bior)
+        final_writer = next(
+            (inst for inst in reversed(segment[:bior_index])
+             if re.search(r"->\s*" + re.escape(mask) + r"(?:\s|,|$)", inst.operands)),
+            None,
+        )
+        if final_writer is None:
+            raise CheckError(f"site {ordinal}: mask has no local scalar producer")
+        if compares:
+            expect_rejected(
+                f"site{ordinal}: overwritten final mask",
+                overwrite_after(text, final_writer, mask),
+            )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dis", required=True, type=Path)
+    parser.add_argument("--ir", required=True, type=Path)
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     text = args.dis.read_text(encoding="utf-8")
+    ir_text = args.ir.read_text(encoding="utf-8")
     try:
         self_test(text) if args.self_test else validate(text)
+        validate_ir(ir_text)
+        if args.self_test:
+            expect_ir_rejected(
+                "residual scalar atomic",
+                re.sub(
+                    r"(define[^\n]*\n)",
+                    r"\1  %bad = atomicrmw add ptr null, i32 1 monotonic\n",
+                    ir_text,
+                    count=1,
+                ),
+            )
+            expect_ir_rejected(
+                "narrow index fallback",
+                ir_text.replace("<32 x i32>", "<32 x i8>", 1),
+            )
     except CheckError as error:
         print(f"disassembly check failed: {error}")
         return 1

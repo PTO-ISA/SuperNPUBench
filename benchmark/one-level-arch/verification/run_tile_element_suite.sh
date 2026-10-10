@@ -8,6 +8,7 @@ default_cases=(
     signed_element_expression
     generic_predicated_cfg_i32
     generic_typed_tile_cfg_i32
+    generic_atomic_cfg_i32
     topk_boundaries_0
     topk_boundaries_1
     topk_boundaries_2
@@ -17,12 +18,14 @@ default_cases=(
 if (( $# == 0 )); then
     cases=("${default_cases[@]}")
 elif (( $# == 2 )) && [[ $1 == --case ]] && \
-     [[ $2 == indexed_gather_tile_element || \
+     [[ $2 == indexed_gather_tile_element || $2 == histogram_tile_element || \
+        $2 == selected_radix_tile_element || $2 == generic_atomic_cfg_i32 || \
         $2 == element_expression_chain || $2 == signed_element_expression || \
-        $2 == generic_predicated_cfg_i32 || $2 == generic_typed_tile_cfg_i32 ]]; then
+        $2 == generic_predicated_cfg_i32 || $2 == generic_typed_tile_cfg_i32 || \
+        $2 == topk_boundaries* ]]; then
     cases=("$2")
 else
-    echo "usage: $0 [--case indexed_gather_tile_element|element_expression_chain|signed_element_expression|generic_predicated_cfg_i32|generic_typed_tile_cfg_i32]" >&2
+    echo "usage: $0 [--case histogram_tile_element|selected_radix_tile_element|indexed_gather_tile_element|element_expression_chain|signed_element_expression|generic_predicated_cfg_i32|generic_typed_tile_cfg_i32|generic_atomic_cfg_i32|topk_boundaries[_0|_1|_2]]" >&2
     exit 2
 fi
 
@@ -85,6 +88,9 @@ if [[ ! -e "$installed_api_include/common/pto_tileop.hpp" ]]; then
     exit 1
 fi
 
+python3 "$case_dir/test_compare_memory.py" 2>&1 \
+    | tee "$artifact_dir/compare-memory-self-test.log"
+
 run_case() {
     local case_name=$1
     local case_artifact="$artifact_dir/$case_name"
@@ -107,8 +113,12 @@ run_case() {
     if [[ "$case_name" == signed_element_expression ||
           "$case_name" == generic_predicated_cfg_i32 ||
           "$case_name" == generic_typed_tile_cfg_i32 ||
+          "$case_name" == generic_atomic_cfg_i32 ||
+          "$case_name" == histogram_tile_element ||
+          "$case_name" == selected_radix_tile_element ||
           "$case_name" == element_expression_chain || \
-          "$case_name" == indexed_gather_tile_element ]]; then
+          "$case_name" == indexed_gather_tile_element || \
+          "$case_name" == topk_boundaries* ]]; then
         make -B -C "$case_dir" TESTCASE="$case_name" \
             COMPILER_DIR="$COMPILER_DIR" \
             TARGET_TRIPLE="$TARGET_TRIPLE" \
@@ -124,8 +134,12 @@ run_case() {
     if [[ "$case_name" == signed_element_expression ||
           "$case_name" == generic_predicated_cfg_i32 ||
           "$case_name" == generic_typed_tile_cfg_i32 ||
+          "$case_name" == generic_atomic_cfg_i32 ||
+          "$case_name" == histogram_tile_element ||
+          "$case_name" == selected_radix_tile_element ||
           "$case_name" == element_expression_chain || \
-          "$case_name" == indexed_gather_tile_element ]]; then
+          "$case_name" == indexed_gather_tile_element || \
+          "$case_name" == topk_boundaries* ]]; then
         python3 "$case_dir/check_disassembly.py" \
             --case "$case_name" --dis "$disassembly" --ir "$ir" \
             --self-test 2>&1 | tee "$case_artifact/disassembly.log"

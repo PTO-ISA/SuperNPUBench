@@ -545,6 +545,88 @@ def validate_indexed_gather(text: str, ir_text: str | None) -> None:
         raise CheckError("indexed gather fell back to scalar vector element access")
 
 
+def validate_generic_atomic(text: str, ir_text: str | None) -> None:
+    body = function_body(text, "generic_atomic_cfg_i32")
+    lines = instruction_lines(body)
+    atomics = [
+        line for line in lines
+        if re.search(r"\bBSTART\.TLSU\s+MGATHER\.ADD, U32\b", line)
+    ]
+    tleas = [
+        line for line in lines
+        if re.search(r"\bBSTART\.TEPL\s+TLEA, S32\b", line)
+    ]
+    if len(atomics) != 3:
+        raise CheckError(
+            f"paired/null-base case needs three atomic sites, found {len(atomics)}"
+        )
+    if len(tleas) != 1:
+        raise CheckError(
+            "signed indices need one cached B32-to-B64 TLEA stream across bases"
+        )
+    masked_ior = [
+        line for line in lines
+        if re.search(r"\bB\.IOR\b", line) and "ExecMaskPresent" in line
+    ]
+    if len(masked_ior) < 3:
+        raise CheckError("atomic sites lost their CFG execution masks")
+    if sum(bool(re.search(r"\bBSTART\.TLSU\s+TLOAD, S32\b", line))
+           for line in lines) != 2:
+        raise CheckError("signed index/delta inputs lost their two S32 TLOAD sites")
+    if sum(bool(re.search(r"\bBSTART\.TLSU\s+TLOAD, U32\b", line))
+           for line in lines) != 1:
+        raise CheckError("inactive atomic gate lost its U32 TLOAD site")
+    if sum(bool(re.search(r"\bBSTART\.TLSU\s+TSTORE, U32\b", line))
+           for line in lines) != 4:
+        raise CheckError("paired atomic observations lost their four U32 TSTORE sites")
+    if "CUBE_M32" not in body:
+        raise CheckError("generic atomic case lost public ElementTile M32 transport")
+
+    if ir_text is None:
+        raise CheckError("generic atomic CFG case requires LLVM IR evidence")
+    ir = ir_function_body(ir_text, "generic_atomic_cfg_i32")
+    if re.search(
+        r"atomicrmw|extractelement|insertelement|"
+        r"@llvm\.linx\.experimental\.element\.(region|view)",
+        ir,
+    ):
+        raise CheckError("generic atomic CFG contains residual scalar/view lowering")
+    atomic_calls = re.findall(
+        r"call <32 x i32> "
+        r"@llvm\.linx\.experimental\.ew\.mgather\.add\.masked[^\n]*",
+        ir,
+    )
+    if len(atomic_calls) != 3:
+        raise CheckError("generic atomic CFG lost one of its three masked atomics")
+    atomic_roots = [
+        match.groups()
+        for call in atomic_calls
+        for match in [re.search(
+            r"ptr (%[-.a-zA-Z0-9]+), <32 x i64> (%[-.a-zA-Z0-9]+),",
+            call,
+        )]
+        if match is not None
+    ]
+    if (len(atomic_roots) != 3 or atomic_roots[0] != atomic_roots[1] or
+            atomic_roots[2][0] == atomic_roots[0][0] or
+            atomic_roots[2][1] != atomic_roots[0][1]):
+        raise CheckError(
+            "all atomics must share one index offset while retaining the "
+            "distinct inactive null-base root"
+        )
+    tlea_calls = re.findall(
+        r"call <32 x i64> @llvm\.linx\.experimental\.ew\.tlea[^\n]*"
+        r"i64 32\)",
+        ir,
+    )
+    if len(tlea_calls) != 1 or "i64 17" not in tlea_calls[0]:
+        raise CheckError("generic atomic CFG lost signed 32-bit byte-index conversion")
+    if "<32 x i8>" in ir or "<32 x i16>" in ir:
+        raise CheckError("generic atomic index conversion narrowed below B32")
+    if len(re.findall(r"@llvm\.linx\.experimental\.ew\.tcmps\.gpr", ir)) < 4:
+        raise CheckError("nested atomic CFG lost element/tail/poison predicates")
+
+
 def validate(text: str, case: str, ir_text: str | None = None) -> None:
     if case == "generic_typed_tile_cfg_i32":
         validate_generic_typed_tile_cfg(text, ir_text)
@@ -557,6 +639,9 @@ def validate(text: str, case: str, ir_text: str | None = None) -> None:
         return
     if case == "indexed_gather_tile_element":
         validate_indexed_gather(text, ir_text)
+        return
+    if case == "generic_atomic_cfg_i32":
+        validate_generic_atomic(text, ir_text)
         return
     if case == "element_expression_chain":
         validate_expression(text, ir_text)
@@ -601,6 +686,40 @@ def validate(text: str, case: str, ir_text: str | None = None) -> None:
         raise CheckError("missing post-element TSTORE")
     if "CUBE_M32" not in text or not re.search(r"C\.B\.DIMI\s+32", text):
         raise CheckError("missing native local Tile geometry")
+    if case in ("histogram_tile_element", "selected_radix_tile_element"):
+        if ir_text is None:
+            raise CheckError("generic atomic migration requires LLVM IR evidence")
+        ir = ir_function_body(ir_text, case)
+        if re.search(
+            r"atomicrmw|extractelement|insertelement|"
+            r"@llvm\.linx\.experimental\.element\.(region|view)",
+            ir,
+        ):
+            raise CheckError("generic atomic migration contains residual lowering")
+        if len(re.findall(
+                r"@llvm\.linx\.experimental\.ew\.mgather\.add\.masked", ir)) != 1:
+            raise CheckError("generic atomic migration lost its masked atomic")
+    if is_topk:
+        if ir_text is None:
+            raise CheckError("generic Top-K migration requires LLVM IR evidence")
+        if re.search(
+            r"atomicrmw|extractelement|insertelement|"
+            r"@llvm\.linx\.experimental\.element\.(region|view)",
+            ir_text,
+        ):
+            raise CheckError("generic Top-K migration contains residual lowering")
+        if len(re.findall(
+                r"call <32 x i32> "
+                r"@llvm\.linx\.experimental\.ew\.mgather\.add\.masked",
+                ir_text,
+        )) != 2:
+            raise CheckError("generic Top-K migration lost its two masked atomics")
+        if len(re.findall(
+                r"call <32 x i64> @llvm\.linx\.experimental\.ew\.tlea[^\n]*"
+                r"i64 32\)",
+                ir_text,
+        )) != 2:
+            raise CheckError("generic Top-K migration lost its two B32 TLEA sites")
 
 
 def rejected(name: str, text: str, case: str, ir_text: str | None = None) -> None:
@@ -623,7 +742,9 @@ def main() -> int:
     try:
         validate(text, args.case, ir_text)
         if args.self_test:
-            if args.case in ("element_expression_chain", "signed_element_expression", "indexed_gather_tile_element", "generic_predicated_cfg_i32", "generic_typed_tile_cfg_i32"):
+            is_topk = (args.case == "topk_boundaries" or
+                       args.case.startswith("topk_boundaries_"))
+            if args.case in ("element_expression_chain", "signed_element_expression", "indexed_gather_tile_element", "generic_predicated_cfg_i32", "generic_typed_tile_cfg_i32", "generic_atomic_cfg_i32", "histogram_tile_element", "selected_radix_tile_element"):
                 for marker in ("region", "view"):
                     rejected(
                         f"residual element {marker} contract",
@@ -636,6 +757,56 @@ def main() -> int:
                             count=1,
                         ),
                     )
+            if args.case == "generic_atomic_cfg_i32":
+                rejected(
+                    "missing one atomic execution mask",
+                    text.replace("ExecMaskPresent", "NoExecMask"),
+                    args.case,
+                    ir_text,
+                )
+                rejected(
+                    "unsigned byte-index conversion",
+                    text.replace("TLEA, S32", "TLEA, U32", 1),
+                    args.case,
+                    ir_text,
+                )
+                rejected(
+                    "residual scalar atomic",
+                    text,
+                    args.case,
+                    re.sub(
+                        r"(define[^\n]*generic_atomic_cfg_i32[^\n]*\n)",
+                        r"\1  %bad = atomicrmw add ptr null, i32 1 monotonic\n",
+                        ir_text or "",
+                        count=1,
+                    ),
+                )
+                print(f"{args.case}: disassembly check PASS")
+                return 0
+            if is_topk:
+                for marker in ("region", "view"):
+                    rejected(
+                        f"residual element {marker} contract",
+                        text,
+                        args.case,
+                        re.sub(
+                            r"(define[^\n]*\n)",
+                            rf"\1  call void @llvm.linx.experimental.element.{marker}()\n",
+                            ir_text or "",
+                            count=1,
+                        ),
+                    )
+                rejected(
+                    "residual scalar atomic",
+                    text,
+                    args.case,
+                    re.sub(
+                        r"(define[^\n]*\n)",
+                        r"\1  %bad = atomicrmw add ptr null, i32 1 monotonic\n",
+                        ir_text or "",
+                        count=1,
+                    ),
+                )
             if args.case == "generic_typed_tile_cfg_i32":
                 rejected(
                     "missing TMOV seed",

@@ -91,6 +91,26 @@ kernel runs with count 257. The last block then contains three wholly inactive
 32-element parts whose indices are all `UINT32_MAX`; exact status fields require
 that empty-mask probe and both output guards to pass.
 
+[`generic_atomic_cfg_i32.cpp`](generic_atomic_cfg_i32.cpp) extends the generic
+CFG path to ordinary C++ `__atomic_fetch_add`. Three public 128-element loads
+produce four logical 32-element views for signed indices, signed deltas, and an
+inactive gate. The marked loop contains nested `if` blocks, repeated indices
+from -16 through 15, positive and negative non-unit addends under modulo-2^32
+arithmetic, and two source-ordered atomics per active element. Both returned old
+values feed result Tiles, followed by four TileOps and four stores per view. Three tail
+elements carry `INT32_MIN` poison indices. A third static atomic site uses a
+null base and the same poison-capable index stream, but its Tile-derived gate is
+zero for every element; the retained output proves an empty execution mask
+neither accesses memory nor overwrites the carrier.
+
+The independent atomic oracle does not assume an element execution order. It
+checks final bins exactly, then searches each bin for a legal modulo-2^32
+interleaving of the observed old values while enforcing only the source rule
+that an element's first atomic precedes its second. A relational check proves
+the final expression uses both old values. Focused corruption tests reject an
+unreachable second old value even when its derived output is changed to remain
+self-consistent.
+
 Both diagnostic output arrays preserve logical input element order, so
 `output[element]` always describes `input[element]`; application indexing does
 not expose a physical partition mapping.
@@ -105,6 +125,9 @@ runs, and every ELF contains the same two static atomic sites from the actual
 kernel. It also requires the unsharded 17-call ELF to pass both models, which
 reuses one workspace across all calls and keeps repeated caller behavior plus
 block-ID wrap covered end to end.
+All four boundary ELFs now use the generic CFG compiler and require optimized
+IR with exactly two masked atomic intrinsics, two B32 `TLEA` conversions, and
+no residual region/view/scalar-vector lowering.
 
 The two standalone histogram inputs deliberately contain repeated hot bins,
 bins 0 and 255, two full 128-element blocks, and a seven-element tail. Every
@@ -115,13 +138,15 @@ results as a permutation.
 
 The generic CFG compiler now covers the complete U32 expression kernel, the
 three-region signed expression kernel, the GM-array predication kernel, and the
-two-region typed-carrier kernel. Each selected gate freshly compiles its source,
-rejects residual region/view/extract/insert IR, and runs the same ELF on both
-models against independent goldens. The indexed gather remains a separate
-standard CFG checkpoint. Atomic histogram and Top-K are still being moved to
-the same compiler; the earlier nine-ELF AST checkpoint does not establish a
-current all-suite pass. All 21 original application entries and their
-applicable configurations remain open.
+two-region typed-carrier kernel. Histogram, selected radix, indexed gather, and
+the paired-atomic CFG case also select that compiler path. Each selected gate
+freshly compiles its source, rejects residual region/view/extract/insert IR,
+and runs the same ELF on both
+models against independent goldens. The actual Top-K boundary kernels now use
+the same generic compiler; the separate 777-element harness covers its original
+application scale and coherence probe. The earlier AST checkpoint does not
+establish a current all-suite pass. Remaining application inventory is tracked
+separately from these verified foundation cases.
 
 Run from the `benchmark/one-level-arch` directory with fresh tool paths:
 
@@ -136,10 +161,12 @@ bash verification/run_tile_element_suite.sh
 
 The script first installs the selected public API branch into the isolated
 resource directory with its official `make install` target. It then builds
-eleven ELFs: seven standalone kernels, one required unsharded 17-call Top-K
-boundary benchmark, and three focused shards of that boundary table. The two
-atomic standalone ELFs each contain one TLEA and one masked `MGATHER.ADD`
-static site; every Top-K ELF contains exactly two of each. The expression ELF
+twelve ELFs: eight standalone kernels, one required unsharded 17-call Top-K
+boundary benchmark, and three focused shards of that boundary table. Histogram
+and selected radix each contain one U32 `TLEA` and one masked `MGATHER.ADD`.
+The generic atomic ELF contains one shared S32 B32-to-B64 `TLEA` stream and
+three masked atomics over two distinct bases. Every Top-K ELF contains exactly two U32 sites of
+each kind. The expression ELF
 must contain all ten native Tile binary selectors, one extra XOR that reuses
 an early SSA value, three native `TSTORE` sites, a native execution mask on
 every compiler-generated operation, and no scalar
@@ -162,12 +189,10 @@ The indexed-gather ELF must contain one ordinary masked `MGATHER` and no
 `MGATHER.ADD`, plus one U32 `TLEA` whose IR contract scales 32-bit element
 indices to byte offsets. Its negative canaries reject a lost execution mask,
 layout, scaling operand, scalar vector-element fallback, or atomic opcode
-substitution. The default command runs the seven pre-existing ELFs plus the
-signed-expression, indexed-gather, generic GM-CFG, and generic typed-CFG ELFs
-(eleven total). During
-focused development, append `--case indexed_gather_tile_element` or
-`--case generic_predicated_cfg_i32` or `--case generic_typed_tile_cfg_i32` to
-run one new case.
+substitution. The default command runs twelve ELFs. During focused development,
+append `--case indexed_gather_tile_element`, `--case generic_predicated_cfg_i32`,
+`--case generic_typed_tile_cfg_i32`, or `--case generic_atomic_cfg_i32` to run
+one case.
 
 Every ELF runs unchanged on `gfrun` and `gfsim`. Both memory dumps are checked
 against separately generated input, histogram, output, and status goldens plus
