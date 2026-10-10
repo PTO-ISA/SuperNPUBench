@@ -1,7 +1,9 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "fileop.h"
-#if defined(QSMLA_USE_TADD_4PE) || \
+#if defined(QSMLA_USE_CSA_V3_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3.hpp"
+#elif defined(QSMLA_USE_TADD_4PE) || \
     defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
@@ -167,7 +169,9 @@ extern const uint8_t _binary_ori_kv_t_hif8_start[];
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_4PE) || \
+    defined(QSMLA_USE_CSA_V3_4PE)
 extern const uint8_t _binary_cmp_kv_hif8_start[];
 #endif
 #else
@@ -179,13 +183,16 @@ extern const uint8_t _binary_ori_kv_t_fp16_start[];
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_4PE) || \
+    defined(QSMLA_USE_CSA_V3_4PE)
 extern const uint8_t _binary_cmp_kv_fp16_start[];
 #endif
 #endif
 #if defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_4PE)
 extern const uint8_t _binary_cmp_sparse_indices_int32_start[];
 #endif
 #if defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
@@ -214,7 +221,10 @@ int main(){
     using Config = QsmlaConfig<
         B, s1, s2, N1, N2, D, 0, kTm, kTk, kTd, g_slice_max>;
 
-#ifdef QSMLA_USE_TADD_4PE
+#ifdef QSMLA_USE_CSA_V3_4PE
+    using ModeConfig = QsmlaModeConfig<
+        Config, QsmlaMode::CSA, cmp_s2, ori_topk, cmp_topk>;
+#elif defined(QSMLA_USE_TADD_4PE)
     using ModeConfig = QsmlaModeConfig<
         Config, QsmlaMode::SWA, 0, 0, 0>;
 #elif defined(QSMLA_USE_HCA_TADD_4PE)
@@ -259,7 +269,9 @@ int main(){
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_4PE) || \
+    defined(QSMLA_USE_CSA_V3_4PE)
 #ifdef QSMLA_USE_HIF8
     kvdtype* cmp_kv = reinterpret_cast<kvdtype*>(
         const_cast<uint8_t*>(_binary_cmp_kv_hif8_start));
@@ -272,7 +284,8 @@ int main(){
 #endif
 #if defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_4PE)
     const int* cmp_indices = reinterpret_cast<const int*>(
         _binary_cmp_sparse_indices_int32_start);
 #else
@@ -320,7 +333,22 @@ int main(){
 
     odttype* out = (odttype*)MAP_MEM_BASE;
 
-#if defined(QSMLA_USE_UNIFIED_TADD_4PE)
+#ifdef QSMLA_USE_CSA_V3_4PE
+    // v3 scratch: GM staging buffer for one 128-token KV block (ops v0Res)
+    // + 2 mask regions + O half-resident buffer (model-gap fallback).
+    constexpr uint64_t out_bytes =
+        static_cast<uint64_t>(B) * s1 * N1 * D * sizeof(odttype);
+    constexpr uint64_t v0_bytes = 128 * D * sizeof(kvdtype);
+    constexpr uint64_t mask_bytes = 2 * (g_slice_max / 4) * 128 * sizeof(float);
+    constexpr uint64_t o_bytes =
+        static_cast<uint64_t>(B) * s1 * N1 * D * sizeof(float);
+    constexpr uint64_t v0_addr = MAP_MEM_BASE + align_up_4k(out_bytes);
+    constexpr uint64_t mask_addr = v0_addr + align_up_4k(v0_bytes);
+    constexpr uint64_t o_addr = mask_addr + align_up_4k(mask_bytes);
+    kvdtype* v0_res_scratch = reinterpret_cast<kvdtype*>(v0_addr);
+    float* mask_scratch = reinterpret_cast<float*>(mask_addr);
+    float* o_scratch = reinterpret_cast<float*>(o_addr);
+#elif defined(QSMLA_USE_UNIFIED_TADD_4PE)
     // Cooperative scratch must live in shared GM rather than a PE-private
     // function stack.  Each PE computes and receives these identical mapped
     // addresses, matching the shared-workspace contract used by the 4-PE FA.
@@ -345,7 +373,17 @@ int main(){
 #endif
 
     BENCHSTART;
-#ifdef QSMLA_USE_CSA_TADD_1PE
+#ifdef QSMLA_USE_CSA_V3_4PE
+    // v3: ops-arch35-flow 4-PE CSA port (single-pass online softmax).
+    quant_sparse_flash_mla_csa_v3_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch);
+#elif defined(QSMLA_USE_CSA_TADD_1PE)
     // 单 PE CSA：Local CUBE 路径（FP16/HIF8 双态，嵌入输入；
     // FP16 下 descale 宏为 1，HIF8 下为 per-tensor 反量化因子）
     using ModeConfig = QsmlaModeConfig<
