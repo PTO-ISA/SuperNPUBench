@@ -9,6 +9,16 @@ import hashlib
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
+
+
+IMMUTABLE_INPUT_FIELDS = (
+    "target",
+    "compiler_version",
+    "artifacts",
+    "repositories",
+    "commands",
+)
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -57,6 +67,40 @@ def git_identity(root: Path) -> dict[str, object]:
     }
 
 
+def immutable_inputs(identity: dict[str, object]) -> dict[str, object]:
+    missing = [field for field in IMMUTABLE_INPUT_FIELDS if field not in identity]
+    if missing:
+        raise RuntimeError(
+            "input provenance is missing immutable fields: " + ", ".join(missing)
+        )
+    return {field: identity[field] for field in IMMUTABLE_INPUT_FIELDS}
+
+
+def _different_paths(before: Any, after: Any, prefix: str = "") -> list[str]:
+    if isinstance(before, dict) and isinstance(after, dict):
+        paths: list[str] = []
+        for key in sorted(set(before) | set(after)):
+            path = f"{prefix}.{key}" if prefix else str(key)
+            if key not in before or key not in after:
+                paths.append(path)
+            else:
+                paths.extend(_different_paths(before[key], after[key], path))
+        return paths
+    return [] if before == after else [prefix]
+
+
+def verify_immutable_inputs(
+    before_identity: dict[str, object], current_identity: dict[str, object]
+) -> None:
+    before = immutable_inputs(before_identity)
+    current = immutable_inputs(current_identity)
+    changed = _different_paths(before, current)
+    if changed:
+        raise RuntimeError(
+            "validation inputs changed after execution: " + ", ".join(changed)
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", required=True, type=Path)
@@ -75,6 +119,7 @@ def main() -> int:
     parser.add_argument("--run-exit-status", required=True, type=int)
     parser.add_argument("--gfrun", required=True, type=Path)
     parser.add_argument("--gfsim", required=True, type=Path)
+    parser.add_argument("--verify-inputs-from", type=Path)
     args = parser.parse_args()
 
     compiler_repo = Path(run("git", "rev-parse", "--show-toplevel", cwd=args.compiler_bin))
@@ -152,6 +197,9 @@ def main() -> int:
     identity["content_id"] = sha256_bytes(
         json.dumps(content_identity, sort_keys=True, separators=(",", ":")).encode()
     )
+    if args.verify_inputs_from is not None:
+        before_identity = json.loads(args.verify_inputs_from.read_text(encoding="utf-8"))
+        verify_immutable_inputs(before_identity, identity)
     args.out.write_text(json.dumps(identity, indent=2) + "\n", encoding="utf-8")
     return 0
 

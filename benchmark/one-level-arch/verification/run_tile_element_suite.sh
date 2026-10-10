@@ -165,6 +165,17 @@ run_case() {
         --symbols "$symbols" --golden "$golden" --print-range)
     local dump_base=${dump_range%%:*}
 
+    python3 "$bench_root/test/kernel/sort/element_atomic_topk/write_provenance.py" \
+        --out "$case_artifact/input-provenance.json" \
+        --elf "$elf" --compiler-bin "$COMPILER_DIR" \
+        --model-root "$SSM" --runtime-root "$LINX_RUNTIME_ROOT" \
+        --api-include "$api_source_include" --bench-root "$bench_root/../.." \
+        --golden-dir "$golden" --target-triple "$TARGET_TRIPLE" \
+        --sysroot "$SYSROOT" --resource-dir "$RESOURCE_DIR" \
+        --artifact-dir "$case_artifact" --dump-range "$dump_range" \
+        --gfrun "$gfrun" --gfsim "$gfsim" --run-exit-status 125 \
+        > "$case_artifact/input-provenance.log" 2>&1
+
     printf '%q ' "$gfrun" --pto059-execution-mask-dev \
         -s softcore.multiThreadNum=1 --dump-force \
         --dump-memory "$dump_range:$case_artifact/gfrun.mem" -f "$elf" \
@@ -229,6 +240,7 @@ run_case() {
         --sysroot "$SYSROOT" --resource-dir "$RESOURCE_DIR" \
         --artifact-dir "$case_artifact" --dump-range "$dump_range" \
         --gfrun "$gfrun" --gfsim "$gfsim" --run-exit-status 0 \
+        --verify-inputs-from "$case_artifact/input-provenance.json" \
         > "$case_artifact/provenance.log" 2>&1
     echo "$case_name: PASS"
 }

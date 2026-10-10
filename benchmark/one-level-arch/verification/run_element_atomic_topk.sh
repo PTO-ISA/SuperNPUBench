@@ -96,6 +96,7 @@ write_final_provenance() {
         --artifact-dir "$artifact_dir" --dump-range "$dump_range" \
         --gfrun "$gfrun" --gfsim "$gfsim" \
         --run-exit-status "$run_status" \
+        --verify-inputs-from "$artifact_dir/input-provenance.json" \
         > "$artifact_dir/provenance.log" 2>&1
     local provenance_status=$?
     set -e
@@ -129,6 +130,17 @@ for symbol in \
         exit 1
     fi
 done
+
+python3 "$case_dir/element_atomic_topk/write_provenance.py" \
+    --out "$artifact_dir/input-provenance.json" \
+    --elf "$elf" --compiler-bin "$COMPILER_DIR" \
+    --model-root "$SSM" --runtime-root "$LINX_RUNTIME_ROOT" \
+    --api-include "$API_INCLUDE" --bench-root "$bench_root/../.." \
+    --golden-dir "$artifact_dir/golden" --target-triple "$TARGET_TRIPLE" \
+    --sysroot "$SYSROOT" --resource-dir "$RESOURCE_DIR" \
+    --artifact-dir "$artifact_dir" --dump-range "$dump_range" \
+    --gfrun "$gfrun" --gfsim "$gfsim" --run-exit-status 125 \
+    > "$artifact_dir/input-provenance.log" 2>&1
 
 set +e
 "$gfrun" --pto059-execution-mask-dev \
