@@ -43,7 +43,13 @@ constexpr int kCandCap = 65536;
 // FP32 top-k.  false -> the single FP16 key low byte gives the exact top-k of
 // the FP16-rounded values (no FP32 pass; ties in the full 16-bit FP16 key are
 // broken arbitrarily).  Compile-time so the two dataflows never coexist.
-constexpr bool kFp32Refine = true;
+// The ifndef guard lets a build select the dataflow with
+// -DTOPK_TILED_FP32_REFINE=0/1 instead of editing this header; the default
+// keeps the exact-FP32 build.
+#ifndef TOPK_TILED_FP32_REFINE
+#define TOPK_TILED_FP32_REFINE 1
+#endif
+constexpr bool kFp32Refine = TOPK_TILED_FP32_REFINE;
 
 struct TopkTilingData {
     int64_t batch;

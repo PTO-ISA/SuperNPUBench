@@ -1,6 +1,9 @@
+#include <cstdint>
+
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "solution/qli/qli_pto_opt_simple.hpp"
+#include "multi_thread/topk/topk_tiled.hpp"
 
 // P1 optimization: eliminate copy_bytes — pass .data segment absolute
 // addresses directly to the kernel. The kernel's global_tensor + TLOAD
@@ -71,8 +74,46 @@ extern "C" unsigned char _binary_srcq_data_start[], _binary_srck_data_start[],
 #define DTYPE __fp8_e4m3
 #endif
 
+// TopK 阶段使用 kernels/multi_thread/topk 的 topk_tiled 引擎（4-PE SPMD）：
+//   - Skv 可达 kColsMax=131072、topk <= kTopKMax=1024（本用例仍为编译期 topK）
+//   - Sq 超过 kBatchMax(4) 时按批分块串行执行，块间栅栏同步（scratch 复用）
+//   - fp32/fp16 精度由 TOPK_TILED_FP32_REFINE 编译期选择（Makefile TOPK_PREC）
+// 运行须 gfrun -s softcore.multiThreadNum=4（1 PE 会在栅栏死锁）。
+static_assert(topK <= topk_tiled::kTopKMax, "topK must fit kTopKMax(1024)");
+// QLI 分数阶段要求 Skv % kTk == 0；topk_tiled 尾块 TLOAD 按 kLane 读满，
+// Skv % kLane == 0 同时保证末行末块不会越出 scores 区域
+static_assert(Skv % topk_tiled::kLane == 0, "Skv must be a multiple of 32");
+
+namespace {
+
+// round 递增的全自旋 4-PE 屏障：每轮所有 PE 互相等待，可重复使用。
+struct QliBarrier {
+    volatile std::uint32_t arrive[4];
+};
+
+inline void qli_barrier(QliBarrier &bar, std::uint32_t tid, std::uint32_t round) {
+    bar.arrive[tid] = round;
+    __asm__ volatile("" : : : "memory");
+    for (std::uint32_t pe = 0; pe < 4; ++pe) {
+        while (bar.arrive[pe] < round) {
+        }
+    }
+    __asm__ volatile("" : : : "memory");
+}
+
+QliBarrier topk_barrier{};
+topk_tiled::Scratch topk_scratch[topk_tiled::kBatchMax];
+topk_tiled::TopkTilingData topk_tiling;
+std::int32_t topk_starts[topk_tiled::kBatchMax];
+std::int32_t topk_ends[topk_tiled::kBatchMax];
+std::int32_t topk_errors[topk_tiled::kBatchMax];
+
+}  // namespace
+
 int main(){
     using dtype = DTYPE;
+    const std::uint32_t tid = get_thread_idx();
+    if (tid >= 4) return 0;
 
     // P1: No copy_bytes — pass .data segment addresses directly.
     // The kernel's global_tensor accepts raw pointers; TLOAD reads from
@@ -86,37 +127,60 @@ int main(){
     // v0.58.4：W*scale_q 预广播为 [Sq*g, kTk]（行 r 全列同值），
     // kernel 内用普通 TMUL（规避单列广播源的物理列校验）
     static float wbb[Sq * g * kTk];
-    for (int r = 0; r < Sq * g; r++)
-        for (int c = 0; c < kTk; c++)
-            wbb[r * kTk + c] = w[r] * scale_q[r];
     // v0.58.4：K 转置为 [D, Skv] 行主序（CUBE_N8 B-tile 契约）
     static dtype ktt[D * Skv];
-    for (int n = 0; n < Skv; n++)
-        for (int d = 0; d < D; d++)
-            ktt[d * Skv + n] = k[n * D + d];
     // CUBE->Vec 桥接临时区
     static float tmp16[kTm * kTk];
 
-    BENCHSTART;
-    for(int i=0;i<B;i++){
-        qli_pto<dtype, Sq, Skv, D, g, kTm, kTk>(
-            reinterpret_cast<float*>(OUT_SCORES) + i*Sq*Skv,
-            q + i*Sq*g*D,
-            ktt + i*D*Skv,
-            wbb + i*Sq*g*kTk,
-            scale_k + i*Skv,
-            tmp16
-        );
-    }
-    BENCHEND;
+    // 数据预处理 + 分数计算仅 PE0，其余 PE 在首个栅栏处等待
+    if (tid == 0) {
+        for (int r = 0; r < Sq * g; r++)
+            for (int c = 0; c < kTk; c++)
+                wbb[r * kTk + c] = w[r] * scale_q[r];
+        for (int n = 0; n < Skv; n++)
+            for (int d = 0; d < D; d++)
+                ktt[d * Skv + n] = k[n * D + d];
 
-    // Step7 (TopK) 独立计时区间
+        BENCHSTART;
+        for(int i=0;i<B;i++){
+            qli_pto<dtype, Sq, Skv, D, g, kTm, kTk>(
+                reinterpret_cast<float*>(OUT_SCORES) + i*Sq*Skv,
+                q + i*Sq*g*D,
+                ktt + i*D*Skv,
+                wbb + i*Sq*g*kTk,
+                scale_k + i*Skv,
+                tmp16
+            );
+        }
+        BENCHEND;
+    }
+
+    // Step7 (TopK) 独立计时区间：topk_tiled 4-PE，Sq > kBatchMax 时按批分块。
+    // PE0 每块写 tiling/starts/ends 后放行 -> 4 PE 各处理本块的一个 batch ->
+    // 块末栅栏同步（scratch/starts 复用安全）。首轮栅栏同时兜住分数就绪。
+    std::uint32_t round = 1;
     __asm__ __volatile__("B.HINT TRACE.begin\n" : : :);
     for(int i=0;i<B;i++){
-        qli_topk_radix<Sq, Skv, topK>(
-            reinterpret_cast<float*>(OUT_SCORES) + i*Sq*Skv,
-            reinterpret_cast<int32_t*>(OUT_INDICES) + i*Sq*topK
-        );
+        float* scores_i  = reinterpret_cast<float*>(OUT_SCORES) + (uint64_t)i*Sq*Skv;
+        int32_t* indices_i = reinterpret_cast<int32_t*>(OUT_INDICES) + (uint64_t)i*Sq*topK;
+        for (int base = 0; base < Sq; base += topk_tiled::kBatchMax) {
+            const int chunk = (Sq - base < topk_tiled::kBatchMax)
+                                  ? (Sq - base) : topk_tiled::kBatchMax;
+            if (tid == 0) {
+                topk_tiling.batch = chunk;
+                topk_tiling.cols = Skv;
+                topk_tiling.topk = topK;
+                for (int b = 0; b < chunk; ++b) {
+                    topk_starts[b] = 0;
+                    topk_ends[b] = Skv;
+                }
+            }
+            qli_barrier(topk_barrier, tid, round++);
+            topk_tiled::run(indices_i + (uint64_t)base * topK, topk_errors,
+                            scores_i + (uint64_t)base * Skv, topk_starts,
+                            topk_ends, topk_scratch, &topk_tiling);
+            qli_barrier(topk_barrier, tid, round++);
+        }
     }
     __asm__ __volatile__("B.HINT TRACE.end\n" : : :);
 
