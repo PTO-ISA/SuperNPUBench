@@ -311,18 +311,25 @@ void fa_lowp_algC_impl(__bf16 *outPtr, const __fp4_e2m1x2 *qPtr,
             GmVScale gVS(vScalePtr + kb * kPScaleCols);
             TLOAD<VMatrix, 1>(v, gV);
             TLOAD<VScaleMatrix, 1>(vScale, gVS);
-            // PV CCTRL (PTO-ISA 0.58.6 spec#236 / internal-accumulator.asl):
-            // acc_hint (CCTRL[1]) is a non-binding explicit-C cache-use/prefetch
-            // hint, legal only on ACC forms.  CCTRL[0] (raw_acc) is optional and
-            // dropped: keep_acc already publishes raw FP32 D.  The first block
-            // is a plain non-ACC TMATMUL_MX that writes D directly (and
-            // CCTRL[1] must be 0 on init=1 forms, so no hint there).
+            // Keep intermediate PV results in InternalAcc (L0C). keep_acc
+            // preserves FP32 precision; raw_acc selects the resident output.
+            // CScale rescales the previous accumulator before adding P*V.
+            // Only the final block publishes to CellReg for normalization.
             if (kb == 0) {
-                TMATMUL_MX<3>(weightedValueSum, p, pScale, v, vScale,
-                              pvOptions, kGroupM);
-            } else {
+                if constexpr (kKVBlocks == 1) {
+                    TMATMUL_MX<3>(weightedValueSum, p, pScale, v, vScale,
+                                  pvOptions, kGroupM);
+                } else {
+                    TMATMUL_MX<3>(weightedValueSum, p, pScale, v, vScale,
+                                  pvOptions.raw_acc(), kGroupM);
+                }
+            } else if (kb != kKVBlocks - 1) {
                 auto pvOptC =
-                    fixp::keep_acc().transpose_b().acc_hint().cscale(cscale);
+                    pvOptions.raw_acc().acc_hint().cscale(cscale);
+                TMATMUL_MX_ACC<3>(weightedValueSum, weightedValueSum,
+                                  p, pScale, v, vScale, pvOptC, kGroupM);
+            } else {
+                auto pvOptC = pvOptions.acc_hint().cscale(cscale);
                 TMATMUL_MX_ACC<3>(weightedValueSum, weightedValueSum,
                                   p, pScale, v, vScale, pvOptC, kGroupM);
             }
