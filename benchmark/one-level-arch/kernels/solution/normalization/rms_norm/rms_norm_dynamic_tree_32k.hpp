@@ -1,8 +1,8 @@
 // rms_norm_dynamic_tree_32k: default test shapes [128,8192] and [32,16384].
 // Dynamic 4PE implementation with FP32 Tile=[32,256] (32 KiB).
 // Full 8192-element R blocks; up to 16 blocks. Original 2 KiB kernel is unchanged.
-// R <= 8192: one block, reduced entirely in Tiles (no workspace).
-// R >  8192: paired blocks, partial row sums spilled to the workspace.
+// R <= 16384: reduced in Tiles. Two blocks are added into one 8192 tile first.
+// R >  16384: paired blocks, partial row sums spilled to the workspace.
 #ifndef SUPERNPU_RMS_NORM_SIMT_DYNAMIC_TREE_32K_HPP
 #define SUPERNPU_RMS_NORM_SIMT_DYNAMIC_TREE_32K_HPP
 
@@ -51,27 +51,88 @@ template <typename gm_t, typename gm_f_col, typename tile_h, typename tile_f,
 inline void reduce_pairs(gm_t &base, int64_t gR, int64_t pair_count,
                          int64_t tile_elems, int64_t tile_m,
                          int64_t tile_r, float *partial_workspace) {
-    for (int64_t pair = 0; pair < pair_count; ++pair) {
-        gm_t g0(base.data() + pair * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
-        gm_t g1(base.data() + (pair + pair_count) * tile_elems, static_cast<int>(tile_m), static_cast<int>(tile_r));
-        tile_h h0(tile_m, tile_r), h1(tile_m, tile_r);
-        tile_f x0(tile_m, tile_r), x1(tile_m, tile_r), sq0(tile_m, tile_r), sq1(tile_m, tile_r), sq_pair(tile_m, tile_r);
-        TLOAD(h0, g0); TCVT(x0, h0); TMUL(sq0, x0, x0);
-        if ((pair + pair_count) * tile_elems < gR) {
-            TLOAD(h1, g1); TCVT(x1, h1); TMUL(sq1, x1, x1);
+    // Two in-range pairs per iteration. Same stage on both pairs runs back
+    // to back: square the low block, square the high block, then reduce and
+    // store. pair_count can be odd, so the last pair is reduced alone.
+    for (int64_t pair = 0; pair + 1 < pair_count; pair += 2) {
+        const int64_t p0 = pair;
+        const int64_t p1 = pair + 1;
+        gm_t g0_0(base.data() + p0 * tile_elems, static_cast<int>(tile_m),
+                  static_cast<int>(tile_r));
+        gm_t g1_0(base.data() + (p0 + pair_count) * tile_elems,
+                  static_cast<int>(tile_m), static_cast<int>(tile_r));
+        gm_t g0_1(base.data() + p1 * tile_elems, static_cast<int>(tile_m),
+                  static_cast<int>(tile_r));
+        gm_t g1_1(base.data() + (p1 + pair_count) * tile_elems,
+                  static_cast<int>(tile_m), static_cast<int>(tile_r));
+        tile_h h0_0(tile_m, tile_r), h1_0(tile_m, tile_r);
+        tile_h h0_1(tile_m, tile_r), h1_1(tile_m, tile_r);
+        tile_f x0_0(tile_m, tile_r), x1_0(tile_m, tile_r), sq0_0(tile_m, tile_r),
+            sq1_0(tile_m, tile_r), sqp_0(tile_m, tile_r);
+        tile_f x0_1(tile_m, tile_r), x1_1(tile_m, tile_r), sq0_1(tile_m, tile_r),
+            sq1_1(tile_m, tile_r), sqp_1(tile_m, tile_r);
+
+        TLOAD(h0_0, g0_0);
+        TCVT(x0_0, h0_0);
+        TMUL(sq0_0, x0_0, x0_0);
+        TLOAD(h0_1, g0_1);
+        TCVT(x0_1, h0_1);
+        TMUL(sq0_1, x0_1, x0_1);
+
+        if ((p0 + pair_count) * tile_elems < gR) {
+            TLOAD(h1_0, g1_0);
+            TCVT(x1_0, h1_0);
+            TMUL(sq1_0, x1_0, x1_0);
         } else {
-            // An unpaired full block contributes only its own square.
+            TEXPANDS(sq1_0, 0.0f);
+        }
+        if ((p1 + pair_count) * tile_elems < gR) {
+            TLOAD(h1_1, g1_1);
+            TCVT(x1_1, h1_1);
+            TMUL(sq1_1, x1_1, x1_1);
+        } else {
+            TEXPANDS(sq1_1, 0.0f);
+        }
+
+        // ValidCol is static: (value, row) would select the fill constructor.
+        // Each TSTORE writes one column. The source valid shape [tile_m, 1]
+        // limits each row to one element.
+        TADD(sqp_0, sq0_0, sq1_0);
+        tile_m_v rows_0(tile_m);
+        TROWSUM(rows_0, sqp_0);
+        gm_f_col partial_out_0(partial_workspace + p0);
+        TSTORE(partial_out_0, rows_0);
+
+        TADD(sqp_1, sq0_1, sq1_1);
+        tile_m_v rows_1(tile_m);
+        TROWSUM(rows_1, sqp_1);
+        gm_f_col partial_out_1(partial_workspace + p1);
+        TSTORE(partial_out_1, rows_1);
+    }
+    if ((pair_count & 1) != 0) {
+        const int64_t pair = pair_count - 1;
+        gm_t g0(base.data() + pair * tile_elems, static_cast<int>(tile_m),
+                static_cast<int>(tile_r));
+        gm_t g1(base.data() + (pair + pair_count) * tile_elems,
+                static_cast<int>(tile_m), static_cast<int>(tile_r));
+        tile_h h0(tile_m, tile_r), h1(tile_m, tile_r);
+        tile_f x0(tile_m, tile_r), x1(tile_m, tile_r), sq0(tile_m, tile_r),
+            sq1(tile_m, tile_r), sqp(tile_m, tile_r);
+        TLOAD(h0, g0);
+        TCVT(x0, h0);
+        TMUL(sq0, x0, x0);
+        if ((pair + pair_count) * tile_elems < gR) {
+            TLOAD(h1, g1);
+            TCVT(x1, h1);
+            TMUL(sq1, x1, x1);
+        } else {
             TEXPANDS(sq1, 0.0f);
         }
-        TADD(sq_pair, sq0, sq1);
-        // ValidCol is static: (value, row) would select the fill constructor.
-        tile_m_v partial_rows(tile_m);
-        TROWSUM(partial_rows, sq_pair);
-
-        // Store column pair in a row-major matrix with kMaxPairCount stride.
-        // The source valid shape [tile_m,1] limits each row to one element.
+        TADD(sqp, sq0, sq1);
+        tile_m_v rows(tile_m);
+        TROWSUM(rows, sqp);
         gm_f_col partial_out(partial_workspace + pair);
-        TSTORE(partial_out, partial_rows);
+        TSTORE(partial_out, rows);
     }
 }
 
@@ -151,9 +212,68 @@ template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
 inline void rms_norm_tile_single_block(dtype *x, const dtype *gamma,
                                        dtype *out, int64_t gR, int64_t peA,
                                        float inv_r) {
-    const int64_t curtile_factal_r = (gR + 31) / 32;
+    // One physical [32,256] tile holds 8192 elements. A 16384-row is two
+    // blocks; their squares are added before this same reduction.
+    constexpr int64_t kSpan = kTileM * 256;
+    const int64_t span = gR > kSpan ? kSpan : gR;
+    const int64_t curtile_factal_r = (span + 31) / 32;
     const int64_t curtile_factal_a =
-        (gR + curtile_factal_r - 1) / curtile_factal_r;
+        (span + curtile_factal_r - 1) / curtile_factal_r;
+    if (gR > kSpan) {
+        const int fa = static_cast<int>(curtile_factal_a);
+        const int fr = static_cast<int>(curtile_factal_r);
+        for (int64_t ia = 0; ia < peA; ++ia) {
+            const int64_t offset = ia * gR;
+            gm_t gi0(x + offset, fa, fr);
+            gm_t gi1(x + offset + span, fa, fr);
+            gm_t gg0(const_cast<dtype *>(gamma), fa, fr);
+            gm_t gg1(const_cast<dtype *>(gamma) + span, fa, fr);
+            gm_t go0(out + offset, fa, fr);
+            gm_t go1(out + offset + span, fa, fr);
+            tile_h h0(curtile_factal_a, curtile_factal_r),
+                h1(curtile_factal_a, curtile_factal_r);
+            tile_f x0(curtile_factal_a, curtile_factal_r),
+                x1(curtile_factal_a, curtile_factal_r),
+                sq0(curtile_factal_a, curtile_factal_r),
+                sq1(curtile_factal_a, curtile_factal_r);
+            TLOAD(h0, gi0);
+            TCVT(x0, h0);
+            TMUL(sq0, x0, x0);
+            TLOAD(h1, gi1);
+            TCVT(x1, h1);
+            TMUL(sq1, x1, x1);
+            TADD(sq0, sq0, sq1);
+
+            tile_m_v row_sums(curtile_factal_a);
+            TROWSUM(row_sums, sq0);
+            tile_s_wide tile_sum, mean, denom, rms;
+            TCOLSUM(tile_sum, row_sums);
+            TMULS(mean, tile_sum, inv_r);
+            TADDS(denom, mean, kEpsilon);
+            rsqrt_regbase(rms, denom);
+
+            tile_m_v rms_rows(curtile_factal_a);
+            TCOLEXPAND(rms_rows, rms);
+            tile_h gh(curtile_factal_a, curtile_factal_r),
+                h_out0(curtile_factal_a, curtile_factal_r),
+                h_out1(curtile_factal_a, curtile_factal_r);
+            tile_f gf(curtile_factal_a, curtile_factal_r),
+                dst(curtile_factal_a, curtile_factal_r);
+            TLOAD(gh, gg0);
+            TCVT(gf, gh);
+            TROWEXPANDMUL(dst, x0, rms_rows);
+            TMUL(dst, dst, gf);
+            TCVT(h_out0, dst);
+            TSTORE(go0, h_out0);
+            TLOAD(gh, gg1);
+            TCVT(gf, gh);
+            TROWEXPANDMUL(dst, x1, rms_rows);
+            TMUL(dst, dst, gf);
+            TCVT(h_out1, dst);
+            TSTORE(go1, h_out1);
+        }
+        return;
+    }
     // Gamma is identical for every row. Load it once here so the FP32 tile
     // and the per-row TMUL destination share this function's M carrier.
     gm_t gg(const_cast<dtype *>(gamma), static_cast<int>(curtile_factal_a),
@@ -251,7 +371,7 @@ void rms_norm_dynamic_tree_32k(dtype *x, const dtype *gamma,
     using tile_m_v = Tile<Location::Vec, float, 32, 256,
                           BLayout::CubeM32, -1, 1>;
 
-    if (gR <= tile_r) {
+    if (gR <= tile_r * 2) {
         using tile_s_wide = Tile<Location::Vec, float, 1, 256,
                                  BLayout::CubeM32, 1, 1>;
         rms_detail_simt_dynamic_tree_32k::rms_norm_tile_single_block<
