@@ -65,9 +65,11 @@ inline void process_view_copy_tile(
     TMULS(cycle_base, cycle, shape[dim]);
     TSUB(coordinate, quotient, cycle_base);
 
-    // PTO v0.58 MGATHER/MSCATTER take element indices.
-    TMULS(input_contribution, coordinate, input_global_stride[dim]);
-    TMULS(output_contribution, coordinate, output_global_stride[dim]);
+    // Public strides are elements; PTO 0.58.4+ indexed TLSU uses bytes.
+    TMULS(input_contribution, coordinate,
+          input_global_stride[dim] * static_cast<std::uint32_t>(sizeof(DType)));
+    TMULS(output_contribution, coordinate,
+          output_global_stride[dim] * static_cast<std::uint32_t>(sizeof(DType)));
 
     TADD(input_offset_tile, input_offset_tile, input_contribution);
     TADD(output_offset_tile, output_offset_tile, output_contribution);
@@ -84,7 +86,7 @@ inline void process_view_copy_tile(
 /**
  * Copy Elements logical elements between two strided views of the same shape.
  *
- * input_offset/output_offset are expressed in bytes; gather/scatter indices and
+ * input_offset/output_offset and internal gather/scatter offsets are bytes;
  * input_global_stride/output_global_stride are expressed in elements. The
  * caller must ensure that offsets are aligned to DType, product(shape) equals
  * Elements, and both strided storage spans fit in uint32 byte offsets.
