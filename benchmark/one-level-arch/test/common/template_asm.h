@@ -1,40 +1,10 @@
 #ifndef JCOREBENCH_TEMPLATE_ASM_HPP
+// 2026-09-24：已删除旧版 MGATHER/MSCATTER 封装（BSTART.TMA 4/5 助记符
+// 已废弃——"Match Instruction Error"，且与 TileOP 新版
+// BSTART.TLSU MGATHER 同名冲突、重载决议更特化会拦截调用）。
 #define JCOREBENCH_TEMPLATE_ASM_HPP
 
 #include <common/pto_tileop.hpp>
-
-template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_offset, is_global_data_v gm_shape>
-void MGATHER(tile_shape_out &dst, gm_shape &src, tile_shape_offset &offset) {
-  asm volatile(
-    "BSTART.TMA 4, %c[DataType]\n"
-    "B.DIM zero, %c[VCOL], ->lb0\n"
-    "B.DIM zero, %c[VROW], ->lb1\n"
-    "B.IOT [%[s1]], last, ->%[d0]<%c[TileSize]>\n"
-    "B.IOR [%[s0]], []\n"
-    : [d0]"=Tr"(dst.data())
-    : [s0]"r"(src.data()),
-      [s1]"Tr"(offset.data()),
-      [DataType]"i"(type_traits<typename tile_shape_out::DType>::TypeCode),
-      [TileSize]"i"(tile_type_traits<typename tile_shape_out::TileDType>::TilesizeCode),
-      [VCOL]"i"(tile_shape_offset::ValidCol), [VROW]"i"(tile_shape_offset::ValidRow)
-  );
-}
-
-template <is_tile_data_v tile_shape_in, is_tile_data_v tile_shape_offset, is_global_data_v gm_shape>
-void MSCATTER(gm_shape &dst, tile_shape_in &src, tile_shape_offset &offset) {
-  asm volatile(
-    "BSTART.TMA 5, %c[SrcType]\n"
-    "B.DIM zero, %c[VCOL], ->lb0\n"
-    "B.DIM zero, %c[VROW], ->lb1\n"
-    "B.IOT [%[s0], %[s1]], last\n"
-    "B.IOR [%[d0]], []\n"
-    :
-    : [d0]"r"(dst.data()), [s0]"Tr"(src.data()),
-      [s1]"Tr"(offset.data()),
-      [SrcType]"i"(type_traits<typename tile_shape_in::DType>::TypeCode),
-      [VCOL]"i"(tile_shape_offset::ValidCol), [VROW]"i"(tile_shape_offset::ValidRow)
-  );
-}
 
 template <is_tile_data_v tile_shape>
 void TMAX_TEPL(tile_shape &dst, tile_shape &src0, tile_shape &src1) {

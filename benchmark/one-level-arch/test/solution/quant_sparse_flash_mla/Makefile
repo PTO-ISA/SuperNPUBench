@@ -13,15 +13,23 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    # Single-PE compatibility: IMPL=tadd QSMLA_DTYPE=FP16.
    # HIF8 remains the default dtype for the unified four-PE implementations.
    IMPL ?= tadd
-   Tm ?= 32
    ifeq ($(IMPL), tadd)
       # Single-PE tadd requires square B tiles (Tk == Td_block, unpatched
       # Local-B contract) and a row-reduction source <= 2048 bytes, so its
       # defaults follow the validated Tk16 square profile instead of the
       # legacy Tk=32/Td_block=64 pair (which now fails the kernel asserts).
+      Tm ?= 32
+      Tk ?= 16
+      Td_block ?= 16
+   else ifeq ($(IMPL), csa_tadd_1pe)
+      # Single-PE CSA uses CUBE_M32 A operands / accumulators
+      # (CubeTileM32 / CubeAccumulatorM32, TileM <= 32); square B tiles
+      # (Tk == Td_block) are still required.
+      Tm ?= 32
       Tk ?= 16
       Td_block ?= 16
    else
+      Tm ?= 32
       Tk ?= 32
       Td_block ?= 64
    endif
