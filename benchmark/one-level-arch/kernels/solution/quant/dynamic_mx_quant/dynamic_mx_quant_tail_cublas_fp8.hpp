@@ -82,7 +82,7 @@ void dynamic_mx_quant_tail_cublas_fp8(InT *x, OutT *y, uint8_t *scale) {
         using tile_u32_1    = Tile<Location::Vec, uint32_t, TileMv, 1, BLayout::RowMajor, ValidRows, 1>;
 
         // #585 列分区归约（InT 域）：源 [TileMv,BlockSize] 超 2048B → 沿列切 nPart 个 [TileMv,RSC]
-        //   子块各 <=2048B，逐块 TROWMAX→[TileMv,1] partial，TMAX 合并；输出满行、不触 #119。
+        //   子块各 <=2048B，逐块 TROWMAX→[TileMv,1] partial，TMAX 合并；输出满行、不触 #42。
         constexpr int RSC   = reduce_slice_cols(TileMv, sizeof(InT), BlockSize);
         constexpr int nPart = BlockSize / RSC;
         using tile_xc = Tile<Location::Vec, InT, TileMv, RSC, BLayout::RowMajor, ValidRows, RSC>;

@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -107,15 +108,15 @@ _DMXQ = [
     ("nontail_ocp_fp4_bigbs",  "FP4", "compact", False),
 ]
 
-# ---- normalization 族（rms_norm / rms_norm_split_r / group_norm_grad / group_norm_grad_1d）：
-#      compile.all 未集成 gen → prepare 调各自 gen 脚本生成 input+golden 到 case_dir；
-#      verify 调各自 compare 脚本（--cmp-dir case_dir，退出码 0=PASS）。gen/compare 默认参数
-#      已对齐 compile.all（rms_norm 由其 run_precision_check.py 佐证 ELF 名与目录约定）。----
-def make_prep_gen(gen_rel: str):
+# ---- normalization 族（rms_norm 32k / group_norm_grad，含 group_norm_grad_1d）：
+#      compile.all 未集成 gen → prepare 调各自 gen 脚本（带与 compile.all 一致的 shape 参数）
+#      生成 input+golden 到 case_dir；verify 调各自 compare 脚本（--cmp-dir case_dir，退出码 0=PASS）。
+#      _NORM 须与各 compile.all 编出的 ELF 一一对应。----
+def make_prep_gen(gen_rel: str, gen_args: tuple[str, ...] = ()):
     def _prep(case_dir):
         gen = ROOT / "test/solution" / gen_rel
-        subprocess.run(["python3", str(gen), "-o", str(case_dir)],
-                       capture_output=True, timeout=180)
+        subprocess.run(["python3", str(gen), *gen_args, "-o", str(case_dir)],
+                       capture_output=True, text=True, timeout=180, check=True)
         return None   # 无返回 golden → 走 verify 路径
     return _prep
 
@@ -134,24 +135,32 @@ def make_verify_cmpdir(compare_rel: str):
     return _verify
 
 
-# name : 相对目录 : gen 脚本 : compare 脚本 : ELF basename(= gen 默认 -o 目录名 = CHK_DIR)
+_RMS_GEN = "normalization/rms_norm/src/gen_rms_norm_data.py"
+_RMS_CMP = "normalization/rms_norm/src/rms_norm_data_compare.py"
+_GNG_GEN = "normalization/group_norm_grad/src/gen_group_norm_grad_data.py"
+_GNG_CMP = "normalization/group_norm_grad/src/group_norm_grad_data_compare.py"
+_GNG1D_GEN = "normalization/group_norm_grad/src/gen_group_norm_grad_1d_data.py"
+_GNG1D_CMP = "normalization/group_norm_grad/src/group_norm_grad_1d_data_compare.py"
+
+# name : 相对目录 : gen 脚本 : compare 脚本 : ELF basename(= CHK_DIR) : gen shape 参数
 _NORM = [
-    ("rms_norm", "normalization/rms_norm",
-     "normalization/rms_norm/src/gen_rms_norm_data.py",
-     "normalization/rms_norm/src/rms_norm_data_compare.py",
-     "solution_normalization_rms_norm_rms_norm_DType__half_gA512_gR8192_PE4"),
-    ("rms_norm_split_r", "normalization/rms_norm_split_r",
-     "normalization/rms_norm_split_r/src/gen_rms_norm_split_r_data.py",
-     "normalization/rms_norm_split_r/src/rms_norm_split_r_data_compare.py",
-     "solution_normalization_rms_norm_split_r_rms_norm_split_r_DType__half_gA16_gR16384_PE4"),
-    ("group_norm_grad", "normalization/group_norm_grad",
-     "normalization/group_norm_grad/src/gen_group_norm_grad_data.py",
-     "normalization/group_norm_grad/src/group_norm_grad_data_compare.py",
-     "solution_normalization_group_norm_grad_group_norm_grad_DType__half_N32_C16_G8_HxW8192_PE4"),
-    ("group_norm_grad_1d", "normalization/group_norm_grad_1d",
-     "normalization/group_norm_grad_1d/src/gen_group_norm_grad_1d_data.py",
-     "normalization/group_norm_grad_1d/src/group_norm_grad_1d_data_compare.py",
-     "solution_normalization_group_norm_grad_1d_group_norm_grad_1d_DType__half_N512_C64_G8_PE4"),
+    *((f"rms_norm_{v}_32k_r{r // 1024}k", "normalization/rms_norm", _RMS_GEN, _RMS_CMP,
+       f"solution_normalization_rms_norm_rms_norm_dynamic_{v}_32k_DType__half_gA{a}_gR{r}_PE4",
+       ("--g-a", str(a), "--g-r", str(r)))
+      for v in ("simt", "tree") for a, r in ((128, 8192), (32, 16384))),
+    # V0 (archived, backup only): rms_norm_split_r moved to normalization/rms_norm/V0/, not run.
+    # ("rms_norm_split_r", "normalization/rms_norm_split_r",
+    #  "normalization/rms_norm_split_r/src/gen_rms_norm_split_r_data.py",
+    #  "normalization/rms_norm_split_r/src/rms_norm_split_r_data_compare.py",
+    #  "solution_normalization_rms_norm_split_r_rms_norm_split_r_DType__half_gA16_gR16384_PE4"),
+    *((f"group_norm_grad_{v}", "normalization/group_norm_grad", _GNG_GEN, _GNG_CMP,
+       f"solution_normalization_group_norm_grad_group_norm_grad_{v}_DType__half_N2_C16_G8_HxW2048_PE4",
+       ("--n", "2", "--c", "16", "--g", "8", "--hxw", "2048"))
+      for v in ("dynamic", "static")),
+    *((f"group_norm_grad_1d_{v}", "normalization/group_norm_grad", _GNG1D_GEN, _GNG1D_CMP,
+       f"solution_normalization_group_norm_grad_group_norm_grad_1d_{v}_DType__half_N256_C512_G8_PE4",
+       ("--n", "256", "--c", "512", "--g", "8"))
+      for v in ("dynamic", "static")),
 ]
 
 # matmul_test 暂不接入：其 verify_matmul_test.py 是**一体化驱动**（自己 prepare+gfrun+比对），
@@ -160,7 +169,7 @@ _NORM = [
 
 # ================================ CASES（算子侧维护）================================
 # 样板 A：dynamic_mx_quant 8 driver（多输出 + verify 钩子；golden 由 compile.all 集成 gen）。
-# 样板 B：normalization 4 个（prepare 调 gen + verify 调 compare；单/多输出均由自带 compare 处理）。
+# 样板 B：normalization 8 个（prepare 调 gen + verify 调 compare；单/多输出均由自带 compare 处理）。
 # 注：缺相应 TileOP 修复的发布版工具链上这些 kernel 编不过 → ELF 缺失 → 如实 SKIP。
 CASES: list[Case] = [
     Case(f"dmxq_{drv}", f"{_DMXQ_DIR}/elf/dynamic_mx_quant_{drv}.elf",
@@ -168,9 +177,31 @@ CASES: list[Case] = [
     for drv, dt, sl, fp in _DMXQ
 ] + [
     Case(nm, f"{rel}/elf/{elf}.elf",
-         prepare=make_prep_gen(gen), verify=make_verify_cmpdir(cmp), four_pe=True)
-    for nm, rel, gen, cmp, elf in _NORM
+         prepare=make_prep_gen(gen, args), verify=make_verify_cmpdir(cmp), four_pe=True)
+    for nm, rel, gen, cmp, elf, args in _NORM
 ]
+
+# 拆分前的旧用例名 → 现用例名，外部脚本沿用旧名时展开成全部变体，避免匹配不到而空跑。
+CASE_ALIASES: dict[str, list[str]] = {
+    "rms_norm": [nm for nm, *_ in _NORM if nm.startswith("rms_norm_")],
+    "group_norm_grad": ["group_norm_grad_dynamic", "group_norm_grad_static"],
+    "group_norm_grad_1d": ["group_norm_grad_1d_dynamic", "group_norm_grad_1d_static"],
+}
+
+
+def resolve_case_names(names: list[str]) -> tuple[set[str], list[str]]:
+    """把 CLI 用例名解析成 CASES 名集合；返回 (selected, unknown)。"""
+    known = {c.name for c in CASES}
+    selected: set[str] = set()
+    unknown: list[str] = []
+    for name in names:
+        if name in known:
+            selected.add(name)
+        elif name in CASE_ALIASES:
+            selected.update(CASE_ALIASES[name])
+        else:
+            unknown.append(name)
+    return selected, unknown
 
 
 def compile_units(cases: list[Case], compiler_dir: Path, timeout: int) -> None:
@@ -183,13 +214,16 @@ def compile_units(cases: list[Case], compiler_dir: Path, timeout: int) -> None:
         unit_dir = ROOT / "test/solution" / rel
         ca = unit_dir / "compile.all"
         if not ca.is_file():
-            continue
+            raise FileNotFoundError(f"missing compile script: {ca}")
         script = ca.read_text()
         if "res_check=on" not in script:
             script = script.replace("make ", "make res_check=on ")   # 只动没自带 res_check 的
         subprocess.run(["bash", "-c", script], cwd=unit_dir, env=env,
-                       timeout=timeout * 30, stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL)
+                       timeout=timeout * 30, check=True)
+    for case in cases:
+        elf = OUTPUT / case.elf
+        if not elf.is_file():
+            raise FileNotFoundError(f"missing ELF after compilation: {elf}")
 
 
 def run_case(case: Case, gfrun: Path, timeout: int) -> tuple[str, str]:
@@ -202,7 +236,14 @@ def run_case(case: Case, gfrun: Path, timeout: int) -> tuple[str, str]:
     case_dir.mkdir(parents=True, exist_ok=True)
     golden = None
     if case.prepare is not None:
-        golden = case.prepare(case_dir)
+        try:
+            golden = case.prepare(case_dir)
+        except subprocess.CalledProcessError as exc:
+            log = case_dir / "prepare.log"
+            log.write_text((exc.stdout or "") + (exc.stderr or ""), encoding="utf-8")
+            return "FAIL", f"prepare rc={exc.returncode}: {log}"
+        except subprocess.TimeoutExpired:
+            return "TIMEOUT", "prepare timed out"
         if golden is not None:
             golden = np.asarray(golden).reshape(-1)
             np.zeros(golden.size, dtype=case.output_dtype).tofile(case_dir / case.output_name)
@@ -242,13 +283,22 @@ def main() -> int:
                         help="Linx 工具链 bin 目录；给了则自包含 res_check=on 编译，"
                              "不给则依赖外部已编好（上层 run_precision 统一编译前置的场景）")
     parser.add_argument("--timeout", type=int, default=120)
-    parser.add_argument("cases", nargs="*", help="case names; default: all")
+    parser.add_argument("cases", nargs="*",
+                        help="case names or aliases (" + ", ".join(CASE_ALIASES) + "); default: all")
     args = parser.parse_args()
 
-    selected = set(args.cases)
-    active = [c for c in CASES if not selected or c.name in selected]
+    selected, unknown = resolve_case_names(args.cases)
+    if unknown:
+        parser.error(f"unknown case(s): {' '.join(unknown)}\n"
+                     f"known cases: {' '.join(c.name for c in CASES)}\n"
+                     f"aliases: {' '.join(CASE_ALIASES)}")
+    active = [c for c in CASES if not args.cases or c.name in selected]
     if args.compiler_dir:
-        compile_units(active, args.compiler_dir, args.timeout)
+        try:
+            compile_units(active, args.compiler_dir, args.timeout)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+            print(f"FAIL compilation: {exc}", file=sys.stderr, flush=True)
+            return 1
 
     results = []
     for case in active:

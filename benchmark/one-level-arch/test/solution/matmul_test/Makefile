@@ -18,6 +18,11 @@ B ?= 1
 DEFINES += -DglobM=$(M) -DglobN=$(N) -DglobK=$(K) \
 	-DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK) -DBatch=$(B)
 
+# Extra defines (e.g. EXTRA_DEFINES=-DPERF_NO_FILL for gfsim-only perf builds
+# that skip the deterministic LCG input fill; timing is data-independent).
+EXTRA_DEFINES ?=
+DEFINES += $(EXTRA_DEFINES)
+
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
 TARGET = $(ELF_HEAD)_$(TESTCASE)_B$(B)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
 

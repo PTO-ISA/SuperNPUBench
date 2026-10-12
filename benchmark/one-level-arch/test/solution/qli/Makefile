@@ -52,6 +52,13 @@ endif
 
 include ../../common/Makefile.common
 
+# qli_check_data.o：纯数据目标文件（.incbin 嵌入输入），必须 -c 只汇编不链接。
+# make 内建 %.o:%.s 规则对 AS=clang 漏了 -c，clang 会尝试把无 main 的 .o 链接成可执行
+# 而报 "undefined symbol: main"，故显式覆盖。incbin 的 compare/current/*.bin 相对 make
+# 工作目录（本 test 目录）解析，由 compile.all 逐变体用 gen_qli_golden.py 预生成。
+$(TEST_ROOT)/$(CASE_SRC_DIR)/qli_check_data.o: $(TEST_ROOT)/$(CASE_SRC_DIR)/qli_check_data.s
+	$(AS) -c $< -o $@
+
 clean:
 	@find $(OBJ_ROOT) -type f -name "*.o" -exec rm -rf {} \;
 	@rm -rf $(COMM_OBJ) $(LINK_SCRIPT)

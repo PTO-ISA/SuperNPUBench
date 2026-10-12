@@ -6,37 +6,54 @@
 # Non-float builds emit a _DType<dtype> ELF suffix so binaries of different
 # dtypes don't collide.
 
-set -euo pipefail
+# No set -e (same convention as the fa compile.all): individual testcase
+# failures must not abort the remaining build list.
+set -u
 
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+
+mm_reusea_gate_ok() {
+    # $1 = dtype, $2 = tN, $3 = tK.  matmul_reuseA uses tM=128, hence a
+    # 32-row Local A shard and a 32-row FP32 accumulator on every PE.
+    local elem shared_b_bytes local_a_bytes local_c_bytes
+    case "$1" in
+        float) elem=4 ;;
+        __bf16|__half) elem=2 ;;
+        *) echo "unsupported reuseA gate dtype: $1" >&2; return 1 ;;
+    esac
+    shared_b_bytes=$(( $2 * $3 * elem ))
+    local_a_bytes=$(( 32 * $3 * elem ))
+    local_c_bytes=$(( 32 * $2 * 4 ))
+    if (( shared_b_bytes > 256 * 1024 )); then
+        echo "SKIP reuseA SharedTReg capacity: $1 tN=$2 tK=$3 B=$((shared_b_bytes / 1024))KiB"
+        return 1
+    fi
+    if (( local_a_bytes + local_c_bytes > 256 * 1024 )); then
+        echo "SKIP reuseA CellReg capacity: $1 tN=$2 tK=$3 A+C=$(((local_a_bytes + local_c_bytes) / 1024))KiB"
+        return 1
+    fi
+    return 0
+}
 
 # Use a 128x256 output tile through FP8. Scale tK with the input element width
 # so these variants retain the same A/B tile byte capacity as FP32. FP4 keeps
 # tM=128 but uses tN=64 below to stay within the aggregate SharedTReg limit.
 # FP32: tK=128; BF16/FP16: 2x; FP8: 4x; FP4: 8x.
-# Build the SharedTile kernel and the variant that reuses Shared B across all
-# M blocks in the same N block.  The reuseB FP32 configuration uses
-# tM=tN=tK=128, so A and B are both 64 KiB and the remaining 128 KiB of the
-# 256 KiB SharedTReg can keep two B tiles resident. FP32 has no ELF suffix.
+# Build the SharedTile kernel and the variant that keeps each PE's local A
+# shards in its 256 KiB CellReg across N blocks.  For the reuseA configuration,
+# each A shard is 32x128 FP32 = 16 KiB; both K tiles plus the 32 KiB C tile fit
+# comfortably, while the 128 KiB B tile is the only SharedTReg operand.
 make diss TESTCASE=matmul_shared \
     COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=float B=1 M=256 N=256 K=256 \
     tM=128 tN=256 tK=128
 
-make diss TESTCASE=matmul_reuseB \
+if mm_reusea_gate_ok float 256 128; then
+make diss TESTCASE=matmul_reuseA \
     COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=float B=1 M=256 N=256 K=256 \
-    tM=128 tN=128 tK=128
-
-# Internal-accumulator K-chain matmul. The K reduction is split into
-# ChainK-wide pieces accumulated through the CUBE internal-accumulator path
-# (Begin/Middle/End); only the final piece publishes the architectural C tile.
-# Mirrors the QK K-chain of multi_thread/fa/fa_gmma_kchains.hpp. K=256 with
-# ChainK=32 yields 8 K-chain pieces.
-make diss TESTCASE=matmul_kchains \
-    COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=256 N=256 K=256 \
-    tM=128 tN=256 ChainK=32
+    tM=128 tN=256 tK=128
+fi
 
 # BF16/FP16 inputs use twice the FP32 K tile extent.
 make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
@@ -56,9 +73,8 @@ for mode in FP8 HIFP8 MXFP8; do
 done
 
 # FP4-family inputs use eight times the FP32 K tile extent.  Keep tM=128 but
-# reduce tN to 64 so A, B and both scale tiles fit in the single 256 KiB
-# SharedTReg pool.  The resulting totals are 216 KiB for HiF4X2 and 198 KiB
-# for MXFP4; N=256 is covered by four N tiles.
+# reduce tN to 64 so A, B and both scale tiles fit in the SharedTReg pool;
+# N=256 is covered by four N tiles.
 for mode in HIF4X2 MXFP4; do
     make diss TESTCASE=matmul_lowp LP_MODE="$mode" \
         COMPILER_DIR="$COMPILER_DIR" \
@@ -71,120 +87,87 @@ done
 make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
     DTYPE=float B=1 M=1024 N=1024 K=1024 tM=128 tN=256 tK=128
 
-make diss TESTCASE=matmul_reuseB COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=1024 N=1024 K=1024 tM=128 tN=128 tK=128
+if mm_reusea_gate_ok float 256 128; then
+make diss TESTCASE=matmul_reuseA COMPILER_DIR="$COMPILER_DIR" \
+    DTYPE=float B=1 M=1024 N=1024 K=1024 tM=128 tN=256 tK=128
+fi
 
-# === M-axis block-tiled matmul (small tK + B shared within batch) ===
-# Loads blockM A tiles at once, shares one B tile across them.  Small tK
-# keeps tiles small so many A tiles fit in the 256 KiB SharedTReg pool.
-# Note: blockM requires gM >= blockM * kGroupM (= blockM * 128), so
-# blockM=4 needs M >= 512.
-# Note: tK=32 + blockM=4 causes gfsim deadlock (scheduler limitation with
-# 4 live C accumulators across 8 K-tiles).  Use tK>=64 for blockM=4, or
-# blockM<=3 for tK=32.
-# FP32: tK=32, blockM=2 and blockM=3
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=64 tK=32 BLOCKM=2
+# === S1-S6 matmul_shared performance matrix ===
+# Source: matmul_shared_S1_S6_pmu_refreshed_20260921.xlsx, sheet
+# "完整对比表".  The table contains 264 shape/dtype/tile configurations:
+#   S1: 2048x256x2048   S2: 128x256x7168
+#   S3: 256x128x7168    S4: 64x128x7168
+#   S5: 64x64x7168      S6: 128x256x32768
+#
+# Every configuration in the table is represented by the grids below; no
+# capacity gate (issue #192 only excludes the two FA Tk256 FP32 cases).
+matrix_built=0
 
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=384 N=256 K=256 tM=128 tN=64 tK=32 BLOCKM=3
+compile_shared_matrix_case() {
+    local suite=$1 dtype=$2 m=$3 n=$4 k=$5 tn=$6 tk=$7
+    make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
+        DTYPE="$dtype" B=1 M="$m" N="$n" K="$k" \
+        tM=128 tN="$tn" tK="$tk"
+    matrix_built=$((matrix_built + 1))
+}
 
-# FP32: tK=64, larger tiles, blockM=2 and blockM=4
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=2
+compile_lowp_matrix_case() {
+    local suite=$1 mode=$2 m=$3 n=$4 k=$5 tn=$6 tk=$7
+    make diss TESTCASE=matmul_lowp LP_MODE="$mode" \
+        COMPILER_DIR="$COMPILER_DIR" \
+        B=1 M="$m" N="$n" K="$k" tM=128 tN="$tn" tK="$tk"
+    matrix_built=$((matrix_built + 1))
+}
 
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=512 N=256 K=256 tM=128 tN=64 tK=64 BLOCKM=4
+compile_shared_grid() {
+    local suite=$1 dtype=$2 m=$3 n=$4 k=$5 tn_values=$6 tk_values=$7
+    local tn tk
+    for tn in $tn_values; do
+        for tk in $tk_values; do
+            compile_shared_matrix_case "$suite" "$dtype" "$m" "$n" "$k" "$tn" "$tk"
+        done
+    done
+}
 
-# BF16: tK=32 blockM=2, tK=64 blockM=4
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=__bf16 B=1 M=256 N=256 K=256 tM=128 tN=128 tK=32 BLOCKM=2
+compile_lowp_grid() {
+    local suite=$1 mode=$2 m=$3 n=$4 k=$5 tn_values=$6 tk_values=$7
+    local tn tk
+    for tn in $tn_values; do
+        for tk in $tk_values; do
+            compile_lowp_matrix_case "$suite" "$mode" "$m" "$n" "$k" "$tn" "$tk"
+        done
+    done
+}
 
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=__bf16 B=1 M=512 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=4
+# FP32 table grids.
+compile_shared_grid S1 float 2048 256 2048 "64 128"     "64 128 256"
+compile_shared_grid S2 float 128  256 7168 "64 128 256" "64 128 256"
+compile_shared_grid S3 float 256  128 7168 "64 128"     "64 128 256 512"
+compile_shared_grid S4 float 64   128 7168 "64 128"     "64 128 256 512"
+compile_shared_grid S5 float 64   64  7168 "64"         "64 128 256 512"
+compile_shared_grid S6 float 128  256 32768 "64 128 256" "64 128 256"
 
-# FP8 block: tK=64, blockM=4
-make diss TESTCASE=matmul_lowp_blockM LP_MODE=FP8 \
-    COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=512 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=4
+# BF16 and FP16 table grids.
+for dtype in __bf16 __half; do
+    compile_shared_grid S1 "$dtype" 2048 256 2048  "64 128 256" "64 128 256"
+    compile_shared_grid S2 "$dtype" 128  256 7168  "64 128 256" "64 128 256"
+    compile_shared_grid S3 "$dtype" 256  128 7168  "64 128"     "64 128 256 512"
+    compile_shared_grid S4 "$dtype" 64   128 7168  "64 128"     "64 128 256 512"
+    compile_shared_grid S5 "$dtype" 64   64  7168  "64"         "64 128 256 512"
+    compile_shared_grid S6 "$dtype" 128  256 32768 "64 128 256" "64 128 256"
+done
 
-# MXFP4 block: tK=64, blockM=4
-make diss TESTCASE=matmul_lowp_blockM LP_MODE=MXFP4 \
-    COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=512 N=256 K=1024 tM=128 tN=64 tK=64 BLOCKM=4
+# FP8/MXFP8/MXFP4 table grids. The raw grids contain every spreadsheet row.
+for mode in FP8 MXFP8 MXFP4; do
+    compile_lowp_grid S1 "$mode" 2048 256 2048  "64 128 256" "256 512 1024"
+    compile_lowp_grid S2 "$mode" 128  256 7168  "64 128 256" "256 512 1024"
+    compile_lowp_grid S3 "$mode" 256  128 7168  "64 128"     "256 512 1024"
+    compile_lowp_grid S4 "$mode" 64   128 7168  "64 128"     "256 512 1024"
+    compile_lowp_grid S5 "$mode" 64   64  7168  "64"         "256 512 1024"
+    compile_lowp_grid S6 "$mode" 128  256 32768 "64 128 256" "256 512 1024"
+done
 
-# Larger FP32 with blockM=2 (1024 problem size)
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=1024 N=1024 K=1024 tM=128 tN=128 tK=64 BLOCKM=2
-
-# === N-axis block-tiled matmul (A shared across N batch) ===
-# Loads blockN B tiles at once, shares one A tile across them.
-# FP32: blockN=2, small tK
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=64 tK=32 BLOCKN=2
-
-# FP32: blockN=2, larger tiles
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKN=2
-
-# BF16: blockN=2
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=__bf16 B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKN=2
-
-# FP8: blockN=2
-make diss TESTCASE=matmul_lowp_blockM LP_MODE=FP8 \
-    COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKN=2
-
-# === 2D block: blockM × blockN (A shared across N, B shared across M) ===
-# Both axes batched simultaneously. blockM*blockN accumulators live across
-# the K loop. The compute loop uses nj-outer / mi-inner ordering so the
-# same B tile is reused by consecutive TMATMULs (avoids a gfsim scheduler
-# deadlock that occurs with the mi-outer / nj-inner ordering).
-# Note: gfsim deadlocks when blockM*blockN>=4 AND Kb is large (>=~16 for
-# FP32/BF16 tile sizes).  Keep K small (Kb<=4) for FP32/BF16 2D block, or
-# use MXFP4 (tiny tiles tolerate Kb=16).  1D block (blockM or blockN = 1)
-# has no such limit.
-# FP32: blockM=2 blockN=2, tK=64 (Kb=4)
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=256 N=256 K=256 tM=128 tN=64 tK=64 BLOCKM=2 BLOCKN=2
-
-# BF16: blockM=2 blockN=2
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=__bf16 B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=2 BLOCKN=2
-
-# FP8: blockM=2 blockN=2
-make diss TESTCASE=matmul_lowp_blockM LP_MODE=FP8 \
-    COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=256 N=256 K=256 tM=128 tN=128 tK=64 BLOCKM=2 BLOCKN=2
-
-# MXFP4: blockM=2 blockN=2 (Kb=16, tiny FP4 tiles tolerate large Kb)
-make diss TESTCASE=matmul_lowp_blockM LP_MODE=MXFP4 \
-    COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=256 N=256 K=1024 tM=128 tN=64 tK=64 BLOCKM=2 BLOCKN=2
-
-# Large N-axis block: blockN=2 scales to large K (2 accumulators, no
-# gfsim limit).  Demonstrates A-shared-across-N at production scale.
-make diss TESTCASE=matmul_blockM COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=2048 N=256 K=2048 tM=128 tN=128 tK=64 BLOCKN=2
-
-# === Fused matmul -> block quantize -> (data + scale) ===
-# Phase 1 reuses the cooperative SharedTile matmul to write FP32 C to a
-# scratch buffer; Phase 2 SPMD-quantises it in 32-row tiles (group-32 MX:
-# amax -> E8M0 scale -> reciprocal -> scale-mul -> encode). N=64 gives two
-# 32-wide blocks per row -- one TASSEMBLY pair on the assemble path.
-#   USE_ASSEMBLE=1: pack two bf16 halves via TASSEMBLY (lowers to
-#     B.ASSEMBLE). gfrun (functional) models B.ASSEMBLE and passes; gfsim
-#     (timing) does not model it, so this path is not gfsim-runnable.
-#   USE_ASSEMBLE=0: strided half stores. Both gfrun- and gfsim-runnable.
-# Minimal config: M=128 N=64 K=256, tM=128 tN=64 tK=128 (FP32, Kb=2).
-make diss TESTCASE=matmul_quantize QUANT_MODE=FP8 USE_ASSEMBLE=1 \
-    COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=128 N=64 K=256 tM=128 tN=64 tK=128
-
-make diss TESTCASE=matmul_quantize QUANT_MODE=FP8 USE_ASSEMBLE=0 \
-    COMPILER_DIR="$COMPILER_DIR" \
-    DTYPE=float B=1 M=128 N=64 K=256 tM=128 tN=64 tK=128
+echo "S1-S6 matmul matrix: BUILT=$matrix_built"
 
 # === Fused matmul -> level-1 HiF4 (S1P2 data + E6M2 scale) ===
 # Per row, every 64 C columns share one E6M2 scale. The two scaled 32-column

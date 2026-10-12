@@ -37,21 +37,35 @@ static dtype outBuf[kSlotCount * kH] __attribute__((aligned(4096))) = {};
 static int32_t cntLocal[4 * kMoeExpertNum] __attribute__((aligned(4096))) = {};
 static int32_t expertStarts[kMoeExpertNum] __attribute__((aligned(4096))) = {};
 
+// PE0 独占验证 (kernel 末端 barrier(4) 后全量输出可见; 逻辑与原内联版
+// 逐条一致, 提取为函数以便汇合屏障结构化)
+static int verifyDispatchMt();
+
 int main() {
     const uint32_t tid = get_thread_idx();
 
-    // Input init runs redundantly on every PE (deterministic, identical
-    // writes — same convention as group_token_vec_mt's genTopkIndex), so no
-    // extra barrier is needed before the kernel reads x / expertIds.
-    for (int i = 0; i < kBS * kH; i++) {
-        float fval = static_cast<float>(i) * 0.1f;
+    // [2026-10-09 优化] Input init 按 PE 写域分片 (原实现 4 PE 冗余全量写):
+    //   - x:           pack 只读本 PE slot 段的 token 行 [tid*BS/4, +BS/4)
+    //                  (BS%4==0, slot 段 [tid*slotCount/4) 与 token 段对齐);
+    //   - expertIds / expertScales: Phase 1/2/3 只读本 PE 的 slot 段
+    //                  [tid*slotCount/4, +slotCount/4)。
+    // 全部读点在 kernel 内部屏障前均为自写自读 (写域不相交); PE0 验证读
+    // 全量, 位于 kernel 末端屏障之后 —— 分片写已发布。
+    constexpr int kTokensPerPE = kBS / 4;
+    constexpr int kSlotsPerPE = (kBS * kK) / 4;
+    const int tokBase = static_cast<int>(tid) * kTokensPerPE;
+    const int slotBase = static_cast<int>(tid) * kSlotsPerPE;
+    for (int i = 0; i < kTokensPerPE * kH; i++) {
+        const int gi = tokBase * kH + i;
+        float fval = static_cast<float>(gi) * 0.1f;
         uint32_t bits; std::memcpy(&bits, &fval, 4);
         uint16_t raw = (uint16_t)(bits >> 16);
-        std::memcpy(&x[i], &raw, 2);
+        std::memcpy(&x[gi], &raw, 2);
     }
-    for (int i = 0; i < kBS * kK; i++) {
-        expertIds[i] = i % kMoeExpertNum;
-        expertScales[i] = 0.25f;
+    for (int i = 0; i < kSlotsPerPE; i++) {
+        const int s = slotBase + i;
+        expertIds[s] = s % kMoeExpertNum;
+        expertScales[s] = 0.25f;
     }
 
     BENCHSTART;
@@ -65,15 +79,28 @@ int main() {
 
     BENCHEND;
 
-    // Verification runs on PE0 only (all outputs are visible after the
-    // kernel's final barrier). Non-leader PEs return right away: since the
-    // 09-01 functional-model change (direct-boot PE exits are independent)
-    // a worker's exit no longer truncates PE0's verification, and each PE
-    // terminating itself lets the simulation finish cleanly.
-    if (tid != 0) {
-        return 0;
+    // [2026-10-09 修复] 验证汇合屏障 (相位 5, kernel 内部用 1..4) —— 镜像
+    // moe_dispatch_mt_dyn 的 mtBarrier(8c+6) 已证模式: PE0 独占验证期间
+    // worker 在屏障自旋 (而非先行 park 到退出 lockstep AND 组), PE0 验证
+    // 完成后全 PE 一起放行、同时到达 _end。原实现 "Non-leader PEs return
+    // right away" 在输入生成分片加速后, PE0 验证与 worker 退出 ecall 的
+    // 交错窗口触发 gfsim BFU nuke 恢复断言 (实测 @ cycle 4935,
+    // "Can't find occupied local pipe by global fbid"); 汇合屏障消除该
+    // 交错, 同时规避 dispatch_mt_dyn 修复注记载的 exit lockstep 搁浅
+    // (T_deadlock=9999) 风险。
+    int ret = 0;
+    if (tid == 0) {
+        ret = verifyDispatchMt();
     }
+    mtBarrier(5U);
 
+    return ret;
+}
+
+// PE0 独占验证 (kernel 末端 barrier(4) 后全量输出可见; 逻辑与原内联版
+// 逐条一致, 提取为函数以便汇合屏障结构化)
+static int verifyDispatchMt()
+{
     int slotCnt = kBS * kK;
     int32_t counts[4] = {0};
     for (int i = 0; i < slotCnt; i++) counts[expertIds[i]]++;

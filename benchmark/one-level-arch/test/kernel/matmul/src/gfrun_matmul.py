@@ -7,20 +7,27 @@ Covers the two matmul operators under benchmark/one-level-arch/test/kernel:
   * multi_thread/matmul  -> four-PE GMMA matmul (C = A * B, fp32)
   * matmul (TYPE=MASK)   -> single-thread tiled matmul (MASK_FP32 / _FP16 / _FP8)
 
-Both compute C = A * B with A:[B,M,K], B:[B,K,N], C:[B,M,N] row-major.
+The cooperative basic-op kernels compute C = A * B^T with A:[B,M,K],
+B:[B,N,K], C:[B,M,N] row-major. Legacy single-thread MASK kernels retain
+their original B:[B,K,N] input contract.
 The multi_thread variant splits the M rows across four PEs
 (get_thread_idx), but the host-visible storage and the golden reference
 are the full [B,M,N] result. The output (res.bin) is always float32.
 
 The golden reference is computed with **pytorch** (torch.matmul). If torch
 is not installed the script falls back to numpy and prints a warning; install
-torch (`pip install torch`) for the pytorch reference.
+torch (`pip install torch`) for the pytorch reference. FP32/FP16/BF16 inputs
+are generated from a deterministic random distribution. MXFP8/MXFP4 inputs
+are constructed directly in their low-precision payload representation with
+non-uniform E8M0 group scales; the script decodes those exact bytes to FP32
+before calling torch.matmul. This validates MX matmul semantics without also
+testing an FP32-to-MX quantizer.
 
 Per ELF the script:
   1. parses B/M/N/K/tM/tN/tK, the input dtype and the thread count from the
      ELF name;
-  2. generates random input (src0.bin = A, src1.bin = B) and golden.bin
-     (= A @ B in fp32, with the input dtype's quantization applied first);
+  2. generates random input (src0.bin = A, src1.bin = B-major B) and
+     golden.bin (= A @ B^T in fp32, after input-dtype quantization);
   3. pre-allocates res.bin (the guest cannot reliably create files);
   4. runs gfrun on the ELF (the multi_thread variant gets
      `-s softcore.multiThreadNum=4`; single-threaded MASK uses `gfrun -f`);
@@ -35,6 +42,7 @@ zero; the script reports that as a "no output / RES_CHECK off?" failure.
 import argparse
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -89,7 +97,7 @@ if ROOT is None:
     ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "../../../.."))
 CMP_ROOT = os.path.join(ROOT, "compare")
 
-DEFAULT_GFRUN = "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel/bin/gfrun"
+DEFAULT_GFRUN = "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-asl/bin/gfrun"
 # NOTE: gfrun's "-t" flag is a LOG LEVEL (1: basic per-instruction trace,
 # 2: tile detail), NOT a thread/PE count. Passing it makes gfrun print every
 # instruction, which is fatal for non-trivial shapes (millions of lines).
@@ -113,15 +121,44 @@ _DTYPE_MAP = {
 
 # atol/rtol defaults. fp8 accumulates more error; allow more slack.
 _TOL = {
-    "fp32": (2e-2, 2e-2),
+    "fp32": (1e-4, 1e-4),
     "fp16": (2e-2, 2e-2),
     "bf16": (2e-2, 2e-2),
     "fp8": (5e-2, 5e-2),
     "hif8": (5e-2, 5e-2),
-    "mxfp8": (5e-2, 5e-2),
-    "hif4x2": (5e-2, 5e-2),
-    "mxfp4": (5e-2, 5e-2),
+    "mxfp8": (1e-4, 1e-4),
+    "hif4x2": (1e-4, 1e-4),
+    "mxfp4": (1e-4, 1e-4),
 }
+
+# E2M1 finite-only payload table. Codes 0x0..0x7 are positive and 0x8..0xf
+# are the corresponding signed values (including negative zero at 0x8).
+_FP4_E2M1 = np.array(
+    [
+        0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0,
+        -0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0,
+    ],
+    dtype=np.float32,
+)
+
+# HiF4/E1M2 finite-only payload table. Bit 3 is the sign; bits 2:0 select
+# quarter-step magnitudes from 0.0 through 1.75.
+_HIF4_E1M2 = np.array(
+    [
+        0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75,
+        -0.0, -0.25, -0.5, -0.75, -1.0, -1.25, -1.5, -1.75,
+    ],
+    dtype=np.float32,
+)
+
+# Values chosen here are exactly representable in E4M3 and exercise zero,
+# signs, mantissas, and several exponents without invoking a quantizer's
+# rounding policy as part of the test oracle.
+_FP8_EXACT_VALUES = np.array(
+    [0.0, 0.125, -0.25, 0.5, -0.5, 0.75, -1.0, 1.5,
+     -2.0, 3.0, -4.0, 6.0, -8.0, 12.0],
+    dtype=np.float32,
+)
 
 statics = {"pass": [], "fail": []}
 
@@ -158,13 +195,14 @@ def parse_matmul_shape(elf_name, args):
 
     if multi_thread:
         lowp_match = re.search(
-            r"matmul_lowp_(FP8|HIFP8|MXFP8|HIF4X2|MXFP4)_B\d", base
+            r"matmul_lowp_(FP8|HIFP8|MXFP8|HIF4|HIF4X2|MXFP4)_B\d", base
         )
         mode = lowp_match.group(1) if lowp_match else None
         lowp_dtypes = {
             "FP8": ("fp8", 1, False),
             "HIFP8": ("hif8", 1, False),
             "MXFP8": ("mxfp8", 1, True),
+            "HIF4": ("hif4x2", 2, True),
             "HIF4X2": ("hif4x2", 2, True),
             "MXFP4": ("mxfp4", 2, True),
         }
@@ -304,6 +342,191 @@ def _quantize_fp8_e4m3(x_np):
     return _quantize_fp8_e4m3_np(x_np)
 
 
+def _decode_fp8_e4m3(bits):
+    """Decode the exact raw E4M3 payload bytes used by the DUT."""
+    bits = np.ascontiguousarray(bits, dtype=np.uint8)
+    if _HAS_TORCH:
+        return (
+            torch.from_numpy(bits)
+            .view(torch.float8_e4m3fn)
+            .to(torch.float32)
+            .numpy()
+        )
+    return _dequant_fp8_e4m3_np(bits)
+
+
+def _decode_e8m0(codes):
+    """Decode finite E8M0 scale bytes to exact powers of two."""
+    codes = np.asarray(codes, dtype=np.uint8)
+    if np.any(codes == 0xFF):
+        raise ValueError("E8M0 code 0xff is NaN and is not valid in this test")
+    return np.ldexp(
+        np.ones(codes.shape, dtype=np.float32),
+        codes.astype(np.int16) - 127,
+    )
+
+
+def _pack_fp4_e2m1x2(codes, k_axis):
+    """Pack adjacent logical K values, even K in the low nibble."""
+    lo_index = [slice(None)] * codes.ndim
+    hi_index = [slice(None)] * codes.ndim
+    lo_index[k_axis] = slice(0, None, 2)
+    hi_index[k_axis] = slice(1, None, 2)
+    lo = codes[tuple(lo_index)]
+    hi = codes[tuple(hi_index)]
+    return (lo | (hi << 4)).astype(np.uint8)
+
+
+def _unpack_fp4_e2m1x2(packed, k_axis):
+    """Decode packed E2M1 bytes, preserving the logical K ordering."""
+    shape = list(packed.shape)
+    shape[k_axis] *= 2
+    out = np.empty(shape, dtype=np.float32)
+    lo_index = [slice(None)] * out.ndim
+    hi_index = [slice(None)] * out.ndim
+    lo_index[k_axis] = slice(0, None, 2)
+    hi_index[k_axis] = slice(1, None, 2)
+    out[tuple(lo_index)] = _FP4_E2M1[(packed & 0x0F).astype(np.int64)]
+    out[tuple(hi_index)] = _FP4_E2M1[((packed >> 4) & 0x0F).astype(np.int64)]
+    return out
+
+
+def _unpack_hif4x2(packed, k_axis):
+    """Decode packed HiF4/E1M2 bytes, preserving logical K ordering."""
+    shape = list(packed.shape)
+    shape[k_axis] *= 2
+    out = np.empty(shape, dtype=np.float32)
+    lo_index = [slice(None)] * out.ndim
+    hi_index = [slice(None)] * out.ndim
+    lo_index[k_axis] = slice(0, None, 2)
+    hi_index[k_axis] = slice(1, None, 2)
+    out[tuple(lo_index)] = _HIF4_E1M2[(packed & 0x0F).astype(np.int64)]
+    out[tuple(hi_index)] = _HIF4_E1M2[
+        ((packed >> 4) & 0x0F).astype(np.int64)
+    ]
+    return out
+
+
+def _decode_hif4_u32_scales(words):
+    """Decode each HiF4 U32 scale word into its 64 lane scale values.
+
+    bits 7:0 carry E6M2 (bias 48), bits 15:8 carry one exponent bit per
+    eight lanes, and bits 31:16 carry one exponent bit per four lanes.
+    """
+    words = np.asarray(words, dtype=np.uint32)
+    base = words & np.uint32(0xFF)
+    if np.any(base == 0xFF):
+        raise ValueError("HiF4 E6M2 base 0xff is NaN and is invalid here")
+    exponent = (base >> np.uint32(2)).astype(np.int16) - 48
+    significand = (4.0 + (base & np.uint32(0x3)).astype(np.float32)) / 4.0
+    base_scale = np.ldexp(significand, exponent)
+    out = np.empty(words.shape + (64,), dtype=np.float32)
+    for lane in range(64):
+        e1_8 = (words >> np.uint32(8 + lane // 8)) & np.uint32(1)
+        e1_16 = (words >> np.uint32(16 + lane // 4)) & np.uint32(1)
+        out[..., lane] = np.ldexp(
+            base_scale, (e1_8 + e1_16).astype(np.int32)
+        )
+    return out
+
+
+def _torch_or_numpy_matmul(a, b):
+    """FP32 reference matmul; PyTorch is preferred and used in CI here."""
+    a = np.ascontiguousarray(a, dtype=np.float32)
+    b = np.ascontiguousarray(b, dtype=np.float32)
+    if _HAS_TORCH:
+        return torch.matmul(torch.from_numpy(a), torch.from_numpy(b)).numpy()
+    return np.matmul(a, b).astype(np.float32)
+
+
+def _make_mx_inputs_and_golden(B, M, N, K, dtype, rng):
+    """Construct MX payload/scales and derive a golden from those exact bytes.
+
+    This deliberately does not start with arbitrary FP32 tensors and does not
+    choose dynamic scales. It therefore tests only the MX matmul consumer:
+    payload decoding, packed-lane order, group-32 scale addressing, and FP32
+    accumulation/output.
+    """
+    if K % 32:
+        raise ValueError(f"MX precision check requires K divisible by 32, got {K}")
+
+    groups = K // 32
+    # Use several finite power-of-two scales. Dependence on row/column as well
+    # as K group catches implementations that accidentally broadcast group 0.
+    a_scale_index = np.indices((B, M, groups), dtype=np.int64)
+    b_scale_index = np.indices((B, N, groups), dtype=np.int64)
+    a_scale = (
+        0x7D
+        + (3 * a_scale_index[0] + 2 * a_scale_index[1] + a_scale_index[2]) % 5
+    ).astype(np.uint8)
+    b_scale_logical = (
+        0x7D
+        + (2 * b_scale_index[0] + 3 * b_scale_index[1] + b_scale_index[2]) % 5
+    ).astype(np.uint8)
+
+    if dtype == "mxfp8":
+        a_values = rng.choice(_FP8_EXACT_VALUES, size=(B, M, K))
+        b_values = rng.choice(_FP8_EXACT_VALUES, size=(B, N, K))
+        a_payload = _quantize_fp8_e4m3(a_values)
+        b_payload = _quantize_fp8_e4m3(b_values)
+        a_dec = _decode_fp8_e4m3(a_payload)
+        b_dec = _decode_fp8_e4m3(b_payload)
+    elif dtype == "mxfp4":
+        # Draw payload codes directly so all finite E2M1 encodings are covered.
+        a_codes = rng.integers(0, 16, size=(B, M, K), dtype=np.uint8)
+        b_codes = rng.integers(0, 16, size=(B, N, K), dtype=np.uint8)
+        a_payload = _pack_fp4_e2m1x2(a_codes, k_axis=2)
+        # B is B-major [B,N,K/2], so adjacent logical K values share a byte.
+        b_payload = _pack_fp4_e2m1x2(b_codes, k_axis=2)
+        a_dec = _unpack_fp4_e2m1x2(a_payload, k_axis=2)
+        b_dec = _unpack_fp4_e2m1x2(b_payload, k_axis=2)
+    else:
+        raise ValueError(f"not an MX dtype: {dtype}")
+
+    a_scale_f32 = np.repeat(_decode_e8m0(a_scale), 32, axis=2)
+    b_scale_f32 = np.repeat(_decode_e8m0(b_scale_logical), 32, axis=2)
+    a_dec *= a_scale_f32
+    b_dec *= b_scale_f32
+    golden = _torch_or_numpy_matmul(a_dec, np.swapaxes(b_dec, 1, 2))
+    return a_payload, b_payload, a_scale, b_scale_logical, golden
+
+
+def _make_hif4_inputs_and_golden(B, M, N, K, rng):
+    """Construct exact HiF4 payload/U32 scales and their FP32 matmul golden."""
+    if K % 64:
+        raise ValueError(f"HiF4 precision check requires K divisible by 64, got {K}")
+
+    groups = K // 64
+    a_codes = rng.integers(0, 16, size=(B, M, K), dtype=np.uint8)
+    b_codes = rng.integers(0, 16, size=(B, N, K), dtype=np.uint8)
+    a_payload = _pack_fp4_e2m1x2(a_codes, k_axis=2)
+    b_payload = _pack_fp4_e2m1x2(b_codes, k_axis=2)
+
+    # Base E6M2 values span 0.5..1.25. Random E1_8/E1_16 masks exercise the
+    # two per-lane exponent-adjustment fields without involving a quantizer.
+    a_index = np.indices((B, M, groups), dtype=np.int64)
+    b_index = np.indices((B, N, groups), dtype=np.int64)
+    a_base = (0xBC + (3 * a_index[0] + 2 * a_index[1] + a_index[2]) % 6).astype(
+        np.uint32
+    )
+    b_base = (0xBC + (2 * b_index[0] + 3 * b_index[1] + b_index[2]) % 6).astype(
+        np.uint32
+    )
+    a_e1_8 = rng.integers(0, 1 << 8, size=a_base.shape, dtype=np.uint32)
+    b_e1_8 = rng.integers(0, 1 << 8, size=b_base.shape, dtype=np.uint32)
+    a_e1_16 = rng.integers(0, 1 << 16, size=a_base.shape, dtype=np.uint32)
+    b_e1_16 = rng.integers(0, 1 << 16, size=b_base.shape, dtype=np.uint32)
+    a_scale = a_base | (a_e1_8 << np.uint32(8)) | (a_e1_16 << np.uint32(16))
+    b_scale = b_base | (b_e1_8 << np.uint32(8)) | (b_e1_16 << np.uint32(16))
+
+    a_dec = _unpack_hif4x2(a_payload, k_axis=2)
+    b_dec = _unpack_hif4x2(b_payload, k_axis=2)
+    a_dec *= _decode_hif4_u32_scales(a_scale).reshape(B, M, K)
+    b_dec *= _decode_hif4_u32_scales(b_scale).reshape(B, N, K)
+    golden = _torch_or_numpy_matmul(a_dec, np.swapaxes(b_dec, 1, 2))
+    return a_payload, b_payload, a_scale, b_scale, golden
+
+
 # ---------------------------------------------------------------------------
 # Golden reference (pytorch preferred)
 # ---------------------------------------------------------------------------
@@ -372,7 +595,18 @@ def gen_input_and_golden(elf_name, path, args):
     dtype = shape["dtype"]
 
     rng = np.random.default_rng(args.seed)
-    if dtype in ("fp8", "hif8", "mxfp8", "hif4x2", "mxfp4"):
+    mx_inputs = None
+    if dtype in ("mxfp8", "mxfp4"):
+        mx_inputs = _make_mx_inputs_and_golden(B, M, N, K, dtype, rng)
+        a_q, b_q, a_scale_q, b_scale_q, golden = mx_inputs
+        # Logical FP32 operands are intentionally not used on this path: the
+        # payload and scale files themselves are the source of truth.
+        a = b = None
+    elif dtype == "hif4x2":
+        mx_inputs = _make_hif4_inputs_and_golden(B, M, N, K, rng)
+        a_q, b_q, a_scale_q, b_scale_q, golden = mx_inputs
+        a = b = None
+    elif dtype in ("fp8", "hif8"):
         # Use non-zero values that are represented exactly by every tested
         # low-precision format. This exercises sign decoding, packed-lane
         # ordering and MX scales without making the reference depend on a
@@ -391,54 +625,40 @@ def gen_input_and_golden(elf_name, path, args):
         golden = matmul_reference(a, b, dtype)  # [B,M,N] float32
 
     # Inputs written in the operator's input-dtype layout.
-    if dtype == "fp16":
+    if dtype in ("mxfp8", "mxfp4", "hif4x2"):
+        # Already constructed directly in the operator's packed input layout.
+        pass
+    elif dtype == "fp16":
         a_q = a.astype(np.float16)
         b_q = b.astype(np.float16)
     elif dtype == "bf16":
         a_q = _quantize_bf16_np(a)
         b_q = _quantize_bf16_np(b)
-    elif dtype in ("fp8", "mxfp8"):
+    elif dtype == "fp8":
         a_q = _quantize_fp8_e4m3(a)
         b_q = _quantize_fp8_e4m3(b)
     elif dtype == "hif8":
         # PTO HiF8: D0 payload 0x08 is +1.0; setting the sign bit gives -1.0.
         a_q = np.where(a > 0, 0x08, 0x88).astype(np.uint8)
         b_q = np.where(b > 0, 0x08, 0x88).astype(np.uint8)
-    elif dtype in ("hif4x2", "mxfp4"):
-        # Finite-only nibble tables used by CubeEngine:
-        # HiF4 index 4 == 1.0; E2M1 index 2 == 1.0; bit 3 is the sign.
-        one = 0x04 if dtype == "hif4x2" else 0x02
-        a_lane = np.where(a > 0, one, one | 0x08).astype(np.uint8)
-        b_lane = np.where(b > 0, one, one | 0x08).astype(np.uint8)
-        # Packed storage is [M,K/2] and [K/2,N]: low nibble is logical
-        # K=2k, high nibble is logical K=2k+1.
-        a_q = a_lane[:, :, 0::2] | (a_lane[:, :, 1::2] << 4)
-        b_q = b_lane[:, 0::2, :] | (b_lane[:, 1::2, :] << 4)
     else:
         a_q = a.astype(np.float32)
         b_q = b.astype(np.float32)
 
+    # The cooperative basic-op kernels use one uniform B-major contract:
+    # [B,N,K] (or [B,N,K/PackedFactor] for packed FP4). The lowp MX/HiF4
+    # helpers above already return B-major payloads; transpose only the
+    # ordinary mathematical [B,K,N] arrays here. Legacy MASK kernels keep
+    # their original [B,K,N] files.
+    if shape["multi_thread"] and dtype not in ("mxfp8", "mxfp4", "hif4x2"):
+        b_q = np.ascontiguousarray(np.swapaxes(b_q, 1, 2))
+
     a_q.tofile(os.path.join(path, "src0.bin"))
     b_q.tofile(os.path.join(path, "src1.bin"))
     if shape["use_mx"]:
-        if dtype == "hif4x2":
-            # HiF4X2 is Matrix-MX-only. One raw U32 word scales 64 logical
-            # lanes. 0x000000c0 encodes E6M2 1.0 with all E1 bits clear.
-            np.full((B, M, K // 64), 0x000000C0, dtype=np.uint32).tofile(
-                os.path.join(path, "src0_scale.bin")
-            )
-            np.full((B, K // 64, N), 0x000000C0, dtype=np.uint32).tofile(
-                os.path.join(path, "src1_scale.bin")
-            )
-        else:
-            # E8M0 0x7f decodes to 2^(127-127) == 1.0. Scale tensors follow
-            # [B,M,K/32] for A and [B,K/32,N] for B.
-            np.full((B, M, K // 32), 0x7F, dtype=np.uint8).tofile(
-                os.path.join(path, "src0_scale.bin")
-            )
-            np.full((B, K // 32, N), 0x7F, dtype=np.uint8).tofile(
-                os.path.join(path, "src1_scale.bin")
-            )
+        if dtype in ("mxfp8", "mxfp4", "hif4x2"):
+            a_scale_q.tofile(os.path.join(path, "src0_scale.bin"))
+            b_scale_q.tofile(os.path.join(path, "src1_scale.bin"))
     golden.tofile(os.path.join(path, "golden.bin"))
 
     # Pre-allocate res.bin (zero). Guest cannot reliably create files.
@@ -468,11 +688,12 @@ def run_qemu(elf, args):
         pe = shape.get("threads", 4)
         if "softcore.multiThreadNum" not in gfrun_args:
             gfrun_args = f" -s softcore.multiThreadNum={pe} {gfrun_args} "
-    cmd = f"{args.gfrun} {gfrun_args} {elf}"
-    print(f"[run] {cmd}")
+    command = [args.gfrun, *shlex.split(gfrun_args), elf]
+    simulator_root = os.path.dirname(os.path.dirname(os.path.abspath(args.gfrun)))
+    print(f"[run] cwd={simulator_root} {shlex.join(command)}")
     try:
         proc = subprocess.Popen(
-            cmd, shell=True, preexec_fn=os.setsid,
+            command, cwd=simulator_root, preexec_fn=os.setsid,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         )
     except Exception as e:
@@ -522,9 +743,21 @@ def compare_array(cmp_data, golden_data, dtype, atol, rtol):
     diff = res - ref
     mse = float(np.mean(diff * diff))
     max_abs = float(np.max(np.abs(diff)))
-    close = bool(np.allclose(res, ref, atol=atol, rtol=rtol))
+    abs_diff = np.abs(diff)
+    close_mask = np.isclose(res, ref, atol=atol, rtol=rtol, equal_nan=False)
+    close = bool(np.all(close_mask))
+    ref_l2 = float(np.linalg.norm(ref.astype(np.float64)))
     chk = "pass" if close else "fail"
-    return chk, {"mse": mse, "max_abs": max_abs}
+    return chk, {
+        "mse": mse,
+        "max_abs": max_abs,
+        "mean_abs": float(np.mean(abs_diff)),
+        "rel_l2": float(np.linalg.norm(diff.astype(np.float64)) / ref_l2)
+        if ref_l2
+        else float("inf"),
+        "mismatches": int(close_mask.size - np.count_nonzero(close_mask)),
+        "elements": int(close_mask.size),
+    }
 
 
 def result_compare(cmp_data_path, args):

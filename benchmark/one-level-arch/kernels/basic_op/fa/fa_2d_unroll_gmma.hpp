@@ -104,10 +104,9 @@ void flash_attention_2d_unroll_shared_impl(
     using tileK = SharedTile<tileKMatrix>;
     using tileV = SharedTile<tileVMatrix>;
 
-    // Change 8: tileW is a CubeTileM32/M16 (Location::Left) instead of
-    // CubeAccumulatorM32/M16 (Location::Acc). The QK TMATMUL writes directly
-    // to a Left tile, and tW is used as the PV TMATMUL left operand without
-    // any TCVT (for FP32). For packed types a Left->Left TCVT remains.
+    // tileW is a CubeTileM32/M16 (Location::Left). QK writes it directly:
+    // keep_acc for FP32 vector math, or fixpipe BF16 conversion otherwise.
+    // This avoids the intermediate FP32 QK tile and standalone TCVT.
     using tileWM16 = CubeTileM16<vector_dtype, kPeTm, kTk>;
     using tileWM32 = CubeTileM32<vector_dtype, kPeTm, kTk>;
     using tileW = std::conditional_t<(kPeTm <= 16), tileWM16, tileWM32>;
@@ -146,8 +145,16 @@ void flash_attention_2d_unroll_shared_impl(
     using tileMaxM32 = VecTileM32<vector_dtype, kPeTm, 1, kPeTm, 1>;
     using tileMax =
         std::conditional_t<(kPeTm <= 16), tileMaxM16, tileMaxM32>;
-    using tileSum = tileMax;
     using tileScale = tileMax;
+    using tileRowFp32M16 = VecTileM16<float, kPeTm, 1, kPeTm, 1>;
+    using tileRowFp32M32 = VecTileM32<float, kPeTm, 1, kPeTm, 1>;
+    using tileRowFp32 =
+        std::conditional_t<(kPeTm <= 16), tileRowFp32M16, tileRowFp32M32>;
+    // Local max/sum reductions follow vector_dtype, but the persistent online
+    // softmax denominator is always FP32. This keeps cross-KV-block global
+    // accumulation in FP32 when the score/vector path uses BF16.
+    using tileLocalSum = tileMax;
+    using tileSum = tileRowFp32;
 
     using itQ = global_iterator<gmQ, tileQMatrix>;
     using itK = global_iterator<gmK, tileKMatrix>;
@@ -174,7 +181,8 @@ void flash_attention_2d_unroll_shared_impl(
     constexpr int Kb = (Skv + kTk - 1) / kTk;
 
     // Loop-invariant fixpipe options — hoisted outside both loops.
-    constexpr auto qkOptions = fixp::keep_acc();
+    constexpr auto qkFp32Options = fixp::keep_acc();
+    constexpr auto qkBf16Options = fixp::bf16();
     constexpr auto pvOptions = fixp::keep_acc().transpose_b();
 
 #pragma clang loop unroll(full)
@@ -199,7 +207,13 @@ void flash_attention_2d_unroll_shared_impl(
             auto gK = gIterK(j, 0);
             TLOAD<tileKMatrix, 1>(tK, gK);
 
-            TMATMUL(tW, tQ, tK, qkOptions);
+            if constexpr (std::is_same_v<vector_dtype, float>) {
+                TMATMUL(tW, tQ, tK, qkFp32Options);
+            } else {
+                static_assert(std::is_same_v<vector_dtype, __bf16>,
+                              "QK fixpipe output supports FP32 or BF16 vector dtype");
+                TMATMUL(tW, tQ, tK, qkBf16Options);
+            }
 
             // Scale
             TMULS(tW, tW, scale);
@@ -211,6 +225,7 @@ void flash_attention_2d_unroll_shared_impl(
 
             tileMax tNewMax;
             tileScale tScale;
+            tileRowFp32 tScaleFp32;
             // tMax starts at the softmax sentinel, so TMAX can consume the
             // reduction prefix directly for both the first and later blocks.
             TMAX(tNewMax, tMax, tLocalMax);
@@ -218,7 +233,12 @@ void flash_attention_2d_unroll_shared_impl(
                 // Change 7: TROWEXPANDEXPDIF replaces TSUB+TEXP (j!=0 only)
                 TROWEXPANDEXPDIF(tScale, tMax, tNewMax);
                 // Rescale old output before PV accumulation
-                TROWEXPANDMUL(tO, tO, tScale);
+                if constexpr (std::is_same_v<vector_dtype, float>) {
+                    TROWEXPANDMUL(tO, tO, tScale);
+                } else {
+                    TCVT(tScaleFp32, tScale);
+                    TROWEXPANDMUL(tO, tO, tScaleFp32);
+                }
             }
 
             // Exponentiate current scores (common to both branches)
@@ -226,18 +246,32 @@ void flash_attention_2d_unroll_shared_impl(
 
             tileReduce tLocalSumR;
             TROWSUM(tLocalSumR, tW);
-            auto tLocalSum = TREDUCEPREFIXVIEW<tileSum>(tLocalSumR);
 
             tileSum tNewSum;
-            if (j == 0) {
-                TADD(tNewSum, tSum, tLocalSum);
+            if constexpr (std::is_same_v<vector_dtype, float>) {
+                auto tLocalSum = TREDUCEPREFIXVIEW<tileSum>(tLocalSumR);
+                if (j == 0) {
+                    TADD(tNewSum, tSum, tLocalSum);
+                } else {
+                    TFMA(tNewSum, tSum, tScale, tLocalSum);
+                }
             } else {
-                // There is no TFMA reduction-prefix overload yet.  Preserve
-                // the zero-copy localSum path with separate MUL and ADD; this
-                // uses separate rather than fused rounding.
-                tileSum tScaledSum;
-                TMUL(tScaledSum, tSum, tScale);
-                TADD(tNewSum, tScaledSum, tLocalSum);
+                // Materialize the reduction prefix as a compact BF16 tile
+                // before TCVT: both functional and timing models require the
+                // conversion operands to be independent CELL descriptors.
+                auto tLocalSumView =
+                    TREDUCEPREFIXVIEW<tileLocalSum>(tLocalSumR);
+                tileLocalSum tLocalSumZero;
+                tileLocalSum tLocalSumCompact;
+                TEXPANDS(tLocalSumZero, 0.0f);
+                TADD(tLocalSumCompact, tLocalSumZero, tLocalSumView);
+                tileSum tLocalSumFp32;
+                TCVT(tLocalSumFp32, tLocalSumCompact);
+                if (j == 0) {
+                    TADD(tNewSum, tSum, tLocalSumFp32);
+                } else {
+                    TFMA(tNewSum, tSum, tScaleFp32, tLocalSumFp32);
+                }
             }
 
             // --- PV matmul ---
@@ -248,8 +282,9 @@ void flash_attention_2d_unroll_shared_impl(
             TLOAD<tileVMatrix, 1>(tV, gV);
 
             if constexpr (PackedFactor == 1 &&
-                          std::is_same_v<matrix_dtype, float>) {
-                // FP32: tW is already Left, float — no TCVT
+                          std::is_same_v<matrix_dtype, vector_dtype>) {
+                // The softmax probability already matches the configured
+                // CUBE input dtype, so it can feed PV directly.
                 if (j == 0) {
                     TMATMUL(tO, tW, tV, pvOptions, kGroupM);
                 } else {
@@ -274,15 +309,15 @@ void flash_attention_2d_unroll_shared_impl(
             tSum = tNewSum;
         }
 
-        // Change 9: TROWEXPANDDIV replaces TRECIP+TROWEXPANDMUL
+        // tSum is persistently FP32 for both vector modes.
         TROWEXPANDDIV(tO, tO, tSum);
         auto dstO = gIterO(i * kPeNum + tid, 0);
         if constexpr (std::is_same_v<vector_dtype, float>) {
-            TSTORE_CUBE(dstO, tO);
+            TSTORE(dstO, tO);
         } else {
             tileOCast tOCast;
             TCVT(tOCast, tO);
-            TSTORE_CUBE(dstO, tOCast);
+            TSTORE(dstO, tOCast);
         }
     }
 }

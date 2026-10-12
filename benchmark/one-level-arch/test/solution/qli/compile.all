@@ -1,20 +1,34 @@
 #!/bin/bash
 # Quant Lightning Indexer test cases — radix-select TopK demo (已验证关键 Case)
 # ============================================================
-# 【demo 主线】qli_check_opt（qli_pto_opt.hpp 多轮 MSD radix-select TopK）
+# 【demo 主线】qli_check_opt（qli_pto_opt_simple.hpp 精简 MSD radix-select TopK）
 #   - 精度判据：TopK set match（无序集合）+ score cosine
-#   - 数据：先 `python3 src/gen_qli_golden.py --mode gen --outdir ../compare/<cfg>`
-#           再按 src/../README.md 更新 qli_check_data.s 路径与地址后构建
+#   - 数据：每个变体先用 gen_qli_golden.py 按该配置生成输入+golden 到
+#           compare/current/，qli_check_data.s 从此处 .incbin（相对 make CWD）。
+#     · 不再手工改 qli_check_data.s 路径 / 跑 fix_cpp_addrs.py：.cpp 已改为直接
+#       引用链接器符号 _binary_*_data_start，地址与配置无关。
+#     · qli_check_data.o 在源码树、不受 Makefile clean 覆盖，且 .s 未变时 make 不会
+#       因 compare/current 数据变化而重编（incbin 依赖不被 make 追踪）→ 每变体前删除。
 # ============================================================
+# 不用 set -e：单个变体失败不阻断其余变体（各自独立生成+编译）。
+set -uo pipefail
+
+D=128        # head 维度（固定）
+G=64         # head 数（Makefile 默认 g=64）
+
+run() {  # $1=Sq $2=Skv $3=topk
+  echo "==== qli variant: Sq=$1 Skv=$2 topk=$3 (g=$G d=$D) ===="
+  python3 src/gen_qli_golden.py --mode gen --outdir compare/current \
+      --sq "$1" --skv "$2" --topk "$3" --g "$G" --d "$D" \
+    && rm -f src/qli_check_data.o \
+    && make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq="$1" Skv="$2" topk="$3"
+}
 
 # ============ 关键 Case 1：单 chunk，多 token，全量 topK ============
-make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=64 Skv=128 topk=128
-
+run 64 128 128
 # ============ 关键 Case 2：单 chunk，大 Skv，大 topK ============
-make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=4 Skv=2048 topk=512
-
+run 4 2048 512
 # ============ 关键 Case 3：4 chunk 大规模 ============
-make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=4 Skv=8192 topk=512
-
+run 4 8192 512
 # ============ 关键 Case 4：tail chunk（Skv%2048=32，Skv%kTk=0） ============
-make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq=4 Skv=2080 topk=512
+run 4 2080 512

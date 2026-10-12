@@ -1,6 +1,8 @@
-# MoE Combine — single-PE V2 and 4-PE SPMD.
-# Single-PE testcase:  moe_combine_v2   (gfrun default)
-# 4-PE testcase:       moe_combine_mt   (gfrun -s softcore.multiThreadNum=4)
+# MoE Combine — single-PE V2, 4-PE SPMD and 4-PE dynamic-shape SPMD.
+# Single-PE testcase:  moe_combine_v2      (gfrun default)
+# 4-PE testcase:       moe_combine_mt      (gfrun -s softcore.multiThreadNum=4)
+# 4-PE dyn testcase:   moe_combine_mt_dyn  (gfrun -s softcore.multiThreadNum=4;
+#                       runtime tiling = {BS,H,K,NumExpanded}, 2 shape configs)
 
 ifeq ($(TESTCASE),moe_combine_v2)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
@@ -8,8 +10,11 @@ TARGET = $(ELF_HEAD)_$(TESTCASE).elf
 else ifeq ($(TESTCASE),moe_combine_mt)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
 TARGET = $(ELF_HEAD)_$(TESTCASE).elf
+else ifeq ($(TESTCASE),moe_combine_mt_dyn)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
+TARGET = $(ELF_HEAD)_$(TESTCASE).elf
 else
-$(error Unsupported TESTCASE=$(TESTCASE); expected moe_combine_v2 or moe_combine_mt)
+$(error Unsupported TESTCASE=$(TESTCASE); expected moe_combine_v2, moe_combine_mt or moe_combine_mt_dyn)
 endif
 
 include ../../common/Makefile.common

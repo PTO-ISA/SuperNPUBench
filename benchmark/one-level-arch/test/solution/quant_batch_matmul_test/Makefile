@@ -37,6 +37,11 @@ DEFINES += -DglobM=$(M) -DglobN=$(N) -DglobK=$(K) \
 	-DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK) \
 	-DBatch=$(B) -DNBLOCKS=$(NBLOCKS)
 
+# GFSIM=on: build for gfsim SyscallBarrier 4PE lockstep (all PEs run file I/O)
+ifeq ($(GFSIM), on)
+DEFINES += -DGFSIM
+endif
+
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
 TARGET = $(ELF_HEAD)_$(TESTCASE)_B$(B)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
 

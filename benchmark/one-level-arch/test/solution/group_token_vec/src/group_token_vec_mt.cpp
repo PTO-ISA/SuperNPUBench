@@ -120,6 +120,14 @@ int main()
 
     // --- verification & reference: PE0 only (after final barrier inside
     // runGroupTokenVecMT, all outputs are fully written and visible) ---
+    // [2026-10-01 修复] gfsim 退出 lockstep 搁浅: 原实现 worker (tid!=0)
+    // 直接 return, 先于 PE0 到达 _end 退出 ecall 并 park; PE0 独占的参考
+    // 计算 + 比对 (~10^5 cycle 标量长尾) 使退出 AND 组停在 ready=3/4 超过
+    // T_deadlock=9999 cycle → syscall_lockstep_and_timeout 断言 (实测
+    // --conf fourpe cycle≈455991 确定性复现)。镜像 mt_dyn 驱动的 "cfgA
+    // 即时验证 + mtBarrier(6) 验证汇合" 模式: 验证在 worker 存活期间执行
+    // (worker 在汇合屏障自旋而非 park 到退出 lockstep), 验证完成后全 PE
+    // 一起放行、同时到达 _end (实测 4 线程到达窗口 <100 cycle)。
     int ret = 0;
     if (tid == 0) {
         static uint32_t refExpertCnt[kExpertNum];
@@ -195,6 +203,11 @@ int main()
         fflush(stdout);
 #endif
     }
+
+    // [2026-10-01 修改] 验证汇合屏障 (相位 5, kernel 内部用 1..4): PE0 的
+    // 长验证完成前 worker 在此自旋 (存活、不触退出 lockstep), 完成后全 PE
+    // 一起放行到 _end —— 消除退出 AND 组 ready=3/4 长时停滞。
+    mtBarrier(5);
 
     return ret;
 }

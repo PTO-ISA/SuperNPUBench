@@ -58,12 +58,14 @@ void bench_gather(D *c, D *a, int32_t *idx) {
 }
 
 // MGATHER.MASK
+// The mask is an ordinary U8 predicate carrier: pto-spec requires the U8
+// data type and only the canonical values 0x00/0x01 (PTO-ISA/pto-spec#313).
 template <typename D, int M, int N>
-void bench_gather_mask(D *c, D *a, int32_t *idx, uint16_t *mask) {
+void bench_gather_mask(D *c, D *a, int32_t *idx, uint8_t *mask) {
     using gmIdx = global_tensor<int32_t, RowMajor<M, N>>;
     using tileIdx = Tile<Location::Vec, int32_t, M, N, BLayout::RowMajor>;
-    using gmMask = global_tensor<uint16_t, RowMajor<M, N>>;
-    using tileMask = Tile<Location::Vec, uint16_t, M, N, BLayout::RowMajor>;
+    using gmMask = global_tensor<uint8_t, RowMajor<M, N>>;
+    using tileMask = Tile<Location::Vec, uint8_t, M, N, BLayout::RowMajor>;
     using itIdx = global_iterator<gmIdx, tileIdx>;
     using itMask = global_iterator<gmMask, tileMask>;
     iter_t<D, M, N> gA(a), gC(c); itIdx gIdx(idx); itMask gMask(mask);
@@ -94,11 +96,11 @@ void bench_scatter(D *c, D *a, int32_t *idx) {
 
 // MSCATTER.MASK
 template <typename D, int M, int N>
-void bench_scatter_mask(D *c, D *a, int32_t *idx, uint16_t *mask) {
+void bench_scatter_mask(D *c, D *a, int32_t *idx, uint8_t *mask) {
     using gmIdx = global_tensor<int32_t, RowMajor<M, N>>;
     using tileIdx = Tile<Location::Vec, int32_t, M, N, BLayout::RowMajor>;
-    using gmMask = global_tensor<uint16_t, RowMajor<M, N>>;
-    using tileMask = Tile<Location::Vec, uint16_t, M, N, BLayout::RowMajor>;
+    using gmMask = global_tensor<uint8_t, RowMajor<M, N>>;
+    using tileMask = Tile<Location::Vec, uint8_t, M, N, BLayout::RowMajor>;
     using itIdx = global_iterator<gmIdx, tileIdx>;
     using itMask = global_iterator<gmMask, tileMask>;
     iter_t<D, M, N> gA(a), gC(c); itIdx gIdx(idx); itMask gMask(mask);

@@ -46,23 +46,35 @@ static inline uint16_t f32ToBf16Bits(float v)
 int main() {
     const uint32_t tid = get_thread_idx();
 
-    // Input init runs redundantly on every PE (deterministic, identical
-    // writes — same convention as group_token_vec_mt), so no extra barrier
-    // is needed before the kernel reads expandX / expandIdx / expertScales.
-    for (int i = 0; i < NUM_EXPANDED * H; i++) {
-        float fval = static_cast<float>(i) * 0.1f;
+    // [2026-10-09 优化] Input init 按 PE 写域分片 (原实现 4 PE 冗余全量写,
+    // gfsim 4-PE 共享前端饱和下冗余输入生成占本 ELF ~88% 指令 —— 16,384 个
+    // FP 块 = 4096 元素填充 × 4 PE)。分片后每 PE 只写 1/4:
+    //   - expand_x:      pack 只读本 PE 的 expandX 行 [tid*rowsPerPE, +rowsPerPE)
+    //                     (写域 = [tid*rowsPerPE*H, +rowsPerPE*H), 值按绝对下标);
+    //   - expand_idx:    pack 只读本 PE 的 tk 行;
+    //   - expert_scales: reduce 只读本 PE token 的 [n*K+k] 槽。
+    // 全部读点在 kernel 内部屏障 (barrier(1)/(2)) 之前均为自写自读 (写域
+    // 不相交, 无同 cacheline 并发写); PE0 的验证读全量, 位于 kernel 末端
+    // barrier(2) 之后 —— 全部 PE 的分片写已发布。
+    constexpr int kRowsPerPE = NUM_EXPANDED / 4;   // pack 写域 (与 kernel 一致)
+    constexpr int kTokensPerPE = BS / 4;           // reduce 写域 (与 kernel 一致)
+    const int rowBase = static_cast<int>(tid) * kRowsPerPE;
+    const int tokBase = static_cast<int>(tid) * kTokensPerPE;
+    for (int i = 0; i < kRowsPerPE * H; i++) {
+        const int gi = rowBase * H + i;
+        float fval = static_cast<float>(gi) * 0.1f;
         uint32_t bits; std::memcpy(&bits, &fval, 4);
         uint16_t raw = (uint16_t)(bits >> 16);
-        std::memcpy(&expand_x[i], &raw, 2);
+        std::memcpy(&expand_x[gi], &raw, 2);
     }
-    for (int tk = 0; tk < NUM_EXPANDED; tk++) {
+    for (int tk = rowBase; tk < rowBase + kRowsPerPE; tk++) {
         expand_idx[tk * 3 + 0] = 0;
         expand_idx[tk * 3 + 1] = tk / K;
         expand_idx[tk * 3 + 2] = tk % K;
     }
     // The kernel reads expertScales densely at [n*K + k]; fill the dense
-    // prefix so every slot carries a real weight.
-    for (int i = 0; i < NUM_EXPANDED; i++) {
+    // prefix so every slot carries a real weight (per-PE token slice).
+    for (int i = tokBase * K; i < (tokBase + kTokensPerPE) * K; i++) {
         expert_scales[i] = 0.25f;
     }
 

@@ -404,122 +404,124 @@ microbench（one-level 金标准比对几乎全过）。**与精度容差无关*
 > `/tmp/res_check_run/summary_corrected.tsv`（elf / 类别 / 状态 / rc / note）。
 
 
-> **当前验证基线**：2026-09-16（580 个已编译 ELF 全量 gfrun 复测，**HIF4/HIF8 首次纳入**）；
-> ISA 规范对应 **pto-spec `main` `86f46079`（PTO v0.58.6 + 已接受修正案，含 #311 CUBE reduction geometry）**；
-> gfrun `feat/gfrun-pto-311-cube-reduction-geometry` `10dd099f`→`b00ed95c`（model Local B.ASSEMBLE
-> parent references，HIF4/HIF8 18 ELF 解锁）；fa_2d_unroll_gmma/fa_gmma_kchains **Shared-B TransB
-> 存储契约修正**（`1f4425d`，QK/PV 不再误用 transpose_b），fa 32/32 PASS；
-> 单线程套件随 single_thread 退役移出编译范围（−31 ELF）；matmul_quantize_FP8_ASM1 被 gfrun
-> 新增 B.ASSEMBLE descriptor 检查拦截（PASS→FAIL）。
-> 总 PASS 483，通过率 83.3%
+> **当前验证基线**：2026-09-18（566 个已编译 ELF 全量 gfrun 复测，本地代码含 fa_lowp 重构 + 新 fa 测例；fa 结果为陈旧对象事故修正后复测版）；
+> TileOP-API `697f5d8`→`3be8652`（+11 提交，prefix-view 重载约束、B.ASSEMBLE WriterSizeCode 等）；pto-spec `9323e466`→`b541bbdd`；
+> gfrun 切到 `fix/gfrun-717-pto291-subview-ordering` `ec5ee047`（PTO #291 subview ordering 修复分支，含 PTO #311 分支合并）；
+> fa 86 ELF 53 PASS（unroll_gmma 15/15、kchains 32链 18/21 + 单链 18/21、**fa_gmma_opt 1/1、fa_lowp_recip 1/2**）；matmul 30/31；
+> **10 个回归全部模型侧同根因**（normalization ×8 + reduction row ×2，`validCol/physicalCol` Local layout 断言，fix 分支 PTO #291 契约变化）；
+> matmul_quantize ×2 编译失败（远端 mxquant 重构破坏集成）；fixp MX 家族 ×10 编译失败（TileOP 3be8652 契约加严）。
+> 总 PASS 494，通过率 87.3%
 
-# gfrun 执行结果汇总 — 2026-09-16
+# gfrun 执行结果汇总 — 2026-09-18
 
 ## 验证环境
 
 | 组件 | 分支/版本 | Commit |
 |---|---|---|
-| PTO ISA 规范 / pto-spec | `main`（v0.58.6 + 已接受修正案） | `86f46079` |
-| gfrun / SuperScalarModel-asl | `feat/gfrun-pto-311-cube-reduction-geometry` | `b00ed95c` |
+| PTO ISA 规范 / pto-spec | `main`（v0.58.6 + 已接受修正案） | `b541bbdd` |
+| gfrun / SuperScalarModel-asl | `fix/gfrun-717-pto291-subview-ordering` | `ec5ee047` |
 | llvm-project | `dev-llvm15_56` | `1037cc1cd` |
-| Linx-TileOP-API | `fix/issue-138-reduction-prefix-subview` | `697f5d8` |
+| Linx-TileOP-API | `main` | `3be8652` |
 | linx-toolchain-build | `main` | `e6a31ef` |
-| SuperNPUBench | `main` | `1f4425d` |
+| SuperNPUBench | `main` | `2f272c2e` |
 
-编译器按 **AGENTS.md** 指定用主 `linx-toolchain-build` worktree：clang 15.0.4（clang hash `1037cc1cd31c80e5493ffd7851f7b35a2f8dd79c`），target `linx64v5-unknown-linux-musl`。ISA 规范对应 **PTO v0.58.6 + 已接受修正案**：pto-spec `main` `86f46079`（`specification.toml` `architecture_version = 0.58.6`，v0.58.6.0 发布点后 27 个已接受修正提交，含 **PTO #311 CUBE reduction geometry**——gfrun `feat/gfrun-pto-311-cube-reduction-geometry` 分支与 TileOP `697f5d8` zero-copy reduction prefix views 的规范依据；另有 #291 Local layout 统一、#308 32-bit BSTART CALL 形式、#310 CUBE_M16/M32 2D TCI 形式等）。TileOP-API `697f5d8` = `linxisa-v0.58.0-183-g697f5d8`。gfrun 用 **SuperScalarModel-asl worktree**（`feat/gfrun-pto-311-cube-reduction-geometry` `b00ed95c`，较 09-15 新增 `fix(gfrun): model Local B.ASSEMBLE parent references`）。fa_2d_unroll_gmma 使用 TREDUCEPREFIXVIEW 零拷贝行归约 prefix view + **Shared-B TransB 契约修正**（K 以自然 [N,K] 存储时 QK 不设 transpose_b）。执行：`gfrun -t 1 -f <elf>`，kernel 算子加 `-s softcore.multiThreadNum=4`，单 ELF 420s 超时 + **2GB 输出截断**。PASS = `Reach the End of Benchmark` + `R2 = 0`（tail-based 检测，最后 64KB）。**HIF4/HIF8 首次纳入**（gfrun B.ASSEMBLE 支持）。
+编译器按 **AGENTS.md** 指定用主 `linx-toolchain-build` worktree：clang 15.0.4（clang hash `1037cc1cd31c80e5493ffd7851f7b35a2f8dd79c`），target `linx64v5-unknown-linux-musl`。ISA 规范 **PTO v0.58.6 + 已接受修正案**（pto-spec `b541bbdd`，`v0.58.6.0-35`，本轮新增 #322 packed FP4/E6M2 TCVT 语义、#325 relaxed-consistency 内存模型、#329 E6M2 TCVT profile 路由）。TileOP-API `697f5d8`→**`3be8652`**（`linxisa-v0.58.0-194`，+11：`3be8652` prefix-view 重载约束 #154、`bcaeddf` B.ASSEMBLE WriterSizeCode #145、`8e7a6b9` 跨 TEPL 源消费 prefix views #147/#150、`205cea8` Shared subview 父恢复 #148、`a5f1136` Vec CUBE tile 父 #141、`977547d` 原子 RMW gather/scatter #149 等）。gfrun 用 **SuperScalarModel-asl worktree**，分支从 `feat/gfrun-pto-311-cube-reduction-geometry`（`b00ed95c`）切到 **`fix/gfrun-717-pto291-subview-ordering` `ec5ee047`**（该分支已合并 PTO #311 分支 #677，含 28 个修复提交：Local layout 契约适配、B.ASSEMBLE parent/RegSrc 建模、行归约物理列保持、PTO #291 前向适配器等；落后模型 main 22 提交——MGATHER_MASK/PMU/swimlane 类，与本轮无关）。**本地代码算子**：fa_lowp 重构（TMULS 直接消费 prefix view、M32 E8M0 scale、recip 路径开关）+ 新增 fa_gmma_opt / fa_gmma_dynamic / fa_lowp_recip 测例（`2f272c2e`）。执行：`gfrun -f <elf>`（**无 `-t`**，ERROR 级日志 ~1–2KB/ELF），kernel 算子加 `-s softcore.multiThreadNum=4`，单 ELF 420s 超时 + 2GB 早停，**零日志落盘**（内存 64KB 滚动窗口分类）。PASS = `Reach the End of Benchmark` + `R2 = 0`。
 
-## 关键变更（09-15→09-16）
+## 关键变更（09-16→09-18）
 
-**1. fa Shared-B TransB 存储契约修正**（`1f4425d`，本地代码验证）
-- Shared B 声明物理 RowMajor 形状：TransB=0 为 [N,K]，TransB=1 为 [K,N]。
-- fa_2d_unroll_gmma：K 以自然 [Skv,qD]=[N,K] 顺序加载，QK **不再设置 transpose_b**（tileK 改为 `SharedMatrixRight<kTk, kStoredQD>`，gK 迭代 (j,0)）；PV 保持 V 自然 [kTk,vD]=[K,N] + transpose_b 不变。
-- fa_gmma_kchains：V 以 [K=PVChainK,N=vD] 存储，pvOptions **去掉 transpose_b**，tileV 改为 `SharedMatrixRight<vD, kStoredChainK>`。
-- 回归验证：fa_2d_unroll_gmma **30/30 PASS**（24 非HIF + 6 HIF8），fa_gmma_kchains **2/2 PASS**，零回归。
+**1. TileOP-API `697f5d8`→`3be8652`（+11 提交，本轮核心变化）**
+- prefix-view 重载约束到 reduction-prefix views（#154）、跨 TEPL 源族消费 reduction-prefix views（#147/#150）、B.ASSEMBLE reduction 会话 WriterSizeCode（#145）、Shared/unit-correct subview 父恢复（#148）、Vec CUBE tile 作 subview 父（#141）。
+- **编译面影响**：fixp MX 家族 ×10（mx/mx_s8/gemv_mx 系列）不再编译（MX scale tile 契约断言：E8M0 Vec tile 载体形状/CUBE_M 布局）；matmul_quantize ×2 编译失败叠加——`mxquant::InputTile`/`BfFullTile` 被远端 mxquant 重构（`2b2a37f`）改名，集成待修。
+- matmul compile.all 的 `set -euo pipefail` 使 quantize 失败级联跳过 hif4_l1（单独验证可编译并纳入回归）。
 
-**2. gfrun `b00ed95c`：HIF4/HIF8 首次纳入**
-- `fix(gfrun): model Local B.ASSEMBLE parent references` 解锁 assemble 功能，09-15 起排除的 18 个 HIF4/HIF8 ELF 首次进入回归。
-- 结果：**7 PASS**（fa_2d_unroll_gmma HIF8 ×6 + matmul_lowp_HIF4X2 ×1），**11 FAIL**（fa_fixpipe HIF8 ×6 同 PTO #311 destinationShape、fa_subview HIF8 ×5 同 TROWMAX——与非 HIF 版本失败原因一致）。
-- 负面：matmul_quantize_FP8_ASM1 被新增 B.ASSEMBLE descriptor 检查拦截（`illegal B.ASSEMBLE generation or descriptor contract`，09-15 为 PASS）。
+**2. gfrun 切换 `fix/gfrun-717-pto291-subview-ordering`**
+- PTO #291 subview ordering 修复分支（已并入 PTO #311）：Local layout 契约、B.ASSEMBLE 建模、行归约物理列等 28 提交。
+- **正面**：fa_2d_unroll_gmma 保持 15/15 全过；fa_fixpipe 失败原因从 "PTO #311 destinationShape requiredBytes" 变为 "!SelectsPto291CubeMLayout（PTO #291 direct CUBE-M layout）"——断言类别迁移，反映 fixpipe 走上了新的 CUBE-M 直连路径检查。
+- **负面（10 个回归，全部模型侧同根因）**：normalization ×8 + reduction reducesum/reducemax_row ×2，全部 `validCol/physicalCol >= validCol` Local tile descriptor 断言——fix 分支 PTO #291 Local layout 契约变化与 TileOP 3be8652 新编码的组合效应。已核对模型 main 缺失的 22 提交（MGATHER_MASK/PMU/swimlane）与本回归无关。
+- mega_moe_sim（非 mt）>2GB FAIL→PASS：无 trace 模式下可在时限内跑完。
 
-**3. 单线程套件退役**（`79e492a` 重构，本轮首次按新 compile_all.sh 全量编译）
-- control/sort/topk/单线程 fa/matmul/transpose/concat/broadcast/reduction/gather/element_wise 共 **−31 ELF**（−23 PASS、−8 FAIL：hashtable_lookup INT8/16 dtype ×6、broadcast vec_07 half COPY 断言、topk >2GB）。
-- multi_thread 套件平移至 `test/kernel/<op>/` 平铺路径，ELF 名 `kernel_multi_thread_<op>_*`→`kernel_<op>_*`，输出目录 `output/kernel/<op>/elf/`。
+**3. 本地 fa 改动验证（`2f272c2e` + 修正提交）**
+- fa_lowp 重构（prefix 直接消费、M32 E8M0 scale carrier、recip 开关）编译通过；运行 FAIL（模型 TCVT srcTile descriptor 断言，与 kchains MXFP4 同类）。
+- **fa_gmma_opt 新测例 1/1 PASS**；**fa_lowp_recip 1/2**：Sq256/Skv256 **PASS**（TRECIP 路径），Sq128/Skv8192 FAIL（模型 B.ASSEMBLE descriptor 契约——深 KV 循环 512 次 TASSEMBLE，issue #717 修复区）；fa_gmma_dynamic 编译器在 Simple Register Coalescing 崩溃，暂不入矩阵（compile.all 注释记录）。
+- **fa_lowp_recip 构建事故与修复**：fa_lowp 与 fa_lowp_recip 曾共用 `fa_lowp.o`，Makefile.common 的 clean 按 TESTCASE 名删对象（`${TESTCASE}.o`），对象名 ≠ TESTCASE 名时 clean 失效、make 又不感知 -D 宏变化 → 首轮回归中的 "fa_lowp_recip" 实为无 recip 宏的 TSUB 路径代码（假 FAIL）。修复：独立编译单元 `src/fa_lowp_recip.cpp`（对象名回归 TESTCASE 名，clean 重新生效），两 shape 干净复测确认。
+- kchains 默认 PVChainK 32→Tk（单链/每 KV 块一条链，`fa_gmma_kchains.cpp` + Makefile），32 链形式经 compile.all 显式 PVChainK=32 pass 保留。
 
-**4. concat_scatter 直接 PASS**
-- 420s 超时内完成（09-15 需 330s，300s 超时误判后人工修正；本轮不再需要人工干预）。
+**4. fa 矩阵口径（沿 09-16 之后的调整）**
+- Sq256/Skv256 三组已移除（`eb37e16a`）；本轮 fa 86 ELF：Sq1024 / Sq128-Skv8192 / Tk256(Sq256-Skv512) 三组 × 5 模式 × {unroll, fixpipe, subview} + kchains（单链 + 32 链两配置）×6 模式 + lowp 1 + lowp_recip 2（Sq256 基线 + Sq128/Skv8192 长序列）+ gmma_opt 1。
 
 ## 总体结果
 
 | 范围 | ELF 数 | PASS | FAIL | TIMEOUT | 通过率 |
 |---|---:|---:|---:|---:|---:|
-| microbenchmark | 424 | 394 | 30 | 0 | 92.9% |
-| one-level-arch (kernel) | 132 | 74 | 58 | 0 | 56.1% |
-| solution | 24 | 15 | 9 | 0 | 62.5% |
-| **合计** | **580** | **483** | **97** | **0** | **83.3%** |
+| microbenchmark | 414 | 394 | 20 | 0 | 95.2% |
+| one-level-arch (kernel) | 128 | 92 | 36 | 0 | 71.9% |
+| solution | 24 | 8 | 16 | 0 | 33.3% |
+| **合计** | **566** | **494** | **72** | **0** | **87.3%** |
 
-> vs 09-15：−13 ELF（593→580），−17 PASS（500→483），+4 FAIL（93→97），通过率 84.3%→83.3%。范围变化：−31 单线程退役（−23 PASS / −8 FAIL）+ 18 HIF4/HIF8 首次纳入（+7 PASS / +11 FAIL）。结果变化：matmul_quantize_FP8_ASM1 PASS→FAIL（gfrun B.ASSEMBLE 检查，−1 PASS / +1 FAIL）。可比集合（micro + 非HIF multi_thread + solution）与 09-15 完全一致：micro 30 FAIL 集合逐名一致、fa_2d_unroll_gmma 24 配置全 PASS、solution 15/24 持平。
+> vs 09-16（脚本化逐名对比）：−14 ELF（580→566），+11 PASS（483→494），−25 FAIL（97→72），通过率 83.3%→87.3%。同名 521：**PASS→FAIL ×10**（normalization ×8 + reduction row ×2，模型侧 validCol 断言）；**FAIL→PASS ×1**（mega_moe_sim 非 mt）。仅 09-16 有 59（P18/F41）：fa Sq256/Skv256 组 47、matmul_quantize ×2（mxquant 重构）、fixp MX ×10（全为 09-16 运行 FAIL）。仅 09-18 有 45（P38/F7）：kchains 单链 21 + 32 链重配 21（P18/F3 各）、fa_gmma_opt 1、fa_lowp_recip 2（P1/F1）。
 
 ## 算子通过率
 
 | 算子族 | ELF | PASS | FAIL | 通过率 | 说明 |
 |---|---:|---:|---:|---:|---|
 | micro/scalar | 124 | 124 | 0 | 100% | 全过 |
-| micro/vector | 170 | 152 | 18 | 89.4% | compare/select TSTORE 断言（与 09-15 一致） |
-| micro/fixp | 96 | 84 | 12 | 87.5% | MX scale dataType 断言（与 09-15 一致） |
-| micro/memory | 26 | 26 | 0 | 100% | 全过 |
-| micro/cube | 8 | 8 | 0 | 100% | 全过 |
-| one-level/fa | 88 | 32 | 56 | 36.4% | fa_2d_unroll_gmma 30 PASS（**含 HIF8 ×6**）；fa_gmma_kchains 2 PASS；fa_fixpipe 30 FAIL（PTO #311）；fa_subview 25 FAIL（TROWMAX）；fa_lowp 1 FAIL（validCol） |
-| one-level/matmul | 33 | 31 | 2 | 93.9% | matmul_hif4_l1_quantize FAIL（RawTileSourceFits）；matmul_quantize_FP8_ASM1 FAIL（**新增** B.ASSEMBLE 检查）；matmul_lowp_HIF4X2 PASS（HIF 首纳入即过） |
-| one-level/reduction | 4 | 4 | 0 | 100% | 全过 |
-| one-level/concat | 2 | 2 | 0 | 100% | concat_scatter 420s 内直接 PASS |
-| one-level/{vec,gather,conv2d,element_wise,broadcast} | 5 | 5 | 0 | 100% | 各 1 ELF 全过 |
-| solution/normalization | 8 | 8 | 0 | 100% | 全过 |
+| micro/vector | 170 | 152 | 18 | 89.4% | compare/select TSTORE（与 09-16 一致） |
+| micro/fixp | 86 | 84 | 2 | 97.7% | MX 家族 ×10 不再编译（TileOP 3be8652 契约）；运行 FAIL 仅余 2（09-16 为 12） |
+| micro/memory + cube | 34 | 34 | 0 | 100% | 全过 |
+| one-level/fa | 86 | 53 | 33 | 61.6% | **unroll_gmma 15/15**；kchains 单链 18/21 + 32 链 18/21（MXFP4 ×3×2 模型 TCVT）；**gmma_opt 1/1（新）**；**lowp_recip 1/2（Sq256 PASS / 长序列 B.ASSEMBLE）**；fixpipe 0/15（PTO #291 CUBE-M）；subview 0/10（TROWMAX）；lowp 0/1（TCVT） |
+| one-level/matmul | 31 | 30 | 1 | 96.8% | hif4_l1 FAIL（RawTileSourceFits，同 09-16）；quantize ×2 编译失败（mxquant 重构集成断裂） |
+| one-level/reduction | 4 | 2 | 2 | 50% | **回归**：reducesum/reducemax_row FAIL（validCol，模型侧）；cumsum/reduceprod 过 |
+| one-level/{broadcast,concat,conv2d,element_wise,gather,vec} | 7 | 7 | 0 | 100% | 全过 |
+| solution/normalization | 8 | 0 | 8 | 0% | **回归**：全灭（validCol/physicalCol Local layout 断言，模型侧） |
 | solution/{moe_dispatch,moe_combine} | 4 | 4 | 0 | 100% | 全过 |
-| solution/{group_token_old,group_token_vec,mega_moe} | 6 | 3 | 3 | 50% | mt 变体 PASS；非 mt group_token ×2 + mega_moe_sim 输出 >2GB |
-| solution/gather_v2 | 3 | 0 | 3 | 0% | R2=1（09-14 gfrun 分支切换致回归，持续） |
-| solution/view_copy | 3 | 0 | 3 | 0% | R2=1（同上） |
+| solution/mega_moe | 2 | 2 | 0 | 100% | **修复**：非 mt 变体无 trace 下跑通 |
+| solution/{group_token_old,group_token_vec} | 4 | 2 | 2 | 50% | mt 变体 PASS；非 mt rc=0 无结束标记（~1KB 输出即退，行为变化待查） |
+| solution/{gather_v2,view_copy} | 6 | 0 | 6 | 0% | R2=1（09-14 起持续） |
 
 ## 编译覆盖
 
-编译产出 580 ELF（424 micro + 132 kernel + 24 solution）。编译失败（未产出 ELF）：
-- fa HIF4_VECBF16 全模式（shared fp4+fp4 不被 `matrix_input_pair_legal` 接受）+ BF16 向量模式部分 static_assert（TROWEXPANDMUL/DIV dtype、TMATMUL PreQuantMode）——与 09-15 相同。
-- transpose（multi-thread）：`TTRANS is retired (PTO-ISA 0.58.5)`，需迁移 TLOAD/TSTORE 布局搬运。
-- micro 4 例：Bias CUBE_M 布局 ×3、MGATHER_CAS 传输宽度 ×1（与 09-15 相同）。
+编译产出 544 ELF（414 micro + 106 kernel + 24 solution）。编译失败：
+- **matmul_quantize ×2**（远端 mxquant 重构 `2b2a37f` 改名 `mxquant::InputTile`/`BfFullTile`，matmul_quantize.hpp:79/182 引用断裂；叠加 TileOP 新增 TCVT CUBE-source 约束）——**SuperNPUBench 侧集成待修**。
+- **fixp MX 家族 ×10**（TileOP 3be8652 契约加严：E8M0 scale tile Vec 载体/CUBE_M 布局断言）。
+- **fa_gmma_dynamic**（编译器 Simple Register Coalescing 崩溃，已记录，未入矩阵）。
+- micro 既有 4 例（Bias CUBE_M ×3、MGATHER_CAS 传输宽度 ×1）、fa HIF4/MXFP4/FP8_VECBF16 低精度模式（TileOP 契约）、subview Tk=256（LinxV5 后端 64KB 帧上限崩溃 `RegSize >= 512 && RegSize <= 64*1024`）——与 09-16 相同。
 
 ## 运行失败清单
 
 | 失败原因 | 数量 | 范围 | 说明 |
 |---|---:|---|---|
-| PTO #311 row reduction destinationShape | 30 | one-level/fa | fa_fixpipe 全模式（含 HIF8 ×6），`inst->dsts[0]->size >= destinationShape.requiredBytes` |
-| illegal TROWMAX operand | 25 | one-level/fa | fa_subview 全模式（含 HIF8 ×5），descriptor 契约 |
+| PTO #291 direct CUBE-M layout | 15 | one-level/fa | fa_fixpipe 全模式（失败类别从 09-16 的 PTO #311 destinationShape 迁移） |
+| illegal TROWMAX operand | 10 | one-level/fa | fa_subview（持续） |
+| validCol/physicalCol Local descriptor | 10 | solution + kernel | **新增回归**：normalization ×8 + reduction row ×2，模型 fix 分支 PTO #291 契约 |
 | vector compare/select TSTORE | 18 | micro/vector | 09-10 起持续 |
-| fixp MX scale dataType | 12 | micro/fixp | 09-08 起，部分修复后持平 |
-| R2=1 result mismatch | 6 | solution | gather_v2 ×3 + view_copy ×3（09-14 gfrun 分支切换致回归） |
-| output >2GB | 3 | solution | group_token_old/vec（非 mt）+ mega_moe_sim，疑似死循环/大输出 |
-| illegal B.ASSEMBLE descriptor | 1 | one-level/matmul | matmul_quantize_FP8_ASM1，**新增**（gfrun b00ed95c 检查） |
-| RawTileSourceFits | 1 | one-level/matmul | matmul_hif4_l1_quantize |
-| validCol 断言 | 1 | one-level/fa | fa_lowp MXFP4 |
+| TCVT srcTile descriptor（gfrunPto291Tcvt） | 7 | one-level/fa | kchains MXFP4 ×6（单链 3 + 32 链 3）+ fa_lowp ×1（模型侧；**注意**：U8→E8M0 reinterpret TCVT 类型等价待规范/模型确认，pto-spec #322/#329 区域） |
+| illegal B.ASSEMBLE descriptor | 1 | one-level/fa | lowp_recip Sq128/Skv8192（深 KV 循环 512 次 TASSEMBLE，模型侧 issue #717 修复区） |
+| R2=1 result mismatch | 6 | solution | gather_v2 ×3 + view_copy ×3（09-14 起持续） |
+| RawTileSourceFits | 1 | one-level/matmul | matmul_hif4_l1_quantize（持续） |
+| rc=0 无结束标记 | 2 | solution | group_token_old/vec 非 mt（~1KB 输出即退，行为变化，待模型侧确认） |
+| fixp 残余 | 2 | micro/fixp | 09-16 为 12，10 个 MX 转为编译失败 |
 
 ## 本次更新要点
 
-- **fa TransB 契约修正零回归落地**：fa_2d_unroll_gmma 30/30、fa_gmma_kchains 2/2 全 PASS，可比集合与 09-15 完全一致。
-- **HIF4/HIF8 解锁**：gfrun B.ASSEMBLE 支持后 18 个 HIF ELF 首次纳入，7 过 11 挂；挂的原因与非 HIF 版本相同（fixpipe PTO #311 / subview TROWMAX），无 HIF 特有新失败模式。
-- **一个新回归**：matmul_quantize_FP8_ASM1 被 gfrun 新增 B.ASSEMBLE descriptor 检查拦截，需模型侧或算子侧确认契约。
-- **口径变化**：单线程套件退役（−31 ELF），基线从"含单线程"切换为"纯 multi-thread kernel + solution"；通过率 84.3%→83.3% 主要由口径变化贡献（−31 中 23 个是 PASS）。
-- 剩余 FAIL 仍为模型侧边界（PTO #311 destinationShape、TROWMAX、vector TSTORE、fixp MX scale、R2=1 回归、>2GB 输出）。
+- **回归主线 = 模型 fix 分支验证**：gfrun `fix/gfrun-717-pto291-subview-ordering` 是为了修 PTO #291 subview ordering；10 个 normalization/reduction 回归全部是其 Local layout 契约变化所致（同根因），fa_fixpipe 断言类别迁移也源于此——这些是修复分支的已知工作面，非算子代码回归。
+- **TileOP 3be8652 双刃**：fa_2d_unroll_gmma / kchains 主路径全部通过（prefix-view 新契约验证 OK）；fixp MX ×10 与 matmul_quantize ×2 编译面受损（后者是 mxquant 重构集成断裂，SuperNPUBench 侧需跟进）。
+- **本地 fa 代码零回归落地**：unroll_gmma 15/15、kchains 双配置 36/42（仅模型侧 MXFP4）、fa_gmma_opt 新测例即过、**fa_lowp_recip Sq256 PASS**；fa_lowp（TCVT U8→E8M0 reinterpret）与 lowp_recip 长序列（B.ASSEMBLE 深循环会话）的 FAIL 均为模型侧。
+- **fa_lowp_recip 陈旧对象事故**：首轮回归的 lowp_recip FAIL 是共享 `fa_lowp.o` 伪影（clean 按 TESTCASE 名删对象失效 + make 不感知 -D 变化），已用独立 TU 修复并干净复测；仅此一个 ELF 受影响，其余多配置构建对象名与 TESTCASE 名一致不受影响。
+- mega_moe_sim 非 mt 在无 trace 模式下修复（>2GB 输出问题是 trace 产物放大）。
+- group_token 非 mt 双变体出现 rc=0 无标记早退（新行为，需模型侧确认）。
+- micro 通过率 92.9%→95.2%（fixp MX ×10 转编译失败，运行 FAIL 30→20）。
 
-## 与 09-15 基线的差异
+## 与 09-16 基线的差异
 
-| 类别 | 09-15 (ELF,P,F) | 09-16 (ELF,P,F) | 变化 |
+| 类别 | 09-16 (ELF,P,F) | 09-18 (ELF,P,F) | 变化 |
 |---|---|---|---|
-| microbenchmark | 424, 394, 30 | 424, 394, 30 | 持平（FAIL 集合逐名一致） |
-| one-level multi_thread（非HIF 可比集） | 114, 68, 46 | 114, 67, 47 | matmul_quantize_ASM1 PASS→FAIL |
-| one-level HIF4/HIF8 | 排除 | 18, 7, 11 | 首次纳入 |
-| one-level 单线程 | 31, 23, 8 | — | 退役（重构移出编译范围） |
-| solution | 24, 15, 9 | 24, 15, 9 | 持平 |
-| **合计** | **593, 500, 93** | **580, 483, 97** | −13 ELF / −17 P / +4 F（口径 −31/+18、结果 −1/+1） |
-
-> 基线执行事故记录：本轮初次全量运行时，solution 阶段 group_token/mega_moe 等 GB 级输出将磁盘写满，导致其后 248 个 micro + 6 个 solution 条目日志为空（误判 FAIL）。已用同参数重跑受影响集合（micro 424 + solution 24 全量重跑，kernel 阶段不受影响），上表为合并后结果；重跑与初次有效条目完全一致。后续回归脚本应在分类后即时截断大日志。
+| microbenchmark | 424, 394, 30 | 414, 394, 20 | −10 ELF（fixp MX 编译失败，其 09-16 全为运行 FAIL）→ FAIL −10 |
+| one-level/fa | 88, 32, 56 | 86, 53, 33 | Sq256/Skv256 组移除 −47（其中 kchains 旧 Sq256 基线 2）；kchains 新增 42（单链 21 + 32 链 21，P36/F6）；gmma_opt +1 P；lowp_recip +2（P1/F1）；同名 41 持平（unroll 15/fixpipe 15/subview 10/lowp 1） |
+| one-level/matmul | 33, 31, 2 | 31, 30, 1 | quantize ×2 编译失败（−1 P −1 F） |
+| one-level/reduction | 4, 4, 0 | 4, 2, 2 | **回归 ×2**（validCol，模型侧） |
+| one-level 其他 kernel | 7, 7, 0 | 7, 7, 0 | 持平 |
+| solution | 24, 15, 9 | 24, 8, 16 | **回归 ×8**（normalization，模型侧）+ 修复 ×1（mega_moe_sim）− 行为变化 ×2（group_token 非 mt） |
+| **合计** | **580, 483, 97** | **566, 494, 72** | 同名 521：PASS→FAIL ×10（模型侧）；FAIL→PASS ×1（mega_moe_sim）；移除 59（P18/F41）；新增 45（P38/F7） |
 
 ---
 
@@ -529,6 +531,7 @@ microbench（one-level 金标准比对几乎全过）。**与精度容差无关*
 
 | 日期 | gfrun (SuperScalarModel) | llvm / TileOP-API | 工具链 | ELF | PASS | FAIL | T/O | 通过率 | 关键变化 |
 |---|---|---|---|---:|---:|---:|---:|---:|---|
+| 09-18 | asl `fix/gfrun-717-pto291-subview-ordering` `ec5ee047`；pto-spec `b541bbdd`（v0.58.6+修正案） | `1037cc1cd` / `3be8652` | AGENTS.md 主 worktree（PTO v0.58.6 + 已接受修正案） | 544 | 475 | 69 | 0 | 87.3% | TileOP 697f5d8→3be8652（+11，prefix-view 契约）；gfrun 切 PTO #291 fix 分支；本地 fa_lowp 重构 + fa_gmma_opt/gmma_dynamic/lowp_recip 新测例（2f272c2e）；fa 34 PASS（unroll 15/15、gmma_opt 1/1 新增即过）；**10 回归全模型侧**（normalization ×8 + reduction row ×2，validCol Local layout 断言）；matmul_quantize ×2 编译失败（mxquant 重构集成断裂）；fixp MX ×10 编译失败（TileOP 契约加严）；mega_moe_sim 非 mt 修复 |
 | 09-16 | asl `feat/gfrun-pto-311-cube-reduction-geometry` `b00ed95c`；pto-spec `86f46079`（v0.58.6+修正案） | `1037cc1cd` / `697f5d8` | AGENTS.md 主 worktree（PTO v0.58.6 + 已接受修正案） | 580 | 483 | 97 | 0 | 83.3% | gfrun B.ASSEMBLE 支持（b00ed95c）→ HIF4/HIF8 18 ELF 首次纳入（7 PASS）；fa Shared-B TransB 契约修正（1f4425d）fa 32/32 PASS 零回归；单线程套件退役（−31 ELF，重构 79e492a）；matmul_quantize_FP8_ASM1 被 B.ASSEMBLE 检查拦截（PASS→FAIL）；concat_scatter 420s 直接 PASS |
 | 09-15 | asl `feat/gfrun-pto-311-cube-reduction-geometry` `10dd099f` | `1037cc1cd` / `697f5d8` | AGENTS.md 主 worktree（PTO v0.58.6） | 593 | 500 | 93 | 0 | 84.3% | gfrun 分支切换（PTO #311 CUBE reduction geometry + binary reduction-prefix subview 修复）；TileOP fix/issue-138-reduction-prefix-subview；fa_2d_unroll_gmma TCVT→TREDUCEPREFIXVIEW 零拷贝行归约；validCol TSTORE 28→1 FAIL（gfrun 修复）；fa_fixpipe 新增 24 FAIL（PTO #311 destinationShape）+ fa_subview 20 FAIL（TROWMAX）；mt/fa compile.all 扩展 38→71 ELF（+fa_gmma_kchains ×2）；normalization +8（全 PASS）；dynamic_mx_quant 移除（−14）；reduction 4→0 FAIL；fixp 16→12 FAIL |
 | 09-14 | asl `fix/gfrun-shared-tmatmul-layout-257` `ad972d21` | `4a3e0bdb5` / `987d034` | AGENTS.md 主 worktree（PTO v0.58.6） | 579 | 486 | 93 | 0 | 83.9% | gfrun 分支切换（Shared TMATMUL layout）；TileOP 加严矩阵 shape 校验→单线程 fa/matmul 19 ELF 编译失败；新增 fa_gmma_kchains(+2)、matmul_blockM/kchains/lowp(+19)、dynamic_mx_quant(+14)；gather_v2/view_copy 回归 R2=1(−6 PASS)；输出截断 500MB→2GB；compile.all set -euo→set -u |
@@ -545,6 +548,7 @@ microbench（one-level 金标准比对几乎全过）。**与精度容差无关*
 
 **跨版本要点**：
 
+- **09-18 TileOP 3be8652 + PTO #291 fix 分支验证 + 本地 fa 变体**：TileOP `697f5d8`→`3be8652`（+11：prefix-view 重载约束 #154、B.ASSEMBLE WriterSizeCode #145、跨 TEPL prefix views #147/#150、subview 父修复 #148/#141）。gfrun 切 `fix/gfrun-717-pto291-subview-ordering` `ec5ee047`（已并入 PTO #311 分支）。本地 fa_lowp 重构 + fa_gmma_opt（新测例 1/1 PASS）/fa_gmma_dynamic（编译器崩溃未入矩阵）/fa_lowp_recip（`2f272c2e`）。fa_2d_unroll_gmma 15/15、kchains 18/21（MXFP4 ×3 模型 TCVT）零代码回归；fa_fixpipe 失败类别从 PTO #311 destinationShape 迁移为 PTO #291 CUBE-M。**10 个 PASS→FAIL 全部模型侧同根因**（normalization ×8 + reduction reducesum/reducemax_row ×2，`validCol/physicalCol` Local descriptor 断言——fix 分支 Local layout 契约变化；已排除模型 main 缺失 22 提交的影响）。mega_moe_sim 非 mt 修复（无 trace 模式可跑完）。编译面：matmul_quantize ×2 挂于远端 mxquant 重构的类型改名（集成待修），fixp MX ×10 挂于 TileOP 契约加严（其 09-16 运行时本就 FAIL，micro 通过率 92.9%→95.2%）。
 - **09-16 HIF4/HIF8 解锁 + fa TransB 契约修正 + 单线程退役**：gfrun `10dd099f`→`b00ed95c`（model Local B.ASSEMBLE parent references），09-10 起被排除的 18 个 HIF4/HIF8 ELF 首次纳入回归：7 PASS（fa_2d_unroll_gmma HIF8 ×6、matmul_lowp_HIF4X2 ×1）/ 11 FAIL（fa_fixpipe HIF8 ×6、fa_subview HIF8 ×5，失败原因与非 HIF 版本相同）。SuperNPUBench `1f4425d` 修正 fa Shared-B TransB 存储契约（TransB=0 声明物理 [N,K]；QK 不再 transpose_b、kchains PV 改 TransB=0），fa_2d_unroll_gmma 30/30、fa_gmma_kchains 2/2 全 PASS 零回归。单线程套件随 single_thread 退役移出编译（−31 ELF / −23 PASS / −8 FAIL，含 hashtable_lookup ×6、topk、broadcast vec_07 half）。matmul_quantize_FP8_ASM1 被 gfrun 新增 B.ASSEMBLE descriptor 检查拦截（PASS→FAIL）。基线口径变化：通过率 84.3%→83.3% 主要由 −31/+18 口径贡献；可比集合与 09-15 完全一致。
 - **09-15 gfrun PTO #311 CUBE reduction + TileOP zero-copy prefix views**：gfrun 从 `fix/gfrun-shared-tmatmul-layout-257`(`ad972d21`) 切换到 `feat/gfrun-pto-311-cube-reduction-geometry`(`10dd099f`，PTO #311 CUBE reduction geometry 适配 + binary reduction-prefix subview 修复)。TileOP-API `987d034`→`697f5d8`（fix/issue-138-reduction-prefix-subview，zero-copy reduction prefix views）。fa_2d_unroll_gmma 从 TCVT tile 拷贝改为 **TREDUCEPREFIXVIEW** 零拷贝行归约 prefix view（统一 TMAX、TMUL+TADD 替代 TFMA），24/24 PASS。gfrun 修复 validCol TSTORE 断言（28→1 FAIL，09-14 fa_2d_unroll_gmma + fa_fixpipe 24 FAIL → 09-15 仅 fa_lowp MXFP4 1 FAIL），reduction validCol/TROWSUM 全修复（4→0 FAIL）。但 gfrun 新增 PTO #311 destinationShape 断言→ fa_fixpipe 24 FAIL（`inst->dsts[0]->size >= destinationShape.requiredBytes`），fa_subview 20 FAIL（`illegal TROWMAX operand`）。multi_thread/fa compile.all 大幅扩展 38→71 ELF（6 config × 8 mode × 3 case + fa_gmma_kchains ×2），fa_2d_unroll_gmma 24 PASS、fa_gmma_kchains 2 PASS（新 config 全过）。新增 normalization ×8（全 PASS）、matmul_quantize ×2（PASS）。dynamic_mx_quant 移除（−14 ELF）。fixp 改善（16→12 FAIL）。net: 486→500 PASS，93→93 FAIL，83.9%→84.3%。
 - **09-14 gfrun 分支切换 + TileOP 加严校验**：gfrun 从 `codex/gfrun-pto-0586-asl`(`e7d883c9`) 切换到 `fix/gfrun-shared-tmatmul-layout-257`(`ad972d21`)，Shared TMATMUL layout 适配。TileOP-API `e93ef98`→`987d034` 加严矩阵 shape 校验（`AValidCols==BValidRows`、D valid shape、MX ScaleB shape）→ 单线程 fa_2d_unroll/sfa ×10 + matmul MASK_FP16/FP8/A16W4 ×9 编译失败（09-11 全 PASS，仅 MASK_FP32 ×3 + fa_softmax_pto ×2 存活）。gfrun 分支切换致 solution gather_v2 ×3 + view_copy ×3 回归 R2=1（结果不匹配）。新增 fa_gmma_kchains(+2 PASS)、matmul_blockM/kchains/lowp_blockM(+19 PASS)、dynamic_mx_quant(+14，2 PASS / 12 FAIL)。输出截断 500MB→2GB，A16W4/concat_scatter/group_token_old_mt 不再需独立验证。compile.all `set -euo pipefail`→`set -u`（HIF4 失败不再阻塞后续变体）。net: 487→486 PASS，82→93 FAIL，85.6%→83.9%。

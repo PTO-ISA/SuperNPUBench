@@ -2,7 +2,7 @@
 #include "guard_io.h"
 // TileOP-API doc guard: TMATMUL + RowMax postprocess.
 // Source: options.md（+ pto-spec matrix-postprocess.asl） — fixp::keep_acc().row_max(row_max_out).
-//   row_max_tile: Tile<Vec, float, 32, 8, RowMajor, 32, 1> (valid M x 1, 物理 >=128B).
+//   row_max_tile: VecTileM32<float, 32, 1> (valid M x 1, CUBE_M32).
 //   RowMaxEn=1, RowMaxInit=0. dtype 必须精确匹配派生 AccType(FP32)。
 // Precision: res_check, golden checks the accumulator out = A@B (row_max side
 // output is not dumped).
@@ -15,7 +15,7 @@ int main() {
     CubeTileM32<__half, GM, GK> a;
     CubeTileN8<__half, GK, GN>  b;
     CubeAccumulatorM32<float, GM, GN> out;
-    Tile<Location::Vec, float, 32, 8, BLayout::RowMajor, 32, 1> row_max_out;
+    VecTileM32<float, GM, 1> row_max_out;
     global_tensor<__half, RowMajor<GM, GK>> gA(ha);
     global_tensor<__half, RowMajor<GK, GN>> gB(hb);
     global_tensor<float,  RowMajor<GM, GN>> gC(hc);

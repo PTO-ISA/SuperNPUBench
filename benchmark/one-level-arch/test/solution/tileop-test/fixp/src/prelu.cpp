@@ -17,18 +17,17 @@ int main() {
     CubeTileM32<__half, M, K> a;
     CubeTileN8<__half, K, N>  b;
     CubeAccumulatorM32<__half, M, N> out;
-    using Fp19Tile = Tile<Location::Vec, uint64_t, 2, 32, BLayout::RowMajor, 1, 32>;
+    using Fp19Tile = CubeTileN8<uint64_t, 2, 32, 1, 32>;
     Fp19Tile prelu;
 
     global_tensor<__half, RowMajor<M, K>> gA(ha);
     global_tensor<__half, RowMajor<K, N>> gB(hb);
     global_tensor<__half, RowMajor<M, N>> gD(hd);
-    global_iterator<gm_t<uint64_t, 2, 32>, Fp19Tile> gP(hp);
-    auto gP0 = gP(0, 0);
+    global_tensor<uint64_t, RowMajor<1, N>> gP(hp);
 
     TLOAD_CUBE(a, gA);
     TLOAD_CUBE(b, gB);
-    TLOAD(prelu, gP0);
+    TLOAD_CUBE(prelu, gP);
     BENCHSTART;
     TMATMUL(out, a, b, fixp::f16().prelu(prelu));
     BENCHEND;

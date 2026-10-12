@@ -22,18 +22,18 @@ int main() {
     CubeTileM32<__half, M, K> a;
     CubeTileN8<__half, K, N>  b;
     CubeAccumulatorM32<int8_t, M, N> out;
-    using QuantTile = Tile<Location::Vec, uint64_t, 2, 32, BLayout::RowMajor, 1, 32>;
+    // PTO-CUBE-AUX-CELLREG-001: logical [1,N] U64 on CUBE_N8 K2xN8.
+    using QuantTile = CubeTileN8<uint64_t, 2, 32, 1, 32>;
     QuantTile quant;
 
     global_tensor<__half, RowMajor<M, K>> gA(ha);
     global_tensor<__half, RowMajor<K, N>> gB(hb);
     global_tensor<int8_t, RowMajor<M, N>> gD(hd);
-    global_iterator<gm_t<uint64_t, 2, 32>, QuantTile> gQ(hq);
-    auto gQ0 = gQ(0, 0);
+    global_tensor<uint64_t, RowMajor<1, N>> gQ(hq);
 
     TLOAD_CUBE(a, gA);
     TLOAD_CUBE(b, gB);
-    TLOAD(quant, gQ0);
+    TLOAD_CUBE(quant, gQ);
     BENCHSTART;
     TMATMUL(out, a, b, fixp::s8(quant));   // vector-quant shortcut
     BENCHEND;

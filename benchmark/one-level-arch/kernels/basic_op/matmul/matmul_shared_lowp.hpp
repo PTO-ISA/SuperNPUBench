@@ -53,9 +53,12 @@ void matmul_shared_lowp(float *c_ptr, dtype *a_ptr, dtype *b_ptr,
                              tK % ScaleGroup == 0),
                   "MX formats require K and tK divisible by their scale group");
 
-    // K chain: single=0, begin=raw_acc, middle=raw_acc|acc_hint, end=acc_hint.
-    // C remains explicit; gfsim also needs cube.enable_internal_acc=true.
-    constexpr auto matmulOptions = fixp::keep_acc().transpose_b();
+    // Every low-precision mode stores B B-major as [N, K/PackedFactor].
+    // Logical K is therefore the innermost dimension and TMATMUL consumes
+    // the Shared Right tile directly, without the TransposeB attribute.
+    // Keep TileOP calls in this function: SharedTile operands are special
+    // registers and must not cross an outlined helper/lambda call boundary.
+    constexpr auto matmulOptions = fixp::keep_acc();
     const uint32_t tid = get_thread_idx();
 
     // Matrix K is expressed in logical elements in the ISA. Packed FP4x2
@@ -63,11 +66,11 @@ void matmul_shared_lowp(float *c_ptr, dtype *a_ptr, dtype *b_ptr,
     // with physical row strides and construct each block from an explicit
     // packed-storage pointer below.
     using gmASlice = global_tensor<dtype, RowMajor<kGroupM, kStoredGK>>;
-    using gmBSlice = global_tensor<dtype, RowMajor<kStoredTK, gN>>;
+    using gmBSlice = global_tensor<dtype, RowMajor<tN, kStoredGK>>;
     using gmC = global_tensor<float, RowMajor<gM, gN>>;
 
     using tileAMatrix = SharedMatrixLeft<dtype, kTileRows, tK, kValidRowM, tK>;
-    using tileBMatrix = SharedMatrixRight<dtype, tK, tN>;
+    using tileBMatrix = SharedMatrixRight<dtype, tN, tK>;
     using tileAShared = SharedTile<tileAMatrix>;
     using tileBShared = SharedTile<tileBMatrix>;
     using tileCM16 = CubeAccumulatorM16<float, kPeM, tN>;
@@ -83,17 +86,15 @@ void matmul_shared_lowp(float *c_ptr, dtype *a_ptr, dtype *b_ptr,
     using gmAScale =
         global_tensor<scale_dtype, RowMajor<gM, gK / ScaleGroup>>;
     using gmBScale =
-        global_tensor<scale_dtype, RowMajor<gK / ScaleGroup, gN>>;
+        global_tensor<scale_dtype, RowMajor<gN, gK / ScaleGroup>>;
     using tileAScaleMatrix =
         SharedMatrixLeft<scale_dtype, kTileRows, kPaddedScaleK,
                          kValidRowM, kScaleK>;
     using tileBScaleMatrix =
-        SharedMatrixRight<scale_dtype, kPaddedScaleK, tN,
-                          kScaleK, tN>;
+        SharedMatrixRight<scale_dtype, tN, kPaddedScaleK,
+                          tN, kScaleK>;
     using tileAScale = SharedTile<tileAScaleMatrix>;
     using tileBScale = SharedTile<tileBScaleMatrix>;
-    using itAScale = global_iterator<gmAScale, tileAScaleMatrix>;
-    using itBScale = global_iterator<gmBScale, tileBScaleMatrix>;
 
     // SharedTile operands share one 256 KiB SharedTReg pool.  Check the
     // rounded Tile capacities used by B.IOS, including both MX scale tiles,
@@ -107,9 +108,6 @@ void matmul_shared_lowp(float *c_ptr, dtype *a_ptr, dtype *b_ptr,
                : 0);
     static_assert(kSharedOperandBytes <= kSharedTRegBytes,
                   "A/B and MX scale tiles exceed the 256 KiB SharedTReg pool");
-
-    itAScale gIterAScale(a_scale_ptr);
-    itBScale gIterBScale(b_scale_ptr);
 
     constexpr int Mb = (gM + kGroupM - 1) / kGroupM;
     constexpr int Nb = gN / tN;
@@ -127,26 +125,42 @@ void matmul_shared_lowp(float *c_ptr, dtype *a_ptr, dtype *b_ptr,
                 tileBShared tB;
                 gmASlice gA(a_ptr + i * kGroupM * kStoredGK +
                             k * kStoredTK);
-                gmBSlice gB(b_ptr + k * kStoredTK * gN + j * tN);
+                dtype *b_tile_ptr = b_ptr + j * tN * kStoredGK +
+                                    k * kStoredTK;
+                gmBSlice gB(b_tile_ptr);
                 TLOAD<tileAMatrix, 1>(tA, gA);
                 TLOAD<tileBMatrix, 1>(tB, gB);
 
                 if constexpr (UseMx) {
                     tileAScale tAScale;
                     tileBScale tBScale;
-                    auto gAScale = gIterAScale(i, k);
-                    auto gBScale = gIterBScale(k, j);
+                    // The Shared scale tiles are physically padded to
+                    // kPaddedScaleK columns, while GM is densely packed by
+                    // kScaleK.  Construct each GM view from its logical
+                    // offset; global_iterator would advance K by the padded
+                    // Tile::Cols and select the wrong scale block for k > 0.
+                    gmAScale gAScale(
+                        a_scale_ptr + i * kGroupM * (gK / ScaleGroup) +
+                        k * kScaleK);
+                    gmBScale gBScale(
+                        b_scale_ptr + j * tN * (gK / ScaleGroup) +
+                        k * kScaleK);
                     TLOAD<tileAScaleMatrix, 1>(tAScale, gAScale);
                     TLOAD<tileBScaleMatrix, 1>(tBScale, gBScale);
 
                     if constexpr (Kb == 1) {
-                        TMATMUL_MX<3>(tC, tA, tAScale, tB, tBScale, matmulOptions);
+                        TMATMUL_MX<3>(tC, tA, tAScale, tB, tBScale,
+                                      matmulOptions);
                     } else if (k == 0) {
-                        TMATMUL_MX<3>(tC, tA, tAScale, tB, tBScale, matmulOptions.raw_acc());
+                        TMATMUL_MX<3>(tC, tA, tAScale, tB, tBScale,
+                                      matmulOptions.raw_acc());
                     } else if (k == Kb - 1) {
-                        TMATMUL_MX_ACC<3>(tC, tC, tA, tAScale, tB, tBScale, matmulOptions.acc_hint());
+                        TMATMUL_MX_ACC<3>(tC, tC, tA, tAScale, tB, tBScale,
+                                          matmulOptions.acc_hint());
                     } else {
-                        TMATMUL_MX_ACC<3>(tC, tC, tA, tAScale, tB, tBScale, matmulOptions.raw_acc().acc_hint());
+                        TMATMUL_MX_ACC<3>(
+                            tC, tC, tA, tAScale, tB, tBScale,
+                            matmulOptions.raw_acc().acc_hint());
                     }
                 } else {
                     if constexpr (Kb == 1) {
@@ -154,9 +168,11 @@ void matmul_shared_lowp(float *c_ptr, dtype *a_ptr, dtype *b_ptr,
                     } else if (k == 0) {
                         TMATMUL(tC, tA, tB, matmulOptions.raw_acc());
                     } else if (k == Kb - 1) {
-                        TMATMUL_ACC(tC, tC, tA, tB, matmulOptions.acc_hint());
+                        TMATMUL_ACC(tC, tC, tA, tB,
+                                    matmulOptions.acc_hint());
                     } else {
-                        TMATMUL_ACC(tC, tC, tA, tB, matmulOptions.raw_acc().acc_hint());
+                        TMATMUL_ACC(tC, tC, tA, tB,
+                                    matmulOptions.raw_acc().acc_hint());
                     }
                 }
             }

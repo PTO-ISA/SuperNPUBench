@@ -33,7 +33,7 @@ gfrun -t 1 -s softcore.multiThreadNum=4 -f <elf>
 |---|---|---|
 | ① 连续 SPMD 切分 | `element_wise/tadd_multithread.hpp` | elementwise / 逐 tile 独立算子：无跨 PE 数据复用，`tid` 只切数据区间 |
 | ② Tile 块 SPMD 轮转 | `conv2d`、`transpose` | 输出空间块可独立分配、需保持全局 layout |
-| ③ Cooperative Group TMATMUL（Shared A+B） | `matmul/matmul_shared.hpp`、`matmul/matmul_test_mt.hpp`、`fa/` | **单个大 GEMM 沿 M 切分**：B 只装一次 4 PE 共读，GM 带宽省 4× |
+| ③ Cooperative Group TMATMUL（Shared A+B） | `matmul/matmul_shared.hpp`、`solution/matmul_test/matmul_test_mt.hpp`、`fa/` | **单个大 GEMM 沿 M 切分**：B 只装一次 4 PE 共读，GM 带宽省 4× |
 | ③ + B 跨 M 驻留 | `matmul/matmul_shared_reuseB.hpp` | M 很大、K 块集可装进 Shared 256 KiB 的瘦高 GEMM，B 进一步免重装 |
 
 决策要点：
@@ -173,7 +173,7 @@ int main() {
   （`value = C; for k: value += a_k*b_k`），与单线程 Local 路径的
   block-then-add 结合律**不同**（见 Test/ISSUE-007）；bit 级比对需按路径选 golden。
 - 输入用确定性 LCG 位模式（hard 随机 fp16）可让 host 侧位级复现，
-  避免"对齐 pattern 不触发舍入"的假阳性（见 `Test/verify_matmul_test_hard.py`）。
+  避免"对齐 pattern 不触发舍入"的假阳性（见 `test/solution/matmul_test/src/verify_matmul_test.py`）。
 
 ## 7. 常见陷阱
 
@@ -197,9 +197,9 @@ int main() {
 |---|---|
 | 最简 SPMD elementwise | `kernels/basic_op/element_wise/tadd_multithread.hpp` |
 | 标准 cooperative GEMM | `kernels/basic_op/matmul/matmul_shared.hpp` |
-| 动态 shape cooperative GEMM（零填充 + scratch 往返） | `kernels/basic_op/matmul/matmul_test_mt.hpp` |
+| 动态 shape cooperative GEMM（零填充 + scratch 往返） | `kernels/solution/matmul_test/matmul_test_mt.hpp` |
 | B 驻留复用 | `kernels/basic_op/matmul/matmul_shared_reuseB.hpp` |
 | 低精度/MX cooperative | `kernels/basic_op/matmul/matmul_shared_lowp.hpp` |
 | 多阶段共享瓦物（Q/K/V staging） | `kernels/basic_op/fa/fa_2d_unroll_gmma.hpp` |
-| 测试 harness（SPMD/group runtime 双路径） | `test/kernel/matmul/src/matmul_shared.cpp`、`matmul_test_mt.cpp` |
-| 精度验证工具 | `Test/verify_matmul_test_hard.py`（fork 侧，非仓内） |
+| 测试 harness（SPMD/group runtime 双路径） | `test/kernel/matmul/src/matmul_shared.cpp`、`test/solution/matmul_test/src/matmul_test_mt.cpp` |
+| 精度验证工具 | `test/solution/matmul_test/src/verify_matmul_test.py`（仓内） |

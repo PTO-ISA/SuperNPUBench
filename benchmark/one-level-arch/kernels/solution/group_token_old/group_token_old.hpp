@@ -6,6 +6,13 @@
 // ============================================================================
 // MoE Token Grouping operator — "old" variant with SIMD sort (PTO one-level-arch)
 //
+// [2026-10-04 修复注] 本头文件为单 PE / 4-PE 驱动共用的算子内核（常量 +
+// 标量/SIMT 实现），本身无需修改。4-PE SPMD 变体（test/solution/
+// group_token_old/src/group_token_old_mt.cpp）在 gfsim `--conf fourpe` 下的
+// 末端 exit lockstep 断言（SyscallBarrier.cpp:1889，cycle 242,720）及其
+// 修复（驱动层验证汇合屏障 + 跨 PE 屏障重排 + gfsim 数据完整性修复）
+// 见同目录 group_token_old_mt_gfsim_fix_report.md。单 PE 路径不受影响。
+//
 // Implements the full 3-phase MoE dispatch from cann-samples
 // group_token_old_main.asc:
 //

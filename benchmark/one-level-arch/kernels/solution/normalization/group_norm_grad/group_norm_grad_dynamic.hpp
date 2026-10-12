@@ -14,8 +14,8 @@
 // All pointers required (dy,x,mean,rstd,gamma,dx,dgamma,dbeta,workspace).
 // tiling[10]: N,C,G,HxW,reduce_hw,reduce_c,dx_hw,dx_c,gb_d,gb_g.
 // Data Tiles use 32 KiB FP32 / 16 KiB FP16. Row-reduction sources <=2 KiB.
-// Spatial, parameter and dx kernels share (n,g) ownership.
-// The test calls all four stages in order without an inter-stage PE barrier.
+// One kernel runs all four stages; each PE owns complete groups across N.
+// Every workspace read has a producer on the same PE; no inter-PE barrier.
 //
 // Torch CUDA launch 总览 (NVIDIA, warp=32):
 //   Step1 ComputeInternalGradientsCUDAKernel
@@ -64,13 +64,17 @@ inline void fused_params_group(dtype *gamma, float *mean, float *rstd,
   gm_f grstd(rstd + ng, static_cast<int>(N * G), 1);
   gm_f gc2(c2_buf + ng, static_cast<int>(N * G), 1);
   gm_f gc3(c3_buf + ng, static_cast<int>(N * G), 1);
-  tile_v mean_t(1), rstd_t(1), sum1(1), sum2(1), c2(1), c3(1), partial(1);
+  using scalar_tile = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, 1, 1>;
+  scalar_tile mean_t, rstd_t, sum1, sum2, c2, c3, loaded;
+  tile_v partial(1);
+  // Each (n,g) owns this output slot; overwrite with final c2 after reduction.
+  gm_f partial_gm(c2_buf + ng, 1, 1);
   TLOAD(mean_t, gmean);
   TLOAD(rstd_t, grstd);
   TEXPANDS(sum1, 0.0f);
   TEXPANDS(sum2, 0.0f);
-  for (int64_t d0 = 0; d0 < D; d0 += 512) {
-    const size_t vd = D - d0 < 512 ? D - d0 : 512;
+  for (int64_t d0 = 0; d0 < D; d0 += tile_f::Cols) {
+    const size_t vd = D - d0 < tile_f::Cols ? D - d0 : tile_f::Cols;
     gm_f gds(ds + n * C + c0 + d0, 1, static_cast<int>(C));
     gm_f gdb(db + n * C + c0 + d0, 1, static_cast<int>(C));
     gm_h gg(gamma + c0 + d0, 1, static_cast<int>(C));
@@ -82,10 +86,14 @@ inline void fused_params_group(dtype *gamma, float *mean, float *rstd,
     TCVT(gamma_f, h0);
     TMUL(t0, ds_f, gamma_f);
     TROWSUM(partial, t0);
-    TADD(sum1, sum1, partial);
+    TSTORE(partial_gm, partial);
+    TLOAD(loaded, partial_gm);
+    TADD(sum1, sum1, loaded);
     TMUL(t0, db_f, gamma_f);
     TROWSUM(partial, t0);
-    TADD(sum2, sum2, partial);
+    TSTORE(partial_gm, partial);
+    TLOAD(loaded, partial_gm);
+    TADD(sum2, sum2, loaded);
   }
 
   // c2/c3 由 block 内 thread 0（归约后）写出；此处标量 tile 完成同样公式
@@ -128,25 +136,21 @@ inline void dx_nc(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2_buf,
   gm_f gc2(c2_buf + ng, static_cast<int>(N * G), 1);
   gm_f gc3(c3_buf + ng, static_cast<int>(N * G), 1);
 
-  tile_v rstd_t(1);
-  tile_v c1(1);
-  tile_v c2(1);
-  tile_v c3(1);
+  using scalar_tile = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, 1, 1>;
+  scalar_tile rstd_t, c1, c2, c3;
 
   TLOAD(rstd_t, grstd);
   TLOAD(c2, gc2);
   TLOAD(c3, gc3);
 
   // Torch 可选 c1 预计算同为 gpu_kernel block=128；此处 c1 = rstd*gamma[c]
-  // Convert gamma through matching small Tiles before reducing to one value.
+  // Gamma is already one value: convert directly, without a reduction.
   {
     gm_h gg(gamma + c, 1, 1);
-    Tile<Location::Vec, dtype, 1, 512, BLayout::RowMajor, -1, -1> hg(1, 1);
-    Tile<Location::Vec, float, 1, 512, BLayout::RowMajor, -1, -1> gf(1, 1);
-    tile_v gv(1);
+    Tile<Location::Vec, dtype, 32, 2, BLayout::CubeM32, 1, 1> hg;
+    Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, 1, 1> gv;
     TLOAD(hg, gg);
-    TCVT(gf, hg);
-    TROWSUM(gv, gf);
+    TCVT(gv, hg);
     TMUL(c1, gv, rstd_t);
   }
 
@@ -183,10 +187,14 @@ inline void spatial_block(dtype *dy, dtype *x, float *ds, float *db, int64_t C,
                           int64_t tile_hw) {
   using GM = global_tensor<dtype, RowMajor<-1, -1>>;
   using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::RowMajor, -1, -1>;
-  using TF = Tile<Location::Vec, float, 1, 512, BLayout::RowMajor, -1, -1>;
-  using TV = Tile<Location::Vec, float, 1, 1, BLayout::RowMajor, -1, 1>;
-  TV sa(1), ba(1), cur(1);
+  using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::CubeM32, -1, -1>;
+  using TF = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, -1>;
+  using TV = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, 1>;
+  using Scalar = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, 1, 1>;
+  Scalar sa, ba, loaded;
+  TV cur(1);
+  GF gs(ds + n * C + c, 1, 1), gb(db + n * C + c, 1, 1);
+  // This (n,c) output slot is private to its PE until this stage finishes.
   TEXPANDS(sa, 0.0f);
   TEXPANDS(ba, 0.0f);
   for (int64_t h = 0; h < H; h += tile_hw) {
@@ -201,11 +209,14 @@ inline void spatial_block(dtype *dy, dtype *x, float *ds, float *db, int64_t C,
     TCVT(yf, v);
     TMUL(prod, xf, yf);
     TROWSUM(cur, prod);
-    TADD(sa, sa, cur);
+    TSTORE(gs, cur);
+    TLOAD(loaded, gs);
+    TADD(sa, sa, loaded);
     TROWSUM(cur, yf);
-    TADD(ba, ba, cur);
+    TSTORE(gb, cur);
+    TLOAD(loaded, gb);
+    TADD(ba, ba, loaded);
   }
-  GF gs(ds + n * C + c, 1, 1), gb(db + n * C + c, 1, 1);
   TSTORE(gs, sa);
   TSTORE(gb, ba);
 }
@@ -218,20 +229,18 @@ inline void dx_block(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2,
                      int64_t tile_hw) {
   using GH = global_tensor<dtype, RowMajor<-1, -1>>;
   using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 32, 256, BLayout::RowMajor, -1, -1>;
-  using TF = Tile<Location::Vec, float, 32, 256, BLayout::RowMajor, -1, -1>;
-  using TV = Tile<Location::Vec, float, 32, 1, BLayout::RowMajor, -1, 1>;
-  using SV = Tile<Location::Vec, float, 1, 1, BLayout::RowMajor, -1, 1>;
-  Tile<Location::Vec, dtype, 32, 16, BLayout::RowMajor, -1, -1> gh(rows, 1);
-  Tile<Location::Vec, float, 32, 16, BLayout::RowMajor, -1, -1> gf(rows, 1);
+  using TH = Tile<Location::Vec, dtype, 32, 256, BLayout::CubeM32, -1, -1>;
+  using TF = Tile<Location::Vec, float, 32, 256, BLayout::CubeM32, -1, -1>;
+  using TV = Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, -1, 1>;
+  using SV = Tile<Location::Vec, float, 1, 1, BLayout::CubeM32, -1, 1>;
+  Tile<Location::Vec, dtype, 32, 1, BLayout::CubeM32, -1, 1> gh(rows);
   GH gm_gamma(gamma + c, rows, 1);
   GF gm_r(rstd + n * G + g, 1, 1), gm_c2(c2 + n * G + g, 1, 1),
       gm_c3(c3 + n * G + g, 1, 1);
   SV rs(1), s2(1), s3(1);
   TV gv(rows), v2(rows), v3(rows), ones(rows);
   TLOAD(gh, gm_gamma);
-  TCVT(gf, gh);
-  TROWSUM(gv, gf);
+  TCVT(gv, gh);
   TLOAD(rs, gm_r);
   TLOAD(s2, gm_c2);
   TLOAD(s3, gm_c3);
@@ -266,9 +275,9 @@ inline void gamma_beta_block(float *ds, float *db, float *mean, float *rstd,
                              int64_t rows, int64_t cols) {
   using GF = global_tensor<float, RowMajor<-1, -1>>;
   using GH = global_tensor<dtype, RowMajor<-1, -1>>;
-  using TF = Tile<Location::Vec, float, Rows, Cols, BLayout::RowMajor, -1, -1>;
-  using TH = Tile<Location::Vec, dtype, Rows, Cols, BLayout::RowMajor, -1, -1>;
-  using TV = Tile<Location::Vec, float, Rows, 1, BLayout::RowMajor, -1, 1>;
+  using TF = Tile<Location::Vec, float, Rows, Cols, BLayout::CubeM32, -1, -1>;
+  using TH = Tile<Location::Vec, dtype, Rows, Cols, BLayout::CubeM32, -1, -1>;
+  using TV = Tile<Location::Vec, float, Rows, 1, BLayout::CubeM32, -1, 1>;
   TF sf(rows, cols), bf(rows, cols), t(rows, cols), ga(rows, cols),
       ba(rows, cols);
   TV m(rows), r(rows);
@@ -300,7 +309,11 @@ struct Config {
   int64_t N, C, G, H, rh, rc, dh, dc, bd, bg, D;
   explicit Config(const int64_t *t)
       : N(t[0]), C(t[1]), G(t[2]), H(t[3]), rh(t[4]), rc(t[5]), dh(t[6]),
-        dc(t[7]), bd(t[8]), bg(t[9]), D(G > 0 ? C / G : 0) {}
+        dc(t[7]), bd(t[8]), bg(t[9]), D(G > 0 ? C / G : 0) {
+    // Keep M32 data carriers <=32 KiB; strip loops cover the remainder.
+    if (dh > 256) dh = 256;
+    if (bd > 256) bd = 256;
+  }
   bool valid() const {
     return N > 0 && C > 0 && G > 0 && H > 0 && C % G == 0 && rh > 0 &&
            rh <= 512 && rc == 1 && dh > 0 && dh <= 8192 && dc > 0 &&
@@ -311,95 +324,122 @@ struct Config {
 } // namespace gn_grad
 
 template <typename dtype, int peNum>
-__attribute__((noinline)) void group_norm_grad_spatial(dtype *dy, dtype *x,
-                                                       const int64_t *tiling,
-                                                       float *workspace) {
+__attribute__((noinline)) void
+group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
+                        dtype *gamma, const int64_t *tiling, float *workspace,
+                        dtype *dx, dtype *dgamma, dtype *dbeta) {
   static_assert(peNum == 4);
-  gn_grad::Config t(tiling);
+  const gn_grad::Config t(tiling);
   const uint32_t tid = get_thread_idx();
   if (!t.valid() || tid >= peNum)
     return;
-  for (int64_t ng = tid; ng < t.N * t.G; ng += peNum) {
-    const int64_t n = ng / t.G, g = ng % t.G;
-    for (int64_t d = 0; d < t.D; d += t.rc)
-      gn_grad::spatial_block(dy, x, workspace, workspace + t.N * t.C, t.C, t.H,
-                             n, g * t.D + d, t.rh);
+  // One PE owns a complete group range across every batch and all stages.
+  // gamma/beta only consume ds/db written by this PE; no cross-PE barrier.
+  const int64_t groups_per_pe = (t.G + peNum - 1) / peNum;
+  const int64_t group_begin = tid * groups_per_pe;
+  const int64_t group_end =
+      group_begin + groups_per_pe < t.G ? group_begin + groups_per_pe : t.G;
+  // Stage 1: spatial.
+  {
+    for (int64_t batch = 0; batch < t.N; ++batch)
+      for (int64_t ng = batch * t.G + group_begin; ng < batch * t.G + group_end;
+           ++ng) {
+        const int64_t n = ng / t.G, g = ng % t.G;
+        for (int64_t d = 0; d < t.D; d += t.rc)
+          gn_grad::spatial_block(dy, x, workspace, workspace + t.N * t.C, t.C,
+                                 t.H, n, g * t.D + d, t.rh);
+      }
   }
-}
-
-template <typename dtype, int peNum>
-__attribute__((noinline)) void
-group_norm_grad_fused_params(dtype *gamma, float *mean, float *rstd,
-                             const int64_t *tiling, float *workspace) {
-  static_assert(peNum == 4);
-  gn_grad::Config t(tiling);
-  const uint32_t tid = get_thread_idx();
-  if (!t.valid() || tid >= peNum)
-    return;
-  using GH = global_tensor<dtype, RowMajor<-1, -1>>;
-  using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::RowMajor, -1, -1>;
-  using TF = Tile<Location::Vec, float, 1, 512, BLayout::RowMajor, -1, -1>;
-  using TV = Tile<Location::Vec, float, 1, 1, BLayout::RowMajor, -1, 1>;
-  float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
-  for (int64_t ng = tid; ng < t.N * t.G; ng += peNum)
-    gn_grad::fused_params_group<dtype, GH, GF, TH, TF, TV>(
-        gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N, t.C,
-        t.G, t.D, ng / t.G, ng % t.G, 1.0f / static_cast<float>(t.D * t.H));
-}
-
-template <typename dtype, int peNum>
-__attribute__((noinline)) void
-group_norm_grad_dx(dtype *dy, dtype *x, dtype *gamma, float *rstd,
-                   const int64_t *tiling, float *workspace, dtype *dx) {
-  static_assert(peNum == 4);
-  gn_grad::Config t(tiling);
-  const uint32_t tid = get_thread_idx();
-  if (!t.valid() || tid >= peNum)
-    return;
-  using GH = global_tensor<dtype, RowMajor<-1, -1>>;
-  using GF = global_tensor<float, RowMajor<-1, -1>>;
-  using TH = Tile<Location::Vec, dtype, 1, 8192, BLayout::RowMajor, -1, -1>;
-  using TF = Tile<Location::Vec, float, 1, 8192, BLayout::RowMajor, -1, -1>;
-  using TV = Tile<Location::Vec, float, 1, 1, BLayout::RowMajor, -1, 1>;
-  float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
-  for (int64_t ng = tid; ng < t.N * t.G; ng += peNum) {
-    const int64_t n = ng / t.G, g = ng % t.G;
-    for (int64_t d = 0; d < t.D; d += t.dc) {
-      const int64_t rows = t.D - d < t.dc ? t.D - d : t.dc;
-      if (t.dc > 1)
-        gn_grad::dx_block(dy, x, gamma, rstd, c2, c3, dx, t.C, t.G, t.H, n, g,
-                          g * t.D + d, rows, t.dh);
-      else
-        gn_grad::dx_nc<dtype, GH, GF, TH, TF, TV>(dy, x, gamma, rstd, c2, c3,
-                                                  dx, t.N, t.C, t.G, t.D, t.H,
-                                                  t.dh, n, g * t.D + d);
-    }
+  // Stage 2: fused parameters.
+  {
+    using GH = global_tensor<dtype, RowMajor<-1, -1>>;
+    using GF = global_tensor<float, RowMajor<-1, -1>>;
+    using TH = Tile<Location::Vec, dtype, 1, 512, BLayout::CubeM32, -1, -1>;
+    using TF = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, -1>;
+    using TV = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, 1>;
+    float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
+    for (int64_t batch = 0; batch < t.N; ++batch)
+      for (int64_t ng = batch * t.G + group_begin; ng < batch * t.G + group_end;
+           ++ng) {
+        if (t.D == 4) {
+          using H4 =
+              Tile<Location::Vec, dtype, 32, 4, BLayout::CubeM32, -1, -1>;
+          using F4 =
+              Tile<Location::Vec, float, 32, 4, BLayout::CubeM32, -1, -1>;
+          using V4 = Tile<Location::Vec, float, 32, 4, BLayout::CubeM32, -1, 1>;
+          gn_grad::fused_params_group<dtype, GH, GF, H4, F4, V4>(
+              gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N,
+              t.C, t.G, t.D, ng / t.G, ng % t.G,
+              1.0f / static_cast<float>(t.D * t.H));
+          continue;
+        }
+        if (t.D == 2) {
+          using H2 =
+              Tile<Location::Vec, dtype, 32, 2, BLayout::CubeM32, -1, -1>;
+          using F2 =
+              Tile<Location::Vec, float, 32, 2, BLayout::CubeM32, -1, -1>;
+          using V2 = Tile<Location::Vec, float, 32, 2, BLayout::CubeM32, -1, 1>;
+          gn_grad::fused_params_group<dtype, GH, GF, H2, F2, V2>(
+              gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N,
+              t.C, t.G, t.D, ng / t.G, ng % t.G,
+              1.0f / static_cast<float>(t.D * t.H));
+          continue;
+        }
+        gn_grad::fused_params_group<dtype, GH, GF, TH, TF, TV>(
+            gamma, mean, rstd, workspace, workspace + t.N * t.C, c2, c3, t.N,
+            t.C, t.G, t.D, ng / t.G, ng % t.G,
+            1.0f / static_cast<float>(t.D * t.H));
+      }
   }
-}
-
-template <typename dtype, int peNum>
-__attribute__((noinline)) void
-group_norm_grad_gamma_beta(float *mean, float *rstd, const int64_t *tiling,
-                           float *workspace, dtype *dgamma, dtype *dbeta) {
-  static_assert(peNum == 4);
-  gn_grad::Config t(tiling);
-  const uint32_t tid = get_thread_idx();
-  if (!t.valid() || tid >= peNum)
-    return;
-  const int64_t og = (t.G + t.bg - 1) / t.bg, od = (t.D + t.bd - 1) / t.bd;
-  for (int64_t task = tid; task < og * od; task += peNum) {
-    const int64_t g = task / od * t.bg, d = task % od * t.bd;
-    const int64_t rows = t.G - g < t.bg ? t.G - g : t.bg,
-                  cols = t.D - d < t.bd ? t.D - d : t.bd;
-    if (t.bd <= 256)
-      gn_grad::gamma_beta_block<dtype, 32, 256>(
-          workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N, t.C,
-          t.G, t.D, g, d, rows, cols);
-    else
-      gn_grad::gamma_beta_block<dtype, 1, 8192>(
-          workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N, t.C,
-          t.G, t.D, g, d, rows, cols);
+  // Stage 3: dx.
+  {
+    using GH = global_tensor<dtype, RowMajor<-1, -1>>;
+    using GF = global_tensor<float, RowMajor<-1, -1>>;
+    using TH = Tile<Location::Vec, dtype, 1, 256, BLayout::CubeM32, -1, -1>;
+    using TF = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, -1>;
+    using TV = Tile<Location::Vec, float, 1, 512, BLayout::CubeM32, -1, 1>;
+    float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
+    for (int64_t batch = 0; batch < t.N; ++batch)
+      for (int64_t ng = batch * t.G + group_begin; ng < batch * t.G + group_end;
+           ++ng) {
+        const int64_t n = ng / t.G, g = ng % t.G;
+        for (int64_t d = 0; d < t.D; d += t.dc) {
+          const int64_t rows = t.D - d < t.dc ? t.D - d : t.dc;
+          if (t.dc > 1)
+            gn_grad::dx_block(dy, x, gamma, rstd, c2, c3, dx, t.C, t.G, t.H, n,
+                              g, g * t.D + d, rows, t.dh);
+          else
+            gn_grad::dx_nc<dtype, GH, GF, TH, TF, TV>(
+                dy, x, gamma, rstd, c2, c3, dx, t.N, t.C, t.G, t.D, t.H, t.dh,
+                n, g * t.D + d);
+        }
+      }
+  }
+  // Stage 4: gamma/beta.
+  {
+    const int64_t od = (t.D + t.bd - 1) / t.bd;
+    for (int64_t g = group_begin; g < group_end; g += t.bg)
+      for (int64_t di = 0; di < od; ++di) {
+        const int64_t d = di * t.bd;
+        const int64_t rows = group_end - g < t.bg ? group_end - g : t.bg,
+                      cols = t.D - d < t.bd ? t.D - d : t.bd;
+        if (cols == 4)
+          gn_grad::gamma_beta_block<dtype, 32, 4>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
+              t.C, t.G, t.D, g, d, rows, cols);
+        else if (cols == 2)
+          gn_grad::gamma_beta_block<dtype, 32, 2>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
+              t.C, t.G, t.D, g, d, rows, cols);
+        else if (t.bd <= 256)
+          gn_grad::gamma_beta_block<dtype, 32, 256>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
+              t.C, t.G, t.D, g, d, rows, cols);
+        else
+          gn_grad::gamma_beta_block<dtype, 1, 256>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
+              t.C, t.G, t.D, g, d, rows, cols);
+      }
   }
 }
 #endif

@@ -1,0 +1,10 @@
+#!/bin/bash
+# conv2d_img2col solution compile cases (TIMG2COL + weight TLOAD transports)
+set -euo pipefail
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+make TESTCASE=conv2d_img2col COMPILER_DIR="$COMPILER_DIR" diss
+# Dynamic-shape variant (runtime tiling descriptor; default shape shares
+# the static test's KPhys=32 bucket). Golden:
+#   make TESTCASE=conv2d_img2col_dyn COMPILER_DIR="$COMPILER_DIR" res_check=on
+#   python3 src/golden_conv2d_img2col_dyn.py --elf .../solution_conv2d_conv2d_img2col_dyn_PE4.elf
+make TESTCASE=conv2d_img2col_dyn COMPILER_DIR="$COMPILER_DIR" diss

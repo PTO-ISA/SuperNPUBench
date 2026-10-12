@@ -7,12 +7,16 @@
 // can read from any mapped address, avoiding the byte-by-byte scalar copy
 // that generated ~1.14M STD blocks (92.8% of total).
 //
-// Addresses updated via llvm-nm after each relink (same as qli_check.cpp).
-#define SRCQ_ADDR  0x0000000000014608ULL
-#define SRCK_ADDR  0x0000000000094608ULL
-#define SRCW_ADDR  0x0000000000098608ULL
-#define SRCSQ_ADDR  0x000000000009c608ULL
-#define SRCSK_ADDR  0x00000000000a0608ULL
+// 输入数据经 qli_check_data.s 的 .incbin 嵌入 .data 段。直接引用链接器导出的
+// _binary_*_data_start 符号，取代硬编码地址 + fix_cpp_addrs.py 事后回填：
+// 地址由链接器解析，与配置/数据 size 无关，任意变体免手工回填、免逐配置重编。
+extern "C" unsigned char _binary_srcq_data_start[], _binary_srck_data_start[],
+    _binary_srcw_data_start[], _binary_srcsq_data_start[], _binary_srcsk_data_start[];
+#define SRCQ_ADDR   ((uint64_t)_binary_srcq_data_start)
+#define SRCK_ADDR   ((uint64_t)_binary_srck_data_start)
+#define SRCW_ADDR   ((uint64_t)_binary_srcw_data_start)
+#define SRCSQ_ADDR  ((uint64_t)_binary_srcsq_data_start)
+#define SRCSK_ADDR  ((uint64_t)_binary_srcsk_data_start)
 
 #define OUT_SCORES  0x4000802000ULL
 // indices 紧随 scores 之后，避免大 Sq*Skv 时与 scores 区域重叠

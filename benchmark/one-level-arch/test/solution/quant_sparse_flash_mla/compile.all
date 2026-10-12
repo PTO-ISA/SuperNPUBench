@@ -1,0 +1,37 @@
+#!/bin/bash
+# QSMLA (quant_sparse_flash_mla) 编译入口 —— 供 run_validation 自动发现。
+# 覆盖五种计算模式各一个自足小用例（4-PE 统一实现），每例先用 CPU 参考脚本现场生成
+# HIF8 输入+golden（嵌入 ELF），再 make 出一个 4-PE ELF。gfrun 用 -s softcore.multiThreadNum=4
+# 运行，功能已实测 R2=0。
+#
+# 说明：
+#   - 不用 `set -e`：五个用例相互独立，某个失败不应中断其余（与 run_validation 的
+#     「新增 ELF 快照」判定配合，逐例可见）。
+#   - 数据默认落 /tmp（可用 QSMLA_DATA_ROOT 覆盖）；Makefile 由 IMPL 自动推导数据子目录。
+#   - 未含 typical_bsnd_csa_*（B=8 生产形状）：它们走 QSMLA_EMBED_INPUT 路径，依赖仓外
+#     qsmla_testdata/ 生产数据，非自足，留给有数据的环境单独构建。
+#   - 未含 csa_tadd_1pe / tadd 单 PE 变体：与 csa_tadd_4pe / swa_tadd_4pe 同模式，此处按
+#     「每模式一 ELF」取 4-PE 统一实现；如需单 PE 覆盖可另加。
+set -uo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
+
+ROOT="${QSMLA_DATA_ROOT:-/tmp/qsmla-sparse-hif8}"
+
+COMMON="TESTCASE=quant_sparse_flash_mla QSMLA_SPARSE_EMBED_INPUT=on \
+  B=1 s1=1 s2=128 N1=64 N2=1 D=512 wleft=127 wright=0 softmax_scale=0.04419417 \
+  cmp_s2=64 ori_topk=40 cmp_topk=40 cmp_ratio=4 Tm=64 Tk=32 Td_block=64 \
+  QSMLA_DTYPE=HIF8 QSMLA_SPARSE_DATA_ROOT=$ROOT"
+
+# 五种模式 -> 统一 4-PE IMPL（Makefile 由 IMPL 推导 QSMLA_SPARSE_CASE 数据子目录）
+for pair in \
+  "swa_small:swa_tadd_4pe" \
+  "hca_small:hca_tadd_4pe" \
+  "csa_small:csa_tadd_4pe" \
+  "ori_sparse_small:ori_sparse_tadd_4pe" \
+  "ori_cmp_sparse_small:ori_cmp_sparse_tadd_4pe"; do
+  case="${pair%%:*}"; impl="${pair##*:}"
+  # 现场生成该用例的 HIF8 输入 + golden（幂等：已生成则脚本自身跳过）
+  python3 run_qsmla_cpu_reference.py --case "$case" --dtype HIF8 --output-root "$ROOT"
+  make $COMMON IMPL="$impl"
+done

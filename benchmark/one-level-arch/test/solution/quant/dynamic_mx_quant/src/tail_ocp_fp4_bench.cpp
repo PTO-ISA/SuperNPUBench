@@ -2,7 +2,7 @@
 #include <cstdint>
 #include "fileop.h"
 #include "multi_thread_res_check.h"  // 官方 4-PE 收尾协议（输入/输出屏障 + PE0 落盘）
-#include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp4.hpp"
+#include "solution/quant/dynamic_mx_quant/dynamic_mx_quant_tail_ocp_fp4_dyn.hpp"
 using namespace supernpu::tile_isa::mxquant;
 
 // TAIL_OCP_FP4 大 shape 基准用例：[M=15360, N=1536], BlockSize=32, bf16 in -> fp4(e2m1) out。
@@ -38,8 +38,9 @@ int main() {
     res_check_publish_inputs(res_check_sync, tid);  // 输入屏障：worker 等 PE0 读完
 #endif
 
-    dynamic_mx_quant_tail_ocp_fp4<PM, PN, 32>(
-        x, reinterpret_cast<__fp4_e2m1x2 *>(y), scale);
+    const int64_t tiling[2] = {PM, PN};   // 动态 shape：M/N 运行期传入
+    dynamic_mx_quant_tail_ocp_fp4_dyn<32, __fp4_e2m1x2, __bf16, 4>(
+        x, reinterpret_cast<__fp4_e2m1x2 *>(y), scale, tiling);
 
 #ifdef RES_CHECK
     res_check_wait_for_all(res_check_sync, tid);  // 输出屏障：PE0 等 PE1..3 算完再落盘

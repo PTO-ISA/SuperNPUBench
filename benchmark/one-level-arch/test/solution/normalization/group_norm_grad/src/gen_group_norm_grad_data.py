@@ -9,7 +9,7 @@ Bins:
   golden_dx / golden_dgamma / golden_dbeta : float16
 
 Math matches PyTorch GroupNormBackward (HxW>1): spatial ds/db then fused c2/c3.
-Default: N=2, C=32, G=8, HxW=2024 (D=4), tile_hw=min(HxW, 512)=512.
+Default: N=2, C=16, G=8, HxW=2048 (D=2), tile_hw=min(HxW, 512)=512.
 """
 
 from __future__ import annotations
@@ -24,8 +24,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
-    / "solution_normalization_group_norm_grad_group_norm_grad"
-    "_DType__half_N2_C32_G8_HxW2024_PE4"
+    / "solution_normalization_group_norm_grad_group_norm_grad_dynamic"
+    "_DType__half_N2_C16_G8_HxW2048_PE4"
 )
 
 
@@ -62,11 +62,11 @@ def f16_bits_to_f32(h: int) -> float:
     exp = (h >> 10) & 0x1F
     mant = h & 0x3FF
     if exp == 0:
-        val = 0.0 if mant == 0 else math.ldexp(mant / 512.0, -14)
+        val = 0.0 if mant == 0 else math.ldexp(mant / 1024.0, -14)
     elif exp == 31:
         val = math.nan if mant else math.inf
     else:
-        val = math.ldexp(1.0 + mant / 512.0, exp - 15)
+        val = math.ldexp(1.0 + mant / 1024.0, exp - 15)
     return -val if sign else val
 
 
@@ -238,9 +238,9 @@ def gen_all(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n", type=int, default=2)
-    parser.add_argument("--c", type=int, default=32)
+    parser.add_argument("--c", type=int, default=16)
     parser.add_argument("--g", type=int, default=8)
-    parser.add_argument("--hxw", type=int, default=2024)
+    parser.add_argument("--hxw", type=int, default=2048)
     parser.add_argument("--tile-hw", type=int, default=None)
     parser.add_argument("--eps", type=float, default=1e-5)
     parser.add_argument("--seed", type=int, default=123)

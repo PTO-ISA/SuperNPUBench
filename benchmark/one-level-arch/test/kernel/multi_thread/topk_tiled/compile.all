@@ -1,0 +1,12 @@
+#!/bin/bash
+# export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin; ./compile.all;
+# python3 src/run_topk_tiled_check.py --gfrun /path/to/gfrun            # exact FP32
+#
+# kFp32Refine in kernels/multi_thread/topk/topk_tiled.hpp selects the tail:
+#   true  (default): four FP32 key bytes  -> run the checker with --mode fp32
+#   false:           one FP16 key low byte -> run the checker with --mode fp16
+set -euo pipefail
+
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+
+make TESTCASE=topk_tiled COMPILER_DIR="$COMPILER_DIR" res_check=on diss

@@ -122,12 +122,20 @@ int main() {
 #define SRC0_MX_PATH CHK_DIR "/src0_mx.bin"
 #define SRC1_MX_PATH CHK_DIR "/src1_mx.bin"
     static MultiThreadResCheckSync res_check_sync{};
+#ifdef GFSIM
+    // gfsim SyscallBarrier 要求 4 PE 都执行相同的 file syscall block
+    readBinaryFile(SRC0_PATH,    (uint8_t *)src0,    Batch * globM * kStoredGK * sizeof(__fp4_hif4x2));
+    readBinaryFile(SRC1_PATH,    (uint8_t *)src1,    Batch * globN * kStoredGK * sizeof(__fp4_hif4x2));
+    readBinaryFile(SRC0_MX_PATH, (uint8_t *)src0_mx, Batch * globM * kGScaleK * sizeof(uint32_t));
+    readBinaryFile(SRC1_MX_PATH, (uint8_t *)src1_mx, Batch * globN * kGScaleK * sizeof(uint32_t));
+#else
     if (tid == 0) {
         readBinaryFile(SRC0_PATH,    (uint8_t *)src0,    Batch * globM * kStoredGK * sizeof(__fp4_hif4x2));
         readBinaryFile(SRC1_PATH,    (uint8_t *)src1,    Batch * globN * kStoredGK * sizeof(__fp4_hif4x2));
         readBinaryFile(SRC0_MX_PATH, (uint8_t *)src0_mx, Batch * globM * kGScaleK * sizeof(uint32_t));
         readBinaryFile(SRC1_MX_PATH, (uint8_t *)src1_mx, Batch * globN * kGScaleK * sizeof(uint32_t));
     }
+#endif
 #ifndef LINX_GROUP_RUNTIME
     res_check_publish_inputs(res_check_sync, tid);
 #endif
@@ -150,9 +158,14 @@ int main() {
 #ifndef LINX_GROUP_RUNTIME
     res_check_wait_for_all(res_check_sync, tid);
 #endif
+#ifdef GFSIM
+    // gfsim SyscallBarrier 要求 4 PE 都执行相同的 file syscall block
+    writeBinaryFile(RES_PATH, (uint8_t *)dst, Batch * globM * globN * sizeof(float));
+#else
     if (tid == 0) {
         writeBinaryFile(RES_PATH, (uint8_t *)dst, Batch * globM * globN * sizeof(float));
     }
+#endif
 #endif
 
     return status;

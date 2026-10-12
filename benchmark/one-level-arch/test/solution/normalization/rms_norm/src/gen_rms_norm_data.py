@@ -7,7 +7,7 @@ gamma.bin        : g_r x float16 affine scale
 golden.bin       : same shape float16, out = x * rsqrt(mean(x^2)+eps) * gamma
                    (fp32 compute then cast to fp16, matching kernel pipeline)
 
-Default: g_a=512, g_r=8192, tile=(1,512), eps=1e-6.
+Default: g_a=128, g_r=8192, tile=(1,512), eps=1e-6.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CMP_DIR = (
     SCRIPT_DIR.parents[4]
     / "compare"
-    / "solution_normalization_rms_norm_rms_norm_dynamic_DType__half_gA512_gR8192_PE4"
+    / "solution_normalization_rms_norm_rms_norm_dynamic_tree_32k_DType__half_gA128_gR8192_PE4"
 )
 DATA_DIR = SCRIPT_DIR / "data"
 
@@ -103,10 +103,10 @@ def rms_norm_rows(
 
 
 def write_tiling_info(
-    path: Path, g_a: int, g_r: int, tile_a: int, tile_r: int, eps: float
+    path: Path, g_a: int, g_r: int, pow_r: int, tile_a: int, tile_r: int, eps: float
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(struct.pack("<4q", g_a, g_r, tile_a, tile_r))
+    path.write_bytes(struct.pack("<5q", g_a, g_r, pow_r, tile_a, tile_r))
     print(f"wrote {path}  tiling=({g_a},{g_r},{tile_a},{tile_r}); fixed eps={eps}")
 
 
@@ -136,7 +136,7 @@ def gen_all(
     ]
     y_f32 = rms_norm_rows(x_f16, gamma_f16, g_a, g_r, eps)
 
-    write_tiling_info(out_dir / "tiling_info.bin", g_a, g_r, tile_a, tile_r, eps)
+    write_tiling_info(out_dir / "tiling_info.bin", g_a, g_r, 1 << (g_r.bit_length() - 1), tile_a, tile_r, eps)
     in_bytes = pack_f16_list(x_f16)
     gamma_bytes = pack_f16_list(gamma_f16)
     gold_bytes = pack_f16_list(y_f32)
@@ -150,7 +150,7 @@ def gen_all(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--g-a", type=int, default=512)
+    parser.add_argument("--g-a", type=int, default=128)
     parser.add_argument("--g-r", type=int, default=8192)
     parser.add_argument("--tile-a", type=int, default=1)
     parser.add_argument("--tile-r", type=int, default=512)
@@ -173,6 +173,7 @@ def main() -> None:
             DATA_DIR / "tiling_info.bin",
             args.g_a,
             args.g_r,
+            1 << (args.g_r.bit_length() - 1),
             args.tile_a,
             args.tile_r,
             1e-6,

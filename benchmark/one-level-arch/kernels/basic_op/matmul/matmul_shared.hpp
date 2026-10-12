@@ -9,13 +9,13 @@ using namespace pto;
 // Four-PE multi-thread matmul with Shared TLOAD.
 //
 // Mathematical semantics:
-//   C = A * B
-//   A: [M, K], B: [K, N], C: [M, N]
+//   C = A * B^T
+//   A: [M, K], B: [N, K], C: [M, N]
 //
 // Host-visible storage:
 //   - A is an array of four PE matrices, each with shape [gM, gK].
 //   - C is an array of four PE matrices, each with shape [gM, gN].
-//   - B is one shared matrix with shape [gK, gN].
+//   - B is one shared B-major matrix with shape [gN, gK].
 //
 // Both A and B are loaded directly into SharedTile via GM->Shared TLOAD.
 // A is a Shared Left tile, B is a Shared Right tile, and C remains a
@@ -51,18 +51,18 @@ void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
     // K chain: single=0, begin=raw_acc, middle=raw_acc|acc_hint, end=acc_hint.
     // C remains explicit; gfsim also needs cube.enable_internal_acc=true.
-    constexpr auto matmulOptions = fixp::keep_acc().transpose_b();
+    constexpr auto matmulOptions = fixp::keep_acc();
     const uint32_t tid = get_thread_idx();
 
     // a_ptr += tid * gM * gK;
     // c_ptr += tid * gM * gN;
 
     using gmA = global_tensor<dtype, RowMajor<gM, gK>>;
-    using gmB = global_tensor<dtype, RowMajor<gK, gN>>;
+    using gmB = global_tensor<dtype, RowMajor<gN, gK>>;
     using gmC = global_tensor<float, RowMajor<gM, gN>>;
 
     using tileAMatrix = SharedMatrixLeft<dtype, kTileRows, tK, kValidRowM, tK>;
-    using tileBMatrix = SharedMatrixRight<dtype, tK, tN>;
+    using tileBMatrix = SharedMatrixRight<dtype, tN, tK>;
     using tileAShared = SharedTile<tileAMatrix>;
     using tileBShared = SharedTile<tileBMatrix>;
     // TMATMUL is issued cooperatively by four PEs.  The shared A tile covers
@@ -83,6 +83,11 @@ void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
     constexpr int Mb = (gM + kGroupM - 1) / kGroupM;
     constexpr int Nb = gN / tN;
     constexpr int Kb = gK / tK;
+    constexpr int kSharedTRegBytes = 256 * 1024;
+    static_assert(tileAMatrix::LogicalTileBytes +
+                          tileBMatrix::LogicalTileBytes <=
+                      kSharedTRegBytes,
+                  "A/B tiles exceed the 256 KiB SharedTReg pool");
     #pragma clang loop unroll(full)
     for (int i = 0; i < Mb; ++i) {
         #pragma clang loop unroll(full)
@@ -91,7 +96,7 @@ void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
 
             if constexpr (Kb == 1) {
                 auto gA = gIterA(i, 0);
-                auto gB = gIterB(0, j);
+                auto gB = gIterB(j, 0);
                 tileAShared tAShared;
                 tileBShared tBShared;
                 TLOAD<tileAMatrix, 1>(tAShared, gA);
@@ -100,7 +105,7 @@ void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
             } else {
                 {
                     auto gA = gIterA(i, 0);
-                    auto gB = gIterB(0, j);
+                    auto gB = gIterB(j, 0);
                     tileAShared tAShared;
                     tileBShared tBShared;
                     TLOAD<tileAMatrix, 1>(tAShared, gA);
@@ -111,7 +116,7 @@ void matmul_shared(float *c_ptr, dtype *a_ptr, dtype *b_ptr) {
                 #pragma clang loop unroll(full)
                 for (int k = 1; k < Kb; ++k) {
                     auto gA = gIterA(i, k);
-                    auto gB = gIterB(k, j);
+                    auto gB = gIterB(j, k);
                     tileAShared tAShared;
                     tileBShared tBShared;
                     TLOAD<tileAMatrix, 1>(tAShared, gA);

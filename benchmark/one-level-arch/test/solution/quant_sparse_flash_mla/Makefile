@@ -9,9 +9,22 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    N1 ?= 1
    N2 ?= 1
    D ?= 512
+   QSMLA_DTYPE ?= HIF8
+   # Single-PE compatibility: IMPL=tadd QSMLA_DTYPE=FP16.
+   # HIF8 remains the default dtype for the unified four-PE implementations.
+   IMPL ?= tadd
    Tm ?= 32
-   Tk ?= 32
-   Td_block ?= 64
+   ifeq ($(IMPL), tadd)
+      # Single-PE tadd requires square B tiles (Tk == Td_block, unpatched
+      # Local-B contract) and a row-reduction source <= 2048 bytes, so its
+      # defaults follow the validated Tk16 square profile instead of the
+      # legacy Tk=32/Td_block=64 pair (which now fails the kernel asserts).
+      Tk ?= 16
+      Td_block ?= 16
+   else
+      Tk ?= 32
+      Td_block ?= 64
+   endif
    softmax_scale ?= 0.125
    wleft ?= 1
    wright ?= 1
@@ -34,16 +47,24 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    endif
    # Single-PE compatibility: IMPL=tadd QSMLA_DTYPE=FP16.
    # HIF8 remains the default dtype for the unified four-PE implementations.
-   IMPL ?= tadd
    QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
-   ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS)),)
+    QSMLA_1PE_IMPLS := csa_tadd_1pe
+    # Dynamic-shape variant (v2): Vec tiles use DYNAMIC ValidRow/ValidCol.
+    # Only valid for the unified four-PE IMPLs.
+    ifeq ($(QSMLA_DYNAMIC_SHAPE), on)
+       ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS)),)
+          $(error QSMLA_DYNAMIC_SHAPE requires a unified four-PE IMPL)
+       endif
+       DEFINES += -DQSMLA_USE_DYNAMIC_SHAPE
+    endif
+   ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS)),)
       $(error unsupported QSMLA IMPL=$(IMPL); use tadd or a unified four-PE implementation)
    endif
-   ifeq ($(IMPL), tadd)
-      ifneq ($(QSMLA_DTYPE), FP16)
-         $(error single-PE tadd requires QSMLA_DTYPE=FP16; HIF8 uses a unified four-PE IMPL)
-      endif
-   endif
+    ifeq ($(IMPL), tadd)
+       ifneq ($(QSMLA_DTYPE), FP16)
+          $(error single-PE tadd requires QSMLA_DTYPE=FP16; HIF8 uses a unified four-PE IMPL)
+       endif
+    endif
    DEFINES += -DTbatch=$(B)
    DEFINES += -DTs1=$(s1)
    DEFINES += -DTs2=$(s2)
@@ -105,6 +126,16 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL).elf
    endif
 
+   # Single-PE CSA (Local CUBE path, FP16, embedded input only).
+   ifeq ($(IMPL), csa_tadd_1pe)
+      ifneq ($(QSMLA_SPARSE_EMBED_INPUT), on)
+         $(error csa_tadd_1pe requires QSMLA_SPARSE_EMBED_INPUT=on (FP16 csa_small data))
+      endif
+      DEFINES += -DQSMLA_USE_CSA_TADD_1PE
+      QSMLA_SPARSE_CASE := csa_small
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_INPUTembedded.elf
+   endif
+
    ifeq ($(QSMLA_EMBED_INPUT), on)
       ifneq ($(B), 8)
          $(error QSMLA_EMBED_INPUT supports only B=8,S1=4,N1=128,N2=1,D=512)
@@ -147,8 +178,8 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    endif
 
    ifeq ($(QSMLA_SPARSE_EMBED_INPUT), on)
-      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS)),)
-         $(error QSMLA_SPARSE_EMBED_INPUT requires a unified four-PE IMPL)
+      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS)),)
+         $(error QSMLA_SPARSE_EMBED_INPUT requires a unified four-PE IMPL or csa_tadd_1pe)
       endif
       QSMLA_SPARSE_DATA_ROOT ?= /tmp/qsmla-sparse
       QSMLA_SPARSE_DATA_DIR := $(QSMLA_SPARSE_DATA_ROOT)/$(QSMLA_SPARSE_CASE)
@@ -166,14 +197,22 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       EXTRA_OBJ_FILES += $(QSMLA_Q_OBJ) $(QSMLA_ORI_KV_OBJ)
       DEFINES += -DQSMLA_USE_SPARSE_EMBEDDED_INPUT
 
-      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe),)
+      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
          QSMLA_CMP_KV_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_kv.o
          EXTRA_OBJ_FILES += $(QSMLA_CMP_KV_OBJ)
       endif
-      ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe),)
-         QSMLA_CMP_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_indices.o
-         EXTRA_OBJ_FILES += $(QSMLA_CMP_INDEX_OBJ)
-      endif
+       ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
+          QSMLA_CMP_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_indices.o
+          EXTRA_OBJ_FILES += $(QSMLA_CMP_INDEX_OBJ)
+       endif
+       ifeq ($(IMPL), csa_tadd_1pe)
+          # qli-style pre-transposed ORI KV view [D, S2] per batch: the
+          # single-PE CSA BMM1 B-tile (CUBE_N8 ND source) consumes K^T
+          # directly, so the transpose moves out of the kernel into the
+          # input layout (same contract as the qli test harness).
+          QSMLA_ORI_KV_T_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_kv_t.o
+          EXTRA_OBJ_FILES += $(QSMLA_ORI_KV_T_OBJ)
+       endif
       ifneq ($(filter $(IMPL),ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe),)
          QSMLA_ORI_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_indices.o
          QSMLA_ORI_LENGTH_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_length.o
@@ -190,9 +229,13 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
 	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol q_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_Q_BYTES) --exact-bytes
 
-      $(QSMLA_ORI_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
+       $(QSMLA_ORI_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
 	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
+
+       $(QSMLA_ORI_KV_T_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv_t.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_t_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
 
       $(QSMLA_CMP_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)

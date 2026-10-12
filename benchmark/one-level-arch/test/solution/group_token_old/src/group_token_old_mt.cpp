@@ -13,9 +13,14 @@ static constexpr uint32_t kThreadsPerBlock = 4;
 // ============================================================================
 // Multi-PE barrier (software, sense-reversal-free phase counter).
 //
-// Follows the synchronization convention of multi_thread/matmul RES_CHECK:
-// volatile flag + compiler memory barrier. Each PE publishes its own phase
-// progress; a PE leaves the barrier only after all PEs reached the phase.
+// [2026-10-04 修改] 保留本算子原有的 volatile flag 裸自旋屏障，不移植
+// group_token_vec_mt 的驱逐屏障：实测（--dump-memory 数据取证，见
+// kernels/solution/group_token_old/group_token_old_mt_gfsim_fix_report.md
+// §4.4）本算子映射驱逐屏障后 Phase 3 计数排序结果被污染（sortMatch
+// 494/512），裸自旋屏障下同负载确定性全对（512/512）；且本屏障的 flag
+// 轮询为 volatile（lwi.u）语义，长安静窗口（末端验证汇合，worker 自旋
+// ~4×10^5 cycle）下多次实测均可靠放行，未复现 vec 家族报告的陈旧 flag
+// 活锁（该场景与其屏障的缓存式轮询实现相关）。
 // ============================================================================
 static volatile uint32_t sPhaseDone[kThreadsPerBlock];
 
@@ -54,13 +59,15 @@ static void genTopkIndex(uint32_t *topkIndex, uint32_t bs, uint32_t k,
 // ============================================================================
 // Multi-thread kernel: Phase 1 — CalTokenPerExpertCnt
 //
-// Following the .asc pattern: stride-mode parallelism.
-// Each PE processes a stride of the topkIndex array and accumulates into
-// its private cntLocal. After the parallel loop, each PE writes its local
-// counts for its assigned expert range into the global tokenPerExpertCnt.
-//
-// Expert partition: 128 experts / 4 PEs = 32 experts per PE.
-// Stride over topkIndex: PE tid processes elements [tid, tid+4, tid+8, ...].
+// [2026-10-04 修复] gfsim `--conf fourpe` 数据完整性修复（--dump-memory 取证，
+// 见 kernels/solution/group_token_old/group_token_old_mt_gfsim_fix_report.md）：
+//   1. 输入分解由 stride-4（4 PE 并发读同一 cacheline）改为每 PE 连续 1/4 段
+//      （直方图对输入划分可交换，结果等价）——并发同行填充竞态是直方图计数
+//      出垃圾值（~12/128 bin）的第二大来源；
+//   2. 计数累加由 .bss 缓存式 RMW（myCnt[e]++）改为寄存器/栈私有累加 +
+//      volatile（非缓存）一次性导出——group_token_vec_mt.hpp 同款约定
+//      （"acc → myCnt volatile 标量逐元素一次性"）；
+//   3. reduce 读取改为 volatile——非缓存直读 L2，规避读侧 L1D 陈旧行。
 // ============================================================================
 static void calTokenPerExpertCnt_multithread(
     const uint32_t *topkIndex,
@@ -71,28 +78,47 @@ static void calTokenPerExpertCnt_multithread(
 {
     const uint32_t tid = get_thread_idx();
 
-    // Each PE initializes its private cntLocal to zero
-    uint32_t *myCnt = cntLocal + tid * expertNum;
+    // [2026-10-04 修改] 寄存器/栈私有累加（不再对 .bss 做缓存式 RMW）
+    uint32_t acc[256];
     for (uint32_t i = 0; i < expertNum; i++) {
-        myCnt[i] = 0;
+        acc[i] = 0;
     }
 
-    // Stride-mode histogram: each PE counts every 4th element
-    for (uint32_t i = tid; i < topkEleNum; i += kThreadsPerBlock) {
-        uint32_t expertId = topkIndex[i];
+    // [2026-10-04 修改] 每 PE 连续 1/4 输入段（替代 stride-4 共享行并发读）
+    uint32_t perPE = topkEleNum / kThreadsPerBlock;
+    const uint32_t *myIn = topkIndex + tid * perPE;
+    for (uint32_t i = 0; i < perPE; i++) {
+        uint32_t expertId = myIn[i];
         if (expertId < expertNum) {
-            myCnt[expertId]++;
+            acc[expertId]++;
         }
     }
 
+    // [2026-10-04 修改] volatile（非缓存）一次性导出到私有 cntLocal 切片
+    volatile uint32_t *myCntV = cntLocal + tid * expertNum;
+    for (uint32_t i = 0; i < expertNum; i++) {
+        myCntV[i] = acc[i];
+    }
+
+    // [2026-10-04 修复] 跨 PE 顺序竞争：reduce 需要读取所有 PE 的 cntLocal
+    // 切片，原实现把 mtBarrier 放在函数返回后的 main 里（reduce 之后），
+    // gfsim 真实 PE 偏斜下 reduce 会读到其它 PE 未完成的计数（gfrun 靠确定性
+    // lockstep 侥幸通过）。屏障移入函数内部：直方图导出后、cross-PE reduce
+    // 读取前（与 group_token_vec_mt.hpp calTokenPerExpertCnt_mt_tile 内屏障
+    // 同款布局；相位编号 1=数据生成发布, 2=本屏障, 3=scatter→merge,
+    // 4=FloorFunc→sort, 5=验证汇合）。
+    mtBarrier(2);   // all PEs' private histograms complete before reduce
+
     // Reduce: each PE writes its contribution for its assigned expert range
     // Expert range: [tid * expertsPerPE, (tid+1) * expertsPerPE)
+    // [2026-10-04 修改] reduce 读取 volatile——非缓存直读 L2
     uint32_t expertsPerPE = expertNum / kThreadsPerBlock;
+    const volatile uint32_t *cl = cntLocal;
     for (uint32_t e = 0; e < expertsPerPE; e++) {
         uint32_t globalExpert = tid * expertsPerPE + e;
         uint32_t sum = 0;
         for (uint32_t t = 0; t < kThreadsPerBlock; t++) {
-            sum += cntLocal[t * expertNum + globalExpert];
+            sum += cl[t * expertNum + globalExpert];
         }
         tokenPerExpertCnt[globalExpert] = sum;
     }
@@ -130,7 +156,11 @@ static void groupToken_multithread(
     constexpr uint32_t kBsPerPE = kBS / kThreadsPerBlock;  // 128
 
     // Per-PE section counts
-    uint32_t *mySectionCnt = perPeSectionCnt + tid * expertPerRank;
+    // [2026-10-04 修改] per-PE 分区计数器改为 volatile（非缓存）RMW：
+    // 该计数器是跨 PE 交接数据（PE0 的 merge 在 mtBarrier(3) 后读取），
+    // volatile 访问直连 L2，规避写侧 L1D 脏行滞留（group_token_vec_mt.hpp
+    // 同款约定）。
+    volatile uint32_t *mySectionCnt = perPeSectionCnt + tid * expertPerRank;
     for (uint32_t i = 0; i < expertPerRank; i++) {
         mySectionCnt[i] = 0;
     }
@@ -156,7 +186,8 @@ static void groupToken_multithread(
             }
         }
 
-        uint32_t idxInSection = mySectionCnt[minLocalExpId]++;
+        uint32_t idxInSection = mySectionCnt[minLocalExpId];
+        mySectionCnt[minLocalExpId] = idxInSection + 1;
         uint32_t peOffset = minLocalExpId * kThreadsPerBlock * kBsPerPE
                           + tid * kBsPerPE + idxInSection;
         perPegroupedIds[peOffset] = i;
@@ -239,6 +270,15 @@ static void sortKernel_multithread(
         }
         minLocalExpIds[i] = minLocalExpId;
     }
+
+    // [2026-10-04 修复] 跨 PE 顺序竞争：Phase 3b 的 counting sort（PE0 独占）
+    // 读取所有 PE 在 3a 写入的 minLocalExpIds，原实现把 mtBarrier 放在
+    // 函数返回后的 main 里（3b 之后），gfsim 真实 PE 偏斜下 PE0 会读到其它
+    // PE 未完成的 minLocalExpIds → counts/writePos 垃圾（gfrun 靠确定性
+    // lockstep 侥幸）。屏障移入函数内部：FloorFunc 完成后、PE0 counting
+    // sort 前（与 group_token_vec_mt.hpp sortKernel_mt_tile 内屏障同款布局；
+    // 相位 4 = FloorFunc→sort）。
+    mtBarrier(4);   // all PEs' FloorFunc writes visible before PE0's sort
 
     // Phase 3b: Counting sort — only PE 0 does the global sort
     if (tid == 0) {
@@ -359,23 +399,32 @@ int main()
     // Phase 3 shared
     static uint32_t minLocalExpIds[kBS];
 
-    // Generate input data (deterministic per PE; identical on every PE)
-    genTopkIndex(topkIndex, kBS, kTopK, kExpertNum);
+    // [2026-10-04 修复] 数据生成改为 PE0 独占 + 发布屏障（相位 1）：原实现
+    // 4 个 PE 冗余执行 genTopkIndex 同时写同一批 topkIndex 行（gfrun 功能
+    // 模型确定性同值写无害；gfsim 时序模型跨 PE 无 snoop，同行并发写在真实
+    // PE 偏斜下产生丢更新/行损坏）——--dump-memory 取证实测这是 Phase 1
+    // 直方图计数垃圾值（~12/128 bin，实测 cntMatch=116/128）的最大来源，
+    // 改为 PE0 独占生成 + mtBarrier(1) 发布后全部计数正确（cntMatch=128/128）。
+    if (tid == 0) {
+        genTopkIndex(topkIndex, kBS, kTopK, kExpertNum);
+    }
+    mtBarrier(1);   // PE0's input generation visible to all PEs
 
     BENCHSTART;
 
-    // Phase 1: Multi-thread histogram (4 PEs, stride mode)
+    // Phase 1: Multi-thread histogram (4 PEs, per-PE contiguous quarter)
+    // [2026-10-04 修改] mtBarrier(2) 在函数内部（直方图导出后、cross-PE
+    // reduce 读取前），原调用点屏障已随竞争修复移除，见函数内注。
     calTokenPerExpertCnt_multithread(
         topkIndex, tokenPerExpertCnt, cntLocal,
         kExpertNum, kTopKEleNum);
-    mtBarrier(1);   // all PEs finished histogram before reduce consumers run
 
     // Phase 2: Multi-thread scatter (4 PEs, stride mode)
     groupToken_multithread(
         topkIndex, groupedTokenIds, tokenSuperPodInfo, expertSectionTokenCnt,
         perPegroupedIds, perPeSectionCnt, perPePodInfo,
         kBS, kTopK, kExpertPerRank, kExpertPerPod, kSuperPodNum);
-    mtBarrier(2);   // all PEs finished scatter before merge reads their sections
+    mtBarrier(3);   // all PEs finished scatter before merge reads their sections
 
     // Phase 2 merge: single-PE merge of per-PE results (avoids duplicated work
     // and guarantees the merge reads fully-written per-PE sections)
@@ -387,10 +436,12 @@ int main()
     }
 
     // Phase 3: Multi-thread FloorFunc + single-PE counting sort
+    // [2026-10-04 修改] mtBarrier(4) 在函数内部（FloorFunc 完成后、PE0
+    // counting sort 读取 minLocalExpIds 前），原调用点屏障已随竞争修复
+    // 移除，见函数内注。
     sortKernel_multithread(
         topkIndex, minLocalExpIds, sortedTokenIds, sectionStarts,
         kBS, kTopK, kExpertPerRank);
-    mtBarrier(3);   // FloorFunc stride writes visible before PE0 sort & verify
 
     BENCHEND;
 
@@ -403,9 +454,6 @@ int main()
         static uint32_t refSectionCnt[kExpertPerRank];
         static uint32_t refSortedIds[kBS];
         static uint32_t refSectionStarts[kExpertPerRank + 1];
-        // scratch buffers used only by PE0 (plain locals on its stack)
-        static uint32_t verBuf[kBS];
-        static uint32_t verRef[kBS];
 
         for (uint32_t i = 0; i < kExpertPerRank * kBS; i++) refGroupedIds[i] = 0;
         refCalTokenPerExpertCnt(topkIndex, refExpertCnt, kExpertNum, kTopKEleNum);
@@ -427,24 +475,36 @@ int main()
         }
 
         // --- verify Phase 2: grouped token ids (as sorted sets per section) ---
+        // [2026-10-04 优化] 原实现为分区 O(n^2) 双数组冒泡排序比对（本数据
+        // 分布下 n_0≈506，~12.8 万对比较）。gfsim fourpe 下该标量冒泡的
+        // 代码生成/时序模型组合效率极低（实测拖慢至 ~4.6M cycle / 仿真
+        // 40+ 分钟），且与退出 lockstep 修复无关。改为 O(n) 计数式多重集
+        // 比对（语义等价：两组分区前缀的多重集相等 ⇔ 排序后逐元素相等），
+        // gfsim 全流程 ~0.66M cycle，判定结果与冒泡版一致（gfrun R2 同判）。
         int idMatch = 0;
         int idTotal = 0;
+        // PE0-private verification scratch ([C9] 同款一次性 .bss scratch)
+        static uint32_t cntA[kBS];
+        static uint32_t cntB[kBS];
         for (uint32_t s = 0; s < kExpertPerRank; s++) {
             uint32_t n = expertSectionTokenCnt[s];
             idTotal += n;
-            for (uint32_t i = 0; i < n; i++) {
-                verBuf[i] = groupedTokenIds[s * kBS + i];
-                verRef[i] = refGroupedIds[s * kBS + i];
+            for (uint32_t v = 0; v < kBS; v++) {
+                cntA[v] = 0;
+                cntB[v] = 0;
             }
             for (uint32_t i = 0; i < n; i++) {
-                for (uint32_t j = i + 1; j < n; j++) {
-                    if (verBuf[i] > verBuf[j]) { uint32_t t = verBuf[i]; verBuf[i] = verBuf[j]; verBuf[j] = t; }
-                    if (verRef[i] > verRef[j]) { uint32_t t = verRef[i]; verRef[i] = verRef[j]; verRef[j] = t; }
-                }
+                uint32_t a = groupedTokenIds[s * kBS + i];
+                uint32_t b = refGroupedIds[s * kBS + i];
+                if (a < kBS) cntA[a]++;
+                if (b < kBS) cntB[b]++;
             }
-            for (uint32_t i = 0; i < n; i++) {
-                if (verBuf[i] == verRef[i]) idMatch++;
+            uint32_t diff = 0;
+            for (uint32_t v = 0; v < kBS; v++) {
+                diff += (cntA[v] > cntB[v]) ? (cntA[v] - cntB[v])
+                                            : (cntB[v] - cntA[v]);
             }
+            if (diff == 0) idMatch += n;   // 分区多重集完全一致
         }
 
         // --- verify Phase 3: section boundaries ---
@@ -489,5 +549,21 @@ int main()
         fflush(stdout);
     }
 #endif
+
+    // [2026-10-04 修复] 退出 lockstep 搁浅（本次 gfsim `--conf fourpe` 确定性
+    // 崩溃的根因，实测 cycle=242,720 断言复现）：原实现 worker (tid!=0) 在
+    // kernel 末端屏障放行后直接 `return ret`，先于 PE0 到达 _end 退出 ecall
+    // 并 park 到退出 lockstep AND 组（gfsim 实测 ready=3/4 joined=3/4，
+    // bpc=0x112b0）；PE0 独占的参考计算 + 比对（~10^5 cycle 标量长尾）使
+    // 退出 AND 组停在 ready=3/4 超过 T_deadlock=9999 cycle →
+    // SyscallBarrier.cpp:1889 LockstepWatchdog 断言中止仿真（单 PE 版本无此
+    // 问题：退出 lockstep 组仅 1 个参与者，AND 到达即完成）。
+    // 修复镜像 group_token_vec_mt 的已证方案（gfsim fourpe 实测 PASS，见
+    // group_token_vec_mt_gfsim_fix_report.md）：新增验证汇合屏障（相位 5，
+    // kernel 内部用 1..4）——验证在 worker 存活期间执行（worker 在汇合屏障
+    // 自旋而非 park 到退出 lockstep），PE0 验证完成后全 PE 一起放行、同时
+    // 到达 _end（vec 同款修复实测 4 线程到达窗口 <100 cycle << 9999）。
+    mtBarrier(5);
+
     return ret;
 }

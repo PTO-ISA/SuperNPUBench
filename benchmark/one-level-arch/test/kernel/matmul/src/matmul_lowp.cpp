@@ -84,8 +84,10 @@ extern "C" int __linx_group_worker_main(uint32_t peId, void *opaque) {
                            globM, globN, globK, tilM, tilN, tilK>(
             context->dst + b * globM * globN,
             context->src0 + b * globM * kStoredGK,
+            // All lowp B operands are B-major [N, K/PACKED_FACTOR].
             context->src1 + b * kStoredGK * globN,
             context->src0Scale + b * globM * (globK / SCALE_GROUP),
+            // All lowp B scales are B-major [N, K/group].
             context->src1Scale + b * (globK / SCALE_GROUP) * globN);
     }
     BENCHEND;
@@ -102,10 +104,12 @@ int main() {
     constexpr int kStoredGK = globK / PACKED_FACTOR;
 
     static dtype src0p[Batch * globM * kStoredGK + 2 * ALIGN];
+    // All lowp modes use B-major [N, K/PACKED_FACTOR].
     static dtype src1p[Batch * kStoredGK * globN + 2 * ALIGN];
     static scale_dtype
         src0Scalep[Batch * globM * (globK / SCALE_GROUP) + 2 * ALIGN];
     static scale_dtype
+        // B scale uses B-major [N, K/group].
         src1Scalep[Batch * (globK / SCALE_GROUP) * globN + 2 * ALIGN];
     static float dstp[Batch * globM * globN + 2 * ALIGN];
 

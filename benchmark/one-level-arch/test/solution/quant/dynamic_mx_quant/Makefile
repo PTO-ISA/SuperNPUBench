@@ -15,40 +15,79 @@ ifeq ($(TYPE), TAIL_OCP_FP8_DYN)
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_dyn.elf
 endif
 
+# TAIL_OCP_FP8 网络基准用例 [7168,16384] BS=32 bf16 in（专用 driver=专用 .o，~234MB 太大默认不跑）。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench.elf
+endif
+
+# TAIL_OCP_FP8 缩小版网络基准 [64,16384] BS=32 bf16 in（动态 shape）分 V1（RowMajor）/ V2（Cube_M32）。
+# V1_DYN：RowMajor，可喂 gfsim。V2_DYN：Cube_M32 动态，依赖 Linx-TileOP-API#187（reduction-prefix
+# 动态 ValidRow 寄存器 B.DIM）已合入上游 → 现编译+gfrun 逐字节 PASS，gfsim 亦可仿真（#760 由 #775 修复）。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V1_DYN)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V1_dyn.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V1_dyn.elf
+endif
+
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V2_DYN)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V2_dyn.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V2_dyn.elf
+endif
+
+# bench_small 静态形状版分 V1（RowMajor）/ V2（Cube_M32）两个 driver，同规格同 golden，供并列对比。
+# V1 恒 PASS；V2 依赖 Linx-TileOP-API#180 + SuperScalarModel#749，均已合入上游 → 现 gfrun 逐字节 PASS。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V1_STATIC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V1_static.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V1_static.elf
+endif
+
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V2_STATIC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V2_static.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V2_static.elf
+endif
+
+# V3（优化版）静态形状 driver：include canonical 头（优化落点），同规格同 golden 与 V1/V2 并列。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V3_STATIC)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V3_static.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V3_static.elf
+endif
+
+# V3（优化版）动态 shape driver：include canonical dyn 头（优化落点）。
+ifeq ($(TYPE), TAIL_OCP_FP8_BENCH_SMALL_V3_DYN)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp8_bench_small_V3_dyn.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp8_bench_small_V3_dyn.elf
+endif
+
 ifeq ($(TYPE), TAIL_OCP_FP4)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp4.cpp
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp4.elf
 endif
 
-# TAIL_OCP_FP4 大 shape 基准用例 [15360,1536] BS=32（专用 driver=专用 .o，避免与 512×256 共享）。
+# TAIL_OCP_FP4 网络基准用例 [15360,1536] BS=32（专用 driver=专用 .o，避免与 512×256 共享）。
 ifeq ($(TYPE), TAIL_OCP_FP4_BENCH)
    SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp4_bench.cpp
    TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp4_bench.elf
 endif
 
-ifeq ($(TYPE), TAIL_CUBLAS_FP8_4PE)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_cublas_fp8_4pe.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_cublas_fp8_4pe.elf
+# TAIL_OCP_FP4 缩小版网络基准 [256,1536] BS=32（专用 driver=默认 PM=256，可默认跑/喂 gfsim）。
+ifeq ($(TYPE), TAIL_OCP_FP4_BENCH_SMALL)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_ocp_fp4_bench_small.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_ocp_fp4_bench_small.elf
 endif
 
-ifeq ($(TYPE), NONTAIL_CUBLAS_FP8_4PE)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8_4pe.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_cublas_fp8_4pe.elf
+ifeq ($(TYPE), TAIL_CUBLAS_FP8)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/tail_cublas_fp8.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_tail_cublas_fp8.elf
 endif
 
-ifeq ($(TYPE), NONTAIL_CUBLAS_FP8_BS128)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8_bs128.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_cublas_fp8_bs128.elf
+ifeq ($(TYPE), NONTAIL_CUBLAS_FP8)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_cublas_fp8.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_cublas_fp8.elf
 endif
 
-ifeq ($(TYPE), NONTAIL_OCP_FP4_4PE)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_ocp_fp4_4pe.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_ocp_fp4_4pe.elf
-endif
-
-ifeq ($(TYPE), NONTAIL_OCP_FP4_BS128)
-   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_ocp_fp4_bs128.cpp
-   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_ocp_fp4_bs128.elf
+ifeq ($(TYPE), NONTAIL_OCP_FP4)
+   SRC_FILE = $(TEST_ROOT)/$(CASE_SRC_DIR)/nontail_ocp_fp4.cpp
+   TARGET = $(ELF_DIR)/$(TESTCASE)_nontail_ocp_fp4.elf
 endif
 
 # --- 运行期动态 shape（_dyn）家族 ---

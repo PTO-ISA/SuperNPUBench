@@ -19,9 +19,9 @@ int main() {
     CubeTileM32<__half, M, K> a;
     CubeTileN8<__half, K, N>  b;
     CubeAccumulatorM32<float, M, N> out;
-    using RMTile = Tile<Location::Vec, float, 32, 8, BLayout::RowMajor, 32, 1>;
+    using RMTile = VecTileM32<float, M, 1>;
     RMTile row_max_in, row_max_out;
-    Tile<Location::Vec, float, 32, 8, BLayout::RowMajor, 32, 4> group_max_out;
+    VecTileM32<float, M, N / 8> group_max_out;
 
     global_tensor<__half, RowMajor<M, K>> gA(ha);
     global_tensor<__half, RowMajor<K, N>> gB(hb);

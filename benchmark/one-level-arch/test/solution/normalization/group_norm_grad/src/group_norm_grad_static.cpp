@@ -1,4 +1,4 @@
-// Fixed-shape 4PE test: N=2,C=32,G=8,HxW=2024.
+// Fixed-shape 4PE test: N=2,C=16,G=8,HxW=2048.
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
@@ -10,18 +10,18 @@
 #define DType __half
 #endif
 
-// Dynamic 4PE validation: N=2, C=32, G=8, HxW=2024.
+// Dynamic 4PE validation: N=2, C=16, G=8, HxW=2048.
 #ifndef N_BATCH
 #define N_BATCH 2
 #endif
 #ifndef C_CH
-#define C_CH 32
+#define C_CH 16
 #endif
 #ifndef G_GRP
 #define G_GRP 8
 #endif
 #ifndef HxW_SZ
-#define HxW_SZ 2024
+#define HxW_SZ 2048
 #endif
 #ifndef PE_NUM
 #define PE_NUM 4
@@ -36,7 +36,7 @@ volatile uint32_t output_written = 0;
 #endif
 
 int main() {
-    static_assert(N_BATCH == 2 && C_CH == 32 && G_GRP == 8 && HxW_SZ == 2024, "static testcase has a fixed shape");
+    static_assert(N_BATCH == 2 && C_CH == 16 && G_GRP == 8 && HxW_SZ == 2048, "static testcase has a fixed shape");
   using dtype = DType;
 
   static_assert(N_BATCH > 0 && C_CH > 0 && G_GRP > 0 && HxW_SZ > 0 &&
@@ -100,13 +100,8 @@ int main() {
   }
 #endif
 
-  group_norm_grad_spatial_static<dtype, PE_NUM>(dy, x,  workspace);
-  group_norm_grad_fused_params_static<dtype, PE_NUM>(gamma, mean, rstd,
-                                              workspace);
-  group_norm_grad_dx_static<dtype, PE_NUM>(dy, x, gamma, rstd,  workspace,
-                                    dx);
-  group_norm_grad_gamma_beta_static<dtype, PE_NUM>(mean, rstd,  workspace,
-                                            dgamma, dbeta);
+  group_norm_grad_static<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
+      workspace, dx, dgamma, dbeta);
 
 #ifdef RES_CHECK
   kernel_done[tid] = 1;

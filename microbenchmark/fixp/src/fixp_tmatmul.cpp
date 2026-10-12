@@ -85,33 +85,36 @@ constexpr uint64_t mk_desc(uint32_t fp19_scale, uint64_t offset,
   return d;
 }
 
-// Vector quant / PReLU parameter Tile: physical 2 x N uint64 (512 B),
-// valid 1 x N.
+// PTO-CUBE-AUX-CELLREG-001: vector quant / PReLU parameters are logical
+// [1, N] U64 values carried by the only legal U64 CellReg geometry,
+// CUBE_N8 K2 x N8.  The physical 2 x N storage is 512 B for N=32.
 template <int N>
-using par_tile_t = Tile<Location::Vec, uint64_t, 2, N, BLayout::RowMajor, 1, N>;
+using par_tile_t = CubeTileN8<uint64_t, 2, N, 1, N>;
 
-// RowMax Tile: physical M x 8 FP32 (1 KB), valid M x 1.
+// Matrix post-process reduction operands must use the same primary CUBE_M
+// layout as D.  These microbenchmarks use a CUBE_M32 destination.
 template <int M>
 using row_max_tile_t =
-    Tile<Location::Vec, float, M, 8, BLayout::RowMajor, M, 1>;
+    VecTileM32<float, M, 1, M, 1>;
 
-// GroupMax Tile: physical M x 8 FP32 (1 KB), valid M x ceil(N/GroupN).
+// GroupMax has the same CUBE_M32 layout requirement; only its valid column
+// count differs (ceil(N / GroupN)).
 template <int M, int GCols>
 using group_max_tile_t =
-    Tile<Location::Vec, float, M, 8, BLayout::RowMajor, M, GCols>;
+    VecTileM32<float, M, GCols, M, GCols>;
 
 // --- Auxiliary operand tiles for the operation-family modes ---------------
 // (Only PostProcess parameter tiles carry the >=512 B minimum; the math
 // operands below are ordinary data tiles. 1-row tiles are still padded to
 // >=512 B physical per the tile-register contract, like par_tile_t above.)
 
-// Bias tile (TMATMUL_BIAS / TGEMV_BIAS): valid 1 x N float, padded to >=512 B.
+// PTO-CUBE-AUX-CELLREG-001: matrix bias is also a logical [1, N]
+// CUBE_N8 CellReg operand.  Four-byte element types use physical K4 x N8.
 template <int N>
-using bias_tile_t = Tile<Location::Vec, float, 4, N, BLayout::RowMajor, 1, N>;
+using bias_tile_t = CubeTileN8<float, 4, N, 1, N>;
 
 template <typename T, int N>
-using typed_bias_tile_t =
-    Tile<Location::Vec, T, 4, N, BLayout::RowMajor, 1, N>;
+using typed_bias_tile_t = CubeTileN8<T, 4, N, 1, N>;
 
 // FP32 accumulator C tile for ACC ops. It must match D's CUBE_M layout.
 template <int M, int N>
@@ -1053,15 +1056,15 @@ int main() {
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        // Cooperative Shared-A exposes the Core-total M dimension.
-        row_max_tile_t<4 * TM> row_out;
+        // Reduction outputs are local per-PE CUBE_M32 tiles.
+        row_max_tile_t<TM> row_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().row_max(row_out));
       });
 #elif defined(SHARED_GROUPMAX_8)            // Shared A/B + GroupMax<8> output
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        group_max_tile_t<TM, (TN + 7) / 8> group_out;
         TMATMUL(tD, tA, tB,
                 fixp::keep_acc().group_max<8>(group_out));
       });
@@ -1069,9 +1072,9 @@ int main() {
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        // Cooperative Shared-A exposes the Core-total M dimension.
-        row_max_tile_t<4 * TM> row_out;
-        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        // Reduction outputs are local per-PE CUBE_M32 tiles.
+        row_max_tile_t<TM> row_out;
+        group_max_tile_t<TM, (TN + 7) / 8> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc()
             .row_max(row_out)
             .group_max<8>(group_out));
@@ -1140,84 +1143,83 @@ int main() {
         TMATMUL(tD, tA, tB, fixp::s8(mk_desc(1, 0, 9)).prelu(prelu));
       });
 #elif defined(SHARED_ROWMAX_INIT)           // Shared A/B + RowMax(in,out)
-  // NOTE: compiles (RowIn==RowOut==EffectiveM=4*TM, the cooperative group_M),
-  // but gfrun rejects the shared RowMaxIn form: the model asserts RowMaxIn
-  // must be a Local Mx1 tile with validRow=min(16,lb0)<=32, while the
-  // compiler's static_assert demands RowIn.ValidRow==EffectiveM=4*TM. No
-  // dimension satisfies both — a toolchain/model gap for shared RowMaxInit.
+  // NOTE: the current TileOP contract requires RowMaxIn.ValidRow to be the
+  // core-total group_M (4*TM), but also requires the same CUBE_M32 layout as
+  // the local destination (at most 32 rows).  No legal Tile can satisfy both;
+  // keep the ISA-shaped per-PE M32 operand here so the compiler diagnoses the
+  // unresolved cooperative RowMaxInit contract explicitly.
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        row_max_tile_t<4 * TM> row_in; load_aux(row_in, buf.aux);
-        row_max_tile_t<4 * TM> row_out;
+        row_max_tile_t<TM> row_in; load_aux(row_in, buf.aux);
+        row_max_tile_t<TM> row_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().row_max(row_in, row_out));
       });
 #elif defined(SHARED_GROUPMAX_16)           // Shared A/B + GroupMax<16>
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 15) / 16> group_out;
+        group_max_tile_t<TM, (TN + 15) / 16> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<16>(group_out));
       });
 #elif defined(SHARED_GROUPMAX_32)           // Shared A/B + GroupMax<32>
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 31) / 32> group_out;
+        group_max_tile_t<TM, (TN + 31) / 32> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<32>(group_out));
       });
 #elif defined(SHARED_GROUPMAX_48)           // Shared A/B + GroupMax<48>
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 47) / 48> group_out;
+        group_max_tile_t<TM, (TN + 47) / 48> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<48>(group_out));
       });
 #elif defined(SHARED_GROUPMAX_64)           // Shared A/B + GroupMax<64>
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 63) / 64> group_out;
+        group_max_tile_t<TM, (TN + 63) / 64> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<64>(group_out));
       });
 #elif defined(SHARED_GROUPMAX_80)           // Shared A/B + GroupMax<80>
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 79) / 80> group_out;
+        group_max_tile_t<TM, (TN + 79) / 80> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<80>(group_out));
       });
 #elif defined(SHARED_GROUPMAX_96)           // Shared A/B + GroupMax<96>
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 95) / 96> group_out;
+        group_max_tile_t<TM, (TN + 95) / 96> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<96>(group_out));
       });
 #elif defined(SHARED_GROUPMAX_112)          // Shared A/B + GroupMax<112>
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 111) / 112> group_out;
+        group_max_tile_t<TM, (TN + 111) / 112> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<112>(group_out));
       });
 #elif defined(SHARED_GROUPMAX_128)          // Shared A/B + GroupMax<128>
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 127) / 128> group_out;
+        group_max_tile_t<TM, (TN + 127) / 128> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<128>(group_out));
       });
 #elif defined(SHARED_ROWGROUP_MAXABS)       // Shared A/B + RowMax + GroupMax<8> + MaxAbs
-  // NOTE: same shared-RowMaxInit gap as SHARED_ROWMAX_INIT — compiles at
-  // 4*TM but gfrun rejects the shared RowMaxIn (Local Mx1 vs cooperative
-  // EffectiveM contradiction). FPATR encoding is still valid.
+  // NOTE: same unrepresentable shared RowMaxIn contract as
+  // SHARED_ROWMAX_INIT.  RowMaxOut and GroupMaxOut are legal per-PE M32 tiles.
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        row_max_tile_t<4 * TM> row_in; load_aux(row_in, buf.aux);
-        row_max_tile_t<4 * TM> row_out;
-        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        row_max_tile_t<TM> row_in; load_aux(row_in, buf.aux);
+        row_max_tile_t<TM> row_out;
+        group_max_tile_t<TM, (TN + 7) / 8> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc()
             .row_max(row_in, row_out)
             .group_max<8>(group_out)
@@ -1232,7 +1234,7 @@ int main() {
   buf_t<__half, __half> buf;
   run_matmul_shared<__half>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 15) / 16> group_out;
+        group_max_tile_t<TM, (TN + 15) / 16> group_out;
         TMATMUL(tD, tA, tB, fixp::f16().group_max<16>(group_out));
       });
 #elif defined(SHARED_S8_ROWMAX)              // Shared A/B + s8 + RowMax
@@ -1242,7 +1244,7 @@ int main() {
   buf_t<__half, int8_t> buf;
   run_matmul_shared<int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        row_max_tile_t<4 * TM> row_out;
+        row_max_tile_t<TM> row_out;
         TMATMUL(tD, tA, tB, fixp::s8(mk_desc(1, 0, 9)).row_max(row_out));
       });
 #elif defined(SHARED_ACC_CSCALE)             // Shared A/B + ACC + CScale
@@ -1257,22 +1259,22 @@ int main() {
   buf_t<__half, float> buf;
   run_matmul_shared_nostore<float>(buf.a, buf.b,
       [&](auto &tD, auto &tA, auto &tB) {
-        row_max_tile_t<4 * TM> row_out;
+        row_max_tile_t<TM> row_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().row_max(row_out));
       });
 #elif defined(SHARED_NOSTORE_GROUPMAX)    // [TEMP] Shared TLOAD + TMATMUL group_max<8>, no TSTORE
   buf_t<__half, float> buf;
   run_matmul_shared_nostore<float>(buf.a, buf.b,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        group_max_tile_t<TM, (TN + 7) / 8> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc().group_max<8>(group_out));
       });
 #elif defined(SHARED_NOSTORE_ROWGROUPMAX) // [TEMP] Shared TLOAD + TMATMUL row_max+group_max<8>, no TSTORE
   buf_t<__half, float> buf;
   run_matmul_shared_nostore<float>(buf.a, buf.b,
       [&](auto &tD, auto &tA, auto &tB) {
-        row_max_tile_t<4 * TM> row_out;
-        group_max_tile_t<4 * TM, (TN + 7) / 8> group_out;
+        row_max_tile_t<TM> row_out;
+        group_max_tile_t<TM, (TN + 7) / 8> group_out;
         TMATMUL(tD, tA, tB, fixp::keep_acc()
             .row_max(row_out)
             .group_max<8>(group_out));

@@ -7,7 +7,7 @@ the generated ``res.bin`` against ``torch.matmul``.
 
 Example:
 
-  python3 golden_cmp.py --ones -d /absolute/path/to/matmul_reuseB_...elf
+  python3 golden_cmp.py --ones -d /absolute/path/to/matmul_reuseA_...elf
 """
 
 import argparse
@@ -37,7 +37,7 @@ COMPARE_ROOT = ONE_LEVEL_ROOT / "compare"
 def extract_shape(elf: Path) -> dict:
     """Extract B/M/N/K/tM/tN/tK from a multi-thread matmul ELF name."""
     match = re.search(
-        r"matmul_(?:shared|reuseB)_B(?P<B>\d+)_M(?P<M>\d+)_N(?P<N>\d+)_K(?P<K>\d+)"
+        r"matmul_(?:shared|reuseA)_B(?P<B>\d+)_M(?P<M>\d+)_N(?P<N>\d+)_K(?P<K>\d+)"
         r"_tM(?P<tM>\d+)_tN(?P<tN>\d+)_tK(?P<tK>\d+)$",
         elf.stem,
     )

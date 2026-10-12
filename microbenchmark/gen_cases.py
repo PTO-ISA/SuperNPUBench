@@ -440,12 +440,23 @@ def emit_memory(c: Case, dt: str) -> str:
     # PE an independent stack, so its GM source/output arrays must have static
     # storage to make every participant bind the same addresses.
     storage = "static " if c.kind == "img2col" else ""
+    # Masked gather/scatter take an ordinary U8 predicate carrier holding only
+    # the canonical 0x00/0x01 values (PTO-ISA/pto-spec#313).  The data and mask
+    # patterns are deliberately non-uniform: with a constant source and an
+    # all-ones mask, a model that ignores or misreads the mask still matches the
+    # reference, so the case could never fail for the reason it exists.
+    is_mask = c.kind in ("gather_mask", "scatter_mask")
+    mask_t = "uint8_t" if is_mask else "uint16_t"
     init = ("for (int i=0;i<M*N;++i) { a[i].data = 0x11; c[i].data = 0; }\n"
             "    fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1);"
             if dt == "s4x2" else
             "for (int i=0;i<M*N;++i) a[i] = (float)(i + 1); "
             "fill_idx(idx, M*N); fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);"
             if c.kind == "img2col" else
+            f"for (int i=0;i<M*N;++i) {{ a[i] = ({ct})((i % 97) + 1); "
+            "mask[i] = (uint8_t)(i % 3 != 0); }\n"
+            "    fill_idx(idx, M*N); zero(c, M*N);"
+            if is_mask else
             f"fill_const(a, M*N, ({ct})2); fill_idx(idx, M*N); "
             "fill_const(mask, M*N, (uint16_t)1); zero(c, M*N);")
     head = f'''#include "memory_bench.hpp"
@@ -454,13 +465,22 @@ def emit_memory(c: Case, dt: str) -> str:
 int main() {{
     constexpr int M = {m}, N = {n};
     {storage}{ct} a[M*N], c[M*N];
-    {storage}int32_t idx[M*N]; {storage}uint16_t mask[M*N];
+    {storage}int32_t idx[M*N]; {storage}{mask_t} mask[M*N];
     {init}
     for (int i=0;i<M*N;++i) idx[i] *= sizeof({ct}); // gather/scatter offsets are bytes
     BENCHSTART;
 '''
     if c.kind == "prefetch":
         ref = "for(int i=0;i<M*N;++i) ref[i]=c[i];"
+    elif c.kind == "gather_mask":
+        # Masked-off lanes publish the block PadValue; the DSL emits Null, and
+        # TilePadValueForDataType(Null) is zero.
+        ref = (f"for(int i=0;i<M*N;++i) "
+               f"ref[i]=mask[i]?a[idx[i]/sizeof({ct})]:({ct})0;")
+    elif c.kind == "scatter_mask":
+        # Masked-off lanes store nothing, so their destinations keep zero.
+        ref = (f"for(int i=0;i<M*N;++i) "
+               f"if(mask[i]) ref[idx[i]/sizeof({ct})]=a[i];")
     elif c.kind in ("load", "store", "mov", "gather", "gather_mask", "gather_cas", "gmov", "img2col"):
         ref = f"for(int i=0;i<M*N;++i) ref[i]=a[idx[i]/sizeof({ct})];" if "gather" in c.kind else \
               "for(int i=0;i<M*N;++i) ref[i]=a[i];"

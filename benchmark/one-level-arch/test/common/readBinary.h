@@ -26,8 +26,10 @@ bool readBinaryFile(const char * filename, uint8_t* data, size_t size) {
     }
 
     close(fd);
+#ifndef GFSIM
     printf("data read to file done: %s\n", filename);
     fflush(stdout);
+#endif
     return true;
 #else
     return true;

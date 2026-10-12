@@ -11,29 +11,16 @@ using namespace pto;
 // O = softmax((Q * K^T) / sqrt(scaleD)) * V
 //   Q: [Sq, qD], K: [Skv, qD], V: [Skv, vD], O: [Sq, vD]
 //
-// This variant is identical to fa_2d_unroll_gmma.hpp except for the
-// row-max computation.  The fixpipe post-processing feature (B.FPATR
-// RowMaxEn) fuses TROWMAX into the QK TMATMUL: the TMATMUL emits the
-// row-wise maximum of the score accumulator alongside the matmul
-// result, writing it to a Vec tile that fa_2d_unroll_gmma produces
-// with a standalone TROWMAX tile op.
+// This kernel follows fa_2d_unroll_gmma.hpp exactly, except that QK's
+// standalone TROWMAX is fused into the QK TMATMUL through fixpipe RowMaxEn.
+// The fixpipe result is the row maximum of the unscaled FP32 accumulator, so
+// it is scaled by the same positive 1/sqrt(scaleD) factor as the score tile.
+// TROWSUM remains a TileOp because B.FPATR has no row-sum output.
 //
-// The row-max output covers the *unscaled* score tile, so a companion
-// TMULS scales tLocalMax by 1/sqrt(scaleD) alongside the existing
-// TMULS on tW.  The remaining softmax ops (TMAX merge, TROWEXPANDEXPDIF,
-// TROWSUM, TFMA, TROWEXPANDDIV) are unchanged.
-//
-// Inherits all optimisations from fa_2d_unroll_gmma v2:
-//   - Left matrix M physical rows are 128 or 64; ValidRow = actual kGroupM.
-//   - kSharedKRowBytes removed; SharedTile total ≤ 256 KB.
-//   - Vector state tiles use VecTileM32 (CubeM32 layout) with vector_dtype.
-//   - j==0: tNewMax = tLocalMax directly (skip TMAX).
-//   - TSUB+TEXP replaced by TROWEXPANDEXPDIF (fused exp(a-b)) in j!=0 branch.
-//   - tW is CubeTileM32 (Left) instead of CubeAccumulatorM32 (Acc).
-//   - TRECIP+TROWEXPANDMUL replaced by TROWEXPANDDIV (fused division).
-//   - PV uses transpose_b() and the 6-arg Options+groupM TMATMUL_ACC.
-//   - Loop-invariant pvOptions hoisted outside both loops; Q load
-//     outside Kb loop.  qkOptions stays in the Kb loop (row_max binding).
+// Shared B declares its physical RowMajor shape: without transpose_b it is
+// [N, K], while with transpose_b it is [K, N]. K is loaded in its natural
+// [kTk, qD] = [N, K] order for QK^T, so QK does not set transpose_b.
+// V is loaded in its natural [kTk, vD] = [K, N] order, so PV does set it.
 
 // Convert two logical scalar columns into one packed-x2 cube element.
 template <is_tile_data_v tile_shape_out, is_tile_data_v tile_shape_in>
@@ -73,7 +60,6 @@ void flash_attention_fixpipe_impl(
     constexpr int kGroupM = kTm <= 128 ? kTm : 128;
     constexpr int kPeTm = kGroupM <= 64 ? 16 : 32;
     constexpr int kTileRows = (kGroupM <= 64) ? 64 : 128;
-    constexpr int kQKStoredChunk = kStoredQD;
     constexpr int kPVStoredChunk = kStoredTk;
     static_assert(kTm % kGroupM == 0 && Sq % kGroupM == 0,
                   "Tm and Sq must be divisible by cooperative group_M");
@@ -83,26 +69,34 @@ void flash_attention_fixpipe_impl(
                   "logical matrix dimensions must be divisible by PackedFactor");
     static_assert(kGroupM >= 1 && kGroupM <= 128,
                   "cooperative group_M must be in the range 1..128");
+    static_assert(kPeTm == 32,
+                  "fixpipe RowMaxOut currently requires the 32-row CUBE_M32 "
+                  "PE shape; the API cannot represent a 16-row FP32 "
+                  "CUBE_M16 one-column output in the minimum 128 bytes");
 
-    // GM tensors. Q/V/O are RowMajor in their natural [rows, cols] orientation.
-    // K is physically [Skv, qD] row-major (head dim contiguous). The K tile
-    // stores K^T [qD, kTk]; transpose_b tells TMATMUL to read it as [K=qD, N=kTk].
+    // GM tensors are RowMajor in their natural [rows, cols] orientation.
+    // K is [Skv, qD] with the head dimension contiguous.
     using gmQ = global_tensor<matrix_dtype, RowMajor<Sq, kStoredQD>>;
     using gmK = global_tensor<matrix_dtype, RowMajor<Skv, kStoredQD>>;
     using gmV = global_tensor<matrix_dtype, RowMajor<kStoredSkv, vD>>;
     using gmO = global_tensor<vector_dtype, RowMajor<Sq, vD>>;
 
     using tileQMatrix =
-        SharedMatrixLeft<matrix_dtype, kTileRows, kQKStoredChunk,
-                         kGroupM, kQKStoredChunk>;
+        SharedMatrixLeft<matrix_dtype, kTileRows, kStoredQD,
+                         kGroupM, kStoredQD>;
+    // K tile is physically [N=kTk, K=qD/PackedFactor]. Shared B without
+    // transpose_b interprets this as the right operand of QK^T.
     using tileKMatrix =
-        SharedMatrixRight<matrix_dtype, kQKStoredChunk, kTk>;
+        SharedMatrixRight<matrix_dtype, kTk, kStoredQD>;
     using tileVMatrix =
         SharedMatrixRight<matrix_dtype, kPVStoredChunk, vD>;
     using tileQ = SharedTile<tileQMatrix>;
     using tileK = SharedTile<tileKMatrix>;
     using tileV = SharedTile<tileVMatrix>;
 
+    // Match fa_2d_unroll_gmma: QK writes directly to the vector-precision
+    // Left tile.  RowMax is still computed from the FP32 FullAcc before this
+    // optional fixpipe conversion.
     using tileWM16 = CubeTileM16<vector_dtype, kPeTm, kTk>;
     using tileWM32 = CubeTileM32<vector_dtype, kPeTm, kTk>;
     using tileW = std::conditional_t<(kPeTm <= 16), tileWM16, tileWM32>;
@@ -123,9 +117,27 @@ void flash_attention_fixpipe_impl(
     using tileOCast =
         std::conditional_t<(kPeTm <= 16), tileOCastM16, tileOCastM32>;
 
-    using tileMax = VecTileM32<vector_dtype, 32, 1, kPeTm, 1>;
-    using tileSum = tileMax;
+    // TROWSUM keeps the same wide reduction carrier as fa_2d_unroll_gmma.
+    using tileReduceM16 = VecTileM16<vector_dtype, kPeTm, kTk, kPeTm, 1>;
+    using tileReduceM32 = VecTileM32<vector_dtype, kPeTm, kTk, kPeTm, 1>;
+    using tileReduce =
+        std::conditional_t<(kPeTm <= 16), tileReduceM16, tileReduceM32>;
+
+    using tileMaxM16 = VecTileM16<vector_dtype, kPeTm, 1, kPeTm, 1>;
+    using tileMaxM32 = VecTileM32<vector_dtype, kPeTm, 1, kPeTm, 1>;
+    using tileMax =
+        std::conditional_t<(kPeTm <= 16), tileMaxM16, tileMaxM32>;
     using tileScale = tileMax;
+    using tileRowFp32M16 = VecTileM16<float, kPeTm, 1, kPeTm, 1>;
+    using tileRowFp32M32 = VecTileM32<float, kPeTm, 1, kPeTm, 1>;
+    using tileRowFp32 =
+        std::conditional_t<(kPeTm <= 16), tileRowFp32M16, tileRowFp32M32>;
+    using tileLocalSum = tileMax;
+    using tileSum = tileRowFp32;
+
+    // Fixpipe auxiliary outputs must be FP32, physical one-column carriers,
+    // and at least 128 bytes. The supported CUBE_M32 shape is exactly 128B.
+    using tileFixpipeRowMax = VecTileM32<float, 32, 1, kPeTm, 1>;
 
     using itQ = global_iterator<gmQ, tileQMatrix>;
     using itK = global_iterator<gmK, tileKMatrix>;
@@ -150,8 +162,7 @@ void flash_attention_fixpipe_impl(
     constexpr int Qb = Sq / kGroupM;
     constexpr int Kb = (Skv + kTk - 1) / kTk;
 
-    // pvOptions is loop-invariant — hoisted outside both loops.  qkOptions
-    // stays inside the Kb loop because row_max binds a per-iteration tile.
+    // PV keeps the natural [K,N] V tile and therefore selects transpose_b.
     constexpr auto pvOptions = fixp::keep_acc().transpose_b();
 
 #pragma clang loop unroll(full)
@@ -173,46 +184,81 @@ void flash_attention_fixpipe_impl(
 
             // --- QK matmul with fused row_max (fixpipe) ---
             tileK tK;
-            auto gK = gIterK(0, j);
+            auto gK = gIterK(j, 0);
             TLOAD<tileKMatrix, 1>(tK, gK);
 
-            // fixpipe: fuse TROWMAX into QK TMATMUL via the row_max
-            // post-processing feature (B.FPATR RowMaxEn).  tLocalMax
-            // receives the row-wise max of the UNSCALED accumulator.
-            tileMax tLocalMax;
-            auto qkOptions = fixp::keep_acc().row_max(tLocalMax).transpose_b();
-            TMATMUL(tW, tQ, tK, qkOptions);
+            // RowMaxOut is an FP32 auxiliary destination computed from the
+            // unscaled FullAcc before conversion. K is already stored as
+            // [N,K], so QK must not request transpose_b.
+            tileFixpipeRowMax tLocalMaxFp32;
+            if constexpr (std::is_same_v<vector_dtype, float>) {
+                auto qkOptions = fixp::keep_acc().row_max(tLocalMaxFp32);
+                TMATMUL(tW, tQ, tK, qkOptions);
+            } else {
+                static_assert(std::is_same_v<vector_dtype, __bf16>,
+                              "QK fixpipe output supports FP32 or BF16 vector dtype");
+                auto qkOptions = fixp::bf16().row_max(tLocalMaxFp32);
+                TMATMUL(tW, tQ, tK, qkOptions);
+            }
 
             // Scale both score and row_max (row_max output is unscaled).
             // max(c*x) = c*max(x) for c > 0, so scaling tLocalMax after
             // the fused row_max is equivalent to TROWMAX on the scaled tile.
             TMULS(tW, tW, scale);
-            TMULS(tLocalMax, tLocalMax, scale);
+            TMULS(tLocalMaxFp32, tLocalMaxFp32, scale);
+
+            tileMax tLocalMax;
+            if constexpr (std::is_same_v<tileMax, tileFixpipeRowMax>) {
+                tLocalMax = tLocalMaxFp32;
+            } else {
+                TCVT(tLocalMax, tLocalMaxFp32);
+            }
 
             // --- Softmax ---
             // TROWMAX is eliminated — tLocalMax was produced by the
             // fused row_max in the QK TMATMUL above.
             tileMax tNewMax;
             tileScale tScale;
-            if (j == 0) {
-                tNewMax = tLocalMax;
-            } else {
-                TMAX(tNewMax, tMax, tLocalMax);
+            tileRowFp32 tScaleFp32;
+            TMAX(tNewMax, tMax, tLocalMax);
+            if (j != 0) {
                 TROWEXPANDEXPDIF(tScale, tMax, tNewMax);
-                TROWEXPANDMUL(tO, tO, tScale);
+                if constexpr (std::is_same_v<vector_dtype, float>) {
+                    TROWEXPANDMUL(tO, tO, tScale);
+                } else {
+                    TCVT(tScaleFp32, tScale);
+                    TROWEXPANDMUL(tO, tO, tScaleFp32);
+                }
             }
 
             // Exponentiate current scores (common to both branches)
             TROWEXPANDEXPDIF(tW, tW, tNewMax);
 
-            tileSum tLocalSum;
-            TROWSUM(tLocalSum, tW);
+            tileReduce tLocalSumR;
+            TROWSUM(tLocalSumR, tW);
 
             tileSum tNewSum;
-            if (j == 0) {
-                tNewSum = tLocalSum;
+            if constexpr (std::is_same_v<vector_dtype, float>) {
+                auto tLocalSum = TREDUCEPREFIXVIEW<tileSum>(tLocalSumR);
+                if (j == 0) {
+                    TADD(tNewSum, tSum, tLocalSum);
+                } else {
+                    TFMA(tNewSum, tSum, tScale, tLocalSum);
+                }
             } else {
-                TFMA(tNewSum, tSum, tScale, tLocalSum);
+                auto tLocalSumView =
+                    TREDUCEPREFIXVIEW<tileLocalSum>(tLocalSumR);
+                tileLocalSum tLocalSumZero;
+                tileLocalSum tLocalSumCompact;
+                TEXPANDS(tLocalSumZero, 0.0f);
+                TADD(tLocalSumCompact, tLocalSumZero, tLocalSumView);
+                tileSum tLocalSumFp32;
+                TCVT(tLocalSumFp32, tLocalSumCompact);
+                if (j == 0) {
+                    TADD(tNewSum, tSum, tLocalSumFp32);
+                } else {
+                    TFMA(tNewSum, tSum, tScaleFp32, tLocalSumFp32);
+                }
             }
 
             // --- PV matmul ---
@@ -221,8 +267,9 @@ void flash_attention_fixpipe_impl(
             TLOAD<tileVMatrix, 1>(tV, gV);
 
             if constexpr (PackedFactor == 1 &&
-                          std::is_same_v<matrix_dtype, float>) {
-                // FP32: tW is already Left, float — no TCVT
+                          std::is_same_v<matrix_dtype, vector_dtype>) {
+                // The softmax probability already matches the configured
+                // CUBE input dtype, so it can feed PV directly.
                 if (j == 0) {
                     TMATMUL(tO, tW, tV, pvOptions, kGroupM);
                 } else {
@@ -250,11 +297,11 @@ void flash_attention_fixpipe_impl(
         TROWEXPANDDIV(tO, tO, tSum);
         auto dstO = gIterO(i * kPeNum + tid, 0);
         if constexpr (std::is_same_v<vector_dtype, float>) {
-            TSTORE_CUBE(dstO, tO);
+            TSTORE(dstO, tO);
         } else {
             tileOCast tOCast;
             TCVT(tOCast, tO);
-            TSTORE_CUBE(dstO, tOCast);
+            TSTORE(dstO, tOCast);
         }
     }
 }

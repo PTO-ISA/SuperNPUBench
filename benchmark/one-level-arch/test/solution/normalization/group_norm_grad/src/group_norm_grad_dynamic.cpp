@@ -9,21 +9,21 @@
 #define DType __half
 #endif
 
-// Dynamic 4PE validation: N=2, C=32, G=8, HxW=2024.
+// Dynamic 4PE validation: N=2, C=16, G=8, HxW=2048.
 #ifndef N_BATCH
 #define N_BATCH 2
 #endif
 #ifndef C_CH
-#define C_CH 32
+#define C_CH 16
 #endif
 #ifndef G_GRP
 #define G_GRP 8
 #endif
 #ifndef HxW_SZ
-#define HxW_SZ 2024
+#define HxW_SZ 2048
 #endif
 #ifndef PE_NUM
-#define PE_NUM 1
+#define PE_NUM 4
 #endif
 
 #ifdef RES_CHECK
@@ -98,13 +98,8 @@ int main() {
   }
 #endif
 
-  group_norm_grad_spatial<dtype, PE_NUM>(dy, x, tiling_info, workspace);
-  group_norm_grad_fused_params<dtype, PE_NUM>(gamma, mean, rstd, tiling_info,
-                                              workspace);
-  group_norm_grad_dx<dtype, PE_NUM>(dy, x, gamma, rstd, tiling_info, workspace,
-                                    dx);
-  group_norm_grad_gamma_beta<dtype, PE_NUM>(mean, rstd, tiling_info, workspace,
-                                            dgamma, dbeta);
+  group_norm_grad_dynamic<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
+      tiling_info, workspace, dx, dgamma, dbeta);
 
 #ifdef RES_CHECK
   kernel_done[tid] = 1;

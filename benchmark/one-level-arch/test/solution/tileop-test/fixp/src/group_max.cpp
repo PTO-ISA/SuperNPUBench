@@ -16,8 +16,8 @@ int main() {
     CubeTileM32<__half, M, K> a;
     CubeTileN8<__half, K, N>  b;
     CubeAccumulatorM32<float, M, N> out;
-    // GroupMax out: 物理 32x8, valid 32x4 (N/GroupN = 32/8)
-    Tile<Location::Vec, float, 32, 8, BLayout::RowMajor, 32, 4> group_max_out;
+    // GroupMax out: CUBE_M32, valid 32x4 (N/GroupN = 32/8).
+    VecTileM32<float, M, N / 8> group_max_out;
 
     global_tensor<__half, RowMajor<M, K>> gA(ha);
     global_tensor<__half, RowMajor<K, N>> gB(hb);

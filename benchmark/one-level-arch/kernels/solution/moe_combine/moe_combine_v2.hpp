@@ -63,18 +63,23 @@ void combine_pack(DType* expandX, int32_t* expandIdx,
     }
 }
 
-// ====== #4 Flag check (tile pass-through; TCMP's 0.58.4 B.DATR syntax is
-// rejected by the 0828 toolchain asm matcher, so the EQ predicate collapses
-// to a flag->predBuf copy. predBuf consumers treat non-1.0f as "not ready";
-// the flag is 1.0f after pack, so pass-through preserves the wait semantics.
-// TSUB stands in for the removed TMOV sync, see combine_pack note) ======
+// ====== #4 Flag check — 真 EQ 谓词 tile 链 ======
+// 旧版因 "TCMP's 0.58.4 B.DATR syntax is rejected by the 0828 toolchain asm
+// matcher" 退化为 flag→predBuf pass-through 拷贝; 0923 基线探针 (tile_probe
+// P16) 实证 fp32 TCMPS<EQ> 可用, TSEL payload 须整数 (predicate 为 U8 载体
+// 与 payload 解耦)。恢复语义:
+//   pred = (flag == 1.0f) → TSEL 物化 int32 0/1 → TCVT fp32 → TSTORE predBuf
+// 消费端 `predBuf[slot*TileW] < 0.5f` 判定对合法 flag 值 (0.0/1.0) 与
+// pass-through 完全等价。依赖链 TLOAD→TCMPS→TSEL→TCVT→TSTORE 天然构成
+// pipeline sync (SyncFunc<MTE2_V> aligned), TSUB sync stand-in 随退化删除。
 template <int NumExpanded, int TileW>
 void check_flag(float* windowFlag, float* predBuf, int slot, int t)
 {
     using namespace pto;
     using gm_flag = global_tensor<float, RowMajor<NumExpanded, TileW>>;
     using gm_pred = global_tensor<float, RowMajor<NumExpanded, TileW>>;
-    using tile_f  = Tile<Location::Vec, float, 1, TileW, BLayout::RowMajor>;
+    using tile_f  = Tile<Location::Vec, float,  1, TileW, BLayout::RowMajor>;
+    using tile_i  = Tile<Location::Vec, int32_t, 1, TileW, BLayout::RowMajor>;
     using it_flag = global_iterator<gm_flag, tile_f>;
     using it_pred = global_iterator<gm_pred, tile_f>;
 
@@ -85,12 +90,18 @@ void check_flag(float* windowFlag, float* predBuf, int slot, int t)
     auto gf = flag_iter(slot, t);
     TLOAD(flagTile, gf);
 
-    // #3 Pipeline sync (SyncFunc<MTE2_V> aligned)
-    tile_f sync_f1;
-    TSUB(sync_f1, flagTile, flagTile);
+    tile_f pred;
+    TCMPS<CmpMode::EQ>(pred, flagTile, 1.0f);
+    tile_i oneI;
+    TEXPANDS(oneI, static_cast<int32_t>(1));
+    tile_i selI;
+    TEXPANDS(selI, static_cast<int32_t>(0));
+    TSEL(selI, pred, oneI);
+    tile_f norm;
+    TCVT(norm, selI);
 
     auto gp = pred_iter(slot, t);
-    TSTORE(gp, flagTile);
+    TSTORE(gp, norm);
 }
 
 // ====== #1 Clear flag ======

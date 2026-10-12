@@ -8,6 +8,11 @@
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
 #define QSMLA_USE_UNIFIED_TADD_4PE
 #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla.hpp"
+#ifdef QSMLA_USE_DYNAMIC_SHAPE
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v2.hpp"
+#endif
+#elif defined(QSMLA_USE_CSA_TADD_1PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_csa_1pe.hpp"
 #else
 #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_tadd.hpp"
 #ifdef QSMLA_USE_HIF8
@@ -156,22 +161,31 @@ extern "C" {
 #ifdef QSMLA_USE_HIF8
 extern const uint8_t _binary_q_hif8_start[];
 extern const uint8_t _binary_ori_kv_hif8_start[];
+#ifdef QSMLA_USE_CSA_TADD_1PE
+extern const uint8_t _binary_ori_kv_t_hif8_start[];
+#endif
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
-    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
+    defined(QSMLA_USE_CSA_TADD_1PE)
 extern const uint8_t _binary_cmp_kv_hif8_start[];
 #endif
 #else
 extern const uint8_t _binary_q_fp16_start[];
 extern const uint8_t _binary_ori_kv_fp16_start[];
+#ifdef QSMLA_USE_CSA_TADD_1PE
+extern const uint8_t _binary_ori_kv_t_fp16_start[];
+#endif
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
-    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
+    defined(QSMLA_USE_CSA_TADD_1PE)
 extern const uint8_t _binary_cmp_kv_fp16_start[];
 #endif
 #endif
 #if defined(QSMLA_USE_CSA_TADD_4PE) || \
-    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
+    defined(QSMLA_USE_CSA_TADD_1PE)
 extern const uint8_t _binary_cmp_sparse_indices_int32_start[];
 #endif
 #if defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
@@ -230,9 +244,22 @@ int main(){
     kvdtype* kv = reinterpret_cast<kvdtype*>(
         const_cast<uint8_t*>(_binary_ori_kv_fp16_start));
 #endif
+#ifdef QSMLA_USE_CSA_TADD_1PE
+    // qli-style pre-transposed ORI KV [D, S2] per batch (BMM1 K^T source)
+#ifdef QSMLA_USE_HIF8
+    kvdtype* ori_kv_t = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_ori_kv_t_hif8_start));
+#else
+    kvdtype* ori_kv_t = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_ori_kv_t_fp16_start));
+#endif
+#else
+    kvdtype* ori_kv_t = nullptr;
+#endif
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
-    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
+    defined(QSMLA_USE_CSA_TADD_1PE)
 #ifdef QSMLA_USE_HIF8
     kvdtype* cmp_kv = reinterpret_cast<kvdtype*>(
         const_cast<uint8_t*>(_binary_cmp_kv_hif8_start));
@@ -244,7 +271,8 @@ int main(){
     kvdtype* cmp_kv = nullptr;
 #endif
 #if defined(QSMLA_USE_CSA_TADD_4PE) || \
-    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
+    defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
+    defined(QSMLA_USE_CSA_TADD_1PE)
     const int* cmp_indices = reinterpret_cast<const int*>(
         _binary_cmp_sparse_indices_int32_start);
 #else
@@ -317,9 +345,33 @@ int main(){
 #endif
 
     BENCHSTART;
+#ifdef QSMLA_USE_CSA_TADD_1PE
+    // 单 PE CSA：Local CUBE 路径（FP16/HIF8 双态，嵌入输入；
+    // FP16 下 descale 宏为 1，HIF8 下为 per-tensor 反量化因子）
+    using ModeConfig = QsmlaModeConfig<
+        Config, QsmlaMode::CSA, cmp_s2, 0, cmp_topk>;
+    quant_sparse_flash_mla_csa_1pe_pto<
+        qdtype, kvdtype, odttype, Config, ModeConfig>(
+            out, q, kv, ori_kv_t, cmp_kv,
+            cmp_indices, nullptr,   // cmp_topk_length（缺省 CmpTopK 全收集）
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right);
+#else
 #ifdef QSMLA_USE_UNIFIED_TADD_4PE
     static_assert(N1 > 1,
                   "unified tadd 4pe is a BSND G-slice implementation");
+#ifdef QSMLA_USE_DYNAMIC_SHAPE
+    // v2: dynamic-shape variant (DYNAMIC ValidRow/ValidCol on Vec tiles)
+    quant_sparse_flash_mla_tadd_4pe_bsnd_pto_v2<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            score_scratch, prob_scratch, pv_scratch);
+#else
     quant_sparse_flash_mla_tadd_4pe_bsnd_pto<
         qdtype, kvdtype, odttype, ModeConfig>(
             out, q, kv, cmp_kv,
@@ -328,6 +380,7 @@ int main(){
             q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
             cmp_ratio, win_left, win_right,
             score_scratch, prob_scratch, pv_scratch);
+#endif // QSMLA_USE_DYNAMIC_SHAPE
 #else
     if constexpr (N1 == 1 && N2 == 1) {
         quant_sparse_flash_mla_swa_tadd_config_pto<
@@ -365,11 +418,19 @@ int main(){
                 (int*)nullptr,     // seqused_ori_kv
                 (float*)nullptr,   // sinks
                 (int*)nullptr,     // metadata
-                (float*)nullptr    // softmax_lse
-            );
+                 (float*)nullptr    // softmax_lse
+             );
     }
 #endif
+#endif
     BENCHEND;
+
+    // gfsim 判读通道（本地性能采集用，不入 PR）: test-finisher 0x10009000=0x5555
+    {
+        volatile uint32_t* finisher =
+            reinterpret_cast<volatile uint32_t*>(0x10009000ULL);
+        *finisher = 0x5555;
+    }
 
     return 0;
 }

@@ -1,4 +1,8 @@
+#ifdef FA_LOWP_RECIP
+#include "basic_op/fa/fa_lowp_recip.hpp"
+#else
 #include "basic_op/fa/fa_lowp.hpp"
+#endif
 #include <cstdint>
 #include "benchmark.h"
 #include "fileop.h"
@@ -60,8 +64,13 @@ int main() {
     res_check_publish_inputs(sync, tid);
 #endif
     BENCHSTART;
+#ifdef FA_LOWP_RECIP
+    fa_lowp_recip::flash_attention_lowp_recip_impl<Tsq, Tskv, FA_QD, FA_VD, Tm, Tk>(
+        out, q, k, v, qs, ks, vs);
+#else
     fa_lowp::flash_attention_lowp_impl<Tsq, Tskv, FA_QD, FA_VD, Tm, Tk>(
         out, q, k, v, qs, ks, vs);
+#endif
     BENCHEND;
 #ifdef RES_CHECK
     res_check_wait_for_all(sync, tid);
