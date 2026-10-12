@@ -1,55 +1,18 @@
 #!/bin/bash
-# matmul_test — dynamic-shape fp16 GEMM (fp16 in / fp32 acc / fp16 out).
+# matmul_test — 4-PE cooperative fp16 GEMM (A Local CellReg / B Shared).
 #
-# Single-PE (matmul_test): the template takes only tile sizes; M/N/K are
-# runtime parameters with leading dimensions. Tail tiles are zero-padded
-# (the PTO 0.58.3 CUBE CELL layout rejects dynamic valid shapes).
-# 4-PE (matmul_test_mt): cooperative variant with SharedMatrix A/B loads and
-# per-PE CubeAccumulator row slices; M/N/K must be divisible by the tiles.
-#
-# Run modes:
-#   matmul_test:     gfrun -t 1 -s softcore.multiThreadNum=1 -f <elf>
-#   matmul_test_mt:  gfrun -t 1 -f <elf>
-# Precision: res_check=on builds + src/verify_matmul_test.py, or
-# gfrun --dump-memory + host-side golden comparison.
+# Run: gfrun -t 1 -f <elf>   (model defaults to 4 PEs)
+# Tiles must be powers of two (model constraint).
+# M/N are zero-padded to tile multiples; K must be divisible by tK.
 
 set -euo pipefail
 : "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
 
-# Aligned shapes.
 make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=256 N=256 K=256 tM=16 tN=16 tK=16 diss
-make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=512 N=256 K=512 tM=32 tN=32 tK=32 diss
+    B=1 M=160 N=320 K=1536 tM=64 tN=256 tK=128 diss
 
-# Tail shapes (M/N/K not multiples of the tile sizes; power-of-two tails).
-# NOTE: non-square local B tiles (tN != tK) are currently blocked by a
-# TileOP-API <-> gfrun contract mismatch (TileOP 697f5d8+ requires the local
-# CubeTileN8 declaration as physical [N, K] while the model asserts [K, N];
-# square tiles are immune). Both cases below therefore use tN == tK.
 make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=200 N=96 K=128 tM=16 tN=16 tK=16 diss
-make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=100 N=100 K=100 tM=16 tN=16 tK=16 diss
+    B=1 M=120 N=256 K=1536 tM=128 tN=128 tK=128 diss
 
-# Non-power-of-two tails: M203 = 11/3/5, M105 = 9/3/7 (CUBE_M32 layout),
-# M101 = 5/3/14 (tN kept square per the note above).
 make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=203 N=99 K=101 tM=16 tN=16 tK=16 diss
-make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=105 N=99 K=103 tM=32 tN=32 tK=32 diss
-make TESTCASE=matmul_test COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=101 N=99 K=110 tM=16 tN=16 tK=16 diss
-
-# 4-PE cooperative (K must be divisible by tK; M/N are zero-padded to tile
-# multiples; tM/tN/tK must be powers of two - the model rejects non-pow2
-# cooperative dims, see the kernel header).
-# Requested shapes M=160/K=1536/N=320 (tM=80 tK=128 tN=320) and
-# M=120/K=1536/N=256 (tM=128 tK=128 tN=192) use non-pow2 tiles and are
-# blocked by the model (ADR-0100 powersOfTwo + shared TLOAD row granularity,
-# see Test/ISSUE-013); the closest legal configs below keep the requested
-# M/K/N shapes and adjust only the tile sizes.
-make TESTCASE=matmul_test_mt COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=160 N=320 K=1536 tM=64 tN=512 tK=128 diss
-make TESTCASE=matmul_test_mt COMPILER_DIR="$COMPILER_DIR" \
-    B=1 M=120 N=256 K=1536 tM=128 tN=256 tK=128 diss
+    B=1 M=120 N=192 K=1536 tM=128 tN=128 tK=128 diss

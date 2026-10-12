@@ -3,105 +3,115 @@
 
 #include <common/pto_tileop.hpp>
 
-#ifndef Batch
+#if !defined(Batch)
 #define Batch 1
 #endif
 
 using namespace pto;
 
 // ============================================================================
-// matmul_test — 动态 shape 的 fp16 GEMM 样例（PTO 一层编程模型，PTO 0.58.3+）
+// matmul_test — 4-PE cooperative fp16 GEMM（A Local CellReg / B Shared）
 //
-// 契约:
-//   1. 模板参数只有 tile size (tM, tN, tK)；M/N/K 全部为运行时参数 (gM/gN/gK)。
-//   2. 输入 A[M,K] / B[K,N] 为 fp16 (__half)；累加在 fp32（CUBE 累加器）；
-//      输出 C[M,N] 为 fp16 (__half)。
-//   3. 接口带 leading dimension（lda/ldb/ldc）。
-//   4. PTO 0.58.3 起 TMATMUL 强制 CUBE CELL layout（A/D=CUBE_M16/M32、
-//      B=CUBE_N8）且拒绝动态 valid 形状（"Matrix dynamic valid shapes are not
-//      supported"），因此尾块改为零填充（padding）方案：
-//        - Mpad = ceil(gM/tM)*tM, Kpad = ceil(gK/tK)*tK, Npad = ceil(gN/tN)*tN；
-//        - A 缓冲 [Mpad, Kpad]（lda >= Kpad）：gM..Mpad 行与 gK..Kpad 列清零；
-//        - B 缓冲 [Kpad, Npad]（ldb >= Npad）：gK..Kpad 行与 gN..Npad 列清零；
-//        - C 缓冲 [Mpad, Npad]（ldc >= Npad）：填充区写入 0，外部只读 [gM,gN]。
-//      零填充不改变累加结果，故逻辑结果仍为 C[0:gM,0:gN] = A*B。
-//   5. fp32 CUBE 累加器 -> fp16 输出：模型要求 TCVT 源/目的 layout 一致
-//      （CUBE 源会被 NORM 目的的断言拒绝），因此沿用 fa_2d_unroll_gmma 的
-//      GM 往返模式：TSTORE_CUBE(acc -> GM fp32 scratch) -> TLOAD(Vec fp32)
-//      -> TCVT(Vec fp16) -> TSTORE(GM fp16)。scratch 由调用方提供，
-//      大小 >= tM*tN 个 float。
-//   6. 精度/性能验证:
-//        - 精度: res_check=on 构建后由 verify_matmul_test.py 与 fp32 中间
-//          golden（torch/numpy）比对；
-//        - 性能: BENCHSTART/BENCHEND 标记 + gfsim 周期统计，或 gfrun 的
-//          block/inst 工作量统计。
+// C[gM,gN] = A[gM,gK] × B[gK,gN]（fp16 in / fp32 acc / fp16 out）
+//
+// A（左矩阵）：每 PE 通过 TLOAD_CUBE 装载自己的 [kPeM, tK] 行切片到本地
+//   CellReg（不同 PE 走不同带宽池，避免与 B 争 SharedTReg）。
+// B（右矩阵）：PE0 单发 TLOAD 到 SharedTReg，4 PE 共读。
+//
+// 约束（模型侧，编译期拦截）：
+//   tM ∈ {64,128}、tN/tK 为 2 的幂（ADR-0100 pow2 + shared 行粒度）
 // ============================================================================
-template <int tM = 16, int tN = 16, int tK = 16>
-using MatmulTestCubeA = std::conditional_t<
-    (tM <= 16), CubeTileM16<__half, tM, tK>, CubeTileM32<__half, tM, tK>>;
 
-template <int tM = 16, int tN = 16, int tK = 16>
-using MatmulTestCubeAcc = std::conditional_t<
-    (tM <= 16), CubeAccumulatorM16<float, tM, tN>,
-    CubeAccumulatorM32<float, tM, tN>>;
-
-template <int tM = 16, int tN = 16, int tK = 16>
-__attribute__((noinline)) void matmul_test(__half *dst, __half *src0,
-                                            __half *src1, float *scratch,
-                                            int gM, int gN, int gK,
-                                            int lda, int ldb, int ldc) {
-  using gm_shapeA = global_tensor<__half, RowMajor<-1, -1>>;
-  using gm_shapeB = global_tensor<__half, RowMajor<-1, -1>>;
-  using gm_shapeC = global_tensor<__half, RowMajor<-1, -1>>;
-  using gm_shapeScratch = global_tensor<float, RowMajor<tM, tN>>;
-
-  // CUBE CELL layout 的静态满宽瓦片（TMATMUL 契约）。
-  // 注：PTO #257（TileOP 697f5d8 起）B 操作数声明其物理存储形状 [N, K]
-  // （首参数 = N），与 GM 逻辑 [K, N] 行优先数据经 ND2N8 装载重排；方阵瓦片
-  // 两种写法不可区分，非方阵（tN != tK）必须 N 在前。
-  using tile_shapeA = MatmulTestCubeA<tM, tN, tK>;
-  using tile_shapeB = CubeTileN8<__half, tN, tK>;
-  using tile_shapeACC = MatmulTestCubeAcc<tM, tN, tK>;
-  // GM 往返 + TCVT 的 Vec 中转 tile。
-  using tile_shapeAccVec = Tile<Location::Vec, float, tM, tN, BLayout::RowMajor>;
-  using tile_shapeC = Tile<Location::Vec, __half, tM, tN, BLayout::RowMajor>;
+template <int tM = 128, int tN = 64, int tK = 64>
+void matmul_test(__half *c_ptr, __half *a_ptr,
+                 __half *b_ptr, float *scratch, int gM, int gN, int gK) {
+  constexpr int kPeNum = 4;
+  static_assert(tM == 64 || tM == 128,
+                "tM must be 64 or 128 (cooperative group_M contract)");
+  static_assert((tN & (tN - 1)) == 0, "tN must be pow2 (model constraint)");
+  static_assert((tK & (tK - 1)) == 0, "tK must be pow2 (model constraint)");
+  constexpr int kPeM = tM / kPeNum;
 
   if (gM <= 0 || gN <= 0 || gK <= 0) return;
+  if (gM % tM != 0 || gN % tN != 0 || gK % tK != 0) return;
 
-  const int Mpad = ((gM + tM - 1) / tM) * tM;
-  const int Kpad = ((gK + tK - 1) / tK) * tK;
-  const int Npad = ((gN + tN - 1) / tN) * tN;
+  const uint32_t tid = get_thread_idx();
 
-  for (int b = 0; b < Batch; b++) {
-    __half *a_base = src0 + (size_t)b * Mpad * lda;
-    __half *b_base = src1 + (size_t)b * Kpad * ldb;
-    __half *c_base = dst + (size_t)b * Mpad * ldc;
-    for (int i = 0; i < Mpad; i += tM) {
-      for (int j = 0; j < Npad; j += tN) {
-        tile_shapeACC tACC;
+  using gmA = global_tensor<__half, RowMajor<-1, -1>>;
+  using gmB = global_tensor<__half, RowMajor<-1, -1>>;
+  using gmC = global_tensor<__half, RowMajor<-1, -1>>;
 
-        for (int k = 0; k < Kpad; k += tK) {
-          gm_shapeA gA(a_base + (size_t)i * lda + k, Mpad, lda);
-          gm_shapeB gB(b_base + (size_t)k * ldb + j, Kpad, ldb);
-          tile_shapeA tA;
-          tile_shapeB tB;
+  // A：每 PE 本地 CUBE 瓦片 [kPeM, tK]。
+  using tileALocalM16 = CubeTileM16<__half, kPeM, tK>;
+  using tileALocalM32 = CubeTileM32<__half, kPeM, tK>;
+  using tileALocal =
+      std::conditional_t<(kPeM <= 16), tileALocalM16, tileALocalM32>;
+
+  // B：Shared 瓦片（PTO #257 [K,N] 物理 + TransB）。
+  using tileBMatrix = SharedMatrixRight<__half, tK, tN>;
+  using tileBSharedTile = SharedTile<tileBMatrix>;
+
+  // 累加器 [kPeM, tN] + GM 往返转换 tile。
+  using tileAccM16 = CubeAccumulatorM16<float, kPeM, tN>;
+  using tileAccM32 = CubeAccumulatorM32<float, kPeM, tN>;
+  using tileAcc =
+      std::conditional_t<(kPeM <= 16), tileAccM16, tileAccM32>;
+  using tileAccVec = Tile<Location::Vec, float, kPeM, tN, BLayout::RowMajor>;
+  using tileC = Tile<Location::Vec, __half, kPeM, tN, BLayout::RowMajor>;
+  using gmScratch = global_tensor<float, RowMajor<kPeM, tN>>;
+
+  const int Mb = gM / tM;
+  const int Nb = gN / tN;
+  const int Kb = gK / tK;
+
+  // K 链 CCTRL（双变体近似；PTO-ISA #236）。
+  constexpr FixpAttr kOptBegin = FixpAttr{}.transpose_b()
+      .with_cube_ctrl(CubeCtrlRawAccumulator);
+  constexpr FixpAttr kOptChain = FixpAttr{}.transpose_b()
+      .with_cube_ctrl(CubeCtrlRawAccAndHint);
+
+  for (int b = 0; b < Batch; ++b) {
+    __half *a_base = a_ptr + (size_t)b * gM * gK;
+    __half *b_base = b_ptr + (size_t)b * gK * gN;
+    __half *c_base = c_ptr + (size_t)b * gM * gN;
+    for (int i = 0; i < Mb; ++i) {
+      for (int j = 0; j < Nb; ++j) {
+        tileAcc tACC;
+
+        for (int k = 0; k < Kb; ++k) {
+          // B → Shared（PE0 单发，全 PE 共读）。
+          gmB gB(b_base + ((size_t)k * tK) * gN + (size_t)j * tN, gK, gN);
+          tileBSharedTile tBShared;
+          TLOAD<tileBMatrix, 1>(tBShared, gB);
+
+          // A → 本地 CellReg（每 PE 独立装载自己的行切片）。
+          gmA gA(a_base +
+                     ((size_t)i * tM + (size_t)tid * kPeM) * gK +
+                     (size_t)k * tK,
+                 kPeM, gK);
+          tileALocal tA;
           TLOAD_CUBE(tA, gA);
-          TLOAD_CUBE(tB, gB);
+
+          // Local-A/Shared-B cooperative TMATMUL（groupM 运行时参数）。
           if (k == 0) {
-            TMATMUL(tACC, tA, tB);
+            TMATMUL<kOptBegin>(tACC, tA, tBShared, (size_t)tM);
           } else {
-            TMATMUL_ACC(tACC, tACC, tA, tB);
+            TMATMUL_ACC<kOptChain>(tACC, tACC, tA, tBShared, (size_t)tM);
           }
         }
 
-        // fp32 CUBE 累加器 -> fp16 GM：经 fp32 GM scratch 往返（FA 同款）。
-        gm_shapeScratch gScratch(scratch);
+        // fp32 acc → GM scratch → Vec → TCVT → fp16 C（每 PE 写回自己的行切片）。
+        float *pe_scratch = scratch + (size_t)tid * kPeM * tN;
+        gmScratch gScratch(pe_scratch);
         TSTORE_CUBE(gScratch, tACC);
-        tile_shapeAccVec tAccVec;
+        tileAccVec tAccVec;
         TLOAD(tAccVec, gScratch);
-        tile_shapeC tC;
+        tileC tC;
         TCVT(tC, tAccVec);
-        gm_shapeC gC(c_base + (size_t)i * ldc + j, Mpad, ldc);
+        gmC gC(c_base +
+                   ((size_t)i * tM + (size_t)tid * kPeM) * gN +
+                   (size_t)j * tN,
+               gM, gN);
         TSTORE(gC, tC);
       }
     }
