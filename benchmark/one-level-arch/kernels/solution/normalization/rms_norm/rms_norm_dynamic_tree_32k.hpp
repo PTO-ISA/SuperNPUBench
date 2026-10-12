@@ -246,8 +246,15 @@ inline void rms_norm_tile_16k(dtype *x, const dtype *gamma, dtype *out,
 
         tile_m_v row_sums(fa);
         TROWSUM(row_sums, sq0);
-        tile_s tile_sum, mean, denom, rms;
-        TCOLSUM(tile_sum, row_sums);
+        // TCOLSUM still needs the wide carrier. The scalar lives in its first
+        // 128 B cell; the prefix view exposes that cell as [32,1].
+        using tile_sum_wide =
+            Tile<tile_s::Loc, typename tile_s::DType, tile_s::Rows,
+                 tile_m_v::Cols, tile_s::BFractal, 1, 1>;
+        tile_sum_wide sum_wide;
+        TCOLSUM(sum_wide, row_sums);
+        auto tile_sum = TREDUCEPREFIXVIEW<tile_s>(sum_wide);
+        tile_s mean, denom, rms;
         TMULS(mean, tile_sum, inv_r);
         TADDS(denom, mean, kEpsilon);
         rsqrt_regbase(rms, denom);
@@ -438,7 +445,7 @@ void rms_norm_dynamic_tree_32k(dtype *x, const dtype *gamma,
                               BLayout::CubeM32, -1, -1>;
         using tile_m16 = Tile<Location::Vec, float, 32, 128,
                               BLayout::CubeM32, -1, 1>;
-        using tile_s16 = Tile<Location::Vec, float, 1, 128,
+        using tile_s16 = Tile<Location::Vec, float, 32, 1,
                               BLayout::CubeM32, 1, 1>;
         rms_detail_simt_dynamic_tree_32k::rms_norm_tile_16k<
             dtype, gm_t, tile_h16, tile_f16, tile_m16, tile_s16>(
