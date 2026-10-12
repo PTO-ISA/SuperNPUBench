@@ -41,8 +41,9 @@ constexpr int64_t rms_pow_r(int64_t reduce_size) {
     return p;
 }
 constexpr int64_t rms_tile_r(int64_t reduce_size) {
-    // tile_r denotes the total number of elements in one linear R block. The
-    // kernel maps 8192 elements to the physical [32,256] Tile.
+    // tile_r denotes the total number of elements in one linear R block.
+    // R == 8192 uses two [32,128] tiles. Larger R maps each 8192-element
+    // block onto the physical [32,256] Tile.
     constexpr int64_t kMaxTileR = 8192;
     return reduce_size < kMaxTileR ? reduce_size : kMaxTileR;
 }

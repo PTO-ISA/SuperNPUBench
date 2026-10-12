@@ -1,7 +1,8 @@
 // rms_norm_dynamic_tree_32k: default test shapes [128,8192] and [32,16384].
 // Dynamic 4PE implementation with FP32 Tile=[32,256] (32 KiB).
 // Full 8192-element R blocks; up to 16 blocks. Original 2 KiB kernel is unchanged.
-// R <= 16384: reduced in Tiles. Two blocks are added into one 8192 tile first.
+// R == 8192: two 4096-element halves in 16 KiB tiles, squares added, then one reduction.
+// R == 16384: two 8192-element blocks in one 32 KiB tile, then the same reduction.
 // R >  16384: paired blocks, partial row sums spilled to the workspace.
 #ifndef SUPERNPU_RMS_NORM_SIMT_DYNAMIC_TREE_32K_HPP
 #define SUPERNPU_RMS_NORM_SIMT_DYNAMIC_TREE_32K_HPP
@@ -208,6 +209,65 @@ inline void rms_norm_tile(dtype *x, const dtype *gamma, dtype *out,
 }
 
 template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
+          typename tile_m_v, typename tile_s>
+inline void rms_norm_tile_16k(dtype *x, const dtype *gamma, dtype *out,
+                              int64_t gR, int64_t peA, float inv_r) {
+    // [32,128] FP32 is 16 KiB and holds 4096 elements. R == 8192 is two
+    // halves; their squares are added before one reduction. Gamma is the
+    // same on every row, so both halves are loaded once.
+    constexpr int fa = 32;
+    constexpr int fr = 128;
+    constexpr int64_t kSpan = kTileM * fr;
+    gm_t gg0(const_cast<dtype *>(gamma), fa, fr);
+    gm_t gg1(const_cast<dtype *>(gamma) + kSpan, fa, fr);
+    tile_f gf0(fa, fr), gf1(fa, fr);
+    {
+        tile_h gh0(fa, fr), gh1(fa, fr);
+        TLOAD(gh0, gg0);
+        TCVT(gf0, gh0);
+        TLOAD(gh1, gg1);
+        TCVT(gf1, gh1);
+    }
+    for (int64_t ia = 0; ia < peA; ++ia) {
+        const int64_t offset = ia * gR;
+        gm_t gi0(x + offset, fa, fr);
+        gm_t gi1(x + offset + kSpan, fa, fr);
+        gm_t go0(out + offset, fa, fr);
+        gm_t go1(out + offset + kSpan, fa, fr);
+        tile_h h0(fa, fr), h1(fa, fr);
+        tile_f x0(fa, fr), x1(fa, fr), sq0(fa, fr), sq1(fa, fr);
+        TLOAD(h0, gi0);
+        TCVT(x0, h0);
+        TMUL(sq0, x0, x0);
+        TLOAD(h1, gi1);
+        TCVT(x1, h1);
+        TMUL(sq1, x1, x1);
+        TADD(sq0, sq0, sq1);
+
+        tile_m_v row_sums(fa);
+        TROWSUM(row_sums, sq0);
+        tile_s tile_sum, mean, denom, rms;
+        TCOLSUM(tile_sum, row_sums);
+        TMULS(mean, tile_sum, inv_r);
+        TADDS(denom, mean, kEpsilon);
+        rsqrt_regbase(rms, denom);
+
+        tile_m_v rms_rows(fa);
+        TCOLEXPAND(rms_rows, rms);
+        tile_h h_out0(fa, fr), h_out1(fa, fr);
+        tile_f dst(fa, fr);
+        TROWEXPANDMUL(dst, x0, rms_rows);
+        TMUL(dst, dst, gf0);
+        TCVT(h_out0, dst);
+        TSTORE(go0, h_out0);
+        TROWEXPANDMUL(dst, x1, rms_rows);
+        TMUL(dst, dst, gf1);
+        TCVT(h_out1, dst);
+        TSTORE(go1, h_out1);
+    }
+}
+
+template <typename dtype, typename gm_t, typename tile_h, typename tile_f,
           typename tile_m_v, typename tile_s_wide>
 inline void rms_norm_tile_single_block(dtype *x, const dtype *gamma,
                                        dtype *out, int64_t gR, int64_t peA,
@@ -371,6 +431,20 @@ void rms_norm_dynamic_tree_32k(dtype *x, const dtype *gamma,
     using tile_m_v = Tile<Location::Vec, float, 32, 256,
                           BLayout::CubeM32, -1, 1>;
 
+    if (gR <= tile_r) {
+        using tile_h16 = Tile<Location::Vec, dtype, 32, 128,
+                              BLayout::CubeM32, -1, -1>;
+        using tile_f16 = Tile<Location::Vec, float, 32, 128,
+                              BLayout::CubeM32, -1, -1>;
+        using tile_m16 = Tile<Location::Vec, float, 32, 128,
+                              BLayout::CubeM32, -1, 1>;
+        using tile_s16 = Tile<Location::Vec, float, 1, 128,
+                              BLayout::CubeM32, 1, 1>;
+        rms_detail_simt_dynamic_tree_32k::rms_norm_tile_16k<
+            dtype, gm_t, tile_h16, tile_f16, tile_m16, tile_s16>(
+            x, gamma, out, gR, peA, inv_r);
+        return;
+    }
     if (gR <= tile_r * 2) {
         using tile_s_wide = Tile<Location::Vec, float, 1, 256,
                                  BLayout::CubeM32, 1, 1>;
