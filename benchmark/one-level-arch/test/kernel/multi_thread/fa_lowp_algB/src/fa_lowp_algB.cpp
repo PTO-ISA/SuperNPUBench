@@ -79,6 +79,11 @@ int main() {
     BENCHEND;
 #ifdef RES_CHECK
     res_check_wait_for_all(sync, tid);
+#ifdef FA_LOWP_DEBUG
+    if (tid == 0)
+        writeBinaryFile(CHK_DIR "/debug.bin", reinterpret_cast<uint8_t *>(fa_lowp_logdomain::functionalDebug),
+                        sizeof(fa_lowp_logdomain::functionalDebug));
+#endif
     if (tid == 0)
         writeBinaryFile(CHK_DIR "/res.bin", reinterpret_cast<uint8_t *>(out),
                         Tsq * FA_VD * sizeof(__bf16));
