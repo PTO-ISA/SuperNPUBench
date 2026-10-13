@@ -1,7 +1,5 @@
 # FA lowp Algo B/C 交接说明
 
-最新AlgoD性能与寻优交接：[Tk256配对结果、resident/preload实验设计（2026-10-13）](HANDOFF_algoD_20261013.md)。
-
 ## 结论
 
 - `Sq=128, Skv=8192, bctrl.vec_cell_sched_enable=false` 下，Tk=128 的 Algo B/C 已能跑通：gfrun 数值检查通过，gfsim 也已完成。

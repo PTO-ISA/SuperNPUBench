@@ -1,7 +1,5 @@
 # FA AlgoD（optD）调度开关
 
-最新AlgoD性能与寻优交接：[Tk256配对结果、resident/preload实验设计（2026-10-13）](HANDOFF_algoD_20261013.md)。
-
 AlgoD 内核在 [`fa_lowp_algD.hpp`](fa_lowp_algD.hpp)，编译、校验和性能入口在
 [`test/kernel/multi_thread/fa_lowp_algB`](../../../test/kernel/multi_thread/fa_lowp_algB)。
 下文命令均从该测试目录执行。
