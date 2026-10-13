@@ -100,19 +100,17 @@ void matmul_test(__half *c_ptr, __half *a_ptr,
           }
         }
 
-        // fp32 acc → GM scratch → Vec → TCVT → fp16 C（每 PE 写回自己的行切片）。
-        float *pe_scratch = scratch + (size_t)tid * kPeM * tN;
-        gmScratch gScratch(pe_scratch);
-        TSTORE_CUBE(gScratch, tACC);
-        tileAccVec tAccVec;
-        TLOAD(tAccVec, gScratch);
-        tileC tC;
-        TCVT(tC, tAccVec);
+        using tileAccF16M16 = CubeAccumulatorM16<__half, kPeM, tN>;
+        using tileAccF16M32 = CubeAccumulatorM32<__half, kPeM, tN>;
+        using tileAccF16 =
+            std::conditional_t<(kPeM <= 16), tileAccF16M16, tileAccF16M32>;
+        tileAccF16 tCF16;
+        TCVT(tCF16, tACC);
         gmC gC(c_base +
                    ((size_t)i * tM + (size_t)tid * kPeM) * gN +
                    (size_t)j * tN,
                gM, gN);
-        TSTORE(gC, tC);
+        TSTORE_CUBE(gC, tCF16);
       }
     }
   }
