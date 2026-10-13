@@ -1,0 +1,15 @@
+id,phase,Tk,resident_tags,preload_mode,N,order,status,decision
+P1_T128_R4,1,128,4,off,0,baseline,planned_only,isolate resident capacity
+P1_T128_R8,1,128,8,off,0,baseline,planned_only,isolate resident capacity
+P1_T256_R4,1,256,4,off,0,baseline,planned_only,isolate resident capacity
+P1_T256_R8,1,256,8,off,0,baseline,planned_only,isolate resident capacity
+P2_T128_N1,2,128,P1 winner,K_only,1,existing Kfuture before Vcurrent,conditional_planned_only,N1 requires isolated guard relaxation
+P2_T128_N2,2,128,P1 winner,K_only,2,existing Kfuture before Vcurrent,conditional_planned_only,existing supported distance; compare with off and N1
+P2_T256_N1,2,256,P1 winner,K_only,1,existing Kfuture before Vcurrent,conditional_planned_only,N1 requires isolated guard relaxation
+P2_T256_N2,2,256,P1 winner,K_only,2,existing Kfuture before Vcurrent,conditional_planned_only,existing supported distance; compare with off and N1
+P3_K_only_existing,3,P2 winner,P1 winner,K_only,1,existing,conditional_planned_only,hold bandwidth and capacity fixed
+P3_K_only_current_V_before_future_K,3,P2 winner,P1 winner,K_only,1,current V before future K,conditional_planned_only,hold bandwidth and capacity fixed
+P3_V_only_deadline_priority,3,P2 winner,P1 winner,V_only,1,deadline priority,conditional_planned_only,hold bandwidth and capacity fixed
+P3_KV_staggered_deadline_priority,3,P2 winner,P1 winner,KV_staggered,1,deadline priority,conditional_planned_only,hold bandwidth and capacity fixed
+P4_scale_retention,4,winner,winner,scale_retention,winner,diagnostic,only_if_evidence_supports,separate model change from scheduling optimization
+P4_CMD_dispatch_2,4,winner,winner,CMD_dispatch_2,winner,diagnostic,only_if_evidence_supports,separate model change from scheduling optimization

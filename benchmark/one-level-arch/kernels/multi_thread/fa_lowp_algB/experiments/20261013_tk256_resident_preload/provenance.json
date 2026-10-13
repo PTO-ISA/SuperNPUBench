@@ -1,0 +1,71 @@
+{
+  "model": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/combined_main_20261012/model",
+  "simulator": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/gfsim",
+  "simulator_sha256": "86e78274e69fbc570efbc8d91904a67b6fa165644e6646685df856b0fbe228b3",
+  "elf": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/inputs/kernel_multi_thread_fa_lowp_algB_D1_dblQ_C0_GM2_Sq256_Skv8192_Tk128_checkoff.elf",
+  "overrides": [
+    "bctrl.vec_cell_sched_enable=false",
+    "bctrl.vecIssueQDepth=256",
+    "bctrl.bctrl_bandwidth=8",
+    "spe.speROBDepth=128",
+    "cube.l0aSharetregResident=true",
+    "core.sharetreg_bandwidth_bytes=256",
+    "cube.enable_internal_acc=true",
+    "spe.macroDescriptorFusion=true"
+  ],
+  "variants": [
+    "baseline_no_soc_random",
+    "soc_random_true"
+  ],
+  "elf_sha256": "1d32efe931018ca5661e318f90979ad927fbfc254dc72699ec9fe3b7b14dd050",
+  "model_commit": "7f924c4b7d6aa92a758ad1c9e82bb80ede47734a",
+  "preexisting_changes": [
+    "CubeCore.cpp",
+    "CubeCore.h",
+    "modelSpec/swimlane.md",
+    "tests/cube_test/README.md",
+    "tests/cube_test/main.cpp"
+  ],
+  "patch": "tmov_chain_fix.patch",
+  "baseline_exit_code": 0,
+  "randomized_exit_code": -6,
+  "cycle_window": "full kernel including setup, vector, loads and synchronization",
+  "peak_MAC_per_cycle_aggregate": 32768,
+  "logical_MAC": 536870912,
+  "theoretical_compute_cycles": 16384,
+  "experiment": "Tk128 vs Tk256, same current source/toolchain; isolated Tk guard relaxation",
+  "soc_random": "user requested no further random runs; initial random attempt already failed before cancellation",
+  "source": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/tk256_compare_20261013/experiment_include/multi_thread/fa_lowp_algB",
+  "shapes": {
+    "Sq": 256,
+    "Skv": 8192,
+    "Tm": 128,
+    "qD": 128,
+    "vD": 128,
+    "Tk": [
+      128,
+      256
+    ]
+  },
+  "builds": {
+    "128": {
+      "elf": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/tk256_compare_20261013/build_tk128/kernel/multi_thread/fa_lowp_algB/elf/kernel_multi_thread_fa_lowp_algB_D1_dblQ_C0_GM2_Sq256_Skv8192_Tk128_checkoff.elf",
+      "sha256": "2a0050b98698b21d3cf47f60fcf96ff80e4e65ea7e3344de07d3e8b841678ff9",
+      "disassembly": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/tk256_compare_20261013/build_tk128/kernel/multi_thread/fa_lowp_algB/elf/kernel_multi_thread_fa_lowp_algB_D1_dblQ_C0_GM2_Sq256_Skv8192_Tk128_checkoff.elf.diss",
+      "log": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/tk256_compare_20261013/build_tk128.log"
+    },
+    "256": {
+      "elf": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/tk256_compare_20261013/build_tk256/kernel/multi_thread/fa_lowp_algB/elf/kernel_multi_thread_fa_lowp_algB_D1_dblQ_C0_GM2_Sq256_Skv8192_Tk256_checkoff.elf",
+      "sha256": "ce98269a2d667f70d002a53f006eaac122c2f0b528938290622b8771213887df",
+      "disassembly": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/tk256_compare_20261013/build_tk256/kernel/multi_thread/fa_lowp_algB/elf/kernel_multi_thread_fa_lowp_algB_D1_dblQ_C0_GM2_Sq256_Skv8192_Tk256_checkoff.elf.diss",
+      "log": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/tk256_compare_20261013/build_tk256.log"
+    }
+  },
+  "manifest_note": "Original archive manifest contains inherited elf/variants fields. For this comparison use builds[128/256], comparison.json and paired_runs; soc_random_true is excluded.",
+  "paired_runs": {
+    "128": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/tk256_compare_20261013/tk128_rebuilt_baseline",
+    "256": "/data/xxr/feishu/workspace/superscalar_v5/performance_archive/2026-10-11_dblQ_final_47p48MFU/cube_tlsu_combined/tmov_chain_fix_20261012/tk256_compare_20261013/baseline_no_soc_random"
+  },
+  "kernel_sha256": "fef13b40f7728fac5b1f841140480895aa194df7e86859c7a67afce9398b184b",
+  "experimental_kernel_sha256": "117d98609d39c2dd934b84702e859a1c6d391d857d5bb5e7a583fe25bc9ec935"
+}
