@@ -5,8 +5,12 @@ $(error group_norm_grad supports only the 4PE testcases)
 endif
 START_FILE = $(ROOT)/test/common/_start_multipe.s
 
+# V0 (archived, backup only): all four kernels are kept in V0/; the static ones are not built.
+# ifneq ($(filter group_norm_grad_dynamic group_norm_grad_static,$(TESTCASE)),)
+# ifneq ($(filter group_norm_grad_1d_dynamic group_norm_grad_1d_static,$(TESTCASE)),)
+
 # HxW > 1
-ifneq ($(filter group_norm_grad_dynamic group_norm_grad_static,$(TESTCASE)),)
+ifneq ($(filter group_norm_grad_dynamic,$(TESTCASE)),)
 N_BATCH ?= 2
 C_CH ?= 16
 G_GRP ?= 8
@@ -17,7 +21,7 @@ TARGET = $(ELF_HEAD)_$(TESTCASE)_DType$(DType)_N$(N_BATCH)_C$(C_CH)_G$(G_GRP)_Hx
 endif
 
 # HxW == 1 (1D)
-ifneq ($(filter group_norm_grad_1d_dynamic group_norm_grad_1d_static,$(TESTCASE)),)
+ifneq ($(filter group_norm_grad_1d_dynamic,$(TESTCASE)),)
 N_BATCH ?= 256
 C_CH ?= 512
 G_GRP ?= 8

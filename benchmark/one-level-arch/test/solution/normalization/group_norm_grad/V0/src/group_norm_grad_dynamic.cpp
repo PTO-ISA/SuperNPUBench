@@ -1,10 +1,9 @@
-// Fixed-shape 4PE test: N=2,C=16,G=8,HxW=2048.
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
 
 #include "fileop.h"
-#include "solution/normalization/group_norm_grad/group_norm_grad_static.hpp"
+#include "solution/normalization/group_norm_grad/V0/group_norm_grad_dynamic.hpp"
 
 #ifndef DType
 #define DType __half
@@ -36,7 +35,6 @@ volatile uint32_t output_written = 0;
 #endif
 
 int main() {
-    static_assert(N_BATCH == 2 && C_CH == 16 && G_GRP == 8 && HxW_SZ == 2048, "static testcase has a fixed shape");
   using dtype = DType;
 
   static_assert(N_BATCH > 0 && C_CH > 0 && G_GRP > 0 && HxW_SZ > 0 &&
@@ -47,7 +45,7 @@ int main() {
   constexpr int64_t dc = dh <= 256 ? (D < 32 ? D : 32) : 1;
   constexpr int64_t bd = D < 8192 ? D : 8192,
                     bg = bd <= 256 ? (G_GRP < 32 ? G_GRP : 32) : 1;
-  constexpr int64_t tiling_info[10] = {N_BATCH, C_CH, G_GRP, HxW_SZ, rh,
+  int64_t tiling_info[10] = {N_BATCH, C_CH, G_GRP, HxW_SZ, rh,
                              rc,      dh,   dc,    bd,     bg};
 
   const int64_t N = tiling_info[0];
@@ -55,7 +53,7 @@ int main() {
   const int64_t G = tiling_info[2];
 
   constexpr int64_t kElems = N_BATCH * C_CH * HxW_SZ;
-  constexpr int64_t kWs = gn_grad_static::workspace_elems(N_BATCH, C_CH, G_GRP);
+  constexpr int64_t kWs = gn_grad::workspace_elems(N_BATCH, C_CH, G_GRP);
 
   static dtype dy_buf[kElems];
   static dtype x_buf[kElems];
@@ -100,8 +98,8 @@ int main() {
   }
 #endif
 
-  group_norm_grad_static<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
-      workspace, dx, dgamma, dbeta);
+  group_norm_grad_dynamic<dtype, PE_NUM>(dy, x, mean, rstd, gamma,
+      tiling_info, workspace, dx, dgamma, dbeta);
 
 #ifdef RES_CHECK
   kernel_done[tid] = 1;
