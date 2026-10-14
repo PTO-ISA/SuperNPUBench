@@ -1,4 +1,8 @@
+#ifdef MATMUL_REUSEB
+#include "basic_op/matmul/matmul_reuseB.hpp"
+#else
 #include "basic_op/matmul/matmul_reuseA.hpp"
+#endif
 
 #include <cstdint>
 #include <unistd.h>
@@ -53,7 +57,11 @@ extern "C" int __linx_group_worker_main(uint32_t peId, void *opaque) {
 
     BENCHSTART;
     for (int b = 0; b < Batch; ++b) {
+#ifdef MATMUL_REUSEB
+        matmul_reuseB<dtype, globM, globN, globK, tilM, tilN, tilK>(
+#else
         matmul_reuseA<dtype, globM, globN, globK, tilM, tilN, tilK>(
+#endif
             context->dst + b * globM * globN,
             context->src0 + b * globM * globK,
             context->src1 + b * globN * globK);
