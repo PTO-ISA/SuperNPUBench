@@ -17,9 +17,15 @@
 //   tile_d <= 0 → min(D, tD); channel splitting continues when D exceeds the selected strip width.
 //   Stage A and B split arbitrary D into tiles, including partial tails.
 //
-// Four PEs share one 256 KiB tile-register pool. Cap strips at 64 CubeM32
-// columns (FP32 8 KiB, FP16 4 KiB) and keep broadcast tiles at Columns=1
-// so peak live tiles stay inside that pool. D>64 is split into strips.
+// Stage A1 reduces R=D in one pass (group_norm_grad_reduce.hpp, Tiles
+// <= 32 KiB) when D is a power of two <= 256 or folds to [<=32, 2^k<=256];
+// otherwise it falls back to 64-column strips with partial sums spilled
+// through GM.
+// Stage B puts 32 batches in the Tile rows of one W-channel block (W | D,
+// W <= 64), TADDs the blocks and reduces N with one TCOLSUM; blocks are spread
+// over the PEs. Odd D keeps the per-group strip path.
+// Four PEs share one 256 KiB tile-register pool. Stage A2/B strips stay at 64
+// CubeM32 columns (FP32 8 KiB, FP16 4 KiB) with broadcast tiles at Columns=1.
 // Reduce and dX are separate passes so large tiles do not stay live across both.
 //
 // Torch CUDA launch 总览 (NVIDIA, warp=32; HxW==1 特化):
@@ -37,6 +43,8 @@
 #include <common/pto_tileop.hpp>
 
 #include <cstdint>
+
+#include "group_norm_grad_reduce.hpp"
 
 namespace gn_grad_1d {
 // Caller-owned GM workspace [2,N*G]: all c2 values, then all c3 values.
@@ -67,6 +75,68 @@ struct TileTypes {
     using tile_f = Tile<Location::Vec, float, Rows, Cols, BLayout::CubeM32, -1, -1>;
     using tile_v = Tile<Location::Vec, float, Rows, 1, BLayout::CubeM32, -1, 1>;
 };
+
+using namespace gn_grad_reduce;
+
+// Stage A1, D = Cols: groups [g0, g0+rows) of batch n as one [rows,D] Tile.
+template <typename dtype, int Cols>
+inline void fused_params_rows(dtype *dy, dtype *x, float *mean, float *rstd,
+                              dtype *gamma, float *workspace, int64_t N,
+                              int64_t C, int64_t G, int64_t n, int64_t g0,
+                              int64_t rows, float s) {
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using T = Tiles<dtype, Cols>;
+    const int64_t ng = n * G + g0;
+    const int64_t offset = n * C + g0 * Cols;
+    gm_h gx(x + offset, rows, Cols), gdy(dy + offset, rows, Cols);
+    gm_h gg(gamma + g0 * Cols, rows, Cols);
+    GFloat gm(mean + ng, rows, 1), gr(rstd + ng, rows, 1);
+    GFloat gc2(workspace + ng, rows, 1), gc3(workspace + N * G + ng, rows, 1);
+    typename T::H h(rows, Cols);
+    typename T::F dyf(rows, Cols), gf(rows, Cols), xf(rows, Cols);
+    typename T::W w1(rows), w2(rows);
+    TLOAD(h, gdy);
+    TCVT(dyf, h);
+    TLOAD(h, gg);
+    TCVT(gf, h);
+    TMUL(dyf, dyf, gf);
+    TLOAD(h, gx);
+    TCVT(xf, h);
+    TROWSUM(w2, dyf);
+    TMUL(xf, xf, dyf);
+    TROWSUM(w1, xf);
+    c2_c3_rows<T>(w1, w2, gm, gr, gc2, gc3, rows, s);
+}
+
+// Stage A1, D = fa*Cols: one (n,g) folded to [fa,Cols].
+template <typename dtype, int Cols>
+inline void fused_params_fold(dtype *dy, dtype *x, float *mean, float *rstd,
+                              dtype *gamma, float *workspace, int64_t N,
+                              int64_t C, int64_t G, int64_t n, int64_t g,
+                              int64_t fa, float s) {
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using T = Tiles<dtype, Cols>;
+    const int64_t ng = n * G + g;
+    const int64_t offset = n * C + g * fa * Cols;
+    gm_h gx(x + offset, fa, Cols), gdy(dy + offset, fa, Cols);
+    gm_h gg(gamma + g * fa * Cols, fa, Cols);
+    GFloat gm(mean + ng, 1, 1), gr(rstd + ng, 1, 1);
+    GFloat gc2(workspace + ng, 1, 1), gc3(workspace + N * G + ng, 1, 1);
+    typename T::H h(fa, Cols);
+    typename T::F dyf(fa, Cols), gf(fa, Cols), xf(fa, Cols);
+    typename T::W w1(fa), w2(fa);
+    TLOAD(h, gdy);
+    TCVT(dyf, h);
+    TLOAD(h, gg);
+    TCVT(gf, h);
+    TMUL(dyf, dyf, gf);
+    TLOAD(h, gx);
+    TCVT(xf, h);
+    TROWSUM(w2, dyf);
+    TMUL(xf, xf, dyf);
+    TROWSUM(w1, xf);
+    c2_c3_fold<T>(w1, w2, gm, gr, gc2, gc3, s);
+}
 
 // ---------------------------------------------------------------------------
 // Stage A1: channel reduce → c2/c3 for one (n, g)
@@ -341,6 +411,108 @@ inline void dgamma_group(dtype *dy, dtype *x, float *mean, float *rstd,
     }
 }
 
+// Stage B column width: a power of two W | D, W <= 64, shrunk until C/W gives
+// every PE a block; 0 when D is odd.
+inline int64_t gamma_beta_cols(int64_t C, int64_t D) {
+    int64_t w = 64;
+    while (w >= 2 && D % w != 0)
+        w /= 2;
+    while (w > 2 && C / w < 4)
+        w /= 2;
+    return w >= 2 ? w : 0;
+}
+
+template <typename dtype, int W> struct GammaBetaTiles {
+    using H = Tile<Location::Vec, dtype, kPhysRows, W, BLayout::CubeM32, -1, W>;
+    using F = Tile<Location::Vec, float, kPhysRows, W, BLayout::CubeM32, -1, W>;
+    using V = Tile<Location::Vec, float, kPhysRows, 1, BLayout::CubeM32, -1, 1>;
+    using RowF = Tile<Location::Vec, float, kPhysRows, W, BLayout::CubeM32, 1, W>;
+    using RowH = Tile<Location::Vec, dtype, kPhysRows, W, BLayout::CubeM32, 1, W>;
+};
+
+// Batches [n0, n0+rows) of channels [c, c+W) in group g:
+// b = dY, t = dY * (X - mean) * rstd.
+template <typename dtype, int W>
+__attribute__((always_inline)) inline void
+gamma_beta_terms(dtype *dy, dtype *x, float *mean, float *rstd, int64_t C,
+                 int64_t G, int64_t g, int64_t c, int64_t n0, int64_t rows,
+                 typename GammaBetaTiles<dtype, W>::F &b,
+                 typename GammaBetaTiles<dtype, W>::F &t) {
+    using T = GammaBetaTiles<dtype, W>;
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using gm_f = global_tensor<float, RowMajor<-1, -1>>;
+    gm_h gdy(dy + n0 * C + c, static_cast<int>(rows), static_cast<int>(C));
+    gm_h gx(x + n0 * C + c, static_cast<int>(rows), static_cast<int>(C));
+    gm_f gm(mean + n0 * G + g, static_cast<int>(rows), static_cast<int>(G));
+    gm_f gr(rstd + n0 * G + g, static_cast<int>(rows), static_cast<int>(G));
+    typename T::H h(rows);
+    typename T::V m(rows), r(rows);
+    TLOAD(h, gdy);
+    TCVT(b, h);
+    TLOAD(h, gx);
+    TCVT(t, h);
+    TLOAD(m, gm);
+    TLOAD(r, gr);
+    TROWEXPANDSUB(t, t, m);
+    TROWEXPANDMUL(t, t, r);
+    TMUL(t, t, b);
+}
+
+template <typename dtype, int W>
+__attribute__((always_inline)) inline void
+gamma_beta_store(dtype *dgamma, dtype *dbeta, int64_t c,
+                 typename GammaBetaTiles<dtype, W>::RowF &sb,
+                 typename GammaBetaTiles<dtype, W>::RowF &sg) {
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    typename GammaBetaTiles<dtype, W>::RowH h;
+    gm_h gb(dbeta + c, 1, W), gg(dgamma + c, 1, W);
+    TCVT(h, sb);
+    TSTORE(gb, h);
+    TCVT(h, sg);
+    TSTORE(gg, h);
+}
+
+// Stage B for channels [c, c+W): batches fill the 32 Tile rows, are summed
+// with TADD per 32-batch block, then reduced once with TCOLSUM.
+template <typename dtype, int W>
+inline void gamma_beta_block(dtype *dy, dtype *x, float *mean, float *rstd,
+                             dtype *dgamma, dtype *dbeta, int64_t N, int64_t C,
+                             int64_t G, int64_t D, int64_t c) {
+    using T = GammaBetaTiles<dtype, W>;
+    const int64_t g = c / D;
+    const int64_t full = N / kPhysRows * kPhysRows, tail = N - full;
+    typename T::RowF sb, sg;
+    if (full > 0) {
+        typename T::F accb(kPhysRows), accg(kPhysRows), b(kPhysRows),
+            t(kPhysRows);
+        gamma_beta_terms<dtype, W>(dy, x, mean, rstd, C, G, g, c, 0, kPhysRows,
+                                   accb, accg);
+        for (int64_t n0 = kPhysRows; n0 < full; n0 += kPhysRows) {
+            gamma_beta_terms<dtype, W>(dy, x, mean, rstd, C, G, g, c, n0,
+                                       kPhysRows, b, t);
+            TADD(accb, accb, b);
+            TADD(accg, accg, t);
+        }
+        TCOLSUM(sb, accb);
+        TCOLSUM(sg, accg);
+    }
+    if (tail > 0) {
+        typename T::F b(tail), t(tail);
+        typename T::RowF tb, tg;
+        gamma_beta_terms<dtype, W>(dy, x, mean, rstd, C, G, g, c, full, tail, b,
+                                   t);
+        TCOLSUM(tb, b);
+        TCOLSUM(tg, t);
+        if (full == 0) {
+            gamma_beta_store<dtype, W>(dgamma, dbeta, c, tb, tg);
+            return;
+        }
+        TADD(sb, sb, tb);
+        TADD(sg, sg, tg);
+    }
+    gamma_beta_store<dtype, W>(dgamma, dbeta, c, sb, sg);
+}
+
 // Stage B logical [active_g,active_d], physical [32,64]. Separate N reductions
 // so dbeta and dgamma do not keep five FP32 tiles live together.
 template <typename dtype>
@@ -420,7 +592,7 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         const uint32_t tid = get_thread_idx();
         if (!shape.valid() || tid >= static_cast<uint32_t>(peNum))
             return;
-        const auto [N, C, G, D] = shape;
+        const int64_t N = shape.N, C = shape.C, G = shape.G, D = shape.D;
         const int64_t requested_d = tiling[3] > 0 ? tiling[3] : D;
         const int64_t tile_d = requested_d < tD ? requested_d : tD;
         if (tile_d <= 0 || tile_d > tD) {
@@ -439,15 +611,42 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
             return;
         const int64_t outer_g = (G + tile_g - 1) / tile_g;
         const float s = 1.0f / static_cast<float>(D);
-        for (int64_t task = tid; task < N * outer_g; task += peNum) {
-            const int64_t n = task / outer_g;
-            const int64_t g0 = (task % outer_g) * tile_g;
-            const int64_t end_g = g0 + tile_g < G ? g0 + tile_g : G;
-            for (int64_t g = g0; g < end_g; ++g) {
-              gn_grad_1d::fused_params_group<dtype, gm_h, gm_f, tile_h, tile_f,
-                                             tile_v>(dy, x, mean, rstd, gamma,
-                                                     workspace + n * G + g, N,
-                                                     C, G, D, n, g, s, tile_d);
+        const int64_t fr = gn_grad_1d::fold_cols(D);
+        if (gn_grad_1d::is_tile_cols(D)) {
+            const int64_t outer_r = (G + 31) / 32;
+            gn_grad_1d::with_cols(D, [&]<int Cols>() {
+                for (int64_t task = tid; task < N * outer_r; task += peNum) {
+                    const int64_t n = task / outer_r;
+                    const int64_t g0 = (task % outer_r) * 32;
+                    const int64_t rows = G - g0 < 32 ? G - g0 : 32;
+                    gn_grad_1d::fused_params_rows<dtype, Cols>(
+                        dy, x, mean, rstd, gamma, workspace, N, C, G, n, g0,
+                        rows, s);
+                }
+            });
+        } else if (fr > 0) {
+            gn_grad_1d::with_cols(fr, [&]<int Cols>() {
+                for (int64_t task = tid; task < N * outer_g; task += peNum) {
+                    const int64_t n = task / outer_g;
+                    const int64_t g0 = (task % outer_g) * tile_g;
+                    const int64_t end_g = g0 + tile_g < G ? g0 + tile_g : G;
+                    for (int64_t g = g0; g < end_g; ++g)
+                        gn_grad_1d::fused_params_fold<dtype, Cols>(
+                            dy, x, mean, rstd, gamma, workspace, N, C, G, n, g,
+                            D / fr, s);
+                }
+            });
+        } else {
+            for (int64_t task = tid; task < N * outer_g; task += peNum) {
+                const int64_t n = task / outer_g;
+                const int64_t g0 = (task % outer_g) * tile_g;
+                const int64_t end_g = g0 + tile_g < G ? g0 + tile_g : G;
+                for (int64_t g = g0; g < end_g; ++g) {
+                  gn_grad_1d::fused_params_group<dtype, gm_h, gm_f, tile_h,
+                                                 tile_f, tile_v>(
+                      dy, x, mean, rstd, gamma, workspace + n * G + g, N, C, G,
+                      D, n, g, s, tile_d);
+                }
             }
         }
     }
@@ -503,7 +702,7 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         const uint32_t tid = get_thread_idx();
         if (!shape.valid() || tid >= static_cast<uint32_t>(peNum))
             return;
-        const auto [N, C, G, D] = shape;
+        const int64_t N = shape.N, C = shape.C, G = shape.G, D = shape.D;
         const int64_t requested_d = tiling[5] > 0 ? tiling[5] : D;
         const int64_t tile_d = requested_d < tD ? requested_d : tD;
         if (tile_d <= 0 || tile_d > tD) {
@@ -520,6 +719,14 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         const int64_t tile_g = tiling[6];
         if (tile_g < 1 || tile_g > 32 || (tile_d > gn_grad_1d::kPhysCols && tile_g != 1))
             return;
+        if (const int64_t w = gn_grad_1d::gamma_beta_cols(C, D); w > 0) {
+            gn_grad_1d::with_cols(w, [&]<int W>() {
+                for (int64_t blk = tid; blk < C / W; blk += peNum)
+                    gn_grad_1d::gamma_beta_block<dtype, W>(
+                        dy, x, mean, rstd, dgamma, dbeta, N, C, G, D, blk * W);
+            });
+            return;
+        }
         if (tile_d <= gn_grad_1d::kPhysCols) {
             const int64_t outer_g = (G + tile_g - 1) / tile_g;
             const int64_t outer_d = (D + tile_d - 1) / tile_d;
