@@ -411,6 +411,13 @@ inline void dgamma_group(dtype *dy, dtype *x, float *mean, float *rstd,
     }
 }
 
+// Groups per (n, task) in stages A1 and A2. Both stages must use the same
+// ownership: A2 reads the c2/c3 that A1 wrote on the same PE, with no
+// inter-PE barrier. The A1 rows branch packs whole tile_g chunks up to 32.
+inline int64_t owned_groups(int64_t D, int64_t tile_g) {
+    return is_tile_cols(D) ? tile_g * (32 / tile_g) : tile_g;
+}
+
 // Stage B column width: a power of two W | D, W <= 64, shrunk until C/W gives
 // every PE a block; 0 when D is odd.
 inline int64_t gamma_beta_cols(int64_t C, int64_t D) {
@@ -613,12 +620,13 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         const float s = 1.0f / static_cast<float>(D);
         const int64_t fr = gn_grad_1d::fold_cols(D);
         if (gn_grad_1d::is_tile_cols(D)) {
-            const int64_t outer_r = (G + 31) / 32;
+            const int64_t own_g = gn_grad_1d::owned_groups(D, tile_g);
+            const int64_t outer_r = (G + own_g - 1) / own_g;
             gn_grad_1d::with_cols(D, [&]<int Cols>() {
                 for (int64_t task = tid; task < N * outer_r; task += peNum) {
                     const int64_t n = task / outer_r;
-                    const int64_t g0 = (task % outer_r) * 32;
-                    const int64_t rows = G - g0 < 32 ? G - g0 : 32;
+                    const int64_t g0 = (task % outer_r) * own_g;
+                    const int64_t rows = G - g0 < own_g ? G - g0 : own_g;
                     gn_grad_1d::fused_params_rows<dtype, Cols>(
                         dy, x, mean, rstd, gamma, workspace, N, C, G, n, g0,
                         rows, s);
@@ -677,18 +685,22 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         const int64_t tile_g = tiling[4];
         if (tile_g < 1 || tile_g > 32 || (D > gn_grad_1d::kPhysCols && tile_g != 1))
             return;
-        const int64_t outer_g = (G + tile_g - 1) / tile_g;
-        for (int64_t task = tid; task < N * outer_g; task += peNum) {
-            const int64_t n = task / outer_g;
-            const int64_t g0 = (task % outer_g) * tile_g;
-            const int64_t active_g = G - g0 < tile_g ? G - g0 : tile_g;
-            if (D <= gn_grad_1d::kPhysCols && tile_g > 1) {
-              gn_grad_1d::dx_groups(dy, x, rstd, gamma, workspace, dx, N, C, G,
-                                    D, n, g0, active_g);
-            } else {
-              gn_grad_1d::dx_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-                  dy, x, rstd, gamma, workspace + n * G + g0, dx, N, C, G, D, n,
-                  g0, tile_d);
+        const int64_t own_g = gn_grad_1d::owned_groups(D, tile_g);
+        const int64_t outer_own = (G + own_g - 1) / own_g;
+        for (int64_t task = tid; task < N * outer_own; task += peNum) {
+            const int64_t n = task / outer_own;
+            const int64_t g_begin = (task % outer_own) * own_g;
+            const int64_t g_end = g_begin + own_g < G ? g_begin + own_g : G;
+            for (int64_t g0 = g_begin; g0 < g_end; g0 += tile_g) {
+              const int64_t active_g = g_end - g0 < tile_g ? g_end - g0 : tile_g;
+              if (D <= gn_grad_1d::kPhysCols && tile_g > 1) {
+                gn_grad_1d::dx_groups(dy, x, rstd, gamma, workspace, dx, N, C,
+                                      G, D, n, g0, active_g);
+              } else {
+                gn_grad_1d::dx_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
+                    dy, x, rstd, gamma, workspace + n * G + g0, dx, N, C, G, D,
+                    n, g0, tile_d);
+              }
             }
         }
     }
