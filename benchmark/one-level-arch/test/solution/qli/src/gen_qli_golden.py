@@ -156,10 +156,19 @@ def topk_set_match(sim_idx, ref_idx):
     return ok, sq
 
 
-def verify(sim_res_path, ref_res_path, sim_idx_path, ref_idx_path):
+def verify(sim_res_path, ref_res_path, sim_idx_path, ref_idx_path,
+           sim_row_stride=None):
     sq_, g_, d_, skv_, topk_ = (DIM["SQ"], DIM["G"], DIM["D"],
                                 DIM["SKV"], DIM["TOPK"])
-    sim = np.fromfile(sim_res_path, dtype=np.float32).reshape(sq_, skv_)
+    stride = skv_ if sim_row_stride is None else sim_row_stride
+    if stride < skv_:
+        raise ValueError("sim row stride must be at least Skv")
+    sim_raw = np.fromfile(sim_res_path, dtype=np.float32)
+    if sim_raw.size != sq_ * stride:
+        raise ValueError(
+            f"sim score file has {sim_raw.size} elements; expected "
+            f"Sq*stride={sq_ * stride}")
+    sim = sim_raw.reshape(sq_, stride)[:, :skv_].copy()
     ref = np.fromfile(ref_res_path, dtype=np.float32).reshape(sq_, skv_)
     sim_idx = np.fromfile(sim_idx_path, dtype=np.int32).reshape(sq_, topk_)
     ref_idx = np.fromfile(ref_idx_path, dtype=np.int32).reshape(sq_, topk_)
@@ -208,6 +217,8 @@ def main():
     parser.add_argument("--ref", default=None, help="reference_scores.bin (verify mode)")
     parser.add_argument("--sim_idx", default=None, help="sim indices.bin (verify mode)")
     parser.add_argument("--ref_idx", default=None, help="reference_indices.bin (verify mode)")
+    parser.add_argument("--sim-row-stride", type=int, default=None,
+                        help="physical FP32 elements between simulated score rows")
     parser.add_argument("--sq", type=int, default=None, help="query token 数 (默认 %d)" % SQ)
     parser.add_argument("--skv", type=int, default=None, help="KV 序列长度 (默认 %d)" % SKV)
     parser.add_argument("--topk", type=int, default=None, help="TopK 选取数 (默认 %d)" % TOPK)
@@ -248,7 +259,8 @@ def main():
     elif args.mode == "verify":
         if not all([args.sim, args.ref, args.sim_idx, args.ref_idx]):
             sys.exit("verify mode requires --sim --ref --sim_idx --ref_idx")
-        ok = verify(args.sim, args.ref, args.sim_idx, args.ref_idx)
+        ok = verify(args.sim, args.ref, args.sim_idx, args.ref_idx,
+                    args.sim_row_stride)
         sys.exit(0 if ok else 1)
 
 

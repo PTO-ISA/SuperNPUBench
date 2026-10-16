@@ -1,80 +1,20 @@
-// ============================================================================
 // Gather 算子 — PTO 一层编程模型
 //
-// 原始 gather.hpp 策略:
-//   对每个输出 tile (tM, tN):
-//     1. TCOPYIN  加载 offset tile (行索引, 1×tM) from GM
-//     2. __vec__ gen_offset 计算字节偏移:
-//          offset[row,col] = (in_offset[row] * gN + n_base + col) * sizeof(dtype)
-//     3. MGATHER  按字节偏移从数据表取数 (旧 MGATHER, 字节偏移语义)
-//     4. TCOPYOUT 写回输出
-//
-// PTO 一层策略:
-//   对每个输出 tile (tM, tN):
-//     1. TLOAD    加载 offset tile (行索引, 1×tM) from GM
-//     2. MGATHER<Coalesce::Row>  按行索引直接取数:
-//          dst[r,:] = table[idx[r], :]
-//          通过调整 table 指针 (+n_base) 处理列偏移
-//          (PTO ISA MGATHER 使用行索引, 非 字节偏移, 无需 gen_offset)
-//     3. TSTORE   写回输出
-//
-//   gen_offset __vec__ 块完全消除: MGATHER<Coalesce::Row> 内部完成
-//   行索引 → 行地址 的转换 (tablePtr + idx * tableRowStride)。
-//
-// ┌─────────────────────────────────────────────────────────────────────────┐
-// │                    当前编译器不支持 / 不完整的指令汇总                   │
-// ├──────────┬──────────────────┬──────────────────────────────────────────┤
-// │ Pto ISA  │ 当前编译器状态   │ 说明                                     │
-// │ 指令     │                  │                                          │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TLOAD    │ API 有(名不同)， │ PTO ISA 名 TLOAD；当前编译器名 TCOPYIN；  │
-// │          │                  │ 核心参数 (dst, src) 和行为一致            │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ MGATHER  │ 部分支持         │ template_asm.h 有 MGATHER (asm volatile);│
-// │          │                  │ 但缺 Coalesce 模板参数 (无法选 Row/Elem);│
-// │          │                  │ 且旧实现按字节偏移取数,                   │
-// │          │                  │ PTO ISA Coalesce::Row 按行索引取数        │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TSTORE   │ API 有(名不同)， │ PTO ISA 名 TSTORE；当前编译器名 TCOPYOUT；│
-// │          │                  │ 核心参数 (dst, src) 和行为一致            │
-// └──────────┴──────────────────┴──────────────────────────────────────────┘
-//
-// PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
-//
-//   TLOAD:
-//     template <typename TileData, typename GlobalData, typename... WaitEvents>
-//     PTO_INST RecordEvent TLOAD(TileData &dst, GlobalData &src,
-//                                WaitEvents &... events);
-//
-//   MGATHER (Coalesce::Row 模式):
-//     template <Coalesce Mode = Coalesce::Row,
-//               GatherOOB Oob  = GatherOOB::Undefined,
-//               typename TileDst, typename GlobalData,
-//               typename TileInd, typename... WaitEvents>
-//     PTO_INST RecordEvent MGATHER(TileDst &dst, GlobalData &src,
-//                                  TileInd &indexes, WaitEvents &... events);
-//
-//     Row 模式语义: dst[r,:] = table[idx[r], :]
-//       - idx 为行索引 (非字节偏移)
-//       - tablePtr + idx * tableRowStride 定位到行起始
-//       - 读取 validCol 个元素到 dst 对应行
-//       - 约束 (A2A3): TileIdx::ValidRow==1, TileIdx::ValidCol==TileDst::ValidRow
-//       - 约束 (A5):   同上, 或 [R,1] ColMajor; 且 staticShape[4]==ValidCol
-//
-//   TSTORE:
-//     template <typename TileData, typename GlobalData,
-//               AtomicType atomicType = AtomicType::AtomicNone,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TSTORE(GlobalData &dst, TileData &src,
-//                                 WaitEvents &... events);
-// ============================================================================
+// 原始 FP32/U32 配置按 MxN tile 工作。每个 tile 都重新快照行索引，
+// 再用普通标量 C++ 下标在 `#pragma pto element for` 中 gather。所有结果先
+// 经 32 -> 128 -> 2048 -> 16384 的公开 ElementTile 层级关闭，之后才写 GM。
+// 这个顺序保留 input/index/output 可能别名时的原始逐 tile 可观察语义。
+// 其他模板实例继续使用既有 MGATHER 路径。
 
-#include <common/pto_tile.hpp>
+#include <common/pto_tileop.hpp>
 #include <common/global_iterator.hpp>
-// #include <pto/pto_instr.hpp>            // [!] PTO ISA C++ Intrinsic — 当前编译器未提供
 
 #include <cstdint>
 #include <cstdio>
+#include <type_traits>
+#include <utility>
+
+using namespace pto;
 
 // ----------------------------------------------------------------------------
 // gather: 按行索引从数据表中 gather 行
@@ -100,6 +40,273 @@ void gather(
     otype *in_offset_ptr,
     dtype *out_ptr
     ) {
+    constexpr bool kElementHierarchySupported =
+        std::is_same_v<dtype, float> &&
+        (std::is_same_v<otype, uint32_t> || std::is_same_v<otype, int32_t>) &&
+        (tM == 32 || tM == 128) &&
+        (tN == 2048 / tM || tN == 16384 / tM) &&
+        gK > 0 && gN > 0 && gM > 0 &&
+        gK <= __UINT32_MAX__ / gN && gM <= __UINT32_MAX__ / gN;
+
+    if constexpr (kElementHierarchySupported) {
+        static_assert(gK * gN <= __UINT32_MAX__,
+                      "gather data offsets must fit the B32 index domain");
+        static_assert(tM == 32 || tM == 128,
+                      "original gather uses 32- or 128-row tiles");
+        static_assert(tM * tN == 2048 || tM * tN == 16384,
+                      "original gather requires a public F32 hierarchy");
+
+        constexpr uint32_t kIndexElements = tM;
+        constexpr uint32_t kLeafElements = 32;
+        constexpr uint32_t kTileElements = tM * tN;
+        constexpr uint32_t kMiddleElements = 128;
+        constexpr uint32_t kMiddleCount = kTileElements / kMiddleElements;
+
+        for (uint32_t m_tile = 0; m_tile < (gM + tM - 1) / tM; ++m_tile) {
+            const uint32_t m_base = m_tile * static_cast<uint32_t>(tM);
+            uint32_t valid_rows = static_cast<uint32_t>(tM);
+            if constexpr (gM % tM != 0) {
+                const uint32_t remaining_rows =
+                    static_cast<uint32_t>(gM) - m_base;
+                if (remaining_rows < valid_rows)
+                    valid_rows = remaining_rows;
+            }
+
+            for (uint32_t n_tile = 0; n_tile < (gN + tN - 1) / tN; ++n_tile) {
+                const uint32_t n_base = n_tile * static_cast<uint32_t>(tN);
+                uint32_t valid_cols = static_cast<uint32_t>(tN);
+                if constexpr (gN % tN != 0) {
+                    const uint32_t remaining_cols =
+                        static_cast<uint32_t>(gN) - n_base;
+                    if (remaining_cols < valid_cols)
+                        valid_cols = remaining_cols;
+                }
+
+                // 索引必须在每个原始 MxN tile 内重新快照。这样若 output
+                // 与 index 别名，前一个 N 块的写入会被下一个 N 块观察到。
+                ElementTile<otype, kIndexElements> index_snapshot;
+                if constexpr (tM == kLeafElements) {
+                    auto &index_elements = TPARTELEMENT(index_snapshot);
+#pragma pto element for
+                    for (uint32_t element = 0; element < kLeafElements; ++element)
+                        if (element < valid_rows)
+                            index_elements[element] = in_offset_ptr[m_base + element];
+                } else {
+                    ElementTile<otype, kIndexElements> index_layout;
+                    auto layout_parts = TPARTVIEW<kLeafElements>(index_layout, valid_rows);
+                    TileArray<ElementTile<otype, kLeafElements>, 1,
+                              kIndexElements / kLeafElements> index_leaves;
+                    for (uint32_t part = 0; part < kIndexElements / kLeafElements; ++part) {
+                        ElementTile<otype, kLeafElements> loaded;
+                        auto &elements = TPARTELEMENT(loaded);
+                        const uint32_t valid = layout_parts.valid_size(part);
+#pragma pto element for
+                        for (uint32_t element = 0; element < kLeafElements; ++element)
+                            if (element < valid)
+                                elements[element] = in_offset_ptr[m_base + static_cast<uint32_t>(layout_parts.logical_index(part, element))];
+                        TMOV(index_leaves[0][part], loaded);
+                    }
+                    auto closed_indices = TASSEMBLY<ElementTile<otype, kIndexElements>>(
+                        std::move(index_leaves));
+                    TMOV(index_snapshot, closed_indices);
+                }
+                const dtype *data_block = in_data_ptr + n_base;
+                dtype *output_block =
+                    out_ptr + m_base * static_cast<uint32_t>(gN) + n_base;
+
+                if constexpr (kTileElements == 2048) {
+                    TileArray<ElementTile<float, kMiddleElements>, 1,
+                              kMiddleCount>
+                        middle;
+
+                    for (uint32_t group = 0; group < kMiddleCount; ++group) {
+                        TileArray<ElementTile<float, kLeafElements>, 1, 4>
+                            leaves;
+                        for (uint32_t leaf = 0; leaf < 4; ++leaf) {
+                            const uint32_t part = group * 4 + leaf;
+                            const uint32_t index_part_number = part / tN;
+                            const uint32_t column = part % tN;
+
+                            ElementTile<otype, kLeafElements> indices;
+                            uint32_t valid_index_elements;
+                            if constexpr (tM == kLeafElements) {
+                                TMOV(indices, index_snapshot);
+                                valid_index_elements = valid_rows;
+                            } else {
+                                auto index_parts = TPARTVIEW<kLeafElements>(index_snapshot, valid_rows);
+                                auto index_part = index_parts.part(index_part_number);
+                                TMOV(indices, index_part);
+                                valid_index_elements = index_parts.valid_size(index_part_number);
+                            }
+
+                            ElementTile<float, kLeafElements> gathered;
+                            auto &index_elements = TPARTELEMENT(indices);
+                            auto &gathered_elements = TPARTELEMENT(gathered);
+
+#pragma pto element for
+                            for (uint32_t element = 0;
+                                 element < kLeafElements; ++element) {
+                                if (element < valid_index_elements &&
+                                    column < valid_cols) {
+                                    const uint32_t data_index =
+                                        index_elements[element] *
+                                            static_cast<uint32_t>(gN) +
+                                        column;
+                                    gathered_elements[element] =
+                                        data_block[data_index];
+                                }
+                            }
+                            TMOV(leaves[0][leaf], gathered);
+                        }
+                        auto closed =
+                            TASSEMBLY<ElementTile<float, kMiddleElements>>(
+                                std::move(leaves));
+                        TMOV(middle[0][group], closed);
+                    }
+
+                    // 完整 2048 元素快照关闭后才开始任何 GM 写回。
+                    auto snapshot = TASSEMBLY<ElementTile<float, kTileElements>>(
+                        std::move(middle));
+                    auto output_parts =
+                        TPARTVIEW<kLeafElements>(snapshot, kTileElements);
+                    for (uint32_t row_group = 0;
+                         row_group < tM / kLeafElements; ++row_group) {
+                        for (uint32_t column = 0; column < valid_cols;
+                             ++column) {
+                            const uint32_t part = row_group * tN + column;
+                            ElementTile<float, kLeafElements> values;
+                            auto output_part = output_parts.part(part);
+                            TMOV(values, output_part);
+                            auto &value_elements = TPARTELEMENT(values);
+                            dtype *output_column =
+                                output_block +
+                                row_group * static_cast<uint32_t>(gN) +
+                                column;
+
+#pragma pto element for
+                            for (uint32_t element = 0;
+                                 element < kLeafElements; ++element) {
+                                // TPARTVIEW<32> 的公开映射为
+                                // flat = element * part_count + part；按 MxN
+                                // 展开后 row = element*(tM/32)+part/tN。
+                                const uint32_t row =
+                                    element * static_cast<uint32_t>(tM / kLeafElements) + row_group;
+                                const uint32_t output_index =
+                                    element * static_cast<uint32_t>(tM / kLeafElements) *
+                                    static_cast<uint32_t>(gN);
+                                if constexpr (gM % tM == 0) {
+                                    output_column[output_index] =
+                                        value_elements[element];
+                                } else if (row < valid_rows) {
+                                    output_column[output_index] =
+                                        value_elements[element];
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    TileArray<ElementTile<float, 2048>, 1, 8> outer;
+
+                    for (uint32_t outer_index = 0; outer_index < 8;
+                         ++outer_index) {
+                        TileArray<ElementTile<float, kMiddleElements>, 1, 16>
+                            middle;
+                        for (uint32_t group = 0; group < 16; ++group) {
+                            TileArray<ElementTile<float, kLeafElements>, 1, 4>
+                                leaves;
+                            for (uint32_t leaf = 0; leaf < 4; ++leaf) {
+                                const uint32_t part =
+                                    (outer_index * 16 + group) * 4 + leaf;
+                                const uint32_t index_part_number = part / tN;
+                                const uint32_t column = part % tN;
+
+                                ElementTile<otype, kLeafElements> indices;
+                                uint32_t valid_index_elements;
+                                if constexpr (tM == kLeafElements) {
+                                    TMOV(indices, index_snapshot);
+                                    valid_index_elements = valid_rows;
+                                } else {
+                                    auto index_parts = TPARTVIEW<kLeafElements>(index_snapshot, valid_rows);
+                                    auto index_part = index_parts.part(index_part_number);
+                                    TMOV(indices, index_part);
+                                    valid_index_elements = index_parts.valid_size(index_part_number);
+                                }
+
+                                ElementTile<float, kLeafElements> gathered;
+                                auto &index_elements = TPARTELEMENT(indices);
+                                auto &gathered_elements =
+                                    TPARTELEMENT(gathered);
+
+#pragma pto element for
+                                for (uint32_t element = 0;
+                                     element < kLeafElements; ++element) {
+                                    if (element < valid_index_elements &&
+                                        column < valid_cols) {
+                                        const uint32_t data_index =
+                                            index_elements[element] *
+                                                static_cast<uint32_t>(gN) +
+                                            column;
+                                        gathered_elements[element] =
+                                            data_block[data_index];
+                                    }
+                                }
+                                TMOV(leaves[0][leaf], gathered);
+                            }
+                            auto closed128 =
+                                TASSEMBLY<ElementTile<float, kMiddleElements>>(
+                                    std::move(leaves));
+                            TMOV(middle[0][group], closed128);
+                        }
+                        auto closed2048 =
+                            TASSEMBLY<ElementTile<float, 2048>>(
+                                std::move(middle));
+                        TMOV(outer[0][outer_index], closed2048);
+                    }
+
+                    // 所有 gather load 完成且层级关闭后，才允许逐元素写回。
+                    auto snapshot = TASSEMBLY<ElementTile<float, kTileElements>>(
+                        std::move(outer));
+                    auto output_parts =
+                        TPARTVIEW<kLeafElements>(snapshot, kTileElements);
+                    for (uint32_t row_group = 0;
+                         row_group < tM / kLeafElements; ++row_group) {
+                        for (uint32_t column = 0; column < valid_cols;
+                             ++column) {
+                            const uint32_t part = row_group * tN + column;
+                            ElementTile<float, kLeafElements> values;
+                            auto output_part = output_parts.part(part);
+                            TMOV(values, output_part);
+                            auto &value_elements = TPARTELEMENT(values);
+                            dtype *output_column =
+                                output_block +
+                                row_group * static_cast<uint32_t>(gN) +
+                                column;
+
+#pragma pto element for
+                            for (uint32_t element = 0;
+                                 element < kLeafElements; ++element) {
+                                // TPARTVIEW<32> 的公开映射为
+                                // flat = element * part_count + part；按 MxN
+                                // 展开后 row = element*(tM/32)+part/tN。
+                                const uint32_t row =
+                                    element * static_cast<uint32_t>(tM / kLeafElements) + row_group;
+                                const uint32_t output_index =
+                                    element * static_cast<uint32_t>(tM / kLeafElements) *
+                                    static_cast<uint32_t>(gN);
+                                if constexpr (gM % tM == 0) {
+                                    output_column[output_index] =
+                                        value_elements[element];
+                                } else if (row < valid_rows) {
+                                    output_column[output_index] =
+                                        value_elements[element];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
     const size_t Mb = gM / tM;
     const size_t Nb = gN / tN;
     const size_t rmd_M = gM % tM;
@@ -195,5 +402,6 @@ void gather(
             MGATHER(outTile_rmd_mn, adjustedGm, inOffsetTile_rmd_mn);
             TSTORE(gO, outTile_rmd_mn);
         }
+    }
     }
 }

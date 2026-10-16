@@ -45,17 +45,17 @@
 //   CANN 代码位置: op_kernel/arch22/quant_lightning_indexer_v2_*.h
 //
 //   Step 1 (Q@K^T):  CANN ComputeQk (Mmad)              → QLI TMATMUL(tSacc, tQ, tK)
-//   Step 2 (ReLU):   CANN FixpSToL1 reluPre=1 (Fixpipe) → QLI TMAX(tS, tS, tZero)
-//   Step 3 (W*Sq):   CANN ProcessVec0 Mul(W, QScale)    → QLI TMUL(tWf, tWf, tSq)
-//   Step 4 (W广播):  CANN Brcb(W*QScale)                → QLI TCOLEXPANDMUL(tS, tS, tWf)
+//   Step 2 (ReLU):   CANN FixpSToL1 reluPre=1 (Fixpipe) → QLI element-for: score > 0 ? score : 0
+//   Step 3 (W*Sq):   CANN ProcessVec0 Mul(W, QScale)    → driver: W * scale_q
+//   Step 4 (W广播):  CANN Brcb(W*QScale)                → QLI element-for: score *= weight
 //   Step 5 (ReduceG):CANN ComputeWs Mmad([1,g]×[g,Skv]) → QLI TCOLSUM(tPartial, tRed)
-//   Step 6 (ScK):    CANN ProcessVec1 Mul(mmIn, kScale) → QLI TMUL(tPartial, tPartial, tSk)
+//   Step 6 (ScK):    CANN ProcessVec1 Mul(mmIn, kScale) → QLI element-for: sum *= scale_k
 //   Step 7 (TopK):   CANN SortAll+MergeSort+LD           → QLI qli_topk_simple (NPU tile op)
 //
 //   CANN ProcessVec0 中先计算 W *= Scale_Q（Mul(inWeights, inQScale)），再 Brcb 广播；
-//   QLI 在 Step 3 用 TMUL 融合 W *= scale_q，在 Step 4 用 TCOLEXPANDMUL 广播。
+//   调用方预广播 W*scale_q，Step 4 的普通 float 循环逐元素加权。
 //   CANN ProcessVec1 中 Mul(mmIn, kScale) 在 g-reduction 之后应用 scale_k；
-//   QLI 在 Step 6 用 TMUL 在 TCOLSUM 之后应用 scale_k。
+//   Step 6 的普通 float 循环在 TCOLSUM 之后应用 scale_k。
 //
 // 【与 FA 的区别】
 //   FA:  O = softmax(Q@K^T / √d) @ V    — online softmax, P@V 矩阵乘, 输出 [S, vD]
@@ -96,36 +96,14 @@
 // =============================================================================
 
 #include <common/pto_tileop.hpp>
+#include "qli_element.hpp"
 #include <cstdint>
 #include <limits>
 
 using namespace pto;
 
 // -----------------------------------------------------------------------------
-// TCOLSUMX — 列求和（本仓 b8669ce 模板 lb1 误绑 dst.ValidRow=1，只累加 1 行；
-// 按上游 f00b928 (#101) 的正确编码：B.DIM 描述源几何，LB1=源 ValidRow）
-// -----------------------------------------------------------------------------
-template <typename tile_o, typename tile_i>
-void TCOLSUMX(tile_o& dst, tile_i& src) {
-  asm volatile(
-    "BSTART.TEPL 80, %D1\n"
-    "B.DIM zero, %c2, ->lb0\n"
-    "B.DIM zero, %c3, ->lb1\n"
-    "B.DIM zero, %c4, ->lb2\n"
-    "B.IOT %5, mask=1111, last, ->%0<%Z6>\n"
-    ""
-    : "=Tr"(dst.data())
-    : "i"(type_traits<typename tile_i::DType>::TypeCode),
-      "i"(tile_i::ValidCol),
-      "i"(tile_i::ValidRow),
-      "i"(tile_i::Cols),
-      "Tr"(src.data()),
-      "i"(tile_type_traits<typename tile_o::TileDType>::TilesizeCode)
-  );
-}
-
-// -----------------------------------------------------------------------------
-// qli_pto — QLI 核心计算（Step 1-6，NPU tile op 实现）
+// qli_pto — QLI 核心计算（CUBE 矩阵乘 + element-for + 列归约）
 // -----------------------------------------------------------------------------
 //
 // 模板参数:
@@ -212,8 +190,10 @@ void qli_pto(float* scores_ptr,
             }
 
             tileSum tSum;
-            tileSum tZeroSum;
-            TEXPANDS(tZeroSum, 0.0f);
+            auto &sum = TPARTELEMENT(tSum);
+#pragma pto element for
+            for (uint32_t column = 0; column < kTk; ++column)
+                sum[column] = 0.0f;
 
             #pragma clang loop unroll(full)
             for (int gi = 0; gi < Gb; gi++) {
@@ -241,23 +221,27 @@ void qli_pto(float* scores_ptr,
                 tileS tS;
                 TLOAD(tS, gTmp);
 
-                tileS tZero;
-                TEXPANDS(tZero, 0.0f);
-                TMAX(tS, tS, tZero);
-
-                TMUL(tS, tS, tWb);
+                auto &score = TPARTELEMENT(tS);
+                const auto &weight = TPARTELEMENT(tWb);
+#pragma pto element for
+                for (uint32_t element = 0; element < kTm * kTk; ++element) {
+                    const float positive = score[element] > 0.0f ? score[element] : 0.0f;
+                    score[element] = positive * weight[element];
+                }
 
                 tileSum tPartial;
-                TCOLSUMX(tPartial, tS);
+                TCOLSUM(tPartial, tS);
 
-                if (gi == 0) {
-                    TADD(tSum, tZeroSum, tPartial);
-                } else {
-                    TADD(tSum, tSum, tPartial);
-                }
+                const auto &partial = TPARTELEMENT(tPartial);
+#pragma pto element for
+                for (uint32_t column = 0; column < kTk; ++column)
+                    sum[column] += partial[column];
             }
 
-            TMUL(tSum, tSum, tSk);
+            const auto &scale = TPARTELEMENT(tSk);
+#pragma pto element for
+            for (uint32_t column = 0; column < kTk; ++column)
+                sum[column] *= scale[column];
 
             auto gOut = gIterOut(i, j);
             TSTORE(gOut, tSum);
@@ -269,11 +253,11 @@ void qli_pto(float* scores_ptr,
 // qli_topk_radix — 4 轮 MSD radix-select TopK（Step 7，模板函数风格）
 // -----------------------------------------------------------------------------
 // 【算法】
-//   1. float→uint32 sortable key（仅符号翻转，7 tile op）
+//   1. float→uint32 sortable key（element-for 符号翻转）
 //      key = (sign) ? ~bits : (bits | 0x80000000)
 //   2. 逐字节 MSD radix（Byte3→Byte0）→ kth_value
 //   3. 提取：key > kth 全部入选，key == kth 边界并列补足
-//      每轮提取 = TROWARGMAX + 索引消零（TMUL，无标量 store）
+//      每轮提取 = TROWARGMAX + element-for 将选中元素清零
 // -----------------------------------------------------------------------------
 namespace qli_radix {
 
@@ -282,20 +266,17 @@ using RU = uint32_t;
 template <int CK, int CKV = CK>
 using TKey = Tile<Location::Vec, RU, 1, CK, BLayout::RowMajor, 1, CKV>;
 
-// Step 1: float bits → sortable key（仅符号翻转，7 tile op）
+// Step 1: 用标量 element-for 表达符号翻转，保留完整 chunk 快照。
 template <int CK, int CKV>
 inline void RadixMakeKey(RU* dst, const RU* src) {
-    using gk = global_tensor<RU, RowMajor<1, CKV>>;
-    gk gs(const_cast<RU*>(src));
-    TKey<CK, CKV> bits; TLOAD(bits, gs);
-    TKey<CK, CKV> sign; TANDS(sign, bits, 0x80000000u);
-    TKey<CK, CKV> neg;  TNOT(neg, bits);
-    TKey<CK, CKV> pos;  TORS(pos, bits, 0x80000000u);
-    TKey<CK, CKV> s01;  TSHRS(s01, sign, 31u);
-    TKey<CK, CKV> diff; TSUB(diff, neg, pos);
-    TMUL(diff, diff, s01);
-    TKey<CK, CKV> key;  TADD(key, pos, diff);
-    gk gd(dst); TSTORE(gd, key);
+    qli_element::make_key<CK, CKV>(dst, src);
+}
+
+// Step 2: 单 chunk 累积直方图：element-for 原子计数 + 标量前缀和
+template <int CK, int CKV>
+inline void RadixChunkHist(RU* key_ptr, int byteId, RU* prefix, RU* hist) {
+    const RU highPrefix = (prefix[0] << 24) | (prefix[8] << 16) | (prefix[16] << 8);
+    qli_element::histogram<CK, CKV>(hist, key_ptr, static_cast<RU>(byteId), highPrefix);
 }
 
 // Step 3: 从 key tile pop n 个最大元素（TROWARGMAX + 索引消零）
@@ -303,25 +284,21 @@ template <int CK, int CKV>
 inline void RadixPopN(TKey<CK, CKV>& mv, RU chunkBase, int32_t* out, int n) {
     // v0.58.4 行归约契约：TROWARGMAX 目的须物理单列 [N,1]（Col==1）；
     // 物理行数 32 维持 128B tile 尺寸下限，valid 仍为 [1,1]
-    using t1  = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
-    using t1i = Tile<Location::Vec, int32_t, 32, 1, BLayout::RowMajor, 1, 1>;
-    using gi1 = global_tensor<RU, RowMajor<1, 1>>;
-    using gi1i = global_tensor<int32_t, RowMajor<1, 1>>;
-    TKey<CK, CKV> idxTile; TCI(idxTile, chunkBase);
-    for (int k = 0; k < n; k++) {
-        t1 best; TROWARGMAX(best, mv);
-        t1 bestg; TADDS(bestg, best, chunkBase);
-        t1i besti; TCVT(besti, bestg);
-        gi1i gout(out + k); TSTORE(gout, besti);
-        RU bv = 0; gi1 gbv(&bv); TSTORE(gbv, bestg);
-        TKey<CK, CKV> bbc; TEXPANDS(bbc, bv);
-        // v0.58.4 predicate 契约：TCMPS 结果为 packed predicate（UINT8 存储），
-        // 不可参与算术（TSUB/TMUL）。索引消零改用 TSEL 条件覆盖：
-        // mv = (idx == best) ? 0 : mv（TSEL 读 dst 旧值作假分支，需先有值）
-        TKey<CK, CKV> diff; TSUB(diff, idxTile, bbc);
-        TKey<CK, CKV> isp; TCMPS<CmpMode::EQ>(isp, diff, 0u);
-        TKey<CK, CKV> zero; TEXPANDS(zero, 0u);
-        TSEL(mv, isp, zero);
+    using Scalar = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
+    auto &values = TPARTELEMENT(mv);
+    for (int k = 0; k < n; ++k) {
+        Scalar best;
+        TROWARGMAX(best, mv);
+        RU selected = 0;
+        global_tensor<RU, RowMajor<1, 1>> index(&selected);
+        TSTORE(index, best);
+        out[k] = static_cast<int32_t>(chunkBase + selected);
+        // 归约按原顺序提取；循环体只描述被选中元素的清零。
+#pragma pto element for
+        for (uint32_t element = 0; element < CKV; ++element) {
+            if (element == selected)
+                values[element] = 0;
+        }
     }
 }
 
@@ -334,72 +311,60 @@ inline void RadixExtract(RU* key_ptr, RU kthVal, RU chunkBase, int32_t* outBase,
     using gi1 = global_tensor<RU, RowMajor<1, 1>>;
     gk g(key_ptr);
 
-    // GT: key > kth（TCMPS 标量比较；predicate 不可直接归约/相乘）
+    // GT 候选及计数由普通标量比较物化，归约保持原 Tile 布局。
     {
         TKey<CK, CKV> key; TLOAD(key, g);
-        TKey<CK, CKV> isgt; TCMPS<CmpMode::GT>(isgt, key, kthVal);
-        // v0.58.4 predicate 契约：TSEL 物化 0/1 计数掩码与候选集
-        TKey<CK, CKV> one; TEXPANDS(one, 1u);
-        TKey<CK, CKV> sel1; TEXPANDS(sel1, 0u); TSEL(sel1, isgt, one);
-        t1 s; TROWSUM(s, sel1); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
-        TKey<CK, CKV> cand; TEXPANDS(cand, 0u); TSEL(cand, isgt, key);
+        TKey<CK, CKV> sel1, cand;
+        auto &keys = TPARTELEMENT(key);
+        auto &counts = TPARTELEMENT(sel1);
+        auto &values = TPARTELEMENT(cand);
+#pragma pto element for
+        for (uint32_t element = 0; element < CKV; ++element) {
+            const bool take = keys[element] > kthVal;
+            counts[element] = take ? 1u : 0u;
+            // PopN selects eligible indices; zero remains the cleared marker
+            // even when the original sortable key is itself zero.
+            values[element] = take ? element + 1u : 0u;
+        }
+        t1 s; TROWSUM(s, sel1);
+        RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
         RadixPopN<CK, CKV>(cand, chunkBase, outBase + outPos, (int)cnt);
         outPos += (int)cnt;
     }
     // EQ: key == kth（补足剩余名额）
     if (needEq > 0) {
         TKey<CK, CKV> key; TLOAD(key, g);
-        TKey<CK, CKV> iseq; TCMPS<CmpMode::EQ>(iseq, key, kthVal);
-        TKey<CK, CKV> one; TEXPANDS(one, 1u);
-        TKey<CK, CKV> sel1; TEXPANDS(sel1, 0u); TSEL(sel1, iseq, one);
-        t1 s; TROWSUM(s, sel1); RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
+        TKey<CK, CKV> sel1, cand;
+        auto &keys = TPARTELEMENT(key);
+        auto &counts = TPARTELEMENT(sel1);
+        auto &values = TPARTELEMENT(cand);
+#pragma pto element for
+        for (uint32_t element = 0; element < CKV; ++element) {
+            const bool take = keys[element] == kthVal;
+            counts[element] = take ? 1u : 0u;
+            values[element] = take ? element + 1u : 0u;
+        }
+        t1 s; TROWSUM(s, sel1);
+        RU cnt = 0; gi1 gcnt(&cnt); TSTORE(gcnt, s);
         int take = (int)cnt; if (take > needEq) take = needEq;
-        TKey<CK, CKV> cand; TEXPANDS(cand, 0u); TSEL(cand, iseq, key);
         RadixPopN<CK, CKV>(cand, chunkBase, outBase + outPos, take);
         outPos += take; needEq -= take;
     }
+}
+
+// 单个 chunk 的直方图 + 差分合并到 per_bin
+template <int CK, int CKV>
+inline void HistMergeChunk(RU* krow, int c, int stride, int r, RU* prefix, RU* hist, RU* per_bin) {
+    RadixChunkHist<CK, CKV>(krow + c * stride, r, prefix, hist);
+    volatile RU* rh = reinterpret_cast<volatile RU*>(hist);
+    RU prev = 0;
+    for (int b = 0; b < 256; b++) { RU cum = rh[b]; per_bin[b] += (cum - prev); prev = cum; }
 }
 
 // 单个 chunk 的提取（调用 RadixExtract，stride = MaxTileCol）
 template <int CK, int CKV>
 inline void ExtractChunk(RU* krow, int c, int stride, RU kthVal, int32_t* outBase, int& outPos, int& needEq) {
     RadixExtract<CK, CKV>(krow + c * stride, kthVal, (RU)c * stride, outBase, outPos, needEq);
-}
-
-// ---- 计数原语：count(key CMP thr)，用于阈值二分找第 k 大（替代退休的 THISTOGRAM）----
-// 单 chunk：TCMPS<M> → TSEL 物化 0/1 掩码 → TROWSUM，返回标量计数。
-// 仅用 Step3 同款在册算子（TCMPS/TSEL/TEXPANDS/TROWSUM），不发任何退休指令。
-template <CmpMode M, int CK, int CKV>
-inline RU CountChunk(const RU* key_ptr, RU thr) {
-    using gk = global_tensor<RU, RowMajor<1, CKV>>;
-    using t1 = Tile<Location::Vec, RU, 32, 1, BLayout::RowMajor, 1, 1>;
-    using gi1 = global_tensor<RU, RowMajor<1, 1>>;
-    gk g(const_cast<RU*>(key_ptr));
-    TKey<CK, CKV> key; TLOAD(key, g);
-    TKey<CK, CKV> ism; TCMPS<M>(ism, key, thr);
-    TKey<CK, CKV> one; TEXPANDS(one, 1u);
-    TKey<CK, CKV> sel1; TEXPANDS(sel1, 0u); TSEL(sel1, ism, one);
-    t1 s; TROWSUM(s, sel1);
-    RU cnt = 0; gi1 gc(&cnt); TSTORE(gc, s);
-    return cnt;
-}
-
-// 整行 count(key CMP thr)，按 chunk 分派（与 Step2/3 相同分块结构）。
-template <CmpMode M, int NumChunks, int MaxTileCol, int Skv,
-          int SinglePhy, int TailPhy, int TailCols>
-inline RU CountRow(const RU* krow, RU thr) {
-    RU cnt = 0;
-    if constexpr (NumChunks == 1) {
-        cnt += CountChunk<M, SinglePhy, Skv>(krow, thr);
-    } else if constexpr (TailCols != MaxTileCol) {
-        for (int c = 0; c < NumChunks - 1; c++)
-            cnt += CountChunk<M, MaxTileCol, MaxTileCol>(krow + (uint64_t)c * MaxTileCol, thr);
-        cnt += CountChunk<M, TailPhy, TailCols>(krow + (uint64_t)(NumChunks - 1) * MaxTileCol, thr);
-    } else {
-        for (int c = 0; c < NumChunks; c++)
-            cnt += CountChunk<M, MaxTileCol, MaxTileCol>(krow + (uint64_t)c * MaxTileCol, thr);
-    }
-    return cnt;
 }
 
 }  // namespace qli_radix
@@ -409,22 +374,33 @@ template <int Sq, int Skv, int topK>
 void qli_topk_radix(float* scores_gm, int32_t* indices_gm) {
     using namespace qli_radix;
     static_assert(Skv % 8 == 0, "Skv must be multiple of 8");
-    static_assert(topK <= Skv, "topK must be <= Skv");
+    static_assert(Sq > 0 && topK > 0 && topK <= Skv,
+                  "QLI requires Sq > 0 and 0 < topK <= Skv");
 
     constexpr int MaxTileCol = 2048;
     constexpr int NumChunks = (Skv + MaxTileCol - 1) / MaxTileCol;
     constexpr int TailCols = Skv - (NumChunks - 1) * MaxTileCol;
     constexpr int SinglePhy = (Skv < 128) ? 128 : Skv;
     constexpr int TailPhy = (TailCols < 128) ? 128 : TailCols;
+    static_assert((NumChunks == 1 && (Skv == 32 || Skv == 128 || Skv == 2048)) ||
+                  (NumChunks > 1 &&
+                   (TailCols == 32 || TailCols == 128 || TailCols == 2048)),
+                  "QLI element views require full 128/2048 columns or a 32-column tail");
 
+    // The caller supplies disjoint score and output/workspace allocations.
+    // Workspace holds Sq*topK indices, an existing 8192-byte reserved span,
+    // Sq*Skv keys, 256 histogram words, and 32 prefix words. The inner key and
+    // histogram helpers separately preserve their documented alias snapshots.
     uint32_t* key_scratch = reinterpret_cast<uint32_t*>(
             reinterpret_cast<uint8_t*>(indices_gm) + (uint64_t)Sq * topK * 4 + 8192);
+    uint32_t* hist_scratch = key_scratch + (uint64_t)Sq * Skv;
+    uint32_t* prefix_buf = hist_scratch + 256;
 
     for (int i = 0; i < Sq; i++) {
         const RU* row = reinterpret_cast<const RU*>(scores_gm) + (uint64_t)i * Skv;
         RU* krow = key_scratch + (uint64_t)i * Skv;
 
-        // ---- Step 1: float → sortable key（每 chunk 7 tile op）----
+        // ---- Step 1: float → sortable key（每 chunk 完整快照）----
         if constexpr (NumChunks == 1) {
             RadixMakeKey<SinglePhy, Skv>(krow, row);
         } else if constexpr (TailCols != MaxTileCol) {
@@ -436,22 +412,49 @@ void qli_topk_radix(float* scores_gm, int32_t* indices_gm) {
                 RadixMakeKey<MaxTileCol, MaxTileCol>(krow + c * MaxTileCol, row + c * MaxTileCol);
         }
 
-        // ---- Step 2: 阈值二分找第 topK 大 key（TCMPS<GT>+TROWSUM 计数，替代已退休 THISTOGRAM）----
-        // kth_value = 第 topK 大 sortable key = 最小 T 满足 count(key>T) < topK。
-        // count(key>·) 随 T 单调非增 → 32 轮二分即可；仅用 TCMPS<GT>（Step3 同款在册算子），
-        // 无 THISTOGRAM / 无 256 桶扫描 / 无 Idx 前缀。收敛点必为真实存在的 key
-        // （count_ge(kth)>=topK>count_gt(kth) ⇒ count_eq(kth)>0）。
-        RU lo = 0u, hi = 0xFFFFFFFFu;
-        while (lo < hi) {
-            RU mid = lo + (RU)((hi - lo) >> 1);
-            RU gt = CountRow<CmpMode::GT, NumChunks, MaxTileCol, Skv,
-                             SinglePhy, TailPhy, TailCols>(krow, mid);
-            if (gt < (RU)topK) hi = mid; else lo = mid + 1u;
+        // ---- Step 2: 4 轮 MSD radix → kth_value ----
+        RU kth_value = 0;
+        int remaining = topK;
+#pragma pto element for
+        for (uint32_t element = 0; element < 32; ++element)
+            prefix_buf[element] = 0;
+
+        for (int r = 3; r >= 0; r--) {
+            RU per_bin[256] = {0};
+            // 前缀: 已定高位字节（ByteId<3 时生效）
+            if (r < 3) {
+                const RU b3 = (kth_value >> 24) & 0xFFu;
+                const RU b2 = (kth_value >> 16) & 0xFFu;
+                const RU b1 = (kth_value >> 8) & 0xFFu;
+                // PE 私有前缀缓冲；下一次 histogram 调用按语句顺序读取。
+#pragma pto element for
+                for (uint32_t element = 0; element < 32; ++element) {
+                    prefix_buf[element] = element < 8 ? b3 :
+                                          element < 16 ? b2 :
+                                          element < 24 ? b1 : 0u;
+                }
+            }
+            // 逐 chunk 原子直方图 + 差分合并
+            if constexpr (NumChunks == 1) {
+                HistMergeChunk<SinglePhy, Skv>(krow, 0, MaxTileCol, r, prefix_buf, hist_scratch, per_bin);
+            } else if constexpr (TailCols != MaxTileCol) {
+                for (int c = 0; c < NumChunks - 1; c++)
+                    HistMergeChunk<MaxTileCol, MaxTileCol>(krow, c, MaxTileCol, r, prefix_buf, hist_scratch, per_bin);
+                HistMergeChunk<TailPhy, TailCols>(krow, NumChunks - 1, MaxTileCol, r, prefix_buf, hist_scratch, per_bin);
+            } else {
+                for (int c = 0; c < NumChunks; c++)
+                    HistMergeChunk<MaxTileCol, MaxTileCol>(krow, c, MaxTileCol, r, prefix_buf, hist_scratch, per_bin);
+            }
+
+            // 高桶向下累计 → kth_byte
+            RU cum = 0; int kth_byte = 0;
+            for (int b = 255; b >= 0; b--) {
+                cum += per_bin[b];
+                if (cum >= (RU)remaining) { kth_byte = b; break; }
+            }
+            remaining -= (int)(cum - per_bin[kth_byte]);
+            kth_value |= ((RU)kth_byte) << (r * 8);
         }
-        RU kth_value = lo;
-        RU gtCount = CountRow<CmpMode::GT, NumChunks, MaxTileCol, Skv,
-                              SinglePhy, TailPhy, TailCols>(krow, kth_value);
-        int remaining = topK - (int)gtCount;   // 需从 == kth_value 组补足的名额
 
         // ---- Step 3: 提取 topK 索引（每 chunk: 先 GT 后 EQ）----
         int outPos = 0;

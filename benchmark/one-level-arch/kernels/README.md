@@ -50,3 +50,9 @@ matmul_shared<float, gM, gN, gK, tM, tN, tK>(c_ptr, a_ptr, b_ptr);
 ## See Also
 - [Top-level README](../../README.md)
 - [Test suites](../test/kernel/README.md)
+
+## PTO element-for examples
+
+The core TopK example is [basic_op/topk/element_atomic_topk.hpp](basic_op/topk/element_atomic_topk.hpp). It alternates public Tile loads/views, ordinary scalar C++ under `#pragma pto element for`, and Tile stores. Its runnable driver and coherence checks are in `test/kernel/sort/element_atomic_topk/`.
+
+The element-for migration retains the original workload configurations in the gfrun suite under `test/kernel/element_wise/tile_element_suite/`. Former single-thread sources now live under `basic_op/`; the verification inventory records their original identities and current paths. QLI demonstrates repeated Tile reduction → element-loop mutation → Tile reduction across helper calls.
