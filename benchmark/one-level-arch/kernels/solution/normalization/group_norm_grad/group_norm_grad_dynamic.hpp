@@ -16,7 +16,9 @@
 // Every Tile is at most 32 KiB (FP32 CubeM32 [32,256]). Stage 1 (R=HxW) and
 // stage 2 (R=D) reduce in one pass (group_norm_grad_reduce.hpp) when R is a
 // power of two <= 256 or folds to [<=32, 2^k<=256]; otherwise [1,256] strips
-// spill partial sums through GM.
+// spill partial sums through GM. Stage 3 prefers the same HxW fold so each
+// channel is one [fa,Cols] TLOAD (e.g. HxW=2048 → [8,256] = 4 KiB FP16)
+// instead of HxW/256 × 512 B strips that cannot hide SoC latency.
 // One kernel runs all four stages; each PE owns complete groups across N.
 // Every workspace read has a producer on the same PE; no inter-PE barrier.
 //
@@ -330,7 +332,52 @@ inline void spatial_block(dtype *dy, dtype *x, float *ds, float *db, int64_t C,
   TSTORE(gb, ba);
 }
 
-// dx within one group: 32x256 FP32 data Tile = 32 KiB.
+// Stage 3, HxW = fa*Cols: one (n,c) folded to [fa,Cols] (one TLOAD per tensor).
+// Prefer this over [1,256] strips so SoC latency is paid once per channel, not
+// once per 256-wide strip (HxW=2048 → 8x fewer TLOAD round-trips).
+template <typename dtype, int Cols>
+__attribute__((always_inline)) inline void
+dx_fold(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2, float *c3,
+        dtype *dx, int64_t C, int64_t G, int64_t D, int64_t n, int64_t c,
+        int64_t fa) {
+  using GM = global_tensor<dtype, RowMajor<-1, -1>>;
+  using T = Tiles<dtype, Cols>;
+  const int64_t g = c / D;
+  const int64_t off = (n * C + c) * fa * Cols;
+  GM gx(x + off, fa, Cols), gy(dy + off, fa, Cols), go(dx + off, fa, Cols);
+  GFloat gm_r(rstd + n * G + g, 1, 1), gm_c2(c2 + n * G + g, 1, 1),
+      gm_c3(c3 + n * G + g, 1, 1);
+  GM gg(gamma + c, 1, 1);
+  typename T::H v(fa, Cols);
+  typename T::F xf(fa, Cols), yf(fa, Cols), out(fa, Cols);
+  typename T::V ones(fa), v1(fa), v2(fa), v3(fa);
+  typename T::Scalar rs, s2, s3, c1;
+  Tile<Location::Vec, dtype, 32, 2, BLayout::CubeM32, 1, 1> hg;
+  Tile<Location::Vec, float, 32, 1, BLayout::CubeM32, 1, 1> gv;
+  TLOAD(rs, gm_r);
+  TLOAD(s2, gm_c2);
+  TLOAD(s3, gm_c3);
+  TLOAD(hg, gg);
+  TCVT(gv, hg);
+  TMUL(c1, gv, rs);
+  TEXPANDS(ones, 1.0f);
+  TCOLEXPANDMUL(v1, ones, c1);
+  TCOLEXPANDMUL(v2, ones, s2);
+  TCOLEXPANDMUL(v3, ones, s3);
+  TLOAD(v, gx);
+  TCVT(xf, v);
+  TLOAD(v, gy);
+  TCVT(yf, v);
+  TROWEXPANDMUL(out, yf, v1);
+  TROWEXPANDMUL(xf, xf, v2);
+  TADD(out, out, xf);
+  TROWEXPANDADD(out, out, v3);
+  TCVT(v, out);
+  TSTORE(go, v);
+}
+
+// dx within one group: strip along HxW with up to 32 contiguous channels.
+// Prefer when HxW does not fold into [fa<=32, 2^k]; Config caps tile_hw at 256.
 template <typename dtype>
 inline void dx_block(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2,
                      float *c3, dtype *dx, int64_t C, int64_t G, int64_t H,
@@ -507,28 +554,41 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
               gamma, mean, rstd, ds, db, c2, c3, t.N, t.C, t.G, t.D, n, g, s);
     }
   }
-  // Stage 3: dx.
+  // Stage 3: dx. Prefer folded [fa,Cols] TLOADs when HxW packs into one Tile
+  // so each channel pays one Soft latency, not HxW/256 strip round-trips.
   {
     using GH = global_tensor<dtype, RowMajor<-1, -1>>;
     using GF = global_tensor<float, RowMajor<-1, -1>>;
     using TH = Tile<Location::Vec, dtype, 1, 256, BLayout::CubeM32, -1, -1>;
     using TF = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, -1>;
     using TV = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, 1>;
-    for (int64_t batch = 0; batch < t.N; ++batch)
-      for (int64_t ng = batch * t.G + group_begin; ng < batch * t.G + group_end;
-           ++ng) {
-        const int64_t n = ng / t.G, g = ng % t.G;
-        for (int64_t d = 0; d < t.D; d += t.dc) {
-          const int64_t rows = t.D - d < t.dc ? t.D - d : t.dc;
-          if (t.dc > 1)
-            gn_grad::dx_block(dy, x, gamma, rstd, c2, c3, dx, t.C, t.G, t.H, n,
-                              g, g * t.D + d, rows, t.dh);
-          else
-            gn_grad::dx_nc<dtype, GH, GF, TH, TF, TV>(
-                dy, x, gamma, rstd, c2, c3, dx, t.N, t.C, t.G, t.D, t.H, t.dh,
-                n, g * t.D + d);
+    const int64_t fr = gn_grad::fold_cols(t.H);
+    const int64_t fa = fr > 0 ? t.H / fr : 0;
+    if (fr > 0 && fa > 0 && fa <= 32) {
+      gn_grad::with_cols(fr, [&]<int Cols>() {
+        for (int64_t batch = 0; batch < t.N; ++batch)
+          for (int64_t g = group_begin; g < group_end; ++g)
+            for (int64_t d = 0; d < t.D; ++d)
+              gn_grad::dx_fold<dtype, Cols>(dy, x, gamma, rstd, c2, c3, dx, t.C,
+                                            t.G, t.D, batch, g * t.D + d, fa);
+      });
+    } else {
+      for (int64_t batch = 0; batch < t.N; ++batch)
+        for (int64_t ng = batch * t.G + group_begin;
+             ng < batch * t.G + group_end; ++ng) {
+          const int64_t n = ng / t.G, g = ng % t.G;
+          for (int64_t d = 0; d < t.D; d += t.dc) {
+            const int64_t rows = t.D - d < t.dc ? t.D - d : t.dc;
+            if (t.dc > 1)
+              gn_grad::dx_block(dy, x, gamma, rstd, c2, c3, dx, t.C, t.G, t.H,
+                                n, g, g * t.D + d, rows, t.dh);
+            else
+              gn_grad::dx_nc<dtype, GH, GF, TH, TF, TV>(
+                  dy, x, gamma, rstd, c2, c3, dx, t.N, t.C, t.G, t.D, t.H,
+                  t.dh, n, g * t.D + d);
+          }
         }
-      }
+    }
   }
   // Stage 4: gamma/beta.
   {

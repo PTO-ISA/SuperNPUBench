@@ -41,8 +41,10 @@ int main() {
                 C_CH % G_GRP == 0);
   constexpr int64_t D = C_CH / G_GRP;
   constexpr int64_t rh = HxW_SZ < 512 ? HxW_SZ : 512, rc = 1;
+  // dh is capped to 256 inside the kernel Config; keep dc = min(D,32) so the
+  // strip fallback can issue multi-row [dc,256] TLOADs instead of 512B rows.
   constexpr int64_t dh = HxW_SZ < 8192 ? HxW_SZ : 8192;
-  constexpr int64_t dc = dh <= 256 ? (D < 32 ? D : 32) : 1;
+  constexpr int64_t dc = D < 32 ? D : 32;
   constexpr int64_t bd = D < 8192 ? D : 8192,
                     bg = bd <= 256 ? (G_GRP < 32 ? G_GRP : 32) : 1;
   int64_t tiling_info[10] = {N_BATCH, C_CH, G_GRP, HxW_SZ, rh,
