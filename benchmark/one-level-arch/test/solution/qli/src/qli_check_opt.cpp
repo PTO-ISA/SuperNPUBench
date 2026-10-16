@@ -71,8 +71,30 @@ extern "C" unsigned char _binary_srcq_data_start[], _binary_srck_data_start[],
 #define DTYPE __fp8_e4m3
 #endif
 
+// 多 PE 测试路径（Makefile -DTNPE=$(NPE)，默认 4）：
+//   wbb 预广播（行块）与 K^T 转置（token 列块）拆分到 NPE 个 PE 并行——两者
+//   均为不相交写，无需同步；worker 完成各自块后置完成标志即退出，仅 PE0
+//   自旋等待全部 ktt 就绪，随后独跑 qli_pto 分数阶段与 qli_topk_radix TopK
+//   （单 PE 代码路径不变）。分数/TopK 的行级并行需 kernel 侧改造
+//   （qli_topk_radix 的 scratch 布局随模板 Sq 推导，按行实例化会互相踩踏）。
+// 运行：gfrun/gfsim -s softcore.multiThreadNum=$(NPE)（gfsim 对含 PEID 指令
+// 的 ELF 自动套用 fourpe bundle，NPE<4 时多余 PE 在 tid 门控处退出）。
+#ifndef TNPE
+#define NPE 4
+#else
+#define NPE TNPE
+#endif
+static_assert(NPE >= 2 && NPE <= 4, "NPE must be 2..4 (multi-PE only)");
+
+// 完成标志（.bss 零初始化；volatile + 编译器屏障，与
+// multi_thread_res_check.h 的发布/等待语义同款）
+static volatile uint32_t ktt_ready[NPE];
+
 int main(){
     using dtype = DTYPE;
+
+    const uint32_t tid = get_thread_idx();
+    if (tid >= NPE) return 0;
 
     // P1: No copy_bytes — pass .data segment addresses directly.
     // The kernel's global_tensor accepts raw pointers; TLOAD reads from
@@ -84,18 +106,41 @@ int main(){
     float*   scale_k = reinterpret_cast<float*>(SRCSK_ADDR);
 
     // v0.58.4：W*scale_q 预广播为 [Sq*g, kTk]（行 r 全列同值），
-    // kernel 内用普通 TMUL（规避单列广播源的物理列校验）
+    // kernel 内用普通 TMUL（规避单列广播源的物理列校验）；
+    // 多 PE：行区间 [tid*per, ...) 拆分（不相交写）
     static float wbb[Sq * g * kTk];
-    for (int r = 0; r < Sq * g; r++)
-        for (int c = 0; c < kTk; c++)
-            wbb[r * kTk + c] = w[r] * scale_q[r];
-    // v0.58.4：K 转置为 [D, Skv] 行主序（CUBE_N8 B-tile 契约）
+    {
+        const int total = Sq * g;
+        const int per = (total + NPE - 1) / NPE;
+        const int r0 = (int)tid * per;
+        const int r1 = (r0 + per < total) ? (r0 + per) : total;
+        for (int r = r0; r < r1; r++)
+            for (int c = 0; c < kTk; c++)
+                wbb[r * kTk + c] = w[r] * scale_q[r];
+    }
+    // v0.58.4：K 转置为 [D, Skv] 行主序（CUBE_N8 B-tile 契约）；
+    // 多 PE：token 列区间 [tid*per, ...) 拆分（不相交写）
     static dtype ktt[D * Skv];
-    for (int n = 0; n < Skv; n++)
-        for (int d = 0; d < D; d++)
-            ktt[d * Skv + n] = k[n * D + d];
+    {
+        const int per = (Skv + NPE - 1) / NPE;
+        const int n0 = (int)tid * per;
+        const int n1 = (n0 + per < Skv) ? (n0 + per) : Skv;
+        for (int n = n0; n < n1; n++)
+            for (int d = 0; d < D; d++)
+                ktt[d * Skv + n] = k[n * D + d];
+    }
     // CUBE->Vec 桥接临时区
     static float tmp16[kTm * kTk];
+
+    // worker：各自块完成 → 置标志 → 退出；PE0：等全部 ktt 块就绪
+    __asm__ volatile("" : : : "memory");
+    ktt_ready[tid] = 1;
+    if (tid != 0) return 0;
+    for (uint32_t p = 1; p < NPE; ++p) {
+        while (ktt_ready[p] == 0) {
+        }
+    }
+    __asm__ volatile("" : : : "memory");
 
     BENCHSTART;
     for(int i=0;i<B;i++){

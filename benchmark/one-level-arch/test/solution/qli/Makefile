@@ -33,7 +33,13 @@ ifeq ($(TESTCASE), qli_check_opt)
       DEFINES += -DQLI_DTYPE_FP8
       DT_TAG = _fp8
    endif
-   TARGET = $(ELF_HEAD)/$(TESTCASE)$(DT_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv)_g$(g)_Tm$(Tm)_Tk$(Tk).elf
+   # 多 PE 测试路径（仅此路径）：wbb/K^T 转置按块拆到 NPE 个 PE，分数+TopK
+   # 仍由 PE0 串行（kernel 行级并行待后续）。NPE 默认 4。
+   # 运行须 -s softcore.multiThreadNum=$(NPE)。ELF 名固定带 _npeN 后缀。
+   NPE ?= 4
+   DEFINES += -DTNPE=$(NPE)
+   NPE_TAG = _npe$(NPE)
+   TARGET = $(ELF_HEAD)/$(TESTCASE)$(DT_TAG)$(NPE_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv)_g$(g)_Tm$(Tm)_Tk$(Tk).elf
 endif
 
 ifeq ($(TESTCASE), qli_check_opt_dynamic)
