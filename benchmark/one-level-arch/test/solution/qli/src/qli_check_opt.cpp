@@ -114,9 +114,15 @@ int main(){
         const int per = (total + NPE - 1) / NPE;
         const int r0 = (int)tid * per;
         const int r1 = (r0 + per < total) ? (r0 + per) : total;
-        for (int r = r0; r < r1; r++)
+        for (int r = r0; r < r1; r++) {
+            const float v = w[r] * scale_q[r];
+            // unroll(disable)：gfsim fourpe bundle 的 BCC 提交协议对"双 load +
+            // fmul + 多 store 展开"的 [FP COND] 循环块会确定性卡死（cycles=13939，
+            // blocks=59，27 块全堵 STID0）；禁用内层展开后正常推进。gfrun 不受影响。
+#pragma clang loop unroll(disable)
             for (int c = 0; c < kTk; c++)
-                wbb[r * kTk + c] = w[r] * scale_q[r];
+                wbb[r * kTk + c] = v;
+        }
     }
     // v0.58.4：K 转置为 [D, Skv] 行主序（CUBE_N8 B-tile 契约）；
     // 多 PE：token 列区间 [tid*per, ...) 拆分（不相交写）

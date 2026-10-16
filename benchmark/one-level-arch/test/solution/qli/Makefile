@@ -39,7 +39,9 @@ ifeq ($(TESTCASE), qli_check_opt)
    NPE ?= 4
    DEFINES += -DTNPE=$(NPE)
    NPE_TAG = _npe$(NPE)
-   TARGET = $(ELF_HEAD)/$(TESTCASE)$(DT_TAG)$(NPE_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv)_g$(g)_Tm$(Tm)_Tk$(Tk).elf
+   # topk 入名（与 qli_check_opt_dynamic 的命名约定一致）：同 (Sq,Skv) 不同
+   # topk 的变体（如真机对照的 topk512/topk1024）产物不再互相覆盖
+   TARGET = $(ELF_HEAD)/$(TESTCASE)$(DT_TAG)_B$(B)_Sq$(Sq)_Skv$(Skv)_topk$(topk)$(NPE_TAG)_g$(g)_Tm$(Tm)_Tk$(Tk).elf
 endif
 
 ifeq ($(TESTCASE), qli_check_opt_dynamic)
