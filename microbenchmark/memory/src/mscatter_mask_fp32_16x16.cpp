@@ -7,12 +7,11 @@ int main() {
     int32_t idx[M*N]; uint8_t mask[M*N];
     for (int i=0;i<M*N;++i) { a[i] = (float)((i % 97) + 1); mask[i] = (uint8_t)(i % 3 != 0); }
     fill_idx(idx, M*N); zero(c, M*N);
-    for (int i=0;i<M*N;++i) idx[i] *= sizeof(float); // gather/scatter offsets are bytes
     BENCHSTART;
     bench_scatter_mask<float,M,N>(c,a,idx,mask);
     BENCHEND;
 #ifdef RES_CHECK
-    float ref[M*N]; zero(ref,M*N); for(int i=0;i<M*N;++i) if(mask[i]) ref[idx[i]/sizeof(float)]=a[i];
+    float ref[M*N]; zero(ref,M*N); for(int i=0;i<M*N;++i) if(mask[i]) ref[idx[i]]=a[i];
     return verify(c,ref,M*N,(float)verify_epsilon<float>(),(float)verify_epsilon<float>()) ? 0 : 1;
 #else
     return 0;

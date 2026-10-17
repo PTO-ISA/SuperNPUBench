@@ -120,12 +120,12 @@ static inline void calTokenPerExpertCnt_tile(uint32_t *topkIndex,
 //       无 TLSU 原子族 [C12]): TROWEXPAND(Mc) + TCOLEXPAND(Mr) + TCMP<EQ>
 //       + TSEL(∧TTRI 下三角) + TROWSUM → rankIncl = 1+#{j<i:min_j==min_i},
 //       GM 往返转 [1×16] 后 TSUBS(-1) = rank (稳定序 = 标量 cnt++ 一致)
-//   8.  base = MGATHER(expertSectionTokenCnt, min<<2) (平 MGATHER 查写指针)
-//       offE = base + rank → TSHLS(<<2) 字节位移
+//   8.  base = MGATHER(expertSectionTokenCnt, min) (平 MGATHER 查写指针, 元素下标)
+//       offE = base + rank (元素下标直传)
 //   9.  TCI(tok, blk*16)                   — token id 行 ramp ([C5])
-//   10. MSCATTER(groupedTokenIds, tok, offB)
-//   11. 每 pod p: TMULS(offE*superPodNum)+TADDS(p)+TSHLS(<<2) +
-//       MSCATTER(tokenSuperPodInfo, podFlagRow_p, poB)
+//   10. MSCATTER(groupedTokenIds, tok, offE)
+//   11. 每 pod p: TMULS(offE*superPodNum)+TADDS(p) +
+//       MSCATTER(tokenSuperPodInfo, podFlagRow_p, po)
 //   12. 块末进位: 每 section 计数链 ([C10]) + 标量 volatile RMW 更新
 //       expertSectionTokenCnt (= 输出计数器本身, 终值 = 各区总数)
 //
@@ -262,20 +262,16 @@ static inline void groupToken_tile(uint32_t *topkIndex,
         // 8-10. groupedTokenIds[min*bs + base+rank] = tokenId
         //       base = 平 MGATHER 查当前写指针 (计数器 = 输出本身);
         //       平坦下标 = 段基址 min*batchSize + 段内位置 base+rank
-        TCol16 minIdx;
-        TSHLS(minIdx, minRow, 2u);
         TCol16 base;
-        MGATHER(base, gCnt, minIdx);
+        MGATHER(base, gCnt, minRow);
         TCol16 minB;
         TMULS(minB, minRow, batchSize);
         TCol16 offE;
         TADD(offE, minB, base);
         TADD(offE, offE, rankRow);
-        TCol16 offB;
-        TSHLS(offB, offE, 2u);
         TCol16 tok;
         TCI(tok, blk * kTileM);
-        MSCATTER(gIds, tok, offB);
+        MSCATTER(gIds, tok, offE);
 
         // 11. tokenSuperPodInfo[(min*bs+base+rank)*spn + p] = podFlag_p
         for (uint32_t p = 0; p < superPodNum; ++p) {
@@ -285,9 +281,7 @@ static inline void groupToken_tile(uint32_t *topkIndex,
             TCol16 po;
             TMULS(po, offE, superPodNum);
             TADDS(po, po, p);
-            TCol16 poB;
-            TSHLS(poB, po, 2u);
-            MSCATTER(gPodInfo, flagRow, poB);
+            MSCATTER(gPodInfo, flagRow, po);
         }
 
         // 12. 块末 base 进位: expertSectionTokenCnt[s] += #{本块 min==s}
@@ -487,17 +481,13 @@ static inline void sortByLocalExpId_tile(const uint32_t *minLocalExpIds,
         TSUBS(rankRow, rankRow, 1u);
 
         // pos = writePos[sec] + rank → MSCATTER(token ramp)
-        T1x32 sIdx;
-        TSHLS(sIdx, sRow, 2u);
         T1x32 base;
-        MGATHER(base, gWP, sIdx);
+        MGATHER(base, gWP, sRow);
         T1x32 pos;
         TADD(pos, base, rankRow);
-        T1x32 posB;
-        TSHLS(posB, pos, 2u);
         T1x32 tok;
         TCI(tok, tb * 32u);
-        MSCATTER(gSorted, tok, posB);
+        MSCATTER(gSorted, tok, pos);
 
         // writePos 进位: 每 bin 计数链 + 标量 volatile RMW
         for (uint32_t e = 0; e < expertPerRank; ++e) {

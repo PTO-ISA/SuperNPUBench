@@ -11,7 +11,7 @@
 // 摘要):
 //   [C2] MSCATTER_ADD: 汇编器助记符表缺 "MSCATTER.ADD", 须数字编码
 //        BSTART.TLSU 21 (模型 TMA_MSCATTER_ADD=21 已实现); index tile 为
-//        相对 base 的字节位移; tile 内重复下标按 row-major 顺序串行 RMW。
+//        相对 base 的元素下标 (PTO v0.58.6); tile 内重复下标按 row-major 顺序串行 RMW。
 //   [C3] MGATHER_ADD: old 值发布 (原子写指针 tile 化), 重复下标确定序。
 //   [C4] 原子族/标量 TEPL 一律 [1×N] 行 tile (N>=2, lb0=ValidCol
 //        必须存在 —— dim-opt 省略值 1 的 B.DIM); [N×1] 归约输出只可 TSTORE。

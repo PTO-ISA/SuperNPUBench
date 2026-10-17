@@ -254,17 +254,15 @@ static inline void rank_dstpos_segment_dyn(const int32_t* expertIds,
         TSEL(idx, neg, zero);
         TSEL(idx, oob, zero);
         TSEL(idx, over, zero);
-        TI1x32 idxB;
-        TSHLS(idxB, idx, 2u);
 
         TI1x32 carry;
         global_tensor<int32_t, RowMajor<-1, -1>> gCnt(
             rankCnt, 1, moeExpertNum);
-        MGATHER(carry, gCnt, idxB);
+        MGATHER(carry, gCnt, idx);
         TI1x32 starts;
         global_tensor<int32_t, RowMajor<-1, -1>> gStarts(
             const_cast<int32_t*>(expertStarts), 1, moeExpertNum);
-        MGATHER(starts, gStarts, idxB);
+        MGATHER(starts, gStarts, idx);
         TI1x32 pos;
         TADD(pos, starts, carry);
         TADD(pos, pos, rankRow);

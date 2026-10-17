@@ -14,7 +14,7 @@
 //   [C2] MSCATTER_ADD: 汇编器助记符表缺 "MSCATTER.ADD" (LinxV5AsmParser
 //        parseTileOPTMA), 须数字编码 BSTART.TLSU 21 (模型 TMA_MSCATTER_ADD=21,
 //        TMAEngine::ExecuteGMReductionValue 已实现)。index tile 为相对 base
-//        的**字节位移** (GMByteDisplacement; address%elementBytes 须 0)。
+//        的**元素下标** (PTO v0.58.6; gfrun 按元素大小换算字节地址)。
 //        tile 内重复下标按 row-major 元素序串行 RMW → 计数稳定序。
 //   [C3] MGATHER_ADD (助记符可用): old 值发布到 dst tile, 重复下标同上确定
 //        序 → 可替代标量 "idx = cnt[section]++" 原子写指针。
