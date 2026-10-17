@@ -220,3 +220,51 @@ grep -E "Total Cycles|Tileop Counter" sim.log
 | 单 PE CSA HIF8 | 100% @2e-2（max_abs 4.68e-03） | **完整跑通 2,982,900 cycles**（finisher pass） |
 | 4-PE CSA 静态/动态（HIF8） | 100% @2e-2 | — |
 | 单 PE SWA（tadd FP16） | 100% @1e-3 | 历史通过（340 万 cycles） |
+
+---
+
+## 5. prebuilt ELF 直接运行（v2 / v3 daily）
+
+`kernels/solution/quant_sparse_flash_mla/prebuilt/` 内置 csa_small（B=1, S1=1,
+S2=128, N1=64, D=512, win127/0, cmp_s2=64, TopK=40, ratio=4, HIF8 入 / BF16 出）
+两个性能形态的自足 ELF（数据已嵌入），合入后无需编译即可运行：
+
+| ELF（prebuilt/ 内） | 形态 | gfsim cycles | 数值 |
+|---|---|---|---|
+| `..._Tm64_Tk32_Td64_IMPLcsa_tadd_4pe_...INPUTembedded.elf` | v2（tadd 线，Tk=32/Td=64） | 455,596 | R2=0 |
+| `..._Tm64_Tk128_Td512_IMPLcsa_v3_4pe_...INPUTembedded.elf` | v3（ops-arch35 流程，Tk=128/Td=512） | **26,022** | R2=0 |
+
+运行命令（在 SuperScalarModel 仓根目录执行；gfrun 为功能验证，gfsim 为时序仿真）：
+
+```bash
+# 功能验证（4-PE，HIF8 输入，对照嵌入 golden，R2=0）
+./bin/gfrun -f <SuperNPUBench>/benchmark/one-level-arch/kernels/solution/quant_sparse_flash_mla/prebuilt/<ELF> -s softcore.multiThreadNum=4
+
+# 时序仿真（输出 Core cycles；完成时写 linx_test_finisher 0x5555 pass）
+./bin/gfsim -f <SuperNPUBench>/benchmark/one-level-arch/kernels/solution/quant_sparse_flash_mla/prebuilt/<ELF> -s softcore.multiThreadNum=4
+```
+
+### 5.1 daily / release 集成
+
+`compile.all`（release 打包 `ops-YYYYMMDD` 的 qsmla daily case）在既有五模式
+tadd 清单末尾追加 v3 形态（大 tile `Tm=64 Tk=128 Td_block=512 IMPL=csa_v3_4pe`），
+与五模式共用 csa_small 数据。release 自动产出的 output/ ELF 即含 v2/v3 两个形态。
+
+### 5.2 从源码重编
+
+```bash
+export COMPILER_DIR=<linx_blockisa_llvm_musl>/bin
+cd benchmark/one-level-arch/test/solution/quant_sparse_flash_mla
+# 数据（幂等，已生成则跳过）
+python3 run_qsmla_cpu_reference.py --case csa_small --dtype HIF8 --output-root /tmp/qsmla-sparse-hif8
+# v2
+make TESTCASE=quant_sparse_flash_mla QSMLA_SPARSE_EMBED_INPUT=on B=1 s1=1 s2=128 \
+  cmp_s2=64 N1=64 N2=1 D=512 wleft=127 wright=0 softmax_scale=0.04419417 \
+  ori_topk=40 cmp_topk=40 cmp_ratio=4 Tm=64 Tk=32 Td_block=64 QSMLA_DTYPE=HIF8 \
+  QSMLA_SPARSE_DATA_ROOT=/tmp/qsmla-sparse-hif8 IMPL=csa_tadd_4pe
+# v3
+make TESTCASE=quant_sparse_flash_mla QSMLA_SPARSE_EMBED_INPUT=on B=1 s1=1 s2=128 \
+  cmp_s2=64 N1=64 N2=1 D=512 wleft=127 wright=0 softmax_scale=0.04419417 \
+  ori_topk=40 cmp_topk=40 cmp_ratio=4 Tm=64 Tk=128 Td_block=512 QSMLA_DTYPE=HIF8 \
+  QSMLA_SPARSE_DATA_ROOT=/tmp/qsmla-sparse-hif8 IMPL=csa_v3_4pe
+```
