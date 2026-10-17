@@ -430,8 +430,9 @@ inline void group_fused(dtype *dy, dtype *x, dtype *gamma, float *mean,
     TADD(sum1, sum1, ts);
     TADD(sum2, sum2, tb);
   }
-  // Loaded after the reduce loop: a Tile live across a loop it is not used in
-  // is referenced with a stale relative index.
+  // Loaded after the reduce loop: defined before it, rstd reaches the dX loop
+  // through a zero-mask PseudoEmptyTile hand pad and is misread from the 2nd
+  // iteration on (LinxISA/llvm-project#130).
   TLOAD(m, gm);
   TLOAD(r, gr);
   c2_c3(c2, c3, sum1, sum2, m, r, s);
@@ -688,8 +689,9 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         continue;
       }
       if (t.bd <= 256) {
-        // Row expansion rejects a data Tile whose valid width differs from
-        // its physical width, so split D into power-of-two column chunks.
+        // gfrun row expansion rejects a data Tile whose valid width differs
+        // from its physical width (LinxISA/SuperScalarModel#1005), so split
+        // D into power-of-two column chunks.
         for (int64_t d = 0; d < t.D;) {
           const int64_t rem = t.D - d < t.bd ? t.D - d : t.bd;
           int64_t cols = 2;
