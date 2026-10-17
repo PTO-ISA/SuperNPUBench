@@ -19,9 +19,10 @@
 // spill partial sums through GM. Stage 3 prefers the same HxW fold so each
 // channel is one [fa,Cols] TLOAD (e.g. HxW=2048 → [8,256] = 4 KiB FP16)
 // instead of HxW/256 × 512 B strips that cannot hide SoC latency.
-// Stages 1–3 are ordered per batch: spatial over all owned groups (keeps
-// TLOAD concurrency), then fused→dx per group so dX reloads dy/x while they
-// are still hot in L2. Stage 4 still reduces dgamma/dbeta over N afterward.
+// When HxW folds, Stages 1–3 run fused per (n,g) (group_fused): ds/db and
+// c2/c3 never leave registers on the way to dX. Otherwise they are ordered
+// per batch: spatial over all owned groups, then fused→dx per group. Stage 4
+// still reduces dgamma/dbeta over N afterward.
 // One kernel runs all four stages; each PE owns complete groups across N.
 // Every workspace read has a producer on the same PE; no inter-PE barrier.
 //
@@ -379,6 +380,91 @@ dx_fold(dtype *dy, dtype *x, dtype *gamma, float *rstd, float *c2, float *c3,
   TSTORE(go, v);
 }
 
+// Stages 1–3 for one (n,g) with HxW = fa*Cols. ds/db and c2/c3 stay in
+// registers, so dX does not wait on a GM store→load round trip (tile stores
+// do not forward); ds/db still go to GM for Stage 4.
+template <typename dtype, int Cols>
+inline void group_fused(dtype *dy, dtype *x, dtype *gamma, float *mean,
+                        float *rstd, float *ds, float *db, dtype *dx,
+                        int64_t C, int64_t G, int64_t D, int64_t n, int64_t g,
+                        int64_t fa, float s) {
+  using GM = global_tensor<dtype, RowMajor<-1, -1>>;
+  using T = Tiles<dtype, Cols>;
+  using Sc = typename T::Scalar;
+  using HS = Tile<Location::Vec, dtype, 32, 2, BLayout::CubeM32, 1, 1>;
+  const int64_t ng = n * G + g;
+  GFloat gm(mean + ng, 1, 1), gr(rstd + ng, 1, 1);
+  Sc m, r, sum1, sum2, c2, c3;
+  TEXPANDS(sum1, 0.0f);
+  TEXPANDS(sum2, 0.0f);
+  for (int64_t d = 0; d < D; ++d) {
+    const int64_t c = g * D + d;
+    const int64_t off = (n * C + c) * fa * Cols;
+    GM gx(x + off, fa, Cols), gy(dy + off, fa, Cols), gg(gamma + c, 1, 1);
+    GFloat gs(ds + n * C + c, 1, 1), gb(db + n * C + c, 1, 1);
+    typename T::H v(fa, Cols);
+    typename T::F xf(fa, Cols), yf(fa, Cols);
+    typename T::W sw(fa), bw(fa);
+    typename T::S s_sum, b_sum;
+    HS hg;
+    Sc gv, ts, tb;
+    TLOAD(hg, gg);
+    TCVT(gv, hg);
+    TLOAD(v, gy);
+    TCVT(yf, v);
+    TLOAD(v, gx);
+    TCVT(xf, v);
+    TROWSUM(bw, yf);
+    TMUL(xf, xf, yf);
+    TROWSUM(sw, xf);
+    TCOLSUM(b_sum, bw);
+    TCOLSUM(s_sum, sw);
+    TSTORE(gs, s_sum);
+    TSTORE(gb, b_sum);
+    auto vs = TREDUCEPREFIXVIEW<Sc>(s_sum);
+    auto vb = TREDUCEPREFIXVIEW<Sc>(b_sum);
+    TMULS(ts, vs, 1.0f);
+    TMULS(tb, vb, 1.0f);
+    TMUL(ts, ts, gv);
+    TMUL(tb, tb, gv);
+    TADD(sum1, sum1, ts);
+    TADD(sum2, sum2, tb);
+  }
+  // Loaded after the reduce loop: a Tile live across a loop it is not used in
+  // is referenced with a stale relative index.
+  TLOAD(m, gm);
+  TLOAD(r, gr);
+  c2_c3(c2, c3, sum1, sum2, m, r, s);
+  for (int64_t d = 0; d < D; ++d) {
+    const int64_t c = g * D + d;
+    const int64_t off = (n * C + c) * fa * Cols;
+    GM gx(x + off, fa, Cols), gy(dy + off, fa, Cols), go(dx + off, fa, Cols);
+    GM gg(gamma + c, 1, 1);
+    typename T::H v(fa, Cols);
+    typename T::F xf(fa, Cols), yf(fa, Cols), out(fa, Cols);
+    typename T::V ones(fa), v1(fa), v2(fa), v3(fa);
+    HS hg;
+    Sc gv, c1;
+    TLOAD(hg, gg);
+    TCVT(gv, hg);
+    TMUL(c1, gv, r);
+    TEXPANDS(ones, 1.0f);
+    TCOLEXPANDMUL(v1, ones, c1);
+    TCOLEXPANDMUL(v2, ones, c2);
+    TCOLEXPANDMUL(v3, ones, c3);
+    TLOAD(v, gx);
+    TCVT(xf, v);
+    TLOAD(v, gy);
+    TCVT(yf, v);
+    TROWEXPANDMUL(out, yf, v1);
+    TROWEXPANDMUL(xf, xf, v2);
+    TADD(out, out, xf);
+    TROWEXPANDADD(out, out, v3);
+    TCVT(v, out);
+    TSTORE(go, v);
+  }
+}
+
 // dx within one group: strip along HxW with up to 32 contiguous channels.
 // Prefer when HxW does not fold into [fa<=32, 2^k]; Config caps tile_hw at 256.
 template <typename dtype>
@@ -520,7 +606,15 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     const bool d_rows = gn_grad::is_tile_cols(t.D);
     const bool d_fold = !d_rows && fr_d > 0;
 
-    for (int64_t n = 0; n < t.N; ++n) {
+    if (dx_fold_ok) {
+      gn_grad::with_cols(fr_h, [&]<int Cols>() {
+        for (int64_t n = 0; n < t.N; ++n)
+          for (int64_t g = group_begin; g < group_end; ++g)
+            gn_grad::group_fused<dtype, Cols>(dy, x, gamma, mean, rstd, ds, db,
+                                              dx, t.C, t.G, t.D, n, g, fa_h, s);
+      });
+    }
+    for (int64_t n = 0; n < t.N && !dx_fold_ok; ++n) {
       // Stage 1: spatial for every owned channel of this batch (MLP).
       if (h_rows) {
         gn_grad::with_cols(t.H, [&]<int Cols>() {
