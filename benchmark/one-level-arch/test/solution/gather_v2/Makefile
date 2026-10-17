@@ -27,3 +27,8 @@ ifeq ($(PLAT),linx)
 CC_OPTS += -mllvm -linxv5-enable-bfi-opt=false
 CC_LINK = -nostartfiles $(TEST_ROOT)/solution/common/start.s
 endif
+
+# Explicit timing-model mode: guest stdio is unsupported in gfsim.
+ifeq ($(gfsim),on)
+DEFINES += -DGFSIM
+endif

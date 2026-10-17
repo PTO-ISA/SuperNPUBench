@@ -4,7 +4,7 @@ set -euo pipefail
 
 : "${COMPILER_DIR:?Set COMPILER_DIR to the in-repo Linx compiler bin directory}"
 
-# Generic path: one-dimensional gather with a real tail tile.
+# Indexed path: one-dimensional gather with a real tail tile.
 make TESTCASE=gather_v2 COMPILER_DIR="$COMPILER_DIR" \
     DType=float IType=uint32_t RANK=1 GATHER_DIM=0 \
     INPUT_ELEMENTS=19 OUTPUT_ELEMENTS=37 INDEX_ELEMENTS=37 \
@@ -12,7 +12,7 @@ make TESTCASE=gather_v2 COMPILER_DIR="$COMPILER_DIR" \
     OUTPUT_SHAPE=37 OUTPUT_SHAPE_NAME=37 \
     TILE_ELEMENTS=32 ABS_TOL=0.001f REL_TOL=0.001f
 
-# Generic path: gather columns from a rank-2 tensor.
+# Indexed path: gather columns from a rank-2 tensor with signed indices.
 make TESTCASE=gather_v2 COMPILER_DIR="$COMPILER_DIR" \
     DType=int32_t IType=int32_t RANK=2 GATHER_DIM=1 \
     INPUT_ELEMENTS=55 OUTPUT_ELEMENTS=35 INDEX_ELEMENTS=7 \
@@ -20,8 +20,7 @@ make TESTCASE=gather_v2 COMPILER_DIR="$COMPILER_DIR" \
     OUTPUT_SHAPE=5,7 OUTPUT_SHAPE_NAME=5_7 \
     TILE_ELEMENTS=32 ABS_TOL=0.0f REL_TOL=0.0f
 
-# Generic path: gather complete rows with a partial final half tile.
-# Coalesce::Row remains disabled by default in the implementation.
+# Narrow-row fallback: pack selected 17-element rows into flattened Tiles.
 make TESTCASE=gather_v2 COMPILER_DIR="$COMPILER_DIR" \
     DType=__half IType=uint32_t RANK=2 GATHER_DIM=0 \
     INPUT_ELEMENTS=187 OUTPUT_ELEMENTS=136 INDEX_ELEMENTS=8 \

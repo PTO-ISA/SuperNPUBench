@@ -9,6 +9,8 @@ from pathlib import Path
 import re
 import struct
 import subprocess
+import shutil
+import shlex
 
 
 ARCH = Path(__file__).resolve().parents[3]
@@ -62,14 +64,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compiler-dir", required=True, type=Path)
     parser.add_argument("--gfrun", required=True, type=Path)
+    parser.add_argument("--gfsim", type=Path,
+                        help="Also run gfsim timing, after gfrun validates the same quiet ELF")
+    parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--output", type=Path,
                         default=ARCH / "output/solution/fixed_validation")
     args = parser.parse_args()
+    if args.timeout <= 0:
+        parser.error("--timeout must be positive")
+    gfsim = args.gfsim.resolve() if args.gfsim else None
     compiler = args.compiler_dir.resolve()
     gfrun = args.gfrun.resolve()
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    env = dict(os.environ, COMPILER_DIR=str(compiler), baremetal="off")
+    env = dict(os.environ, COMPILER_DIR=str(compiler), baremetal="off",
+               gfsim="on" if gfsim else "off")
     rows = []
     for op in ("view_copy", "gather_v2"):
         with (out / (op + "_compile.log")).open("w") as log:
@@ -79,7 +88,9 @@ def main():
         elfs = sorted((ARCH / "output/solution" / op / "elf").glob("*.elf"))
         if len(elfs) != 3:
             raise RuntimeError(f"Expected 3 shipped {op} ELFs, found {len(elfs)}")
-        for elf in elfs:
+        for built_elf in elfs:
+            elf = out / built_elf.name
+            shutil.copy2(built_elf, elf)
             symbols = subprocess.check_output([str(compiler / "llvm-nm"),
                                                "-S", str(elf)], text=True)
             symbol = next(line.split() for line in symbols.splitlines()
@@ -103,12 +114,33 @@ def main():
                     rc = 124
             logtext = (out / (elf.name + ".log")).read_text(errors="replace")
             numeric = dump.is_file() and dump.read_bytes() == expected
-            passed = (rc == 0 and "PASS: " + op in logtext and
+            passed = (rc == 0 and (gfsim or "PASS: " + op in logtext) and
                       re.search(r"Reach the End of Benchmark! R2 = 0\s", logtext)
                       and numeric)
-            rows.append(dict(case=elf.name, exit_code=rc,
-                             host_golden=numeric, passed=bool(passed), command=command))
-            print(f"{'PASS' if passed else 'FAIL'} {elf.name} host_golden={numeric}")
+            row = dict(case=elf.name, exit_code=rc, host_golden=numeric,
+                       passed=bool(passed), command=command)
+            if gfsim and passed:
+                sim_command = [str(gfsim), "-f", str(elf), "--conf", "fourpe", "--seed", "1"]
+                sim_log = out / (elf.name + ".gfsim.log")
+                with sim_log.open("w") as log:
+                    log.write(shlex.join(sim_command) + "\n")
+                    log.flush()
+                    try:
+                        sim_rc = subprocess.run(sim_command, cwd=gfsim.parent.parent,
+                            stdout=log, stderr=subprocess.STDOUT, timeout=args.timeout).returncode
+                    except subprocess.TimeoutExpired:
+                        sim_rc = 124
+                        log.write("\nTIMEOUT\n")
+                text = sim_log.read_text(errors="replace")
+                cycles = re.findall(r"^\s*Total Cycles\.+:\s*(\d+)", text, re.M)
+                complete = sim_rc == 0 and len(cycles) == 1 and "SuperScalar Report Stop" in text
+                row.update(gfsim_exit=sim_rc, gfsim_completed=complete,
+                           gfsim_command=sim_command, total_cycles=int(cycles[0]) if complete else None)
+                row["passed"] = row["passed"] and complete
+            rows.append(row)
+            (out / "results.json").write_text(json.dumps(rows, indent=2) + "\n")
+            print(f"{'PASS' if row['passed'] else 'FAIL'} {elf.name} host_golden={numeric} "
+                  f"gfsim_completed={row.get('gfsim_completed')}", flush=True)
     (out / "results.json").write_text(json.dumps(rows, indent=2) + "\n")
     return 0 if all(row["passed"] for row in rows) else 1
 
