@@ -19,6 +19,9 @@
 // spill partial sums through GM. Stage 3 prefers the same HxW fold so each
 // channel is one [fa,Cols] TLOAD (e.g. HxW=2048 → [8,256] = 4 KiB FP16)
 // instead of HxW/256 × 512 B strips that cannot hide SoC latency.
+// Stages 1–3 are ordered per batch: spatial over all owned groups (keeps
+// TLOAD concurrency), then fused→dx per group so dX reloads dy/x while they
+// are still hot in L2. Stage 4 still reduces dgamma/dbeta over N afterward.
 // One kernel runs all four stages; each PE owns complete groups across N.
 // Every workspace read has a producer on the same PE; no inter-PE barrier.
 //
@@ -498,99 +501,83 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
       group_begin + groups_per_pe < t.G ? group_begin + groups_per_pe : t.G;
   float *ds = workspace, *db = workspace + t.N * t.C;
   float *c2 = workspace + 2 * t.N * t.C, *c3 = c2 + t.N * t.G;
-  // Stage 1: spatial, R = HxW.
-  {
-    const int64_t c_begin = group_begin * t.D, c_end = group_end * t.D;
-    const int64_t fr = gn_grad::fold_cols(t.H);
-    if (gn_grad::is_tile_cols(t.H)) {
-      gn_grad::with_cols(t.H, [&]<int Cols>() {
-        for (int64_t n = 0; n < t.N; ++n)
-          for (int64_t c = c_begin; c < c_end; c += 32)
-            gn_grad::spatial_rows<dtype, Cols>(dy, x, ds, db, t.C, n, c,
-                                               c_end - c < 32 ? c_end - c : 32);
-      });
-    } else if (fr > 0) {
-      gn_grad::with_cols(fr, [&]<int Cols>() {
-        for (int64_t n = 0; n < t.N; ++n)
-          for (int64_t c = c_begin; c < c_end; ++c)
-            gn_grad::spatial_fold<dtype, Cols>(dy, x, ds, db, t.C, n, c,
-                                               t.H / fr);
-      });
-    } else {
-      for (int64_t n = 0; n < t.N; ++n)
-        for (int64_t c = c_begin; c < c_end; ++c)
-          gn_grad::spatial_block(dy, x, ds, db, t.C, t.H, n, c, t.rh);
-    }
-  }
-  // Stage 2: fused parameters, R = D.
-  {
-    const float s = 1.0f / static_cast<float>(t.D * t.H);
-    const int64_t fr = gn_grad::fold_cols(t.D);
-    if (gn_grad::is_tile_cols(t.D)) {
-      gn_grad::with_cols(t.D, [&]<int Cols>() {
-        for (int64_t n = 0; n < t.N; ++n)
-          for (int64_t g = group_begin; g < group_end; g += 32)
-            gn_grad::fused_params_rows<dtype, Cols>(
-                gamma, mean, rstd, ds, db, c2, c3, t.C, t.G, n, g,
-                group_end - g < 32 ? group_end - g : 32, s);
-      });
-    } else if (fr > 0) {
-      gn_grad::with_cols(fr, [&]<int Cols>() {
-        for (int64_t n = 0; n < t.N; ++n)
-          for (int64_t g = group_begin; g < group_end; ++g)
-            gn_grad::fused_params_fold<dtype, Cols>(gamma, mean, rstd, ds, db,
-                                                    c2, c3, t.C, t.G, n, g,
-                                                    t.D / fr, s);
-      });
-    } else {
-      using GH = global_tensor<dtype, RowMajor<-1, -1>>;
-      using GF = global_tensor<float, RowMajor<-1, -1>>;
-      using TH = Tile<Location::Vec, dtype, 1, 256, BLayout::CubeM32, -1, -1>;
-      using TF = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, -1>;
-      using TV = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, 1>;
-      for (int64_t n = 0; n < t.N; ++n)
-        for (int64_t g = group_begin; g < group_end; ++g)
-          gn_grad::fused_params_group<dtype, GH, GF, TH, TF, TV>(
-              gamma, mean, rstd, ds, db, c2, c3, t.N, t.C, t.G, t.D, n, g, s);
-    }
-  }
-  // Stage 3: dx. Prefer folded [fa,Cols] TLOADs when HxW packs into one Tile
-  // so each channel pays one Soft latency, not HxW/256 strip round-trips.
+  // Per batch: Stage 1 over all owned groups, then Stage 2→3 per group.
   {
     using GH = global_tensor<dtype, RowMajor<-1, -1>>;
     using GF = global_tensor<float, RowMajor<-1, -1>>;
     using TH = Tile<Location::Vec, dtype, 1, 256, BLayout::CubeM32, -1, -1>;
     using TF = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, -1>;
     using TV = Tile<Location::Vec, float, 1, 256, BLayout::CubeM32, -1, 1>;
-    const int64_t fr = gn_grad::fold_cols(t.H);
-    const int64_t fa = fr > 0 ? t.H / fr : 0;
-    if (fr > 0 && fa > 0 && fa <= 32) {
-      gn_grad::with_cols(fr, [&]<int Cols>() {
-        for (int64_t batch = 0; batch < t.N; ++batch)
-          for (int64_t g = group_begin; g < group_end; ++g)
+    const float s = 1.0f / static_cast<float>(t.D * t.H);
+    const int64_t c_begin = group_begin * t.D, c_end = group_end * t.D;
+    const int64_t fr_h = gn_grad::fold_cols(t.H);
+    const int64_t fa_h = fr_h > 0 ? t.H / fr_h : 0;
+    const bool h_rows = gn_grad::is_tile_cols(t.H);
+    const bool h_fold = !h_rows && fr_h > 0 && fa_h > 0 && fa_h <= 32;
+    // dx_fold can pack HxW even when Stage 1 used the exact-width rows path.
+    const bool dx_fold_ok = fr_h > 0 && fa_h > 0 && fa_h <= 32;
+    const int64_t fr_d = gn_grad::fold_cols(t.D);
+    const bool d_rows = gn_grad::is_tile_cols(t.D);
+    const bool d_fold = !d_rows && fr_d > 0;
+
+    for (int64_t n = 0; n < t.N; ++n) {
+      // Stage 1: spatial for every owned channel of this batch (MLP).
+      if (h_rows) {
+        gn_grad::with_cols(t.H, [&]<int Cols>() {
+          for (int64_t c = c_begin; c < c_end; c += 32)
+            gn_grad::spatial_rows<dtype, Cols>(
+                dy, x, ds, db, t.C, n, c,
+                c_end - c < 32 ? c_end - c : 32);
+        });
+      } else if (h_fold) {
+        gn_grad::with_cols(fr_h, [&]<int Cols>() {
+          for (int64_t c = c_begin; c < c_end; ++c)
+            gn_grad::spatial_fold<dtype, Cols>(dy, x, ds, db, t.C, n, c, fa_h);
+        });
+      } else {
+        for (int64_t c = c_begin; c < c_end; ++c)
+          gn_grad::spatial_block(dy, x, ds, db, t.C, t.H, n, c, t.rh);
+      }
+      // Stages 2–3: fused → dx per group while dy/x from Stage 1 are warm.
+      for (int64_t g = group_begin; g < group_end; ++g) {
+        const int64_t c0 = g * t.D;
+        if (d_rows) {
+          gn_grad::with_cols(t.D, [&]<int Cols>() {
+            gn_grad::fused_params_rows<dtype, Cols>(
+                gamma, mean, rstd, ds, db, c2, c3, t.C, t.G, n, g, 1, s);
+          });
+        } else if (d_fold) {
+          gn_grad::with_cols(fr_d, [&]<int Cols>() {
+            gn_grad::fused_params_fold<dtype, Cols>(gamma, mean, rstd, ds, db,
+                                                    c2, c3, t.C, t.G, n, g,
+                                                    t.D / fr_d, s);
+          });
+        } else {
+          gn_grad::fused_params_group<dtype, GH, GF, TH, TF, TV>(
+              gamma, mean, rstd, ds, db, c2, c3, t.N, t.C, t.G, t.D, n, g, s);
+        }
+        if (dx_fold_ok) {
+          gn_grad::with_cols(fr_h, [&]<int Cols>() {
             for (int64_t d = 0; d < t.D; ++d)
               gn_grad::dx_fold<dtype, Cols>(dy, x, gamma, rstd, c2, c3, dx, t.C,
-                                            t.G, t.D, batch, g * t.D + d, fa);
-      });
-    } else {
-      for (int64_t batch = 0; batch < t.N; ++batch)
-        for (int64_t ng = batch * t.G + group_begin;
-             ng < batch * t.G + group_end; ++ng) {
-          const int64_t n = ng / t.G, g = ng % t.G;
+                                            t.G, t.D, n, c0 + d, fa_h);
+          });
+        } else {
           for (int64_t d = 0; d < t.D; d += t.dc) {
             const int64_t rows = t.D - d < t.dc ? t.D - d : t.dc;
             if (t.dc > 1)
               gn_grad::dx_block(dy, x, gamma, rstd, c2, c3, dx, t.C, t.G, t.H,
-                                n, g, g * t.D + d, rows, t.dh);
+                                n, g, c0 + d, rows, t.dh);
             else
               gn_grad::dx_nc<dtype, GH, GF, TH, TF, TV>(
                   dy, x, gamma, rstd, c2, c3, dx, t.N, t.C, t.G, t.D, t.H,
-                  t.dh, n, g * t.D + d);
+                  t.dh, n, c0 + d);
           }
         }
+      }
     }
   }
-  // Stage 4: gamma/beta.
+  // Stage 4: gamma/beta (needs ds/db for every n of this PE's groups).
   {
     const int64_t od = (t.D + t.bd - 1) / t.bd;
     for (int64_t g = group_begin; g < group_end; g += t.bg)
