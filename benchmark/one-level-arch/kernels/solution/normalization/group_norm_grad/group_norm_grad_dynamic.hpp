@@ -674,28 +674,46 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
   // Stage 4: gamma/beta (needs ds/db for every n of this PE's groups).
   {
     const int64_t od = (t.D + t.bd - 1) / t.bd;
-    for (int64_t g = group_begin; g < group_end; g += t.bg)
+    for (int64_t g = group_begin; g < group_end; g += t.bg) {
+      const int64_t rows = group_end - g < t.bg ? group_end - g : t.bg;
+      if (t.D == 2 || t.D == 4) {
+        if (t.D == 4)
+          gn_grad::gamma_beta_block<dtype, 32, 4>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta,
+              t.N, t.C, t.G, t.D, g, 0, rows, 4);
+        else
+          gn_grad::gamma_beta_block<dtype, 32, 2>(
+              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta,
+              t.N, t.C, t.G, t.D, g, 0, rows, 2);
+        continue;
+      }
+      if (t.bd <= 256) {
+        // Row expansion rejects a data Tile whose valid width differs from
+        // its physical width, so split D into power-of-two column chunks.
+        for (int64_t d = 0; d < t.D;) {
+          const int64_t rem = t.D - d < t.bd ? t.D - d : t.bd;
+          int64_t cols = 2;
+          while (cols * 2 <= rem)
+            cols *= 2;
+          if (cols > rem)
+            cols = rem;
+          gn_grad::with_cols(cols < 2 ? 2 : cols, [&]<int Cols>() {
+            gn_grad::gamma_beta_block<dtype, 32, Cols>(
+                workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta,
+                t.N, t.C, t.G, t.D, g, d, rows, cols);
+          });
+          d += cols;
+        }
+        continue;
+      }
       for (int64_t di = 0; di < od; ++di) {
         const int64_t d = di * t.bd;
-        const int64_t rows = group_end - g < t.bg ? group_end - g : t.bg,
-                      cols = t.D - d < t.bd ? t.D - d : t.bd;
-        if (cols == 4)
-          gn_grad::gamma_beta_block<dtype, 32, 4>(
-              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
-              t.C, t.G, t.D, g, d, rows, cols);
-        else if (cols == 2)
-          gn_grad::gamma_beta_block<dtype, 32, 2>(
-              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
-              t.C, t.G, t.D, g, d, rows, cols);
-        else if (t.bd <= 256)
-          gn_grad::gamma_beta_block<dtype, 32, 256>(
-              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
-              t.C, t.G, t.D, g, d, rows, cols);
-        else
-          gn_grad::gamma_beta_block<dtype, 1, 256>(
-              workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
-              t.C, t.G, t.D, g, d, rows, cols);
+        const int64_t cols = t.D - d < t.bd ? t.D - d : t.bd;
+        gn_grad::gamma_beta_block<dtype, 1, 256>(
+            workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta, t.N,
+            t.C, t.G, t.D, g, d, rows, cols);
       }
+    }
   }
 }
 #endif
