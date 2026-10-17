@@ -255,6 +255,23 @@ _QSMLA_MODE_CASES: Tuple[QsmlaCase, ...] = (
               source="supernpubench:five-mode", enable_stage="gfrun",
               reference_feasible=True, mode_generation_feasible=True,
               coverage=frozenset({"hif8", "bf16_output", "descale"})),
+    # 网络典型 CSA case（生产形状，C4 死数据裁剪版）：
+    #   S2 131072->2048（窗口 [diag-128, diag+576] ⊆ [0,580) 永不触界，
+    #   执行逐块等价）、cmp_s2 32768->4096（top-1024-of-4K 选择池）。
+    #   B=8/S1=4/N1=128（GSliceMax=64 → 64 work/ELF）。
+    QsmlaCase(name="typical_bsnd_csa_s2_2048_topk1024_c4", mode="CSA",
+              b=8, s1=4, s2=2048, n1=128, n2=1, d=512, k=1024,
+              cmp_s2=4096, cmp_topk=1024, cmp_ratio=4, tm=64, tk=32,
+              td=64, win_left=128, win_right=576,
+              softmax_scale=0.04419417,
+              source="user:typical_csa_c4",
+              enable_stage="gfrun", reference_feasible=True,
+              mode_generation_feasible=True,
+              coverage=frozenset({"typical_csa", "bsnd_layout", "batch_gqa",
+                                  "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
+              note="Network CSA case, C4 dead-data trim (S2 131072->2048, "
+                   "cmp_s2 32768->4096); block-wise equivalent to the "
+                   "production shape, 64 works per ELF."),
     QsmlaCase(name="ori_sparse_small", mode="ORI_SPARSE", b=1, s1=1,
               s2=128, n1=64, n2=1, d=512, k=0, k1=40, cmp_s2=64,
               ori_topk=40, cmp_ratio=4, tm=64, tk=32, td=64,
