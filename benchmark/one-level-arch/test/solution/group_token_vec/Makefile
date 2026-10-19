@@ -30,17 +30,8 @@ CC_OPTS += $(ELEMENT_TARGET_FLAGS)
 CC_LINK += $(ELEMENT_TARGET_FLAGS) -fuse-ld=lld
 
 ifneq ($(filter group_token_vec_mt_dyn,$(TESTCASE)),)
-HISTOGRAM_SRC := $(ROOT)/kernels/solution/group_token_vec/group_token_vec_mt_dyn_histogram.cpp
-HISTOGRAM_OBJ := $(OBJ_ROOT)/solution/group_token_vec/src/group_token_vec_mt_dyn_histogram.o
-EXTRA_OBJ_FILES += $(HISTOGRAM_OBJ)
-
-$(TARGET): $(HISTOGRAM_OBJ)
-
-$(HISTOGRAM_OBJ): $(HISTOGRAM_SRC)
-	@mkdir -p $(shell dirname $@)
-	$(CXX) $(CXX_O_ALL) $(INCLUDE) $(DEFINES) \
-		-mllvm -linxv5-enable-generic-element=true \
-		-fno-vectorize -fno-slp-vectorize -Werror=unknown-pragmas $< -o $@
+CC_OPTS += -mllvm -linxv5-enable-generic-element=true \
+	-fno-vectorize -fno-slp-vectorize -Werror=unknown-pragmas
 
 histogram-ir: pre_work
 	@test -n "$(IR_TARGET)" || \
@@ -48,7 +39,7 @@ histogram-ir: pre_work
 	$(CXX) $(CXX_O_ALL) $(INCLUDE) $(DEFINES) \
 		-mllvm -linxv5-enable-generic-element=true \
 		-fno-vectorize -fno-slp-vectorize -Werror=unknown-pragmas \
-		-S -emit-llvm $(HISTOGRAM_SRC) -o $(IR_TARGET)
+		-S -emit-llvm $(SRC_FILE) -o $(IR_TARGET)
 endif
 endif
 

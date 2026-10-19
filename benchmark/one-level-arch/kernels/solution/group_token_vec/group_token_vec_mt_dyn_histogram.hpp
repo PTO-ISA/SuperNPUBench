@@ -1,3 +1,6 @@
+#ifndef GROUP_TOKEN_VEC_MT_DYN_HISTOGRAM_HPP
+#define GROUP_TOKEN_VEC_MT_DYN_HISTOGRAM_HPP
+
 #include <common/pto_tileop.hpp>
 #include <cstdint>
 
@@ -8,20 +11,10 @@ __attribute__((noinline)) void addElementHistogramPart(
     const uint32_t *input, uint32_t valid, uint32_t *histogram,
     uint32_t histogramSize)
 {
-    pto::ElementTile<uint32_t, kPartElements> indices;
-    auto &elements = pto::TPARTELEMENT(indices);
 #pragma pto element for
     for (uint32_t element = 0; element < kPartElements; ++element) {
         if (element < valid) {
-            elements[element] = input[element];
-        } else {
-            elements[element] = 0u;
-        }
-    }
-#pragma pto element for
-    for (uint32_t element = 0; element < kPartElements; ++element) {
-        if (element < valid) {
-            const uint32_t index = elements[element];
+            const uint32_t index = input[element];
             if (index < histogramSize) {
                 __atomic_fetch_add(histogram + index, 1u,
                                    __ATOMIC_RELAXED);
@@ -31,7 +24,7 @@ __attribute__((noinline)) void addElementHistogramPart(
 }
 } // namespace
 
-__attribute__((noinline)) void gt_dyn_clear_element_histogram(
+__attribute__((noinline)) static void gt_dyn_clear_element_histogram(
     uint32_t *histogram, uint32_t size)
 {
     for (uint32_t begin = 0; begin < size; begin += kPartElements) {
@@ -47,7 +40,7 @@ __attribute__((noinline)) void gt_dyn_clear_element_histogram(
     }
 }
 
-__attribute__((noinline)) void gt_dyn_add_element_histogram_range(
+__attribute__((noinline)) static void gt_dyn_add_element_histogram_range(
     const uint32_t *input, uint32_t count, uint32_t *histogram,
     uint32_t histogramSize)
 {
@@ -58,3 +51,5 @@ __attribute__((noinline)) void gt_dyn_add_element_histogram_range(
                                 histogramSize);
     }
 }
+
+#endif

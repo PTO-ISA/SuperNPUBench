@@ -25,10 +25,11 @@ independent verification stage sorts them for comparison only. Optimized IR
 must contain the three semantic atomic sites and no residual region/view,
 `atomicrmw`, scalar extract/insert, or GM roundtrip.
 
-The four independent workspace clears also use element loops, with one write
-stream per region. The cutoff scans and compact output collection retain normal
-sequential C++ loops because their counters depend on preceding elements. The
-core header therefore has six marked loops; its driver adds the coherence loop.
+The four workspace clears use two fused element loops, one per pair of buffers.
+Each pair writes the same zero value with naturally aligned U32 accesses, so
+potential overlap does not change the result. Both stores still lower to masked
+native scatter operations. The core header has four marked loops; the driver
+adds the coherence loop.
 
 The target test validates all 256 bins at both radix levels, exactly 37 output
 elements, the complete Top-K multiset across a tied cutoff, and the returned

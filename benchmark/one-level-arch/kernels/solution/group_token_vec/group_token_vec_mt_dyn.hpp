@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "solution/group_token_vec/gt_tile_common.hpp"
+#include "solution/group_token_vec/group_token_vec_mt_dyn_histogram.hpp"
 
 // ============================================================================
 // MoE Token Grouping — Multi-thread Vector (Tile) variant, runtime DYNAMIC
@@ -26,13 +27,6 @@ constexpr uint32_t kTileN = 16;   // tile 列宽; tile 路径仅 topK == kTileN
 constexpr uint32_t kEprCap = 8;   // expertPerRank ≤ 8 (driver kExpertPerRankMax)
 constexpr uint32_t kSpnCap = 2;   // superPodNum ≤ 2 (driver kSuperPodNumMax)
 constexpr uint32_t kExpertNumCap = 256;  // expertNum ≤ 256 (计数链 acc 栈数组)
-
-// Kept in a small generic-element translation unit.  Enabling that lowering
-// for this header's legacy Tile-heavy driver perturbs unrelated descriptors.
-void gt_dyn_clear_element_histogram(uint32_t *histogram, uint32_t size);
-void gt_dyn_add_element_histogram_range(const uint32_t *input, uint32_t count,
-                                        uint32_t *histogram,
-                                        uint32_t histogramSize);
 
 // ============================================================================
 // Multi-PE barrier —— 单行 flag + 寄存器延迟链 + 稀疏定向集驱逐

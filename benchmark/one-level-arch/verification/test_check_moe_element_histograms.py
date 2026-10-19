@@ -20,15 +20,13 @@ void gt_dyn_clear_element_histogram(uint32_t *histogram, uint32_t size) {
 }
 void addElementHistogramPart(const uint32_t *input, uint32_t valid,
                              uint32_t *histogram, uint32_t histogramSize) {
-  pto::ElementTile<uint32_t, kPartElements> tile;
-  const auto &values = pto::TPARTELEMENT(tile);
 #pragma pto element for
-  for (uint32_t element = 0; element < 32; ++element)
-    if (element < valid) values[element] = input[element];
-#pragma pto element for
-  for (uint32_t element = 0; element < 32; ++element)
-    if (element < valid && values[element] < histogramSize)
-      __atomic_fetch_add(histogram + values[element], 1u, __ATOMIC_RELAXED);
+  for (uint32_t element = 0; element < kPartElements; ++element)
+    if (element < valid) {
+      const uint32_t index = input[element];
+      if (index < histogramSize)
+      __atomic_fetch_add(histogram + index, 1u, __ATOMIC_RELAXED);
+    }
 }
 """
 
@@ -85,6 +83,13 @@ class NegativeCanaries(unittest.TestCase):
 
     def test_baseline_fixture_is_accepted(self) -> None:
         check.validate_artifact(SOURCE, IR, DIS, check.DYNAMIC)
+
+    def test_widened_induction_still_requires_both_tile_masks(self) -> None:
+        count = COUNT_IR.replace("ew.tcmps.gpr.v32i32", "ew.tcmps.gpr.v32i64", 1)
+        check.validate_artifact(SOURCE, IR.replace(COUNT_IR, count), DIS, check.DYNAMIC)
+        count = count.replace(
+            "  %pto.mask.profile2 = call i64 @llvm.linx.experimental.ew.tcmps.gpr.v32i32()\n", "")
+        self.assert_rejected(ir=IR.replace(COUNT_IR, count))
 
     def test_scalar_histogram_update_survives_tile_markers(self) -> None:
         poisoned = IR.replace("  ret void\n}",
@@ -146,6 +151,17 @@ class NegativeCanaries(unittest.TestCase):
             "  200: 0000  C.BSTART.STD DIRECT, 0x300 <scalar_helper>\n")
         self.assert_rejected(dis=poisoned)
 
+    def test_split_region_regression_is_rejected(self) -> None:
+        self.assert_rejected(source=SOURCE.replace(
+            "      const uint32_t index = input[element];",
+            "#pragma pto element for\n      const uint32_t index = input[element];"))
+
+    def test_tile_staging_regression_is_rejected(self) -> None:
+        self.assert_rejected(source=SOURCE.replace(
+            "      const uint32_t index = input[element];",
+            "      pto::ElementTile<uint32_t, 32> staged;\n"
+            "      const uint32_t index = input[element];"))
+
     def test_wrong_count_capacity_is_rejected(self) -> None:
         self.assert_rejected(ir=IR.replace("<32 x i32>", "<64 x i32>"))
 
@@ -158,8 +174,8 @@ class NegativeCanaries(unittest.TestCase):
 
     def test_wrong_source_capacity_is_rejected(self) -> None:
         self.assert_rejected(source=SOURCE.replace(
-            "ElementTile<uint32_t, kPartElements>",
-            "ElementTile<uint32_t, 64>"))
+            "element < kPartElements",
+            "element < 64"))
 
     def test_wrong_element_width_is_rejected(self) -> None:
         self.assert_rejected(source=SOURCE.replace("kPartElements = 32",

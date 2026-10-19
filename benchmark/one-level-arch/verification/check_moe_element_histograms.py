@@ -134,15 +134,14 @@ def validate_ir_calls(body: str, context: str) -> None:
 def validate_source(source: str, spec: HelperSpec) -> None:
     clear = extract_cpp_function(source, spec.clear_source)
     count = extract_cpp_function(source, spec.count_source)
-    for body, kind, marked_count in ((clear, "clear", 1), (count, "count", 2)):
+    for body, kind, marked_count in ((clear, "clear", 1), (count, "count", 1)):
         if body.count("#pragma pto element for") != marked_count:
             raise CheckError(
                 f"{spec.label} {kind}: expected {marked_count} marked loop(s)"
             )
         if "element <" not in body or "if (element <" not in body:
             raise CheckError(f"{spec.label} {kind}: fixed loop or valid guard missing")
-    require_all(count, ("ElementTile<uint32_t", "TPARTELEMENT",
-                        "= input[element]",
+    require_all(count, ("= input[element]",
                         "__atomic_fetch_add", "__ATOMIC_RELAXED"),
                 f"{spec.label} count source")
     if "TLOAD(" in count:
@@ -152,8 +151,10 @@ def validate_source(source: str, spec: HelperSpec) -> None:
     part_constant = "kHistogramPartElements" if spec is OLD else "kPartElements"
     if not re.search(rf"{part_constant}\s*=\s*32\s*;", source):
         raise CheckError(f"{spec.label}: wrong element-loop width")
-    if f"ElementTile<uint32_t, {part_constant}>" not in count:
-        raise CheckError(f"{spec.label}: count Tile capacity differs from loop width")
+    if "ElementTile" in count or "TPARTELEMENT" in count:
+        raise CheckError(f"{spec.label}: fused loop must not stage input through a Tile view")
+    if f"element < {part_constant}" not in count:
+        raise CheckError(f"{spec.label}: count loop differs from logical width")
 
 
 def validate_clear_ir(ir: str, spec: HelperSpec) -> None:
@@ -180,7 +181,11 @@ def validate_count_ir(ir: str, spec: HelperSpec) -> None:
                        "%pto.mask.profile"), f"{spec.label} count IR")
     if body.count("llvm.linx.experimental.ew.tlea.v32i64.v32i32") < 2:
         raise CheckError(f"{spec.label} count IR: input and atomic address paths missing")
-    if body.count("llvm.linx.experimental.ew.tcmps.gpr.v32i32") < 2:
+    # LLVM may widen the loop induction variable to i64 while expert IDs
+    # remain U32. Both comparisons must still lower to native Tile masks.
+    comparisons = re.findall(
+        r"@llvm\.linx\.experimental\.ew\.tcmps\.gpr\.v32i(?:32|64)\(", body)
+    if len(comparisons) < 2:
         raise CheckError(f"{spec.label} count IR: valid/expert masks missing")
     reject_scalar_ir(body, f"{spec.label} count")
     validate_ir_calls(body, f"{spec.label} count")
@@ -267,9 +272,6 @@ def validate_count_native(disassembly: str, spec: HelperSpec) -> None:
 def validate_artifact(source: str, ir: str, disassembly: str,
                       spec: HelperSpec) -> None:
     validate_source(source, spec)
-    view = "pto.element.view:v1;dtype=u32;rows=32;cols=1;layout=cube_m32"
-    if view not in ir:
-        raise CheckError(f"{spec.label}: 32-element view metadata missing")
     validate_clear_ir(ir, spec)
     validate_count_ir(ir, spec)
     validate_clear_native(disassembly, spec)

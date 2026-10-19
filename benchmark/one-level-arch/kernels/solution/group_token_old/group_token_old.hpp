@@ -75,20 +75,10 @@ __attribute__((noinline)) static inline void addElementHistogramPart(
     const uint32_t *input, uint32_t valid, uint32_t *histogram,
     uint32_t histogramSize)
 {
-    pto::ElementTile<uint32_t, kHistogramPartElements> indices;
-    auto &elements = pto::TPARTELEMENT(indices);
 #pragma pto element for
     for (uint32_t element = 0; element < kHistogramPartElements; ++element) {
         if (element < valid) {
-            elements[element] = input[element];
-        } else {
-            elements[element] = 0u;
-        }
-    }
-#pragma pto element for
-    for (uint32_t element = 0; element < kHistogramPartElements; ++element) {
-        if (element < valid) {
-            const uint32_t index = elements[element];
+            const uint32_t index = input[element];
             if (index < histogramSize) {
                 __atomic_fetch_add(histogram + index, 1u,
                                    __ATOMIC_RELAXED);

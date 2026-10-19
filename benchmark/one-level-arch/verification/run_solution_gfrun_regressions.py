@@ -360,7 +360,7 @@ def check_histogram_lowering(case: Case, args: argparse.Namespace,
 
     dynamic = case.name == "group_token_vec_mt_dyn"
     source = ONE_LEVEL / "kernels/solution" / (
-        "group_token_vec/group_token_vec_mt_dyn_histogram.cpp" if dynamic else
+        "group_token_vec/group_token_vec_mt_dyn_histogram.hpp" if dynamic else
         "group_token_old/group_token_old.hpp")
     ir = case_dir / "element-histogram.ll"
     target = "histogram-ir" if dynamic else "ir"

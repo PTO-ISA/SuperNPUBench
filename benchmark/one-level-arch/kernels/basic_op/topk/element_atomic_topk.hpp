@@ -39,26 +39,24 @@ inline TopKResult topk16(const uint32_t *input, std::size_t count,
                         TopKWorkspace workspace) {
   const std::size_t k = requested_k < count ? requested_k : count;
   const std::size_t padded_count = ((count + 127) / 128) * 128;
-  // 初始化同样通过元素循环写回原有缓冲；每个 region 只有一个写流。
+  // 两个目标写入相同的零值，合并到一个元素循环；原有缓冲与阶段顺序不变。
   for (uint32_t begin = 0; begin < 256; begin += kPartElements) {
     auto *high = workspace.high_hist + begin;
     auto *low = workspace.low_hist + begin;
 #pragma pto element for
-    for (uint32_t element = 0; element < kPartElements; ++element)
+    for (uint32_t element = 0; element < kPartElements; ++element) {
       high[element] = 0;
-#pragma pto element for
-    for (uint32_t element = 0; element < kPartElements; ++element)
       low[element] = 0;
+    }
   }
   for (std::size_t begin = 0; begin < padded_count; begin += kPartElements) {
     auto *high = workspace.old_high + begin;
     auto *low = workspace.old_low + begin;
 #pragma pto element for
-    for (uint32_t element = 0; element < kPartElements; ++element)
+    for (uint32_t element = 0; element < kPartElements; ++element) {
       high[element] = 0;
-#pragma pto element for
-    for (uint32_t element = 0; element < kPartElements; ++element)
       low[element] = 0;
+    }
   }
 
   // 第一轮：统计所有元素的高 8 位。

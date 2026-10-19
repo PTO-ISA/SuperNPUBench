@@ -2,7 +2,7 @@
 
 核心示例是 [`element_atomic_topk.hpp`](../kernels/basic_op/topk/element_atomic_topk.hpp)。
 它处理 U32 承载的 16-bit key，保持 Tile 加载、元素计算、Tile 写回的源码顺序。
-6 个 `#pragma pto element for` 区域分别承担四个工作区清零和两轮 radix histogram。
+4 个 `#pragma pto element for` 区域分别承担两组融合的工作区清零和两轮 radix histogram。
 元素循环内的移位、按位与、条件和原子加使用普通 C++，没有手写 barrier。
 
 ```cpp
@@ -45,11 +45,12 @@ scalar 指令。验收禁止的是逐元素数据计算、加载、写回或原�
 TopK 的 cutoff 扫描和紧凑输出有跨元素依赖，仍是明确保留的顺序阶段。
 
 MoE 的单 PE `group_token_old` 和四 PE 动态 `group_token_vec_mt_dyn` histogram
-采用 32 元素 marked loops：先用有效长度 mask 加载输入，再用有效长度和 expert
-范围 mask 执行原子计数。输入不要求新增 padding，清零同样使用 masked scatter。
+采用一个 32 元素 fused marked loop：直接读取 `input[element]`，检查有效长度
+和 expert 范围，再执行原子计数。编译器生成 masked gather 和 masked atomic。输入不要求新增 padding，清零同样使用 masked scatter。
 PE 行分工、跨 PE barrier、后续 prefix sum 和稳定排序保持原顺序。
-动态 histogram 位于独立编译单元；当前完整旧 driver 在全局 generic 模式下仍有
-Tile descriptor 编译限制，不能据此宣称任意混合编译单元均已支持。
+动态 histogram 与 driver 在同一编译单元内，普通 Tile 和 fused element loop
+交替执行。编译器从本地 helper 的全部直接调用方证明缓冲区分离；不在源码中
+添加 `restrict`，未知或重叠的调用仍拒绝降低。
 
 `run_solution_gfrun_regressions.py` 对这两个迁移用例先检查具体 helper 的源码、
 优化 IR 和 ELF 反汇编，再运行数值测试。检查拒绝 scalar 数据 load/store、
@@ -59,6 +60,31 @@ scalar atomic、原子 helper 和 vector extract/insert；缺失执行 mask 也�
 重复调用、非法 expert id 和输出 guard 的独立测试；该补充用例不改变原 21 项分母。
 MoE combine 的算术已有 Tile 运算；prefix/rank 和 MegaMoE 的变长内循环仍需独立
 依赖分析与编译支持，不把普通外层循环机械改成 element loop。
+
+## 优先使用 fused 源码
+
+当相邻元素阶段没有跨元素依赖、需要保留的中间 Tile 快照或归约边界时，
+优先放在同一个 element loop 内。MoE histogram 的推荐形式为：
+
+```cpp
+#pragma pto element for
+for (unsigned element = 0; element < 32; ++element) {
+  if (element < valid) {
+    const unsigned expert = input[element];
+    if (expert < histogramSize)
+      __atomic_fetch_add(histogram + expert, 1u, __ATOMIC_RELAXED);
+  }
+}
+```
+
+本次合并两个 MoE read/count 循环对，以及 TopK 两个相同零值 store 循环对。
+TopK 仍写回四个原始缓冲区；减少的是 region 边界，不是写回数量。
+编译器仅在对齐足以排除部分字节重叠时接受可交换的零值写入。
+
+QLI `make_key`、gather/view-copy、transpose、concat 的部分拆分保留整块输入
+快照与既有 alias 行为；element→Tile reduction→element 保留归约顺序。
+清零与 histogram 累加之间也保留阶段边界，防止后续 lane 清零覆盖已有计数。
+这些边界不应为了减少 pragma 数量而合并。
 
 ## 构建与运行
 

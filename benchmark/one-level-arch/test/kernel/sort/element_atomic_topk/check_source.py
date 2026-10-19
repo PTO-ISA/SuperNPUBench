@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 
-def validate(source: str, pragma_count: int = 6) -> None:
+def validate(source: str, pragma_count: int = 4) -> None:
     # Ignore comments so documentation can name the APIs being replaced.
     code = re.sub(r"/\*.*?\*/|//[^\n]*", "", source, flags=re.S)
     tile_calls = set(re.findall(r"\b(T[A-Z][A-Z0-9_]*)\s*(?:<[^;\n]*?>)?\s*\(", code))
@@ -19,7 +19,7 @@ def main() -> None:
     kernel = (Path(__file__).resolve().parents[4]
               / "kernels/basic_op/topk/element_atomic_topk.hpp")
     driver = Path(__file__).resolve().parents[1] / "src/element_atomic_topk.cpp"
-    for path, pragma_count in ((kernel, 6), (driver, 1)):
+    for path, pragma_count in ((kernel, 4), (driver, 1)):
         source = path.read_text(encoding="utf-8")
         validate(source, pragma_count)
         mutations = [source + f"\n{opcode}(values, view, 0);"
