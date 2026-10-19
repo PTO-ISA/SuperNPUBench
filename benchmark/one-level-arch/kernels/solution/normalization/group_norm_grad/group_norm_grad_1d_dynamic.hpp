@@ -47,8 +47,14 @@
 #include "group_norm_grad_reduce.hpp"
 
 namespace gn_grad_1d {
-// Caller-owned GM workspace [2,N*G]: all c2 values, then all c3 values.
-constexpr int64_t workspace_elems(int64_t N, int64_t G) { return 2 * N * G; }
+// Caller-owned GM workspace. Staged paths: [2,N*G], all c2 values, then all
+// c3 values. Fused path: dbeta then dgamma column partials, one [1,D] row per
+// (g, 32-batch block).
+constexpr int64_t workspace_elems(int64_t N, int64_t C, int64_t G) {
+    const int64_t staged = 2 * N * G;
+    const int64_t fused = 2 * ((N + 31) / 32) * C;
+    return staged > fused ? staged : fused;
+}
 
 // Shared shape validation and physical Tile definitions for all three stages.
 // CubeM32 always allocates 32 physical rows. 64 columns => 8 KiB FP32.
@@ -410,6 +416,93 @@ inline void dgamma_group(dtype *dy, dtype *x, float *mean, float *rstd,
     }
 }
 
+// A1/A2 n-block path: one Tile holds batches [n0, n0+rows) of one group g as
+// [rows, D] (D = Cols), so x/dY load with row stride C and mean/rstd/c2/c3
+// with row stride G, and gamma is one [1, D] row broadcast over the batches.
+// Chosen when it fills at least as many Tile rows as packing the groups of
+// one batch.
+inline bool use_nblock(int64_t N, int64_t G, int64_t D) {
+    const int64_t nrows = N < kPhysRows ? N : kPhysRows;
+    const int64_t grows = G < kPhysRows ? G : kPhysRows;
+    return is_tile_cols(D) && nrows >= grows;
+}
+
+template <typename dtype, int Cols> struct NBlockTiles {
+    using T = Tiles<dtype, Cols>;
+    using RowH = Tile<Location::Vec, dtype, kPhysRows, Cols, BLayout::CubeM32, 1, Cols>;
+    using RowF = Tile<Location::Vec, float, kPhysRows, Cols, BLayout::CubeM32, 1, Cols>;
+};
+
+// Stage A1 for batches [n0, n0+rows) of group g.
+template <typename dtype, int Cols>
+inline void fused_params_nblock(dtype *dy, dtype *x, float *mean, float *rstd,
+                                dtype *gamma, float *workspace, int64_t N,
+                                int64_t C, int64_t G, int64_t g, int64_t n0,
+                                int64_t rows, float s) {
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using B = NBlockTiles<dtype, Cols>;
+    using T = typename B::T;
+    const int64_t ng = n0 * G + g;
+    const int64_t offset = n0 * C + g * Cols;
+    gm_h gx(x + offset, rows, C), gdy(dy + offset, rows, C);
+    gm_h gg(gamma + g * Cols, 1, Cols);
+    GFloat gm(mean + ng, rows, G), gr(rstd + ng, rows, G);
+    GFloat gc2(workspace + ng, rows, G), gc3(workspace + N * G + ng, rows, G);
+    typename T::H h(rows, Cols);
+    typename T::F dyf(rows, Cols), xf(rows, Cols);
+    typename T::W w1(rows), w2(rows);
+    typename B::RowH gh;
+    typename B::RowF gf;
+    TLOAD(gh, gg);
+    TCVT(gf, gh);
+    TLOAD(h, gdy);
+    TCVT(dyf, h);
+    TCOLEXPANDMUL(dyf, dyf, gf);
+    TLOAD(h, gx);
+    TCVT(xf, h);
+    TROWSUM(w2, dyf);
+    TMUL(xf, xf, dyf);
+    TROWSUM(w1, xf);
+    c2_c3_rows<T>(w1, w2, gm, gr, gc2, gc3, rows, s);
+}
+
+// Stage A2 for batches [n0, n0+rows) of group g.
+template <typename dtype, int Cols>
+inline void dx_nblock(dtype *dy, dtype *x, float *rstd, dtype *gamma,
+                      float *workspace, dtype *dx, int64_t N, int64_t C,
+                      int64_t G, int64_t g, int64_t n0, int64_t rows) {
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using B = NBlockTiles<dtype, Cols>;
+    using T = typename B::T;
+    const int64_t ng = n0 * G + g;
+    const int64_t offset = n0 * C + g * Cols;
+    gm_h gx(x + offset, rows, C), gdy(dy + offset, rows, C);
+    gm_h gout(dx + offset, rows, C), gg(gamma + g * Cols, 1, Cols);
+    GFloat gr(rstd + ng, rows, G), gc2(workspace + ng, rows, G),
+        gc3(workspace + N * G + ng, rows, G);
+    typename T::H h(rows, Cols);
+    typename T::F xf(rows, Cols), out(rows, Cols);
+    typename T::V r(rows), c2(rows), c3(rows);
+    typename B::RowH gh;
+    typename B::RowF gf;
+    TLOAD(gh, gg);
+    TCVT(gf, gh);
+    TLOAD(r, gr);
+    TLOAD(c2, gc2);
+    TLOAD(c3, gc3);
+    TLOAD(h, gdy);
+    TCVT(out, h);
+    TCOLEXPANDMUL(out, out, gf);
+    TROWEXPANDMUL(out, out, r);
+    TLOAD(h, gx);
+    TCVT(xf, h);
+    TROWEXPANDMUL(xf, xf, c2);
+    TADD(out, out, xf);
+    TROWEXPANDADD(out, out, c3);
+    TCVT(h, out);
+    TSTORE(gout, h);
+}
+
 // Groups per (n, task) in stages A1 and A2. Both stages must use the same
 // ownership: A2 reads the c2/c3 that A1 wrote on the same PE, with no
 // inter-PE barrier. The A1 rows branch packs whole tile_g chunks up to 32.
@@ -519,6 +612,92 @@ inline void gamma_beta_block(dtype *dy, dtype *x, float *mean, float *rstd,
     gamma_beta_store<dtype, W>(dgamma, dbeta, c, sb, sg);
 }
 
+// Fused A1+A2+B: one PE owns group g for every batch. No Tile lives across
+// loop iterations: each 32-batch block stores its dgamma/dbeta column
+// partials to the workspace and a final pass reduces them, since loop-carried
+// Tiles are mis-indexed through zero-mask PseudoEmptyTile hand pads
+// (LinxISA/llvm-project#130). The live set fits the 256 KiB tile pool for
+// D <= kFusedMaxCols; the final reduce is one Tile, so N <= 32*32.
+constexpr int kFusedMaxCols = 128;
+
+inline bool use_fused(int64_t N, int64_t G, int64_t D, int peNum) {
+    return use_nblock(N, G, D) && G >= peNum && D <= kFusedMaxCols &&
+           N <= kPhysRows * kPhysRows;
+}
+
+// Batches [n0, n0+rows) of group g (block nb): writes dX and the dbeta/dgamma
+// column partials sum_n dY and sum_n dY*(X-mean)*rstd, from one load of dY/X.
+template <typename dtype, int Cols>
+inline void fused_block(dtype *dy, dtype *x, float *mean, float *rstd,
+                        dtype *gamma, dtype *dx, float *part_b, float *part_g,
+                        int64_t C, int64_t G, int64_t g, int64_t nb,
+                        int64_t n0, int64_t rows, float s) {
+    using gm_h = global_tensor<dtype, RowMajor<-1, -1>>;
+    using GB = GammaBetaTiles<dtype, Cols>;
+    using W = Tile<Location::Vec, float, kPhysRows, Cols, BLayout::CubeM32, -1, 1>;
+    using V = typename GB::V;
+    const int64_t ng = n0 * G + g;
+    const int64_t offset = n0 * C + g * Cols;
+    gm_h gx(x + offset, rows, C), gdy(dy + offset, rows, C);
+    gm_h gout(dx + offset, rows, C), gg(gamma + g * Cols, 1, Cols);
+    GFloat gm(mean + ng, rows, G), gr(rstd + ng, rows, G);
+    GFloat gpb(part_b + nb * Cols, 1, Cols), gpg(part_g + nb * Cols, 1, Cols);
+    typename GB::H h(rows);
+    typename GB::F b(rows), xf(rows), t(rows), gdyf(rows), p(rows);
+    W w1(rows), w2(rows);
+    V zero(rows), sum1(rows), sum2(rows), m(rows), r(rows), c2(rows), c3(rows);
+    typename GB::RowH gh;
+    typename GB::RowF gf, tb, tg;
+    TLOAD(gh, gg);
+    TCVT(gf, gh);
+    TLOAD(h, gdy);
+    TCVT(b, h);
+    TLOAD(h, gx);
+    TCVT(xf, h);
+    TLOAD(m, gm);
+    TLOAD(r, gr);
+    TCOLSUM(tb, b);
+    TROWEXPANDSUB(t, xf, m);
+    TROWEXPANDMUL(t, t, r);
+    TMUL(t, t, b);
+    TCOLSUM(tg, t);
+    TSTORE(gpb, tb);
+    TSTORE(gpg, tg);
+    // c2/c3 from sum1 = sum_d gamma*dY*X, sum2 = sum_d gamma*dY.
+    TCOLEXPANDMUL(gdyf, b, gf);
+    TROWSUM(w2, gdyf);
+    TMUL(p, xf, gdyf);
+    TROWSUM(w1, p);
+    auto v1 = TREDUCEPREFIXVIEW<V>(w1);
+    auto v2 = TREDUCEPREFIXVIEW<V>(w2);
+    TEXPANDS(zero, 0.0f);
+    TADD(sum1, zero, v1);
+    TADD(sum2, zero, v2);
+    c2_c3(c2, c3, sum1, sum2, m, r, s);
+    // dX = rstd*gamma*dY + c2*X + c3.
+    TROWEXPANDMUL(gdyf, gdyf, r);
+    TROWEXPANDMUL(xf, xf, c2);
+    TADD(gdyf, gdyf, xf);
+    TROWEXPANDADD(gdyf, gdyf, c3);
+    TCVT(h, gdyf);
+    TSTORE(gout, h);
+}
+
+// Reduces the nblocks [1,D] partial rows of group g into dbeta/dgamma.
+template <typename dtype, int Cols>
+inline void fused_reduce(float *part_b, float *part_g, dtype *dgamma,
+                         dtype *dbeta, int64_t g, int64_t nblocks) {
+    using GB = GammaBetaTiles<dtype, Cols>;
+    GFloat gpb(part_b, nblocks, Cols), gpg(part_g, nblocks, Cols);
+    typename GB::F pb(nblocks), pg(nblocks);
+    typename GB::RowF sb, sg;
+    TLOAD(pb, gpb);
+    TLOAD(pg, gpg);
+    TCOLSUM(sb, pb);
+    TCOLSUM(sg, pg);
+    gamma_beta_store<dtype, Cols>(dgamma, dbeta, g * Cols, sb, sg);
+}
+
 // Stage B logical [active_g,active_d], physical [32,64]. Separate N reductions
 // so dbeta and dgamma do not keep five FP32 tiles live together.
 template <typename dtype>
@@ -586,6 +765,40 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
                            dtype *gamma, const int64_t *tiling,
                            float *workspace, dtype *dx, dtype *dgamma,
                            dtype *dbeta) {
+    // Fused path: one pass over dY/X per group computes everything.
+    {
+        const gn_grad_1d::Shape shape(tiling);
+        const int64_t N = shape.N, C = shape.C, G = shape.G, D = shape.D;
+        if (gn_grad_1d::use_fused(N, G, D, peNum)) {
+            const uint32_t tid = get_thread_idx();
+            const float s = 1.0f / static_cast<float>(D);
+            const int64_t nblocks =
+                (N + gn_grad_1d::kPhysRows - 1) / gn_grad_1d::kPhysRows;
+            float *part_b = workspace, *part_g = workspace + nblocks * C;
+            gn_grad_1d::with_cols(D, [=]<int Cols>() {
+                if constexpr (Cols <= gn_grad_1d::kFusedMaxCols) {
+                    for (int64_t g = tid; g < G; g += peNum)
+                        for (int64_t nb = 0; nb < nblocks; ++nb) {
+                            const int64_t n0 = nb * gn_grad_1d::kPhysRows;
+                            const int64_t rows =
+                                N - n0 < gn_grad_1d::kPhysRows
+                                    ? N - n0 : gn_grad_1d::kPhysRows;
+                            gn_grad_1d::fused_block<dtype, Cols>(
+                                dy, x, mean, rstd, gamma, dx,
+                                part_b + g * nblocks * Cols,
+                                part_g + g * nblocks * Cols, C, G, g, nb, n0,
+                                rows, s);
+                        }
+                    for (int64_t g = tid; g < G; g += peNum)
+                        gn_grad_1d::fused_reduce<dtype, Cols>(
+                            part_b + g * nblocks * Cols,
+                            part_g + g * nblocks * Cols, dgamma, dbeta, g,
+                            nblocks);
+                }
+            });
+            return;
+        }
+    }
     // Parameters and dx retain identical (n, group-block) ownership.
     // gamma/beta read only immutable inputs, not another PE's workspace.
     // Stage 1: fused parameters.
@@ -610,7 +823,20 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         const int64_t outer_g = (G + tile_g - 1) / tile_g;
         const float s = 1.0f / static_cast<float>(D);
         const int64_t fr = gn_grad_1d::fold_cols(D);
-        if (gn_grad_1d::is_tile_cols(D)) {
+        if (gn_grad_1d::use_nblock(N, G, D)) {
+            const int64_t nb = (N + gn_grad_1d::kPhysRows - 1) / gn_grad_1d::kPhysRows;
+            gn_grad_1d::with_cols(D, [&]<int Cols>() {
+                for (int64_t task = tid; task < G * nb; task += peNum) {
+                    const int64_t g = task / nb;
+                    const int64_t n0 = (task % nb) * gn_grad_1d::kPhysRows;
+                    const int64_t rows = N - n0 < gn_grad_1d::kPhysRows
+                                             ? N - n0 : gn_grad_1d::kPhysRows;
+                    gn_grad_1d::fused_params_nblock<dtype, Cols>(
+                        dy, x, mean, rstd, gamma, workspace, N, C, G, g, n0,
+                        rows, s);
+                }
+            });
+        } else if (gn_grad_1d::is_tile_cols(D)) {
             const int64_t own_g = gn_grad_1d::owned_groups(D, tile_g);
             const int64_t outer_r = (G + own_g - 1) / own_g;
             gn_grad_1d::with_cols(D, [&]<int Cols>() {
@@ -656,7 +882,7 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
 
         const gn_grad_1d::Shape shape(tiling);
         const uint32_t tid = get_thread_idx();
-        const auto [N, C, G, D] = shape;
+        const int64_t N = shape.N, C = shape.C, G = shape.G, D = shape.D;
         const int64_t requested_d = tiling[3] > 0 ? tiling[3] : D;
         const int64_t tile_d = requested_d < tD ? requested_d : tD;
 
@@ -670,20 +896,37 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         const int64_t tile_g = tiling[4];
         const int64_t own_g = gn_grad_1d::owned_groups(D, tile_g);
         const int64_t outer_own = (G + own_g - 1) / own_g;
-        for (int64_t task = tid; task < N * outer_own; task += peNum) {
-            const int64_t n = task / outer_own;
-            const int64_t g_begin = (task % outer_own) * own_g;
-            const int64_t g_end = g_begin + own_g < G ? g_begin + own_g : G;
-            for (int64_t g0 = g_begin; g0 < g_end; g0 += tile_g) {
-              const int64_t active_g = g_end - g0 < tile_g ? g_end - g0 : tile_g;
-              if (D <= gn_grad_1d::kPhysCols && tile_g > 1) {
-                gn_grad_1d::dx_groups(dy, x, rstd, gamma, workspace, dx, N, C,
-                                      G, D, n, g0, active_g);
-              } else {
-                gn_grad_1d::dx_group<dtype, gm_h, gm_f, tile_h, tile_f, tile_v>(
-                    dy, x, rstd, gamma, workspace + n * G + g0, dx, N, C, G, D,
-                    n, g0, tile_d);
-              }
+        // Same (g, n-block) task order as Stage 1, so c2/c3 stay PE-local.
+        if (gn_grad_1d::use_nblock(N, G, D)) {
+            const int64_t nb = (N + gn_grad_1d::kPhysRows - 1) / gn_grad_1d::kPhysRows;
+            gn_grad_1d::with_cols(D, [&]<int Cols>() {
+                for (int64_t task = tid; task < G * nb; task += peNum) {
+                    const int64_t g = task / nb;
+                    const int64_t n0 = (task % nb) * gn_grad_1d::kPhysRows;
+                    const int64_t rows = N - n0 < gn_grad_1d::kPhysRows
+                                             ? N - n0 : gn_grad_1d::kPhysRows;
+                    gn_grad_1d::dx_nblock<dtype, Cols>(dy, x, rstd, gamma,
+                                                       workspace, dx, N, C, G,
+                                                       g, n0, rows);
+                }
+            });
+        } else {
+            for (int64_t task = tid; task < N * outer_own; task += peNum) {
+                const int64_t n = task / outer_own;
+                const int64_t g_begin = (task % outer_own) * own_g;
+                const int64_t g_end = g_begin + own_g < G ? g_begin + own_g : G;
+                for (int64_t g0 = g_begin; g0 < g_end; g0 += tile_g) {
+                  const int64_t active_g = g_end - g0 < tile_g ? g_end - g0 : tile_g;
+                  if (D <= gn_grad_1d::kPhysCols && tile_g > 1) {
+                    gn_grad_1d::dx_groups(dy, x, rstd, gamma, workspace, dx, N,
+                                          C, G, D, n, g0, active_g);
+                  } else {
+                    gn_grad_1d::dx_group<dtype, gm_h, gm_f, tile_h, tile_f,
+                                         tile_v>(
+                        dy, x, rstd, gamma, workspace + n * G + g0, dx, N, C, G,
+                        D, n, g0, tile_d);
+                  }
+                }
             }
         }
     }
