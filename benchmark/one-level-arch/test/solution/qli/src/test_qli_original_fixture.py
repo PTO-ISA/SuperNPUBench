@@ -14,6 +14,9 @@ class OriginalQLIFixtureTest(unittest.TestCase):
             ('static', 64, 128, 128, 1), ('static', 4, 2048, 512, 1),
             ('static', 4, 8192, 512, 1), ('static', 4, 2080, 512, 1),
             ('dynamic', 4, 128, 8, 1)))
+        self.assertEqual(fixture.supplemental_four_pe_profiles(), (
+            ('static', 32, 8192, 512, 4),
+            ('static', 32, 8192, 1024, 4)))
         for _, sq, skv, _, _ in fixture.profiles():
             inputs = fixture.make_inputs(sq, skv)
             self.assertEqual(len(inputs['srcq']), sq * 64 * 128)
@@ -26,7 +29,8 @@ class OriginalQLIFixtureTest(unittest.TestCase):
                 np.testing.assert_array_equal(scores[row], expected)
 
     def test_complete_workspace_and_unordered_indices(self):
-        for profile in fixture.profiles():
+        profiles = fixture.profiles() + fixture.supplemental_four_pe_profiles()
+        for profile in profiles:
             with self.subTest(profile=profile), tempfile.TemporaryDirectory() as work:
                 directory = Path(work) / 'fixture'
                 fixture.generate(directory, profile)

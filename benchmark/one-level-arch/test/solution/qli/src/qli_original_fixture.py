@@ -20,6 +20,11 @@ def profiles():
         ('dynamic', 4, 128, 8, 1),)
 
 
+def supplemental_four_pe_profiles():
+    return (('static', 32, 8192, 512, 4),
+            ('static', 32, 8192, 1024, 4))
+
+
 def make_inputs(sq, skv):
     # Each head selects one coordinate. K encodes the token index in sixteen
     # +/-1 coordinates, while powers-of-two weights make every score unique.

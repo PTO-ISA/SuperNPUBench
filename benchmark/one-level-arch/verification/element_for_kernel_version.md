@@ -86,6 +86,18 @@ QLI `make_key`、gather/view-copy、transpose、concat 的部分拆分保留整�
 清零与 histogram 累加之间也保留阶段边界，防止后续 lane 清零覆盖已有计数。
 这些边界不应为了减少 pragma 数量而合并。
 
+QLI 的多 PE driver 由各 PE 分担输入预处理，再由 PE0 执行 score 与 TopK。
+`run_qli_pe0` 用 `PTO_PE_DOMAIN(8)` 声明这段调用链的 Tile 参与范围；8 是
+架构原始 mask `1000`，对应 PE0。编译器将该范围传递到 helper、Tile producer、
+consumer 和生成的复制指令。该声明不会给普通 C++ 标量代码添加 PE 条件，
+因此调用仍位于 `tid != 0` 返回之后。
+
+PE mask 与 element loop 的 execution mask 分别检查：前者限制参与的 PE，
+后者保留尾部和 `if` 条件选择的元素。QLI runner 检查 PE0 调用链上每个
+`B.IOT` 的 mask，并检查每个 element atomic 的 `B.IOR` execution mask。
+`--profile-set original` 保留原五项用例；`original-four-pe` 验证原四项静态
+配置的四 PE 路径，`upstream-four-pe` 验证新增的两项 Sq32/Skv8192 配置。
+
 ## 构建与运行
 
 使用彼此匹配的开发版 LLVM、TileOP API 和 gfrun。完整运行库提供 musl sysroot；

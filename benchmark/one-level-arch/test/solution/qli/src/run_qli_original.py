@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the original five QLI drivers with full guarded memory observation."""
+"""Run original or supplemental QLI drivers with guarded memory observation."""
 import argparse
 import hashlib
 import json
@@ -20,37 +20,7 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def check_score_native(text, kind):
-    fragment = 'qli_ptoI' if kind == 'static' else 'qli_pto_dynamicI'
-    matches = matching_function_bodies(text, fragment)
-    main = function_body_exact(text, 'main')
-    if matches:
-        assert len(matches) == 1, 'ambiguous original QLI specialization'
-        symbol, body = matches[0]
-        assert re.search(r'BSTART\.STD\s+DIRECT,[^\n]*<' + re.escape(symbol) + '>', main), \
-            'original QLI function is not called'
-    else:
-        body = main
-    assert re.search(r'BSTART(?:\.CUBE\s+|\.)TMATMUL\b', body), 'missing QK matmul'
-    for operation in ('TCMP', 'TSEL', 'TCOLSUM', 'TMUL', 'TADD'):
-        assert re.search(r'BSTART(?:\.TEPL\s+|\.VEC\s+|\.SFU\s+|\.)' +
-                         operation + r',\s*FP32\b', body), \
-            'missing original FP32 score operation: ' + operation
-
-
-def check_topk_native(text, ir, profile):
-    kind, sq, skv, topk, _ = profile
-    fragment = (f'qli_topk_radixILi{sq}ELi{skv}ELi{topk}E'
-                if kind == 'static' else 'qli_topk_radix_dynamic')
-    matches = matching_function_bodies(text, fragment)
-    main = function_body_exact(text, 'main')
-    if matches:
-        assert len(matches) == 1, 'ambiguous original TopK specialization'
-        root, _ = matches[0]
-        assert re.search(r'BSTART\.STD\s+DIRECT,[^\n]*<' + re.escape(root) + '>', main), \
-            'original TopK function is not called'
-    else:
-        root = 'main'
+def reachable_native_functions(text, root='main'):
     pending, reachable = [root], {}
     while pending:
         symbol = pending.pop()
@@ -59,6 +29,61 @@ def check_topk_native(text, ir, profile):
         body = function_body_exact(text, symbol)
         reachable[symbol] = body
         pending.extend(re.findall(r'BSTART\.STD\s+DIRECT,[^\n]*<([^>]+)>', body))
+    return reachable
+
+
+def check_score_native(text, kind):
+    fragment = 'qli_ptoI' if kind == 'static' else 'qli_pto_dynamicI'
+    reachable = reachable_native_functions(text)
+    matches = [(symbol, body) for symbol, body in reachable.items()
+               if fragment in symbol]
+    if matches:
+        assert len(matches) == 1, 'ambiguous original QLI specialization'
+        symbol, body = matches[0]
+    else:
+        body = '\n'.join(reachable.values())
+    assert re.search(r'BSTART(?:\.CUBE\s+|\.)TMATMUL\b', body), 'missing QK matmul'
+    for operation in ('TCMP', 'TSEL', 'TCOLSUM', 'TMUL', 'TADD'):
+        assert re.search(r'BSTART(?:\.TEPL\s+|\.VEC\s+|\.SFU\s+|\.)' +
+                         operation + r',\s*FP32\b', body), \
+            'missing original FP32 score operation: ' + operation
+
+
+def check_pe0_domain_native(text):
+    """Check every Tile binder reachable from the explicitly PE0-only stage."""
+    called = reachable_native_functions(text)
+    roots = [symbol for symbol in called if 'run_qli_pe0' in symbol]
+    assert len(roots) == 1, 'missing or ambiguous PE0 domain boundary'
+    reachable = reachable_native_functions(text, roots[0])
+    binders, atomics = 0, 0
+    for symbol, body in reachable.items():
+        for line in body.splitlines():
+            if re.search(r'\bB\.IOT\b', line):
+                assert re.search(r'\bmask=1000\b', line), \
+                    'Tile binder escaped PE0 domain in ' + symbol + ': ' + line
+                binders += 1
+        for bundle in re.split(r'(?=\bBSTART\.)', body):
+            if re.match(r'BSTART\.TLSU\s+MGATHER\.ADD,', bundle):
+                assert re.search(r'\bB\.IOR\b[^\n]*ExecMaskPresent', bundle), \
+                    'element atomic lost its execution mask in ' + symbol
+                atomics += 1
+    assert binders, 'PE0 domain has no native Tile binders'
+    assert atomics, 'PE0 domain has no masked element atomic'
+
+
+def check_topk_native(text, ir, profile):
+    kind, sq, skv, topk, _ = profile
+    fragment = (f'qli_topk_radixILi{sq}ELi{skv}ELi{topk}E'
+                if kind == 'static' else 'qli_topk_radix_dynamic')
+    called = reachable_native_functions(text)
+    matches = [(symbol, body) for symbol, body in called.items()
+               if fragment in symbol]
+    if matches:
+        assert len(matches) == 1, 'ambiguous original TopK specialization'
+        root, _ = matches[0]
+        reachable = reachable_native_functions(text, root)
+    else:
+        reachable = called
     combined = '\n'.join(reachable.values())
     assert 'THISTOGRAM' not in combined, 'retired histogram instruction'
     for engine, operation in (('TLSU', 'MGATHER.ADD'), ('TEPL', 'TROWSUM'),
@@ -66,7 +91,7 @@ def check_topk_native(text, ir, profile):
         assert re.search(r'BSTART\.' + engine + r'\s+' + re.escape(operation) +
                          r',\s*U32\b', combined), 'missing migrated TopK operation: ' + operation
     helpers = [symbol for symbol in reachable
-               if 'PopN' in symbol and symbol.endswith('.pto.local')]
+               if 'PopN' in symbol and re.search(r'\.pto\.local(?:\.pto\.pe\d+\.\d+)?$', symbol)]
     assert helpers, 'no reachable outlined LocalTile selection helper'
     for symbol in helpers:
         body = reachable[symbol]
@@ -83,8 +108,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for option in ('compiler-bin', 'sysroot', 'resource-dir', 'api-include', 'gfrun', 'out'):
         parser.add_argument('--' + option, type=Path, required=True)
+    parser.add_argument('--profile-set', choices=('original', 'original-four-pe', 'upstream-four-pe'),
+                        default='original')
     parser.add_argument('--case', type=int, choices=range(5), action='append')
     args = parser.parse_args()
+    profile_sets = {
+        'original': fixture.profiles(),
+        'original-four-pe': tuple((*profile[:4], 4) for profile in fixture.profiles()
+                                 if profile[0] == 'static'),
+        'upstream-four-pe': fixture.supplemental_four_pe_profiles(),
+    }
+    profiles = profile_sets[args.profile_set]
+    if args.case is not None and any(index >= len(profiles) for index in args.case):
+        parser.error(f'--case must select one of 0..{len(profiles) - 1} for '
+                     f'{args.profile_set}')
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=False)
     source = Path(__file__).resolve().parent
@@ -107,8 +144,8 @@ def main():
         hashes=before, model='gfrun', spec_pin=fixture.SPEC_PIN,
         target_triple='linx64v5-unknown-linux-musl', sysroot=str(args.sysroot.resolve()),
         scope='original driver full-memory diagnostics; clean integrated freeze required for promotion',
-        compile_timeout_seconds=600,
-        gfrun_timeout_seconds=120, profiles=fixture.profiles()), indent=2) + '\n')
+        compile_timeout_seconds=600, gfrun_timeout_seconds=120,
+        profile_set=args.profile_set, profiles=profiles), indent=2) + '\n')
     commands, reports = [], []
 
     def run(command, log, timeout=600):
@@ -120,8 +157,8 @@ def main():
 
     target = ['--target=linx64v5-unknown-linux-musl', '--sysroot=' + str(args.sysroot),
               '-resource-dir=' + str(args.resource_dir)]
-    for index in (range(5) if args.case is None else args.case):
-        profile = fixture.profiles()[index]
+    for index in (range(len(profiles)) if args.case is None else args.case):
+        profile = profiles[index]
         kind, sq, skv, topk, npe = profile
         case = out / f'case_{index}'
         case.mkdir()
@@ -152,6 +189,8 @@ def main():
             check_score_native((case / 'kernel.diss').read_text(), kind)
             check_topk_native((case / 'kernel.diss').read_text(),
                               (case / 'kernel.ll').read_text(), profile)
+            if kind == 'static':
+                check_pe0_domain_native((case / 'kernel.diss').read_text())
             run([tools / 'llvm-objdump', '-t', case / 'kernel.elf'], case / 'symbols.txt')
             symbols = load_symbols(case / 'symbols.txt')
             wants = {p.name.removesuffix('.golden.bin'): p.read_bytes()
@@ -185,9 +224,12 @@ def main():
             report['error'] = str(error)
         reports.append(report)
         (case / 'summary.json').write_text(json.dumps(report, indent=2) + '\n')
-        (out / 'summary.json').write_text(json.dumps(dict(cases=reports, passed=sum(
-            row['status'] == 'PASS' for row in reports), total=len(reports), original_total=5), indent=2) + '\n')
-        print(f'original QLI case {index}: {report["status"]}', flush=True)
+        (out / 'summary.json').write_text(json.dumps(dict(
+            cases=reports, passed=sum(row['status'] == 'PASS' for row in reports),
+            total=len(reports), profile_set=args.profile_set, original_total=5,
+            supplemental_four_pe_total=len(fixture.supplemental_four_pe_profiles())),
+            indent=2) + '\n')
+        print(f'{args.profile_set} QLI case {index}: {report["status"]}', flush=True)
     assert all(digest(path) == value for path, value in before.items()), 'source/tool mutation invalidates run'
     return 0 if all(row['status'] == 'PASS' for row in reports) else 1
 
