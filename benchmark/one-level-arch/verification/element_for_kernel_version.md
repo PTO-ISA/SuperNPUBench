@@ -146,3 +146,22 @@ fixture 仍需迁移到 masked-only 契约，issue-60 的合法 guard-correlated
 之外的 scalar tail copy；本轮 MoE helper 已改用 bounded masked MGATHER。
 完整原始应用库存仍为 17/21 个已验证 profile，四条 pending 路径不由
 solution 的 21/21 数值回归替代。gfsim 继续留到后续 PR。
+
+## Fused 版本验收
+
+最新融合版本使用 LLVM `a3b798ae3cf22f452b0fe58a61191764a5464623`、
+benchmark `f4a20b82ec7fc5658a03cc45a7c5f8c1a7379292`，API `03ef51d` 与
+gfrun `0a237ccfe` 保持不变。该 benchmark 提交包含 TopK 检查器对共享地址偏移
+的适配；四条 masked store 及其各自执行 mask 的检查仍保留。
+
+最终结果：element suite **64/64**、solution **21/21**、核心 TopK **9/9 内存段**、
+原始 matmul **7/7**、QLI 全组、predicate 原始/边界、D6、issue-130 和 MoE
+重复边界测试全部通过。独立审计核验 **2,844 项哈希**，错误和待完成项均为零。
+精确版本与范围见 JSON 的 `fused_element_gfrun_20261019`。
+
+同一 v16 编译器下，动态 MoE histogram helper 从拆分版的 5 条 TCI、3 条 TCMPS、
+1 条 TSEL，减少为 3 条 TCI、2 条 TCMPS、0 条 TSEL。两版都保留 2 条 TLEA、
+1 条 masked MGATHER 和 1 条 masked MGATHER.ADD。这是静态指令比较，未作周期加速结论。
+
+动态 MoE 已移除独立 TU workaround，可在完整 driver 中交替执行 Tile 与 fused
+元素循环。前述 LLVM legacy pragma/issue-60、原应用库存和 gfsim 范围限制仍分别跟踪。

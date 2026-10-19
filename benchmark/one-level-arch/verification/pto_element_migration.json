@@ -1732,5 +1732,134 @@
       "gfsim/TimingSim deferred"
     ],
     "skill_evolve": "no-update; project-specific changes documented in repository and existing compiler/runtime proof gates"
+  },
+  "fused_element_gfrun_20261019": {
+    "status": "qualified_functional_profiles",
+    "models": [
+      "gfrun"
+    ],
+    "gfrun_timeout_seconds": 120,
+    "repositories": {
+      "compiler": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-llvm",
+        "head": "a3b798ae3cf22f452b0fe58a61191764a5464623",
+        "status": ""
+      },
+      "benchmark": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-bench",
+        "head": "f4a20b82ec7fc5658a03cc45a7c5f8c1a7379292",
+        "status": ""
+      },
+      "tileop_api": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-f16-dense-api",
+        "head": "03ef51d16ec7d25a2dd48ded8d8f6725e95df950",
+        "status": ""
+      },
+      "model": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-functional-model",
+        "head": "0a237ccfe8404d73d92dd144a6af539b2b0ebc5a",
+        "status": ""
+      }
+    },
+    "artifact_root": "/tmp/pto-element-fusion-20261019/final-v16b",
+    "audit": {
+      "path": "/tmp/pto-element-fusion-20261019/final-v16b-audit.json",
+      "sha256": "e5cbca30996c6dfce921b54757e2c37a0dd33fd7d251924edc740a93061b71b2",
+      "verified_hashes": 2844,
+      "passed": true,
+      "errors": [],
+      "pending": []
+    },
+    "source_fusions": {
+      "moe_read_count_pairs": 2,
+      "topk_zero_store_pairs": 2,
+      "topk_marked_regions": 4,
+      "dynamic_moe_translation_units": 1
+    },
+    "compiler_changes": [
+      "Whole-object disjointness proved across all direct calls to local helpers, including forwarded arguments and global roots; scoped metadata only on proven access pairs",
+      "Commuting naturally full-width-aligned unit-stride zero stores; conflicting ordinary/atomic streams still fail closed",
+      "Correct row/column/arg reduction result descriptors; strict capacity checks retained"
+    ],
+    "results": {
+      "element_suite": [
+        64,
+        64
+      ],
+      "element_memory_segments": 455,
+      "topk777_memory_segments": [
+        9,
+        9
+      ],
+      "solution_regressions": [
+        21,
+        21
+      ],
+      "moe_boundary_driver": [
+        1,
+        1
+      ],
+      "boundary_lengths": 11,
+      "calls_per_boundary_length": 2,
+      "qli_profiles": {
+        "key": 48,
+        "histogram": 72,
+        "norm": 13,
+        "popn": 18,
+        "static_topk": 7,
+        "original_drivers": 5,
+        "dynamic_topk": 4
+      },
+      "original_lowp_matmul": [
+        7,
+        7
+      ],
+      "predicate_original_outputs": 7,
+      "predicate_edge_outputs": 7,
+      "d6_c48": true,
+      "issue130_c16": true
+    },
+    "verification_tests": {
+      "moe_checker": 18,
+      "solution_runner": 11,
+      "disassembly_scope": 11,
+      "compiler_fusion": 4,
+      "compiler_descriptors": 24
+    },
+    "same_compiler_instruction_comparison": {
+      "artifact": "/tmp/pto-element-fusion-20261019/ab-v16/instruction-comparison.json",
+      "split": {
+        "TCI": 5,
+        "TCMPS": 3,
+        "TSEL": 1,
+        "TLEA": 2,
+        "MGATHER": 1,
+        "MGATHER.ADD": 1
+      },
+      "fused": {
+        "TCI": 3,
+        "TCMPS": 2,
+        "TSEL": 0,
+        "TLEA": 2,
+        "MGATHER": 1,
+        "MGATHER.ADD": 1
+      },
+      "claim": "Static instruction counts only; no timing improvement claimed"
+    },
+    "retained_boundaries": [
+      "Whole-chunk alias snapshots in QLI make_key/histogram, gather/view-copy, transpose and concat",
+      "Tile reductions and ordered prefix/rank stages",
+      "Histogram clear before updates and cross-PE synchronization"
+    ],
+    "known_limits": [
+      "Unknown/exported/address-taken or unproved mixed-alias helper contexts are not assumed disjoint",
+      "28 old pragma fixtures and issue-60 path proof remain separate LLVM merge-readiness gaps",
+      "Original21 application inventory17verified/4pending is separate fromsolution21PASS",
+      "gfsim/TimingSim deferred"
+    ],
+    "superseded_implementation_limits": [
+      "Dynamic MoE separate translation-unit workaround removed; full mixed Tile/element driver now qualifies"
+    ],
+    "skill_evolve": "no-update; project-specific fusion and descriptor contracts documented in compiler and benchmark guides"
   }
 }
