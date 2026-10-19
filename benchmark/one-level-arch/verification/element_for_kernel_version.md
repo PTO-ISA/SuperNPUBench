@@ -159,9 +159,9 @@ fixture 仍需迁移到 masked-only 契约，issue-60 的合法 guard-correlated
 完整原始应用库存仍为 17/21 个已验证 profile，四条 pending 路径不由
 solution 的 21/21 数值回归替代。gfsim 继续留到后续 PR。
 
-## Fused 版本验收
+## Fused 历史验收（v16）
 
-最新融合版本使用 LLVM `a3b798ae3cf22f452b0fe58a61191764a5464623`、
+该批次融合版本使用 LLVM `a3b798ae3cf22f452b0fe58a61191764a5464623`、
 benchmark `f4a20b82ec7fc5658a03cc45a7c5f8c1a7379292`，API `03ef51d` 与
 gfrun `0a237ccfe` 保持不变。该 benchmark 提交包含 TopK 检查器对共享地址偏移
 的适配；四条 masked store 及其各自执行 mask 的检查仍保留。
@@ -177,3 +177,38 @@ gfrun `0a237ccfe` 保持不变。该 benchmark 提交包含 TopK 检查器对共
 
 动态 MoE 已移除独立 TU workaround，可在完整 driver 中交替执行 Tile 与 fused
 元素循环。前述 LLVM legacy pragma/issue-60、原应用库存和 gfsim 范围限制仍分别跟踪。
+
+## Fused + PE domain 最新验收（v19）
+
+本轮冻结版本为 LLVM `a08e1c228dbe8b5fe45a6c613fec6a78499ab920`、
+API `1f72e918fcbb72569d8e28dda11f7c579a06dab2`、benchmark 代码
+`693d25349b9e17bad57fe7d281be258140d649ba` 和未修改的 gfrun
+`0a237ccfe8404d73d92dd144a6af539b2b0ebc5a`。LLVM 已集成目标分支
+`dev-llvm15_56` 的 `78b74f4`。本节是验收后的独立文档提交，不能代替代码版本。
+
+编译器新增 PE domain 在 helper 调用链、压缩指令、MC 展开和汇编往返中的传播，
+并保留 generic masked profile 所需的 Local source lifetime 编码，包括分配后
+新生成的 queue-alignment copy。该修复关闭了 v18 的 gather、MegaMoE 和 issue130
+回归；v18 失败记录保留，不改记为通过。API 增加参与 mask 与函数边界支持；
+benchmark 的原始四 PE QLI driver 仅用 PE0 wrapper 声明 score/TopK 的执行范围。
+
+- element suite **64/64**，**455 个内存段**；核心 TopK **9/9 个内存段**；
+- solution **21/21**，原始低精度 matmul **7/7**；
+- QLI key48、histogram72、norm13、popn18、静态 TopK7、original5、dynamic4；
+- 额外 QLI 原始四 PE **4/4**、新增四 PE **2/2**，每例 **18 个内存段**；
+- 嵌套 assembly/view/TMOV/element 调用链 **2 个内存段、16,768 bytes**，
+  全部 **21 个 B.IOT** 使用 PE0 的 `1000` mask；
+- predicate 原始/边界、MoE 的 11 个边界长度及重复调用、D6 C48、issue130 C16 全部通过。
+
+全部运行保留 **120 秒 gfrun 超时和原资源限制**。Focused 检查 **95/95** 通过：
+API6、native adapter42、PE-domain7、精确 descriptor glob24、upstream lifetime/header16。
+另有 late-copy/legacy **3/3**，其中两项与前述 16 项重叠，不能相加为独立测试数。
+独立最终审计核验 **3,795 条哈希记录**，错误和缺失项均为零；重新运行的
+MoE 无 scalar 数据路径检查及 TopK mask 故障注入检查均通过。
+
+精确证据见 JSON 的 `fused_pe_domain_gfrun_20261019_v19`，以及本机
+`/tmp/pto-element-fusion-20261019/final-v19-audit.json`。旧批次保留原始版本和结果。
+issue60 的合法 guard-correlated 路径证明仍未关闭；其 negative test 通过不表示
+功能已支持。Broad MC 为 **82 PASS、1 XFAIL、3 个历史失败**，不是全 LLVM 绿灯。
+28 个旧 pragma fixture、原应用库存 17/21、强制 Tile spill 运行验证、lifetime
+retirement 语义和 gfsim/timing 仍不在本次关闭范围内。

@@ -1861,5 +1861,206 @@
       "Dynamic MoE separate translation-unit workaround removed; full mixed Tile/element driver now qualifies"
     ],
     "skill_evolve": "no-update; project-specific fusion and descriptor contracts documented in compiler and benchmark guides"
-  }
+  },
+  "fused_pe_domain_gfrun_20261019_v19": {
+    "status": "qualified_functional_profiles",
+    "models": [
+      "gfrun"
+    ],
+    "gfrun_timeout_seconds": 120,
+    "repositories": {
+      "compiler": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-llvm",
+        "head": "a08e1c228dbe8b5fe45a6c613fec6a78499ab920",
+        "status": ""
+      },
+      "benchmark": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-bench",
+        "head": "693d25349b9e17bad57fe7d281be258140d649ba",
+        "status": ""
+      },
+      "tileop_api": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-f16-dense-api",
+        "head": "1f72e918fcbb72569d8e28dda11f7c579a06dab2",
+        "status": ""
+      },
+      "model": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-functional-model",
+        "head": "0a237ccfe8404d73d92dd144a6af539b2b0ebc5a",
+        "status": ""
+      }
+    },
+    "artifact_root": "/tmp/pto-element-fusion-20261019/final-v19",
+    "audit": {
+      "path": "/tmp/pto-element-fusion-20261019/final-v19-audit.json",
+      "sha256": "ec21921ce2f554e78131ee12be39e9ebc151d7a62d999f1093a51aa814eed0c4",
+      "verified_hashes": 3795,
+      "passed": true,
+      "errors": [],
+      "pending": []
+    },
+    "source_fusions": {
+      "moe_read_count_pairs": 2,
+      "topk_zero_store_pairs": 2,
+      "topk_marked_regions": 4,
+      "dynamic_moe_translation_units": 1
+    },
+    "compiler_changes": [
+      "Whole-object disjointness proved across all direct calls to local helpers, including forwarded arguments and global roots; scoped metadata only on proven access pairs",
+      "Commuting naturally full-width-aligned unit-stride zero stores; conflicting ordinary/atomic streams still fail closed",
+      "Correct row/column/arg reduction result descriptors; strict capacity checks retained",
+      "Explicit PE domains preserved through closed-callgraph specialization, instruction compression, all MC pseudo expansions and assembly roundtrip; unsupported effects and Tile-pointer crossings reject",
+      "Canonical upstream reuse families and standalone TLSU/CUBE headers preserve strict PE-mask, descriptor and SizeCode validation",
+      "Generic masked lowering conservatively retains Local sources including late queue-alignment copies; legacy late retention changes generated PseudoTCOPYDesc only, preserving explicit legacy lifetimes"
+    ],
+    "results": {
+      "element_suite": [
+        64,
+        64
+      ],
+      "element_memory_segments": 455,
+      "topk777_memory_segments": [
+        9,
+        9
+      ],
+      "solution_regressions": [
+        21,
+        21
+      ],
+      "moe_boundary_driver": [
+        1,
+        1
+      ],
+      "boundary_lengths": 11,
+      "calls_per_boundary_length": 2,
+      "qli_profiles": {
+        "key": 48,
+        "histogram": 72,
+        "norm": 13,
+        "popn": 18,
+        "static_topk": 7,
+        "original_drivers": 5,
+        "dynamic_topk": 4
+      },
+      "original_lowp_matmul": [
+        7,
+        7
+      ],
+      "predicate_original_outputs": 7,
+      "predicate_edge_outputs": 7,
+      "d6_c48": true,
+      "issue130_c16": true,
+      "qli_original_four_pe": [
+        4,
+        4
+      ],
+      "qli_upstream_four_pe": [
+        2,
+        2
+      ],
+      "qli_four_pe_segments_per_case": 18,
+      "nested_pe_domain_chain": {
+        "segments": [
+          2,
+          2
+        ],
+        "bytes": 16768,
+        "biot_binders": 21,
+        "pe_mask": "1000"
+      }
+    },
+    "verification_tests": {
+      "focused_primary": {
+        "passed": 95,
+        "total": 95,
+        "api": 6,
+        "native_adapter": 42,
+        "pe_domain": 7,
+        "exact_descriptor_glob": 24,
+        "upstream_lifetime_header": 16
+      },
+      "additional_late_copy_legacy": {
+        "passed": 3,
+        "total": 3,
+        "overlaps_primary": 2
+      },
+      "issue60": {
+        "negative_test_passed": true,
+        "feature_closed": false
+      },
+      "independent_moe_no_scalar_and_topk_mask_canaries": "PASS",
+      "evidence": "/tmp/pto-element-fusion-20261019/final-v19/focused/summary.json"
+    },
+    "same_compiler_instruction_comparison": {
+      "artifact": "/tmp/pto-element-fusion-20261019/ab-v16/instruction-comparison.json",
+      "split": {
+        "TCI": 5,
+        "TCMPS": 3,
+        "TSEL": 1,
+        "TLEA": 2,
+        "MGATHER": 1,
+        "MGATHER.ADD": 1
+      },
+      "fused": {
+        "TCI": 3,
+        "TCMPS": 2,
+        "TSEL": 0,
+        "TLEA": 2,
+        "MGATHER": 1,
+        "MGATHER.ADD": 1
+      },
+      "claim": "Static instruction counts only; no timing improvement claimed",
+      "qualification": "Historical same-compiler v16 comparison; not rerun as a v19 timing claim"
+    },
+    "retained_boundaries": [
+      "Whole-chunk alias snapshots in QLI make_key/histogram, gather/view-copy, transpose and concat",
+      "Tile reductions and ordered prefix/rank stages",
+      "Histogram clear before updates and cross-PE synchronization"
+    ],
+    "known_limits": [
+      "Unknown/exported/address-taken or unproved mixed-alias helper contexts are not assumed disjoint",
+      "28 legacy pragma fixtures remain outside this closure; valid guard-correlated issue60 path proof remains open",
+      "Broad MC: 82 PASS, 1 XFAIL, 3 historical failures: CUBE_Mamulb, MTC_Tloadstore, pto-tileop-macro-ranges",
+      "Original application inventory 17/21 verified with four pending profiles is distinct from solution regression 21/21",
+      "Forced Tile spill runtime and lifetime retirement semantics are not qualified",
+      "gfsim/TimingSim deferred; model unchanged"
+    ],
+    "superseded_implementation_limits": [
+      "Dynamic MoE separate translation-unit workaround removed; full mixed Tile/element driver now qualifies"
+    ],
+    "skill_evolve": "no-update; project-specific fusion and descriptor contracts documented in compiler and benchmark guides",
+    "input_manifest": {
+      "path": "/tmp/pto-element-fusion-20261019/final-v19/input-manifest.json",
+      "sha256": "596b5a92f87c35bd4809d1dbddcd769dabdb567096425d2315e267144f02dee3"
+    },
+    "upstream_compiler_base": "78b74f4a614e61b8992abeb315da9c3bd058aa86",
+    "api_changes": [
+      "PTO_PE_DOMAIN(mask) boundary annotation",
+      "TileArray participant masks preserved through output references, assembly, views and TMOV writers; invalid or unsupported uses reject"
+    ],
+    "benchmark_changes": [
+      "Keep original four-PE QLI preprocessing, with PE0 score/TopK wrapper domain8 and original TileArray/template defaults",
+      "Strict shared native-header normalization for exact legacy, standalone and numeric TLSU/CUBE forms; preserve all mask/address/scalar checks"
+    ],
+    "historical_runs": [
+      {
+        "version": "v17",
+        "status": "PASS",
+        "audit": "/tmp/pto-element-fusion-20261019/final-v17-audit.json"
+      },
+      {
+        "version": "v18",
+        "status": "FAIL",
+        "artifact_root": "/tmp/pto-element-fusion-20261019/final-v18",
+        "failures": [
+          "gather in default64",
+          "two MegaMoE cases in solution21",
+          "issue130 C16"
+        ],
+        "resolution": "a08e1c2 late generated copy source-retention fix, independently requalified in v19"
+      }
+    ],
+    "post_validation_documentation": "This record is committed after the qualified benchmark code SHA; no code or runner changes in the documentation commit."
+  },
+  "latest_qualification_ref": "fused_pe_domain_gfrun_20261019_v19"
 }
