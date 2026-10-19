@@ -1,17 +1,6 @@
-/**
- * @file transpose_tile_isa.hpp
- * @brief 基于纯 Tile ISA 的转置算子实现
- * 
- * 本文件提供两个转置算子：
- * 1. tile_transpose_nd: 通用 N 维任意轴交换，使用 offset 计算 + MGATHER
- * 2. tile_transpose_2d: 2D 矩阵转置，使用硬件原生 TTRANS 指令
- * 
- * 核心设计思想：
- * - 将"标量计算"与"数据并行计算"分离到不同执行路径
- * - 维度循环在标量核心上运行（编译期模板展开）
- * - 每个维度内的坐标提取用 tile 操作并行处理所有元素
- * - 避免使用 __vec__ 的 per-element 标量循环模式
- */
+// N维轴交换和2D Tile转置。FP16/512的N维路径使用普通标量索引 +
+// #pragma pto element for，每个原512元素Tile先完成全部读取，再写回。
+// 2D TTRANS 路径与其他 profile 的既有 TileOp 路径保持独立。
 
 #ifndef SUPERNPU_TRANSPOSE_TILE_ISA_HPP
 #define SUPERNPU_TRANSPOSE_TILE_ISA_HPP
@@ -19,6 +8,8 @@
 #include <common/pto_tileop.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
+#include <utility>
 
 // TTRANS 指令的 API 兼容性配置
 // 旧 API: TTRANS(dst, src)
@@ -29,6 +20,52 @@
 #endif
 
 namespace supernpu::tile_isa {
+
+// 所有 gather 分片先组成原512元素快照，再写回。轴映射保留普通标量
+// C++ 的写法，pragma 负责逐元素地址计算和 Tile lowering。
+template <int Rank, int Axis0, int Axis1, uint32_t ValidElements>
+void transpose_f16_element_tile(const __half *input, __half *output,
+                                const uint32_t *input_strides,
+                                const uint32_t *output_strides,
+                                const uint32_t *output_shape,
+                                uint32_t begin) {
+  constexpr uint32_t kTileElements = 512;
+  constexpr uint32_t kLeafElements = 64;
+  constexpr uint32_t kParts = kTileElements / kLeafElements;
+  pto::ElementTile<__half, kTileElements> layout;
+  auto parts = pto::TPARTVIEW<kLeafElements>(layout, ValidElements);
+  pto::TileArray<pto::ElementTile<__half, kLeafElements>, 1, kParts> gathered_parts;
+  for (uint32_t part = 0; part < kParts; ++part) {
+    pto::ElementTile<__half, kLeafElements> gathered;
+    auto &values = pto::TPARTELEMENT(gathered);
+    const uint32_t valid = static_cast<uint32_t>(parts.valid_size(part));
+#pragma pto element for
+    for (uint32_t element = 0; element < kLeafElements; ++element) {
+      if (element < valid) {
+        const uint32_t output_index = begin + parts.logical_index(part, element);
+        uint32_t input_index = 0;
+        for (uint32_t input_dim = 0; input_dim < Rank; ++input_dim) {
+          const uint32_t output_dim = input_dim == Axis0 ? Axis1 :
+                                      input_dim == Axis1 ? Axis0 : input_dim;
+          const uint32_t coordinate =
+              output_index / output_strides[output_dim] % output_shape[output_dim];
+          input_index += coordinate * input_strides[input_dim];
+        }
+        values[element] = input[input_index];
+      }
+    }
+    TMOV(gathered_parts[0][part], gathered);
+  }
+  auto snapshot = pto::TASSEMBLY<pto::ElementTile<__half, kTileElements>>(
+      std::move(gathered_parts));
+  auto output_parts = pto::TPARTVIEW<kLeafElements>(snapshot, ValidElements);
+  for (uint32_t part = 0; part < kParts; ++part) {
+    pto::ElementTile<__half, kLeafElements> stored;
+    auto borrowed = output_parts.part(part);
+    TMOV(stored, borrowed);
+    TSTORE(output + begin, stored, output_parts, part, output_parts.valid_size(part));
+  }
+}
 
 /**
  * @brief 通用 N 维转置（任意轴交换）
@@ -78,6 +115,36 @@ void tile_transpose_nd(DType *input, DType *output, std::uint32_t *input_shape,
   // ========== 分块参数 ==========
   constexpr int kFullTiles = Elements / TileElements;      // 完整 tile 数量
   constexpr int kTailElements = Elements % TileElements;   // 尾部剩余元素数
+
+  if constexpr (std::is_same_v<DType, __half> && TileElements == 512) {
+    uint32_t input_strides[Rank];
+    uint32_t output_strides[Rank];
+    uint32_t input_product = 1, output_product = 1;
+    for (int dimension = Rank - 1; dimension >= 0; --dimension) {
+      const int swapped = dimension == Axis0 ? Axis1 :
+                          dimension == Axis1 ? Axis0 : dimension;
+      if (input_shape[dimension] == 0 || output_shape[dimension] == 0 ||
+          input_shape[dimension] != output_shape[swapped] ||
+          input_product > UINT32_MAX / input_shape[dimension] ||
+          output_product > UINT32_MAX / output_shape[dimension])
+        __builtin_trap();
+      input_strides[dimension] = input_product;
+      output_strides[dimension] = output_product;
+      input_product *= input_shape[dimension];
+      output_product *= output_shape[dimension];
+    }
+    if (input_product != Elements || output_product != Elements)
+      __builtin_trap();
+    for (uint32_t tile = 0; tile < kFullTiles; ++tile)
+      transpose_f16_element_tile<Rank, Axis0, Axis1, TileElements>(
+          input, output, input_strides, output_strides, output_shape,
+          tile * TileElements);
+    if constexpr (kTailElements != 0)
+      transpose_f16_element_tile<Rank, Axis0, Axis1, kTailElements>(
+          input, output, input_strides, output_strides, output_shape,
+          kFullTiles * TileElements);
+    return;
+  }
 
   // ========== 类型定义 ==========
   // 输入/输出全局张量：展平为一维（转置不改变存储，只改变逻辑索引）

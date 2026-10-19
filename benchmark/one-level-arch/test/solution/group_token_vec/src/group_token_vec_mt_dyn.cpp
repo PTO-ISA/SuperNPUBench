@@ -117,12 +117,16 @@ static uint32_t topkIndex[kTopKEleNumMax + 2 * 4096];
 // (refPreCompute), 延迟验证只做比对。
 static inline uint32_t *topkAligned()
 {
-    return (uint32_t *)(((uint64_t)topkIndex & ~0xFFFu) + 0x1000);
+    // Express alignment as a bounded offset within the original allocation.
+    const uintptr_t offsetBytes =
+        0x1000 - (reinterpret_cast<uintptr_t>(topkIndex) & 0xFFFu);
+    return topkIndex + offsetBytes / sizeof(uint32_t);
 }
 // .sbss 压舱槽: 保持启动期构造器 store 与 GlobalTensor 惰性初始化守卫的
 // 相邻布局, 把后端 16B 合并 store 的丢失吸收到无害位置 ([C9])。
 __attribute__((used)) static uint32_t *topkIndexAlignedBallast =
-    (uint32_t *)(((uint64_t)topkIndex & ~0xFFFu) + 0x1000);
+    topkIndex +
+    (0x1000 - (reinterpret_cast<uintptr_t>(topkIndex) & 0xFFFu)) / sizeof(uint32_t);
 
 static uint32_t tokenPerExpertCnt[kExpertNumMax];
 static uint32_t groupedTokenIds[kExpertPerRankMax * kBSMax];

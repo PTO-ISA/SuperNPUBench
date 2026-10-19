@@ -89,6 +89,10 @@ REG['tcmp']  = R(fam='cmpsel',   mode='gt', M=16, N=16, dt=I32, eps=0)
 REG['tcmps'] = R(fam='cmpsel_s', mode='gt', M=16, N=16, dt=I32, scalar=0, eps=0)
 # ---- TSELS: masked select between a tile source and a scalar; out = where(a>b, src, SVAL) ----
 REG['tsels'] = R(fam='tsels', mode='gt', M=16, N=16, dt=I32, scalar=777, eps=0)
+REG['elementwise_if_predicates'] = R(
+    fam='elementwise_if_predicates', M=1, N=128, dt=F32, eps=0)
+REG['elementwise_atomic_histogram'] = R(
+    fam='elementwise_atomic_histogram', bins=8, elements=128, eps=0)
 
 # ---- SFU transcendental (elementwise; positive bounded domain so log/sqrt/
 #      recip/rsqrt stay in-domain and exp does not overflow). SFU is a hardware
@@ -328,6 +332,12 @@ def np_read(path, dt):
 def gen(case, chkdir):
     s = REG[case]; fam = s['fam']; op = s.get('op', '')
     os.makedirs(chkdir, exist_ok=True)
+    # The predicate matrix seeds its exact dyadic inputs in the target source.
+    if fam == 'elementwise_if_predicates':
+        return
+    # The histogram case seeds deterministic index/value/mask arrays on target.
+    if fam == 'elementwise_atomic_histogram':
+        return
     # --- TCI: self-generated iota, no input files ---
     if fam == 'iota':
         return
@@ -1427,6 +1437,83 @@ def check_ttri(case, chkdir):
 
 def check(case, chkdir):
     s = REG[case]
+    if s['fam'] == 'elementwise_atomic_histogram':
+        paths = {
+            'bins': os.path.join(chkdir, 'out_bins.bin'),
+            'observed': os.path.join(chkdir, 'out_observed.bin'),
+            'status': os.path.join(chkdir, 'out_status.bin'),
+        }
+        missing = [name for name, path in paths.items()
+                   if not os.path.exists(path)]
+        if missing:
+            print(f'[{case}] MISSING {", ".join(missing)}', file=sys.stderr)
+            return 1
+        expected_sizes = {'bins': s['bins'] * 4,
+                          'observed': s['elements'] * 4, 'status': 8 * 4}
+        for name, size in expected_sizes.items():
+            if os.path.getsize(paths[name]) != size:
+                print(f'[{case}] {name} BYTE SIZE MISMATCH', file=sys.stderr)
+                return 1
+        bins = np.fromfile(paths['bins'], dtype=np.int32)
+        observed = np.fromfile(paths['observed'], dtype=np.uint32)
+        status = np.fromfile(paths['status'], dtype=np.uint32)
+        expected_bins = np.full(s['bins'], 16, dtype=np.int32)
+        expected_observed = np.full(s['elements'], 16, dtype=np.uint32)
+        expected_status = np.array(
+            [128, 8, 0, 128, 2048, 128, 4, 0x41544853],
+            dtype=np.uint32)
+        for name, got, expected in (
+                ('bins', bins, expected_bins),
+                ('observed', observed, expected_observed),
+                ('status', status, expected_status)):
+            if got.size != expected.size:
+                print(f'[{case}] {name} SIZE MISMATCH got={got.size} '
+                      f'expected={expected.size}', file=sys.stderr)
+                return 1
+            bad = np.flatnonzero(got != expected)
+            if bad.size:
+                index = int(bad[0])
+                print(f'[{case}] {name} MISMATCH {bad.size}/{expected.size} '
+                      f'first@{index} got={got[index]} expected={expected[index]}',
+                      file=sys.stderr)
+                return 1
+        return 0
+    if s['fam'] == 'elementwise_if_predicates':
+        out_path = os.path.join(chkdir, 'out.bin')
+        if not os.path.exists(out_path):
+            print(f'[{case}] MISSING out.bin', file=sys.stderr); return 1
+        if os.path.getsize(out_path) != 7 * 128 * 4:
+            print(f'[{case}] BYTE SIZE MISMATCH', file=sys.stderr)
+            return 1
+        got = np_read(out_path, F32)
+        if got.size != 7 * 128:
+            print(f'[{case}] SIZE MISMATCH got={got.size} expected={7 * 128}',
+                  file=sys.stderr)
+            return 1
+        got = got.reshape(7, 128)
+        i = np.arange(128)
+        lhs = np.where(i % 3 == 0, np.float32(1.0),
+                       np.where(i % 3 == 1, np.float32(-1.0),
+                                np.float32(0.0))).astype(np.float32)
+        rhs = np.full(128, np.float32(0.5), dtype=np.float32)
+        predicates = (
+            lhs > 0.0, lhs < 0.0, lhs >= 0.0, lhs <= 0.0,
+            lhs == 0.0, lhs != 0.0, np.logical_not(lhs > 0.0),
+        )
+        ref = np.stack([
+            np.where(predicate, lhs + rhs, lhs - rhs)
+            for predicate in predicates
+        ]).astype(np.float32)
+        bad = np.flatnonzero(got.view(np.uint32).reshape(-1) !=
+                             ref.view(np.uint32).reshape(-1))
+        if bad.size == 0:
+            return 0
+        flat = int(bad[0]); predicate = flat // 128; lane = flat % 128
+        print(f'[{case}] MISMATCH {bad.size}/{7 * 128} '
+              f'first predicate={predicate} lane={lane} '
+              f'got={got[predicate, lane]} ref={ref[predicate, lane]}',
+              file=sys.stderr)
+        return 1
     if s['fam'] == 'matmul':
         return check_matmul(case, chkdir)
     if s['fam'] == 'mquant':

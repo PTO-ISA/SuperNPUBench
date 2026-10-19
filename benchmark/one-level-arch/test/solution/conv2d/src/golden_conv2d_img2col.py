@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -66,21 +67,28 @@ def main() -> int:
     x.numpy().tofile(compare_dir / "input.bin")
     w.numpy().tofile(compare_dir / "weight.bin")
     # Pre-create the output file so a silent ELF failure cannot pass unnoticed.
-    np.zeros(BATCH * OUT_H * OUT_W * COUT, dtype=np.float32).tofile(
+    np.full(BATCH * OUT_H * OUT_W * COUT, np.nan, dtype=np.float32).tofile(
         compare_dir / "output.bin")
 
-    cmd = [str(args.gfrun), "-t", "1", "-s", "softcore.multiThreadNum=4",
+    cmd = [str(args.gfrun), "-s", "softcore.multiThreadNum=4",
            "-f", str(elf)]
     print("+", " ".join(cmd))
-    completed = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    completed = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     if completed.returncode != 0:
         print(completed.stdout[-4000:])
         print(completed.stderr[-4000:])
         raise SystemExit(f"gfrun failed with rc={completed.returncode}")
-    if "Reach the End of Benchmark" not in completed.stdout:
-        raise SystemExit("gfrun did not reach the end of the benchmark")
+    if not any(re.fullmatch(
+            r"(?:Success|Suaccelss) to Reach the End of Benchmark! R2 = 0", line)
+            for line in completed.stdout.splitlines()):
+        raise SystemExit("gfrun did not report successful completion with R2 = 0")
 
-    result = np.fromfile(compare_dir / "output.bin", dtype=np.float32)
+    output = compare_dir / "output.bin"
+    if output.stat().st_size != golden.nbytes:
+        raise SystemExit("output byte length does not match the golden")
+    result = np.fromfile(output, dtype=np.float32)
+    if not np.all(np.isfinite(result)):
+        raise SystemExit("output contains unwritten or non-finite values")
     if result.size != golden.size:
         raise SystemExit(f"output size {result.size} != expected {golden.size}")
 

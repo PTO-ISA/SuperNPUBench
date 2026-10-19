@@ -1,6 +1,6 @@
 /**
  * @file view_copy.hpp
- * @brief Copy between strided tensor views with Tile ISA gather/scatter.
+ * @brief Copy between strided tensor views with element-wise Tile lowering.
  */
 
 #ifndef SUPERNPU_VIEW_COPY_HPP
@@ -18,65 +18,68 @@ namespace detail {
  * kTailElements for the final partial tile. Keeping ValidElements as a template
  * parameter lets the PTO tile valid region remain a compile-time constant.
  */
-template <typename DType, int Rank, int TileElements, int ValidElements,
-          typename InputGlobal, typename OutputGlobal>
+template <typename DType, int Rank, int TileElements, int ValidElements>
 inline void process_view_copy_tile(
-    InputGlobal &input_global, OutputGlobal &output_global,
-    std::uint32_t linear_base, const std::uint32_t *shape,
+    const DType *input, DType *output, std::uint32_t linear_base,
+    const std::uint32_t *shape,
     const std::uint32_t *input_global_stride,
     const std::uint32_t *output_global_stride) {
   static_assert(ValidElements > 0, "ValidElements must be positive");
   static_assert(ValidElements <= TileElements,
                 "ValidElements cannot exceed the physical tile size");
 
-  using DataTile =
-      pto::Tile<pto::Location::Vec, DType, 1, TileElements,
-                pto::BLayout::RowMajor, 1, ValidElements>;
-  using OffsetTile =
-      pto::Tile<pto::Location::Vec, std::uint32_t, 1, TileElements,
-                pto::BLayout::RowMajor, 1, ValidElements>;
-
-  DataTile output_tile;
-  OffsetTile input_offset_tile;
-  OffsetTile output_offset_tile;
-
-  OffsetTile linear_index;
-  OffsetTile quotient;
-  OffsetTile cycle;
-  OffsetTile cycle_base;
-  OffsetTile coordinate;
-  OffsetTile input_contribution;
-  OffsetTile output_contribution;
-
-  TCI(linear_index, linear_base);
-  TEXPANDS(input_offset_tile, static_cast<std::uint32_t>(0));
-  TEXPANDS(output_offset_tile, static_cast<std::uint32_t>(0));
-
-  std::uint32_t logical_stride = 1;
-  for (int dim = Rank - 1; dim >= 0; --dim) {
-    if (logical_stride == 1) {
-      TCVT(quotient, linear_index);
-    } else {
-      TDIVS(quotient, linear_index, logical_stride);
-    }
-
-    // coordinate = (linear_index / logical_stride) % shape[dim]
-    TDIVS(cycle, quotient, shape[dim]);
-    TMULS(cycle_base, cycle, shape[dim]);
-    TSUB(coordinate, quotient, cycle_base);
-
-    // PTO v0.58 MGATHER/MSCATTER take element indices.
-    TMULS(input_contribution, coordinate, input_global_stride[dim]);
-    TMULS(output_contribution, coordinate, output_global_stride[dim]);
-
-    TADD(input_offset_tile, input_offset_tile, input_contribution);
-    TADD(output_offset_tile, output_offset_tile, output_contribution);
-
-    logical_stride *= shape[dim];
+  std::uint32_t local_shape[Rank];
+  std::uint32_t local_input_stride[Rank];
+  std::uint32_t local_output_stride[Rank];
+  for (int dim = 0; dim < Rank; ++dim) {
+    local_shape[dim] = shape[dim];
+    local_input_stride[dim] = input_global_stride[dim];
+    local_output_stride[dim] = output_global_stride[dim];
   }
 
-  MGATHER(output_tile, input_global, input_offset_tile);
-  MSCATTER(output_global, output_tile, output_offset_tile);
+  pto::ElementTile<DType, TileElements> snapshot;
+  auto &snapshot_elements = pto::TPARTELEMENT(snapshot);
+
+  // Finish every source read before this tile performs any destination write.
+  // Later tiles intentionally observe writes from earlier tiles when the views
+  // alias, matching the original per-tile MGATHER/MSCATTER behavior.
+#pragma pto element for
+  for (std::uint32_t element = 0; element < TileElements; ++element) {
+    if (element < ValidElements) {
+      const std::uint32_t linear = linear_base + element;
+      std::uint32_t input_index = 0;
+      std::uint32_t logical_stride = 1;
+      for (int dim = Rank - 1; dim >= 0; --dim) {
+        const std::uint32_t coordinate =
+            (linear / logical_stride) % local_shape[dim];
+        input_index += coordinate * local_input_stride[dim];
+        logical_stride *= local_shape[dim];
+      }
+      snapshot_elements[element] = input[input_index];
+    }
+  }
+
+  // Keep the source snapshot as a Tile transport between the read and write
+  // regions. This makes the per-tile alias contract explicit to lowering.
+  pto::ElementTile<DType, TileElements> transported;
+  TMOV(transported, snapshot);
+  auto &transported_elements = pto::TPARTELEMENT(transported);
+
+#pragma pto element for
+  for (std::uint32_t element = 0; element < TileElements; ++element) {
+    if (element < ValidElements) {
+      const std::uint32_t linear = linear_base + element;
+      std::uint32_t output_index = 0;
+      std::uint32_t logical_stride = 1;
+      for (int dim = Rank - 1; dim >= 0; --dim) {
+        const std::uint32_t coordinate =
+            (linear / logical_stride) % local_shape[dim];
+        output_index += coordinate * local_output_stride[dim];
+        logical_stride *= local_shape[dim];
+      }
+      output[output_index] = transported_elements[element];
+    }
+  }
 }
 
 } // namespace detail
@@ -114,13 +117,8 @@ void tile_view_copy(DType *input, DType *output, const std::uint32_t *shape,
   constexpr int kFullTiles = Elements / TileElements;
   constexpr int kTailElements = Elements % TileElements;
 
-  using InputGlobal =
-      pto::global_tensor<DType, pto::RowMajor<1, Elements>>;
-  using OutputGlobal =
-      pto::global_tensor<DType, pto::RowMajor<1, Elements>>;
-
-  InputGlobal input_global(input + input_offset / sizeof(DType));
-  OutputGlobal output_global(output + output_offset / sizeof(DType));
+  const DType *input_view = input + input_offset / sizeof(DType);
+  DType *output_view = output + output_offset / sizeof(DType);
 
   constexpr std::uint32_t ThreadNum = 4;
   std::uint32_t thread_id = get_thread_idx();
@@ -128,7 +126,7 @@ void tile_view_copy(DType *input, DType *output, const std::uint32_t *shape,
   for (int tile = static_cast<int>(thread_id); tile < kFullTiles;
        tile += ThreadNum) {
     detail::process_view_copy_tile<DType, Rank, TileElements, TileElements>(
-        input_global, output_global,
+        input_view, output_view,
         static_cast<std::uint32_t>(tile * TileElements), shape,
         input_global_stride, output_global_stride);
   }
@@ -137,7 +135,7 @@ void tile_view_copy(DType *input, DType *output, const std::uint32_t *shape,
     constexpr int kTailOwner = kFullTiles % ThreadNum;
     if (thread_id == static_cast<std::uint32_t>(kTailOwner)) {
       detail::process_view_copy_tile<DType, Rank, TileElements, kTailElements>(
-          input_global, output_global,
+          input_view, output_view,
           static_cast<std::uint32_t>(kFullTiles * TileElements), shape,
           input_global_stride, output_global_stride);
     }

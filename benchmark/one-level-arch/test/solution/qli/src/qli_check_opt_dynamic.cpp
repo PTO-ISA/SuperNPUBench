@@ -2,22 +2,29 @@
 #include "benchmark.h"
 #include "solution/qli/qli_pto_opt_dynamic.hpp"
 
-// 动态 shape + 多 PE 版 driver（地址由 fix_cpp_addrs.py 迭代更新）
-#define SRCQ_ADDR  0x0000000000014e20ULL
-#define SRCK_ADDR  0x000000000001ce20ULL
-#define SRCW_ADDR  0x0000000000020e20ULL
-#define SRCSQ_ADDR  0x0000000000021220ULL
-#define SRCSK_ADDR  0x0000000000021620ULL
+// 输入地址由链接器解析，修改 kernel 大小后无需重新修补常量地址。
+extern "C" {
+extern unsigned char _binary_srcq_data_start[];
+extern unsigned char _binary_srck_data_start[];
+extern unsigned char _binary_srcw_data_start[];
+extern unsigned char _binary_srcsq_data_start[];
+extern unsigned char _binary_srcsk_data_start[];
+}
 
-#define OUT_SCORES  0x4000802000ULL
+#ifdef QLI_INPUT_DATA
+extern "C" uint32_t qli_workspace[];
+#define OUT_SCORES reinterpret_cast<uintptr_t>(qli_workspace)
+#else
+#define OUT_SCORES 0x4000802000ULL
+#endif
 // scores 行步长为 paddedSkv = ceil(Skv/2048)*2048（TopK 整块读取契约）
 #define PADDED_SKV (((Skv + 2047) / 2048) * 2048)
 #define OUT_INDICES (OUT_SCORES + (uint64_t)Sq * PADDED_SKV * 4)
 // key/hist/prefix scratch 紧随 indices 之后
 #define KEY_SCRATCH (OUT_INDICES + (uint64_t)Sq * topK * 4 + 8192 + (uint64_t)Sq * PADDED_SKV * 4 + 2048)
 
-#ifndef B
-#define B 1
+#ifndef Batch
+#define Batch 1
 #endif
 #ifndef Tsq
 #define Sq 4
@@ -42,13 +49,24 @@
 
 #define DTYPE __fp8_e4m3
 
+static_assert(Batch == 1,
+              "original dynamic QLI driver supports exactly one batch");
+static_assert(Sq > 0 && Sq <= 8192 && Skv > 0 && Skv <= 16384,
+              "dynamic QLI dimensions exceed the supported bounds");
+static_assert(Skv % 32 == 0,
+              "dynamic QLI Skv must be divisible by 32");
+static_assert(topK > 0 && topK <= Skv,
+              "dynamic QLI topK must be in the range 1..Skv");
+static_assert(numPEs > 0 && Sq % numPEs == 0,
+              "dynamic QLI requires positive NPE dividing Sq");
+
 int main() {
     using dtype = DTYPE;
-    dtype*   q       = reinterpret_cast<dtype*>(SRCQ_ADDR);
-    dtype*   k       = reinterpret_cast<dtype*>(SRCK_ADDR);
-    float*   w       = reinterpret_cast<float*>(SRCW_ADDR);
-    float*   scale_q = reinterpret_cast<float*>(SRCSQ_ADDR);
-    float*   scale_k = reinterpret_cast<float*>(SRCSK_ADDR);
+    dtype*   q       = reinterpret_cast<dtype*>(_binary_srcq_data_start);
+    dtype*   k       = reinterpret_cast<dtype*>(_binary_srck_data_start);
+    float*   w       = reinterpret_cast<float*>(_binary_srcw_data_start);
+    float*   scale_q = reinterpret_cast<float*>(_binary_srcsq_data_start);
+    float*   scale_k = reinterpret_cast<float*>(_binary_srcsk_data_start);
     float*   scores  = reinterpret_cast<float*>(OUT_SCORES);
     int32_t* indices = reinterpret_cast<int32_t*>(OUT_INDICES);
     uint32_t* key_scratch = reinterpret_cast<uint32_t*>(KEY_SCRATCH);
@@ -68,7 +86,7 @@ int main() {
     static float tmp16[16 * 32 * numPEs];
 
     BENCHSTART;
-    for (int i = 0; i < B; i++) {
+    for (int i = 0; i < Batch; i++) {
         qli_pto_dynamic<dtype>(
             scores + i * Sq * PADDED_SKV,
             q + i * Sq * 64 * 128, ktt + i * 128 * Skv,
@@ -78,7 +96,7 @@ int main() {
     BENCHEND;
 
     __asm__ __volatile__("B.HINT TRACE.begin\n" : : :);
-    for (int i = 0; i < B; i++) {
+    for (int i = 0; i < Batch; i++) {
         qli_topk_radix_dynamic(
             scores + i * Sq * PADDED_SKV,
             indices + i * Sq * topK,

@@ -7,7 +7,7 @@
 // MoE Token Grouping operator — "old" variant with SIMD sort (PTO one-level-arch)
 //
 // [2026-10-04 修复注] 本头文件为单 PE / 4-PE 驱动共用的算子内核（常量 +
-// 标量/SIMT 实现），本身无需修改。4-PE SPMD 变体（test/solution/
+// Element/标量/SIMT 实现）。4-PE SPMD 变体（test/solution/
 // group_token_old/src/group_token_old_mt.cpp）在 gfsim `--conf fourpe` 下的
 // 末端 exit lockstep 断言（SyscallBarrier.cpp:1889，cycle 242,720）及其
 // 修复（驱动层验证汇合屏障 + 跨 PE 屏障重排 + gfsim 数据完整性修复）
@@ -34,11 +34,9 @@
 //     This replaces the scattered output of Phase 2 with a compact,
 //     sorted-by-section array.
 //
-// The scalar implementations below are unguarded and compile under every
-// backend (__linx / __cpu_sim__ / __ARM_FEATURE_SME), guaranteeing correct
-// results on gfrun/gfsim.  Optional SIMT-accelerated paths are provided
-// under #if !defined(__linx) && !defined(__cpu_sim__), following the same
-// convention as sort/topk.hpp.
+// Phase 1 uses native masked Element loops.  Phases 2 and 3 retain their
+// scalar implementations for __linx / __cpu_sim__; optional SIMT paths remain
+// under #if !defined(__linx) && !defined(__cpu_sim__).
 // ============================================================================
 
 // --- MoE topology constants (matching gen_expert_ids.py defaults) ---
@@ -54,33 +52,69 @@ constexpr uint32_t kTopKEleNum    = kBS * kTopK;                     // 8192
 // --- Tile type: 16×16 uint32 = 256 elements ---
 using TileU32 = Tile<Location::Vec, uint32_t, 16, 16, BLayout::RowMajor>;
 
+constexpr uint32_t kHistogramPartElements = 32;
+
+__attribute__((noinline)) static inline void clearElementHistogram(
+    uint32_t *histogram, uint32_t size)
+{
+    for (uint32_t begin = 0; begin < size; begin += kHistogramPartElements) {
+        const uint32_t valid =
+            size - begin < kHistogramPartElements ? size - begin
+                                                  : kHistogramPartElements;
+        uint32_t *part = histogram + begin;
+#pragma pto element for
+        for (uint32_t element = 0; element < kHistogramPartElements; ++element) {
+            if (element < valid) {
+                part[element] = 0u;
+            }
+        }
+    }
+}
+
+__attribute__((noinline)) static inline void addElementHistogramPart(
+    const uint32_t *input, uint32_t valid, uint32_t *histogram,
+    uint32_t histogramSize)
+{
+#pragma pto element for
+    for (uint32_t element = 0; element < kHistogramPartElements; ++element) {
+        if (element < valid) {
+            const uint32_t index = input[element];
+            if (index < histogramSize) {
+                __atomic_fetch_add(histogram + index, 1u,
+                                   __ATOMIC_RELAXED);
+            }
+        }
+    }
+}
+
 // ============================================================================
-// Phase 1 (scalar): CalTokenPerExpertCnt
+// Phase 1 (Element): CalTokenPerExpertCnt
 //
 // 功能：遍历 topkIndex 数组，统计每个 expert 被多少个 token 选中（直方图）。
-//       对应 .asc 中 __simt_vf__ CalTokenPerExpertCnt 的标量保底实现。
+//       对应 .asc 中 __simt_vf__ CalTokenPerExpertCnt 的 Tile 元素实现。
 //
 // 输入：topkIndex      — [expertNum] 每个 token 选中的 top-k expert id 列表，共 bs*k 个
 //       expertNum      — 全局 expert 总数（128）
 //       topkEleNum     — topkIndex 元素总数（bs*k = 8192）
 // 输出：tokenPerExpertCnt — [expertNum] 每个 expert 收到的 token 计数
 //
-// 执行方式：单线程标量 for 循环，顺序遍历 topkIndex 逐个计数。
-//           对应 .asc 版本用 128 线程 stride 并行 + asc_atomic_add 原子累加。
+// 执行方式：32 元素 masked gather 后由 element-for 并行更新直方图；尾块
+//           通过 valid guard 屏蔽。重复 expert id 使用 relaxed atomic add。
 // ============================================================================
-static inline void calTokenPerExpertCnt_scalar(const uint32_t *topkIndex,
-                                                  uint32_t *tokenPerExpertCnt,
-                                                  uint32_t expertNum,
-                                                  uint32_t topkEleNum)
+static inline void calTokenPerExpertCnt_element(const uint32_t *topkIndex,
+                                                uint32_t *tokenPerExpertCnt,
+                                                uint32_t expertNum,
+                                                uint32_t topkEleNum)
 {
-    for (uint32_t i = 0; i < expertNum; i++) {
-        tokenPerExpertCnt[i] = 0;
-    }
-    for (uint32_t i = 0; i < topkEleNum; i++) {
-        uint32_t expertId = topkIndex[i];
-        if (expertId < expertNum) {
-            tokenPerExpertCnt[expertId]++;
-        }
+    clearElementHistogram(tokenPerExpertCnt, expertNum);
+    for (uint32_t begin = 0; begin < topkEleNum;
+         begin += kHistogramPartElements) {
+        const uint32_t valid =
+            topkEleNum - begin < kHistogramPartElements
+                ? topkEleNum - begin
+                : kHistogramPartElements;
+        addElementHistogramPart(topkIndex + begin, valid,
+                                tokenPerExpertCnt, expertNum);
     }
 }
 
@@ -669,7 +703,8 @@ void FloorFunc_Impl(tile_shape_out& dst, const uint32_t* topkIndex,
 //       sectionStarts        — [expertPerRank+1] 各分区起始边界（Phase 3）
 //
 // 执行方式：
-//   - __linx / __cpu_sim__ 环境（v300 仿真器）：调用标量保底路径
+//   - __linx / __cpu_sim__ 环境：Phase 1 调用 Element 直方图，Phase 2/3
+//     保留标量路径
 //   - 真实硬件环境：调用 SIMT 加速路径（128 lane 并行）
 // ============================================================================
 static inline void runGroupTokenOld(const uint32_t *topkIndex,
@@ -682,13 +717,12 @@ static inline void runGroupTokenOld(const uint32_t *topkIndex,
 {
 #if defined(__linx) || defined(__cpu_sim__)
     // ========================================================================
-    // 标量路径（v300 仿真器 / CPU 模拟器）
-    // 单线程顺序执行，保证功能正确性验证。
+    // Phase 1 为 Element 直方图；Phase 2/3 保留标量路径。
     // ========================================================================
 
     // Phase 1: histogram
-    calTokenPerExpertCnt_scalar(topkIndex, tokenPerExpertCnt,
-                                 kExpertNum, kTopKEleNum);
+    calTokenPerExpertCnt_element(topkIndex, tokenPerExpertCnt,
+                                kExpertNum, kTopKEleNum);
     // Phase 2: scatter (atomic-add write pointer)
     groupToken_scalar<true>(topkIndex, groupedTokenIds, tokenSuperPodInfo,
                              expertSectionTokenCnt,

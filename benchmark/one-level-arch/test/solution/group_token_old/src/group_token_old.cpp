@@ -109,7 +109,10 @@ int main()
 #endif
 
     static uint32_t topkIndex[kTopKEleNum + 2 * 4096];
-    uint32_t *topkIndexAligned = (uint32_t *)(((uint64_t)topkIndex & ~0xFFFu) + 0x1000);
+    // Keep the aligned input inside its original allocation for alias analysis.
+    const uintptr_t inputOffsetBytes =
+        0x1000 - (reinterpret_cast<uintptr_t>(topkIndex) & 0xFFFu);
+    uint32_t *topkIndexAligned = topkIndex + inputOffsetBytes / sizeof(uint32_t);
     static uint32_t tokenPerExpertCnt[kExpertNum];
     static uint32_t groupedTokenIds[kExpertPerRank * kBS];
     static uint32_t tokenSuperPodInfo[kExpertPerRank * kBS * kSuperPodNum];
