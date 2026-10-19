@@ -1647,8 +1647,9 @@ def validate(text: str, case: str, ir_text: str | None = None) -> None:
         line for line in lines
         if re.search(r"\bB\.IOR\b", line) and "ExecMaskPresent" in line
     ]
-    # TopK also clears four workspace streams through element loops.
-    expected_tleas = expected_sites + (4 if is_topk else 0)
+    # TopK clears four streams in two fused pairs. Each pair shares the
+    # same logical offset Tile while retaining two separate masked stores.
+    expected_tleas = expected_sites + (2 if is_topk else 0)
     if len(tlea) != expected_tleas:
         raise CheckError(
             f"expected exactly {expected_tleas} static TLEA sites, found {len(tlea)}"
@@ -1661,16 +1662,20 @@ def validate(text: str, case: str, ir_text: str | None = None) -> None:
     if not subview:
         raise CheckError("missing TPARTVIEW/B.SUBVIEW lowering")
     if is_topk:
-        # Scalar >> and & expressions introduce their own masked arithmetic.
-        # Require the mask in each atomic bundle instead of counting all IORs.
-        for atomic_line in atomic:
-            start = lines.index(atomic_line)
+        # Require each memory effect's own mask; fused clear pairs still have
+        # four distinct stores even though they share two offset producers.
+        clear_stores = [line for line in lines
+                        if "BSTART.TLSU" in line and "MSCATTER, U32" in line]
+        if len(clear_stores) != 4:
+            raise CheckError("Top-K lost its four native initialization stores")
+        for memory_line in atomic + clear_stores:
+            start = lines.index(memory_line)
             end = next((i for i in range(start + 1, len(lines))
                         if "BSTART." in lines[i]), len(lines))
             binders = [line for line in lines[start + 1:end]
                        if re.search(r"\bB\.IOR\b", line)]
             if len(binders) != 1 or "ExecMaskPresent" not in binders[0]:
-                raise CheckError("atomic is missing its native execution mask")
+                raise CheckError("Top-K memory effect is missing its native execution mask")
     elif len(masked_ior) != expected_sites:
         raise CheckError("atomic is missing its native execution mask")
     if not any(re.search(r"\bTLOAD\b", line) for line in lines):
@@ -1728,8 +1733,8 @@ def validate(text: str, case: str, ir_text: str | None = None) -> None:
                 r"call <32 x i64> @llvm\.linx\.experimental\.ew\.tlea[^\n]*"
                 r"i64 32\)",
                 ir_text,
-        )) != 6:
-            raise CheckError("generic Top-K migration lost its six B32 TLEA sites")
+        )) != 4:
+            raise CheckError("fused Top-K lost its four B32 TLEA sites")
         stores = 0
         for function in re.findall(r"^define\b.*?^\}", ir_text, re.MULTILINE | re.DOTALL):
             offsets = set(re.findall(
@@ -2342,7 +2347,18 @@ def main() -> int:
                     r"(BSTART\.TLSU\s+MGATHER\.ADD, U32.*?)(?=BSTART|\Z)",
                     lambda match: match[0].replace("ExecMaskPresent", "NoExecMask"),
                     text, count=1, flags=re.S)
-                rejected("missing atomic execution mask", broken_mask, args.case)
+                rejected("missing atomic execution mask", broken_mask, args.case, ir_text)
+                clear_bundles = list(re.finditer(
+                    r"BSTART\.TLSU\s+MSCATTER, U32.*?(?=BSTART|\Z)",
+                    text, flags=re.S))
+                if len(clear_bundles) != 4:
+                    raise CheckError("expected four initialization store canaries")
+                for ordinal, bundle in enumerate(clear_bundles):
+                    broken = (text[:bundle.start()] +
+                              bundle[0].replace("ExecMaskPresent", "NoExecMask") +
+                              text[bundle.end():])
+                    rejected(f"missing clear {ordinal} execution mask",
+                             broken, args.case, ir_text)
                 rejected("missing scalar shift lowering", re.sub(r"\bTSHRS?\b", "TSHR_REMOVED", text), args.case)
                 rejected("missing scalar mask lowering", re.sub(r"\bTANDS?\b", "TAND_REMOVED", text), args.case)
             else:
