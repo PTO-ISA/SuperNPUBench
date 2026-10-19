@@ -1,0 +1,121 @@
+{
+  "fa_gmma_kchains.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/fa_gmma_kchains.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/fa/fa_gmma_kchains.hpp",
+    "line": 23,
+    "symbol": "void flash_attention_gmma_kchains_impl",
+    "sha256": "4746642142fa40675e707c8e06afa3c2b64827a35130b0a72da50b228a766f13"
+  },
+  "fa_gmma_opt.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/fa_gmma_opt.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/fa/fa_gmma_opt.hpp",
+    "line": 20,
+    "symbol": "void flash_attention_gmma_opt_impl",
+    "sha256": "32e8ada9d78d431205058ada9885533c61fa18f9de95dcbebbc8940c6006c088"
+  },
+  "fa_lowp_algD.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/fa_lowp_algD.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/algoc_algod_doubleq_compare_20261019/algD_source_snapshot.hpp",
+    "line": 74,
+    "symbol": "void fa_lowp_algD_impl",
+    "sha256": "6fdf25b4d182e87e2b9699a24d81b273514baf591bdb68efc64d43bf2027ecc8"
+  },
+  "fa_lowp_algC_final.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/fa_lowp_algC_final.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/fa/fa_lowp_algC_final.hpp",
+    "line": 88,
+    "symbol": "void fa_lowp_algC_final_impl",
+    "sha256": "bd7c107e2541e8545cd9196b4188ec7647d657f229b3d9c5a68cb7eb85b02e45"
+  },
+  "matmul_lowp_reuseA.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/matmul_lowp_reuseA.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/lowp_fullcache_C23_tK_sweep_20261019/source/matmul_lowp_reuseA.hpp",
+    "line": 77,
+    "symbol": "void compute_m_cached",
+    "sha256": "5686c4ac33a67663fa6b152bcc8e7f50e59565fa1868a7003859bd6c34556d98"
+  },
+  "matmul_shared_lowp.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/matmul_shared_lowp.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/matmul/matmul_shared_lowp.hpp",
+    "line": 273,
+    "symbol": "void matmul_shared_lowp",
+    "sha256": "2fd3a3eb19ec24b78dc4fcaa94eeec46a28563953b1c9929f6601a465d0011a3"
+  },
+  "matmul_reuseA_mtail_cellA.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/matmul_reuseA_mtail_cellA.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/matmul/matmul_reuseA_mtail_cellA.hpp",
+    "line": 112,
+    "symbol": "void matmul_reuseA_mtail_cellA",
+    "sha256": "073e44b9e117b8c7f4f25c6754e959afd370a675ac2d7a9441c3ad2b850b7c3a"
+  },
+  "matmul_reuseB_ktail.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/matmul_reuseB_ktail.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/matmul/matmul_reuseB_ktail.hpp",
+    "line": 187,
+    "symbol": "void matmul_reuseB_ktail",
+    "sha256": "295eb8f6230a53f034c1ff1e28fac19d714c0903fc62729417fcf087d5c39857"
+  },
+  "matmul_reuseB_mtail_sharedA.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/matmul_reuseB_mtail_sharedA.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/matmul/matmul_reuseB_mtail_sharedA.hpp",
+    "line": 85,
+    "symbol": "void matmul_reuseB_mtail_sharedA",
+    "sha256": "7043fdbb84afe599aa1cac3587ceb8c12fe4015012ed1c862cd08455c8e3ff21"
+  },
+  "matmul_reuseA.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/matmul_reuseA.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/matmul/matmul_reuseA.hpp",
+    "line": 281,
+    "symbol": "void matmul_reuseA",
+    "sha256": "950925ff580d2bbf8e82503d8aea16e3825525d70a6a03ccb74563cdd492a7b7"
+  },
+  "matmul_reuseB.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/matmul_reuseB.hpp",
+    "origin": "HEAD:benchmark/one-level-arch/kernels/basic_op/matmul/matmul_reuseB.hpp",
+    "line": 308,
+    "symbol": "void matmul_reuseB",
+    "sha256": "e73896c586da890fa99c9ec5eb28f4ecbff74d96d1aa8a38b347ed47944997ce"
+  },
+  "matmul_shared.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/matmul_shared.hpp",
+    "origin": "HEAD:benchmark/one-level-arch/kernels/basic_op/matmul/matmul_shared.hpp",
+    "line": 24,
+    "symbol": "void matmul_shared",
+    "sha256": "9759a99aa8036c4e79512cf9ecd23807b4318808f006108a14cf156741ed9762"
+  },
+  "rms_norm_dynamic_tree_32k.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/rms_norm_dynamic_tree_32k.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/solution/normalization/rms_norm/rms_norm_dynamic_tree_32k.hpp",
+    "line": 405,
+    "symbol": "void rms_norm_dynamic_tree_32k",
+    "sha256": "3b87a48d6fd82e7532025904d335710defe5adc71c92fc80b251696eee3004c3"
+  },
+  "mxquant.hpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/mxquant.hpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/mxquant/mxquant.hpp",
+    "line": 180,
+    "symbol": "inline void run",
+    "sha256": "961dfb60ea0228b93c239f410db6b61c3a62152ab08169c5c72f27b5b94801bd"
+  },
+  "matmul_lowp.cpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/matmul_lowp.cpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/lowp_fullcache_C23_tK_sweep_20261019/source/matmul_lowp.cpp",
+    "line": 1,
+    "symbol": null,
+    "sha256": "eff9bab9621dc4b72ae1f3691d0bf375acd031574f91132131c9637642b41850"
+  },
+  "Makefile.matmul_fullKcache": {
+    "path": "eval/perf_data/source_snapshots/20261019/Makefile.matmul_fullKcache",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/lowp_fullcache_C23_tK_sweep_20261019/source/Makefile",
+    "line": 1,
+    "symbol": null,
+    "sha256": "010769b082c05e33027d8bc6c8fb1362dfce7239cfbddd21082816fae8f7bba0"
+  },
+  "fa_algD_compare.cpp": {
+    "path": "eval/perf_data/source_snapshots/20261019/fa_algD_compare.cpp",
+    "origin": "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/algoc_algod_doubleq_compare_20261019/compare.cpp",
+    "line": 1,
+    "symbol": null,
+    "sha256": "2092421291963b2f3a0a406ced1089e9f6743e64361e63e76a38bcdef3b3cbe9"
+  }
+}
