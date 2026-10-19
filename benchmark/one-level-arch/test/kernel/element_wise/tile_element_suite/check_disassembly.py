@@ -7,6 +7,10 @@ import argparse
 import re
 from collections import Counter
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[5]))
+from native_bstart import normalize_disassembly
 
 
 class CheckError(RuntimeError):
@@ -1574,6 +1578,7 @@ def validate_leaf_gather_scatter(text: str, case: str, ir_text: str | None) -> N
 
 
 def validate(text: str, case: str, ir_text: str | None = None) -> None:
+    text = normalize_disassembly(text)
     if case.startswith(("view_copy_", "gather_v2_")):
         validate_leaf_gather_scatter(text, case, ir_text)
         return
@@ -1771,7 +1776,7 @@ def main() -> int:
     parser.add_argument("--ir", type=Path)
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
-    text = args.dis.read_text(encoding="utf-8")
+    text = normalize_disassembly(args.dis.read_text(encoding="utf-8"))
     ir_text = args.ir.read_text(encoding="utf-8") if args.ir else None
     try:
         validate(text, args.case, ir_text)

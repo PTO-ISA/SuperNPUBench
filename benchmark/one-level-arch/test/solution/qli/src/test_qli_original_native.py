@@ -73,6 +73,12 @@ class OriginalQLINativeTest(unittest.TestCase):
     def test_topk_requires_reachable_native_helpers(self):
         profile = ('static', 4, 2048, 512, 1)
         check_topk_native(NATIVE, IR, profile)
+        standalone = (NATIVE.replace("BSTART.CUBE TMATMUL, FP8_E4M3",
+                                     "BSTART.TMATMUL FP8_E4M3")
+                            .replace("BSTART.TLSU MGATHER.ADD, U32",
+                                     "BSTART.MGATHER.ADD U32"))
+        check_score_native(standalone, 'static')
+        check_topk_native(standalone, IR, profile)
         for bad in (NATIVE.replace(f'0x300 <{TOPK}>', '0x300 <unrelated>'),
                     NATIVE.replace(f'0x400 <{POPN}>', f'0x200 <{SCORE}>'),
                     NATIVE.replace('MGATHER.ADD', 'MGATHER'),

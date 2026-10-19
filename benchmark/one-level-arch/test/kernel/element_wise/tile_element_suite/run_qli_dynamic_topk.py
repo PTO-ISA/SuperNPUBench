@@ -70,6 +70,7 @@ def main():
                HERE / "test_qli_dynamic_topk_native.py",
                HERE / "check_disassembly.py", HERE / "compare_memory.py",
                HERE / "run_qli_element.py", BENCH / "verification/gfrun_dump.py",
+               BENCH.parent / "native_bstart.py",
                BENCH / "kernels/solution/qli/qli_pto_opt_dynamic.hpp",
                BENCH / "kernels/solution/qli/qli_element.hpp",
                BENCH / "test/common/_start.s", args.gfrun.resolve()]

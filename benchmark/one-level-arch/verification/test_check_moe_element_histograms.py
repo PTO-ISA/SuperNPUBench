@@ -75,6 +75,15 @@ COUNT_NATIVE = """00000200 <addElementHistogramPart>:
 DIS = CLEAR_NATIVE + COUNT_NATIVE
 
 
+def standalone_disassembly() -> str:
+    return (DIS.replace("BSTART.TLSU\tMSCATTER",
+                        "BSTART.MSCATTER\tU32")
+               .replace("BSTART.TLSU\tMGATHER.ADD",
+                        "BSTART.MGATHER.ADD\tU32")
+               .replace("BSTART.TLSU\tMGATHER,",
+                        "BSTART.MGATHER\tU32"))
+
+
 class NegativeCanaries(unittest.TestCase):
     def assert_rejected(self, source: str = SOURCE, ir: str = IR,
                         dis: str = DIS) -> None:
@@ -83,6 +92,7 @@ class NegativeCanaries(unittest.TestCase):
 
     def test_baseline_fixture_is_accepted(self) -> None:
         check.validate_artifact(SOURCE, IR, DIS, check.DYNAMIC)
+        check.validate_artifact(SOURCE, IR, standalone_disassembly(), check.DYNAMIC)
 
     def test_widened_induction_still_requires_both_tile_masks(self) -> None:
         count = COUNT_IR.replace("ew.tcmps.gpr.v32i32", "ew.tcmps.gpr.v32i64", 1)
@@ -107,6 +117,8 @@ class NegativeCanaries(unittest.TestCase):
 
     def test_missing_native_mask_is_rejected(self) -> None:
         self.assert_rejected(dis=DIS.replace(
+            "B.IOR [], ExecMaskPresent", "B.IOR []", 1))
+        self.assert_rejected(dis=standalone_disassembly().replace(
             "B.IOR [], ExecMaskPresent", "B.IOR []", 1))
 
     def test_missing_input_gather_mask_is_rejected(self) -> None:

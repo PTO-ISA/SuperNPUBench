@@ -1,6 +1,11 @@
 """Function-scoped native evidence for runtime-shape QLI TopK."""
 
 import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[5]))
+from native_bstart import normalize_disassembly
 
 from check_disassembly import (function_body_exact, ir_function_body_exact,
                                matching_function_bodies)
@@ -11,6 +16,7 @@ def direct_calls(body):
 
 
 def check_native(disassembly, ir):
+    disassembly = normalize_disassembly(disassembly)
     roots = matching_function_bodies(disassembly, "qli_topk_radix_dynamic")
     if len(roots) != 1:
         raise ValueError("expected one dynamic QLI TopK function")

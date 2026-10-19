@@ -7,6 +7,10 @@ import argparse
 from dataclasses import dataclass
 from pathlib import Path
 import re
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from native_bstart import normalize_disassembly
 
 
 class CheckError(RuntimeError):
@@ -248,8 +252,7 @@ def require_masked_tlsu_bundle(body: str, operation: str, context: str) -> None:
 
 def validate_clear_native(disassembly: str, spec: HelperSpec) -> None:
     body = extract_native_function(disassembly, spec.clear_symbol)
-    require_all(body, ("BSTART.TEPL\tTCI", "BSTART.TEPL\tTLEA",
-                       "BSTART.TLSU\tMSCATTER"),
+    require_all(body, ("BSTART.TEPL\tTCI", "BSTART.TEPL\tTLEA"),
                 f"{spec.label} native clear")
     require_masked_tlsu_bundle(body, "MSCATTER", f"{spec.label} native clear")
     reject_scalar_native(body, f"{spec.label} native clear")
@@ -258,8 +261,7 @@ def validate_clear_native(disassembly: str, spec: HelperSpec) -> None:
 def validate_count_native(disassembly: str, spec: HelperSpec) -> None:
     body = extract_native_function(disassembly, spec.count_symbol)
     require_all(body, ("BSTART.TEPL\tTCI", "TCMPS",
-                       "BSTART.TEPL\tTLEA", "BSTART.TLSU\tMGATHER,",
-                       "BSTART.TLSU\tMGATHER.ADD"),
+                       "BSTART.TEPL\tTLEA"),
                 f"{spec.label} native count")
     require_masked_tlsu_bundle(body, "MGATHER", f"{spec.label} native count")
     require_masked_tlsu_bundle(body, "MGATHER.ADD",
@@ -271,6 +273,7 @@ def validate_count_native(disassembly: str, spec: HelperSpec) -> None:
 
 def validate_artifact(source: str, ir: str, disassembly: str,
                       spec: HelperSpec) -> None:
+    disassembly = normalize_disassembly(disassembly)
     validate_source(source, spec)
     validate_clear_ir(ir, spec)
     validate_count_ir(ir, spec)

@@ -19,6 +19,8 @@ import qli_popn_fixture
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "verification"))
 from gfrun_dump import has_success_finisher
+sys.path.insert(0, str(Path(__file__).resolve().parents[5]))
+from native_bstart import normalize_disassembly
 
 OPTIONS = ('enable-all-vector-as-tilereg=true', 'linxv5-enable-HL-Inst-Opt=true',
            'linxv5-enable-dim-opt=true', 'linxv5-enable-ldst-bridge=false',
@@ -32,6 +34,7 @@ def sha(path):
 
 
 def check_native(text, kind, profiles):
+    text = normalize_disassembly(text)
     for capacity, valid in sorted({(p[0], p[1]) for p in profiles}):
         if valid == 0:
             continue
@@ -50,6 +53,7 @@ def check_native(text, kind, profiles):
 
 
 def check_norm_native(text, profiles, symbol='qli_norm_stage'):
+    text = normalize_disassembly(text)
     for capacity, valid in sorted({case[:2] for case in profiles}):
         body = function_body(text, f'{symbol}ILj{capacity}ELj{valid}E')
         assert 'TCMP, U32' in body and 'TSEL, U32' in body
@@ -76,6 +80,7 @@ def check_norm_native(text, profiles, symbol='qli_norm_stage'):
 
 def check_popn_native(disassembly, ir, profiles):
     """Pair each fixture's real call and result with its marked outlined helper."""
+    disassembly = normalize_disassembly(disassembly)
     caller_ir = ir_function_body_exact(ir, 'main')
     caller_native = function_body_exact(disassembly, 'main')
     assert not re.search(r'\b(?:load|store)\s+<\d+ x', caller_ir), 'Tile payload GM spill'
@@ -171,7 +176,7 @@ def main():
     inputs = [suite / f'qli_{args.kind}.cpp', Path(fixture.__file__),
               bench / 'kernels/solution/qli/qli_element.hpp', Path(__file__).resolve(),
               suite / 'compare_memory.py', suite / 'check_disassembly.py',
-              bench / 'verification/gfrun_dump.py']
+              bench / 'verification/gfrun_dump.py', bench.parent / 'native_bstart.py']
     if args.kind in ('topk', 'popn'):
         inputs += [bench / 'kernels/solution/qli/qli_pto_opt_simple.hpp',
                    Path(qli_histogram_fixture.__file__)]

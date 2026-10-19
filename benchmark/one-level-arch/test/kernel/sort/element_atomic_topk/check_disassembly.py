@@ -7,6 +7,10 @@ import argparse
 import re
 from dataclasses import dataclass
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[5]))
+from native_bstart import normalize_disassembly
 
 
 class CheckError(RuntimeError):
@@ -323,6 +327,7 @@ def atomic_segments(text: str) -> list[list[Instruction]]:
 
 
 def validate(text: str) -> None:
+    text = normalize_disassembly(text)
     instructions = parse(text)
     stores = [index for index, inst in enumerate(instructions)
               if inst.mnemonic == "BSTART.TLSU" and "MSCATTER" in inst.operands]
@@ -400,6 +405,7 @@ def expect_ir_rejected(name: str, text: str) -> None:
 
 
 def self_test(text: str) -> None:
+    text = normalize_disassembly(text)
     validate(text)
     first_segment = atomic_segments(text)[0]
     atomic_index = next(
@@ -485,7 +491,7 @@ def main() -> int:
     parser.add_argument("--ir", required=True, type=Path)
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
-    text = args.dis.read_text(encoding="utf-8")
+    text = normalize_disassembly(args.dis.read_text(encoding="utf-8"))
     ir_text = args.ir.read_text(encoding="utf-8")
     try:
         self_test(text) if args.self_test else validate(text)

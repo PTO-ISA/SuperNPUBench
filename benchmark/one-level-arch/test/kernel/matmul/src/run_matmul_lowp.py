@@ -14,7 +14,8 @@ import matmul_lowp_fixture as fixture
 SUITE = Path(__file__).resolve().parents[2]/'element_wise/tile_element_suite'
 sys.path.insert(0, str(SUITE))
 from compare_memory import load_symbols
-from check_disassembly import function_body_exact, matching_function_bodies
+from check_disassembly import (function_body_exact, matching_function_bodies,
+                               normalize_disassembly)
 from run_qli_element import OPTIONS, has_success_finisher
 
 
@@ -33,6 +34,7 @@ def compare_output(actual, expected):
 
 
 def check_matmul_native(text, profile):
+    text = normalize_disassembly(text)
     kind, version, m, n, k, tm, tn, tk = profile
     opcode = 'TMATMULMX' if kind == 'HIF4_HIF4' else 'TMATMUL'
     main_body = function_body_exact(text, 'main')
@@ -100,7 +102,7 @@ def main():
     files = [Path(__file__).resolve(), Path(fixture.__file__), source.parent/'element_original_profiles.json',
              source/'HiF4_HiF4.cpp', source/'A16W4.cpp', bench/'test/common/_start.s',
              SUITE/'compare_memory.py', SUITE/'check_disassembly.py', SUITE/'run_qli_element.py',
-             bench/'verification/gfrun_dump.py']
+             bench/'verification/gfrun_dump.py', bench.parent/'native_bstart.py']
     files += list((bench/'kernels').rglob('*.hpp'))
     files += list(args.api_include.rglob('*.hpp'))
     files += list((args.resource_dir/'include').rglob('*.hpp'))

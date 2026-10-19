@@ -10,6 +10,9 @@ import sys
 
 import qli_original_fixture as fixture
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[5]))
+from native_bstart import normalize_disassembly
+
 sys.path.insert(0, str(fixture.SUITE))
 from compare_memory import load_symbols
 from check_disassembly import function_body_exact, matching_function_bodies, ir_function_body_exact
@@ -21,6 +24,7 @@ def digest(path):
 
 
 def reachable_native_functions(text, root='main'):
+    text = normalize_disassembly(text)
     pending, reachable = [root], {}
     while pending:
         symbol = pending.pop()
@@ -132,7 +136,7 @@ def main():
              bench / 'test/common/_start.s', fixture.SUITE / 'qli_topk_fixture.py',
              fixture.SUITE / 'qli_histogram_fixture.py', fixture.SUITE / 'compare_memory.py',
              fixture.SUITE / 'check_disassembly.py', fixture.SUITE / 'run_qli_element.py',
-             bench / 'verification/gfrun_dump.py']
+             bench / 'verification/gfrun_dump.py', bench.parent / 'native_bstart.py']
     files += list((bench / 'kernels/solution/qli').glob('*.hpp'))
     files += list(args.api_include.rglob('*.hpp'))
     files += list((args.resource_dir / 'include').rglob('*.hpp'))

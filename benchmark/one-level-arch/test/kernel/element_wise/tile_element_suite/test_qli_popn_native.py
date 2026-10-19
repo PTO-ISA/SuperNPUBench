@@ -33,6 +33,8 @@ PROFILES = [(128,32,False,0),(128,32,False,1)]
 class PopNNativeTest(unittest.TestCase):
     def test_real_call_and_return_pair(self):
         check_popn_native(NATIVE,IR,PROFILES)
+        check_popn_native(NATIVE.replace("BSTART.TLSU TMOV, U32",
+                                         "BSTART.TMOV U32"), IR, PROFILES)
         check_popn_native(NATIVE.replace('B.IOT t#1,', 'B.IOT t#1.reuse,'),
                           IR, PROFILES)
         check_popn_native(NATIVE, IR.replace('BSTART.TLSU TSTORE,',

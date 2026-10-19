@@ -18,6 +18,11 @@ NATIVE = f'''00000100 <main>:
 class LowpNativeTest(unittest.TestCase):
     def test_called_original_specialization(self):
         check_matmul_native(NATIVE, profiles()[0])
+        check_matmul_native(NATIVE.replace("BSTART.CUBE TMATMULMX, HiF4x2",
+                                           "BSTART.TMATMULMX HiF4x2")
+                                  .replace("BSTART.CUBE TMATMULMX.ACC, HiF4x2",
+                                           "BSTART.TMATMULMX.ACC HiF4x2"),
+                            profiles()[0])
         for text in (NATIVE.replace('0x200 <'+SYMBOL+'>', '0x200 <unrelated>'),
                      NATIVE.replace('TMATMULMX', 'TSQRT'),
                      NATIVE.replace('ELi2048ELi2048', 'ELi1280ELi2048')):
