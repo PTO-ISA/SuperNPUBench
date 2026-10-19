@@ -599,7 +599,7 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     const bool d_fold = !d_rows && fr_d > 0;
 
     if (dx_fold_ok) {
-      gn_grad::with_cols(fr_h, [&]<int Cols>() {
+      gn_grad::with_cols(fr_h, [=]<int Cols>() {
         for (int64_t n = 0; n < t.N; ++n)
           for (int64_t g = group_begin; g < group_end; ++g)
             gn_grad::group_fused<dtype, Cols>(dy, x, gamma, mean, rstd, ds, db,
@@ -609,14 +609,14 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     for (int64_t n = 0; n < t.N && !dx_fold_ok; ++n) {
       // Stage 1: spatial for every owned channel of this batch (MLP).
       if (h_rows) {
-        gn_grad::with_cols(t.H, [&]<int Cols>() {
+        gn_grad::with_cols(t.H, [=]<int Cols>() {
           for (int64_t c = c_begin; c < c_end; c += 32)
             gn_grad::spatial_rows<dtype, Cols>(
                 dy, x, ds, db, t.C, n, c,
                 c_end - c < 32 ? c_end - c : 32);
         });
       } else if (h_fold) {
-        gn_grad::with_cols(fr_h, [&]<int Cols>() {
+        gn_grad::with_cols(fr_h, [=]<int Cols>() {
           for (int64_t c = c_begin; c < c_end; ++c)
             gn_grad::spatial_fold<dtype, Cols>(dy, x, ds, db, t.C, n, c, fa_h);
         });
@@ -628,12 +628,12 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
       for (int64_t g = group_begin; g < group_end; ++g) {
         const int64_t c0 = g * t.D;
         if (d_rows) {
-          gn_grad::with_cols(t.D, [&]<int Cols>() {
+          gn_grad::with_cols(t.D, [=]<int Cols>() {
             gn_grad::fused_params_rows<dtype, Cols>(
                 gamma, mean, rstd, ds, db, c2, c3, t.C, t.G, n, g, 1, s);
           });
         } else if (d_fold) {
-          gn_grad::with_cols(fr_d, [&]<int Cols>() {
+          gn_grad::with_cols(fr_d, [=]<int Cols>() {
             gn_grad::fused_params_fold<dtype, Cols>(gamma, mean, rstd, ds, db,
                                                     c2, c3, t.C, t.G, n, g,
                                                     t.D / fr_d, s);
@@ -643,7 +643,7 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
               gamma, mean, rstd, ds, db, c2, c3, t.N, t.C, t.G, t.D, n, g, s);
         }
         if (dx_fold_ok) {
-          gn_grad::with_cols(fr_h, [&]<int Cols>() {
+          gn_grad::with_cols(fr_h, [=]<int Cols>() {
             for (int64_t d = 0; d < t.D; ++d)
               gn_grad::dx_fold<dtype, Cols>(dy, x, gamma, rstd, c2, c3, dx, t.C,
                                             t.G, t.D, n, c0 + d, fa_h);
@@ -690,7 +690,7 @@ group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
             cols *= 2;
           if (cols > rem)
             cols = rem;
-          gn_grad::with_cols(cols < 2 ? 2 : cols, [&]<int Cols>() {
+          gn_grad::with_cols(cols < 2 ? 2 : cols, [=]<int Cols>() {
             gn_grad::gamma_beta_block<dtype, 32, Cols>(
                 workspace, workspace + t.N * t.C, mean, rstd, dgamma, dbeta,
                 t.N, t.C, t.G, t.D, g, d, rows, cols);

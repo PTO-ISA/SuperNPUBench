@@ -36,7 +36,8 @@ inline int64_t fold_cols(int64_t R) {
 }
 
 // Run f<Cols>() with Cols == cols; cols must satisfy is_tile_cols().
-template <typename F> inline void with_cols(int64_t cols, F &&f) {
+template <typename F>
+__attribute__((always_inline)) inline void with_cols(int64_t cols, F &&f) {
   switch (cols) {
   case 2:
     f.template operator()<2>();
