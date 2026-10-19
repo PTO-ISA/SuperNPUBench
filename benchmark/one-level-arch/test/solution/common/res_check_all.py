@@ -155,6 +155,8 @@ _NORM = [
     #  "solution_normalization_rms_norm_split_r_rms_norm_split_r_DType__half_gA16_gR16384_PE4"),
     # V0 (archived, backup only): group_norm_grad_static / group_norm_grad_1d_static moved to
     # normalization/group_norm_grad/V0/, not run.
+    # V1 (archived, optimization record only): the pre-fusion group_norm_grad_dynamic /
+    # group_norm_grad_1d_dynamic are kept in normalization/group_norm_grad/V1/, not run.
     *((f"group_norm_grad_{v}", "normalization/group_norm_grad", _GNG_GEN, _GNG_CMP,
        f"solution_normalization_group_norm_grad_group_norm_grad_{v}_DType__half_N2_C16_G8_HxW2048_PE4",
        ("--n", "2", "--c", "16", "--g", "8", "--hxw", "2048"))

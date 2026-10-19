@@ -8,6 +8,8 @@ START_FILE = $(ROOT)/test/common/_start_multipe.s
 # V0 (archived, backup only): all four kernels are kept in V0/; the static ones are not built.
 # ifneq ($(filter group_norm_grad_dynamic group_norm_grad_static,$(TESTCASE)),)
 # ifneq ($(filter group_norm_grad_1d_dynamic group_norm_grad_1d_static,$(TESTCASE)),)
+# V1 (archived, optimization record only): the pre-fusion dynamic kernels (main e21875b)
+# are kept in V1/ and V1/src/; not built.
 
 # HxW > 1
 ifneq ($(filter group_norm_grad_dynamic,$(TESTCASE)),)

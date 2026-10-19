@@ -9,6 +9,9 @@ set -euo pipefail
 # # Fixed-shape static 4PE 1D counterpart.
 # make TESTCASE=group_norm_grad_1d_static COMPILER_DIR="$COMPILER_DIR" DType=__half N_BATCH=256 C_CH=512 G_GRP=8 PE_NUM=4 diss
 
+# V1 (archived, optimization record only): the pre-fusion group_norm_grad_dynamic and
+# group_norm_grad_1d_dynamic (main e21875b) are kept in V1/ and V1/src/; not built.
+
 # Dynamic 4PE GroupNormGrad N=2,C=16,G=8,HxW=2048; tiling is calculated from runtime shape.
 make TESTCASE=group_norm_grad_dynamic COMPILER_DIR="$COMPILER_DIR" DType=__half N_BATCH=2 C_CH=16 G_GRP=8 HxW_SZ=2048 PE_NUM=4 diss
 
