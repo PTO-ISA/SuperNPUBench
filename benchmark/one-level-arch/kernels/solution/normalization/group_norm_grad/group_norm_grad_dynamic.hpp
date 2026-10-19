@@ -561,12 +561,6 @@ struct Config {
     if (dh > 256) dh = 256;
     if (bd > 256) bd = 256;
   }
-  bool valid() const {
-    return N > 0 && C > 0 && G > 0 && H > 0 && C % G == 0 && rh > 0 &&
-           rh <= 512 && rc == 1 && dh > 0 && dh <= 8192 && dc > 0 &&
-           dc <= 32 && (dc == 1 || dh <= 256) && bd > 0 && bd <= 8192 &&
-           bg > 0 && bg <= 32 && (bg == 1 || bd <= 256);
-  }
 };
 } // namespace gn_grad
 
@@ -575,11 +569,8 @@ __attribute__((noinline)) void
 group_norm_grad_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
                         dtype *gamma, const int64_t *tiling, float *workspace,
                         dtype *dx, dtype *dgamma, dtype *dbeta) {
-  static_assert(peNum == 4);
   const gn_grad::Config t(tiling);
   const uint32_t tid = get_thread_idx();
-  if (!t.valid() || tid >= peNum)
-    return;
   // One PE owns a complete group range across every batch and all stages.
   // gamma/beta only consume ds/db written by this PE; no cross-PE barrier.
   const int64_t groups_per_pe = (t.G + peNum - 1) / peNum;

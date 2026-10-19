@@ -64,8 +64,7 @@ constexpr int64_t data_columns() {
 struct Shape {
     int64_t N, C, G, D;
     explicit Shape(const int64_t *t)
-        : N(t[0]), C(t[1]), G(t[2]), D(G > 0 ? C / G : 0) {}
-    bool valid() const { return N > 0 && C > 0 && G > 0 && C % G == 0; }
+        : N(t[0]), C(t[1]), G(t[2]), D(C / G) {}
 };
 template <typename dtype, int Rows, int Cols>
 struct TileTypes {
@@ -591,20 +590,14 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     // gamma/beta read only immutable inputs, not another PE's workspace.
     // Stage 1: fused parameters.
     {
-        static_assert(peNum == 4, "normalization kernels support only 4PE");
         // CubeM32 FP32: 32 physical rows x 64 columns = 8 KiB.
         constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
         const gn_grad_1d::Shape shape(tiling);
         const uint32_t tid = get_thread_idx();
-        if (!shape.valid() || tid >= static_cast<uint32_t>(peNum))
-            return;
         const int64_t N = shape.N, C = shape.C, G = shape.G, D = shape.D;
         const int64_t requested_d = tiling[3] > 0 ? tiling[3] : D;
         const int64_t tile_d = requested_d < tD ? requested_d : tD;
-        if (tile_d <= 0 || tile_d > tD) {
-            return;
-        }
 
         using Types = gn_grad_1d::TileTypes<dtype, 1, tD>;
         using gm_h = typename Types::gm_h;
@@ -614,8 +607,6 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         using tile_v = typename Types::tile_v;
 
         const int64_t tile_g = tiling[4];
-        if (tile_g < 1 || tile_g > 32 || (D > gn_grad_1d::kPhysCols && tile_g != 1))
-            return;
         const int64_t outer_g = (G + tile_g - 1) / tile_g;
         const float s = 1.0f / static_cast<float>(D);
         const int64_t fr = gn_grad_1d::fold_cols(D);
@@ -660,20 +651,14 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     }
     // Stage 2: dx.
     {
-        static_assert(peNum == 4, "normalization kernels support only 4PE");
         // CubeM32 FP32: 32 physical rows x 64 columns = 8 KiB.
         constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
         const gn_grad_1d::Shape shape(tiling);
         const uint32_t tid = get_thread_idx();
-        if (!shape.valid() || tid >= static_cast<uint32_t>(peNum))
-            return;
         const auto [N, C, G, D] = shape;
         const int64_t requested_d = tiling[3] > 0 ? tiling[3] : D;
         const int64_t tile_d = requested_d < tD ? requested_d : tD;
-        if (tile_d <= 0 || tile_d > tD) {
-            return;
-        }
 
         using Types = gn_grad_1d::TileTypes<dtype, 1, tD>;
         using gm_h = typename Types::gm_h;
@@ -683,8 +668,6 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         using tile_v = typename Types::tile_v;
 
         const int64_t tile_g = tiling[4];
-        if (tile_g < 1 || tile_g > 32 || (D > gn_grad_1d::kPhysCols && tile_g != 1))
-            return;
         const int64_t own_g = gn_grad_1d::owned_groups(D, tile_g);
         const int64_t outer_own = (G + own_g - 1) / own_g;
         for (int64_t task = tid; task < N * outer_own; task += peNum) {
@@ -706,20 +689,14 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
     }
     // Stage 3: gamma/beta.
     {
-        static_assert(peNum == 4, "normalization kernels support only 4PE");
         // CubeM32 FP32: 32 physical rows x 64 columns = 8 KiB.
         constexpr int64_t tD = gn_grad_1d::data_columns<dtype>();
 
         const gn_grad_1d::Shape shape(tiling);
         const uint32_t tid = get_thread_idx();
-        if (!shape.valid() || tid >= static_cast<uint32_t>(peNum))
-            return;
         const int64_t N = shape.N, C = shape.C, G = shape.G, D = shape.D;
         const int64_t requested_d = tiling[5] > 0 ? tiling[5] : D;
         const int64_t tile_d = requested_d < tD ? requested_d : tD;
-        if (tile_d <= 0 || tile_d > tD) {
-            return;
-        }
 
         using Types = gn_grad_1d::TileTypes<dtype, 1, tD>;
         using gm_h = typename Types::gm_h;
@@ -729,8 +706,6 @@ group_norm_grad_1d_dynamic(dtype *dy, dtype *x, float *mean, float *rstd,
         using tile_v = typename Types::tile_v;
 
         const int64_t tile_g = tiling[6];
-        if (tile_g < 1 || tile_g > 32 || (tile_d > gn_grad_1d::kPhysCols && tile_g != 1))
-            return;
         if (const int64_t w = gn_grad_1d::gamma_beta_cols(C, D); w > 0) {
             gn_grad_1d::with_cols(w, [&]<int W>() {
                 for (int64_t blk = tid; blk < C / W; blk += peNum)
