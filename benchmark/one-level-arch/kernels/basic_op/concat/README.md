@@ -1,4 +1,78 @@
-# Two-input concat
+# Concat
+
+## Runtime tensor list and axis
+
+`concat.hpp` accepts a list of tensor descriptors and a runtime axis. Input
+count, rank, dimensions, pointers and axis are runtime values; no recompilation
+is needed when they change. All inputs have the same C++ element type and
+contiguous row-major storage. Each tensor owns its data pointer independently.
+
+```cpp
+#include "basic_op/concat/concat.hpp"
+using namespace supernpu::multi_thread;
+
+// a: [3,5], b: [3,7], c: [3,2]; output: [3,14].
+ConcatTensor<float> tensors[] = {
+    {a, {2, {3, 5}}, 15},
+    {b, {2, {3, 7}}, 21},
+    {c, {2, {3, 2}}, 6},
+};
+ConcatShape output_shape{};  // PE-local metadata
+ConcatStatus status = concat(tensors, 3, -1, output, 42, &output_shape);
+```
+
+Each participating PE calls `concat<T, TileElements=128, PeCount=4>` with the
+same published descriptors and data. The caller joins PEs before consuming the
+output. Capacity fields are in elements. The list and data pointers must be
+valid in the executing SuperScalar program, not addresses from a Python host
+process. This is a native descriptor interface, not the binary ABI of Ascend
+`aclTensorList`/`ListTensorDesc`.
+
+The API validates the complete list before copying. It normalizes negative
+axes, verifies ranks (1..8), nonnegative dimensions and matching dimensions
+outside the axis, checks capacities, integer/address overflow and input/output
+overlap, and infers the output shape. Failures return a `ConcatStatus` without
+writing output or inferred metadata. A null pointer is permitted for data with
+zero elements. Input tensors may alias each other; output must not alias any
+nonempty input. Descriptor metadata must remain immutable and separate from the
+output; optional inferred metadata belongs to the calling PE.
+
+Like A5 `aclnnCat::EraseDim1EmptyTensor`, one-dimensional `[0]` members are
+ignored before rank/axis validation. If the list is empty or all members are
+`[0]`, the operation is a successful no-op with inferred shape `[0]`, regardless
+of axis. The list pointer itself must be nonnull. Other zero dimensions retain
+normal shape and axis checks. Tensor count is not capped by the kernel; the
+test harness provides space for up to 64 descriptors.
+
+Runtime widths and prefix offsets use the same row-folding algorithm as the
+A5 reference described below. Full and tail jobs both use real `TLOAD/TSTORE`
+with `Tile<..., 1, DYNAMIC>` valid columns supplied from a scalar register.
+There is no scalar copy fallback, input packing, or switch over template shapes.
+The kernel does not allocate workspace. The caller supplies output storage.
+
+This aligns tensor-list and selected-axis semantics for same-type contiguous
+inputs. A5's noncontiguous-view support, dtype promotion/conversion, packed FP4
+and the full A5 dtype/performance matrix are not claimed. FP32, FP16, int32 and
+uint8 are covered by the validation runner.
+
+From `benchmark/one-level-arch/test/kernel/concat`, with `COMPILER_DIR` and
+`GFRUN` set:
+
+```bash
+make check-concat-list
+python3 src/check_concat_list.py --dtype float32 --case three_inputs
+```
+
+The runner compiles exactly one ELF per dtype, then changes input descriptors
+and axis through binary metadata. SHA256 verifies the ELF does not change
+between cases. NumPy supplies golden concatenation; comparison is bitwise,
+including FP NaN payloads and signed zero. All output storage outside the expected
+payload is guarded. Rejection tests verify status on all four PEs and unchanged
+output/shape metadata. The harness's input storage banks are separate views with
+independent addresses and gaps, not a pre-concatenated buffer consumed by the
+algorithm. Logs and `summary.json` go to `--artifacts` or ignored build output.
+
+## Compile-time two-input interface
 
 `concat_two.hpp` implements concatenation of two independently allocated,
 contiguous row-major tensors with the same element type and matching dimensions

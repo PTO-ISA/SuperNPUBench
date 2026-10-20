@@ -4,3 +4,4 @@ set -euo pipefail
 make TESTCASE=concat_gather COMPILER_DIR="$COMPILER_DIR" diss
 make TESTCASE=concat_scatter COMPILER_DIR="$COMPILER_DIR" diss
 make TESTCASE=concat_two COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=concat_list COMPILER_DIR="$COMPILER_DIR" DTYPE=float diss
