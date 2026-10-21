@@ -119,6 +119,11 @@ else ifeq ($(TESTCASE),fa_fixpipe)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_fixpipe.cpp
 else ifeq ($(TESTCASE),fa_lowp)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_lowp.cpp
+else ifeq ($(TESTCASE),fa_lowp_algD)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_lowp_algD.cpp
+ifneq ($(FA_MODE)_$(Tm)_$(Tk)_$(QD)_$(VD),MXFP4_VECBF16_128_256_128_128)
+$(error fa_lowp_algD requires FA_MODE=MXFP4_VECBF16 Tm=128 Tk=256 QD=128 VD=128)
+endif
 else ifeq ($(TESTCASE),fa_lowp_algC_final)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_lowp_algC_final.cpp
 else ifeq ($(TESTCASE),fa_lowp_ltile)
@@ -133,7 +138,7 @@ else ifeq ($(TESTCASE),fa_lowp_recip)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_lowp_recip.cpp
 DEFINES += -DFA_LOWP_RECIP=1
 else
-$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma, fa_gmma_opt, fa_gmma_dynamic, fa_gmma_kchains, fa_2d_unroll_gmma_no_tstore, fa_fixpipe, fa_lowp, fa_lowp_algC_final, fa_lowp_ltile, fa_mxfp4_opt, or fa_lowp_recip)
+$(error Unsupported TESTCASE=$(TESTCASE); expected fa_2d_unroll_gmma, fa_gmma_opt, fa_gmma_dynamic, fa_gmma_kchains, fa_2d_unroll_gmma_no_tstore, fa_fixpipe, fa_lowp, fa_lowp_algC_final, fa_lowp_ltile, fa_mxfp4_opt, fa_lowp_algD, or fa_lowp_recip)
 endif
 
 ifeq ($(TESTCASE),fa_gmma_dynamic)
@@ -178,3 +183,14 @@ precision-check:
 	done; \
 	echo "FA GMMA precision summary: PASS=$$pass FAIL=$$fail"; \
 	exit $$status
+
+# AlgoD uses the MXFP4/BF16 reference rather than the generic scaled-FA checker.
+.PHONY: algd-check
+algd-check:
+	@test "$(TESTCASE)" = fa_lowp_algD && test -n "$(GFRUN)" || { echo "Set TESTCASE=fa_lowp_algD GFRUN=/path/to/gfrun and the fixed AlgoD parameters"; exit 1; }
+	$(MAKE) -j4 -B diss TESTCASE=fa_lowp_algD FA_MODE=MXFP4_VECBF16 \
+		Sq=$(Sq) Skv=$(Skv) Tm=128 Tk=256 QD=128 VD=128 res_check=on
+	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/gfrun_fa_algD.py \
+		--elf $(TARGET) --gfrun "$(GFRUN)" \
+		--case-dir $(ROOT)/compare/fa_lowp_algD_Sq$(Sq)_Skv$(Skv) \
+		--sq $(Sq) --skv $(Skv)

@@ -15,7 +15,8 @@
 #     scalar-elementwise 缺口 #760 已由 #775 修复；三守卫的 compare-select CUBE-M 几何由 #785 修复）。
 #
 #   export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
-#   ./compile.all
+#   ./compile.all                 # 编 ELF+diss，并现场生成 golden 到 ROOT/compare/
+#   GEN_GOLDEN=0 ./compile.all    # 只编 ELF+diss，跳过 golden 生成（发布/CI 构建用）
 #
 # 精度验证（gfrun + 逐字节比对）见 src/run_precision_check.py。
 # golden 落 ROOT/compare/dynamic_mx_quant_<driver>/，与 ELF basename 同名，供
@@ -74,21 +75,33 @@ for cfg in "${CONFIGS[@]}"; do
   IFS=: read -r TYPE DRIVER M K BS INDT ALGO KERNEL DTYPE <<<"$cfg"
   cmpdir="$CMP_ROOT/dynamic_mx_quant_${DRIVER}"
   echo "==== $TYPE ($DRIVER  M=$M K=$K BS=$BS in=$INDT $ALGO/$KERNEL/$DTYPE) ===="
-  mkdir -p "$cmpdir"
-  python3 "$GEN" --M "$M" --K "$K" --block-size "$BS" --algo "$ALGO" \
-      --kernel "$KERNEL" --dtype "$DTYPE" --in-dtype "$INDT" \
-      --scale-layout compact --seed "$SEED" -o "$cmpdir"
+  if [ "${GEN_GOLDEN:-1}" = "1" ]; then
+    mkdir -p "$cmpdir"
+    python3 "$GEN" --M "$M" --K "$K" --block-size "$BS" --algo "$ALGO" \
+        --kernel "$KERNEL" --dtype "$DTYPE" --in-dtype "$INDT" \
+        --scale-layout compact --seed "$SEED" -o "$cmpdir"
+  else
+    echo "  GEN_GOLDEN=0：跳过 golden 生成（只编 ELF+diss）"
+  fi
   if make -C "$HERE" TESTCASE=dynamic_mx_quant TYPE="$TYPE" COMPILER_DIR="$COMPILER_DIR" diss; then
     OK_CASES+=("$TYPE")
   else
-    echo "  !! 编译失败: $TYPE（不中断，继续后续用例）"
+    # 注意：变量必须加花括号——紧跟中文全角字符时，bash 3.2（macOS 自带）会把
+    # 多字节字符并入变量名，配合 set -u 直接报 unbound variable 并中断整脚本。
+    echo "  !! 编译失败: ${TYPE}（不中断，继续后续用例）"
     FAILED_CASES+=("$TYPE")
   fi
 done
 
 echo
 echo "======== compile.all 汇总 ========"
-echo "编译成功 ${#OK_CASES[@]} 个：${OK_CASES[*]}"
+echo "编译成功 ${#OK_CASES[@]} 个："
+if ((${#OK_CASES[@]})); then
+  echo "  ${OK_CASES[*]}"
+fi
 if ((${#FAILED_CASES[@]})); then
-  echo "编译失败 ${#FAILED_CASES[@]} 个：${FAILED_CASES[*]}"
+  echo "编译失败 ${#FAILED_CASES[@]} 个："
+  echo "  ${FAILED_CASES[*]}"
+  # 与其它 suite 一致：存在失败用例时以非零码退出，便于顶层 driver 标记 ✗。
+  exit 1
 fi

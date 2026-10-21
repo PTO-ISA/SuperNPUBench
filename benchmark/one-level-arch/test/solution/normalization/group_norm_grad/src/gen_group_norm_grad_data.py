@@ -188,8 +188,9 @@ def make_tiling(N, C, G, H, reduce_hw):
     D = C // G
     dx_hw = min(H, 8192)
     gb_d = min(D, 8192)
-    return (N, C, G, H, reduce_hw, 1, dx_hw,
-            min(D, 32) if dx_hw <= 256 else 1, gb_d,
+    # Kernel Config caps dx_hw to 256; keep dx_c = min(D,32) so strip dX can
+    # use multi-row tiles. Folded HxW (fa x Cols) is preferred inside the kernel.
+    return (N, C, G, H, reduce_hw, 1, dx_hw, min(D, 32), gb_d,
             min(G, 32) if gb_d <= 256 else 1)
 
 

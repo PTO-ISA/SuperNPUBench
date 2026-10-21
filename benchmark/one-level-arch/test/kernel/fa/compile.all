@@ -21,6 +21,15 @@ make diss TESTCASE=fa_lowp \
     FA_MODE=MXFP4_VECBF16 Sq=256 Skv=256 Tm=128 Tk=128 \
     X_dim=1 Y_dim=2
 
+# AlgoD: two Q tiles reuse K/V with one-block K/KScale lookahead.
+# Its fixed tile and head dimensions are enforced by the kernel and Makefile.
+for skv in 512 8192; do
+    make -j4 -B diss TESTCASE=fa_lowp_algD \
+        COMPILER_DIR="$COMPILER_DIR" \
+        FA_MODE=MXFP4_VECBF16 Sq=256 Skv="$skv" Tm=128 Tk=256 \
+        X_dim=1 Y_dim=1 || exit $?
+done
+
 # PMU-optimized long-context MXFP4 path. Keep the reference fa_lowp target
 # above as the functional/performance A/B baseline.
 make diss TESTCASE=fa_mxfp4_opt \

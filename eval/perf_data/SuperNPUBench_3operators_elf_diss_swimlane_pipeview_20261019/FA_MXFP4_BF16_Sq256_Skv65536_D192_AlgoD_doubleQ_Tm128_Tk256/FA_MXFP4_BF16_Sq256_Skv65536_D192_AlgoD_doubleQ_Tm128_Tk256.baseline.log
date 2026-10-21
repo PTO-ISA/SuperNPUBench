@@ -1,0 +1,157 @@
+/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-asl/bin/gfsim -s dfx.swimCounterSampleInterval=256 bctrl.vec_cell_sched_enable=false bctrl.vecIssueQDepth=64 bctrl.bctrl_bandwidth=8 spe.speROBDepth=128 cube.l0aSharetregResident=true cube.l0aResidentTagNum=8 core.sharetreg_bandwidth_bytes=256 cube.enable_internal_acc=true spe.macroDescriptorFusion=true core.soc_random=true core.soc_bw_limit=156 core.soc_lat_mean=260 core.soc_lat_random_seed=1 bfu.hwpf_nl_degree=32 bfu.hwpf_max_pending_req=32 bfu.bhc_pf_nostd=32 bfu.bhc_nostd=40 core.sharetreg_size_bytes=262144 core.sharetreg_ssb_count=64 --conf /Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-asl/configs/fourpe.conf -f /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/algoc_algod_doubleq_compare_20261019/algD_D192.elf 
+[gfsim] explicit PE config present; skipping ELF auto-detection
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Override configurations:
+dfx.swimCounterSampleInterval=256
+bctrl.vec_cell_sched_enable=false
+bctrl.vecIssueQDepth=64
+bctrl.bctrl_bandwidth=8
+spe.speROBDepth=128
+cube.l0aSharetregResident=true
+cube.l0aResidentTagNum=8
+core.sharetreg_bandwidth_bytes=256
+cube.enable_internal_acc=true
+spe.macroDescriptorFusion=true
+core.soc_random=true
+core.soc_bw_limit=156
+core.soc_lat_mean=260
+core.soc_lat_random_seed=1
+bfu.hwpf_nl_degree=32
+bfu.hwpf_max_pending_req=32
+bfu.bhc_pf_nostd=32
+bfu.bhc_nostd=40
+core.sharetreg_size_bytes=262144
+core.sharetreg_ssb_count=64
+core.threadCount=4
+core.stdPeCount=1
+core.cube_core_num=4
+core.cube_thread_num=1
+core.vec_core_num=4
+fourpe.pe_cluster_enable=true
+fourpe.pe_cluster_count=4
+fourpe.pe_cluster_frontend_thread_count=4
+fourpe.pe_cluster_aggregate_decode_width=8
+fourpe.pe_cluster_gpr_rename_partition_entries=128
+fourpe.pe_cluster_scalar_rob_partition_entries=128
+fourpe.pe_cluster_scalar_iq_partition_entries=128
+fourpe.pe_cluster_block_rob_partition_entries=256
+fourpe.pe_cluster_block_iq_partition_entries=88
+fourpe.pe_cluster_local_reg_partition_entries=88
+bfu.brq_depth=1024
+fourpe.pe_cluster_partition_borrow_enable=false
+fourpe.pe_cluster_eligible_rr_fairness_check=true
+fourpe.pe_cluster_group_contract_fatal=false
+dfx.swimCounterSampleInterval=8
+VEC_RESOURCE_FRONTEND stid=0 l1=64
+VEC_RESOURCE_FRONTEND stid=1 l1=64
+VEC_RESOURCE_FRONTEND stid=2 l1=64
+VEC_RESOURCE_FRONTEND stid=3 l1=64
+VEC_RESOURCE_BACKEND rob=64
+VEC_RESOURCE_BACKEND rob=64
+VEC_RESOURCE_BACKEND rob=64
+VEC_RESOURCE_BACKEND rob=64
+Memory: 0x10200 - 0x10250 (Size=0KB) [.rodata]
+Memory: 0x10254 - 0x1026f (Size=0KB) [.eh_frame_hdr]
+Memory: 0x10270 - 0x102d3 (Size=0KB) [.eh_frame]
+Memory: 0x112d4 - 0xc445b (Size=716KB) [.text]
+Memory: 0xc5460 - 0xc54af (Size=0KB) [.init_array]
+Memory: 0xc54b0 - 0xc54c7 (Size=0KB) [.data.rel.ro]
+Memory: 0xc64c8 - 0xdacbb3 (Size=13209KB) [.bss]
+Memory: 0xdacbb8 - 0xdacc07 (Size=0KB) [.sbss]
+Memory: 0xdacc10 - 0x8dbcc10 (Size=131136KB) [stack mem]
+Memory: 0x4000802000 - 0x4008803000 (Size=131076KB) [map mem]
+VEC_RESOURCE cycle=1 slots=0 reads=0 admissions=0 init_wait=0 l2_unready_observations=0 slots_this_cycle=0 pending=0 port_wait=0 l2_occ=0 l1_occ=0
+gfsim fusion budget: profile=default(32B,3members,4/4 ops) (GFSIM_FUSION_LEGACY=unset)
+gfsim fusion budget: GFSIM_BCC_DESCRIPTOR_OPS_PER_CYCLE unset -> 4 (descriptor ops per stid per cycle at BCC park (default 4; 0/legacy=unlimited))
+[gfsim] caught std::exception: ASSERTION FAILED: rowBits != 0u && (static_cast<uint64_t>(capacity) * 8u) % rowBits == 0u
+, func ExecuteSharedTMA, file /Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-asl/emulator/SoftCore.cpp:3293
+stack:
+0   gfsim                               0x0000000103861890 _ZN11superScalar12GetBacktraceEmm + 36
+1   gfsim                               0x0000000103015aec _ZN11superScalar8SoftCore16ExecuteSharedTMAENSt3__110shared_ptrINS_9BlockFuncEEE + 7448
+2   gfsim                               0x0000000103009b30 _ZN11superScalar8SoftCore15ExecuteTemplateERNSt3__110shared_ptrINS_9BlockFuncEEE + 460
+3   gfsim                               0x0000000103005440 _ZN11superScalar8SoftCore16PostProcessBlockERNSt3__110shared_ptrINS_9BlockFuncEEE + 88
+4   gfsim                               0x0000000103003e90 _ZN11superScalar8SoftCore13EmulatorBlockEy + 580
+5   gfsim                               0x00000001034ae3ec _ZN11superScalar6SimSys12RunReferenceEy + 152
+6   gfsim                               0x0000000102fa200c main + 14160
+7   dyld                                0x000000018a79be00 start + 6992
+
+std::terminate called (unhandled exception or exception during unwinding)
+
+FATAL: gfsim received signal 6
+0   gfsim                               0x0000000102fad228 _ZN12_GLOBAL__N_125PrintFatalSignalBacktraceEi + 52
+1   libsystem_platform.dylib            0x000000018ab63744 _sigtramp + 56
+2   libsystem_pthread.dylib             0x000000018ab598d8 pthread_kill + 296
+3   libsystem_c.dylib                   0x000000018aa60644 abort + 148
+4   gfsim                               0x0000000103865dbc main.cold.1 + 0
+5   libc++abi.dylib                     0x000000018ab0d75c _ZSt11__terminatePFvvE + 16
+6   libc++abi.dylib                     0x000000018aafce80 _ZN10__cxxabiv1L13is_class_typeEPKNS_16__shim_type_infoE + 0
+7   gfsim                               0x0000000102fa3e4c main + 21904
+8   dyld                                0x000000018a79be00 start + 6992

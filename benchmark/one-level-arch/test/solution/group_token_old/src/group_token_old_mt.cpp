@@ -35,8 +35,64 @@ static inline void mtBarrier(uint32_t phase)
     sPhaseDone[get_thread_idx()] = phase;      // publish my arrival
     mtCompilerBarrier();
     for (uint32_t t = 0; t < kThreadsPerBlock; ++t) {
+        // [2026-10-11 优化] 轮询间插入寄存器驻留乘法延迟链 (gtv
+        // mt 屏障同款式样): 本算子为纯标量实现, PE0 独占段 (genTopkIndex
+        // 生成 / merge / Phase 3b 计数排序 / 参考计算+比对验证, 合计
+        // ~4×10^5 cycle) 期间其余 3 PE 的紧凑 volatile 轮询 (~1 load/5cy
+        // ×3) 同时抢占共享 4-wide 前端与 TLSU —— v2 数据 TLSU busy
+        // 98.7% 的主要构成。延迟链纯寄存器 (零内存流量), volatile 轮询
+        // 语义与访问模式不变 (不引入 vec 家族的驱逐读 —— 其在本算子
+        // 实测会污染 Phase 3 计数排序); 释放延迟仅 +<100 cycle/屏障,
+        // 相对相位长度可忽略。
+        // [2026-10-12 优化] 链长 16→32 步 + 逐步活性屏障 (v3 报告 §6.3-4
+        // 方向): 实测发现原 16 步 LCG 链被编译器闭式折叠为单条 mul
+        // (中间值无观察点 → s' = s·∏K + ΣC 合并; 16/32 步版反汇编与
+        // gfsim 周期逐位相同, 549,011)。每步插入 __asm__ volatile("+r")
+        // 空体屏障 (零指令, 仅阻止跨步折叠), 32 条串行依赖乘法真实
+        // 展开 (~3-4 cycle/步 ≈ 100+ cycle 轮询间隔), 自旋 TLSU/前端
+        // 占用进一步下降一个量级; 释放延迟 +~10^2 cycle/屏障, 相对
+        // PE0 独占段 ~4×10^5 cycle 可忽略。
+        uint32_t spins = 0x9E3779B9u ^ (phase * 2654435761u) ^ (t * 0x85EBCA6Bu);
+#define GT_OLD_SPIN_STEP(cst)                       \
+    do {                                            \
+        spins = spins * 2654435761u + (cst);         \
+        __asm__ volatile("" : "+r"(spins));         \
+    } while (0)
         while (sPhaseDone[t] < phase) {
+            GT_OLD_SPIN_STEP(0x2545F491u);
+            GT_OLD_SPIN_STEP(0x2545F492u);
+            GT_OLD_SPIN_STEP(0x2545F493u);
+            GT_OLD_SPIN_STEP(0x2545F494u);
+            GT_OLD_SPIN_STEP(0x2545F495u);
+            GT_OLD_SPIN_STEP(0x2545F496u);
+            GT_OLD_SPIN_STEP(0x2545F497u);
+            GT_OLD_SPIN_STEP(0x2545F498u);
+            GT_OLD_SPIN_STEP(0x2545F499u);
+            GT_OLD_SPIN_STEP(0x2545F49Au);
+            GT_OLD_SPIN_STEP(0x2545F49Bu);
+            GT_OLD_SPIN_STEP(0x2545F49Cu);
+            GT_OLD_SPIN_STEP(0x2545F49Du);
+            GT_OLD_SPIN_STEP(0x2545F49Eu);
+            GT_OLD_SPIN_STEP(0x2545F49Fu);
+            GT_OLD_SPIN_STEP(0x2545F4A0u);
+            GT_OLD_SPIN_STEP(0x2545F4A1u);
+            GT_OLD_SPIN_STEP(0x2545F4A2u);
+            GT_OLD_SPIN_STEP(0x2545F4A3u);
+            GT_OLD_SPIN_STEP(0x2545F4A4u);
+            GT_OLD_SPIN_STEP(0x2545F4A5u);
+            GT_OLD_SPIN_STEP(0x2545F4A6u);
+            GT_OLD_SPIN_STEP(0x2545F4A7u);
+            GT_OLD_SPIN_STEP(0x2545F4A8u);
+            GT_OLD_SPIN_STEP(0x2545F4A9u);
+            GT_OLD_SPIN_STEP(0x2545F4AAu);
+            GT_OLD_SPIN_STEP(0x2545F4ABu);
+            GT_OLD_SPIN_STEP(0x2545F4ACu);
+            GT_OLD_SPIN_STEP(0x2545F4ADu);
+            GT_OLD_SPIN_STEP(0x2545F4AEu);
+            GT_OLD_SPIN_STEP(0x2545F4AFu);
+            GT_OLD_SPIN_STEP(0x2545F4B0u);
         }                                      // spin until all PEs arrived
+#undef GT_OLD_SPIN_STEP
     }
     mtCompilerBarrier();
 }

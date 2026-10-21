@@ -8,6 +8,10 @@ gfrun -s softcore.multiThreadNum=4 -f <elf>, then compare. Guards:
   3. the comparison must not be vacuous (golden not all zero);
   4. per row, the output must match the mode's golden.
 
+For gfsim, build with res_check=on GFSIM=on and pass --gfsim instead of
+--gfrun. The runner writes a SwimLane trace under --run-dir (by default
+perf_runs/gfsim_res_check) and uses the same independent result comparison.
+
 --mode selects the kernel's compile-time dataflow (kFp32Refine):
   fp32 (default): four FP32 key-byte rounds -> exact FP32 top-k, so the sorted
       output index set equals the golden set exactly (input values distinct).
@@ -102,10 +106,10 @@ def golden_topk_fp16_keys(values, row):
     return keys[:TOPK]
 
 
-def run_check(gfrun, timeout, seed, mode):
-    elf = ELF_DIR / ELF_NAME
+def run_check(model, timeout, seed, mode, simulator="gfrun", run_dir=None, elf_path=None):
+    elf = (elf_path or ELF_DIR / ELF_NAME).resolve()
     if not elf.exists():
-        return "SKIP", f"missing {elf}"
+        return "FAIL", f"missing {elf}"
     case_dir = COMPARE_ROOT / elf.stem
     case_dir.mkdir(parents=True, exist_ok=True)
     for stem in EXPORTS + ("golden.bin",):
@@ -119,21 +123,32 @@ def run_check(gfrun, timeout, seed, mode):
     # TopkTilingData { int64 batch, cols, topk }
     (case_dir / "shape.bin").write_bytes(struct.pack("<3q", BATCH, TOTAL_LEN, TOPK))
 
-    command = [str(gfrun), "-s", "softcore.multiThreadNum=4", "-f", str(elf)]
+    model = model.resolve()
+    if simulator == "gfsim":
+        run_dir = (run_dir or SCRIPT_DIR.parent / "perf_runs" / "gfsim_res_check").resolve()
+        command = [sys.executable, str(ONE_LEVEL_ROOT / "test/common/run_swimlane.py"),
+                   "--gfsim", str(model), "--elf", str(elf),
+                   "--outdir", str(run_dir), "--name", "topk",
+                   "--conf", str(model.parent.parent / "configs/fourpe.conf"), "--timeout", str(timeout)]
+    else:
+        command = [str(model), "-s", "softcore.multiThreadNum=4", "-f", str(elf)]
+    log = case_dir / f"{simulator}.log"
     try:
         proc = subprocess.run(command, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT, text=True,
-                              timeout=timeout, check=False)
+                              timeout=timeout + 10, check=False,
+                              cwd=case_dir)
     except subprocess.TimeoutExpired as exc:
-        (case_dir / "gfrun.log").write_text(exc.stdout or "", encoding="utf-8")
-        return "TIMEOUT", f"after {timeout}s: {case_dir / 'gfrun.log'}"
-    (case_dir / "gfrun.log").write_text(proc.stdout, encoding="utf-8")
+        log.write_text((exc.stdout or b"").decode() if isinstance(exc.stdout, bytes)
+                       else (exc.stdout or ""), encoding="utf-8")
+        return "TIMEOUT", f"after {timeout}s: {log}"
+    log.write_text(proc.stdout, encoding="utf-8")
     if proc.returncode != 0:
-        return "FAIL", f"gfrun rc={proc.returncode}: {case_dir / 'gfrun.log'}"
+        return "FAIL", f"{simulator} rc={proc.returncode}: {log}"
 
     missing = [stem for stem in EXPORTS if not (case_dir / stem).exists()]
     if missing:
-        return "FAIL", f"missing exports {missing}: {case_dir / 'gfrun.log'}"
+        return "FAIL", f"missing exports {missing}: {log}"
 
     # Guard 1: the device must have seen the input we wrote.
     if (case_dir / "input_readback.bin").read_bytes() != (case_dir / "input.bin").read_bytes():
@@ -190,7 +205,11 @@ def run_check(gfrun, timeout, seed, mode):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--gfrun", required=True, type=Path, help="path to gfrun")
+    models = parser.add_mutually_exclusive_group(required=True)
+    models.add_argument("--gfrun", type=Path, help="path to gfrun; build without GFSIM=on")
+    models.add_argument("--gfsim", type=Path, help="path to gfsim; build res_check=on GFSIM=on")
+    parser.add_argument("--elf", type=Path, help="override the default ELF path")
+    parser.add_argument("--run-dir", type=Path, help="gfsim SwimLane output directory")
     parser.add_argument("--timeout", type=int, default=1800)
     parser.add_argument("--seed", type=int, default=12345)
     parser.add_argument("--mode", choices=("fp32", "fp16"), default="fp32",
@@ -215,9 +234,10 @@ def main():
         STARTS = [0] * BATCH
         ENDS = [TOTAL_LEN] * BATCH
 
-    status, detail = run_check(args.gfrun, args.timeout, args.seed, args.mode)
+    status, detail = run_check(args.gfsim or args.gfrun, args.timeout, args.seed, args.mode,
+                             "gfsim" if args.gfsim else "gfrun", args.run_dir, args.elf)
     print(f"{status} topk {detail}")
-    failed = status not in ("PASS", "SKIP")
+    failed = status != "PASS"
     print(f"summary: {0 if failed else 1} ok, {1 if failed else 0} failed")
     return 1 if failed else 0
 

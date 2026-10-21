@@ -15,7 +15,10 @@
  *   - barrier 相位由 kernel 内 per-PE 调用计数 (sInvCntDyn) 单调编号
  *     (inv*8+1), 跨调用陈旧 flag 天然失效 —— 不做任何跨 PE 的 flag 复位写;
  *     driver 的 cfg 间汇合点取相位 5 (严格落在 cfgA=1 与 cfgB=9 之间);
- *   - 验证 PE0 独占, 逐组比对 (golden/精度/token 与静态版一致, 边界运行时化):
+ *   - 验证: cfgA 轮 PE0 独占 legacy 形态 (模型稳定性承载位);
+ *     [2026-10-15 v8] cfgB 轮 golden 4-PE 并行分割 (decode/GEMM 行与
+ *     token 单写者分片 + 发布扫描 + 相位 14/15 屏障, 见 v8 块头注),
+ *     比较尾部仍 PE0 独占 —— golden 与误差统计逐位不变;
  *     cfgA 失败返回静态版同款诊断码, cfgB 失败返回 +10 偏移码。
  *
  * 运行 (gfrun 功能仿真, 必须四线程):
@@ -40,18 +43,13 @@ constexpr uint32 kHMax = 32;
 constexpr uint32 kHdMax = 128;
 constexpr uint32 kEprMax = 2;
 constexpr uint32 kTopKMax = 1;
-// 每 PE scratch = w1F16[epr*h*hd] + w2F16[epr*(hd/2)*h] + xf16[h] +
-// y1[hd]f32 + y2f16[hd/2] + y3[h]f32 (kernel 头文件契约)
+// [A1 对齐 2026-10-13] workspace = dispatch 通路布局 (moe_ws_layout: dstPos/
+// mask/cnt/starts/xDisp/scaleDisp/metaInfo/combine/stats) + 共享 fp16 权重
+// 副本 (M2 分片解码) + 4 PE wave 组 scratch + 余量 (kernel 四d 节同式)
 constexpr uint32 kWorkspaceBytes =
-    2U * kBSMax * 4U +                                     // dispatch 表
-    2U * kBSMax +                                          // mask
-    kBSMax * kHMax * 4U +                                  // combine 缓冲
-    16U * kEprMax * 4U +                                   // 核内统计
-    4U * ((kEprMax * kHMax * kHdMax
-         + kEprMax * (kHdMax / 2U) * kHMax) * 2U           // 每 PE fp16 权重副本
-        + kHMax * 2U + kHdMax * 4U + kHdMax * 2U + kHMax * 4U) +  // GMM scratch
-    // [2026-10-04 修复] slack 4K→16K: 承载 x 预量化槽 (4 PE × myTok×h×2B,
-    // bs=18 时 2KB) + 裕量 (kernel 阶段 3 修复注)
+    mega_moe::moe_ws_layout(kBSMax, kHMax, kHdMax, kEprMax, kTopKMax).total +
+    mega_moe::mx_weight_copy_bytes(kEprMax, kHMax, kHdMax) +
+    4U * mega_moe::mx_wave_group_bytes(kHMax, kHdMax) +
     16384U;
 
 // ==== GM 全局缓冲 (声明顺序 = bss 地址顺序; 全部置于高地址区 —
@@ -75,6 +73,10 @@ __attribute__((aligned(4096))) uint8_t g_mmWorkspace[kWorkspaceBytes];
 // 见 compute_golden 注
 __attribute__((aligned(4096))) double g_w1Dbl[kEprMax * kHMax * kHdMax];
 __attribute__((aligned(4096))) double g_w2Dbl[kEprMax * (kHdMax / 2U) * kHMax];
+// [2026-10-14 优化] E4M3→double 解码 LUT: E4M3 仅 256 个可表示值, 一次性
+// 预构建查表 (构建即原 ref_fp8_e4m3 逐值计算, lut[b] ≡ ref_fp8_e4m3((double)b)
+// 逐位一致)。置于 bss 尾部, 不影响既有符号布局 (含 mt 系 g_timingPad 衬垫域)。
+__attribute__((aligned(4096))) double g_e4m3Lut[256];
 
 // ==== 参考实现 (运行时 shape; gen_data.compute_golden 同语义) ====
 // [perf] PR #194 同款 golden 侧优化: 2^k 的 O(|k|) 连乘循环 → 位级 O(1) 构造。
@@ -159,21 +161,97 @@ static double ref_w2(uint32_t e, uint32_t k, uint32_t n, uint32_t h, uint32_t hd
 // lockstep 搁浅 (cycle 3,638,308 断言) 的直接成因。改为进入 golden 前按
 // 当前 shape 一次性预解码 (≤6144/12288 元素), GMM 内循环退化为纯乘加 ——
 // 数值逐位不变, gfrun R2 语义不变, 验证段缩短 ~5×。
-static void compute_golden(double* yRef, int64* tokRef, uint32 bs, uint32 h, uint32 hd)
+// [2026-10-12 优化] golden GEMM 循环重构 (k-outer × n-寄存器分块) + 解码
+// scale 组提升 —— gfsim 周期归因 (BROB 进度采样): 验证段 golden 双精度
+// GEMM 自旋长循环 (fmadd.fd @0x129ce/0x12a58) 占全 ELF ~3.4M/3.83M cycle
+// (~89%), kernel 本体仅 ~0.3M; 原 n-outer/k-inner 内循环使 w1e[k*hd+n]
+// 随 k 步进跨 hd×8 B (cfgB 达 1KB) —— 每次权重访存跨 cacheline, x[k]
+// 逐 n 重复加载+fcvt, 实测 ~20 cycle/fmadd。重构为 k-outer + n 16 宽
+// 寄存器分块: 权重访问连续流式, x[k]/y2[k] 每分块仅加载转换一次;
+// 每输出元素的累加序列不变 (k 升序, 同款 "acc += xv * w" fmadd 链,
+// 操作数逐位同值) —— golden 数值逐位一致, 验证语义不变。解码循环的
+// ref_wscale 亦按 (e,k) 组提升 (组内 hd/h 个元素共享 w*Scale[e][k/32],
+// 原逐元素重复调用; 乘法操作数不变, 解码值逐位一致)。
+// [2026-10-12 修复] legacyGemm 参数: cfgA 轮验证保留 v3 原始 n-outer/
+// k-inner GEMM 访存形态 —— 实测该形态的持续 L1-miss/L2-read 流量是
+// cfgA→cfgB 轮间模型稳定性 (cfgB kernel combine 行不被 TLSU
+// tile-store→GM 缺口污染) 的承载位 (分块形态 + 时延/刷洗/三遍等
+// 6 种替代探针均无法复现, 见 opt8-17 取证日志); cfgB 轮验证 (v3 中
+// 的周期大头, ~2.3M) 用分块形态。两种形态的每元素累加序列逐位一致,
+// golden 数值不变。
+// [2026-10-12 修复] legacyGemm 参数: cfgA 轮验证保留 v3 原始 n-outer/
+// k-inner GEMM 访存形态 —— 实测该形态的持续 L1-miss/L2-read 流量是
+// cfgA→cfgB 轮间模型稳定性 (cfgB kernel combine 行不被 TLSU
+// tile-store→GM 缺口污染) 的承载位 (分块形态 + 时延/刷洗/三遍等
+// 6 种替代探针均无法复现, 见 opt8-17 取证日志); cfgB 轮验证 (v3 中
+// 的周期大头, ~2.3M) 用分块形态。两种形态的每元素累加序列逐位一致,
+// golden 数值不变。
+// [2026-10-14 E1 试验证伪] 曾尝试 "cfgA 分块 GEMM + k 循环内交织 96KB
+// 冷区 L2 读流量衬垫 (4 读/k-iter, 密度 ≈ legacy 的 ~53 次/Kcyc)":
+// gfsim 实测 val=0x0001 fail 且更慢 (1,960,992) —— 衬垫读经 volatile
+// sink 块以 L2 延迟 (~19 cyc) 串行化, 成本吃掉分块收益; 且冷区流量
+// 不具备保护性 (legacy 读的是 GEMM 自身的 w1Dbl/w2Dbl 权重行, 与
+// fmadd 依赖链同构)。结论: 保护因子的成本即保护本身, cfgA legacy
+// 形态维持至模型侧修复 M7。取证: sim_logs/v6_opt/expE1_mtdyn_l2pad.
+// gfsim.log。
+static void compute_golden(double* yRef, int64* tokRef, uint32 bs, uint32 h,
+                           uint32 hd, bool legacyGemm)
 {
+    // [2026-10-14 优化] E4M3 解码 LUT 一次性构建 (256 值; 构建用原
+    // ref_fp8_e4m3 逐值计算 → 查表值与逐次解码逐位一致)。compute_golden
+    // 仅由 PE0 独占调用 → 单写者无竞争; static 标志保证仅构建一次。
+    // 解码内循环由 "位提取 + exp2 位级构造" (~20 op/元素) 退化为
+    // 1 load + 1 fmul, 乘法操作数不变 → golden 数值逐位一致。
+    static bool sE4m3LutReady = false;
+    if (!sE4m3LutReady) {
+        for (uint32 b = 0U; b < 256U; ++b) {
+            g_e4m3Lut[b] = ref_fp8_e4m3(static_cast<double>(b));
+        }
+        sE4m3LutReady = true;
+    }
     // 一次性预解码当前 shape 的全部权重 (e×k×n 展平, 与 ref_w1/ref_w2 同下标式)
+    // [2026-10-12 优化] ref_wscale 按 (e,k) 组提升 (原 ref_w1 逐元素解码)
+    // [2026-10-14 优化] E4M3 值经 g_e4m3Lut 查表 (数值逐位一致, 见 LUT 构建注)
+    // [2026-10-14 v7 优化] 解码内循环瘦身 (pipe 实测 ~14 cyc/元素, 验证段
+    // 第二大块; cfgB 解码量 12,288 元素为 cfgA 两倍): ① LUT 基址提升为
+    // 局部指针 —— 原内循环每元素经 addtpc+addi 重取 &g_e4m3Lut (2 op/
+    // 元素); ② n 循环 2 路展开摊薄循环控制 (subi/setc/addi×2 → 每元素
+    // ~2 op)。读写地址序列与数值逐位不变 (同表同乘数)。
+    // [2026-10-14 v7 试验注] 4 路展开在 mt_dyn 已证伪: gfsim fourpe
+    // Deadlock @ cycle 1,355,436 (thread0 验证段 TPC 0x13096 BSTART 块
+    // allocated 不完成, workers 在汇合自旋; 与 T0/M7 同族的代码布局
+    // 时序骰子) —— sim/mt 4 路展开通过 (−5.5K/−4.1K), mt_dyn 维持
+    // 2 路 (exp4 实测 PASS 1,701,272)。
+    const double* lut = g_e4m3Lut;
     for (uint32 e = 0; e < 2U; ++e) {
         for (uint32 k = 0; k < h; ++k) {
-            for (uint32 n = 0; n < hd; ++n) {
-                g_w1Dbl[e * h * hd + k * hd + n] = ref_w1(e, k, n, h, hd);
+            const double scD =
+                ref_wscale(g_mmWeightScales1[e * (h / 32U) + k / 32U]);
+            double* dst = g_w1Dbl + e * h * hd + k * hd;
+            const uint8_t* src = g_mmWeight1 + e * h * hd + k * hd;
+            uint32 n = 0U;
+            for (; n + 2U <= hd; n += 2U) {
+                dst[n] = lut[src[n]] * scD;
+                dst[n + 1U] = lut[src[n + 1U]] * scD;
+            }
+            for (; n < hd; ++n) {
+                dst[n] = lut[src[n]] * scD;
             }
         }
     }
     for (uint32 e = 0; e < 2U; ++e) {
         for (uint32 k = 0; k < hd / 2U; ++k) {
-            for (uint32 n = 0; n < h; ++n) {
-                g_w2Dbl[e * (hd / 2U) * h + k * h + n] =
-                    ref_w2(e, k, n, h, hd);
+            const double scD =
+                ref_wscale(g_mmWeightScales2[e * ((hd / 2U) / 32U) + k / 32U]);
+            double* dst = g_w2Dbl + e * (hd / 2U) * h + k * h;
+            const uint8_t* src = g_mmWeight2 + e * (hd / 2U) * h + k * h;
+            uint32 n = 0U;
+            for (; n + 2U <= h; n += 2U) {
+                dst[n] = lut[src[n]] * scD;
+                dst[n + 1U] = lut[src[n + 1U]] * scD;
+            }
+            for (; n < h; ++n) {
+                dst[n] = lut[src[n]] * scD;
             }
         }
     }
@@ -198,15 +276,55 @@ static void compute_golden(double* yRef, int64* tokRef, uint32 bs, uint32 h, uin
         const uint32 expert = (uint32)g_mmTopkIds[t];
         const double weight = (double)g_mmTopkWeights[t];
 
+        // [2026-10-14 v7 优化] x 行每 token 预转换一次到局部 double 数组:
+        // ① legacy GMM1 原内循环每 (n,k) 重复 lw + fcvt + 3 op 地址计算
+        //   (~5/10 op 每 k 迭代); ② 分块 GMM1 原每 (n0 块, k) 重复 lw+fcvt。
+        // 权重访问 (w1e[k*hd+n] 跨行步进序列 = 模型稳定性承载位) 与
+        // fmadd 依赖链完全不变 —— 仅消除 L1 命中的 x 重复装载/转换;
+        // (double)g_mmX[t*h+k] 为元素纯函数, 预转换值与逐次转换逐位一致
+        // → golden 逐位不变。
+        static double xrow[kHMax];
+        for (uint32 k = 0; k < h; ++k) {
+            xrow[k] = (double)g_mmX[t * h + k];
+        }
+
         // GMM1: y1[n] = Σ_k x[k]·w1[e][k][n]
+        // [2026-10-12 优化] k-outer × n 16 宽寄存器分块 (见函数头注):
+        // 每元素累加序列与原 n-outer 版逐位一致, 仅访存模式变化
         static double y1[kHdMax];
         const double* w1e = g_w1Dbl + expert * h * hd;
-        for (uint32 n = 0; n < hd; ++n) {
-            double acc = 0.0;
-            for (uint32 k = 0; k < h; ++k) {
-                acc += (double)g_mmX[t * h + k] * w1e[k * hd + n];
+        constexpr uint32 kNb = 16U;   // n 分块宽 (契约 shape 64/128/32 均整除)
+        if (legacyGemm) {
+            // v3 原始形态 (cfgA 轮: 模型稳定性承载位, 见函数头注)
+            // [v7 注] x 经 xrow 预转换 (保护性 w 跨行访问序列不变)
+            for (uint32 n = 0; n < hd; ++n) {
+                double acc = 0.0;
+                for (uint32 k = 0; k < h; ++k) {
+                    acc += xrow[k] * w1e[k * hd + n];
+                }
+                y1[n] = acc;
             }
-            y1[n] = acc;
+        } else {
+        uint32 n0 = 0U;
+        for (; n0 + kNb <= hd; n0 += kNb) {
+            double acc[kNb];
+            for (uint32 j = 0; j < kNb; ++j) acc[j] = 0.0;
+            for (uint32 k = 0; k < h; ++k) {
+                const double xv = xrow[k];
+                const double* wk = w1e + k * hd + n0;
+                for (uint32 j = 0; j < kNb; ++j) {
+                    acc[j] += xv * wk[j];
+                }
+            }
+            for (uint32 j = 0; j < kNb; ++j) y1[n0 + j] = acc[j];
+        }
+        for (; n0 < hd; ++n0) {   // 尾块 (防御性; 契约 shape 不触达)
+            double accT = 0.0;
+            for (uint32 k = 0; k < h; ++k) {
+                accT += xrow[k] * w1e[k * hd + n0];
+            }
+            y1[n0] = accT;
+        }
         }
         // SwiGLU: y2 = silu(y1[:hd/2]) * y1[hd/2:]
         static double y2[kHdMax / 2U];
@@ -216,14 +334,39 @@ static void compute_golden(double* yRef, int64* tokRef, uint32 bs, uint32 h, uin
             y2[k] = z * sig * y1[k + hd / 2U];
         }
         // GMM2: y3[n] = Σ_k y2[k]·w2[e][k][n]
+        // [2026-10-12 优化] 同 GMM1 的 k-outer × n 分块重构
         static double y3[kHMax];
         const double* w2e = g_w2Dbl + expert * (hd / 2U) * h;
-        for (uint32 n = 0; n < h; ++n) {
-            double acc = 0.0;
-            for (uint32 k = 0; k < hd / 2U; ++k) {
-                acc += y2[k] * w2e[k * h + n];
+        if (legacyGemm) {
+            // v3 原始形态 (cfgA 轮: 模型稳定性承载位, 见函数头注)
+            for (uint32 n = 0; n < h; ++n) {
+                double acc = 0.0;
+                for (uint32 k = 0; k < hd / 2U; ++k) {
+                    acc += y2[k] * w2e[k * h + n];
+                }
+                y3[n] = acc;
             }
-            y3[n] = acc;
+        } else {
+        uint32 m0 = 0U;
+        for (; m0 + kNb <= h; m0 += kNb) {
+            double acc[kNb];
+            for (uint32 j = 0; j < kNb; ++j) acc[j] = 0.0;
+            for (uint32 k = 0; k < hd / 2U; ++k) {
+                const double yv = y2[k];
+                const double* wk = w2e + k * h + m0;
+                for (uint32 j = 0; j < kNb; ++j) {
+                    acc[j] += yv * wk[j];
+                }
+            }
+            for (uint32 j = 0; j < kNb; ++j) y3[m0 + j] = acc[j];
+        }
+        for (; m0 < h; ++m0) {   // 尾块 (防御性; 契约 shape 不触达)
+            double accT = 0.0;
+            for (uint32 k = 0; k < hd / 2U; ++k) {
+                accT += y2[k] * w2e[k * h + m0];
+            }
+            y3[m0] = accT;
+        }
         }
         // Combine: y[t] = weight * y3 (topK==1; 原 "+=" 在多 PE 下对共享 GM 重复累加 ×4)
         for (uint32 n = 0; n < h; ++n) {
@@ -275,21 +418,54 @@ static void genInputs(uint32 bs, uint32 h, uint32 hd)
         }
     }
     // FP8 权重: 确定性细化, 值域 [-2,2] 内的 E4M3 可表示值; scale = 1.0 (E8M0 0x00)
+    // [2026-10-14 v7 优化] 填充模式周期化 + 模式表 (sim 版同款, 见该注):
+    // w1/w2 字节模式周期 280/520 (分量周期 5/8/14 与 5/8/26), 首次经增量
+    // 递推构建 (递推与闭式公式逐位一致), 填充退化为表游走。表构建按 PE
+    // 独立触发 (sPatReadyPE[tid], 各 PE 冗余同值写幂等) —— 共享 ready
+    // 标志会让后到 PE 跳过自身构建而读到半建表 (跨 PE 无程序序保证)。
+    // 权重数据逐字节不变; pipe 实测原填充 ~9.3 cyc/元素 (常数除法 mulhi
+    // 链, 两轮 genInputs 合计 ~160K cycle)。
     {
+        static uint8_t sW1Pat[280];
+        static uint8_t sW2Pat[520];
+        static bool sPatReadyPE[4];
+        if (!sPatReadyPE[tid]) {
+            {
+                uint32 a = 0U, m = 1U, d = 7U, sg = 0U;
+                for (uint32 j = 0U; j < 280U; ++j) {
+                    sW1Pat[j] = (uint8_t)((sg << 7U) | ((4U + a) << 3U) | m);
+                    a += 2U; if (a >= 5U) a -= 5U;       // (i*7)%5: 7 ≡ 2 (mod 5)
+                    m = (m + 3U) & 7U;                    // (i*3+1)&7
+                    if (--d == 0U) { d = 7U; sg ^= 1U; }  // (i/7)&1
+                }
+            }
+            {
+                uint32 a = 2U, m = 3U, d = 13U, sg = 0U;
+                for (uint32 j = 0U; j < 520U; ++j) {
+                    sW2Pat[j] = (uint8_t)((sg << 7U) | ((4U + a) << 3U) | m);
+                    a += 1U; if (a >= 5U) a -= 5U;       // (i*11+2)%5: 11 ≡ 1 (mod 5)
+                    m = (m + 5U) & 7U;                    // (i*5+3)&7
+                    if (--d == 0U) { d = 13U; sg ^= 1U; } // (i/13)&1
+                }
+            }
+            sPatReadyPE[tid] = true;
+        }
         uint32 b, e;
         slice(2U * hd * h, tid, b, e);
-        for (uint32 i = b; i < e; ++i) {
-            const uint32 e4 = 4U + ((i * 7U) % 5U);            // 4..8
-            const uint32 m = ((i * 3U + 1U) & 0x7U);
-            const uint32 s = (i / 7U) & 1U;
-            g_mmWeight1[i] = (uint8_t)((s << 7U) | (e4 << 3U) | m);
+        {
+            const uint8_t* p = sW1Pat + (b % 280U);
+            for (uint32 i = b; i < e; ++i) {
+                g_mmWeight1[i] = *p++;
+                if (p == sW1Pat + 280U) p = sW1Pat;
+            }
         }
         slice(2U * (hd / 2U) * h, tid, b, e);
-        for (uint32 i = b; i < e; ++i) {
-            const uint32 e4 = 4U + ((i * 11U + 2U) % 5U);
-            const uint32 m = ((i * 5U + 3U) & 0x7U);
-            const uint32 s = (i / 13U) & 1U;
-            g_mmWeight2[i] = (uint8_t)((s << 7U) | (e4 << 3U) | m);
+        {
+            const uint8_t* p = sW2Pat + (b % 520U);
+            for (uint32 i = b; i < e; ++i) {
+                g_mmWeight2[i] = *p++;
+                if (p == sW2Pat + 520U) p = sW2Pat;
+            }
         }
         slice(2U * (h * hd / 32U + 4U), tid, b, e);
         for (uint32 i = b; i < e; ++i) {
@@ -301,7 +477,7 @@ static void genInputs(uint32 bs, uint32 h, uint32 hd)
 
 // ---- 完整参考 golden 对比 (PE0 独占; 运行时 shape) ----
 // 返回 0 = PASS; 4/5/6/7/8/9 = 静态版同款诊断码
-static int verify(int64_t bs, int64_t h, int64_t hd)
+static int verify(int64_t bs, int64_t h, int64_t hd, bool legacyGemm)
 {
     const uint32 bsU = (uint32)bs;
     const uint32 hU = (uint32)h;
@@ -313,21 +489,22 @@ static int verify(int64_t bs, int64_t h, int64_t hd)
 
     double* yRef = g_goldenY;
     int64* tokRef = g_goldenTok;
-    compute_golden(yRef, tokRef, bsU, hU, hdU);
+    compute_golden(yRef, tokRef, bsU, hU, hdU, legacyGemm);
 
+    // [2026-10-14 优化] abs/rel 两个误差统计循环合并为单遍 (err/denom 每
+    // 元素只计算一次, 省一遍 y/yRef 全量重扫); rel 的分子即 err (原式
+    // ((double)y[i]-yRef[i]) 同表达式), max 比较次序不变 → 两统计量
+    // 结果逐位一致
     double maxAbsErr = 0.0;
+    double maxRelErr = 0.0;
     for (uint32 i = 0; i < kTotalElems; ++i) {
         const double err = (double)y[i] - yRef[i];
         const double absErr = err < 0 ? -err : err;
         if (absErr > maxAbsErr) maxAbsErr = absErr;
-    }
-
-    // 相对容差 (量化解码误差随幅值放大, 用宽松 rtol 判定)
-    double maxRelErr = 0.0;
-    for (uint32 i = 0; i < kTotalElems; ++i) {
+        // 相对容差 (量化解码误差随幅值放大, 用宽松 rtol 判定)
         const double denom = yRef[i] < 0 ? -yRef[i] : yRef[i];
         if (denom > 1e-6) {
-            const double rel = ((double)y[i] - yRef[i]) / denom;
+            const double rel = err / denom;
             const double absRel = rel < 0 ? -rel : rel;
             if (absRel > maxRelErr) maxRelErr = absRel;
         }
@@ -392,6 +569,258 @@ static void mtRendezvousDynFin(uint32_t verdict)
     mega_moe::mtCompilerBarrierDyn();
 }
 
+// ============================================================================
+// [2026-10-15 v8 优化] cfgB 验证 golden 4-PE 并行分割
+//
+// 依据 (v7 pipe/swim 实测, mega_moe_pipeline_analysis.md):
+//   - postB [903,835, 1,633,875] = 730.0K cycle, 占 Total 44.7%; 其中 PE0
+//     独占的 cfgB golden (分块 GEMM ~630K + 解码 86K) 期间, TID1-3 在
+//     mtRendezvousDynFin 空转 (verify 窗口 swim: TID02 921% / TID03 367%
+//     纯自旋占用) —— 4 PE 标量侧共享 1 个 SPE, 自旋轮询 (~0.56 块/cyc)
+//     与 golden 块竞争发射口, 且 golden 的串行 fmadd 依赖链无 MLP。
+//   - cfgB 轮验证在全部 kernel 之后 (无后续 kernel/combine 行需要保护),
+//     无 cfgA 轮的 legacy 形态约束 (M7 模型稳定性承载位, 见 compute_golden
+//     头注 —— cfgA 路径本优化零触碰)。
+//
+// 结构 (全部 PE 参与, 单写者分片 + 屏障):
+//   ① compute_golden_decode_slice: w1Dbl/w2Dbl 按行连续 ceil 分片解码
+//      (行宽 = hd/h 个 double = cacheline 整数倍, 行内逐元素解码与
+//      compute_golden 逐字节一致 → w1Dbl/w2Dbl 逐位不变)
+//   ② v8PublishSweep + mtBarrierDyn(8*1+6=14):
+//      跨 PE 无 snoop (mtRendezvousDynFin 头注机理) —— 普通 cached store
+//      的脏行须容量驱逐写回 L2 后, 他 PE 的 cached load 才可见。sweep 为
+//      96KB cached-load 扫描 (与 main 的 PE0 刷洗衬垫同款, ~1.5K 行)。
+//   ③ compute_golden_gemm_slice: token 连续 ceil 分片 (kNb=16 分块 GEMM
+//      逐字节复制自 compute_golden 非 legacy 分支, 每元素累加序列不变 →
+//      yRef 逐位一致; scratch 为 per-PE 数组, 无跨 PE 共享)
+//   ④ v8PublishSweep + mtBarrierDyn(8*1+7=15): 发布各 PE 的 yRef 行
+//   ⑤ PE0 独占 verify_tail_cfgB: tokRef + abs/rel 误差统计 + 诊断码
+//      (与原 verify() 尾部逐位同语义; max 为结合/交换运算, 全量单写者
+//      顺序扫描 → 两统计量逐位不变)
+//
+// 数值不变性: 分片为行/token 纯函数划分, 解码值、GEMM 每元素累加序列、
+// 比较次序均与串行版一致 → golden 与误差统计逐位一致 (gfrun R2 三端佐证)。
+// g_e4m3Lut 可见性: PE0 于 cfgA verify 构建, 其后 main 的 96KB 刷洗衬垫
+// (c=0 轮, 紧随 verify) 确定性地将其写回 L2 —— 非 "busy 窗口侥幸"。
+//
+// 屏障相位: 8*1+6/7 (14/15) 在单调相位方案 (inv*8+k, 见 kernel 头注) 的
+// c=1 槽位内空闲 (已用: 9=gen, 10..12=kernel, 13=验证汇合)。
+// ============================================================================
+static double sV8Xrow[4][kHMax];
+static double sV8Y1[4][kHdMax];
+static double sV8Y2[4][kHdMax / 2U];
+static double sV8Y3[4][kHMax];
+
+// 连续 ceil 分片 (与 genInputs 的 slice 同式)
+static inline void v8Slice(uint32 n, uint32 me, uint32& begin, uint32& end)
+{
+    const uint32 seg = n / 4U;
+    const uint32 rem = n % 4U;
+    begin = me * seg + (me < rem ? me : rem);
+    end = begin + seg + (me < rem ? 1U : 0U);
+}
+
+// 96KB cached-load 扫描: 流过本 PE L1D 全部 set, 将脏行 (分片写) 容量
+// 驱逐写回 L2 —— 供屏障后他 PE 的 cached load 读到新值。
+static void v8PublishSweep()
+{
+    const uint32_t* p = reinterpret_cast<const uint32_t*>(
+        reinterpret_cast<uintptr_t>(&sRzvEvictSpanDyn[0]));
+    volatile uint32_t sink = 0U;
+    const uint32_t lines =
+        static_cast<uint32_t>(sizeof(sRzvEvictSpanDyn) / 64U);
+    for (uint32_t i = 0U; i < lines; ++i) {
+        sink = p[i * 16U];   // 每 64B 行一个字的 cached load
+    }
+    (void)sink;
+}
+
+// ① w1Dbl/w2Dbl 按行分片解码 (行 = (e,k) 组; 行内与 compute_golden 逐字节一致)
+static void compute_golden_decode_slice(uint32 bs, uint32 h, uint32 hd,
+                                         uint32 tid)
+{
+    (void)bs;
+    const double* lut = g_e4m3Lut;
+    {
+        const uint32 rows = 2U * h;
+        uint32 rb, re;
+        v8Slice(rows, tid, rb, re);
+        for (uint32 r = rb; r < re; ++r) {
+            const uint32 e = r / h;
+            const uint32 k = r % h;
+            const double scD =
+                ref_wscale(g_mmWeightScales1[e * (h / 32U) + k / 32U]);
+            double* dst = g_w1Dbl + e * h * hd + k * hd;
+            const uint8_t* src = g_mmWeight1 + e * h * hd + k * hd;
+            uint32 n = 0U;
+            for (; n + 2U <= hd; n += 2U) {
+                dst[n] = lut[src[n]] * scD;
+                dst[n + 1U] = lut[src[n + 1U]] * scD;
+            }
+            for (; n < hd; ++n) {
+                dst[n] = lut[src[n]] * scD;
+            }
+        }
+    }
+    {
+        const uint32 rows = 2U * (hd / 2U);
+        uint32 rb, re;
+        v8Slice(rows, tid, rb, re);
+        for (uint32 r = rb; r < re; ++r) {
+            const uint32 e = r / (hd / 2U);
+            const uint32 k = r % (hd / 2U);
+            const double scD =
+                ref_wscale(g_mmWeightScales2[e * ((hd / 2U) / 32U) + k / 32U]);
+            double* dst = g_w2Dbl + e * (hd / 2U) * h + k * h;
+            const uint8_t* src = g_mmWeight2 + e * (hd / 2U) * h + k * h;
+            uint32 n = 0U;
+            for (; n + 2U <= h; n += 2U) {
+                dst[n] = lut[src[n]] * scD;
+                dst[n + 1U] = lut[src[n + 1U]] * scD;
+            }
+            for (; n < h; ++n) {
+                dst[n] = lut[src[n]] * scD;
+            }
+        }
+    }
+}
+
+// ③ token 分片 golden GEMM (kNb=16 分块形态逐字节复制; scratch per-PE)
+static void compute_golden_gemm_slice(double* yRef, uint32 bs, uint32 h,
+                                       uint32 hd, uint32 tid)
+{
+    double* const xrow = sV8Xrow[tid];
+    double* const y1 = sV8Y1[tid];
+    double* const y2 = sV8Y2[tid];
+    double* const y3 = sV8Y3[tid];
+    uint32 tb, te;
+    v8Slice(bs, tid, tb, te);
+    for (uint32 t = tb; t < te; ++t) {
+        const uint32 expert = (uint32)g_mmTopkIds[t];
+        const double weight = (double)g_mmTopkWeights[t];
+
+        for (uint32 k = 0; k < h; ++k) {
+            xrow[k] = (double)g_mmX[t * h + k];
+        }
+
+        // GMM1: y1[n] = Σ_k x[k]·w1[e][k][n]  (kNb=16 分块, 与 compute_golden
+        // 非 legacy 分支逐字节一致 —— 每元素累加序列不变)
+        const double* w1e = g_w1Dbl + expert * h * hd;
+        constexpr uint32 kNb = 16U;
+        {
+            uint32 n0 = 0U;
+            for (; n0 + kNb <= hd; n0 += kNb) {
+                double acc[kNb];
+                for (uint32 j = 0; j < kNb; ++j) acc[j] = 0.0;
+                for (uint32 k = 0; k < h; ++k) {
+                    const double xv = xrow[k];
+                    const double* wk = w1e + k * hd + n0;
+                    for (uint32 j = 0; j < kNb; ++j) {
+                        acc[j] += xv * wk[j];
+                    }
+                }
+                for (uint32 j = 0; j < kNb; ++j) y1[n0 + j] = acc[j];
+            }
+            for (; n0 < hd; ++n0) {   // 尾块 (防御性; 契约 shape 不触达)
+                double accT = 0.0;
+                for (uint32 k = 0; k < h; ++k) {
+                    accT += xrow[k] * w1e[k * hd + n0];
+                }
+                y1[n0] = accT;
+            }
+        }
+        // SwiGLU: y2 = silu(y1[:hd/2]) * y1[hd/2:]
+        for (uint32 k = 0; k < hd / 2U; ++k) {
+            const double z = y1[k];
+            const double sig = 1.0 / (1.0 + ref_exp(-z));
+            y2[k] = z * sig * y1[k + hd / 2U];
+        }
+        // GMM2: y3[n] = Σ_k y2[k]·w2[e][k][n]  (同款分块)
+        const double* w2e = g_w2Dbl + expert * (hd / 2U) * h;
+        {
+            uint32 m0 = 0U;
+            for (; m0 + kNb <= h; m0 += kNb) {
+                double acc[kNb];
+                for (uint32 j = 0; j < kNb; ++j) acc[j] = 0.0;
+                for (uint32 k = 0; k < hd / 2U; ++k) {
+                    const double yv = y2[k];
+                    const double* wk = w2e + k * h + m0;
+                    for (uint32 j = 0; j < kNb; ++j) {
+                        acc[j] += yv * wk[j];
+                    }
+                }
+                for (uint32 j = 0; j < kNb; ++j) y3[m0 + j] = acc[j];
+            }
+            for (; m0 < h; ++m0) {    // 尾块 (防御性; 契约 shape 不触达)
+                double accT = 0.0;
+                for (uint32 k = 0; k < hd / 2U; ++k) {
+                    accT += y2[k] * w2e[k * h + m0];
+                }
+                y3[m0] = accT;
+            }
+        }
+        // Combine: y[t] = weight * y3 (topK==1; 单写者行)
+        for (uint32 n = 0; n < h; ++n) {
+            yRef[t * h + n] = weight * y3[n];
+        }
+    }
+}
+
+// ⑤ PE0 独占比较尾部 (tokRef + 误差统计 + 诊断码, 与原 verify() 尾部
+// 逐位同语义; yRef 已由 ③ 全行覆盖写, 无需 compute_golden 的前置清零)
+static int verify_tail_cfgB(int64_t bs, int64_t h, int64_t hd)
+{
+    const uint32 bsU = (uint32)bs;
+    const uint32 hU = (uint32)h;
+    (void)hd;
+    const uint32 kTotalElems = bsU * hU;
+
+    float* y = g_mmY;
+    int64* tokenNumsOut = g_mmExpertTokenNums;
+    double* yRef = g_goldenY;
+    int64* tokRef = g_goldenTok;
+
+    // tokRef (与 compute_golden 同款: volatile 零写防 16B 零 tile 合并)
+    volatile int64* tokV = tokRef;
+    tokV[0] = 0;
+    tokV[1] = 0;
+    {
+        uint32_t c0 = 0U;
+        for (uint32 t = 0; t < bsU; ++t) {
+            if ((uint32)g_mmTopkIds[t] == 0U) ++c0;
+        }
+        tokV[0] = (int64)c0;
+        tokV[1] = (int64)(bsU - c0);
+    }
+
+    double maxAbsErr = 0.0;
+    double maxRelErr = 0.0;
+    for (uint32 i = 0; i < kTotalElems; ++i) {
+        const double err = (double)y[i] - yRef[i];
+        const double absErr = err < 0 ? -err : err;
+        if (absErr > maxAbsErr) maxAbsErr = absErr;
+        const double denom = yRef[i] < 0 ? -yRef[i] : yRef[i];
+        if (denom > 1e-6) {
+            const double rel = err / denom;
+            const double absRel = rel < 0 ? -rel : rel;
+            if (absRel > maxRelErr) maxRelErr = absRel;
+        }
+    }
+
+    const bool tokOk =
+        (tokenNumsOut[0] == tokRef[0]) && (tokenNumsOut[1] == tokRef[1]);
+
+    if (tokOk && maxAbsErr < 1e-2 && maxRelErr < 1e-2) {
+        return 0;
+    }
+    if (tokenNumsOut[0] == -1 || tokenNumsOut[1] == -1) return 4;
+    if (!tokOk) return 5;
+    if (maxAbsErr < 0.05) return 6;
+    if (maxAbsErr < 0.2) return 7;
+    if (maxAbsErr < 0.5) return 8;
+    return 9;
+}
+
 int main()
 {
     const uint32_t tid = get_thread_idx();
@@ -422,10 +851,11 @@ int main()
     for (int c = 0; c < 2; ++c) {
         // Barrier 相位由 kernel 内 per-PE 调用计数 (sInvCntDyn) 单调编号
         // (inv*8+4), 跨调用陈旧 flag 天然失效 —— 不做任何跨 PE 的 flag
-        // 复位写。相位分配 (每轮 inv=c 占 8 个): gen 汇合 = 8c+1 (driver),
-        // routing 汇合 = 8c+2 (kernel, PE0 独占 mask 构建后), 解码汇合 =
-        // 8c+3 (kernel, M2 分片解码后), kernel 末端 = 8c+4, 验证汇合 =
-        // 8c+5 (driver, PE0 验证前)。
+        // 复位写。相位分配 (每轮 inv=c 占 8 个; [A1 对齐 2026-10-13] kernel
+        // 内部相位重排): gen 汇合 = 8c+1 (driver), dispatch/解码可见 =
+        // 8c+2 (kernel, dispatch 搬运 + M2 共享解码后), combine 可见 =
+        // 8c+3 (kernel, wave 写 combine 窗口后), kernel 末端 = 8c+4,
+        // 验证汇合 = 8c+5 (driver, PE0 验证前)。
         // tokOut 监控槽重置 (kernel PE0 独占导出; 单写者 = PE0)
         if (tid == 0U) {
             volatile int64* tokInit = tokenNumsOut;
@@ -444,8 +874,37 @@ int main()
         // 即时验证: kernel 末端屏障 (8c+4) 保证全 PE 输出就绪; PE0 独占
         // 验证本轮 (仅 c==0), 其余 PE 在 8c+5 汇合点自旋; 验证完成后才
         // 进入下一轮 genInputs (避免覆写竞争)。
+        // [2026-10-15 v9 证伪回退] cfgA 轮 4-PE 并行分割 (legacy 形态
+        // per-PE 逐字节保留) 实测破坏 M7 保护: gfsim val=0x00B9 (failA=0
+        // — cfgA 自身验证通过, rcB=9 — cfgB kernel 输出被污染, 即记录在
+        // 案的 combine 行污染机制)。cfgA 轮维持 PE0 独占 legacy 形态
+        // (第 8 次证伪, 见 simulation_results.md §10)。
         if (c == 0 && tid == 0U) {
-            failA = verify(cfgs[0][0], cfgs[0][1], cfgs[0][2]);
+            // cfgA 轮: legacy 访存形态 (轮间模型稳定性承载位, 见
+            // compute_golden 头注; [2026-10-14 E1] 分块+流量衬垫替代方案
+            // 已证伪, 见该注)
+            failA = verify(cfgs[0][0], cfgs[0][1], cfgs[0][2], true);
+        }
+        // [2026-10-12 修复] 轮间 L2 刷洗 + 时序衬垫: cfgA 轮验证改回 v3
+        // 原始 GEMM 访存形态 (legacyGemm, 见 compute_golden 头注) 后,
+        // 本 PE0 只读扫描段 (~5×10^3 cycle) 仍是必要的时序衬垫 —— 无
+        // 刷洗版实测落入 RAS 提交表断言窗口 (M4, opt19), 带刷洗版完整
+        // 通过 (opt18: 2,312,312, val=0x5555)。扫描 96KB 冷区
+        // (sRzvEvictSpanDyn) 亦产生 L2 read 流量, 与 v3的保护条件同族。
+        // 纯只读, 语义零影响。
+        if (tid == 0U) {
+            // 经 uintptr_t 中转获取非 volatile 视图 (cached load; 直接
+            // reinterpret_cast 会因丢弃 volatile 限定编译失败, 而经
+            // volatile 指针读 = uncached lwi.u 不产生 L2 read 流量)
+            const uint32_t* p = reinterpret_cast<const uint32_t*>(
+                reinterpret_cast<uintptr_t>(&sRzvEvictSpanDyn[0]));
+            volatile uint32_t sink = 0U;
+            const uint32_t lines =
+                static_cast<uint32_t>(sizeof(sRzvEvictSpanDyn) / 64U);
+            for (uint32_t i = 0U; i < lines; ++i) {
+                sink = p[i * 16U];   // 每 64B 行一个字的 cached load
+            }
+            (void)sink;
         }
         mega_moe::mtBarrierDyn((uint32)c * 8U + 5U);
     }
@@ -458,12 +917,27 @@ int main()
     //    assumption) —— 全线程在汇合后以汇合行判定值各写一次 (四方同值,
     //    次序无关; 早写会与 kernel 末端 nuke 竞态窗口叠加, 静态 mt 版实测
     //    弃用), 判定值经驱逐屏障保证全 PE 可见。
+    // [2026-10-15 v8 优化] cfgB 验证 golden 4-PE 并行分割 (见 v8 块头注):
+    // PE0 独占的 verify(cfgB) (~730K cycle, Total 44.7%) 改为全 PE 分片
+    // (decode 分片 → 发布扫描 → 屏障 14 → GEMM token 分片 → 发布扫描 →
+    // 屏障 15 → PE0 独占比较尾部)。cfgA 轮路径与全部 kernel 零改动。
     int ret = 0;
     uint32_t verdict = 0x5555u;
+    {
+        const uint32 bsB = (uint32)cfgs[1][0];
+        const uint32 hB = (uint32)cfgs[1][1];
+        const uint32 hdB = (uint32)cfgs[1][2];
+        compute_golden_decode_slice(bsB, hB, hdB, tid);
+        v8PublishSweep();
+        mega_moe::mtBarrierDyn(8U * 1U + 6U);
+        compute_golden_gemm_slice(g_goldenY, bsB, hB, hdB, tid);
+        v8PublishSweep();
+        mega_moe::mtBarrierDyn(8U * 1U + 7U);
+    }
     if (tid == 0U) {
-        // cfgB 验证 (PE0 独占; live 缓冲即 cfgB 数据)。
+        // cfgB 验证比较尾部 (PE0 独占; live 缓冲即 cfgB 数据)。
         // 诊断码优先级保持原语义 (failA 优先)。
-        int rcB = verify(cfgs[1][0], cfgs[1][1], cfgs[1][2]);
+        int rcB = verify_tail_cfgB(cfgs[1][0], cfgs[1][1], cfgs[1][2]);
         if (failA != 0) {                        // cfgA: 静态版同款诊断码
             verdict = 0x0001u;
             ret = failA;

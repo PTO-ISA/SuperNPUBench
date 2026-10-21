@@ -79,7 +79,7 @@ int main() {
     static dtype dgamma_buf[C_CH];
     static dtype dbeta_buf[C_CH];
     // Contiguous planes: c2[N,G], followed by c3[N,G].
-    static float params_workspace[gn_grad_1d::workspace_elems(N_BATCH, G_GRP)];
+    static float params_workspace[gn_grad_1d::workspace_elems(N_BATCH, C_CH, G_GRP)];
 
     dtype *dy = dy_buf;
     dtype *x = x_buf;

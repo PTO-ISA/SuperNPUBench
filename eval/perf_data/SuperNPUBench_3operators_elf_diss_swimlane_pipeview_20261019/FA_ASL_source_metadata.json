@@ -1,0 +1,29 @@
+{
+  "model_root": "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-asl",
+  "model_commit": "bdbafed55613955d0b8b27438e9e7d2a72dfccd2",
+  "gfsim_sha256": "6fe43c9f135981a296b515a46475a71649a4227fdaf1eb2f15abbd1f5930bf93",
+  "settings": [
+    "softcore.multiThreadNum=4",
+    "core.sharetreg_size_bytes=262144",
+    "core.sharetreg_ssb_count=64",
+    "dfx.swimCounterSampleInterval=256",
+    "bctrl.vec_cell_sched_enable=false",
+    "bctrl.vecIssueQDepth=64",
+    "bctrl.bctrl_bandwidth=8",
+    "spe.speROBDepth=128",
+    "cube.l0aSharetregResident=true",
+    "cube.l0aResidentTagNum=8",
+    "core.sharetreg_bandwidth_bytes=128",
+    "cube.enable_internal_acc=true",
+    "spe.macroDescriptorFusion=true",
+    "core.soc_random=true",
+    "core.soc_bw_limit=156",
+    "core.soc_lat_mean=260",
+    "core.soc_lat_random_seed=1",
+    "bfu.hwpf_nl_degree=32",
+    "bfu.hwpf_max_pending_req=32",
+    "bfu.bhc_pf_nostd=32",
+    "bfu.bhc_nostd=40"
+  ],
+  "scope": "FA non-FP4/HIF4 only; retained ELF versions; Sq128 single-head proxy"
+}

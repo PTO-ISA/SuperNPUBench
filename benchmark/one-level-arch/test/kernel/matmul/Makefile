@@ -33,6 +33,8 @@ ifeq ($(TESTCASE),matmul_shared)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_shared.cpp
 else ifeq ($(TESTCASE),matmul_reuseA)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_reuseA.cpp
+else ifeq ($(TESTCASE),matmul_reuseB)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_reuseB.cpp
 else ifeq ($(TESTCASE),matmul_lowp)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/matmul_lowp.cpp
 ifeq ($(LP_MODE),FP8)

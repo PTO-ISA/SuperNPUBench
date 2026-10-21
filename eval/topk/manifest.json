@@ -1,0 +1,47 @@
+{
+  "build_flags": "res_check=on GFSIM=on CHK_DIR=.",
+  "shape": [
+    4,
+    8192,
+    512
+  ],
+  "seed": 12345,
+  "files": {
+    "inputs/ends.bin": {
+      "bytes": 16,
+      "sha256": "9c743f34074356ad306cb4ffe09cfec411c5ef848a5ef01231ac35c319c6c5ef"
+    },
+    "inputs/golden.bin": {
+      "bytes": 8192,
+      "sha256": "b0ffb359542d3ad8d4e69f30c1e2df9a5efed9ad3c91c48276632f36f3774733"
+    },
+    "inputs/input.bin": {
+      "bytes": 131200,
+      "sha256": "13d0c3e6c0b060995d115c42e39f292b1b954795589e3718c564f70eb924fd36"
+    },
+    "inputs/shape.bin": {
+      "bytes": 24,
+      "sha256": "7ec336675059b6254cc39448b7169753caade0d72997ff4b10c1f63d84b2585b"
+    },
+    "inputs/starts.bin": {
+      "bytes": 16,
+      "sha256": "2bdf276d587fb6dbc91b748c0d45bfebfc68b0d8f1c4b955ee7c171e88437b3e"
+    },
+    "kernel_multi_thread_topk_tiled_topk_tiled_PE4.elf": {
+      "bytes": 39864,
+      "sha256": "343414d3eba44413fddecb6568cf18249f7dc86c38a997c0e3f126057bc6222a"
+    },
+    "kernel_multi_thread_topk_tiled_topk_tiled_PE4.elf.diss": {
+      "bytes": 204838,
+      "sha256": "d082fa176aef710f7ea048d2b9f8955344ec1e66a6de0e160d618e8de07fdd84"
+    },
+    "run.py": {
+      "bytes": 4962,
+      "sha256": "e05a76b71b5505e6b4e44fb94c8a541612b69be88e304b7d976d565667130cd7"
+    },
+    "run_swimlane.py": {
+      "bytes": 3317,
+      "sha256": "6228a4bed129cc241919dddf0ae7dbc61aa4f755e6a3deb5eaf9099649da0055"
+    }
+  }
+}

@@ -27,8 +27,10 @@ int main() {
         expand_idx[tk * 3 + 0] = 0;
         expand_idx[tk * 3 + 1] = tk / K;
         expand_idx[tk * 3 + 2] = tk % K;
-        for (int j = 0; j < K; j++)
-            expert_scales[tk * TILE_W + j] = 0.25f;
+        // [A5 对齐修复 2026-10-13] kernel 密集读 expertScales[n*K + k] (即下标
+        // tk, v2.hpp:167); 原按 [tk*TILE_W + j] 填充使 token 1..7 的 scale
+        // 实际为 0。改为密集前缀填充 (mt.cpp:78 同款), 每 slot 携带真实权重。
+        expert_scales[tk] = 0.25f;
     }
 
     moe_combine_v2<__bf16, __bf16, BS, H, K, NUM_EXPANDED, TILE_W>(

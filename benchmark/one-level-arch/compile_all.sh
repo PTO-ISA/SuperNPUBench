@@ -60,6 +60,11 @@ compile_operator "$REPO_ROOT/test/solution/gather_v2" "solution/gather_v2"
 compile_operator "$REPO_ROOT/test/solution/quant_sparse_flash_mla" "solution/quant_sparse_flash_mla"
 compile_operator "$REPO_ROOT/test/solution/matmul_test" "solution/matmul_test"
 compile_operator "$REPO_ROOT/test/solution/quant_batch_matmul_test" "solution/quant_batch_matmul_test"
+# solution/quant/dynamic_mx_quant：套件自带 compile.all 遍历 19 个 TYPE 变体（静态 5 + 动态 7 +
+# bench_small V1/V2/V3 × static/dyn 7）；FP4 变体当前受 TileOP TCVT 契约断言阻塞（见 release notes）。
+# GEN_GOLDEN=0：发布/CI 只取 ELF+diss，跳过现场 golden 生成；需要 golden/精度校验时直接在该目录跑
+# ./compile.all（默认 GEN_GOLDEN=1）。
+GEN_GOLDEN=0 compile_operator "$REPO_ROOT/test/solution/quant/dynamic_mx_quant" "solution/quant/dynamic_mx_quant"
 compile_operator "$REPO_ROOT/test/solution/qli" "solution/qli"
 compile_operator "$REPO_ROOT/test/solution/conv2d" "solution/conv2d"
 compile_operator "$REPO_ROOT/test/kernel/vec" "vec"

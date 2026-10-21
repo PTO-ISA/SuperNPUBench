@@ -153,14 +153,18 @@ _NORM = [
     #  "normalization/rms_norm_split_r/src/gen_rms_norm_split_r_data.py",
     #  "normalization/rms_norm_split_r/src/rms_norm_split_r_data_compare.py",
     #  "solution_normalization_rms_norm_split_r_rms_norm_split_r_DType__half_gA16_gR16384_PE4"),
+    # V0 (archived, backup only): group_norm_grad_static / group_norm_grad_1d_static moved to
+    # normalization/group_norm_grad/V0/, not run.
+    # V1 (archived, optimization record only): the pre-fusion group_norm_grad_dynamic /
+    # group_norm_grad_1d_dynamic are kept in normalization/group_norm_grad/V1/, not run.
     *((f"group_norm_grad_{v}", "normalization/group_norm_grad", _GNG_GEN, _GNG_CMP,
        f"solution_normalization_group_norm_grad_group_norm_grad_{v}_DType__half_N2_C16_G8_HxW2048_PE4",
        ("--n", "2", "--c", "16", "--g", "8", "--hxw", "2048"))
-      for v in ("dynamic", "static")),
+      for v in ("dynamic",)),
     *((f"group_norm_grad_1d_{v}", "normalization/group_norm_grad", _GNG1D_GEN, _GNG1D_CMP,
        f"solution_normalization_group_norm_grad_group_norm_grad_1d_{v}_DType__half_N256_C512_G8_PE4",
        ("--n", "256", "--c", "512", "--g", "8"))
-      for v in ("dynamic", "static")),
+      for v in ("dynamic",)),
 ]
 
 # matmul_test 暂不接入：其 verify_matmul_test.py 是**一体化驱动**（自己 prepare+gfrun+比对），
@@ -169,7 +173,7 @@ _NORM = [
 
 # ================================ CASES（算子侧维护）================================
 # 样板 A：dynamic_mx_quant 8 driver（多输出 + verify 钩子；golden 由 compile.all 集成 gen）。
-# 样板 B：normalization 8 个（prepare 调 gen + verify 调 compare；单/多输出均由自带 compare 处理）。
+# 样板 B：normalization 6 个（prepare 调 gen + verify 调 compare；单/多输出均由自带 compare 处理）。
 # 注：缺相应 TileOP 修复的发布版工具链上这些 kernel 编不过 → ELF 缺失 → 如实 SKIP。
 CASES: list[Case] = [
     Case(f"dmxq_{drv}", f"{_DMXQ_DIR}/elf/dynamic_mx_quant_{drv}.elf",
@@ -184,8 +188,8 @@ CASES: list[Case] = [
 # 拆分前的旧用例名 → 现用例名，外部脚本沿用旧名时展开成全部变体，避免匹配不到而空跑。
 CASE_ALIASES: dict[str, list[str]] = {
     "rms_norm": [nm for nm, *_ in _NORM if nm.startswith("rms_norm_")],
-    "group_norm_grad": ["group_norm_grad_dynamic", "group_norm_grad_static"],
-    "group_norm_grad_1d": ["group_norm_grad_1d_dynamic", "group_norm_grad_1d_static"],
+    "group_norm_grad": ["group_norm_grad_dynamic"],
+    "group_norm_grad_1d": ["group_norm_grad_1d_dynamic"],
 }
 
 

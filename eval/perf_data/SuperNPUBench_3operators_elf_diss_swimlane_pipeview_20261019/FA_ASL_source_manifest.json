@@ -1,0 +1,308 @@
+[
+  {
+    "case": {
+      "id": "row14",
+      "row": 14,
+      "mode": "FP8_VECFP32",
+      "dim": 256,
+      "tk": 128
+    },
+    "cycles": 69022,
+    "expected_cycles": 69022,
+    "trace_events": 1612285,
+    "files": {
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row14_FP8_VECFP32_D256_Tk128/row14_FP8_VECFP32_D256_Tk128.elf": {
+        "bytes": 31144,
+        "sha256": "060fd0524bd98412782a9a78c9ff2990f7d20ddd2c7af40fadbc8f800661b1fa"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row14_FP8_VECFP32_D256_Tk128/row14_FP8_VECFP32_D256_Tk128.diss": {
+        "bytes": 330328,
+        "sha256": "44e54e51f0f43853784df977327a26b57a5b8460a72f14ee9dd41c35e1464688"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row14_FP8_VECFP32_D256_Tk128/row14_FP8_VECFP32_D256_Tk128.swimlane.json": {
+        "bytes": 265377580,
+        "sha256": "dae4311c536e19c72f381fcfdf96db17b1ac9aa2985181b2f78bd11e2da9390c"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row14_FP8_VECFP32_D256_Tk128/row14_FP8_VECFP32_D256_Tk128.pipeview.log.out": {
+        "bytes": 178644502,
+        "sha256": "803575d007c52f21d6be0d684ec704f81b74131470021acecad5d514c442195c"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row14_FP8_VECFP32_D256_Tk128/gfsim.log": {
+        "bytes": 223250,
+        "sha256": "ed7ed2dd7e424890ed62c28ea4a1301a38e10c70e1bfafc6817527c84795e094"
+      }
+    }
+  },
+  {
+    "case": {
+      "id": "row16",
+      "row": 16,
+      "mode": "FP8_VECFP32",
+      "dim": 128,
+      "tk": 128
+    },
+    "cycles": 35290,
+    "expected_cycles": 35290,
+    "trace_events": 878838,
+    "files": {
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row16_FP8_VECFP32_D128_Tk128/row16_FP8_VECFP32_D128_Tk128.elf": {
+        "bytes": 30624,
+        "sha256": "9b4a762543ca92ce074bd00f86b660ee3d6597bee39452c714bdbe7df0130a4d"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row16_FP8_VECFP32_D128_Tk128/row16_FP8_VECFP32_D128_Tk128.diss": {
+        "bytes": 328805,
+        "sha256": "872ff1e6faa890b02dc6a2e6bcc4cf6e983af54e3935a40c4afa060200502ca8"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row16_FP8_VECFP32_D128_Tk128/row16_FP8_VECFP32_D128_Tk128.swimlane.json": {
+        "bytes": 157567310,
+        "sha256": "b7ca4151d6d9494e0c1d749fa3e121d90715e61a79a260643823dc2a839662c1"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row16_FP8_VECFP32_D128_Tk128/row16_FP8_VECFP32_D128_Tk128.pipeview.log.out": {
+        "bytes": 113247183,
+        "sha256": "07dea1dae2b0d104c951a49f290fab3e5d6249e7a21e7823a703e0734da012df"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row16_FP8_VECFP32_D128_Tk128/gfsim.log": {
+        "bytes": 222980,
+        "sha256": "14ed61bdc84ec3a079bf79a7b74371a6066746f8b758293e2dd91c04ec88acc3"
+      }
+    }
+  },
+  {
+    "case": {
+      "id": "row17",
+      "row": 17,
+      "mode": "FP8_VECFP32",
+      "dim": 64,
+      "tk": 128
+    },
+    "cycles": 23045,
+    "expected_cycles": 23045,
+    "trace_events": 610267,
+    "files": {
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row17_FP8_VECFP32_D64_Tk128/row17_FP8_VECFP32_D64_Tk128.elf": {
+        "bytes": 30336,
+        "sha256": "63c0a9b7b4b04234c0f2bcee16c07a507f1bb01705ab1c0bcdce8c4e68a4456f"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row17_FP8_VECFP32_D64_Tk128/row17_FP8_VECFP32_D64_Tk128.diss": {
+        "bytes": 328223,
+        "sha256": "2571d211b968b1d6dd2e131cf452599ec82759d58db26f47c880bf8e64ec5453"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row17_FP8_VECFP32_D64_Tk128/row17_FP8_VECFP32_D64_Tk128.swimlane.json": {
+        "bytes": 117533664,
+        "sha256": "bb2c50fa8b0a2588eebddc31ebceb658617c52dba8bd5e094841b91cf3142c55"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row17_FP8_VECFP32_D64_Tk128/row17_FP8_VECFP32_D64_Tk128.pipeview.log.out": {
+        "bytes": 80553726,
+        "sha256": "860d66b1476b15a523c38b3de4ebd2e6645b2f372232e21e9b302729dec3897d"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row17_FP8_VECFP32_D64_Tk128/gfsim.log": {
+        "bytes": 232143,
+        "sha256": "91cf90c39ffc7c812084a8cf1f257a901ed460bfa9a723d2792f0f767376a9c0"
+      }
+    }
+  },
+  {
+    "case": {
+      "id": "row18",
+      "row": 18,
+      "mode": "FP8_VECBF16",
+      "dim": 256,
+      "tk": 128
+    },
+    "cycles": 68867,
+    "expected_cycles": 68867,
+    "trace_events": 1576154,
+    "files": {
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row18_FP8_VECBF16_D256_Tk128/row18_FP8_VECBF16_D256_Tk128.elf": {
+        "bytes": 31080,
+        "sha256": "be1172f1260e65901e2070125df8b78d68dbc31a357ccd8bb15e2c8480876ac2"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row18_FP8_VECBF16_D256_Tk128/row18_FP8_VECBF16_D256_Tk128.diss": {
+        "bytes": 354488,
+        "sha256": "207aa869a126d46c383a253c4121a9a96b6432e522394621199d8ca9ecaaaa3d"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row18_FP8_VECBF16_D256_Tk128/row18_FP8_VECBF16_D256_Tk128.swimlane.json": {
+        "bytes": 248716212,
+        "sha256": "eb294166a5ba5e1459663000e744390da23480e9511a88107a095de2faa687cf"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row18_FP8_VECBF16_D256_Tk128/row18_FP8_VECBF16_D256_Tk128.pipeview.log.out": {
+        "bytes": 163504053,
+        "sha256": "15692fb963365f335b9f014be9c2affa6aa09405ae3bbb747d7b30bf0cc7f126"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row18_FP8_VECBF16_D256_Tk128/gfsim.log": {
+        "bytes": 223252,
+        "sha256": "5c2660d7305d78746ff52d0710f20b5a75e4dead0d824f98a05bb2db11335951"
+      }
+    }
+  },
+  {
+    "case": {
+      "id": "row20",
+      "row": 20,
+      "mode": "FP8_VECBF16",
+      "dim": 128,
+      "tk": 256
+    },
+    "cycles": 35213,
+    "expected_cycles": 35213,
+    "trace_events": 816594,
+    "files": {
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row20_FP8_VECBF16_D128_Tk256/row20_FP8_VECBF16_D128_Tk256.elf": {
+        "bytes": 19104,
+        "sha256": "65059329f86dce5bcc68ccbc1f910774ac00ac5cc807f72764a12f4fa326ba0b"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row20_FP8_VECBF16_D128_Tk256/row20_FP8_VECBF16_D128_Tk256.diss": {
+        "bytes": 182925,
+        "sha256": "e56b89346cbcd67b2300ddeeef8449df384dd3ca4e1dcd0e2039972ec187064b"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row20_FP8_VECBF16_D128_Tk256/row20_FP8_VECBF16_D128_Tk256.swimlane.json": {
+        "bytes": 133188902,
+        "sha256": "a1a9f30b273155c625385c413275b1f4703402debf3825d64acd8dad2bf4bc70"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row20_FP8_VECBF16_D128_Tk256/row20_FP8_VECBF16_D128_Tk256.pipeview.log.out": {
+        "bytes": 93980316,
+        "sha256": "a22fc18f8b8eda4ceffde23c64c9dba53c058d8c46116a484c51d07cbbee7756"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row20_FP8_VECBF16_D128_Tk256/gfsim.log": {
+        "bytes": 223000,
+        "sha256": "578c16491d535aee6d090b91d0be3de4a1650a02a4dd909bc78e3e0a0d91fdde"
+      }
+    }
+  },
+  {
+    "case": {
+      "id": "row21",
+      "row": 21,
+      "mode": "FP8_VECBF16",
+      "dim": 64,
+      "tk": 256
+    },
+    "cycles": 18523,
+    "expected_cycles": 18523,
+    "trace_events": 453673,
+    "files": {
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row21_FP8_VECBF16_D64_Tk256/row21_FP8_VECBF16_D64_Tk256.elf": {
+        "bytes": 19080,
+        "sha256": "abd7e0c899b9ef8bbc5cc05f0993fa53dbc887459df1b80385f068ed0c2a79ed"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row21_FP8_VECBF16_D64_Tk256/row21_FP8_VECBF16_D64_Tk256.diss": {
+        "bytes": 182749,
+        "sha256": "adf6f617880772d7800f08e1926be64e01b55043c003317d49015343c7d00107"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row21_FP8_VECBF16_D64_Tk256/row21_FP8_VECBF16_D64_Tk256.swimlane.json": {
+        "bytes": 79633054,
+        "sha256": "7c45acc038e60dd2c26b7ef8d3b306d8384f0b2cc799e973f2344df4095265e9"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row21_FP8_VECBF16_D64_Tk256/row21_FP8_VECBF16_D64_Tk256.pipeview.log.out": {
+        "bytes": 61299686,
+        "sha256": "26b7345e3b7704b26ccf6dcf0ea8e7325994977e7ef7734f83477a0007caba50"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row21_FP8_VECBF16_D64_Tk256/gfsim.log": {
+        "bytes": 222958,
+        "sha256": "a681c2e49dfed1b3fb55727039d46c790efbdeee9a235fdf8ab5461282b49414"
+      }
+    }
+  },
+  {
+    "case": {
+      "id": "row22",
+      "row": 22,
+      "mode": "BF16_VECFP32",
+      "dim": 256,
+      "tk": 64
+    },
+    "cycles": 134777,
+    "expected_cycles": 134777,
+    "trace_events": 3094281,
+    "files": {
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row22_BF16_VECFP32_D256_Tk64/row22_BF16_VECFP32_D256_Tk64.elf": {
+        "bytes": 55984,
+        "sha256": "a909c1d775a53f85623f725d3579ffd6485dd0758f08ee69bee6bf49c5811551"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row22_BF16_VECFP32_D256_Tk64/row22_BF16_VECFP32_D256_Tk64.diss": {
+        "bytes": 649769,
+        "sha256": "0fea6b956bf5ed9f1ca238c0075ecde088da1d98bd7f9c5e0bbf80abf797a124"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row22_BF16_VECFP32_D256_Tk64/row22_BF16_VECFP32_D256_Tk64.swimlane.json": {
+        "bytes": 489897684,
+        "sha256": "6007a6eb34ae356d5a693886dc5885c35bcb1201a5ad1bce2a752b534180492f"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row22_BF16_VECFP32_D256_Tk64/row22_BF16_VECFP32_D256_Tk64.pipeview.log.out": {
+        "bytes": 321537043,
+        "sha256": "f30595a4f860bc49a98f1438e6ec62e4010027daffe1b13fedf7f39d70780e2d"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row22_BF16_VECFP32_D256_Tk64/gfsim.log": {
+        "bytes": 226381,
+        "sha256": "afef87c6c3fc14b811a4bc3e4ec5100e2d091178475825f26af533e14f741c55"
+      }
+    }
+  },
+  {
+    "case": {
+      "id": "row24",
+      "row": 24,
+      "mode": "BF16_VECFP32",
+      "dim": 128,
+      "tk": 128
+    },
+    "cycles": 68326,
+    "expected_cycles": 68326,
+    "trace_events": 1594943,
+    "files": {
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row24_BF16_VECFP32_D128_Tk128/row24_BF16_VECFP32_D128_Tk128.elf": {
+        "bytes": 30376,
+        "sha256": "3d47f7d95240f9944fa6a43ab466810d6358a53ae5a07bf8cbfe47915f1a5059"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row24_BF16_VECFP32_D128_Tk128/row24_BF16_VECFP32_D128_Tk128.diss": {
+        "bytes": 328708,
+        "sha256": "506c83ea2b27ab1ae04bde5b727ba34e63c6d48f4ab4eb7b6e627e840352c4be"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row24_BF16_VECFP32_D128_Tk128/row24_BF16_VECFP32_D128_Tk128.swimlane.json": {
+        "bytes": 261734262,
+        "sha256": "3e22159d82d8ffc35d9be366ad79e9ff65f9b4fd5390961a38b53e9d14d3ac8c"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row24_BF16_VECFP32_D128_Tk128/row24_BF16_VECFP32_D128_Tk128.pipeview.log.out": {
+        "bytes": 181283210,
+        "sha256": "eeb793777c17c096edece2e55d07b7b5cc13cdf619e59d35937952e556b4db88"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row24_BF16_VECFP32_D128_Tk128/gfsim.log": {
+        "bytes": 223492,
+        "sha256": "da5203bdfd47e0f13c1431cb9fb66e56a3c3b6baf30fed0f1c7e0e277c5cb16d"
+      }
+    }
+  },
+  {
+    "case": {
+      "id": "row25",
+      "row": 25,
+      "mode": "BF16_VECFP32",
+      "dim": 64,
+      "tk": 128
+    },
+    "cycles": 35282,
+    "expected_cycles": 35282,
+    "trace_events": 875342,
+    "files": {
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row25_BF16_VECFP32_D64_Tk128/row25_BF16_VECFP32_D64_Tk128.elf": {
+        "bytes": 30600,
+        "sha256": "d778632a23cd52ec449090c656ec9d680e0af6f780617bc625e117ba415e76fb"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row25_BF16_VECFP32_D64_Tk128/row25_BF16_VECFP32_D64_Tk128.diss": {
+        "bytes": 328477,
+        "sha256": "eb0e919a88ef751f7111ca6c857c6956f4a9da9aa831b4ee1068fa37b08291dd"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row25_BF16_VECFP32_D64_Tk128/row25_BF16_VECFP32_D64_Tk128.swimlane.json": {
+        "bytes": 155552743,
+        "sha256": "88eeca21468b2309b0295e8d82af0f33a4b825d905962ae71eeadd2e801641b8"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row25_BF16_VECFP32_D64_Tk128/row25_BF16_VECFP32_D64_Tk128.pipeview.log.out": {
+        "bytes": 116550324,
+        "sha256": "da0f0eaeea9707f8c0486fbc9b0447c78ed0e3b2c029e5260242cdf80d6a2a74"
+      },
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview_Tk64/row25_BF16_VECFP32_D64_Tk128/gfsim.log": {
+        "bytes": 227810,
+        "sha256": "45030f3a13200a996edb92875b938fa08b06179931064ca2b2e8f15f79504a48"
+      }
+    }
+  }
+]

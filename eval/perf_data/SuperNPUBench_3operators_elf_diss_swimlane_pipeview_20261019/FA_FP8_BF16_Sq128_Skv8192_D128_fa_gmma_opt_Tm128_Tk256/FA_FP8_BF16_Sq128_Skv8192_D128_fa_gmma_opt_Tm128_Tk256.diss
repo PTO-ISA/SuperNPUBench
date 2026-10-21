@@ -1,0 +1,3219 @@
+
+/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/fa_asl_refresh_20261019/fa_asl_9_cases_elf_diss_swimlane_pipeview/row20_FP8_VECBF16_D128_Tk256/row20_FP8_VECBF16_D128_Tk256.elf:	file format elf64-unknown
+
+Disassembly of section .text:
+
+00000000000112b4 <_start>:
+   112b4: 0232                 	C.BSTART.STD	DIRECT, 0x112fa <main>
+   112b6: 5056                 	c.setret	0x112b8, ->ra <_end>
+
+00000000000112b8 <_end>:
+   112b8: 0800                 	C.BSTART.STD	
+   112ba: 05e00a95             	addi	zero, 94, 	->x1
+   112be: 0010302b             	acrc 1
+   112c2: 0000                 	C.BSTOP
+
+00000000000112c4 <_ZN3pto18layout_type_to_strENS_10LayoutEnumE>:
+   112c4: 00d4                 	C.BSTART.STD	COND, 0x112de <.LBB0_2>
+   112c6: fffff187             	addtpc	-1, 	->a1
+   112ca: f896                 	c.movi	2, 	->t
+   112cc: 002c6065             	setc.ltu	t#1, a0
+   112d0: 00a2                 	C.BSTART.STD	DIRECT, 0x112e4 <.LBB0_3>
+   112d2: 00004f87             	addtpc	4, 	->t
+   112d6: 47ec0f95             	addi	t#1, 1150, 	->t
+   112da: 182c3109             	ld	[t#1, a0<<3], 	->a0
+
+00000000000112de <.LBB0_2>:
+   112de: 0800                 	C.BSTART.STD	
+   112e0: 0be19115             	subi	a1, 190, 	->a0
+
+00000000000112e4 <.LBB0_3>:
+   112e4: 3800                 	C.BSTART.STD	RET
+   112e6: 029c                 	c.setc.tgt	ra
+   112e8: 0800                 	C.BSTART.STD	
+
+00000000000112ea <_Z15writeBinaryFilePKcPKhm>:
+   112ea: 3800                 	C.BSTART.STD	RET
+   112ec: 1056                 	c.movi	1, 	->a0
+   112ee: 029c                 	c.setc.tgt	ra
+   112f0: 0800                 	C.BSTART.STD	
+
+00000000000112f2 <_Z14readBinaryFilePKcPhm>:
+   112f2: 3800                 	C.BSTART.STD	RET
+   112f4: 1056                 	c.movi	1, 	->a0
+   112f6: 029c                 	c.setc.tgt	ra
+   112f8: 0800                 	C.BSTART.STD	
+
+00000000000112fa <main>:
+   112fa: 40a50041             	FENTRY	[ra ~ ra], sp!, 256
+   112fe: 0800                 	C.BSTART.STD	
+   11300: 00001033             	B.HINT TRACE.begin
+   11304: 0ce2                 	C.BSTART.STD	DIRECT, 0x114a0 <_Z33flash_attention_gmma_kchains_implI10__fp8_e4m311__blkc_bf16Li128ELi8192ELi128ELi128ELi128ELi256ELi128ELb1EEvPT0_PT_S5_S5_>
+   11306: 00024507             	setret	0x1134e, ->ra <main+0x54>
+   1130a: 0020ff87             	addtpc	527, 	->t
+   1130e: 45ec0f95             	addi	t#1, 1118, 	->t
+   11312: 00bc2fe7             	bic	t#1, 0, 12, 	->t
+   11316: 00001f17             	lui	1, 	->u
+   1131a: 01cc0105             	add	t#1, u#1, 	->a0
+   1131e: 00005f87             	addtpc	5, 	->t
+   11322: 44ac0f95             	addi	t#1, 1098, 	->t
+   11326: 00bc2fe7             	bic	t#1, 0, 12, 	->t
+   1132a: 01cc0185             	add	t#1, u#1, 	->a1
+   1132e: 0000bf87             	addtpc	11, 	->t
+   11332: 43ac0f95             	addi	t#1, 1082, 	->t
+   11336: 00bc2fe7             	bic	t#1, 0, 12, 	->t
+   1133a: 01cc0205             	add	t#1, u#1, 	->a2
+   1133e: 0010df87             	addtpc	269, 	->t
+   11342: 42ac0f95             	addi	t#1, 1066, 	->t
+   11346: 00bc2fe7             	bic	t#1, 0, 12, 	->t
+   1134a: 01cc0285             	add	t#1, u#1, 	->a3
+   1134e: 00009033             	B.HINT TRACE.end
+   11352: 0800                 	C.BSTART.STD	
+   11354: 1006                 	c.movr	zero, 	->a0
+   11356: 40a53041             	FRET.STK	[ra ~ ra], sp!, 256
+   1135a: 0800                 	C.BSTART.STD	
+
+000000000001135c <__cxx_global_var_init>:
+   1135c: 0184                 	C.BSTART.STD	COND, 0x1138c <.LBB4_2>
+   1135e: 0021bf87             	addtpc	539, 	->t
+   11362: 49ac4f99             	lbui	[t#1, 1178], 	->t
+   11366: 0636                 	c.setc.ne	t#1, zero
+   11368: 0800                 	C.BSTART.STD	
+   1136a: 0021bf87             	addtpc	539, 	->t
+   1136e: f856                 	c.movi	1, 	->t
+   11370: fd9c73d9             	sdi.u	t#1, [t#2, 1022]
+   11374: 3fec8f95             	addi	t#2, 1022, 	->t
+   11378: 05802059             	swi	zero, [t#1, 8]
+   1137c: 07802059             	swi	zero, [t#1, 12]
+   11380: 09802059             	swi	zero, [t#1, 16]
+   11384: 0021bf87             	addtpc	539, 	->t
+   11388: e98d0459             	sbi	t#3, [t#1, 1140]
+
+000000000001138c <.LBB4_2>:
+   1138c: 3800                 	C.BSTART.STD	RET
+   1138e: 029c                 	c.setc.tgt	ra
+   11390: 0800                 	C.BSTART.STD	
+
+0000000000011392 <__cxx_global_var_init.4>:
+   11392: 0184                 	C.BSTART.STD	COND, 0x113c2 <.LBB5_2>
+   11394: 0021bf87             	addtpc	539, 	->t
+   11398: 46cc4f99             	lbui	[t#1, 1132], 	->t
+   1139c: 0636                 	c.setc.ne	t#1, zero
+   1139e: 0800                 	C.BSTART.STD	
+   113a0: 0021bf87             	addtpc	539, 	->t
+   113a4: f856                 	c.movi	1, 	->t
+   113a6: c19c73d9             	sdi.u	t#1, [t#2, 992]
+   113aa: 3e0c8f95             	addi	t#2, 992, 	->t
+   113ae: 05802059             	swi	zero, [t#1, 8]
+   113b2: 07802059             	swi	zero, [t#1, 12]
+   113b6: 09802059             	swi	zero, [t#1, 16]
+   113ba: 0021bf87             	addtpc	539, 	->t
+   113be: 8d8d0459             	sbi	t#3, [t#1, 1094]
+
+00000000000113c2 <.LBB5_2>:
+   113c2: 3800                 	C.BSTART.STD	RET
+   113c4: 029c                 	c.setc.tgt	ra
+   113c6: 0800                 	C.BSTART.STD	
+
+00000000000113c8 <__cxx_global_var_init.5>:
+   113c8: 0184                 	C.BSTART.STD	COND, 0x113f8 <.LBB6_2>
+   113ca: 0021bf87             	addtpc	539, 	->t
+   113ce: 43ec4f99             	lbui	[t#1, 1086], 	->t
+   113d2: 0636                 	c.setc.ne	t#1, zero
+   113d4: 0800                 	C.BSTART.STD	
+   113d6: 0021bf87             	addtpc	539, 	->t
+   113da: f856                 	c.movi	1, 	->t
+   113dc: 859c73d9             	sdi.u	t#1, [t#2, 962]
+   113e0: 3c2c8f95             	addi	t#2, 962, 	->t
+   113e4: 05802059             	swi	zero, [t#1, 8]
+   113e8: 07802059             	swi	zero, [t#1, 12]
+   113ec: 09802059             	swi	zero, [t#1, 16]
+   113f0: 0021bf87             	addtpc	539, 	->t
+   113f4: 318d0459             	sbi	t#3, [t#1, 1048]
+
+00000000000113f8 <.LBB6_2>:
+   113f8: 3800                 	C.BSTART.STD	RET
+   113fa: 029c                 	c.setc.tgt	ra
+   113fc: 0800                 	C.BSTART.STD	
+
+00000000000113fe <__cxx_global_var_init.6>:
+   113fe: 0184                 	C.BSTART.STD	COND, 0x1142e <.LBB7_2>
+   11400: 0021bf87             	addtpc	539, 	->t
+   11404: 410c4f99             	lbui	[t#1, 1040], 	->t
+   11408: 0636                 	c.setc.ne	t#1, zero
+   1140a: 0800                 	C.BSTART.STD	
+   1140c: 0021bf87             	addtpc	539, 	->t
+   11410: f856                 	c.movi	1, 	->t
+   11412: 499c73d9             	sdi.u	t#1, [t#2, 932]
+   11416: 3a4c8f95             	addi	t#2, 932, 	->t
+   1141a: 05802059             	swi	zero, [t#1, 8]
+   1141e: 07802059             	swi	zero, [t#1, 12]
+   11422: 09802059             	swi	zero, [t#1, 16]
+   11426: 0021bf87             	addtpc	539, 	->t
+   1142a: d58d03d9             	sbi	t#3, [t#1, 1002]
+
+000000000001142e <.LBB7_2>:
+   1142e: 3800                 	C.BSTART.STD	RET
+   11430: 029c                 	c.setc.tgt	ra
+   11432: 0800                 	C.BSTART.STD	
+
+0000000000011434 <__cxx_global_var_init.7>:
+   11434: 0184                 	C.BSTART.STD	COND, 0x11464 <.LBB8_2>
+   11436: 0021bf87             	addtpc	539, 	->t
+   1143a: 3e2c4f99             	lbui	[t#1, 994], 	->t
+   1143e: 0636                 	c.setc.ne	t#1, zero
+   11440: 0800                 	C.BSTART.STD	
+   11442: 0021bf87             	addtpc	539, 	->t
+   11446: f856                 	c.movi	1, 	->t
+   11448: 0d9c73d9             	sdi.u	t#1, [t#2, 902]
+   1144c: 386c8f95             	addi	t#2, 902, 	->t
+   11450: 05802059             	swi	zero, [t#1, 8]
+   11454: 07802059             	swi	zero, [t#1, 12]
+   11458: 09802059             	swi	zero, [t#1, 16]
+   1145c: 0021bf87             	addtpc	539, 	->t
+   11460: 798d03d9             	sbi	t#3, [t#1, 956]
+
+0000000000011464 <.LBB8_2>:
+   11464: 3800                 	C.BSTART.STD	RET
+   11466: 029c                 	c.setc.tgt	ra
+   11468: 0800                 	C.BSTART.STD	
+
+000000000001146a <__cxx_global_var_init.8>:
+   1146a: 0184                 	C.BSTART.STD	COND, 0x1149a <.LBB9_2>
+   1146c: 0021bf87             	addtpc	539, 	->t
+   11470: 3b4c4f99             	lbui	[t#1, 948], 	->t
+   11474: 0636                 	c.setc.ne	t#1, zero
+   11476: 0800                 	C.BSTART.STD	
+   11478: 0021bf87             	addtpc	539, 	->t
+   1147c: f856                 	c.movi	1, 	->t
+   1147e: d19c7359             	sdi.u	t#1, [t#2, 872]
+   11482: 368c8f95             	addi	t#2, 872, 	->t
+   11486: 05802059             	swi	zero, [t#1, 8]
+   1148a: 07802059             	swi	zero, [t#1, 12]
+   1148e: 09802059             	swi	zero, [t#1, 16]
+   11492: 0021bf87             	addtpc	539, 	->t
+   11496: 1d8d03d9             	sbi	t#3, [t#1, 910]
+
+000000000001149a <.LBB9_2>:
+   1149a: 3800                 	C.BSTART.STD	RET
+   1149c: 029c                 	c.setc.tgt	ra
+   1149e: 0800                 	C.BSTART.STD	
+
+00000000000114a0 <_Z33flash_attention_gmma_kchains_implI10__fp8_e4m311__blkc_bf16Li128ELi8192ELi128ELi128ELi128ELi256ELi128ELb1EEvPT0_PT_S5_S5_>:
+   114a0: 0800                 	C.BSTART.STD	
+   114a2: 0000ff97             	lui	15, 	->t
+   114a6: 14ac0315             	addi	t#1, 330, 	->a4
+   114aa: 2bb19181 19f01ea3    	TEXPANDS          <Row=32, Col=1, BF16, CUBE_M32>, a4, ->U<128B>
+          483c007c 0008ee93
+          00030013
+   114be: 0800                 	C.BSTART.STD	
+   114c0: 3006                 	c.movr	zero, 	->a4
+   114c2: 2bb19181 19f01ea3    	TEXPANDS          <Row=32, Col=1, BF16, CUBE_M32>, a4, ->T<128B>
+          483c007c 0008ee13
+          00030013
+   114d6: 0800                 	C.BSTART.STD	
+   114d8: 08000315             	addi	zero, 128, 	->a4
+   114dc: 38011181 603c203c    	TLOAD             <Row=128, Col=128, e4m3, PE3>, [base=a1, stride=a4], ->S0<16KB>
+          1813a03c 80130004
+          0061
+   114ee: 0800                 	C.BSTART.STD	
+   114f0: 00008397             	lui	8, 	->a5
+   114f4: 00720a85             	add	a2, a5, 	->x1
+   114f8: 00728485             	add	a3, a5, 	->a7
+   114fc: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a2, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00620013
+   11510: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   11514: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   11518: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   1151c: 00030043             	B.DIM	a4, 0, 	->lb0
+   11520: 10001043             	B.DIM	zero, 256, 	->lb1
+   11524: a03c                 	C.B.DIMI	128, 	->lb2
+   11526: 00001e13             	B.IOS	S0, mask=1111
+   1152a: 00101e13             	B.IOS	S1, mask=1111
+   1152e: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   11532: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   11536: 0800                 	C.BSTART.STD	
+   11538: 00003217             	lui	3, 	->a2
+   1153c: db520195             	addi	a2, 3509, 	->a1
+   11540: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11544: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11548: 10000043             	B.DIM	zero, 256, 	->lb0
+   1154c: 483c                 	C.B.DIMI	32, 	->lb1
+   1154e: 10002043             	B.DIM	zero, 256, 	->lb2
+   11552: 000c5f13             	B.IOT	t#1, mask=1111, last, 	->m<16KB>
+   11556: 00018013             	B.IOR	[a1], []
+   1155a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1155e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11562: 007c                 	C.B.DIMI	1, 	->lb0
+   11564: 483c                 	C.B.DIMI	32, 	->lb1
+   11566: 0108df93             	B.IOT	u#1, mask=1111, last, 	->n<128B>
+   1156a: 00018013             	B.IOR	[a1], []
+   1156e: 28b19181             	BSTART.TEPL	TMAX, BF16
+   11572: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11576: 007c                 	C.B.DIMI	1, 	->lb0
+   11578: 483c                 	C.B.DIMI	32, 	->lb1
+   1157a: c118cf93             	B.IOT	u#2, n#1, mask=1111, last, 	->n<128B>
+   1157e: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, M#1, N#1, ->U<16KB>
+          10000043 2043483c
+          4e931000 c20c
+   11594: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, U#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 010c
+   115aa: 28019181             	BSTART.TEPL	TADD, BF16
+   115ae: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   115b2: 007c                 	C.B.DIMI	1, 	->lb0
+   115b4: 483c                 	C.B.DIMI	32, 	->lb1
+   115b6: 8018cf13             	B.IOT	t#2, m#1, mask=1111, last, 	->m<128B>
+   115ba: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   115be: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a3, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00628013
+   115d2: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, U#1, ->T<8KB>
+          10000043 de13483c
+          010b
+   115e4: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   115e8: 08701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulator, RNONE, nosat
+   115ec: 00002123             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 0
+   115f0: 00030043             	B.DIM	a4, 0, 	->lb0
+   115f4: 603c                 	C.B.DIMI	128, 	->lb1
+   115f6: 10002043             	B.DIM	zero, 256, 	->lb2
+   115fa: 00101e13             	B.IOS	S1, mask=1111
+   115fe: 00005e13             	B.IOT	t#1, mask=1111
+   11602: 000c6e93             	B.IOT	mask=1111, last, 	->u<16KB>
+   11606: 0800                 	C.BSTART.STD	
+   11608: 007a8a05             	add	x1, a5, 	->x0
+   1160c: 00748405             	add	a7, a5, 	->a6
+   11610: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   11624: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   11628: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   1162c: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   11630: 00030043             	B.DIM	a4, 0, 	->lb0
+   11634: 10001043             	B.DIM	zero, 256, 	->lb1
+   11638: a03c                 	C.B.DIMI	128, 	->lb2
+   1163a: 00001e13             	B.IOS	S0, mask=1111
+   1163e: 00101e13             	B.IOS	S1, mask=1111
+   11642: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   11646: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   1164a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1164e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11652: 10000043             	B.DIM	zero, 256, 	->lb0
+   11656: 483c                 	C.B.DIMI	32, 	->lb1
+   11658: 10002043             	B.DIM	zero, 256, 	->lb2
+   1165c: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   11660: 00018013             	B.IOR	[a1], []
+   11664: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11668: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1166c: 007c                 	C.B.DIMI	1, 	->lb0
+   1166e: 483c                 	C.B.DIMI	32, 	->lb1
+   11670: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   11674: 00018013             	B.IOR	[a1], []
+   11678: 28b19181             	BSTART.TEPL	TMAX, BF16
+   1167c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11680: 007c                 	C.B.DIMI	1, 	->lb0
+   11682: 483c                 	C.B.DIMI	32, 	->lb1
+   11684: 0308ce13             	B.IOT	n#1, t#1, mask=1111, last, 	->t<128B>
+   11688: 28119181             	BSTART.TEPL	TSUB, BF16
+   1168c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11690: 007c                 	C.B.DIMI	1, 	->lb0
+   11692: 483c                 	C.B.DIMI	32, 	->lb1
+   11694: c008cf93             	B.IOT	t#1, n#1, mask=1111, last, 	->n<128B>
+   11698: 0800                 	C.BSTART.STD	
+   1169a: fb920215             	addi	a2, 4025, 	->a2
+   1169e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   116a2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   116a6: 007c                 	C.B.DIMI	1, 	->lb0
+   116a8: 483c                 	C.B.DIMI	32, 	->lb1
+   116aa: 0308df93             	B.IOT	n#1, mask=1111, last, 	->n<128B>
+   116ae: 00020013             	B.IOR	[a2], []
+   116b2: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, N#1, ->N<128B>
+          483c007c 0308df93
+   116c2: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, N#1, ->N<128B>
+          483c007c 0308df93
+   116d2: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, N#1, ->U<128B>
+          483c007c 0308de93
+   116e2: 0800                 	C.BSTART.STD	
+   116e4: 0000bf97             	lui	11, 	->t
+   116e8: f31c0295             	addi	t#1, 3889, 	->a3
+   116ec: 2a219181             	BSTART.TEPL	TMULS, BF16
+   116f0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   116f4: 007c                 	C.B.DIMI	1, 	->lb0
+   116f6: 483c                 	C.B.DIMI	32, 	->lb1
+   116f8: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   116fc: 00028013             	B.IOR	[a3], []
+   11700: 29219181             	BSTART.TEPL	TEXP, BF16
+   11704: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11708: 007c                 	C.B.DIMI	1, 	->lb0
+   1170a: 483c                 	C.B.DIMI	32, 	->lb1
+   1170c: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   11710: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, T#3, T#1, ->T<16KB>
+          10000043 2043483c
+          4e131000 002c
+   11726: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, T#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 000c
+   1173c: 28219181             	BSTART.TEPL	TMUL, BF16
+   11740: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11744: 007c                 	C.B.DIMI	1, 	->lb0
+   11746: 483c                 	C.B.DIMI	32, 	->lb1
+   11748: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   1174c: 28019181             	BSTART.TEPL	TADD, BF16
+   11750: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11754: 007c                 	C.B.DIMI	1, 	->lb0
+   11756: 483c                 	C.B.DIMI	32, 	->lb1
+   11758: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   1175c: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   11760: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   11774: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, T#1, ->U<8KB>
+          10000043 de93483c
+          000b
+   11786: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   1178a: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   1178e: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   11792: 00030043             	B.DIM	a4, 0, 	->lb0
+   11796: 603c                 	C.B.DIMI	128, 	->lb1
+   11798: 10002043             	B.DIM	zero, 256, 	->lb2
+   1179c: 00101e13             	B.IOS	S1, mask=1111
+   117a0: 41504e13             	B.IOT	u#6, u#1, mask=1111
+   117a4: 030c5e13             	B.IOT	n#1, mask=1111, last, 	->t<16KB>
+   117a8: 0800                 	C.BSTART.STD	
+   117aa: 007a0a85             	add	x0, a5, 	->x1
+   117ae: 00740485             	add	a6, a5, 	->a7
+   117b2: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   117c6: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   117ca: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   117ce: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   117d2: 00030043             	B.DIM	a4, 0, 	->lb0
+   117d6: 10001043             	B.DIM	zero, 256, 	->lb1
+   117da: a03c                 	C.B.DIMI	128, 	->lb2
+   117dc: 00001e13             	B.IOS	S0, mask=1111
+   117e0: 00101e13             	B.IOS	S1, mask=1111
+   117e4: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   117e8: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   117ec: 2a219181             	BSTART.TEPL	TMULS, BF16
+   117f0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   117f4: 10000043             	B.DIM	zero, 256, 	->lb0
+   117f8: 483c                 	C.B.DIMI	32, 	->lb1
+   117fa: 10002043             	B.DIM	zero, 256, 	->lb2
+   117fe: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   11802: 00018013             	B.IOR	[a1], []
+   11806: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1180a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1180e: 007c                 	C.B.DIMI	1, 	->lb0
+   11810: 483c                 	C.B.DIMI	32, 	->lb1
+   11812: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   11816: 00018013             	B.IOR	[a1], []
+   1181a: 28b19181             	BSTART.TEPL	TMAX, BF16
+   1181e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11822: 007c                 	C.B.DIMI	1, 	->lb0
+   11824: 483c                 	C.B.DIMI	32, 	->lb1
+   11826: 4038ce93             	B.IOT	t#4, u#1, mask=1111, last, 	->u<128B>
+   1182a: 28119181             	BSTART.TEPL	TSUB, BF16
+   1182e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11832: 007c                 	C.B.DIMI	1, 	->lb0
+   11834: 483c                 	C.B.DIMI	32, 	->lb1
+   11836: 0d08ce13             	B.IOT	u#1, t#4, mask=1111, last, 	->t<128B>
+   1183a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1183e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11842: 007c                 	C.B.DIMI	1, 	->lb0
+   11844: 483c                 	C.B.DIMI	32, 	->lb1
+   11846: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   1184a: 00020013             	B.IOR	[a2], []
+   1184e: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   1185e: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   1186e: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   1187e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11882: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11886: 007c                 	C.B.DIMI	1, 	->lb0
+   11888: 483c                 	C.B.DIMI	32, 	->lb1
+   1188a: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   1188e: 00028013             	B.IOR	[a3], []
+   11892: 29219181             	BSTART.TEPL	TEXP, BF16
+   11896: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1189a: 007c                 	C.B.DIMI	1, 	->lb0
+   1189c: 483c                 	C.B.DIMI	32, 	->lb1
+   1189e: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   118a2: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   118b8: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   118ce: 28219181             	BSTART.TEPL	TMUL, BF16
+   118d2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   118d6: 007c                 	C.B.DIMI	1, 	->lb0
+   118d8: 483c                 	C.B.DIMI	32, 	->lb1
+   118da: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   118de: 28019181             	BSTART.TEPL	TADD, BF16
+   118e2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   118e6: 007c                 	C.B.DIMI	1, 	->lb0
+   118e8: 483c                 	C.B.DIMI	32, 	->lb1
+   118ea: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   118ee: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   118f2: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   11906: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   11918: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   1191c: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   11920: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   11924: 00030043             	B.DIM	a4, 0, 	->lb0
+   11928: 603c                 	C.B.DIMI	128, 	->lb1
+   1192a: 10002043             	B.DIM	zero, 256, 	->lb2
+   1192e: 00101e13             	B.IOS	S1, mask=1111
+   11932: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   11936: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   1193a: 0800                 	C.BSTART.STD	
+   1193c: 007a8a05             	add	x1, a5, 	->x0
+   11940: 00748405             	add	a7, a5, 	->a6
+   11944: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   11958: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   1195c: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   11960: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   11964: 00030043             	B.DIM	a4, 0, 	->lb0
+   11968: 10001043             	B.DIM	zero, 256, 	->lb1
+   1196c: a03c                 	C.B.DIMI	128, 	->lb2
+   1196e: 00001e13             	B.IOS	S0, mask=1111
+   11972: 00101e13             	B.IOS	S1, mask=1111
+   11976: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   1197a: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   1197e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11982: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11986: 10000043             	B.DIM	zero, 256, 	->lb0
+   1198a: 483c                 	C.B.DIMI	32, 	->lb1
+   1198c: 10002043             	B.DIM	zero, 256, 	->lb2
+   11990: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   11994: 00018013             	B.IOR	[a1], []
+   11998: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1199c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   119a0: 007c                 	C.B.DIMI	1, 	->lb0
+   119a2: 483c                 	C.B.DIMI	32, 	->lb1
+   119a4: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   119a8: 00018013             	B.IOR	[a1], []
+   119ac: 28b19181             	BSTART.TEPL	TMAX, BF16
+   119b0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   119b4: 007c                 	C.B.DIMI	1, 	->lb0
+   119b6: 483c                 	C.B.DIMI	32, 	->lb1
+   119b8: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   119bc: 28119181             	BSTART.TEPL	TSUB, BF16
+   119c0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   119c4: 007c                 	C.B.DIMI	1, 	->lb0
+   119c6: 483c                 	C.B.DIMI	32, 	->lb1
+   119c8: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   119cc: 2a219181             	BSTART.TEPL	TMULS, BF16
+   119d0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   119d4: 007c                 	C.B.DIMI	1, 	->lb0
+   119d6: 483c                 	C.B.DIMI	32, 	->lb1
+   119d8: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   119dc: 00020013             	B.IOR	[a2], []
+   119e0: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   119f0: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   11a00: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   11a10: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11a14: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11a18: 007c                 	C.B.DIMI	1, 	->lb0
+   11a1a: 483c                 	C.B.DIMI	32, 	->lb1
+   11a1c: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   11a20: 00028013             	B.IOR	[a3], []
+   11a24: 29219181             	BSTART.TEPL	TEXP, BF16
+   11a28: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11a2c: 007c                 	C.B.DIMI	1, 	->lb0
+   11a2e: 483c                 	C.B.DIMI	32, 	->lb1
+   11a30: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   11a34: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   11a4a: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   11a60: 28219181             	BSTART.TEPL	TMUL, BF16
+   11a64: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11a68: 007c                 	C.B.DIMI	1, 	->lb0
+   11a6a: 483c                 	C.B.DIMI	32, 	->lb1
+   11a6c: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   11a70: 28019181             	BSTART.TEPL	TADD, BF16
+   11a74: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11a78: 007c                 	C.B.DIMI	1, 	->lb0
+   11a7a: 483c                 	C.B.DIMI	32, 	->lb1
+   11a7c: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   11a80: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   11a84: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   11a98: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   11aaa: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   11aae: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   11ab2: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   11ab6: 00030043             	B.DIM	a4, 0, 	->lb0
+   11aba: 603c                 	C.B.DIMI	128, 	->lb1
+   11abc: 10002043             	B.DIM	zero, 256, 	->lb2
+   11ac0: 00101e13             	B.IOS	S1, mask=1111
+   11ac4: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   11ac8: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   11acc: 0800                 	C.BSTART.STD	
+   11ace: 007a0a85             	add	x0, a5, 	->x1
+   11ad2: 00740485             	add	a6, a5, 	->a7
+   11ad6: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   11aea: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   11aee: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   11af2: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   11af6: 00030043             	B.DIM	a4, 0, 	->lb0
+   11afa: 10001043             	B.DIM	zero, 256, 	->lb1
+   11afe: a03c                 	C.B.DIMI	128, 	->lb2
+   11b00: 00001e13             	B.IOS	S0, mask=1111
+   11b04: 00101e13             	B.IOS	S1, mask=1111
+   11b08: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   11b0c: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   11b10: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11b14: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11b18: 10000043             	B.DIM	zero, 256, 	->lb0
+   11b1c: 483c                 	C.B.DIMI	32, 	->lb1
+   11b1e: 10002043             	B.DIM	zero, 256, 	->lb2
+   11b22: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   11b26: 00018013             	B.IOR	[a1], []
+   11b2a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11b2e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11b32: 007c                 	C.B.DIMI	1, 	->lb0
+   11b34: 483c                 	C.B.DIMI	32, 	->lb1
+   11b36: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   11b3a: 00018013             	B.IOR	[a1], []
+   11b3e: 28b19181             	BSTART.TEPL	TMAX, BF16
+   11b42: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11b46: 007c                 	C.B.DIMI	1, 	->lb0
+   11b48: 483c                 	C.B.DIMI	32, 	->lb1
+   11b4a: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   11b4e: 28119181             	BSTART.TEPL	TSUB, BF16
+   11b52: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11b56: 007c                 	C.B.DIMI	1, 	->lb0
+   11b58: 483c                 	C.B.DIMI	32, 	->lb1
+   11b5a: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   11b5e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11b62: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11b66: 007c                 	C.B.DIMI	1, 	->lb0
+   11b68: 483c                 	C.B.DIMI	32, 	->lb1
+   11b6a: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   11b6e: 00020013             	B.IOR	[a2], []
+   11b72: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   11b82: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   11b92: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   11ba2: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11ba6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11baa: 007c                 	C.B.DIMI	1, 	->lb0
+   11bac: 483c                 	C.B.DIMI	32, 	->lb1
+   11bae: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   11bb2: 00028013             	B.IOR	[a3], []
+   11bb6: 29219181             	BSTART.TEPL	TEXP, BF16
+   11bba: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11bbe: 007c                 	C.B.DIMI	1, 	->lb0
+   11bc0: 483c                 	C.B.DIMI	32, 	->lb1
+   11bc2: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   11bc6: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   11bdc: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   11bf2: 28219181             	BSTART.TEPL	TMUL, BF16
+   11bf6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11bfa: 007c                 	C.B.DIMI	1, 	->lb0
+   11bfc: 483c                 	C.B.DIMI	32, 	->lb1
+   11bfe: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   11c02: 28019181             	BSTART.TEPL	TADD, BF16
+   11c06: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11c0a: 007c                 	C.B.DIMI	1, 	->lb0
+   11c0c: 483c                 	C.B.DIMI	32, 	->lb1
+   11c0e: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   11c12: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   11c16: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   11c2a: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   11c3c: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   11c40: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   11c44: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   11c48: 00030043             	B.DIM	a4, 0, 	->lb0
+   11c4c: 603c                 	C.B.DIMI	128, 	->lb1
+   11c4e: 10002043             	B.DIM	zero, 256, 	->lb2
+   11c52: 00101e13             	B.IOS	S1, mask=1111
+   11c56: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   11c5a: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   11c5e: 0800                 	C.BSTART.STD	
+   11c60: 007a8a05             	add	x1, a5, 	->x0
+   11c64: 00748405             	add	a7, a5, 	->a6
+   11c68: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   11c7c: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   11c80: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   11c84: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   11c88: 00030043             	B.DIM	a4, 0, 	->lb0
+   11c8c: 10001043             	B.DIM	zero, 256, 	->lb1
+   11c90: a03c                 	C.B.DIMI	128, 	->lb2
+   11c92: 00001e13             	B.IOS	S0, mask=1111
+   11c96: 00101e13             	B.IOS	S1, mask=1111
+   11c9a: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   11c9e: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   11ca2: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11ca6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11caa: 10000043             	B.DIM	zero, 256, 	->lb0
+   11cae: 483c                 	C.B.DIMI	32, 	->lb1
+   11cb0: 10002043             	B.DIM	zero, 256, 	->lb2
+   11cb4: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   11cb8: 00018013             	B.IOR	[a1], []
+   11cbc: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11cc0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11cc4: 007c                 	C.B.DIMI	1, 	->lb0
+   11cc6: 483c                 	C.B.DIMI	32, 	->lb1
+   11cc8: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   11ccc: 00018013             	B.IOR	[a1], []
+   11cd0: 28b19181             	BSTART.TEPL	TMAX, BF16
+   11cd4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11cd8: 007c                 	C.B.DIMI	1, 	->lb0
+   11cda: 483c                 	C.B.DIMI	32, 	->lb1
+   11cdc: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   11ce0: 28119181             	BSTART.TEPL	TSUB, BF16
+   11ce4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11ce8: 007c                 	C.B.DIMI	1, 	->lb0
+   11cea: 483c                 	C.B.DIMI	32, 	->lb1
+   11cec: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   11cf0: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11cf4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11cf8: 007c                 	C.B.DIMI	1, 	->lb0
+   11cfa: 483c                 	C.B.DIMI	32, 	->lb1
+   11cfc: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   11d00: 00020013             	B.IOR	[a2], []
+   11d04: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   11d14: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   11d24: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   11d34: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11d38: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11d3c: 007c                 	C.B.DIMI	1, 	->lb0
+   11d3e: 483c                 	C.B.DIMI	32, 	->lb1
+   11d40: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   11d44: 00028013             	B.IOR	[a3], []
+   11d48: 29219181             	BSTART.TEPL	TEXP, BF16
+   11d4c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11d50: 007c                 	C.B.DIMI	1, 	->lb0
+   11d52: 483c                 	C.B.DIMI	32, 	->lb1
+   11d54: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   11d58: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   11d6e: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   11d84: 28219181             	BSTART.TEPL	TMUL, BF16
+   11d88: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11d8c: 007c                 	C.B.DIMI	1, 	->lb0
+   11d8e: 483c                 	C.B.DIMI	32, 	->lb1
+   11d90: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   11d94: 28019181             	BSTART.TEPL	TADD, BF16
+   11d98: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11d9c: 007c                 	C.B.DIMI	1, 	->lb0
+   11d9e: 483c                 	C.B.DIMI	32, 	->lb1
+   11da0: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   11da4: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   11da8: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   11dbc: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   11dce: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   11dd2: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   11dd6: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   11dda: 00030043             	B.DIM	a4, 0, 	->lb0
+   11dde: 603c                 	C.B.DIMI	128, 	->lb1
+   11de0: 10002043             	B.DIM	zero, 256, 	->lb2
+   11de4: 00101e13             	B.IOS	S1, mask=1111
+   11de8: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   11dec: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   11df0: 0800                 	C.BSTART.STD	
+   11df2: 007a0a85             	add	x0, a5, 	->x1
+   11df6: 00740485             	add	a6, a5, 	->a7
+   11dfa: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   11e0e: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   11e12: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   11e16: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   11e1a: 00030043             	B.DIM	a4, 0, 	->lb0
+   11e1e: 10001043             	B.DIM	zero, 256, 	->lb1
+   11e22: a03c                 	C.B.DIMI	128, 	->lb2
+   11e24: 00001e13             	B.IOS	S0, mask=1111
+   11e28: 00101e13             	B.IOS	S1, mask=1111
+   11e2c: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   11e30: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   11e34: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11e38: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11e3c: 10000043             	B.DIM	zero, 256, 	->lb0
+   11e40: 483c                 	C.B.DIMI	32, 	->lb1
+   11e42: 10002043             	B.DIM	zero, 256, 	->lb2
+   11e46: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   11e4a: 00018013             	B.IOR	[a1], []
+   11e4e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11e52: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11e56: 007c                 	C.B.DIMI	1, 	->lb0
+   11e58: 483c                 	C.B.DIMI	32, 	->lb1
+   11e5a: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   11e5e: 00018013             	B.IOR	[a1], []
+   11e62: 28b19181             	BSTART.TEPL	TMAX, BF16
+   11e66: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11e6a: 007c                 	C.B.DIMI	1, 	->lb0
+   11e6c: 483c                 	C.B.DIMI	32, 	->lb1
+   11e6e: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   11e72: 28119181             	BSTART.TEPL	TSUB, BF16
+   11e76: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11e7a: 007c                 	C.B.DIMI	1, 	->lb0
+   11e7c: 483c                 	C.B.DIMI	32, 	->lb1
+   11e7e: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   11e82: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11e86: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11e8a: 007c                 	C.B.DIMI	1, 	->lb0
+   11e8c: 483c                 	C.B.DIMI	32, 	->lb1
+   11e8e: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   11e92: 00020013             	B.IOR	[a2], []
+   11e96: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   11ea6: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   11eb6: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   11ec6: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11eca: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11ece: 007c                 	C.B.DIMI	1, 	->lb0
+   11ed0: 483c                 	C.B.DIMI	32, 	->lb1
+   11ed2: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   11ed6: 00028013             	B.IOR	[a3], []
+   11eda: 29219181             	BSTART.TEPL	TEXP, BF16
+   11ede: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11ee2: 007c                 	C.B.DIMI	1, 	->lb0
+   11ee4: 483c                 	C.B.DIMI	32, 	->lb1
+   11ee6: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   11eea: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   11f00: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   11f16: 28219181             	BSTART.TEPL	TMUL, BF16
+   11f1a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11f1e: 007c                 	C.B.DIMI	1, 	->lb0
+   11f20: 483c                 	C.B.DIMI	32, 	->lb1
+   11f22: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   11f26: 28019181             	BSTART.TEPL	TADD, BF16
+   11f2a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11f2e: 007c                 	C.B.DIMI	1, 	->lb0
+   11f30: 483c                 	C.B.DIMI	32, 	->lb1
+   11f32: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   11f36: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   11f3a: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   11f4e: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   11f60: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   11f64: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   11f68: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   11f6c: 00030043             	B.DIM	a4, 0, 	->lb0
+   11f70: 603c                 	C.B.DIMI	128, 	->lb1
+   11f72: 10002043             	B.DIM	zero, 256, 	->lb2
+   11f76: 00101e13             	B.IOS	S1, mask=1111
+   11f7a: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   11f7e: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   11f82: 0800                 	C.BSTART.STD	
+   11f84: 007a8a05             	add	x1, a5, 	->x0
+   11f88: 00748405             	add	a7, a5, 	->a6
+   11f8c: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   11fa0: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   11fa4: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   11fa8: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   11fac: 00030043             	B.DIM	a4, 0, 	->lb0
+   11fb0: 10001043             	B.DIM	zero, 256, 	->lb1
+   11fb4: a03c                 	C.B.DIMI	128, 	->lb2
+   11fb6: 00001e13             	B.IOS	S0, mask=1111
+   11fba: 00101e13             	B.IOS	S1, mask=1111
+   11fbe: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   11fc2: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   11fc6: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11fca: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11fce: 10000043             	B.DIM	zero, 256, 	->lb0
+   11fd2: 483c                 	C.B.DIMI	32, 	->lb1
+   11fd4: 10002043             	B.DIM	zero, 256, 	->lb2
+   11fd8: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   11fdc: 00018013             	B.IOR	[a1], []
+   11fe0: 2a219181             	BSTART.TEPL	TMULS, BF16
+   11fe4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11fe8: 007c                 	C.B.DIMI	1, 	->lb0
+   11fea: 483c                 	C.B.DIMI	32, 	->lb1
+   11fec: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   11ff0: 00018013             	B.IOR	[a1], []
+   11ff4: 28b19181             	BSTART.TEPL	TMAX, BF16
+   11ff8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   11ffc: 007c                 	C.B.DIMI	1, 	->lb0
+   11ffe: 483c                 	C.B.DIMI	32, 	->lb1
+   12000: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   12004: 28119181             	BSTART.TEPL	TSUB, BF16
+   12008: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1200c: 007c                 	C.B.DIMI	1, 	->lb0
+   1200e: 483c                 	C.B.DIMI	32, 	->lb1
+   12010: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   12014: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12018: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1201c: 007c                 	C.B.DIMI	1, 	->lb0
+   1201e: 483c                 	C.B.DIMI	32, 	->lb1
+   12020: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12024: 00020013             	B.IOR	[a2], []
+   12028: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   12038: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   12048: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   12058: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1205c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12060: 007c                 	C.B.DIMI	1, 	->lb0
+   12062: 483c                 	C.B.DIMI	32, 	->lb1
+   12064: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   12068: 00028013             	B.IOR	[a3], []
+   1206c: 29219181             	BSTART.TEPL	TEXP, BF16
+   12070: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12074: 007c                 	C.B.DIMI	1, 	->lb0
+   12076: 483c                 	C.B.DIMI	32, 	->lb1
+   12078: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   1207c: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   12092: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   120a8: 28219181             	BSTART.TEPL	TMUL, BF16
+   120ac: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   120b0: 007c                 	C.B.DIMI	1, 	->lb0
+   120b2: 483c                 	C.B.DIMI	32, 	->lb1
+   120b4: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   120b8: 28019181             	BSTART.TEPL	TADD, BF16
+   120bc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   120c0: 007c                 	C.B.DIMI	1, 	->lb0
+   120c2: 483c                 	C.B.DIMI	32, 	->lb1
+   120c4: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   120c8: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   120cc: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   120e0: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   120f2: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   120f6: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   120fa: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   120fe: 00030043             	B.DIM	a4, 0, 	->lb0
+   12102: 603c                 	C.B.DIMI	128, 	->lb1
+   12104: 10002043             	B.DIM	zero, 256, 	->lb2
+   12108: 00101e13             	B.IOS	S1, mask=1111
+   1210c: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   12110: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   12114: 0800                 	C.BSTART.STD	
+   12116: 007a0a85             	add	x0, a5, 	->x1
+   1211a: 00740485             	add	a6, a5, 	->a7
+   1211e: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   12132: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   12136: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   1213a: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   1213e: 00030043             	B.DIM	a4, 0, 	->lb0
+   12142: 10001043             	B.DIM	zero, 256, 	->lb1
+   12146: a03c                 	C.B.DIMI	128, 	->lb2
+   12148: 00001e13             	B.IOS	S0, mask=1111
+   1214c: 00101e13             	B.IOS	S1, mask=1111
+   12150: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   12154: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   12158: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1215c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12160: 10000043             	B.DIM	zero, 256, 	->lb0
+   12164: 483c                 	C.B.DIMI	32, 	->lb1
+   12166: 10002043             	B.DIM	zero, 256, 	->lb2
+   1216a: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   1216e: 00018013             	B.IOR	[a1], []
+   12172: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12176: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1217a: 007c                 	C.B.DIMI	1, 	->lb0
+   1217c: 483c                 	C.B.DIMI	32, 	->lb1
+   1217e: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12182: 00018013             	B.IOR	[a1], []
+   12186: 28b19181             	BSTART.TEPL	TMAX, BF16
+   1218a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1218e: 007c                 	C.B.DIMI	1, 	->lb0
+   12190: 483c                 	C.B.DIMI	32, 	->lb1
+   12192: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   12196: 28119181             	BSTART.TEPL	TSUB, BF16
+   1219a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1219e: 007c                 	C.B.DIMI	1, 	->lb0
+   121a0: 483c                 	C.B.DIMI	32, 	->lb1
+   121a2: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   121a6: 2a219181             	BSTART.TEPL	TMULS, BF16
+   121aa: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   121ae: 007c                 	C.B.DIMI	1, 	->lb0
+   121b0: 483c                 	C.B.DIMI	32, 	->lb1
+   121b2: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   121b6: 00020013             	B.IOR	[a2], []
+   121ba: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   121ca: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   121da: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   121ea: 2a219181             	BSTART.TEPL	TMULS, BF16
+   121ee: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   121f2: 007c                 	C.B.DIMI	1, 	->lb0
+   121f4: 483c                 	C.B.DIMI	32, 	->lb1
+   121f6: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   121fa: 00028013             	B.IOR	[a3], []
+   121fe: 29219181             	BSTART.TEPL	TEXP, BF16
+   12202: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12206: 007c                 	C.B.DIMI	1, 	->lb0
+   12208: 483c                 	C.B.DIMI	32, 	->lb1
+   1220a: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   1220e: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   12224: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   1223a: 28219181             	BSTART.TEPL	TMUL, BF16
+   1223e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12242: 007c                 	C.B.DIMI	1, 	->lb0
+   12244: 483c                 	C.B.DIMI	32, 	->lb1
+   12246: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   1224a: 28019181             	BSTART.TEPL	TADD, BF16
+   1224e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12252: 007c                 	C.B.DIMI	1, 	->lb0
+   12254: 483c                 	C.B.DIMI	32, 	->lb1
+   12256: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   1225a: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   1225e: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   12272: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   12284: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   12288: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   1228c: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   12290: 00030043             	B.DIM	a4, 0, 	->lb0
+   12294: 603c                 	C.B.DIMI	128, 	->lb1
+   12296: 10002043             	B.DIM	zero, 256, 	->lb2
+   1229a: 00101e13             	B.IOS	S1, mask=1111
+   1229e: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   122a2: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   122a6: 0800                 	C.BSTART.STD	
+   122a8: 007a8a05             	add	x1, a5, 	->x0
+   122ac: 00748405             	add	a7, a5, 	->a6
+   122b0: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   122c4: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   122c8: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   122cc: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   122d0: 00030043             	B.DIM	a4, 0, 	->lb0
+   122d4: 10001043             	B.DIM	zero, 256, 	->lb1
+   122d8: a03c                 	C.B.DIMI	128, 	->lb2
+   122da: 00001e13             	B.IOS	S0, mask=1111
+   122de: 00101e13             	B.IOS	S1, mask=1111
+   122e2: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   122e6: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   122ea: 2a219181             	BSTART.TEPL	TMULS, BF16
+   122ee: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   122f2: 10000043             	B.DIM	zero, 256, 	->lb0
+   122f6: 483c                 	C.B.DIMI	32, 	->lb1
+   122f8: 10002043             	B.DIM	zero, 256, 	->lb2
+   122fc: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   12300: 00018013             	B.IOR	[a1], []
+   12304: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12308: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1230c: 007c                 	C.B.DIMI	1, 	->lb0
+   1230e: 483c                 	C.B.DIMI	32, 	->lb1
+   12310: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   12314: 00018013             	B.IOR	[a1], []
+   12318: 28b19181             	BSTART.TEPL	TMAX, BF16
+   1231c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12320: 007c                 	C.B.DIMI	1, 	->lb0
+   12322: 483c                 	C.B.DIMI	32, 	->lb1
+   12324: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   12328: 28119181             	BSTART.TEPL	TSUB, BF16
+   1232c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12330: 007c                 	C.B.DIMI	1, 	->lb0
+   12332: 483c                 	C.B.DIMI	32, 	->lb1
+   12334: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   12338: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1233c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12340: 007c                 	C.B.DIMI	1, 	->lb0
+   12342: 483c                 	C.B.DIMI	32, 	->lb1
+   12344: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12348: 00020013             	B.IOR	[a2], []
+   1234c: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   1235c: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   1236c: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   1237c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12380: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12384: 007c                 	C.B.DIMI	1, 	->lb0
+   12386: 483c                 	C.B.DIMI	32, 	->lb1
+   12388: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   1238c: 00028013             	B.IOR	[a3], []
+   12390: 29219181             	BSTART.TEPL	TEXP, BF16
+   12394: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12398: 007c                 	C.B.DIMI	1, 	->lb0
+   1239a: 483c                 	C.B.DIMI	32, 	->lb1
+   1239c: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   123a0: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   123b6: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   123cc: 28219181             	BSTART.TEPL	TMUL, BF16
+   123d0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   123d4: 007c                 	C.B.DIMI	1, 	->lb0
+   123d6: 483c                 	C.B.DIMI	32, 	->lb1
+   123d8: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   123dc: 28019181             	BSTART.TEPL	TADD, BF16
+   123e0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   123e4: 007c                 	C.B.DIMI	1, 	->lb0
+   123e6: 483c                 	C.B.DIMI	32, 	->lb1
+   123e8: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   123ec: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   123f0: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   12404: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   12416: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   1241a: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   1241e: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   12422: 00030043             	B.DIM	a4, 0, 	->lb0
+   12426: 603c                 	C.B.DIMI	128, 	->lb1
+   12428: 10002043             	B.DIM	zero, 256, 	->lb2
+   1242c: 00101e13             	B.IOS	S1, mask=1111
+   12430: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   12434: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   12438: 0800                 	C.BSTART.STD	
+   1243a: 007a0a85             	add	x0, a5, 	->x1
+   1243e: 00740485             	add	a6, a5, 	->a7
+   12442: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   12456: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   1245a: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   1245e: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   12462: 00030043             	B.DIM	a4, 0, 	->lb0
+   12466: 10001043             	B.DIM	zero, 256, 	->lb1
+   1246a: a03c                 	C.B.DIMI	128, 	->lb2
+   1246c: 00001e13             	B.IOS	S0, mask=1111
+   12470: 00101e13             	B.IOS	S1, mask=1111
+   12474: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   12478: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   1247c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12480: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12484: 10000043             	B.DIM	zero, 256, 	->lb0
+   12488: 483c                 	C.B.DIMI	32, 	->lb1
+   1248a: 10002043             	B.DIM	zero, 256, 	->lb2
+   1248e: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   12492: 00018013             	B.IOR	[a1], []
+   12496: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1249a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1249e: 007c                 	C.B.DIMI	1, 	->lb0
+   124a0: 483c                 	C.B.DIMI	32, 	->lb1
+   124a2: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   124a6: 00018013             	B.IOR	[a1], []
+   124aa: 28b19181             	BSTART.TEPL	TMAX, BF16
+   124ae: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   124b2: 007c                 	C.B.DIMI	1, 	->lb0
+   124b4: 483c                 	C.B.DIMI	32, 	->lb1
+   124b6: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   124ba: 28119181             	BSTART.TEPL	TSUB, BF16
+   124be: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   124c2: 007c                 	C.B.DIMI	1, 	->lb0
+   124c4: 483c                 	C.B.DIMI	32, 	->lb1
+   124c6: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   124ca: 2a219181             	BSTART.TEPL	TMULS, BF16
+   124ce: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   124d2: 007c                 	C.B.DIMI	1, 	->lb0
+   124d4: 483c                 	C.B.DIMI	32, 	->lb1
+   124d6: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   124da: 00020013             	B.IOR	[a2], []
+   124de: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   124ee: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   124fe: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   1250e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12512: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12516: 007c                 	C.B.DIMI	1, 	->lb0
+   12518: 483c                 	C.B.DIMI	32, 	->lb1
+   1251a: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   1251e: 00028013             	B.IOR	[a3], []
+   12522: 29219181             	BSTART.TEPL	TEXP, BF16
+   12526: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1252a: 007c                 	C.B.DIMI	1, 	->lb0
+   1252c: 483c                 	C.B.DIMI	32, 	->lb1
+   1252e: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12532: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   12548: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   1255e: 28219181             	BSTART.TEPL	TMUL, BF16
+   12562: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12566: 007c                 	C.B.DIMI	1, 	->lb0
+   12568: 483c                 	C.B.DIMI	32, 	->lb1
+   1256a: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   1256e: 28019181             	BSTART.TEPL	TADD, BF16
+   12572: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12576: 007c                 	C.B.DIMI	1, 	->lb0
+   12578: 483c                 	C.B.DIMI	32, 	->lb1
+   1257a: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   1257e: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   12582: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   12596: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   125a8: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   125ac: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   125b0: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   125b4: 00030043             	B.DIM	a4, 0, 	->lb0
+   125b8: 603c                 	C.B.DIMI	128, 	->lb1
+   125ba: 10002043             	B.DIM	zero, 256, 	->lb2
+   125be: 00101e13             	B.IOS	S1, mask=1111
+   125c2: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   125c6: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   125ca: 0800                 	C.BSTART.STD	
+   125cc: 007a8a05             	add	x1, a5, 	->x0
+   125d0: 00748405             	add	a7, a5, 	->a6
+   125d4: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   125e8: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   125ec: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   125f0: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   125f4: 00030043             	B.DIM	a4, 0, 	->lb0
+   125f8: 10001043             	B.DIM	zero, 256, 	->lb1
+   125fc: a03c                 	C.B.DIMI	128, 	->lb2
+   125fe: 00001e13             	B.IOS	S0, mask=1111
+   12602: 00101e13             	B.IOS	S1, mask=1111
+   12606: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   1260a: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   1260e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12612: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12616: 10000043             	B.DIM	zero, 256, 	->lb0
+   1261a: 483c                 	C.B.DIMI	32, 	->lb1
+   1261c: 10002043             	B.DIM	zero, 256, 	->lb2
+   12620: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   12624: 00018013             	B.IOR	[a1], []
+   12628: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1262c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12630: 007c                 	C.B.DIMI	1, 	->lb0
+   12632: 483c                 	C.B.DIMI	32, 	->lb1
+   12634: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   12638: 00018013             	B.IOR	[a1], []
+   1263c: 28b19181             	BSTART.TEPL	TMAX, BF16
+   12640: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12644: 007c                 	C.B.DIMI	1, 	->lb0
+   12646: 483c                 	C.B.DIMI	32, 	->lb1
+   12648: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   1264c: 28119181             	BSTART.TEPL	TSUB, BF16
+   12650: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12654: 007c                 	C.B.DIMI	1, 	->lb0
+   12656: 483c                 	C.B.DIMI	32, 	->lb1
+   12658: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   1265c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12660: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12664: 007c                 	C.B.DIMI	1, 	->lb0
+   12666: 483c                 	C.B.DIMI	32, 	->lb1
+   12668: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   1266c: 00020013             	B.IOR	[a2], []
+   12670: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   12680: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   12690: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   126a0: 2a219181             	BSTART.TEPL	TMULS, BF16
+   126a4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   126a8: 007c                 	C.B.DIMI	1, 	->lb0
+   126aa: 483c                 	C.B.DIMI	32, 	->lb1
+   126ac: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   126b0: 00028013             	B.IOR	[a3], []
+   126b4: 29219181             	BSTART.TEPL	TEXP, BF16
+   126b8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   126bc: 007c                 	C.B.DIMI	1, 	->lb0
+   126be: 483c                 	C.B.DIMI	32, 	->lb1
+   126c0: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   126c4: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   126da: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   126f0: 28219181             	BSTART.TEPL	TMUL, BF16
+   126f4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   126f8: 007c                 	C.B.DIMI	1, 	->lb0
+   126fa: 483c                 	C.B.DIMI	32, 	->lb1
+   126fc: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   12700: 28019181             	BSTART.TEPL	TADD, BF16
+   12704: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12708: 007c                 	C.B.DIMI	1, 	->lb0
+   1270a: 483c                 	C.B.DIMI	32, 	->lb1
+   1270c: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   12710: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   12714: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   12728: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   1273a: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   1273e: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   12742: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   12746: 00030043             	B.DIM	a4, 0, 	->lb0
+   1274a: 603c                 	C.B.DIMI	128, 	->lb1
+   1274c: 10002043             	B.DIM	zero, 256, 	->lb2
+   12750: 00101e13             	B.IOS	S1, mask=1111
+   12754: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   12758: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   1275c: 0800                 	C.BSTART.STD	
+   1275e: 007a0a85             	add	x0, a5, 	->x1
+   12762: 00740485             	add	a6, a5, 	->a7
+   12766: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   1277a: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   1277e: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   12782: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   12786: 00030043             	B.DIM	a4, 0, 	->lb0
+   1278a: 10001043             	B.DIM	zero, 256, 	->lb1
+   1278e: a03c                 	C.B.DIMI	128, 	->lb2
+   12790: 00001e13             	B.IOS	S0, mask=1111
+   12794: 00101e13             	B.IOS	S1, mask=1111
+   12798: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   1279c: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   127a0: 2a219181             	BSTART.TEPL	TMULS, BF16
+   127a4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   127a8: 10000043             	B.DIM	zero, 256, 	->lb0
+   127ac: 483c                 	C.B.DIMI	32, 	->lb1
+   127ae: 10002043             	B.DIM	zero, 256, 	->lb2
+   127b2: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   127b6: 00018013             	B.IOR	[a1], []
+   127ba: 2a219181             	BSTART.TEPL	TMULS, BF16
+   127be: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   127c2: 007c                 	C.B.DIMI	1, 	->lb0
+   127c4: 483c                 	C.B.DIMI	32, 	->lb1
+   127c6: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   127ca: 00018013             	B.IOR	[a1], []
+   127ce: 28b19181             	BSTART.TEPL	TMAX, BF16
+   127d2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   127d6: 007c                 	C.B.DIMI	1, 	->lb0
+   127d8: 483c                 	C.B.DIMI	32, 	->lb1
+   127da: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   127de: 28119181             	BSTART.TEPL	TSUB, BF16
+   127e2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   127e6: 007c                 	C.B.DIMI	1, 	->lb0
+   127e8: 483c                 	C.B.DIMI	32, 	->lb1
+   127ea: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   127ee: 2a219181             	BSTART.TEPL	TMULS, BF16
+   127f2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   127f6: 007c                 	C.B.DIMI	1, 	->lb0
+   127f8: 483c                 	C.B.DIMI	32, 	->lb1
+   127fa: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   127fe: 00020013             	B.IOR	[a2], []
+   12802: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   12812: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   12822: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   12832: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12836: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1283a: 007c                 	C.B.DIMI	1, 	->lb0
+   1283c: 483c                 	C.B.DIMI	32, 	->lb1
+   1283e: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12842: 00028013             	B.IOR	[a3], []
+   12846: 29219181             	BSTART.TEPL	TEXP, BF16
+   1284a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1284e: 007c                 	C.B.DIMI	1, 	->lb0
+   12850: 483c                 	C.B.DIMI	32, 	->lb1
+   12852: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12856: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   1286c: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   12882: 28219181             	BSTART.TEPL	TMUL, BF16
+   12886: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1288a: 007c                 	C.B.DIMI	1, 	->lb0
+   1288c: 483c                 	C.B.DIMI	32, 	->lb1
+   1288e: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   12892: 28019181             	BSTART.TEPL	TADD, BF16
+   12896: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1289a: 007c                 	C.B.DIMI	1, 	->lb0
+   1289c: 483c                 	C.B.DIMI	32, 	->lb1
+   1289e: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   128a2: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   128a6: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   128ba: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   128cc: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   128d0: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   128d4: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   128d8: 00030043             	B.DIM	a4, 0, 	->lb0
+   128dc: 603c                 	C.B.DIMI	128, 	->lb1
+   128de: 10002043             	B.DIM	zero, 256, 	->lb2
+   128e2: 00101e13             	B.IOS	S1, mask=1111
+   128e6: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   128ea: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   128ee: 0800                 	C.BSTART.STD	
+   128f0: 007a8a05             	add	x1, a5, 	->x0
+   128f4: 00748405             	add	a7, a5, 	->a6
+   128f8: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   1290c: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   12910: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   12914: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   12918: 00030043             	B.DIM	a4, 0, 	->lb0
+   1291c: 10001043             	B.DIM	zero, 256, 	->lb1
+   12920: a03c                 	C.B.DIMI	128, 	->lb2
+   12922: 00001e13             	B.IOS	S0, mask=1111
+   12926: 00101e13             	B.IOS	S1, mask=1111
+   1292a: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   1292e: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   12932: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12936: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1293a: 10000043             	B.DIM	zero, 256, 	->lb0
+   1293e: 483c                 	C.B.DIMI	32, 	->lb1
+   12940: 10002043             	B.DIM	zero, 256, 	->lb2
+   12944: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   12948: 00018013             	B.IOR	[a1], []
+   1294c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12950: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12954: 007c                 	C.B.DIMI	1, 	->lb0
+   12956: 483c                 	C.B.DIMI	32, 	->lb1
+   12958: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   1295c: 00018013             	B.IOR	[a1], []
+   12960: 28b19181             	BSTART.TEPL	TMAX, BF16
+   12964: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12968: 007c                 	C.B.DIMI	1, 	->lb0
+   1296a: 483c                 	C.B.DIMI	32, 	->lb1
+   1296c: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   12970: 28119181             	BSTART.TEPL	TSUB, BF16
+   12974: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12978: 007c                 	C.B.DIMI	1, 	->lb0
+   1297a: 483c                 	C.B.DIMI	32, 	->lb1
+   1297c: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   12980: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12984: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12988: 007c                 	C.B.DIMI	1, 	->lb0
+   1298a: 483c                 	C.B.DIMI	32, 	->lb1
+   1298c: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12990: 00020013             	B.IOR	[a2], []
+   12994: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   129a4: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   129b4: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   129c4: 2a219181             	BSTART.TEPL	TMULS, BF16
+   129c8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   129cc: 007c                 	C.B.DIMI	1, 	->lb0
+   129ce: 483c                 	C.B.DIMI	32, 	->lb1
+   129d0: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   129d4: 00028013             	B.IOR	[a3], []
+   129d8: 29219181             	BSTART.TEPL	TEXP, BF16
+   129dc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   129e0: 007c                 	C.B.DIMI	1, 	->lb0
+   129e2: 483c                 	C.B.DIMI	32, 	->lb1
+   129e4: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   129e8: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   129fe: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   12a14: 28219181             	BSTART.TEPL	TMUL, BF16
+   12a18: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12a1c: 007c                 	C.B.DIMI	1, 	->lb0
+   12a1e: 483c                 	C.B.DIMI	32, 	->lb1
+   12a20: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   12a24: 28019181             	BSTART.TEPL	TADD, BF16
+   12a28: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12a2c: 007c                 	C.B.DIMI	1, 	->lb0
+   12a2e: 483c                 	C.B.DIMI	32, 	->lb1
+   12a30: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   12a34: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   12a38: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   12a4c: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   12a5e: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   12a62: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   12a66: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   12a6a: 00030043             	B.DIM	a4, 0, 	->lb0
+   12a6e: 603c                 	C.B.DIMI	128, 	->lb1
+   12a70: 10002043             	B.DIM	zero, 256, 	->lb2
+   12a74: 00101e13             	B.IOS	S1, mask=1111
+   12a78: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   12a7c: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   12a80: 0800                 	C.BSTART.STD	
+   12a82: 007a0a85             	add	x0, a5, 	->x1
+   12a86: 00740485             	add	a6, a5, 	->a7
+   12a8a: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   12a9e: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   12aa2: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   12aa6: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   12aaa: 00030043             	B.DIM	a4, 0, 	->lb0
+   12aae: 10001043             	B.DIM	zero, 256, 	->lb1
+   12ab2: a03c                 	C.B.DIMI	128, 	->lb2
+   12ab4: 00001e13             	B.IOS	S0, mask=1111
+   12ab8: 00101e13             	B.IOS	S1, mask=1111
+   12abc: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   12ac0: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   12ac4: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12ac8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12acc: 10000043             	B.DIM	zero, 256, 	->lb0
+   12ad0: 483c                 	C.B.DIMI	32, 	->lb1
+   12ad2: 10002043             	B.DIM	zero, 256, 	->lb2
+   12ad6: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   12ada: 00018013             	B.IOR	[a1], []
+   12ade: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12ae2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12ae6: 007c                 	C.B.DIMI	1, 	->lb0
+   12ae8: 483c                 	C.B.DIMI	32, 	->lb1
+   12aea: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12aee: 00018013             	B.IOR	[a1], []
+   12af2: 28b19181             	BSTART.TEPL	TMAX, BF16
+   12af6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12afa: 007c                 	C.B.DIMI	1, 	->lb0
+   12afc: 483c                 	C.B.DIMI	32, 	->lb1
+   12afe: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   12b02: 28119181             	BSTART.TEPL	TSUB, BF16
+   12b06: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12b0a: 007c                 	C.B.DIMI	1, 	->lb0
+   12b0c: 483c                 	C.B.DIMI	32, 	->lb1
+   12b0e: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   12b12: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12b16: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12b1a: 007c                 	C.B.DIMI	1, 	->lb0
+   12b1c: 483c                 	C.B.DIMI	32, 	->lb1
+   12b1e: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   12b22: 00020013             	B.IOR	[a2], []
+   12b26: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   12b36: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   12b46: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   12b56: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12b5a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12b5e: 007c                 	C.B.DIMI	1, 	->lb0
+   12b60: 483c                 	C.B.DIMI	32, 	->lb1
+   12b62: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12b66: 00028013             	B.IOR	[a3], []
+   12b6a: 29219181             	BSTART.TEPL	TEXP, BF16
+   12b6e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12b72: 007c                 	C.B.DIMI	1, 	->lb0
+   12b74: 483c                 	C.B.DIMI	32, 	->lb1
+   12b76: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12b7a: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   12b90: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   12ba6: 28219181             	BSTART.TEPL	TMUL, BF16
+   12baa: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12bae: 007c                 	C.B.DIMI	1, 	->lb0
+   12bb0: 483c                 	C.B.DIMI	32, 	->lb1
+   12bb2: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   12bb6: 28019181             	BSTART.TEPL	TADD, BF16
+   12bba: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12bbe: 007c                 	C.B.DIMI	1, 	->lb0
+   12bc0: 483c                 	C.B.DIMI	32, 	->lb1
+   12bc2: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   12bc6: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   12bca: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   12bde: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   12bf0: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   12bf4: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   12bf8: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   12bfc: 00030043             	B.DIM	a4, 0, 	->lb0
+   12c00: 603c                 	C.B.DIMI	128, 	->lb1
+   12c02: 10002043             	B.DIM	zero, 256, 	->lb2
+   12c06: 00101e13             	B.IOS	S1, mask=1111
+   12c0a: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   12c0e: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   12c12: 0800                 	C.BSTART.STD	
+   12c14: 007a8a05             	add	x1, a5, 	->x0
+   12c18: 00748405             	add	a7, a5, 	->a6
+   12c1c: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   12c30: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   12c34: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   12c38: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   12c3c: 00030043             	B.DIM	a4, 0, 	->lb0
+   12c40: 10001043             	B.DIM	zero, 256, 	->lb1
+   12c44: a03c                 	C.B.DIMI	128, 	->lb2
+   12c46: 00001e13             	B.IOS	S0, mask=1111
+   12c4a: 00101e13             	B.IOS	S1, mask=1111
+   12c4e: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   12c52: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   12c56: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12c5a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12c5e: 10000043             	B.DIM	zero, 256, 	->lb0
+   12c62: 483c                 	C.B.DIMI	32, 	->lb1
+   12c64: 10002043             	B.DIM	zero, 256, 	->lb2
+   12c68: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   12c6c: 00018013             	B.IOR	[a1], []
+   12c70: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12c74: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12c78: 007c                 	C.B.DIMI	1, 	->lb0
+   12c7a: 483c                 	C.B.DIMI	32, 	->lb1
+   12c7c: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   12c80: 00018013             	B.IOR	[a1], []
+   12c84: 28b19181             	BSTART.TEPL	TMAX, BF16
+   12c88: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12c8c: 007c                 	C.B.DIMI	1, 	->lb0
+   12c8e: 483c                 	C.B.DIMI	32, 	->lb1
+   12c90: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   12c94: 28119181             	BSTART.TEPL	TSUB, BF16
+   12c98: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12c9c: 007c                 	C.B.DIMI	1, 	->lb0
+   12c9e: 483c                 	C.B.DIMI	32, 	->lb1
+   12ca0: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   12ca4: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12ca8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12cac: 007c                 	C.B.DIMI	1, 	->lb0
+   12cae: 483c                 	C.B.DIMI	32, 	->lb1
+   12cb0: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12cb4: 00020013             	B.IOR	[a2], []
+   12cb8: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   12cc8: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   12cd8: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   12ce8: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12cec: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12cf0: 007c                 	C.B.DIMI	1, 	->lb0
+   12cf2: 483c                 	C.B.DIMI	32, 	->lb1
+   12cf4: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   12cf8: 00028013             	B.IOR	[a3], []
+   12cfc: 29219181             	BSTART.TEPL	TEXP, BF16
+   12d00: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12d04: 007c                 	C.B.DIMI	1, 	->lb0
+   12d06: 483c                 	C.B.DIMI	32, 	->lb1
+   12d08: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   12d0c: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   12d22: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   12d38: 28219181             	BSTART.TEPL	TMUL, BF16
+   12d3c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12d40: 007c                 	C.B.DIMI	1, 	->lb0
+   12d42: 483c                 	C.B.DIMI	32, 	->lb1
+   12d44: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   12d48: 28019181             	BSTART.TEPL	TADD, BF16
+   12d4c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12d50: 007c                 	C.B.DIMI	1, 	->lb0
+   12d52: 483c                 	C.B.DIMI	32, 	->lb1
+   12d54: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   12d58: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   12d5c: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   12d70: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   12d82: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   12d86: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   12d8a: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   12d8e: 00030043             	B.DIM	a4, 0, 	->lb0
+   12d92: 603c                 	C.B.DIMI	128, 	->lb1
+   12d94: 10002043             	B.DIM	zero, 256, 	->lb2
+   12d98: 00101e13             	B.IOS	S1, mask=1111
+   12d9c: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   12da0: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   12da4: 0800                 	C.BSTART.STD	
+   12da6: 007a0a85             	add	x0, a5, 	->x1
+   12daa: 00740485             	add	a6, a5, 	->a7
+   12dae: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   12dc2: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   12dc6: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   12dca: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   12dce: 00030043             	B.DIM	a4, 0, 	->lb0
+   12dd2: 10001043             	B.DIM	zero, 256, 	->lb1
+   12dd6: a03c                 	C.B.DIMI	128, 	->lb2
+   12dd8: 00001e13             	B.IOS	S0, mask=1111
+   12ddc: 00101e13             	B.IOS	S1, mask=1111
+   12de0: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   12de4: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   12de8: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12dec: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12df0: 10000043             	B.DIM	zero, 256, 	->lb0
+   12df4: 483c                 	C.B.DIMI	32, 	->lb1
+   12df6: 10002043             	B.DIM	zero, 256, 	->lb2
+   12dfa: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   12dfe: 00018013             	B.IOR	[a1], []
+   12e02: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12e06: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12e0a: 007c                 	C.B.DIMI	1, 	->lb0
+   12e0c: 483c                 	C.B.DIMI	32, 	->lb1
+   12e0e: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12e12: 00018013             	B.IOR	[a1], []
+   12e16: 28b19181             	BSTART.TEPL	TMAX, BF16
+   12e1a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12e1e: 007c                 	C.B.DIMI	1, 	->lb0
+   12e20: 483c                 	C.B.DIMI	32, 	->lb1
+   12e22: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   12e26: 28119181             	BSTART.TEPL	TSUB, BF16
+   12e2a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12e2e: 007c                 	C.B.DIMI	1, 	->lb0
+   12e30: 483c                 	C.B.DIMI	32, 	->lb1
+   12e32: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   12e36: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12e3a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12e3e: 007c                 	C.B.DIMI	1, 	->lb0
+   12e40: 483c                 	C.B.DIMI	32, 	->lb1
+   12e42: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   12e46: 00020013             	B.IOR	[a2], []
+   12e4a: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   12e5a: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   12e6a: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   12e7a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12e7e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12e82: 007c                 	C.B.DIMI	1, 	->lb0
+   12e84: 483c                 	C.B.DIMI	32, 	->lb1
+   12e86: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12e8a: 00028013             	B.IOR	[a3], []
+   12e8e: 29219181             	BSTART.TEPL	TEXP, BF16
+   12e92: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12e96: 007c                 	C.B.DIMI	1, 	->lb0
+   12e98: 483c                 	C.B.DIMI	32, 	->lb1
+   12e9a: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12e9e: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   12eb4: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   12eca: 28219181             	BSTART.TEPL	TMUL, BF16
+   12ece: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12ed2: 007c                 	C.B.DIMI	1, 	->lb0
+   12ed4: 483c                 	C.B.DIMI	32, 	->lb1
+   12ed6: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   12eda: 28019181             	BSTART.TEPL	TADD, BF16
+   12ede: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12ee2: 007c                 	C.B.DIMI	1, 	->lb0
+   12ee4: 483c                 	C.B.DIMI	32, 	->lb1
+   12ee6: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   12eea: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   12eee: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   12f02: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   12f14: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   12f18: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   12f1c: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   12f20: 00030043             	B.DIM	a4, 0, 	->lb0
+   12f24: 603c                 	C.B.DIMI	128, 	->lb1
+   12f26: 10002043             	B.DIM	zero, 256, 	->lb2
+   12f2a: 00101e13             	B.IOS	S1, mask=1111
+   12f2e: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   12f32: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   12f36: 0800                 	C.BSTART.STD	
+   12f38: 007a8a05             	add	x1, a5, 	->x0
+   12f3c: 00748405             	add	a7, a5, 	->a6
+   12f40: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   12f54: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   12f58: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   12f5c: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   12f60: 00030043             	B.DIM	a4, 0, 	->lb0
+   12f64: 10001043             	B.DIM	zero, 256, 	->lb1
+   12f68: a03c                 	C.B.DIMI	128, 	->lb2
+   12f6a: 00001e13             	B.IOS	S0, mask=1111
+   12f6e: 00101e13             	B.IOS	S1, mask=1111
+   12f72: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   12f76: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   12f7a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12f7e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12f82: 10000043             	B.DIM	zero, 256, 	->lb0
+   12f86: 483c                 	C.B.DIMI	32, 	->lb1
+   12f88: 10002043             	B.DIM	zero, 256, 	->lb2
+   12f8c: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   12f90: 00018013             	B.IOR	[a1], []
+   12f94: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12f98: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12f9c: 007c                 	C.B.DIMI	1, 	->lb0
+   12f9e: 483c                 	C.B.DIMI	32, 	->lb1
+   12fa0: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   12fa4: 00018013             	B.IOR	[a1], []
+   12fa8: 28b19181             	BSTART.TEPL	TMAX, BF16
+   12fac: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12fb0: 007c                 	C.B.DIMI	1, 	->lb0
+   12fb2: 483c                 	C.B.DIMI	32, 	->lb1
+   12fb4: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   12fb8: 28119181             	BSTART.TEPL	TSUB, BF16
+   12fbc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12fc0: 007c                 	C.B.DIMI	1, 	->lb0
+   12fc2: 483c                 	C.B.DIMI	32, 	->lb1
+   12fc4: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   12fc8: 2a219181             	BSTART.TEPL	TMULS, BF16
+   12fcc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   12fd0: 007c                 	C.B.DIMI	1, 	->lb0
+   12fd2: 483c                 	C.B.DIMI	32, 	->lb1
+   12fd4: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   12fd8: 00020013             	B.IOR	[a2], []
+   12fdc: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   12fec: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   12ffc: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   1300c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13010: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13014: 007c                 	C.B.DIMI	1, 	->lb0
+   13016: 483c                 	C.B.DIMI	32, 	->lb1
+   13018: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   1301c: 00028013             	B.IOR	[a3], []
+   13020: 29219181             	BSTART.TEPL	TEXP, BF16
+   13024: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13028: 007c                 	C.B.DIMI	1, 	->lb0
+   1302a: 483c                 	C.B.DIMI	32, 	->lb1
+   1302c: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13030: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   13046: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   1305c: 28219181             	BSTART.TEPL	TMUL, BF16
+   13060: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13064: 007c                 	C.B.DIMI	1, 	->lb0
+   13066: 483c                 	C.B.DIMI	32, 	->lb1
+   13068: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   1306c: 28019181             	BSTART.TEPL	TADD, BF16
+   13070: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13074: 007c                 	C.B.DIMI	1, 	->lb0
+   13076: 483c                 	C.B.DIMI	32, 	->lb1
+   13078: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   1307c: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   13080: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   13094: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   130a6: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   130aa: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   130ae: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   130b2: 00030043             	B.DIM	a4, 0, 	->lb0
+   130b6: 603c                 	C.B.DIMI	128, 	->lb1
+   130b8: 10002043             	B.DIM	zero, 256, 	->lb2
+   130bc: 00101e13             	B.IOS	S1, mask=1111
+   130c0: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   130c4: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   130c8: 0800                 	C.BSTART.STD	
+   130ca: 007a0a85             	add	x0, a5, 	->x1
+   130ce: 00740485             	add	a6, a5, 	->a7
+   130d2: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   130e6: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   130ea: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   130ee: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   130f2: 00030043             	B.DIM	a4, 0, 	->lb0
+   130f6: 10001043             	B.DIM	zero, 256, 	->lb1
+   130fa: a03c                 	C.B.DIMI	128, 	->lb2
+   130fc: 00001e13             	B.IOS	S0, mask=1111
+   13100: 00101e13             	B.IOS	S1, mask=1111
+   13104: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   13108: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   1310c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13110: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13114: 10000043             	B.DIM	zero, 256, 	->lb0
+   13118: 483c                 	C.B.DIMI	32, 	->lb1
+   1311a: 10002043             	B.DIM	zero, 256, 	->lb2
+   1311e: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   13122: 00018013             	B.IOR	[a1], []
+   13126: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1312a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1312e: 007c                 	C.B.DIMI	1, 	->lb0
+   13130: 483c                 	C.B.DIMI	32, 	->lb1
+   13132: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13136: 00018013             	B.IOR	[a1], []
+   1313a: 28b19181             	BSTART.TEPL	TMAX, BF16
+   1313e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13142: 007c                 	C.B.DIMI	1, 	->lb0
+   13144: 483c                 	C.B.DIMI	32, 	->lb1
+   13146: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   1314a: 28119181             	BSTART.TEPL	TSUB, BF16
+   1314e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13152: 007c                 	C.B.DIMI	1, 	->lb0
+   13154: 483c                 	C.B.DIMI	32, 	->lb1
+   13156: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   1315a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1315e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13162: 007c                 	C.B.DIMI	1, 	->lb0
+   13164: 483c                 	C.B.DIMI	32, 	->lb1
+   13166: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   1316a: 00020013             	B.IOR	[a2], []
+   1316e: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   1317e: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   1318e: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   1319e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   131a2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   131a6: 007c                 	C.B.DIMI	1, 	->lb0
+   131a8: 483c                 	C.B.DIMI	32, 	->lb1
+   131aa: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   131ae: 00028013             	B.IOR	[a3], []
+   131b2: 29219181             	BSTART.TEPL	TEXP, BF16
+   131b6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   131ba: 007c                 	C.B.DIMI	1, 	->lb0
+   131bc: 483c                 	C.B.DIMI	32, 	->lb1
+   131be: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   131c2: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   131d8: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   131ee: 28219181             	BSTART.TEPL	TMUL, BF16
+   131f2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   131f6: 007c                 	C.B.DIMI	1, 	->lb0
+   131f8: 483c                 	C.B.DIMI	32, 	->lb1
+   131fa: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   131fe: 28019181             	BSTART.TEPL	TADD, BF16
+   13202: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13206: 007c                 	C.B.DIMI	1, 	->lb0
+   13208: 483c                 	C.B.DIMI	32, 	->lb1
+   1320a: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   1320e: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   13212: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   13226: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   13238: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   1323c: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   13240: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   13244: 00030043             	B.DIM	a4, 0, 	->lb0
+   13248: 603c                 	C.B.DIMI	128, 	->lb1
+   1324a: 10002043             	B.DIM	zero, 256, 	->lb2
+   1324e: 00101e13             	B.IOS	S1, mask=1111
+   13252: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   13256: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   1325a: 0800                 	C.BSTART.STD	
+   1325c: 007a8a05             	add	x1, a5, 	->x0
+   13260: 00748405             	add	a7, a5, 	->a6
+   13264: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   13278: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   1327c: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   13280: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   13284: 00030043             	B.DIM	a4, 0, 	->lb0
+   13288: 10001043             	B.DIM	zero, 256, 	->lb1
+   1328c: a03c                 	C.B.DIMI	128, 	->lb2
+   1328e: 00001e13             	B.IOS	S0, mask=1111
+   13292: 00101e13             	B.IOS	S1, mask=1111
+   13296: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   1329a: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   1329e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   132a2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   132a6: 10000043             	B.DIM	zero, 256, 	->lb0
+   132aa: 483c                 	C.B.DIMI	32, 	->lb1
+   132ac: 10002043             	B.DIM	zero, 256, 	->lb2
+   132b0: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   132b4: 00018013             	B.IOR	[a1], []
+   132b8: 2a219181             	BSTART.TEPL	TMULS, BF16
+   132bc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   132c0: 007c                 	C.B.DIMI	1, 	->lb0
+   132c2: 483c                 	C.B.DIMI	32, 	->lb1
+   132c4: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   132c8: 00018013             	B.IOR	[a1], []
+   132cc: 28b19181             	BSTART.TEPL	TMAX, BF16
+   132d0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   132d4: 007c                 	C.B.DIMI	1, 	->lb0
+   132d6: 483c                 	C.B.DIMI	32, 	->lb1
+   132d8: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   132dc: 28119181             	BSTART.TEPL	TSUB, BF16
+   132e0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   132e4: 007c                 	C.B.DIMI	1, 	->lb0
+   132e6: 483c                 	C.B.DIMI	32, 	->lb1
+   132e8: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   132ec: 2a219181             	BSTART.TEPL	TMULS, BF16
+   132f0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   132f4: 007c                 	C.B.DIMI	1, 	->lb0
+   132f6: 483c                 	C.B.DIMI	32, 	->lb1
+   132f8: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   132fc: 00020013             	B.IOR	[a2], []
+   13300: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   13310: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   13320: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   13330: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13334: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13338: 007c                 	C.B.DIMI	1, 	->lb0
+   1333a: 483c                 	C.B.DIMI	32, 	->lb1
+   1333c: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13340: 00028013             	B.IOR	[a3], []
+   13344: 29219181             	BSTART.TEPL	TEXP, BF16
+   13348: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1334c: 007c                 	C.B.DIMI	1, 	->lb0
+   1334e: 483c                 	C.B.DIMI	32, 	->lb1
+   13350: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13354: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   1336a: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   13380: 28219181             	BSTART.TEPL	TMUL, BF16
+   13384: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13388: 007c                 	C.B.DIMI	1, 	->lb0
+   1338a: 483c                 	C.B.DIMI	32, 	->lb1
+   1338c: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   13390: 28019181             	BSTART.TEPL	TADD, BF16
+   13394: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13398: 007c                 	C.B.DIMI	1, 	->lb0
+   1339a: 483c                 	C.B.DIMI	32, 	->lb1
+   1339c: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   133a0: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   133a4: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   133b8: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   133ca: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   133ce: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   133d2: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   133d6: 00030043             	B.DIM	a4, 0, 	->lb0
+   133da: 603c                 	C.B.DIMI	128, 	->lb1
+   133dc: 10002043             	B.DIM	zero, 256, 	->lb2
+   133e0: 00101e13             	B.IOS	S1, mask=1111
+   133e4: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   133e8: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   133ec: 0800                 	C.BSTART.STD	
+   133ee: 007a0a85             	add	x0, a5, 	->x1
+   133f2: 00740485             	add	a6, a5, 	->a7
+   133f6: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   1340a: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   1340e: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   13412: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   13416: 00030043             	B.DIM	a4, 0, 	->lb0
+   1341a: 10001043             	B.DIM	zero, 256, 	->lb1
+   1341e: a03c                 	C.B.DIMI	128, 	->lb2
+   13420: 00001e13             	B.IOS	S0, mask=1111
+   13424: 00101e13             	B.IOS	S1, mask=1111
+   13428: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   1342c: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   13430: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13434: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13438: 10000043             	B.DIM	zero, 256, 	->lb0
+   1343c: 483c                 	C.B.DIMI	32, 	->lb1
+   1343e: 10002043             	B.DIM	zero, 256, 	->lb2
+   13442: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   13446: 00018013             	B.IOR	[a1], []
+   1344a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1344e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13452: 007c                 	C.B.DIMI	1, 	->lb0
+   13454: 483c                 	C.B.DIMI	32, 	->lb1
+   13456: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   1345a: 00018013             	B.IOR	[a1], []
+   1345e: 28b19181             	BSTART.TEPL	TMAX, BF16
+   13462: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13466: 007c                 	C.B.DIMI	1, 	->lb0
+   13468: 483c                 	C.B.DIMI	32, 	->lb1
+   1346a: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   1346e: 28119181             	BSTART.TEPL	TSUB, BF16
+   13472: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13476: 007c                 	C.B.DIMI	1, 	->lb0
+   13478: 483c                 	C.B.DIMI	32, 	->lb1
+   1347a: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   1347e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13482: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13486: 007c                 	C.B.DIMI	1, 	->lb0
+   13488: 483c                 	C.B.DIMI	32, 	->lb1
+   1348a: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   1348e: 00020013             	B.IOR	[a2], []
+   13492: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   134a2: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   134b2: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   134c2: 2a219181             	BSTART.TEPL	TMULS, BF16
+   134c6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   134ca: 007c                 	C.B.DIMI	1, 	->lb0
+   134cc: 483c                 	C.B.DIMI	32, 	->lb1
+   134ce: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   134d2: 00028013             	B.IOR	[a3], []
+   134d6: 29219181             	BSTART.TEPL	TEXP, BF16
+   134da: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   134de: 007c                 	C.B.DIMI	1, 	->lb0
+   134e0: 483c                 	C.B.DIMI	32, 	->lb1
+   134e2: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   134e6: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   134fc: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   13512: 28219181             	BSTART.TEPL	TMUL, BF16
+   13516: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1351a: 007c                 	C.B.DIMI	1, 	->lb0
+   1351c: 483c                 	C.B.DIMI	32, 	->lb1
+   1351e: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   13522: 28019181             	BSTART.TEPL	TADD, BF16
+   13526: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1352a: 007c                 	C.B.DIMI	1, 	->lb0
+   1352c: 483c                 	C.B.DIMI	32, 	->lb1
+   1352e: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   13532: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   13536: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   1354a: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   1355c: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   13560: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   13564: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   13568: 00030043             	B.DIM	a4, 0, 	->lb0
+   1356c: 603c                 	C.B.DIMI	128, 	->lb1
+   1356e: 10002043             	B.DIM	zero, 256, 	->lb2
+   13572: 00101e13             	B.IOS	S1, mask=1111
+   13576: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   1357a: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   1357e: 0800                 	C.BSTART.STD	
+   13580: 007a8a05             	add	x1, a5, 	->x0
+   13584: 00748405             	add	a7, a5, 	->a6
+   13588: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   1359c: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   135a0: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   135a4: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   135a8: 00030043             	B.DIM	a4, 0, 	->lb0
+   135ac: 10001043             	B.DIM	zero, 256, 	->lb1
+   135b0: a03c                 	C.B.DIMI	128, 	->lb2
+   135b2: 00001e13             	B.IOS	S0, mask=1111
+   135b6: 00101e13             	B.IOS	S1, mask=1111
+   135ba: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   135be: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   135c2: 2a219181             	BSTART.TEPL	TMULS, BF16
+   135c6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   135ca: 10000043             	B.DIM	zero, 256, 	->lb0
+   135ce: 483c                 	C.B.DIMI	32, 	->lb1
+   135d0: 10002043             	B.DIM	zero, 256, 	->lb2
+   135d4: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   135d8: 00018013             	B.IOR	[a1], []
+   135dc: 2a219181             	BSTART.TEPL	TMULS, BF16
+   135e0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   135e4: 007c                 	C.B.DIMI	1, 	->lb0
+   135e6: 483c                 	C.B.DIMI	32, 	->lb1
+   135e8: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   135ec: 00018013             	B.IOR	[a1], []
+   135f0: 28b19181             	BSTART.TEPL	TMAX, BF16
+   135f4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   135f8: 007c                 	C.B.DIMI	1, 	->lb0
+   135fa: 483c                 	C.B.DIMI	32, 	->lb1
+   135fc: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   13600: 28119181             	BSTART.TEPL	TSUB, BF16
+   13604: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13608: 007c                 	C.B.DIMI	1, 	->lb0
+   1360a: 483c                 	C.B.DIMI	32, 	->lb1
+   1360c: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   13610: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13614: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13618: 007c                 	C.B.DIMI	1, 	->lb0
+   1361a: 483c                 	C.B.DIMI	32, 	->lb1
+   1361c: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13620: 00020013             	B.IOR	[a2], []
+   13624: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   13634: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   13644: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   13654: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13658: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1365c: 007c                 	C.B.DIMI	1, 	->lb0
+   1365e: 483c                 	C.B.DIMI	32, 	->lb1
+   13660: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13664: 00028013             	B.IOR	[a3], []
+   13668: 29219181             	BSTART.TEPL	TEXP, BF16
+   1366c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13670: 007c                 	C.B.DIMI	1, 	->lb0
+   13672: 483c                 	C.B.DIMI	32, 	->lb1
+   13674: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13678: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   1368e: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   136a4: 28219181             	BSTART.TEPL	TMUL, BF16
+   136a8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   136ac: 007c                 	C.B.DIMI	1, 	->lb0
+   136ae: 483c                 	C.B.DIMI	32, 	->lb1
+   136b0: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   136b4: 28019181             	BSTART.TEPL	TADD, BF16
+   136b8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   136bc: 007c                 	C.B.DIMI	1, 	->lb0
+   136be: 483c                 	C.B.DIMI	32, 	->lb1
+   136c0: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   136c4: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   136c8: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   136dc: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   136ee: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   136f2: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   136f6: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   136fa: 00030043             	B.DIM	a4, 0, 	->lb0
+   136fe: 603c                 	C.B.DIMI	128, 	->lb1
+   13700: 10002043             	B.DIM	zero, 256, 	->lb2
+   13704: 00101e13             	B.IOS	S1, mask=1111
+   13708: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   1370c: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   13710: 0800                 	C.BSTART.STD	
+   13712: 007a0a85             	add	x0, a5, 	->x1
+   13716: 00740485             	add	a6, a5, 	->a7
+   1371a: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   1372e: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   13732: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   13736: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   1373a: 00030043             	B.DIM	a4, 0, 	->lb0
+   1373e: 10001043             	B.DIM	zero, 256, 	->lb1
+   13742: a03c                 	C.B.DIMI	128, 	->lb2
+   13744: 00001e13             	B.IOS	S0, mask=1111
+   13748: 00101e13             	B.IOS	S1, mask=1111
+   1374c: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   13750: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   13754: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13758: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1375c: 10000043             	B.DIM	zero, 256, 	->lb0
+   13760: 483c                 	C.B.DIMI	32, 	->lb1
+   13762: 10002043             	B.DIM	zero, 256, 	->lb2
+   13766: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   1376a: 00018013             	B.IOR	[a1], []
+   1376e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13772: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13776: 007c                 	C.B.DIMI	1, 	->lb0
+   13778: 483c                 	C.B.DIMI	32, 	->lb1
+   1377a: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   1377e: 00018013             	B.IOR	[a1], []
+   13782: 28b19181             	BSTART.TEPL	TMAX, BF16
+   13786: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1378a: 007c                 	C.B.DIMI	1, 	->lb0
+   1378c: 483c                 	C.B.DIMI	32, 	->lb1
+   1378e: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   13792: 28119181             	BSTART.TEPL	TSUB, BF16
+   13796: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1379a: 007c                 	C.B.DIMI	1, 	->lb0
+   1379c: 483c                 	C.B.DIMI	32, 	->lb1
+   1379e: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   137a2: 2a219181             	BSTART.TEPL	TMULS, BF16
+   137a6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   137aa: 007c                 	C.B.DIMI	1, 	->lb0
+   137ac: 483c                 	C.B.DIMI	32, 	->lb1
+   137ae: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   137b2: 00020013             	B.IOR	[a2], []
+   137b6: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   137c6: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   137d6: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   137e6: 2a219181             	BSTART.TEPL	TMULS, BF16
+   137ea: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   137ee: 007c                 	C.B.DIMI	1, 	->lb0
+   137f0: 483c                 	C.B.DIMI	32, 	->lb1
+   137f2: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   137f6: 00028013             	B.IOR	[a3], []
+   137fa: 29219181             	BSTART.TEPL	TEXP, BF16
+   137fe: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13802: 007c                 	C.B.DIMI	1, 	->lb0
+   13804: 483c                 	C.B.DIMI	32, 	->lb1
+   13806: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   1380a: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   13820: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   13836: 28219181             	BSTART.TEPL	TMUL, BF16
+   1383a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1383e: 007c                 	C.B.DIMI	1, 	->lb0
+   13840: 483c                 	C.B.DIMI	32, 	->lb1
+   13842: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   13846: 28019181             	BSTART.TEPL	TADD, BF16
+   1384a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1384e: 007c                 	C.B.DIMI	1, 	->lb0
+   13850: 483c                 	C.B.DIMI	32, 	->lb1
+   13852: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   13856: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   1385a: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   1386e: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   13880: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   13884: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   13888: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   1388c: 00030043             	B.DIM	a4, 0, 	->lb0
+   13890: 603c                 	C.B.DIMI	128, 	->lb1
+   13892: 10002043             	B.DIM	zero, 256, 	->lb2
+   13896: 00101e13             	B.IOS	S1, mask=1111
+   1389a: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   1389e: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   138a2: 0800                 	C.BSTART.STD	
+   138a4: 007a8a05             	add	x1, a5, 	->x0
+   138a8: 00748405             	add	a7, a5, 	->a6
+   138ac: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   138c0: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   138c4: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   138c8: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   138cc: 00030043             	B.DIM	a4, 0, 	->lb0
+   138d0: 10001043             	B.DIM	zero, 256, 	->lb1
+   138d4: a03c                 	C.B.DIMI	128, 	->lb2
+   138d6: 00001e13             	B.IOS	S0, mask=1111
+   138da: 00101e13             	B.IOS	S1, mask=1111
+   138de: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   138e2: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   138e6: 2a219181             	BSTART.TEPL	TMULS, BF16
+   138ea: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   138ee: 10000043             	B.DIM	zero, 256, 	->lb0
+   138f2: 483c                 	C.B.DIMI	32, 	->lb1
+   138f4: 10002043             	B.DIM	zero, 256, 	->lb2
+   138f8: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   138fc: 00018013             	B.IOR	[a1], []
+   13900: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13904: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13908: 007c                 	C.B.DIMI	1, 	->lb0
+   1390a: 483c                 	C.B.DIMI	32, 	->lb1
+   1390c: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   13910: 00018013             	B.IOR	[a1], []
+   13914: 28b19181             	BSTART.TEPL	TMAX, BF16
+   13918: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1391c: 007c                 	C.B.DIMI	1, 	->lb0
+   1391e: 483c                 	C.B.DIMI	32, 	->lb1
+   13920: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   13924: 28119181             	BSTART.TEPL	TSUB, BF16
+   13928: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1392c: 007c                 	C.B.DIMI	1, 	->lb0
+   1392e: 483c                 	C.B.DIMI	32, 	->lb1
+   13930: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   13934: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13938: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1393c: 007c                 	C.B.DIMI	1, 	->lb0
+   1393e: 483c                 	C.B.DIMI	32, 	->lb1
+   13940: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13944: 00020013             	B.IOR	[a2], []
+   13948: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   13958: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   13968: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   13978: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1397c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13980: 007c                 	C.B.DIMI	1, 	->lb0
+   13982: 483c                 	C.B.DIMI	32, 	->lb1
+   13984: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13988: 00028013             	B.IOR	[a3], []
+   1398c: 29219181             	BSTART.TEPL	TEXP, BF16
+   13990: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13994: 007c                 	C.B.DIMI	1, 	->lb0
+   13996: 483c                 	C.B.DIMI	32, 	->lb1
+   13998: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   1399c: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   139b2: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   139c8: 28219181             	BSTART.TEPL	TMUL, BF16
+   139cc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   139d0: 007c                 	C.B.DIMI	1, 	->lb0
+   139d2: 483c                 	C.B.DIMI	32, 	->lb1
+   139d4: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   139d8: 28019181             	BSTART.TEPL	TADD, BF16
+   139dc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   139e0: 007c                 	C.B.DIMI	1, 	->lb0
+   139e2: 483c                 	C.B.DIMI	32, 	->lb1
+   139e4: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   139e8: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   139ec: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   13a00: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   13a12: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   13a16: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   13a1a: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   13a1e: 00030043             	B.DIM	a4, 0, 	->lb0
+   13a22: 603c                 	C.B.DIMI	128, 	->lb1
+   13a24: 10002043             	B.DIM	zero, 256, 	->lb2
+   13a28: 00101e13             	B.IOS	S1, mask=1111
+   13a2c: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   13a30: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   13a34: 0800                 	C.BSTART.STD	
+   13a36: 007a0a85             	add	x0, a5, 	->x1
+   13a3a: 00740485             	add	a6, a5, 	->a7
+   13a3e: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   13a52: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   13a56: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   13a5a: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   13a5e: 00030043             	B.DIM	a4, 0, 	->lb0
+   13a62: 10001043             	B.DIM	zero, 256, 	->lb1
+   13a66: a03c                 	C.B.DIMI	128, 	->lb2
+   13a68: 00001e13             	B.IOS	S0, mask=1111
+   13a6c: 00101e13             	B.IOS	S1, mask=1111
+   13a70: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   13a74: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   13a78: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13a7c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13a80: 10000043             	B.DIM	zero, 256, 	->lb0
+   13a84: 483c                 	C.B.DIMI	32, 	->lb1
+   13a86: 10002043             	B.DIM	zero, 256, 	->lb2
+   13a8a: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   13a8e: 00018013             	B.IOR	[a1], []
+   13a92: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13a96: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13a9a: 007c                 	C.B.DIMI	1, 	->lb0
+   13a9c: 483c                 	C.B.DIMI	32, 	->lb1
+   13a9e: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13aa2: 00018013             	B.IOR	[a1], []
+   13aa6: 28b19181             	BSTART.TEPL	TMAX, BF16
+   13aaa: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13aae: 007c                 	C.B.DIMI	1, 	->lb0
+   13ab0: 483c                 	C.B.DIMI	32, 	->lb1
+   13ab2: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   13ab6: 28119181             	BSTART.TEPL	TSUB, BF16
+   13aba: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13abe: 007c                 	C.B.DIMI	1, 	->lb0
+   13ac0: 483c                 	C.B.DIMI	32, 	->lb1
+   13ac2: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   13ac6: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13aca: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13ace: 007c                 	C.B.DIMI	1, 	->lb0
+   13ad0: 483c                 	C.B.DIMI	32, 	->lb1
+   13ad2: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13ad6: 00020013             	B.IOR	[a2], []
+   13ada: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   13aea: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   13afa: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   13b0a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13b0e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13b12: 007c                 	C.B.DIMI	1, 	->lb0
+   13b14: 483c                 	C.B.DIMI	32, 	->lb1
+   13b16: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13b1a: 00028013             	B.IOR	[a3], []
+   13b1e: 29219181             	BSTART.TEPL	TEXP, BF16
+   13b22: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13b26: 007c                 	C.B.DIMI	1, 	->lb0
+   13b28: 483c                 	C.B.DIMI	32, 	->lb1
+   13b2a: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13b2e: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   13b44: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   13b5a: 28219181             	BSTART.TEPL	TMUL, BF16
+   13b5e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13b62: 007c                 	C.B.DIMI	1, 	->lb0
+   13b64: 483c                 	C.B.DIMI	32, 	->lb1
+   13b66: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   13b6a: 28019181             	BSTART.TEPL	TADD, BF16
+   13b6e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13b72: 007c                 	C.B.DIMI	1, 	->lb0
+   13b74: 483c                 	C.B.DIMI	32, 	->lb1
+   13b76: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   13b7a: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   13b7e: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   13b92: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   13ba4: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   13ba8: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   13bac: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   13bb0: 00030043             	B.DIM	a4, 0, 	->lb0
+   13bb4: 603c                 	C.B.DIMI	128, 	->lb1
+   13bb6: 10002043             	B.DIM	zero, 256, 	->lb2
+   13bba: 00101e13             	B.IOS	S1, mask=1111
+   13bbe: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   13bc2: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   13bc6: 0800                 	C.BSTART.STD	
+   13bc8: 007a8a05             	add	x1, a5, 	->x0
+   13bcc: 00748405             	add	a7, a5, 	->a6
+   13bd0: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   13be4: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   13be8: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   13bec: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   13bf0: 00030043             	B.DIM	a4, 0, 	->lb0
+   13bf4: 10001043             	B.DIM	zero, 256, 	->lb1
+   13bf8: a03c                 	C.B.DIMI	128, 	->lb2
+   13bfa: 00001e13             	B.IOS	S0, mask=1111
+   13bfe: 00101e13             	B.IOS	S1, mask=1111
+   13c02: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   13c06: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   13c0a: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13c0e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13c12: 10000043             	B.DIM	zero, 256, 	->lb0
+   13c16: 483c                 	C.B.DIMI	32, 	->lb1
+   13c18: 10002043             	B.DIM	zero, 256, 	->lb2
+   13c1c: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   13c20: 00018013             	B.IOR	[a1], []
+   13c24: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13c28: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13c2c: 007c                 	C.B.DIMI	1, 	->lb0
+   13c2e: 483c                 	C.B.DIMI	32, 	->lb1
+   13c30: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   13c34: 00018013             	B.IOR	[a1], []
+   13c38: 28b19181             	BSTART.TEPL	TMAX, BF16
+   13c3c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13c40: 007c                 	C.B.DIMI	1, 	->lb0
+   13c42: 483c                 	C.B.DIMI	32, 	->lb1
+   13c44: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   13c48: 28119181             	BSTART.TEPL	TSUB, BF16
+   13c4c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13c50: 007c                 	C.B.DIMI	1, 	->lb0
+   13c52: 483c                 	C.B.DIMI	32, 	->lb1
+   13c54: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   13c58: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13c5c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13c60: 007c                 	C.B.DIMI	1, 	->lb0
+   13c62: 483c                 	C.B.DIMI	32, 	->lb1
+   13c64: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13c68: 00020013             	B.IOR	[a2], []
+   13c6c: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   13c7c: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   13c8c: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   13c9c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13ca0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13ca4: 007c                 	C.B.DIMI	1, 	->lb0
+   13ca6: 483c                 	C.B.DIMI	32, 	->lb1
+   13ca8: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13cac: 00028013             	B.IOR	[a3], []
+   13cb0: 29219181             	BSTART.TEPL	TEXP, BF16
+   13cb4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13cb8: 007c                 	C.B.DIMI	1, 	->lb0
+   13cba: 483c                 	C.B.DIMI	32, 	->lb1
+   13cbc: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13cc0: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   13cd6: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   13cec: 28219181             	BSTART.TEPL	TMUL, BF16
+   13cf0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13cf4: 007c                 	C.B.DIMI	1, 	->lb0
+   13cf6: 483c                 	C.B.DIMI	32, 	->lb1
+   13cf8: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   13cfc: 28019181             	BSTART.TEPL	TADD, BF16
+   13d00: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13d04: 007c                 	C.B.DIMI	1, 	->lb0
+   13d06: 483c                 	C.B.DIMI	32, 	->lb1
+   13d08: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   13d0c: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   13d10: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   13d24: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   13d36: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   13d3a: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   13d3e: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   13d42: 00030043             	B.DIM	a4, 0, 	->lb0
+   13d46: 603c                 	C.B.DIMI	128, 	->lb1
+   13d48: 10002043             	B.DIM	zero, 256, 	->lb2
+   13d4c: 00101e13             	B.IOS	S1, mask=1111
+   13d50: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   13d54: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   13d58: 0800                 	C.BSTART.STD	
+   13d5a: 007a0a85             	add	x0, a5, 	->x1
+   13d5e: 00740485             	add	a6, a5, 	->a7
+   13d62: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   13d76: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   13d7a: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   13d7e: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   13d82: 00030043             	B.DIM	a4, 0, 	->lb0
+   13d86: 10001043             	B.DIM	zero, 256, 	->lb1
+   13d8a: a03c                 	C.B.DIMI	128, 	->lb2
+   13d8c: 00001e13             	B.IOS	S0, mask=1111
+   13d90: 00101e13             	B.IOS	S1, mask=1111
+   13d94: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   13d98: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   13d9c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13da0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13da4: 10000043             	B.DIM	zero, 256, 	->lb0
+   13da8: 483c                 	C.B.DIMI	32, 	->lb1
+   13daa: 10002043             	B.DIM	zero, 256, 	->lb2
+   13dae: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   13db2: 00018013             	B.IOR	[a1], []
+   13db6: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13dba: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13dbe: 007c                 	C.B.DIMI	1, 	->lb0
+   13dc0: 483c                 	C.B.DIMI	32, 	->lb1
+   13dc2: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13dc6: 00018013             	B.IOR	[a1], []
+   13dca: 28b19181             	BSTART.TEPL	TMAX, BF16
+   13dce: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13dd2: 007c                 	C.B.DIMI	1, 	->lb0
+   13dd4: 483c                 	C.B.DIMI	32, 	->lb1
+   13dd6: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   13dda: 28119181             	BSTART.TEPL	TSUB, BF16
+   13dde: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13de2: 007c                 	C.B.DIMI	1, 	->lb0
+   13de4: 483c                 	C.B.DIMI	32, 	->lb1
+   13de6: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   13dea: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13dee: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13df2: 007c                 	C.B.DIMI	1, 	->lb0
+   13df4: 483c                 	C.B.DIMI	32, 	->lb1
+   13df6: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13dfa: 00020013             	B.IOR	[a2], []
+   13dfe: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   13e0e: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   13e1e: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   13e2e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13e32: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13e36: 007c                 	C.B.DIMI	1, 	->lb0
+   13e38: 483c                 	C.B.DIMI	32, 	->lb1
+   13e3a: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13e3e: 00028013             	B.IOR	[a3], []
+   13e42: 29219181             	BSTART.TEPL	TEXP, BF16
+   13e46: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13e4a: 007c                 	C.B.DIMI	1, 	->lb0
+   13e4c: 483c                 	C.B.DIMI	32, 	->lb1
+   13e4e: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13e52: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   13e68: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   13e7e: 28219181             	BSTART.TEPL	TMUL, BF16
+   13e82: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13e86: 007c                 	C.B.DIMI	1, 	->lb0
+   13e88: 483c                 	C.B.DIMI	32, 	->lb1
+   13e8a: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   13e8e: 28019181             	BSTART.TEPL	TADD, BF16
+   13e92: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13e96: 007c                 	C.B.DIMI	1, 	->lb0
+   13e98: 483c                 	C.B.DIMI	32, 	->lb1
+   13e9a: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   13e9e: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   13ea2: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   13eb6: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   13ec8: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   13ecc: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   13ed0: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   13ed4: 00030043             	B.DIM	a4, 0, 	->lb0
+   13ed8: 603c                 	C.B.DIMI	128, 	->lb1
+   13eda: 10002043             	B.DIM	zero, 256, 	->lb2
+   13ede: 00101e13             	B.IOS	S1, mask=1111
+   13ee2: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   13ee6: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   13eea: 0800                 	C.BSTART.STD	
+   13eec: 007a8a05             	add	x1, a5, 	->x0
+   13ef0: 00748405             	add	a7, a5, 	->a6
+   13ef4: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   13f08: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   13f0c: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   13f10: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   13f14: 00030043             	B.DIM	a4, 0, 	->lb0
+   13f18: 10001043             	B.DIM	zero, 256, 	->lb1
+   13f1c: a03c                 	C.B.DIMI	128, 	->lb2
+   13f1e: 00001e13             	B.IOS	S0, mask=1111
+   13f22: 00101e13             	B.IOS	S1, mask=1111
+   13f26: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   13f2a: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   13f2e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13f32: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13f36: 10000043             	B.DIM	zero, 256, 	->lb0
+   13f3a: 483c                 	C.B.DIMI	32, 	->lb1
+   13f3c: 10002043             	B.DIM	zero, 256, 	->lb2
+   13f40: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   13f44: 00018013             	B.IOR	[a1], []
+   13f48: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13f4c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13f50: 007c                 	C.B.DIMI	1, 	->lb0
+   13f52: 483c                 	C.B.DIMI	32, 	->lb1
+   13f54: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   13f58: 00018013             	B.IOR	[a1], []
+   13f5c: 28b19181             	BSTART.TEPL	TMAX, BF16
+   13f60: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13f64: 007c                 	C.B.DIMI	1, 	->lb0
+   13f66: 483c                 	C.B.DIMI	32, 	->lb1
+   13f68: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   13f6c: 28119181             	BSTART.TEPL	TSUB, BF16
+   13f70: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13f74: 007c                 	C.B.DIMI	1, 	->lb0
+   13f76: 483c                 	C.B.DIMI	32, 	->lb1
+   13f78: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   13f7c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13f80: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13f84: 007c                 	C.B.DIMI	1, 	->lb0
+   13f86: 483c                 	C.B.DIMI	32, 	->lb1
+   13f88: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   13f8c: 00020013             	B.IOR	[a2], []
+   13f90: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   13fa0: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   13fb0: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   13fc0: 2a219181             	BSTART.TEPL	TMULS, BF16
+   13fc4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13fc8: 007c                 	C.B.DIMI	1, 	->lb0
+   13fca: 483c                 	C.B.DIMI	32, 	->lb1
+   13fcc: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13fd0: 00028013             	B.IOR	[a3], []
+   13fd4: 29219181             	BSTART.TEPL	TEXP, BF16
+   13fd8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   13fdc: 007c                 	C.B.DIMI	1, 	->lb0
+   13fde: 483c                 	C.B.DIMI	32, 	->lb1
+   13fe0: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   13fe4: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   13ffa: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   14010: 28219181             	BSTART.TEPL	TMUL, BF16
+   14014: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14018: 007c                 	C.B.DIMI	1, 	->lb0
+   1401a: 483c                 	C.B.DIMI	32, 	->lb1
+   1401c: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   14020: 28019181             	BSTART.TEPL	TADD, BF16
+   14024: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14028: 007c                 	C.B.DIMI	1, 	->lb0
+   1402a: 483c                 	C.B.DIMI	32, 	->lb1
+   1402c: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   14030: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   14034: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   14048: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   1405a: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   1405e: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   14062: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   14066: 00030043             	B.DIM	a4, 0, 	->lb0
+   1406a: 603c                 	C.B.DIMI	128, 	->lb1
+   1406c: 10002043             	B.DIM	zero, 256, 	->lb2
+   14070: 00101e13             	B.IOS	S1, mask=1111
+   14074: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   14078: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   1407c: 0800                 	C.BSTART.STD	
+   1407e: 007a0a85             	add	x0, a5, 	->x1
+   14082: 00740485             	add	a6, a5, 	->a7
+   14086: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   1409a: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   1409e: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   140a2: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   140a6: 00030043             	B.DIM	a4, 0, 	->lb0
+   140aa: 10001043             	B.DIM	zero, 256, 	->lb1
+   140ae: a03c                 	C.B.DIMI	128, 	->lb2
+   140b0: 00001e13             	B.IOS	S0, mask=1111
+   140b4: 00101e13             	B.IOS	S1, mask=1111
+   140b8: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   140bc: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   140c0: 2a219181             	BSTART.TEPL	TMULS, BF16
+   140c4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   140c8: 10000043             	B.DIM	zero, 256, 	->lb0
+   140cc: 483c                 	C.B.DIMI	32, 	->lb1
+   140ce: 10002043             	B.DIM	zero, 256, 	->lb2
+   140d2: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   140d6: 00018013             	B.IOR	[a1], []
+   140da: 2a219181             	BSTART.TEPL	TMULS, BF16
+   140de: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   140e2: 007c                 	C.B.DIMI	1, 	->lb0
+   140e4: 483c                 	C.B.DIMI	32, 	->lb1
+   140e6: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   140ea: 00018013             	B.IOR	[a1], []
+   140ee: 28b19181             	BSTART.TEPL	TMAX, BF16
+   140f2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   140f6: 007c                 	C.B.DIMI	1, 	->lb0
+   140f8: 483c                 	C.B.DIMI	32, 	->lb1
+   140fa: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   140fe: 28119181             	BSTART.TEPL	TSUB, BF16
+   14102: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14106: 007c                 	C.B.DIMI	1, 	->lb0
+   14108: 483c                 	C.B.DIMI	32, 	->lb1
+   1410a: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   1410e: 2a219181             	BSTART.TEPL	TMULS, BF16
+   14112: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14116: 007c                 	C.B.DIMI	1, 	->lb0
+   14118: 483c                 	C.B.DIMI	32, 	->lb1
+   1411a: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   1411e: 00020013             	B.IOR	[a2], []
+   14122: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   14132: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->T<128B>
+          483c007c 0008de13
+   14142: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, T#1, ->U<128B>
+          483c007c 0008de93
+   14152: 2a219181             	BSTART.TEPL	TMULS, BF16
+   14156: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1415a: 007c                 	C.B.DIMI	1, 	->lb0
+   1415c: 483c                 	C.B.DIMI	32, 	->lb1
+   1415e: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   14162: 00028013             	B.IOR	[a3], []
+   14166: 29219181             	BSTART.TEPL	TEXP, BF16
+   1416a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1416e: 007c                 	C.B.DIMI	1, 	->lb0
+   14170: 483c                 	C.B.DIMI	32, 	->lb1
+   14172: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   14176: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, U#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 4f0c
+   1418c: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->M<16KB>
+          10000043 2043483c
+          5f131000 030c
+   141a2: 28219181             	BSTART.TEPL	TMUL, BF16
+   141a6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   141aa: 007c                 	C.B.DIMI	1, 	->lb0
+   141ac: 483c                 	C.B.DIMI	32, 	->lb1
+   141ae: 4218cf13             	B.IOT	m#2, u#1, mask=1111, last, 	->m<128B>
+   141b2: 28019181             	BSTART.TEPL	TADD, BF16
+   141b6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   141ba: 007c                 	C.B.DIMI	1, 	->lb0
+   141bc: 483c                 	C.B.DIMI	32, 	->lb1
+   141be: 8608cf13             	B.IOT	m#1, m#2, mask=1111, last, 	->m<128B>
+   141c2: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   141c6: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   141da: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   141ec: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   141f0: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   141f4: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   141f8: 00030043             	B.DIM	a4, 0, 	->lb0
+   141fc: 603c                 	C.B.DIMI	128, 	->lb1
+   141fe: 10002043             	B.DIM	zero, 256, 	->lb2
+   14202: 00101e13             	B.IOS	S1, mask=1111
+   14206: c0504e13             	B.IOT	t#6, n#1, mask=1111
+   1420a: 000c5e13             	B.IOT	t#1, mask=1111, last, 	->t<16KB>
+   1420e: 0800                 	C.BSTART.STD	
+   14210: 007a8a05             	add	x1, a5, 	->x0
+   14214: 00748405             	add	a7, a5, 	->a6
+   14218: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x1, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a8013
+   1422c: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   14230: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   14234: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   14238: 00030043             	B.DIM	a4, 0, 	->lb0
+   1423c: 10001043             	B.DIM	zero, 256, 	->lb1
+   14240: a03c                 	C.B.DIMI	128, 	->lb2
+   14242: 00001e13             	B.IOS	S0, mask=1111
+   14246: 00101e13             	B.IOS	S1, mask=1111
+   1424a: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   1424e: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   14252: 2a219181             	BSTART.TEPL	TMULS, BF16
+   14256: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1425a: 10000043             	B.DIM	zero, 256, 	->lb0
+   1425e: 483c                 	C.B.DIMI	32, 	->lb1
+   14260: 10002043             	B.DIM	zero, 256, 	->lb2
+   14264: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   14268: 00018013             	B.IOR	[a1], []
+   1426c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   14270: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14274: 007c                 	C.B.DIMI	1, 	->lb0
+   14276: 483c                 	C.B.DIMI	32, 	->lb1
+   14278: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   1427c: 00018013             	B.IOR	[a1], []
+   14280: 28b19181             	BSTART.TEPL	TMAX, BF16
+   14284: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14288: 007c                 	C.B.DIMI	1, 	->lb0
+   1428a: 483c                 	C.B.DIMI	32, 	->lb1
+   1428c: 0148ce13             	B.IOT	u#5, t#1, mask=1111, last, 	->t<128B>
+   14290: 28119181             	BSTART.TEPL	TSUB, BF16
+   14294: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14298: 007c                 	C.B.DIMI	1, 	->lb0
+   1429a: 483c                 	C.B.DIMI	32, 	->lb1
+   1429c: 5008ce93             	B.IOT	t#1, u#5, mask=1111, last, 	->u<128B>
+   142a0: 2a219181             	BSTART.TEPL	TMULS, BF16
+   142a4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   142a8: 007c                 	C.B.DIMI	1, 	->lb0
+   142aa: 483c                 	C.B.DIMI	32, 	->lb1
+   142ac: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   142b0: 00020013             	B.IOR	[a2], []
+   142b4: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   142c4: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   142d4: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->T<128B>
+          483c007c 0108de13
+   142e4: 2a219181             	BSTART.TEPL	TMULS, BF16
+   142e8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   142ec: 007c                 	C.B.DIMI	1, 	->lb0
+   142ee: 483c                 	C.B.DIMI	32, 	->lb1
+   142f0: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   142f4: 00028013             	B.IOR	[a3], []
+   142f8: 29219181             	BSTART.TEPL	TEXP, BF16
+   142fc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14300: 007c                 	C.B.DIMI	1, 	->lb0
+   14302: 483c                 	C.B.DIMI	32, 	->lb1
+   14304: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   14308: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#4, ->N<16KB>
+          10000043 2043483c
+          4f931000 0f0c
+   1431e: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 030c
+   14334: 28219181             	BSTART.TEPL	TMUL, BF16
+   14338: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1433c: 007c                 	C.B.DIMI	1, 	->lb0
+   1433e: 483c                 	C.B.DIMI	32, 	->lb1
+   14340: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   14344: 28019181             	BSTART.TEPL	TADD, BF16
+   14348: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1434c: 007c                 	C.B.DIMI	1, 	->lb0
+   1434e: 483c                 	C.B.DIMI	32, 	->lb1
+   14350: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   14354: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   14358: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   1436c: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   1437e: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   14382: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   14386: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   1438a: 00030043             	B.DIM	a4, 0, 	->lb0
+   1438e: 603c                 	C.B.DIMI	128, 	->lb1
+   14390: 10002043             	B.DIM	zero, 256, 	->lb2
+   14394: 00101e13             	B.IOS	S1, mask=1111
+   14398: c0604e13             	B.IOT	t#7, n#1, mask=1111
+   1439c: 011c5e13             	B.IOT	u#2, mask=1111, last, 	->t<16KB>
+   143a0: 0800                 	C.BSTART.STD	
+   143a2: 007a0485             	add	x0, a5, 	->a7
+   143a6: 00740385             	add	a6, a5, 	->a5
+   143aa: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=x0, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          006a0013
+   143be: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   143c2: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   143c6: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   143ca: 00030043             	B.DIM	a4, 0, 	->lb0
+   143ce: 10001043             	B.DIM	zero, 256, 	->lb1
+   143d2: a03c                 	C.B.DIMI	128, 	->lb2
+   143d4: 00001e13             	B.IOS	S0, mask=1111
+   143d8: 00101e13             	B.IOS	S1, mask=1111
+   143dc: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   143e0: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   143e4: 2a219181             	BSTART.TEPL	TMULS, BF16
+   143e8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   143ec: 10000043             	B.DIM	zero, 256, 	->lb0
+   143f0: 483c                 	C.B.DIMI	32, 	->lb1
+   143f2: 10002043             	B.DIM	zero, 256, 	->lb2
+   143f6: 000c5e93             	B.IOT	t#1, mask=1111, last, 	->u<16KB>
+   143fa: 00018013             	B.IOR	[a1], []
+   143fe: 2a219181             	BSTART.TEPL	TMULS, BF16
+   14402: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14406: 007c                 	C.B.DIMI	1, 	->lb0
+   14408: 483c                 	C.B.DIMI	32, 	->lb1
+   1440a: 0118de93             	B.IOT	u#2, mask=1111, last, 	->u<128B>
+   1440e: 00018013             	B.IOR	[a1], []
+   14412: 28b19181             	BSTART.TEPL	TMAX, BF16
+   14416: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1441a: 007c                 	C.B.DIMI	1, 	->lb0
+   1441c: 483c                 	C.B.DIMI	32, 	->lb1
+   1441e: 4058ce93             	B.IOT	t#6, u#1, mask=1111, last, 	->u<128B>
+   14422: 28119181             	BSTART.TEPL	TSUB, BF16
+   14426: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1442a: 007c                 	C.B.DIMI	1, 	->lb0
+   1442c: 483c                 	C.B.DIMI	32, 	->lb1
+   1442e: 1508ce13             	B.IOT	u#1, t#6, mask=1111, last, 	->t<128B>
+   14432: 2a219181             	BSTART.TEPL	TMULS, BF16
+   14436: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1443a: 007c                 	C.B.DIMI	1, 	->lb0
+   1443c: 483c                 	C.B.DIMI	32, 	->lb1
+   1443e: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   14442: 00020013             	B.IOR	[a2], []
+   14446: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, T#1, ->T<128B>
+          483c007c 0008de13
+   14456: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, T#1, ->N<128B>
+          483c007c 0008df93
+   14466: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, N#1, ->T<128B>
+          483c007c 0308de13
+   14476: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1447a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1447e: 007c                 	C.B.DIMI	1, 	->lb0
+   14480: 483c                 	C.B.DIMI	32, 	->lb1
+   14482: 0008de13             	B.IOT	t#1, mask=1111, last, 	->t<128B>
+   14486: 00028013             	B.IOR	[a3], []
+   1448a: 29219181             	BSTART.TEPL	TEXP, BF16
+   1448e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14492: 007c                 	C.B.DIMI	1, 	->lb0
+   14494: 483c                 	C.B.DIMI	32, 	->lb1
+   14496: 0008df13             	B.IOT	t#1, mask=1111, last, 	->m<128B>
+   1449a: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, U#3, U#1, ->T<16KB>
+          10000043 2043483c
+          4e131000 412c
+   144b0: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, T#1, ->U<16KB>
+          10000043 2043483c
+          5e931000 000c
+   144c6: 28219181             	BSTART.TEPL	TMUL, BF16
+   144ca: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   144ce: 007c                 	C.B.DIMI	1, 	->lb0
+   144d0: 483c                 	C.B.DIMI	32, 	->lb1
+   144d2: 8218cf13             	B.IOT	m#2, m#1, mask=1111, last, 	->m<128B>
+   144d6: 28019181             	BSTART.TEPL	TADD, BF16
+   144da: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   144de: 007c                 	C.B.DIMI	1, 	->lb0
+   144e0: 483c                 	C.B.DIMI	32, 	->lb1
+   144e2: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   144e6: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   144ea: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a6, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00640013
+   144fe: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, T#1, ->U<8KB>
+          10000043 de93483c
+          000b
+   14510: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   14514: 18701023             	B.DATR	e4m3, byte0, CCTRL.RawAccumulatorInternalAccHint, RNONE, nosat
+   14518: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   1451c: 00030043             	B.DIM	a4, 0, 	->lb0
+   14520: 603c                 	C.B.DIMI	128, 	->lb1
+   14522: 10002043             	B.DIM	zero, 256, 	->lb2
+   14526: 00101e13             	B.IOS	S1, mask=1111
+   1452a: 40704e13             	B.IOT	t#8, u#1, mask=1111
+   1452e: 030c5e13             	B.IOT	n#1, mask=1111, last, 	->t<16KB>
+   14532: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a7, stride=a4], ->S1<32KB>
+          a03c1000 00149813
+          00648013
+   14546: 38031181             	BSTART.CUBE	TMATMUL, e4m3
+   1454a: 00701023             	B.DATR	e4m3, byte0, CCTRL.None, RNONE, nosat
+   1454e: 40042023             	B.FPATR	16, 0, 0, 1, 0, 0, 0, 0, 0, 0
+   14552: 00030043             	B.DIM	a4, 0, 	->lb0
+   14556: 10001043             	B.DIM	zero, 256, 	->lb1
+   1455a: a03c                 	C.B.DIMI	128, 	->lb2
+   1455c: 00001e13             	B.IOS	S0, mask=1111
+   14560: 00101e13             	B.IOS	S1, mask=1111
+   14564: 00046e13             	B.IOT	mask=1111, 	->t<16KB>
+   14568: 0008ee93             	B.IOT	mask=1111, last, 	->u<128B>
+   1456c: 2a219181             	BSTART.TEPL	TMULS, BF16
+   14570: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14574: 10000043             	B.DIM	zero, 256, 	->lb0
+   14578: 483c                 	C.B.DIMI	32, 	->lb1
+   1457a: 10002043             	B.DIM	zero, 256, 	->lb2
+   1457e: 000c5f93             	B.IOT	t#1, mask=1111, last, 	->n<16KB>
+   14582: 00018013             	B.IOR	[a1], []
+   14586: 2a219181             	BSTART.TEPL	TMULS, BF16
+   1458a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1458e: 007c                 	C.B.DIMI	1, 	->lb0
+   14590: 483c                 	C.B.DIMI	32, 	->lb1
+   14592: 0108de13             	B.IOT	u#1, mask=1111, last, 	->t<128B>
+   14596: 00018013             	B.IOR	[a1], []
+   1459a: 28b19181             	BSTART.TEPL	TMAX, BF16
+   1459e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   145a2: 007c                 	C.B.DIMI	1, 	->lb0
+   145a4: 483c                 	C.B.DIMI	32, 	->lb1
+   145a6: 0138ce13             	B.IOT	u#4, t#1, mask=1111, last, 	->t<128B>
+   145aa: 28119181             	BSTART.TEPL	TSUB, BF16
+   145ae: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   145b2: 007c                 	C.B.DIMI	1, 	->lb0
+   145b4: 483c                 	C.B.DIMI	32, 	->lb1
+   145b6: 4c08ce93             	B.IOT	t#1, u#4, mask=1111, last, 	->u<128B>
+   145ba: 2a219181             	BSTART.TEPL	TMULS, BF16
+   145be: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   145c2: 007c                 	C.B.DIMI	1, 	->lb0
+   145c4: 483c                 	C.B.DIMI	32, 	->lb1
+   145c6: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   145ca: 00020013             	B.IOR	[a2], []
+   145ce: 29b19181 19119023    	TCVT              <Col=1, ValidRow=32, BF16, S32, RTM>, U#1, ->U<128B>
+          483c007c 0108de93
+   145de: 89b19181 19b01023    	TCVT              <Col=1, ValidRow=32, S32, U8>, U#1, ->U<128B>
+          483c007c 0108de93
+   145ee: d9b19181 18501023    	TCVT              <Col=1, ValidRow=32, U8, BF16>, U#1, ->U<128B>
+          483c007c 0108de93
+   145fe: 2a219181             	BSTART.TEPL	TMULS, BF16
+   14602: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14606: 007c                 	C.B.DIMI	1, 	->lb0
+   14608: 483c                 	C.B.DIMI	32, 	->lb1
+   1460a: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   1460e: 00028013             	B.IOR	[a3], []
+   14612: 29219181             	BSTART.TEPL	TEXP, BF16
+   14616: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1461a: 007c                 	C.B.DIMI	1, 	->lb0
+   1461c: 483c                 	C.B.DIMI	32, 	->lb1
+   1461e: 0108de93             	B.IOT	u#1, mask=1111, last, 	->u<128B>
+   14622: 2cb19181 19f01ea3    	TROWEXPANDEXPDIF  <Row=32, Col=256, BF16, CUBE_M32>, N#1, T#1, ->N<16KB>
+          10000043 2043483c
+          4f931000 030c
+   14638: 2c019181 19f01ea3    	TROWSUM           <Row=32, Col=256, BF16, CUBE_M32>, N#1, ->T<16KB>
+          10000043 2043483c
+          5e131000 030c
+   1464e: 28219181             	BSTART.TEPL	TMUL, BF16
+   14652: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14656: 007c                 	C.B.DIMI	1, 	->lb0
+   14658: 483c                 	C.B.DIMI	32, 	->lb1
+   1465a: 4208cf13             	B.IOT	m#1, u#1, mask=1111, last, 	->m<128B>
+   1465e: 28019181             	BSTART.TEPL	TADD, BF16
+   14662: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   14666: 007c                 	C.B.DIMI	1, 	->lb0
+   14668: 483c                 	C.B.DIMI	32, 	->lb1
+   1466a: 0208cf13             	B.IOT	m#1, t#1, mask=1111, last, 	->m<128B>
+   1466e: 800000d3             	B.SUBVIEW	1, zero, 0, 1
+   14672: 38011181 1043203c    	TLOAD             <Row=256, Col=128, e4m3, PE3>, [base=a5, stride=a4], ->S0<32KB>
+          a03c1000 00049813
+          00638013
+   14686: 29b19181 18701023    	TCVT              <Col=1, ValidRow=32, ValidCol=256, BF16, e4m3>, N#1, ->N<8KB>
+          10000043 df93483c
+          030b
+   14698: 38231181             	BSTART.CUBE	TMATMUL.ACC, e4m3
+   1469c: 10701023             	B.DATR	e4m3, byte0, CCTRL.InternalAccHint, RNONE, nosat
+   146a0: 00002323             	B.FPATR	0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+   146a4: 00030043             	B.DIM	a4, 0, 	->lb0
+   146a8: 603c                 	C.B.DIMI	128, 	->lb1
+   146aa: 10002043             	B.DIM	zero, 256, 	->lb2
+   146ae: 00001e13             	B.IOS	S0, mask=1111
+   146b2: c0404e13             	B.IOT	t#5, n#1, mask=1111
+   146b6: 013c5e13             	B.IOT	u#4, mask=1111, last, 	->t<16KB>
+   146ba: 0800                 	C.BSTART.STD	
+   146bc: 802001bb             	ssrget	2050, 	->a1
+   146c0: 29b19181 18101023    	TCVT              <Col=1, ValidRow=32, BF16, FP32>, M#1, ->T<128B>
+          483c007c 0208de13
+   146d0: 0c819181 19f01ea3    	TROWEXPANDDIV     <Row=32, Col=128, FP32, CUBE_M32>, T#2, T#1, ->T<16KB>
+          483c203c 4e13a03c
+          001c
+   146e2: 0800                 	C.BSTART.STD	
+   146e4: 00c1ff95             	slli	a1, 12, 	->t
+   146e8: 0b810105             	add	a0, t#1.sw<<1, 	->a0
+   146ec: 09b19181 18501023    	TCVT              <Col=1, ValidRow=32, ValidCol=128, FP32, BF16>, T#1, ->T<8KB>
+          483c203c 000bde13
+   146fc: 0800                 	C.BSTART.STD	
+   146fe: 10000195             	addi	zero, 256, 	->a1
+   14702: 28111181 19f01c23    	TSTORE            <Row=32, ValidCol=128, BF16, M322ND>, T#1, [base=a0, stride=a1]
+          483c203c 00085e13
+          00310013
+   14716: 3800                 	C.BSTART.STD	RET
+   14718: 029c                 	c.setc.tgt	ra
+   1471a: 0800                 	C.BSTART.STD	

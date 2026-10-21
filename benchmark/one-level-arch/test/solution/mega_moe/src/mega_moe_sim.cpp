@@ -33,18 +33,15 @@ using uint32 = uint32_t;
 using int64 = int64_t;
 constexpr uint32 kHiddenDim = mega_moe::kMoeHiddenDim;
 constexpr uint32 kTotalWorkspace = 2U * 2U * 2U * 2U * 8U;
-// MX tile 路径 (issue #180): 无 fp32 权重缓存; 每 PE scratch =
-// w1F16[epr*h*hd] + w2F16[epr*(hd/2)*h] + xf16[h] + y1[hd]f32 +
-// y2f16[hd/2] + y3[h]f32 (kernel 头文件契约; 4 PE 槽位)
-constexpr uint32 kScratchBytes = 4U * (
-    (2U * kH * kHiddenDim + 2U * (kHiddenDim / 2U) * kH) * 2U +
-    kH * 2U + kHiddenDim * 4U + kHiddenDim * 2U + kH * 4U);
+// [A1 对齐 2026-10-13] workspace = dispatch 通路布局 (moe_ws_layout: dstPos/
+// mask/cnt/starts/xDisp/scaleDisp/metaInfo/combine/stats) + 4 PE MX scratch
+// (fp16 权重副本 + wave 组 y1/y2/y3) + 余量 —— 与 kernel 四d 节同式
 constexpr uint32 kWorkspaceBytes =
-    2U * kBS * 4U +                                // dispatch 表
-    2U * kBS +                                     // mask
-    kBS * kH * 4U +                                // combine 缓冲
-    16U * 2U * 4U +                                // 核内统计
-    kScratchBytes +                                // 每 PE tile scratch
+    mega_moe::moe_ws_layout(kBS, kH, kHiddenDim,
+                            mega_moe::kMoeExpertPerRank,
+                            mega_moe::kTopK).total +
+    4U * mega_moe::mx_tile_scratch_bytes(mega_moe::kMoeExpertPerRank,
+                                         kH, kHiddenDim) +
     4096U;
 
 // ==== GM 全局缓冲 (声明顺序 = bss 地址顺序; 全部置于高地址区 —
@@ -64,6 +61,15 @@ __attribute__((aligned(4096))) uint8_t g_mmWeightScales2[2U * (kHiddenDim / 64U)
 __attribute__((aligned(4096))) float g_mmY[kBS * kH];
 __attribute__((aligned(4096))) int64 g_mmExpertTokenNums[2];
 __attribute__((aligned(4096))) uint8_t g_mmWorkspace[kWorkspaceBytes];
+// [2026-10-12 优化] golden 权重预解码备忘录 (double; mt/mt_dyn 版同款):
+// 原实现 ref_w1/ref_w2 在 GMM 内循环按访问逐次解码 FP8 (每元素 ~20 op,
+// 每 token 全量重解码)。改为进入 golden 前一次性预解码 + k-outer 分块
+// GEMM (见 compute_golden 注)。置于 bss 尾部, 不影响既有符号布局。
+__attribute__((aligned(4096))) double g_w1Dbl[2U * kH * kHiddenDim];
+__attribute__((aligned(4096))) double g_w2Dbl[2U * (kHiddenDim / 2U) * kH];
+// [2026-10-14 优化] E4M3→double 解码 LUT (256 值一次性查表; 见
+// compute_golden 内构建注)。置于 bss 尾部, 不影响既有符号布局。
+__attribute__((aligned(4096))) double g_e4m3Lut[256];
 
 // ==== 参考实现 (gen_data.compute_golden 同语义) ====
 // [perf] PR #194 同款 golden 侧优化: 2^k 的 O(|k|) 连乘循环 → 位级 O(1) 构造。
@@ -71,6 +77,10 @@ __attribute__((aligned(4096))) uint8_t g_mmWorkspace[kWorkspaceBytes];
 // 2^1024→+inf、次正规域至 2^-1074、完全下溢→0 的阈值行为), golden 数值不变
 // (gfrun R2=0 佐证)。连乘循环为 gfsim 周期绝对主体 (每 FP8 权重元素调用
 // ref_wscale/exp2_approx, E8M0 偏置大时单次上百次迭代)。
+// [2026-10-14 v7 试验注] ref_exp2i 四路分支 → csel 无分支选择链已证伪
+// (sim 实测 287,735 vs 280,065, +7.7K): k=0 恒走规格数域, 分支版每调用
+// 仅 1~2 次块转移 + 4 op, 无分支版恒 ~10 op —— 块转移比指令便宜,
+// 回退分支版。
 static double ref_exp2i(int64_t k)
 {
     union { uint64_t u; double d; } cvt;
@@ -141,8 +151,77 @@ static double ref_w2(uint32_t e, uint32_t k, uint32_t n)
 }
 
 // 完整 MoE 参考前向 (gen_data.compute_golden 语义)
+// [2026-10-12 优化] ① 权重解码备忘录化 (mt/mt_dyn 版同款): 原实现 GMM
+// 内循环逐访问调用 ref_w1/ref_w2 (每元素 ~20 op, 16 token 全量重解码),
+// 改为进入前一次性预解码到 g_w1Dbl/g_w2Dbl (6144 元素), 解码值逐位不变
+// (解码为元素字节的纯函数); ② GMM 循环 k-outer × n 16 宽寄存器分块
+// (mt_dyn 版同款): 原内循环 w1e[k*kHiddenDim+n] 随 k 步进跨 512B ——
+// 每次权重访存跨 cacheline 且 x[k] 逐 n 重复加载/转换; 分块后权重访问
+// 连续流式, 每元素累加序列不变 (k 升序同款 "acc += xv * w" fmadd 链),
+// golden 数值逐位一致, 验证语义不变; ③ 解码 ref_wscale 按 (e,k) 组提升
+// (组内同 scale, 原逐元素重复调用)。
 static void compute_golden(double* yRef, int64* tokRef)
 {
+    // [2026-10-14 优化] E4M3 解码 LUT 一次性构建 (256 值; 构建用原
+    // ref_fp8_e4m3 逐值计算 → 查表值与逐次解码逐位一致)。单 PE 程序
+    // 单写者无竞争; 解码内循环由 "位提取 + exp2 位级构造" (~20 op/元素)
+    // 退化为 1 load + 1 fmul, 乘法操作数不变 → golden 数值逐位一致。
+    static bool sE4m3LutReady = false;
+    if (!sE4m3LutReady) {
+        for (uint32 b = 0U; b < 256U; ++b) {
+            g_e4m3Lut[b] = ref_fp8_e4m3(static_cast<double>(b));
+        }
+        sE4m3LutReady = true;
+    }
+    // 一次性预解码全部权重 (e×k×n 展平, 与 ref_w1/ref_w2 同下标式)
+    // [2026-10-12 优化] ref_wscale 按 (e,k) 组提升 (原 ref_w1 逐元素解码)
+    // [2026-10-14 优化] E4M3 值经 g_e4m3Lut 查表 (数值逐位一致)
+    // [2026-10-14 v7 优化] 解码内循环瘦身: ① LUT 基址提升为局部指针 ——
+    // 原内循环每元素经 addtpc+addi 重取 &g_e4m3Lut (2 op/元素); ② n 循环
+    // 4 路展开摊薄循环控制 (subi/setc/addi×2 + LUT 基址重取 ~6 op/元素 →
+    // ~1.5 op/元素)。读写地址序列与数值逐位不变 (同表同乘数); gfsim 实测
+    // sim 2 路展开 −7.6K、4 路 −13.0K (vs 基线 287,642)。
+    const double* lut = g_e4m3Lut;
+    for (uint32 e = 0; e < 2U; ++e) {
+        for (uint32 k = 0; k < kH; ++k) {
+            const double scD =
+                ref_wscale(g_mmWeightScales1[e * (kH / 32U) + k / 32U]);
+            double* dst = g_w1Dbl + e * kH * kHiddenDim + k * kHiddenDim;
+            const uint8_t* src =
+                g_mmWeight1 + e * kH * kHiddenDim + k * kHiddenDim;
+            uint32 n = 0U;
+            for (; n + 4U <= kHiddenDim; n += 4U) {
+                dst[n] = lut[src[n]] * scD;
+                dst[n + 1U] = lut[src[n + 1U]] * scD;
+                dst[n + 2U] = lut[src[n + 2U]] * scD;
+                dst[n + 3U] = lut[src[n + 3U]] * scD;
+            }
+            for (; n < kHiddenDim; ++n) {
+                dst[n] = lut[src[n]] * scD;
+            }
+        }
+    }
+    for (uint32 e = 0; e < 2U; ++e) {
+        for (uint32 k = 0; k < kHiddenDim / 2U; ++k) {
+            const double scD =
+                ref_wscale(g_mmWeightScales2[e * (kHiddenDim / 64U) + k / 32U]);
+            double* dst =
+                g_w2Dbl + e * (kHiddenDim / 2U) * kH + k * kH;
+            const uint8_t* src =
+                g_mmWeight2 + e * (kHiddenDim / 2U) * kH + k * kH;
+            uint32 n = 0U;
+            for (; n + 4U <= kH; n += 4U) {
+                dst[n] = lut[src[n]] * scD;
+                dst[n + 1U] = lut[src[n + 1U]] * scD;
+                dst[n + 2U] = lut[src[n + 2U]] * scD;
+                dst[n + 3U] = lut[src[n + 3U]] * scD;
+            }
+            for (; n < kH; ++n) {
+                dst[n] = lut[src[n]] * scD;
+            }
+        }
+    }
+
     for (uint32 t = 0; t < kBS * kH; ++t) yRef[t] = 0.0;
     // 注: volatile 阻止相邻 i64 清零被合并为 16B tile store (BLK_TSTORE v2i64),
     //     linxv5 后端不支持整数 tile 类型, 会报 "Cannot select: v2i64 = BUILD_VECTOR"
@@ -163,15 +242,43 @@ static void compute_golden(double* yRef, int64* tokRef)
     for (uint32 t = 0; t < kBS; ++t) {
         const uint32 expert = (uint32)g_mmTopkIds[t];
         const double weight = (double)g_mmTopkWeights[t];
+        const double* w1e = g_w1Dbl + expert * kH * kHiddenDim;
+        const double* w2e = g_w2Dbl + expert * (kHiddenDim / 2U) * kH;
 
-        // GMM1: y1[n] = Σ_k x[k]·w1[e][k][n]
+        // GMM1: y1[n] = Σ_k x[k]·w1[e][k][n]  (读预解码备忘录)
+        // [2026-10-12 优化] k-outer × n 16 宽寄存器分块 (见函数头注)
+        // [2026-10-14 v7 优化] x 行每 token 预转换一次到局部 double 数组
+        // (原每个 (n0 块, k) 重复 lw+fcvt, hd/kNb 块 × k 次冗余)。
+        // 每输出元素的 k 升序累加序列与操作数逐位不变 → golden 逐位一致。
+        // [2026-10-14 v7 试验注] kNb 16→32 已证伪: 32 个 fp 累加器超出
+        // 寄存器文件, 后端将 acc[] 溢出到栈 (GEMM 内循环退化为 ldi.u 栈
+        // 读 + fmadd), gfsim 实测更慢且 val=0x0001 fail (414,732 vs
+        // 基线 287,642), 回退 16。
+        double xrow[kH];
+        for (uint32 k = 0; k < kH; ++k) {
+            xrow[k] = (double)g_mmX[t * kH + k];
+        }
         double y1[kHiddenDim];
-        for (uint32 n = 0; n < kHiddenDim; ++n) {
-            double acc = 0.0;
+        constexpr uint32 kNb = 16U;   // n 分块宽 (kHiddenDim=64 整除)
+        uint32 n0 = 0U;
+        for (; n0 + kNb <= kHiddenDim; n0 += kNb) {
+            double acc[kNb];
+            for (uint32 j = 0; j < kNb; ++j) acc[j] = 0.0;
             for (uint32 k = 0; k < kH; ++k) {
-                acc += (double)g_mmX[t * kH + k] * ref_w1(expert, k, n);
+                const double xv = xrow[k];
+                const double* wk = w1e + k * kHiddenDim + n0;
+                for (uint32 j = 0; j < kNb; ++j) {
+                    acc[j] += xv * wk[j];
+                }
             }
-            y1[n] = acc;
+            for (uint32 j = 0; j < kNb; ++j) y1[n0 + j] = acc[j];
+        }
+        for (; n0 < kHiddenDim; ++n0) {   // 尾块 (防御性; 本 spec 不触达)
+            double accT = 0.0;
+            for (uint32 k = 0; k < kH; ++k) {
+                accT += (double)g_mmX[t * kH + k] * w1e[k * kHiddenDim + n0];
+            }
+            y1[n0] = accT;
         }
         // SwiGLU: y2 = silu(y1[:64]) * y1[64:], silu(z)=z·sigmoid(z)
         double y2[kHiddenDim / 2U];
@@ -180,14 +287,28 @@ static void compute_golden(double* yRef, int64* tokRef)
             const double sig = 1.0 / (1.0 + ref_exp(-z));
             y2[k] = z * sig * y1[k + kHiddenDim / 2U];
         }
-        // GMM2: y3[n] = Σ_k y2[k]·w2[e][k][n]
+        // GMM2: y3[n] = Σ_k y2[k]·w2[e][k][n]  (读预解码备忘录)
+        // [2026-10-12 优化] 同 GMM1 的 k-outer × n 分块重构
         double y3[kH];
-        for (uint32 n = 0; n < kH; ++n) {
-            double acc = 0.0;
+        uint32 m0 = 0U;
+        for (; m0 + kNb <= kH; m0 += kNb) {
+            double acc[kNb];
+            for (uint32 j = 0; j < kNb; ++j) acc[j] = 0.0;
             for (uint32 k = 0; k < kHiddenDim / 2U; ++k) {
-                acc += y2[k] * ref_w2(expert, k, n);
+                const double yv = y2[k];
+                const double* wk = w2e + k * kH + m0;
+                for (uint32 j = 0; j < kNb; ++j) {
+                    acc[j] += yv * wk[j];
+                }
             }
-            y3[n] = acc;
+            for (uint32 j = 0; j < kNb; ++j) y3[m0 + j] = acc[j];
+        }
+        for (; m0 < kH; ++m0) {   // 尾块 (防御性; 本 spec 不触达)
+            double accT = 0.0;
+            for (uint32 k = 0; k < kHiddenDim / 2U; ++k) {
+                accT += y2[k] * w2e[k * kH + m0];
+            }
+            y3[m0] = accT;
         }
         // Combine: y[t] = weight * y3 (topK==1; 原 "+=" 在多 PE 下对共享 GM 重复累加 ×4)
         for (uint32 n = 0; n < kH; ++n) {
@@ -242,29 +363,50 @@ int main()
             g_mmTopkWeights[t] = 1.0f;
         }
     }
-    // FP8 权重: 小随机值 (E4M3 可表示), scale 取 1.0 (E8M0 0x00 → 2^0)
+    // FP8 权重: 确定性细化, 值域 [-2, 2] 内的 E4M3 可表示值; scale = 1.0
+    // (E8M0 0x00 → 2^0)。
+    // [2026-10-09 优化注沿承] 原第一遍随机小值循环被本细化循环逐元素完全
+    // 覆盖 —— 纯死代码, 删除 (mt 版 2026-10-09 同款清理, 值不变)。
+    // [2026-10-14 v7 优化] 填充模式周期化 + 模式表: 三分量周期 5/8/14 (w1)
+    // 与 5/8/26 (w2) → 字节模式周期 280/520。首次经增量递推 (与闭式公式
+    // 逐位一致: (i*7)%5 步进 +7≡+2、(i*3+1)&7 步进 +3、(i/7)&1 每 7 步
+    // 翻转; w2 同理, 递推初值 = i=0 的公式值) 一次构建模式表, 填充退化为
+    // 表游走 (每元素 lbu+sb+指针步进)。pipe 实测原填充 ~9.3 cyc/元素
+    // (常数除法 mulhi 链)。权重数据逐字节不变。
     {
-        uint32 seed = 7U;
-        for (uint32 i = 0; i < 2U * kHiddenDim * kH; ++i) {
-            seed = seed * 1664525U + 1013904223U;
-            const uint32 m = (seed >> 1U) & 0x7U;            // 尾数
-            const uint32 e = ((seed >> 4U) & 0xFU) == 0U ? 1U : ((seed >> 4U) & 0xFU);  // 指数 1..15
-            const uint32 s = (seed >> 8U) & 1U;
-            g_mmWeight1[i] = (uint8_t)((s << 7U) | (e << 3U) | m);   // E4M3 ✓ 但范围 [-15,15]
-            // 控制幅值: 用指数 4..8 → 值域 ~2^-3..2^1
+        static uint8_t sW1Pat[280];
+        static uint8_t sW2Pat[520];
+        static bool sPatReady = false;
+        if (!sPatReady) {
+            {
+                uint32 a = 0U, m = 1U, d = 7U, sg = 0U;
+                for (uint32 j = 0U; j < 280U; ++j) {
+                    sW1Pat[j] = (uint8_t)((sg << 7U) | ((4U + a) << 3U) | m);
+                    a += 2U; if (a >= 5U) a -= 5U;       // (i*7)%5: 7 ≡ 2 (mod 5)
+                    m = (m + 3U) & 7U;                    // (i*3+1)&7
+                    if (--d == 0U) { d = 7U; sg ^= 1U; }  // (i/7)&1
+                }
+            }
+            {
+                uint32 a = 2U, m = 3U, d = 13U, sg = 0U;
+                for (uint32 j = 0U; j < 520U; ++j) {
+                    sW2Pat[j] = (uint8_t)((sg << 7U) | ((4U + a) << 3U) | m);
+                    a += 1U; if (a >= 5U) a -= 5U;       // (i*11+2)%5: 11 ≡ 1 (mod 5)
+                    m = (m + 5U) & 7U;                    // (i*5+3)&7
+                    if (--d == 0U) { d = 13U; sg ^= 1U; } // (i/13)&1
+                }
+            }
+            sPatReady = true;
         }
-        // 用确定性细化: 值域 [-2, 2] 内的可表示值
-        for (uint32 i = 0; i < 2U * kHiddenDim * kH; ++i) {
-            const uint32 e = 4U + ((i * 7U) % 5U);            // 4..8
-            const uint32 m = ((i * 3U + 1U) & 0x7U);
-            const uint32 s = (i / 7U) & 1U;
-            g_mmWeight1[i] = (uint8_t)((s << 7U) | (e << 3U) | m);
+        const uint8_t* p1 = sW1Pat;
+        for (uint32 i = 0U; i < 2U * kHiddenDim * kH; ++i) {
+            g_mmWeight1[i] = *p1++;
+            if (p1 == sW1Pat + 280U) p1 = sW1Pat;
         }
-        for (uint32 i = 0; i < 2U * (kHiddenDim / 2U) * kH; ++i) {
-            const uint32 e = 4U + ((i * 11U + 2U) % 5U);
-            const uint32 m = ((i * 5U + 3U) & 0x7U);
-            const uint32 s = (i / 13U) & 1U;
-            g_mmWeight2[i] = (uint8_t)((s << 7U) | (e << 3U) | m);
+        const uint8_t* p2 = sW2Pat;
+        for (uint32 i = 0U; i < 2U * (kHiddenDim / 2U) * kH; ++i) {
+            g_mmWeight2[i] = *p2++;
+            if (p2 == sW2Pat + 520U) p2 = sW2Pat;
         }
         for (uint32 i = 0; i < 2U * (kH * kHiddenDim / 32U + 4U); ++i) {
             g_mmWeightScales1[i] = 0x00;   // scale = 1.0
@@ -281,19 +423,20 @@ int main()
     int64* tokRef = g_goldenTok;
     compute_golden(yRef, tokRef);
 
+    // [2026-10-14 优化] abs/rel 两个误差统计循环合并为单遍 (err/denom 每
+    // 元素只计算一次, 省一遍 y/yRef 全量重扫); rel 的分子即 err (原式
+    // ((double)y[i]-yRef[i]) 同表达式), max 比较次序不变 → 两统计量
+    // 结果逐位一致
     double maxAbsErr = 0.0;
+    double maxRelErr = 0.0;
     for (uint32 i = 0; i < kTotalElems; ++i) {
         const double err = (double)y[i] - yRef[i];
         const double absErr = err < 0 ? -err : err;
         if (absErr > maxAbsErr) maxAbsErr = absErr;
-    }
-
-    // 相对容差 (量化解码误差随幅值放大, 用宽松 rtol 判定)
-    double maxRelErr = 0.0;
-    for (uint32 i = 0; i < kTotalElems; ++i) {
+        // 相对容差 (量化解码误差随幅值放大, 用宽松 rtol 判定)
         const double denom = yRef[i] < 0 ? -yRef[i] : yRef[i];
         if (denom > 1e-6) {
-            const double rel = ((double)y[i] - yRef[i]) / denom;
+            const double rel = err / denom;
             const double absRel = rel < 0 ? -rel : rel;
             if (absRel > maxRelErr) maxRelErr = absRel;
         }

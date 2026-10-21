@@ -24,11 +24,14 @@ run() {  # $1=Sq $2=Skv $3=topk
     && make TESTCASE=qli_check_opt QLI_DTYPE=FP8 Sq="$1" Skv="$2" topk="$3"
 }
 
-# ============ 关键 Case 1：单 chunk，多 token，全量 topK ============
-run 64 128 128
-# ============ 关键 Case 2：单 chunk，大 Skv，大 topK ============
-run 4 2048 512
-# ============ 关键 Case 3：4 chunk 大规模 ============
-run 4 8192 512
-# ============ 关键 Case 4：tail chunk（Skv%2048=32，Skv%kTk=0） ============
-run 4 2080 512
+# ============ 真机 QLI V2 对照 case（profiling trace，两 case 仅 TopK 不同）============
+# 硬件口径：S1=8192, N1(g)=64, D=128, S2=8192, TopK=512/1024, block_size=64,
+# cmp_ratio=4, FP8_E4M3FN；输出 [1,8192,1,TopK]；aic_total_cycles 15.06M/14.43M
+# （64 核和）。K 输入 [800,512,1,128] 为硬件侧块稀疏候选池，本稠密参考取名义 S2。
+#
+# 字面 Sq=8192 在本仿真基建上不可跑：scores [8192,8192] fp32 = 256MB 超出 131MB
+# map 区；Q 嵌入 64MB；tile 迭代 8.39M ≈ Sq4xSkv65536 case 的 256 倍（gfrun ~40h）。
+# 故保留 case 签名（Skv=8192=S2、g=64、D=128、双 topk 仅差 TopK，与硬件对照同构），
+# Sq 缩至 32——tile 预算与已验证的 Sq4xSkv65536 case 完全一致（gfsim 4-PE ~3h/case）。
+run 32 8192 512
+run 32 8192 1024

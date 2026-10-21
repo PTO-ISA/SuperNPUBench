@@ -11,23 +11,24 @@
  *     保证正确); 本版为真 4PE 分工:
  *       16 伪核 = 4 PE × 4 伪核, PE tid 拥有伪核 [tid*4, tid*4+4),
  *       token 域按伪核 ceil 分片, 各 PE 写域不相交;
- *   - 分片划分 (对照原版各阶段; issue #180 tile 化迁移后):
- *       阶段 1  统计槽清零        每 PE 只清自己 4 个伪核的槽
- *               量化解码 w1/w2     每 PE 私有 tile 化解码 (TCVT + TMULS scale
- *                                 折叠) 为 fp16 权重副本, 无 fp32 workspace,
- *                                 权重读由 driver kernel 前的输入发布屏障
- *                                 mtBarrier(1) 覆盖 (genInputs 按 PE 分片)
- *               mask 表/dispatch   按伪核归属 token 分片
- *       阶段 3  GMM 流水          PE tid 只处理自己 4 个伪核的 token;
- *                                 GMM1/GMM2 = TGEMV_MX (MX FP16 pair),
- *                                 SwiGLU = VEC 链, combine 写域 = 本 PE token
- *                                 集 (不相交)
- *               Unpermute          token 分片与 combine 写方同 PE, 程序序
- *                                 保证可见, 免栅栏 (VEC tile 拷贝)
- *       阶段 4  统计导出          stats 按伪核归属分片; tokOut PE0 独占导出
- *       栅栏    mtBarrier(2)      末端汇合: 全部 yOut/tokOut 就绪后才返回,
- *                                 PE0 验证依赖全量输出 (相位 1 为 driver 的
- *                                 kernel 前输入发布屏障)
+ *   - 分片划分 (A1/A2/A3/B8/B9/A6 对齐 2026-10-13; 与 flat 版同阶段集):
+ *       阶段 1   统计槽清零 (PE 分片) / 权重量化解码 (每 PE 私有 fp16 副本,
+ *                ×2 幂等双遍) / mask 表全量幂等散射 (A5 结构载体)
+ *       阶段 1.5 dispatch 计划 (topkIds 标量, 幂等同值写 — MSCARRIER→标量读
+ *                存在 TLSU tile-store→GM 缺口, 计数不走 mask) + 核内统计
+ *                (PE 分片) + 量化 token/scale/metaInfo 搬运 (slot 分片, ×2
+ *                幂等双遍) — A5 CopyTokensAndMetaForDispatch 通路
+ *       栅栏 2   dispatch 通路全量可见 (A5 flagDispatchToGmm1; GMM 波跨 PE
+ *                读 xDisp/metaInfo/starts)
+ *       阶段 3   expert wave ×2 幂等双遍 (B8: PE 行片 ∩ expert 段, 权重 tile
+ *                组内复用; GMM1/GMM2 = TGEMV_MX, SwiGLU = VEC 链) → combine
+ *                窗口未加权行 (B9, slot = TOKEN*topK+TOPK)
+ *       栅栏 3   combine 窗口全量可见 (A5 CrossRankSyncInWorldSize/WaitCombine)
+ *       Unpermute 加权反排列 (B9: token 分片, 跨 PE 读 combine; 权重读
+ *                topk_weights) + yOut 冲刷
+ *       栅栏 4   末端汇合; PE0 随后从核内统计导出 tokOut (A6)
+ *   - mtBarrier 为写方定向驱逐版 (moe_combine_mt 同款, 2026-10-13: A1 通路
+ *     引入 kernel 内跨 PE tile 数据交接); 相位 1 为 driver 的输入发布屏障
  *   - tile 计算核心 (类型/解码/GEMV/SwiGLU/拷贝) 由 mega_moe_sim.hpp 的
  *     "四a、tile 计算核心" 共享段提供 (与 sim / sim_mt_dyn 同源)。
  *   - mtBarrier 为 volatile per-PE phase flags + compiler barrier, 与
@@ -67,7 +68,16 @@ namespace mega_moe {
 // ============================================================================
 constexpr uint32_t kMtThreadsPerBlock = 4U;
 
-static volatile uint32_t sMtPhaseDone[kMtThreadsPerBlock];
+alignas(64) static volatile uint32_t sMtPhaseDone[kMtThreadsPerBlock];
+
+// [2026-10-13 修复] 屏障升级为写方定向驱逐版 (moe_combine_mt 的
+// combineMtBarrier 同款): A1 dispatch 通路引入 kernel 内跨 PE tile 数据
+// 交接 (xDisp/combine 窗口), 时序模型跨 PE 无 snoop —— 裸 volatile flag
+// 自旋存在安静窗口陈旧 flag 活锁 (脏 flag 行滞留各 PE 私有 L1D, 非缓存
+// 轮询读 L2 永远看不到发布值; moe_combine_mt 2026-10-04 修复实证)。
+// 写方到达即驱逐自身脏 flag 行 (强制写回 L2), 等待方每 32 轮驱逐一次。
+// tile 数据本身经 TLSU 直达 L2, 屏障仅提供时序序 + flag 可见性。
+alignas(16384) static volatile uint32_t sMtEvictSpan[6 * 4096];
 
 static inline void mtCompilerBarrier()
 {
@@ -77,10 +87,23 @@ static inline void mtCompilerBarrier()
 static inline void mtBarrier(uint32_t phase)
 {
     mtCompilerBarrier();
-    sMtPhaseDone[get_thread_idx()] = phase;
+    const uint32_t tid = get_thread_idx();
+    sMtPhaseDone[tid] = phase;
     mtCompilerBarrier();
+    const uint32_t wordOff =
+        (static_cast<uint32_t>(
+             reinterpret_cast<uint64_t>(&sMtPhaseDone[0]) >> 2)) & 4095u;
+    for (uint32_t k = 1; k <= 5; ++k) {
+        (void)sMtEvictSpan[k * 4096u + wordOff];   // 写方到达驱逐
+    }
     for (uint32_t t = 0U; t < kMtThreadsPerBlock; ++t) {
+        uint32_t spins = 0;
         while (sMtPhaseDone[t] < phase) {
+            if ((++spins & 31u) == 0u) {
+                for (uint32_t k = 1; k <= 5; ++k) {
+                    (void)sMtEvictSpan[k * 4096u + wordOff];
+                }
+            }
         }
     }
     mtCompilerBarrier();
@@ -124,12 +147,12 @@ void mega_moe_sim_mt_kernel(float* yOut, float* xIn, int64_t* tokOut)
     tilingData.sendMaskCoreCountWithExtraExpert = 2;
     tilingData.unpermuteConfigForFullTokenChunk = {16, 6, 128, 128, 64, 0};
     // 注: 全零聚合初始化会被后端合并为 16B 零 tile store (v2i64 Cannot select), 逐字段写规避
-    tilingData.unpermuteConfigForTailTokenChunk.chunkRows = 0;
-    tilingData.unpermuteConfigForTailTokenChunk.chunksPerCore = 0;
-    tilingData.unpermuteConfigForTailTokenChunk.rowElems = 0;
-    tilingData.unpermuteConfigForTailTokenChunk.rowStride = 0;
-    tilingData.unpermuteConfigForTailTokenChunk.coreStride = 0;
-    tilingData.unpermuteConfigForTailTokenChunk.reserved = 0;
+    tilingData.unpermuteConfigForTailTokenChunk.tokensPerBatch = 0;
+    tilingData.unpermuteConfigForTailTokenChunk.inputBufferCount = 0;
+    tilingData.unpermuteConfigForTailTokenChunk.bf16SlotElementCount = 0;
+    tilingData.unpermuteConfigForTailTokenChunk.fp32SlotElementCount = 0;
+    tilingData.unpermuteConfigForTailTokenChunk.topKWeightsBufferBytes = 0;
+    tilingData.unpermuteConfigForTailTokenChunk.topKWeightsConversionBufferBytes = 0;
     tilingData.unpermuteFullTokenChunkCoreCount = kBlockAivNum;
     tilingData.topkWeightsPrefetch = 0;
     tilingData.maxTilesPerExpert = kMaxTilesPerExpert;
@@ -145,12 +168,12 @@ void mega_moe_sim_mt_kernel(float* yOut, float* xIn, int64_t* tokOut)
     static_assert(kHiddenDim % 32 == 0, "h must be a multiple of the 32-wide MX K-tile");
     static_assert(kMoeHiddenDim % 64 == 0, "hiddenDim/2 must cover whole MX scale groups");
 
-    // workspace 布局 (MX 路径: 无 fp32 权重缓存) — 运行期 dims
-    const uint32_t dispatchOffset = 0U;
-    const uint32_t maskOffset = dispatchOffset + tilingData.moeExpertPerRank * tilingData.bs * 4U;
-    const uint32_t combineOffset = maskOffset + tilingData.moeExpertPerRank * tilingData.bs * 1U;
-    const uint32_t statsOffset = combineOffset + tilingData.bs * tilingData.h * 4U;
-    const uint32_t yScratchOffset = statsOffset + kBlockAivNum * tilingData.moeExpertPerRank * 4U;
+    // workspace 布局 (A1 dispatch 通路版, mega_moe_sim.hpp 四d MoeWsLayout)
+    const MoeWsLayout WS = moe_ws_layout(tilingData.bs, tilingData.h,
+                                         tilingData.hiddenDim,
+                                         tilingData.moeExpertPerRank,
+                                         tilingData.topK);
+    const uint32_t slots = tilingData.bs * tilingData.topK;
 
     // PE id 与伪核归属: PE tid 拥有伪核 [tid*4, tid*4+4)
     const uint32_t tid = get_thread_idx();
@@ -200,201 +223,280 @@ void mega_moe_sim_mt_kernel(float* yOut, float* xIn, int64_t* tokOut)
     mtBarrier(2U);
 #else
     // ============ 完整真机流水 — 真 4PE 分片执行 ============
+    // [A1/A2/A3/B8/B9/A6 对齐 2026-10-13] dispatch 通路 + expert wave 批处理
+    // (阶段结构与 flat 版 mega_moe_sim.hpp 一致; PE 分片 + 跨 PE 交接屏障):
+    //   阶段 1   统计清零/权重量化解码/mask scatter (各 PE 写域不相交)
+    //   barrier(2)   mask 表全量可见 (A5 SendMask/WaitDispatch 协议对齐)
+    //   阶段 1.5 dispatch 计划 (幂等) + 数据搬运 (slot 分片) + 核内统计
+    //   barrier(3)   xDisp/metaInfo/starts 全量可见 (A5 flagDispatchToGmm1)
+    //   阶段 3   expert wave ×2 幂等双遍 (行分片; B8 权重组内复用)
+    //   barrier(4)   combine 窗口全量可见 (A5 CrossRankSyncInWorldSize/
+    //               WaitCombine, asc:10416-10421)
+    //   Unpermute 加权反排列 (token 分片, 跨 PE 读 combine) + yOut 冲刷
+    //   barrier(5)   末端汇合; PE0 导出 tokOut (A6)
     // ---- 阶段 1: 输入准备 (各 PE 写域不相交) ----
     // SendAndQuantBuffInit (9731): 统计槽清零 — 每 PE 只清自己 4 个伪核
-    // (8 i32 = 一个 [1×8] tile, mm_fill_i32; 替代原 volatile 标量清零及其
-    // continuous-mem-opt 合并规避 —— tile store 无合并问题)
     {
-        int32_t* stats = reinterpret_cast<int32_t*>(g_mmWorkspace + statsOffset);
+        int32_t* stats = reinterpret_cast<int32_t*>(g_mmWorkspace + WS.stats);
         mm_fill_i32(stats + tid * kCoresPerPE * tilingData.moeExpertPerRank,
                     kCoresPerPE * tilingData.moeExpertPerRank, 0);
     }
     // QuantizeLocalTokens (3754) — MX 路径: 每 PE 私有 tile 化解码
-    // (TLOAD(E4M3[32,32]) → TCVT(fp16) → TMULS(k 组 scale 折叠) → TSTORE);
-    // issue #180: 标量 bit-twiddle / fp32 workspace / 跨 PE 权重栅栏全删
     MxTileScratch mx = mx_tile_scratch_at(
-        g_mmWorkspace + yScratchOffset, tid,
+        g_mmWorkspace + WS.scratch, tid,
         tilingData.moeExpertPerRank, tilingData.h, tilingData.hiddenDim);
-    mx_decode_weights_tile(mx, tilingData.moeExpertPerRank,
-                           tilingData.h, tilingData.hiddenDim);
-    // GatherAndSendExpertMasks (3934): 自回环本地 mask 表 — 按伪核归属
-    // token 分片; PE tid 的 token 段 [tid*4*perCore, +4*perCore) 连续
-    // (coreIdx = tid*4+lc, token = coreIdx*perCore+i) → slot 段连续
-    // (topK 倍乘), mm_mask_scatter tile 散射 (topK!=1 时 helper 标量兜底)
+    // [2026-10-13 修复] 解码幂等双遍: 解码段 TLOAD(w1)→TSTORE(w1F16) 相邻
+    // 块对的 nuke (实测 ld/st bid 相邻 @~54.8k cycle) 恢复丢 tile 状态时,
+    // 污染的 w1F16 tile 会沿 GEMM 传播到 y —— 第二遍以同值覆写自愈
+    // (guardPass 同哲学; 第二遍几乎不占墙钟, [2026-10-11 试验注 #2])。
+    for (uint32_t decodePass = 0U; decodePass < 2U; ++decodePass) {
+        mx_decode_weights_tile(mx, tilingData.moeExpertPerRank,
+                               tilingData.h, tilingData.hiddenDim);
+    }
+    // GatherAndSendExpertMasks (3934): 自回环本地 mask 表 — 全量幂等散射
+    // ([2026-10-13 模型注] MSCARRIER tile 写 → 标量读存在 TLSU tile-store→
+    // GM 缺口 (mm_count_eq_i32 同族, D15): mt 版计数改从 topkIds 标量统计
+    // (moe_dispatch_mt cntLocal 同款 proven 路径), mask 表保留为 A5 结构
+    // 载体 (写后不读 — 消费端被模型封锁, A2 部分对齐注记); sim 版 (同 PE
+    // 程序序无屏障插入) 保留 mask 行求和消费)
     {
-        uint8_t* mask = g_mmWorkspace + maskOffset;
-        const uint32_t tokBegin = tid * kCoresPerPE * perCore;
-        // 尾核空转钳位 (原 token >= bs break 守卫): bs < 16 核时尾 PE 段截断
-        const uint32_t nTok = (tokBegin < tilingData.bs)
-                            ? ((tilingData.bs - tokBegin < kCoresPerPE * perCore)
-                               ? (tilingData.bs - tokBegin)
-                               : (kCoresPerPE * perCore))
-                            : 0U;
-        mm_mask_scatter(g_mmTopkIds, mask, tokBegin * tilingData.topK,
-                        nTok * tilingData.topK,
+        uint8_t* mask = g_mmWorkspace + WS.mask;
+        mm_mask_scatter(g_mmTopkIds, mask, 0U, slots,
                         tilingData.bs, tilingData.topK);
     }
-    // ResetDispatchWorkspace (4051) = DispatchBuffInit: dispatch 表填 -1 —
-    // token 分片; 每 e 的 PE 段 [e*bs + tokBegin, +nTok) 连续 → mm_fill_f32
+
+    // ---- 阶段 1.5: dispatch 计划 (幂等, 各 PE 同值; 无跨 PE 依赖) ----
+    // ComputeExpertTokenCountAndNotify (4540): expertCnt + starts (cumsumInfo)
+    // + dstPos (稳定序); 全部从 topkIds 标量计算 (驱动数据, 屏障 1 已覆盖)。
+    // [mt 版注] 独立 -1 复位段省略: 跨 PE tile-store(复位)/scalar-store
+    // (plan) 无全局序, 迟到的复位 tile store 会覆写 plan 值; -1 复位语义
+    // 由 plan 的无效槽 -1 写承载 (mm_dispatch_plan 非法 eid → 0xFFFFFFFF)。
     {
-        float* dispatch = reinterpret_cast<float*>(g_mmWorkspace + dispatchOffset);
+        uint32_t expertCnt[kMoeEprMax];
+        uint32_t startsArr[kMoeEprMax];
+        uint32_t dstPosArr[64];
+        if (tilingData.moeExpertPerRank <= kMoeEprMax && slots <= 64U) {
+            for (uint32_t e = 0U; e < tilingData.moeExpertPerRank; ++e) {
+                uint32_t cnt = 0U;
+                for (uint32_t s = 0U; s < slots; ++s) {
+                    if (static_cast<uint32_t>(g_mmTopkIds[s]) == e) ++cnt;
+                }
+                expertCnt[e] = cnt;
+            }
+            uint32_t acc = 0U;
+            for (uint32_t e = 0U; e < tilingData.moeExpertPerRank; ++e) {
+                startsArr[e] = acc;
+                acc += expertCnt[e];
+            }
+            for (uint32_t s = 0U; s < slots; ++s) {
+                const uint32_t e = static_cast<uint32_t>(g_mmTopkIds[s]);
+                if (e >= tilingData.moeExpertPerRank) {
+                    dstPosArr[s] = 0xFFFFFFFFU;
+                    continue;
+                }
+                uint32_t rank = 0U;
+                for (uint32_t j = 0U; j < s; ++j) {
+                    if (static_cast<uint32_t>(g_mmTopkIds[j]) == e) ++rank;
+                }
+                dstPosArr[s] = startsArr[e] + rank;
+            }
+            // workspace 镜像 (A5 expertRevTokenNums/cumsumInfo/dstPosition
+            // 载体; GMM 波读 starts): 幂等同值写 (tilingData 填充同模式)
+            int32_t* cntWs = reinterpret_cast<int32_t*>(g_mmWorkspace + WS.cnt);
+            int32_t* stWs = reinterpret_cast<int32_t*>(g_mmWorkspace + WS.starts);
+            float* dstTab = reinterpret_cast<float*>(g_mmWorkspace + WS.dstPos);
+            for (uint32_t e = 0U; e < tilingData.moeExpertPerRank; ++e) {
+                cntWs[e] = static_cast<int32_t>(expertCnt[e]);
+                stWs[e] = static_cast<int32_t>(startsArr[e]);
+            }
+            for (uint32_t s = 0U; s < slots; ++s) {
+                dstTab[s] = (dstPosArr[s] == 0xFFFFFFFFU)
+                              ? -1.0f
+                              : static_cast<float>(dstPosArr[s]);
+            }
+        }
+    }
+    // InitExpertTokenCountExportBuffers 核内累计 (A6: dispatch 期逐核计数,
+    // 本 PE 4 伪核; A5 dispatch job 分核语义)
+    {
+        int32_t* stats = reinterpret_cast<int32_t*>(g_mmWorkspace + WS.stats);
+        const uint32_t perSlot = (slots + kBlockAivNum - 1U) / kBlockAivNum;
+        for (uint32_t lc = 0U; lc < kCoresPerPE; ++lc) {
+            const uint32_t core = tid * kCoresPerPE + lc;
+            for (uint32_t e = 0U; e < tilingData.moeExpertPerRank; ++e) {
+                uint32_t cnt = 0U;
+                for (uint32_t i = 0U; i < perSlot; ++i) {
+                    const uint32_t s = core * perSlot + i;
+                    if (s >= slots) break;
+                    if (static_cast<uint32_t>(g_mmTopkIds[s]) == e) ++cnt;
+                }
+                stats[core * tilingData.moeExpertPerRank + e] =
+                    static_cast<int32_t>(cnt);
+            }
+        }
+    }
+    // CopyTokensAndMetaForDispatch (4332) + DispatchExpertTokens (4447):
+    // 量化 token+scale 搬运 + metaInfo — slot 分片 (本 PE token 段;
+    // xDisp/metaInfo 行域经 dstPos 置换后各 PE 写域不相交)
+    {
+        __half* xDisp = reinterpret_cast<__half*>(g_mmWorkspace + WS.xDisp);
+        uint8_t* scaleDisp = g_mmWorkspace + WS.scaleDisp;
+        int32_t* meta = reinterpret_cast<int32_t*>(g_mmWorkspace + WS.metaInfo);
+        const float* dstTab = reinterpret_cast<const float*>(
+            g_mmWorkspace + WS.dstPos);
         const uint32_t tokBegin = tid * kCoresPerPE * perCore;
         const uint32_t nTok = (tokBegin < tilingData.bs)
                             ? ((tilingData.bs - tokBegin < kCoresPerPE * perCore)
                                ? (tilingData.bs - tokBegin)
                                : (kCoresPerPE * perCore))
                             : 0U;
-        for (uint32_t e = 0; e < tilingData.moeExpertPerRank; ++e) {
-            mm_fill_f32(dispatch + e * tilingData.bs + tokBegin, nTok, -1.0f);
+        // [2026-10-13 修复] 搬运幂等双遍: xDisp 量化 TSTORE 单遍下 TLSU
+        // tile-store→GM 缺口的污染行无人自愈 (wave 双遍只覆写 combine),
+        // 第二遍以同值覆写 xDisp/metaInfo (guardPass 同哲学)。
+        for (uint32_t dispPass = 0U; dispPass < 2U; ++dispPass) {
+        for (uint32_t s = tokBegin * tilingData.topK;
+             s < (tokBegin + nTok) * tilingData.topK; ++s) {
+            const int32_t e = g_mmTopkIds[s];
+            if (e < 0 || static_cast<uint32_t>(e) >= tilingData.moeExpertPerRank) {
+                continue;   // 非法 eid 守卫
+            }
+            const float dstV = dstTab[s];   // GM 读回 (dstPos 表活跃消费)
+            const uint32_t row = static_cast<uint32_t>(dstV);
+            const uint32_t token = s / tilingData.topK;
+            const uint32_t kk = s % tilingData.topK;
+            mx_quantize_row(xIn + token * tilingData.h,
+                            xDisp + row * tilingData.h, tilingData.h);
+            volatile uint8_t* sc = scaleDisp + row;
+            *sc = 0x00U;                    // E8M0 0x00 = 1.0 (A5 dispatchRevScale)
+            volatile int32_t* mrow = meta + row * kMetaInfoWords;
+            mrow[kMetaRankId] = 0;
+            mrow[kMetaTokenId] = static_cast<int32_t>(token);
+            mrow[kMetaTopkIndex] = static_cast<int32_t>(kk);
+            mrow[kMetaWeightIndex] = 0;
+            mrow[4] = 0;
+            mrow[5] = 0;
+            mrow[6] = 0;
+            mrow[7] = 0;
+        }
+        }
+        // pad 元数据行 (幂等, 任一 PE 写即可 — 同值): {TOKEN=bs, TOPK=topK-1}
+        // → combine 写 dummy 尾行 (永不读取)
+        {
+            volatile int32_t* mrow = meta + slots * kMetaInfoWords;
+            mrow[kMetaRankId] = 0;
+            mrow[kMetaTokenId] = static_cast<int32_t>(tilingData.bs);
+            mrow[kMetaTopkIndex] =
+                static_cast<int32_t>(tilingData.topK - 1U);
+            mrow[kMetaWeightIndex] = 0;
+            mrow[4] = 0;
+            mrow[5] = 0;
+            mrow[6] = 0;
+            mrow[7] = 0;
         }
     }
 
-    // ---- 阶段 2: 共享专家输入准备 (源 PrepareSharedExpertInput, sharedExpertNum==0 跳过) ----
+    // ---- dispatch 通路全量可见 (A5 flagDispatchToGmm1; GMM 波读他 PE 行) ----
+    mtBarrier(2U);
 
-    // ---- 阶段 3: MoE 专家流水 (ProcessMoeExpertStages → ProcessGmmPipeline) ----
-    // tile 计算核心 (issue #180): GMM1/GMM2 = TGEMV_MX (MX FP16 pair),
-    // SwiGLU = VEC 链, Combine = VEC tile (详见 mega_moe_sim.hpp 四a 共享段)
-    // [2026-10-04 修复] x 预量化前置为独立一遍 (mx_quantize_row), 主循环用
-    // mx_token_compute_pre 消费: 消除原 per-token 内联 "量化 TSTORE(xf16) →
-    // GEMM1 TLOAD(xf16)" 相邻块 GM 往返对触发的 nuke (模型 nuke 恢复在
-    // tile 域丢状态 → 在飞链 TSTORE 以默认数据 2.0f 提交, 实测 y[14..15]
-    // 行恒 2.0f; 见 mega_moe_sim.hpp mx_quantize_row 处修复注)。预量化槽
-    // 位于 workspace 4 PE scratch 槽之后的余量区 (驱动 kWorkspaceBytes 的
-    // slack 已扩至 16KB), 每 PE 连续 myTokens*h*2 字节, 写域不相交。
-    // [2026-10-04 修复] 幂等双遍执行: 模型 nuke(解码段, 与本算子代码无关)的
-    // flush 恢复会丢失在飞 tile 链状态, 落飞窗口内本 PE 末段 token 的
-    // combine TSTORE 以默认数据 2.0f 提交 (实测 combine[14..15] 行恒 2.0)。
-    // 依赖预测器在首碰撞后学习 (同 tpc 对不再 nuke), 第二遍执行无 nuke、
-    // 全链数据正常 resolve —— 以正确值覆盖第一遍的污染行。幂等性: 全部
-    // store 目标 (xf16 槽/scratch/combine) 按同值重写, 输入不变 (原单 PE
-    // 版即按同哲学做 16 伪核冗余执行)。成本 ~+10^4 cycle (占比 <1%)。
-    for (uint32_t guardPass = 0U; guardPass < 2U; ++guardPass) {
-        (void)guardPass;
+    // ---- 阶段 3: MoE 专家流水 (ProcessMoeExpertStages asc:10222) ----
+    // B8 expert-major wave ×2 幂等双遍 ([2026-10-11 试验注 #2] 单遍下末段
+    // combine 行被 gfsim TLSU tile-store→GM 缺口污染, 双遍以正确值覆盖,
+    // 第二遍几乎不占墙钟 —— 保持 2U); PE 行片 = slots ceil 4 分片
     {
-        const uint32_t slotBytes = mx_tile_scratch_bytes(
-            tilingData.moeExpertPerRank, tilingData.h, tilingData.hiddenDim);
-        __half* const xf16Slots = reinterpret_cast<__half*>(
-            g_mmWorkspace + yScratchOffset +
-            kMtThreadsPerBlock * slotBytes +
-            tid * kCoresPerPE * perCore * tilingData.h * 2U);
-        uint32_t nq = 0U;
-        for (uint32_t lc = 0U; lc < kCoresPerPE; ++lc) {
-            const uint32_t coreIdx = tid * kCoresPerPE + lc;
-            for (uint32_t i = 0; i < perCore; ++i) {
-                const uint32_t token = coreIdx * perCore + i;
-                if (token >= tilingData.bs) break;  // bs < 16 核时尾核空转
-                mx_quantize_row(xIn + token * tilingData.h,
-                                xf16Slots + nq * tilingData.h, tilingData.h);
-                ++nq;
-            }
-        }
-        float* const combineBase = reinterpret_cast<float*>(
-            g_mmWorkspace + combineOffset);
-        uint32_t iq = 0U;
-        for (uint32_t lc = 0U; lc < kCoresPerPE; ++lc) {
-            const uint32_t coreIdx = tid * kCoresPerPE + lc;
-            for (uint32_t i = 0; i < perCore; ++i) {
-                const uint32_t token = coreIdx * perCore + i;
-                if (token >= tilingData.bs) break;  // bs < 16 核时尾核空转
-
-                for (uint32_t kk = 0U; kk < tilingData.topK; ++kk) {
-                    const uint32_t slot = token * tilingData.topK + kk;
-                    const uint32_t expert =
-                        static_cast<uint32_t>(g_mmTopkIds[slot]);
-                    const float weight = g_mmTopkWeights[slot];
-                    mx_token_compute_pre(mx,
-                                         xf16Slots + iq * tilingData.h,
-                                         tilingData.h, tilingData.hiddenDim,
-                                         tilingData.moeExpertPerRank, expert,
-                                         weight, kk,
-                                         combineBase + token * tilingData.h);
-                }
-                ++iq;
+        const __half* xDisp = reinterpret_cast<const __half*>(
+            g_mmWorkspace + WS.xDisp);
+        const int32_t* meta = reinterpret_cast<const int32_t*>(
+            g_mmWorkspace + WS.metaInfo);
+        float* const combineWin = reinterpret_cast<float*>(
+            g_mmWorkspace + WS.combine);
+        const int32_t* stWs = reinterpret_cast<const int32_t*>(
+            g_mmWorkspace + WS.starts);
+        const uint32_t rowsPerPE =
+            (slots + kMtThreadsPerBlock - 1U) / kMtThreadsPerBlock;
+        const uint32_t rowBegin = tid * rowsPerPE;
+        const uint32_t rowEnd = (rowBegin + rowsPerPE < slots)
+                                  ? (rowBegin + rowsPerPE) : slots;
+        for (uint32_t guardPass = 0U; guardPass < 2U; ++guardPass) {
+            (void)guardPass;
+            for (uint32_t e = 0U; e < tilingData.moeExpertPerRank; ++e) {
+                const uint32_t segBegin = static_cast<uint32_t>(stWs[e]);
+                const uint32_t segEnd =
+                    (e + 1U < tilingData.moeExpertPerRank)
+                        ? static_cast<uint32_t>(stWs[e + 1U]) : slots;
+                const uint32_t eb = (segBegin > rowBegin) ? segBegin : rowBegin;
+                const uint32_t ee = (segEnd < rowEnd) ? segEnd : rowEnd;
+                // [2026-10-14 优化] 自适应组大小分派 (满组 G=4, 尾组 G=rem):
+                // 消除 PE 行片 ∩ expert 段边界尾组的越段 pad 槽
+                mx_expert_wave_run(mx, xDisp, eb, ee, slots,
+                                   tilingData.h, tilingData.hiddenDim,
+                                   e, meta, combineWin,
+                                   tilingData.topK);
             }
         }
     }
-    }  // [2026-10-04 修复] 幂等双遍执行结束
-    // UnpermuteTokens (9163): combine 缓冲按 token 序写回 y (VEC tile 拷贝;
-    // token 分片与 combine 写方同 PE, 程序序保证可见, 免栅栏)
+
+    // ---- combine 窗口全量可见 (A5 CrossRankSyncInWorldSize / WaitCombine,
+    //      asc:10416-10421: 等待所有 rank Combine 发送完成再 Unpermute) ----
+    mtBarrier(3U);
+
+    // ---- UnpermuteTokens (9163): 加权反排列 (B9) — token 分片 ----
+    // y[token] = Σ_kk weight·combineWin[token*topK+kk] (跨 PE 读 combine)
     {
-        const float* combine = reinterpret_cast<const float*>(g_mmWorkspace + combineOffset);
+        const float* combineWin = reinterpret_cast<const float*>(
+            g_mmWorkspace + WS.combine);
+        const uint32_t tokBegin = tid * kCoresPerPE * perCore;
+        const uint32_t nTok = (tokBegin < tilingData.bs)
+                            ? ((tilingData.bs - tokBegin < kCoresPerPE * perCore)
+                               ? (tilingData.bs - tokBegin)
+                               : (kCoresPerPE * perCore))
+                            : 0U;
+        for (uint32_t i = 0U; i < nTok; ++i) {
+            mx_unpermute_token(combineWin, g_mmTopkWeights, yOut,
+                               tokBegin + i, tilingData.topK, tilingData.h);
+        }
+    }
+
+    // [2026-10-12 修复] 写方 yOut 冲刷 (mt_dyn 版同款): 每 PE 在末端汇合
+    // 屏障发布前对自己写入的 yOut 行做 volatile 读回 (64B 行粒度), 借同
+    // PE load/store 块序强制本 PE 在飞 tile-store 先于屏障 flag 落盘。
+    {
         for (uint32_t lc = 0U; lc < kCoresPerPE; ++lc) {
             const uint32_t coreIdx = tid * kCoresPerPE + lc;
-            for (uint32_t i = 0U; i < perCore; ++i) {
+            for (uint32_t i = 0; i < perCore; ++i) {
                 const uint32_t t = coreIdx * perCore + i;
                 if (t >= tilingData.bs) break;
-                mx_copy_row_tile(combine + t * tilingData.h,
-                                 yOut + t * tilingData.h, tilingData.h);
+                const volatile float* yRow =
+                    reinterpret_cast<const volatile float*>(
+                        yOut + t * tilingData.h);
+                for (uint32_t c = 0U; c < tilingData.h; c += 16U) {
+                    (void)yRow[c];   // 64B 行粒度触碰 (16 × fp32)
+                }
             }
         }
     }
 
-    // ---- 阶段 4: 跨 rank 同步 (自回环本地退化) 与统计导出 ----
-    // stats 按伪核归属分片 (每 PE 只写自己 4 个伪核的槽, 写不相交)
-    // [2026-10-04 优化] 两遍式: 先集中加载本 PE 全部 token id 到栈, 再计算
-    // 并写 stats —— 消除原实现逐 (core,e) 交错 "load g_mmTopkIds / store
-    // stats" 的相邻 ld/st 块对 (gfsim 依赖预测器对跨数组基址无法证不相交,
-    // 会保守 nuke; nuke 恢复存在丢寄存器生产者的模型竞态, 减少 nuke 触发
-    // 面即降低死锁暴露, 见修复报告 §5.3)。
-    {
-        int32_t* stats = reinterpret_cast<int32_t*>(g_mmWorkspace + statsOffset);
-        uint32_t myIds[kCoresPerPE * 8U];   // 每 core 至多 8 token (perCore 上界)
-        uint32_t myCnt[kCoresPerPE];
-        uint32_t loaded = 0U;
-        for (uint32_t lc = 0U; lc < kCoresPerPE; ++lc) {
-            const uint32_t core = tid * kCoresPerPE + lc;
-            uint32_t c = 0U;
-            for (uint32_t i = 0; i < perCore; ++i) {
-                const uint32_t token = core * perCore + i;
-                if (token >= tilingData.bs) break;  // bs < 16 核时尾核空转
-                myIds[loaded++] = static_cast<uint32_t>(g_mmTopkIds[token * tilingData.topK]);
-                ++c;
+    // ---- 末端汇合: 全部 yOut 写入完成后汇合; PE0 随后从核内统计导出 ----
+    mtBarrier(4U);
+
+    // ---- 阶段 4: 统计导出 (A6: dispatch 期核内累计求和; A5
+    //      ExportExpertTokenCounts(FromWorkspace) 4599/4640) — PE0 独占 ----
+    // (汇合后全 PE stats 可见; tokOut 单写者; volatile 规避相邻 i64 store
+    // 合并为 16B tile store 的 v2i64 崩溃)
+    if (tid == 0U) {
+        const int32_t* stats = reinterpret_cast<const int32_t*>(
+            g_mmWorkspace + WS.stats);
+        volatile int64_t* tokExport = tokOut;
+        for (uint32_t e = 0U; e < tilingData.moeExpertPerRank; ++e) {
+            uint32_t cnt = 0U;
+            for (uint32_t c = 0U; c < kBlockAivNum; ++c) {
+                cnt += static_cast<uint32_t>(
+                    stats[c * tilingData.moeExpertPerRank + e]);
             }
-            myCnt[lc] = c;
-        }
-        for (uint32_t lc = 0U; lc < kCoresPerPE; ++lc) {
-            const uint32_t core = tid * kCoresPerPE + lc;
-            for (uint32_t e = 0; e < tilingData.moeExpertPerRank; ++e) {
-                uint32_t cnt = 0U;
-                uint32_t idx = 0U;
-                for (uint32_t p = 0U; p < lc; ++p) idx += myCnt[p];
-                for (uint32_t i = 0U; i < myCnt[lc]; ++i) {
-                    if (myIds[idx + i] == e) ++cnt;
-                }
-                stats[core * tilingData.moeExpertPerRank + e] = static_cast<int32_t>(cnt);
-            }
-        }
-        // tokOut: PE0 独占导出 — 等值计数
-        // [2026-10-04 修复] 原实现 topK==1 时走 mm_count_eq_i32 tile 计数链
-        // (TLOAD+TCMPS+TSEL+TROWSUM+TSTORE → scratch 标量读回)。gfsim
-        // (TimingSim HEAD 9905a05f) 的 TLSU tile-store→GM 数据通路存在缺口:
-        // TSTORE 执行后在架构内存不可见 (探针实证, 同根因见模型 known-gap-list
-        // memory 类 gmov/mscatter/timg2col 微基准; 详见
-        // kernels/solution/mega_moe/mega_moe_sim_gfsim_fix_report.md §5),
-        // 由此 mm_count_eq_i32 恒返 0 → tokOut=(0,0) vs golden=(8,8) →
-        // test-finisher val=0x0001 FAIL。gfrun 功能模型 tile 操作同步执行,
-        // 同一 elf R2=0 全对 (单 PE 版 mega_moe_sim.hpp 同款修复)。
-        // 修复: 计数长度仅 bs*topK(=16) 个元素, 直接标量等值计数循环
-        // (与 mm_count_eq_i32 的 <4 标量尾/topK!=1 兜底同款语义), 不依赖
-        // tile-store 回读通路——gfrun/gfsim/真机三端语义一致。
-        // volatile 规避相邻 i64 store 合并为 16B tile store 的 v2i64 崩溃
-        if (tid == 0U) {
-            volatile int64_t* tokExport = tokOut;
-            for (uint32_t e = 0; e < tilingData.moeExpertPerRank; ++e) {
-                uint32_t cnt = 0U;
-                for (uint32_t t = 0; t < tilingData.bs; ++t) {
-                    if (static_cast<uint32_t>(g_mmTopkIds[t * tilingData.topK]) == e) ++cnt;
-                }
-                tokExport[e] = static_cast<int64_t>(cnt);
-            }
+            tokExport[e] = static_cast<int64_t>(cnt);
         }
     }
-
-    // ---- 跨 PE 交接点: 末端汇合栅栏 (fp32 解码栅栏已随 MX 原地消费删除) ----
-    // 所有 PE 的 yOut / tokOut 写入完成后才返回 (PE0 随后的验证依赖全量输出)
-    // [2026-10-09 优化] 相位 1→2 (driver kernel 前新增输入发布屏障 1)
-    mtBarrier(2U);
 #endif
 }
 
 }  // namespace mega_moe
+

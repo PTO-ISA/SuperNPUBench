@@ -35,13 +35,21 @@ struct Buffers {
 #ifdef RES_CHECK
 
 inline void prepare(Buffers &buffers, MultiThreadResCheckSync &sync, uint32_t tid) {
-    if (tid == 0) {
+    // In gfsim's 4PE RES_CHECK ABI, FILE_EXIT syscalls are lockstep: every
+    // thread must execute the same syscall instruction.  The buffers are
+    // shared, so the lockstep owner performs each read once and its result is
+    // visible to all PEs.  Keep initialization and publication PE0-owned.
+#ifdef GFSIM
+    const bool file_io_participant = true;
+#else
+    const bool file_io_participant = tid == 0;
+#endif
+    if (file_io_participant) {
         readBinaryFile(CHK_DIR "/shape.bin",
                        reinterpret_cast<uint8_t *>(&buffers.tiling),
                        sizeof(buffers.tiling));
         const int32_t batch = static_cast<int32_t>(buffers.tiling.batch);
         const int32_t cols = static_cast<int32_t>(buffers.tiling.cols);
-        const int32_t topk = static_cast<int32_t>(buffers.tiling.topk);
         readBinaryFile(CHK_DIR "/input.bin",
                        reinterpret_cast<uint8_t *>(buffers.input),
                        (batch * cols + kLane) * sizeof(float));
@@ -51,6 +59,10 @@ inline void prepare(Buffers &buffers, MultiThreadResCheckSync &sync, uint32_t ti
         readBinaryFile(CHK_DIR "/ends.bin",
                        reinterpret_cast<uint8_t *>(buffers.ends),
                        batch * sizeof(int32_t));
+    }
+    if (tid == 0) {
+        const int32_t batch = static_cast<int32_t>(buffers.tiling.batch);
+        const int32_t topk = static_cast<int32_t>(buffers.tiling.topk);
         for (int32_t i = 0; i < batch * topk; ++i) buffers.output[i] = -1;
         for (int32_t i = 0; i < batch; ++i) buffers.errors[i] = 0;
     }
@@ -59,10 +71,15 @@ inline void prepare(Buffers &buffers, MultiThreadResCheckSync &sync, uint32_t ti
 
 inline int finish(Buffers &buffers, MultiThreadResCheckSync &sync, uint32_t tid) {
     res_check_wait_for_all(sync, tid);
+#ifndef GFSIM
     if (tid != 0) return 0;
+#endif
     const int32_t batch = static_cast<int32_t>(buffers.tiling.batch);
     const int32_t cols = static_cast<int32_t>(buffers.tiling.cols);
     const int32_t topk = static_cast<int32_t>(buffers.tiling.topk);
+    // Match prepare(): all four PEs must reach the FILE_EXIT write syscalls
+    // so the lockstep barrier can complete; the shared owner performs one
+    // host write for each path.
     writeBinaryFile(CHK_DIR "/input_readback.bin",
                     reinterpret_cast<const uint8_t *>(buffers.input),
                     (batch * cols + kLane) * sizeof(float));

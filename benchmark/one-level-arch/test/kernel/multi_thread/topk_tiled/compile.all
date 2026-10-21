@@ -1,6 +1,8 @@
 #!/bin/bash
 # export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin; ./compile.all;
 # python3 src/run_topk_tiled_check.py --gfrun /path/to/gfrun            # exact FP32
+# make TESTCASE=topk_tiled res_check=on GFSIM=on -j4 diss
+# python3 src/run_topk_tiled_check.py --gfsim /path/to/gfsim
 #
 # kFp32Refine in kernels/multi_thread/topk/topk_tiled.hpp selects the tail:
 #   true  (default): four FP32 key bytes  -> run the checker with --mode fp32
