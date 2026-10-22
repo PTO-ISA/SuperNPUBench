@@ -63,24 +63,30 @@ __attribute__((noinline)) void quant_batch_matmul_hif4_mt(
 
     const uint32_t tid = get_thread_idx();
 
-    // GM slices use carrier-stride columns
-    using gmASlice = global_tensor<dtype, RowMajor<kGroupM, kStoredGK>>;
+// GM slices use carrier-stride columns.  A/scaleA are per-PE M shards
+    // (kPeM rows), B/scaleB are full tiles shared across the 4 PEs.
+    using gmASlice = global_tensor<dtype, RowMajor<kPeM, kStoredGK>>;
     using gmBSlice = global_tensor<dtype, RowMajor<tN, kStoredGK>>;
 
-    // Shared tiles use logical K (PTO ISA CUBE contract)
-    using tileAMatrix = SharedMatrixLeft<dtype, kGroupM, tK>;
+    // A: per-PE Local CUBE tile [kPeM, tK] in CellReg (does NOT compete with
+    // B for ShareTReg capacity or read-port bandwidth).
+    using tileALocalM16 = CubeTileM16<dtype, kPeM, tK>;
+    using tileALocalM32 = CubeTileM32<dtype, kPeM, tK>;
+    using tileALocal =
+        std::conditional_t<(kPeM <= 16), tileALocalM16, tileALocalM32>;
+
+    // B: Shared tile (all 4 PEs read the same N-slice).
     using tileBMatrix = SharedMatrixRight<dtype, tN, tK>;
-    using tileAShared = SharedTile<tileAMatrix>;
     using tileBShared = SharedTile<tileBMatrix>;
 
-    // MX scale shared tiles (U32, logical group-64)
-    using tileAScaleMatrix =
-        SharedMatrixLeft<scale_dtype, kGroupM, kPaddedScaleK,
-                         kGroupM, kScaleK>;
+    // MX scale (U32, logical group-64): A scale stays Local with A, B scale
+    // stays Shared with B (Local-A/Shared-B cooperative form).
+    using tileAScaleLocal =
+        Tile<Location::Scaling, scale_dtype, kPeM, kPaddedScaleK,
+             BLayout::RowMajor, kPeM, kScaleK>;
     using tileBScaleMatrix =
         SharedMatrixRight<scale_dtype, tN, kPaddedScaleK,
-                         tN, kScaleK>;
-    using tileAScaleShared = SharedTile<tileAScaleMatrix>;
+                          tN, kScaleK>;
     using tileBScaleShared = SharedTile<tileBScaleMatrix>;
 
     // PE-private CUBE accumulator
@@ -90,14 +96,14 @@ __attribute__((noinline)) void quant_batch_matmul_hif4_mt(
 
     // SharedTile capacity check
     constexpr int kSharedTRegBytes = 256 * 1024;
+    // Only B/scaleB live in ShareTReg now; A/scaleA moved to Local CellReg.
     constexpr int kSharedOperandBytes =
-        tileAMatrix::LogicalTileBytes + tileBMatrix::LogicalTileBytes +
-        tileAScaleMatrix::LogicalTileBytes + tileBScaleMatrix::LogicalTileBytes;
+        tileBMatrix::LogicalTileBytes + tileBScaleMatrix::LogicalTileBytes;
     static_assert(kSharedOperandBytes <= kSharedTRegBytes,
-                  "A/B and MX scale tiles exceed the 256 KiB SharedTReg pool");
+                  "B and MX scale tiles exceed the 256 KiB SharedTReg pool");
 
     // Global scale slice tensors (carrier-stride for packed B)
-    using gmAScaleSlice = global_tensor<scale_dtype, RowMajor<kGroupM, kGScaleK>>;
+    using gmAScaleSlice = global_tensor<scale_dtype, RowMajor<kPeM, kGScaleK>>;
     using gmBScaleSlice = global_tensor<scale_dtype, RowMajor<tN, kGScaleK>>;
 
     // Global C slice
@@ -120,39 +126,45 @@ __attribute__((noinline)) void quant_batch_matmul_hif4_mt(
             for (int j = 0; j < Nb; ++j) {
                 tileC tC;
 
+auto mxOptions = fixp::keep_acc();
+
 #pragma clang loop unroll(full)
                 for (int k = 0; k < Kb; ++k) {
-                    // GM slices (carrier-stride for packed FP4x2)
-                    gmASlice gA(src0 + bOffA +
-                                (size_t)i * kGroupM * kStoredGK +
-                                (size_t)k * kStoredTK);
+                    // B → Shared（4 PE 共读同一个 [tN, tK] 右矩阵切片）。
                     gmBSlice gB(src1 + bOffB +
                                 (size_t)j * tN * kStoredGK +
                                 (size_t)k * kStoredTK);
-
-                    tileAShared tA;
                     tileBShared tB;
-                    TLOAD<tileAMatrix, 1>(tA, gA);
                     TLOAD<tileBMatrix, 1>(tB, gB);
 
-                    tileAScaleShared tAScale;
-                    tileBScaleShared tBScale;
-                    gmAScaleSlice gAScale(src0_mx + bOffAS +
-                                          (size_t)i * kGroupM * kGScaleK +
-                                          (size_t)k * kScaleK);
+                    // A → Local CellReg（每 PE 独立装载自己的 [kPeM, tK] 行切片）。
+                    gmASlice gA(src0 + bOffA +
+                                ((size_t)i * kGroupM + (size_t)tid * kPeM) *
+                                    kStoredGK +
+                                (size_t)k * kStoredTK);
+                    tileALocal tA;
+                    TLOAD_CUBE(tA, gA);
+
+                    // scaleB → Shared；scaleA → Local（随各自矩阵存储类）。
                     gmBScaleSlice gBScale(src1_mx + bOffBS +
                                           (size_t)j * tN * kGScaleK +
                                           (size_t)k * kScaleK);
-                    TLOAD<tileAScaleMatrix, 1>(tAScale, gAScale);
+                    tileBScaleShared tBScale;
                     TLOAD<tileBScaleMatrix, 1>(tBScale, gBScale);
 
-                    auto mxOptions = fixp::keep_acc();
+                    gmAScaleSlice gAScale(
+                        src0_mx + bOffAS +
+                        ((size_t)i * kGroupM + (size_t)tid * kPeM) * kGScaleK +
+                        (size_t)k * kScaleK);
+                    tileAScaleLocal tAScale;
+                    TLOAD(tAScale, gAScale);
+
                     if (k == 0) {
-                        TMATMUL_MX<3>(tC, tA, tAScale, tB, tBScale,
-                                      mxOptions);
+                        TMATMUL_MX<3>(tC, tA, tAScale, tB, tBScale, mxOptions,
+                                      (size_t)kGroupM);
                     } else {
                         TMATMUL_MX_ACC<3>(tC, tC, tA, tAScale, tB, tBScale,
-                                          mxOptions);
+                                          mxOptions, (size_t)kGroupM);
                     }
                 }
 
