@@ -24,10 +24,14 @@ COMMON="TESTCASE=quant_sparse_flash_mla QSMLA_SPARSE_EMBED_INPUT=on \
   QSMLA_DTYPE=HIF8 QSMLA_SPARSE_DATA_ROOT=$ROOT"
 
 # 五种模式 -> 统一 4-PE IMPL（Makefile 由 IMPL 推导 QSMLA_SPARSE_CASE 数据子目录）
+# csa_small 使用 Td_block=256：O/Q tile 全驻留（kDb=2）形态——gfsim 实测可 PASS
+# （Td=64 形态在 gfsim 撞 tile-store dataRdy 死锁家族，表现为 daily TIMEOUT）；
+# 其余模式暂保持 Td_block=64（Td=256 待逐个验证后切换）。
+COMMON_TD256="${COMMON/Td_block=64/Td_block=256}"
+
 for pair in \
   "swa_small:swa_tadd_4pe" \
   "hca_small:hca_tadd_4pe" \
-  "csa_small:csa_tadd_4pe" \
   "ori_sparse_small:ori_sparse_tadd_4pe" \
   "ori_cmp_sparse_small:ori_cmp_sparse_tadd_4pe"; do
   case="${pair%%:*}"; impl="${pair##*:}"
@@ -35,3 +39,17 @@ for pair in \
   python3 run_qsmla_cpu_reference.py --case "$case" --dtype HIF8 --output-root "$ROOT"
   make $COMMON IMPL="$impl"
 done
+
+# csa_small（Td=256 全驻留形态）
+python3 run_qsmla_cpu_reference.py --case csa_small --dtype HIF8 --output-root "$ROOT"
+make $COMMON_TD256 IMPL=csa_tadd_4pe
+
+# 网络典型 CSA case（C4 死数据裁剪版，Td=256）：
+#   生产形状 B=8/S1=4/S2=131072/N1=128/TopK=1024 的等价裁剪（窗口不触界、
+#   cmp 选择池 4K），64 work/ELF——daily 的网络负载画像用例。
+#   首次数据生成约 13 分钟（64 work 的 CPU golden），幂等缓存于 $ROOT。
+WEB_CASE=typical_bsnd_csa_s2_2048_topk1024_c4
+python3 run_qsmla_cpu_reference.py --case "$WEB_CASE" --dtype HIF8 --output-root "$ROOT"
+make $COMMON_TD256 IMPL=csa_tadd_4pe QSMLA_SPARSE_CASE="$WEB_CASE" \
+  B=8 s1=4 s2=2048 N1=128 N2=1 D=512 wleft=128 wright=576 \
+  cmp_s2=4096 ori_topk=1024 cmp_topk=1024

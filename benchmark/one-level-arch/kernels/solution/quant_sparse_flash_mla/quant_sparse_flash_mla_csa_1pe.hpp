@@ -118,7 +118,9 @@ struct CsaTiles {
         std::is_same_v<qdtype, __hif8>;
     static constexpr float kHif8ProbabilityScale = 16.0f;
 
-    // ---- CUBE 操作数 / 累加器 ----
+    // ---- CUBE 操作数 / 累加器（M32 CELL 格式）----
+    // A 操作数与累加器同为 CUBE_M32（TMATMUL 契约：A 与 D 的 CUBE_M
+    // 布局必须一致），物理 CELL 高 32 行；B 保持 CUBE_N8。
     using tileQ = CubeTileM32<qdtype, kTm, kTd>;            // A: Q [Tm, Td]
     using tileKRight = CubeTileN8<kvdtype, kTd, kTk>;       // B: K^T [Td, Tk]
     using tileV = CubeTileN8<kvdtype, kTk, kTd>;            // B: V   [Tk, Td]
@@ -126,15 +128,18 @@ struct CsaTiles {
     using tileScoreCube = CubeAccumulatorM32<float, kTm, kTk>;
     using tilePVCube = CubeAccumulatorM32<float, kTm, kTd>;
 
-    // ---- Vec 引擎 tile ----
-    using tileW = Tile<Location::Vec, float, kTm, kTk, BLayout::RowMajor>;
+    // ---- Vec 引擎 tile（M32 CELL 格式，PTO-ISA #291）----
+    // 物理 carrier 为 32 行 CELL 列阵（128B/CELL）；elementwise / TCVT /
+    // TLOAD / TSTORE 经 B.DATR CUBE_M32 与 ND2M32 / M322ND 自动编码。
+    using tileW = VecTileM32<float, kTm, kTk>;
     using tileMask = tileW;
-    using tileP = Tile<Location::Vec, qdtype, kTm, kTk, BLayout::RowMajor>;
-    using tileO = Tile<Location::Vec, float, kTm, kTd, BLayout::RowMajor>;
-    using tileOCast =
-        Tile<Location::Vec, odttype, kTm, kTd, BLayout::RowMajor>;
-    using tileRowState =
-        Tile<Location::Vec, float, kTm, 1, BLayout::RowMajor, kTm, 1>;
+    using tileP = VecTileM32<qdtype, kTm, kTk>;
+    using tileO = VecTileM32<float, kTm, kTd>;
+    using tileOCast = VecTileM32<odttype, kTm, kTd>;
+    using tileRowState = VecTileM32<float, kTm, 1, kTm, 1>;
+    // PTO #311 行归约宽载体：物理保持源的列跨度 [32, kTk]，有效区域
+    // [kTm, 1]；归约结果落在首个 CELL，由 TREDUCEPREFIXVIEW 借出。
+    using tileRowStateWide = VecTileM32<float, kTm, kTk, kTm, 1>;
 
     // ---- GM 视图与迭代器 ----
     using gmQO = global_tensor<qdtype, RowMajor<N1, D>>;
@@ -429,6 +434,7 @@ void quant_sparse_flash_mla_csa_1pe_pto(
     using Tiles = CsaTiles<qdtype, kvdtype, odttype, Config, ModeConfig>;
     using tileW = typename Tiles::tileW;
     using tileRowState = typename Tiles::tileRowState;
+    using tileRowStateWide = typename Tiles::tileRowStateWide;
     using tileP = typename Tiles::tileP;
     using tileO = typename Tiles::tileO;
     using tileOCast = typename Tiles::tileOCast;
@@ -546,9 +552,13 @@ void quant_sparse_flash_mla_csa_1pe_pto(
                                          ori_masks[j], gScore);
                     tileW tW;
                     TLOAD(tW, gScore);
-                    tileRowState tLocalMax;
+                    // PTO #311：行归约写入保持源物理列跨度的宽载体，
+                    // 再用 TREDUCEPREFIXVIEW 借出首个 CELL 参与算术。
+                    tileRowStateWide tLocalMaxWide;
+                    TROWMAX(tLocalMaxWide, tW);
+                    auto tLocalMax =
+                        TREDUCEPREFIXVIEW<tileRowState>(tLocalMaxWide);
                     tileRowState tNewMax;
-                    TROWMAX(tLocalMax, tW);
                     TMAX(tNewMax, tMax, tLocalMax);
                     tileRowState tScale;
                     TSUB(tScale, tMax, tNewMax);
@@ -557,8 +567,10 @@ void quant_sparse_flash_mla_csa_1pe_pto(
                     TMUL(tScaledOldSum, tSum, tScale);
                     TROWEXPANDSUB(tW, tW, tNewMax);
                     TEXP(tW, tW);
-                    tileRowState tLocalSum;
-                    TROWSUM(tLocalSum, tW);
+                    tileRowStateWide tLocalSumWide;
+                    TROWSUM(tLocalSumWide, tW);
+                    auto tLocalSum =
+                        TREDUCEPREFIXVIEW<tileRowState>(tLocalSumWide);
                     TADD(tSum, tScaledOldSum, tLocalSum);
                     tMax = tNewMax;
                 }
@@ -570,9 +582,13 @@ void quant_sparse_flash_mla_csa_1pe_pto(
                                          gScore);
                     tileW tW;
                     TLOAD(tW, gScore);
-                    tileRowState tLocalMax;
+                    // PTO #311：行归约写入保持源物理列跨度的宽载体，
+                    // 再用 TREDUCEPREFIXVIEW 借出首个 CELL 参与算术。
+                    tileRowStateWide tLocalMaxWide;
+                    TROWMAX(tLocalMaxWide, tW);
+                    auto tLocalMax =
+                        TREDUCEPREFIXVIEW<tileRowState>(tLocalMaxWide);
                     tileRowState tNewMax;
-                    TROWMAX(tLocalMax, tW);
                     TMAX(tNewMax, tMax, tLocalMax);
                     tileRowState tScale;
                     TSUB(tScale, tMax, tNewMax);
@@ -581,8 +597,10 @@ void quant_sparse_flash_mla_csa_1pe_pto(
                     TMUL(tScaledOldSum, tSum, tScale);
                     TROWEXPANDSUB(tW, tW, tNewMax);
                     TEXP(tW, tW);
-                    tileRowState tLocalSum;
-                    TROWSUM(tLocalSum, tW);
+                    tileRowStateWide tLocalSumWide;
+                    TROWSUM(tLocalSumWide, tW);
+                    auto tLocalSum =
+                        TREDUCEPREFIXVIEW<tileRowState>(tLocalSumWide);
                     TADD(tSum, tScaledOldSum, tLocalSum);
                     tMax = tNewMax;
                 }
