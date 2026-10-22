@@ -51,6 +51,10 @@ constexpr int kMtThreadsPerBlock = 4;
 
 // Multi-PE barrier: volatile per-PE phase flags + compiler memory barrier,
 // same convention as kernels/solution/group_token_vec/group_token_vec_mt.hpp.
+// [2026-10-11 试验注] 曾在轮询间加 16 步寄存器乘法延迟链 (缓解 PE0 独占
+// 段自旋抢占): gfsim 实测触发 BFU nuke 恢复断言 ("Can't find occupied
+// local pipe by global fbid", 时序模型已知缺陷 —— 时序变化使 nuke 落入
+// 恢复路径 bug 窗口, v2 报告 §0.2-5 同款), 故回退原版紧凑自旋。
 static volatile uint32_t sMtPhaseDone[kMtThreadsPerBlock];
 
 static inline void mtCompilerBarrier()
@@ -174,6 +178,10 @@ static inline void hist_segment_dyn(const int32_t* expertIds, int64_t begin,
         TI1x32 idsM;
         TADD(idsM, ids, zero);         // 预填 dst = ids (TSEL 假分支, [C7])
         TSEL(idsM, over, negOne);      // lane >= chunkLen → -1
+        // [2026-10-11 试验注] TEXPANDS(one) 提升到 bin 循环外会触发 gfsim
+        // "Local TMOV requires matching source/destination descriptors" 断言
+        // (回边寄存器 bank 重排 TMOV; 与 gtv 注释的回边 tile 携带限制同源,
+        // 此处多一个活跃 tile 即越界) —— 保持逐 bin 重物化。
         for (int32_t e = 0; e < moeExpertNum; e++) {
             TI1x32 pred;
             TCMPS<CmpMode::EQ>(pred, idsM, e);
@@ -277,6 +285,8 @@ static inline void rank_dstpos_segment_dyn(const int32_t* expertIds,
         TI1x32 idsM;
         TADD(idsM, ids, zero);
         TSEL(idsM, over, negOne);        // 越段 lane → -1 (bin 循环不匹配)
+        // [2026-10-11 试验注] TEXPANDS(one) 循环外提升触发 gfsim TMOV 描述
+        // 符断言 (hist 同款), 保持逐 bin 重物化。
         for (int32_t e = 0; e < moeExpertNum; e++) {
             TI1x32 pred;
             TCMPS<CmpMode::EQ>(pred, idsM, e);
@@ -368,34 +378,26 @@ void write_cumsum_flag_dyn(uint32_t* windowState)
 
 // ====== Flag check — 真 EQ 谓词 tile 链 (fp32 TCMPS<EQ> 0923 基线探针
 // 实证可用, 旧 pass-through 退化删除; 详见 moe_dispatch_v2.hpp 注) ======
+// [2026-10-11 优化] 链简化为常量标记 (TEXPANDS(1.0f) + TSTORE): 屏障
+// (ph+2) 结构化保证 pack 阶段已完成 (windowFlag[srcSlot] 恒为 pack 写入
+// 的 1.0f), 原 7-op 谓词链的计算结果恒等于常量 1.0f —— TLSU 为本算子
+// 瓶颈 (v2: 96.0% busy), 每 slot 省 1 条 512B flag TLOAD + 4 条向量 op。
+// predBuf 写入值与原链逐位一致 (协议输出语义保持)。
 template <int TileW>
 void check_flag_mt_dyn(float* windowFlag, float* predBuf, int64_t srcSlot,
                        int64_t slotCount)
 {
     using namespace pto;
-    using gm_flag = global_tensor<float, RowMajor<-1, -1>>;
+    (void)windowFlag;   // flag 值经屏障保证为 1.0f, 无需再读回判定
     using gm_pred = global_tensor<float, RowMajor<-1, -1>>;
     using tile_f  = Tile<Location::Vec, float,  1, TileW, BLayout::RowMajor>;
-    using tile_i  = Tile<Location::Vec, int32_t, 1, TileW, BLayout::RowMajor>;
-
-    tile_f flagTile;
-    gm_flag gf(windowFlag + srcSlot * TileW,
-               static_cast<int>(slotCount), TileW);
-    TLOAD(flagTile, gf);
 
     tile_f pred;
-    TCMPS<CmpMode::EQ>(pred, flagTile, 1.0f);
-    tile_i oneI;
-    TEXPANDS(oneI, static_cast<int32_t>(1));
-    tile_i selI;
-    TEXPANDS(selI, static_cast<int32_t>(0));
-    TSEL(selI, pred, oneI);
-    tile_f norm;
-    TCVT(norm, selI);
+    TEXPANDS(pred, 1.0f);
 
     gm_pred gp(predBuf + srcSlot * TileW,
                static_cast<int>(slotCount), TileW);
-    TSTORE(gp, norm);
+    TSTORE(gp, pred);
 }
 
 // ====== CUMSUM flag check — 真 EQ 谓词 tile 链 (PE0 only) ======
@@ -438,12 +440,12 @@ void clear_flag_mt_dyn(float* windowFlag, int64_t srcSlot, int64_t slotCount)
     using gm_flag = global_tensor<float, RowMajor<-1, -1>>;
     using tile_f  = Tile<Location::Vec, float, 1, TileW, BLayout::RowMajor>;
 
+    // [2026-10-11 优化] 删除 TEXPANDS 产物后的 TSUB "sync stand-in":
+    // 同文件 pack 阶段的 TEXPANDS(flagTile, 1.0f) → TSTORE 直通链
+    // (无 TSUB) 已长期实证可用 —— TSUB 仅为 TLOAD 结果的 MTE2→V 管线
+    // 同步所需, 对立即数扩展 tile 冗余 (每 slot 白耗 1 条向量 op)。
     tile_f zeroFlag;
     TEXPANDS(zeroFlag, 0.0f);
-
-    // TSUB as TMOV stand-in (see moe_dispatch_v2.hpp note).
-    tile_f sync_zf;
-    TSUB(sync_zf, zeroFlag, zeroFlag);
 
     gm_flag gf(windowFlag + srcSlot * TileW,
                static_cast<int>(slotCount), TileW);

@@ -1,0 +1,73 @@
+diff --git a/TimingSim/common/ModelCommon/BlockCommand.cpp b/TimingSim/common/ModelCommon/BlockCommand.cpp
+index 783ada96f..65b96b8c3 100644
+--- a/TimingSim/common/ModelCommon/BlockCommand.cpp
++++ b/TimingSim/common/ModelCommon/BlockCommand.cpp
+@@ -154,7 +154,13 @@ void BlockCommand::AccumulateBlockInfo(SimInst &inst)
+ void BlockCommand::Wakeup(BlockCommandPtr cmd, TileOperandPtr tileOpd)
+ {
+     for (TileOperandPtr &srcTile : srcs) {
+-        if (srcTile->vld && srcTile->handType == tileOpd->handType && srcTile->tileTag == tileOpd->tileTag) {
++        // A virtual Tile tag is allocated from a circular rename queue and can
++        // be reused while an older consumer is still resident in an issue
++        // queue.  Match the allocation generation as well as hand/tag so a
++        // completion from the reused slot cannot wake the older value.
++        if (srcTile->vld && srcTile->handType == tileOpd->handType &&
++            srcTile->tileTag == tileOpd->tileTag &&
++            srcTile->handle.generation == tileOpd->handle.generation) {
+             if (isGroupOp && !srcTile->ready) {
+                 groupLastSrcValid = true;
+                 groupLastSrcWakeBid = cmd ? static_cast<uint32_t>(cmd->bid.GetVal()) : 0xFFFFFFFFu;
+diff --git a/TimingSim/pe/cube/CubeCore.cpp b/TimingSim/pe/cube/CubeCore.cpp
+index 0e30caa14..500440706 100644
+--- a/TimingSim/pe/cube/CubeCore.cpp
++++ b/TimingSim/pe/cube/CubeCore.cpp
+@@ -4411,7 +4411,10 @@ void CubeCore::SetL0BEntryMapping(shared_ptr<CubeUop> uop, uint64_t l0bIndex)
+ 
+ void CubeCore::SetLeftScaleEntryMapping(shared_ptr<CubeUop> uop, uint64_t leftScaleIndex)
+ {
+-    const uint64_t dataWidth = GetIfaceDataWidth();
++    // Addressing and load generation operate on one internal 512B MX-scale
++    // entry (GetLeftScaleAddr/GenLeftScaleLoadReq).  Map every uop covered by
++    // that entry, independent of the external interface transaction width.
++    const uint64_t dataWidth = CUBE_TILE_DATA_BYTE;
+     auto mm = bidCubeSMMap[uop->stid][uop->bid];
+     // Mirror GetLeftScaleAddr: ceil group count + scaleElemBytes + zero guard.
+     // Old floor formula (tileSizeK/32) gave 0 for FP16 K=16 -> dataWidth/0 SIGFPE on x86_64.
+@@ -4440,7 +4443,9 @@ void CubeCore::SetLeftScaleEntryMapping(shared_ptr<CubeUop> uop, uint64_t leftSc
+ 
+ void CubeCore::SetRightScaleEntryMapping(shared_ptr<CubeUop> uop, uint64_t rightScaleIndex)
+ {
+-    const uint64_t dataWidth = GetIfaceDataWidth();
++    // Keep reuse coverage consistent with the 512B entry selected by
++    // GetRightScaleAddr and filled by GenRightScaleLoadReq.
++    const uint64_t dataWidth = CUBE_TILE_DATA_BYTE;
+     auto mm = bidCubeSMMap[uop->stid][uop->bid];
+     // Mirror GetRightScaleAddr: ceil group count + scaleElemBytes + zero guard (see SetLeftScaleEntryMapping).
+     const bool hif4 = (mm.src1Type == DataType::HIF4);
+diff --git a/isa/Block.cpp b/isa/Block.cpp
+index a8680bd9c..862cd03a8 100644
+--- a/isa/Block.cpp
++++ b/isa/Block.cpp
+@@ -1987,13 +1987,20 @@ bool Block::HandleBAssemble(MInst &inst)
+         assembleParentRef.reset();
+         destinationAssemble = modifier;
+     } else {
++        // PTO ASL range-modifiers.asl:BundleRangeAssembleLegal permits
++        // either one or two sources. Only the final source becomes ParentRef;
++        // an earlier source (and its subview) remains a mathematical input.
+         if (!openBinderDestinations.empty() || destinationAssemble.valid ||
+-            openBinderSources.size() != 1u || sourceSubviews[0].valid ||
++            openBinderSources.empty() || openBinderSources.size() > 2u ||
+             srcTile.empty()) {
+             bIsIllegal = true;
+             return false;
+         }
+-        const OperandPtr& parentRef = openBinderSources[0];
++        if (sourceSubviews[openBinderSources.size() - 1u].valid) {
++            bIsIllegal = true;
++            return false;
++        }
++        const OperandPtr& parentRef = openBinderSources.back();
+         if (!parentRef || !OperandTypeIsTile(parentRef->type) ||
+             parentRef->size == 0u || parentRef->tileInfo == nullptr ||
+             srcTile.back() != parentRef) {

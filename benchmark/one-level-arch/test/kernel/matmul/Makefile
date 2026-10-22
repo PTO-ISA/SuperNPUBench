@@ -15,6 +15,21 @@ group_runtime := on
 # (see matmul_shared.hpp: gmC/tileC use float). Supported: float, __bf16, __half.
 DTYPE ?= float
 LP_MODE ?= FP8
+LOWP_REUSE_A ?= off
+LOWP_TAIL_STORAGE ?= local
+LOWP_RESIDENT_CHAINS ?= 2
+ifeq ($(filter $(LOWP_REUSE_A),on off),)
+$(error LOWP_REUSE_A must be on or off)
+endif
+ifeq ($(LOWP_REUSE_A),on)
+ifeq ($(filter $(LOWP_TAIL_STORAGE),shared local),)
+$(error LOWP_TAIL_STORAGE must be shared or local)
+endif
+DEFINES += -DMATMUL_LOWP_REUSE_A
+DEFINES += -DMATMUL_LOWP_TAIL_SHARED=$(if $(filter shared,$(LOWP_TAIL_STORAGE)),1,0)
+DEFINES += -DMATMUL_LOWP_REUSE_A_MAX_RESIDENT_OUTPUTS=$(LOWP_RESIDENT_CHAINS)
+LOWP_REUSE_SUFFIX := _reuseA_tail$(LOWP_TAIL_STORAGE)
+endif
 
 ifeq ($(filter $(DTYPE),float __bf16 __half),)
 $(error Unsupported DTYPE '$(DTYPE)'; supported: float, __bf16, __half)
@@ -92,7 +107,7 @@ endif
 # Keep the default (FP32) ELF name unchanged for backward compatibility;
 # non-default dtypes get a _DType<dtype> suffix so binaries don't collide.
 ifeq ($(TESTCASE),matmul_lowp)
-TARGET = $(ELF_HEAD)_$(TESTCASE)_$(LP_MODE)_B$(B)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
+TARGET = $(ELF_HEAD)_$(TESTCASE)_$(LP_MODE)_B$(B)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK)$(LOWP_REUSE_SUFFIX).elf
 else ifeq ($(TESTCASE),matmul_hif4_l1_quantize)
 TARGET = $(ELF_HEAD)_$(TESTCASE)_B$(B)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
 else ifeq ($(DTYPE),float)
@@ -107,6 +122,8 @@ include ../../common/Makefile.common
 ifeq ($(TESTCASE),matmul_lowp)
 golden-check:
 	$(MAKE) -B TESTCASE=$(TESTCASE) LP_MODE=$(LP_MODE) \
+		LOWP_REUSE_A=$(LOWP_REUSE_A) LOWP_TAIL_STORAGE=$(LOWP_TAIL_STORAGE) \
+		LOWP_RESIDENT_CHAINS=$(LOWP_RESIDENT_CHAINS) \
 		B=$(B) M=$(M) N=$(N) K=$(K) tM=$(tM) tN=$(tN) tK=$(tK) \
 		COMPILER_DIR=$(COMPILER_DIR) OBJ_ROOT=$(OBJ_ROOT) \
 		res_check=on all

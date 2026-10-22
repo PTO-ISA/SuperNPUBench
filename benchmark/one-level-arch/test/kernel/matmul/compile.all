@@ -81,6 +81,15 @@ for mode in HIF4X2 MXFP4; do
         B=1 M=256 N=256 K=1024 tM=128 tN=64 tK=1024
 done
 
+# HIF4 reuseA full-cache performance configuration (M/K/N=256/4096/1280).
+# The compile-time dispatcher selects matmul_lowp_reuseA_full_cache: all A
+# slices fit in CellReg, two M128 C chains fit the 32 KiB/Cube internal
+# accumulator, and the two B/scale buffers fit in the 256 KiB SharedTReg pool.
+make diss TESTCASE=matmul_lowp LP_MODE=HIF4 LOWP_REUSE_A=on \
+    LOWP_RESIDENT_CHAINS=2 LOWP_TAIL_STORAGE=local \
+    COMPILER_DIR="$COMPILER_DIR" \
+    B=1 M=256 N=1280 K=4096 tM=128 tN=128 tK=512
+
 # Larger FP32 problem size (M=N=K=1024) to exercise deeper K reduction and
 # more M/N output tiles. Tile extents unchanged from the 256 baseline
 # (tM=128 tN=256 tK=128); only the outer loop counts grow.
