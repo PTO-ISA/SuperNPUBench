@@ -1,130 +1,21 @@
-// ============================================================================
-// Broadcast 算子 — PTO 一层编程模型
-//
-// 以 Tile_ISA_Reference 文档为准，使用 PTO ISA 定义的 C++ Intrinsic 接口。
-// 当前编译器 (Linx-TileOP-API) 尚未完全实现 PTO ISA，本文件按 ISA 文档书写，
-// 暂不保证可编译通过。
-//
-// ┌─────────────────────────────────────────────────────────────────────────┐
-// │                    当前编译器不支持 / 不完整的指令汇总                   │
-// ├──────────┬──────────────────┬──────────────────────────────────────────┤
-// │ Pto ISA  │ 当前编译器状态   │ 说明                                     │
-// │ 指令     │                  │                                          │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TCI      │ API 有，二层实现 │ pto_tileop.hpp 有声明；                  │
-// │          │                  │ jcore/TCI.hpp 用 __vec__ + blkv_get_*     │
-// │          │                  │ 实现，非真正一层                         │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TEXPANDS │ API 有(名不同)， │ Pto ISA 名 TEXPANDS；                    │
-// │          │ 二层实现         │ 当前编译器名 TEXPANDSCALAR；              │
-// │          │                  │ jcore 用 __vec__ 实现                    │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TREMS    │ 完全缺失         │ pto_tileop.hpp 中无此 API；              │
-// │          │                  │ 当前编译器无任何标量取余实现             │
-// │          │                  │ (仅有 tile-tile 的 TREM，且仅 int32)      │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TDIVS    │ API 有，二层实现 │ jcore/TDivs.hpp 用 __vec__ 实现          │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TMULS    │ API 有，二层实现 │ jcore/TMuls.hpp 用 __vec__ 实现          │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TADD     │ API 有，二层实现 │ jcore/TAdd.hpp 用 __vec__ 实现           │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ MGATHER  │ 已支持(一层)     │ template_asm.h 用 asm volatile            │
-// │          │                  │ (BSTART.TMA) 实现；                      │
-// │          │                  │ 但缺少 Coalesce::Elem 模板参数支持       │
-// ├──────────┼──────────────────┼──────────────────────────────────────────┤
-// │ TSTORE   │ API 有(名不同)， │ Pto ISA 名 TSTORE；                      │
-// │          │ 二层实现         │ 当前编译器名 TCOPYOUT；                   │
-// │          │                  │ jcore/TCopyOut.hpp 用 __vec__ 实现       │
-// └──────────┴──────────────────┴──────────────────────────────────────────┘
-//
-// PTO ISA 文档签名 (Declared in include/pto/pto_instr.hpp):
-//
-//   TCI:
-//     template <typename TileData, typename T, int descending, typename... WaitEvents>
-//     PTO_INST RecordEvent TCI(TileData &dst, T start, WaitEvents &... events);
-//
-//   TEXPANDS:
-//     template <typename TileData, typename... WaitEvents>
-//     PTO_INST RecordEvent TEXPANDS(TileData &dst, typename TileData::DType scalar,
-//                                   WaitEvents &... events);
-//
-//   TREMS:
-//     template <auto PrecisionType = RemSAlgorithm::DEFAULT,
-//               typename TileDataDst, typename TileDataSrc,
-//               typename TileDataTmp, typename... WaitEvents>
-//     PTO_INST RecordEvent TREMS(TileDataDst &dst, TileDataSrc &src,
-//                                typename TileDataSrc::DType scalar,
-//                                TileDataTmp &tmp, WaitEvents &... events);
-//
-//   TDIVS:
-//     template <auto PrecisionType = DivAlgorithm::DEFAULT,
-//               typename TileDataDst, typename TileDataSrc,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TDIVS(TileDataDst &dst, TileDataSrc &src0,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TMULS:
-//     template <typename TileDataDst, typename TileDataSrc, typename... WaitEvents>
-//     PTO_INST RecordEvent TMULS(TileDataDst &dst, TileDataSrc &src0,
-//                                typename TileDataSrc::DType scalar,
-//                                WaitEvents &... events);
-//
-//   TADD:
-//     template <typename TileDataDst, typename TileDataSrc0,
-//               typename TileDataSrc1, typename... WaitEvents>
-//     PTO_INST RecordEvent TADD(TileDataDst &dst, TileDataSrc0 &src0,
-//                               TileDataSrc1 &src1, WaitEvents &... events);
-//
-//   MGATHER:
-//     template <Coalesce Mode = Coalesce::Row,
-//               GatherOOB Oob = GatherOOB::Undefined,
-//               typename TileDst, typename GlobalData,
-//               typename TileInd, typename... WaitEvents>
-//     PTO_INST RecordEvent MGATHER(TileDst &dst, GlobalData &src,
-//                                  TileInd &indexes, WaitEvents &... events);
-//
-//   TSTORE:
-//     template <typename TileData, typename GlobalData,
-//               AtomicType atomicType = AtomicType::AtomicNone,
-//               typename... WaitEvents>
-//     PTO_INST RecordEvent TSTORE(GlobalData &dst, TileData &src,
-//                                 WaitEvents &... events);
-//
-// ============================================================================
+// Broadcast 的逐元素示例：用普通 C++ 坐标计算表达读取，用公共 TileOp
+// 组装完整快照，再统一写回。FP16/2048 路径为64->128->2048层级，保留
+// 尾部谓词和逐 Tile 的输入/输出重叠语义。其他 profile 保留既有兼容路径。
 
-#include <common/pto_tile.hpp>             // Tile, GlobalTensor 等类型 (当前编译器已有)
-#include <common/global_iterator.hpp>      // global_iterator 工具类型 (当前编译器已有)
-// #include <pto/pto_instr.hpp>            // [!] PTO ISA C++ Intrinsic — 当前编译器未提供
+#include <common/pto_tileop.hpp>
+#include <common/pto_tile.hpp>
+#include <common/global_iterator.hpp>
 
 #include <cstdint>
 #include <cstdio>
+#include <type_traits>
+#include <utility>
 
 // ============================================================================
 // 维度规则：从后面对齐，前面自动补 1，维度=1 可广播
 // ============================================================================
 
-// ----------------------------------------------------------------------------
-// gen_offset_pto: 用 PTO ISA Tile 指令计算广播偏移 (一层编程，无 __vec__ 块)
-//
-// 算法 (stride 累加法，从最内维到最外维):
-//   1. TCI      生成索引序列  base, base+1, ..., base+N-1
-//   2. TEXPANDS 将输出偏移 tile 初始化为 0
-//   3. 对每个输出维 d (从 OUT_DIM-1 到 0):
-//        TREMS  coord = idx % out_shape[d]          (标量取余)
-//        TDIVS  idx   = idx / out_shape[d]          (标量整除)
-//        若 d 对应输入维 i = d-(OUT_DIM-IN_DIM) >= 0:
-//          非广播维 (in_shape[i]!=1):
-//            TMULS  tmp = coord * stride
-//            TADD   out += tmp
-//          stride *= in_shape[i]
-//
-// 注意: PTO ISA MGATHER<Coalesce::Elem> 使用元素索引 (非字节偏移),
-//       所以这里不再乘 sizeof(dtype)。
-//       原始 broadcast.hpp 的 __vec__ 版本需要乘 sizeof(dtype) 是因为
-//       template_asm.h 里的旧 MGATHER 按字节偏移取数。
-// ----------------------------------------------------------------------------
+// 既有 TileOp 偏移生成路径，供尚未迁移的 profile 使用。
 template<typename dtype, typename tile_shapeOffset, size_t MAX_DIM, size_t IN_DIM, size_t OUT_DIM>
 void gen_offset_pto(
     tile_shapeOffset &out,
@@ -143,11 +34,9 @@ void gen_offset_pto(
     tile_shapeOffset tmpTile;     // TREMS 需要 (A2A3 要求 tmp >= 1 行, 列数 >= dst)
 
     // ---- Step 1: TCI 生成索引序列 [base, base+1, ..., base+N-1] ----
-    // [当前编译器] TCI 在 pto_tileop.hpp 有声明，但 jcore 实现为 __vec__ (二层)
     TCI(idxTile, (off_t)base);
 
     // ---- Step 2: TEXPANDS 初始化 out = 0 ----
-    // [当前编译器] PTO ISA 名 TEXPANDS，当前编译器名 TEXPANDSCALAR；jcore 为 __vec__
     TEXPANDS(out, (off_t)0);
 
     size_t stride = 1;
@@ -158,12 +47,9 @@ void gen_offset_pto(
         off_t out_d = (off_t)out_shape[d];
 
         // TREMS: coord = idx % out_d
-        // [当前编译器] 完全缺失！pto_tileop.hpp 无 TREMS API。
-        //             退路: 用 TDIVS+TMULS+TSUB 三条拼出取余。
         TREMS(coordTile, idxTile, out_d);
 
         // TDIVS: idx = idx / out_d (推进到下一维)
-        // [当前编译器] API 有，jcore 为 __vec__
         TDIVS(idxTile, idxTile, out_d);
 
         // 该输出维是否对应输入维
@@ -171,21 +57,129 @@ void gen_offset_pto(
         if (i >= 0) {
             if (in_shape[i] != 1) {            // 非广播维才累加
                 // TMULS: tmp = coord * stride
-                // [当前编译器] API 有，jcore 为 __vec__
                 TMULS(tmpTile, coordTile, (off_t)stride);
                 // TADD: out += tmp
-                // [当前编译器] API 有，jcore 为 __vec__
                 TADD(out, out, tmpTile);
             }
             stride *= in_shape[i];             // stride 更新 (广播维 ==1 不变)
         }
     }
 
-    // 不再乘 sizeof(dtype):
-    //   PTO ISA MGATHER<Coalesce::Elem> 按"元素索引"取数 (dst[i,j] = src[idx[i,j]])，
-    //   而非旧 MGATHER 的字节偏移。
 }
 
+
+template <size_t IN_DIM, size_t OUT_DIM, uint32_t LogicalCount>
+void broadcast_f16_element_tile(
+    const __half *in_ptr,
+    __half *out_ptr,
+    const size_t *in_shape,
+    const size_t *out_shape,
+    uint32_t output_base,
+    uint32_t batch_begin)
+{
+    constexpr uint32_t kTileElements = 2048;
+    constexpr uint32_t kLeafElements = 64;
+    constexpr uint32_t kLeavesPerGroup = 2;
+    constexpr uint32_t kGroupCount = 16;
+    constexpr uint32_t kPartCount = kLeavesPerGroup * kGroupCount;
+    static_assert(LogicalCount > 0 && LogicalCount <= kTileElements);
+
+    uint32_t input_extents[IN_DIM];
+    uint32_t input_strides[IN_DIM];
+    uint32_t output_extents[OUT_DIM];
+    uint32_t output_strides[OUT_DIM];
+
+    uint32_t stride = 1;
+    for (int dimension = static_cast<int>(OUT_DIM) - 1;
+         dimension >= 0; --dimension) {
+        output_extents[dimension] =
+            static_cast<uint32_t>(out_shape[dimension]);
+        output_strides[dimension] = stride;
+        stride *= output_extents[dimension];
+    }
+
+    stride = 1;
+    for (int dimension = static_cast<int>(IN_DIM) - 1;
+         dimension >= 0; --dimension) {
+        input_extents[dimension] =
+            static_cast<uint32_t>(in_shape[dimension]);
+        input_strides[dimension] = stride;
+        stride *= input_extents[dimension];
+    }
+
+    // 逻辑分片和完整快照均由公共 API 管理；所有输入先读取，再统一写回，
+    // 保留 input/output 重叠时原有的逐 Tile 快照语义。
+    pto::ElementTile<__half, kTileElements> logical_layout;
+    auto logical_parts =
+        pto::TPARTVIEW<kLeafElements>(logical_layout, LogicalCount);
+    pto::TileArray<pto::ElementTile<__half, 128>, 1, kGroupCount> groups;
+
+    for (uint32_t group = 0; group < kGroupCount; ++group) {
+        pto::TileArray<pto::ElementTile<__half, kLeafElements>, 1,
+                       kLeavesPerGroup>
+            leaves;
+
+        for (uint32_t leaf_in_group = 0;
+             leaf_in_group < kLeavesPerGroup; ++leaf_in_group) {
+            const uint32_t part =
+                group * kLeavesPerGroup + leaf_in_group;
+            const uint32_t part_count =
+                static_cast<uint32_t>(logical_parts.valid_size(part));
+            pto::ElementTile<__half, kLeafElements> gathered;
+            auto &elements = pto::TPARTELEMENT(gathered);
+
+#pragma pto element for
+            for (uint32_t element = 0; element < kLeafElements; ++element) {
+                if (element < part_count) {
+                    const uint32_t local_output =
+                        batch_begin +
+                        logical_parts.logical_index(part, element);
+                    const uint32_t global_output =
+                        output_base + local_output;
+                    uint32_t input_index = 0;
+
+                    for (uint32_t dimension = 0; dimension < IN_DIM;
+                         ++dimension) {
+                        const uint32_t output_dimension =
+                            dimension + static_cast<uint32_t>(OUT_DIM -
+                                                              IN_DIM);
+                        const uint32_t coordinate =
+                            (global_output /
+                             output_strides[output_dimension]) %
+                            output_extents[output_dimension];
+                        if (input_extents[dimension] != 1)
+                            input_index +=
+                                coordinate * input_strides[dimension];
+                    }
+
+                    elements[element] = in_ptr[input_index];
+                }
+            }
+
+            TMOV(leaves[0][leaf_in_group], gathered);
+        }
+
+        auto closed_group =
+            pto::TASSEMBLY<pto::ElementTile<__half, 128>>(
+                std::move(leaves));
+        TMOV(groups[0][group], closed_group);
+    }
+
+    auto output_tile =
+        pto::TASSEMBLY<pto::ElementTile<__half, kTileElements>>(
+            std::move(groups));
+    auto output_parts =
+        pto::TPARTVIEW<kLeafElements>(output_tile, LogicalCount);
+
+    for (uint32_t part = 0; part < kPartCount; ++part) {
+        const uint32_t part_count =
+            static_cast<uint32_t>(output_parts.valid_size(part));
+        pto::ElementTile<__half, kLeafElements> stored;
+        auto borrowed = output_parts.part(part);
+        TMOV(stored, borrowed);
+        TSTORE(out_ptr + batch_begin, stored, output_parts, part, part_count);
+    }
+}
 
 // ----------------------------------------------------------------------------
 // broadcast: 接口与原 broadcast.hpp 一致
@@ -201,6 +195,49 @@ void broadcast(
     // value for disjoint output slices.
     size_t output_base = 0
     ) {
+    if constexpr (std::is_same_v<dtype, __half> && tM == 2048 &&
+                  IN_DIM <= OUT_DIM && gIM > 0 && gOM > 0 &&
+                  gIM <= UINT32_MAX && gOM <= UINT32_MAX) {
+        static_assert(IN_DIM > 0 && OUT_DIM <= MAX_DIM,
+                      "broadcast ranks must fit the shape arrays");
+        uint32_t input_elements = 1;
+        uint32_t output_elements = 1;
+        for (uint32_t d = 0; d < OUT_DIM; ++d) {
+            if (out_shape[d] == 0 || out_shape[d] > UINT32_MAX ||
+                output_elements > UINT32_MAX / out_shape[d])
+                __builtin_trap();
+            output_elements *= static_cast<uint32_t>(out_shape[d]);
+        }
+        for (uint32_t d = 0; d < IN_DIM; ++d) {
+            if (in_shape[d] == 0 || in_shape[d] > UINT32_MAX ||
+                input_elements > UINT32_MAX / in_shape[d] ||
+                (in_shape[d] != 1 && in_shape[d] != out_shape[d + OUT_DIM - IN_DIM]))
+                __builtin_trap();
+            input_elements *= static_cast<uint32_t>(in_shape[d]);
+        }
+        if (input_elements > gIM || gOM > output_elements ||
+            output_base > output_elements - gOM)
+            __builtin_trap();
+        constexpr uint32_t kTileElements = 2048;
+        constexpr uint32_t kFullTiles =
+            static_cast<uint32_t>(gOM) / kTileElements;
+        constexpr uint32_t kTailElements =
+            static_cast<uint32_t>(gOM) % kTileElements;
+
+        for (uint32_t tile = 0; tile < kFullTiles; ++tile) {
+            const uint32_t batch_begin = tile * kTileElements;
+            broadcast_f16_element_tile<IN_DIM, OUT_DIM, kTileElements>(
+                in_ptr, out_ptr, in_shape, out_shape,
+                static_cast<uint32_t>(output_base), batch_begin);
+        }
+        if constexpr (kTailElements != 0)
+            broadcast_f16_element_tile<IN_DIM, OUT_DIM, kTailElements>(
+                in_ptr, out_ptr, in_shape, out_shape,
+                static_cast<uint32_t>(output_base),
+                kFullTiles * kTileElements);
+        return;
+    }
+
     const size_t Mb = gOM / tM;
     const size_t rmd_M = gOM % tM;
 
@@ -231,13 +268,9 @@ void broadcast(
         base += total_elements;
 
         // MGATHER: 按 offsetTile 中的元素索引从 inGm 取数
-        // [当前编译器] template_asm.h 的 MGATHER 已用 asm volatile (一层)，
-        //             但不支持 Coalesce::Elem 模板参数；
-        //             且旧实现按字节偏移取数，与 PTO ISA 的元素索引语义不同。
         MGATHER(outTile, inGm, offsetTile);
 
         // TSTORE: 将 outTile 写回 global memory
-        // [当前编译器] PTO ISA 名 TSTORE，当前编译器名 TCOPYOUT；jcore 为 __vec__
         TSTORE(gO, outTile);
     }
     if constexpr (rmd_M) {

@@ -1,0 +1,15 @@
+{
+  "source_commit": "80896575819da07517adc96485aa23cf5d6102d6",
+  "original_configuration_source": "benchmark/one-level-arch/test/kernel/matmul/compile.all",
+  "original_source_sha256": "aa13b535eacf951c3bf6ac243771ad36662f61d7e4748ec0b0b090f48be0f477",
+  "scope": "the seven original active matmul_mx scale-access profiles; current upstream native matmul compile.all is separate",
+  "original_commands": [
+    "make diss TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER M=256 N=2048 K=2048 tM=32 tN=64 tK=1024",
+    "make diss TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER M=512 N=1280 K=4096 tM=32 tN=64 tK=1024",
+    "make diss TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER_REUSEA M=256 N=2048 K=2048 tM=32 tN=64 tK=1024",
+    "make diss TESTCASE=matmul TYPE=HIF4_HIF4 VER=MX_NOGATHER_REUSEA M=256 N=1280 K=2048 tM=32 tN=64 tK=1024",
+    "make diss TESTCASE=matmul TYPE=A16W4 M=256 N=2048 K=2048 tM=16 tN=16 tK=128",
+    "make diss TESTCASE=matmul TYPE=A16W4 M=512 N=1280 K=2048 tM=16 tN=16 tK=128",
+    "make diss TESTCASE=matmul TYPE=A16W4 M=512 N=512 K=4096 tM=16 tN=16 tK=128"
+  ]
+}

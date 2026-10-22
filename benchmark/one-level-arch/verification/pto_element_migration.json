@@ -1,0 +1,2066 @@
+{
+  "schema_version": 1,
+  "scope": "all active one-level indexed/sparse/histogram application access paths; raw conformance and historical sources tracked separately",
+  "canonical_pragma": "#pragma pto element for",
+  "entries": [
+    {
+      "id": "gather",
+      "source": "benchmark/one-level-arch/kernels/basic_op/gather/detail/gather.hpp",
+      "access_kind": "indexed_gm_load",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_coverage": "all four configurations listed by test/kernel/gather/compile.all, plus alias probes and the actual four-PE wrapper",
+        "cases": [
+          "gather_f32_0_original",
+          "gather_f32_0_alias_probe",
+          "gather_f32_1_original",
+          "gather_f32_1_alias_probe",
+          "gather_f32_2_original",
+          "gather_f32_2_alias_probe",
+          "gather_f32_3_original",
+          "gather_f32_3_alias_probe",
+          "gather_f32_3_index_alias_probe",
+          "gather_fourpe"
+        ]
+      },
+      "configuration_source": "benchmark/one-level-arch/test/kernel/gather/compile.all",
+      "configurations": [
+        {
+          "dtype": "FP32",
+          "index_dtype": "U32",
+          "gK": 200000,
+          "gM": 202,
+          "gN": 97,
+          "tM": 128,
+          "tN": 128,
+          "source_status": "documented",
+          "migration_status": "verified_functional_profile",
+          "evidence_ref": "conflict_repair_20261016",
+          "case": "gather_f32_0_original"
+        },
+        {
+          "dtype": "FP32",
+          "index_dtype": "U32",
+          "gK": 875000,
+          "gM": 8192,
+          "gN": 1,
+          "tM": 128,
+          "tN": 128,
+          "source_status": "documented",
+          "migration_status": "verified_functional_profile",
+          "evidence_ref": "conflict_repair_20261016",
+          "case": "gather_f32_1_original"
+        },
+        {
+          "dtype": "FP32",
+          "index_dtype": "U32",
+          "gK": 754,
+          "gM": 640,
+          "gN": 17,
+          "tM": 128,
+          "tN": 128,
+          "source_status": "documented",
+          "migration_status": "verified_functional_profile",
+          "evidence_ref": "conflict_repair_20261016",
+          "case": "gather_f32_2_original"
+        },
+        {
+          "dtype": "FP32",
+          "index_dtype": "U32",
+          "gK": 131072,
+          "gM": 32,
+          "gN": 256,
+          "tM": 32,
+          "tN": 64,
+          "source_status": "active",
+          "migration_status": "verified_functional_profile",
+          "evidence_ref": "conflict_repair_20261016",
+          "case": "gather_f32_3_original"
+        }
+      ],
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/gather/gather.hpp"
+    },
+    {
+      "id": "concat_gather",
+      "source": "benchmark/one-level-arch/kernels/basic_op/concat/detail/concat_gather.hpp",
+      "access_kind": "indexed_gm_load",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "acceptance_scope": "both original compile.all configurations with separately checked alias probes; exact inputs per profile",
+        "profiles": [
+          {
+            "value_dtype": "S32",
+            "acceptance_scope": "exact original and separately named strong/alias gfrun profiles",
+            "spec_commit": "8f589b70085a37c70f210898b168aae634da5ac1",
+            "repositories": {
+              "benchmark": "814439750ee53221315282a936dc64529348cb0f",
+              "compiler": "8bc0f201b8cf3fc22acf3b17aba547ab99382822",
+              "model": "30e90b74ae622d6aba9b971acd6b85786d4dece9",
+              "tileop_api": "07cc52dd30ba68587db10f0a2b9d6d8eb86c7c4c"
+            },
+            "runs": [
+              {
+                "case": "concat_gather_s32_original",
+                "artifact": "tile_element_suite/20261012-functional-integer-final-concat_gather_s32_original",
+                "content_id": "d671b3f35ad14c76938c8d68a81631bfe5f5e09a441b531548b19885807c2e6d",
+                "elf_sha256": "d1fc25692980eadcfd0482a3f5dfbc2d8514c9231a511ebc5b9fbe74c2648a5a",
+                "provenance_sha256": "7d27b1afd8a11d41a2f7b59394563d907ec1fcccef87e46bc8cec2c75868d481",
+                "verified_hash_count": 26,
+                "selected_models": [
+                  "gfrun"
+                ]
+              },
+              {
+                "case": "concat_gather_s32_alias_probe",
+                "artifact": "tile_element_suite/20261012-functional-integer-final-concat_gather_s32_alias_probe",
+                "content_id": "b3970ffa3683991e40b114af0e078ff87bbdf6193480120194c58daac207b719",
+                "elf_sha256": "e4a77ba7cf0702fae4f5841fed3437e49e6a993745d80ee32fdb52a55efcbcd6",
+                "provenance_sha256": "5f21736941ea4311a374bbfe814047c29a79ae100437247d951f16b2edb92793",
+                "verified_hash_count": 26,
+                "selected_models": [
+                  "gfrun"
+                ]
+              }
+            ],
+            "execution_profile": "one simulated PE with SDK mask1111; not four-PE collective proof"
+          },
+          {
+            "value_dtype": "FP16",
+            "spec_commit": "8f589b70085a37c70f210898b168aae634da5ac1",
+            "repositories": {
+              "benchmark": "e127fafa52fcf967ad71edcfe2ce3f60b6d096e5",
+              "compiler": "87c09dbb9a8bc68d4fd080a1e0a6c32d05c6de4f",
+              "model": "98c21b0627d67624a9f6d7e7f715a7a6eb6f491d",
+              "tileop_api": "b0967b0174dbc8563ba281aee0e1b4d06c2d5a68"
+            },
+            "runs": [
+              {
+                "case": "concat_gather_f16_original",
+                "artifact": "tile_element_suite/20261013-f16-concat-original-clean-87c09",
+                "content_id": "e35fa82165fc1e958a41a5aa3339174663cae142ee0ea1123df122413eb73dd2",
+                "elf_sha256": "b25aefe17bb8154486f21ddd9e242a9923d2c546bb163a13d753c1e9d2bd1ec5",
+                "provenance_sha256": "5ecc52a92b4c79e54549bb4c4cd74382c0b41227e11a1ec810d4f93f88ef4a86",
+                "verified_hash_count": 31,
+                "memory_bytes": 20480312,
+                "segments": 7,
+                "selected_models": [
+                  "gfrun"
+                ]
+              },
+              {
+                "case": "concat_gather_f16_alias_probe",
+                "artifact": "tile_element_suite/20261013-f16-concat-alias-clean-87c09",
+                "content_id": "03b6effaa6bedb6dc2fb57dc6467c5f3585ece8eeb87eedea591ce57f5164deb",
+                "elf_sha256": "830939bbc77151a34b73f9cad63ef97e22a98d5332bbfc8d36a8a256d7d383a4",
+                "provenance_sha256": "3b6000d43b70b8d4f5a9600b3d910dc44c737ba6c1570afb7f0fed99f5277ffb",
+                "verified_hash_count": 29,
+                "memory_bytes": 16385336,
+                "segments": 7,
+                "selected_models": [
+                  "gfrun"
+                ]
+              }
+            ],
+            "comparison": "exact raw binary16 bytes, all input including unused tail, output, adjacent guards, shapes and status",
+            "input_fixture": "deterministic raw bits; legacy driver used uninitialized buffers with no enabled file fixture",
+            "execution_profile": "one simulated PE with SDK mask1111; not four-PE collective proof"
+          }
+        ]
+      },
+      "configuration_source": "benchmark/one-level-arch/test/kernel/concat/compile.all",
+      "configurations": [
+        {
+          "dtype": "S32",
+          "gIM": 128000,
+          "gOM": 128000,
+          "tM": 512,
+          "input_shape": [
+            64,
+            2
+          ],
+          "output_shape": [
+            64,
+            2000
+          ],
+          "data_dim": 2,
+          "concat_dim": 1,
+          "migration_status": "verified_functional_profile"
+        },
+        {
+          "dtype": "FP16",
+          "gIM": 8192000,
+          "gOM": 2048000,
+          "tM": 512,
+          "input_shape": [
+            256,
+            8
+          ],
+          "output_shape": [
+            256,
+            8000
+          ],
+          "data_dim": 2,
+          "concat_dim": 1,
+          "migration_status": "verified_functional_profile"
+        }
+      ],
+      "timing_status": "pending_separate_pr",
+      "remaining_profiles": [
+        "multi-thread wrapper"
+      ],
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/concat/concat_gather.hpp"
+    },
+    {
+      "id": "concat_scatter",
+      "source": "benchmark/one-level-arch/kernels/basic_op/concat/detail/concat_scatter.hpp",
+      "access_kind": "indexed_gm_store",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_coverage": "both original S32 and FP16 configurations, their alias probes, and the actual four-PE wrapper",
+        "cases": [
+          "concat_scatter_s32_original",
+          "concat_scatter_s32_alias_probe",
+          "concat_scatter_f16_original",
+          "concat_scatter_f16_alias_probe",
+          "concat_scatter_fourpe"
+        ]
+      },
+      "configuration_source": "benchmark/one-level-arch/test/kernel/concat/compile.all",
+      "configurations": [
+        {
+          "dtype": "S32",
+          "gIM": 128000,
+          "gOM": 128000,
+          "tM": 512,
+          "input_shape": [
+            64,
+            2
+          ],
+          "output_shape": [
+            64,
+            2000
+          ],
+          "data_dim": 2,
+          "concat_dim": 1,
+          "migration_status": "verified_functional_profile",
+          "evidence_ref": "conflict_repair_20261016",
+          "case": "concat_scatter_s32_original"
+        },
+        {
+          "dtype": "FP16",
+          "gIM": 8192000,
+          "gOM": 2048000,
+          "tM": 512,
+          "input_shape": [
+            256,
+            8
+          ],
+          "output_shape": [
+            256,
+            8000
+          ],
+          "data_dim": 2,
+          "concat_dim": 1,
+          "migration_status": "verified_functional_profile",
+          "evidence_ref": "conflict_repair_20261016",
+          "case": "concat_scatter_f16_original"
+        }
+      ],
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/concat/concat_scatter.hpp"
+    },
+    {
+      "id": "broadcast",
+      "source": "benchmark/one-level-arch/kernels/basic_op/broadcast/detail/broadcast.hpp",
+      "access_kind": "affine_indexed_load",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/Makefile",
+        "cases": [
+          "broadcast_f16_2d_original",
+          "broadcast_f16_2d_alias_probe",
+          "broadcast_f16_3d_original",
+          "broadcast_f16_3d_alias_probe",
+          "broadcast_f16_5d_original",
+          "broadcast_f16_5d_alias_probe",
+          "broadcast_fourpe"
+        ]
+      },
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/broadcast/broadcast.hpp"
+    },
+    {
+      "id": "broadcast_inline",
+      "source": "benchmark/one-level-arch/kernels/basic_op/broadcast/broadcast_inline.hpp",
+      "access_kind": "affine_indexed_load",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/Makefile",
+        "cases": [
+          "broadcast_inline_s32_original",
+          "broadcast_inline_s32_alias_probe"
+        ]
+      },
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/broadcast/broadcast_inline.hpp"
+    },
+    {
+      "id": "transpose",
+      "source": "benchmark/one-level-arch/kernels/basic_op/transpose/detail/transpose.hpp",
+      "access_kind": "permuted_indexed_load",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/Makefile",
+        "cases": [
+          "transpose_f16_0_original",
+          "transpose_f16_0_alias_probe",
+          "transpose_f16_1_original",
+          "transpose_f16_1_alias_probe",
+          "transpose_f16_2_original",
+          "transpose_f16_2_alias_probe",
+          "transpose_f16_3_original",
+          "transpose_f16_3_alias_probe"
+        ]
+      },
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/transpose/transpose.hpp"
+    },
+    {
+      "id": "hashtable_lookup_simd",
+      "source": "benchmark/one-level-arch/kernels/basic_op/control/hashtable_lookup_simd.hpp",
+      "access_kind": "data_dependent_probe",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "source_migration": "pragma present in active source",
+        "qualification_status": "pending",
+        "remaining": "no exact conflict_repair_20261016 gfrun case maps to this source path"
+      },
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/control/hashtable_lookup_simd.hpp"
+    },
+    {
+      "id": "group_count_aux_fi",
+      "source": "benchmark/one-level-arch/kernels/basic_op/group_count/group_count_aux_fi.hpp",
+      "access_kind": "histogram_reduction",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "acceptance_scope": "exact original and separately named strong/alias gfrun profiles",
+        "spec_commit": "8f589b70085a37c70f210898b168aae634da5ac1",
+        "repositories": {
+          "benchmark": "814439750ee53221315282a936dc64529348cb0f",
+          "compiler": "8bc0f201b8cf3fc22acf3b17aba547ab99382822",
+          "model": "30e90b74ae622d6aba9b971acd6b85786d4dece9",
+          "tileop_api": "07cc52dd30ba68587db10f0a2b9d6d8eb86c7c4c"
+        },
+        "runs": [
+          {
+            "case": "group_count_s32_original",
+            "artifact": "tile_element_suite/20261012-functional-integer-final-group_count_s32_original",
+            "content_id": "48ec04b2f9008f0928b75f55aadc3372960c52061e53b1153bf6128929ff2686",
+            "elf_sha256": "d4bea5a787793f2ba67256c3ab78efaeacdb71ec33dfb1dd228bc5a98e430678",
+            "provenance_sha256": "9fd706dca46196970d5bfd145e3a280420ad029e1902f6fad8fd27467484e629",
+            "verified_hash_count": 24,
+            "selected_models": [
+              "gfrun"
+            ]
+          },
+          {
+            "case": "group_count_s32_strong",
+            "artifact": "tile_element_suite/20261012-functional-integer-final-group_count_s32_strong",
+            "content_id": "f3e730784be459f1fdb1afb7f7bc67afb1b3871815b33073c2aa978b0c4fac00",
+            "elf_sha256": "c1fce947aef445a1dab37f00e2a80602985717e17f226fcefe69a0c0e1bbdc84",
+            "provenance_sha256": "70a0554cc50bd7b4d7c9742dff81bcb151a1b794b02d69b2f71c27788fd3caf4",
+            "verified_hash_count": 25,
+            "selected_models": [
+              "gfrun"
+            ]
+          }
+        ],
+        "execution_profile": "one simulated PE with SDK mask1111; not four-PE collective proof"
+      },
+      "timing_status": "pending_separate_pr",
+      "validated_profile": {
+        "dtype": "S32",
+        "template_arguments": [
+          16,
+          8,
+          32
+        ],
+        "input_elements": 256,
+        "used_elements": 128,
+        "output_elements": 64,
+        "bins": 32
+      },
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/deepseek/moe/group_count_aux_fi.hpp"
+    },
+    {
+      "id": "matmul_mx_scale_access",
+      "source": "benchmark/one-level-arch/kernels/basic_op/matmul/matmul_mx.hpp",
+      "access_kind": "indexed_scale_rearrangement",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_source": "benchmark/one-level-arch/test/kernel/matmul/element_original_profiles.json",
+        "numerical_profiles_passed": 7,
+        "migration_status": "numerical_regression_only",
+        "claim_boundary": "does not close the CUBE_M16/A16 element migration"
+      },
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/matmul/matmul_mx.hpp"
+    },
+    {
+      "id": "gather_v2",
+      "source": "benchmark/one-level-arch/kernels/solution/gather_v2/gather_v2.hpp",
+      "access_kind": "general_rank_indexed_load",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_source": "benchmark/one-level-arch/test/solution/gather_v2/compile.all",
+        "configuration_coverage": "all three compile.all configurations; S32 rank-2 also has an alias probe",
+        "cases": [
+          "gather_v2_f32_0_original",
+          "gather_v2_s32_1_original",
+          "gather_v2_s32_1_alias_probe",
+          "gather_v2_f16_2_original"
+        ]
+      }
+    },
+    {
+      "id": "view_copy",
+      "source": "benchmark/one-level-arch/kernels/solution/view_copy/view_copy.hpp",
+      "access_kind": "strided_gather_scatter",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_source": "benchmark/one-level-arch/test/solution/view_copy/compile.all",
+        "configuration_coverage": "all three compile.all configurations; S32 also has an alias probe",
+        "cases": [
+          "view_copy_s32_0_original",
+          "view_copy_s32_0_alias_probe",
+          "view_copy_f16_1_original",
+          "view_copy_f16_2_tail"
+        ]
+      }
+    },
+    {
+      "id": "qli_simple",
+      "source": "benchmark/one-level-arch/kernels/solution/qli/qli_pto_opt_simple.hpp",
+      "access_kind": "histogram_radix_selection",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_source": "benchmark/one-level-arch/test/solution/qli/compile.all",
+        "qualified_sets": [
+          "qli-key: 48 profiles",
+          "qli-histogram: 72 profiles",
+          "qli-norm: 13 profiles",
+          "qli-popn: 18 profiles",
+          "qli-topk: 7 profiles",
+          "qli-original5: 5 original driver runs"
+        ],
+        "claim_boundary": "exact qualified profiles only; does not qualify QSMLA or every possible QLI configuration"
+      }
+    },
+    {
+      "id": "qli_dynamic",
+      "source": "benchmark/one-level-arch/kernels/solution/qli/qli_pto_opt_dynamic.hpp",
+      "access_kind": "histogram_radix_selection",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "conflict_repair_ref": "conflict_repair_20261016",
+        "configuration_source": "benchmark/one-level-arch/test/solution/qli/compile.all",
+        "qualified_sets": [
+          "qli-dynamic4: 4 dynamic driver runs"
+        ],
+        "claim_boundary": "the four recorded dynamic configurations only"
+      }
+    },
+    {
+      "id": "quant_sparse_flash_mla",
+      "source": "benchmark/one-level-arch/kernels/solution/quant_sparse_flash_mla/quant_sparse_flash_mla.hpp",
+      "access_kind": "sparse_kv_access",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "source_migration": "pragma present in active source",
+        "qualification_status": "pending",
+        "configuration_source": "benchmark/one-level-arch/test/solution/quant_sparse_flash_mla/qsmla_cases.py",
+        "remaining": "original and dynamic QSMLA configurations are not closed by conflict_repair_20261016"
+      }
+    },
+    {
+      "id": "qsmla_sparse_index_collection",
+      "source": "benchmark/one-level-arch/kernels/solution/quant_sparse_flash_mla/qsmla_mode.hpp",
+      "access_kind": "sparse_index_filter",
+      "status": "pending",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "source_migration": "pragma present in active source",
+        "qualification_status": "pending",
+        "configuration_source": "benchmark/one-level-arch/test/solution/quant_sparse_flash_mla/qsmla_cases.py",
+        "remaining": "sparse index collection requires its own complete configuration and golden evidence"
+      }
+    },
+    {
+      "id": "element_atomic_topk",
+      "source": "benchmark/one-level-arch/kernels/basic_op/topk/element_atomic_topk.hpp",
+      "access_kind": "atomic_histogram_topk",
+      "status": "verified_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "compiler": "482b4207e88adf312fd1b1a8a567b83f5a4e207b",
+        "benchmark": "9076bd082544e273cdb93f39675df42510d8c071",
+        "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+        "model": "8e8d8ac7b1becc8937e77989c2762139f946b8af",
+        "artifact": "element_atomic_topk/20261010-element-atomic-topk-integrated",
+        "elf_sha256": "81b23b4afd4c95bb8781a7886f614de6983b58dc41d1e1472a5a9ca2831a5a2e",
+        "content_id": "d99f460053725969727b4fc1d1d93988c7285addd700a04c45a85194a8c495e6",
+        "golden_segments_per_model": 9,
+        "gfsim_queue_created": 11050,
+        "gfsim_queue_destroyed": 11050,
+        "gfsim_a3": 0,
+        "source_sha256": "bfa433749e6ebc79bf868701fb24fc1ce0d39070369848bc4dcb26307b4e1449",
+        "boundary_cases": {
+          "topk_boundaries_0": "d9d4dca1fcba7b71fe1267ecf44bfd9eaa6ffee46837fb3f9dec031e9738a904",
+          "topk_boundaries_1": "5b9522a00613f8b26bc26560403fbf1c9cacd7f62fc237cdb2fa72c96e6dec99",
+          "topk_boundaries_2": "0a6bd65dd806c12ece45ec606b2dd9aead499f8c76e4d9519fed2cd38c4eb902",
+          "topk_boundaries": "5c8eac46334e8d4e76540c59280ced313e2d90ae84e50eb6cc43e4dcb16cfe7b"
+        }
+      },
+      "validated_profile": {
+        "value_dtype": "U32",
+        "element_index_dtype": "U32",
+        "byte_offset_dtype": "U64",
+        "part_elements": 32,
+        "execution": "generic CFG/LLVM SSA; same ELF on gfrun/gfsim with independent goldens",
+        "input_elements": 777,
+        "requested_k": 37,
+        "boundaries": "17 calls, three shard ELFs and one unsharded shared-workspace ELF",
+        "coherence_probe": [
+          0,
+          9,
+          10,
+          0
+        ]
+      },
+      "closure_scope": "Only the recorded source/configurations; does not close other inventory entries or multithread wrappers.",
+      "deferred_requirements": [
+        "same_elf_gfsim"
+      ],
+      "original_source": "benchmark/one-level-arch/kernels/single_thread/sort/element_atomic_topk.hpp"
+    },
+    {
+      "id": "histogram_tile_element",
+      "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/histogram_tile_element.cpp",
+      "access_kind": "atomic_histogram",
+      "status": "verified_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "compiler": "482b4207e88adf312fd1b1a8a567b83f5a4e207b",
+        "benchmark": "9076bd082544e273cdb93f39675df42510d8c071",
+        "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+        "model": "8e8d8ac7b1becc8937e77989c2762139f946b8af",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/histogram_tile_element",
+        "elf_sha256": "642fbfa222d41e1c25224ac5f1f8591ceaca6a97d9f92444c14e0e29ae1dd7a6",
+        "content_id": "5c0e29b4f01c25e2e29d2610d1d43ccb6606ebc2fdb8bdbeff260bcf6f96b089",
+        "golden_segments_per_model": 4,
+        "gfsim_queue_created": 1310,
+        "gfsim_queue_destroyed": 1310,
+        "gfsim_a3": 0,
+        "source_sha256": "e278a922e6b6393e486b0ebc09265ca25b45f4116e5463e9c9941ec83cf4081b"
+      },
+      "validated_profile": {
+        "value_dtype": "U32",
+        "element_index_dtype": "U32",
+        "byte_offset_dtype": "U64",
+        "part_elements": 32,
+        "execution": "generic CFG/LLVM SSA; same ELF on gfrun/gfsim with independent goldens",
+        "input_elements": 263,
+        "histogram_bins": 256
+      },
+      "closure_scope": "Only the recorded source/configurations; does not close other inventory entries or multithread wrappers.",
+      "deferred_requirements": [
+        "same_elf_gfsim"
+      ]
+    },
+    {
+      "id": "selected_radix_tile_element",
+      "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/selected_radix_tile_element.cpp",
+      "access_kind": "conditional_atomic_histogram",
+      "status": "verified_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "compiler": "482b4207e88adf312fd1b1a8a567b83f5a4e207b",
+        "benchmark": "9076bd082544e273cdb93f39675df42510d8c071",
+        "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+        "model": "8e8d8ac7b1becc8937e77989c2762139f946b8af",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/selected_radix_tile_element",
+        "elf_sha256": "b7e4636a01ee7508933ea440034b3fe397fedba125bd866a3ad50996a838ee1e",
+        "content_id": "d561e8e3b59c8249fbafe16070642497d5ba33b3320c0ea127b0a8daa3b638a5",
+        "golden_segments_per_model": 4,
+        "gfsim_queue_created": 1449,
+        "gfsim_queue_destroyed": 1449,
+        "gfsim_a3": 0,
+        "source_sha256": "95d5cd6065c58abb46f501ca54dd31a68ae25c3067d5b6669af0890743fa6ae1"
+      },
+      "validated_profile": {
+        "value_dtype": "U32",
+        "element_index_dtype": "U32",
+        "byte_offset_dtype": "U64",
+        "part_elements": 32,
+        "execution": "generic CFG/LLVM SSA; same ELF on gfrun/gfsim with independent goldens",
+        "input_elements": 263,
+        "histogram_bins": 256
+      },
+      "closure_scope": "Only the recorded source/configurations; does not close other inventory entries or multithread wrappers.",
+      "deferred_requirements": [
+        "same_elf_gfsim"
+      ]
+    },
+    {
+      "id": "elementwise_if_for",
+      "source": "benchmark/one-level-arch/test/solution/tileop-test/vec/src/elementwise_if_for.cpp",
+      "access_kind": "masked_arithmetic",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "acceptance_scope": "bounded FP32 functional profile; no gfsim parity claim",
+        "spec_commit": "8f589b70085a37c70f210898b168aae634da5ac1",
+        "compiler_commit": "a6168443731fbc6c0c85b45513c70e511f72433c",
+        "benchmark_execution_commit": "d7e0f63a09190190d073938f48d0af5c2acd23fd",
+        "model_commit": "965d5fd2e87f6066de337593d03d0d80ed321838",
+        "api_commit": "b95ac2ef2b471205c8865944c00712081f2362ce",
+        "runs": [
+          {
+            "run_id": "20261012-fp32-functional-original-final",
+            "case": "elementwise_if_for",
+            "selected_models": [
+              "gfrun"
+            ],
+            "provenance_sha256": "f2c67e99269f4747a54f82862618fd6ccf431d08eedca25400f3323980775dab",
+            "elf_sha256": "91ed011cc167d83db8429268d951644cd31f8c30269569654def20961ebb4aea",
+            "manifest_sha256": "fa2d3e21f20e535d898598c241b84a9f531d4f2c9957e7f4720c6a06a4cd033c",
+            "segments": [
+              "lhs_storage",
+              "rhs_storage",
+              "out_storage"
+            ],
+            "comparison": "exact_raw_bytes"
+          },
+          {
+            "run_id": "20261012-fp32-functional-strong-final",
+            "case": "elementwise_if_for_strong",
+            "selected_models": [
+              "gfrun"
+            ],
+            "provenance_sha256": "e49c7aff158ff9223562dfbd836bc6f38974381f2385ca499fb205e26729f9a9",
+            "elf_sha256": "38072e1952ccc4ff262414acda5b8d758c40a254cbae41e740b47377a53549ee",
+            "manifest_sha256": "59821073e0038480a34d4f92fcac0ca4e1006edaa77b87f75eaaedf0a175fed8",
+            "segments": [
+              "lhs_storage",
+              "rhs_storage",
+              "out_storage"
+            ],
+            "comparison": "exact_raw_bytes"
+          }
+        ],
+        "compiler_focused_tests": "21/21 PASS",
+        "functional_model_affected_tests": "3/3 PASS",
+        "remaining_timing_gaps": [
+          "physical_byte_definedness",
+          "masked_TNEG_admission",
+          "raw_part_TMOV_transport",
+          "same_ELF_gfsim_validation"
+        ]
+      },
+      "functional_acceptance": [
+        "pto_spec",
+        "compiler",
+        "official_tileop_api",
+        "gfrun"
+      ],
+      "timing_status": "pending_separate_pr",
+      "deferred_requirements": [
+        "same_elf_gfsim"
+      ]
+    },
+    {
+      "id": "elementwise_atomic_histogram",
+      "source": "benchmark/one-level-arch/test/solution/tileop-test/vec/src/elementwise_atomic_histogram.cpp",
+      "access_kind": "atomic_histogram",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "acceptance_scope": "exact original and separately named strong/alias gfrun profiles",
+        "spec_commit": "8f589b70085a37c70f210898b168aae634da5ac1",
+        "repositories": {
+          "benchmark": "814439750ee53221315282a936dc64529348cb0f",
+          "compiler": "8bc0f201b8cf3fc22acf3b17aba547ab99382822",
+          "model": "30e90b74ae622d6aba9b971acd6b85786d4dece9",
+          "tileop_api": "07cc52dd30ba68587db10f0a2b9d6d8eb86c7c4c"
+        },
+        "runs": [
+          {
+            "case": "elementwise_atomic_histogram",
+            "artifact": "tile_element_suite/20261012-functional-integer-final-elementwise_atomic_histogram",
+            "content_id": "955ed2852e61d1c4c35438b9d1df90858c0337c847f5efa566e2af3c9abfa9b9",
+            "elf_sha256": "3caf6d3b4c72d7ec8a6e6ef12bb9b4a1c73908f090176f1f9ace4c5d26bf71ab",
+            "provenance_sha256": "f100292f6a9a79810233b6c6dc613109aed32d1ef7636ec57fc1089d2722b536",
+            "verified_hash_count": 27,
+            "selected_models": [
+              "gfrun"
+            ]
+          }
+        ],
+        "execution_profile": "one simulated PE with SDK mask1111; not four-PE collective proof"
+      },
+      "timing_status": "pending_separate_pr"
+    },
+    {
+      "id": "elementwise_masked_gather_scatter",
+      "source": "benchmark/one-level-arch/test/solution/tileop-test/vec/src/elementwise_masked_gather_scatter.cpp",
+      "access_kind": "masked_indexed_memory",
+      "status": "verified_functional_profile",
+      "requirements": [
+        "canonical_pto_element_for",
+        "logical_element_arrays",
+        "chinese_kernel_comments",
+        "native_tile_lowering",
+        "independent_goldens",
+        "same_elf_gfrun",
+        "zero_model_invariants"
+      ],
+      "evidence": {
+        "acceptance_scope": "bounded original FP32 masked memory functional profile; no gfsim parity claim",
+        "spec_commit": "8f589b70085a37c70f210898b168aae634da5ac1",
+        "owning_clauses": [
+          "PTO-MGATHER-BYTE-DISPLACEMENT-001",
+          "PTO-MSCATTER-BYTE-DISPLACEMENT-001",
+          "PTO-MSCATTER-DUPLICATE-ORDER-001"
+        ],
+        "compiler_commit": "c1116751a03bd78b5dd2dd9141349cdc619b11cc",
+        "benchmark_execution_commit": "bfa549d2a38087da9aef17c91fd6ea41090b780d",
+        "model_commit": "965d5fd2e87f6066de337593d03d0d80ed321838",
+        "api_commit": "b95ac2ef2b471205c8865944c00712081f2362ce",
+        "compiler_focused_tests": "36/36 PASS",
+        "comparator_tests": "12/12 PASS",
+        "independent_evidence_audit": "54/54 SHA256 entries; original5/5 and strong7/7 raw segments; clean exact inputs; adjacent64/512/64 output guards",
+        "runs": [
+          {
+            "run_id": "20261012-fp32-memory-original-final",
+            "case": "elementwise_masked_gather_scatter",
+            "selected_models": [
+              "gfrun"
+            ],
+            "provenance_sha256": "a1fda2e430fff38ddf0d34680dde6a458bbc239a4e0b4fb1b6a7788da03a8075",
+            "elf_sha256": "dc10b4d2d7f465553f6994a79293221fbfcb5fd5049cd0d532306f297a3538d9",
+            "manifest_sha256": "55fcda3bfddf63f73769a46b5f6cdc519bd869b39e56e01c314ca48974e5eb1a",
+            "content_id": "2f75548fccd2444f2a9677283cffaeb663e9a84aeda5d890389c83298d777a49",
+            "segments": [
+              "source_storage",
+              "index_storage",
+              "mask_storage",
+              "gathered_storage",
+              "output_storage"
+            ],
+            "comparison": "exact_raw_bytes"
+          },
+          {
+            "run_id": "20261012-fp32-memory-strong-final",
+            "case": "elementwise_masked_gather_scatter_strong",
+            "selected_models": [
+              "gfrun"
+            ],
+            "provenance_sha256": "2ad014bd20d180501383bb36f7f5a26f826477fbd5eb8276e6a8f9b1e923d35c",
+            "elf_sha256": "81887c082b4fcc461cb856cef647ea2b037951d531a875c981582f80ee496c72",
+            "manifest_sha256": "3d5cdb9fe7daa01e66831e4414a8c43be2e9123bec6902668e6b32c104b8a6d3",
+            "content_id": "ff2540050ccf0ee1435e345fae1387cb00368729b5283fd39e4ca3a9c1fdf12e",
+            "segments": [
+              "source_storage",
+              "index_storage",
+              "mask_storage",
+              "gathered_storage",
+              "output_guard_before",
+              "output_storage",
+              "output_guard_after"
+            ],
+            "comparison": "exact_raw_bytes"
+          }
+        ],
+        "spec_source": "published FP32 feature specification, including TLEA/B64 address contract"
+      },
+      "functional_acceptance": [
+        "pto_spec",
+        "compiler",
+        "official_tileop_api",
+        "gfrun"
+      ],
+      "timing_status": "pending_separate_pr",
+      "validated_profile": {
+        "value_dtype": "FP32",
+        "element_index_dtype": "S32",
+        "byte_offset_dtype": "S64",
+        "part_elements": 32,
+        "input_elements": 128,
+        "mask_storage_dtype": "U8",
+        "mask_transport_dtype": "U32",
+        "inter_element_order": "unordered",
+        "intra_element_order": "source",
+        "comparison": "exact_raw_bytes",
+        "duplicate_destinations": "strong case writes identical payloads to each repeated destination"
+      },
+      "deferred_requirements": [
+        "same_elf_gfsim"
+      ]
+    }
+  ],
+  "multi_thread_wrappers": [
+    "benchmark/one-level-arch/kernels/basic_op/broadcast/broadcast.hpp",
+    "benchmark/one-level-arch/kernels/basic_op/concat/concat_gather.hpp",
+    "benchmark/one-level-arch/kernels/basic_op/concat/concat_scatter.hpp",
+    "benchmark/one-level-arch/kernels/basic_op/gather/gather.hpp"
+  ],
+  "raw_conformance_companions": [
+    "mgather",
+    "mscatter",
+    "mgather_mask",
+    "mscatter_mask",
+    "mgather_cas",
+    "tgather",
+    "tscatter"
+  ],
+  "historical_accounting": {
+    "root": "benchmark/two-level-arch",
+    "policy": "record explicitly; do not silently claim active one-level ISA execution for archived two-level semantics",
+    "retired_histogram": "benchmark/one-level-arch/test/solution/tileop-test/retired/thistogram.cpp"
+  },
+  "pointwise_expression_requirements": [
+    "add",
+    "subtract",
+    "multiply",
+    "divide",
+    "remainder",
+    "bitwise_and",
+    "bitwise_or",
+    "bitwise_xor",
+    "shift_left",
+    "shift_right",
+    "negate",
+    "bitwise_not",
+    "compare",
+    "select",
+    "min",
+    "max",
+    "cast",
+    "basic_math_unary"
+  ],
+  "closure": "Every active workload, applicable dtype/shape configuration and named operation must have independent compile/IR/object/model evidence. Parsing the pragma, retaining old scalar code, or one histogram result does not close the scope.",
+  "foundation_expression_profile": {
+    "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/element_expression_chain.cpp",
+    "types": [
+      "U32"
+    ],
+    "logical_shape": [
+      32,
+      1
+    ],
+    "operators": [
+      "add",
+      "subtract",
+      "multiply",
+      "divide",
+      "remainder",
+      "bitwise_and",
+      "bitwise_or",
+      "bitwise_xor",
+      "shift_left",
+      "shift_right",
+      "negate",
+      "bitwise_not"
+    ],
+    "status": "standard CFG/SSA P1a implemented; clean-head same-ELF gfrun/gfsim proof passed",
+    "does_not_close_application_inventory": true,
+    "evidence": {
+      "compiler": "34ade53ebfe81975a91512568e337bacb91ad27d",
+      "benchmark": "d4fabe03a9d27560728d528671de2ae5a3febede",
+      "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+      "model": "34a3d79945a5d49bdf2959ad5073ce16c9bd643f",
+      "artifact": "tile_element_suite/20261007T125327Z-78937",
+      "content_id": "44d411602764ba0db4cb1c5862a3379eec677095cfa25826a805742d10cbae52",
+      "elf_sha256": "94589bf4627ce397e807eb698681ac348f6cbbfd1898f9c8131e57e3eb9a8919",
+      "verified_hash_count": 30,
+      "golden_segments_per_model": 5,
+      "lit_passed": 15,
+      "gfsim_queue_created": 1786,
+      "gfsim_queue_destroyed": 1786,
+      "gfsim_a3": 0
+    }
+  },
+  "foundation_gather_profile": {
+    "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/indexed_gather_tile_element.cpp",
+    "types": [
+      "U32 values",
+      "U32 logical indices",
+      "U64 byte offsets"
+    ],
+    "logical_shape": [
+      32,
+      1
+    ],
+    "status": "standard CFG/SSA P1b implemented; clean-head same-ELF gfrun/gfsim proof passed",
+    "does_not_close_application_inventory": true,
+    "cases": [
+      "263-element result with guarded padded output",
+      "257-element probe with three wholly inactive poisoned parts"
+    ],
+    "compiler_scope": "U32/M32/32, zero inactive else, IV ULT invariant i32 bound; optional invariant outer predicate; other CFG/cast/type/memory effects reject",
+    "evidence": {
+      "compiler": "34ade53ebfe81975a91512568e337bacb91ad27d",
+      "benchmark": "d4fabe03a9d27560728d528671de2ae5a3febede",
+      "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+      "model": "34a3d79945a5d49bdf2959ad5073ce16c9bd643f",
+      "artifact": "tile_element_suite/20261007T125248Z-78397",
+      "content_id": "c6f5eccb96f421d0b1a62d1e7ac302fb7cd9dde18ed1719a4aca736f866df10e",
+      "elf_sha256": "e05d020e5b84e2ce447a3187adaf0dd5f9e9e5d94272dddc667685d88e9acb64",
+      "verified_hash_count": 29,
+      "golden_segments_per_model": 4,
+      "lit_passed": 15,
+      "gfsim_a3": 0,
+      "gfsim_queue_created": 1593,
+      "gfsim_queue_destroyed": 1593
+    }
+  },
+  "compiler_architecture_status": "Generic CFG/LLVM SSA supports bounded logical32 S32/U32/FP32 and logical64 S32/U32/FP16/U16 profiles, nested if/continue and edge-mask PHIs, official TileOp -> element -> TileOp views, B32 indices -> B64 byte offsets, typed indexed memory and isolated unordered scatter, and the admitted System/Monotonic i32 atomic-add profile. Exact FI/MMO descriptor provenance survives raw spill/reload, reload-to-respill, COPY, loops, colored stack-slot epochs and proven CLOSED assembly; OPEN/Shared/subview and unproved joins reject. This is existing compiler/gfrun compatibility, not a new architectural spill ABI. O0 marked regions, unproved reference-backed Tile inputs/outputs, varying inner loops, additional profiles/effects and remaining original configurations/wrappers are pending. gfsim qualification is deferred for all dtypes.",
+  "generic_cfg_verified_profiles": {
+    "compiler": "482b4207e88adf312fd1b1a8a567b83f5a4e207b",
+    "benchmark": "9076bd082544e273cdb93f39675df42510d8c071",
+    "model": "8e8d8ac7b1becc8937e77989c2762139f946b8af",
+    "tileop_api": "b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650",
+    "suite_hash_count": 323,
+    "cases": {
+      "element_expression_chain": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/element_expression_chain.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/element_expression_chain",
+        "elf_sha256": "5ed7a6b5e4f84c7936894efaa8617666606d4fe5b0c4da113f7efb31b1457843",
+        "content_id": "6c47dc7d111d4e9343905ab6df54561469eec6149fd18d4f237042061c6847fa",
+        "does_not_close_other_application_entries": true
+      },
+      "generic_atomic_cfg_i32": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/generic_atomic_cfg_i32.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/generic_atomic_cfg_i32",
+        "elf_sha256": "f977d9449c3019e52ff7e2ec571635d90794b635ab5bdc42792abdbbc95a2284",
+        "content_id": "82467f808819191bdbba5948d28c3a0627ec8eaec4c11e73ee9eed488a6d382e",
+        "does_not_close_other_application_entries": true
+      },
+      "generic_predicated_cfg_i32": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/generic_predicated_cfg_i32.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/generic_predicated_cfg_i32",
+        "elf_sha256": "b32275a42db8905426ff89db6a459970d690f261ae6c99052147806dd91264bc",
+        "content_id": "6371bdc35b3a27f78eb931d645ec1ca919a718bb234edeae79b83448db9ca200",
+        "does_not_close_other_application_entries": true
+      },
+      "generic_typed_tile_cfg_i32": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/generic_typed_tile_cfg_i32.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/generic_typed_tile_cfg_i32",
+        "elf_sha256": "b393875549d395d292e27157afca1b5718765732084027abd702890d80e150f4",
+        "content_id": "d32a036ec61792f9415c5c590f52a7925b40244563bf14d30d118c240eeaa90d",
+        "does_not_close_other_application_entries": true
+      },
+      "histogram_tile_element": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/histogram_tile_element.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/histogram_tile_element",
+        "elf_sha256": "642fbfa222d41e1c25224ac5f1f8591ceaca6a97d9f92444c14e0e29ae1dd7a6",
+        "content_id": "5c0e29b4f01c25e2e29d2610d1d43ccb6606ebc2fdb8bdbeff260bcf6f96b089",
+        "does_not_close_other_application_entries": true
+      },
+      "indexed_gather_tile_element": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/indexed_gather_tile_element.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/indexed_gather_tile_element",
+        "elf_sha256": "982647be20c960ff8d015a82dbcd469cc8224ccfc31bed76971a33050307b379",
+        "content_id": "00cb25db5556866c9aef98080c786d2242ef7151f28277c2a2737f172edaba33",
+        "does_not_close_other_application_entries": true
+      },
+      "selected_radix_tile_element": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/selected_radix_tile_element.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/selected_radix_tile_element",
+        "elf_sha256": "b7e4636a01ee7508933ea440034b3fe397fedba125bd866a3ad50996a838ee1e",
+        "content_id": "d561e8e3b59c8249fbafe16070642497d5ba33b3320c0ea127b0a8daa3b638a5",
+        "does_not_close_other_application_entries": true
+      },
+      "signed_element_expression": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/signed_element_expression.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/signed_element_expression",
+        "elf_sha256": "8c2ade3e174c1de4fa45203d30da122f0455a2ea61a186b86a2e16079d6e7ea9",
+        "content_id": "9d9f177e07abb2c1e46fce0fef7ae494924bc456ab4398fc84d825b233af2a9d",
+        "does_not_close_other_application_entries": true
+      },
+      "topk_boundaries": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/topk_boundaries.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/topk_boundaries",
+        "elf_sha256": "5c8eac46334e8d4e76540c59280ced313e2d90ae84e50eb6cc43e4dcb16cfe7b",
+        "content_id": "70a3898e1e1ada20590b68df3a5d0bebc3f56b7ad56dbc0a969ca0421b5490ed",
+        "does_not_close_other_application_entries": true
+      },
+      "topk_boundaries_0": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/topk_boundaries.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/topk_boundaries_0",
+        "elf_sha256": "d9d4dca1fcba7b71fe1267ecf44bfd9eaa6ffee46837fb3f9dec031e9738a904",
+        "content_id": "1e2fbed0eaf566714079dece10e62e1890b84febc125cecf9c8e08304a647be4",
+        "does_not_close_other_application_entries": true
+      },
+      "topk_boundaries_1": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/topk_boundaries.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/topk_boundaries_1",
+        "elf_sha256": "5b9522a00613f8b26bc26560403fbf1c9cacd7f62fc237cdb2fa72c96e6dec99",
+        "content_id": "d1dcfd9e37f8d5669fc83e9a556f86b142483740724809863c717fba27783d0f",
+        "does_not_close_other_application_entries": true
+      },
+      "topk_boundaries_2": {
+        "source": "benchmark/one-level-arch/test/kernel/element_wise/tile_element_suite/topk_boundaries.cpp",
+        "artifact": "tile_element_suite/20261010-generic-atomic-integrated/topk_boundaries_2",
+        "elf_sha256": "0a6bd65dd806c12ece45ec606b2dd9aead499f8c76e4d9519fed2cd38c4eb902",
+        "content_id": "f6b02ea99617b042ac73d598443deb5ad096f98acaa75072ea6c0a093af03f1c",
+        "does_not_close_other_application_entries": true
+      }
+    }
+  },
+  "current_acceptance_policy": {
+    "updated": "2026-10-13",
+    "authority": "explicit user direction: ensure all gfrun passes; gfsim belongs to a later separate PR",
+    "models": [
+      "gfrun"
+    ],
+    "applies_to": "all original application configurations, expression/type profiles and four multithread wrappers",
+    "required": [
+      "owning_spec",
+      "public_api",
+      "native_compiler_ir_object_elf",
+      "independent_golden",
+      "same_elf_gfrun",
+      "immutable_provenance"
+    ],
+    "timing_status": "deferred to separate PR; existing gfsim diagnostics are not functional acceptance blockers",
+    "historical_evidence": "preserve prior dual-model evidence with its exact original inputs"
+  },
+  "current_gfrun_regression": {
+    "repositories": {
+      "compiler": "4d5fb5027a53f0b2217a5870def2c1521dbd53ab",
+      "model": "6850368c8622b6bab4040b989d94b5b04535f7aa",
+      "tileop_api": "b0967b0174dbc8563ba281aee0e1b4d06c2d5a68"
+    },
+    "benchmark_commits": [
+      "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+      "9b9bbaac5fc924ab139919ce0ffd6a159a45eeca"
+    ],
+    "selected_models": [
+      "gfrun"
+    ],
+    "cases": [
+      {
+        "case": "concat_gather_s32_alias_probe",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-concat_gather_s32_alias_probe",
+        "content_id": "fd6c59f576869c7d378221fae7a96bbdc4f2cd61f9775b5ff27c744722405a93",
+        "elf_sha256": "34cef361ce0fd402e2f14d7c3daa6d445fef37f0aa0e54a8a1de2a01b15decc5",
+        "provenance_sha256": "4cad74efe6c3d3e286d9d2ac88f2fd3e4b6a08a037e8cb940fa380e213c7e3e8",
+        "verified_hash_count": 27,
+        "independently_compared_exact_segments": 5,
+        "exact_bytes": 514352,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "concat_gather_s32_original",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-concat_gather_s32_original",
+        "content_id": "05d7b098d78db60b25be7a1307d97e6a918bdc54fe37d65f74df60de06e31a10",
+        "elf_sha256": "d6d8b272a6a544d0a2f05c021372252d27e783b4fd525ab8722d1268c08666a8",
+        "provenance_sha256": "be1c41628a86f9d5838faa97177faafe5c590bfa840131a942a1958d85b15b65",
+        "verified_hash_count": 27,
+        "independently_compared_exact_segments": 5,
+        "exact_bytes": 1024304,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "element_expression_chain",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-element_expression_chain",
+        "content_id": "8f4b9f7e6db76b6274827453c7be3370c050d6c8a9a658c93092a149530a8692",
+        "elf_sha256": "8c577f335f852b0fa2d4e9ebe0809b4426c3be1bb15f3f3236dab39836deb55f",
+        "provenance_sha256": "22e8d6279885365e0dccef27d1aa6c44626a51d2507b3cb8b5b94840f65441d3",
+        "verified_hash_count": 27,
+        "independently_compared_exact_segments": 5,
+        "exact_bytes": 6176,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "elementwise_atomic_histogram",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-elementwise_atomic_histogram",
+        "content_id": "d2f7e0f553dcc58ee39bd41b96e2d2b9ac85ab872e74fd6d158fa025a6a56858",
+        "elf_sha256": "a73890185b00b1d4e4c9da18bbd7e44cd77f1e244fe4daaf6f10406e4f7150e6",
+        "provenance_sha256": "625461eae8ce65433421b662b4c30f2c39edf64cf84118915ba44d5405e49227",
+        "verified_hash_count": 28,
+        "independently_compared_exact_segments": 6,
+        "exact_bytes": 1728,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "generic_atomic_cfg_i32",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-generic_atomic_cfg_i32",
+        "content_id": "91a311f943ba58bcb9a0faa6eec1cd2da4aa9fb15937f8898cf7cb60966c6725",
+        "elf_sha256": "67c83efc2f99e177232a3eb49b8100a917a5c90326733e6c26bf1039c9ffe138",
+        "provenance_sha256": "e9ef5520f06838284b29cc1bf54380ac0a1853190cea7605ddb7e059735de551",
+        "verified_hash_count": 31,
+        "independently_compared_exact_segments": 6,
+        "exact_bytes": 2208,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "generic_predicated_cfg_i32",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-generic_predicated_cfg_i32",
+        "content_id": "24c30b4a8e4715cdf701fc68d3457e7f0b9378ed0e793bb57330c4bd5d545c7a",
+        "elf_sha256": "8e03bbac373c539c93f79b171d809518c2a65f78c7745acf3a4956078af66a66",
+        "provenance_sha256": "a198fa865fa6f3336b2f5033d09928811ffb704405b3e1f65a4dd8b8b5997c41",
+        "verified_hash_count": 29,
+        "independently_compared_exact_segments": 7,
+        "exact_bytes": 1024,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "generic_typed_tile_cfg_i32",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-generic_typed_tile_cfg_i32",
+        "content_id": "61fb77dd1d9291610e094053b9a7a55695ecdef1a45d9341db9410a88b2134f6",
+        "elf_sha256": "f08f947cf248d2f8a06f061067a39b9d382817cc93a6eab6a87ae0048e086877",
+        "provenance_sha256": "dbac31deee481b8998734675e32eb0a8737c15bfcd0e8a0cab14bcf6db095a49",
+        "verified_hash_count": 25,
+        "independently_compared_exact_segments": 3,
+        "exact_bytes": 3248,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "group_count_s32_original",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-group_count_s32_original",
+        "content_id": "beb71a0082eff752e4c9bcf28cdb493b39c939b79a3f84a4a5b5f1b63542d1fe",
+        "elf_sha256": "2b8f2f805b6de1ce6e5f59d2374ee47c428363af59c343a4811b8c1ed61a204d",
+        "provenance_sha256": "7ced87cff2fa6fc6b150f3a2cc345405177bb9cc36b2fb62cf9baf1cdbdf86db",
+        "verified_hash_count": 25,
+        "independently_compared_exact_segments": 3,
+        "exact_bytes": 1328,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "group_count_s32_strong",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-group_count_s32_strong",
+        "content_id": "d77e012f26a94f3861e9aa6ab761783f72e18963d9968d9b8919d5da39b353d8",
+        "elf_sha256": "a7d23223c3f5ec23b0b23046b286be337b02deede4eab5bc994a354d3627344c",
+        "provenance_sha256": "db25dddb2a0c343cbd53a7122a54c6f22b13e1d6daf388db46efa32e268692bd",
+        "verified_hash_count": 26,
+        "independently_compared_exact_segments": 4,
+        "exact_bytes": 2352,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "histogram_tile_element",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-histogram_tile_element",
+        "content_id": "2cd531795a148e36dbdd481391ebd4bd87e509698685690f3094b311ec76173f",
+        "elf_sha256": "5ffe4b490c0f91b6334e3b5e08dc84e000d302d93b4dbba394aa4e9f10ede8a9",
+        "provenance_sha256": "b23eaabe1888eda2ca89916a6b4938008ebaaed77a4786eee52b3330c43a753f",
+        "verified_hash_count": 25,
+        "independently_compared_exact_segments": 3,
+        "exact_bytes": 2592,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "indexed_gather_tile_element",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-indexed_gather_tile_element",
+        "content_id": "7373abd6d80b403ee214df861930830271b40779f01f8212bb5dcb6bcc8e1b08",
+        "elf_sha256": "b4507b5f4cb7ab42a3da9da00973e446370f3a44b9191b9784addbc9019647a9",
+        "provenance_sha256": "23a655cb6953b00bb46b4bbd24f73d9e4d1f1cd20bfaa95819a1d6b6867c12bb",
+        "verified_hash_count": 26,
+        "independently_compared_exact_segments": 4,
+        "exact_bytes": 4276,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "selected_radix_tile_element",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-selected_radix_tile_element",
+        "content_id": "7555c523326458d3224021416211cf85ca62f5bf6ed6acab926851c18628cd2f",
+        "elf_sha256": "0dc463484824e581280559f4efcf9ec267d0faf56f044d2c6e755a8f82bf318f",
+        "provenance_sha256": "afc51a40ec99e745e79d1626379f58c774955fb7607740b4a17a00131b32237c",
+        "verified_hash_count": 25,
+        "independently_compared_exact_segments": 3,
+        "exact_bytes": 2592,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "signed_element_expression",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-signed_element_expression",
+        "content_id": "65213e7acb165d1a81eaa31f61fa2a09c646d5af0939ecb03203b37caae598dd",
+        "elf_sha256": "62a166d9db8a8661a2633f1ffc4566b8efe1cd848412122ae61301b71c7b002c",
+        "provenance_sha256": "1dcbe359be4ff5f0a59f4d7ad9129813176a7a8c26c5b6a0b293dd95f3765adc",
+        "verified_hash_count": 27,
+        "independently_compared_exact_segments": 5,
+        "exact_bytes": 6560,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "topk_boundaries",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-topk_boundaries",
+        "content_id": "cb4587981d0534cc383616b3ce5ace4b3820b1129fee3ceeb06d16ade0a3711c",
+        "elf_sha256": "85f6489f44e1d0dc1f2ad1044d2206df3ce24c4ec00904bb2aba4a59cf6d897f",
+        "provenance_sha256": "da885ed0bc2de5cd00f80524d3fae2c6df510f29e9006bb4a8dddbe8fec0306e",
+        "verified_hash_count": 26,
+        "independently_compared_exact_segments": 4,
+        "exact_bytes": 3096,
+        "zero_status_ranges": 1,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "topk_boundaries_0",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-topk_boundaries_0",
+        "content_id": "05596b83235e74a349203a9889212a80fae14c178edbd644db9cbb8df4315115",
+        "elf_sha256": "b1da280b9a257d4d783f77d9d8f0bb6297cdcc4a87563747aea29920d956a62e",
+        "provenance_sha256": "bdd65eabf8a2257d9dbe448cbdb8ea5432a4cc372145391fb09f60d98f2ad227",
+        "verified_hash_count": 26,
+        "independently_compared_exact_segments": 4,
+        "exact_bytes": 3096,
+        "zero_status_ranges": 1,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "topk_boundaries_1",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-topk_boundaries_1",
+        "content_id": "35486b757b4bdcd16e4aa81bd90c465dc7f273bb8ccfe0b724d1447f28a5705b",
+        "elf_sha256": "567d48b3c0ef5554836f50bac9810b0f90516abe94cfd9cbf1cbfe581bad68d5",
+        "provenance_sha256": "162039a6054fccea734ff52e36452d3de25bd1ede3a5141d1da81cdeeab0130b",
+        "verified_hash_count": 26,
+        "independently_compared_exact_segments": 4,
+        "exact_bytes": 3096,
+        "zero_status_ranges": 1,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "topk_boundaries_2",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "tile_element_suite/20261013-spill-clean-topk_boundaries_2",
+        "content_id": "b98e5f1aaf54da3d29b07a1e85d7d3fad552ab92c5a77eb9fd8e84c2729b1460",
+        "elf_sha256": "8818be88383bf0a921d4c34dd3aaddcee9b70925e0e8ac6037d7129a16723494",
+        "provenance_sha256": "a9c037b1b24b98915891feaf2e04abde31ed651a990bc59241740340bcc22882",
+        "verified_hash_count": 26,
+        "independently_compared_exact_segments": 4,
+        "exact_bytes": 3096,
+        "zero_status_ranges": 1,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "elementwise_if_for",
+        "benchmark_commit": "9b9bbaac5fc924ab139919ce0ffd6a159a45eeca",
+        "artifact": "tile_element_suite/20261013-spill-clean-v2-elementwise_if_for",
+        "content_id": "be467a131cae7fca274db2a20350cc16fa1991efbfe7ed2c26f3a6222e961912",
+        "elf_sha256": "dc8c6491293bec564a8254f617a0d323c1a2f83b30128da24086e26712c08b98",
+        "provenance_sha256": "dfe3abc2799a011b12763aabccdb720a96692c790f708bb5e4ca2b6b86b1db82",
+        "verified_hash_count": 25,
+        "independently_compared_exact_segments": 3,
+        "exact_bytes": 1536,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "elementwise_if_for_strong",
+        "benchmark_commit": "9b9bbaac5fc924ab139919ce0ffd6a159a45eeca",
+        "artifact": "tile_element_suite/20261013-spill-clean-v2-elementwise_if_for_strong",
+        "content_id": "f099a836e793535aa64c40f821aa129e45c1fca8b01351f608cb35cf05abf4a1",
+        "elf_sha256": "9bf3667f201284f9cf2ab2b0766cc00f458e5e1ab939fe40274f1119370010ed",
+        "provenance_sha256": "7495906f418da3f06347b3b4c066d6b2bbe1c3258dfa8329c18559eeaad4dbf0",
+        "verified_hash_count": 25,
+        "independently_compared_exact_segments": 3,
+        "exact_bytes": 1664,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "elementwise_masked_gather_scatter",
+        "benchmark_commit": "9b9bbaac5fc924ab139919ce0ffd6a159a45eeca",
+        "artifact": "tile_element_suite/20261013-spill-clean-v2-elementwise_masked_gather_scatter",
+        "content_id": "1720c77d9ef1110988b58d6ebb747484bdd68c4be9485e28ae9fff0a35ec8ae5",
+        "elf_sha256": "61cd477228d0b449a49ef52c93b5b39d17229e74545e90f709c725bb7d6a1298",
+        "provenance_sha256": "d78224f84f2f1aec1a14a2859bd3166340b557426028404ea629e0cf62b40492",
+        "verified_hash_count": 27,
+        "independently_compared_exact_segments": 5,
+        "exact_bytes": 2176,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "elementwise_masked_gather_scatter_strong",
+        "benchmark_commit": "9b9bbaac5fc924ab139919ce0ffd6a159a45eeca",
+        "artifact": "tile_element_suite/20261013-spill-clean-v2-elementwise_masked_gather_scatter_strong",
+        "content_id": "3f9d068f7035c2e868102b1797c334c1d0dc724b31a6322bf486252d09d9a593",
+        "elf_sha256": "32c9700f01e4f439f5c148d781305511cd8f57430704b3def617eec19f594bfb",
+        "provenance_sha256": "9e15935e9cda7a6cc178fd05e2f9f6cc2976206e5f24c58e730778be5dc16a2a",
+        "verified_hash_count": 29,
+        "independently_compared_exact_segments": 7,
+        "exact_bytes": 2304,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "concat_gather_f16_original",
+        "benchmark_commit": "9b9bbaac5fc924ab139919ce0ffd6a159a45eeca",
+        "artifact": "tile_element_suite/20261013-spill-clean-v2-concat_gather_f16_original",
+        "content_id": "5cd4c60c3e3d9a56ffe73ba2b6ee728d58fb039ce7839a740004ef4ad8d37f98",
+        "elf_sha256": "b68965cf664d29964102865fd48156c027d34c9ca8685996fe2b6794627725d5",
+        "provenance_sha256": "302dcb12452cbfa62046f676db46a09cc4097c0d1ce3d7b56437a1c81a8fe79d",
+        "verified_hash_count": 31,
+        "independently_compared_exact_segments": 7,
+        "exact_bytes": 20480312,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "concat_gather_f16_alias_probe",
+        "benchmark_commit": "9b9bbaac5fc924ab139919ce0ffd6a159a45eeca",
+        "artifact": "tile_element_suite/20261013-spill-clean-v2-concat_gather_f16_alias_probe",
+        "content_id": "3a3f9386f5b65d94860cf2b172ccf098abd864b97b1dceba30326acf73c1c22d",
+        "elf_sha256": "139172ed57adf39e082327ef0c45ccca668a9b709af60011de6c8f26139aac8c",
+        "provenance_sha256": "793da407205264b42932a1ff2dc9ec2028d620553df1c3e820f35800e7eb9368",
+        "verified_hash_count": 29,
+        "independently_compared_exact_segments": 7,
+        "exact_bytes": 16385336,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      },
+      {
+        "case": "topk777",
+        "benchmark_commit": "59ce0cd65f8ca53ef324885ace33bb0201d7c124",
+        "artifact": "element_atomic_topk/20261013-spill-clean-topk777",
+        "content_id": "aaaaa880131fc78c67dd9f5a9ae45fe4c110ed1d4e4f76f8b176cd231b66d3a6",
+        "elf_sha256": "7a6390af161ac30dc9f869a1e926ac79f2f4204e8736b9c8515284bc709d8c30",
+        "provenance_sha256": "2d6b9ef06070667b65f6f92baac7cae4d83651588b68c85c10a97a3cf67f635f",
+        "verified_hash_count": 31,
+        "independently_compared_exact_segments": 9,
+        "exact_bytes": 7876,
+        "zero_status_ranges": 0,
+        "non_exact_observations": "validated by recorded independent oracle and its negative canaries"
+      }
+    ],
+    "total_verified_hashes": 649,
+    "scope": "23 freshly compiled integer/FP32/FP16 suite profiles plus original777 TopK; all on compiler4d5fb502/APIb0967b0/model6850368; per-case benchmark pins retained",
+    "audit_artifact": "20261013-spill-clean-audit.json",
+    "prebuilt_ci_audit": "20261013-gfrun-spill-ci-audit.json",
+    "claim_boundary": "24 validation profiles do not replace the denominator of 21 original application entries/all configurations and four wrappers. Earlier profile evidence remains unchanged."
+  },
+  "element_api_remaining_gaps": [
+    "CUBE_M16/A16 full matrix, borrowed accumulator range and row-broadcast element views remain outside this qualified API slice.",
+    "Remaining QSMLA source migration/configurations and complete 21-entry source/configuration inventory closure are unfinished.",
+    "This replay qualifies admitted O2 profiles; arbitrary helper/alias geometries and O0 are not qualified by these gates.",
+    "gfsim/TimingSim parity is deferred to a separate PR."
+  ],
+  "original_multi_thread_wrappers": [
+    "benchmark/one-level-arch/kernels/multi_thread/broadcast/broadcast.hpp",
+    "benchmark/one-level-arch/kernels/multi_thread/concat/concat_gather.hpp",
+    "benchmark/one-level-arch/kernels/multi_thread/concat/concat_scatter.hpp",
+    "benchmark/one-level-arch/kernels/multi_thread/gather/gather.hpp"
+  ],
+  "historical_element_api_remaining_gaps_20261013": [
+    "FP32 ElementTile storage only32/128 and direct element fragment32; larger original gather snapshots require public storage/lowering support.",
+    "FP16/U16 parent2048 can be partitioned into32 logical64 parts, but a single TileArray assembly admits at most16writers; no capacity increase is allowed.",
+    "Whole-parent pointer TSTORE requires full count; generic native masked tail transport remains bounded to admitted part profiles.",
+    "Reference-backed Tile parameter promotion and alias proofs are not covered by local-carrier support; two existing positive frontend tests still reject at O2.",
+    "O0 marked regions remain explicitly rejected; old negative fixtures must be revised to reach their intended per-effect legality checks.",
+    "Remaining original application configurations and all4 multithread wrappers require their own complete gfrun memory evidence."
+  ],
+  "conflict_repair_20261016": {
+    "scope": "TopK-centered alternating Tile/element programming model and gfrun integration",
+    "pins": {
+      "benchmark": "056def293e905c287092c1b1f876733fdfa0f975",
+      "compiler": "f235b3e56a219fb0475f068e81a3d4201a66730d",
+      "model": "1c2e5cb11e756011528147171bd4ac779db0c91a",
+      "tileop_api": "ef578d8d92289d270a17c02b918cd1df9b496ba8"
+    },
+    "evidence": "/tmp/pto-pr-repair-final-latest-v5/final-evidence.json",
+    "inventory_accounting": {
+      "source_path_entries": 21,
+      "verified_profile_entries": 17,
+      "pending_entries": [
+        "hashtable_lookup_simd",
+        "matmul_mx_scale_access",
+        "quant_sparse_flash_mla",
+        "qsmla_sparse_index_collection"
+      ],
+      "denominator_note": "These are source-path/configuration inventory entries, not 21 regression cases or 21 independently completed applications. A verified entry is limited to the exact configurations recorded in its evidence."
+    },
+    "gfrun": {
+      "pass": 64,
+      "fail": 0,
+      "timeout": 0,
+      "total": 64,
+      "four_actual_wrappers": 4,
+      "topk_boundary_profiles": 17,
+      "shared_workspace_replay": true
+    },
+    "canonical_topk": "777 elements, coherence, nine observed segments PASS",
+    "qli_profile_counts": {
+      "key": 48,
+      "histogram": 72,
+      "norm": 13,
+      "popn": 18,
+      "static_topk": 7,
+      "original_drivers": 5,
+      "dynamic_topk": 4
+    },
+    "matmul_original_numerical_profiles": 7,
+    "model_standard_regression": 310,
+    "model_full_diff_pass": 1148758,
+    "timeout_seconds": 120,
+    "known_nightly_baseline_failures": 3,
+    "whole_ci_status": {
+      "gfrun_linux": "310/310 PASS",
+      "full_run_tests": "FAIL: timing_test and gfsim lane",
+      "pr_template": "PASS",
+      "tileop_api_target_validation": "PASS",
+      "tileop_api_auto_merge": "blocked: draft PR retained"
+    },
+    "programming_model": {
+      "header_element_regions": 6,
+      "coherence_driver_element_regions": 1,
+      "barriers": false,
+      "alternation": "Tile load/view -> scalar-style element loop -> Tile store/reduction; repeated reduction/update in QLI",
+      "sequential_recurrences": [
+        "cutoff scan",
+        "compact collection",
+        "prefix recurrence"
+      ]
+    },
+    "does_not_close_all_inventory_entries": true,
+    "remaining": [
+      "CUBE_M16/A16 full element migration",
+      "remaining QSMLA configurations and full 21-entry source/configuration inventory closure",
+      "timing/gfsim qualification in separate PR"
+    ]
+  },
+  "masked_element_gfrun_20261019": {
+    "status": "qualified_functional_profiles",
+    "models": [
+      "gfrun"
+    ],
+    "timeout_seconds": 120,
+    "repositories": {
+      "compiler": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-llvm",
+        "head": "03019e0f794d6f3cf57407508e3d7aedc705fc81",
+        "status": ""
+      },
+      "benchmark": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-bench",
+        "head": "aa97d6dea4717428c74fd13799dde1a49775a605",
+        "status": ""
+      },
+      "tileop_api": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-f16-dense-api",
+        "head": "03ef51d16ec7d25a2dd48ded8d8f6725e95df950",
+        "status": ""
+      },
+      "model": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-functional-model",
+        "head": "0a237ccfe8404d73d92dd144a6af539b2b0ebc5a",
+        "status": ""
+      }
+    },
+    "artifact_root": "/tmp/pto-element-followup-20261018/final-masked-v15-20261019",
+    "audit": {
+      "path": "/tmp/final-audit-v15.json",
+      "sha256": "5c59ba49909cd0997409cd2c4ddb204af32cd675bf6ec27695f4c177b7d0152d",
+      "verified_hashes": 2843,
+      "passed": true,
+      "errors": []
+    },
+    "results": {
+      "element_suite": {
+        "passed": 64,
+        "total": 64,
+        "memory_segments": 455,
+        "status_segments": 56
+      },
+      "topk777": {
+        "passed_segments": 9,
+        "total_segments": 9
+      },
+      "solution_regressions": {
+        "passed": 21,
+        "total": 21
+      },
+      "moe_boundary_driver": {
+        "passed": 1,
+        "total": 1,
+        "lengths": 11,
+        "calls_per_length": 2
+      },
+      "qli": {
+        "key": 48,
+        "histogram": 72,
+        "norm": 13,
+        "popn": 18,
+        "static_topk": 7,
+        "original_drivers": 5,
+        "dynamic_topk": 4
+      },
+      "original_lowp_matmul": {
+        "passed": 7,
+        "total": 7
+      },
+      "predicate": {
+        "original_outputs": 7,
+        "edge_outputs": 7
+      },
+      "d6": true,
+      "issue130": true
+    },
+    "masked_contract": "Marked element data paths require native masked Tile lowering. Missing/false generic lowering, O0 and incomplete regions diagnose; no scalar/unmasked fallback.",
+    "moe_scope": [
+      "group_token_old histogram clear/load/count",
+      "group_token_vec_mt_dyn histogram clear/load/count"
+    ],
+    "checks": {
+      "helper_checker_tests": 15,
+      "solution_runner_tests": 11,
+      "exact_helper_source_ir_native": "PASS; per-operation masks, scalar data memory/atomics/extraction/hidden calls rejected"
+    },
+    "known_limits": [
+      "28 unchanged legacy pragma compiler fixtures require migration to masked-only contract; not silently reclassified as passing",
+      "issue-60 valid guarded Tile program remains unsupported by path-insensitive native-distance proof",
+      "Complete dynamic legacy driver requires separate generic histogram TU",
+      "Public pointer TLOAD partial-parent transport can use scalar tail copy outside marked regions; MoE migrated helpers use bounded masked MGATHER instead",
+      "Original21 application inventory retains17 verified profiles and4 pending paths; distinct from21 solution regressions",
+      "gfsim/TimingSim deferred"
+    ],
+    "skill_evolve": "no-update; project-specific changes documented in repository and existing compiler/runtime proof gates"
+  },
+  "fused_element_gfrun_20261019": {
+    "status": "qualified_functional_profiles",
+    "models": [
+      "gfrun"
+    ],
+    "gfrun_timeout_seconds": 120,
+    "repositories": {
+      "compiler": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-llvm",
+        "head": "a3b798ae3cf22f452b0fe58a61191764a5464623",
+        "status": ""
+      },
+      "benchmark": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-bench",
+        "head": "f4a20b82ec7fc5658a03cc45a7c5f8c1a7379292",
+        "status": ""
+      },
+      "tileop_api": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-f16-dense-api",
+        "head": "03ef51d16ec7d25a2dd48ded8d8f6725e95df950",
+        "status": ""
+      },
+      "model": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-functional-model",
+        "head": "0a237ccfe8404d73d92dd144a6af539b2b0ebc5a",
+        "status": ""
+      }
+    },
+    "artifact_root": "/tmp/pto-element-fusion-20261019/final-v16b",
+    "audit": {
+      "path": "/tmp/pto-element-fusion-20261019/final-v16b-audit.json",
+      "sha256": "e5cbca30996c6dfce921b54757e2c37a0dd33fd7d251924edc740a93061b71b2",
+      "verified_hashes": 2844,
+      "passed": true,
+      "errors": [],
+      "pending": []
+    },
+    "source_fusions": {
+      "moe_read_count_pairs": 2,
+      "topk_zero_store_pairs": 2,
+      "topk_marked_regions": 4,
+      "dynamic_moe_translation_units": 1
+    },
+    "compiler_changes": [
+      "Whole-object disjointness proved across all direct calls to local helpers, including forwarded arguments and global roots; scoped metadata only on proven access pairs",
+      "Commuting naturally full-width-aligned unit-stride zero stores; conflicting ordinary/atomic streams still fail closed",
+      "Correct row/column/arg reduction result descriptors; strict capacity checks retained"
+    ],
+    "results": {
+      "element_suite": [
+        64,
+        64
+      ],
+      "element_memory_segments": 455,
+      "topk777_memory_segments": [
+        9,
+        9
+      ],
+      "solution_regressions": [
+        21,
+        21
+      ],
+      "moe_boundary_driver": [
+        1,
+        1
+      ],
+      "boundary_lengths": 11,
+      "calls_per_boundary_length": 2,
+      "qli_profiles": {
+        "key": 48,
+        "histogram": 72,
+        "norm": 13,
+        "popn": 18,
+        "static_topk": 7,
+        "original_drivers": 5,
+        "dynamic_topk": 4
+      },
+      "original_lowp_matmul": [
+        7,
+        7
+      ],
+      "predicate_original_outputs": 7,
+      "predicate_edge_outputs": 7,
+      "d6_c48": true,
+      "issue130_c16": true
+    },
+    "verification_tests": {
+      "moe_checker": 18,
+      "solution_runner": 11,
+      "disassembly_scope": 11,
+      "compiler_fusion": 4,
+      "compiler_descriptors": 24
+    },
+    "same_compiler_instruction_comparison": {
+      "artifact": "/tmp/pto-element-fusion-20261019/ab-v16/instruction-comparison.json",
+      "split": {
+        "TCI": 5,
+        "TCMPS": 3,
+        "TSEL": 1,
+        "TLEA": 2,
+        "MGATHER": 1,
+        "MGATHER.ADD": 1
+      },
+      "fused": {
+        "TCI": 3,
+        "TCMPS": 2,
+        "TSEL": 0,
+        "TLEA": 2,
+        "MGATHER": 1,
+        "MGATHER.ADD": 1
+      },
+      "claim": "Static instruction counts only; no timing improvement claimed"
+    },
+    "retained_boundaries": [
+      "Whole-chunk alias snapshots in QLI make_key/histogram, gather/view-copy, transpose and concat",
+      "Tile reductions and ordered prefix/rank stages",
+      "Histogram clear before updates and cross-PE synchronization"
+    ],
+    "known_limits": [
+      "Unknown/exported/address-taken or unproved mixed-alias helper contexts are not assumed disjoint",
+      "28 old pragma fixtures and issue-60 path proof remain separate LLVM merge-readiness gaps",
+      "Original21 application inventory17verified/4pending is separate fromsolution21PASS",
+      "gfsim/TimingSim deferred"
+    ],
+    "superseded_implementation_limits": [
+      "Dynamic MoE separate translation-unit workaround removed; full mixed Tile/element driver now qualifies"
+    ],
+    "skill_evolve": "no-update; project-specific fusion and descriptor contracts documented in compiler and benchmark guides"
+  },
+  "fused_pe_domain_gfrun_20261019_v19": {
+    "status": "qualified_functional_profiles",
+    "models": [
+      "gfrun"
+    ],
+    "gfrun_timeout_seconds": 120,
+    "repositories": {
+      "compiler": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-llvm",
+        "head": "a08e1c228dbe8b5fe45a6c613fec6a78499ab920",
+        "status": ""
+      },
+      "benchmark": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-fp32-memory-bench",
+        "head": "693d25349b9e17bad57fe7d281be258140d649ba",
+        "status": ""
+      },
+      "tileop_api": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-f16-dense-api",
+        "head": "1f72e918fcbb72569d8e28dda11f7c579a06dab2",
+        "status": ""
+      },
+      "model": {
+        "path": "/Users/zhoubot/.codex/worktrees/pto-element-functional-model",
+        "head": "0a237ccfe8404d73d92dd144a6af539b2b0ebc5a",
+        "status": ""
+      }
+    },
+    "artifact_root": "/tmp/pto-element-fusion-20261019/final-v19",
+    "audit": {
+      "path": "/tmp/pto-element-fusion-20261019/final-v19-audit.json",
+      "sha256": "ec21921ce2f554e78131ee12be39e9ebc151d7a62d999f1093a51aa814eed0c4",
+      "verified_hashes": 3795,
+      "passed": true,
+      "errors": [],
+      "pending": []
+    },
+    "source_fusions": {
+      "moe_read_count_pairs": 2,
+      "topk_zero_store_pairs": 2,
+      "topk_marked_regions": 4,
+      "dynamic_moe_translation_units": 1
+    },
+    "compiler_changes": [
+      "Whole-object disjointness proved across all direct calls to local helpers, including forwarded arguments and global roots; scoped metadata only on proven access pairs",
+      "Commuting naturally full-width-aligned unit-stride zero stores; conflicting ordinary/atomic streams still fail closed",
+      "Correct row/column/arg reduction result descriptors; strict capacity checks retained",
+      "Explicit PE domains preserved through closed-callgraph specialization, instruction compression, all MC pseudo expansions and assembly roundtrip; unsupported effects and Tile-pointer crossings reject",
+      "Canonical upstream reuse families and standalone TLSU/CUBE headers preserve strict PE-mask, descriptor and SizeCode validation",
+      "Generic masked lowering conservatively retains Local sources including late queue-alignment copies; legacy late retention changes generated PseudoTCOPYDesc only, preserving explicit legacy lifetimes"
+    ],
+    "results": {
+      "element_suite": [
+        64,
+        64
+      ],
+      "element_memory_segments": 455,
+      "topk777_memory_segments": [
+        9,
+        9
+      ],
+      "solution_regressions": [
+        21,
+        21
+      ],
+      "moe_boundary_driver": [
+        1,
+        1
+      ],
+      "boundary_lengths": 11,
+      "calls_per_boundary_length": 2,
+      "qli_profiles": {
+        "key": 48,
+        "histogram": 72,
+        "norm": 13,
+        "popn": 18,
+        "static_topk": 7,
+        "original_drivers": 5,
+        "dynamic_topk": 4
+      },
+      "original_lowp_matmul": [
+        7,
+        7
+      ],
+      "predicate_original_outputs": 7,
+      "predicate_edge_outputs": 7,
+      "d6_c48": true,
+      "issue130_c16": true,
+      "qli_original_four_pe": [
+        4,
+        4
+      ],
+      "qli_upstream_four_pe": [
+        2,
+        2
+      ],
+      "qli_four_pe_segments_per_case": 18,
+      "nested_pe_domain_chain": {
+        "segments": [
+          2,
+          2
+        ],
+        "bytes": 16768,
+        "biot_binders": 21,
+        "pe_mask": "1000"
+      }
+    },
+    "verification_tests": {
+      "focused_primary": {
+        "passed": 95,
+        "total": 95,
+        "api": 6,
+        "native_adapter": 42,
+        "pe_domain": 7,
+        "exact_descriptor_glob": 24,
+        "upstream_lifetime_header": 16
+      },
+      "additional_late_copy_legacy": {
+        "passed": 3,
+        "total": 3,
+        "overlaps_primary": 2
+      },
+      "issue60": {
+        "negative_test_passed": true,
+        "feature_closed": false
+      },
+      "independent_moe_no_scalar_and_topk_mask_canaries": "PASS",
+      "evidence": "/tmp/pto-element-fusion-20261019/final-v19/focused/summary.json"
+    },
+    "same_compiler_instruction_comparison": {
+      "artifact": "/tmp/pto-element-fusion-20261019/ab-v16/instruction-comparison.json",
+      "split": {
+        "TCI": 5,
+        "TCMPS": 3,
+        "TSEL": 1,
+        "TLEA": 2,
+        "MGATHER": 1,
+        "MGATHER.ADD": 1
+      },
+      "fused": {
+        "TCI": 3,
+        "TCMPS": 2,
+        "TSEL": 0,
+        "TLEA": 2,
+        "MGATHER": 1,
+        "MGATHER.ADD": 1
+      },
+      "claim": "Static instruction counts only; no timing improvement claimed",
+      "qualification": "Historical same-compiler v16 comparison; not rerun as a v19 timing claim"
+    },
+    "retained_boundaries": [
+      "Whole-chunk alias snapshots in QLI make_key/histogram, gather/view-copy, transpose and concat",
+      "Tile reductions and ordered prefix/rank stages",
+      "Histogram clear before updates and cross-PE synchronization"
+    ],
+    "known_limits": [
+      "Unknown/exported/address-taken or unproved mixed-alias helper contexts are not assumed disjoint",
+      "28 legacy pragma fixtures remain outside this closure; valid guard-correlated issue60 path proof remains open",
+      "Broad MC: 82 PASS, 1 XFAIL, 3 historical failures: CUBE_Mamulb, MTC_Tloadstore, pto-tileop-macro-ranges",
+      "Original application inventory 17/21 verified with four pending profiles is distinct from solution regression 21/21",
+      "Forced Tile spill runtime and lifetime retirement semantics are not qualified",
+      "gfsim/TimingSim deferred; model unchanged"
+    ],
+    "superseded_implementation_limits": [
+      "Dynamic MoE separate translation-unit workaround removed; full mixed Tile/element driver now qualifies"
+    ],
+    "skill_evolve": "no-update; project-specific fusion and descriptor contracts documented in compiler and benchmark guides",
+    "input_manifest": {
+      "path": "/tmp/pto-element-fusion-20261019/final-v19/input-manifest.json",
+      "sha256": "596b5a92f87c35bd4809d1dbddcd769dabdb567096425d2315e267144f02dee3"
+    },
+    "upstream_compiler_base": "78b74f4a614e61b8992abeb315da9c3bd058aa86",
+    "api_changes": [
+      "PTO_PE_DOMAIN(mask) boundary annotation",
+      "TileArray participant masks preserved through output references, assembly, views and TMOV writers; invalid or unsupported uses reject"
+    ],
+    "benchmark_changes": [
+      "Keep original four-PE QLI preprocessing, with PE0 score/TopK wrapper domain8 and original TileArray/template defaults",
+      "Strict shared native-header normalization for exact legacy, standalone and numeric TLSU/CUBE forms; preserve all mask/address/scalar checks"
+    ],
+    "historical_runs": [
+      {
+        "version": "v17",
+        "status": "PASS",
+        "audit": "/tmp/pto-element-fusion-20261019/final-v17-audit.json"
+      },
+      {
+        "version": "v18",
+        "status": "FAIL",
+        "artifact_root": "/tmp/pto-element-fusion-20261019/final-v18",
+        "failures": [
+          "gather in default64",
+          "two MegaMoE cases in solution21",
+          "issue130 C16"
+        ],
+        "resolution": "a08e1c2 late generated copy source-retention fix, independently requalified in v19"
+      }
+    ],
+    "post_validation_documentation": "This record is committed after the qualified benchmark code SHA; no code or runner changes in the documentation commit."
+  },
+  "latest_qualification_ref": "fused_pe_domain_gfrun_20261019_v19"
+}

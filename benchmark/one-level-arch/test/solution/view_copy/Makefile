@@ -25,7 +25,16 @@ include ../../common/Makefile.common
 
 # These tests use the direct-entry four-PE runtime, not hosted libc startup.
 ifeq ($(PLAT),linx)
+# Optional overrides support an in-development compiler outside its runtime.
+ELEMENT_TARGET_FLAGS = $(if $(TARGET_TRIPLE),--target=$(TARGET_TRIPLE)) \
+	$(if $(SYSROOT),--sysroot=$(SYSROOT)) \
+	$(if $(RESOURCE_DIR),-resource-dir=$(RESOURCE_DIR))
+INCLUDE += $(if $(API_INCLUDE),-I$(API_INCLUDE))
+
+# The kernel's pragma loops require generic element lowering.
+CC_OPTS += $(ELEMENT_TARGET_FLAGS) -mllvm -linxv5-enable-generic-element=true \
+	-fno-vectorize -fno-slp-vectorize -Werror=unknown-pragmas
 # The bundled compiler's BFI constant synthesis miscompiles repeated words.
 CC_OPTS += -mllvm -linxv5-enable-bfi-opt=false
-CC_LINK = -nostartfiles $(TEST_ROOT)/solution/common/start.s
+CC_LINK = $(ELEMENT_TARGET_FLAGS) -fuse-ld=lld -nostartfiles $(TEST_ROOT)/solution/common/start.s
 endif

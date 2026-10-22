@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+: "${LINX_RUNTIME_ROOT:?set LINX_RUNTIME_ROOT for element_atomic_topk}"
+: "${API_INCLUDE:?set API_INCLUDE for element_atomic_topk}"
+target_triple=${TARGET_TRIPLE:-linx64v5-unknown-linux-musl}
+sysroot=${SYSROOT:-"$LINX_RUNTIME_ROOT/sysroot"}
+resource_dir=${RESOURCE_DIR:-"$LINX_RUNTIME_ROOT/lib/clang/15.0.4"}
+make -C "$case_dir" TESTCASE=element_atomic_topk \
+    TARGET_TRIPLE="$target_triple" \
+    SYSROOT="$sysroot" \
+    RESOURCE_DIR="$resource_dir" \
+    API_INCLUDE="$API_INCLUDE"

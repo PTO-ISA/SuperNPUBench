@@ -19,6 +19,8 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "benchmark"))
+from native_bstart import normalize_disassembly
 OUTPUT_FLAVOR = "res_check" if os.environ.get("res_check") == "on" else ""
 ELF_GLOB = os.path.join(
     HERE, "..", "..", "output", OUTPUT_FLAVOR, "microbenchmark", "fixp", "elf",
@@ -256,6 +258,7 @@ def parse_bundle(lines):
     ior_gpr counts real B.IOR GPR slots (the literal `zero` placeholder is
     skipped); iot_src counts all non-destination B.IOT source lines; has_ios
     reports a B.IOS (Shared) binder."""
+    lines = normalize_disassembly("\n".join(lines)).splitlines()
     mnemonic = None
     fpatr = None
     word = None

@@ -527,8 +527,8 @@ inline void gamma_beta_block(float *ds, float *db, float *mean, float *rstd,
   TF sf(rows, cols), bf(rows, cols), t(rows, cols), ga(rows, cols),
       ba(rows, cols);
   TV m(rows), r(rows);
-  TEXPANDS(ga, 0.0f);
-  TEXPANDS(ba, 0.0f);
+  TEXPANDS(ga, 0.0f, cols, rows, cols);
+  TEXPANDS(ba, 0.0f, cols, rows, cols);
   for (int64_t n = 0; n < N; ++n) {
     GF gs(ds + n * C + g * D + d, rows, D), gb(db + n * C + g * D + d, rows, D);
     GF gm(mean + n * G + g, rows, 1), gr(rstd + n * G + g, rows, 1);
@@ -536,11 +536,11 @@ inline void gamma_beta_block(float *ds, float *db, float *mean, float *rstd,
     TLOAD(bf, gb);
     TLOAD(m, gm);
     TLOAD(r, gr);
-    TADD(ba, ba, bf);
-    TROWEXPANDMUL(t, bf, m);
-    TSUB(t, sf, t);
-    TROWEXPANDMUL(t, t, r);
-    TADD(ga, ga, t);
+    TADD(ba, ba, bf, cols, rows, cols);
+    TROWEXPANDMUL(t, bf, m, cols, rows, cols);
+    TSUB(t, sf, t, cols, rows, cols);
+    TROWEXPANDMUL(t, t, r, cols, rows, cols);
+    TADD(ga, ga, t, cols, rows, cols);
   }
   TH h(rows, cols);
   GH gg(dg + g * D + d, rows, D), gb(dbeta + g * D + d, rows, D);

@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "solution/group_token_vec/gt_tile_common.hpp"
+#include "solution/group_token_vec/group_token_vec_mt_dyn_histogram.hpp"
 
 // ============================================================================
 // MoE Token Grouping — Multi-thread Vector (Tile) variant, runtime DYNAMIC
@@ -102,9 +103,8 @@ static inline void mtBarrier(uint32_t phase)
 }
 
 // ============================================================================
-// Phase 1 (runtime shape): 满块标量计数 (hybrid) + 尾块标量兜底; 归约按
-// 专家段分片 (≤64/PE, 标量读回)。全 tile 计数链保留给静态 mt 版 (dyn
-// 形状下回边 TMOV 描述符断言/依赖 TLOAD 超时, 见静态版注释)。
+// Phase 1 (runtime shape): 每个 PE 保持原有行域，32 元素 Tile 加载后由
+// element-for 原子更新私有直方图；归约仍按专家段分片 (≤64/PE, 标量读回)。
 // ============================================================================
 static inline void calTokenPerExpertCnt_mt_tile_dyn(
     uint32_t *topkIndex,
@@ -119,68 +119,34 @@ static inline void calTokenPerExpertCnt_mt_tile_dyn(
     const uint32_t tid = get_thread_idx();
 
     uint32_t *myCnt = cntLocal + tid * expertNum;
-    // 清零用 volatile 标量: 常量 TEXPANDS(0)+TSTORE 被后端折叠为零寄存器
-    // 别名绑定, cfgB 重复调用时 TSTORE 永不完成 ([C9])。
-    {
-        volatile uint32_t *v = myCnt;
-        for (uint32_t i = 0; i < expertNum; i++) v[i] = 0u;
-    }
+    gt_dyn_clear_element_histogram(myCnt, expertNum);
 
     if (topK == kTileN && expertNum <= kExpertNumCap) {
-        using GmPerPE = global_tensor<uint32_t, RowMajor<-1, -1>>;
-
         const uint32_t fullBlocks = bs / kTileM;
-        // dyn 满块直方图 = 标量计数 (hybrid; 全 tile 计数链在 dyn 形状下
-        // 受模型 TMOV 断言/依赖 TLOAD 超时限制, 静态版保留全 tile 链)。
-        // 满块 TLOAD 预取已删除 (无消费者, 语义不变, 块数下降)。
         for (uint32_t blk = 0; blk < fullBlocks; ++blk) {
-            // rows [16*blk + 4*tid, +4): 标量计数 (hybrid)
+            // rows [16*blk + 4*tid, +4): 原有 4-row/PE 所有权不变。
             const uint32_t r0 = blk * kTileM + tid * 4U;
-            for (uint32_t row = 0; row < 4U; ++row) {
-                const uint32_t base = (r0 + row) * topK;
-                for (uint32_t col = 0; col < topK; ++col) {
-                    const uint32_t expertId = topkIndex[base + col];
-                    if (expertId < expertNum) {
-                        myCnt[expertId]++;
-                    }
-                }
-            }
+            gt_dyn_add_element_histogram_range(topkIndex + r0 * topK,
+                                               4U * topK, myCnt, expertNum);
         }
-        // 尾块: 行域 [fullBlocks*16, bs), PE tid 拥有 [4*tid, +4) 切片。
-        // 动态 valid 计数链泄漏 ([C6]) → TLOAD 预取 + 标量直方图 (原实现)。
+        // 尾块: 行域 [fullBlocks*16, bs), PE tid 拥有 [4*tid, +4) 切片；
+        // element helper 的 valid guard 屏蔽不足 4 行的末尾元素。
         const uint32_t tailRows = bs - fullBlocks * kTileM;
         if (tailRows > 0) {
             const uint32_t r0 = fullBlocks * kTileM + tid * 4U;
             const uint32_t vr = (r0 < bs) ? ((bs - r0 < 4U) ? (bs - r0) : 4U) : 0U;
             if (vr > 0) {
-                // 原 dyn-valid TLOAD 预取已删除: 动态 ValidRow tile 的描述符
-                // 会污染复用 tile 寄存器, 循环回边 TMOV bank 重排束触发模型
-                // "Local TMOV requires matching descriptors" 断言 (gfsim);
-                // 预取无消费价值 (数据由标量经 GM 读), 删除后语义不变。
-                {
-                for (uint32_t row = 0; row < vr; ++row) {
-                    uint32_t tokenId = r0 + row;
-                    uint32_t base = tokenId * topK;
-                    for (uint32_t col = 0; col < topK; ++col) {
-                        uint32_t expertId = topkIndex[base + col];
-                        if (expertId < expertNum) {
-                            myCnt[expertId]++;
-                        }
-                    }
-                }
-                }
+                gt_dyn_add_element_histogram_range(topkIndex + r0 * topK,
+                                                   vr * topK, myCnt,
+                                                   expertNum);
             }
         }
     } else {
-        // topK != kTileN: 纯标量 stride 兜底 (tile 列宽与 topK 绑定)
+        // topK != kTileN: 保持逐行 stride 所有权，每行按 32 元素分片。
         for (uint32_t i = tid; i < bs; i += kThreadsPerBlock) {
             uint32_t base = i * topK;
-            for (uint32_t col = 0; col < topK; ++col) {
-                uint32_t expertId = topkIndex[base + col];
-                if (expertId < expertNum) {
-                    myCnt[expertId]++;
-                }
-            }
+            gt_dyn_add_element_histogram_range(topkIndex + base, topK, myCnt,
+                                               expertNum);
         }
     }
 

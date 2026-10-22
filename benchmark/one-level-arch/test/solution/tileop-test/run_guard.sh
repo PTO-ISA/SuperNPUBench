@@ -51,12 +51,20 @@ for src in "$SUBDIR"/src/*.cpp; do
 
     chk="$GUARD_ROOT/compare/$SUB/$name"
     mkdir -p "$chk"
+    rm -f "$chk"/out*.bin
     python3 "$GOLDEN" gen "$name" "$chk" >/dev/null 2>&1
     genrc=$?   # 0 = registered golden; 3 = not registered (run-only)
+    if [ "$genrc" -ne 0 ] && [ "$genrc" -ne 3 ]; then
+        printf '%-28s %-8s %-8s %-10s\n' "$name" "ok" "-" "GOLDEN-FAIL"
+        pfail=$((pfail+1)); continue
+    fi
 
     elf="$ELF_DIR/$name.elf"
-    rlog="$(timeout 120 "$GFRUN" -f "$elf" 2>&1)"
-    if ! echo "$rlog" | grep -q "Reach the End of Benchmark"; then
+    rlog="$(timeout 120 "$GFRUN" --pto059-execution-mask-dev \
+        -s softcore.multiThreadNum=1 -f "$elf" 2>&1)"
+    rrc=$?
+    if [ "$rrc" -ne 0 ] || ! printf '%s\n' "$rlog" | \
+        grep -Eq '^(Success|Suaccelss) to Reach the End of Benchmark! R2 = 0$'; then
         printf '%-28s %-8s %-8s %-10s\n' "$name" "ok" "FAIL" "-"
         echo "$rlog" | grep -iE 'assert|error|abort|fault|fatal' | head -3 | sed 's/^/    /'
         printf '%s\n' "$rlog" > "$chk/gfrun.log"
@@ -82,3 +90,4 @@ done
 
 echo "----"
 echo "pass=$pass  compile-fail=$cfail  run-fail=$rfail  precision-fail=$pfail  run-only=$ronly"
+test $((cfail + rfail + pfail)) -eq 0

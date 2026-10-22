@@ -2,29 +2,27 @@
 #include "benchmark.h"
 #include "solution/qli/qli_pto_opt_simple.hpp"
 
-// P1 optimization: eliminate copy_bytes — pass .data segment absolute
-// addresses directly to the kernel. The kernel's global_tensor + TLOAD
-// can read from any mapped address, avoiding the byte-by-byte scalar copy
-// that generated ~1.14M STD blocks (92.8% of total).
-//
-// 输入数据经 qli_check_data.s 的 .incbin 嵌入 .data 段。直接引用链接器导出的
-// _binary_*_data_start 符号，取代硬编码地址 + fix_cpp_addrs.py 事后回填：
-// 地址由链接器解析，与配置/数据 size 无关，任意变体免手工回填、免逐配置重编。
-extern "C" unsigned char _binary_srcq_data_start[], _binary_srck_data_start[],
-    _binary_srcw_data_start[], _binary_srcsq_data_start[], _binary_srcsk_data_start[];
-#define SRCQ_ADDR   ((uint64_t)_binary_srcq_data_start)
-#define SRCK_ADDR   ((uint64_t)_binary_srck_data_start)
-#define SRCW_ADDR   ((uint64_t)_binary_srcw_data_start)
-#define SRCSQ_ADDR  ((uint64_t)_binary_srcsq_data_start)
-#define SRCSK_ADDR  ((uint64_t)_binary_srcsk_data_start)
+// 输入地址由链接器解析，修改 kernel 大小后无需重新修补常量地址。
+extern "C" {
+extern unsigned char _binary_srcq_data_start[];
+extern unsigned char _binary_srck_data_start[];
+extern unsigned char _binary_srcw_data_start[];
+extern unsigned char _binary_srcsq_data_start[];
+extern unsigned char _binary_srcsk_data_start[];
+}
 
-#define OUT_SCORES  0x4000802000ULL
+#ifdef QLI_INPUT_DATA
+extern "C" uint32_t qli_workspace[];
+#define OUT_SCORES reinterpret_cast<uintptr_t>(qli_workspace)
+#else
+#define OUT_SCORES 0x4000802000ULL
+#endif
 // indices 紧随 scores 之后，避免大 Sq*Skv 时与 scores 区域重叠
-#define OUT_INDICES (0x4000802000ULL + (uint64_t)Sq * Skv * 4)
+#define OUT_INDICES (OUT_SCORES + (uint64_t)Sq * Skv * 4)
 
 // 尊重 Makefile -DBatch=$(B)；未定义时默认 1
-#ifndef B
-#define B 1
+#ifndef Batch
+#define Batch 1
 #endif
 
 #ifndef Tsq
@@ -71,6 +69,16 @@ extern "C" unsigned char _binary_srcq_data_start[], _binary_srck_data_start[],
 #define DTYPE __fp8_e4m3
 #endif
 
+static_assert(Batch == 1, "original QLI driver supports exactly one batch");
+static_assert(Sq > 0 && Skv > 0 && g > 0 && kTm > 0 && kTk > 0,
+              "QLI dimensions must be positive");
+static_assert(Skv % kTk == 0,
+              "Skv must be divisible by the key tile width");
+static_assert(g % kTm == 0 && kTm <= 32,
+              "g must be divisible by kTm and kTm must be at most 32");
+static_assert(topK > 0 && topK <= Skv,
+              "topK must be in the range 1..Skv");
+
 // 多 PE 测试路径（Makefile -DTNPE=$(NPE)，默认 4）：
 //   wbb 预广播（行块）与 K^T 转置（token 列块）拆分到 NPE 个 PE 并行——两者
 //   均为不相交写，无需同步；worker 完成各自块后置完成标志即退出，仅 PE0
@@ -84,11 +92,43 @@ extern "C" unsigned char _binary_srcq_data_start[], _binary_srck_data_start[],
 #else
 #define NPE TNPE
 #endif
-static_assert(NPE >= 2 && NPE <= 4, "NPE must be 2..4 (multi-PE only)");
+static_assert(NPE >= 1 && NPE <= 4, "NPE must be in the range 1..4");
 
 // 完成标志（.bss 零初始化；volatile + 编译器屏障，与
 // multi_thread_res_check.h 的发布/等待语义同款）
 static volatile uint32_t ktt_ready[NPE];
+
+// Only PE0 calls this boundary after the shared preprocessing completes.
+// Its static Tile domain covers assembly writers, views, element operations,
+// and compiler-generated copies in every reachable helper.
+PTO_PE_DOMAIN(8)
+static void run_qli_pe0(DTYPE *q, DTYPE *ktt, float *wbb,
+                       float *scale_k, float *tmp16) {
+    using dtype = DTYPE;
+    BENCHSTART;
+    for(int i=0;i<Batch;i++){
+        qli_pto<dtype, Sq, Skv, D, g, kTm, kTk>(
+            reinterpret_cast<float*>(OUT_SCORES) + i*Sq*Skv,
+            q + i*Sq*g*D,
+            ktt + i*D*Skv,
+            wbb + i*Sq*g*kTk,
+            scale_k + i*Skv,
+            tmp16
+        );
+    }
+    BENCHEND;
+
+    // Step7 (TopK) 独立计时区间
+    __asm__ __volatile__("B.HINT TRACE.begin\n" : : :);
+    for(int i=0;i<Batch;i++){
+        qli_topk_radix<Sq, Skv, topK>(
+            reinterpret_cast<float*>(OUT_SCORES) + i*Sq*Skv,
+            reinterpret_cast<int32_t*>(OUT_INDICES) + i*Sq*topK
+        );
+    }
+    __asm__ __volatile__("B.HINT TRACE.end\n" : : :);
+
+}
 
 int main(){
     using dtype = DTYPE;
@@ -96,14 +136,11 @@ int main(){
     const uint32_t tid = get_thread_idx();
     if (tid >= NPE) return 0;
 
-    // P1: No copy_bytes — pass .data segment addresses directly.
-    // The kernel's global_tensor accepts raw pointers; TLOAD reads from
-    // the mapped .data region without needing aligned stack buffers.
-    dtype*   q       = reinterpret_cast<dtype*>(SRCQ_ADDR);
-    dtype*   k       = reinterpret_cast<dtype*>(SRCK_ADDR);
-    float*   w       = reinterpret_cast<float*>(SRCW_ADDR);
-    float*   scale_q = reinterpret_cast<float*>(SRCSQ_ADDR);
-    float*   scale_k = reinterpret_cast<float*>(SRCSK_ADDR);
+    dtype*   q       = reinterpret_cast<dtype*>(_binary_srcq_data_start);
+    dtype*   k       = reinterpret_cast<dtype*>(_binary_srck_data_start);
+    float*   w       = reinterpret_cast<float*>(_binary_srcw_data_start);
+    float*   scale_q = reinterpret_cast<float*>(_binary_srcsq_data_start);
+    float*   scale_k = reinterpret_cast<float*>(_binary_srcsk_data_start);
 
     // v0.58.4：W*scale_q 预广播为 [Sq*g, kTk]（行 r 全列同值），
     // kernel 内用普通 TMUL（规避单列广播源的物理列校验）；
@@ -148,28 +185,6 @@ int main(){
     }
     __asm__ volatile("" : : : "memory");
 
-    BENCHSTART;
-    for(int i=0;i<B;i++){
-        qli_pto<dtype, Sq, Skv, D, g, kTm, kTk>(
-            reinterpret_cast<float*>(OUT_SCORES) + i*Sq*Skv,
-            q + i*Sq*g*D,
-            ktt + i*D*Skv,
-            wbb + i*Sq*g*kTk,
-            scale_k + i*Skv,
-            tmp16
-        );
-    }
-    BENCHEND;
-
-    // Step7 (TopK) 独立计时区间
-    __asm__ __volatile__("B.HINT TRACE.begin\n" : : :);
-    for(int i=0;i<B;i++){
-        qli_topk_radix<Sq, Skv, topK>(
-            reinterpret_cast<float*>(OUT_SCORES) + i*Sq*Skv,
-            reinterpret_cast<int32_t*>(OUT_INDICES) + i*Sq*topK
-        );
-    }
-    __asm__ __volatile__("B.HINT TRACE.end\n" : : :);
-
+    run_qli_pe0(q, ktt, wbb, scale_k, tmp16);
     return 0;
 }

@@ -21,6 +21,30 @@ endif
 
 include ../../common/Makefile.common
 
+ifeq ($(PLAT),linx)
+ELEMENT_TARGET_FLAGS = $(if $(TARGET_TRIPLE),--target=$(TARGET_TRIPLE)) \
+	$(if $(SYSROOT),--sysroot=$(SYSROOT)) \
+	$(if $(RESOURCE_DIR),-resource-dir=$(RESOURCE_DIR))
+INCLUDE += $(if $(API_INCLUDE),-I$(API_INCLUDE))
+CC_OPTS += $(ELEMENT_TARGET_FLAGS)
+CC_LINK += $(ELEMENT_TARGET_FLAGS) -fuse-ld=lld
+
+ifneq ($(filter group_token_vec_mt_dyn,$(TESTCASE)),)
+CC_OPTS += -mllvm -linxv5-enable-generic-element=true \
+	-fno-vectorize -fno-slp-vectorize -Werror=unknown-pragmas
+
+histogram-ir: pre_work
+	@test -n "$(IR_TARGET)" || \
+		(echo "IR_TARGET is required for histogram-ir" >&2; exit 1)
+	$(CXX) $(CXX_O_ALL) $(INCLUDE) $(DEFINES) \
+		-mllvm -linxv5-enable-generic-element=true \
+		-fno-vectorize -fno-slp-vectorize -Werror=unknown-pragmas \
+		-S -emit-llvm $(SRC_FILE) -o $(IR_TARGET)
+endif
+endif
+
 clean:
 	@find $(OBJ_ROOT) -type f -name "*.o" -exec rm -rf {} \;
 	@rm -rf $(COMM_OBJ) $(LINK_SCRIPT)
+
+.PHONY: histogram-ir

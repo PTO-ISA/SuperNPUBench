@@ -4,17 +4,16 @@
 #include <common/pto_tileop.hpp>
 #include <cstdint>
 #include <cstdio>
+#include <type_traits>
 
 using namespace pto;
 
 /**
  * @brief 通用 N 维 concat scatter（Tile ISA 实现）
  *
- * 算法：对输入张量的每个元素，计算其多维坐标，用输出 stride 计算输出 byte offset，
- * 用 MSCATTER 将数据写入输出。
- *
- * 注意：当前实现中 n（来自哪个输入张量）始终为 0，即输入被放置在输出的起始位置。
- * 这与原始 __vec__ 版本行为一致。
+ * 算法：原始 2D concat profile 把连续的 N 个 [rows, cols]
+ * 输入 scatter 为 [rows, N, cols]。每个原始 Tile 输入块先整体
+ * snapshot 到 ElementTile，再用普通标量 C++ 下标在 element region 中写回。
  *
  * @tparam DType 数据类型
  * @tparam MAX_DIM 最大维度数
@@ -31,10 +30,89 @@ void concat_scatter(
     DType *out_ptr,
     size_t *in_shape,
     size_t *out_shape,
-    // Global flattened index represented by in_ptr[0].
-    uint32_t input_base_start = 0
+    // in_ptr[0] 对应的全局展平下标。
+    uint32_t input_base_start = 0,
+    // 单 PE 原始用例处理 gOM 个元素；多 PE wrapper 显式传入本 PE
+    // 的整 tile 元素数。
+    uint32_t processed_elements = static_cast<uint32_t>(gOM)
 )
 {
+    if constexpr (DATA_DIM == 2 && CONCAT_DIM == 1 &&
+                  (((std::is_same_v<DType, int32_t> ||
+                     std::is_same_v<DType, __half>) && tM == 512) ||
+                   (std::is_same_v<DType, float> && tM == 128))) {
+        static_assert(gIM > 0 && gOM > 0,
+                      "concat scatter requires non-empty allocations");
+        static_assert(gIM <= static_cast<int>(__INT32_MAX__) &&
+                          gOM <= static_cast<int>(__INT32_MAX__),
+                      "concat scatter requires B32-representable indices");
+
+        constexpr uint32_t kTileElements = tM;
+        constexpr uint32_t kPartElements =
+            std::is_same_v<DType, __half> ? 64u : 32u;
+
+        if (processed_elements == 0u)
+            return;
+        if (processed_elements % kTileElements != 0u ||
+            processed_elements > static_cast<uint32_t>(gIM) ||
+            input_base_start > static_cast<uint32_t>(gIM) -
+                                   processed_elements ||
+            processed_elements > static_cast<uint32_t>(gOM) ||
+            input_base_start > static_cast<uint32_t>(gOM) -
+                                   processed_elements)
+            __builtin_trap();
+
+        if (in_shape[0] > __UINT32_MAX__ ||
+            in_shape[1] > __UINT32_MAX__ ||
+            out_shape[0] > __UINT32_MAX__ ||
+            out_shape[1] > __UINT32_MAX__)
+            __builtin_trap();
+        const uint32_t in_rows = static_cast<uint32_t>(in_shape[0]);
+        const uint32_t in_cols = static_cast<uint32_t>(in_shape[1]);
+        const uint32_t out_rows = static_cast<uint32_t>(out_shape[0]);
+        const uint32_t out_cols = static_cast<uint32_t>(out_shape[1]);
+        if (in_rows == 0u || in_cols == 0u || out_rows != in_rows ||
+            out_cols == 0u || out_cols % in_cols != 0u ||
+            in_rows > __UINT32_MAX__ / in_cols ||
+            out_rows > __UINT32_MAX__ / out_cols ||
+            out_rows * out_cols != static_cast<uint32_t>(gOM))
+            __builtin_trap();
+
+        const uint32_t input_elements = in_rows * in_cols;
+        for (uint32_t batch_begin = 0; batch_begin < processed_elements;
+             batch_begin += kTileElements) {
+            ElementTile<DType, kTileElements> input_tile;
+
+            // 整块 TLOAD 必须位于 scatter region 之前。输入输出别名时，
+            // 本块保留完整 snapshot，下一块则观察到之前块的写入。
+            TLOAD(input_tile, in_ptr + batch_begin, kTileElements);
+            auto input_parts =
+                TPARTVIEW<kPartElements>(input_tile, kTileElements);
+
+            for (uint32_t part = 0; part < input_parts.size(); ++part) {
+                ElementTile<DType, kPartElements> values;
+                auto input_part = input_parts.part(part);
+                TMOV(values, input_part);
+                auto &value_elements = TPARTELEMENT(values);
+
+#pragma pto element for
+                for (uint32_t element = 0; element < kPartElements;
+                     ++element) {
+                    const uint32_t local =
+                        batch_begin +
+                        input_parts.logical_index(part, element);
+                    const uint32_t global = input_base_start + local;
+                    const uint32_t input_no = global / input_elements;
+                    const uint32_t within_input = global % input_elements;
+                    const uint32_t row = within_input / in_cols;
+                    const uint32_t col = within_input % in_cols;
+                    const uint32_t output_index =
+                        row * out_cols + input_no * in_cols + col;
+                    out_ptr[output_index] = value_elements[element];
+                }
+            }
+        }
+    } else {
     constexpr int kFullTiles = gIM / tM;
     constexpr int kTailElements = gIM % tM;
 
@@ -150,6 +228,7 @@ void concat_scatter(
 
         TLOAD(data_tile, input_tile_global);
         MSCATTER(output_global, data_tile, offset_tile);
+    }
     }
 }
 

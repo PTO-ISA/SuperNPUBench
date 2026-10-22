@@ -8,21 +8,41 @@ import datetime as dt
 import json
 import os
 import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
+sys.path.insert(0, str(REPO / "benchmark"))
+from native_bstart import contains
 DEFAULT_COMPILER = Path("/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin")
 DEFAULT_GFRUN = Path("/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel/bin/gfrun")
 
 
 def expected_opcode(case: dict) -> str:
-    # llvm 553b08045 recognizes the TIMG2COL encoding but still prints the
-    # generic TLSU function spelling rather than the standalone mnemonic.
     if case.get("command_mnemonic") == "BSTART.TIMG2COL":
-        return "BSTART.TLSU 28"
-    return case["operation"].replace("_", ".").upper()
+        return "BSTART.TLSU TIMG2COL"
+    return canonical_operation(case["operation"])
+
+
+def canonical_operation(operation: str) -> str:
+    return operation.upper().replace("_MX", "MX").replace("_", ".")
+
+
+DTYPE = {
+    "bf16": "BF16", "fp16": "FP16", "fp32": "FP32",
+    "i8": "S8", "i16": "S16", "i32": "S32",
+    "u8": "U8", "u32": "U32", "s4x2": "S4X2",
+}
+
+
+def canonical_dtype(dtype: str | None) -> str | None:
+    if dtype is None:
+        return None
+    if dtype not in DTYPE:
+        raise ValueError("unknown microbenchmark dtype: " + dtype)
+    return DTYPE[dtype]
 
 
 def main() -> int:
@@ -64,7 +84,17 @@ def main() -> int:
         diss = Path(str(elf) + ".diss")
         opcode = expected_opcode(case)
         check_opcode = family != "scalar"
-        if not diss.exists() or (check_opcode and opcode not in diss.read_text(errors="replace").upper()):
+        diss_text = diss.read_text(errors="replace").upper() if diss.exists() else ""
+        precise_match = False
+        if family in ("memory", "cube", "fixp"):
+            engine = "TLSU" if family == "memory" else "CUBE"
+            precise_match = contains(
+                diss_text, engine, canonical_operation(case["operation"]),
+                canonical_dtype(case.get("dtype")),
+            )
+        else:
+            precise_match = opcode in diss_text
+        if not diss.exists() or (check_opcode and not precise_match):
             records.append({**case, "state": "DISS_MISSING_OPCODE", "elf": str(elf),
                             "diss": str(diss), "expected_opcode": opcode})
             continue

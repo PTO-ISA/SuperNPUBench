@@ -82,75 +82,54 @@ inline void process_gather_row(
  * kTailElements for the final partial tile. Keeping ValidElements as a template
  * parameter lets the PTO tile valid region remain a compile-time constant.
  */
-template <typename DType, typename IType, int Rank, int GatherDim, int TileElements, int ValidElements,
-          typename InputGlobal, typename IndexGlobal, typename OutputGlobal>
+template <typename DType, typename IType, int Rank, int GatherDim,
+          int TileElements, int ValidElements>
 inline void process_gather_tile(
-    InputGlobal &input_global, IndexGlobal &index_global, OutputGlobal &output_global,
-    std::uint32_t linear_base, const std::uint32_t *input_shape, const std::uint32_t *output_shape
-)
-{
+    const DType *input, const IType *index, DType *output,
+    std::uint32_t linear_base, const std::uint32_t *input_shape,
+    const std::uint32_t *output_shape) {
   static_assert(ValidElements > 0, "ValidElements must be positive");
   static_assert(ValidElements <= TileElements,
                 "ValidElements cannot exceed the physical tile size");
 
-  using DataTile =
-      pto::Tile<pto::Location::Vec, DType, 1, TileElements,
-                pto::BLayout::RowMajor, 1, ValidElements>;
-  using OffsetTile =
-      pto::Tile<pto::Location::Vec, std::uint32_t, 1, TileElements,
-                pto::BLayout::RowMajor, 1, ValidElements>;
-  using IndexTile =
-      pto::Tile<pto::Location::Vec, IType, 1, TileElements,
-                pto::BLayout::RowMajor, 1, ValidElements>;
-
-  DataTile output_tile;
-  OffsetTile input_offset_tile;
-
-  OffsetTile linear_index;
-  OffsetTile quotient;
-  OffsetTile cycle;
-  OffsetTile cycle_base;
-  OffsetTile coordinate;
-  OffsetTile contribution;
-
-  TCI(linear_index, linear_base);
-  TEXPANDS(input_offset_tile, static_cast<std::uint32_t>(0));
-
-  std::uint32_t output_stride = 1;
-  std::uint32_t input_stride = 1;
-  for (int dim = Rank - 1; dim >= 0; --dim) {
-    if (output_stride == 1) {
-      TCVT(quotient, linear_index);
-    } else {
-      TDIVS(quotient, linear_index, output_stride);
-    }
-
-    // coordinate = (linear_index / output_stride) % output_shape[dim]
-    TDIVS(cycle, quotient, output_shape[dim]);
-    TMULS(cycle_base, cycle, output_shape[dim]);
-    TSUB(coordinate, quotient, cycle_base);
-
-    // transfer logical coordinate to gather coordinate
-    if (dim == GatherDim) {
-      OffsetTile index_offset;
-      IndexTile index_tile;
-      TCVT(index_offset, coordinate);
-      MGATHER(index_tile, index_global, index_offset);
-      TCVT(coordinate, index_tile);
-    }
-    
-    // PTO v0.58 MGATHER takes element indices.
-    TMULS(contribution, coordinate, input_stride);
-
-    TADD(input_offset_tile, input_offset_tile, contribution);
-
-    output_stride *= output_shape[dim];
-    input_stride *= input_shape[dim];
+  std::uint32_t local_input_shape[Rank];
+  std::uint32_t local_output_shape[Rank];
+  for (int dim = 0; dim < Rank; ++dim) {
+    local_input_shape[dim] = input_shape[dim];
+    local_output_shape[dim] = output_shape[dim];
   }
 
-  MGATHER(output_tile, input_global, input_offset_tile);
-  OutputGlobal tile_output_global(output_global.data() + linear_base);
-  TSTORE(tile_output_global, output_tile);
+  pto::ElementTile<DType, TileElements> snapshot;
+  auto &snapshot_elements = pto::TPARTELEMENT(snapshot);
+
+#pragma pto element for
+  for (std::uint32_t element = 0; element < TileElements; ++element) {
+    if (element < ValidElements) {
+      const std::uint32_t linear = linear_base + element;
+      std::uint32_t input_index = 0;
+      std::uint32_t input_stride = 1;
+      std::uint32_t output_stride = 1;
+      for (int dim = Rank - 1; dim >= 0; --dim) {
+        std::uint32_t coordinate =
+            (linear / output_stride) % local_output_shape[dim];
+        if (dim == GatherDim)
+          coordinate = static_cast<std::uint32_t>(index[coordinate]);
+        input_index += coordinate * input_stride;
+        input_stride *= local_input_shape[dim];
+        output_stride *= local_output_shape[dim];
+      }
+      snapshot_elements[element] = input[input_index];
+    }
+  }
+
+  pto::ElementTile<DType, TileElements> transported;
+  TMOV(transported, snapshot);
+  auto &transported_elements = pto::TPARTELEMENT(transported);
+
+#pragma pto element for
+  for (std::uint32_t element = 0; element < TileElements; ++element)
+    if (element < ValidElements)
+      output[linear_base + element] = transported_elements[element];
 }
 
 } // namespace detail
@@ -162,7 +141,8 @@ inline void process_gather_tile(
  * that the input/output shapes match outside GatherDim and that their products
  * equal InputElements and OutputElements respectively.
  */
-template <typename DType, typename IType, int Rank, int GatherDim, int InputElements, int OutputElements, int TileElements = 512>
+template <typename DType, typename IType, int Rank, int GatherDim,
+          int InputElements, int OutputElements, int TileElements = 512>
 void gather_v2(DType *input, IType *index, DType *output, const std::uint32_t *input_shape, const std::uint32_t *output_shape)
 {
   static_assert(Rank > 0, "Rank must be positive");
@@ -227,7 +207,7 @@ void gather_v2(DType *input, IType *index, DType *output, const std::uint32_t *i
   for (int tile = static_cast<int>(thread_id); tile < kFullTiles;
        tile += ThreadNum) {
     detail::process_gather_tile<DType, IType, Rank, GatherDim, TileElements, TileElements>(
-        input_global, index_global, output_global,
+        input, index, output,
         static_cast<std::uint32_t>(tile * TileElements), input_shape, output_shape);
   }
 
@@ -235,7 +215,7 @@ void gather_v2(DType *input, IType *index, DType *output, const std::uint32_t *i
     constexpr int kTailOwner = kFullTiles % ThreadNum;
     if (thread_id == static_cast<std::uint32_t>(kTailOwner)) {
       detail::process_gather_tile<DType, IType, Rank, GatherDim, TileElements, kTailElements>(
-          input_global, index_global, output_global,
+          input, index, output,
           static_cast<std::uint32_t>(kFullTiles * TileElements), input_shape, output_shape);
     }
   }
