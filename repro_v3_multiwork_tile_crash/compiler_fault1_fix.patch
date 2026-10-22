@@ -1,0 +1,20 @@
+diff --git a/llvm/lib/Target/LinxV5/LinxV5TRegToOffset.cpp b/llvm/lib/Target/LinxV5/LinxV5TRegToOffset.cpp
+index 21ec51cbdaba..722f29184a04 100644
+--- a/llvm/lib/Target/LinxV5/LinxV5TRegToOffset.cpp
++++ b/llvm/lib/Target/LinxV5/LinxV5TRegToOffset.cpp
+@@ -1633,6 +1633,15 @@ void LinxV5TRegToOffsetOpt::rewriteMBB(
+           LLVM_DEBUG(dbgs()
+                      << "   " << printReg(MO.getReg(), TRI) << " CurIdx "
+                      << CurIdx << " LastIdx " << TRegIdx[MO.getReg()] << "\n");
++          // A tile IMPLICIT_DEF (a loop-carried live-in) is recorded with the
++          // -1 sentinel because it has no materialised window slot.  Its use
++          // would then compute Index == CurIdx + 1, naming a slot the runtime
++          // tile window never defined (the model tile-ROB faults on the first
++          // iteration).  The implicit-def value is undefined/dead, so bind the
++          // read to the current window head (a materialised slot) instead.
++          if (TRegIdx[MO.getReg()] == static_cast<unsigned>(-1)) {
++            Index = 1;
++          }
+           assert(Index <= RC->getNumRegs());
+           Register NewReg = OffsetBase + (Index - 1);
+           MO.setReg(NewReg);
