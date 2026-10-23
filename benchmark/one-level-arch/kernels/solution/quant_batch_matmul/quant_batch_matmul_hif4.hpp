@@ -83,7 +83,7 @@ __attribute__((noinline)) void quant_batch_matmul_hif4_mt(
     // stays Shared with B (Local-A/Shared-B cooperative form).
     using tileAScaleLocal =
         Tile<Location::Scaling, scale_dtype, kPeM, kPaddedScaleK,
-             BLayout::RowMajor, kPeM, kScaleK>;
+             BLayout::CubeM32, kPeM, kScaleK>;
     using tileBScaleMatrix =
         SharedMatrixRight<scale_dtype, tN, kPaddedScaleK,
                           tN, kScaleK>;
