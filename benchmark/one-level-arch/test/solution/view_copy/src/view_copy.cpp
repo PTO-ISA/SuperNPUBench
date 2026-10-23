@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "multi_thread_res_check.h"
+#include "../../common/test_log.h"
 #include "solution/view_copy/view_copy.hpp"
 
 #ifndef DATA_TYPE
@@ -117,13 +118,13 @@ int main() {
       std::uint64_t shape_elements = 1;
       for (int dim = 0; dim < RANKs; ++dim) {
         if (shape[dim] == 0) {
-          printf("FAIL: shape[%d] is zero\n", dim);
+          SOLUTION_TEST_PRINTF("FAIL: shape[%d] is zero\n", dim);
           return 2;
         }
         shape_elements *= shape[dim];
       }
       if (shape_elements != static_cast<std::uint64_t>(ELEMENTSs)) {
-        printf("FAIL: product(shape)=%llu, Elements=%d\n",
+        SOLUTION_TEST_PRINTF("FAIL: product(shape)=%llu, Elements=%d\n",
                static_cast<unsigned long long>(shape_elements), ELEMENTSs);
         return 2;
       }
@@ -145,7 +146,7 @@ int main() {
 
         if (input_index >= INPUT_STORAGE_ELEMENTSs ||
             output_index >= OUTPUT_STORAGE_ELEMENTSs) {
-          printf("FAIL: reference index out of range at logical element %u "
+          SOLUTION_TEST_PRINTF("FAIL: reference index out of range at logical element %u "
                  "(input=%llu, output=%llu)\n",
                  linear, static_cast<unsigned long long>(input_index),
                  static_cast<unsigned long long>(output_index));
@@ -185,7 +186,7 @@ int main() {
     const bool has_nan = actual != actual || expected != expected;
     if (has_nan || difference > tolerance) {
       if (mismatch_count < 8) {
-        printf("Mismatch[%d]: actual=%f expected=%f diff=%f tol=%f\n", i,
+        SOLUTION_TEST_PRINTF("Mismatch[%d]: actual=%f expected=%f diff=%f tol=%f\n", i,
                actual, expected, difference, tolerance);
       }
       ++mismatch_count;
@@ -193,10 +194,10 @@ int main() {
   }
 
   if (mismatch_count != 0) {
-    printf("FAIL: view_copy found %d mismatches\n", mismatch_count);
+    SOLUTION_TEST_PRINTF("FAIL: view_copy found %d mismatches\n", mismatch_count);
     return 1;
   }
 
-  puts("PASS: view_copy all logical elements and output guards checked");
+  SOLUTION_TEST_PUTS("PASS: view_copy all logical elements and output guards checked");
   return 0;
 }
