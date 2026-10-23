@@ -153,8 +153,12 @@ void qli_pto(float* scores_ptr,
              dtype* q_ptr, dtype* k_ptr,
              float* wb_ptr,
              float* scale_k_ptr,
-             float* temp_gm = nullptr)   // [kTm, kTk] CUBE->Vec 桥接临时区
+             float* temp_gm = nullptr,   // [kTm, kTk] CUBE->Vec 桥接临时区
+             int i0 = 0, int i1 = Sq)   // 行区间 [i0, i1)：多 PE 分数阶段按行拆分
 {
+    // 行区间拆分（A2）：kernel 内全部寻址为绝对行索引（gIterQ(i*Gb+gi,0)、
+    // gOut(i,j)、wb_ptr + (i*Gb+gi)*kTm*kTk），子区间只是少跑若干外层迭代，
+    // 无任何地址平移。多 PE 并发调用时各 PE 的 temp_gm 必须不相交。
     constexpr int Qb = Sq;
     constexpr int Kb = Skv / kTk;
     constexpr int Gb = g / kTm;
@@ -196,7 +200,7 @@ void qli_pto(float* scores_ptr,
     itK   gIterK(k_ptr);
     itOut gIterOut(scores_ptr);
 
-    for (int i = 0; i < Qb; i++) {
+    for (int i = i0; i < i1; i++) {
         for (int j = 0; j < Kb; j++) {
             tileK tK;
             auto gK = gIterK(0, j);
