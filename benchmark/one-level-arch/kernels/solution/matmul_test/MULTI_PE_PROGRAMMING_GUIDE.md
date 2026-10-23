@@ -2,9 +2,11 @@
 
 > 适用范围：`benchmark/one-level-arch/kernels/basic_op/` 与
 > `test/kernel/` 下的四 PE 算子。
-> 依据：PTO-ISA v0.58.3/0.58.4（TileOP-API `linx` 分支 `docs/tileop-usage/`）、
-> SuperScalarModel `codex/pr-0.58.4-shared-model`（gfrun d8903938 实测）。
-> 实例来源：本仓 basic_op 算子（matmul/fa/element_wise/...）的现有实现。
+> 依据：PTO-ISA v0.58.x（TileOP-API `linx` 分支 `bffad5b3`）、
+> SuperScalarModel `587ec8cbe` + llvm `7675921e`（gfrun/gfsim 实测，
+> 含 fp16 golden 位级验证）。
+> 实例来源：本仓 basic_op 算子（matmul/fa/element_wise/...）与
+> `solution/matmul_test/` 统一内核的现有实现。
 
 ## 1. 硬件与执行模型
 
@@ -34,12 +36,15 @@ gfrun -t 1 -s softcore.multiThreadNum=4 -f <elf>
 | ① 连续 SPMD 切分 | `element_wise/tadd_multithread.hpp` | elementwise / 逐 tile 独立算子：无跨 PE 数据复用，`tid` 只切数据区间 |
 | ② Tile 块 SPMD 轮转 | `conv2d`、`transpose` | 输出空间块可独立分配、需保持全局 layout |
 | ③ Cooperative Group TMATMUL（Shared A+B） | `matmul/matmul_shared.hpp`、`solution/matmul_test/matmul_test_mt.hpp`、`fa/` | **单个大 GEMM 沿 M 切分**：B 只装一次 4 PE 共读，GM 带宽省 4× |
-| ③ + B 跨 M 驻留 | `matmul/matmul_shared_reuseB.hpp` | M 很大、K 块集可装进 Shared 256 KiB 的瘦高 GEMM，B 进一步免重装 |
+| ③ + B 跨 M 驻留（reuseB） | `matmul/matmul_shared_reuseB.hpp`、统一内核 `matmul_test.hpp`（`kMode=2`） | M 条带 ≥ 2 的瘦高 GEMM：B 每 k 装一次跨 R 个 M 条带复用 |
+| ③ + A 跨 N 驻留（reuseA） | 统一内核 `matmul_test.hpp`（`kMode=1`） | A 紧、N 块多：A 每 k 装一次跨 R 个 N 块驻留累加器复用 |
 
 决策要点：
 - 算子内**没有矩阵乘** → ①/②（纯 Local tile，无集合点，最简单）。
 - 算子是 GEMM/FA 且 B（或 K/V）被 4 个 PE 重复消费 → ③。
 - ② 的"4 个独立 GEMM 共享 B"（batch 并行）历史上用 Local A + `TMOV_L2S_PUBLISH` 广播 B（`matmul_multithread.hpp`，**已废弃**），新代码直接用 ③。
+- A 或 B 的重复装载成为 TLSU 墙时 → ③ + 对应方向的驻留复用（reuseA/reuseB，
+  见 §4.6）；先按"重复装载方向"选：N 块多选 reuseA，M 条带多选 reuseB。
 
 ## 3. 模型①：连续 SPMD 切分
 
@@ -123,14 +128,91 @@ auto gC = gIterC(i * kPeNum + tid, j);   // 或按 gN 手工寻址
 TSTORE_CUBE(gC, tACC);
 ```
 
-fp32 CUBE 累加器 → fp16 输出：模型要求 TCVT 源/目的 layout 一致，CUBE 源直接 TCVT 会被断言拒绝；
-用 **GM 往返**（FA 同款）：`TSTORE_CUBE(scratch_fp32) → TLOAD(Vec fp32) → TCVT(fp16) → TSTORE`，
-scratch 每 PE 一片（≥ kPeM×tN float），由调用方提供。
+**fp32 CUBE 累加器 → fp16 输出（TCVT，推荐）**：K 链 CCTRL 用四变体——
+`Kb==1 → CCTRL=0`（单 op 直接写普通 tile）；`Kb>1 → head=1 / mid=3 / tail=2`。
+末条 `TMATMUL_ACC` 用 CCTRL=2（`CubeCtrlInternalAccHint`）把累加结果
+**物化到 CellReg tile**，`TCVT` 直接读该 tile 转 fp16 后 `TSTORE_CUBE`：
 
-### 4.5 B 驻留复用（③ 的扩展）
+```cpp
+constexpr FixpAttr kOptSingle = FixpAttr{}.transpose_b();                       // CCTRL=0
+constexpr FixpAttr kOptHead   = kOptSingle.with_cube_ctrl(CubeCtrlRawAccumulator);   // 1
+constexpr FixpAttr kOptMid    = kOptSingle.with_cube_ctrl(CubeCtrlRawAccAndHint);    // 3
+constexpr FixpAttr kOptTail   = kOptSingle.with_cube_ctrl(CubeCtrlInternalAccHint);  // 2
+...
+Kb == 1 ? TMATMUL<kOptSingle>(tACC, tA, tB, groupM)
+        : (k == 0       ? TMATMUL<kOptHead>(tACC, tA, tB, groupM)
+        : (k == Kb - 1  ? TMATMUL_ACC<kOptTail>(tACC, tACC, tA, tB, groupM)
+                        : TMATMUL_ACC<kOptMid>(tACC, tACC, tA, tB, groupM)));
+TCVT(tCF16, tACC);        // tCF16: CubeAccumulatorM16/M32<__half, kPeM, tN>
+TSTORE_CUBE(gC, tCF16);
+```
+
+- 直接在 CUBE 累加器上做 TCVT（不经 GM 往返）在新模型下可用且位级正确；
+- **必须保留显式 tail（CCTRL=2）**：若末条仍用 CCTRL=3，新模型把该 D
+  归类为 InternalAcc，TCVT 读不到合法 CellReg 描述符 →
+  `PTO 0.58 CUBE M-format TCVT requires independently legal CELL descriptors`
+  断言（此前的 GM 往返规避正是绕开这一路径）；
+- 历史规避（仍可用的后备）：`TSTORE_CUBE(scratch_fp32) → TLOAD(Vec) →
+  TCVT(fp16) → TSTORE`，scratch 每 PE 一片（≥ kPeM×tN float）。
+
+### 4.5 B 驻留复用（reuseB）
 
 N 外 M 内循环序；B tiles 数组常驻 SharedTReg 跨 M 块复用，容量按
 `(256 KiB − 活跃 A/B) / tileB 字节数` 编译期计算驻留数（`matmul_shared_reuseB.hpp`）。
+统一内核 `matmul_test.hpp` 的 `kMode=2` 是同族实现：每 k 步装 1 次 B 跨 R
+个驻留累加器（M 条带方向），M 尾条带回退单链处理。
+
+### 4.6 统一内核 matmul_test.hpp 的执行模型（reuseA/reuseB + TCVT）
+
+`solution/matmul_test/matmul_test.hpp` 是动态 shape cooperative GEMM 的统一
+实现（替代 `matmul_test_mt.hpp` 的 GM 往返路径）：
+
+```cpp
+template <int tM, int tN, int tK, int kTailM, int kMode, int kReuse,
+          int gM, int gN, int gK>
+void matmul_test(__half *c, __half *a, __half *b, float *scratch);
+```
+
+| 参数 | 含义 |
+|---|---|
+| `tM/tN/tK` | 基本块；tM∈{64,128}，tN/tK 为 2 的幂 |
+| `kTailM` | M 尾组行数 ∈ {0,16,32,64}（pow2 group_M，shard 16）；0=传统整组 padding |
+| `kMode` | 0=不复用 / 1=reuseA / 2=reuseB（宏 `REUSE_MODE`） |
+| `kReuse` | 驻留累加器个数 1..4（宏 `REUSE_COUNT`，默认 4=上限） |
+| `gM/gN/gK` | **编译期** shape（static RowMajor global_tensor） |
+
+**三种执行模式**（每条带内）：
+
+```
+kMode=0：for j { for k { 装B; 装A; TMATMUL[_ACC] } } TCVT/TSTORE      （A/B 每 k 重装）
+kMode=1：for jBase step R { acc[R]; for k { 装A 一次; for n<R { 装B; TMATMUL_ACC(acc[n]) } }
+                            for n<R 物化+TCVT+TSTORE }               （A 跨 N 块复用 R 次）
+kMode=2：for j { for g step R { acc[R]; for k { 装B 一次; for ms<R { 装A; TMATMUL_ACC(acc[ms]) } }
+                                for ms<R 物化+TCVT+TSTORE } }         （B 跨 M 条带复用 R 次）
+```
+
+**M 尾组**（`kTailM>0`）：M 非 tM 整数倍时，尾行用独立 pow2 组
+（group_M=kTailM，shard 16，零行 PE 读 A 零填充行、写 C 填充行），
+避免整组 padding 的计算浪费；`compile.all` 用宏 `NO_TAIL_GROUP` 可回退。
+
+**硬性实现约束（违反则模型断言/gfsim 挂起）**：
+
+1. 驻留累加器**数组访问必须 `#pragma clang loop unroll(full)`**——运行时
+   索引 `cs[n]` 会迫使编译器把累加器降到内存逐次重载，产生带 LB2 的
+   `CUBE TLOAD requires omitted LB2/physical Col` 非法编码。reuseB 的条带
+   循环须以编译期 R 为界（`for ms<R: if (ms<stripCount)`）。
+2. **shape 必须编译期**（gM/gN/gK 模板参数）：运行时维度使寄存器分配器
+   把 A tile 与某累加器 dst 放同一 tile 手（N/T/U/M 四手），dst 改名后
+   cooperative 左操作数版本解析混淆 →
+   `requestLeftInfo->validCol == leftPhysicalCols` 断言（R=4 必现）。
+3. `kReuse ≤ 4`：驻留累加器占用 tile 手（4 hit 手 U/N/T/M 上限）；
+   同手多代（T#1..T#4）由编译器处理，A 需独占一手。
+4. 驻留容量编译期断言：`A tile + R×acc slice ≤ 256 KiB / PE`。
+
+**选 tile 经验（M120–M256 / K=1536–7168 实测）**：tM=128、tN=32/64、
+tK=128 起步；加速比与模式选择规律——Mb=1 用 reuseA、Mb≥2 用 reuseB；
+大 K（Kb 大）时模型可回收重命名条目（无需担心 Kb 上限），
+如 M256N512K7168 tN=64 reuseA 达 **99.6% 逻辑 MFU**。
 
 ## 5. 测试 harness（test/kernel/）
 
@@ -183,13 +265,18 @@ int main() {
    pad 到 tile 整数倍）或约束整除。
 4. **任一 PE 提前退出/走不同循环次数** → 集合 rendezvous 永远到不齐 → 死锁
    （gfsim/gfrun 表现为 stall）。4 PE 必须执行**完全相同**的 TMATMUL 序列。
-5. **对 CUBE 累加器直接 TCVT** → "TCVT requires matching source/destination
-   logical shapes" 断言；走 GM 往返。
+5. **对 CUBE 累加器直接 TCVT**：K 链末条用 CCTRL=2 显式物化到 CellReg 后
+   直接 TCVT 已支持（§4.4）；末条仍用 CCTRL=3 会被新模型归为 InternalAcc
+   而断言。历史 GM 往返仍可作后备。
 6. **TLOAD 的 PEMask 当成"每 PE 冗余加载"** → 语义是 PE0 单发或 quarter 分区
    （§4.3），供数地址跟线程走，理解错会导致静态布局下读错 bank。
 7. **栈越界症状怪异**：guest 栈被踩后 PC 乱飞、trace 刷 `invalid_block_type`、
    超时——先怀疑内核侧越界（如缓冲尺寸/leading dimension 算错），不是模型慢。
 8. **worker 里调 exit** → 杀整组；worker 只能返回。
+9. **驻留累加器数组未 unroll(full)** → 编译器把累加器降内存重载，产生
+   `CUBE TLOAD requires omitted LB2` 非法编码（§4.6 约束 1）。
+10. **运行时 shape 做 R≥2 驻留** → tile 手分配漂移（A 与累加器 dst 同手），
+    cooperative 左操作数版本断言（§4.6 约束 2）；shape 必须编译期。
 
 ## 8. 参考实现索引
 
@@ -197,9 +284,11 @@ int main() {
 |---|---|
 | 最简 SPMD elementwise | `kernels/basic_op/element_wise/tadd_multithread.hpp` |
 | 标准 cooperative GEMM | `kernels/basic_op/matmul/matmul_shared.hpp` |
-| 动态 shape cooperative GEMM（零填充 + scratch 往返） | `kernels/solution/matmul_test/matmul_test_mt.hpp` |
+| **动态 shape cooperative GEMM 统一内核（reuseA/reuseB + 直接 TCVT）** | `kernels/solution/matmul_test/matmul_test.hpp`（§4.6） |
+| 动态 shape cooperative GEMM（旧：GM 往返 TCVT） | `kernels/solution/matmul_test/matmul_test_mt.hpp` |
 | B 驻留复用 | `kernels/basic_op/matmul/matmul_shared_reuseB.hpp` |
 | 低精度/MX cooperative | `kernels/basic_op/matmul/matmul_shared_lowp.hpp` |
 | 多阶段共享瓦物（Q/K/V staging） | `kernels/basic_op/fa/fa_2d_unroll_gmma.hpp` |
 | 测试 harness（SPMD/group runtime 双路径） | `test/kernel/matmul/src/matmul_shared.cpp`、`test/solution/matmul_test/src/matmul_test_mt.cpp` |
+| **统一内核测试入口（REUSE_MODE/REUSE_COUNT 宏）** | `test/solution/matmul_test/src/matmul_test.cpp` |
 | 精度验证工具 | `test/solution/matmul_test/src/verify_matmul_test.py`（仓内） |

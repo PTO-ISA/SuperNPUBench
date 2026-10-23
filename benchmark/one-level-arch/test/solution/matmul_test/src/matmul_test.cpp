@@ -46,9 +46,32 @@
 #define ALIGN_MASK 0xfffffffffffff000ull
 #define ALIGN (4 * 1024)
 
-constexpr int kMpad = ((globM + tilM - 1) / tilM) * tilM;
+// M 尾组：tilM=128 且尾部 ∈ {16,32,64}（pow2 group_M，per-PE shard 16）时，
+// 用独立尾组替代整组 padding；NO_TAIL_GROUP 强制回到传统 padding 路径。
+// 尾组 4 个 shard 覆盖 4*16=64 行（零行 PE 读 A 零填充行、写 C 填充行）。
+#ifdef NO_TAIL_GROUP
+constexpr bool kUseTail = false;
+#else
+constexpr bool kUseTail = (tilM == 128) && (globM % tilM != 0) &&
+    ((globM % tilM == 16) || (globM % tilM == 32) || (globM % tilM == 64));
+#endif
+constexpr int kTailM = kUseTail ? (globM % tilM) : 0;
+constexpr int kMpad = kUseTail ? (globM / tilM) * tilM + 4 * 16
+                               : ((globM + tilM - 1) / tilM) * tilM;
 constexpr int kNpad = ((globN + tilN - 1) / tilN) * tilN;
 constexpr int kPeRows = tilM <= 64 ? 16 : 32;
+
+// 复用模式与驻留累加器个数（可选宏，默认 0=不复用 / 4=上限）。
+#ifndef REUSE_MODE
+#define REUSE_MODE 0
+#endif
+#ifndef REUSE_COUNT
+#define REUSE_COUNT 4
+#endif
+static_assert(REUSE_MODE >= 0 && REUSE_MODE <= 2,
+              "REUSE_MODE must be 0 (none) / 1 (reuseA) / 2 (reuseB)");
+static_assert(REUSE_COUNT >= 1 && REUSE_COUNT <= 4,
+              "REUSE_COUNT must be in 1..4");
 
 static inline uint64_t lcg_next(uint64_t *s) {
     *s = *s * 6364136223846793005ull + 1442695040888963407ull;
@@ -82,11 +105,12 @@ extern "C" int __linx_group_worker_main(uint32_t peId, void *opaque) {
     MatmulTestContext *context = static_cast<MatmulTestContext *>(opaque);
     BENCHSTART;
     for (int b = 0; b < Batch; ++b) {
-        matmul_test<tilM, tilN, tilK>(
+        matmul_test<tilM, tilN, tilK, kTailM, REUSE_MODE, REUSE_COUNT,
+                    kMpad, kNpad, globK>(
             context->dst + (size_t)b * kMpad * kNpad,
             context->src0 + (size_t)b * kMpad * globK,
             context->src1 + (size_t)b * globK * kNpad,
-            context->scratch, kMpad, kNpad, globK);
+            context->scratch);
     }
     BENCHEND;
     return 0;
