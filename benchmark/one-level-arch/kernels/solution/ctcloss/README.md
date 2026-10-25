@@ -61,3 +61,10 @@ builds pass. Full-network target numerical/timing acceptance remains unresolved.
 Historical model blockers are SuperScalarModel #1075 and #982; the local model
 has only the scalar-owner routing backport associated with upstream PR #1000.
 No complete CTC simulator PASS or performance speedup is claimed.
+
+
+### Single-PE functional validation after Tile lifetime refactor
+
+The full T=195, N=256, D=41, U=74 network passed gfrun on one logical PE. All 256 losses, 7,438,080 alpha elements, PE completion status and output guards were checked at rtol=1e-4 / atol=2e-5. The DP arithmetic and input fixture are unchanged. Each Tile update now owns its temporaries in a leaf function, avoiding both loop window-maintenance NoPE carriers and raw S64 Tile spills in the frozen compiler.
+
+Runner SHA256: `d9f2564347fa97466324882c0cdf8f3bbc1c6de51499bb5b29979f997c3cf55d`; ELF SHA256: `5407e3670a4762db6368cfe3b46552bda62ebb7ab6c90011c2fc7187f038368d`; wall time: 9303.187 seconds. LLVM `482b4207`, TileOP `b223de6`, model `8e8d8ac7` (same frozen gfrun binary). Four-PE and gfsim have not been rerun for this refactor.

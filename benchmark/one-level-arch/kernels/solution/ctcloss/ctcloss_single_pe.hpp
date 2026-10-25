@@ -104,15 +104,13 @@ __attribute__((always_inline)) inline void compiler_order_boundary() {
 // Flatten [BatchSlots, StateLanes] into one 32-element group. Time is uniform
 // and sequential. State tiles advance in increasing order and retain all
 // previous-tile rows in GM for boundary s-1/s-2 predecessors. No scalar DP.
-template <unsigned StateLanes = 16, unsigned BatchSlots = 2>
-__attribute__((noinline)) void forward(const Arguments &args) {
-  static_assert(StateLanes * BatchSlots == 32 &&
-                (StateLanes & (StateLanes - 1)) == 0);
-  static_assert(StateLanes == 16 && BatchSlots == 2,
-                "This frozen compiler profile is validated for 16 states x 2 batch slots only");
+// Each leaf owns its Tile temporaries. No Tile value crosses the scalar
+// iteration backedges or a function call boundary.
+__attribute__((noinline)) inline void update_alpha_tile(
+    const Arguments &args, uint32_t group, uint32_t base, uint32_t t) {
+  constexpr unsigned StateLanes = 16;
   const Word *lp = reinterpret_cast<const Word *>(args.log_probs);
   Word *alpha = reinterpret_cast<Word *>(args.log_alpha);
-  Word *loss = reinterpret_cast<Word *>(args.negative_log_likelihood);
   const uint32_t *targets = args.targets, *input_lengths = args.input_lengths;
   const uint32_t *target_lengths = args.target_lengths, *offsets = args.target_offsets;
   const uint32_t batch = args.batch, blank = args.blank, max_states = args.max_states;
@@ -121,89 +119,109 @@ __attribute__((noinline)) void forward(const Arguments &args) {
   const uint32_t alpha_bs = args.alpha_batch_stride;
   const uint32_t alpha_ts = args.alpha_time_stride, alpha_ss = args.alpha_state_stride;
   alignas(128) uint32_t transfer[32];
-  for (uint32_t group = 0; group < batch;
-       group += (batch-group < BatchSlots ? batch-group : BatchSlots)) {
-    for (uint32_t base = 0; base < max_states;
-         base += (max_states-base < StateLanes ? max_states-base : StateLanes)) {
-      for (uint32_t t = 0; t < args.time; ++t) {
-        Words aa, bb, cc, emission_bits;
-        auto &a = TPARTELEMENT(aa); auto &b = TPARTELEMENT(bb);
-        auto &c = TPARTELEMENT(cc); auto &emission = TPARTELEMENT(emission_bits);
+  Words aa, bb, cc, emission_bits;
+  auto &a = TPARTELEMENT(aa); auto &b = TPARTELEMENT(bb);
+  auto &c = TPARTELEMENT(cc); auto &emission = TPARTELEMENT(emission_bits);
 #pragma pto element for
-        for (unsigned i = 0; i < 32; ++i) {
-          const uint32_t sample = group + i / StateLanes;
-          const uint32_t state = base + i % StateLanes;
-          uint32_t av = negative_infinity_bits, bv = negative_infinity_bits;
-          uint32_t cv = negative_infinity_bits, ev = 0u;
-          if (sample < batch && state < max_states) {
-            const uint32_t u = target_lengths[sample];
-            if (t < input_lengths[sample] && state < 2u * u + 1u) {
-              uint32_t label = blank;
-              if ((state & 1u) != 0u)
-                label = targets[offsets[sample] + (state / 2u) * target_stride];
-              ev = lp[t * lp_ts + sample * lp_bs + label * lp_cs];
-              if (t == 0u) {
-                if (state < 2u) av = 0u;
-              } else {
-                const uint32_t prev = sample * alpha_bs + (t - 1u) * alpha_ts;
-                av = alpha[prev + state * alpha_ss];
-                if (state > 0u) bv = alpha[prev + (state - 1u) * alpha_ss];
-                if (state > 1u && (state & 1u) != 0u) {
-                  const uint32_t earlier = targets[offsets[sample] + (state / 2u - 1u) * target_stride];
-                  if (label != earlier) cv = alpha[prev + (state - 2u) * alpha_ss];
-                }
-              }
-            }
-          }
-          a[i] = av; b[i] = bv; c[i] = cv; emission[i] = ev;
-        }
-        auto recurrence_bits = logadd3<0>(aa, bb, cc);
-        auto recurrence = as_float(recurrence_bits), emission_tile = as_float(emission_bits);
-        Floats updated;
-        TADD(updated, recurrence, emission_tile);
-        auto updated_bits = as_words(updated);
-        pto::global_tensor<uint32_t, pto::RowMajor<32, 1>> transfer_memory(transfer);
-        TSTORE(transfer_memory, updated_bits);
-        compiler_order_boundary();
-        // Layout-only transfer: the frozen compiler accepts only unit-stride
-        // ordinary element stores. DP math above remains native Tile math.
-        for (unsigned i = 0; i < 32; ++i) {
-          const uint32_t sample = group + i / StateLanes;
-          const uint32_t state = base + i % StateLanes;
-          if (sample < batch && state < max_states)
-            alpha[sample * alpha_bs + t * alpha_ts + state * alpha_ss] = transfer[i];
-        }
-        compiler_order_boundary();
-      }
-    }
-    Words last_bits, previous_bits, zero_bits;
-    auto &last = TPARTELEMENT(last_bits); auto &previous = TPARTELEMENT(previous_bits);
-    auto &zero = TPARTELEMENT(zero_bits);
-#pragma pto element for
-    for (unsigned i = 0; i < 32; ++i) {
-      uint32_t lv = negative_infinity_bits, pv = negative_infinity_bits;
-      const uint32_t sample = group + i / StateLanes;
-      if (sample < batch) {
-        const uint32_t length = input_lengths[sample], u = target_lengths[sample];
-        if (length == 0u) {
-          if (u == 0u) lv = 0u;
+  for (unsigned i = 0; i < 32; ++i) {
+    const uint32_t sample = group + i / StateLanes;
+    const uint32_t state = base + i % StateLanes;
+    uint32_t av = negative_infinity_bits, bv = negative_infinity_bits;
+    uint32_t cv = negative_infinity_bits, ev = 0u;
+    if (sample < batch && state < max_states) {
+      const uint32_t u = target_lengths[sample];
+      if (t < input_lengths[sample] && state < 2u * u + 1u) {
+        uint32_t label = blank;
+        if ((state & 1u) != 0u)
+          label = targets[offsets[sample] + (state / 2u) * target_stride];
+        ev = lp[t * lp_ts + sample * lp_bs + label * lp_cs];
+        if (t == 0u) {
+          if (state < 2u) av = 0u;
         } else {
-          const uint32_t row = sample * alpha_bs + (length - 1u) * alpha_ts;
-          lv = alpha[row + (2u * u) * alpha_ss];
-          if (u > 0u) pv = alpha[row + (2u * u - 1u) * alpha_ss];
+          const uint32_t prev = sample * alpha_bs + (t - 1u) * alpha_ts;
+          av = alpha[prev + state * alpha_ss];
+          if (state > 0u) bv = alpha[prev + (state - 1u) * alpha_ss];
+          if (state > 1u && (state & 1u) != 0u) {
+            const uint32_t earlier = targets[offsets[sample] + (state / 2u - 1u) * target_stride];
+            if (label != earlier) cv = alpha[prev + (state - 2u) * alpha_ss];
+          }
         }
       }
-      last[i] = lv; previous[i] = pv; zero[i] = negative_infinity_bits;
     }
-    auto likelihood = logadd3<1>(last_bits, previous_bits, zero_bits);
-    pto::global_tensor<uint32_t, pto::RowMajor<32, 1>> transfer_memory(transfer);
-    TSTORE(transfer_memory, likelihood);
-    compiler_order_boundary();
-    for (unsigned i = 0; i < BatchSlots; ++i) {
-      if (group + i < batch)
-        loss[group + i] = transfer[i * StateLanes] ^ 0x80000000u;
+    a[i] = av; b[i] = bv; c[i] = cv; emission[i] = ev;
+  }
+  auto recurrence_bits = logadd3<0>(aa, bb, cc);
+  auto recurrence = as_float(recurrence_bits), emission_tile = as_float(emission_bits);
+  Floats updated;
+  TADD(updated, recurrence, emission_tile);
+  auto updated_bits = as_words(updated);
+  pto::global_tensor<uint32_t, pto::RowMajor<32, 1>> transfer_memory(transfer);
+  TSTORE(transfer_memory, updated_bits);
+  compiler_order_boundary();
+  // Layout-only transfer: the frozen compiler accepts only unit-stride
+  // ordinary element stores. DP math above remains native Tile math.
+  for (unsigned i = 0; i < 32; ++i) {
+    const uint32_t sample = group + i / StateLanes;
+    const uint32_t state = base + i % StateLanes;
+    if (sample < batch && state < max_states)
+      alpha[sample * alpha_bs + t * alpha_ts + state * alpha_ss] = transfer[i];
+  }
+  compiler_order_boundary();
+
+}
+__attribute__((noinline)) inline void update_loss_tile(
+    const Arguments &args, uint32_t group) {
+  constexpr unsigned StateLanes = 16, BatchSlots = 2;
+  Word *alpha = reinterpret_cast<Word *>(args.log_alpha);
+  Word *loss = reinterpret_cast<Word *>(args.negative_log_likelihood);
+  const uint32_t *input_lengths = args.input_lengths;
+  const uint32_t *target_lengths = args.target_lengths;
+  const uint32_t batch = args.batch;
+  const uint32_t alpha_bs = args.alpha_batch_stride;
+  const uint32_t alpha_ts = args.alpha_time_stride;
+  const uint32_t alpha_ss = args.alpha_state_stride;
+  alignas(128) uint32_t transfer[32];
+  Words last_bits, previous_bits, zero_bits;
+  auto &last = TPARTELEMENT(last_bits); auto &previous = TPARTELEMENT(previous_bits);
+  auto &zero = TPARTELEMENT(zero_bits);
+#pragma pto element for
+  for (unsigned i = 0; i < 32; ++i) {
+    uint32_t lv = negative_infinity_bits, pv = negative_infinity_bits;
+    const uint32_t sample = group + i / StateLanes;
+    if (sample < batch) {
+      const uint32_t length = input_lengths[sample], u = target_lengths[sample];
+      if (length == 0u) {
+        if (u == 0u) lv = 0u;
+      } else {
+        const uint32_t row = sample * alpha_bs + (length - 1u) * alpha_ts;
+        lv = alpha[row + (2u * u) * alpha_ss];
+        if (u > 0u) pv = alpha[row + (2u * u - 1u) * alpha_ss];
+      }
     }
-    compiler_order_boundary();
+    last[i] = lv; previous[i] = pv; zero[i] = negative_infinity_bits;
+  }
+  auto likelihood = logadd3<1>(last_bits, previous_bits, zero_bits);
+  pto::global_tensor<uint32_t, pto::RowMajor<32, 1>> transfer_memory(transfer);
+  TSTORE(transfer_memory, likelihood);
+  compiler_order_boundary();
+  for (unsigned i = 0; i < BatchSlots; ++i) {
+    if (group + i < batch)
+      loss[group + i] = transfer[i * StateLanes] ^ 0x80000000u;
+  }
+  compiler_order_boundary();
+
+}
+template <unsigned StateLanes = 16, unsigned BatchSlots = 2>
+__attribute__((noinline)) void forward(const Arguments &args) {
+  static_assert(StateLanes == 16 && BatchSlots == 2);
+  for (uint32_t group = 0; group < args.batch;
+       group += (args.batch-group < BatchSlots ? args.batch-group : BatchSlots)) {
+    for (uint32_t base = 0; base < args.max_states;
+         base += (args.max_states-base < StateLanes ? args.max_states-base : StateLanes)) {
+      for (uint32_t t = 0; t < args.time; ++t)
+        update_alpha_tile(args, group, base, t);
+    }
+    update_loss_tile(args, group);
   }
 }
 } // namespace ctc_loss_forward
