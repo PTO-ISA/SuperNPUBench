@@ -116,7 +116,29 @@ dumps. One PE must own 256 samples; each of four PEs must own 64.
 Validation on 2026-10-25: host input/tiling ABI, full FP64 reference checks,
 and single/four-PE RES_CHECK on/off builds PASS. Checker acceptance/rejection
 self-tests use the complete network shape and are not target-kernel runs.
-Full-network gfrun/gfsim: NOT_RUN; no verified operator performance.
+The original normalized revision b2b9166 timed out in full-network gfrun at
+120 seconds for both PE counts. A bounded-PC/count diagnostic identified its
+7,438,088-element pre-kernel alpha fill as a startup bottleneck; the four-PE
+workers spent substantial time waiting for PE0 to publish inputs.
+
+The test now initializes only the 16 boundary guard words. Logical outputs
+remain at their BSS zero values; the generator asserts that neither golden
+matches zero at the checker tolerances, so an unwritten logical output still fails the unchanged
+comparator. Shapes, inputs, arithmetic and tolerances are unchanged.
+Kernel-entry debug stops now reach the core in about 2.4s (PE1) and 4.9s (PE4).
+These are diagnostic startup times, not full runtime/accuracy results.
+
+With a 500k-block diagnostic budget, the first 4 MiB contains 4,247 written
+alpha values in PE1 and 232 in PE4, all matching reference; at 750k blocks PE1
+has 6,921 matching values. The PE4 block statistics show Tile operations on
+all four contexts. Debug stops never qualify as a complete accuracy PASS.
+The remaining core hotspot contains many compiler-generated NoPE TLOAD blocks
+(297,259 / 500,000 total sampled blocks on PE1). The model treats these as
+no-ops before TLSU allocation, so this is decode/maintenance overhead rather
+than that many real GM reads. No compiler correctness defect is inferred.
+
+Full-network accuracy/timing acceptance remains unresolved; gfsim was not
+rerun for this startup-only change. No verified operator performance is given.
 Related historical blockers:
 https://github.com/LinxISA/SuperScalarModel/issues/1075
 https://github.com/LinxISA/SuperScalarModel/issues/982

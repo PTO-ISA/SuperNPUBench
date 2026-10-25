@@ -86,6 +86,10 @@ def generate_network(out, seed=20261024, pe_num=4):
             'input_lengths.bin':il,'target_lengths.bin':tl}
     for name,value in arrays.items(): value.tofile(out/name)
     alpha32=alpha.astype('<f4'); loss32=loss.astype('<f4')
+    # Unwritten logical outputs remain zero in BSS; retain full write coverage
+    # without a guest-side fill of all 7.4M alpha elements before launch.
+    assert not np.any(np.isclose(np.float32(0),alpha32,rtol=1e-4,atol=2e-5)), 'zero BSS could match an unwritten output'
+    assert not np.any(np.isclose(np.float32(0),loss32,rtol=1e-4,atol=2e-5)), 'zero BSS could match an unwritten loss'
     alpha32.tofile(out/'log_alpha.golden.bin')
     loss32.tofile(out/'negative_log_likelihood.golden.bin')
     if pe_num==1:

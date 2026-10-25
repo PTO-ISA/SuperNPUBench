@@ -57,7 +57,7 @@ avoids the frozen-model bug tracked in SuperScalarModel #1074 without changing
 the oracle or tolerances.
 
 Full-size input/reference validation and all single/four-PE RES_CHECK on/off
-builds pass. Full-network target numerical/timing validation remains NOT_RUN.
+builds pass. Full-network target numerical/timing acceptance remains unresolved.
 Historical model blockers are SuperScalarModel #1075 and #982; the local model
 has only the scalar-owner routing backport associated with upstream PR #1000.
 No complete CTC simulator PASS or performance speedup is claimed.

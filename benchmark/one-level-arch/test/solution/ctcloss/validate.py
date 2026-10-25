@@ -101,6 +101,8 @@ def main():
         for pe in (1,4):
             result=report['variants'][str(pe)]
             try:
+                runner='gfrun'
+                result[runner]=dict(status='RUNNING')
                 execute(f'pe{pe}-gfrun',[model/'bin/gfrun','--pto059-execution-mask-dev','-s',f'softcore.multiThreadNum={pe}','-f',elf(pe,'on')],cwd=model)
                 log=(out/f'pe{pe}-gfrun.log').read_text()
                 assert 'CTCLOSS_OUTPUT_WRITTEN' in log,'guest did not export outputs'
@@ -109,6 +111,8 @@ def main():
                 if not a.functional_only:
                     extra=[] if pe==1 else ['--conf','fourpe']
                     settings=['core.threadCount=1','core.stdPeCount=1','tlsu.fake_l2_enable=false'] if pe==1 else ['tlsu.fake_l2_enable=false']
+                    runner='gfsim'
+                    result[runner]=dict(status='RUNNING')
                     execute(f'pe{pe}-gfsim',[model/'bin/gfsim','--pto059-execution-mask-dev',*extra,'-s',*settings,'-f',elf(pe,'off')],cwd=model,timeout=900)
                     log=(out/f'pe{pe}-gfsim.log').read_text()
                     assert not re.search(r'LOG_ERROR|ASSERTION FAILED',log)
@@ -117,6 +121,10 @@ def main():
                         cycle_scope='includes launch and input I/O; not a kernel-only speedup measurement')
                 result['status']='FUNCTIONAL_PASS' if a.functional_only else 'PASS'
             except Exception as e:
+                last=report['steps'][-1]
+                code=last.get('exit_code')
+                phase='TIMEOUT' if code==124 else 'KILLED_OR_TIMEOUT' if code==137 else 'EXECUTION_FAIL' if code else 'CHECK_FAIL'
+                result[runner]=dict(status=phase,exit_code=code,error=str(e))
                 result.update(status='FAIL',error=str(e)); failed=True
             save()
         report['status']='FAIL' if failed else 'FUNCTIONAL_PASS' if a.functional_only else 'PASS'

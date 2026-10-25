@@ -72,8 +72,15 @@ int main() {
     }
 #ifdef RES_CHECK
     if (!input_error) {
-      for (uint32_t i=0;i<kAlphaElements+8;++i) ctcloss_alpha[i]=kGuard;
-      for (uint32_t i=0;i<kBatch+8;++i) ctcloss_loss[i]=kGuard;
+      // Logical outputs already start at zero in BSS. The fixture generator
+      // rejects zero-matching goldens at checker tolerance; unwritten data fails.
+      // Initialize only the boundary guards, not 7.4M logical alpha elements.
+      for (uint32_t i=0;i<4;++i) {
+        ctcloss_alpha[i]=kGuard;
+        ctcloss_alpha[kAlphaElements+4+i]=kGuard;
+        ctcloss_loss[i]=kGuard;
+        ctcloss_loss[kBatch+4+i]=kGuard;
+      }
     }
 #endif
   }
