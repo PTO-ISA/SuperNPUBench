@@ -289,62 +289,75 @@ inline void rms_norm_tile_single_block(dtype *x, const dtype *gamma,
     if (gR > kSpan) {
         const int fa = static_cast<int>(curtile_factal_a);
         const int fr = static_cast<int>(curtile_factal_r);
+        using tile_sum_wide =
+            Tile<tile_s::Loc, typename tile_s::DType, tile_s::Rows,
+                 tile_m_v::Cols, tile_s::BFractal, 1, 1>;
+        // Gamma is identical on every row. Hold both halves once so the
+        // per-row path does not TLOAD gamma after the reduce (that TLOAD
+        // used to sit behind a blocked TSTORE).
+        tile_f gf0(curtile_factal_a, curtile_factal_r),
+            gf1(curtile_factal_a, curtile_factal_r);
+        {
+            gm_t gg0(const_cast<dtype *>(gamma), fa, fr);
+            gm_t gg1(const_cast<dtype *>(gamma) + span, fa, fr);
+            tile_h gh0(curtile_factal_a, curtile_factal_r),
+                gh1(curtile_factal_a, curtile_factal_r);
+            TLOAD(gh0, gg0);
+            TCVT(gf0, gh0);
+            TLOAD(gh1, gg1);
+            TCVT(gf1, gh1);
+        }
         for (int64_t ia = 0; ia < peA; ++ia) {
             const int64_t offset = ia * gR;
             gm_t gi0(x + offset, fa, fr);
             gm_t gi1(x + offset + span, fa, fr);
-            gm_t gg0(const_cast<dtype *>(gamma), fa, fr);
-            gm_t gg1(const_cast<dtype *>(gamma) + span, fa, fr);
             gm_t go0(out + offset, fa, fr);
             gm_t go1(out + offset + span, fa, fr);
-            tile_h h0(curtile_factal_a, curtile_factal_r),
-                h1(curtile_factal_a, curtile_factal_r);
             tile_f x0(curtile_factal_a, curtile_factal_r),
-                x1(curtile_factal_a, curtile_factal_r),
-                sq0(curtile_factal_a, curtile_factal_r),
-                sq1(curtile_factal_a, curtile_factal_r);
-            TLOAD(h0, gi0);
-            TCVT(x0, h0);
-            TMUL(sq0, x0, x0);
-            TLOAD(h1, gi1);
-            TCVT(x1, h1);
-            TMUL(sq1, x1, x1);
-            TADD(sq0, sq0, sq1);
-
-            tile_m_v row_sums(curtile_factal_a);
-            TROWSUM(row_sums, sq0);
-            // TCOLSUM still needs the wide carrier. The scalar lives in its
-            // first 128 B cell; the prefix view exposes that cell as [32,1].
-            using tile_sum_wide =
-                Tile<tile_s::Loc, typename tile_s::DType, tile_s::Rows,
-                     tile_m_v::Cols, tile_s::BFractal, 1, 1>;
-            tile_sum_wide sum_wide;
-            TCOLSUM(sum_wide, row_sums);
-            auto tile_sum = TREDUCEPREFIXVIEW<tile_s>(sum_wide);
-            tile_s mean, denom, rms;
-            TMULS(mean, tile_sum, inv_r);
-            TADDS(denom, mean, kEpsilon);
-            rsqrt_regbase(rms, denom);
-
+                x1(curtile_factal_a, curtile_factal_r);
+            {
+                tile_h h0(curtile_factal_a, curtile_factal_r),
+                    h1(curtile_factal_a, curtile_factal_r);
+                TLOAD(h0, gi0);
+                TCVT(x0, h0);
+                TLOAD(h1, gi1);
+                TCVT(x1, h1);
+            }
+            tile_s rms;
             tile_m_v rms_rows(curtile_factal_a);
+            {
+                tile_f sq0(curtile_factal_a, curtile_factal_r),
+                    sq1(curtile_factal_a, curtile_factal_r);
+                tile_m_v row_sums(curtile_factal_a);
+                TMUL(sq0, x0, x0);
+                TMUL(sq1, x1, x1);
+                TADD(sq0, sq0, sq1);
+                TROWSUM(row_sums, sq0);
+                tile_sum_wide sum_wide;
+                TCOLSUM(sum_wide, row_sums);
+                auto tile_sum = TREDUCEPREFIXVIEW<tile_s>(sum_wide);
+                tile_s mean, denom;
+                TMULS(mean, tile_sum, inv_r);
+                TADDS(denom, mean, kEpsilon);
+                rsqrt_regbase(rms, denom);
+            }
             TCOLEXPAND(rms_rows, rms);
-            tile_h gh(curtile_factal_a, curtile_factal_r),
-                h_out0(curtile_factal_a, curtile_factal_r),
-                h_out1(curtile_factal_a, curtile_factal_r);
-            tile_f gf(curtile_factal_a, curtile_factal_r),
-                dst(curtile_factal_a, curtile_factal_r);
-            TLOAD(gh, gg0);
-            TCVT(gf, gh);
-            TROWEXPANDMUL(dst, x0, rms_rows);
-            TMUL(dst, dst, gf);
-            TCVT(h_out0, dst);
-            TSTORE(go0, h_out0);
-            TLOAD(gh, gg1);
-            TCVT(gf, gh);
-            TROWEXPANDMUL(dst, x1, rms_rows);
-            TMUL(dst, dst, gf);
-            TCVT(h_out1, dst);
-            TSTORE(go1, h_out1);
+            {
+                tile_f dst(curtile_factal_a, curtile_factal_r);
+                tile_h h_out(curtile_factal_a, curtile_factal_r);
+                TROWEXPANDMUL(dst, x0, rms_rows);
+                TMUL(dst, dst, gf0);
+                TCVT(h_out, dst);
+                TSTORE(go0, h_out);
+            }
+            {
+                tile_f dst(curtile_factal_a, curtile_factal_r);
+                tile_h h_out(curtile_factal_a, curtile_factal_r);
+                TROWEXPANDMUL(dst, x1, rms_rows);
+                TMUL(dst, dst, gf1);
+                TCVT(h_out, dst);
+                TSTORE(go1, h_out);
+            }
         }
         return;
     }
