@@ -207,4 +207,18 @@ __attribute__((noinline)) void forward(const Arguments &args) {
   }
 }
 } // namespace ctc_loss_forward
+
+#include "ctcloss_tiling.hpp"
+
+// Normal solution interface: inputs, host tiling, outputs and offset workspace.
+// Inputs/metadata are validated before launch; loss is unreduced.
+inline void ctcloss_v2_single_pe(
+    const float *log_probs, const int32_t *targets,
+    const int32_t *input_lengths, const int32_t *target_lengths,
+    const CtcLossTilingData *tiling_info, float *loss, float *log_alpha,
+    const uint32_t *target_offsets) {
+  const auto args=bind_ctcloss_arguments(log_probs,targets,input_lengths,
+      target_lengths,tiling_info,loss,log_alpha,target_offsets);
+  ctc_loss_forward::forward(args);
+}
 #endif

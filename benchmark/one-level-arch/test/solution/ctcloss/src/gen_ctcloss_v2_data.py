@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 import numpy as np
 import math
-GUARD = -987.25
 
 def logadd(values):
     m = max(values)
@@ -37,8 +36,9 @@ def oracle(probs, labels, length, blank, time, states):
 
 
 
-def generate_network(out, seed=20261024):
-    out=Path(out).resolve(); out.mkdir(parents=True,exist_ok=True)
+def generate_network(out, seed=20261024, pe_num=4):
+    out=Path(out).resolve(); out.mkdir(parents=True,exist_ok=False)
+    if pe_num not in (1,4): raise ValueError("pe_num must be 1 or 4")
     T,N,C,U,S=195,256,41,74,149
     rng=np.random.default_rng(seed)
     logits=rng.uniform(-4,4,(T,N,C))
@@ -88,37 +88,15 @@ def generate_network(out, seed=20261024):
     alpha32=alpha.astype('<f4'); loss32=loss.astype('<f4')
     alpha32.tofile(out/'log_alpha.golden.bin')
     loss32.tofile(out/'negative_log_likelihood.golden.bin')
-    for name,values in [('alpha',alpha32),('loss',loss32)]:
-        flat=values.ravel()
-        checked=np.full(flat.size+8,GUARD,dtype='<f4'); checked[4:-4]=flat
-        checked.tofile(out/(name+'.golden'))
-        np.full(flat.size+8,GUARD,dtype='<f4').tofile(out/(name+'.initial.bin'))
-    kAlpha=N*T*S+8; kLoss=N+8
-    header=f"""#pragma once
-#include <cstdint>
-constexpr unsigned kCases=1,kTime={T},kBatch={N},kClasses={C},kTargetWidth={U};
-constexpr unsigned kInputElements={T*N*C},kTargetElements={N*U},kAlpha={kAlpha},kLoss={kLoss};
-extern "C" {{
-extern const float ctc_lp[kInputElements];
-extern const int32_t ctc_targets[kTargetElements],ctc_lengths[kBatch],ctc_target_lengths[kBatch];
-extern float ctc_alpha[kAlpha],ctc_loss[kLoss];
-}}
-"""
-    (out/'data.hpp').write_text(header)
-    assembly=[]
-    for symbol,file,section in [('ctc_lp','log_probs.bin','.rodata'),
-        ('ctc_targets','targets.bin','.rodata'),('ctc_lengths','input_lengths.bin','.rodata'),
-        ('ctc_target_lengths','target_lengths.bin','.rodata'),
-        ('ctc_alpha','alpha.initial.bin','.data'),('ctc_loss','loss.initial.bin','.data')]:
-        alignment=4096 if section=='.data' else 32
-        assembly += [f'.section {section}',f'.balign {alignment}',f'.global {symbol}',
-            f'.type {symbol},@object',symbol+':',f'.incbin "{out/file}"',
-            f'.size {symbol}, .-{symbol}']
-    (out/'data.S').write_text('\n'.join(assembly)+'\n')
-    case=dict(name='ops_nn_ctcloss_v2',lp=0,targets=0,lengths=0,offsets=0,
-        alpha=4,loss=4,T=T,N=N,C=C,states=S,blank=0,
-        lpts=N*C,lpbs=C,lpcs=1,ts=1,abs=T*S,ats=S,ass=1)
-    (out/'cases.json').write_text(json.dumps([case],indent=2)+'\n')
+    if pe_num==1:
+        starts=[0,N,N,N]; ends=[N,N,N,N]
+    else:
+        groups=(N+1)//2; q,r=divmod(groups,4)
+        first=[q*pe+min(pe,r) for pe in range(4)]
+        last=[first[pe]+q+(pe<r) for pe in range(4)]
+        starts=[min(x*2,N) for x in first]; ends=[min(x*2,N) for x in last]
+    words=[T,N,C,U,S,0,pe_num,0,N*C,C,1,1,T*S,S,1,0,*starts,*ends]
+    np.asarray(words,dtype='<u4').tofile(out/'tiling_info.bin')
     spec=dict(name='ops_nn_Ctcloss_v2',data_origin='deterministic synthetic, not captured network tensors',
         seed=seed,numpy_version=np.__version__,rng='default_rng/PCG64',attributes=dict(blank=0,reduction='none',zero_infinity=False),
         inputs=[dict(name=name,shape=list(value.shape),dtype=str(value.dtype),
@@ -134,13 +112,18 @@ extern float ctc_alpha[kAlpha],ctc_loss[kLoss];
         strides_in_elements=dict(log_probs=[N*C,C,1],targets=[U,1],log_alpha=[T*S,S,1]),
         oracle='time-first NumPy FP64 DP; full scalar FP64 cross-check of samples 0,1,255',
         host_checks='PASS; no simulator accuracy/performance claim',
+        tiling_info=dict(file='tiling_info.bin',abi='24 little-endian uint32 words',pe_num=pe_num,
+                         batch_begin=starts,batch_end=ends),
         loss_min=float(loss.min()),loss_max=float(loss.max()),
-        sha256={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in out.glob('*.bin')})
+        sha256={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in [out/name for name in [*arrays,'log_alpha.golden.bin','negative_log_likelihood.golden.bin','tiling_info.bin']]})
     (out/'network-spec.json').write_text(json.dumps(spec,indent=2)+'\n')
     print('[network-data][PASS] exact shapes/dtypes/lengths; FP64 oracle checked',flush=True)
-    return [case]
+    return spec
 
 if __name__=='__main__':
     import argparse
-    p=argparse.ArgumentParser(); p.add_argument('--out',required=True); p.add_argument('--seed',type=int,default=20261024)
-    a=p.parse_args(); generate_network(a.out,a.seed)
+    p=argparse.ArgumentParser()
+    p.add_argument('--out-dir',required=True)
+    p.add_argument('--pe-num',type=int,choices=[1,4],default=4)
+    p.add_argument('--seed',type=int,default=20261024)
+    a=p.parse_args(); generate_network(a.out_dir,a.seed,a.pe_num)

@@ -15,3 +15,19 @@ inline void forward(const ctc_loss_forward::Arguments &args) {
   ctc_loss_forward::forward<16,2>(local);
 }
 }
+
+inline void ctcloss_v2_four_pe(
+    const float *log_probs, const int32_t *targets,
+    const int32_t *input_lengths, const int32_t *target_lengths,
+    const CtcLossTilingData *tiling_info, float *loss, float *log_alpha,
+    const uint32_t *target_offsets) {
+  const uint32_t pe=get_thread_idx();
+  if (pe>=tiling_info->pe_num) return;
+  const ctc_loss_forward_4pe::BatchRange range{
+      tiling_info->batch_begin[pe],tiling_info->batch_end[pe]};
+  if (range.begin==range.end) return;
+  const auto args=bind_ctcloss_arguments(log_probs,targets,input_lengths,
+      target_lengths,tiling_info,loss,log_alpha,target_offsets);
+  const auto local=ctc_loss_forward_4pe::slice_batch(args,range);
+  ctc_loss_forward::forward(local);
+}

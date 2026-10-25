@@ -1,86 +1,124 @@
-# Ctcloss_v2: one fixed network specification, single PE and four PE
+# Ctcloss_v2 network test
 
-This directory intentionally contains one network fixture. There is no small
-shape / smoke / boundary-case suite in this change.
+This follows the normalization test layout:
 
-Inputs, in order:
-- log_probs: float32 [195,256,41], contiguous [T,N,C].
-- targets: int32 [256,74], contiguous padded labels.
-- input_lengths: int32 [256], exactly [195]*256.
-- target_lengths: int32 [256], exactly [40]+[74]*255.
+- Makefile includes ../../common/Makefile.common.
+- compile.all builds ctcloss_v2_single_pe and ctcloss_v2_four_pe.
+- src/ctcloss_v2_*_pe.cpp are testcase entries sharing ctcloss_v2_test.hpp.
+- src/gen_ctcloss_v2_data.py writes ordinary input/golden/tiling BINs.
+- src/ctcloss_v2_data_compare.py compares RES_CHECK output files.
+- src/validate_ctcloss_v2_inputs.cpp validates the full input and tiling ABI.
+- validate.py is optional orchestration around these Makefile/script entries;
+  it has no separate compiler flag or startup implementation.
 
-Attributes: blank=0, reduction=none, zero_infinity=false.
-Outputs: loss float32 [256], log_alpha float32 [256,195,149].
-Sample 0 has 81 valid states; unused alpha states are defined as -Inf.
-Targets beyond sample 0's first 40 labels are padding (filled with zero).
+Only the requested network specification is present:
+log_probs float32 [195,256,41]; targets int32 [256,74];
+input_lengths int32 [256] = [195]*256;
+target_lengths int32 [256] = [40]+[74]*255.
+blank=0, reduction=none, zero_infinity=false.
+Outputs are loss float32 [256] and log_alpha float32 [256,195,149].
+Sample 0 has 81 valid states; its remaining states are -Inf.
 
-## Data, reference and checks
+The deterministic synthetic fixture uses seed 20261024 / NumPy PCG64.
+Logits are normalized to FP32 log-softmax; effective labels are 1..40.
+This is not captured network data or a comparison against ops-nn device output.
+The full FP64 time-first reference is independently cross-checked with scalar
+FP64 DP for samples 0,1,255. The six raw input/golden files remain byte-identical
+to the earlier network fixture. Only PE-specific tiling metadata differs.
 
-generate.py creates deterministic synthetic data (seed 20261024, NumPy PCG64).
-Random logits are normalized to FP32 log-softmax; effective labels are in 1..40.
-This is shape-aligned synthetic input, not captured network data or an ops-nn
-implementation-to-implementation comparison.
+## Standard entries
 
-The complete alpha/loss reference uses time-first FP64 DP. Samples 0,1,255 are
-also checked with an independent scalar FP64 implementation. FP32 raw logical
-goldens are log_alpha.golden.bin / negative_log_likelihood.golden.bin.
-alpha.golden and loss.golden additionally contain four guard words at each end.
-The checker compares guard bytes exactly, finite values with rtol=1e-4 and
-atol=2e-5, rejects NaNs and compares Inf signs. Each real PE must publish its
-identity, completion and sample count (64 per PE for four PE).
-
-validate_inputs.cpp validates these full-size INT32 inputs using the adapter;
-it does not run scalar CTC as a replacement for the target kernel.
-
-## Build and execution
-
-Requires Python 3.11+, NumPy, host g++, and the compatible Linx compiler/runtime,
-public TileOP headers and model. No dependencies are installed automatically.
-
-From the repository root (replace the three dependency paths):
-~~~bash
-python3 benchmark/one-level-arch/test/solution/ctcloss/run.py \
-  --toolchain /path/to/linx_blockisa_llvm_musl \
-  --tileop-include /path/to/Linx-TileOP-API/include \
-  --model /path/to/SuperScalarModel \
-  --build-only
+Requires Python 3.11+, NumPy, host g++, and the pinned Linx dependencies.
+No packages are installed automatically. Set:
+~~~sh
+export COMPILER_DIR=/path/to/linx_blockisa_llvm_musl/bin
+export API_INCLUDE=/path/to/Linx-TileOP-API/include
+cd benchmark/one-level-arch/test/solution/ctcloss
 ~~~
 
-By default both PE variants are built from the same generated input/data
-object. Use --pe-count 1 or --pe-count 4 to select one. Remove --build-only to
-run target checks; --functional-only skips gfsim. Existing timeout limits are
-120 seconds for gfrun and 900 seconds for real-L2 gfsim. This full shape may
-exceed those limits: a timeout fails, does not reduce the shape, and never
-becomes an accuracy PASS. gfsim runs only after gfrun accuracy succeeds.
+One normal RES_CHECK case:
+~~~sh
+python3 src/gen_ctcloss_v2_data.py --out-dir /tmp/ctc-pe4-data --pe-num 4
+make -o clean -W "$PWD/src/ctcloss_v2_four_pe.cpp" \
+  TESTCASE=ctcloss_v2_four_pe DType=float PE_NUM=4 res_check=on \
+  CHK_DIR=/tmp/ctc-pe4-data diss
+# After a successful four-PE gfrun execution of the generated ELF:
+python3 src/ctcloss_v2_data_compare.py --cmp-dir /tmp/ctc-pe4-data
+~~~
 
-Default output is a unique validation_logs/ctcloss-solution-* directory beside
-the repository, overridable by --out. It includes commands, return codes,
-timings, source/tool/ELF/input hashes, repo HEAD/dirty state, IR, disassembly,
-network-spec.json and runner logs/dumps. Large binaries/data are generated
-outside the checkout and are not included in this PR.
+For single PE select ctcloss_v2_single_pe, PE_NUM=1 and --pe-num 1.
+The generator requires a new output directory. CHK_DIR defaults to
+compare/<ELF-basename>, following the common Makefile convention; when using
+that default, generate the inputs in that exact directory.
 
-The direct-boot start.s relies on the loader supplying independent per-PE
-stacks and joining all exits before the host checks outputs. Guard buffers
-are initialized in the ELF image, so workers cannot race a leader's memset.
-This is not a hosted libc or hardware device launcher.
+compile.all builds both PE variants. If CTC_COMPARE_ROOT is set, it uses
+<root>/pe1/compare and <root>/pe4/compare for their CHK_DIR directories.
+Set res_check=off for the timing variants. ELF names encode DType, the fixed
+network dimensions, PE count and res_check mode to prevent artifact confusion.
+The shared Makefile contains an implicit clean prerequisite; compile.all
+suppresses it with -o clean and forces the relevant TU for flag/CHK_DIR changes.
+Kernel/header dependencies are also tracked by this testcase Makefile.
+The public common Makefile itself is unchanged.
 
-## Frozen dependency tuple and validation limit
+Optional full generation/host checking/four-configuration build:
+~~~sh
+python3 validate.py --build-only \
+  --compiler-dir "$COMPILER_DIR" --api-include "$API_INCLUDE" \
+  --model /path/to/SuperScalarModel
+~~~
 
-- LLVM: codex/pto-element-region-compiler @
+Remove --build-only to run gfrun accuracy then real-L2 gfsim timing;
+--functional-only skips timing. Limits remain 120 seconds / 900 seconds.
+Timeouts fail; this fixed network shape is never reduced. A fresh run directory
+contains commands, return codes, source/tool/ELF hashes, dependency HEAD/dirty
+state, Make plans, disassembly, and logs. Runtime output directories are fresh,
+so stale output files cannot qualify as a PASS.
+
+## Runtime / RES_CHECK
+
+Both modes use static hosted musl startup and the existing common
+group_worker_runtime.o. There is no testcase-private start.s or input .incbin.
+The frozen loader gives PE0 the libc entry and PE1..3 the common worker entry,
+with independent stacks. Workers return to the common park loop; only PE0
+performs file I/O or exits the process. One-PE execution uses the same ABI
+without worker participants.
+
+PE0 reads all four input BINs plus tiling_info.bin, validates signed values and
+the tiling ABI, and publishes inputs using MultiThreadResCheckSync. That common
+protocol is used unchanged; it is not a newly implemented hardware barrier.
+The host computes ownership/strides in tiling_info; the kernel applies them.
+After the kernel, PE0 waits for four completion slots before exporting results.
+
+CTC lengths/labels determine executed work. Unlike a zero-input timing stub,
+res_check=off still reads the same inputs before TRACE.begin, so it cannot
+silently benchmark zero effective lengths. RES_CHECK controls guard setup and
+result export. File I/O and launch setup lie outside TRACE.begin/TRACE.end.
+The validator reports gfsim Total Cycles as whole-program cycles, including
+startup/I/O; it does not turn them into a kernel-only speedup measurement.
+
+RES_CHECK writes loss.bin [256], log_alpha.bin [256,195,149], status.bin and
+output_guards.bin. The comparator requires exact PE IDs/completion/sample
+counts and exact guard bytes, rejects NaNs, matches Inf signs, and uses
+rtol=1e-4 / atol=2e-5 for finite numbers. It does not read simulator memory
+dumps. One PE must own 256 samples; each of four PEs must own 64.
+
+## Dependency and validation status
+
+- LLVM codex/pto-element-region-compiler:
   482b4207e88adf312fd1b1a8a567b83f5a4e207b.
 - TileOP: b223de6a80c1d9b7c2f1ac3a1ff4517b1951d650.
 - Toolchain wrapper: e6a31efb4cfb17f1f1c33265cbf6dbb61bbba156.
-- Model: codex/pto-element-generic-timing @
-  8e8d8ac7b1becc8937e77989c2762139f946b8af, plus a local scalar-owner routing
-  backport: VecTop's GPR packet uses DispatchToPE(stid), not vector coreIndex.
-  This is not pristine frozen code and not latest model main. The backport is
-  not part of this kernel PR; upstream handling is described in model PR #1000.
+- Model codex/pto-element-generic-timing:
+  8e8d8ac7b1becc8937e77989c2762139f946b8af plus local GPR scalar-owner routing
+  backport (DispatchToPE(stid)); not pristine frozen code or latest main.
+  That model patch is not included in this kernel PR.
 
-The runner records actual source dirty hashes and installed runner hashes.
-Validation on 2026-10-24: full input dimensions/dtypes/lengths, FP64 reference
-cross-checks and host INT32 adapter validation PASS; single-PE and four-PE target
-compilation/linking and element-region lowering checks PASS.
-Full-network gfrun/gfsim: NOT_RUN. There is no verified performance result.
-Related historical model failures:
+Validation on 2026-10-25: host input/tiling ABI, full FP64 reference checks,
+and single/four-PE RES_CHECK on/off builds PASS. Checker acceptance/rejection
+self-tests use the complete network shape and are not target-kernel runs.
+Full-network gfrun/gfsim: NOT_RUN; no verified operator performance.
+Related historical blockers:
 https://github.com/LinxISA/SuperScalarModel/issues/1075
 https://github.com/LinxISA/SuperScalarModel/issues/982
+Upstream routing fix:
+https://github.com/LinxISA/SuperScalarModel/pull/1000

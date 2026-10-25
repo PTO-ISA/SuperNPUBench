@@ -1,5 +1,7 @@
 #include "solution/ctcloss/ctcloss_v2_i32.hpp"
 #include <cassert>
+#include <cstring>
+#include "solution/ctcloss/ctcloss_tiling.hpp"
 #include <fstream>
 #include <string>
 #include <vector>
@@ -23,6 +25,12 @@ int main(int argc,char **argv) {
       al.data(),nll.data(),195,256,41,74,0,Reduction::none,false};
     assert(prepare(network,x.size(),y.size(),lengths.size(),targets.size(),
       al.size(),nll.size(),off.data(),off.size(),core)==InputError::ok);
+    auto words=read<uint32_t>(dir+"/tiling_info.bin",24);
+    CtcLossTilingData tiling{};
+    std::memcpy(&tiling,words.data(),sizeof(tiling));
+    assert(tiling.pe_num==1 || tiling.pe_num==4);
+    const auto expected=make_ctcloss_tiling(core,74,tiling.pe_num);
+    assert(std::memcmp(&tiling,&expected,sizeof(tiling))==0);
     assert(core.max_states==149 && core.lp_time_stride==10496);
     assert(core.lp_batch_stride==41 && core.alpha_batch_stride==29055);
     assert(core.alpha_time_stride==149 && off[255]==255*74);
