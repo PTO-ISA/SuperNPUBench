@@ -28,15 +28,19 @@ def main():
     p.add_argument('--compiler-dir',type=Path,default=Path(os.environ.get('COMPILER_DIR',WORKSPACE/'linx-toolchain-build/output/linx_blockisa_llvm_musl/bin')))
     p.add_argument('--api-include',type=Path,default=Path(os.environ.get('API_INCLUDE',WORKSPACE/'Linx-TileOP-API-b223de6/include')))
     p.add_argument('--model',type=Path,default=Path(os.environ.get('SSM',WORKSPACE/'SuperScalarModel-8e8d8ac7')))
+    p.add_argument('--pe',type=int,choices=(1,4),help='Validate only this PE variant (default: both)')
+    p.add_argument('--gfrun-timeout',type=int,default=120,help='gfrun wall-time limit in seconds; full network may need 21600')
     p.add_argument('--build-only',action='store_true')
     p.add_argument('--functional-only',action='store_true')
     p.add_argument('--out',type=Path)
     a=p.parse_args()
+    if a.gfrun_timeout<=0: p.error('--gfrun-timeout must be positive')
+    pe_variants=(a.pe,) if a.pe else (1,4)
     compiler=a.compiler_dir.resolve(); api=a.api_include.resolve(); model=a.model.resolve()
     out=(a.out or WORKSPACE/'validation_logs'/('ctcloss-normalized-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+str(os.getpid()))).resolve()
     out.mkdir(parents=True,exist_ok=False)
     report=dict(status='RUNNING',steps=[],variants={},output=str(out),rtol=1e-4,atol=2e-5)
-    env=dict(os.environ,COMPILER_DIR=str(compiler),API_INCLUDE=str(api),CTC_COMPARE_ROOT=str(out))
+    env=dict(os.environ,COMPILER_DIR=str(compiler),API_INCLUDE=str(api),CTC_COMPARE_ROOT=str(out),CTC_PE_NUM=str(a.pe) if a.pe else '')
     def save(): (out/'result.json').write_text(json.dumps(report,indent=2)+'\n')
     def execute(stage,cmd,cwd=HERE,timeout=120,extra_env=None):
         stage_env=env.copy()
@@ -52,13 +56,13 @@ def main():
         case='ctcloss_v2_single_pe' if pe==1 else 'ctcloss_v2_four_pe'
         return out/'elf'/f'solution_ctcloss_{case}_DTypefloat_T195_N256_D41_U74_PE{pe}_rescheck{mode}.elf'
     try:
-        for pe in (1,4):
+        for pe in pe_variants:
             work=out/f'pe{pe}'; work.mkdir()
             generate_network(work/'compare',pe_num=pe)
             report['variants'][str(pe)]=dict(gfrun='NOT_RUN',gfsim='NOT_RUN')
         execute('host-build',['g++','-std=c++17','-O2','-Wall','-Wextra','-Werror',
             '-I'+str(ONE/'kernels'),SRC/'validate_ctcloss_v2_inputs.cpp','-o',out/'validate_inputs'])
-        for pe in (1,4): execute(f'pe{pe}-input-check',[out/'validate_inputs',out/f'pe{pe}/compare'])
+        for pe in pe_variants: execute(f'pe{pe}-input-check',[out/'validate_inputs',out/f'pe{pe}/compare'])
         tools=[compiler/'clang++',compiler/'lld',compiler/'llvm-objdump',model/'bin/gfrun',model/'bin/gfsim']
         report['tools_sha256']={str(t):digest(t) if t.exists() else 'UNAVAILABLE' for t in tools}
         report['repositories']={}
@@ -76,7 +80,7 @@ def main():
         report['source_sha256']={str(t.relative_to(REPO)):digest(t) for t in source_paths}
         args=[f'OBJ_ROOT={out/"objects"}',f'ELF_DIR={out/"elf"}']
         for mode in ('on','off'):
-            for pe in (1,4):
+            for pe in pe_variants:
                 case='ctcloss_v2_single_pe' if pe==1 else 'ctcloss_v2_four_pe'
                 plan_cmd=['make','-n','-o','clean',f'TESTCASE={case}',f'PE_NUM={pe}',f'res_check={mode}',
                           f'CHK_DIR={out/f"pe{pe}/compare"}',*args,'diss']
@@ -84,7 +88,7 @@ def main():
                 (out/f'pe{pe}-{mode}-make-plan.txt').write_text(plan)
                 assert not re.search(r'^\s*(?:rm\s|find\s.*-exec)',plan,re.M),'unexpected clean command'
             execute('compile-all-'+mode,['bash',HERE/'compile.all',*args],extra_env={'res_check':mode},timeout=240)
-            for pe in (1,4):
+            for pe in pe_variants:
                 binary=elf(pe,mode)
                 dis=Path(str(binary)+'.diss').read_text()
                 assert all(op.lower() in dis.lower() for op in ['TEXP','TLOG','TLEA','MGATHER'])
@@ -98,19 +102,27 @@ def main():
             report['status']='BUILD_PASS_NOT_RUN'; save()
             print('BUILD_PASS_NOT_RUN: '+str(out)); return
         failed=False
-        for pe in (1,4):
+        for pe in pe_variants:
             result=report['variants'][str(pe)]
             try:
                 runner='gfrun'
                 result[runner]=dict(status='RUNNING')
-                execute(f'pe{pe}-gfrun',[model/'bin/gfrun','--pto059-execution-mask-dev','-s',f'softcore.multiThreadNum={pe}','-f',elf(pe,'on')],cwd=model)
+                execute(f'pe{pe}-gfrun',[model/'bin/gfrun','--pto059-execution-mask-dev','-s',f'softcore.multiThreadNum={pe}','-f',elf(pe,'on')],cwd=model,timeout=a.gfrun_timeout)
                 log=(out/f'pe{pe}-gfrun.log').read_text()
                 assert 'CTCLOSS_OUTPUT_WRITTEN' in log,'guest did not export outputs'
                 assert 'Reach the End of Benchmark! R2 = 0' in log,'guest did not finish successfully'
                 result['gfrun']=compare(out/f'pe{pe}/compare')
                 if not a.functional_only:
-                    extra=[] if pe==1 else ['--conf','fourpe']
-                    settings=['core.threadCount=1','core.stdPeCount=1','tlsu.fake_l2_enable=false'] if pe==1 else ['tlsu.fake_l2_enable=false']
+                    if pe==1:
+                        # Hosted worker code contains PEID even in a 1-PE ELF.
+                        # Explicit config prevents automatic SMT4 injection.
+                        config_dir=out/'configs'; config_dir.mkdir(exist_ok=True)
+                        single_config=config_dir/'single-pe.conf'
+                        single_config.write_text('core.threadCount=1\ncore.stdPeCount=1\n')
+                        extra=['--conf',single_config]
+                    else:
+                        extra=['--conf','fourpe']
+                    settings=['tlsu.fake_l2_enable=false']
                     runner='gfsim'
                     result[runner]=dict(status='RUNNING')
                     execute(f'pe{pe}-gfsim',[model/'bin/gfsim','--pto059-execution-mask-dev',*extra,'-s',*settings,'-f',elf(pe,'off')],cwd=model,timeout=900)

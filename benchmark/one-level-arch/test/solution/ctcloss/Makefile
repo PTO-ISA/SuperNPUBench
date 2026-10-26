@@ -46,6 +46,8 @@ include ../../common/Makefile.common
 CXX = $(COMPILER_DIR)/clang++ $(LINX_TARGET_FLAGS)
 CC_LINK = $(LINX_TARGET_FLAGS) -fuse-ld=lld -static
 EXTRA_OBJ_FILES := $(sort $(EXTRA_OBJ_FILES) $(OBJ_ROOT)/$(COMM_SRC_DIR)/group_worker_runtime.o)
+# The shared rule expands prerequisites before the assignment above.
+$(TARGET): $(EXTRA_OBJ_FILES)
 CHK_DIR ?= $(ROOT)/compare/$(notdir $(basename $(TARGET)))
 ifneq ($(res_check),on)
 DEFINES += -DCHK_DIR=\"$(CHK_DIR)\"

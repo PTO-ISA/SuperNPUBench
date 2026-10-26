@@ -144,3 +144,12 @@ https://github.com/LinxISA/SuperScalarModel/issues/1075
 https://github.com/LinxISA/SuperScalarModel/issues/982
 Upstream routing fix:
 https://github.com/LinxISA/SuperScalarModel/pull/1000
+
+
+Single-PE full-network reproduction (the default 120-second gfrun limit is only an initial bound):
+
+```bash
+python3 validate.py --pe 1 --functional-only --gfrun-timeout 21600
+```
+
+`--pe` selects one variant; omitting it validates both. This changes only the external wall-time limit, not the model deadlock watchdog, resources, input fixture or numerical tolerances. Single-PE gfsim uses an explicit run-local profile so the hosted worker's PEID instruction cannot auto-enable four PEs. Both RES_CHECK modes explicitly build the public worker runtime from a fresh object directory.

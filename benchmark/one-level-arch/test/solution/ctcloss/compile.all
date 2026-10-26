@@ -2,10 +2,15 @@
 set -euo pipefail
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx toolchain bin directory}"
 : "${API_INCLUDE:?Set API_INCLUDE to the pinned TileOP include directory}"
+if [[ -n "${CTC_PE_NUM:-}" && "$CTC_PE_NUM" != 1 && "$CTC_PE_NUM" != 4 ]]; then
+    echo "CTC_PE_NUM must be 1 or 4" >&2
+    exit 2
+fi
 cd "$(dirname "$0")"
 for entry in ctcloss_v2_single_pe:1 ctcloss_v2_four_pe:4; do
     testcase="${entry%%:*}"
     pe="${entry##*:}"
+    if [[ -n "${CTC_PE_NUM:-}" && "$pe" != "$CTC_PE_NUM" ]]; then continue; fi
     extra=()
     if [[ -n "${CTC_COMPARE_ROOT:-}" ]]; then
         extra+=("CHK_DIR=$CTC_COMPARE_ROOT/pe$pe/compare")
