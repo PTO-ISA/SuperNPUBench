@@ -63,10 +63,10 @@ int main() {
     constexpr int64_t g_a = G_A;
     constexpr int64_t g_r = G_R;
 
-    static dtype input_buf[G_A * G_R];
-    static dtype gamma_buf[G_R];
-    static dtype output_buf[G_A * G_R];
-    static float workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS];
+    alignas(512) static dtype input_buf[G_A * G_R];
+    alignas(512) static dtype gamma_buf[G_R];
+    alignas(512) static dtype output_buf[G_A * G_R];
+    alignas(512) static float workspace_buf[K_MAX_LEVELS * G_A * K_WS_COLS];
     dtype *input = input_buf;
     dtype *gamma = gamma_buf;
     dtype *output = output_buf;

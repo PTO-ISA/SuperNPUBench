@@ -88,10 +88,10 @@ int main() {
     const int64_t g_a = tiling_info.g_a;
     const int64_t g_r = tiling_info.g_r;
 
-    static dtype input_buf[G_A * G_R];
-    static dtype gamma_buf[G_R];
-    static dtype output_buf[G_A * G_R];
-    static float partial_workspace_buf[kWorkspaceElems];
+    alignas(512) static dtype input_buf[G_A * G_R];
+    alignas(512) static dtype gamma_buf[G_R];
+    alignas(512) static dtype output_buf[G_A * G_R];
+    alignas(512) static float partial_workspace_buf[kWorkspaceElems];
     dtype *input = input_buf;
     dtype *gamma = gamma_buf;
     dtype *output = output_buf;

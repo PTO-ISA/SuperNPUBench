@@ -55,15 +55,15 @@ int main() {
   constexpr int64_t kElems = N_BATCH * C_CH * HxW_SZ;
   constexpr int64_t kWs = gn_grad::workspace_elems(N_BATCH, C_CH, G_GRP);
 
-  static dtype dy_buf[kElems];
-  static dtype x_buf[kElems];
-  static float mean_buf[N_BATCH * G_GRP];
-  static float rstd_buf[N_BATCH * G_GRP];
-  static dtype gamma_buf[C_CH];
-  static dtype dx_buf[kElems];
-  static dtype dgamma_buf[C_CH];
-  static dtype dbeta_buf[C_CH];
-  static float workspace_buf[kWs];
+  alignas(512) static dtype dy_buf[kElems];
+  alignas(512) static dtype x_buf[kElems];
+  alignas(512) static float mean_buf[N_BATCH * G_GRP];
+  alignas(512) static float rstd_buf[N_BATCH * G_GRP];
+  alignas(512) static dtype gamma_buf[C_CH];
+  alignas(512) static dtype dx_buf[kElems];
+  alignas(512) static dtype dgamma_buf[C_CH];
+  alignas(512) static dtype dbeta_buf[C_CH];
+  alignas(512) static float workspace_buf[kWs];
 
   dtype *dy = dy_buf;
   dtype *x = x_buf;

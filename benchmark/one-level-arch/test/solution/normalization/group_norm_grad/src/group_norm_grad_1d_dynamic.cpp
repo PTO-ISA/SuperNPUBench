@@ -70,16 +70,16 @@ int main() {
     const int64_t C = tiling_info[1];
     const int64_t G = tiling_info[2];
 
-    static dtype dy_buf[N_BATCH * C_CH];
-    static dtype x_buf[N_BATCH * C_CH];
-    static float mean_buf[N_BATCH * G_GRP];
-    static float rstd_buf[N_BATCH * G_GRP];
-    static dtype gamma_buf[C_CH];
-    static dtype dx_buf[N_BATCH * C_CH];
-    static dtype dgamma_buf[C_CH];
-    static dtype dbeta_buf[C_CH];
+    alignas(512) static dtype dy_buf[N_BATCH * C_CH];
+    alignas(512) static dtype x_buf[N_BATCH * C_CH];
+    alignas(512) static float mean_buf[N_BATCH * G_GRP];
+    alignas(512) static float rstd_buf[N_BATCH * G_GRP];
+    alignas(512) static dtype gamma_buf[C_CH];
+    alignas(512) static dtype dx_buf[N_BATCH * C_CH];
+    alignas(512) static dtype dgamma_buf[C_CH];
+    alignas(512) static dtype dbeta_buf[C_CH];
     // Contiguous planes: c2[N,G], followed by c3[N,G].
-    static float params_workspace[gn_grad_1d::workspace_elems(N_BATCH, C_CH, G_GRP)];
+    alignas(512) static float params_workspace[gn_grad_1d::workspace_elems(N_BATCH, C_CH, G_GRP)];
 
     dtype *dy = dy_buf;
     dtype *x = x_buf;
