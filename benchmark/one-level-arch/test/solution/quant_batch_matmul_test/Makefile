@@ -32,6 +32,7 @@ tK ?= 64
 endif
 B ?= 1
 NBLOCKS ?= 32
+REUSEA ?= off
 
 DEFINES += -DglobM=$(M) -DglobN=$(N) -DglobK=$(K) \
 	-DtilM=$(tM) -DtilN=$(tN) -DtilK=$(tK) \
@@ -42,8 +43,13 @@ ifeq ($(GFSIM), on)
 DEFINES += -DGFSIM
 endif
 
+# REUSEA=on: use the reuseA kernel (m->k->n loop, A reused across N)
+ifeq ($(REUSEA), on)
+DEFINES += -DREUSEA
+endif
+
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
-TARGET = $(ELF_HEAD)_$(TESTCASE)_B$(B)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK).elf
+TARGET = $(ELF_HEAD)_$(TESTCASE)_B$(B)_M$(M)_N$(N)_K$(K)_tM$(tM)_tN$(tN)_tK$(tK)$(if $(filter on,$(REUSEA)),_reuseA).elf
 
 EXTRA_INCLUDE = -I$(ROOT)/../two-level-arch/include
 # Prioritize toolchain tileop-api headers (newer) over the bundled two-level-arch copies
