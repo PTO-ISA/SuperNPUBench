@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "output/kernel"
 COMPARE = ROOT / "compare"
 
@@ -118,6 +118,51 @@ def prep_transpose(case_dir: Path) -> np.ndarray:
     return x.T.reshape(-1)
 
 
+# ---- ArgMaxV2 (CANN ArgMaxV2 / aclnnArgMax 语义) ----------------------------
+# 代表例注册（每路径一例，金标准 np.argmax 零容差，输入定向注入边界模式：
+# 平局取首个 / +inf 后 NaN 仍胜 / ±0.0 相等 / 负位模式 NaN 视为最大 /
+# 全下界行）。更广形状/数据类型覆盖由 test/kernel/argmaxv2/ 下 runner
+# 自包含套件承担（run_fuzz.py 200 例随机形状、run_net.py / run_net_sc.py
+# 网络形状），不经本注册表。
+
+def _argmax_seed_rows(x: np.ndarray) -> np.ndarray:
+    """在行方向（dim=1）注入边界模式：平局/+inf 后 NaN/±0/负 NaN/全下界。"""
+    rows, cols = x.shape
+    x[0, :] = -0.5
+    x[0, 5] = 2.0
+    x[0, cols // 2 + 5] = 2.0            # 平局取首个
+    x[1, 40] = np.inf
+    x[1, 41] = float("nan")              # +inf 之后 NaN 仍胜（首个 NaN）
+    x[2, :] = 0.0
+    x[2, 3] = -0.0                       # ±0.0 相等，取首个
+    if x.dtype == np.float32:
+        neg_nan = np.array([0xFFC00000], dtype=np.uint32).view(np.float32)[0]
+    else:
+        neg_nan = np.array([0xFE00], dtype=np.uint16).view(np.float16)[0]
+    x[3, :] = 0.25
+    x[3, 7] = neg_nan                    # 负位模式 NaN 同样视为最大
+    x[4, :] = np.finfo(x.dtype).min      # 全下界 → 索引 0
+    return x
+
+
+def prep_argmaxv2(case_dir: Path) -> np.ndarray:
+    """切 R 路径代表例：[7,3333]——末段 tailB=5 + 哨兵 + 屏障合并全链。"""
+    rng = np.random.default_rng(11)
+    x = _argmax_seed_rows(
+        rng.uniform(-1.0, 1.0, (7, 3333)).astype(np.float32))
+    write(case_dir, "input.bin", x)
+    return np.argmax(x, axis=1).astype(np.int32)
+
+
+def prep_argmaxv2_dynamic(case_dir: Path) -> np.ndarray:
+    """动态版代表例：[133,1000]——运行期 tiling、ceil 分区 + 尾数。"""
+    rng = np.random.default_rng(12)
+    x = _argmax_seed_rows(
+        rng.uniform(-1.0, 1.0, (133, 1000)).astype(np.float32))
+    write(case_dir, "input.bin", x)
+    return np.argmax(x, axis=1).astype(np.int32)
+
+
 def prep_tadd(case_dir: Path) -> np.ndarray:
     a = np.arange(256, dtype=np.float32).reshape(16, 16) / 16.0
     b = np.flip(a, axis=1).copy()
@@ -163,6 +208,8 @@ def prep_fa(case_dir: Path) -> np.ndarray:
 
 
 CASES = [
+    Case("argmaxv2", "argmaxv2/elf/kernel_argmaxv2_argmaxv2_fp32_dim1_PE4.elf", prep_argmaxv2, output_dtype=np.int32, atol=0.0, rtol=0.0),
+    Case("argmaxv2_dynamic", "argmaxv2/elf/kernel_argmaxv2_argmaxv2_dynamic_fp32_dim1_PE4.elf", prep_argmaxv2_dynamic, output_dtype=np.int32, atol=0.0, rtol=0.0),
     Case("broadcast", "broadcast/elf/kernel_broadcast_broadcast_PE4.elf", prep_broadcast),
     Case("concat_gather", "concat/elf/kernel_concat_concat_gather_PE4.elf", prep_concat_gather),
     Case("concat_scatter", "concat/elf/kernel_concat_concat_scatter_PE4.elf", prep_concat_scatter),

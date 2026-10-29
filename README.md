@@ -60,6 +60,7 @@ Each backend implements operator categories:
 | **fa** | Flash Attention; 2D unroll, SFA (block-sparse), HIF4 quantization, softmax_pto, unaligned boundary |
 | **flashMLA** | Flash MLA (multi-head latent attention) |
 | **transpose** | 3D~6D tensor transpose; multiple dtypes |
+| **argmaxv2** | Max-value index along an axis (CANN `aclnnArgMax` semantics); first-max tie-breaking, NaN-as-max, fp16/fp32/bf16/int32 input, int32/int64 index output |
 | **reduction** | Row/column max & sum; single-tree, unaligned, cumsum, reduceprod |
 | **gelu** | GELU activation; exact (erf) and tanh approximation |
 | **broadcast** | 2D~5D broadcast; vectorized variants |
