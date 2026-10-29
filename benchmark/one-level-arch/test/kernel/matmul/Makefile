@@ -35,6 +35,18 @@ ifeq ($(filter $(DTYPE),float __bf16 __half),)
 $(error Unsupported DTYPE '$(DTYPE)'; supported: float, __bf16, __half)
 endif
 
+# Optional full-K A cache with paired M strips and buffered B prefetch.
+REUSE_A_FULL_CACHE ?= off
+REUSE_A_N_GROUP ?= 1
+REUSE_A_ALLOW_ACC_SPILL ?= 0
+REUSE_A_B_BUFFERS ?= 2
+ifeq ($(REUSE_A_FULL_CACHE),on)
+DEFINES += -DMATMUL_REUSE_A_FULL_CACHE=1
+DEFINES += -DMATMUL_REUSE_A_N_GROUP=$(REUSE_A_N_GROUP)
+DEFINES += -DMATMUL_REUSE_A_ALLOW_ACC_SPILL=$(REUSE_A_ALLOW_ACC_SPILL)
+DEFINES += -DMATMUL_REUSE_A_B_BUFFERS=$(REUSE_A_B_BUFFERS)
+endif
+
 DEFINES += -DDTYPE=$(DTYPE)
 DEFINES += -DBatch=$(B)
 DEFINES += -DglobM=$(M)
