@@ -363,15 +363,10 @@ there through `run_fuzz.py` and the network suites.
 ## Scope limits
 
 This directory only contains implementations with race-free output ownership.
-A kernel-level multi-PE barrier now exists (`utils/mt_barrier.hpp`: directed
-set-eviction publish + phase counting), and the R-split ArgMaxV2 path is the
-in-tree example of a cross-PE reduction built on it — intermediate results
-are staged in per-PE exclusive cacheline-aligned rows, and only PE0 owns the
-final output store, so no two PEs ever write the same destination. New
-operators with cross-PE dependencies must follow the same pattern
-(exclusive staging + single-owner output); group-wise/global reductions,
-TopK, and fused cross-PE kernels that cannot express this ownership still
-do not belong here.
+GroupNorm backward, column-wise/global reductions, TopK, and fused kernels
+with cross-PE dependencies still require a kernel-level barrier and/or an
+inter-PE reduction primitive. They must not be implemented by having four PEs
+write the same destination.
 
 ## Run with gfrun
 
