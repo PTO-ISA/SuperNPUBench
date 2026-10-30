@@ -284,8 +284,8 @@ Broader coverage lives in the self-contained suites under
 `test/kernel/argmaxv2/` (each runner generates its own inputs and
 compares against `np.argmax`): `run_fuzz.py` — 200 randomized shapes
 across dtypes, axes, and both static/dynamic/R-split routings;
-`run_net.py` — 8 network shapes; `run_net_sc.py` — 8 single-core scaled
-shapes with per-case cycle tracking; `run_gfsim_batch.py` — gfsim timing
+`run_net_sc.py` — 8 single-core scaled network shapes with per-case
+accuracy check and cycle tracking; `run_gfsim_batch.py` — gfsim timing
 batch. Historical full variant-matrix validation (19 dtype × axis ×
 rank combinations, all PASS, 2026-10-10) preceded the suite
 consolidation.

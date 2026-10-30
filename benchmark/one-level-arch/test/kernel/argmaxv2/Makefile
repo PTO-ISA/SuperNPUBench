@@ -1,12 +1,11 @@
 # ArgMaxV2 (CANN ArgMaxV2 / aclnnArgMax 语义) 四 PE 测试。
 #
-# 本目录为 ArgMaxV2 唯一测试目录，四套件：
-#   1. 变体矩阵（下表 19 例，compile.all 逐例构建）——静态/动态 × 数据
-#      类型 × 轴/维度，res_check_all.py 金标准比对。
-#   2. 网络用例 argmax_net_1..8（run_net.py）——真实网络形状精度+性能。
-#   3. 单核缩放用例 argmax_net_sc_1..8（run_net_sc.py）——单核等比缩放，
-#      与 V121 逐例对比的性能追踪套件。
-#   4. fuzz 用例 f000..（run_fuzz.py 生成源码后构建）——200 例随机形状
+# 本目录为 ArgMaxV2 唯一测试目录，三套件：
+#   1. 代表例（下方 2 例，compile.all 逐例构建）——切 R 路径与动态版，
+#      res_check_all.py 金标准比对（每路径一例，仓库惯例）。
+#   2. 单核缩放用例 argmax_net_sc_1..8（run_net_sc.py）——网络形状单核
+#      等比缩放，与 V121 逐例对比的性能追踪套件（自带精度比对）。
+#   3. fuzz 用例 f000..（run_fuzz.py 生成源码后构建）——200 例随机形状
 #      回归；run_gfsim_batch.py 为 gfsim 定时批量复验。
 # 通用 make 入口：make TESTCASE=<名> COMPILER_DIR=<...> [res_check=on |
 # SUFFIX=_t]，2-4 套件用例走文件尾通用映射分支。
@@ -29,8 +28,8 @@ else ifeq ($(TESTCASE),argmaxv2_dynamic)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/argmaxv2_dynamic.cpp
 TARGET = $(ELF_HEAD)_argmaxv2_dynamic_fp32_dim1_PE4.elf
 else
-# 通用映射：网络用例（argmax_net_*）、单核缩放用例（argmax_net_sc_*）与
-# fuzz 生成用例（f*）——源文件与 TESTCASE 同名，ELF 名亦随 TESTCASE。
+# 通用映射：单核缩放用例（argmax_net_sc_*）与 fuzz 生成用例（f*）——
+# 源文件与 TESTCASE 同名，ELF 名亦随 TESTCASE。
 # SUFFIX 分离 timing ELF（res_check 关闭时传 SUFFIX=_t，产物带 _t 后缀）。
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
 SUFFIX ?=
