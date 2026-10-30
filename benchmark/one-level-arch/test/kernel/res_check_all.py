@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 OUTPUT = ROOT / "output/kernel"
 COMPARE = ROOT / "compare"
 
@@ -122,7 +122,7 @@ def prep_transpose(case_dir: Path) -> np.ndarray:
 # 代表例注册（每路径一例，金标准 np.argmax 零容差，输入定向注入边界模式：
 # 平局取首个 / +inf 后 NaN 仍胜 / ±0.0 相等 / 负位模式 NaN 视为最大 /
 # 全下界行）。更广形状/数据类型覆盖由 test/kernel/argmaxv2/ 下 runner
-# 自包含套件承担（run_fuzz.py 200 例随机形状、run_net.py / run_net_sc.py
+# 自包含套件承担（run_fuzz.py 200 例随机形状、run_net_sc.py 单核缩放
 # 网络形状），不经本注册表。
 
 def _argmax_seed_rows(x: np.ndarray) -> np.ndarray:

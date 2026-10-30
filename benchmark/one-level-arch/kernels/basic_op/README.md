@@ -329,9 +329,6 @@ Routing compiles to one of three last-axis paths:
    kernel (same 16-bit sortable-key path as fp16) and compile-verified,
    but is not yet in the res_check matrix.
 
-> Note: `test/kernel/res_check_all.py` computed `ROOT` one directory too
-> high for the current tree, which made every case SKIP; fixed to
-> `parents[2]` in this change.
 
 ### Numerical result: 2026-10-14 — ArgMaxV2 dynamic (runtime tiling)
 
