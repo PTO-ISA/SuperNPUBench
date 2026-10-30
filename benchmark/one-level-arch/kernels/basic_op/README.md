@@ -272,8 +272,10 @@ treated as maximal with the first NaN index, ±0.0 equal). Comparison is
 exact (`atol=0, rtol=0`). Inputs embed tie / ±inf / positive and negative
 NaN / ±0.0 / all-lower-bound rows.
 
-`res_check_all.py` registers one representative golden case per code
-path (repo norm — see the fa / matmul sections above):
+The host-golden check runs through the per-operator script
+`test/kernel/argmaxv2/run_res_check.py` (res_check_guide.md layer-3
+pattern, as matmul `golden_cmp.py` / mxquant `run_mxquant_check.py`),
+one representative case per code path:
 
 | Testcase | Path | Result | Max abs error |
 |---|---|---|---|

@@ -1,8 +1,9 @@
 # ArgMaxV2 (CANN ArgMaxV2 / aclnnArgMax 语义) 四 PE 测试。
 #
-# 本目录为 ArgMaxV2 唯一测试目录，三套件：
+# 本目录为 ArgMaxV2 唯一测试目录，四套件：
 #   1. 代表例（下方 2 例，compile.all 逐例构建）——切 R 路径与动态版，
-#      res_check_all.py 金标准比对（每路径一例，仓库惯例）。
+#      run_res_check.py host-golden 零容差比对（per-operator 脚本范式，
+#      对齐 matmul golden_cmp.py / mxquant run_mxquant_check.py）。
 #   2. 单核缩放用例 argmax_net_sc_1..8（run_net_sc.py）——网络形状单核
 #      等比缩放，与 V121 逐例对比的性能追踪套件（自带精度比对）。
 #   3. fuzz 用例 f000..（run_fuzz.py 生成源码后构建）——200 例随机形状
