@@ -18,6 +18,7 @@ divisible by the PE count. This is checked at compile time.
 
 | Operator | Header |
 |---|---|
+| ArgMaxV2 | `argmaxv2/argmaxv2.hpp` |
 | Broadcast | `broadcast/broadcast.hpp` |
 | Concat gather/scatter | `concat/concat_gather.hpp`, `concat/concat_scatter.hpp` |
 | 1x1 Conv2D | `conv2d/v300_conv2d.hpp` |
@@ -40,6 +41,8 @@ does not collide with the wrapper that shares its name:
 
 | Base implementation | Four-PE wrapper |
 |---|---|
+| `basic_op/argmaxv2/detail/argmaxv2.hpp` | `basic_op/argmaxv2/argmaxv2.hpp` |
+| `basic_op/argmaxv2/detail/argmaxv2_dynamic.hpp` | `basic_op/argmaxv2/argmaxv2_dynamic.hpp` |
 | `basic_op/gather/detail/gather.hpp` | `basic_op/gather/gather.hpp` |
 | `basic_op/element_wise/detail/gelu.hpp` | `basic_op/element_wise/gelu.hpp` |
 
@@ -260,6 +263,102 @@ checking, rather than binary I/O or four-PE synchronization failures:
 - ReduceMax and ReduceProd expose one valid value per row through a padded
   reduction carrier, but their current TSTORE path writes with the physical
   carrier stride instead of a compact `[Rows]` layout.
+
+### Numerical result: 2026-10 — ArgMaxV2
+
+ArgMaxV2 (CANN `ArgMaxV2` / `aclnnArgMax` semantics) is validated against
+`np.argmax` goldens (identical semantics: first max index on ties, NaN
+treated as maximal with the first NaN index, ±0.0 equal). Comparison is
+exact (`atol=0, rtol=0`). Inputs embed tie / ±inf / positive and negative
+NaN / ±0.0 / all-lower-bound rows.
+
+The host-golden check runs through the per-operator script
+`test/kernel/argmaxv2/run_res_check.py` (res_check_guide.md layer-3
+pattern, as matmul `golden_cmp.py` / mxquant `run_mxquant_check.py`),
+one representative case per code path:
+
+| Testcase | Path | Result | Max abs error |
+|---|---|---|---|
+| `argmaxv2` fp32 dim=1 [7,3333] | R-split (tail segment tailB=5, sentinels, barrier merge) | PASS | 0 |
+| `argmaxv2_dynamic` fp32 dim=1 [133,1000] | dynamic (runtime tiling, ceil partition + tails) | PASS | 0 |
+
+Broader coverage lives in the self-contained suites under
+`test/kernel/argmaxv2/` (each runner generates its own inputs and
+compares against `np.argmax`): `run_fuzz.py` — 200 randomized shapes
+across dtypes, axes, and both static/dynamic/R-split routings;
+`run_net_sc.py` — 8 single-core scaled network shapes with per-case
+accuracy check and cycle tracking; `run_gfsim_batch.py` — gfsim timing
+batch. Historical full variant-matrix validation (19 dtype × axis ×
+rank combinations, all PASS, 2026-10-10) preceded the suite
+consolidation.
+
+Toolchain: `linx_blockisa_llvm_musl` (clang 15.0.4, linx64v5), gfrun
+four-PE `softcore.multiThreadNum=4`. The kernel exposes a single variadic
+entry `argmaxv2<DType, IdType, Axis, Dims...>` (any rank, negative axis;
+compile-time folding reuses the 2D row/column detail kernels). ArgMaxV2
+returns the index of the
+first maximum along the reduction axis: ties resolve to the smallest
+index, fp16/fp32/bf16 NaN is treated as maximal (first NaN index), and
+±0.0 compares equal. Input dtypes: fp16/fp32/bf16/int32 (sortable-key or
+direct reduction); int64 input is NOT supported — the tile-op layer has
+no 64-bit reduce/compare instructions (the TROWARGMAX/TCOLARGMAX
+contracts and the model reduce/compare dtype whitelist cap at 32-bit),
+and the earlier u64-split workaround was removed by decision. Output
+index dtype is decoupled: int32 direct store or int64 via a TCVT exit.
+Last-axis reduction accepts arbitrary row/col remainders.
+
+Routing compiles to one of three last-axis paths:
+
+1. **Static SPMD** — compile-time-specialized partition where exactly
+   expressible: outer rows divisible by `PeCount`, or column windows
+   satisfying `Cols % (PeCount * TileN) == 0`.
+2. **Dynamic** (`argmaxv2_dynamic`) — every other shape (including
+   1-D inputs and misaligned column windows) is auto-delegated at
+   compile time with a tiling folded from the template shape: runtime
+   tiling, dynamic Valid strips, ceil-partition four-PE execution with
+   identical results.
+3. **R-split** (`argmaxv2_rsplit`) — large-R small-A shapes
+   (`ceil(A/PeCount)*4 < tM`, `R >= PeCount*tM`, and `A < PeCount` or
+   `R >= PeCount*tM*tN/2`), where row partitioning cannot fill a row
+   tile: each PE reduces its segment as `[S/16,16]` reshaped views
+   (~full-load blocks instead of 1/tM row utilization), stage winners
+   land in per-PE exclusive rows, an eviction barrier
+   (`utils/mt_barrier.hpp`) publishes them, and all PEs run a
+   redundant strict-GT merge (watchdog-friendly). Two inner forms are
+   selected at compile time by block-count bounds: reshape+merge vs.
+   row-parallel direct reduce; 4-byte keys with segments <= 1024 use
+   a [64,8] tile (single-row-block main view). bf16 is supported by the
+   kernel (same 16-bit sortable-key path as fp16) and compile-verified,
+   but is not yet in the res_check matrix.
+
+
+### Numerical result: 2026-10-14 — ArgMaxV2 dynamic (runtime tiling)
+
+The runtime-tiling counterpart `argmaxv2_dynamic` was added following the
+`solution/normalization` static/dynamic split (rms_norm / group_norm_grad):
+shape folding moves to the host, which passes
+`argmaxv2_dyn::ArgMaxV2TilingData{g_outer, g_axis, g_inner, tile_m, tile_n,
+axis_last}`; the kernel uses dynamic Valid Tile carriers (`-1` templates +
+runtime constructor masks), fail-closed runtime validation, and ceil PE
+partitioning, which relaxes the static entry's divisibility constraints
+(last-axis outer rows and column windows no longer need to divide evenly;
+the PE0-solo fallback and the `kInner % (PeCount*TileN) == 0` requirement
+are gone — the static entry now auto-delegates exactly these shapes to
+`argmaxv2_dynamic`, so both constraints disappeared from the static API
+too). Neither entry takes tile parameters — physical tile shapes are
+fixed from the dtype traits (normalization convention); the tiling's
+`tile_m`/`tile_n` only shrink the runtime valid strips. The reduction
+instruction chain is identical to the static
+version (sortable key → TROWMAX/TROWARGMAX or TCOLMAX/TCOLARGMAX → strict-GT
+TSEL merge), so results are bit-exact. At introduction, nine dynamic cases mirroring the static matrix
+(deliberately non-divisible shapes: ceil partitions, partial tail
+blocks, runtime strips smaller than the physical tile) all passed with
+zero error, and the static matrix re-run confirmed no regression
+(9 PASS / 0 FAIL, bit-identical). Those per-variant cases were later
+consolidated (2026-10-27) into the representative-case registration
+plus the self-contained suites in `test/kernel/argmaxv2/` — see the
+2026-10 section above; the dynamic path keeps continuous coverage
+there through `run_fuzz.py` and the network suites.
 
 ## Scope limits
 

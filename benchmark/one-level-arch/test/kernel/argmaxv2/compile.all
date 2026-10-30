@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+make TESTCASE=argmaxv2 COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=argmaxv2_dynamic COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=argmax_net_sc_1 COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=argmax_net_sc_2 COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=argmax_net_sc_3 COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=argmax_net_sc_4 COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=argmax_net_sc_5 COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=argmax_net_sc_6 COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=argmax_net_sc_7 COMPILER_DIR="$COMPILER_DIR" res_check=on diss
+make TESTCASE=argmax_net_sc_8 COMPILER_DIR="$COMPILER_DIR" res_check=on diss

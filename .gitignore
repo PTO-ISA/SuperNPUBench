@@ -33,3 +33,6 @@ release-plan-site/
 AGENTS.md
 .agents/
 .zcode/
+
+# Validation artifacts
+.validation/

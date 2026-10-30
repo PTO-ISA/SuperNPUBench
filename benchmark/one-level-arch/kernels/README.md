@@ -13,6 +13,7 @@ Header-only PTO operator implementations, organized by execution model:
 
 | Operator | Directory |
 |---|---|
+| ArgMaxV2 | `basic_op/argmaxv2/` |
 | Broadcast | `basic_op/broadcast/` |
 | Concat (gather / scatter) | `basic_op/concat/` |
 | 1x1 Conv2D | `basic_op/conv2d/` |
