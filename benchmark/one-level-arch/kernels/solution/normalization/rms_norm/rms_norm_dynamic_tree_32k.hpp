@@ -214,10 +214,21 @@ inline void rms_norm_tile_16k(dtype *x, const dtype *gamma, dtype *out,
                               int64_t gR, int64_t peA, float inv_r) {
     // [32,128] FP32 is 16 KiB and holds 4096 elements. R == 8192 is two
     // halves; their squares are added before one reduction. Gamma is the
-    // same on every row, so both halves are loaded once.
+    // same on every row, so both halves are loaded once (no double-buffer).
+    //
+    // Software-pipeline A-rows with two IO ping-pong buffers (even/odd):
+    // load row 0 outside the loop, then each iteration consumes buffer[i&1]
+    // while prefetching row i+1 into buffer[(i+1)&1] under reduce/rsqrt.
+    // Store tiles follow the same parity so consecutive TSTOREs do not WAW.
+    // Float compute stays single-buffered. Select buffers with if/else —
+    // ternary tile picks fail ISel ("Cannot select").
     constexpr int fa = 32;
     constexpr int fr = 128;
     constexpr int64_t kSpan = kTileM * fr;
+    using tile_sum_wide =
+        Tile<tile_s::Loc, typename tile_s::DType, tile_s::Rows,
+             tile_m_v::Cols, tile_s::BFractal, 1, 1>;
+
     gm_t gg0(const_cast<dtype *>(gamma), fa, fr);
     gm_t gg1(const_cast<dtype *>(gamma) + kSpan, fa, fr);
     tile_f gf0(fa, fr), gf1(fa, fr);
@@ -228,49 +239,135 @@ inline void rms_norm_tile_16k(dtype *x, const dtype *gamma, dtype *out,
         TLOAD(gh1, gg1);
         TCVT(gf1, gh1);
     }
+
+    if (peA <= 0) {
+        return;
+    }
+
+    // Two IO spaces; parity of ia picks which to read / which to fill next.
+    tile_h hin0_e(fa, fr), hin1_e(fa, fr), hin0_o(fa, fr), hin1_o(fa, fr);
+    tile_h hout0_e(fa, fr), hout1_e(fa, fr), hout0_o(fa, fr), hout1_o(fa, fr);
+    tile_f x0(fa, fr), x1(fa, fr), sq(fa, fr), sq_tmp(fa, fr), dst(fa, fr);
+
+    // Prologue: stage row 0 into the even buffer.
+    {
+        gm_t gi0(x, fa, fr);
+        gm_t gi1(x + kSpan, fa, fr);
+        TLOAD(hin0_e, gi0);
+        TLOAD(hin1_e, gi1);
+    }
+
     for (int64_t ia = 0; ia < peA; ++ia) {
         const int64_t offset = ia * gR;
-        gm_t gi0(x + offset, fa, fr);
-        gm_t gi1(x + offset + kSpan, fa, fr);
         gm_t go0(out + offset, fa, fr);
         gm_t go1(out + offset + kSpan, fa, fr);
-        tile_h h0(fa, fr), h1(fa, fr);
-        tile_f x0(fa, fr), x1(fa, fr), sq0(fa, fr), sq1(fa, fr);
-        TLOAD(h0, gi0);
-        TCVT(x0, h0);
-        TMUL(sq0, x0, x0);
-        TLOAD(h1, gi1);
-        TCVT(x1, h1);
-        TMUL(sq1, x1, x1);
-        TADD(sq0, sq0, sq1);
-
-        tile_m_v row_sums(fa);
-        TROWSUM(row_sums, sq0);
-        // TCOLSUM still needs the wide carrier. The scalar lives in its first
-        // 128 B cell; the prefix view exposes that cell as [32,1].
-        using tile_sum_wide =
-            Tile<tile_s::Loc, typename tile_s::DType, tile_s::Rows,
-                 tile_m_v::Cols, tile_s::BFractal, 1, 1>;
-        tile_sum_wide sum_wide;
-        TCOLSUM(sum_wide, row_sums);
-        auto tile_sum = TREDUCEPREFIXVIEW<tile_s>(sum_wide);
-        tile_s mean, denom, rms;
-        TMULS(mean, tile_sum, inv_r);
-        TADDS(denom, mean, kEpsilon);
-        rsqrt_regbase(rms, denom);
-
-        tile_m_v rms_rows(fa);
-        TCOLEXPAND(rms_rows, rms);
-        tile_h h_out0(fa, fr), h_out1(fa, fr);
-        tile_f dst(fa, fr);
-        TROWEXPANDMUL(dst, x0, rms_rows);
-        TMUL(dst, dst, gf0);
-        TCVT(h_out0, dst);
-        TSTORE(go0, h_out0);
-        TROWEXPANDMUL(dst, x1, rms_rows);
-        TMUL(dst, dst, gf1);
-        TCVT(h_out1, dst);
-        TSTORE(go1, h_out1);
+        // Entire even/odd bodies stay in separate branches so the backend
+        // cannot if-convert tile operands into an unselectable `select`.
+        if ((ia & 1) == 0) {
+            TCVT(x0, hin0_e);
+            TMUL(sq, x0, x0);
+            TCVT(x1, hin1_e);
+            TMUL(sq_tmp, x1, x1);
+            TADD(sq, sq, sq_tmp);
+            if (ia + 1 < peA) {
+                const int64_t n_off = (ia + 1) * gR;
+                gm_t ngi0(x + n_off, fa, fr);
+                gm_t ngi1(x + n_off + kSpan, fa, fr);
+                TLOAD(hin0_o, ngi0);
+                tile_m_v row_sums(fa);
+                TROWSUM(row_sums, sq);
+                TLOAD(hin1_o, ngi1);
+                tile_sum_wide sum_wide;
+                TCOLSUM(sum_wide, row_sums);
+                auto tile_sum = TREDUCEPREFIXVIEW<tile_s>(sum_wide);
+                tile_s mean, denom, rms;
+                TMULS(mean, tile_sum, inv_r);
+                TADDS(denom, mean, kEpsilon);
+                rsqrt_regbase(rms, denom);
+                tile_m_v rms_rows(fa);
+                TCOLEXPAND(rms_rows, rms);
+                TROWEXPANDMUL(dst, x0, rms_rows);
+                TMUL(dst, dst, gf0);
+                TCVT(hout0_e, dst);
+                TSTORE(go0, hout0_e);
+                TROWEXPANDMUL(dst, x1, rms_rows);
+                TMUL(dst, dst, gf1);
+                TCVT(hout1_e, dst);
+                TSTORE(go1, hout1_e);
+            } else {
+                tile_m_v row_sums(fa);
+                TROWSUM(row_sums, sq);
+                tile_sum_wide sum_wide;
+                TCOLSUM(sum_wide, row_sums);
+                auto tile_sum = TREDUCEPREFIXVIEW<tile_s>(sum_wide);
+                tile_s mean, denom, rms;
+                TMULS(mean, tile_sum, inv_r);
+                TADDS(denom, mean, kEpsilon);
+                rsqrt_regbase(rms, denom);
+                tile_m_v rms_rows(fa);
+                TCOLEXPAND(rms_rows, rms);
+                TROWEXPANDMUL(dst, x0, rms_rows);
+                TMUL(dst, dst, gf0);
+                TCVT(hout0_e, dst);
+                TSTORE(go0, hout0_e);
+                TROWEXPANDMUL(dst, x1, rms_rows);
+                TMUL(dst, dst, gf1);
+                TCVT(hout1_e, dst);
+                TSTORE(go1, hout1_e);
+            }
+        } else {
+            TCVT(x0, hin0_o);
+            TMUL(sq, x0, x0);
+            TCVT(x1, hin1_o);
+            TMUL(sq_tmp, x1, x1);
+            TADD(sq, sq, sq_tmp);
+            if (ia + 1 < peA) {
+                const int64_t n_off = (ia + 1) * gR;
+                gm_t ngi0(x + n_off, fa, fr);
+                gm_t ngi1(x + n_off + kSpan, fa, fr);
+                TLOAD(hin0_e, ngi0);
+                tile_m_v row_sums(fa);
+                TROWSUM(row_sums, sq);
+                TLOAD(hin1_e, ngi1);
+                tile_sum_wide sum_wide;
+                TCOLSUM(sum_wide, row_sums);
+                auto tile_sum = TREDUCEPREFIXVIEW<tile_s>(sum_wide);
+                tile_s mean, denom, rms;
+                TMULS(mean, tile_sum, inv_r);
+                TADDS(denom, mean, kEpsilon);
+                rsqrt_regbase(rms, denom);
+                tile_m_v rms_rows(fa);
+                TCOLEXPAND(rms_rows, rms);
+                TROWEXPANDMUL(dst, x0, rms_rows);
+                TMUL(dst, dst, gf0);
+                TCVT(hout0_o, dst);
+                TSTORE(go0, hout0_o);
+                TROWEXPANDMUL(dst, x1, rms_rows);
+                TMUL(dst, dst, gf1);
+                TCVT(hout1_o, dst);
+                TSTORE(go1, hout1_o);
+            } else {
+                tile_m_v row_sums(fa);
+                TROWSUM(row_sums, sq);
+                tile_sum_wide sum_wide;
+                TCOLSUM(sum_wide, row_sums);
+                auto tile_sum = TREDUCEPREFIXVIEW<tile_s>(sum_wide);
+                tile_s mean, denom, rms;
+                TMULS(mean, tile_sum, inv_r);
+                TADDS(denom, mean, kEpsilon);
+                rsqrt_regbase(rms, denom);
+                tile_m_v rms_rows(fa);
+                TCOLEXPAND(rms_rows, rms);
+                TROWEXPANDMUL(dst, x0, rms_rows);
+                TMUL(dst, dst, gf0);
+                TCVT(hout0_o, dst);
+                TSTORE(go0, hout0_o);
+                TROWEXPANDMUL(dst, x1, rms_rows);
+                TMUL(dst, dst, gf1);
+                TCVT(hout1_o, dst);
+                TSTORE(go1, hout1_o);
+            }
+        }
     }
 }
 
