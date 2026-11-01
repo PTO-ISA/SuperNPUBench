@@ -1,0 +1,99 @@
+# TileOP hash + element-if lookup
+
+实现：`/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/kernels/basic_op/hashtable_lookup/hashtable_lookup.hpp`
+
+接口：
+
+```cpp
+supernpu::hash_lookup::lookup<Capacity>(table, queries, output, count);
+supernpu::multi_thread::hashtable_lookup<Capacity, 4>(table, queries, output, count);
+```
+
+第一种由调用者分配任务；第二种按 PE ID 划分连续 query 区间，要求启动对应数量的 PE。接口包含非 32 倍数的 count 分支，但尾加载存在已知访问域问题，尚未数值验证通过；当前验证范围要求每个 PE 的查询数是 32 的倍数。count=0 不访存。输入与输出不可重叠。
+
+- 表项为 16 字节：int64 key、int32 value、int32 padding；空槽 key=-1，miss 输出 -1。无删除标记，key=-1 不可插入。
+- MurmurHash3 x86_32、seed=0，低 32 位先混合，再高 32 位，最后按 8 字节长度 finalize；与用户附件和 two-level 算法一致。
+- 哈希使用 TMULS/TADDS/TXOR/TSHLS/TSHRS/TOR 等 TileOP。无符号取模采用 two-level 的两次有符号 TREM 恒等式，不要求 capacity 为 2 的幂。
+- 查找使用 ElementTile / TPARTELEMENT / `#pragma pto element for`，内部 if 判断 live、空槽、完整 64 位 key 命中及回绕。结果与状态先在局部标量中合并，每轮每个 view 只写一次，避免当前编译器拒绝同一 lane 多次条件写入。
+- 元素区域外按 active 状态动态循环：每轮通过 `TCMPS<NE>(active, 0)` 直接生成 GPR 掩码，并与 `(uint64_t{1} << valid) - 1` 相与，忽略尾块的补齐 lane；结果非零才继续探测。退出判断不再写入/读回 GM。Capacity 仅作为满表 miss 的安全上限，不是固定执行次数。
+- `0 < Capacity <= INT32_MAX / 16`，确保槽位字节偏移和模运算中间值不溢出。S32 输出使用 M322ND TSTORE，lb1 设置为运行时 valid 行数，直接从 result Tile 写最终 GM。当前 ElementTile 固定完整有效形状，且与动态 CubeTile 的寄存器载体不兼容，因此在算子内复用 TSTORE_CUBE 的动态行内联汇编编码，不使用 scratch、标量回读或 MSCATTER。32-query/4-PE 测例编译与存储执行通过，trace 确认每 PE lb1=8；最终数值校验仍 FAIL。
+
+参考接口：
+
+- `/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/src/Linx-TileOP-API/docs/tileop-usage/element-if.md`
+- `/Users/blacktraker/Programming/gitproj/DV4/pto-spec/docs/status/decisions/ADR-TILE-0008-tile-elementwise-and-irregular-operations.md`
+- `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/two-level-arch/kernels/control/hashtable_lookup_simd.hpp`
+
+## 当前验证状态（2026-11-02 整理）
+
+2026-10-31 使用含本地修复的 gfsim，128-key（100槽、70%装载）及6144-key（2550000槽、70%装载）用例已通过逐项数值校验。此结论依赖本地工具链/模型补丁，不代表干净上游模型已通过。6144-key完整验证程序为424487 cycles，含同步和校验，不是纯kernel性能；时序准确性仍待校准。
+
+U64 ElementTile API需要0.59相关支持；模型相关问题见 SuperScalarModel #1096、#1098、#1100、#1105、#1107、#1118、#1149、#1153–#1157、#1160–#1163。尾批次暂不作为支持承诺。下方记录保留早期失败现场，不能替代上述最终状态。
+
+测试目录中的 run_checks.py 是早期 gfrun/res_check 检查入口，包含尾批次，不是上述6144-key验证的复现脚本。compile.all默认无libc、res_check=off，只能作为编译/执行穿刺，不能据其退出码声称数值通过。
+
+## 历史验证（2026-10-26）
+
+已用指定主工具链成功编译、链接三种配置：37 槽约 80% 装载、37 槽满表、1 槽满表。测试各包含 139 个 query，4 PE，不整除的 PE 分区及 tile 尾块；用独立逐表扫描 golden 和首尾 guard 检查输出。输入包含负数、相同低 32 位但高位不同的 key、命中和 miss。
+
+**运行校验尚未通过**：默认配置的 gfrun 在首次 `TLOAD INT64 / ND2M32.normal` 处触发 `CUBE TLOAD requires a fitting CELL destination`，尚未执行输出比对。已进一步定位：当前 ASL 模型的 `CubeCellElementBits(INT64)` 返回 0，`CubeCellGeometry` 随即拒绝；其 64 位 CUBE 路径仅支持 N8/U64，尚未接入 ISA #371 的 M32 double-CELL。ELF 分配 256B，与 32×1×8B 一致。当前 ISA 可执行合同明确允许 M32 S64 的 TLOAD/TSTORE，因此这次断言的直接原因是指定 ASL 模型版本不支持该布局/类型组合，而非目标容量不足。没有修改外部依赖，也没有宣称功能 PASS。
+
+定位源码：
+- `/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-asl/isa/ISACommon/CubeCell.h`（CubeCellElementBits / CubeCellGeometry）
+- `/Users/blacktraker/Programming/gitproj/DV4/pto-spec/asl/tile/model/shape/cube-double-cell.asl`（M32 b64 两个 128B CELL）
+- `/Users/blacktraker/Programming/gitproj/DV4/pto-spec/asl/block/model/dispatch/tlsu-layout-conversion.asl`（BundleCubeTransportDataTypeSupported）
+
+注意部分 ISA TLOAD 文字摘要仍保留旧的 non-64-bit 描述，与新增可执行合同不一致；上述结论依据 #371 已接受修订及 ASL 代码。
+
+复现：
+
+```bash
+python3 /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/test/kernel/hashtable_lookup/run_checks.py
+```
+
+脚本使用主工具链，运行指定 ASL worktree 的 gfrun；遇到非零退出、超时或缺少明确 PASS 即失败，输出实际绝对 artifact 路径。
+
+本轮编译日志、ELF、完整反汇编、gfrun 日志、关键 trace 和精确版本保存在：
+`/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/`
+
+## main gfrun 对照（用户指定，2026-10-26）
+
+模型 checkout：`/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-main`，commit `c668a6388907f503e80954fdfd4d013395d8775d`。
+
+- 同一 ELF、4 PE：加载器拒绝旧 hosted PE0/worker ABI，要求 common-entry SPMD runtime，未执行算子。
+- 主工具链重编译 `CC_OPTS=-DHASH_PE_COUNT=1`，1 PE 处理全部 query 并跳过四 PE 完成屏障：启动阶段在 PC `0x13250` 的 `acrc 1` 报 `illegal architecture manager request`，仍未进入 main 的算子验证。
+
+因此 main 源码有 M32/INT64 支持不等于这份 hosted ELF 已能运行；目前还存在运行时 ABI/系统调用契约的版本不兼容。没有修改外部依赖或绕过模型校验。
+
+日志：
+- `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/gfrun_main.log`
+- `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/gfrun_main_single.log`
+- `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/kernel_main_single.diss`
+
+## 探测循环修订
+
+原版本固定执行 Capacity 轮已修正为按活跃 lane 动态退出。尾块无效 lane 不参与退出判断，避免它们初始化的 active=1 导致循环跑满。单 lane 命中或遇空槽即停，整批全部完成即退出；满表 miss 最多遍历一圈。此次修改仍受上述 runtime/model 阻塞影响，编译成功不代表运行数值验证通过。
+
+## 无 libc 穿刺（2026-10-26）
+
+按用户要求，默认 compile.all 已改为 res_check=off。该路径用 -ffreestanding 编译、-nostdlib -nostartfiles 链接仓库最小入口，不生成 printf/golden 校验代码；保留输入构造及必要的 PE 同步。run_checks.py 显式指定 res_check=on，避免误将无校验路径当作数值 PASS。
+
+构建命令：
+```bash
+/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-level-arch/test/kernel/hashtable_lookup/compile.all OBJ_ROOT=/tmp/hash_element_smoke
+```
+
+在 main worktree 用 gfrun、softcore.multiThreadNum=4 跑穿刺：已越过 hosted ABI 检查，进入 main；在 PC 0x11330 的旧 ssrget 0x0802 处失败，原因是它位于 STD 块，新模型要求 SYS 块且使用 THREAD_ID 0x0026。因此尚未执行 hash，也没有声称穿刺完成。未修改外部编译器或模型。
+
+证据：
+- `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/kernel_smoke.elf`
+- `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/kernel_smoke.diss`
+- `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/gfrun_main_smoke.log`
+
+## PE ID 修订后穿刺（2026-10-26）
+
+经用户授权，在指定主工具链 checkout 移植 0.59 / fc39fb07b 的 THREAD_ID=0x0026 修改，并补充 SSR_GET 的 SYS 属性及独立块隔离；未切换整个 0.59 分支，未合入无关 SYNC.CORE 特性，修改保留为本地 diff。增量构建并安装 clang、llc、llvm-objdump；PE ID 回归覆盖直接返回和读取后普通算术，通过。
+
+重新构建无 libc、res_check=off 的 4 PE ELF，main gfrun 已越过原 PE ID 失败以及 INT64 TLOAD，后续在 PC 0x11994 的普通 S64 TSTORE 触发 `ordinary TSTORE requires PadValue=Zero`。仍未跑完整个算子，不构成功能 PASS；没有修改模型或继续修改这个新问题的编译器路径。
+
+本轮证据目录：`/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/`，包含 compiler_peid.patch、toolchain_peid_build.log、toolchain_peid_install.log、peid_fixed_versions.txt、kernel_peid_fixed.elf、kernel_peid_fixed.diss 和 gfrun_main_peid_fixed.log。
