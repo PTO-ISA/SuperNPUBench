@@ -1,0 +1,29 @@
+{
+  "results": {
+    "exit": 0,
+    "per_pe": {
+      "0": "0x5555",
+      "2": "0x5555",
+      "1": "0x5555",
+      "3": "0x5555"
+    },
+    "cycles": 424487,
+    "finisher": [
+      "linx_test_finisher write addr=0x10009000 val=0x5555 pass"
+    ],
+    "wall_seconds": 277.30854773521423,
+    "pass": true
+  },
+  "versions": {
+    "SuperScalarModel": {
+      "head": "f63d1178ddcc703615b43b42cebe3a4b95ee3f64",
+      "local_changes": " M TimingSim/common/ModelCommon/BlockCommand.cpp\n M TimingSim/common/ModelCommon/BlockCommand.h\n M TimingSim/common/ModelCommon/TileLsuArg.cpp\n M TimingSim/common/ModelCommon/bus/TlsuL2Bus.h\n M TimingSim/core/Core.cpp\n M TimingSim/frontend/bctrl/BIssue.cpp\n M TimingSim/frontend/tlsu/TlsuFrontend.cpp\n M TimingSim/group/tlsu/L2/l2_agu.cpp\n M TimingSim/group/tlsu/L2/l2_agu.h\n M TimingSim/group/tlsu/L2/l2_bypq.cpp\n M TimingSim/group/tlsu/L2/l2_bypq.h\n M TimingSim/group/tlsu/L2/l2_inflight_q.cpp\n M TimingSim/group/tlsu/L2/l2_inst_buffer.cpp\n M TimingSim/group/tlsu/L2/l2_mrob.cpp\n M TimingSim/group/tlsu/L2/l2_rwdb.cpp\n M TimingSim/group/tlsu/L2/l2_tag_array.cpp\n M TimingSim/group/tlsu/L2/l2_top.cpp\n M TimingSim/group/tlsu/L2/l2_top.h\n M TimingSim/group/tlsu/L2/l2_types.h\n M TimingSim/pe/vec/VecCompute.h\n M TimingSim/pe/vec/VecPredicate.h\n M TimingSim/pe/vec/VecTileSplit.cpp\n M TimingSim/pe/vec/VecTop.cpp\n M TimingSim/pe/vec/VecTop.h\n M TimingSim/pe/vec/VecValuInfo.h\n M TimingSim/scalar_pe/lsu/l1/cluster.cpp\n M TimingSim/scalar_pe/lsu/l1/cluster.h\n M TimingSim/scalar_pe/lsu/l1/clusters_top.cpp\n M TimingSim/scalar_pe/lsu/l1/clusters_top.h\n M emulator/ELF.cpp\n M emulator/engine/AccumulateBlockInfo.cpp\n M emulator/engine/CubeEngine.cpp\n M emulator/engine/TEPLEngine.cpp\n M emulator/engine/TMAEngine.cpp\n M isa/Block.cpp\n M isa/Block.h\n M isa/ISACommon/BlockAttribute.h\n M isa/ISACommon/CubeCell.h\n M isa/ISACommon/TileOpManager.cpp\n M isa/ISACommon/TileOpManager.h\n M isa/MInst.cpp\n M isa/calculate/CubeCalculate.cpp\n M tests/sl2_test/l2_inst_buffer_test.cpp\n M tests/timing_test/pr922_keyed_static_match_test.cpp\n M tests/vec_compute_test/main.cpp\n M tests/vec_datapath_test/main.cpp\n?? .zcode/\n?? TimingSim/common/ModelCommon/CubeTlsuGeometry.h\n?? TimingSim/common/ModelCommon/GatherGeometry.h\n?? TimingSim/pe/vec/VecMaskedU64.h\n?? TimingSim/pe/vec/VecWideInteger.h\n?? arch_diagram.svg\n?? arch_diagram.svg.png\n?? emulator/engine/Pto369Tlea.cpp\n?? emulator/engine/Pto369Tlea.h\n?? fa_dynamic_highperf_tfma_sq128_skv2048.pipeview.log.out\n?? gfrun_v058_compatibility_issue.md\n?? issue_gfrun_binary_tepl_srctile0_zero.md\n?? issue_gfrun_bior_stride_unit.md\n?? issue_gfrun_cooperative_shared_tile_validrow_bytesof.md\n?? issue_gfrun_cross_type_dtype_check.md\n?? issue_gfrun_fixp_tmatmul.md\n?? issue_gfrun_hosted_syscall_x1_selection.md\n?? issue_ops_full_regression_20260813.md\n?? kernel_fa_fa_gmma_dynamic_Sq128_Skv2048_MaxSq128_MaxSkv2048_Tm128_Tk128_X1_Y1_CubeFP32_VectorFP32.pipeview.log.out\n?? kernel_fa_fa_gmma_dynamic_Sq128_Skv2048_MaxSq128_MaxSkv2048_Tm128_Tk128_X1_Y1_CubeFP32_VectorFP32.swimlane.json\n?? kernel_fa_fa_gmma_dynamic_Sq128_Skv64_MaxSq128_MaxSkv64_Tm128_Tk64_X1_Y1_FP32_VECFP32.pipeview.log.out\n?? matmul_tk64_issue.md\n?? modelSpec/architect_handbook.md\n?? modelSpec/biot_retained_source_modeling_spec.md\n?? modelSpec/cube_tlsu_valid_shape_modeling_spec.md\n?? modelSpec/cube_tmov_elimination_modeling_spec.md\n?? modelSpec/m32_b64_local_transport_modeling_spec.md\n?? modelSpec/m32_wide_integer_modeling_spec.md\n?? modelSpec/mgather_mixed_return_modeling_spec.md\n?? modelSpec/mgather_u64_timing_modeling_spec.md\n?? modelSpec/tci_cube_local_modeling_spec.md\n?? modelSpec/tci_timing_modeling_spec.md\n?? modelSpec/tcmp_gpr_modeling_spec.md\n?? modelSpec/tcmps_u64_gpr_modeling_spec.md\n?? modelSpec/tile_store_l1_visibility_modeling_spec.md\n?? modelSpec/timing_execution_mask_modeling_spec.md\n?? modelSpec/tlea_local_modeling_spec.md\n?? modelSpec/tlsu_m32_b64_modeling_spec.md\n?? modelSpec/tmul_u64_mask_local_modeling_spec.md\n?? modelSpec/tmul_u64_mask_timing_modeling_spec.md\n?? modelSpec/transpose_execution_mask_modeling_spec.md\n?? modelSpec/tsel_gpr_local_modeling_spec.md\n?? modelSpec/tsel_gpr_timing_modeling_spec.md\n?? modelSpec/tshr_gpr_zero_local_modeling_spec.md\n?? modelSpec/vec_temp_identity_modeling_spec.md\n?? modelSpec/vec_temp_readiness_modeling_spec.md\n?? multi_thread_cooperative_cube_issue.md\n?? scripts/draw_arch.py\n?? tests/biot_retain/\n?? tests/cube_tlsu_geometry/\n?? tests/cube_tmov/\n?? tests/elf_phdr/\n?? tests/m32_b64_transport/\n?? tests/m32_wide_integer/\n?? tests/mgather_mixed_return/\n?? tests/mgather_u64/\n?? tests/sl2_test/l2_cube_layout_test.cpp\n?? tests/tci_cube/\n?? tests/tci_timing/\n?? tests/tcmp_gpr/\n?? tests/tcmps_u64_gpr/\n?? tests/tile_store_l1_visibility/\n?? tests/timing_execution_mask/\n?? tests/tlea_local/\n?? tests/tlsu_m32_b64/\n?? tests/tmul_mask/\n?? tests/tmul_u64_timing/\n?? tests/transpose_mask/\n?? tests/tsel_gpr/\n?? tests/tsel_gpr_timing/\n?? tests/tshr_mask/\n?? tests/vec_temp_identity/\n"
+    },
+    "linx-toolchain-build": {
+      "head": "e6a31efb4cfb17f1f1c33265cbf6dbb61bbba156",
+      "local_changes": " M Makefile\n?? docs/\n?? scripts/daily-update-summary.sh\n"
+    },
+    "elf_sha256": "960ba161b8c662a74bf3f93ed5ad96a75f3375d4a91eee4607bc870b9fa48bd4",
+    "gfsim_sha256": "e0d9fc64bbab2ffd3fb576ba27cdce76ba83482f7b823a86fe8ae34ee202e6cf"
+  }
+}

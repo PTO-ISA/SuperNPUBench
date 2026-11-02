@@ -2,6 +2,8 @@
   "cwd": "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel",
   "argv": [
     "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel/bin/gfsim",
+    "--test-finisher",
+    "1",
     "-s",
     "softcore.multiThreadNum=4",
     "-s",
@@ -18,15 +20,17 @@
     "core.sharetreg_size_bytes=262144",
     "-s",
     "core.sharetreg_ssb_count=64",
+    "-f",
+    "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_6144_trace_20261102/hash_6144_PE4.elf",
+    "-t",
+    "1",
     "--swimlane",
     "1",
     "--swimfile",
-    "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_trace_20261102/hash_PE4.swimlane.json",
+    "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_6144_trace_20261102/hash_6144_PE4.swimlane.json",
     "-p",
     "1",
     "--pipefile",
-    "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_trace_20261102/hash_PE4.pipeview.log",
-    "-f",
-    "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_disassembly_20261102/hash_PE4.elf"
+    "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_6144_trace_20261102/hash_6144_PE4.pipeview.log"
   ]
 }

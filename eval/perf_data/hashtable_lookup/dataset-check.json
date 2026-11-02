@@ -1,0 +1,9 @@
+{
+  "keys": 6144,
+  "capacity": 2550000,
+  "occupied": 1785000,
+  "load": 0.7,
+  "golden_mismatch": 0,
+  "max_probes": 63,
+  "mean_probes": 2.1222330729166665
+}
