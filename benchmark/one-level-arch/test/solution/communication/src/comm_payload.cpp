@@ -2,13 +2,14 @@
 
 #include "benchmark.h"
 #include "fileop.h"
-#include "communication/pto_payload.hpp"
+#include "communication/tileop_comm.hpp"
 
 #ifndef RES_CHECK
 #error "Build with res_check=on and use run_payload_check.py"
 #endif
 
 namespace {
+namespace comm = supernpu::comm::tileop;
 constexpr int kSources = 3;
 constexpr int kCapacity = 96;
 constexpr int kCases = 3;
@@ -30,14 +31,13 @@ int main() {
         for (int c = 0; c < kCases; ++c)
             for (int i = 0; i < kCapacity; ++i) outputs[op][c][i] = -9999.0f;
     const float* sources[kSources] = {inputs[0], inputs[1], inputs[2]};
-    using Ops = supernpu::comm::PtoPayload;
     BENCHSTART;
     for (int c = 0; c < kCases; ++c) {
-        const std::size_t elements = (c + 1) * Ops::kWidth;
-        statuses[0][c] = static_cast<int>(supernpu::comm::put<Ops>(outputs[0][c], inputs[0], elements));
-        statuses[1][c] = static_cast<int>(supernpu::comm::get<Ops>(outputs[1][c], inputs[1], elements));
-        statuses[2][c] = static_cast<int>(supernpu::comm::reduce_sum<Ops>(outputs[2][c], sources, kSources, elements));
-        statuses[3][c] = static_cast<int>(supernpu::comm::weighted_combine<Ops>(
+        const std::size_t elements = (c + 1) * comm::kTileElements;
+        statuses[0][c] = static_cast<int>(comm::put(outputs[0][c], inputs[0], elements));
+        statuses[1][c] = static_cast<int>(comm::get(outputs[1][c], inputs[1], elements));
+        statuses[2][c] = static_cast<int>(comm::reduce_sum(outputs[2][c], sources, kSources, elements));
+        statuses[3][c] = static_cast<int>(comm::weighted_combine(
             outputs[3][c], sources, weights, kSources, elements));
     }
     BENCHEND;

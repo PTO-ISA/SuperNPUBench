@@ -53,6 +53,20 @@ def verify_exports(case_dir, golden):
                              f"first differing byte={mismatch}")
 
 
+def verify_tileop_disassembly(disassembly):
+    # Match decoded instruction lines, not source comments or symbol names.
+    # TLSU operations can be printed as bundles; arithmetic is BSTART.TEPL.
+    counts = dict.fromkeys(("TLOAD", "TSTORE", "TEXPANDS", "TMULS", "TADD"), 0)
+    pattern = (r"^\s*[0-9a-fA-F]+:\s+(?:[0-9a-fA-F]{2,16}\s+)+"
+               r"(?:BSTART\.\w+\s+)?(TLOAD|TSTORE|TEXPANDS|TMULS|TADD)(?=\s|,)")
+    for mnemonic in re.findall(pattern, disassembly, re.MULTILINE):
+        counts[mnemonic] += 1
+    missing = [mnemonic for mnemonic, count in counts.items() if count == 0]
+    if missing:
+        raise ValueError(f"missing TileOP instructions in disassembly: {missing}")
+    return counts
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compiler-dir", required=True, type=Path)
@@ -99,6 +113,8 @@ def main():
                            check=True, timeout=args.timeout)
         elf = ARCH_ROOT / "output/solution/communication/elf" / (NAME + ".elf")
         report["elf_sha256"] = hashlib.sha256(elf.read_bytes()).hexdigest()
+        report["tileop_static_instruction_counts"] = verify_tileop_disassembly(
+            Path(str(elf) + ".diss").read_text())
         command = [str(model), "-s", "softcore.multiThreadNum=1", "-f", str(elf)]
         report["run_command"] = command
         with (case_dir / "gfrun.log").open("w") as log:

@@ -13,21 +13,43 @@ neither test measures network bandwidth, RTT or device communication overlap.
 
 ## Operators
 
-Include `communication/pto_payload.hpp` for the PTO adapter, or
-`communication/mapped_window.hpp` for the backend-independent operators.
+Include `communication/tileop_comm.hpp` for the directly implemented PTO kernels
+in `supernpu::comm::tileop`. Their bodies contain the TileOP calls themselves;
+there is no `PtoPayload` or `Ops::load/store` forwarding layer on this path.
 
 | Entry point | Operation |
 | --- | --- |
-| `put<Ops>(mapped_dst, src, elements)` | Copy local input into a mapped peer destination |
-| `get<Ops>(dst, mapped_src, elements)` | Copy from a mapped peer source into local output |
-| `reduce_sum<Ops>(dst, sources, source_count, elements)` | Sum corresponding elements of source windows into one destination |
-| `weighted_combine<Ops>(dst, sources, weights, source_count, elements)` | Compute `dst[i] = sum_r weights[r] * sources[r][i]` |
+| `tileop::put(mapped_dst, src, elements)` | TLOAD local input, TSTORE mapped peer destination |
+| `tileop::get(dst, mapped_src, elements)` | TLOAD mapped peer source, TSTORE local output |
+| `tileop::reduce_sum(dst, sources, source_count, elements)` | TLOAD each source, TADD into accumulator, TSTORE result |
+| `tileop::weighted_combine(dst, sources, weights, source_count, elements)` | TLOAD each source, TMULS by its weight, TADD, TSTORE result |
+
+The weighted-combine tile loop is explicit in the kernel:
+
+```cpp
+F32Tile accumulator;
+TEXPANDS(accumulator, 0.0f);
+for (std::size_t r = 0; r < source_count; ++r) {
+    F32Global remote(sources[r] + i);
+    F32Tile input, scaled;
+    TLOAD(input, remote);
+    TMULS(scaled, input, weights ? weights[r] : 1.0f);
+    TADD(accumulator, accumulator, scaled);
+}
+F32Global output(destination + i);
+TSTORE(output, accumulator);
+```
+
+The separate `communication/mapped_window.hpp` contains the generic CPU protocol
+prototype tested with `CpuPayload`. It is not connected to the device kernels:
+
+| Host protocol entry point | Operation |
+| --- | --- |
 | `send<Ops>(window, src, elements, epoch, sync)` | Wait for slot credit, copy payload and publish ready |
 | `receive<Ops>(dst, window, elements, epoch, sync)` | Wait for ready, copy payload and acknowledge consumption |
 | `receive_combine<Ops>(dst, windows, weights, source_count, elements, epoch, sync)` | Wait for this chunk from every source, combine it and acknowledge each slot |
 
-`Ops = supernpu::comm::PtoPayload` uses TLOAD/TSTORE for data movement and
-TEXPANDS/TMULS/TADD for combination. There is no remote floating-point atomic
+There is no remote floating-point atomic
 reduction: each producer owns a distinct source window and reduction follows
 source order. `weights == nullptr` selects unit weights. ReduceSum has a single
 destination; it is not an AllReduce or ReduceScatter collective.
@@ -88,9 +110,9 @@ void publish(uint64_t& word, uint64_t epoch);
   It must not be paired with asynchronous device payload operations.
 
 No default `volatile`, empty assembly barrier or scalar atomic substitute is
-provided for device completion. A hardware adapter must supply the missing
-tile/scalar/fabric ordering guarantees before instantiating this protocol with
-`PtoPayload`.
+provided for device completion. A device protocol implementation must supply
+the missing tile/scalar/fabric ordering guarantees before publishing or
+consuming results from `tileop::put/get/reduce_sum/weighted_combine`.
 
 Invalid arguments, including unsupported shapes and duplicate combine
 windows, return `invalid_argument`. A failed wait returns `timeout` without
@@ -120,13 +142,15 @@ invalid arguments and bounded timeout/child cleanup. Golden arithmetic is
 independent of the payload implementation. ASan/UBSan covers the host code;
 it is not a proof of a remote device's memory ordering.
 
-The PTO checker builds an ELF and disassembly, then compares all output bytes
+The PTO checker builds an ELF and checks the disassembly for decoded TLOAD,
+TSTORE, TEXPANDS, TMULS and TADD instructions, then compares all output bytes
 for four operations at three sizes with independent host-generated FP32
 goldens. It also checks untouched tails, status exports and the simulator
 finisher. Missing tools, output files, malformed output, nonzero status and
 timeouts fail the check. Outputs, logs, source/artifact hashes and `report.json`
 are written under `benchmark/one-level-arch/compare/solution_communication_comm_payload/`.
-They are ignored by Git. Inspect `worktree_status` before attributing a report
+The instruction counts are static disassembly counts, not runtime performance
+counters. Artifacts are ignored by Git. Inspect `worktree_status` before attributing a report
 to its recorded revision.
 
 The initial payload run passed with clang 15.0.4

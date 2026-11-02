@@ -5,7 +5,23 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from run_payload_check import input_and_golden, verify_exports
+from run_payload_check import input_and_golden, verify_exports, verify_tileop_disassembly
+
+
+class DisassemblyCheckTests(unittest.TestCase):
+    def test_real_instructions_required(self):
+        decoded = (
+            "125a8: 08011181 01f01aa3 TLOAD <Row=32>\n"
+            "125ba: 08111181 19f01c23 TSTORE <Row=32>\n"
+            "12686: 0bb19181 19f01ea3 TEXPANDS <Row=32>\n"
+            "1278e: 0a219181 BSTART.TEPL TMULS, FP32\n"
+            "127a0: 08019181 BSTART.TEPL TADD, FP32\n"
+        )
+        self.assertEqual(set(verify_tileop_disassembly(decoded).values()), {1})
+        with self.assertRaises(ValueError):
+            verify_tileop_disassembly("// TLOAD TSTORE TEXPANDS TMULS TADD\n")
+        with self.assertRaises(ValueError):
+            verify_tileop_disassembly(decoded.replace("BSTART.TEPL TADD,", "BSTART.TEPL TSUB,"))
 
 
 class ExportCheckTests(unittest.TestCase):

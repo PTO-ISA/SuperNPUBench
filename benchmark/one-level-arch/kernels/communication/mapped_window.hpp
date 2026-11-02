@@ -3,16 +3,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include "communication/comm_types.hpp"
 
 namespace supernpu::comm {
-
-enum class Status { ok, invalid_argument, timeout };
-constexpr std::size_t kMaxSources = 32;
 
 // Payload operations require accessible, non-overlapping mapped ranges. Address
 // registration/mapping and peer discovery belong to the caller. A mapping in a
 // host process alone does not make the range accessible to a tile load engine.
-// Ops supplies kWidth, Tile, load/store/zero/scale/add (see pto_payload.hpp).
+// CPU protocol/reference path: Ops supplies kWidth, Tile, load/store/zero/scale/add.
+// Device payload kernels call TileOP directly in tileop_comm.hpp.
 template <class Ops>
 inline bool valid_elements(std::size_t elements) {
     return elements != 0 && elements % Ops::kWidth == 0;
