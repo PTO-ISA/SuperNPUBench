@@ -21,6 +21,8 @@ def main():
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--lanes', type=int, nargs='+', default=[128, 256, 512], choices=[32, 64, 128, 256, 512])
     p.add_argument('--query-repeats', type=int, default=1, choices=[1, 4])
+    p.add_argument('--expanded-only', action='store_true',
+                   help='emit explicit physical disassembly only; keep default macro coverage strict')
     a = p.parse_args()
     a.llvm, a.api, a.sysroot, a.reference, a.output = (
         x.resolve() for x in (a.llvm, a.api, a.sysroot, a.reference, a.output))
@@ -55,6 +57,7 @@ def main():
                   'compiler_sha256': digest(clang), 'linker_sha256': digest(lld),
                   'compiler_version': subprocess.check_output([str(clang), '--version'], text=True),
                   'query_repeats': a.query_repeats, 'query_count': 6144 * a.query_repeats,
+                  'disassembly_mode': 'expanded-only' if a.expanded_only else 'macro-and-expanded',
                   'commands': []}
     for lanes in a.lanes:
         base = a.output / ('hash' + str(lanes))
@@ -69,7 +72,10 @@ def main():
                    '-o', str(base.with_suffix('.elf'))]
         provenance['commands'].append(command)
         subprocess.run(command, cwd=root, check=True)
-        for suffix, options in (('.diss', []), ('.expanded.diss', ['--disassembler-options=no-tile-macros'])):
+        views = [('.expanded.diss', ['--disassembler-options=no-tile-macros'])]
+        if not a.expanded_only:
+            views.append(('.diss', []))
+        for suffix, options in views:
             with base.with_suffix(suffix).open('w') as stream:
                 subprocess.run([str(objdump), '-d', '--no-show-raw-insn'] + options +
                                [str(base.with_suffix('.elf'))], stdout=stream, check=True)

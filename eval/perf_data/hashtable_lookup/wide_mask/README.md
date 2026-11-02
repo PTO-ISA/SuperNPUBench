@@ -64,3 +64,10 @@ set; comparisons must keep the same repeat count. It still checks every output
 and both guards. Build outputs include a `.witness.json` with disassembly-derived
 checker PCs bound to the ELF hash and query count. Pass it to the model checker
 with `--witness-json`, and use the same `--query-repeats` value.
+
+Current LLVM15 branch versions enforce complete macro coverage in the default
+objdump view and return nonzero when any bundle cannot be folded. This builder
+preserves that failure. Use `--expanded-only` explicitly when validating the ELF
+through physical disassembly while macro coverage is incomplete; that mode is
+recorded in provenance and does not claim a complete macro view. The generated
+witness metadata always comes from the physical disassembly.
