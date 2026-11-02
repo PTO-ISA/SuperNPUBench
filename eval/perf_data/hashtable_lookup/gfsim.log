@@ -1,0 +1,3235 @@
+/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel/bin/gfsim -s softcore.multiThreadNum=4 -s cube.enable_internal_acc=true -s bctrl.vec_cell_sched_enable=true -s core.soc_random=true -s core.read_bandwidth_limit=128 -s core.write_bandwidth_limit=128 -s core.sharetreg_size_bytes=262144 -s core.sharetreg_ssb_count=64 --swimlane 1 --swimfile /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_trace_20261102/hash_PE4.swimlane.json -p 1 --pipefile /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_trace_20261102/hash_PE4.pipeview.log -f /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_disassembly_20261102/hash_PE4.elf 
+[gfsim] ELF auto-detect: single-PE; using default config
+[gfsim] ELF auto-detect: ssrget 2050 (PEID) found; applying fourpe config bundle (threadCount=4, stdPeCount=1)
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Parse Config File:
+Override configurations:
+softcore.multiThreadNum=4
+cube.enable_internal_acc=true
+bctrl.vec_cell_sched_enable=true
+core.soc_random=true
+core.read_bandwidth_limit=128
+core.write_bandwidth_limit=128
+core.sharetreg_size_bytes=262144
+core.sharetreg_ssb_count=64
+core.threadCount=4
+core.stdPeCount=1
+core.cube_core_num=4
+core.cube_thread_num=1
+core.vec_core_num=4
+fourpe.pe_cluster_enable=true
+fourpe.pe_cluster_count=4
+fourpe.pe_cluster_frontend_thread_count=4
+fourpe.pe_cluster_aggregate_decode_width=8
+fourpe.pe_cluster_gpr_rename_partition_entries=128
+fourpe.pe_cluster_scalar_rob_partition_entries=128
+fourpe.pe_cluster_scalar_iq_partition_entries=128
+fourpe.pe_cluster_block_rob_partition_entries=256
+fourpe.pe_cluster_block_iq_partition_entries=88
+fourpe.pe_cluster_local_reg_partition_entries=88
+bfu.brq_depth=1024
+fourpe.pe_cluster_partition_borrow_enable=false
+fourpe.pe_cluster_eligible_rr_fairness_check=true
+fourpe.pe_cluster_group_contract_fatal=false
+dfx.swimCounterSampleInterval=8
+Memory: 0x10200 - 0x10248 (Size=0KB) [.rodata]
+Memory: 0x1024c - 0x1026f (Size=0KB) [.eh_frame_hdr]
+Memory: 0x10270 - 0x102eb (Size=0KB) [.eh_frame]
+Memory: 0x112ec - 0x12011 (Size=3KB) [.text]
+Memory: 0x13018 - 0x13027 (Size=0KB) [.init_array]
+Memory: 0x13028 - 0x1303f (Size=0KB) [.data.rel.ro]
+Memory: 0x15000 - 0x18263 (Size=12KB) [.bss]
+Memory: 0x18268 - 0x18277 (Size=0KB) [.sbss]
+Memory: 0x18280 - 0x8028280 (Size=131136KB) [stack mem]
+Memory: 0x4000802000 - 0x4008803000 (Size=131076KB) [map mem]
+Simulation time: 4s 
++-------------------------+--------------+
+| Block Control Config Name | Value        |
++-------------------------+--------------+
+| inst_decode_bw          | 4            |
+| block_rob_depth         | 256          |
+| BISQ:cube_isq_depth     | 32           |
+| BISQ:vector_isq_depth   | 32           |
+| BISQ:vector_rob_depth   | 64           |
++-------------------------+--------------+
++-------------------+--------------+
+| CUBE Config Name  | Value        |
++-------------------+--------------+
+| uop_isq_depth     | 32           |
+| tcvt_isq_depth    | 16           |
+| L0A_size          | 16           |
+| L0B_size          | 16           |
+| L0C_size          | 16           |
++-------------------+--------------+
+===================SuperScalar NPU Stats====================
+Total Cycles.....................................:     27995
+================SuperScalar Unified Top-Down================
+Retiring.........................................:     38.51%
+Bad Speculation..................................:     25.58%
+Frontend Bound...................................:      0.91%
+CMD Bound........................................:      0.98%
+Backend Bound....................................:     34.01%
+=============Top-Down Normalization Diagnostics=============
+Bad Speculation Clipped Slots....................:         0
+Frontend Bound Clipped Slots.....................:         0
+  |-- LD Retiring................................:      6.57%
+  |-- ST Retiring................................:      0.25%
+  |-- BR Retiring................................:      0.00%
+  |-- ALU Retiring...............................:     31.69%
+  |-- Other Retiring.............................:      0.00%
+  |-- Misprediction..............................:      0.06%
+  |-- Machine Clear..............................:     25.53%
+  |-- Fetch Latency..............................:      0.00%
+  |-- Fetch Bandwidth............................:      0.91%
+    |-- Branch Resteering........................:      0.00%
+    |-- ITLB/BTLB miss...........................:      0.00%
+    |-- BHC miss penalty.........................:      0.00%
+    |-- Other fetch lat..........................:      0.00%
+    |-- Decode Stall.............................:      0.00%
+    |-- Rename Stall.............................:      0.00%
+    |-- BROB Stall...............................:      0.00%
+    |-- SYS Block Stall..........................:      0.00%
+  |-- CMD queue backpressure.....................:      0.98%
+    |-- Operand not ready........................:      0.98%
+    |-- BIQ capacity full........................:      0.00%
+      |-- CUBE BIQ full..........................:      0.00%
+      |-- VECTOR BIQ full........................:      0.00%
+      |-- TLSU BIQ full..........................:      0.00%
+      |-- GROUP/SHU BIQ full.....................:      0.00%
+      |-- Other BIQ full.........................:      0.00%
+    |-- TileReg capacity full....................:      0.00%
+    |-- GPR LPV/no-cancel gate...................:      0.00%
+    |-- Other CMD queue block....................:      0.00%
+  |-- CMDPipe tile backpressure..................:      0.00%
+    |-- TileReg resource unavailable.............:      0.00%
+    |-- Other CMDPipe stall......................:      0.00%
+  |-- Other CMD control..........................:      0.00%
+  |-- Memory Bound...............................:      0.00%
+  |-- Core Bound.................................:     34.01%
+    |-- L1 Bound.................................:      0.00%
+    |-- L2 Bound.................................:      0.00%
+    |-- L3/DRAM Bound............................:      0.00%
+    |-- Store Bound..............................:      0.00%
+    |-- Scalar ALU...............................:     14.28%
+    |-- Cube.....................................:      0.00%
+    |-- Vector...................................:      2.46%
+    |-- TLSU Tload...............................:     14.09%
+    |-- TLSU Tstore..............................:      3.19%
+    |-- TLSU TMOV................................:      0.00%
+    |-- Idle.....................................:      0.00%
+    |-- Other Core...............................:      0.00%
+      |-- Simple ALU pipe full...................:      0.00%
+      |-- Complex INT busy.......................:      0.89%
+      |-- Branch port busy.......................:     16.59%
+===============Top-Down Boundary Attribution================
+IFU-OEX boundary observations (slots)............:    111980
+  |-- Frontend supply bubble (F5)................:      4.32%
+  |-- Backend backpressure (F5)..................:      1.30%
+  |-- Delivered to OEX (F5)......................:     94.38%
+CMD queue/Pipe boundary observations (cycles)....:     27995
+  |-- CMD queue supply bubble....................:     93.30%
+  |-- CMD queue backpressure.....................:      0.98%
+  |-- CMD blocked union cycles...................:       275
+  |-- CMD issued slots...........................:      2869
+  |-- CMD IQ TileOp issue count..................:       736
+  |-- CMD IQ non-empty cycles....................:      1875
+  |-- CMD IQ TileOp issue rate (tileops/cycle)...:0.39253333
+  |-- CMDPipe tile backpressure events...........:         0
+=======Core-Cycles Oldest-Block Top-Down (diagnostic)=======
+Core cycles......................................:     27995
+L1 Retiring......................................:      0.00%
+L1 Recovery......................................:      0.00%
+L1 Frontend Bound................................:     91.93%
+L1 CMD Bound.....................................:      0.00%
+L1 Backend Bound.................................:      7.15%
+L1 Idle/Other....................................:      0.91%
+  |-- L2 Memory Bound............................:      0.11%
+  |-- L2 Group Sync Bound........................:      0.00%
+  |-- L2 Core Bound..............................:      7.04%
+    |-- L3 Cube..................................:      0.00%
+    |-- L3 Vector................................:      3.81%
+    |-- L3 TLSU..................................:      3.23%
+    |-- L3 Scalar ALU............................:      0.00%
+      |-- L4 Cube execution/queue owner..........:      0.00%
+      |-- L4 Vector execution owner..............:      3.81%
+      |-- L4 TLSU Tload owner....................:      2.66%
+      |-- L4 TLSU Tstore owner...................:      0.56%
+      |-- L4 Scalar ALU owner....................:      0.00%
+Core-cycle attribution sum.......................:     27995
+STID0 oldest observations........................:     27995
+STID1 oldest observations........................:     27995
+STID2 oldest observations........................:     27995
+STID3 oldest observations........................:     27995
+  |-- RETIRING representative STID...............:         0
+  |-- RETIRING representative BID................:         5
+  |-- RETIRING participant mask..................:        15
+  |-- FRONTEND_BOUND representative STID.........:         0
+  |-- FRONTEND_BOUND representative BID..........:         0
+  |-- FRONTEND_BOUND participant mask............:        15
+  |-- MEMORY_BOUND representative STID...........:         1
+  |-- MEMORY_BOUND representative BID............:        46
+  |-- MEMORY_BOUND participant mask..............:        15
+  |-- TLSU_TLOAD representative STID.............:         2
+  |-- TLSU_TLOAD representative BID..............:         2
+  |-- TLSU_TLOAD participant mask................:        15
+  |-- TLSU_TSTORE representative STID............:         2
+  |-- TLSU_TSTORE representative BID.............:        81
+  |-- TLSU_TSTORE participant mask...............:        15
+  |-- VECTOR representative STID.................:         3
+  |-- VECTOR representative BID..................:         0
+  |-- VECTOR participant mask....................:        15
+  |-- IDLE_NO_OLDEST representative STID.........:         0
+  |-- IDLE_NO_OLDEST representative BID..........:18446744073709551615
+  |-- IDLE_NO_OLDEST participant mask............:        15
+===================superScalar Key Stats====================
+superScalar Tileop Total Cycles..................:    111980
+  |--Cube Tileop Total Cycles....................:         0
+  |--Vector Tileop Total Cycles..................:      4309
+  |--TLSU Tileop Total Cycles....................:      3280
+superScalar Total Tileop Counter.................:       704
+  |--Cube Execute Tileop Counter.................:         0
+  |--Vector Execute Tileop Counter...............:       624
+  |--TLSU Execute Tileop Counter.................:        80
+    |--AccountExpTlsuCellReads...................:         0
+    |--AccountExpTlsuCellWrites..................:         0
+superScalar Run Tileop Wall Cycles...............:     20118
+  |--Cube Busy Resource-Cycles (PE-summed).......:         0
+  |--Vector Busy Resource-Cycles (PE-summed).....:     43949
+  |--TLSU Busy Resource-Cycles (PE-summed).......:     19403
+  |--Cube Active Wall Cycles (union).............:         0
+  |--Vector Active Wall Cycles (union)...........:      1397
+  |--TLSU Active Wall Cycles (union).............:     19403
+    |--TLSU Tload Resource-Cycles (PE-summed)....:     19059
+      |--write Blocked By Ring Cycles............:         0
+    |--TLSU Tstore Resource-Cycles (PE-summed)...:       708
+    |--TLSU Tmov Resource-Cycles (PE-summed).....:         0
+    |--TLSU Mgather Resource-Cycles (PE-summed)..:         0
+    |--TLSU Mscatter Resource-Cycles (PE-summed).:         0
+    |--TLSU Vgather Resource-Cycles (PE-summed)..:         0
+    |--TLSU Vscatter Resource-Cycles (PE-summed).:         0
+  |--All Cores Idle Wall Cycles..................:      7877
+  |--Vector-Cube Concurrent Wall Cycles (union)..:         0
+  |--Vector-Cube Active Wall Cycles (union)......:      1397
+  |--Cube-TLSU Concurrent Wall Cycles (union)....:         0
+  |--Cube-TLSU Active Wall Cycles (union)........:     19403
+  |--Vector-TLSU Concurrent Wall Cycles (union)..:       682
+  |--Vector-TLSU Active Wall Cycles (union)......:     20118
+=============TileOp Efficiency (explicit units)=============
+PE0 CUBE ExecCycles/TileOp.......................:      0.00
+PE0 CUBE TileOpRate (ops/cycle)..................:0.00000000
+PE0 CUBE TileOp Occupancy (%)....................:      0.00
+PE1 CUBE ExecCycles/TileOp.......................:      0.00
+PE1 CUBE TileOpRate (ops/cycle)..................:0.00000000
+PE1 CUBE TileOp Occupancy (%)....................:      0.00
+PE2 CUBE ExecCycles/TileOp.......................:      0.00
+PE2 CUBE TileOpRate (ops/cycle)..................:0.00000000
+PE2 CUBE TileOp Occupancy (%)....................:      0.00
+PE3 CUBE ExecCycles/TileOp.......................:      0.00
+PE3 CUBE TileOpRate (ops/cycle)..................:0.00000000
+PE3 CUBE TileOp Occupancy (%)....................:      0.00
+PE0 VECTOR ReadLatency (cycles/op)...............:      5.17
+PE0 VECTOR TileOpRate (ops/cycle)................:      0.01
+PE0 VECTOR Utilization...........................:      0.03
+PE0 VECTOR Utilization (issue-events)............:      0.00
+PE1 VECTOR ReadLatency (cycles/op)...............:      5.17
+PE1 VECTOR TileOpRate (ops/cycle)................:      0.01
+PE1 VECTOR Utilization...........................:      0.03
+PE1 VECTOR Utilization (issue-events)............:      0.00
+PE2 VECTOR ReadLatency (cycles/op)...............:      5.17
+PE2 VECTOR TileOpRate (ops/cycle)................:      0.01
+PE2 VECTOR Utilization...........................:      0.03
+PE2 VECTOR Utilization (issue-events)............:      0.00
+PE3 VECTOR ReadLatency (cycles/op)...............:      5.17
+PE3 VECTOR TileOpRate (ops/cycle)................:      0.01
+PE3 VECTOR Utilization...........................:      0.03
+PE3 VECTOR Utilization (issue-events)............:      0.00
+PE0 TLSU Occupancy/Issue (cycles/event)..........:      7.84
+PE0 TLSU IssueRate (events/cycle)................:      0.55
+PE0 TLSU Utilization (%).........................:     94.52
+Vector-Cube overlap ratio........................:      0.00
+Vector-TLSU overlap ratio........................:      0.03
+============PROB Status Occupancy (entry-cycles)============
+  |--free........................................:         0
+  |--alloc.......................................:   2120591
+  |--renamed.....................................:         0
+  |--dispatched..................................:     55346
+  |--in_queue....................................:   1182432
+  |--issued......................................:     65222
+  |--executing...................................:     29821
+  |--writeback...................................:     22364
+  |--completed...................................:   1110042
+  |--retired.....................................:    123903
+  |--fault.......................................:         0
+  |--need_flush..................................:         0
+===============Block Control Key Stats total================
+Average Outstanding Block Number.................:      3.17
+  |--Average Outstanding Cube Block Number.......:      0.00
+  |--Average Outstanding Vector Block Number.....:      3.08
+  |--Average Outstanding TLoad Number............:      0.08
+  |--Average Outstanding TStore Number...........:      0.01
+=============Block Control Key Stats SThread 0==============
+Average Outstanding Block Number.................:      0.80
+  |--Average Outstanding Cube Block Number.......:      0.00
+  |--Average Outstanding Vector Block Number.....:      0.78
+  |--Average Outstanding TLoad Number............:      0.02
+  |--Average Outstanding TStore Number...........:      0.00
+=============Block Control Key Stats SThread 1==============
+Average Outstanding Block Number.................:      0.79
+  |--Average Outstanding Cube Block Number.......:      0.00
+  |--Average Outstanding Vector Block Number.....:      0.77
+  |--Average Outstanding TLoad Number............:      0.02
+  |--Average Outstanding TStore Number...........:      0.00
+=============Block Control Key Stats SThread 2==============
+Average Outstanding Block Number.................:      0.78
+  |--Average Outstanding Cube Block Number.......:      0.00
+  |--Average Outstanding Vector Block Number.....:      0.76
+  |--Average Outstanding TLoad Number............:      0.02
+  |--Average Outstanding TStore Number...........:      0.00
+=============Block Control Key Stats SThread 3==============
+Average Outstanding Block Number.................:      0.79
+  |--Average Outstanding Cube Block Number.......:      0.00
+  |--Average Outstanding Vector Block Number.....:      0.77
+  |--Average Outstanding TLoad Number............:      0.02
+  |--Average Outstanding TStore Number...........:      0.00
+===================CubeCore 0 Statistics====================
+Cube Total Cycles................................:     27995
+Cube MAC Exec Occupancy..........................:         0    0.00%
+Cube MAC Utilization.............................:      0.00    0.00%
+Cube Logical MAC Count...........................:         0
+Cube Equivalent MAC Count........................:      0.00
+Cube Equivalent MAC Rate (MAC/cycle).............:      0.00
+Cube core workload units (dtype-normalized)......:      0.00
+Cube core workload rate (units/cycle)............:0.00000000
+Cube Achieved TFLOPS (equivalent MACs, 1.65GHz)..:  0.000000
+Cube core exe tileop count.......................:         0
+L0A Tag Hits (A resident)........................:         0
+L0A Tag Misses (A resident)......................:         0
+L0A Tag Flushes (A resident).....................:         0
+L0A Tag Stale Window Rejects (issue1032).........:         0
+L0A Tag Stale Slot Rejects (issue1032)...........:         0
+Cube Uop Generated Count.........................:         0
+Cube core retired uop count......................:         0
+Cube core total load count.......................:         0
+Cube core total store count (CellReg TileC writes):         0
+==================InternalAcc Feature PMU===================
+internal_acc_entry_alloc_count...................:         0
+internal_acc_entry_read_count....................:         0
+internal_acc_entry_write_count...................:         0
+internal_acc_entry_peak_occupancy................:         0
+internal_acc_active_cycles.......................:         0
+internal_acc_entry_unavailable_stall_cycles......:         0
+internal_acc_entry_lookup_wait_stall_cycles......:         0
+internal_acc_entry_not_ready_stall_cycles........:         0
+internal_acc_stale_reference_count...............:         0
+Cube FP16 Logical MAC Count......................:         0
+Cube FP16 Equivalent MAC Count...................:      0.00
+Cube FP8 Logical MAC Count.......................:         0
+Cube FP8 Equivalent MAC Count....................:      0.00
+Cube FP4 Logical MAC Count.......................:         0
+Cube FP4 Equivalent MAC Count....................:      0.00
+Cube TileOp Occupancy............................:         0    0.00%
+Cube Load Outstanding............................:         0    0.00%
+Cube FixPipe/Store Occupancy.....................:         0    0.00%
+Cube core average acc slot use...................:       N/A
+Cube core average l0a entry use..................:       N/A
+Cube core average l0b entry use..................:       N/A
+Cube core peak l0a entry use.....................:         0    0.00%
+Cube core peak l0b entry use.....................:         0    0.00%
+Cube core peak l0a entry use scan................:         0    0.00%
+Cube core peak l0b entry use scan................:         0    0.00%
+Cube core peak l0a bytes.........................:         0    0.00%
+Cube core peak l0b bytes.........................:         0    0.00%
+Cube core average l0a entry use busy.............:       N/A
+Cube core average l0b entry use busy.............:       N/A
+Cube core average acc slot use busy..............:       N/A
+Cube MAC Range...................................:         0
+Cube Load Range..................................:         0
+Cube Store Range.................................:         0
+Cube Load-MAC Range Overlap......................:         0     N/A
+accSlotAllocCount................................:         0
+accSlotFreeCount.................................:         0
+accSlotPeakInUse.................................:         0
+accSlotWaitCount.................................:         0
+============FixPipe stash (Step-0 capacity need)============
+groupEvenMFallbackCount..........................:         0
+reduceSlotConflictCount..........................:         0
+fixpMergeMapPeakEntries..........................:         0
+fixpMergeMapPeakLaneBytes........................:         0
+fixpOutInflightPeakBytes.........................:         0
+fixPipeInPeakBytes...............................:         0
+fixPipeInFullCycles..............................:         0
+fixPipeInDroppedPending..........................:         0
+fixPipeOutPeakBytes..............................:         0
+fixPipeOutFullCycles.............................:         0
+macStallFixPipeFullCycles........................:         0
+fixPipeBlockEndLeakCount.........................:         0
+bandPairMapPeakSize..............................:         0
+bandPairMapFinalSize.............................:         0
+batchDistributeCount.............................:         0
+batchFallbackCount...............................:         0
+m0TileCReadCount.................................:         0
+m1TileCReadCount.................................:         0
+tileCReadRequestCount............................:         0
+tileCReadBytes...................................:         0
+batchMissedDistributeCount.......................:         0
+uniqueTileCSourceAddresses.......................:         0
+Cube core exe uop count..........................:         0
+Cube core retired uop count......................:         0
+Cube core total load count.......................:         0
+Cube core total store count (CellReg TileC writes):         0
+  |--CellReg Load Count..........................:         0
+    |--CellReg TileA Count.......................:         0
+    |--CellReg TileB Count.......................:         0
+    |--CellReg TileC Count.......................:         0
+    |--CellReg LeftScale Count...................:         0
+    |--CellReg RightScale Count..................:         0
+  |--CellReg Load Bytes..........................:         0
+    |--CellReg TileA Bytes.......................:         0
+    |--CellReg TileB Bytes.......................:         0
+    |--CellReg TileC Bytes.......................:         0
+    |--CellReg LeftScale Bytes...................:         0
+    |--CellReg RightScale Bytes..................:         0
+  |--CellReg Store Count.........................:         0
+    |--CellReg TileC Count.......................:         0
+  |--CellReg Store Bytes.........................:         0
+    |--CellReg TileC Bytes.......................:         0
+  |--ShareTReg Load Count........................:         0
+    |--ShareTReg TileA Count.....................:         0
+    |--ShareTReg TileB Count.....................:         0
+    |--ShareTReg LeftScale Count.................:         0
+    |--ShareTReg RightScale Count................:         0
+  |--ShareTReg Load Bytes........................:         0
+    |--ShareTReg TileA Bytes.....................:         0
+    |--ShareTReg TileB Bytes.....................:         0
+    |--ShareTReg LeftScale Bytes.................:         0
+    |--ShareTReg RightScale Bytes................:         0
+  |--Exp CellReg Load Count......................:         0
+    |--Exp CellReg TileA Count...................:         0
+    |--Exp CellReg TileB Count...................:         0
+    |--Exp CellReg TileC Count...................:         0
+    |--Exp CellReg LeftScale Count...............:         0
+    |--Exp CellReg RightScale Count..............:         0
+  |--Exp CellReg Load Delta......................:      0.00
+InitReduceBuffer calls...........................:         0
+  |--early-out: no reduce requested..............:         0
+  |--early-out: no aux destination...............:         0
+  |--initialized.................................:         0
+matmul blocks w/ hasFixpAttr.....................:         0
+  |--preQuant != 0...............................:         0
+  |--rowMaxEn....................................:         0
+  |--groupMaxEn..................................:         0
+  |--dsts.size() >= 2............................:         0
+  |--dsts.size() >= 3............................:         0
+  |--Exp CellReg Store Count.....................:         0
+  |--Exp CellReg Store Delta.....................:      0.00
+  |--Exp ShareTReg Load Count....................:         0
+  |--Exp ShareTReg Load Cache Skip...............:         0
+  |--Exp ShareTReg Load Delta....................:      0.00
+Cube core cannot pick main chain uop ratio.......:         0     N/A
+Cube core pick cub chain uop ratio...............:         0     N/A
+Cube busy cycle..................................:         0
+Cube core mmad busy cycle........................:         0     N/A
+Cube core load busy cycle........................:         0     N/A
+Cube core store busy cycle.......................:         0     N/A
+  UtilMacW (array exec)..........................:         0
+    |--UtilMacWMad (systolic MAC phase)..........:         0
+    |--UtilMacWRamp (staging/fill-drain).........:         0
+  UtilMacO (operand in-flight)...................:         0
+  UtilMacA (exec/writeback struct)...............:         0
+  UtilMacD (dependency chain)....................:         0
+  UtilMacI (issue/rename struct).................:         0
+  UtilMacS (no tile).............................:     27995
+  UtilMacUnaccounted.............................:         0
+  UtilMacCycles..................................:     27995
+    |--UtilMacSub_O_L0InFlight...................:         0
+    |--UtilMacSub_O_ScaleInFlight................:         0
+    |--UtilMacSub_O_LoadPath.....................:         0
+    |--UtilMacSub_O_LdUopBuf.....................:         0
+    |--UtilMacSub_A_AllocBackpressure............:         0
+    |--UtilMacSub_A_StoreInFlight................:         0
+    |--UtilMacSub_A_FixPipeAnnounce..............:         0
+    |--UtilMacSub_A_UopBufQueue..................:         0
+    |--UtilMacSub_A_TileBoundary.................:         0
+    |--UtilMacSub_A_AccPoolFull..................:         0
+    |--UtilMacSub_A_AccEntryRelease..............:         0
+    |--UtilMacSub_D_KLoopChain...................:         0
+    |--UtilMacSub_D_AccEntryNotReady.............:         0
+    |--UtilMacSubO_Reconcile.....................:      0.00
+    |--UtilMacSubA_Reconcile.....................:      0.00
+    |--UtilMacSubD_Reconcile.....................:      0.00
+    |--UtilMacSub_O_L0InFlight_A.................:         0
+    |--UtilMacSub_O_L0InFlight_B.................:         0
+    |--UtilMacSub_O_L0InFlight_C.................:         0
+    |--UtilMacSub_O_L0InFlight_Other.............:         0
+    |--UtilMacSubO_L0Split_Reconcile.............:      0.00
+  UtilMacIssue_Issued............................:         0
+  UtilMacIssue_CStreamWait.......................:         0
+  UtilMacIssue_L0InFlight........................:         0
+  UtilMacIssue_ScaleInFlight.....................:         0
+  UtilMacIssue_AllocBackpressure.................:         0
+  UtilMacIssue_KLoopChain........................:         0
+  UtilMacIssue_UopBufQueue.......................:         0
+  UtilMacIssue_LdUopBufQueue.....................:         0
+  UtilMacIssue_NoTile............................:     27995
+  UtilMacIssue_TileBoundary......................:         0
+  UtilMacIssue_Unaccounted.......................:         0
+  UtilMacIssue_Reconcile.........................:      0.00
+  UtilMacIssue_L0InFlight_A......................:         0
+  UtilMacIssue_L0InFlight_B......................:         0
+  UtilMacIssue_L0InFlight_C......................:         0
+  UtilMacIssue_L0InFlight_Other..................:         0
+  UtilMacIssue_L0Split_Reconcile.................:      0.00
+  UtilMacStageOcc................................:         0
+  RenameAllocAFailCycles.........................:         0
+  RenameAllocBFailCycles.........................:         0
+  RenameFifoFullCycles...........................:         0
+  UtilMacStageIdle...............................:         0
+  UtilMacStage_Reconcile.........................:      0.00
+  UtilMacFillWeightedUtil........................:      0.00
+  UtilMacShadow_CwaitCycles......................:         0
+  UtilMacShadow_L0WithCwait......................:         0
+  UtilMacStageIdleByCause_Reconcile..............:      0.00
+===================CubeCore 1 Statistics====================
+Cube Total Cycles................................:     27995
+Cube MAC Exec Occupancy..........................:         0    0.00%
+Cube MAC Utilization.............................:      0.00    0.00%
+Cube Logical MAC Count...........................:         0
+Cube Equivalent MAC Count........................:      0.00
+Cube Equivalent MAC Rate (MAC/cycle).............:      0.00
+Cube core workload units (dtype-normalized)......:      0.00
+Cube core workload rate (units/cycle)............:0.00000000
+Cube Achieved TFLOPS (equivalent MACs, 1.65GHz)..:  0.000000
+Cube core exe tileop count.......................:         0
+L0A Tag Hits (A resident)........................:         0
+L0A Tag Misses (A resident)......................:         0
+L0A Tag Flushes (A resident).....................:         0
+L0A Tag Stale Window Rejects (issue1032).........:         0
+L0A Tag Stale Slot Rejects (issue1032)...........:         0
+Cube Uop Generated Count.........................:         0
+Cube core retired uop count......................:         0
+Cube core total load count.......................:         0
+Cube core total store count (CellReg TileC writes):         0
+==================InternalAcc Feature PMU===================
+internal_acc_entry_alloc_count...................:         0
+internal_acc_entry_read_count....................:         0
+internal_acc_entry_write_count...................:         0
+internal_acc_entry_peak_occupancy................:         0
+internal_acc_active_cycles.......................:         0
+internal_acc_entry_unavailable_stall_cycles......:         0
+internal_acc_entry_lookup_wait_stall_cycles......:         0
+internal_acc_entry_not_ready_stall_cycles........:         0
+internal_acc_stale_reference_count...............:         0
+Cube FP16 Logical MAC Count......................:         0
+Cube FP16 Equivalent MAC Count...................:      0.00
+Cube FP8 Logical MAC Count.......................:         0
+Cube FP8 Equivalent MAC Count....................:      0.00
+Cube FP4 Logical MAC Count.......................:         0
+Cube FP4 Equivalent MAC Count....................:      0.00
+Cube TileOp Occupancy............................:         0    0.00%
+Cube Load Outstanding............................:         0    0.00%
+Cube FixPipe/Store Occupancy.....................:         0    0.00%
+Cube core average acc slot use...................:       N/A
+Cube core average l0a entry use..................:       N/A
+Cube core average l0b entry use..................:       N/A
+Cube core peak l0a entry use.....................:         0    0.00%
+Cube core peak l0b entry use.....................:         0    0.00%
+Cube core peak l0a entry use scan................:         0    0.00%
+Cube core peak l0b entry use scan................:         0    0.00%
+Cube core peak l0a bytes.........................:         0    0.00%
+Cube core peak l0b bytes.........................:         0    0.00%
+Cube core average l0a entry use busy.............:       N/A
+Cube core average l0b entry use busy.............:       N/A
+Cube core average acc slot use busy..............:       N/A
+Cube MAC Range...................................:         0
+Cube Load Range..................................:         0
+Cube Store Range.................................:         0
+Cube Load-MAC Range Overlap......................:         0     N/A
+accSlotAllocCount................................:         0
+accSlotFreeCount.................................:         0
+accSlotPeakInUse.................................:         0
+accSlotWaitCount.................................:         0
+============FixPipe stash (Step-0 capacity need)============
+groupEvenMFallbackCount..........................:         0
+reduceSlotConflictCount..........................:         0
+fixpMergeMapPeakEntries..........................:         0
+fixpMergeMapPeakLaneBytes........................:         0
+fixpOutInflightPeakBytes.........................:         0
+fixPipeInPeakBytes...............................:         0
+fixPipeInFullCycles..............................:         0
+fixPipeInDroppedPending..........................:         0
+fixPipeOutPeakBytes..............................:         0
+fixPipeOutFullCycles.............................:         0
+macStallFixPipeFullCycles........................:         0
+fixPipeBlockEndLeakCount.........................:         0
+bandPairMapPeakSize..............................:         0
+bandPairMapFinalSize.............................:         0
+batchDistributeCount.............................:         0
+batchFallbackCount...............................:         0
+m0TileCReadCount.................................:         0
+m1TileCReadCount.................................:         0
+tileCReadRequestCount............................:         0
+tileCReadBytes...................................:         0
+batchMissedDistributeCount.......................:         0
+uniqueTileCSourceAddresses.......................:         0
+Cube core exe uop count..........................:         0
+Cube core retired uop count......................:         0
+Cube core total load count.......................:         0
+Cube core total store count (CellReg TileC writes):         0
+  |--CellReg Load Count..........................:         0
+    |--CellReg TileA Count.......................:         0
+    |--CellReg TileB Count.......................:         0
+    |--CellReg TileC Count.......................:         0
+    |--CellReg LeftScale Count...................:         0
+    |--CellReg RightScale Count..................:         0
+  |--CellReg Load Bytes..........................:         0
+    |--CellReg TileA Bytes.......................:         0
+    |--CellReg TileB Bytes.......................:         0
+    |--CellReg TileC Bytes.......................:         0
+    |--CellReg LeftScale Bytes...................:         0
+    |--CellReg RightScale Bytes..................:         0
+  |--CellReg Store Count.........................:         0
+    |--CellReg TileC Count.......................:         0
+  |--CellReg Store Bytes.........................:         0
+    |--CellReg TileC Bytes.......................:         0
+  |--ShareTReg Load Count........................:         0
+    |--ShareTReg TileA Count.....................:         0
+    |--ShareTReg TileB Count.....................:         0
+    |--ShareTReg LeftScale Count.................:         0
+    |--ShareTReg RightScale Count................:         0
+  |--ShareTReg Load Bytes........................:         0
+    |--ShareTReg TileA Bytes.....................:         0
+    |--ShareTReg TileB Bytes.....................:         0
+    |--ShareTReg LeftScale Bytes.................:         0
+    |--ShareTReg RightScale Bytes................:         0
+  |--Exp CellReg Load Count......................:         0
+    |--Exp CellReg TileA Count...................:         0
+    |--Exp CellReg TileB Count...................:         0
+    |--Exp CellReg TileC Count...................:         0
+    |--Exp CellReg LeftScale Count...............:         0
+    |--Exp CellReg RightScale Count..............:         0
+  |--Exp CellReg Load Delta......................:      0.00
+InitReduceBuffer calls...........................:         0
+  |--early-out: no reduce requested..............:         0
+  |--early-out: no aux destination...............:         0
+  |--initialized.................................:         0
+matmul blocks w/ hasFixpAttr.....................:         0
+  |--preQuant != 0...............................:         0
+  |--rowMaxEn....................................:         0
+  |--groupMaxEn..................................:         0
+  |--dsts.size() >= 2............................:         0
+  |--dsts.size() >= 3............................:         0
+  |--Exp CellReg Store Count.....................:         0
+  |--Exp CellReg Store Delta.....................:      0.00
+  |--Exp ShareTReg Load Count....................:         0
+  |--Exp ShareTReg Load Cache Skip...............:         0
+  |--Exp ShareTReg Load Delta....................:      0.00
+Cube core cannot pick main chain uop ratio.......:         0     N/A
+Cube core pick cub chain uop ratio...............:         0     N/A
+Cube busy cycle..................................:         0
+Cube core mmad busy cycle........................:         0     N/A
+Cube core load busy cycle........................:         0     N/A
+Cube core store busy cycle.......................:         0     N/A
+  UtilMacW (array exec)..........................:         0
+    |--UtilMacWMad (systolic MAC phase)..........:         0
+    |--UtilMacWRamp (staging/fill-drain).........:         0
+  UtilMacO (operand in-flight)...................:         0
+  UtilMacA (exec/writeback struct)...............:         0
+  UtilMacD (dependency chain)....................:         0
+  UtilMacI (issue/rename struct).................:         0
+  UtilMacS (no tile).............................:     27995
+  UtilMacUnaccounted.............................:         0
+  UtilMacCycles..................................:     27995
+    |--UtilMacSub_O_L0InFlight...................:         0
+    |--UtilMacSub_O_ScaleInFlight................:         0
+    |--UtilMacSub_O_LoadPath.....................:         0
+    |--UtilMacSub_O_LdUopBuf.....................:         0
+    |--UtilMacSub_A_AllocBackpressure............:         0
+    |--UtilMacSub_A_StoreInFlight................:         0
+    |--UtilMacSub_A_FixPipeAnnounce..............:         0
+    |--UtilMacSub_A_UopBufQueue..................:         0
+    |--UtilMacSub_A_TileBoundary.................:         0
+    |--UtilMacSub_A_AccPoolFull..................:         0
+    |--UtilMacSub_A_AccEntryRelease..............:         0
+    |--UtilMacSub_D_KLoopChain...................:         0
+    |--UtilMacSub_D_AccEntryNotReady.............:         0
+    |--UtilMacSubO_Reconcile.....................:      0.00
+    |--UtilMacSubA_Reconcile.....................:      0.00
+    |--UtilMacSubD_Reconcile.....................:      0.00
+    |--UtilMacSub_O_L0InFlight_A.................:         0
+    |--UtilMacSub_O_L0InFlight_B.................:         0
+    |--UtilMacSub_O_L0InFlight_C.................:         0
+    |--UtilMacSub_O_L0InFlight_Other.............:         0
+    |--UtilMacSubO_L0Split_Reconcile.............:      0.00
+  UtilMacIssue_Issued............................:         0
+  UtilMacIssue_CStreamWait.......................:         0
+  UtilMacIssue_L0InFlight........................:         0
+  UtilMacIssue_ScaleInFlight.....................:         0
+  UtilMacIssue_AllocBackpressure.................:         0
+  UtilMacIssue_KLoopChain........................:         0
+  UtilMacIssue_UopBufQueue.......................:         0
+  UtilMacIssue_LdUopBufQueue.....................:         0
+  UtilMacIssue_NoTile............................:     27995
+  UtilMacIssue_TileBoundary......................:         0
+  UtilMacIssue_Unaccounted.......................:         0
+  UtilMacIssue_Reconcile.........................:      0.00
+  UtilMacIssue_L0InFlight_A......................:         0
+  UtilMacIssue_L0InFlight_B......................:         0
+  UtilMacIssue_L0InFlight_C......................:         0
+  UtilMacIssue_L0InFlight_Other..................:         0
+  UtilMacIssue_L0Split_Reconcile.................:      0.00
+  UtilMacStageOcc................................:         0
+  RenameAllocAFailCycles.........................:         0
+  RenameAllocBFailCycles.........................:         0
+  RenameFifoFullCycles...........................:         0
+  UtilMacStageIdle...............................:         0
+  UtilMacStage_Reconcile.........................:      0.00
+  UtilMacFillWeightedUtil........................:      0.00
+  UtilMacShadow_CwaitCycles......................:         0
+  UtilMacShadow_L0WithCwait......................:         0
+  UtilMacStageIdleByCause_Reconcile..............:      0.00
+===================CubeCore 2 Statistics====================
+Cube Total Cycles................................:     27995
+Cube MAC Exec Occupancy..........................:         0    0.00%
+Cube MAC Utilization.............................:      0.00    0.00%
+Cube Logical MAC Count...........................:         0
+Cube Equivalent MAC Count........................:      0.00
+Cube Equivalent MAC Rate (MAC/cycle).............:      0.00
+Cube core workload units (dtype-normalized)......:      0.00
+Cube core workload rate (units/cycle)............:0.00000000
+Cube Achieved TFLOPS (equivalent MACs, 1.65GHz)..:  0.000000
+Cube core exe tileop count.......................:         0
+L0A Tag Hits (A resident)........................:         0
+L0A Tag Misses (A resident)......................:         0
+L0A Tag Flushes (A resident).....................:         0
+L0A Tag Stale Window Rejects (issue1032).........:         0
+L0A Tag Stale Slot Rejects (issue1032)...........:         0
+Cube Uop Generated Count.........................:         0
+Cube core retired uop count......................:         0
+Cube core total load count.......................:         0
+Cube core total store count (CellReg TileC writes):         0
+==================InternalAcc Feature PMU===================
+internal_acc_entry_alloc_count...................:         0
+internal_acc_entry_read_count....................:         0
+internal_acc_entry_write_count...................:         0
+internal_acc_entry_peak_occupancy................:         0
+internal_acc_active_cycles.......................:         0
+internal_acc_entry_unavailable_stall_cycles......:         0
+internal_acc_entry_lookup_wait_stall_cycles......:         0
+internal_acc_entry_not_ready_stall_cycles........:         0
+internal_acc_stale_reference_count...............:         0
+Cube FP16 Logical MAC Count......................:         0
+Cube FP16 Equivalent MAC Count...................:      0.00
+Cube FP8 Logical MAC Count.......................:         0
+Cube FP8 Equivalent MAC Count....................:      0.00
+Cube FP4 Logical MAC Count.......................:         0
+Cube FP4 Equivalent MAC Count....................:      0.00
+Cube TileOp Occupancy............................:         0    0.00%
+Cube Load Outstanding............................:         0    0.00%
+Cube FixPipe/Store Occupancy.....................:         0    0.00%
+Cube core average acc slot use...................:       N/A
+Cube core average l0a entry use..................:       N/A
+Cube core average l0b entry use..................:       N/A
+Cube core peak l0a entry use.....................:         0    0.00%
+Cube core peak l0b entry use.....................:         0    0.00%
+Cube core peak l0a entry use scan................:         0    0.00%
+Cube core peak l0b entry use scan................:         0    0.00%
+Cube core peak l0a bytes.........................:         0    0.00%
+Cube core peak l0b bytes.........................:         0    0.00%
+Cube core average l0a entry use busy.............:       N/A
+Cube core average l0b entry use busy.............:       N/A
+Cube core average acc slot use busy..............:       N/A
+Cube MAC Range...................................:         0
+Cube Load Range..................................:         0
+Cube Store Range.................................:         0
+Cube Load-MAC Range Overlap......................:         0     N/A
+accSlotAllocCount................................:         0
+accSlotFreeCount.................................:         0
+accSlotPeakInUse.................................:         0
+accSlotWaitCount.................................:         0
+============FixPipe stash (Step-0 capacity need)============
+groupEvenMFallbackCount..........................:         0
+reduceSlotConflictCount..........................:         0
+fixpMergeMapPeakEntries..........................:         0
+fixpMergeMapPeakLaneBytes........................:         0
+fixpOutInflightPeakBytes.........................:         0
+fixPipeInPeakBytes...............................:         0
+fixPipeInFullCycles..............................:         0
+fixPipeInDroppedPending..........................:         0
+fixPipeOutPeakBytes..............................:         0
+fixPipeOutFullCycles.............................:         0
+macStallFixPipeFullCycles........................:         0
+fixPipeBlockEndLeakCount.........................:         0
+bandPairMapPeakSize..............................:         0
+bandPairMapFinalSize.............................:         0
+batchDistributeCount.............................:         0
+batchFallbackCount...............................:         0
+m0TileCReadCount.................................:         0
+m1TileCReadCount.................................:         0
+tileCReadRequestCount............................:         0
+tileCReadBytes...................................:         0
+batchMissedDistributeCount.......................:         0
+uniqueTileCSourceAddresses.......................:         0
+Cube core exe uop count..........................:         0
+Cube core retired uop count......................:         0
+Cube core total load count.......................:         0
+Cube core total store count (CellReg TileC writes):         0
+  |--CellReg Load Count..........................:         0
+    |--CellReg TileA Count.......................:         0
+    |--CellReg TileB Count.......................:         0
+    |--CellReg TileC Count.......................:         0
+    |--CellReg LeftScale Count...................:         0
+    |--CellReg RightScale Count..................:         0
+  |--CellReg Load Bytes..........................:         0
+    |--CellReg TileA Bytes.......................:         0
+    |--CellReg TileB Bytes.......................:         0
+    |--CellReg TileC Bytes.......................:         0
+    |--CellReg LeftScale Bytes...................:         0
+    |--CellReg RightScale Bytes..................:         0
+  |--CellReg Store Count.........................:         0
+    |--CellReg TileC Count.......................:         0
+  |--CellReg Store Bytes.........................:         0
+    |--CellReg TileC Bytes.......................:         0
+  |--ShareTReg Load Count........................:         0
+    |--ShareTReg TileA Count.....................:         0
+    |--ShareTReg TileB Count.....................:         0
+    |--ShareTReg LeftScale Count.................:         0
+    |--ShareTReg RightScale Count................:         0
+  |--ShareTReg Load Bytes........................:         0
+    |--ShareTReg TileA Bytes.....................:         0
+    |--ShareTReg TileB Bytes.....................:         0
+    |--ShareTReg LeftScale Bytes.................:         0
+    |--ShareTReg RightScale Bytes................:         0
+  |--Exp CellReg Load Count......................:         0
+    |--Exp CellReg TileA Count...................:         0
+    |--Exp CellReg TileB Count...................:         0
+    |--Exp CellReg TileC Count...................:         0
+    |--Exp CellReg LeftScale Count...............:         0
+    |--Exp CellReg RightScale Count..............:         0
+  |--Exp CellReg Load Delta......................:      0.00
+InitReduceBuffer calls...........................:         0
+  |--early-out: no reduce requested..............:         0
+  |--early-out: no aux destination...............:         0
+  |--initialized.................................:         0
+matmul blocks w/ hasFixpAttr.....................:         0
+  |--preQuant != 0...............................:         0
+  |--rowMaxEn....................................:         0
+  |--groupMaxEn..................................:         0
+  |--dsts.size() >= 2............................:         0
+  |--dsts.size() >= 3............................:         0
+  |--Exp CellReg Store Count.....................:         0
+  |--Exp CellReg Store Delta.....................:      0.00
+  |--Exp ShareTReg Load Count....................:         0
+  |--Exp ShareTReg Load Cache Skip...............:         0
+  |--Exp ShareTReg Load Delta....................:      0.00
+Cube core cannot pick main chain uop ratio.......:         0     N/A
+Cube core pick cub chain uop ratio...............:         0     N/A
+Cube busy cycle..................................:         0
+Cube core mmad busy cycle........................:         0     N/A
+Cube core load busy cycle........................:         0     N/A
+Cube core store busy cycle.......................:         0     N/A
+  UtilMacW (array exec)..........................:         0
+    |--UtilMacWMad (systolic MAC phase)..........:         0
+    |--UtilMacWRamp (staging/fill-drain).........:         0
+  UtilMacO (operand in-flight)...................:         0
+  UtilMacA (exec/writeback struct)...............:         0
+  UtilMacD (dependency chain)....................:         0
+  UtilMacI (issue/rename struct).................:         0
+  UtilMacS (no tile).............................:     27995
+  UtilMacUnaccounted.............................:         0
+  UtilMacCycles..................................:     27995
+    |--UtilMacSub_O_L0InFlight...................:         0
+    |--UtilMacSub_O_ScaleInFlight................:         0
+    |--UtilMacSub_O_LoadPath.....................:         0
+    |--UtilMacSub_O_LdUopBuf.....................:         0
+    |--UtilMacSub_A_AllocBackpressure............:         0
+    |--UtilMacSub_A_StoreInFlight................:         0
+    |--UtilMacSub_A_FixPipeAnnounce..............:         0
+    |--UtilMacSub_A_UopBufQueue..................:         0
+    |--UtilMacSub_A_TileBoundary.................:         0
+    |--UtilMacSub_A_AccPoolFull..................:         0
+    |--UtilMacSub_A_AccEntryRelease..............:         0
+    |--UtilMacSub_D_KLoopChain...................:         0
+    |--UtilMacSub_D_AccEntryNotReady.............:         0
+    |--UtilMacSubO_Reconcile.....................:      0.00
+    |--UtilMacSubA_Reconcile.....................:      0.00
+    |--UtilMacSubD_Reconcile.....................:      0.00
+    |--UtilMacSub_O_L0InFlight_A.................:         0
+    |--UtilMacSub_O_L0InFlight_B.................:         0
+    |--UtilMacSub_O_L0InFlight_C.................:         0
+    |--UtilMacSub_O_L0InFlight_Other.............:         0
+    |--UtilMacSubO_L0Split_Reconcile.............:      0.00
+  UtilMacIssue_Issued............................:         0
+  UtilMacIssue_CStreamWait.......................:         0
+  UtilMacIssue_L0InFlight........................:         0
+  UtilMacIssue_ScaleInFlight.....................:         0
+  UtilMacIssue_AllocBackpressure.................:         0
+  UtilMacIssue_KLoopChain........................:         0
+  UtilMacIssue_UopBufQueue.......................:         0
+  UtilMacIssue_LdUopBufQueue.....................:         0
+  UtilMacIssue_NoTile............................:     27995
+  UtilMacIssue_TileBoundary......................:         0
+  UtilMacIssue_Unaccounted.......................:         0
+  UtilMacIssue_Reconcile.........................:      0.00
+  UtilMacIssue_L0InFlight_A......................:         0
+  UtilMacIssue_L0InFlight_B......................:         0
+  UtilMacIssue_L0InFlight_C......................:         0
+  UtilMacIssue_L0InFlight_Other..................:         0
+  UtilMacIssue_L0Split_Reconcile.................:      0.00
+  UtilMacStageOcc................................:         0
+  RenameAllocAFailCycles.........................:         0
+  RenameAllocBFailCycles.........................:         0
+  RenameFifoFullCycles...........................:         0
+  UtilMacStageIdle...............................:         0
+  UtilMacStage_Reconcile.........................:      0.00
+  UtilMacFillWeightedUtil........................:      0.00
+  UtilMacShadow_CwaitCycles......................:         0
+  UtilMacShadow_L0WithCwait......................:         0
+  UtilMacStageIdleByCause_Reconcile..............:      0.00
+===================CubeCore 3 Statistics====================
+Cube Total Cycles................................:     27995
+Cube MAC Exec Occupancy..........................:         0    0.00%
+Cube MAC Utilization.............................:      0.00    0.00%
+Cube Logical MAC Count...........................:         0
+Cube Equivalent MAC Count........................:      0.00
+Cube Equivalent MAC Rate (MAC/cycle).............:      0.00
+Cube core workload units (dtype-normalized)......:      0.00
+Cube core workload rate (units/cycle)............:0.00000000
+Cube Achieved TFLOPS (equivalent MACs, 1.65GHz)..:  0.000000
+Cube core exe tileop count.......................:         0
+L0A Tag Hits (A resident)........................:         0
+L0A Tag Misses (A resident)......................:         0
+L0A Tag Flushes (A resident).....................:         0
+L0A Tag Stale Window Rejects (issue1032).........:         0
+L0A Tag Stale Slot Rejects (issue1032)...........:         0
+Cube Uop Generated Count.........................:         0
+Cube core retired uop count......................:         0
+Cube core total load count.......................:         0
+Cube core total store count (CellReg TileC writes):         0
+==================InternalAcc Feature PMU===================
+internal_acc_entry_alloc_count...................:         0
+internal_acc_entry_read_count....................:         0
+internal_acc_entry_write_count...................:         0
+internal_acc_entry_peak_occupancy................:         0
+internal_acc_active_cycles.......................:         0
+internal_acc_entry_unavailable_stall_cycles......:         0
+internal_acc_entry_lookup_wait_stall_cycles......:         0
+internal_acc_entry_not_ready_stall_cycles........:         0
+internal_acc_stale_reference_count...............:         0
+Cube FP16 Logical MAC Count......................:         0
+Cube FP16 Equivalent MAC Count...................:      0.00
+Cube FP8 Logical MAC Count.......................:         0
+Cube FP8 Equivalent MAC Count....................:      0.00
+Cube FP4 Logical MAC Count.......................:         0
+Cube FP4 Equivalent MAC Count....................:      0.00
+Cube TileOp Occupancy............................:         0    0.00%
+Cube Load Outstanding............................:         0    0.00%
+Cube FixPipe/Store Occupancy.....................:         0    0.00%
+Cube core average acc slot use...................:       N/A
+Cube core average l0a entry use..................:       N/A
+Cube core average l0b entry use..................:       N/A
+Cube core peak l0a entry use.....................:         0    0.00%
+Cube core peak l0b entry use.....................:         0    0.00%
+Cube core peak l0a entry use scan................:         0    0.00%
+Cube core peak l0b entry use scan................:         0    0.00%
+Cube core peak l0a bytes.........................:         0    0.00%
+Cube core peak l0b bytes.........................:         0    0.00%
+Cube core average l0a entry use busy.............:       N/A
+Cube core average l0b entry use busy.............:       N/A
+Cube core average acc slot use busy..............:       N/A
+Cube MAC Range...................................:         0
+Cube Load Range..................................:         0
+Cube Store Range.................................:         0
+Cube Load-MAC Range Overlap......................:         0     N/A
+accSlotAllocCount................................:         0
+accSlotFreeCount.................................:         0
+accSlotPeakInUse.................................:         0
+accSlotWaitCount.................................:         0
+============FixPipe stash (Step-0 capacity need)============
+groupEvenMFallbackCount..........................:         0
+reduceSlotConflictCount..........................:         0
+fixpMergeMapPeakEntries..........................:         0
+fixpMergeMapPeakLaneBytes........................:         0
+fixpOutInflightPeakBytes.........................:         0
+fixPipeInPeakBytes...............................:         0
+fixPipeInFullCycles..............................:         0
+fixPipeInDroppedPending..........................:         0
+fixPipeOutPeakBytes..............................:         0
+fixPipeOutFullCycles.............................:         0
+macStallFixPipeFullCycles........................:         0
+fixPipeBlockEndLeakCount.........................:         0
+bandPairMapPeakSize..............................:         0
+bandPairMapFinalSize.............................:         0
+batchDistributeCount.............................:         0
+batchFallbackCount...............................:         0
+m0TileCReadCount.................................:         0
+m1TileCReadCount.................................:         0
+tileCReadRequestCount............................:         0
+tileCReadBytes...................................:         0
+batchMissedDistributeCount.......................:         0
+uniqueTileCSourceAddresses.......................:         0
+Cube core exe uop count..........................:         0
+Cube core retired uop count......................:         0
+Cube core total load count.......................:         0
+Cube core total store count (CellReg TileC writes):         0
+  |--CellReg Load Count..........................:         0
+    |--CellReg TileA Count.......................:         0
+    |--CellReg TileB Count.......................:         0
+    |--CellReg TileC Count.......................:         0
+    |--CellReg LeftScale Count...................:         0
+    |--CellReg RightScale Count..................:         0
+  |--CellReg Load Bytes..........................:         0
+    |--CellReg TileA Bytes.......................:         0
+    |--CellReg TileB Bytes.......................:         0
+    |--CellReg TileC Bytes.......................:         0
+    |--CellReg LeftScale Bytes...................:         0
+    |--CellReg RightScale Bytes..................:         0
+  |--CellReg Store Count.........................:         0
+    |--CellReg TileC Count.......................:         0
+  |--CellReg Store Bytes.........................:         0
+    |--CellReg TileC Bytes.......................:         0
+  |--ShareTReg Load Count........................:         0
+    |--ShareTReg TileA Count.....................:         0
+    |--ShareTReg TileB Count.....................:         0
+    |--ShareTReg LeftScale Count.................:         0
+    |--ShareTReg RightScale Count................:         0
+  |--ShareTReg Load Bytes........................:         0
+    |--ShareTReg TileA Bytes.....................:         0
+    |--ShareTReg TileB Bytes.....................:         0
+    |--ShareTReg LeftScale Bytes.................:         0
+    |--ShareTReg RightScale Bytes................:         0
+  |--Exp CellReg Load Count......................:         0
+    |--Exp CellReg TileA Count...................:         0
+    |--Exp CellReg TileB Count...................:         0
+    |--Exp CellReg TileC Count...................:         0
+    |--Exp CellReg LeftScale Count...............:         0
+    |--Exp CellReg RightScale Count..............:         0
+  |--Exp CellReg Load Delta......................:      0.00
+InitReduceBuffer calls...........................:         0
+  |--early-out: no reduce requested..............:         0
+  |--early-out: no aux destination...............:         0
+  |--initialized.................................:         0
+matmul blocks w/ hasFixpAttr.....................:         0
+  |--preQuant != 0...............................:         0
+  |--rowMaxEn....................................:         0
+  |--groupMaxEn..................................:         0
+  |--dsts.size() >= 2............................:         0
+  |--dsts.size() >= 3............................:         0
+  |--Exp CellReg Store Count.....................:         0
+  |--Exp CellReg Store Delta.....................:      0.00
+  |--Exp ShareTReg Load Count....................:         0
+  |--Exp ShareTReg Load Cache Skip...............:         0
+  |--Exp ShareTReg Load Delta....................:      0.00
+Cube core cannot pick main chain uop ratio.......:         0     N/A
+Cube core pick cub chain uop ratio...............:         0     N/A
+Cube busy cycle..................................:         0
+Cube core mmad busy cycle........................:         0     N/A
+Cube core load busy cycle........................:         0     N/A
+Cube core store busy cycle.......................:         0     N/A
+  UtilMacW (array exec)..........................:         0
+    |--UtilMacWMad (systolic MAC phase)..........:         0
+    |--UtilMacWRamp (staging/fill-drain).........:         0
+  UtilMacO (operand in-flight)...................:         0
+  UtilMacA (exec/writeback struct)...............:         0
+  UtilMacD (dependency chain)....................:         0
+  UtilMacI (issue/rename struct).................:         0
+  UtilMacS (no tile).............................:     27995
+  UtilMacUnaccounted.............................:         0
+  UtilMacCycles..................................:     27995
+    |--UtilMacSub_O_L0InFlight...................:         0
+    |--UtilMacSub_O_ScaleInFlight................:         0
+    |--UtilMacSub_O_LoadPath.....................:         0
+    |--UtilMacSub_O_LdUopBuf.....................:         0
+    |--UtilMacSub_A_AllocBackpressure............:         0
+    |--UtilMacSub_A_StoreInFlight................:         0
+    |--UtilMacSub_A_FixPipeAnnounce..............:         0
+    |--UtilMacSub_A_UopBufQueue..................:         0
+    |--UtilMacSub_A_TileBoundary.................:         0
+    |--UtilMacSub_A_AccPoolFull..................:         0
+    |--UtilMacSub_A_AccEntryRelease..............:         0
+    |--UtilMacSub_D_KLoopChain...................:         0
+    |--UtilMacSub_D_AccEntryNotReady.............:         0
+    |--UtilMacSubO_Reconcile.....................:      0.00
+    |--UtilMacSubA_Reconcile.....................:      0.00
+    |--UtilMacSubD_Reconcile.....................:      0.00
+    |--UtilMacSub_O_L0InFlight_A.................:         0
+    |--UtilMacSub_O_L0InFlight_B.................:         0
+    |--UtilMacSub_O_L0InFlight_C.................:         0
+    |--UtilMacSub_O_L0InFlight_Other.............:         0
+    |--UtilMacSubO_L0Split_Reconcile.............:      0.00
+  UtilMacIssue_Issued............................:         0
+  UtilMacIssue_CStreamWait.......................:         0
+  UtilMacIssue_L0InFlight........................:         0
+  UtilMacIssue_ScaleInFlight.....................:         0
+  UtilMacIssue_AllocBackpressure.................:         0
+  UtilMacIssue_KLoopChain........................:         0
+  UtilMacIssue_UopBufQueue.......................:         0
+  UtilMacIssue_LdUopBufQueue.....................:         0
+  UtilMacIssue_NoTile............................:     27995
+  UtilMacIssue_TileBoundary......................:         0
+  UtilMacIssue_Unaccounted.......................:         0
+  UtilMacIssue_Reconcile.........................:      0.00
+  UtilMacIssue_L0InFlight_A......................:         0
+  UtilMacIssue_L0InFlight_B......................:         0
+  UtilMacIssue_L0InFlight_C......................:         0
+  UtilMacIssue_L0InFlight_Other..................:         0
+  UtilMacIssue_L0Split_Reconcile.................:      0.00
+  UtilMacStageOcc................................:         0
+  RenameAllocAFailCycles.........................:         0
+  RenameAllocBFailCycles.........................:         0
+  RenameFifoFullCycles...........................:         0
+  UtilMacStageIdle...............................:         0
+  UtilMacStage_Reconcile.........................:      0.00
+  UtilMacFillWeightedUtil........................:      0.00
+  UtilMacShadow_CwaitCycles......................:         0
+  UtilMacShadow_L0WithCwait......................:         0
+  UtilMacStageIdleByCause_Reconcile..............:      0.00
+=============== TLSU tile-store STQ residency peId=0 ===============
+  resident entry-cycles ....................: 8
+  |-- addr/interval not resolved ...........: 0  (0.00%)
+  |-- tile data (rename) not ready .........: 0  (0.00%)
+  |-- BLOCKED BY NON-FLUSH POINTER .........: 0  (0.00%)
+  |-- older store still in STQ .............: 0  (0.00%)
+  |-- SCB full ............................: 0  (0.00%)
+  store_issue=560 scb_enter=560 stq_peak=46 scb_peak=46
+  private_l1_handoff: fragments=552 acks=552 wait_entry_cycles=552 balanced=yes
+  swimlane: lane_cap_hits=0
+  invariants: stq_conservation=OK (created=557 destroyed=557) a3_tile_violation=0 scb_flush_hit=0 scb_waw_scalar=0 scb_waw_tile=0 nuke=0
+=============== TLOAD Sub-path peId=0 ===============
+  occupancy entry-cycles ..................: 104344 (86.63%)
+  issue events ............................: 14797
+=============== TSTORE Sub-path peId=0 ===============
+  occupancy entry-cycles ..................: 16105 (13.37%)
+  issue events ............................: 560
+=============== TMOV Sub-path peId=0 ===============
+  occupancy entry-cycles ..................: 0 (0.00%)
+  issue events ............................: 0
+========================Streaming L2========================
+l2_tr_read_sent..................................:         8
+l2_tr_read_response..............................:         8
+l2_tr_read_wait_cycles...........................:         8
+l2_tr_read_queue_full_cycles.....................:         0
+l2_tr_write_sent.................................:        40
+l2_tr_write_response.............................:        40
+l2_tr_write_wait_cycles..........................:       240
+l2_tr_write_queue_full_cycles....................:         0
+l2_rwdb_entry_full_cycles........................:         0
+l2_prior_read_raw_renames........................:         1
+l2_atom_accept_cnt...............................:         0
+l2_atom_resolve_cnt..............................:         0
+l2_atom_slot_rmw_preq_cnt........................:         0
+l2_atom_mrob_rmw_preq_cnt........................:         0
+l2_atom_rename_cnt...............................:         0
+l2_atom_rename_war_fill_cnt......................:         0
+l2_atom_rename_war_cow_cnt.......................:         0
+l2_atom_rename_raw_cnt...........................:         0
+l2_atom_lane_cnt.................................:         0
+l2_atom_store_divert_cnt.........................:         0
+l2_starvation_bypass_cycles......................:         0
+=====================Retired block Type=====================
+Retired Block Num................................:     16556
+  |--Retired STD Block Num.......................:     15852
+  |--Retired PARALLEL Block Num..................:       704
+    |--Retired CUBE Block Num....................:         0    0.00%
+    |--Retired VCALL Block Num...................:       624   88.64%
+    |--Retired TLSU Block Num....................:        80   11.36%
+  |--Retired SYS Block Num.......................:         0
+  |--Retired FP Block Num........................:         0
+  |--Retired OTHER Block Num.....................:         0
+==================Retired Template Opcode===================
+FENTRY...........................................:         8
+FEXIT............................................:         0
+FRET.............................................:         8
+MEMSET...........................................:         0
+MEMCOPY..........................................:         0
+Retired Instruction Number.......................:     86237
+  |--Retired Scalar Inst Number..................:     86237
+  |--Retired Vec Inst Number.....................:         0
+Retired Cube TileOp Number.......................:         0
+Blocks Per Cycle.................................:  0.591391
+IPC..............................................:  3.080443
+Average BROB occupancy...........................:     46.86
+  |--STID0 Average BROB occupancy................: 21.724987
+  |--STID1 Average BROB occupancy................:  8.556671
+  |--STID2 Average BROB occupancy................:  8.310055
+  |--STID3 Average BROB occupancy................:  8.267048
+Effective window size............................:     87.22
+MPKB.............................................:      7.67
+MPKI.............................................:      1.47
+Simulation speed (Kilo Insts Per Second).........:     18.19
+Discontinuous BPC Count..........................:     14963
+Average Continuous BPC Length....................:  1.106463
+Average fetch minsts/header per cycle............:      8.01
+==========Block Control Detail Stats(Tile rename)===========
+Tile capacity sample cycles......................:     27995
+Tile virtual tag capacity T/U/M/N (all threads)..:      4096
+Tile virtual peak live tags T/U/M/N (all threads):       227
+Tile physical CellReg capacity per PE(B).........:    262144
+Tile physical CellReg capacity all PEs(B)........:   1048576
+Tile lazy physical allocation enabled............:         0
+Tile TLOAD first-data-ready bind enabled.........:         0
+Tile physical bind requests......................:         0
+Tile physical bind grants........................:         0
+Tile physical bind failures......................:         0
+Tile rename-to-bind average cycles...............:       N/A
+Tile average virtual-only live tags..............:      0.00
+Tile stale cell wakeup events....................:         0
+Tile register average tag num....................:     14.19
+  |--T...........................................:     10.79
+  |--U...........................................:      1.12
+  |--M...........................................:      1.14
+  |--N...........................................:      1.14
+  |--ACC.........................................:      0.00
+  |--STK.........................................:      0.00
+  |--DEP.........................................:      0.00
+  |--MCALL_GPR...................................:      0.00
+  |--MCALL_STK...................................:      0.00
+Tile virtual average requested bytes (all threads):   2074.92
+Tile virtual sum of per-hand peak requested bytes:      9344
+Tile virtual simultaneous peak requested bytes (all threads):     32512
+Tile physical simultaneous peak occupied bytes (all PEs):     28672
+Tile physical simultaneous peak occupied cells (all PEs):       224
+  |--T virtual requested bytes...................:   1639.07
+  |--T virtual peak requested bytes..............:      7808
+  |--U virtual requested bytes...................:    143.59
+  |--U virtual peak requested bytes..............:       512
+  |--M virtual requested bytes...................:    145.90
+  |--M virtual peak requested bytes..............:       512
+  |--N virtual requested bytes...................:    146.36
+  |--N virtual peak requested bytes..............:       512
+  |--ACC virtual requested bytes.................:      0.00
+  |--ACC virtual peak requested bytes............:         0
+  |--STK virtual requested bytes.................:      0.00
+  |--STK virtual peak requested bytes............:         0
+  |--DEP virtual requested bytes.................:      0.00
+  |--DEP virtual peak requested bytes............:         0
+  |--MCALL_GPR virtual requested bytes...........:      0.00
+  |--MCALL_GPR virtual peak requested bytes......:         0
+  |--MCALL_STK virtual requested bytes...........:      0.00
+  |--MCALL_STK virtual peak requested bytes......:         0
+Tile register average occupied bytes (all threads):   1878.08
+Tile register average utilization (%)............:    0.1791
+  |--T occupied bytes............................:      1442   76.78%
+  |--U occupied bytes............................:       143    7.61%
+  |--M occupied bytes............................:       145    7.72%
+  |--N occupied bytes............................:       146    7.77%
+  |--ACC occupied bytes..........................:         0    0.00%
+  |--STK occupied bytes..........................:         0    0.00%
+  |--DEP occupied bytes..........................:         0    0.00%
+  |--MCALL_GPR occupied bytes....................:         0    0.00%
+  |--MCALL_STK occupied bytes....................:         0    0.00%
+Tile physical configured hand size of T..........:     65536
+  |-- physical peak utilization..................:      6784   10.35%
+Tile physical configured hand size of U..........:     65536
+  |-- physical peak utilization..................:       512    0.78%
+Tile physical configured hand size of M..........:     65536
+  |-- physical peak utilization..................:       512    0.78%
+Tile physical configured hand size of N..........:     65536
+  |-- physical peak utilization..................:       512    0.78%
+STID0 TileReg average occupied bytes.............:    472.23
+STID0 TileReg average utilization (%)............:    0.1801
+STID0 virtual Tile average requested bytes.......:    523.08
+STID0 virtual Tile peak requested bytes..........:      8448
+STID0 physical Tile peak occupied bytes..........:      7424
+STID1 TileReg average occupied bytes.............:    469.80
+STID1 TileReg average utilization (%)............:    0.1792
+STID1 virtual Tile average requested bytes.......:    518.59
+STID1 virtual Tile peak requested bytes..........:      8448
+STID1 physical Tile peak occupied bytes..........:      7552
+STID2 TileReg average occupied bytes.............:    465.01
+STID2 TileReg average utilization (%)............:    0.1774
+STID2 virtual Tile average requested bytes.......:    513.82
+STID2 virtual Tile peak requested bytes..........:      8576
+STID2 physical Tile peak occupied bytes..........:      7552
+STID3 TileReg average occupied bytes.............:    471.04
+STID3 TileReg average utilization (%)............:    0.1797
+STID3 virtual Tile average requested bytes.......:    519.42
+STID3 virtual Tile peak requested bytes..........:      8576
+STID3 physical Tile peak occupied bytes..........:      7680
+Tile size-class allocator enabled................:         1
+Tile allocator unit size(B)......................:       128
+Tile allocator requests..........................:       616
+Tile allocator failures..........................:         0
+Tile allocator successful requested units........:       680
+Tile allocator granted units.....................:       680
+Tile allocator class waste units.................:         0
+Tile allocator split events......................:       538
+Tile allocator merge events......................:       424
+Tile allocator sum of per-thread peak(B).........:     30208
+==============Block Control Stall Stats Total===============
+BRob Full Stall..................................:         0
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:        25
+TileReg Full Stall ..............................:         0
+CMD desc ops total (per CMD pipe sum)............:      5062
+CMD desc peak ops (per pipe per cycle)...........:         4
+CMD budget wait cycles...........................:         0
+BCC desc ops total (per stid sum)................:      5047
+BCC desc peak ops (per stid per cycle)...........:         4
+BCC budget wait cycles...........................:         0
+============Block Control Stall Stats SThread 0=============
+BRob Full Stall..................................:         0
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:         8
+TileReg Full Stall ..............................:         0
+InternalAcc Credit Wait..........................:         0
+internal_acc_chain_allocated.....................:         0
+internal_acc_chain_completed.....................:         0
+internal_acc_chain_flush_released................:         0
+internal_acc_block_head..........................:         0
+internal_acc_block_mid...........................:         0
+internal_acc_block_tail..........................:         0
+internal_acc_chain_order_wait_stall_cycles.......:         0
+internal_acc_dispatch_queue_full_wait_cycles.....:         0
+============Block Control Stall Stats SThread 1=============
+BRob Full Stall..................................:         0
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:         7
+TileReg Full Stall ..............................:         0
+InternalAcc Credit Wait..........................:         0
+internal_acc_chain_allocated.....................:         0
+internal_acc_chain_completed.....................:         0
+internal_acc_chain_flush_released................:         0
+internal_acc_block_head..........................:         0
+internal_acc_block_mid...........................:         0
+internal_acc_block_tail..........................:         0
+internal_acc_chain_order_wait_stall_cycles.......:         0
+internal_acc_dispatch_queue_full_wait_cycles.....:         0
+============Block Control Stall Stats SThread 2=============
+BRob Full Stall..................................:         0
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:         3
+TileReg Full Stall ..............................:         0
+InternalAcc Credit Wait..........................:         0
+internal_acc_chain_allocated.....................:         0
+internal_acc_chain_completed.....................:         0
+internal_acc_chain_flush_released................:         0
+internal_acc_block_head..........................:         0
+internal_acc_block_mid...........................:         0
+internal_acc_block_tail..........................:         0
+internal_acc_chain_order_wait_stall_cycles.......:         0
+internal_acc_dispatch_queue_full_wait_cycles.....:         0
+============Block Control Stall Stats SThread 3=============
+BRob Full Stall..................................:         0
+RENAME Stall.....................................:         0
+Block Rename Get Stall...........................:         0
+Block Rename Set Stall...........................:         0
+BIsq Full Stall .................................:         7
+TileReg Full Stall ..............................:         0
+InternalAcc Credit Wait..........................:         0
+internal_acc_chain_allocated.....................:         0
+internal_acc_chain_completed.....................:         0
+internal_acc_chain_flush_released................:         0
+internal_acc_block_head..........................:         0
+internal_acc_block_mid...........................:         0
+internal_acc_block_tail..........................:         0
+internal_acc_chain_order_wait_stall_cycles.......:         0
+internal_acc_dispatch_queue_full_wait_cycles.....:         0
+============CtlStack (BISQ park head, per-stid)=============
+  CtlStackG_S0...................................:      1261
+  CtlStackBIQFull_S0.............................:        32
+  CtlStackPortBudget_S0..........................:         0
+  CtlStackCellRename_S0..........................:         0
+  CtlStackGroupGate_S0...........................:         0
+  CtlStackTlsuBusy_S0............................:         0
+  CtlStackPeCluster_S0...........................:         0
+  CtlStackEmpty_S0...............................:     27250
+  CtlStackUnaccounted_S0.........................:         0
+  CtlStackSyscallGate_S0.........................:         0
+  CtlStackResidual_S0............................:         0
+  CtlStackG_S1...................................:      1261
+  CtlStackBIQFull_S1.............................:        47
+  CtlStackPortBudget_S1..........................:         0
+  CtlStackCellRename_S1..........................:         0
+  CtlStackGroupGate_S1...........................:         0
+  CtlStackTlsuBusy_S1............................:         0
+  CtlStackPeCluster_S1...........................:         0
+  CtlStackEmpty_S1...............................:     27236
+  CtlStackUnaccounted_S1.........................:         0
+  CtlStackSyscallGate_S1.........................:         0
+  CtlStackResidual_S1............................:         0
+  CtlStackG_S2...................................:      1265
+  CtlStackBIQFull_S2.............................:        22
+  CtlStackPortBudget_S2..........................:         0
+  CtlStackCellRename_S2..........................:         0
+  CtlStackGroupGate_S2...........................:         0
+  CtlStackTlsuBusy_S2............................:         0
+  CtlStackPeCluster_S2...........................:         0
+  CtlStackEmpty_S2...............................:     27256
+  CtlStackUnaccounted_S2.........................:         0
+  CtlStackSyscallGate_S2.........................:         0
+  CtlStackResidual_S2............................:         0
+  CtlStackG_S3...................................:      1260
+  CtlStackBIQFull_S3.............................:        49
+  CtlStackPortBudget_S3..........................:         0
+  CtlStackCellRename_S3..........................:         0
+  CtlStackGroupGate_S3...........................:         0
+  CtlStackTlsuBusy_S3............................:         0
+  CtlStackPeCluster_S3...........................:         0
+  CtlStackEmpty_S3...............................:     27235
+  CtlStackUnaccounted_S3.........................:         0
+  CtlStackSyscallGate_S3.........................:         0
+  CtlStackResidual_S3............................:         0
+==============CtlStack0 (fetch slot, per-stid)==============
+  CtlStack0G0_S0.................................:       713
+  CtlStack0Empty0_S0.............................:     27282
+  CtlStack0Held0_S0..............................:         0
+  CtlStack0Residual_S0...........................:         0
+  CtlStack0G0_S1.................................:       712
+  CtlStack0Empty0_S1.............................:     27283
+  CtlStack0Held0_S1..............................:         0
+  CtlStack0Residual_S1...........................:         0
+  CtlStack0G0_S2.................................:       717
+  CtlStack0Empty0_S2.............................:     27278
+  CtlStack0Held0_S2..............................:         0
+  CtlStack0Residual_S2...........................:         0
+  CtlStack0G0_S3.................................:       711
+  CtlStack0Empty0_S3.............................:     27284
+  CtlStack0Held0_S3..............................:         0
+  CtlStack0Residual_S3...........................:         0
+==============CtlStack2 (BIQ dispatch, per-IQ)==============
+  CtlStack2G_CUBE................................:         0
+  CtlStack2Empty_CUBE............................:     27995
+  CtlStack2ReadyWait_CUBE........................:         0
+  CtlStack2DispQFull_CUBE........................:         0
+  CtlStack2Unaccounted_CUBE......................:         0
+  CtlStack2Residual_CUBE.........................:         0
+  CtlStack2G_VEC_PE0.............................:       164
+  CtlStack2Empty_VEC_PE0.........................:     26427
+  CtlStack2ReadyWait_VEC_PE0.....................:      1404
+  CtlStack2DispQFull_VEC_PE0.....................:         0
+  CtlStack2Unaccounted_VEC_PE0...................:         0
+  CtlStack2Residual_VEC_PE0......................:         0
+  CtlStack2G_VEC_PE1.............................:       164
+  CtlStack2Empty_VEC_PE1.........................:     26390
+  CtlStack2ReadyWait_VEC_PE1.....................:      1441
+  CtlStack2DispQFull_VEC_PE1.....................:         0
+  CtlStack2Unaccounted_VEC_PE1...................:         0
+  CtlStack2Residual_VEC_PE1......................:         0
+  CtlStack2G_VEC_PE2.............................:       164
+  CtlStack2Empty_VEC_PE2.........................:     26464
+  CtlStack2ReadyWait_VEC_PE2.....................:      1367
+  CtlStack2DispQFull_VEC_PE2.....................:         0
+  CtlStack2Unaccounted_VEC_PE2...................:         0
+  CtlStack2Residual_VEC_PE2......................:         0
+  CtlStack2G_VEC_PE3.............................:       164
+  CtlStack2Empty_VEC_PE3.........................:     26362
+  CtlStack2ReadyWait_VEC_PE3.....................:      1469
+  CtlStack2DispQFull_VEC_PE3.....................:         0
+  CtlStack2Unaccounted_VEC_PE3...................:         0
+  CtlStack2Residual_VEC_PE3......................:         0
+============TileCell lifetime by producer module============
+  TileCell OccCellCycles_CUBE....................:         0
+  TileCell FreedCells_CUBE.......................:         0
+  TileCell AvgLifeCycles_CUBE....................:      0.00
+  TileCell MaxLifeCycles_CUBE....................:         0
+  TileCell OccCellCycles_VEC.....................:    366123
+  TileCell FreedCells_VEC........................:       544
+  TileCell AvgLifeCycles_VEC.....................:    673.02
+  TileCell MaxLifeCycles_VEC.....................:      1189
+  TileCell OccCellCycles_TLSU....................:     44634
+  TileCell FreedCells_TLSU.......................:        28
+  TileCell AvgLifeCycles_TLSU....................:   1594.07
+  TileCell MaxLifeCycles_TLSU....................:     26627
+  TileCell OccCellCycles_Other...................:         0
+  TileCell FreedCells_Other......................:         0
+  TileCell AvgLifeCycles_Other...................:      0.00
+  TileCell MaxLifeCycles_Other...................:         0
+==========GmmaGenSpread (lockstep 4-PE divergence)==========
+  GenCount (4-PE complete).......................:         0
+  IssueSpreadMean................................:       N/A
+  IssueSpreadMax.................................:         0
+  CompleteSpreadMean.............................:       N/A
+  CompleteSpreadMax..............................:         0
+  CompleteSpreadBucket_le4.......................:         0
+  CompleteSpreadBucket_5to16.....................:         0
+  CompleteSpreadBucket_17to64....................:         0
+  CompleteSpreadBucket_gt64......................:         0
+  FirstDivergenceGen (completeSpread>8)..........:         0
+  FirstDivergenceCycle...........................:         0
+  FirstDivergenceSpread..........................:         0
+=====Block Control Detail Stats(Flush Statistics) Total=====
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:       131
+===Block Control Detail Stats(Flush Statistics) SThread 0===
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:        76
+===Block Control Detail Stats(Flush Statistics) SThread 1===
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:        17
+===Block Control Detail Stats(Flush Statistics) SThread 2===
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:        20
+===Block Control Detail Stats(Flush Statistics) SThread 3===
+intra-block ld-st conflict.......................:         0
+inter-block ld-st conflict.......................:         0
+intra-block misp.................................:         0
+inter-block misp.................................:        18
+=====================SPE OOO&IEX stats======================
+Macro fusion bundles.............................:      1351
+Macro fusion absorbed descriptors................:      2700
+Macro fusion encoded-byte budget stops...........:         0
+Macro fusion in-flight slot stops................:         0
+Macro fusion max bundle encoded bytes............:        14
+Macro fusion max bundle members..................:         3
+decode inst bubble...............................:    129732
+average decode bundle............................:      0.00
+Thread0 Pick Cnt.................................:     13616
+Thread1 Pick Cnt.................................:     26234
+Thread2 Pick Cnt.................................:     26180
+Thread3 Pick Cnt.................................:     26158
+Thread0 rob stall cnt............................:      3241
+Thread1 rob stall cnt............................:       110
+Thread2 rob stall cnt............................:        91
+Thread3 rob stall cnt............................:       134
+decode pe rob stall..............................:         0
+decode local gpr stall...........................:         0
+inst buffer stall................................:         0
+predicate reg stall..............................:         0
+vector reg ptag stall............................:         0
+vector local scalar reg stall....................:         0
+retired ld inst..................................:     14717
+retired st inst..................................:       552
+retired scalar inst..............................:     86237
+retired vector inst..............................:         0
+retired div/sqrt inst............................:         0
+MAPQ lg0 stall...................................:         0
+MAPQ lg1 stall...................................:         0
+MAPQ lg2 stall...................................:         0
+MAPQ lg3 stall...................................:         0
+ROB lg0 stall....................................:      3241
+ROB lg1 stall....................................:       110
+ROB lg2 stall....................................:        91
+ROB lg3 stall....................................:       134
+Thread0 decode cycle.............................:      6662
+Thread1 decode cycle.............................:      6822
+Thread2 decode cycle.............................:      6794
+Thread3 decode cycle.............................:      6805
+Thread0 alloc cycle..............................:      3360
+Thread1 alloc cycle..............................:      6632
+Thread2 alloc cycle..............................:      6631
+Thread3 alloc cycle..............................:      6602
+Thread0 rename cycle.............................:      3356
+Thread1 rename cycle.............................:      6628
+Thread2 rename cycle.............................:      6626
+Thread3 rename cycle.............................:      6602
+Thread0 d2_s1 dispatch cnt.......................:      2948
+Thread1 d2_s1 dispatch cnt.......................:      5034
+Thread2 d2_s1 dispatch cnt.......................:      5823
+Thread3 d2_s1 dispatch cnt.......................:      5642
+Thread0 slots_total..............................:     53296
+Thread1 slots_total..............................:     54576
+Thread2 slots_total..............................:     54352
+Thread3 slots_total..............................:     54440
+Thread0 slots_rob_allocated......................:     13616
+Thread1 slots_rob_allocated......................:     26234
+Thread2 slots_rob_allocated......................:     26180
+Thread3 slots_rob_allocated......................:     26158
+Thread0 slots_fe_bubble..........................:     39680
+Thread1 slots_fe_bubble..........................:     28342
+Thread2 slots_fe_bubble..........................:     28172
+Thread3 slots_fe_bubble..........................:     28282
+Thread0 slots_idle...............................:         0
+Thread1 slots_idle...............................:         0
+Thread2 slots_idle...............................:         0
+Thread3 slots_idle...............................:         0
+Thread0 robStall.................................:     25928
+Thread1 robStall.................................:       880
+Thread2 robStall.................................:       728
+Thread3 robStall.................................:      1072
+Thread0 retired_load.............................:       109
+Thread1 retired_load.............................:      4869
+Thread2 retired_load.............................:      4869
+Thread3 retired_load.............................:      4870
+Thread0 retired_store............................:       417
+Thread1 retired_store............................:        45
+Thread2 retired_store............................:        45
+Thread3 retired_store............................:        45
+Thread0 retired_innerJump........................:         0
+Thread1 retired_innerJump........................:         0
+Thread2 retired_innerJump........................:         0
+Thread3 retired_innerJump........................:         0
+Thread0 retiredAluInst...........................:      8644
+Thread1 retiredAluInst...........................:     20772
+Thread2 retiredAluInst...........................:     20776
+Thread3 retiredAluInst...........................:     20776
+Thread0 retiredSAluInst..........................:      8644
+Thread1 retiredSAluInst..........................:     20772
+Thread2 retiredSAluInst..........................:     20776
+Thread3 retiredSAluInst..........................:     20776
+Thread0 retiredVAluInst..........................:         0
+Thread1 retiredVAluInst..........................:         0
+Thread2 retiredVAluInst..........................:         0
+Thread3 retiredVAluInst..........................:         0
+Thread0 retiredScalar............................:      9170
+Thread1 retiredScalar............................:     25686
+Thread2 retiredScalar............................:     25690
+Thread3 retiredScalar............................:     25691
+Thread0 retiredVector............................:         0
+Thread1 retiredVector............................:         0
+Thread2 retiredVector............................:         0
+Thread3 retiredVector............................:         0
+Thread0 retiredDivSqrt...........................:         0
+Thread1 retiredDivSqrt...........................:         0
+Thread2 retiredDivSqrt...........................:         0
+Thread3 retiredDivSqrt...........................:         0
+====================Vector PMU Stats PE0====================
+PEId.............................................:         0
+ExpandPinBlocks0.................................:         0
+ExpandFillWaits0.................................:         0
+ExpandPinBlocks1.................................:         0
+ExpandFillWaits1.................................:         0
+ExpandPinBlocks2.................................:         0
+ExpandFillWaits2.................................:         0
+TileopNum........................................:       164
+TCMPPackedTileNum................................:         0
+TCMPFragmentExpected.............................:         0
+TCMPFragmentCompleted............................:         0
+TCMPFragmentCanceled.............................:         0
+TCMPPackedCellWrites.............................:         0
+TCMPPackWriteWaitCycles..........................:        12
+TCMPFlushedTileNum...............................:         0
+UopNum...........................................:       177
+SplitCellCountMismatch...........................:         0
+SplitPartialCellUopCount.........................:         0
+SplitUopAvgPayloadBytes..........................:       N/A
+UopQDispatch_INT.................................:        18
+UopQReadyBypass_INT..............................:        10
+UopQDispatchSrcBufFullCycles_INT.................:         0
+UopQDispatchSrcBufFullBlockedCycles_INT..........:         0
+VecSrcCellNotReadyCycles_INT.....................:       907
+SharedReadPortWaitCycles_INT.....................:         0
+UopQDispatch_FMA.................................:         8
+UopQReadyBypass_FMA..............................:         0
+UopQDispatchSrcBufFullCycles_FMA.................:         0
+UopQDispatchSrcBufFullBlockedCycles_FMA..........:         0
+VecSrcCellNotReadyCycles_FMA.....................:       628
+SharedReadPortWaitCycles_FMA.....................:         0
+UopQDispatch_LNEXP...............................:         4
+UopQReadyBypass_LNEXP............................:         0
+UopQDispatchSrcBufFullCycles_LNEXP...............:         0
+UopQDispatchSrcBufFullBlockedCycles_LNEXP........:         0
+VecSrcCellNotReadyCycles_LNEXP...................:       415
+SharedReadPortWaitCycles_LNEXP...................:         0
+CellReadMergedUops...............................:         0
+StaticUopsIssued.................................:       146
+StaticBoardBlockCycles...........................:         1
+CellAccessPartialReads...........................:         0
+CellAccessPartialBankBlocks......................:         0
+CellAccessPartialVisibleBlocks...................:         0
+StaticWritebacks.................................:       126
+EarlyWakeupFired.................................:         0
+StaticDynPipeBlockCycles.........................:       100
+DynStaticChainBlockCycles........................:       133
+ExpandTagHits_INT................................:         0
+ExpandTagMisses_INT..............................:         0
+ExpandBankFills_INT..............................:         0
+ExpandTempFills_INT..............................:         0
+ExpandEvicts_INT.................................:         0
+ExpandTagHits_FMA................................:         0
+ExpandTagMisses_FMA..............................:         0
+ExpandBankFills_FMA..............................:         0
+ExpandTempFills_FMA..............................:         0
+ExpandEvicts_FMA.................................:         0
+ExpandTagHits_LNEXP..............................:         0
+ExpandTagMisses_LNEXP............................:         0
+ExpandBankFills_LNEXP............................:         0
+ExpandTempFills_LNEXP............................:         0
+ExpandEvicts_LNEXP...............................:         0
+ExpandFillDrops..................................:         0
+ExpandReadStaleFallbacks cls0....................:         0
+ExpandReadStaleFallbacks cls1....................:         0
+ExpandReadStaleFallbacks cls2....................:         0
+LeSharedPortBlockCycles..........................:         0
+LeSrc1CarrySkips.................................:         0
+=======Static Path Bank Access / Conflict Attribution=======
+  StaticBankReads Bank[0]........................:        20
+  StaticBankReads Bank[1]........................:        21
+  StaticBankReads Bank[2]........................:        13
+  StaticBankReads Bank[3]........................:        10
+  StaticBankReads Bank[4]........................:         7
+  StaticBankReads Bank[5]........................:        10
+  StaticBankReads Bank[6]........................:        11
+  StaticBankReads Bank[7]........................:        16
+  StaticDetectReadBlocks Bank[0].................:         0
+  StaticDetectReadBlocks Bank[1].................:         0
+  StaticDetectReadBlocks Bank[2].................:         0
+  StaticDetectReadBlocks Bank[3].................:         0
+  StaticDetectReadBlocks Bank[4].................:         0
+  StaticDetectReadBlocks Bank[5].................:         0
+  StaticDetectReadBlocks Bank[6].................:         0
+  StaticDetectReadBlocks Bank[7].................:         0
+  StaticDetectWriteBlocks Bank[0]................:         0
+  StaticDetectWriteBlocks Bank[1]................:         0
+  StaticDetectWriteBlocks Bank[2]................:         0
+  StaticDetectWriteBlocks Bank[3]................:         0
+  StaticDetectWriteBlocks Bank[4]................:         0
+  StaticDetectWriteBlocks Bank[5]................:         0
+  StaticDetectWriteBlocks Bank[6]................:         0
+  StaticDetectWriteBlocks Bank[7]................:         0
+  StaticIntYieldBlocks Bank[0]...................:         0
+  StaticIntYieldBlocks Bank[1]...................:         0
+  StaticIntYieldBlocks Bank[2]...................:         0
+  StaticIntYieldBlocks Bank[3]...................:         0
+  StaticIntYieldBlocks Bank[4]...................:         0
+  StaticIntYieldBlocks Bank[5]...................:         0
+  StaticIntYieldBlocks Bank[6]...................:         0
+  StaticIntYieldBlocks Bank[7]...................:         0
+  StaticBoardOccSum Bank[0]......................:       275
+  StaticBoardOccSum Bank[1]......................:       284
+  StaticBoardOccSum Bank[2]......................:       253
+  StaticBoardOccSum Bank[3]......................:       243
+  StaticBoardOccSum Bank[4]......................:       261
+  StaticBoardOccSum Bank[5]......................:       225
+  StaticBoardOccSum Bank[6]......................:       283
+  StaticBoardOccSum Bank[7]......................:       285
+  StaticBoardOccColSum Col[0]....................:       367
+  StaticBoardOccColSum Col[1]....................:       234
+  StaticBoardOccColSum Col[2]....................:       234
+  StaticBoardOccColSum Col[3]....................:       236
+  StaticBoardOccColSum Col[4]....................:       156
+  StaticBoardOccColSum Col[5]....................:       126
+  StaticBoardOccColSum Col[6]....................:       126
+  StaticBoardOccColSum Col[7]....................:       126
+  StaticBoardOccColSum Col[8]....................:       126
+  StaticBoardOccColSum Col[9]....................:       126
+  StaticBoardOccColSum Col[10]...................:       126
+  StaticBoardOccColSum Col[11]...................:       126
+  StaticBoardOccColSum Col[12]...................:         0
+  StaticBoardOccColSum Col[13]...................:         0
+  StaticBoardOccColSum Col[14]...................:         0
+  StaticBoardOccColSum Col[15]...................:         0
+VecAluAcceptCycles_FMA...........................:        28
+VecAluAcceptCycles_INT...........................:       144
+VecAluAcceptCycles_LNEXP.........................:         4
+VecTripleIssueCycles.............................:         0
+VecDualIssueCycles...............................:         6
+VecSingleIssueCycles.............................:       164
+VecIdleIssueCycles...............................:     27825
+CellReadMergeSaved...............................:         0
+SrcBufBypassIssue................................:         0
+SplitRawGateBlocked..............................:         0
+SplitNoFreeSlotCycles............................:         0
+IPC(UOP).........................................:  0.006323
+RowExpandTileNum.................................:         0
+RowReduceTileNum.................................:         0
+RedTempMacroNum..................................:         0
+HybridCountGatedTiles............................:         0
+ReadNum..........................................:        12
+CellReadAccessTotal..............................:       132
+CellReadAccess_INT...............................:        88
+CellReadAccess_FMA...............................:        36
+CellReadAccess_LNEXP.............................:         8
+ReadLat..........................................:      5.17
+  |--LatLE5......................................:        10
+  |--LatLE10.....................................:         2
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+WriteNum.........................................:        30
+CellWriteAccessTotal.............................:       156
+CellWriteAccess_INT..............................:       124
+CellWriteAccess_FMA..............................:        28
+CellWriteAccess_LNEXP............................:         4
+TempForwardHits_INT..............................:        88
+TempForwardHits_FMA..............................:         0
+TempForwardHits_LNEXP............................:         0
+TempForwardMisses_INT............................:        90
+TempForwardMisses_FMA............................:        20
+TempForwardMisses_LNEXP..........................:         0
+ExpandTagHits_INT................................:         0
+ExpandTagHits_FMA................................:         0
+ExpandTagHits_LNEXP..............................:         0
+ExpandTagMisses_INT..............................:         0
+ExpandTagMisses_FMA..............................:         0
+ExpandTagMisses_LNEXP............................:         0
+ExpandBankFills_INT..............................:         0
+ExpandBankFills_FMA..............................:         0
+ExpandBankFills_LNEXP............................:         0
+ExpandTempFills_INT..............................:         0
+ExpandTempFills_FMA..............................:         0
+ExpandTempFills_LNEXP............................:         0
+ExpandEvicts_INT.................................:         0
+ExpandEvicts_FMA.................................:         0
+ExpandEvicts_LNEXP...............................:         0
+LeSharedPortBlockCycles..........................:         0
+WriteLat.........................................:      1.03
+  |--LatLE5......................................:        30
+  |--LatLE10.....................................:         0
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+AccountExpCellReads_INT..........................:       176
+AccountExpCellReads_FMA..........................:        36
+AccountExpCellReads_LNEXP........................:         8
+AccountExpRedTempReads...........................:         0
+AccountRedTempReads..............................:         0
+AccountExpCellWrites_INT.........................:       140
+AccountExpCellWrites_FMA.........................:        28
+AccountExpCellWrites_LNEXP.......................:         4
+AccountExpRedTempWrites..........................:         0
+AccountExpReadsTotal.............................:       220
+AccountActReadsTotal.............................:       220
+AccountReadDelta.................................:      0.00
+AccountExpWritesTotal............................:       172
+AccountActWritesTotal............................:       156
+AccountWriteDelta................................:     16.00
+========================VecUtilStack========================
+UtilStackW_INT...................................:       144
+UtilStackO_INT...................................:         0
+UtilStackA_INT...................................:         0
+UtilStackD_INT...................................:       675
+UtilStackI_INT...................................:       167
+UtilStackS_INT...................................:     27009
+UtilStackUnaccounted_INT.........................:         0
+UtilStackW_FMA...................................:        28
+UtilStackO_FMA...................................:         0
+UtilStackA_FMA...................................:         0
+UtilStackD_FMA...................................:       641
+UtilStackI_FMA...................................:        20
+UtilStackS_FMA...................................:     27306
+UtilStackUnaccounted_FMA.........................:         0
+UtilStackW_LNEXP.................................:         4
+UtilStackO_LNEXP.................................:         0
+UtilStackA_LNEXP.................................:         0
+UtilStackD_LNEXP.................................:       431
+UtilStackI_LNEXP.................................:         0
+UtilStackS_LNEXP.................................:     27560
+UtilStackUnaccounted_LNEXP.......................:         0
+UtilStackW_SHARED................................:         0
+UtilStackO_SHARED................................:         0
+UtilStackA_SHARED................................:         0
+UtilStackD_SHARED................................:         0
+UtilStackI_SHARED................................:         0
+UtilStackS_SHARED................................:     27995
+UtilStackUnaccounted_SHARED......................:         0
+UtilStackCycles..................................:     27995
+UtilStackVecBusy.................................:       930
+UtilStackVecExposed..............................:       930
+  UtilStackSub_O_DstWriteCfl_INT.................:         0
+  UtilStackSub_O_BankCfl_INT.....................:         0
+  UtilStackSub_O_SharedPort_INT..................:         0
+  UtilStackSub_O_YieldFma_INT....................:         0
+  UtilStackSub_O_LePort_INT......................:         0
+  UtilStackSub_A_RedTempMacro_INT................:         0
+  UtilStackSub_A_LeThrottle_INT..................:         0
+  UtilStackSub_A_LeFifoFull_INT..................:         0
+  UtilStackSub_A_IiCool_INT......................:         0
+  UtilStackSub_A_DstbufFull_INT..................:         0
+  UtilStackSub_A_PipeFull_INT....................:         0
+  UtilStackSub_D_StaticSrc_INT...................:       650
+  UtilStackSub_D_RedTempCount_INT................:         0
+  UtilStackSub_D_DynSrcbuf_INT...................:        25
+  UtilStackSubO_Reconcile_INT....................:      0.00
+  UtilStackSubA_Reconcile_INT....................:      0.00
+  UtilStackSubD_Reconcile_INT....................:      0.00
+  UtilStackSub_O_DstWriteCfl_FMA.................:         0
+  UtilStackSub_O_BankCfl_FMA.....................:         0
+  UtilStackSub_O_SharedPort_FMA..................:         0
+  UtilStackSub_O_YieldFma_FMA....................:         0
+  UtilStackSub_O_LePort_FMA......................:         0
+  UtilStackSub_A_RedTempMacro_FMA................:         0
+  UtilStackSub_A_LeThrottle_FMA..................:         0
+  UtilStackSub_A_LeFifoFull_FMA..................:         0
+  UtilStackSub_A_IiCool_FMA......................:         0
+  UtilStackSub_A_DstbufFull_FMA..................:         0
+  UtilStackSub_A_PipeFull_FMA....................:         0
+  UtilStackSub_D_StaticSrc_FMA...................:       368
+  UtilStackSub_D_RedTempCount_FMA................:         0
+  UtilStackSub_D_DynSrcbuf_FMA...................:       273
+  UtilStackSubO_Reconcile_FMA....................:      0.00
+  UtilStackSubA_Reconcile_FMA....................:      0.00
+  UtilStackSubD_Reconcile_FMA....................:      0.00
+  UtilStackSub_O_DstWriteCfl_LNEXP...............:         0
+  UtilStackSub_O_BankCfl_LNEXP...................:         0
+  UtilStackSub_O_SharedPort_LNEXP................:         0
+  UtilStackSub_O_YieldFma_LNEXP..................:         0
+  UtilStackSub_O_LePort_LNEXP....................:         0
+  UtilStackSub_A_RedTempMacro_LNEXP..............:         0
+  UtilStackSub_A_LeThrottle_LNEXP................:         0
+  UtilStackSub_A_LeFifoFull_LNEXP................:         0
+  UtilStackSub_A_IiCool_LNEXP....................:         0
+  UtilStackSub_A_DstbufFull_LNEXP................:         0
+  UtilStackSub_A_PipeFull_LNEXP..................:         0
+  UtilStackSub_D_StaticSrc_LNEXP.................:         0
+  UtilStackSub_D_RedTempCount_LNEXP..............:         0
+  UtilStackSub_D_DynSrcbuf_LNEXP.................:       431
+  UtilStackSubO_Reconcile_LNEXP..................:      0.00
+  UtilStackSubA_Reconcile_LNEXP..................:      0.00
+  UtilStackSubD_Reconcile_LNEXP..................:      0.00
+  UtilStackSub_O_DstWriteCfl_SHARED..............:         0
+  UtilStackSub_O_BankCfl_SHARED..................:         0
+  UtilStackSub_O_SharedPort_SHARED...............:         0
+  UtilStackSub_O_YieldFma_SHARED.................:         0
+  UtilStackSub_O_LePort_SHARED...................:         0
+  UtilStackSub_A_RedTempMacro_SHARED.............:         0
+  UtilStackSub_A_LeThrottle_SHARED...............:         0
+  UtilStackSub_A_LeFifoFull_SHARED...............:         0
+  UtilStackSub_A_IiCool_SHARED...................:         0
+  UtilStackSub_A_DstbufFull_SHARED...............:         0
+  UtilStackSub_A_PipeFull_SHARED.................:         0
+  UtilStackSub_D_StaticSrc_SHARED................:         0
+  UtilStackSub_D_RedTempCount_SHARED.............:         0
+  UtilStackSub_D_DynSrcbuf_SHARED................:         0
+  UtilStackSubO_Reconcile_SHARED.................:      0.00
+  UtilStackSubA_Reconcile_SHARED.................:      0.00
+  UtilStackSubD_Reconcile_SHARED.................:      0.00
+  UtilStackOBlocker_None_INT.....................:         0
+  UtilStackOBlocker_FmaRead_INT..................:         0
+  UtilStackOBlocker_IntRead_INT..................:         0
+  UtilStackOBlocker_LeRead_INT...................:         0
+  UtilStackOBlocker_FmaWrite_INT.................:         0
+  UtilStackOBlocker_IntWrite_INT.................:         0
+  UtilStackOBlocker_CubeRead_INT.................:         0
+  UtilStackOBlocker_CubeWrite_INT................:         0
+  UtilStackOBlocker_LeWrite_INT..................:         0
+  UtilStackOBlocker_Reconcile_INT................:      0.00
+  UtilStackOBlocker_None_FMA.....................:         0
+  UtilStackOBlocker_FmaRead_FMA..................:         0
+  UtilStackOBlocker_IntRead_FMA..................:         0
+  UtilStackOBlocker_LeRead_FMA...................:         0
+  UtilStackOBlocker_FmaWrite_FMA.................:         0
+  UtilStackOBlocker_IntWrite_FMA.................:         0
+  UtilStackOBlocker_CubeRead_FMA.................:         0
+  UtilStackOBlocker_CubeWrite_FMA................:         0
+  UtilStackOBlocker_LeWrite_FMA..................:         0
+  UtilStackOBlocker_Reconcile_FMA................:      0.00
+  UtilStackOBlocker_None_LNEXP...................:         0
+  UtilStackOBlocker_FmaRead_LNEXP................:         0
+  UtilStackOBlocker_IntRead_LNEXP................:         0
+  UtilStackOBlocker_LeRead_LNEXP.................:         0
+  UtilStackOBlocker_FmaWrite_LNEXP...............:         0
+  UtilStackOBlocker_IntWrite_LNEXP...............:         0
+  UtilStackOBlocker_CubeRead_LNEXP...............:         0
+  UtilStackOBlocker_CubeWrite_LNEXP..............:         0
+  UtilStackOBlocker_LeWrite_LNEXP................:         0
+  UtilStackOBlocker_Reconcile_LNEXP..............:      0.00
+  UtilStackOBlocker_None_SHARED..................:         0
+  UtilStackOBlocker_FmaRead_SHARED...............:         0
+  UtilStackOBlocker_IntRead_SHARED...............:         0
+  UtilStackOBlocker_LeRead_SHARED................:         0
+  UtilStackOBlocker_FmaWrite_SHARED..............:         0
+  UtilStackOBlocker_IntWrite_SHARED..............:         0
+  UtilStackOBlocker_CubeRead_SHARED..............:         0
+  UtilStackOBlocker_CubeWrite_SHARED.............:         0
+  UtilStackOBlocker_LeWrite_SHARED...............:         0
+  UtilStackOBlocker_Reconcile_SHARED.............:      0.00
+YieldFmaReadCycles...............................:         0
+YieldFmaWriteCycles..............................:         0
+UtilStackHideRatio...............................:      0.00
+UtilStackHideRatioStrict.........................:      0.00
+  UtilStackIssueCombo_None.......................:     27825
+  UtilStackIssueCombo_INT........................:       138
+  UtilStackIssueCombo_FMA........................:        22
+  UtilStackIssueCombo_INT+FMA....................:         6
+  UtilStackIssueCombo_LE.........................:         4
+  UtilStackIssueCombo_INT+LE.....................:         0
+  UtilStackIssueCombo_FMA+LE.....................:         0
+  UtilStackIssueCombo_INT+FMA+LE.................:         0
+  UtilStackIssueCombo_SH.........................:         0
+  UtilStackIssueCombo_INT+SH.....................:         0
+  UtilStackIssueCombo_FMA+SH.....................:         0
+  UtilStackIssueCombo_INT+FMA+SH.................:         0
+  UtilStackIssueCombo_LE+SH......................:         0
+  UtilStackIssueCombo_INT+LE+SH..................:         0
+  UtilStackIssueCombo_FMA+LE+SH..................:         0
+  UtilStackIssueCombo_INT+FMA+LE+SH..............:         0
+  UtilStackIssueCombo_Reconcile..................:      0.00
+  UtilStackIssueEvent_Reconcile..................:      0.00
+UtilStackMultiIssueProb..........................:      0.04
+UtilStackAvgIssueRate............................:      0.01
+UtilStackIssueWidthUtil..........................:      0.00
+====================Vector PMU Stats PE1====================
+PEId.............................................:         1
+ExpandPinBlocks0.................................:         0
+ExpandFillWaits0.................................:         0
+ExpandPinBlocks1.................................:         0
+ExpandFillWaits1.................................:         0
+ExpandPinBlocks2.................................:         0
+ExpandFillWaits2.................................:         0
+TileopNum........................................:       164
+TCMPPackedTileNum................................:         0
+TCMPFragmentExpected.............................:         0
+TCMPFragmentCompleted............................:         0
+TCMPFragmentCanceled.............................:         0
+TCMPPackedCellWrites.............................:         0
+TCMPPackWriteWaitCycles..........................:        12
+TCMPFlushedTileNum...............................:         0
+UopNum...........................................:       177
+SplitCellCountMismatch...........................:         0
+SplitPartialCellUopCount.........................:         0
+SplitUopAvgPayloadBytes..........................:       N/A
+UopQDispatch_INT.................................:        18
+UopQReadyBypass_INT..............................:        10
+UopQDispatchSrcBufFullCycles_INT.................:         0
+UopQDispatchSrcBufFullBlockedCycles_INT..........:         0
+VecSrcCellNotReadyCycles_INT.....................:       939
+SharedReadPortWaitCycles_INT.....................:         0
+UopQDispatch_FMA.................................:         8
+UopQReadyBypass_FMA..............................:         0
+UopQDispatchSrcBufFullCycles_FMA.................:         0
+UopQDispatchSrcBufFullBlockedCycles_FMA..........:         0
+VecSrcCellNotReadyCycles_FMA.....................:       635
+SharedReadPortWaitCycles_FMA.....................:         0
+UopQDispatch_LNEXP...............................:         4
+UopQReadyBypass_LNEXP............................:         0
+UopQDispatchSrcBufFullCycles_LNEXP...............:         0
+UopQDispatchSrcBufFullBlockedCycles_LNEXP........:         0
+VecSrcCellNotReadyCycles_LNEXP...................:       439
+SharedReadPortWaitCycles_LNEXP...................:         0
+CellReadMergedUops...............................:         0
+StaticUopsIssued.................................:       146
+StaticBoardBlockCycles...........................:         0
+CellAccessPartialReads...........................:         0
+CellAccessPartialBankBlocks......................:         0
+CellAccessPartialVisibleBlocks...................:         0
+StaticWritebacks.................................:       126
+EarlyWakeupFired.................................:         0
+StaticDynPipeBlockCycles.........................:        98
+DynStaticChainBlockCycles........................:       128
+ExpandTagHits_INT................................:         0
+ExpandTagMisses_INT..............................:         0
+ExpandBankFills_INT..............................:         0
+ExpandTempFills_INT..............................:         0
+ExpandEvicts_INT.................................:         0
+ExpandTagHits_FMA................................:         0
+ExpandTagMisses_FMA..............................:         0
+ExpandBankFills_FMA..............................:         0
+ExpandTempFills_FMA..............................:         0
+ExpandEvicts_FMA.................................:         0
+ExpandTagHits_LNEXP..............................:         0
+ExpandTagMisses_LNEXP............................:         0
+ExpandBankFills_LNEXP............................:         0
+ExpandTempFills_LNEXP............................:         0
+ExpandEvicts_LNEXP...............................:         0
+ExpandFillDrops..................................:         0
+ExpandReadStaleFallbacks cls0....................:         0
+ExpandReadStaleFallbacks cls1....................:         0
+ExpandReadStaleFallbacks cls2....................:         0
+LeSharedPortBlockCycles..........................:         0
+LeSrc1CarrySkips.................................:         0
+=======Static Path Bank Access / Conflict Attribution=======
+  StaticBankReads Bank[0]........................:        17
+  StaticBankReads Bank[1]........................:        18
+  StaticBankReads Bank[2]........................:        15
+  StaticBankReads Bank[3]........................:        12
+  StaticBankReads Bank[4]........................:        11
+  StaticBankReads Bank[5]........................:        11
+  StaticBankReads Bank[6]........................:        10
+  StaticBankReads Bank[7]........................:        15
+  StaticDetectReadBlocks Bank[0].................:         0
+  StaticDetectReadBlocks Bank[1].................:         0
+  StaticDetectReadBlocks Bank[2].................:         0
+  StaticDetectReadBlocks Bank[3].................:         0
+  StaticDetectReadBlocks Bank[4].................:         0
+  StaticDetectReadBlocks Bank[5].................:         0
+  StaticDetectReadBlocks Bank[6].................:         0
+  StaticDetectReadBlocks Bank[7].................:         0
+  StaticDetectWriteBlocks Bank[0]................:         0
+  StaticDetectWriteBlocks Bank[1]................:         0
+  StaticDetectWriteBlocks Bank[2]................:         0
+  StaticDetectWriteBlocks Bank[3]................:         0
+  StaticDetectWriteBlocks Bank[4]................:         0
+  StaticDetectWriteBlocks Bank[5]................:         0
+  StaticDetectWriteBlocks Bank[6]................:         0
+  StaticDetectWriteBlocks Bank[7]................:         0
+  StaticIntYieldBlocks Bank[0]...................:         0
+  StaticIntYieldBlocks Bank[1]...................:         0
+  StaticIntYieldBlocks Bank[2]...................:         0
+  StaticIntYieldBlocks Bank[3]...................:         0
+  StaticIntYieldBlocks Bank[4]...................:         0
+  StaticIntYieldBlocks Bank[5]...................:         0
+  StaticIntYieldBlocks Bank[6]...................:         0
+  StaticIntYieldBlocks Bank[7]...................:         0
+  StaticBoardOccSum Bank[0]......................:       251
+  StaticBoardOccSum Bank[1]......................:       260
+  StaticBoardOccSum Bank[2]......................:       265
+  StaticBoardOccSum Bank[3]......................:       236
+  StaticBoardOccSum Bank[4]......................:       247
+  StaticBoardOccSum Bank[5]......................:       246
+  StaticBoardOccSum Bank[6]......................:       261
+  StaticBoardOccSum Bank[7]......................:       269
+  StaticBoardOccColSum Col[0]....................:       289
+  StaticBoardOccColSum Col[1]....................:       235
+  StaticBoardOccColSum Col[2]....................:       235
+  StaticBoardOccColSum Col[3]....................:       237
+  StaticBoardOccColSum Col[4]....................:       157
+  StaticBoardOccColSum Col[5]....................:       126
+  StaticBoardOccColSum Col[6]....................:       126
+  StaticBoardOccColSum Col[7]....................:       126
+  StaticBoardOccColSum Col[8]....................:       126
+  StaticBoardOccColSum Col[9]....................:       126
+  StaticBoardOccColSum Col[10]...................:       126
+  StaticBoardOccColSum Col[11]...................:       126
+  StaticBoardOccColSum Col[12]...................:         0
+  StaticBoardOccColSum Col[13]...................:         0
+  StaticBoardOccColSum Col[14]...................:         0
+  StaticBoardOccColSum Col[15]...................:         0
+VecAluAcceptCycles_FMA...........................:        28
+VecAluAcceptCycles_INT...........................:       144
+VecAluAcceptCycles_LNEXP.........................:         4
+VecTripleIssueCycles.............................:         0
+VecDualIssueCycles...............................:         6
+VecSingleIssueCycles.............................:       164
+VecIdleIssueCycles...............................:     27825
+CellReadMergeSaved...............................:         0
+SrcBufBypassIssue................................:         0
+SplitRawGateBlocked..............................:         0
+SplitNoFreeSlotCycles............................:         0
+IPC(UOP).........................................:  0.006323
+RowExpandTileNum.................................:         0
+RowReduceTileNum.................................:         0
+RedTempMacroNum..................................:         0
+HybridCountGatedTiles............................:         0
+ReadNum..........................................:        12
+CellReadAccessTotal..............................:       133
+CellReadAccess_INT...............................:        89
+CellReadAccess_FMA...............................:        36
+CellReadAccess_LNEXP.............................:         8
+ReadLat..........................................:      5.17
+  |--LatLE5......................................:        10
+  |--LatLE10.....................................:         2
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+WriteNum.........................................:        30
+CellWriteAccessTotal.............................:       156
+CellWriteAccess_INT..............................:       124
+CellWriteAccess_FMA..............................:        28
+CellWriteAccess_LNEXP............................:         4
+TempForwardHits_INT..............................:        87
+TempForwardHits_FMA..............................:         0
+TempForwardHits_LNEXP............................:         0
+TempForwardMisses_INT............................:        91
+TempForwardMisses_FMA............................:        20
+TempForwardMisses_LNEXP..........................:         0
+ExpandTagHits_INT................................:         0
+ExpandTagHits_FMA................................:         0
+ExpandTagHits_LNEXP..............................:         0
+ExpandTagMisses_INT..............................:         0
+ExpandTagMisses_FMA..............................:         0
+ExpandTagMisses_LNEXP............................:         0
+ExpandBankFills_INT..............................:         0
+ExpandBankFills_FMA..............................:         0
+ExpandBankFills_LNEXP............................:         0
+ExpandTempFills_INT..............................:         0
+ExpandTempFills_FMA..............................:         0
+ExpandTempFills_LNEXP............................:         0
+ExpandEvicts_INT.................................:         0
+ExpandEvicts_FMA.................................:         0
+ExpandEvicts_LNEXP...............................:         0
+LeSharedPortBlockCycles..........................:         0
+WriteLat.........................................:      1.00
+  |--LatLE5......................................:        30
+  |--LatLE10.....................................:         0
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+AccountExpCellReads_INT..........................:       176
+AccountExpCellReads_FMA..........................:        36
+AccountExpCellReads_LNEXP........................:         8
+AccountExpRedTempReads...........................:         0
+AccountRedTempReads..............................:         0
+AccountExpCellWrites_INT.........................:       140
+AccountExpCellWrites_FMA.........................:        28
+AccountExpCellWrites_LNEXP.......................:         4
+AccountExpRedTempWrites..........................:         0
+AccountExpReadsTotal.............................:       220
+AccountActReadsTotal.............................:       220
+AccountReadDelta.................................:      0.00
+AccountExpWritesTotal............................:       172
+AccountActWritesTotal............................:       156
+AccountWriteDelta................................:     16.00
+========================VecUtilStack========================
+UtilStackW_INT...................................:       144
+UtilStackO_INT...................................:         0
+UtilStackA_INT...................................:         0
+UtilStackD_INT...................................:       708
+UtilStackI_INT...................................:       166
+UtilStackS_INT...................................:     26977
+UtilStackUnaccounted_INT.........................:         0
+UtilStackW_FMA...................................:        28
+UtilStackO_FMA...................................:         0
+UtilStackA_FMA...................................:         0
+UtilStackD_FMA...................................:       648
+UtilStackI_FMA...................................:        20
+UtilStackS_FMA...................................:     27299
+UtilStackUnaccounted_FMA.........................:         0
+UtilStackW_LNEXP.................................:         4
+UtilStackO_LNEXP.................................:         0
+UtilStackA_LNEXP.................................:         0
+UtilStackD_LNEXP.................................:       455
+UtilStackI_LNEXP.................................:         0
+UtilStackS_LNEXP.................................:     27536
+UtilStackUnaccounted_LNEXP.......................:         0
+UtilStackW_SHARED................................:         0
+UtilStackO_SHARED................................:         0
+UtilStackA_SHARED................................:         0
+UtilStackD_SHARED................................:         0
+UtilStackI_SHARED................................:         0
+UtilStackS_SHARED................................:     27995
+UtilStackUnaccounted_SHARED......................:         0
+UtilStackCycles..................................:     27995
+UtilStackVecBusy.................................:       947
+UtilStackVecExposed..............................:       947
+  UtilStackSub_O_DstWriteCfl_INT.................:         0
+  UtilStackSub_O_BankCfl_INT.....................:         0
+  UtilStackSub_O_SharedPort_INT..................:         0
+  UtilStackSub_O_YieldFma_INT....................:         0
+  UtilStackSub_O_LePort_INT......................:         0
+  UtilStackSub_A_RedTempMacro_INT................:         0
+  UtilStackSub_A_LeThrottle_INT..................:         0
+  UtilStackSub_A_LeFifoFull_INT..................:         0
+  UtilStackSub_A_IiCool_INT......................:         0
+  UtilStackSub_A_DstbufFull_INT..................:         0
+  UtilStackSub_A_PipeFull_INT....................:         0
+  UtilStackSub_D_StaticSrc_INT...................:       683
+  UtilStackSub_D_RedTempCount_INT................:         0
+  UtilStackSub_D_DynSrcbuf_INT...................:        25
+  UtilStackSubO_Reconcile_INT....................:      0.00
+  UtilStackSubA_Reconcile_INT....................:      0.00
+  UtilStackSubD_Reconcile_INT....................:      0.00
+  UtilStackSub_O_DstWriteCfl_FMA.................:         0
+  UtilStackSub_O_BankCfl_FMA.....................:         0
+  UtilStackSub_O_SharedPort_FMA..................:         0
+  UtilStackSub_O_YieldFma_FMA....................:         0
+  UtilStackSub_O_LePort_FMA......................:         0
+  UtilStackSub_A_RedTempMacro_FMA................:         0
+  UtilStackSub_A_LeThrottle_FMA..................:         0
+  UtilStackSub_A_LeFifoFull_FMA..................:         0
+  UtilStackSub_A_IiCool_FMA......................:         0
+  UtilStackSub_A_DstbufFull_FMA..................:         0
+  UtilStackSub_A_PipeFull_FMA....................:         0
+  UtilStackSub_D_StaticSrc_FMA...................:       331
+  UtilStackSub_D_RedTempCount_FMA................:         0
+  UtilStackSub_D_DynSrcbuf_FMA...................:       317
+  UtilStackSubO_Reconcile_FMA....................:      0.00
+  UtilStackSubA_Reconcile_FMA....................:      0.00
+  UtilStackSubD_Reconcile_FMA....................:      0.00
+  UtilStackSub_O_DstWriteCfl_LNEXP...............:         0
+  UtilStackSub_O_BankCfl_LNEXP...................:         0
+  UtilStackSub_O_SharedPort_LNEXP................:         0
+  UtilStackSub_O_YieldFma_LNEXP..................:         0
+  UtilStackSub_O_LePort_LNEXP....................:         0
+  UtilStackSub_A_RedTempMacro_LNEXP..............:         0
+  UtilStackSub_A_LeThrottle_LNEXP................:         0
+  UtilStackSub_A_LeFifoFull_LNEXP................:         0
+  UtilStackSub_A_IiCool_LNEXP....................:         0
+  UtilStackSub_A_DstbufFull_LNEXP................:         0
+  UtilStackSub_A_PipeFull_LNEXP..................:         0
+  UtilStackSub_D_StaticSrc_LNEXP.................:         0
+  UtilStackSub_D_RedTempCount_LNEXP..............:         0
+  UtilStackSub_D_DynSrcbuf_LNEXP.................:       455
+  UtilStackSubO_Reconcile_LNEXP..................:      0.00
+  UtilStackSubA_Reconcile_LNEXP..................:      0.00
+  UtilStackSubD_Reconcile_LNEXP..................:      0.00
+  UtilStackSub_O_DstWriteCfl_SHARED..............:         0
+  UtilStackSub_O_BankCfl_SHARED..................:         0
+  UtilStackSub_O_SharedPort_SHARED...............:         0
+  UtilStackSub_O_YieldFma_SHARED.................:         0
+  UtilStackSub_O_LePort_SHARED...................:         0
+  UtilStackSub_A_RedTempMacro_SHARED.............:         0
+  UtilStackSub_A_LeThrottle_SHARED...............:         0
+  UtilStackSub_A_LeFifoFull_SHARED...............:         0
+  UtilStackSub_A_IiCool_SHARED...................:         0
+  UtilStackSub_A_DstbufFull_SHARED...............:         0
+  UtilStackSub_A_PipeFull_SHARED.................:         0
+  UtilStackSub_D_StaticSrc_SHARED................:         0
+  UtilStackSub_D_RedTempCount_SHARED.............:         0
+  UtilStackSub_D_DynSrcbuf_SHARED................:         0
+  UtilStackSubO_Reconcile_SHARED.................:      0.00
+  UtilStackSubA_Reconcile_SHARED.................:      0.00
+  UtilStackSubD_Reconcile_SHARED.................:      0.00
+  UtilStackOBlocker_None_INT.....................:         0
+  UtilStackOBlocker_FmaRead_INT..................:         0
+  UtilStackOBlocker_IntRead_INT..................:         0
+  UtilStackOBlocker_LeRead_INT...................:         0
+  UtilStackOBlocker_FmaWrite_INT.................:         0
+  UtilStackOBlocker_IntWrite_INT.................:         0
+  UtilStackOBlocker_CubeRead_INT.................:         0
+  UtilStackOBlocker_CubeWrite_INT................:         0
+  UtilStackOBlocker_LeWrite_INT..................:         0
+  UtilStackOBlocker_Reconcile_INT................:      0.00
+  UtilStackOBlocker_None_FMA.....................:         0
+  UtilStackOBlocker_FmaRead_FMA..................:         0
+  UtilStackOBlocker_IntRead_FMA..................:         0
+  UtilStackOBlocker_LeRead_FMA...................:         0
+  UtilStackOBlocker_FmaWrite_FMA.................:         0
+  UtilStackOBlocker_IntWrite_FMA.................:         0
+  UtilStackOBlocker_CubeRead_FMA.................:         0
+  UtilStackOBlocker_CubeWrite_FMA................:         0
+  UtilStackOBlocker_LeWrite_FMA..................:         0
+  UtilStackOBlocker_Reconcile_FMA................:      0.00
+  UtilStackOBlocker_None_LNEXP...................:         0
+  UtilStackOBlocker_FmaRead_LNEXP................:         0
+  UtilStackOBlocker_IntRead_LNEXP................:         0
+  UtilStackOBlocker_LeRead_LNEXP.................:         0
+  UtilStackOBlocker_FmaWrite_LNEXP...............:         0
+  UtilStackOBlocker_IntWrite_LNEXP...............:         0
+  UtilStackOBlocker_CubeRead_LNEXP...............:         0
+  UtilStackOBlocker_CubeWrite_LNEXP..............:         0
+  UtilStackOBlocker_LeWrite_LNEXP................:         0
+  UtilStackOBlocker_Reconcile_LNEXP..............:      0.00
+  UtilStackOBlocker_None_SHARED..................:         0
+  UtilStackOBlocker_FmaRead_SHARED...............:         0
+  UtilStackOBlocker_IntRead_SHARED...............:         0
+  UtilStackOBlocker_LeRead_SHARED................:         0
+  UtilStackOBlocker_FmaWrite_SHARED..............:         0
+  UtilStackOBlocker_IntWrite_SHARED..............:         0
+  UtilStackOBlocker_CubeRead_SHARED..............:         0
+  UtilStackOBlocker_CubeWrite_SHARED.............:         0
+  UtilStackOBlocker_LeWrite_SHARED...............:         0
+  UtilStackOBlocker_Reconcile_SHARED.............:      0.00
+YieldFmaReadCycles...............................:         0
+YieldFmaWriteCycles..............................:         0
+UtilStackHideRatio...............................:      0.00
+UtilStackHideRatioStrict.........................:      0.00
+  UtilStackIssueCombo_None.......................:     27825
+  UtilStackIssueCombo_INT........................:       138
+  UtilStackIssueCombo_FMA........................:        22
+  UtilStackIssueCombo_INT+FMA....................:         6
+  UtilStackIssueCombo_LE.........................:         4
+  UtilStackIssueCombo_INT+LE.....................:         0
+  UtilStackIssueCombo_FMA+LE.....................:         0
+  UtilStackIssueCombo_INT+FMA+LE.................:         0
+  UtilStackIssueCombo_SH.........................:         0
+  UtilStackIssueCombo_INT+SH.....................:         0
+  UtilStackIssueCombo_FMA+SH.....................:         0
+  UtilStackIssueCombo_INT+FMA+SH.................:         0
+  UtilStackIssueCombo_LE+SH......................:         0
+  UtilStackIssueCombo_INT+LE+SH..................:         0
+  UtilStackIssueCombo_FMA+LE+SH..................:         0
+  UtilStackIssueCombo_INT+FMA+LE+SH..............:         0
+  UtilStackIssueCombo_Reconcile..................:      0.00
+  UtilStackIssueEvent_Reconcile..................:      0.00
+UtilStackMultiIssueProb..........................:      0.04
+UtilStackAvgIssueRate............................:      0.01
+UtilStackIssueWidthUtil..........................:      0.00
+====================Vector PMU Stats PE2====================
+PEId.............................................:         2
+ExpandPinBlocks0.................................:         0
+ExpandFillWaits0.................................:         0
+ExpandPinBlocks1.................................:         0
+ExpandFillWaits1.................................:         0
+ExpandPinBlocks2.................................:         0
+ExpandFillWaits2.................................:         0
+TileopNum........................................:       164
+TCMPPackedTileNum................................:         0
+TCMPFragmentExpected.............................:         0
+TCMPFragmentCompleted............................:         0
+TCMPFragmentCanceled.............................:         0
+TCMPPackedCellWrites.............................:         0
+TCMPPackWriteWaitCycles..........................:        12
+TCMPFlushedTileNum...............................:         0
+UopNum...........................................:       178
+SplitCellCountMismatch...........................:         0
+SplitPartialCellUopCount.........................:         0
+SplitUopAvgPayloadBytes..........................:       N/A
+UopQDispatch_INT.................................:        18
+UopQReadyBypass_INT..............................:        10
+UopQDispatchSrcBufFullCycles_INT.................:         0
+UopQDispatchSrcBufFullBlockedCycles_INT..........:         0
+VecSrcCellNotReadyCycles_INT.....................:       926
+SharedReadPortWaitCycles_INT.....................:         0
+UopQDispatch_FMA.................................:         8
+UopQReadyBypass_FMA..............................:         0
+UopQDispatchSrcBufFullCycles_FMA.................:         0
+UopQDispatchSrcBufFullBlockedCycles_FMA..........:         0
+VecSrcCellNotReadyCycles_FMA.....................:       635
+SharedReadPortWaitCycles_FMA.....................:         0
+UopQDispatch_LNEXP...............................:         4
+UopQReadyBypass_LNEXP............................:         0
+UopQDispatchSrcBufFullCycles_LNEXP...............:         0
+UopQDispatchSrcBufFullBlockedCycles_LNEXP........:         0
+VecSrcCellNotReadyCycles_LNEXP...................:       410
+SharedReadPortWaitCycles_LNEXP...................:         0
+CellReadMergedUops...............................:         0
+StaticUopsIssued.................................:       146
+StaticBoardBlockCycles...........................:         0
+CellAccessPartialReads...........................:         0
+CellAccessPartialBankBlocks......................:         0
+CellAccessPartialVisibleBlocks...................:         0
+StaticWritebacks.................................:       126
+EarlyWakeupFired.................................:         0
+StaticDynPipeBlockCycles.........................:       102
+DynStaticChainBlockCycles........................:       104
+ExpandTagHits_INT................................:         0
+ExpandTagMisses_INT..............................:         0
+ExpandBankFills_INT..............................:         0
+ExpandTempFills_INT..............................:         0
+ExpandEvicts_INT.................................:         0
+ExpandTagHits_FMA................................:         0
+ExpandTagMisses_FMA..............................:         0
+ExpandBankFills_FMA..............................:         0
+ExpandTempFills_FMA..............................:         0
+ExpandEvicts_FMA.................................:         0
+ExpandTagHits_LNEXP..............................:         0
+ExpandTagMisses_LNEXP............................:         0
+ExpandBankFills_LNEXP............................:         0
+ExpandTempFills_LNEXP............................:         0
+ExpandEvicts_LNEXP...............................:         0
+ExpandFillDrops..................................:         0
+ExpandReadStaleFallbacks cls0....................:         0
+ExpandReadStaleFallbacks cls1....................:         0
+ExpandReadStaleFallbacks cls2....................:         0
+LeSharedPortBlockCycles..........................:         0
+LeSrc1CarrySkips.................................:         0
+=======Static Path Bank Access / Conflict Attribution=======
+  StaticBankReads Bank[0]........................:        20
+  StaticBankReads Bank[1]........................:        11
+  StaticBankReads Bank[2]........................:        13
+  StaticBankReads Bank[3]........................:        16
+  StaticBankReads Bank[4]........................:        11
+  StaticBankReads Bank[5]........................:        11
+  StaticBankReads Bank[6]........................:        11
+  StaticBankReads Bank[7]........................:        14
+  StaticDetectReadBlocks Bank[0].................:         0
+  StaticDetectReadBlocks Bank[1].................:         0
+  StaticDetectReadBlocks Bank[2].................:         0
+  StaticDetectReadBlocks Bank[3].................:         0
+  StaticDetectReadBlocks Bank[4].................:         0
+  StaticDetectReadBlocks Bank[5].................:         0
+  StaticDetectReadBlocks Bank[6].................:         0
+  StaticDetectReadBlocks Bank[7].................:         0
+  StaticDetectWriteBlocks Bank[0]................:         0
+  StaticDetectWriteBlocks Bank[1]................:         0
+  StaticDetectWriteBlocks Bank[2]................:         0
+  StaticDetectWriteBlocks Bank[3]................:         0
+  StaticDetectWriteBlocks Bank[4]................:         0
+  StaticDetectWriteBlocks Bank[5]................:         0
+  StaticDetectWriteBlocks Bank[6]................:         0
+  StaticDetectWriteBlocks Bank[7]................:         0
+  StaticIntYieldBlocks Bank[0]...................:         0
+  StaticIntYieldBlocks Bank[1]...................:         0
+  StaticIntYieldBlocks Bank[2]...................:         0
+  StaticIntYieldBlocks Bank[3]...................:         0
+  StaticIntYieldBlocks Bank[4]...................:         0
+  StaticIntYieldBlocks Bank[5]...................:         0
+  StaticIntYieldBlocks Bank[6]...................:         0
+  StaticIntYieldBlocks Bank[7]...................:         0
+  StaticBoardOccSum Bank[0]......................:       282
+  StaticBoardOccSum Bank[1]......................:       284
+  StaticBoardOccSum Bank[2]......................:       283
+  StaticBoardOccSum Bank[3]......................:       236
+  StaticBoardOccSum Bank[4]......................:       257
+  StaticBoardOccSum Bank[5]......................:       209
+  StaticBoardOccSum Bank[6]......................:       232
+  StaticBoardOccSum Bank[7]......................:       243
+  StaticBoardOccColSum Col[0]....................:       287
+  StaticBoardOccColSum Col[1]....................:       233
+  StaticBoardOccColSum Col[2]....................:       233
+  StaticBoardOccColSum Col[3]....................:       235
+  StaticBoardOccColSum Col[4]....................:       156
+  StaticBoardOccColSum Col[5]....................:       126
+  StaticBoardOccColSum Col[6]....................:       126
+  StaticBoardOccColSum Col[7]....................:       126
+  StaticBoardOccColSum Col[8]....................:       126
+  StaticBoardOccColSum Col[9]....................:       126
+  StaticBoardOccColSum Col[10]...................:       126
+  StaticBoardOccColSum Col[11]...................:       126
+  StaticBoardOccColSum Col[12]...................:         0
+  StaticBoardOccColSum Col[13]...................:         0
+  StaticBoardOccColSum Col[14]...................:         0
+  StaticBoardOccColSum Col[15]...................:         0
+VecAluAcceptCycles_FMA...........................:        28
+VecAluAcceptCycles_INT...........................:       144
+VecAluAcceptCycles_LNEXP.........................:         4
+VecTripleIssueCycles.............................:         0
+VecDualIssueCycles...............................:         6
+VecSingleIssueCycles.............................:       164
+VecIdleIssueCycles...............................:     27825
+CellReadMergeSaved...............................:         0
+SrcBufBypassIssue................................:         0
+SplitRawGateBlocked..............................:         0
+SplitNoFreeSlotCycles............................:         0
+IPC(UOP).........................................:  0.006358
+RowExpandTileNum.................................:         0
+RowReduceTileNum.................................:         0
+RedTempMacroNum..................................:         0
+HybridCountGatedTiles............................:         0
+ReadNum..........................................:        12
+CellReadAccessTotal..............................:       131
+CellReadAccess_INT...............................:        87
+CellReadAccess_FMA...............................:        36
+CellReadAccess_LNEXP.............................:         8
+ReadLat..........................................:      5.17
+  |--LatLE5......................................:        10
+  |--LatLE10.....................................:         2
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+WriteNum.........................................:        30
+CellWriteAccessTotal.............................:       156
+CellWriteAccess_INT..............................:       124
+CellWriteAccess_FMA..............................:        28
+CellWriteAccess_LNEXP............................:         4
+TempForwardHits_INT..............................:        89
+TempForwardHits_FMA..............................:         0
+TempForwardHits_LNEXP............................:         0
+TempForwardMisses_INT............................:        89
+TempForwardMisses_FMA............................:        20
+TempForwardMisses_LNEXP..........................:         0
+ExpandTagHits_INT................................:         0
+ExpandTagHits_FMA................................:         0
+ExpandTagHits_LNEXP..............................:         0
+ExpandTagMisses_INT..............................:         0
+ExpandTagMisses_FMA..............................:         0
+ExpandTagMisses_LNEXP............................:         0
+ExpandBankFills_INT..............................:         0
+ExpandBankFills_FMA..............................:         0
+ExpandBankFills_LNEXP............................:         0
+ExpandTempFills_INT..............................:         0
+ExpandTempFills_FMA..............................:         0
+ExpandTempFills_LNEXP............................:         0
+ExpandEvicts_INT.................................:         0
+ExpandEvicts_FMA.................................:         0
+ExpandEvicts_LNEXP...............................:         0
+LeSharedPortBlockCycles..........................:         0
+WriteLat.........................................:      1.00
+  |--LatLE5......................................:        30
+  |--LatLE10.....................................:         0
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+AccountExpCellReads_INT..........................:       176
+AccountExpCellReads_FMA..........................:        36
+AccountExpCellReads_LNEXP........................:         8
+AccountExpRedTempReads...........................:         0
+AccountRedTempReads..............................:         0
+AccountExpCellWrites_INT.........................:       140
+AccountExpCellWrites_FMA.........................:        28
+AccountExpCellWrites_LNEXP.......................:         4
+AccountExpRedTempWrites..........................:         0
+AccountExpReadsTotal.............................:       220
+AccountActReadsTotal.............................:       220
+AccountReadDelta.................................:      0.00
+AccountExpWritesTotal............................:       172
+AccountActWritesTotal............................:       156
+AccountWriteDelta................................:     16.00
+========================VecUtilStack========================
+UtilStackW_INT...................................:       144
+UtilStackO_INT...................................:         0
+UtilStackA_INT...................................:         0
+UtilStackD_INT...................................:       711
+UtilStackI_INT...................................:       151
+UtilStackS_INT...................................:     26989
+UtilStackUnaccounted_INT.........................:         0
+UtilStackW_FMA...................................:        28
+UtilStackO_FMA...................................:         0
+UtilStackA_FMA...................................:         0
+UtilStackD_FMA...................................:       648
+UtilStackI_FMA...................................:        20
+UtilStackS_FMA...................................:     27299
+UtilStackUnaccounted_FMA.........................:         0
+UtilStackW_LNEXP.................................:         4
+UtilStackO_LNEXP.................................:         0
+UtilStackA_LNEXP.................................:         0
+UtilStackD_LNEXP.................................:       426
+UtilStackI_LNEXP.................................:         0
+UtilStackS_LNEXP.................................:     27565
+UtilStackUnaccounted_LNEXP.......................:         0
+UtilStackW_SHARED................................:         0
+UtilStackO_SHARED................................:         0
+UtilStackA_SHARED................................:         0
+UtilStackD_SHARED................................:         0
+UtilStackI_SHARED................................:         0
+UtilStackS_SHARED................................:     27995
+UtilStackUnaccounted_SHARED......................:         0
+UtilStackCycles..................................:     27995
+UtilStackVecBusy.................................:       949
+UtilStackVecExposed..............................:       949
+  UtilStackSub_O_DstWriteCfl_INT.................:         0
+  UtilStackSub_O_BankCfl_INT.....................:         0
+  UtilStackSub_O_SharedPort_INT..................:         0
+  UtilStackSub_O_YieldFma_INT....................:         0
+  UtilStackSub_O_LePort_INT......................:         0
+  UtilStackSub_A_RedTempMacro_INT................:         0
+  UtilStackSub_A_LeThrottle_INT..................:         0
+  UtilStackSub_A_LeFifoFull_INT..................:         0
+  UtilStackSub_A_IiCool_INT......................:         0
+  UtilStackSub_A_DstbufFull_INT..................:         0
+  UtilStackSub_A_PipeFull_INT....................:         0
+  UtilStackSub_D_StaticSrc_INT...................:       685
+  UtilStackSub_D_RedTempCount_INT................:         0
+  UtilStackSub_D_DynSrcbuf_INT...................:        26
+  UtilStackSubO_Reconcile_INT....................:      0.00
+  UtilStackSubA_Reconcile_INT....................:      0.00
+  UtilStackSubD_Reconcile_INT....................:      0.00
+  UtilStackSub_O_DstWriteCfl_FMA.................:         0
+  UtilStackSub_O_BankCfl_FMA.....................:         0
+  UtilStackSub_O_SharedPort_FMA..................:         0
+  UtilStackSub_O_YieldFma_FMA....................:         0
+  UtilStackSub_O_LePort_FMA......................:         0
+  UtilStackSub_A_RedTempMacro_FMA................:         0
+  UtilStackSub_A_LeThrottle_FMA..................:         0
+  UtilStackSub_A_LeFifoFull_FMA..................:         0
+  UtilStackSub_A_IiCool_FMA......................:         0
+  UtilStackSub_A_DstbufFull_FMA..................:         0
+  UtilStackSub_A_PipeFull_FMA....................:         0
+  UtilStackSub_D_StaticSrc_FMA...................:       334
+  UtilStackSub_D_RedTempCount_FMA................:         0
+  UtilStackSub_D_DynSrcbuf_FMA...................:       314
+  UtilStackSubO_Reconcile_FMA....................:      0.00
+  UtilStackSubA_Reconcile_FMA....................:      0.00
+  UtilStackSubD_Reconcile_FMA....................:      0.00
+  UtilStackSub_O_DstWriteCfl_LNEXP...............:         0
+  UtilStackSub_O_BankCfl_LNEXP...................:         0
+  UtilStackSub_O_SharedPort_LNEXP................:         0
+  UtilStackSub_O_YieldFma_LNEXP..................:         0
+  UtilStackSub_O_LePort_LNEXP....................:         0
+  UtilStackSub_A_RedTempMacro_LNEXP..............:         0
+  UtilStackSub_A_LeThrottle_LNEXP................:         0
+  UtilStackSub_A_LeFifoFull_LNEXP................:         0
+  UtilStackSub_A_IiCool_LNEXP....................:         0
+  UtilStackSub_A_DstbufFull_LNEXP................:         0
+  UtilStackSub_A_PipeFull_LNEXP..................:         0
+  UtilStackSub_D_StaticSrc_LNEXP.................:         0
+  UtilStackSub_D_RedTempCount_LNEXP..............:         0
+  UtilStackSub_D_DynSrcbuf_LNEXP.................:       426
+  UtilStackSubO_Reconcile_LNEXP..................:      0.00
+  UtilStackSubA_Reconcile_LNEXP..................:      0.00
+  UtilStackSubD_Reconcile_LNEXP..................:      0.00
+  UtilStackSub_O_DstWriteCfl_SHARED..............:         0
+  UtilStackSub_O_BankCfl_SHARED..................:         0
+  UtilStackSub_O_SharedPort_SHARED...............:         0
+  UtilStackSub_O_YieldFma_SHARED.................:         0
+  UtilStackSub_O_LePort_SHARED...................:         0
+  UtilStackSub_A_RedTempMacro_SHARED.............:         0
+  UtilStackSub_A_LeThrottle_SHARED...............:         0
+  UtilStackSub_A_LeFifoFull_SHARED...............:         0
+  UtilStackSub_A_IiCool_SHARED...................:         0
+  UtilStackSub_A_DstbufFull_SHARED...............:         0
+  UtilStackSub_A_PipeFull_SHARED.................:         0
+  UtilStackSub_D_StaticSrc_SHARED................:         0
+  UtilStackSub_D_RedTempCount_SHARED.............:         0
+  UtilStackSub_D_DynSrcbuf_SHARED................:         0
+  UtilStackSubO_Reconcile_SHARED.................:      0.00
+  UtilStackSubA_Reconcile_SHARED.................:      0.00
+  UtilStackSubD_Reconcile_SHARED.................:      0.00
+  UtilStackOBlocker_None_INT.....................:         0
+  UtilStackOBlocker_FmaRead_INT..................:         0
+  UtilStackOBlocker_IntRead_INT..................:         0
+  UtilStackOBlocker_LeRead_INT...................:         0
+  UtilStackOBlocker_FmaWrite_INT.................:         0
+  UtilStackOBlocker_IntWrite_INT.................:         0
+  UtilStackOBlocker_CubeRead_INT.................:         0
+  UtilStackOBlocker_CubeWrite_INT................:         0
+  UtilStackOBlocker_LeWrite_INT..................:         0
+  UtilStackOBlocker_Reconcile_INT................:      0.00
+  UtilStackOBlocker_None_FMA.....................:         0
+  UtilStackOBlocker_FmaRead_FMA..................:         0
+  UtilStackOBlocker_IntRead_FMA..................:         0
+  UtilStackOBlocker_LeRead_FMA...................:         0
+  UtilStackOBlocker_FmaWrite_FMA.................:         0
+  UtilStackOBlocker_IntWrite_FMA.................:         0
+  UtilStackOBlocker_CubeRead_FMA.................:         0
+  UtilStackOBlocker_CubeWrite_FMA................:         0
+  UtilStackOBlocker_LeWrite_FMA..................:         0
+  UtilStackOBlocker_Reconcile_FMA................:      0.00
+  UtilStackOBlocker_None_LNEXP...................:         0
+  UtilStackOBlocker_FmaRead_LNEXP................:         0
+  UtilStackOBlocker_IntRead_LNEXP................:         0
+  UtilStackOBlocker_LeRead_LNEXP.................:         0
+  UtilStackOBlocker_FmaWrite_LNEXP...............:         0
+  UtilStackOBlocker_IntWrite_LNEXP...............:         0
+  UtilStackOBlocker_CubeRead_LNEXP...............:         0
+  UtilStackOBlocker_CubeWrite_LNEXP..............:         0
+  UtilStackOBlocker_LeWrite_LNEXP................:         0
+  UtilStackOBlocker_Reconcile_LNEXP..............:      0.00
+  UtilStackOBlocker_None_SHARED..................:         0
+  UtilStackOBlocker_FmaRead_SHARED...............:         0
+  UtilStackOBlocker_IntRead_SHARED...............:         0
+  UtilStackOBlocker_LeRead_SHARED................:         0
+  UtilStackOBlocker_FmaWrite_SHARED..............:         0
+  UtilStackOBlocker_IntWrite_SHARED..............:         0
+  UtilStackOBlocker_CubeRead_SHARED..............:         0
+  UtilStackOBlocker_CubeWrite_SHARED.............:         0
+  UtilStackOBlocker_LeWrite_SHARED...............:         0
+  UtilStackOBlocker_Reconcile_SHARED.............:      0.00
+YieldFmaReadCycles...............................:         0
+YieldFmaWriteCycles..............................:         0
+UtilStackHideRatio...............................:      0.00
+UtilStackHideRatioStrict.........................:      0.00
+  UtilStackIssueCombo_None.......................:     27825
+  UtilStackIssueCombo_INT........................:       138
+  UtilStackIssueCombo_FMA........................:        22
+  UtilStackIssueCombo_INT+FMA....................:         6
+  UtilStackIssueCombo_LE.........................:         4
+  UtilStackIssueCombo_INT+LE.....................:         0
+  UtilStackIssueCombo_FMA+LE.....................:         0
+  UtilStackIssueCombo_INT+FMA+LE.................:         0
+  UtilStackIssueCombo_SH.........................:         0
+  UtilStackIssueCombo_INT+SH.....................:         0
+  UtilStackIssueCombo_FMA+SH.....................:         0
+  UtilStackIssueCombo_INT+FMA+SH.................:         0
+  UtilStackIssueCombo_LE+SH......................:         0
+  UtilStackIssueCombo_INT+LE+SH..................:         0
+  UtilStackIssueCombo_FMA+LE+SH..................:         0
+  UtilStackIssueCombo_INT+FMA+LE+SH..............:         0
+  UtilStackIssueCombo_Reconcile..................:      0.00
+  UtilStackIssueEvent_Reconcile..................:      0.00
+UtilStackMultiIssueProb..........................:      0.04
+UtilStackAvgIssueRate............................:      0.01
+UtilStackIssueWidthUtil..........................:      0.00
+====================Vector PMU Stats PE3====================
+PEId.............................................:         3
+ExpandPinBlocks0.................................:         0
+ExpandFillWaits0.................................:         0
+ExpandPinBlocks1.................................:         0
+ExpandFillWaits1.................................:         0
+ExpandPinBlocks2.................................:         0
+ExpandFillWaits2.................................:         0
+TileopNum........................................:       164
+TCMPPackedTileNum................................:         0
+TCMPFragmentExpected.............................:         0
+TCMPFragmentCompleted............................:         0
+TCMPFragmentCanceled.............................:         0
+TCMPPackedCellWrites.............................:         0
+TCMPPackWriteWaitCycles..........................:        12
+TCMPFlushedTileNum...............................:         0
+UopNum...........................................:       177
+SplitCellCountMismatch...........................:         0
+SplitPartialCellUopCount.........................:         0
+SplitUopAvgPayloadBytes..........................:       N/A
+UopQDispatch_INT.................................:        18
+UopQReadyBypass_INT..............................:        10
+UopQDispatchSrcBufFullCycles_INT.................:         0
+UopQDispatchSrcBufFullBlockedCycles_INT..........:         0
+VecSrcCellNotReadyCycles_INT.....................:       976
+SharedReadPortWaitCycles_INT.....................:         0
+UopQDispatch_FMA.................................:         8
+UopQReadyBypass_FMA..............................:         0
+UopQDispatchSrcBufFullCycles_FMA.................:         0
+UopQDispatchSrcBufFullBlockedCycles_FMA..........:         0
+VecSrcCellNotReadyCycles_FMA.....................:       634
+SharedReadPortWaitCycles_FMA.....................:         0
+UopQDispatch_LNEXP...............................:         4
+UopQReadyBypass_LNEXP............................:         0
+UopQDispatchSrcBufFullCycles_LNEXP...............:         0
+UopQDispatchSrcBufFullBlockedCycles_LNEXP........:         0
+VecSrcCellNotReadyCycles_LNEXP...................:       436
+SharedReadPortWaitCycles_LNEXP...................:         0
+CellReadMergedUops...............................:         0
+StaticUopsIssued.................................:       146
+StaticBoardBlockCycles...........................:         0
+CellAccessPartialReads...........................:         0
+CellAccessPartialBankBlocks......................:         0
+CellAccessPartialVisibleBlocks...................:         0
+StaticWritebacks.................................:       126
+EarlyWakeupFired.................................:         0
+StaticDynPipeBlockCycles.........................:        98
+DynStaticChainBlockCycles........................:       107
+ExpandTagHits_INT................................:         0
+ExpandTagMisses_INT..............................:         0
+ExpandBankFills_INT..............................:         0
+ExpandTempFills_INT..............................:         0
+ExpandEvicts_INT.................................:         0
+ExpandTagHits_FMA................................:         0
+ExpandTagMisses_FMA..............................:         0
+ExpandBankFills_FMA..............................:         0
+ExpandTempFills_FMA..............................:         0
+ExpandEvicts_FMA.................................:         0
+ExpandTagHits_LNEXP..............................:         0
+ExpandTagMisses_LNEXP............................:         0
+ExpandBankFills_LNEXP............................:         0
+ExpandTempFills_LNEXP............................:         0
+ExpandEvicts_LNEXP...............................:         0
+ExpandFillDrops..................................:         0
+ExpandReadStaleFallbacks cls0....................:         0
+ExpandReadStaleFallbacks cls1....................:         0
+ExpandReadStaleFallbacks cls2....................:         0
+LeSharedPortBlockCycles..........................:         0
+LeSrc1CarrySkips.................................:         0
+=======Static Path Bank Access / Conflict Attribution=======
+  StaticBankReads Bank[0]........................:        16
+  StaticBankReads Bank[1]........................:        17
+  StaticBankReads Bank[2]........................:        15
+  StaticBankReads Bank[3]........................:        18
+  StaticBankReads Bank[4]........................:         8
+  StaticBankReads Bank[5]........................:        11
+  StaticBankReads Bank[6]........................:         9
+  StaticBankReads Bank[7]........................:        15
+  StaticDetectReadBlocks Bank[0].................:         0
+  StaticDetectReadBlocks Bank[1].................:         0
+  StaticDetectReadBlocks Bank[2].................:         0
+  StaticDetectReadBlocks Bank[3].................:         0
+  StaticDetectReadBlocks Bank[4].................:         0
+  StaticDetectReadBlocks Bank[5].................:         0
+  StaticDetectReadBlocks Bank[6].................:         0
+  StaticDetectReadBlocks Bank[7].................:         0
+  StaticDetectWriteBlocks Bank[0]................:         0
+  StaticDetectWriteBlocks Bank[1]................:         0
+  StaticDetectWriteBlocks Bank[2]................:         0
+  StaticDetectWriteBlocks Bank[3]................:         0
+  StaticDetectWriteBlocks Bank[4]................:         0
+  StaticDetectWriteBlocks Bank[5]................:         0
+  StaticDetectWriteBlocks Bank[6]................:         0
+  StaticDetectWriteBlocks Bank[7]................:         0
+  StaticIntYieldBlocks Bank[0]...................:         0
+  StaticIntYieldBlocks Bank[1]...................:         0
+  StaticIntYieldBlocks Bank[2]...................:         0
+  StaticIntYieldBlocks Bank[3]...................:         0
+  StaticIntYieldBlocks Bank[4]...................:         0
+  StaticIntYieldBlocks Bank[5]...................:         0
+  StaticIntYieldBlocks Bank[6]...................:         0
+  StaticIntYieldBlocks Bank[7]...................:         0
+  StaticBoardOccSum Bank[0]......................:       236
+  StaticBoardOccSum Bank[1]......................:       255
+  StaticBoardOccSum Bank[2]......................:       277
+  StaticBoardOccSum Bank[3]......................:       251
+  StaticBoardOccSum Bank[4]......................:       244
+  StaticBoardOccSum Bank[5]......................:       246
+  StaticBoardOccSum Bank[6]......................:       256
+  StaticBoardOccSum Bank[7]......................:       270
+  StaticBoardOccColSum Col[0]....................:       289
+  StaticBoardOccColSum Col[1]....................:       235
+  StaticBoardOccColSum Col[2]....................:       235
+  StaticBoardOccColSum Col[3]....................:       237
+  StaticBoardOccColSum Col[4]....................:       157
+  StaticBoardOccColSum Col[5]....................:       126
+  StaticBoardOccColSum Col[6]....................:       126
+  StaticBoardOccColSum Col[7]....................:       126
+  StaticBoardOccColSum Col[8]....................:       126
+  StaticBoardOccColSum Col[9]....................:       126
+  StaticBoardOccColSum Col[10]...................:       126
+  StaticBoardOccColSum Col[11]...................:       126
+  StaticBoardOccColSum Col[12]...................:         0
+  StaticBoardOccColSum Col[13]...................:         0
+  StaticBoardOccColSum Col[14]...................:         0
+  StaticBoardOccColSum Col[15]...................:         0
+VecAluAcceptCycles_FMA...........................:        28
+VecAluAcceptCycles_INT...........................:       144
+VecAluAcceptCycles_LNEXP.........................:         4
+VecTripleIssueCycles.............................:         0
+VecDualIssueCycles...............................:         6
+VecSingleIssueCycles.............................:       164
+VecIdleIssueCycles...............................:     27825
+CellReadMergeSaved...............................:         0
+SrcBufBypassIssue................................:         0
+SplitRawGateBlocked..............................:         0
+SplitNoFreeSlotCycles............................:         0
+IPC(UOP).........................................:  0.006323
+RowExpandTileNum.................................:         0
+RowReduceTileNum.................................:         0
+RedTempMacroNum..................................:         0
+HybridCountGatedTiles............................:         0
+ReadNum..........................................:        12
+CellReadAccessTotal..............................:       133
+CellReadAccess_INT...............................:        89
+CellReadAccess_FMA...............................:        36
+CellReadAccess_LNEXP.............................:         8
+ReadLat..........................................:      5.17
+  |--LatLE5......................................:        10
+  |--LatLE10.....................................:         2
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+WriteNum.........................................:        30
+CellWriteAccessTotal.............................:       156
+CellWriteAccess_INT..............................:       124
+CellWriteAccess_FMA..............................:        28
+CellWriteAccess_LNEXP............................:         4
+TempForwardHits_INT..............................:        87
+TempForwardHits_FMA..............................:         0
+TempForwardHits_LNEXP............................:         0
+TempForwardMisses_INT............................:        91
+TempForwardMisses_FMA............................:        20
+TempForwardMisses_LNEXP..........................:         0
+ExpandTagHits_INT................................:         0
+ExpandTagHits_FMA................................:         0
+ExpandTagHits_LNEXP..............................:         0
+ExpandTagMisses_INT..............................:         0
+ExpandTagMisses_FMA..............................:         0
+ExpandTagMisses_LNEXP............................:         0
+ExpandBankFills_INT..............................:         0
+ExpandBankFills_FMA..............................:         0
+ExpandBankFills_LNEXP............................:         0
+ExpandTempFills_INT..............................:         0
+ExpandTempFills_FMA..............................:         0
+ExpandTempFills_LNEXP............................:         0
+ExpandEvicts_INT.................................:         0
+ExpandEvicts_FMA.................................:         0
+ExpandEvicts_LNEXP...............................:         0
+LeSharedPortBlockCycles..........................:         0
+WriteLat.........................................:      1.03
+  |--LatLE5......................................:        30
+  |--LatLE10.....................................:         0
+  |--LatLE15.....................................:         0
+  |--LatGT15.....................................:         0
+AccountExpCellReads_INT..........................:       176
+AccountExpCellReads_FMA..........................:        36
+AccountExpCellReads_LNEXP........................:         8
+AccountExpRedTempReads...........................:         0
+AccountRedTempReads..............................:         0
+AccountExpCellWrites_INT.........................:       140
+AccountExpCellWrites_FMA.........................:        28
+AccountExpCellWrites_LNEXP.......................:         4
+AccountExpRedTempWrites..........................:         0
+AccountExpReadsTotal.............................:       220
+AccountActReadsTotal.............................:       220
+AccountReadDelta.................................:      0.00
+AccountExpWritesTotal............................:       172
+AccountActWritesTotal............................:       156
+AccountWriteDelta................................:     16.00
+========================VecUtilStack========================
+UtilStackW_INT...................................:       144
+UtilStackO_INT...................................:         0
+UtilStackA_INT...................................:         0
+UtilStackD_INT...................................:       764
+UtilStackI_INT...................................:       147
+UtilStackS_INT...................................:     26940
+UtilStackUnaccounted_INT.........................:         0
+UtilStackW_FMA...................................:        28
+UtilStackO_FMA...................................:         0
+UtilStackA_FMA...................................:         0
+UtilStackD_FMA...................................:       647
+UtilStackI_FMA...................................:        20
+UtilStackS_FMA...................................:     27300
+UtilStackUnaccounted_FMA.........................:         0
+UtilStackW_LNEXP.................................:         4
+UtilStackO_LNEXP.................................:         0
+UtilStackA_LNEXP.................................:         0
+UtilStackD_LNEXP.................................:       452
+UtilStackI_LNEXP.................................:         0
+UtilStackS_LNEXP.................................:     27539
+UtilStackUnaccounted_LNEXP.......................:         0
+UtilStackW_SHARED................................:         0
+UtilStackO_SHARED................................:         0
+UtilStackA_SHARED................................:         0
+UtilStackD_SHARED................................:         0
+UtilStackI_SHARED................................:         0
+UtilStackS_SHARED................................:     27995
+UtilStackUnaccounted_SHARED......................:         0
+UtilStackCycles..................................:     27995
+UtilStackVecBusy.................................:       932
+UtilStackVecExposed..............................:       932
+  UtilStackSub_O_DstWriteCfl_INT.................:         0
+  UtilStackSub_O_BankCfl_INT.....................:         0
+  UtilStackSub_O_SharedPort_INT..................:         0
+  UtilStackSub_O_YieldFma_INT....................:         0
+  UtilStackSub_O_LePort_INT......................:         0
+  UtilStackSub_A_RedTempMacro_INT................:         0
+  UtilStackSub_A_LeThrottle_INT..................:         0
+  UtilStackSub_A_LeFifoFull_INT..................:         0
+  UtilStackSub_A_IiCool_INT......................:         0
+  UtilStackSub_A_DstbufFull_INT..................:         0
+  UtilStackSub_A_PipeFull_INT....................:         0
+  UtilStackSub_D_StaticSrc_INT...................:       738
+  UtilStackSub_D_RedTempCount_INT................:         0
+  UtilStackSub_D_DynSrcbuf_INT...................:        26
+  UtilStackSubO_Reconcile_INT....................:      0.00
+  UtilStackSubA_Reconcile_INT....................:      0.00
+  UtilStackSubD_Reconcile_INT....................:      0.00
+  UtilStackSub_O_DstWriteCfl_FMA.................:         0
+  UtilStackSub_O_BankCfl_FMA.....................:         0
+  UtilStackSub_O_SharedPort_FMA..................:         0
+  UtilStackSub_O_YieldFma_FMA....................:         0
+  UtilStackSub_O_LePort_FMA......................:         0
+  UtilStackSub_A_RedTempMacro_FMA................:         0
+  UtilStackSub_A_LeThrottle_FMA..................:         0
+  UtilStackSub_A_LeFifoFull_FMA..................:         0
+  UtilStackSub_A_IiCool_FMA......................:         0
+  UtilStackSub_A_DstbufFull_FMA..................:         0
+  UtilStackSub_A_PipeFull_FMA....................:         0
+  UtilStackSub_D_StaticSrc_FMA...................:       331
+  UtilStackSub_D_RedTempCount_FMA................:         0
+  UtilStackSub_D_DynSrcbuf_FMA...................:       316
+  UtilStackSubO_Reconcile_FMA....................:      0.00
+  UtilStackSubA_Reconcile_FMA....................:      0.00
+  UtilStackSubD_Reconcile_FMA....................:      0.00
+  UtilStackSub_O_DstWriteCfl_LNEXP...............:         0
+  UtilStackSub_O_BankCfl_LNEXP...................:         0
+  UtilStackSub_O_SharedPort_LNEXP................:         0
+  UtilStackSub_O_YieldFma_LNEXP..................:         0
+  UtilStackSub_O_LePort_LNEXP....................:         0
+  UtilStackSub_A_RedTempMacro_LNEXP..............:         0
+  UtilStackSub_A_LeThrottle_LNEXP................:         0
+  UtilStackSub_A_LeFifoFull_LNEXP................:         0
+  UtilStackSub_A_IiCool_LNEXP....................:         0
+  UtilStackSub_A_DstbufFull_LNEXP................:         0
+  UtilStackSub_A_PipeFull_LNEXP..................:         0
+  UtilStackSub_D_StaticSrc_LNEXP.................:         0
+  UtilStackSub_D_RedTempCount_LNEXP..............:         0
+  UtilStackSub_D_DynSrcbuf_LNEXP.................:       452
+  UtilStackSubO_Reconcile_LNEXP..................:      0.00
+  UtilStackSubA_Reconcile_LNEXP..................:      0.00
+  UtilStackSubD_Reconcile_LNEXP..................:      0.00
+  UtilStackSub_O_DstWriteCfl_SHARED..............:         0
+  UtilStackSub_O_BankCfl_SHARED..................:         0
+  UtilStackSub_O_SharedPort_SHARED...............:         0
+  UtilStackSub_O_YieldFma_SHARED.................:         0
+  UtilStackSub_O_LePort_SHARED...................:         0
+  UtilStackSub_A_RedTempMacro_SHARED.............:         0
+  UtilStackSub_A_LeThrottle_SHARED...............:         0
+  UtilStackSub_A_LeFifoFull_SHARED...............:         0
+  UtilStackSub_A_IiCool_SHARED...................:         0
+  UtilStackSub_A_DstbufFull_SHARED...............:         0
+  UtilStackSub_A_PipeFull_SHARED.................:         0
+  UtilStackSub_D_StaticSrc_SHARED................:         0
+  UtilStackSub_D_RedTempCount_SHARED.............:         0
+  UtilStackSub_D_DynSrcbuf_SHARED................:         0
+  UtilStackSubO_Reconcile_SHARED.................:      0.00
+  UtilStackSubA_Reconcile_SHARED.................:      0.00
+  UtilStackSubD_Reconcile_SHARED.................:      0.00
+  UtilStackOBlocker_None_INT.....................:         0
+  UtilStackOBlocker_FmaRead_INT..................:         0
+  UtilStackOBlocker_IntRead_INT..................:         0
+  UtilStackOBlocker_LeRead_INT...................:         0
+  UtilStackOBlocker_FmaWrite_INT.................:         0
+  UtilStackOBlocker_IntWrite_INT.................:         0
+  UtilStackOBlocker_CubeRead_INT.................:         0
+  UtilStackOBlocker_CubeWrite_INT................:         0
+  UtilStackOBlocker_LeWrite_INT..................:         0
+  UtilStackOBlocker_Reconcile_INT................:      0.00
+  UtilStackOBlocker_None_FMA.....................:         0
+  UtilStackOBlocker_FmaRead_FMA..................:         0
+  UtilStackOBlocker_IntRead_FMA..................:         0
+  UtilStackOBlocker_LeRead_FMA...................:         0
+  UtilStackOBlocker_FmaWrite_FMA.................:         0
+  UtilStackOBlocker_IntWrite_FMA.................:         0
+  UtilStackOBlocker_CubeRead_FMA.................:         0
+  UtilStackOBlocker_CubeWrite_FMA................:         0
+  UtilStackOBlocker_LeWrite_FMA..................:         0
+  UtilStackOBlocker_Reconcile_FMA................:      0.00
+  UtilStackOBlocker_None_LNEXP...................:         0
+  UtilStackOBlocker_FmaRead_LNEXP................:         0
+  UtilStackOBlocker_IntRead_LNEXP................:         0
+  UtilStackOBlocker_LeRead_LNEXP.................:         0
+  UtilStackOBlocker_FmaWrite_LNEXP...............:         0
+  UtilStackOBlocker_IntWrite_LNEXP...............:         0
+  UtilStackOBlocker_CubeRead_LNEXP...............:         0
+  UtilStackOBlocker_CubeWrite_LNEXP..............:         0
+  UtilStackOBlocker_LeWrite_LNEXP................:         0
+  UtilStackOBlocker_Reconcile_LNEXP..............:      0.00
+  UtilStackOBlocker_None_SHARED..................:         0
+  UtilStackOBlocker_FmaRead_SHARED...............:         0
+  UtilStackOBlocker_IntRead_SHARED...............:         0
+  UtilStackOBlocker_LeRead_SHARED................:         0
+  UtilStackOBlocker_FmaWrite_SHARED..............:         0
+  UtilStackOBlocker_IntWrite_SHARED..............:         0
+  UtilStackOBlocker_CubeRead_SHARED..............:         0
+  UtilStackOBlocker_CubeWrite_SHARED.............:         0
+  UtilStackOBlocker_LeWrite_SHARED...............:         0
+  UtilStackOBlocker_Reconcile_SHARED.............:      0.00
+YieldFmaReadCycles...............................:         0
+YieldFmaWriteCycles..............................:         0
+UtilStackHideRatio...............................:      0.00
+UtilStackHideRatioStrict.........................:      0.00
+  UtilStackIssueCombo_None.......................:     27825
+  UtilStackIssueCombo_INT........................:       138
+  UtilStackIssueCombo_FMA........................:        22
+  UtilStackIssueCombo_INT+FMA....................:         6
+  UtilStackIssueCombo_LE.........................:         4
+  UtilStackIssueCombo_INT+LE.....................:         0
+  UtilStackIssueCombo_FMA+LE.....................:         0
+  UtilStackIssueCombo_INT+FMA+LE.................:         0
+  UtilStackIssueCombo_SH.........................:         0
+  UtilStackIssueCombo_INT+SH.....................:         0
+  UtilStackIssueCombo_FMA+SH.....................:         0
+  UtilStackIssueCombo_INT+FMA+SH.................:         0
+  UtilStackIssueCombo_LE+SH......................:         0
+  UtilStackIssueCombo_INT+LE+SH..................:         0
+  UtilStackIssueCombo_FMA+LE+SH..................:         0
+  UtilStackIssueCombo_INT+FMA+LE+SH..............:         0
+  UtilStackIssueCombo_Reconcile..................:      0.00
+  UtilStackIssueEvent_Reconcile..................:      0.00
+UtilStackMultiIssueProb..........................:      0.04
+UtilStackAvgIssueRate............................:      0.01
+UtilStackIssueWidthUtil..........................:      0.00
+===============CellReg Bank Arbitration Stats===============
+CellAccessServices...............................:      1233
+CellAccessQueuedServices.........................:       296
+CellAccessReservationFailures....................:         1
+CellAccessStaticPhaseDeferrals...................:         0
+CellAccessUnusedGrants...........................:         0
+Bank Active Cycles (>=1 pending).................:       296
+  |--Bank Conflict Cycles (>=2 pending)..........:         0    0.00%
+  |--Bank Urgent(aged) Cycles....................:         0
+Static Busy Cycles (static-pipe bank access).....:       937
+  |--Static-Yield Conflict Cycles (>=1 pending)..:         2    0.21%
+Bank Grants (winners) Total......................:       296
+Bank Lose (non-winner waits) Total...............:         0
+Bank Port-Yield (no free channel) Total..........:         0
+Total Served Read Bytes..........................:     17408
+Total Served Write Bytes.........................:     18432
+  |--RQ_CUBE Win.................................:         0
+  |--RQ_CUBE Lose................................:         0     N/A
+  |--RQ_CUBE PortYield...........................:         0
+  |--RQ_CUBE StaticYield.........................:         0
+  |--RQ_CUBE Served Bytes........................:         0
+  |--RQ_VEC Win..................................:        96
+  |--RQ_VEC Lose.................................:         0    0.00%
+  |--RQ_VEC PortYield............................:         0
+  |--RQ_VEC StaticYield..........................:         0
+  |--RQ_VEC Served Bytes.........................:     12288
+  |--RQ_TLSU Win.................................:        40
+  |--RQ_TLSU Lose................................:         0    0.00%
+  |--RQ_TLSU PortYield...........................:         0
+  |--RQ_TLSU StaticYield.........................:         2
+  |--RQ_TLSU Served Bytes........................:      5120
+  |--WQ_CUBE Win.................................:         0
+  |--WQ_CUBE Lose................................:         0     N/A
+  |--WQ_CUBE PortYield...........................:         0
+  |--WQ_CUBE StaticYield.........................:         0
+  |--WQ_CUBE Served Bytes........................:         0
+  |--WQ_VEC Win..................................:       104
+  |--WQ_VEC Lose.................................:         0    0.00%
+  |--WQ_VEC PortYield............................:         0
+  |--WQ_VEC StaticYield..........................:         0
+  |--WQ_VEC Served Bytes.........................:     13312
+  |--WQ_VEC_LNEXP Win............................:        16
+  |--WQ_VEC_LNEXP Lose...........................:         0    0.00%
+  |--WQ_VEC_LNEXP PortYield......................:         0
+  |--WQ_VEC_LNEXP StaticYield....................:         0
+  |--WQ_VEC_LNEXP Served Bytes...................:      2048
+  |--WQ_TLSU Win.................................:        40
+  |--WQ_TLSU Lose................................:         0    0.00%
+  |--WQ_TLSU PortYield...........................:         0
+  |--WQ_TLSU StaticYield.........................:         0
+  |--WQ_TLSU Served Bytes........................:      5120
+==============CellReg CUBE Bank-Group Backlog===============
+WQ_CUBE active cycles............................:         0
+  |--WQ_CUBE cross-group cycles..................:         0     N/A
+RQ_CUBE active cycles............................:         0
+  |--RQ_CUBE cross-group cycles..................:         0     N/A
+CUBE Rd+Wr concurrent cycles.....................:         0
+  |--Rd/Wr different-group cycles................:         0     N/A
+  |--Wr-starved-by-Rd cycles (each owns a group).:         0     N/A
+Direct OOR access dropped (pool end).............:         0
+===========CellReg Per-Bank Conflict Distribution===========
+  Bank[0] conflict cycles........................:         0     N/A
+  Bank[1] conflict cycles........................:         0     N/A
+  Bank[2] conflict cycles........................:         0     N/A
+  Bank[3] conflict cycles........................:         0     N/A
+  Bank[4] conflict cycles........................:         0     N/A
+  Bank[5] conflict cycles........................:         0     N/A
+  Bank[6] conflict cycles........................:         0     N/A
+  Bank[7] conflict cycles........................:         0     N/A
+  Bank[0] static-yield cycles....................:         0    0.00%
+  Bank[1] static-yield cycles....................:         0    0.00%
+  Bank[2] static-yield cycles....................:         0    0.00%
+  Bank[3] static-yield cycles....................:         2  100.00%
+  Bank[4] static-yield cycles....................:         0    0.00%
+  Bank[5] static-yield cycles....................:         0    0.00%
+  Bank[6] static-yield cycles....................:         0    0.00%
+  Bank[7] static-yield cycles....................:         0    0.00%
+==================SuperScalar Report Stop===================
+======================Syscall Barrier=======================
+sb_requested.....................................:         4
+sb_executed......................................:         1
+sb_canceled......................................:         3
+sb_stashed.......................................:         1
+sb_stash_overflow................................:         0
+sb_pending.......................................:         0
+sb_phase_idle....................................:     27202
+sb_phase_pre_commit..............................:        18
+sb_phase_quiet_wait..............................:         0
+sb_phase_gate_all................................:         1
+sb_phase_draining................................:       687
+sb_phase_executing...............................:         1
+syscall_owner_precommit_wait.....................:        18
+syscall_worker_quiet_wait........................:         0
+syscall_worker_quiet_cycles_total................:         0
+syscall_worker_quiet_cycles_max..................:         0
+syscall_commit_wait..............................:         0
+syscall_l1_scb_drain_wait........................:       686
+syscall_sl2_drain_wait...........................:         0
+drain_wait.......................................:       686
+syscall_drain_progress_timeout...................:         0
+sb_T_complete....................................:      9998
+sb_T_deadlock_effective..........................:      9999
+sb_last_progress_cycle...........................:     27994
+sb_lockstep_enabled..............................:         1
+sb_lockstep_registered...........................:         4
+sb_lockstep_blocks...............................:         1
+sb_lockstep_executes.............................:         1
+sb_lockstep_withdraw_startup.....................:         0
+sb_lockstep_withdraw_hostwrite...................:         0
+sb_lockstep_withdraw_flush.......................:         0
+sb_lockstep_overflow.............................:         0
+sb_lockstep_and_timeout..........................:         0
+sb_lockstep_hold_cycles..........................:      2989
+sb_lockstep_exit_parks...........................:         4
+syscall_post_ecall_issue_rejects.................:    165840
+syscall_bstop_admission_rejects..................:         0
+sb_lockstep_held_now.............................:         0
+sb_lockstep_ready_hist_0.........................:         0
+sb_lockstep_ready_hist_1.........................:         0
+sb_lockstep_ready_hist_2.........................:         0
+sb_lockstep_ready_hist_3.........................:         0
+sb_lockstep_ready_hist_4.........................:         1
