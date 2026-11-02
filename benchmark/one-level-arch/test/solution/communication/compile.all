@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx toolchain bin directory}"
+make TESTCASE=comm_payload res_check=on COMPILER_DIR="$COMPILER_DIR" diss
