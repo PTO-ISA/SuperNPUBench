@@ -1,0 +1,15 @@
+fourpe.pe_cluster_group_contract_fatal=false
+[C:421511 ][SPE.STAGE ]:  retire entry 81 BPC:0x270d2ac TPC:0x270d2d6 P0-L0-(B104-)-G0-T0-I81-ST0  TR94-UR4 sid:66 lsid:1 src0:t#2-P(156)-rdy data=0x5555,src1:t#1-P(157)-rdy data=0x10009000,src2:[zero<<2] data=0x0,|sw t#2, t#1, [zero<<2] last: false size 16 osd size 16
+[C:421551 ][SPE.STAGE ]:  retire entry 67 BPC:0x270d2ac TPC:0x270d2d6 P0-L0-(B2-)-G0-T0-I67-ST3  TR107-UR3 sid:61 lsid:1 src0:t#2-P(105)-rdy data=0x5555,src1:t#1-P(106)-rdy data=0x10009000,src2:[zero<<2] data=0x0,|sw t#2, t#1, [zero<<2] last: false size 8 osd size 8
+[C:421554 ][SPE.STAGE ]:  retire entry 50 BPC:0x270d2ac TPC:0x270d2d6 P0-L0-(B118-)-G0-T0-I50-ST2  TR113-UR3 sid:61 lsid:1 src0:t#2-P(111)-rdy data=0x5555,src1:t#1-P(112)-rdy data=0x10009000,src2:[zero<<2] data=0x0,|sw t#2, t#1, [zero<<2] last: false size 8 osd size 8
+[C:421561 ][SPE.STAGE ]:  retire entry 96 BPC:0x270d2ac TPC:0x270d2d6 P0-L0-(B123-)-G0-T0-I96-ST1  TR93-UR3 sid:61 lsid:1 src0:t#2-P(91)-rdy data=0x5555,src1:t#1-P(92)-rdy data=0x10009000,src2:[zero<<2] data=0x0,|sw t#2, t#1, [zero<<2] last: false size 8 osd size 8
+Total Cycles.....................................:    421564
+superScalar Tileop Total Cycles..................:   1686256
+  |--Cube Tileop Total Cycles....................:         0
+  |--Vector Tileop Total Cycles..................:    527987
+  |--TLSU Tileop Total Cycles....................:    532899
+Cube Total Cycles................................:    421564
+Cube Total Cycles................................:    421564
+Cube Total Cycles................................:    421564
+Cube Total Cycles................................:    421564
+linx_test_finisher write addr=0x10009000 val=0x5555 pass

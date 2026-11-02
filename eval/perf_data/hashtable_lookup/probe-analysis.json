@@ -1,0 +1,14 @@
+{
+  "sum_probes": 13039,
+  "max_probe": 63,
+  "batch_count": 192,
+  "sum_batch_max": 2421,
+  "mean_batch_max": 12.609375,
+  "active_lane_fraction": 0.16830596860801322,
+  "per_pe_sum_batch_max": [
+    562,
+    564,
+    667,
+    628
+  ]
+}

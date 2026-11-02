@@ -1,12 +1,12 @@
 {
   "exit": 0,
-  "seconds": 7.771008014678955,
-  "cycles": 27995,
-  "files": {
-    "run.py": 1278,
-    "hash_PE4.swimlane.json": 86846704,
-    "hash_PE4.pipeview.log.out": 29905454,
-    "command.json": 967,
-    "gfsim.log": 194881
-  }
+  "per_pe": {
+    "0": "0x5555",
+    "3": "0x5555",
+    "2": "0x5555",
+    "1": "0x5555"
+  },
+  "cycles": 421564,
+  "seconds": 152.91665720939636,
+  "pass": true
 }

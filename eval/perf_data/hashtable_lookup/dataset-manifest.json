@@ -1,0 +1,53 @@
+{
+  "capacity": 2550000,
+  "insert_count": 1785000,
+  "occupied_slots": 1785000,
+  "query_count": 6144,
+  "hit_count": 6144,
+  "miss_count": 0,
+  "entry_format": "<Qi4x",
+  "seed_init": 0,
+  "seed_query": 1,
+  "seed_note": "0 does not seed RNG; use saved init files with --reuse-init",
+  "golden_data": "uint32 initial hash slot, not lookup value",
+  "lookup_golden": "int32 value, verified against original key/value pairs",
+  "probe_count_includes_first_read": true,
+  "probe_min": 1,
+  "probe_max": 63,
+  "probe_mean": 2.1222330729166665,
+  "numpy_version": "2.0.2",
+  "files": {
+    "const_mem.bin": {
+      "bytes": 72,
+      "sha256": "28342bc12727f4cb746bf2e4e2478dc8eafe26277233bdeef122be41b0ffd9d2"
+    },
+    "golden_data.bin": {
+      "bytes": 24576,
+      "sha256": "1d0abb4d35508cdc10fcc033c8ec9ec6f5aa77868fc65312cfde9fe6b70b1680"
+    },
+    "init_keys.bin": {
+      "bytes": 14280000,
+      "sha256": "dce26215b1ca71bdc4f784c6d704f6d9973a74fa22a3de795d253d88871f022f"
+    },
+    "init_vals.bin": {
+      "bytes": 7140000,
+      "sha256": "1182076c347c908dd1bc4028db750a755cdcf8ab5a4fc029ce90e076c84fe704"
+    },
+    "input_keys_data.bin": {
+      "bytes": 49152,
+      "sha256": "d570d0e38cc8de3879e76751e1bb22f0667339a4c4b269c9b59c9a898d62d8b1"
+    },
+    "lookup_golden.bin": {
+      "bytes": 24576,
+      "sha256": "391cf71f1078d0b6d5f6a6c8a920588ee9f65cf4328b4dc8bfdf3b4cbcf8d714"
+    },
+    "lookup_probe_counts.bin": {
+      "bytes": 24576,
+      "sha256": "95cfa4a8ef875a68deb298348465b4f16ffffaa6c28d3f9029c38e738f784b1c"
+    },
+    "table_data_70pct.bin": {
+      "bytes": 40800000,
+      "sha256": "dfc7ca5dafa97fbf086c79b22ecf12de6959f53fa61d28ba91e42fadb6c8ad10"
+    }
+  }
+}
