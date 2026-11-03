@@ -97,3 +97,23 @@ python3 /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-l
 重新构建无 libc、res_check=off 的 4 PE ELF，main gfrun 已越过原 PE ID 失败以及 INT64 TLOAD，后续在 PC 0x11994 的普通 S64 TSTORE 触发 `ordinary TSTORE requires PadValue=Zero`。仍未跑完整个算子，不构成功能 PASS；没有修改模型或继续修改这个新问题的编译器路径。
 
 本轮证据目录：`/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/`，包含 compiler_peid.patch、toolchain_peid_build.log、toolchain_peid_install.log、peid_fixed_versions.txt、kernel_peid_fixed.elf、kernel_peid_fixed.diss 和 gfrun_main_peid_fixed.log。
+
+## 默认实现（2026-11-03）
+
+公共入口 `hashtable_lookup.hpp` 现转发到
+`hashtable_lookup_tileop_stride4_guard.hpp`：每轮同时探测 4 个连续槽位，
+配合 48 字节表尾 guard 省掉每槽回绕计算。
+
+- 6144 query / 4 PE / 70% 装载：**140,166 cycles**（首 TLOAD → 末 TSTORE），
+  相对 177,474 基线 **-21.0%**；verify PASS（6144 输出 + 两侧哨兵）。
+- 表契约：调用方必须在 slot `Capacity-1` 之后提供 3 个可读的 16 字节 entry，
+  镜像 slot 0..2，且 `Capacity >= 4`。
+- 测试夹具：`hash_table_guard` 默认 48（Makefile），`run_dataset.py` 的
+  `--table-guard` 默认 48；smoke 表已扩展为 `capacity + 3` 并填充 guard。
+- 不带 guard 的实现仍保留在 `hashtable_lookup_tileop_masked.hpp`；如需回退，
+  用 `HASH_KERNEL_HEADER=<...>/hashtable_lookup_tileop_masked.hpp
+  hash_table_guard=0` 编译。
+
+128-lane（32x4）尝试与工具链阻塞记录见
+`/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lane128_20261103/README.md`；
+上游 issue：https://github.com/LinxISA/linx-toolchain-build/issues/24

@@ -19,7 +19,7 @@ static_assert(HASH_PE_COUNT == 1 || HASH_PE_COUNT == 4);
 namespace {
 using supernpu::hash_lookup::TableEntry;
 constexpr unsigned capacity = HASH_CAPACITY, count = 139;
-alignas(4096) TableEntry table[capacity];
+alignas(4096) TableEntry table[capacity + 3];
 alignas(4096) int64_t queries[count];
 alignas(4096) int32_t output[count + 2];
 #ifdef RES_CHECK
@@ -52,13 +52,15 @@ void prepare() {
         while (table[slot].key != -1) slot = (slot + 1) % capacity;
         table[slot] = {key, static_cast<int32_t>(n*17 + 3), 0};
     }
+    // Guard tail required by the default kernel: mirror slots 0..2.
+    for (unsigned i = 0; i < 3; ++i) table[capacity + i] = table[i];
     for (unsigned i = 0; i < count; ++i) {
         queries[i] = i % 7 == 0 ? -1 : make_key(i % (capacity + 7));
 #ifdef RES_CHECK
         // Independent oracle: scan entries, not the device probing algorithm.
         golden[i] = -1;
-        for (const auto &entry : table)
-            if (entry.key != -1 && entry.key == queries[i]) golden[i] = entry.value;
+        for (unsigned s = 0; s < capacity; ++s)
+            if (table[s].key != -1 && table[s].key == queries[i]) golden[i] = table[s].value;
 #endif
     }
     for (auto &x : output) x = 0x12345678;
