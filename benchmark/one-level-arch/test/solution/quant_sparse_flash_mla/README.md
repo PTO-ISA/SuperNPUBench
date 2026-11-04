@@ -149,13 +149,13 @@ COMMON="TESTCASE=quant_sparse_flash_mla QSMLA_SPARSE_EMBED_INPUT=on \
   B=1 s1=1 s2=128 N1=64 N2=1 D=512 wleft=127 wright=0 \
   softmax_scale=0.04419417 cmp_s2=64 ori_topk=40 cmp_topk=40 cmp_ratio=4"
 
-# (a) 单 PE CSA（FP16）—— 默认 Tm=32/Tk=16/Td_block=16
+# (a) 单 PE CSA（FP16）—— M32 累加器默认 Tm=32/Tk=16/Td_block=16
 make $COMMON IMPL=csa_tadd_1pe QSMLA_DTYPE=FP16 \
-  QSMLA_SPARSE_DATA_ROOT=/tmp/qsmla-sparse-fp16 Tm=32 Tk=16 Td_block=16
+  QSMLA_SPARSE_DATA_ROOT=/tmp/qsmla-sparse-fp16
 
 # (b) 单 PE CSA（HIF8）—— 注意数据 root 用 HIF8 的
 make $COMMON IMPL=csa_tadd_1pe QSMLA_DTYPE=HIF8 \
-  QSMLA_SPARSE_DATA_ROOT=/tmp/qsmla-sparse-hif8 Tm=32 Tk=16 Td_block=16
+  QSMLA_SPARSE_DATA_ROOT=/tmp/qsmla-sparse-hif8
 
 # (c) 4-PE CSA（静态 shape，HIF8）
 make $COMMON IMPL=csa_tadd_4pe QSMLA_DTYPE=HIF8 \
@@ -212,11 +212,23 @@ grep -E "Total Cycles|Tileop Counter" sim.log
 
 ---
 
-## 4. 已验证状态（2026-09-17）
+## 4. 已验证状态（2026-09-21，M32/M16 迁移后）
 
 | 场景 | gfrun | gfsim |
 |---|---|---|
-| 单 PE CSA FP16 | 100% @1e-3（max_abs 9.07e-06） | 无死锁，可完整推进 |
-| 单 PE CSA HIF8 | 100% @2e-2（max_abs 4.68e-03） | **完整跑通 2,982,900 cycles**（finisher pass） |
-| 4-PE CSA 静态/动态（HIF8） | 100% @2e-2 | — |
-| 单 PE SWA（tadd FP16） | 100% @1e-3 | 历史通过（340 万 cycles） |
+| 单 PE CSA FP16（M32 Vec + M16 CUBE） | 100% @1e-3（max_abs 9.07e-06） | 未重跑（参考下方 HIF8） |
+| 单 PE CSA HIF8（M32 Vec + M16 CUBE，Tm=16） | 100% @2e-2（max_abs 4.68e-03） | 待跑 |
+| 4-PE CSA 动态 v2（Vec=M32 CELL） | 100% @2e-2（max_abs 4.68e-03） | C:164657/28723 blocks 死于 lockstep×non-flush（#681 家族，与 M32 无关；`-m 28000` 可优雅采集） |
+| 4-PE SWA 动态 v2（Vec=M32 CELL） | 100% @2e-2（max_abs 4.92e-03） | C:43612/3059 blocks 死于同族 |
+| 4-PE ORI_SPARSE 动态 v2（Vec=M32 CELL） | 100% @2e-2（max_abs 9.07e-03） | **完整跑通 284,246 cycles，finisher pass，dump 64KB** |
+| 4-PE CSA 静态（HIF8） | 100% @2e-2（历史） | — |
+| 单 PE SWA（tadd FP16） | 100% @1e-3（历史） | 历史通过（340 万 cycles） |
+
+> M32 迁移说明：Vec tile 改用 `BLayout::CubeM32`（`VecTileM32`，PTO-ISA
+> #291），行归约改走 PTO #311 宽载体 + `TREDUCEPREFIXVIEW`；单 PE CSA 的
+> CUBE A 操作数/累加器改 `CubeTileM16`/`CubeAccumulatorM16`（Tm ≤ 16，
+> Makefile 默认已改 Tm=16）。v2 的 tW/tMask/tPShard 运行时 valid 固定
+> 全宽 kTk——CUBE 载体上 TLOAD_CUBE 不编码 lb2 且链上生产者物理 col 由
+> valid 派生，与行归约 lb2 的静态 Cols 在部分块时不一致（模型
+> Block.cpp:2536 拒绝）；软件 mask（-1e30）保证全宽数值逐位等价，动态
+> ValidCol 待上游补齐 CUBE 物理列编码后恢复。
