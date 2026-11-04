@@ -1,0 +1,4 @@
+kernel_cycles=109193
+first_input_load=290
+last_result_store=109483
+whole_fixture=171646
