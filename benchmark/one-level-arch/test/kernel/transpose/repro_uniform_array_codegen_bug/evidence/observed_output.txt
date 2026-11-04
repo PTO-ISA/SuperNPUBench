@@ -1,0 +1,2 @@
+uniform_out.bin [8, 16, 8, 16]
+nonuniform_out.bin [1, 2, 3, 4]
