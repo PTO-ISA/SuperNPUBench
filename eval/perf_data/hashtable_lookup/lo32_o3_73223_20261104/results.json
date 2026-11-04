@@ -1,0 +1,57 @@
+{
+  "operator": "hashtable_lookup",
+  "variant": "wide256_lo32_gather_o3",
+  "date": "2026-11-04",
+  "fixture": {
+    "queries": 6144,
+    "table_capacity": 2550000,
+    "inserted": 1785000,
+    "load_factor": 0.7,
+    "pe_count": 4,
+    "queries_per_pe": 1536,
+    "lanes": 256,
+    "batches_per_pe": 6,
+    "table_guard_entries": 128
+  },
+  "elf": {
+    "file": "hash_6144_PE4_lo32_o3.elf",
+    "sha256": "cf33a85e48ec79bc392b00d30303889dbabafb0374b1d95cdc783a1977f1fb80"
+  },
+  "measurements": {
+    "deterministic_trace": {
+      "kernel_span_cycles": 73223,
+      "first_input_load_cycle": 291,
+      "last_result_store_cycle": 73514,
+      "whole_fixture_cycles": 135299,
+      "per_pe_last_tstore_end": {"PE0": 66214, "PE1": 66098, "PE2": 73514, "PE3": 69839}
+    },
+    "canonical_soc_random": {
+      "whole_fixture_cycles": 280218,
+      "finisher_pass": true
+    }
+  },
+  "verification": {
+    "status": "PASS",
+    "output_matches": true,
+    "errors": 0,
+    "sync": [1, 1, 1, 1, 1],
+    "finisher_pass": true,
+    "returncode": 0
+  },
+  "comparisons": {
+    "vs_wide256_109193": {
+      "kernel_span": {"baseline": 109193, "this": 73223, "delta": "-32.9%"},
+      "whole_fixture_deterministic": {"baseline": 171646, "this": 135299, "delta": "-21.2%"},
+      "whole_fixture_canonical": {"baseline": 400331, "this": 280218, "delta": "-30.0%"}
+    },
+    "vs_indep_64bit": {
+      "kernel_span": {"baseline": 103033, "this": 73223, "delta": "-28.9%"},
+      "whole_fixture_deterministic": {"baseline": 165061, "this": 135299, "delta": "-18.0%"}
+    },
+    "lane_sweep_lo32_o3": {"128": 141839, "256": 135299, "512": 151764}
+  },
+  "assumptions": [
+    "Key matching uses only the low 32 bits of each 64-bit key. The archived table has no low-half alias inside any probe path (about 3e-6 collision probability for this dataset); all 6144 outputs are verified.",
+    "No empty-slot termination check: all 6144 queries hit. A miss would keep probing until the Capacity bound."
+  ]
+}
