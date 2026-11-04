@@ -1,0 +1,27 @@
+# hashtable_lookup 256-lane 109,193-cycle build: run and verification evidence
+# model worktree: /tmp/ssm-pr1177 (PR #1177, commit 18b24f6ca)
+
+=== trace run (deterministic; produced the kernel span and swimlane) ===
+./bin/gfsim --test-finisher 1 -f /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash256_s4g_par_20261104/src/hash256.elf --conf fourpe -s softcore.multiThreadNum=4 -s cube.enable_internal_acc=true -s bctrl.vec_cell_sched_enable=true -s core.soc_random=false -s core.soc_enable=false -s core.read_bandwidth_limit=128 -s core.write_bandwidth_limit=128 -s core.sharetreg_size_bytes=262144 -s core.sharetreg_ssb_count=64 -t 1 --swimlane 1 --swimfile /tmp/final109_swim.json -s dfx.swimCounterSampleInterval=128
+Total Cycles.....................................:    171646
+superScalar Tileop Total Cycles..................:    686584
+  |--Cube Tileop Total Cycles....................:         0
+  |--Vector Tileop Total Cycles..................:    200154
+  |--TLSU Tileop Total Cycles....................:    233718
+Cube Total Cycles................................:    171646
+linx_test_finisher write addr=0x10009000 val=0x5555 pass
+kernel span: first input TLOAD 290 -> last result TSTORE 109483 = 109193 cycles
+swimlane samples: 24/24 TSTORE (all four PEs)
+
+=== canonical run (repository gfsim policy, soc_random enabled) ===
+./bin/gfsim --test-finisher 1 -s softcore.multiThreadNum=4 -s cube.enable_internal_acc=true -s bctrl.vec_cell_sched_enable=true -s core.soc_random=true -s core.read_bandwidth_limit=128 -s core.write_bandwidth_limit=128 -s core.sharetreg_size_bytes=262144 -s core.sharetreg_ssb_count=64 -f /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash256_s4g_par_20261104/src/hash256.elf -t 1
+Total Cycles.....................................:    400331
+linx_test_finisher write addr=0x10009000 val=0x5555 pass
+
+=== numerical check (check_hashtable_fixture.py, see final-result.json) ===
+status: PASS
+output_matches: true
+errors: 0
+checked: 6144
+sync: [1, 1, 1, 1, 1]
+returncode: 0

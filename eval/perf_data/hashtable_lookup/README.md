@@ -25,3 +25,11 @@
 压缩只改变存储形式，解压后分别用Perfetto/Konata打开。checksums.json给出归档文件和解压后轨迹的SHA256。command.json保留原运行路径，供审计；reproduce.py从当前归档目录读取ELF，可用环境变量MODEL覆盖模型绝对路径。
 
 原全量调试日志保留在 `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_6144_trace_20261102/gfsim.log.gz`，约445MiB；远端存完整PMU和关键PASS日志，未把全量调试文本放入Git。原始未压缩轨迹也在 `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_6144_trace_20261102`。
+
+## 优化版本（2026-11-04）
+
+256-lane、两槽并行、槽号寻址、empty-first、2 KB no-wrap guard 的优化版归档在
+[wide256_109193_20261104](https://github.com/PTO-ISA/SuperNPUBench/tree/main/eval/perf_data/hashtable_lookup/wide256_109193_20261104)。
+追踪配置（`core.soc_random=false`、`core.soc_enable=false`）下 kernel span
+**109,193** cycles、整个 fixture 171,646；规范配置（`core.soc_random=true`）
+整个 fixture 400,331。构建使用 PR 编译器 #146、API #303、模型 #1177。

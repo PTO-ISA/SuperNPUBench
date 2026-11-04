@@ -1,0 +1,83 @@
+{
+  "operator": "hashtable_lookup",
+  "variant": "wide256_stride2_slotidx_emptyfirst_nowrap_deferred_value",
+  "date": "2026-11-04",
+  "fixture": {
+    "queries": 6144,
+    "table_capacity": 2550000,
+    "inserted": 1785000,
+    "load_factor": 0.7,
+    "pe_count": 4,
+    "queries_per_pe": 1536,
+    "lanes": 256,
+    "batches_per_pe": 6,
+    "table_guard_entries": 128,
+    "max_probe_slots": 63
+  },
+  "elf": {
+    "file": "hash_6144_PE4_wide256.elf",
+    "sha256": "eb4c3bae829e44db631e7892069561b67c05d6bdc2654aaefdb28334f3a3d563"
+  },
+  "source": {
+    "kernel.hpp": "5699c3d585e375d567d0456745f8554964dc4247a59e317fc9e26637addbdc65",
+    "fixture.cpp": "4b1fb90e084b3bbfe5a1f48ad26328877e5bb794812227dc1a77f0d34dd94733",
+    "diss": "555f3f4bc5609e3b9eee0e286ff0a4c814af3de357889422d8555b99ec791484"
+  },
+  "trace_run": {
+    "description": "deterministic trace run; source of the kernel span and swimlane",
+    "config": {
+      "conf": "fourpe",
+      "softcore.multiThreadNum": 4,
+      "cube.enable_internal_acc": true,
+      "bctrl.vec_cell_sched_enable": true,
+      "core.soc_random": false,
+      "core.soc_enable": false,
+      "core.read_bandwidth_limit": 128,
+      "core.write_bandwidth_limit": 128,
+      "core.sharetreg_size_bytes": 262144,
+      "core.sharetreg_ssb_count": 64,
+      "dfx.swimCounterSampleInterval": 128
+    },
+    "total_cycles": 171646,
+    "first_input_load_cycle": 290,
+    "last_result_store_cycle": 109483,
+    "kernel_span_cycles": 109193
+  },
+  "canonical_run": {
+    "description": "repository-standard config (soc_random enabled); source of pmu.log",
+    "config": {
+      "softcore.multiThreadNum": 4,
+      "cube.enable_internal_acc": true,
+      "bctrl.vec_cell_sched_enable": true,
+      "core.soc_random": true,
+      "core.read_bandwidth_limit": 128,
+      "core.write_bandwidth_limit": 128,
+      "core.sharetreg_size_bytes": 262144,
+      "core.sharetreg_ssb_count": 64
+    },
+    "model_head": "18b24f6ca7f71369aee9245426daa68cc741dad5",
+    "total_cycles": 400331,
+    "finisher_pass": true
+  },
+  "verification": {
+    "checker": "scripts/check_hashtable_fixture.py",
+    "checker_sha256": "7986f49ed5e4775dfedbef3ea88c818f57b503491422417e807e3c7027c0e625",
+    "status": "PASS",
+    "output_matches": true,
+    "errors": 0,
+    "checked": 6144,
+    "sync": [1, 1, 1, 1, 1]
+  },
+  "comparisons": {
+    "deterministic_trace": {
+      "pr_wide_mask_stride1": {"kernel_span": 187851, "whole_fixture": 250057},
+      "s4g_baseline": {"kernel_span": 130577, "whole_fixture": 193010},
+      "this_build": {"kernel_span": 109193, "whole_fixture": 171646}
+    },
+    "random_soc": {
+      "pr_wide_mask_stride1": 467361,
+      "s4g_baseline": 404765,
+      "this_build": 400331
+    }
+  }
+}

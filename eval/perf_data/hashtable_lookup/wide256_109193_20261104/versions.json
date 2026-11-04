@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-04",
+  "compiler": {
+    "pr": 146,
+    "commit": "a5f03b38",
+    "path": "/tmp/llvm-pr146/build-hash/bin/clang++",
+    "linker": "/tmp/llvm-pr146/build-hash/bin/ld.lld",
+    "target": "linx64v5-unknown-linux-musl",
+    "sysroot": "/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/sysroot",
+    "extra_includes": [
+      "/tmp/lane128-prcfg",
+      "/tmp/llvm-pr146/libcxx/include",
+      "/tmp/api-pr303/include"
+    ]
+  },
+  "api": {
+    "pr": 303,
+    "commit": "decac4f",
+    "include": "/tmp/api-pr303/include"
+  },
+  "model": {
+    "pr": 1177,
+    "commit": "18b24f6ca7f71369aee9245426daa68cc741dad5",
+    "worktree": "/tmp/ssm-pr1177",
+    "binary": "/tmp/ssm-pr1177/bin/gfsim",
+    "binary_sha256": "48f71d11f10a97f6443ba37d40438ded28d10446f6af8d3e2279acab77e6817f"
+  },
+  "checker": {
+    "path": "/tmp/ssm-pr1177/scripts/check_hashtable_fixture.py",
+    "sha256": "7986f49ed5e4775dfedbef3ea88c818f57b503491422417e807e3c7027c0e625"
+  },
+  "notes": [
+    "The compiler and API changes are the PR stack (#146 / #303); SuperNPUBench main does not build this kernel without them.",
+    "The model worktree is pinned to PR #1177 because 18b24f6ca is not an ancestor of the SuperScalarModel main worktree HEAD at packaging time.",
+    "The trace run used core.soc_random=false and core.soc_enable=false; the canonical run used core.soc_random=true, matching the repository gfsim policy."
+  ]
+}
