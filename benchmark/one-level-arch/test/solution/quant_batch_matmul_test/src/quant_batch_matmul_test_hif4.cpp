@@ -1,4 +1,5 @@
 #include "solution/quant_batch_matmul/quant_batch_matmul_hif4.hpp"
+#include "solution/quant_batch_matmul/quant_batch_matmul_hif4_reuseA.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -80,12 +81,21 @@ extern "C" int __linx_group_worker_main(uint32_t peId, void *opaque) {
 
     BENCHSTART;
     // The kernel itself iterates over Batch; pass batch-0 pointers only.
+#ifdef REUSEA
+    quant_batch_matmul_hif4_reuseA<tilM, tilN, tilK, globM, globN, globK>(
+        context->dst,
+        context->src0,
+        context->src1,
+        context->src0_mx,
+        context->src1_mx);
+#else
     quant_batch_matmul_hif4_mt<tilM, tilN, tilK, globM, globN, globK>(
         context->dst,
         context->src0,
         context->src1,
         context->src0_mx,
         context->src1_mx);
+#endif
     BENCHEND;
     return 0;
 }
