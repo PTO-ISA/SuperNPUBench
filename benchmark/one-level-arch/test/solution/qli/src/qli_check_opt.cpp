@@ -73,10 +73,11 @@ extern "C" unsigned char _binary_srcq_data_start[], _binary_srck_data_start[],
 
 // 多 PE 测试路径（Makefile -DTNPE=$(NPE)，默认 4）：
 //   wbb 预广播（行块）与 K^T 转置（token 列块）拆分到 NPE 个 PE 并行——两者
-//   均为不相交写，无需同步；worker 完成各自块后置完成标志即退出，仅 PE0
-//   自旋等待全部 ktt 就绪，随后独跑 qli_pto 分数阶段与 qli_topk_radix TopK
-//   （单 PE 代码路径不变）。分数/TopK 的行级并行需 kernel 侧改造
-//   （qli_topk_radix 的 scratch 布局随模板 Sq 推导，按行实例化会互相踩踏）。
+//   均为不相交写，无需同步；屏障 1 等全部数据块就绪后，分数阶段按行区间
+//   [tid*per, ...) 拆到 NPE 个 PE（qli_pto 行区间参数，各 PE 传不相交的
+//   temp_gm）；屏障 2 等全部分数行就绪后，PE0 独跑 qli_topk_radix TopK
+//   （其 scratch 布局随模板 Sq 推导，按行实例化会互相踩踏，行级并行待
+//   kernel 侧 scratch 参数化）。
 // 运行：gfrun/gfsim -s softcore.multiThreadNum=$(NPE)（gfsim 对含 PEID 指令
 // 的 ELF 自动套用 fourpe bundle，NPE<4 时多余 PE 在 tid 门控处退出）。
 #ifndef TNPE
@@ -86,9 +87,10 @@ extern "C" unsigned char _binary_srcq_data_start[], _binary_srck_data_start[],
 #endif
 static_assert(NPE >= 2 && NPE <= 4, "NPE must be 2..4 (multi-PE only)");
 
-// 完成标志（.bss 零初始化；volatile + 编译器屏障，与
+// 阶段完成标志（.bss 零初始化；volatile + 编译器屏障，与
 // multi_thread_res_check.h 的发布/等待语义同款）
-static volatile uint32_t ktt_ready[NPE];
+static volatile uint32_t prep_ready[NPE];
+static volatile uint32_t scores_ready[NPE];
 
 int main(){
     using dtype = DTYPE;
@@ -135,19 +137,22 @@ int main(){
             for (int d = 0; d < D; d++)
                 ktt[d * Skv + n] = k[n * D + d];
     }
-    // CUBE->Vec 桥接临时区
-    static float tmp16[kTm * kTk];
+    // CUBE->Vec 桥接临时区：每 PE 一份（分数阶段并发调用 qli_pto）
+    static float tmp16[kTm * kTk * NPE];
 
-    // worker：各自块完成 → 置标志 → 退出；PE0：等全部 ktt 块就绪
+    // ---- 屏障 1：等全部 wbb/ktt 块就绪（每 PE 的分数行需要完整 K^T）----
     __asm__ volatile("" : : : "memory");
-    ktt_ready[tid] = 1;
-    if (tid != 0) return 0;
-    for (uint32_t p = 1; p < NPE; ++p) {
-        while (ktt_ready[p] == 0) {
+    prep_ready[tid] = 1;
+    for (uint32_t p = 0; p < NPE; ++p) {
+        while (prep_ready[p] == 0) {
         }
     }
     __asm__ volatile("" : : : "memory");
 
+    // ---- 分数阶段：行区间 [tid*per, ...) 拆到 NPE 个 PE（A2）----
+    const int per = (Sq + NPE - 1) / NPE;
+    const int row0 = (int)tid * per;
+    const int row1 = (row0 + per < Sq) ? (row0 + per) : Sq;
     BENCHSTART;
     for(int i=0;i<B;i++){
         qli_pto<dtype, Sq, Skv, D, g, kTm, kTk>(
@@ -156,10 +161,21 @@ int main(){
             ktt + i*D*Skv,
             wbb + i*Sq*g*kTk,
             scale_k + i*Skv,
-            tmp16
+            tmp16 + (size_t)tid * kTm * kTk,
+            row0, row1
         );
     }
     BENCHEND;
+
+    // ---- 屏障 2：等全部分数行就绪后，PE0 独跑 TopK ----
+    __asm__ volatile("" : : : "memory");
+    scores_ready[tid] = 1;
+    if (tid != 0) return 0;
+    for (uint32_t p = 1; p < NPE; ++p) {
+        while (scores_ready[p] == 0) {
+        }
+    }
+    __asm__ volatile("" : : : "memory");
 
     // Step7 (TopK) 独立计时区间
     __asm__ __volatile__("B.HINT TRACE.begin\n" : : :);
