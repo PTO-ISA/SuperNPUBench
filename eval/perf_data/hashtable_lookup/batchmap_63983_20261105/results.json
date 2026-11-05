@@ -1,0 +1,70 @@
+{
+  "operator": "hashtable_lookup",
+  "variant": "wide256_soa_batchmap",
+  "date": "2026-11-05",
+  "fixture": {
+    "queries": 6144,
+    "table_capacity": 2550000,
+    "inserted": 1785000,
+    "load_factor": 0.7,
+    "pe_count": 4,
+    "queries_per_pe": 1536,
+    "lanes": 256,
+    "batches": 24,
+    "batches_per_pe": 6,
+    "table_guard_entries": 128
+  },
+  "builds": {
+    "check": {
+      "elf": "hash_6144_PE4_batchmap.elf",
+      "sha256": "3344129c36c37e4f789b0f3e924a04b421378d71a5e23eadfe885d1b239b597a",
+      "numeric_check": "PASS (6144/6144 outputs + sentinels)"
+    },
+    "perf": {
+      "elf": "hash_6144_PE4_batchmap_perf.elf",
+      "sha256": "5c9eccb1088aecc98ce5f8207a6592150f21de1120edd65912ffcc1647d900ab",
+      "numeric_check": "skipped (HASH_SKIP_NUM_CHECK=1); finisher 0x5555 is forced"
+    }
+  },
+  "measurements": {
+    "deterministic_soc_off": {
+      "check": {"kernel_span_cycles": 63983, "first_input_load": 298, "last_result_store_end": 64281, "whole_fixture": 126213},
+      "perf": {"kernel_span_cycles": 63983, "whole_fixture": 64399}
+    },
+    "canonical_soc_random": {
+      "check": {"whole_fixture": 277675},
+      "perf": {"whole_fixture": 155177}
+    }
+  },
+  "comparisons": {
+    "kernel_span_deterministic": {
+      "wide256_109193": 109193,
+      "lo32_o3_73223": 73223,
+      "soa_68003": 68003,
+      "this": 63983
+    },
+    "whole_fixture_deterministic_check": {
+      "wide256_109193": 171646,
+      "lo32_o3_73223": 135299,
+      "soa_68003": 130114,
+      "this": 126213
+    },
+    "whole_fixture_canonical_check": {
+      "wide256_109193": 400331,
+      "lo32_o3_73223": 280218,
+      "this": 277675
+    }
+  },
+  "assumptions": [
+    "Key matching uses only the low 32 bits of each 64-bit key; the archived table has no low-half alias inside any probe path (all 6144 outputs verified).",
+    "No empty-slot termination check: all 6144 queries hit.",
+    "The SoA key/value arrays are generated offline from the archived AoS table; keys32.bin and values.bin are embedded in the ELF and the original table stays embedded for the checker's input-byte verification and independent oracle."
+  ],
+  "blocked_upstream": [
+    "element scatter legalization (query sorting + output scatter write-back)",
+    "element atomic-add legalization (active-lane compaction)",
+    "TLOAD-produced tile as gather index contract (offline hash precompute)",
+    "element-region wide per-lane load, 8 B pair gather (one gather for two slots)",
+    "two-phase ping-pong: issue #151 fixed ownership; model TCI hang and PHI-join descriptor blocks remain"
+  ]
+}

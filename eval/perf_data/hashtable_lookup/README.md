@@ -40,3 +40,18 @@
 相对 109,193 版本 kernel -32.9%、整个 fixture -21.2%（规范配置 -30.0%）。
 该版本只比较 key 低 32 位且假定所有查询命中（无空槽终止检查），通用语义请回退到
 64 位比较 + 空槽检查的版本。
+
+## 批次重排 + SoA 版（2026-11-05，kernel 63,983）
+
+在 `lo32_o3_73223_20261104` 基础上做了三件事：key/value 拆成 SoA 数组、24 批到
+4 PE 的最优 6+6+6+6 分配、以及性能模式开关 `HASH_SKIP_NUM_CHECK`。归档在
+[batchmap_63983_20261105](https://github.com/PTO-ISA/SuperNPUBench/tree/main/eval/perf_data/hashtable_lookup/batchmap_63983_20261105)。
+
+- 确定性配置（`soc_random=false`）：kernel span **63,983**；校验构建整个
+  fixture 126,213（PASS），性能构建 64,399（跳过校验）。
+- 规范配置（`soc_random=true`）：校验构建 277,675，性能构建 155,177。
+- 相对 73,223 版本：kernel span -12.6%，确定性 fixture -6.7%，规范配置
+  （校验构建）280,218 → 277,675（-0.9%）。
+
+数值结论仍以校验构建 `hash_6144_PE4_batchmap.elf` + `check_hashtable_fixture.py`
+为准；性能构建的 0x5555 是无条件写入的。

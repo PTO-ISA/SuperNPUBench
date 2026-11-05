@@ -1,0 +1,1121 @@
+
+outputs/hash256_batchmap_20261105/src/hash_batchmap.elf:	file format elf64-unknown
+
+Disassembly of section .text:
+
+00000000000100f0 <__cxx_global_var_init>:
+   100f0: 0164                 	C.BSTART.STD	COND, 0x1011c <.LBB6_2>
+   100f2: 03a7cf87             	addtpc	14972, 	->t
+   100f6: f9ec4f99             	lbui	[t#1, -98], 	->t
+   100fa: 0636                 	c.setc.ne	t#1, zero
+   100fc: 0800                 	C.BSTART.STD	
+   100fe: 03a7cf87             	addtpc	14972, 	->t
+   10102: 0dec1f95             	subi	t#1, 222, 	->t
+   10106: f856                 	c.movi	1, 	->t
+   10108: 45ac7f59             	sdi.u	t#1, [t#3, -222]
+   1010c: 03903059             	sdi	zero, [t#2, 8]
+   10110: 09902059             	swi	zero, [t#2, 16]
+   10114: 03a7cf87             	addtpc	14972, 	->t
+   10118: f98c8f59             	sbi	t#2, [t#1, -132]
+
+000000000001011c <.LBB6_2>:
+   1011c: 3800                 	C.BSTART.STD	RET
+   1011e: 029c                 	c.setc.tgt	ra
+   10120: 0800                 	C.BSTART.STD	
+
+0000000000010122 <__cxx_global_var_init.4>:
+   10122: 0164                 	C.BSTART.STD	COND, 0x1014e <.LBB7_2>
+   10124: 03a7cf87             	addtpc	14972, 	->t
+   10128: f74c4f99             	lbui	[t#1, -140], 	->t
+   1012c: 0636                 	c.setc.ne	t#1, zero
+   1012e: 0800                 	C.BSTART.STD	
+   10130: 03a7cf87             	addtpc	14972, 	->t
+   10134: 0f8c1f95             	subi	t#1, 248, 	->t
+   10138: f856                 	c.movi	1, 	->t
+   1013a: 11ac7f59             	sdi.u	t#1, [t#3, -248]
+   1013e: 03903059             	sdi	zero, [t#2, 8]
+   10142: 09902059             	swi	zero, [t#2, 16]
+   10146: 03a7cf87             	addtpc	14972, 	->t
+   1014a: a58c8f59             	sbi	t#2, [t#1, -174]
+
+000000000001014e <.LBB7_2>:
+   1014e: 3800                 	C.BSTART.STD	RET
+   10150: 029c                 	c.setc.tgt	ra
+   10152: 0800                 	C.BSTART.STD	
+
+0000000000010154 <__cxx_global_var_init.5>:
+   10154: 0164                 	C.BSTART.STD	COND, 0x10180 <.LBB8_2>
+   10156: 03a7cf87             	addtpc	14972, 	->t
+   1015a: f4ac4f99             	lbui	[t#1, -182], 	->t
+   1015e: 0636                 	c.setc.ne	t#1, zero
+   10160: 0800                 	C.BSTART.STD	
+   10162: 03a7cf87             	addtpc	14972, 	->t
+   10166: 112c1f95             	subi	t#1, 274, 	->t
+   1016a: f856                 	c.movi	1, 	->t
+   1016c: ddac7ed9             	sdi.u	t#1, [t#3, -274]
+   10170: 03903059             	sdi	zero, [t#2, 8]
+   10174: 09902059             	swi	zero, [t#2, 16]
+   10178: 03a7cf87             	addtpc	14972, 	->t
+   1017c: 518c8f59             	sbi	t#2, [t#1, -216]
+
+0000000000010180 <.LBB8_2>:
+   10180: 3800                 	C.BSTART.STD	RET
+   10182: 029c                 	c.setc.tgt	ra
+   10184: 0800                 	C.BSTART.STD	
+
+0000000000010186 <__cxx_global_var_init.6>:
+   10186: 0164                 	C.BSTART.STD	COND, 0x101b2 <.LBB9_2>
+   10188: 03a7cf87             	addtpc	14972, 	->t
+   1018c: f20c4f99             	lbui	[t#1, -224], 	->t
+   10190: 0636                 	c.setc.ne	t#1, zero
+   10192: 0800                 	C.BSTART.STD	
+   10194: 03a7cf87             	addtpc	14972, 	->t
+   10198: 12cc1f95             	subi	t#1, 300, 	->t
+   1019c: f856                 	c.movi	1, 	->t
+   1019e: a9ac7ed9             	sdi.u	t#1, [t#3, -300]
+   101a2: 03903059             	sdi	zero, [t#2, 8]
+   101a6: 09902059             	swi	zero, [t#2, 16]
+   101aa: 03a7cf87             	addtpc	14972, 	->t
+   101ae: fd8c8ed9             	sbi	t#2, [t#1, -258]
+
+00000000000101b2 <.LBB9_2>:
+   101b2: 3800                 	C.BSTART.STD	RET
+   101b4: 029c                 	c.setc.tgt	ra
+   101b6: 0800                 	C.BSTART.STD	
+
+00000000000101b8 <_ZN3pto18layout_type_to_strENS_10LayoutEnumE>:
+   101b8: 00d4                 	C.BSTART.STD	COND, 0x101d2 <.LBB0_2>
+   101ba: 03a74187             	addtpc	14964, 	->a1
+   101be: f896                 	c.movi	2, 	->t
+   101c0: 002c6065             	setc.ltu	t#1, a0
+   101c4: 00a2                 	C.BSTART.STD	DIRECT, 0x101d8 <.LBB0_3>
+   101c6: 03a75f87             	addtpc	14965, 	->t
+   101ca: 1c6c1f95             	subi	t#1, 454, 	->t
+   101ce: 182c3109             	ld	[t#1, a0<<3], 	->a0
+
+00000000000101d2 <.LBB0_2>:
+   101d2: 0800                 	C.BSTART.STD	
+   101d4: 19219115             	subi	a1, 402, 	->a0
+
+00000000000101d8 <.LBB0_3>:
+   101d8: 3800                 	C.BSTART.STD	RET
+   101da: 029c                 	c.setc.tgt	ra
+   101dc: 0800                 	C.BSTART.STD	
+
+00000000000101de <wide_mask_run>:
+   101de: 0172                 	C.BSTART.STD	DIRECT, 0x1020c <_ZN8supernpu11hash_lookup9wide_mask3runILj2550000ELj256ELj4EEEvPKjPKiPKlPiS4_j>
+   101e0: 026ebf87             	addtpc	9963, 	->t
+   101e4: 1e0c1115             	subi	t#1, 480, 	->a0
+   101e8: 030a6f87             	addtpc	12454, 	->t
+   101ec: 1e8c1195             	subi	t#1, 488, 	->a1
+   101f0: 03a62f87             	addtpc	14946, 	->t
+   101f4: 1f0c1215             	subi	t#1, 496, 	->a2
+   101f8: 03a76f87             	addtpc	14966, 	->t
+   101fc: 1f4c1295             	subi	t#1, 500, 	->a3
+   10200: 03a61f87             	addtpc	14945, 	->t
+   10204: 200c1315             	subi	t#1, 512, 	->a4
+   10208: 3996                 	c.movi	6, 	->a5
+   1020a: 0800                 	C.BSTART.STD	
+
+000000000001020c <_ZN8supernpu11hash_lookup9wide_mask3runILj2550000ELj256ELj4EEEvPKjPKiPKlPiS4_j>:
+   1020c: 0084                 	C.BSTART.STD	COND, 0x1021c <.LBB2_2>
+   1020e: 8020043b             	ssrget	2050, 	->a6
+   10212: f8d6                 	c.movi	3, 	->t
+   10214: 028c7065             	setc.geu	t#1, a6.sw
+   10218: 3800                 	C.BSTART.STD	RET
+   1021a: 029c                 	c.setc.tgt	ra
+
+000000000001021c <.LBB2_2>:
+   1021c: 0c12                 	C.BSTART.STD	DIRECT, 0x1039e <_ZN8supernpu11hash_lookup9wide_mask6lookupILj2550000ELj256EEEvPKjPKiPKlPiS4_j>
+   1021e: 00740fc7             	mul	a6, a5, 	->t
+   10222: 15830305             	add	a4, t#1.uw<<2, 	->a4
+   10226: 0800                 	C.BSTART.STD	
+
+0000000000010228 <wide_mask_checker_load_begin>:
+   10228: 0800                 	C.BSTART.STD	
+   1022a: 1006                 	c.movr	zero, 	->a0
+   1022c: 03a76f87             	addtpc	14966, 	->t
+   10230: 228c1195             	subi	t#1, 552, 	->a1
+   10234: 03a6ef87             	addtpc	14958, 	->t
+   10238: 234c1215             	subi	t#1, 564, 	->a2
+   1023c: 00001f97             	lui	1, 	->t
+   10240: 800c0295             	addi	t#1, 2048, 	->a3
+
+0000000000010244 <.LBB3_3>:
+   10244: 0004                 	C.BSTART.STD	COND, 0x10244 <.LBB3_3>
+   10246: 0001af89             	lw	[a1, zero], 	->t
+   1024a: 00418195             	addi	a1, 4, 	->a1
+   1024e: 00022f89             	lw	[a2, zero], 	->t
+   10252: 018c9fc5             	cmp.ne	t#2, t#1, 	->t
+   10256: 01810125             	addw	a0, t#1, 	->a0
+   1025a: 00420215             	addi	a2, 4, 	->a2
+   1025e: 00129295             	subi	a3, 1, 	->a3
+   10262: 0176                 	c.setc.ne	a3, zero
+   10264: 0800                 	C.BSTART.STD	
+   10266: 03a76f87             	addtpc	14966, 	->t
+   1026a: 266c1f15             	subi	t#1, 614, 	->u
+   1026e: d9ac2fa9             	lwi.u	[t#1, -614], 	->t
+   10272: 12345f97             	lui	74565, 	->t
+   10276: 678c0f15             	addi	t#1, 1656, 	->u
+   1027a: 01cccf05             	xor	t#2, u#1, 	->u
+   1027e: 00006f97             	lui	6, 	->t
+   10282: 260c                 	c.addi	t#1, 4, ->t
+   10284: 018f2f89             	lw	[u#3, t#1], 	->t
+   10288: 01dc4f85             	xor	t#1, u#2, 	->t
+   1028c: 018e3fa5             	orw	u#1, t#1, 	->t
+   10290: 082c                 	c.cmp.nei	t#1, 0, ->t
+   10292: 01810125             	addw	a0, t#1, 	->a0
+
+0000000000010296 <wide_mask_checker_load_end>:
+   10296: 3800                 	C.BSTART.STD	RET
+   10298: 029c                 	c.setc.tgt	ra
+   1029a: 0800                 	C.BSTART.STD	
+
+000000000001029c <main>:
+   1029c: 40d50041             	FENTRY	[ra ~ s2], sp!, 256
+   102a0: 0194                 	C.BSTART.STD	COND, 0x102d2 <.LBB4_7>
+   102a2: 80200fbb             	ssrget	2050, 	->t
+   102a6: 81fc2667             	bic	t#1, 32, 32, 	->s1
+   102aa: 0326                 	c.setc.eq	s1, zero
+   102ac: 000605d5             	cmp.eqi	s1, 0, 	->s0
+
+00000000000102b0 <.LBB4_2>:
+   102b0: 0004                 	C.BSTART.STD	COND, 0x102b0 <.LBB4_2>
+   102b2: 03a7cf87             	addtpc	14972, 	->t
+   102b6: d56c2fa9             	lwi.u	[t#1, -682], 	->t
+   102ba: 0626                 	c.setc.eq	t#1, zero
+   102bc: f912                 	C.BSTART.STD	DIRECT, 0x101de <wide_mask_run>
+   102be: 5056                 	c.setret	0x102c0, ->ra <.LBB4_2+0x10>
+   102c0: 0372                 	C.BSTART.STD	DIRECT, 0x1032e <.LBB4_16>
+   102c2: 03a7cf87             	addtpc	14972, 	->t
+   102c6: 2bac1f95             	subi	t#1, 698, 	->t
+   102ca: 10cc0f85             	add	t#1, s1<<2, 	->t
+   102ce: f856                 	c.movi	1, 	->t
+   102d0: 0e6a                 	c.swi	t#1, [t#2, 4]
+
+00000000000102d2 <.LBB4_7>:
+   102d2: 0800                 	C.BSTART.STD	
+   102d4: 03a76f87             	addtpc	14966, 	->t
+   102d8: 2d4c1f15             	subi	t#1, 724, 	->u
+   102dc: 12345f97             	lui	74565, 	->t
+   102e0: 678c0f95             	addi	t#1, 1656, 	->t
+   102e4: 59ac6d59             	swi.u	t#1, [t#3, -724]
+   102e8: 00006f97             	lui	6, 	->t
+   102ec: 260c                 	c.addi	t#1, 4, ->t
+   102ee: d18e6049             	sw.u	t#3, [u#1, t#1]
+   102f2: f762                 	C.BSTART.STD	DIRECT, 0x101de <wide_mask_run>
+   102f4: 5216                 	c.setret	0x10304, ->ra <.LBB4_7+0x32>
+   102f6: 03a7cf87             	addtpc	14972, 	->t
+   102fa: 2eec1615             	subi	t#1, 750, 	->s1
+   102fe: 6856                 	c.movi	1, 	->s2
+   10300: 2586ed59             	swi.u	s2, [t#1, -750]
+   10304: 0800                 	C.BSTART.STD	
+   10306: 02c6a059             	swi	s2, [s1, 4]
+
+000000000001030a <.LBB4_12>:
+   1030a: 0004                 	C.BSTART.STD	COND, 0x1030a <.LBB4_12>
+   1030c: 03a7cf87             	addtpc	14972, 	->t
+   10310: d04c2fa9             	lwi.u	[t#1, -764], 	->t
+   10314: 0626                 	c.setc.eq	t#1, zero
+
+0000000000010316 <.LBB4_13>:
+   10316: 0004                 	C.BSTART.STD	COND, 0x10316 <.LBB4_13>
+   10318: 03a7cf87             	addtpc	14972, 	->t
+   1031c: cfcc2fa9             	lwi.u	[t#1, -772], 	->t
+   10320: 0626                 	c.setc.eq	t#1, zero
+
+0000000000010322 <.LBB4_14>:
+   10322: 0004                 	C.BSTART.STD	COND, 0x10322 <.LBB4_14>
+   10324: 03a7cf87             	addtpc	14972, 	->t
+   10328: cf4c2fa9             	lwi.u	[t#1, -780], 	->t
+   1032c: 0626                 	c.setc.eq	t#1, zero
+
+000000000001032e <.LBB4_16>:
+   1032e: 0094                 	C.BSTART.STD	COND, 0x10340 <.LBB4_18>
+   10330: 02f6                 	c.setc.ne	s0, zero
+
+0000000000010332 <.LBB4_17>:
+   10332: 0004                 	C.BSTART.STD	COND, 0x10332 <.LBB4_17>
+   10334: 03a7cf87             	addtpc	14972, 	->t
+   10338: d54c2fa9             	lwi.u	[t#1, -684], 	->t
+   1033c: 0626                 	c.setc.eq	t#1, zero
+   1033e: 00e2                 	C.BSTART.STD	DIRECT, 0x1035a <.LBB4_22>
+
+0000000000010340 <.LBB4_18>:
+   10340: f742                 	C.BSTART.STD	DIRECT, 0x10228 <wide_mask_checker_load_begin>
+   10342: 5056                 	c.setret	0x10344, ->ra <.LBB4_18+0x4>
+   10344: 0800                 	C.BSTART.STD	
+   10346: 03a7cf87             	addtpc	14972, 	->t
+   1034a: 75816d59             	swi.u	a0, [t#1, -710]
+   1034e: 0800                 	C.BSTART.STD	
+   10350: 03a7cf87             	addtpc	14972, 	->t
+   10354: f856                 	c.movi	1, 	->t
+   10356: 719c6d59             	swi.u	t#1, [t#2, -712]
+
+000000000001035a <.LBB4_22>:
+   1035a: 0800                 	C.BSTART.STD	
+   1035c: 03a7cf87             	addtpc	14972, 	->t
+   10360: d24c21a9             	lwi.u	[t#1, -732], 	->a1
+
+0000000000010364 <wide_mask_finisher_store>:
+   10364: 0800                 	C.BSTART.STD	
+   10366: 1006                 	c.movr	zero, 	->a0
+   10368: 00018f55             	cmp.eqi	a1, 0, 	->u
+   1036c: 00003f97             	lui	3, 	->t
+   10370: 333c0f95             	addi	t#1, 819, 	->t
+   10374: 803c3f85             	or	t#1, a1<<16, 	->t
+   10378: 00005f97             	lui	5, 	->t
+   1037c: 555c0f95             	addi	t#1, 1365, 	->t
+   10380: e1ac0ff7             	csel	u#1, t#1, t#3, 	->t
+   10384: 10009f97             	lui	65545, 	->t
+   10388: c80c2049             	sw	t#2, [t#1, zero<<2]
+   1038c: 40d53041             	FRET.STK	[ra ~ s2], sp!, 256
+   10390: 0800                 	C.BSTART.STD	
+
+0000000000010392 <_start>:
+   10392: 40a50041             	FENTRY	[ra ~ ra], sp!, 256
+   10396: f832                 	C.BSTART.STD	DIRECT, 0x1029c <main>
+   10398: 5056                 	c.setret	0x1039a, ->ra <.LBB5_2>
+
+000000000001039a <.LBB5_2>:
+   1039a: 0002                 	C.BSTART.STD	DIRECT, 0x1039a <.LBB5_2>
+   1039c: 0800                 	C.BSTART.STD	
+
+000000000001039e <_ZN8supernpu11hash_lookup9wide_mask6lookupILj2550000ELj256EEEvPKjPKiPKlPiS4_j>:
+   1039e: 41058041             	FENTRY	[s0 ~ s5], sp!, 256
+   103a2: 4e64                 	C.BSTART.STD	COND, 0x10d6e <.LBB10_150>
+   103a4: 01e6                 	c.setc.eq	a5, zero
+   103a6: 0800                 	C.BSTART.STD	
+   103a8: 4006                 	c.movr	zero, 	->a6
+   103aa: 81f3a3e7             	bic	a5, 32, 32, 	->a5
+
+00000000000103ae <.LBB10_2>:
+   103ae: 0800                 	C.BSTART.STD	
+   103b0: 10836f89             	lwu	[a4, a6<<2], 	->t
+   103b4: 008c7495             	slli	t#1, 8, 	->a7
+   103b8: 59820a05             	add	a2, t#1<<11, 	->x0
+   103bc: 04000a95             	addi	zero, 64, 	->x1
+   103c0: c0011181             	BSTART.TLSU	TLOAD, U64
+   103c4: 01f01aa3             	B.DATR	ND2M32.normal, Zero
+   103c8: 023c                 	C.B.DIMI	8, 	->lb0
+   103ca: 483c                 	C.B.DIMI	32, 	->lb1
+   103cc: 000aee13             	B.IOT	mask=1111, last, 	->t<2KB>
+   103d0: 015a0013             	B.IOR	[x0, x1], []
+   103d4: c1b19181             	BSTART.TEPL	TCVT, U64
+   103d8: 19901023             	B.DATR	U32, byte0, Null, RNONE, nosat
+   103dc: 023c                 	C.B.DIMI	8, 	->lb0
+   103de: 483c                 	C.B.DIMI	32, 	->lb1
+   103e0: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   103e4: c1b19181             	BSTART.TEPL	TCVT, U64
+   103e8: 19901023             	B.DATR	U32, byte0, Null, RNONE, nosat
+   103ec: 023c                 	C.B.DIMI	8, 	->lb0
+   103ee: 483c                 	C.B.DIMI	32, 	->lb1
+   103f0: 001a5e13             	B.IOT	t#2, mask=1111, last, 	->t<1KB>
+   103f4: 0800                 	C.BSTART.STD	
+   103f6: 02000a15             	addi	zero, 32, 	->x0
+   103fa: c2a19181             	BSTART.TEPL	TSHRS, U64
+   103fe: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10402: 023c                 	C.B.DIMI	8, 	->lb0
+   10404: 483c                 	C.B.DIMI	32, 	->lb1
+   10406: 823c                 	C.B.DIMI	8, 	->lb2
+   10408: 002ade13             	B.IOT	t#3, mask=1111, last, 	->t<2KB>
+   1040c: 000a0013             	B.IOR	[x0], []
+   10410: c1b19181             	BSTART.TEPL	TCVT, U64
+   10414: 19901023             	B.DATR	U32, byte0, Null, RNONE, nosat
+   10418: 023c                 	C.B.DIMI	8, 	->lb0
+   1041a: 483c                 	C.B.DIMI	32, 	->lb1
+   1041c: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10420: 0800                 	C.BSTART.STD	
+   10422: a006                 	c.movr	zero, 	->x0
+   10424: cbb19181             	BSTART.TEPL	TEXPANDS, U32
+   10428: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1042c: 023c                 	C.B.DIMI	8, 	->lb0
+   1042e: 483c                 	C.B.DIMI	32, 	->lb1
+   10430: 823c                 	C.B.DIMI	8, 	->lb2
+   10432: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10436: 000a0013             	B.IOR	[x0], []
+   1043a: 0800                 	C.BSTART.STD	
+   1043c: cc9e2f97             	lui	-210462, 	->t
+   10440: d51c0b15             	addi	t#1, 3409, 	->x2
+   10444: ca219181             	BSTART.TEPL	TMULS, U32
+   10448: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1044c: 023c                 	C.B.DIMI	8, 	->lb0
+   1044e: 483c                 	C.B.DIMI	32, 	->lb1
+   10450: 823c                 	C.B.DIMI	8, 	->lb2
+   10452: 003a5e13             	B.IOT	t#4, mask=1111, last, 	->t<1KB>
+   10456: 000b0013             	B.IOR	[x2], []
+   1045a: 0800                 	C.BSTART.STD	
+   1045c: 5bd6                 	c.movi	15, 	->s0
+   1045e: ca919181             	BSTART.TEPL	TSHLS, U32
+   10462: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10466: 023c                 	C.B.DIMI	8, 	->lb0
+   10468: 483c                 	C.B.DIMI	32, 	->lb1
+   1046a: 823c                 	C.B.DIMI	8, 	->lb2
+   1046c: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10470: 00058013             	B.IOR	[s0], []
+   10474: 0800                 	C.BSTART.STD	
+   10476: 01100615             	addi	zero, 17, 	->s1
+   1047a: caa19181             	BSTART.TEPL	TSHRS, U32
+   1047e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10482: 023c                 	C.B.DIMI	8, 	->lb0
+   10484: 483c                 	C.B.DIMI	32, 	->lb1
+   10486: 823c                 	C.B.DIMI	8, 	->lb2
+   10488: 001a5e13             	B.IOT	t#2, mask=1111, last, 	->t<1KB>
+   1048c: 00060013             	B.IOR	[s1], []
+   10490: c8719181             	BSTART.TEPL	TOR, U32
+   10494: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10498: 023c                 	C.B.DIMI	8, 	->lb0
+   1049a: 483c                 	C.B.DIMI	32, 	->lb1
+   1049c: 823c                 	C.B.DIMI	8, 	->lb2
+   1049e: 001a4e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<1KB>
+   104a2: 0800                 	C.BSTART.STD	
+   104a4: 1b873f97             	lui	112755, 	->t
+   104a8: 593c0695             	addi	t#1, 1427, 	->s2
+   104ac: ca219181             	BSTART.TEPL	TMULS, U32
+   104b0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   104b4: 023c                 	C.B.DIMI	8, 	->lb0
+   104b6: 483c                 	C.B.DIMI	32, 	->lb1
+   104b8: 823c                 	C.B.DIMI	8, 	->lb2
+   104ba: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   104be: 00068013             	B.IOR	[s2], []
+   104c2: c8819181             	BSTART.TEPL	TXOR, U32
+   104c6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   104ca: 023c                 	C.B.DIMI	8, 	->lb0
+   104cc: 483c                 	C.B.DIMI	32, 	->lb1
+   104ce: 823c                 	C.B.DIMI	8, 	->lb2
+   104d0: 005a4e13             	B.IOT	t#6, t#1, mask=1111, last, 	->t<1KB>
+   104d4: 0800                 	C.BSTART.STD	
+   104d6: ab56                 	c.movi	13, 	->x1
+   104d8: ca919181             	BSTART.TEPL	TSHLS, U32
+   104dc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   104e0: 023c                 	C.B.DIMI	8, 	->lb0
+   104e2: 483c                 	C.B.DIMI	32, 	->lb1
+   104e4: 823c                 	C.B.DIMI	8, 	->lb2
+   104e6: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   104ea: 000a8013             	B.IOR	[x1], []
+   104ee: 0800                 	C.BSTART.STD	
+   104f0: 01300715             	addi	zero, 19, 	->s3
+   104f4: caa19181             	BSTART.TEPL	TSHRS, U32
+   104f8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   104fc: 023c                 	C.B.DIMI	8, 	->lb0
+   104fe: 483c                 	C.B.DIMI	32, 	->lb1
+   10500: 823c                 	C.B.DIMI	8, 	->lb2
+   10502: 001a5e13             	B.IOT	t#2, mask=1111, last, 	->t<1KB>
+   10506: 00070013             	B.IOR	[s3], []
+   1050a: c8719181             	BSTART.TEPL	TOR, U32
+   1050e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10512: 023c                 	C.B.DIMI	8, 	->lb0
+   10514: 483c                 	C.B.DIMI	32, 	->lb1
+   10516: 823c                 	C.B.DIMI	8, 	->lb2
+   10518: 001a4e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<1KB>
+   1051c: 0800                 	C.BSTART.STD	
+   1051e: 7956                 	c.movi	5, 	->s4
+   10520: ca219181             	BSTART.TEPL	TMULS, U32
+   10524: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10528: 023c                 	C.B.DIMI	8, 	->lb0
+   1052a: 483c                 	C.B.DIMI	32, 	->lb1
+   1052c: 823c                 	C.B.DIMI	8, 	->lb2
+   1052e: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10532: 00078013             	B.IOR	[s4], []
+   10536: 0800                 	C.BSTART.STD	
+   10538: e6546f97             	lui	-105146, 	->t
+   1053c: b64c0815             	addi	t#1, 2916, 	->s5
+   10540: ca019181             	BSTART.TEPL	TADDS, U32
+   10544: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10548: 023c                 	C.B.DIMI	8, 	->lb0
+   1054a: 483c                 	C.B.DIMI	32, 	->lb1
+   1054c: 823c                 	C.B.DIMI	8, 	->lb2
+   1054e: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10552: 00080013             	B.IOR	[s5], []
+   10556: c8211181             	BSTART.TLSU	TMOV, U32
+   1055a: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   1055e: 023c                 	C.B.DIMI	8, 	->lb0
+   10560: 483c                 	C.B.DIMI	32, 	->lb1
+   10562: 823c                 	C.B.DIMI	8, 	->lb2
+   10564: 00fa5e13             	B.IOT	t#16, mask=1111, last, 	->t<1KB>
+   10568: ca219181             	BSTART.TEPL	TMULS, U32
+   1056c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10570: 023c                 	C.B.DIMI	8, 	->lb0
+   10572: 483c                 	C.B.DIMI	32, 	->lb1
+   10574: 823c                 	C.B.DIMI	8, 	->lb2
+   10576: 00da5e13             	B.IOT	t#14, mask=1111, last, 	->t<1KB>
+   1057a: 000b0013             	B.IOR	[x2], []
+   1057e: ca919181             	BSTART.TEPL	TSHLS, U32
+   10582: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10586: 023c                 	C.B.DIMI	8, 	->lb0
+   10588: 483c                 	C.B.DIMI	32, 	->lb1
+   1058a: 823c                 	C.B.DIMI	8, 	->lb2
+   1058c: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10590: 00058013             	B.IOR	[s0], []
+   10594: caa19181             	BSTART.TEPL	TSHRS, U32
+   10598: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1059c: 023c                 	C.B.DIMI	8, 	->lb0
+   1059e: 483c                 	C.B.DIMI	32, 	->lb1
+   105a0: 823c                 	C.B.DIMI	8, 	->lb2
+   105a2: 001a5e13             	B.IOT	t#2, mask=1111, last, 	->t<1KB>
+   105a6: 00060013             	B.IOR	[s1], []
+   105aa: c8719181             	BSTART.TEPL	TOR, U32
+   105ae: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   105b2: 023c                 	C.B.DIMI	8, 	->lb0
+   105b4: 483c                 	C.B.DIMI	32, 	->lb1
+   105b6: 823c                 	C.B.DIMI	8, 	->lb2
+   105b8: 001a4e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<1KB>
+   105bc: ca219181             	BSTART.TEPL	TMULS, U32
+   105c0: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   105c4: 023c                 	C.B.DIMI	8, 	->lb0
+   105c6: 483c                 	C.B.DIMI	32, 	->lb1
+   105c8: 823c                 	C.B.DIMI	8, 	->lb2
+   105ca: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   105ce: 00068013             	B.IOR	[s2], []
+   105d2: c8819181             	BSTART.TEPL	TXOR, U32
+   105d6: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   105da: 023c                 	C.B.DIMI	8, 	->lb0
+   105dc: 483c                 	C.B.DIMI	32, 	->lb1
+   105de: 823c                 	C.B.DIMI	8, 	->lb2
+   105e0: 006a4e13             	B.IOT	t#7, t#1, mask=1111, last, 	->t<1KB>
+   105e4: ca919181             	BSTART.TEPL	TSHLS, U32
+   105e8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   105ec: 023c                 	C.B.DIMI	8, 	->lb0
+   105ee: 483c                 	C.B.DIMI	32, 	->lb1
+   105f0: 823c                 	C.B.DIMI	8, 	->lb2
+   105f2: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   105f6: 000a8013             	B.IOR	[x1], []
+   105fa: caa19181             	BSTART.TEPL	TSHRS, U32
+   105fe: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10602: 023c                 	C.B.DIMI	8, 	->lb0
+   10604: 483c                 	C.B.DIMI	32, 	->lb1
+   10606: 823c                 	C.B.DIMI	8, 	->lb2
+   10608: 001a5e13             	B.IOT	t#2, mask=1111, last, 	->t<1KB>
+   1060c: 00070013             	B.IOR	[s3], []
+   10610: c8719181             	BSTART.TEPL	TOR, U32
+   10614: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10618: 023c                 	C.B.DIMI	8, 	->lb0
+   1061a: 483c                 	C.B.DIMI	32, 	->lb1
+   1061c: 823c                 	C.B.DIMI	8, 	->lb2
+   1061e: 001a4e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<1KB>
+   10622: ca219181             	BSTART.TEPL	TMULS, U32
+   10626: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1062a: 023c                 	C.B.DIMI	8, 	->lb0
+   1062c: 483c                 	C.B.DIMI	32, 	->lb1
+   1062e: 823c                 	C.B.DIMI	8, 	->lb2
+   10630: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10634: 00078013             	B.IOR	[s4], []
+   10638: ca019181             	BSTART.TEPL	TADDS, U32
+   1063c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10640: 023c                 	C.B.DIMI	8, 	->lb0
+   10642: 483c                 	C.B.DIMI	32, 	->lb1
+   10644: 823c                 	C.B.DIMI	8, 	->lb2
+   10646: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   1064a: 00080013             	B.IOR	[s5], []
+   1064e: 0800                 	C.BSTART.STD	
+   10650: b216                 	c.movi	8, 	->x2
+   10652: cbb19181             	BSTART.TEPL	TEXPANDS, U32
+   10656: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1065a: 023c                 	C.B.DIMI	8, 	->lb0
+   1065c: 483c                 	C.B.DIMI	32, 	->lb1
+   1065e: 823c                 	C.B.DIMI	8, 	->lb2
+   10660: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10664: 000b0013             	B.IOR	[x2], []
+   10668: c8819181             	BSTART.TEPL	TXOR, U32
+   1066c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10670: 023c                 	C.B.DIMI	8, 	->lb0
+   10672: 483c                 	C.B.DIMI	32, 	->lb1
+   10674: 823c                 	C.B.DIMI	8, 	->lb2
+   10676: 001a4e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<1KB>
+   1067a: 0800                 	C.BSTART.STD	
+   1067c: 01000b15             	addi	zero, 16, 	->x2
+   10680: caa19181             	BSTART.TEPL	TSHRS, U32
+   10684: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10688: 023c                 	C.B.DIMI	8, 	->lb0
+   1068a: 483c                 	C.B.DIMI	32, 	->lb1
+   1068c: 823c                 	C.B.DIMI	8, 	->lb2
+   1068e: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10692: 000b0013             	B.IOR	[x2], []
+   10696: c8819181             	BSTART.TEPL	TXOR, U32
+   1069a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1069e: 023c                 	C.B.DIMI	8, 	->lb0
+   106a0: 483c                 	C.B.DIMI	32, 	->lb1
+   106a2: 823c                 	C.B.DIMI	8, 	->lb2
+   106a4: 001a4e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<1KB>
+   106a8: 0800                 	C.BSTART.STD	
+   106aa: 85ebcf97             	lui	-500036, 	->t
+   106ae: a6bc0595             	addi	t#1, 2667, 	->s0
+   106b2: c8211181             	BSTART.TLSU	TMOV, U32
+   106b6: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   106ba: 023c                 	C.B.DIMI	8, 	->lb0
+   106bc: 483c                 	C.B.DIMI	32, 	->lb1
+   106be: 823c                 	C.B.DIMI	8, 	->lb2
+   106c0: 00fa5e13             	B.IOT	t#16, mask=1111, last, 	->t<1KB>
+   106c4: ca219181             	BSTART.TEPL	TMULS, U32
+   106c8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   106cc: 023c                 	C.B.DIMI	8, 	->lb0
+   106ce: 483c                 	C.B.DIMI	32, 	->lb1
+   106d0: 823c                 	C.B.DIMI	8, 	->lb2
+   106d2: 001a5e13             	B.IOT	t#2, mask=1111, last, 	->t<1KB>
+   106d6: 00058013             	B.IOR	[s0], []
+   106da: caa19181             	BSTART.TEPL	TSHRS, U32
+   106de: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   106e2: 023c                 	C.B.DIMI	8, 	->lb0
+   106e4: 483c                 	C.B.DIMI	32, 	->lb1
+   106e6: 823c                 	C.B.DIMI	8, 	->lb2
+   106e8: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   106ec: 000a8013             	B.IOR	[x1], []
+   106f0: c8819181             	BSTART.TEPL	TXOR, U32
+   106f4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   106f8: 023c                 	C.B.DIMI	8, 	->lb0
+   106fa: 483c                 	C.B.DIMI	32, 	->lb1
+   106fc: 823c                 	C.B.DIMI	8, 	->lb2
+   106fe: 001a4e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<1KB>
+   10702: 0800                 	C.BSTART.STD	
+   10704: c2b2af97             	lui	-251094, 	->t
+   10708: e35c0a95             	addi	t#1, 3637, 	->x1
+   1070c: ca219181             	BSTART.TEPL	TMULS, U32
+   10710: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10714: 023c                 	C.B.DIMI	8, 	->lb0
+   10716: 483c                 	C.B.DIMI	32, 	->lb1
+   10718: 823c                 	C.B.DIMI	8, 	->lb2
+   1071a: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   1071e: 000a8013             	B.IOR	[x1], []
+   10722: caa19181             	BSTART.TEPL	TSHRS, U32
+   10726: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1072a: 023c                 	C.B.DIMI	8, 	->lb0
+   1072c: 483c                 	C.B.DIMI	32, 	->lb1
+   1072e: 823c                 	C.B.DIMI	8, 	->lb2
+   10730: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10734: 000b0013             	B.IOR	[x2], []
+   10738: c8819181             	BSTART.TEPL	TXOR, U32
+   1073c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10740: 023c                 	C.B.DIMI	8, 	->lb0
+   10742: 483c                 	C.B.DIMI	32, 	->lb1
+   10744: 823c                 	C.B.DIMI	8, 	->lb2
+   10746: 001a4e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<1KB>
+   1074a: 0800                 	C.BSTART.STD	
+   1074c: b056                 	c.movi	1, 	->x2
+   1074e: caa19181             	BSTART.TEPL	TSHRS, U32
+   10752: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10756: 023c                 	C.B.DIMI	8, 	->lb0
+   10758: 483c                 	C.B.DIMI	32, 	->lb1
+   1075a: 823c                 	C.B.DIMI	8, 	->lb2
+   1075c: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10760: 000b0013             	B.IOR	[x2], []
+   10764: cbb19181             	BSTART.TEPL	TEXPANDS, U32
+   10768: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1076c: 023c                 	C.B.DIMI	8, 	->lb0
+   1076e: 483c                 	C.B.DIMI	32, 	->lb1
+   10770: 823c                 	C.B.DIMI	8, 	->lb2
+   10772: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10776: 000b0013             	B.IOR	[x2], []
+   1077a: c8619181             	BSTART.TEPL	TAND, U32
+   1077e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10782: 023c                 	C.B.DIMI	8, 	->lb0
+   10784: 483c                 	C.B.DIMI	32, 	->lb1
+   10786: 823c                 	C.B.DIMI	8, 	->lb2
+   10788: 002a4e13             	B.IOT	t#3, t#1, mask=1111, last, 	->t<1KB>
+   1078c: c9b19181             	BSTART.TEPL	TCVT, U32
+   10790: 19101023             	B.DATR	S32, byte0, Null, RNONE, nosat
+   10794: 023c                 	C.B.DIMI	8, 	->lb0
+   10796: 483c                 	C.B.DIMI	32, 	->lb1
+   10798: 002a5e13             	B.IOT	t#3, mask=1111, last, 	->t<1KB>
+   1079c: c9b19181             	BSTART.TEPL	TCVT, U32
+   107a0: 19101023             	B.DATR	S32, byte0, Null, RNONE, nosat
+   107a4: 023c                 	C.B.DIMI	8, 	->lb0
+   107a6: 483c                 	C.B.DIMI	32, 	->lb1
+   107a8: 001a5e13             	B.IOT	t#2, mask=1111, last, 	->t<1KB>
+   107ac: 0800                 	C.BSTART.STD	
+   107ae: 0026ef97             	lui	622, 	->t
+   107b2: 8f0c0a95             	addi	t#1, 2288, 	->x1
+   107b6: 5d46                 	c.movr	x1, 	->s0
+   107b8: 8bb19181             	BSTART.TEPL	TEXPANDS, S32
+   107bc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   107c0: 023c                 	C.B.DIMI	8, 	->lb0
+   107c2: 483c                 	C.B.DIMI	32, 	->lb1
+   107c4: 823c                 	C.B.DIMI	8, 	->lb2
+   107c6: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   107ca: 00058013             	B.IOR	[s0], []
+   107ce: 88419181             	BSTART.TEPL	TREM, S32
+   107d2: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   107d6: 023c                 	C.B.DIMI	8, 	->lb0
+   107d8: 483c                 	C.B.DIMI	32, 	->lb1
+   107da: 823c                 	C.B.DIMI	8, 	->lb2
+   107dc: 002a4e13             	B.IOT	t#3, t#1, mask=1111, last, 	->t<1KB>
+   107e0: 0800                 	C.BSTART.STD	
+   107e2: 5896                 	c.movi	2, 	->s0
+   107e4: 8a219181             	BSTART.TEPL	TMULS, S32
+   107e8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   107ec: 023c                 	C.B.DIMI	8, 	->lb0
+   107ee: 483c                 	C.B.DIMI	32, 	->lb1
+   107f0: 823c                 	C.B.DIMI	8, 	->lb2
+   107f2: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   107f6: 00058013             	B.IOR	[s0], []
+   107fa: 88019181             	BSTART.TEPL	TADD, S32
+   107fe: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10802: 023c                 	C.B.DIMI	8, 	->lb0
+   10804: 483c                 	C.B.DIMI	32, 	->lb1
+   10806: 823c                 	C.B.DIMI	8, 	->lb2
+   10808: 0c0a4e13             	B.IOT	t#1, t#4, mask=1111, last, 	->t<1KB>
+   1080c: 88419181             	BSTART.TEPL	TREM, S32
+   10810: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10814: 023c                 	C.B.DIMI	8, 	->lb0
+   10816: 483c                 	C.B.DIMI	32, 	->lb1
+   10818: 823c                 	C.B.DIMI	8, 	->lb2
+   1081a: 0c0a4f13             	B.IOT	t#1, t#4, mask=1111, last, 	->m<1KB>
+   1081e: 0800                 	C.BSTART.STD	
+   10820: 5fd6                 	c.movi	-1, 	->s0
+   10822: 8bb19181             	BSTART.TEPL	TEXPANDS, S32
+   10826: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1082a: 023c                 	C.B.DIMI	8, 	->lb0
+   1082c: 483c                 	C.B.DIMI	32, 	->lb1
+   1082e: 823c                 	C.B.DIMI	8, 	->lb2
+   10830: 000a6e93             	B.IOT	mask=1111, last, 	->u<1KB>
+   10834: 00058013             	B.IOR	[s0], []
+   10838: c8211181             	BSTART.TLSU	TMOV, U32
+   1083c: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10840: 023c                 	C.B.DIMI	8, 	->lb0
+   10842: 483c                 	C.B.DIMI	32, 	->lb1
+   10844: 823c                 	C.B.DIMI	8, 	->lb2
+   10846: 00fa5e13             	B.IOT	t#16, mask=1111, last, 	->t<1KB>
+   1084a: 8bb19181             	BSTART.TEPL	TEXPANDS, S32
+   1084e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10852: 023c                 	C.B.DIMI	8, 	->lb0
+   10854: 483c                 	C.B.DIMI	32, 	->lb1
+   10856: 823c                 	C.B.DIMI	8, 	->lb2
+   10858: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   1085c: 00058013             	B.IOR	[s0], []
+   10860: cbb19181             	BSTART.TEPL	TEXPANDS, U32
+   10864: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10868: 023c                 	C.B.DIMI	8, 	->lb0
+   1086a: 483c                 	C.B.DIMI	32, 	->lb1
+   1086c: 823c                 	C.B.DIMI	8, 	->lb2
+   1086e: 000a6f93             	B.IOT	mask=1111, last, 	->n<1KB>
+   10872: 000b0013             	B.IOR	[x2], []
+   10876: 0800                 	C.BSTART.STD	
+   10878: b006                 	c.movr	zero, 	->x2
+
+000000000001087a <.LBB10_91>:
+   1087a: cc119181             	BSTART.TEPL	TROWMAX, U32
+   1087e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10882: 023c                 	C.B.DIMI	8, 	->lb0
+   10884: 483c                 	C.B.DIMI	32, 	->lb1
+   10886: 823c                 	C.B.DIMI	8, 	->lb2
+   10888: 030a5e13             	B.IOT	n#1, mask=1111, last, 	->t<1KB>
+   1088c: cad19181             	BSTART.TEPL	TCMPS, U32
+   10890: 21f01023             	B.DATR	NORM.normal, Zero, NE
+   10894: 007c                 	C.B.DIMI	1, 	->lb0
+   10896: 483c                 	C.B.DIMI	32, 	->lb1
+   10898: 823c                 	C.B.DIMI	8, 	->lb2
+   1089a: 00085e13             	B.IOT	t#1, mask=1111, last
+   1089e: 000a0593             	B.IOR	[x0], ->s0
+   108a2: 1a64                 	C.BSTART.STD	COND, 0x10bee <.LBB10_131>
+   108a4: 00059fd5             	cmp.nei	s0, 0, 	->t
+   108a8: 559c                 	c.sext.w	x2, ->t
+   108aa: 015c6fc5             	cmp.ltu	t#1, x1, 	->t
+   108ae: c6a8                 	c.and	t#3, t#1, ->t
+   108b0: 0626                 	c.setc.eq	t#1, zero
+   108b2: ce619181             	BSTART.TEPL	TCI, U32
+   108b6: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   108ba: 023c                 	C.B.DIMI	8, 	->lb0
+   108bc: 483c                 	C.B.DIMI	32, 	->lb1
+   108be: 823c                 	C.B.DIMI	8, 	->lb2
+   108c0: 00000013             	B.IOR	[], []
+   108c4: 000a6e93             	B.IOT	mask=1111, last, 	->u<1KB>
+   108c8: c8d19181             	BSTART.TEPL	TCMP, U32
+   108cc: 01f01023             	B.DATR	NORM.normal, Zero
+   108d0: 023c                 	C.B.DIMI	8, 	->lb0
+   108d2: 483c                 	C.B.DIMI	32, 	->lb1
+   108d4: 823c                 	C.B.DIMI	8, 	->lb2
+   108d6: 43094e93             	B.IOT	n#1, u#1, mask=1111, last, 	->u<256B>
+   108da: 0800                 	C.BSTART.STD	
+   108dc: 5856                 	c.movi	1, 	->s0
+   108de: ce619181             	BSTART.TEPL	TCI, U32
+   108e2: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   108e6: 023c                 	C.B.DIMI	8, 	->lb0
+   108e8: 483c                 	C.B.DIMI	32, 	->lb1
+   108ea: 823c                 	C.B.DIMI	8, 	->lb2
+   108ec: 00058013             	B.IOR	[s0], []
+   108f0: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   108f4: ce619181             	BSTART.TEPL	TCI, U32
+   108f8: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   108fc: 023c                 	C.B.DIMI	8, 	->lb0
+   108fe: 483c                 	C.B.DIMI	32, 	->lb1
+   10900: 823c                 	C.B.DIMI	8, 	->lb2
+   10902: 00000013             	B.IOR	[], []
+   10906: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   1090a: c8d19181             	BSTART.TEPL	TCMP, U32
+   1090e: 21f01023             	B.DATR	NORM.normal, Zero, NE
+   10912: 023c                 	C.B.DIMI	8, 	->lb0
+   10914: 483c                 	C.B.DIMI	32, 	->lb1
+   10916: 823c                 	C.B.DIMI	8, 	->lb2
+   10918: 00194e93             	B.IOT	t#2, t#1, mask=1111, last, 	->u<256B>
+   1091c: d8819181             	BSTART.TEPL	TXOR, U8
+   10920: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10924: 023c                 	C.B.DIMI	8, 	->lb0
+   10926: 483c                 	C.B.DIMI	32, 	->lb1
+   10928: 41194e13             	B.IOT	u#2, u#1, mask=1111, last, 	->t<256B>
+   1092c: ce619181             	BSTART.TEPL	TCI, U32
+   10930: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10934: 023c                 	C.B.DIMI	8, 	->lb0
+   10936: 483c                 	C.B.DIMI	32, 	->lb1
+   10938: 823c                 	C.B.DIMI	8, 	->lb2
+   1093a: 00058013             	B.IOR	[s0], []
+   1093e: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10942: ce619181             	BSTART.TEPL	TCI, U32
+   10946: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   1094a: 023c                 	C.B.DIMI	8, 	->lb0
+   1094c: 483c                 	C.B.DIMI	32, 	->lb1
+   1094e: 823c                 	C.B.DIMI	8, 	->lb2
+   10950: 00000013             	B.IOR	[], []
+   10954: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10958: c8d19181             	BSTART.TEPL	TCMP, U32
+   1095c: 21f01023             	B.DATR	NORM.normal, Zero, NE
+   10960: 023c                 	C.B.DIMI	8, 	->lb0
+   10962: 483c                 	C.B.DIMI	32, 	->lb1
+   10964: 823c                 	C.B.DIMI	8, 	->lb2
+   10966: 00194e93             	B.IOT	t#2, t#1, mask=1111, last, 	->u<256B>
+   1096a: d8619181             	BSTART.TEPL	TAND, U8
+   1096e: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10972: 023c                 	C.B.DIMI	8, 	->lb0
+   10974: 483c                 	C.B.DIMI	32, 	->lb1
+   10976: 40294e93             	B.IOT	t#3, u#1, mask=1111, last, 	->u<256B>
+   1097a: c8019181             	BSTART.TEPL	TADD, U32
+   1097e: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10982: 023c                 	C.B.DIMI	8, 	->lb0
+   10984: 483c                 	C.B.DIMI	32, 	->lb1
+   10986: 52004e13             	B.IOT	m#1, u#5, mask=1111
+   1098a: 011a5e13             	B.IOT	u#2, mask=1111, last, 	->t<1KB>
+   1098e: 0800                 	C.BSTART.STD	
+   10990: 02000615             	addi	zero, 32, 	->s1
+   10994: cae19181             	BSTART.TEPL	TLEA, U32
+   10998: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   1099c: 023c                 	C.B.DIMI	8, 	->lb0
+   1099e: 483c                 	C.B.DIMI	32, 	->lb1
+   109a0: 000ade13             	B.IOT	t#1, mask=1111, last, 	->t<2KB>
+   109a4: 00060013             	B.IOR	[s1], []
+   109a8: c8611181             	BSTART.TLSU	MGATHER.MASK, U32
+   109ac: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   109b0: 023c                 	C.B.DIMI	8, 	->lb0
+   109b2: 483c                 	C.B.DIMI	32, 	->lb1
+   109b4: 400a4e13             	B.IOT	t#1, u#1, mask=1111, last, 	->t<1KB>
+   109b8: 00010013             	B.IOR	[a0], []
+   109bc: ce619181             	BSTART.TEPL	TCI, U32
+   109c0: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   109c4: 023c                 	C.B.DIMI	8, 	->lb0
+   109c6: 483c                 	C.B.DIMI	32, 	->lb1
+   109c8: 823c                 	C.B.DIMI	8, 	->lb2
+   109ca: 00058013             	B.IOR	[s0], []
+   109ce: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   109d2: c8019181             	BSTART.TEPL	TADD, U32
+   109d6: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   109da: 023c                 	C.B.DIMI	8, 	->lb0
+   109dc: 483c                 	C.B.DIMI	32, 	->lb1
+   109de: 02004e13             	B.IOT	m#1, t#1, mask=1111
+   109e2: 010a5e13             	B.IOT	u#1, mask=1111, last, 	->t<1KB>
+   109e6: cae19181             	BSTART.TEPL	TLEA, U32
+   109ea: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   109ee: 023c                 	C.B.DIMI	8, 	->lb0
+   109f0: 483c                 	C.B.DIMI	32, 	->lb1
+   109f2: 000ade13             	B.IOT	t#1, mask=1111, last, 	->t<2KB>
+   109f6: 00060013             	B.IOR	[s1], []
+   109fa: c8611181             	BSTART.TLSU	MGATHER.MASK, U32
+   109fe: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10a02: 023c                 	C.B.DIMI	8, 	->lb0
+   10a04: 483c                 	C.B.DIMI	32, 	->lb1
+   10a06: 400a4e13             	B.IOT	t#1, u#1, mask=1111, last, 	->t<1KB>
+   10a0a: 00010013             	B.IOR	[a0], []
+   10a0e: c8d19181             	BSTART.TEPL	TCMP, U32
+   10a12: 01f01023             	B.DATR	NORM.normal, Zero
+   10a16: 023c                 	C.B.DIMI	8, 	->lb0
+   10a18: 483c                 	C.B.DIMI	32, 	->lb1
+   10a1a: 823c                 	C.B.DIMI	8, 	->lb2
+   10a1c: 38494e13             	B.IOT	t#5, t#15, mask=1111, last, 	->t<256B>
+   10a20: c8211181             	BSTART.TLSU	TMOV, U32
+   10a24: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10a28: 023c                 	C.B.DIMI	8, 	->lb0
+   10a2a: 483c                 	C.B.DIMI	32, 	->lb1
+   10a2c: 823c                 	C.B.DIMI	8, 	->lb2
+   10a2e: 00fa5e13             	B.IOT	t#16, mask=1111, last, 	->t<1KB>
+   10a32: 88211181             	BSTART.TLSU	TMOV, S32
+   10a36: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10a3a: 023c                 	C.B.DIMI	8, 	->lb0
+   10a3c: 483c                 	C.B.DIMI	32, 	->lb1
+   10a3e: 823c                 	C.B.DIMI	8, 	->lb2
+   10a40: 00fa5e13             	B.IOT	t#16, mask=1111, last, 	->t<1KB>
+   10a44: d8819181             	BSTART.TEPL	TXOR, U8
+   10a48: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10a4c: 023c                 	C.B.DIMI	8, 	->lb0
+   10a4e: 483c                 	C.B.DIMI	32, 	->lb1
+   10a50: 44294e13             	B.IOT	t#3, u#2, mask=1111, last, 	->t<256B>
+   10a54: d8619181             	BSTART.TEPL	TAND, U8
+   10a58: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10a5c: 023c                 	C.B.DIMI	8, 	->lb0
+   10a5e: 483c                 	C.B.DIMI	32, 	->lb1
+   10a60: 48394e13             	B.IOT	t#4, u#3, mask=1111, last, 	->t<256B>
+   10a64: c8d19181             	BSTART.TEPL	TCMP, U32
+   10a68: 01f01023             	B.DATR	NORM.normal, Zero
+   10a6c: 023c                 	C.B.DIMI	8, 	->lb0
+   10a6e: 483c                 	C.B.DIMI	32, 	->lb1
+   10a70: 823c                 	C.B.DIMI	8, 	->lb2
+   10a72: 0c594e13             	B.IOT	t#6, t#4, mask=1111, last, 	->t<256B>
+   10a76: d8619181             	BSTART.TEPL	TAND, U8
+   10a7a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10a7e: 023c                 	C.B.DIMI	8, 	->lb0
+   10a80: 483c                 	C.B.DIMI	32, 	->lb1
+   10a82: 00294e13             	B.IOT	t#3, t#1, mask=1111, last, 	->t<256B>
+   10a86: d8719181             	BSTART.TEPL	TOR, U8
+   10a8a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10a8e: 023c                 	C.B.DIMI	8, 	->lb0
+   10a90: 483c                 	C.B.DIMI	32, 	->lb1
+   10a92: 00294e13             	B.IOT	t#3, t#1, mask=1111, last, 	->t<256B>
+   10a96: c9a19181             	BSTART.TEPL	TSEL, U32
+   10a9a: 023c                 	C.B.DIMI	8, 	->lb0
+   10a9c: 483c                 	C.B.DIMI	32, 	->lb1
+   10a9e: 823c                 	C.B.DIMI	8, 	->lb2
+   10aa0: 50004e13             	B.IOT	t#1, u#5, mask=1111
+   10aa4: 030a5e13             	B.IOT	n#1, mask=1111, last, 	->t<1KB>
+   10aa8: c9a19181             	BSTART.TEPL	TSEL, U32
+   10aac: 023c                 	C.B.DIMI	8, 	->lb0
+   10aae: 483c                 	C.B.DIMI	32, 	->lb1
+   10ab0: 823c                 	C.B.DIMI	8, 	->lb2
+   10ab2: 51304e13             	B.IOT	u#4, u#5, mask=1111
+   10ab6: 000a5f93             	B.IOT	t#1, mask=1111, last, 	->n<1KB>
+   10aba: 0800                 	C.BSTART.STD	
+   10abc: 6096                 	c.movi	2, 	->s1
+   10abe: ce619181             	BSTART.TEPL	TCI, U32
+   10ac2: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10ac6: 023c                 	C.B.DIMI	8, 	->lb0
+   10ac8: 483c                 	C.B.DIMI	32, 	->lb1
+   10aca: 823c                 	C.B.DIMI	8, 	->lb2
+   10acc: 00060013             	B.IOR	[s1], []
+   10ad0: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10ad4: d8619181             	BSTART.TEPL	TAND, U8
+   10ad8: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10adc: 023c                 	C.B.DIMI	8, 	->lb0
+   10ade: 483c                 	C.B.DIMI	32, 	->lb1
+   10ae0: 45294e13             	B.IOT	u#3, u#2, mask=1111, last, 	->t<256B>
+   10ae4: 88019181             	BSTART.TEPL	TADD, S32
+   10ae8: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10aec: 023c                 	C.B.DIMI	8, 	->lb0
+   10aee: 483c                 	C.B.DIMI	32, 	->lb1
+   10af0: 06004e13             	B.IOT	m#1, t#2, mask=1111
+   10af4: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10af8: d8819181             	BSTART.TEPL	TXOR, U8
+   10afc: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10b00: 023c                 	C.B.DIMI	8, 	->lb0
+   10b02: 483c                 	C.B.DIMI	32, 	->lb1
+   10b04: 48b94e13             	B.IOT	t#12, u#3, mask=1111, last, 	->t<256B>
+   10b08: d8619181             	BSTART.TEPL	TAND, U8
+   10b0c: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10b10: 023c                 	C.B.DIMI	8, 	->lb0
+   10b12: 483c                 	C.B.DIMI	32, 	->lb1
+   10b14: 40094e13             	B.IOT	t#1, u#1, mask=1111, last, 	->t<256B>
+   10b18: ce619181             	BSTART.TEPL	TCI, U32
+   10b1c: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10b20: 023c                 	C.B.DIMI	8, 	->lb0
+   10b22: 483c                 	C.B.DIMI	32, 	->lb1
+   10b24: 823c                 	C.B.DIMI	8, 	->lb2
+   10b26: 00058013             	B.IOR	[s0], []
+   10b2a: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10b2e: ce619181             	BSTART.TEPL	TCI, U32
+   10b32: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10b36: 023c                 	C.B.DIMI	8, 	->lb0
+   10b38: 483c                 	C.B.DIMI	32, 	->lb1
+   10b3a: 823c                 	C.B.DIMI	8, 	->lb2
+   10b3c: 00000013             	B.IOR	[], []
+   10b40: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10b44: c9a19181             	BSTART.TEPL	TSEL, U32
+   10b48: 023c                 	C.B.DIMI	8, 	->lb0
+   10b4a: 483c                 	C.B.DIMI	32, 	->lb1
+   10b4c: 823c                 	C.B.DIMI	8, 	->lb2
+   10b4e: 04204e13             	B.IOT	t#3, t#2, mask=1111
+   10b52: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10b56: c8211181             	BSTART.TLSU	TMOV, U32
+   10b5a: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10b5e: 023c                 	C.B.DIMI	8, 	->lb0
+   10b60: 483c                 	C.B.DIMI	32, 	->lb1
+   10b62: 823c                 	C.B.DIMI	8, 	->lb2
+   10b64: 00fa5e13             	B.IOT	t#16, mask=1111, last, 	->t<1KB>
+   10b68: 88211181             	BSTART.TLSU	TMOV, S32
+   10b6c: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10b70: 023c                 	C.B.DIMI	8, 	->lb0
+   10b72: 483c                 	C.B.DIMI	32, 	->lb1
+   10b74: 823c                 	C.B.DIMI	8, 	->lb2
+   10b76: 00fa5e13             	B.IOT	t#16, mask=1111, last, 	->t<1KB>
+   10b7a: 88019181             	BSTART.TEPL	TADD, S32
+   10b7e: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10b82: 023c                 	C.B.DIMI	8, 	->lb0
+   10b84: 483c                 	C.B.DIMI	32, 	->lb1
+   10b86: 0a004e13             	B.IOT	m#1, t#3, mask=1111
+   10b8a: 010a5e13             	B.IOT	u#1, mask=1111, last, 	->t<1KB>
+   10b8e: 89a19181             	BSTART.TEPL	TSEL, S32
+   10b92: 023c                 	C.B.DIMI	8, 	->lb0
+   10b94: 483c                 	C.B.DIMI	32, 	->lb1
+   10b96: 823c                 	C.B.DIMI	8, 	->lb2
+   10b98: 00c04e13             	B.IOT	t#13, t#1, mask=1111
+   10b9c: 015a5e13             	B.IOT	u#6, mask=1111, last, 	->t<1KB>
+   10ba0: 89a19181             	BSTART.TEPL	TSEL, S32
+   10ba4: 023c                 	C.B.DIMI	8, 	->lb0
+   10ba6: 483c                 	C.B.DIMI	32, 	->lb1
+   10ba8: 823c                 	C.B.DIMI	8, 	->lb2
+   10baa: 55304e13             	B.IOT	u#4, u#6, mask=1111
+   10bae: 000a5e93             	B.IOT	t#1, mask=1111, last, 	->u<1KB>
+   10bb2: 88211181             	BSTART.TLSU	TMOV, S32
+   10bb6: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10bba: 023c                 	C.B.DIMI	8, 	->lb0
+   10bbc: 483c                 	C.B.DIMI	32, 	->lb1
+   10bbe: 823c                 	C.B.DIMI	8, 	->lb2
+   10bc0: 009a5f13             	B.IOT	t#10, mask=1111, last, 	->m<1KB>
+   10bc4: c8211181             	BSTART.TLSU	TMOV, U32
+   10bc8: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10bcc: 023c                 	C.B.DIMI	8, 	->lb0
+   10bce: 483c                 	C.B.DIMI	32, 	->lb1
+   10bd0: 823c                 	C.B.DIMI	8, 	->lb2
+   10bd2: 003a5e13             	B.IOT	t#4, mask=1111, last, 	->t<1KB>
+   10bd6: 88211181             	BSTART.TLSU	TMOV, S32
+   10bda: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10bde: 023c                 	C.B.DIMI	8, 	->lb0
+   10be0: 483c                 	C.B.DIMI	32, 	->lb1
+   10be2: 823c                 	C.B.DIMI	8, 	->lb2
+   10be4: 003a5e13             	B.IOT	t#4, mask=1111, last, 	->t<1KB>
+   10be8: e492                 	C.BSTART.STD	DIRECT, 0x1087a <.LBB10_91>
+   10bea: 002b0b15             	addi	x2, 2, 	->x2
+
+0000000000010bee <.LBB10_131>:
+   10bee: 0800                 	C.BSTART.STD	
+   10bf0: ffd6                 	c.movi	-1, 	->t
+   10bf2: 05803a05             	or	zero, t#1.uw, 	->x0
+   10bf6: 8e619181             	BSTART.TEPL	TCI, S32
+   10bfa: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10bfe: 023c                 	C.B.DIMI	8, 	->lb0
+   10c00: 483c                 	C.B.DIMI	32, 	->lb1
+   10c02: 823c                 	C.B.DIMI	8, 	->lb2
+   10c04: 000a0013             	B.IOR	[x0], []
+   10c08: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10c0c: 88d19181             	BSTART.TEPL	TCMP, S32
+   10c10: 61f01023             	B.DATR	NORM.normal, Zero, GT
+   10c14: 023c                 	C.B.DIMI	8, 	->lb0
+   10c16: 483c                 	C.B.DIMI	32, 	->lb1
+   10c18: 823c                 	C.B.DIMI	8, 	->lb2
+   10c1a: 01094e13             	B.IOT	u#1, t#1, mask=1111, last, 	->t<256B>
+   10c1e: 0800                 	C.BSTART.STD	
+   10c20: a856                 	c.movi	1, 	->x1
+   10c22: ce619181             	BSTART.TEPL	TCI, U32
+   10c26: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10c2a: 023c                 	C.B.DIMI	8, 	->lb0
+   10c2c: 483c                 	C.B.DIMI	32, 	->lb1
+   10c2e: 823c                 	C.B.DIMI	8, 	->lb2
+   10c30: 000a8013             	B.IOR	[x1], []
+   10c34: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10c38: ce619181             	BSTART.TEPL	TCI, U32
+   10c3c: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10c40: 023c                 	C.B.DIMI	8, 	->lb0
+   10c42: 483c                 	C.B.DIMI	32, 	->lb1
+   10c44: 823c                 	C.B.DIMI	8, 	->lb2
+   10c46: 00000013             	B.IOR	[], []
+   10c4a: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10c4e: c8d19181             	BSTART.TEPL	TCMP, U32
+   10c52: 21f01023             	B.DATR	NORM.normal, Zero, NE
+   10c56: 023c                 	C.B.DIMI	8, 	->lb0
+   10c58: 483c                 	C.B.DIMI	32, 	->lb1
+   10c5a: 823c                 	C.B.DIMI	8, 	->lb2
+   10c5c: 00194e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<256B>
+   10c60: d8619181             	BSTART.TEPL	TAND, U8
+   10c64: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10c68: 023c                 	C.B.DIMI	8, 	->lb0
+   10c6a: 483c                 	C.B.DIMI	32, 	->lb1
+   10c6c: 00394e13             	B.IOT	t#4, t#1, mask=1111, last, 	->t<256B>
+   10c70: ce619181             	BSTART.TEPL	TCI, U32
+   10c74: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10c78: 023c                 	C.B.DIMI	8, 	->lb0
+   10c7a: 483c                 	C.B.DIMI	32, 	->lb1
+   10c7c: 823c                 	C.B.DIMI	8, 	->lb2
+   10c7e: 00000013             	B.IOR	[], []
+   10c82: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10c86: c8019181             	BSTART.TEPL	TADD, U32
+   10c8a: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10c8e: 023c                 	C.B.DIMI	8, 	->lb0
+   10c90: 483c                 	C.B.DIMI	32, 	->lb1
+   10c92: 01004e13             	B.IOT	u#1, t#1, mask=1111
+   10c96: 002a5e13             	B.IOT	t#3, mask=1111, last, 	->t<1KB>
+   10c9a: 0800                 	C.BSTART.STD	
+   10c9c: 02000a15             	addi	zero, 32, 	->x0
+   10ca0: cae19181             	BSTART.TEPL	TLEA, U32
+   10ca4: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10ca8: 023c                 	C.B.DIMI	8, 	->lb0
+   10caa: 483c                 	C.B.DIMI	32, 	->lb1
+   10cac: 000ade13             	B.IOT	t#1, mask=1111, last, 	->t<2KB>
+   10cb0: 000a0013             	B.IOR	[x0], []
+   10cb4: c8611181             	BSTART.TLSU	MGATHER.MASK, U32
+   10cb8: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10cbc: 023c                 	C.B.DIMI	8, 	->lb0
+   10cbe: 483c                 	C.B.DIMI	32, 	->lb1
+   10cc0: 0c0a4e13             	B.IOT	t#1, t#4, mask=1111, last, 	->t<1KB>
+   10cc4: 00018013             	B.IOR	[a1], []
+   10cc8: ce619181             	BSTART.TEPL	TCI, U32
+   10ccc: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10cd0: 023c                 	C.B.DIMI	8, 	->lb0
+   10cd2: 483c                 	C.B.DIMI	32, 	->lb1
+   10cd4: 823c                 	C.B.DIMI	8, 	->lb2
+   10cd6: 000a8013             	B.IOR	[x1], []
+   10cda: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10cde: ce619181             	BSTART.TEPL	TCI, U32
+   10ce2: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10ce6: 023c                 	C.B.DIMI	8, 	->lb0
+   10ce8: 483c                 	C.B.DIMI	32, 	->lb1
+   10cea: 823c                 	C.B.DIMI	8, 	->lb2
+   10cec: 00000013             	B.IOR	[], []
+   10cf0: 000a6e13             	B.IOT	mask=1111, last, 	->t<1KB>
+   10cf4: c8d19181             	BSTART.TEPL	TCMP, U32
+   10cf8: 21f01023             	B.DATR	NORM.normal, Zero, NE
+   10cfc: 023c                 	C.B.DIMI	8, 	->lb0
+   10cfe: 483c                 	C.B.DIMI	32, 	->lb1
+   10d00: 823c                 	C.B.DIMI	8, 	->lb2
+   10d02: 00194e13             	B.IOT	t#2, t#1, mask=1111, last, 	->t<256B>
+   10d06: d8819181             	BSTART.TEPL	TXOR, U8
+   10d0a: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+   10d0e: 023c                 	C.B.DIMI	8, 	->lb0
+   10d10: 483c                 	C.B.DIMI	32, 	->lb1
+   10d12: 00b94e13             	B.IOT	t#12, t#1, mask=1111, last, 	->t<256B>
+   10d16: 88211181             	BSTART.TLSU	TMOV, S32
+   10d1a: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10d1e: 023c                 	C.B.DIMI	8, 	->lb0
+   10d20: 483c                 	C.B.DIMI	32, 	->lb1
+   10d22: 823c                 	C.B.DIMI	8, 	->lb2
+   10d24: 00fa5e13             	B.IOT	t#16, mask=1111, last, 	->t<1KB>
+   10d28: 89a19181             	BSTART.TEPL	TSEL, S32
+   10d2c: 023c                 	C.B.DIMI	8, 	->lb0
+   10d2e: 483c                 	C.B.DIMI	32, 	->lb1
+   10d30: 823c                 	C.B.DIMI	8, 	->lb2
+   10d32: 14d04e13             	B.IOT	t#14, t#6, mask=1111
+   10d36: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10d3a: 89a19181             	BSTART.TEPL	TSEL, S32
+   10d3e: 023c                 	C.B.DIMI	8, 	->lb0
+   10d40: 483c                 	C.B.DIMI	32, 	->lb1
+   10d42: 823c                 	C.B.DIMI	8, 	->lb2
+   10d44: 04204e13             	B.IOT	t#3, t#2, mask=1111
+   10d48: 000a5e13             	B.IOT	t#1, mask=1111, last, 	->t<1KB>
+   10d4c: 0800                 	C.BSTART.STD	
+   10d4e: 10928485             	add	a3, a7<<2, 	->a7
+   10d52: 88111181             	BSTART.TLSU	TSTORE, S32
+   10d56: 19f01c23             	B.DATR	M322ND.normal, Null
+   10d5a: 023c                 	C.B.DIMI	8, 	->lb0
+   10d5c: 483c                 	C.B.DIMI	32, 	->lb1
+   10d5e: 00085e13             	B.IOT	t#1, mask=1111, last
+   10d62: 01448013             	B.IOR	[a7, x0], []
+   10d66: b244                 	C.BSTART.STD	COND, 0x103ae <.LBB10_2>
+   10d68: 00140415             	addi	a6, 1, 	->a6
+   10d6c: 3a36                 	c.setc.ne	a6, a5
+
+0000000000010d6e <.LBB10_150>:
+   10d6e: 4105a041             	FRET.RA	[s0 ~ s5], sp!, 256
+   10d72: 0800                 	C.BSTART.STD	
+
+0000000000010d74 <_ZN3pto12TPARTELEMENTINS_4TileILNS_8LocationE0EiLi32ELi8ELNS_7BLayoutE3ELi32ELi8ELNS_7SLayoutE0ELi512ELNS_8PadValueE3ELNS_11CompactModeE0ELb1EEEEEDcRT_>:
+   10d74: 3800                 	C.BSTART.STD	RET
+   10d76: 02010115             	addi	a0, 32, 	->a0
+   10d7a: 029c                 	c.setc.tgt	ra
+   10d7c: 0800                 	C.BSTART.STD	
+
+0000000000010d7e <_ZN3pto12TPARTELEMENTINS_4TileILNS_8LocationE0EjLi32ELi8ELNS_7BLayoutE3ELi32ELi8ELNS_7SLayoutE0ELi512ELNS_8PadValueE3ELNS_11CompactModeE0ELb1EEEEEDcRT_>:
+   10d7e: 3800                 	C.BSTART.STD	RET
+   10d80: 02010115             	addi	a0, 32, 	->a0
+   10d84: 029c                 	c.setc.tgt	ra
+   10d86: 0800                 	C.BSTART.STD	
