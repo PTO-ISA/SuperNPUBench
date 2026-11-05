@@ -1,0 +1,115 @@
+{
+  "cwd": "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177",
+  "deterministic_trace_check": {
+    "argv": [
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177/bin/gfsim",
+      "--test-finisher", "1",
+      "-f", "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash256_batchmap_20261105/src/hash_batchmap.elf",
+      "--conf", "fourpe",
+      "-s", "softcore.multiThreadNum=4",
+      "-s", "cube.enable_internal_acc=true",
+      "-s", "bctrl.vec_cell_sched_enable=true",
+      "-s", "core.soc_random=false",
+      "-s", "core.soc_enable=false",
+      "-s", "core.read_bandwidth_limit=128",
+      "-s", "core.write_bandwidth_limit=128",
+      "-s", "core.sharetreg_size_bytes=262144",
+      "-s", "core.sharetreg_ssb_count=64",
+      "-t", "1",
+      "--swimlane", "1",
+      "--swimfile", "/tmp/soab/b.swim.json",
+      "-s", "dfx.swimCounterSampleInterval=128"
+    ],
+    "total_cycles": 126213,
+    "kernel_span_cycles": 63983
+  },
+  "deterministic_trace_perf": {
+    "argv": [
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177/bin/gfsim",
+      "--test-finisher", "1",
+      "-f", "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash256_batchmap_20261105/src/hash_batchmap_perf.elf",
+      "--conf", "fourpe",
+      "-s", "softcore.multiThreadNum=4",
+      "-s", "cube.enable_internal_acc=true",
+      "-s", "bctrl.vec_cell_sched_enable=true",
+      "-s", "core.soc_random=false",
+      "-s", "core.soc_enable=false",
+      "-s", "core.read_bandwidth_limit=128",
+      "-s", "core.write_bandwidth_limit=128",
+      "-s", "core.sharetreg_size_bytes=262144",
+      "-s", "core.sharetreg_ssb_count=64",
+      "-t", "1",
+      "--swimlane", "1",
+      "--swimfile", "/tmp/batchmap_perf.swim.json",
+      "-s", "dfx.swimCounterSampleInterval=128"
+    ],
+    "total_cycles": 64399,
+    "kernel_span_cycles": 63983
+  },
+  "pipeview_check": {
+    "argv": [
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177/bin/gfsim",
+      "--test-finisher", "1",
+      "-f", "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash256_batchmap_20261105/src/hash_batchmap.elf",
+      "--conf", "fourpe",
+      "-s", "softcore.multiThreadNum=4",
+      "-s", "cube.enable_internal_acc=true",
+      "-s", "bctrl.vec_cell_sched_enable=true",
+      "-s", "core.soc_random=false",
+      "-s", "core.soc_enable=false",
+      "-s", "core.read_bandwidth_limit=128",
+      "-s", "core.write_bandwidth_limit=128",
+      "-s", "core.sharetreg_size_bytes=262144",
+      "-s", "core.sharetreg_ssb_count=64",
+      "-t", "1",
+      "-p", "1",
+      "--pipefile", "/tmp/batchmap.pipeview.log"
+    ],
+    "total_cycles": 126213
+  },
+  "canonical_check": {
+    "argv": [
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177/bin/gfsim",
+      "--test-finisher", "1",
+      "-s", "softcore.multiThreadNum=4",
+      "-s", "cube.enable_internal_acc=true",
+      "-s", "bctrl.vec_cell_sched_enable=true",
+      "-s", "core.soc_random=true",
+      "-s", "core.read_bandwidth_limit=128",
+      "-s", "core.write_bandwidth_limit=128",
+      "-s", "core.sharetreg_size_bytes=262144",
+      "-s", "core.sharetreg_ssb_count=64",
+      "-f", "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash256_batchmap_20261105/src/hash_batchmap.elf",
+      "-t", "1"
+    ],
+    "total_cycles": 277675
+  },
+  "canonical_perf": {
+    "argv": [
+      "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177/bin/gfsim",
+      "--test-finisher", "1",
+      "-s", "softcore.multiThreadNum=4",
+      "-s", "cube.enable_internal_acc=true",
+      "-s", "bctrl.vec_cell_sched_enable=true",
+      "-s", "core.soc_random=true",
+      "-s", "core.read_bandwidth_limit=128",
+      "-s", "core.write_bandwidth_limit=128",
+      "-s", "core.sharetreg_size_bytes=262144",
+      "-s", "core.sharetreg_ssb_count=64",
+      "-f", "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash256_batchmap_20261105/src/hash_batchmap_perf.elf",
+      "-t", "1"
+    ],
+    "total_cycles": 155177
+  },
+  "verify_run": {
+    "argv": [
+      "python3", "scripts/check_hashtable_fixture.py",
+      "--elf", "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash256_batchmap_20261105/src/hash_batchmap.elf",
+      "--reference-elf", "/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/eval/perf_data/hashtable_lookup/hash_6144_PE4.elf",
+      "--model", "gfsim",
+      "--output", "/tmp/check_bm_repro"
+    ],
+    "status": "PASS",
+    "total_cycles": 126213
+  }
+}
