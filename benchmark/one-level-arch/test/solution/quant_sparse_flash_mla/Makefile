@@ -49,7 +49,7 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    # HIF8 remains the default dtype for the unified four-PE implementations.
    QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
     QSMLA_1PE_IMPLS := csa_tadd_1pe
-    QSMLA_V3_IMPLS := csa_v3_4pe csa_v3_1_4pe csa_v3_0_1_4pe csa_v3_2_4pe csa_v3_1_1_4pe
+    QSMLA_V3_IMPLS := csa_v3_4pe csa_v3_1_4pe csa_v3_0_1_4pe csa_v3_2_4pe csa_v3_1_1_4pe csa_v3_3_4pe csa_v3_4_1_4pe csa_v3_3_1_4pe csa_v3_3_2_4pe csa_v3_3_3_4pe csa_v3_5_4pe
     # PA_BBND variants (v2.1 unified / v3.1 ops-flow) + block tables.
     QSMLA_V2_1_IMPLS := csa_v2_1_4pe
     # Dynamic-shape variant (v2): Vec tiles use DYNAMIC ValidRow/ValidCol.
@@ -163,6 +163,81 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       endif
       ifneq ($(QSMLA_DTYPE), HIF8)
          $(error csa_v3_1_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.4: O residency + inline staged-KV prefetch (no lambda).
+   ifeq ($(IMPL), csa_v3_4_1_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_4_1_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_4_1_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.5: v3.3.3 + L1 侧 KV 双缓冲（kvA/kvB，深度 1）。
+   ifeq ($(IMPL), csa_v3_5_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_5_4PE
+      DEFINES += -DQSMLA_PRELOAD=$(QSMLA_PRELOAD)
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_5_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.3.3: 可配置预取深度（QSMLA_PRELOAD=x，默认 2）。
+   QSMLA_PRELOAD ?= 2
+   ifeq ($(IMPL), csa_v3_3_3_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_3_3_4PE
+      DEFINES += -DQSMLA_PRELOAD=$(QSMLA_PRELOAD)
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_3_3_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_P$(QSMLA_PRELOAD)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.3.2: v3.3.1 + preload=3（3 份 staging slice、预取距离 2）。
+   ifeq ($(IMPL), csa_v3_3_2_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_3_2_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_3_2_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.3.1: v3.3 + staging 内部行级 ping-pong（双行 tile 交替）。
+   ifeq ($(IMPL), csa_v3_3_1_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_3_1_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_3_1_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.3: O full UB residency + staged-KV prefetch.
+   ifeq ($(IMPL), csa_v3_3_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_3_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_3_4pe requires QSMLA_DTYPE=HIF8)
       endif
    TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
    endif
@@ -294,11 +369,11 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       EXTRA_OBJ_FILES += $(QSMLA_Q_OBJ) $(QSMLA_ORI_KV_OBJ)
       DEFINES += -DQSMLA_USE_SPARSE_EMBEDDED_INPUT
 
-      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe csa_v3_4pe csa_v3_1_4pe csa_v3_0_1_4pe csa_v2_1_4pe csa_v3_2_4pe csa_v3_1_1_4pe),)
+      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe csa_v3_4pe csa_v3_1_4pe csa_v3_0_1_4pe csa_v2_1_4pe csa_v3_2_4pe csa_v3_1_1_4pe csa_v3_3_4pe csa_v3_4_1_4pe csa_v3_3_1_4pe csa_v3_3_2_4pe csa_v3_3_3_4pe csa_v3_5_4pe),)
          QSMLA_CMP_KV_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_kv.o
          EXTRA_OBJ_FILES += $(QSMLA_CMP_KV_OBJ)
       endif
-       ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe csa_v3_4pe csa_v3_1_4pe csa_v3_0_1_4pe csa_v2_1_4pe csa_v3_2_4pe csa_v3_1_1_4pe),)
+       ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe csa_v3_4pe csa_v3_1_4pe csa_v3_0_1_4pe csa_v2_1_4pe csa_v3_2_4pe csa_v3_1_1_4pe csa_v3_3_4pe csa_v3_4_1_4pe csa_v3_3_1_4pe csa_v3_3_2_4pe csa_v3_3_3_4pe csa_v3_5_4pe),)
           QSMLA_CMP_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_indices.o
           EXTRA_OBJ_FILES += $(QSMLA_CMP_INDEX_OBJ)
        endif
