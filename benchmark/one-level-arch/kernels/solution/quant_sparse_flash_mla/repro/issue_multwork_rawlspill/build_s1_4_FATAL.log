@@ -1,0 +1,58 @@
+/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang++ -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true  -mllvm -linxv5-enable-HL-Inst-Opt=true -mllvm -linxv5-enable-dim-opt=true -mllvm -linxv5-enable-ldst-bridge=false -mllvm -linxv5-enable-continuous-mem-opt=true -mllvm -linxv5-enable-tile-clock-hand=false -mllvm -linxv5-enable-simt-clock-hand=true -mllvm -enable-misched=false -std=c++20  -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/include -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/test/common -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/test/common/src -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/kernels -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/models -DTbatch=1 -DTs1=4 -DTs2=128 -DTn1=64 -DTn2=1 -DTd=512 -DTm=64 -DTk=128 -DTd_block=512 -DTsoftmax_scale=0.04419417 -DTwleft=127 -DTwright=0 -DTcmp_s2=64 -DTori_topk=40 -DTcmp_topk=40 -DTcmp_ratio=4 -DTq_descale=0.5 -DTori_kv_descale=0.25 -DTcmp_kv_descale=0.125 -DQSMLA_USE_HIF8 -DQSMLA_USE_CSA_V3_1_1_4PE -DQSMLA_PA_BLOCK_SIZE=128 -DQSMLA_USE_SPARSE_EMBEDDED_INPUT -DQSMLA_SPARSE_KV_PA_BBND=1 -D__linx -DENABLE_TENSOR_INSTR /mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/test/solution/quant_sparse_flash_mla/src/quant_sparse_flash_mla.cpp -o /mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/output/solution/quant_sparse_flash_mla/src/quant_sparse_flash_mla.o
+fatal error: error in backend: cannot prove a complete Local tile descriptor for raw spill
+PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace, preprocessed source, and associated run script.
+Stack dump:
+0.	Program arguments: /mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang++ -c -mlxbc -fenable-matrix -O2 -mllvm -enable-all-vector-as-tilereg=true -mllvm -linxv5-enable-HL-Inst-Opt=true -mllvm -linxv5-enable-dim-opt=true -mllvm -linxv5-enable-ldst-bridge=false -mllvm -linxv5-enable-continuous-mem-opt=true -mllvm -linxv5-enable-tile-clock-hand=false -mllvm -linxv5-enable-simt-clock-hand=true -mllvm -enable-misched=false -std=c++20 -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/include -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/test/common -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/test/common/src -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/kernels -I/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/models -DTbatch=1 -DTs1=4 -DTs2=128 -DTn1=64 -DTn2=1 -DTd=512 -DTm=64 -DTk=128 -DTd_block=512 -DTsoftmax_scale=0.04419417 -DTwleft=127 -DTwright=0 -DTcmp_s2=64 -DTori_topk=40 -DTcmp_topk=40 -DTcmp_ratio=4 -DTq_descale=0.5 -DTori_kv_descale=0.25 -DTcmp_kv_descale=0.125 -DQSMLA_USE_HIF8 -DQSMLA_USE_CSA_V3_1_1_4PE -DQSMLA_PA_BLOCK_SIZE=128 -DQSMLA_USE_SPARSE_EMBEDDED_INPUT -DQSMLA_SPARSE_KV_PA_BBND=1 -D__linx -DENABLE_TENSOR_INSTR /mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/test/solution/quant_sparse_flash_mla/src/quant_sparse_flash_mla.cpp -o /mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/output/solution/quant_sparse_flash_mla/src/quant_sparse_flash_mla.o
+1.	<eof> parser at end of file
+2.	Code generation
+3.	Running pass 'Function Pass Manager' on module '/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/test/solution/quant_sparse_flash_mla/src/quant_sparse_flash_mla.cpp'.
+4.	Running pass 'LinxV5 Tile Fixup' on function '@_Z41quant_sparse_flash_mla_csa_v3_1_1_4pe_ptoI6__hif8S0_11__blkc_bf1615QsmlaModeConfigI11QsmlaConfigILi1ELi4ELi128ELi64ELi1ELi512ELi0ELi64ELi128ELi512ELi64EEL9QsmlaMode2ELi64ELi40ELi40EEEvPT1_PT_PT0_SC_PKiSE_SE_SE_ffffiiiSC_PfSF_RK13QsmlaPaConfigRK16QsmlaQueryConfig'
+ #0 0x0000aaaadc7c7574 PrintStackTraceSignalHandler(void*) Signals.cpp:0:0
+ #1 0x0000aaaadc7c5780 llvm::sys::CleanupOnSignal(unsigned long) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x1e55780)
+ #2 0x0000aaaadc722e20 llvm::CrashRecoveryContext::HandleExit(int) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x1db2e20)
+ #3 0x0000aaaadc7bec34 llvm::sys::Process::Exit(int, bool) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x1e4ec34)
+ #4 0x0000aaaadb5a78f4 LLVMErrorHandler(void*, char const*, bool) cc1_main.cpp:0:0
+ #5 0x0000aaaadc72b280 llvm::report_fatal_error(llvm::Twine const&, bool) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x1dbb280)
+ #6 0x0000aaaadc72b3f8 (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x1dbb3f8)
+ #7 0x0000aaaadb655c1c (anonymous namespace)::LinxV5TileFixup::AnnotateTileSpillDescriptors(llvm::MachineFunction&) LinxV5TileFixup.cpp:0:0
+ #8 0x0000aaaadb655df0 (anonymous namespace)::LinxV5TileFixup::runOnMachineFunction(llvm::MachineFunction&) LinxV5TileFixup.cpp:0:0
+ #9 0x0000aaaadbb4d5a4 llvm::MachineFunctionPass::runOnFunction(llvm::Function&) (.part.0) MachineFunctionPass.cpp:0:0
+#10 0x0000aaaadc083c10 llvm::FPPassManager::runOnFunction(llvm::Function&) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x1713c10)
+#11 0x0000aaaadc083fdc llvm::FPPassManager::runOnModule(llvm::Module&) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x1713fdc)
+#12 0x0000aaaadc084b40 llvm::legacy::PassManagerImpl::run(llvm::Module&) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x1714b40)
+#13 0x0000aaaadcb22730 (anonymous namespace)::EmitAssemblyHelper::EmitAssembly(clang::BackendAction, std::unique_ptr<llvm::raw_pwrite_stream, std::default_delete<llvm::raw_pwrite_stream>>) BackendUtil.cpp:0:0
+#14 0x0000aaaadcb22e68 clang::EmitBackendOutput(clang::DiagnosticsEngine&, clang::HeaderSearchOptions const&, clang::CodeGenOptions const&, clang::TargetOptions const&, clang::LangOptions const&, llvm::StringRef, llvm::Module*, clang::BackendAction, std::unique_ptr<llvm::raw_pwrite_stream, std::default_delete<llvm::raw_pwrite_stream>>) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x21b2e68)
+#15 0x0000aaaadd7df4dc clang::BackendConsumer::HandleTranslationUnit(clang::ASTContext&) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x2e6f4dc)
+#16 0x0000aaaade4ebb48 clang::ParseAST(clang::Sema&, bool, bool) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x3b7bb48)
+#17 0x0000aaaadd207948 clang::FrontendAction::Execute() (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x2897948)
+#18 0x0000aaaadd1a88a8 clang::CompilerInstance::ExecuteAction(clang::FrontendAction&) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x28388a8)
+#19 0x0000aaaadd2db190 clang::ExecuteCompilerInvocation(clang::CompilerInstance*) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x296b190)
+#20 0x0000aaaadb5a8540 cc1_main(llvm::ArrayRef<char const*>, char const*, void*) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0xc38540)
+#21 0x0000aaaadb5a27b4 ExecuteCC1Tool(llvm::SmallVectorImpl<char const*>&) driver.cpp:0:0
+#22 0x0000aaaadd04058c void llvm::function_ref<void ()>::callback_fn<clang::driver::CC1Command::Execute(llvm::ArrayRef<llvm::Optional<llvm::StringRef>>, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>*, bool*) const::'lambda'()>(long) Job.cpp:0:0
+#23 0x0000aaaadc722ce0 llvm::CrashRecoveryContext::RunSafely(llvm::function_ref<void ()>) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x1db2ce0)
+#24 0x0000aaaadd041f88 clang::driver::CC1Command::Execute(llvm::ArrayRef<llvm::Optional<llvm::StringRef>>, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>*, bool*) const (.part.0) Job.cpp:0:0
+#25 0x0000aaaadd010550 clang::driver::Compilation::ExecuteCommand(clang::driver::Command const&, clang::driver::Command const*&, bool) const (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x26a0550)
+#26 0x0000aaaadd010ea4 clang::driver::Compilation::ExecuteJobs(clang::driver::JobList const&, llvm::SmallVectorImpl<std::pair<int, clang::driver::Command const*>>&, bool) const (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x26a0ea4)
+#27 0x0000aaaadd020c54 clang::driver::Driver::ExecuteCompilation(clang::driver::Compilation&, llvm::SmallVectorImpl<std::pair<int, clang::driver::Command const*>>&) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0x26b0c54)
+#28 0x0000aaaadb5a6db0 clang_main(int, char**) (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0xc36db0)
+#29 0x0000ffffabae84c4 __libc_start_call_main ./csu/../sysdeps/nptl/libc_start_call_main.h:74:3
+#30 0x0000ffffabae8598 call_init ./csu/../csu/libc-start.c:128:20
+#31 0x0000ffffabae8598 __libc_start_main ./csu/../csu/libc-start.c:347:5
+#32 0x0000aaaadb5a1ab0 _start (/mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang+++0xc31ab0)
+clang-15: error: clang frontend command failed with exit code 70 (use -v to see invocation)
+clang version 15.0.4 (linx64v5-musl-local b82a1798ff3e6529ec068e9ecf445fb320939ab3)
+Target: linx64v5-unknown-linux-musl
+Thread model: posix
+InstalledDir: /mnt/workspace/gitCode/ChenYiran/SuperScalar/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
+clang-15: note: diagnostic msg: 
+********************
+
+PLEASE ATTACH THE FOLLOWING FILES TO THE BUG REPORT:
+Preprocessed source(s) and associated run script(s) are located at:
+clang-15: note: diagnostic msg: /tmp/quant_sparse_flash_mla-2f101d.cpp
+clang-15: note: diagnostic msg: /tmp/quant_sparse_flash_mla-2f101d.sh
+clang-15: note: diagnostic msg: 
+
+********************
+make: *** [../../common/Makefile.common:141: /mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/output/solution/quant_sparse_flash_mla/src/quant_sparse_flash_mla.o] Error 1

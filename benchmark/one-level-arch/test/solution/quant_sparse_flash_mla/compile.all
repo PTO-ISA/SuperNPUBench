@@ -35,3 +35,9 @@ for pair in \
   python3 run_qsmla_cpu_reference.py --case "$case" --dtype HIF8 --output-root "$ROOT"
   make $COMMON IMPL="$impl"
 done
+
+# v3：ops-arch35 流程移植的单趟 online softmax CSA（csa_small 性能最优形态，
+# 同 case 同数据下 gfsim 实测 26,022 cyc / R2=0，对照 v2 tadd 线 455,596 cyc）。
+# 大 tile 形态：Tk=128（KV 块）/ Td_block=512（D 不切）；与五模式共用
+# csa_small 数据（上方循环已生成，Makefile 按 IMPL 推导同一数据子目录）。
+make $COMMON Tm=64 Tk=128 Td_block=512 IMPL=csa_v3_4pe

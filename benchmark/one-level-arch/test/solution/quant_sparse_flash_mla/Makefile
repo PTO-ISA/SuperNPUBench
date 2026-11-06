@@ -49,6 +49,9 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    # HIF8 remains the default dtype for the unified four-PE implementations.
    QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
     QSMLA_1PE_IMPLS := csa_tadd_1pe
+    QSMLA_V3_IMPLS := csa_v3_4pe csa_v3_1_4pe csa_v3_0_1_4pe csa_v3_2_4pe csa_v3_1_1_4pe csa_v3_3_4pe csa_v3_4_1_4pe csa_v3_3_1_4pe csa_v3_3_2_4pe csa_v3_3_3_4pe csa_v3_5_4pe
+    # PA_BBND variants (v2.1 unified / v3.1 ops-flow) + block tables.
+    QSMLA_V2_1_IMPLS := csa_v2_1_4pe
     # Dynamic-shape variant (v2): Vec tiles use DYNAMIC ValidRow/ValidCol.
     # Only valid for the unified four-PE IMPLs.
     ifeq ($(QSMLA_DYNAMIC_SHAPE), on)
@@ -57,7 +60,7 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
        endif
        DEFINES += -DQSMLA_USE_DYNAMIC_SHAPE
     endif
-   ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS)),)
+   ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS) $(QSMLA_V3_IMPLS) $(QSMLA_V2_1_IMPLS)),)
       $(error unsupported QSMLA IMPL=$(IMPL); use tadd or a unified four-PE implementation)
    endif
     ifeq ($(IMPL), tadd)
@@ -126,6 +129,164 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL).elf
    endif
 
+   # v3: ops-arch35-flow 4-PE CSA port (single-pass online softmax,
+   # 128-token blocks). Tm/Tk/Td_block only feed the ELF name / Config.
+   ifeq ($(IMPL), csa_v3_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_4PE
+      QSMLA_SPARSE_CASE := csa_small
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_INPUTembedded.elf
+   endif
+
+   # v3.0.1: v3 body + G-slice (N1 > 64 / network-case experiments). Same
+   # ops-arch35 flow as v3; only the work decomposition adds G slices.
+   ifeq ($(IMPL), csa_v3_0_1_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_0_1_4PE
+      QSMLA_SPARSE_CASE := csa_small
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_0_1_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+      TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_INPUTembedded.elf
+   endif
+
+   # v3.1: v3 + PA_BBND block-table KV addressing (paged KV + identity block
+   # tables generated in the case data dir).
+   ifeq ($(IMPL), csa_v3_1_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_1_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifeq ($(QSMLA_PA_ISOLATE), on)
+         DEFINES += -DQSMLA_PA_ISOLATE_NULL_TABLES
+      endif
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_1_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.4: O residency + inline staged-KV prefetch (no lambda).
+   ifeq ($(IMPL), csa_v3_4_1_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_4_1_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_4_1_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.5: v3.3.3 + L1 侧 KV 双缓冲（kvA/kvB，深度 1）。
+   ifeq ($(IMPL), csa_v3_5_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_5_4PE
+      DEFINES += -DQSMLA_PRELOAD=$(QSMLA_PRELOAD)
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_5_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.3.3: 可配置预取深度（QSMLA_PRELOAD=x，默认 2）。
+   QSMLA_PRELOAD ?= 2
+   ifeq ($(IMPL), csa_v3_3_3_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_3_3_4PE
+      DEFINES += -DQSMLA_PRELOAD=$(QSMLA_PRELOAD)
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_3_3_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_P$(QSMLA_PRELOAD)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.3.2: v3.3.1 + preload=3（3 份 staging slice、预取距离 2）。
+   ifeq ($(IMPL), csa_v3_3_2_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_3_2_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_3_2_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.3.1: v3.3 + staging 内部行级 ping-pong（双行 tile 交替）。
+   ifeq ($(IMPL), csa_v3_3_1_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_3_1_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_3_1_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.3: O full UB residency + staged-KV prefetch.
+   ifeq ($(IMPL), csa_v3_3_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_3_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_3_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.1.1: v3.1 + full UB-resident O accumulator.
+   ifeq ($(IMPL), csa_v3_1_1_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_1_1_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifeq ($(QSMLA_PA_ISOLATE), on)
+         DEFINES += -DQSMLA_PA_ISOLATE_NULL_TABLES
+      endif
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_1_1_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v3.2: v3.1 + KV ping-pong double buffering (prefetch next block's KV).
+   ifeq ($(IMPL), csa_v3_2_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_2_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifeq ($(QSMLA_PA_ISOLATE), on)
+         DEFINES += -DQSMLA_PA_ISOLATE_NULL_TABLES
+      endif
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_2_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
+   # v2.1: unified five-mode tadd + PA_BBND block-table KV addressing.
+   ifeq ($(IMPL), csa_v2_1_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V2_1_4PE
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifeq ($(QSMLA_PA_ISOLATE), on)
+         DEFINES += -DQSMLA_PA_ISOLATE_NULL_TABLES
+      endif
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v2_1_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
    # Single-PE CSA (Local CUBE path, FP16, embedded input only).
    ifeq ($(IMPL), csa_tadd_1pe)
       ifneq ($(QSMLA_SPARSE_EMBED_INPUT), on)
@@ -178,7 +339,7 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    endif
 
    ifeq ($(QSMLA_SPARSE_EMBED_INPUT), on)
-      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS)),)
+      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS) $(QSMLA_V3_IMPLS) $(QSMLA_V2_1_IMPLS)),)
          $(error QSMLA_SPARSE_EMBED_INPUT requires a unified four-PE IMPL or csa_tadd_1pe)
       endif
       QSMLA_SPARSE_DATA_ROOT ?= /tmp/qsmla-sparse
@@ -188,6 +349,17 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       QSMLA_Q_BYTES := $(shell expr $(B) \* $(s1) \* $(N1) \* $(D) \* $(QSMLA_INPUT_BYTES))
       QSMLA_ORI_KV_BYTES := $(shell expr $(B) \* $(s2) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
       QSMLA_CMP_KV_BYTES := $(shell expr $(B) \* $(cmp_s2) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
+      # PA_BBND pool sizing (block_size = 128).
+      QSMLA_PA_BLOCK := 128
+      QSMLA_ORI_ROWS_PA := $(shell expr \( \( $(s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK) \) \* $(QSMLA_PA_BLOCK))
+      QSMLA_CMP_ROWS_PA := $(shell expr \( \( $(cmp_s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK) \) \* $(QSMLA_PA_BLOCK))
+      QSMLA_CMP_BYTES_PA := $(shell expr $(B) \* $(QSMLA_CMP_ROWS_PA) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
+      QSMLA_PA_MAX_BLOCKS := $(shell expr \( $(s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK))
+      QSMLA_PA_TABLE_BYTES := $(shell expr $(B) \* $(QSMLA_PA_MAX_BLOCKS) \* 4)
+      # CMP block table is its own width (ceil(cmp_s2 / block)); for cmp_s2 > s2
+      # it is wider than the ORI table (e.g. the network CSA case).
+      QSMLA_PA_CMP_MAX_BLOCKS := $(shell expr \( $(cmp_s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK))
+      QSMLA_PA_CMP_TABLE_BYTES := $(shell expr $(B) \* $(QSMLA_PA_CMP_MAX_BLOCKS) \* 4)
       QSMLA_ORI_INDEX_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* $(ori_topk) \* 4)
       QSMLA_CMP_INDEX_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* $(cmp_topk) \* 4)
       QSMLA_LENGTH_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* 4)
@@ -197,11 +369,11 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       EXTRA_OBJ_FILES += $(QSMLA_Q_OBJ) $(QSMLA_ORI_KV_OBJ)
       DEFINES += -DQSMLA_USE_SPARSE_EMBEDDED_INPUT
 
-      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
+      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe csa_v3_4pe csa_v3_1_4pe csa_v3_0_1_4pe csa_v2_1_4pe csa_v3_2_4pe csa_v3_1_1_4pe csa_v3_3_4pe csa_v3_4_1_4pe csa_v3_3_1_4pe csa_v3_3_2_4pe csa_v3_3_3_4pe csa_v3_5_4pe),)
          QSMLA_CMP_KV_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_kv.o
          EXTRA_OBJ_FILES += $(QSMLA_CMP_KV_OBJ)
       endif
-       ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
+       ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe csa_v3_4pe csa_v3_1_4pe csa_v3_0_1_4pe csa_v2_1_4pe csa_v3_2_4pe csa_v3_1_1_4pe csa_v3_3_4pe csa_v3_4_1_4pe csa_v3_3_1_4pe csa_v3_3_2_4pe csa_v3_3_3_4pe csa_v3_5_4pe),)
           QSMLA_CMP_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_indices.o
           EXTRA_OBJ_FILES += $(QSMLA_CMP_INDEX_OBJ)
        endif
@@ -221,6 +393,18 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       ifeq ($(IMPL), ori_cmp_sparse_tadd_4pe)
          QSMLA_CMP_LENGTH_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_length.o
          EXTRA_OBJ_FILES += $(QSMLA_CMP_LENGTH_OBJ)
+      endif
+
+      # PA_BBND variants: paged KV copies + [B, max_blocks] identity block
+      # tables (block_size = 128), generated beside the case data.
+      ifeq ($(QSMLA_SPARSE_PA), on)
+         QSMLA_ORI_KV_PA_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_kv_pa.o
+         QSMLA_CMP_KV_PA_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_kv_pa.o
+         QSMLA_ORI_BT_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_block_table.o
+         QSMLA_CMP_BT_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_block_table.o
+         EXTRA_OBJ_FILES += $(QSMLA_ORI_KV_PA_OBJ) $(QSMLA_CMP_KV_PA_OBJ) \
+                            $(QSMLA_ORI_BT_OBJ) $(QSMLA_CMP_BT_OBJ)
+         DEFINES += -DQSMLA_SPARSE_KV_PA_BBND=1
       endif
 
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_INPUTembedded.elf
@@ -256,6 +440,24 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       $(QSMLA_CMP_LENGTH_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_topk_length.int32.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
 	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_topk_length_int32 --bytes $(QSMLA_LENGTH_BYTES) --exact-bytes
+
+      ifeq ($(QSMLA_SPARSE_PA), on)
+      $(QSMLA_ORI_KV_PA_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
+
+      $(QSMLA_CMP_KV_PA_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_CMP_BYTES_PA) --exact-bytes
+
+      $(QSMLA_ORI_BT_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_block_table.int32.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_block_table_int32 --bytes $(QSMLA_PA_TABLE_BYTES) --exact-bytes
+
+      $(QSMLA_CMP_BT_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_block_table.int32.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_block_table_int32 --bytes $(QSMLA_PA_CMP_TABLE_BYTES) --exact-bytes
+      endif
    endif
 endif
 

@@ -1,7 +1,48 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "fileop.h"
-#if defined(QSMLA_USE_TADD_4PE) || \
+
+#ifndef QSMLA_PRELOAD
+#define QSMLA_PRELOAD 2
+#endif
+#if defined(QSMLA_USE_CSA_V3_0_1_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_0_1.hpp"
+// v3.0.1 reuses the v3 kernel plumbing (scratch/ModeConfig/data guards).
+#define QSMLA_USE_CSA_V3_4PE
+#elif defined(QSMLA_USE_CSA_V3_1_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_1.hpp"
+#elif defined(QSMLA_USE_CSA_V3_1_1_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_1_1.hpp"
+// v3.1.1 reuses the v3.1 plumbing (scratch/ModeConfig/data guards).
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_4_1_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_4.hpp"
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_5_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_5.hpp"
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_3_3_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_3_3.hpp"
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_3_2_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_3_2.hpp"
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_3_1_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_3_1.hpp"
+// v3.3.1 reuses the v3.1 plumbing (PA/TND scratch, ModeConfig, data guards).
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_3_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_3.hpp"
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_2_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_2.hpp"
+// v3.2 reuses the v3.1 plumbing (PA/TND scratch, ModeConfig, data guards).
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V2_1_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v2_1.hpp"
+#elif (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE))
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3.hpp"
+#elif defined(QSMLA_USE_TADD_4PE) || \
     defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
@@ -167,7 +208,9 @@ extern const uint8_t _binary_ori_kv_t_hif8_start[];
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE)) || \
+    (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE))
 extern const uint8_t _binary_cmp_kv_hif8_start[];
 #endif
 #else
@@ -179,13 +222,16 @@ extern const uint8_t _binary_ori_kv_t_fp16_start[];
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE)) || \
+    (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE))
 extern const uint8_t _binary_cmp_kv_fp16_start[];
 #endif
 #endif
 #if defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE))
 extern const uint8_t _binary_cmp_sparse_indices_int32_start[];
 #endif
 #if defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
@@ -195,6 +241,12 @@ extern const uint8_t _binary_ori_topk_length_int32_start[];
 #endif
 #if defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
 extern const uint8_t _binary_cmp_topk_length_int32_start[];
+#endif
+#ifdef QSMLA_SPARSE_KV_PA_BBND
+extern const uint8_t _binary_ori_kv_pa_hif8_start[];
+extern const uint8_t _binary_cmp_kv_pa_hif8_start[];
+extern const uint8_t _binary_ori_block_table_int32_start[];
+extern const uint8_t _binary_cmp_block_table_int32_start[];
 #endif
 }
 #endif
@@ -214,7 +266,11 @@ int main(){
     using Config = QsmlaConfig<
         B, s1, s2, N1, N2, D, 0, kTm, kTk, kTd, g_slice_max>;
 
-#ifdef QSMLA_USE_TADD_4PE
+#if (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE)) || defined(QSMLA_USE_CSA_V3_1_4PE) || \
+    defined(QSMLA_USE_CSA_V2_1_4PE)
+    using ModeConfig = QsmlaModeConfig<
+        Config, QsmlaMode::CSA, cmp_s2, ori_topk, cmp_topk>;
+#elif defined(QSMLA_USE_TADD_4PE)
     using ModeConfig = QsmlaModeConfig<
         Config, QsmlaMode::SWA, 0, 0, 0>;
 #elif defined(QSMLA_USE_HCA_TADD_4PE)
@@ -259,7 +315,9 @@ int main(){
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE)) || \
+    (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE))
 #ifdef QSMLA_USE_HIF8
     kvdtype* cmp_kv = reinterpret_cast<kvdtype*>(
         const_cast<uint8_t*>(_binary_cmp_kv_hif8_start));
@@ -270,9 +328,19 @@ int main(){
 #else
     kvdtype* cmp_kv = nullptr;
 #endif
+#ifdef QSMLA_SPARSE_KV_PA_BBND
+    // PA_BBND: KV bases point at the paged pools; rows come from the tables.
+    kv = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_ori_kv_pa_hif8_start));
+    if constexpr (N1 > 1) {
+        cmp_kv = reinterpret_cast<kvdtype*>(
+            const_cast<uint8_t*>(_binary_cmp_kv_pa_hif8_start));
+    }
+#endif
 #if defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    (defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE))
     const int* cmp_indices = reinterpret_cast<const int*>(
         _binary_cmp_sparse_indices_int32_start);
 #else
@@ -320,7 +388,40 @@ int main(){
 
     odttype* out = (odttype*)MAP_MEM_BASE;
 
-#if defined(QSMLA_USE_UNIFIED_TADD_4PE)
+#if defined(QSMLA_USE_CSA_V3_4PE) || defined(QSMLA_USE_CSA_V3_1_4PE)
+    // v3 scratch: GM staging buffer for one 128-token KV block (ops v0Res)
+    // + 2 mask regions + O half-resident buffer (model-gap fallback).
+    constexpr uint64_t out_bytes =
+        static_cast<uint64_t>(B) * s1 * N1 * D * sizeof(odttype);
+#if defined(QSMLA_USE_CSA_V3_5_4PE)
+    // v3.5：同 v3.3.3，staging ring 份数 = QSMLA_PRELOAD（至少 2）。
+    constexpr uint64_t v0_bytes =
+        static_cast<uint64_t>((QSMLA_PRELOAD < 2 ? 2 : QSMLA_PRELOAD)) *
+        128 * D * sizeof(kvdtype);
+#elif defined(QSMLA_USE_CSA_V3_3_3_4PE)
+    // v3.3.3：staging slice 份数 = 预取深度 QSMLA_PRELOAD。
+    constexpr uint64_t v0_bytes =
+        static_cast<uint64_t>(QSMLA_PRELOAD) * 128 * D * sizeof(kvdtype);
+#elif defined(QSMLA_USE_CSA_V3_3_2_4PE)
+    // v3.3.2 preload=3：三份 GM staging slice。
+    constexpr uint64_t v0_bytes = 3 * 128 * D * sizeof(kvdtype);
+#elif defined(QSMLA_USE_CSA_V3_2_4PE) || defined(QSMLA_USE_CSA_V3_3_4PE) || \
+    defined(QSMLA_USE_CSA_V3_4_1_4PE) || defined(QSMLA_USE_CSA_V3_3_1_4PE)
+    // v3.2/v3.3/v3.4 KV ping-pong: two GM staging slices (one per in-flight block).
+    constexpr uint64_t v0_bytes = 2 * 128 * D * sizeof(kvdtype);
+#else
+    constexpr uint64_t v0_bytes = 128 * D * sizeof(kvdtype);
+#endif
+    constexpr uint64_t mask_bytes = 2 * (g_slice_max / 4) * 128 * sizeof(float);
+    constexpr uint64_t o_bytes =
+        static_cast<uint64_t>(B) * s1 * N1 * D * sizeof(float);
+    constexpr uint64_t v0_addr = MAP_MEM_BASE + align_up_4k(out_bytes);
+    constexpr uint64_t mask_addr = v0_addr + align_up_4k(v0_bytes);
+    constexpr uint64_t o_addr = mask_addr + align_up_4k(mask_bytes);
+    kvdtype* v0_res_scratch = reinterpret_cast<kvdtype*>(v0_addr);
+    float* mask_scratch = reinterpret_cast<float*>(mask_addr);
+    float* o_scratch = reinterpret_cast<float*>(o_addr);
+#elif defined(QSMLA_USE_UNIFIED_TADD_4PE) || defined(QSMLA_USE_CSA_V2_1_4PE)
     // Cooperative scratch must live in shared GM rather than a PE-private
     // function stack.  Each PE computes and receives these identical mapped
     // addresses, matching the shared-workspace contract used by the 4-PE FA.
@@ -345,7 +446,163 @@ int main(){
 #endif
 
     BENCHSTART;
-#ifdef QSMLA_USE_CSA_TADD_1PE
+#ifdef QSMLA_USE_CSA_V3_1_4PE
+    // v3.1: v3 + PA_BBND block-table KV addressing.
+    QsmlaPaConfig pa;
+#ifdef QSMLA_PA_ISOLATE_NULL_TABLES
+    pa.ori_block_table = nullptr;
+    pa.cmp_block_table = nullptr;
+#else
+    pa.ori_block_table = reinterpret_cast<const int32_t*>(
+        _binary_ori_block_table_int32_start);
+    pa.cmp_block_table = reinterpret_cast<const int32_t*>(
+        _binary_cmp_block_table_int32_start);
+#endif
+    pa.ori_block_size = QSMLA_PA_BLOCK_SIZE;
+    pa.cmp_block_size = QSMLA_PA_BLOCK_SIZE;
+    pa.ori_max_blocks = (s2 + QSMLA_PA_BLOCK_SIZE - 1) / QSMLA_PA_BLOCK_SIZE;
+    pa.cmp_max_blocks =
+        (cmp_s2 + QSMLA_PA_BLOCK_SIZE - 1) / QSMLA_PA_BLOCK_SIZE;
+    // Query layout: TND flattened token rows.  cu_seqlens_q is optional; the
+    // uniform-length benchmark cases fall back to the per-batch base b * S1.
+    QsmlaQueryConfig qc;
+    qc.q_tnd = true;
+    qc.cu_seqlens_q = nullptr;
+#if defined(QSMLA_USE_CSA_V3_5_4PE)
+    quant_sparse_flash_mla_csa_v3_5_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_3_3_4PE)
+    // v3.3.3：work 循环提到 host 侧（每 work 一次调用，规避 kWorkCount>1 的
+    // 编译器 raw-spill 限制，llvm-project #143）。
+    for (int qsmla_w = 0; qsmla_w < Config::WorkCount; ++qsmla_w) {
+        quant_sparse_flash_mla_csa_v3_3_3_4pe_pto<
+            qdtype, kvdtype, odttype, ModeConfig>(
+                out, q, kv, cmp_kv,
+                ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+                softmax_scale_val,
+                q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+                cmp_ratio, win_left, win_right,
+                v0_res_scratch, mask_scratch, o_scratch, qsmla_w, pa, qc);
+    }
+#elif defined(QSMLA_USE_CSA_V3_3_2_4PE)
+    quant_sparse_flash_mla_csa_v3_3_2_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_3_1_4PE)
+    quant_sparse_flash_mla_csa_v3_3_1_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_4_1_4PE)
+    quant_sparse_flash_mla_csa_v3_4_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_3_4PE)
+    // v3.3: O full UB residency + staged-KV prefetch.
+    quant_sparse_flash_mla_csa_v3_3_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_1_1_4PE)
+    // v3.1.1: v3.1 + full UB-resident O accumulator.
+    quant_sparse_flash_mla_csa_v3_1_1_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_2_4PE)
+    // v3.2: v3.1 + KV ping-pong double buffering (prefetch next block).
+    quant_sparse_flash_mla_csa_v3_2_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#else
+    quant_sparse_flash_mla_csa_v3_1_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#endif
+#elif defined(QSMLA_USE_CSA_V2_1_4PE)
+    // v2.1: unified tadd + PA_BBND block-table KV addressing.
+    QsmlaPaConfig pa;
+    pa.ori_block_table = reinterpret_cast<const int32_t*>(
+        _binary_ori_block_table_int32_start);
+    pa.cmp_block_table = reinterpret_cast<const int32_t*>(
+        _binary_cmp_block_table_int32_start);
+    pa.ori_block_size = QSMLA_PA_BLOCK_SIZE;
+    pa.cmp_block_size = QSMLA_PA_BLOCK_SIZE;
+    pa.ori_max_blocks = (s2 + QSMLA_PA_BLOCK_SIZE - 1) / QSMLA_PA_BLOCK_SIZE;
+    pa.cmp_max_blocks =
+        (cmp_s2 + QSMLA_PA_BLOCK_SIZE - 1) / QSMLA_PA_BLOCK_SIZE;
+    // Query layout: TND flattened token rows (uniform benchmark cases use the
+    // per-batch base b * S1 via the null cu_seqlens_q fallback).
+    QsmlaQueryConfig qc;
+    qc.q_tnd = true;
+    qc.cu_seqlens_q = nullptr;
+    quant_sparse_flash_mla_csa_v2_1_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            score_scratch, prob_scratch, pv_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_0_1_4PE)
+    // v3.0.1: v3 body + G-slice for N1 > 64 (network-case experiments).
+    quant_sparse_flash_mla_csa_v3_0_1_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch);
+#elif defined(QSMLA_USE_CSA_V3_4PE)
+    // v3: ops-arch35-flow 4-PE CSA port (single-pass online softmax).
+    quant_sparse_flash_mla_csa_v3_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch);
+#elif defined(QSMLA_USE_CSA_TADD_1PE)
     // 单 PE CSA：Local CUBE 路径（FP16/HIF8 双态，嵌入输入；
     // FP16 下 descale 宏为 1，HIF8 下为 per-tensor 反量化因子）
     using ModeConfig = QsmlaModeConfig<
