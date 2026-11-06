@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+: "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
+make TESTCASE=transpose COMPILER_DIR="$COMPILER_DIR" diss
