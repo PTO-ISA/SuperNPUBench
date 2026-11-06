@@ -1,6 +1,10 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "fileop.h"
+
+#ifndef QSMLA_PRELOAD
+#define QSMLA_PRELOAD 2
+#endif
 #if defined(QSMLA_USE_CSA_V3_0_1_4PE)
 #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_0_1.hpp"
 // v3.0.1 reuses the v3 kernel plumbing (scratch/ModeConfig/data guards).
@@ -10,6 +14,25 @@
 #elif defined(QSMLA_USE_CSA_V3_1_1_4PE)
 #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_1_1.hpp"
 // v3.1.1 reuses the v3.1 plumbing (scratch/ModeConfig/data guards).
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_4_1_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_4.hpp"
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_5_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_5.hpp"
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_3_3_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_3_3.hpp"
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_3_2_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_3_2.hpp"
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_3_1_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_3_1.hpp"
+// v3.3.1 reuses the v3.1 plumbing (PA/TND scratch, ModeConfig, data guards).
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_CSA_V3_3_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_3.hpp"
 #define QSMLA_USE_CSA_V3_1_4PE
 #elif defined(QSMLA_USE_CSA_V3_2_4PE)
 #include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_2.hpp"
@@ -370,8 +393,21 @@ int main(){
     // + 2 mask regions + O half-resident buffer (model-gap fallback).
     constexpr uint64_t out_bytes =
         static_cast<uint64_t>(B) * s1 * N1 * D * sizeof(odttype);
-#if defined(QSMLA_USE_CSA_V3_2_4PE)
-    // v3.2 KV ping-pong: two GM staging slices (one per in-flight block).
+#if defined(QSMLA_USE_CSA_V3_5_4PE)
+    // v3.5：同 v3.3.3，staging ring 份数 = QSMLA_PRELOAD（至少 2）。
+    constexpr uint64_t v0_bytes =
+        static_cast<uint64_t>((QSMLA_PRELOAD < 2 ? 2 : QSMLA_PRELOAD)) *
+        128 * D * sizeof(kvdtype);
+#elif defined(QSMLA_USE_CSA_V3_3_3_4PE)
+    // v3.3.3：staging slice 份数 = 预取深度 QSMLA_PRELOAD。
+    constexpr uint64_t v0_bytes =
+        static_cast<uint64_t>(QSMLA_PRELOAD) * 128 * D * sizeof(kvdtype);
+#elif defined(QSMLA_USE_CSA_V3_3_2_4PE)
+    // v3.3.2 preload=3：三份 GM staging slice。
+    constexpr uint64_t v0_bytes = 3 * 128 * D * sizeof(kvdtype);
+#elif defined(QSMLA_USE_CSA_V3_2_4PE) || defined(QSMLA_USE_CSA_V3_3_4PE) || \
+    defined(QSMLA_USE_CSA_V3_4_1_4PE) || defined(QSMLA_USE_CSA_V3_3_1_4PE)
+    // v3.2/v3.3/v3.4 KV ping-pong: two GM staging slices (one per in-flight block).
     constexpr uint64_t v0_bytes = 2 * 128 * D * sizeof(kvdtype);
 #else
     constexpr uint64_t v0_bytes = 128 * D * sizeof(kvdtype);
@@ -432,7 +468,62 @@ int main(){
     QsmlaQueryConfig qc;
     qc.q_tnd = true;
     qc.cu_seqlens_q = nullptr;
-#if defined(QSMLA_USE_CSA_V3_1_1_4PE)
+#if defined(QSMLA_USE_CSA_V3_5_4PE)
+    quant_sparse_flash_mla_csa_v3_5_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_3_3_4PE)
+    quant_sparse_flash_mla_csa_v3_3_3_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_3_2_4PE)
+    quant_sparse_flash_mla_csa_v3_3_2_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_3_1_4PE)
+    quant_sparse_flash_mla_csa_v3_3_1_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_4_1_4PE)
+    quant_sparse_flash_mla_csa_v3_4_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_3_4PE)
+    // v3.3: O full UB residency + staged-KV prefetch.
+    quant_sparse_flash_mla_csa_v3_3_4pe_pto<
+        qdtype, kvdtype, odttype, ModeConfig>(
+            out, q, kv, cmp_kv,
+            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+            softmax_scale_val,
+            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+            cmp_ratio, win_left, win_right,
+            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+#elif defined(QSMLA_USE_CSA_V3_1_1_4PE)
     // v3.1.1: v3.1 + full UB-resident O accumulator.
     quant_sparse_flash_mla_csa_v3_1_1_4pe_pto<
         qdtype, kvdtype, odttype, ModeConfig>(
