@@ -207,6 +207,7 @@ void quant_sparse_flash_mla_csa_v3_3_3_4pe_pto(
     float q_descale, float ori_kv_descale, float cmp_kv_descale,
     int cmp_ratio, int win_left, int win_right,
     kvdtype *v0_res_scratch, float *mask_scratch, float *o_scratch,
+    int work_id,
     const QsmlaPaConfig &pa = QsmlaPaConfig(),
     const QsmlaQueryConfig &qc = QsmlaQueryConfig())
 {
@@ -259,7 +260,9 @@ void quant_sparse_flash_mla_csa_v3_3_3_4pe_pto(
     // 都可以并行收集）。
     int selected[CmpTopK > 0 ? CmpTopK : 1];
 
-    for (int work = 0; work < kWorkCount; ++work) {
+    // work 循环由 host 侧按 work 逐个调用（避免 kWorkCount>1 时的编译器 raw-spill 限制，issue #143）
+    {
+        const int work = work_id;
         // G 切分对齐 v2 的统一路径：Config::decode_work 给出 64-head 切片（g_slice）
         // 与 head 基址 q_head_begin = kv_head*G + g_slice*GSliceMax，使 work 顺序、
         // Q 行基址与输出偏移都与 v2 布局一致。
