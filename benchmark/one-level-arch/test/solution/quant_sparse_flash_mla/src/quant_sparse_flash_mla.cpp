@@ -478,14 +478,18 @@ int main(){
             cmp_ratio, win_left, win_right,
             v0_res_scratch, mask_scratch, o_scratch, pa, qc);
 #elif defined(QSMLA_USE_CSA_V3_3_3_4PE)
-    quant_sparse_flash_mla_csa_v3_3_3_4pe_pto<
-        qdtype, kvdtype, odttype, ModeConfig>(
-            out, q, kv, cmp_kv,
-            ori_indices, cmp_indices, ori_lengths, cmp_lengths,
-            softmax_scale_val,
-            q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
-            cmp_ratio, win_left, win_right,
-            v0_res_scratch, mask_scratch, o_scratch, pa, qc);
+    // v3.3.3：work 循环提到 host 侧（每 work 一次调用，规避 kWorkCount>1 的
+    // 编译器 raw-spill 限制，llvm-project #143）。
+    for (int qsmla_w = 0; qsmla_w < Config::WorkCount; ++qsmla_w) {
+        quant_sparse_flash_mla_csa_v3_3_3_4pe_pto<
+            qdtype, kvdtype, odttype, ModeConfig>(
+                out, q, kv, cmp_kv,
+                ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+                softmax_scale_val,
+                q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+                cmp_ratio, win_left, win_right,
+                v0_res_scratch, mask_scratch, o_scratch, qsmla_w, pa, qc);
+    }
 #elif defined(QSMLA_USE_CSA_V3_3_2_4PE)
     quant_sparse_flash_mla_csa_v3_3_2_4pe_pto<
         qdtype, kvdtype, odttype, ModeConfig>(
