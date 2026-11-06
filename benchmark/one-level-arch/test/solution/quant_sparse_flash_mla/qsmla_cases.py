@@ -255,6 +255,26 @@ _QSMLA_MODE_CASES: Tuple[QsmlaCase, ...] = (
               source="supernpubench:five-mode", enable_stage="gfrun",
               reference_feasible=True, mode_generation_feasible=True,
               coverage=frozenset({"hif8", "bf16_output", "descale"})),
+    # 小号多 work 用例：B=2,S1=2 -> kWorkCount=4；D=128 让 tile 更小，
+    # 用于在 v3.x 上验证"多 work"路径（生产形状的缩小版）。
+    QsmlaCase(name="csa_mw_small", mode="CSA", b=2, s1=2, s2=256,
+              n1=64, n2=1, d=128, k=64, cmp_s2=128, cmp_topk=64,
+              cmp_ratio=4, tm=64, tk=32, td=64, win_left=255,
+              win_right=0, softmax_scale=0.04419417,
+              source="supernpubench:five-mode", enable_stage="gfrun",
+              reference_feasible=True, mode_generation_feasible=True,
+              coverage=frozenset({"hif8", "bf16_output", "descale",
+                                  "multi_work", "small_d"})),
+    # 大用例：10 个 KV 块（8 个 ORI 满块 + 2 个 CMP 块），用于验证
+    # KV 预取深度（preload=1 vs 3）在多块场景下的收益。
+    QsmlaCase(name="csa_medium", mode="CSA", b=1, s1=1, s2=1024,
+              n1=64, n2=1, d=512, k=40, cmp_s2=512, cmp_topk=256,
+              cmp_ratio=4, tm=64, tk=32, td=64, win_left=1023,
+              win_right=0, softmax_scale=0.04419417,
+              source="supernpubench:five-mode", enable_stage="gfrun",
+              reference_feasible=True, mode_generation_feasible=True,
+              coverage=frozenset({"hif8", "bf16_output", "descale",
+                                  "csa_medium"})),
     QsmlaCase(name="ori_sparse_small", mode="ORI_SPARSE", b=1, s1=1,
               s2=128, n1=64, n2=1, d=512, k=0, k1=40, cmp_s2=64,
               ori_topk=40, cmp_ratio=4, tm=64, tk=32, td=64,
