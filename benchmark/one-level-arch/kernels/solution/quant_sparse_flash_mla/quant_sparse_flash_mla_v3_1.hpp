@@ -2,50 +2,43 @@
 #define QUANT_SPARSE_FLASH_MLA_V3_1_HPP
 
 // ============================================================================
-// QuantSparseFlashMla v3.1 — 4-PE CSA kernel, ported from the ops-transformer
-// arch35 reference (ops-transformer/attention/quant_sparse_flash_mla).
+// QuantSparseFlashMla v3.1 —— 4-PE CSA kernel，从 ops-transformer arch35 参考实现
+// （ops-transformer/attention/quant_sparse_flash_mla）移植而来。
 //
-// v3.1 = v3 + PA_BBND (page-attention block-table) KV layout support.  Pass a
-// non-null QsmlaPaConfig to address the KV cache through block tables; the
-// default (null tables) is the original BSND contiguous behaviour.  In PA
-// mode the "full ORI block direct Shared TLOAD" fast path is disabled (rows
-// are staged individually through v0-res with table-mapped addresses).
+// v3.1 = v3 + PA_BBND（page-attention 块表）KV 布局支持。传入非空
+// QsmlaPaConfig 即通过块表寻址 KV cache；默认（空表）保持原 BSND 连续布局。
+// PA 模式下关闭“ORI 满块直连 Shared TLOAD”快路径（改为按行经 v0-res、
+// 用块表映射地址逐行暂存）。
 //
-// Design goal: mirror the ops kernel's per-block computation flow and data
-// movement (what is moved, when, and how much) within the SuperScalar 4-PE
-// SPMD model.  Written against the PTO Tile-OP primitives only; it does not
-// reuse the earlier SuperNPUBench QSMLA implementations.
+// 设计目标：在 SuperScalar 4-PE SPMD 模型内，镜像 ops kernel 的逐块计算流与
+// 数据搬运（搬什么、何时搬、搬多少）。只使用 PTO Tile-OP 原语编写，不复用
+// 早先的 SuperNPUBench QSMLA 实现。
 //
-// Ops-reference mapping (arch35 stage -> v3):
-//   ProcessVec0         -> stage block rows into the GM v0-res buffer
-//                          (indexed TopK gather: one 512 B row per
-//                           TLOAD/TSTORE pair, mirroring CopyInSingleKv;
-//                           contiguous tail blocks use the same row path)
-//   IterateLoadQK       -> TLOAD<SharedMatrixRight, PEMask=1> (one shared
-//                          load per 128-token block; ORI full blocks connect
-//                          directly to GM, per user decision)
+// ops 参考映射（arch35 阶段 -> v3）：
+//   ProcessVec0         -> 把块内行暂存到 GM 的 v0-res 缓冲
+//                          （TopK 索引 gather：每次 TLOAD/TSTORE 搬一行 512B，
+//                           对齐 CopyInSingleKv；连续尾块走同一条行路径）
+//   IterateLoadQK       -> TLOAD<SharedMatrixRight, PEMask=1>（每个 128-token 块
+//                          一次共享加载；ORI 满块按用户决定直连 GM）
 //   IterateBmm1CSA      -> TMATMUL(tScore, tQ, tKV, keep_acc())
-//                          (single K=512 product, per user decision; output
-//                           stays on a Vec-operable CUBE_M16 tile, matching
-//                           the ops Fixpipe L0C->UB behaviour)
-//   ProcessVec1         -> online softmax: x scale', + mask, rowmax,
-//                          expdif, rowsum/TFMA, x16, TCVT -> HIF8
+//                          （单次 K=512 乘，按用户决定；结果留在可做向量运算的
+//                           CUBE_M16 tile 上，对齐 ops 的 Fixpipe L0C->UB 行为）
+//   ProcessVec1         -> online softmax：缩放、加 mask、rowmax、expdif、
+//                          rowsum/TFMA、乘 16、TCVT -> HIF8
 //   IterateBmm2CSA      -> TMATMUL(tPV, tPShard, tKV, keep_acc().transpose_b())
-//   ProcessVec2         -> FlashUpdate: first block O = PV*descale,
-//                          later blocks O = O*alpha + PV*descale
-//   Vec2 epilogue       -> O / sum, O / 16, cast BF16, TSTORE
+//   ProcessVec2         -> FlashUpdate：首块 O = PV*descale，
+//                          后续块 O = O*alpha + PV*descale
+//   Vec2 epilogue       -> O / sum、O / 16、转 BF16、TSTORE
 //
-// Block size kS2Base = 128 KV tokens (ops s2BaseSize).  Tail blocks keep the
-// ops behaviour: only valid rows are staged, invalid columns are masked with
-// -1e30 ("dirty data removed by mask").
+// 块大小 kS2Base = 128 个 KV token（ops s2BaseSize）。尾块保持 ops 行为：
+// 只暂存有效行，无效列用 -1e30 掩掉（“脏数据由 mask 清除”）。
 //
-// Concurrency notes (gfrun/gfsim round-robin, PE0 always ahead):
-//   - the partial-block mask is written in full by every PE (identical
-//     values, so concurrent writes are benign) before its own TLOAD;
-//   - the KV staging into v0-res is done by PE0 only, and the shared KV
-//     TLOAD is initiated by PE0 (PEMask=1), so the store->load order is
-//     guaranteed on the initiating thread;
-//   - TMATMUL is cooperative (PE_MASK=1111) and waits for all PEs.
+// 并发说明（gfrun/gfsim 为轮转调度，PE0 始终领先）：
+//   - 部分块的 mask 由每个 PE 在自身 TLOAD 之前整块写入（值完全相同，因此
+//     并发写是良性的）；
+//   - KV 暂存到 v0-res 只由 PE0 执行，共享 KV TLOAD 也由 PE0（PEMask=1）
+//     发起，从而在发起线程上保证 store->load 的先后顺序；
+//   - TMATMUL 是协作式（PE_MASK=1111），会等待全部 PE。
 // ============================================================================
 
 #include <common/pto_tileop.hpp>
@@ -55,16 +48,15 @@
 using namespace pto;
 
 // ---------------------------------------------------------------------------
-// v3.1 addition: PA_BBND (page-attention block-table) KV addressing.
+// v3.1 新增：PA_BBND（page-attention 块表）KV 寻址。
 //
-// Physical KV cache layout (BBND, N2=1): [BlockNum, BlockSize, 1, D].  A
-// logically ordered row `pos` lives at pool row
+// 物理 KV cache 布局（BBND，N2=1）：[BlockNum, BlockSize, 1, D]。逻辑上第 pos
+// 行位于池中的行号：
 //     block_table[batch * max_blocks + pos / block_size] * block_size
 //         + pos % block_size
-// (mirrors ops arch35 quant_sparse_flash_mla_csa_block_vector.h blockTableGm;
-// with N2=1 the in-pool row stride stays D).  A null table degenerates to the
-// BSND contiguous mapping with the per-batch base row, so one kernel serves
-// both layouts.
+// （对齐 ops arch35 quant_sparse_flash_mla_csa_block_vector.h 的 blockTableGm；
+// N2=1 时池内行步长仍为 D）。空表退化为 BSND 连续映射（按 batch 基行），
+// 因此同一份 kernel 可服务两种布局。
 // ---------------------------------------------------------------------------
 struct QsmlaPaConfig {
     const int32_t *ori_block_table = nullptr;   // [B, ori_max_blocks]
@@ -91,11 +83,11 @@ inline int64_t qsmla_pa_physical_row(
 
 
 // ---------------------------------------------------------------------------
-// v3.1 addition: query GM layout.  BSND is (b, s, n, d); TND is (t, n, d)
-// with the flattened token row t = cu_seqlens_q[batch] + s (ops arch35
-// offset_calculator GM_Q_OUT_TND; the cu_seqlens array carries a leading
-// zero).  A null cu_seqlens_q degenerates to the uniform per-batch base
-// batch * S1, so one kernel serves both layouts.
+// v3.1 新增：Query 的 GM 布局。BSND 为 (b, s, n, d)；TND 为 (t, n, d)，其中
+// 展平后的 token 行 t = cu_seqlens_q[batch] + s（ops arch35
+// offset_calculator GM_Q_OUT_TND；cu_seqlens 数组带一个前导 0）。空
+// cu_seqlens_q 退化为按 batch 的均匀基址 batch * S1，因此同一份 kernel 可
+// 服务两种布局。
 // ---------------------------------------------------------------------------
 struct QsmlaQueryConfig {
     const int32_t *cu_seqlens_q = nullptr;  // TND prefix sums [B + 1], first 0
@@ -113,7 +105,7 @@ inline int64_t qsmla_q_token_base(
 
 
 // ---------------------------------------------------------------------------
-// Compile-time type/constant bundle for the v3 kernel.
+// v3 kernel 的编译期类型/常量集合。
 // ---------------------------------------------------------------------------
 template <typename qdtype, typename kvdtype, typename ModeConfig>
 struct qsmla_v3_types {
@@ -138,31 +130,31 @@ struct qsmla_v3_types {
     static constexpr int kPeTm = kGroupM / kPeNum;  // rows per PE (16)
     static constexpr int kS2Base = 128;      // ops s2BaseSize
 
-    // Q: shared Left operand, loaded once per work item (ops CopyQGmToL1).
+    // Q：共享 Left 操作数，每个 work item 加载一次（ops CopyQGmToL1）。
     using tileQMatrix = SharedMatrixLeft<qdtype, 64, D, kGroupM, D>;
     using tileQ = SharedTile<tileQMatrix>;
-    // KV: shared Right operand, one 128-token block (ops l1RightBuffers).
-    // Consumed by QK^T (no TransB: stored [N, K]) and by PV (TransB: [K, N])
-    // — the ops K=V shared-latent behaviour.
+    // KV：共享 Right 操作数，一次一个 128-token 块（ops l1RightBuffers）。
+    // 同时被 QK^T（不做 TransB：按 [N, K] 存储）与 PV（做 TransB：[K, N]）消费
+    // —— 即 ops 中 K=V 共享隐变量的行为。
     using tileKVMatrix = SharedMatrixRight<kvdtype, kS2Base, D>;
     using tileKV = SharedTile<tileKVMatrix>;
-    // S = Q@K^T per-PE [16, 128] FP32 (ops bmm1Buffers after Fixpipe).
+    // S = Q@K^T，每 PE [16, 128] FP32（ops bmm1Buffers，Fixpipe 之后）。
     using tileScore = CubeTileM16<float, kPeTm, kS2Base>;
     using tileScoreRed = VecTileM16<float, kPeTm, kS2Base, kPeTm, 1>;
     using tileRow = VecTileM16<float, kPeTm, 1, kPeTm, 1>;
-    // P quantized to HIF8, Local Left shard (ops l1PBuffers).
+    // P 量化为 HIF8，Local Left 分片（ops l1PBuffers）。
     using tilePShard = CubeTileM16<qdtype, kPeTm, kS2Base>;
-    // O / PV, per-PE [16, 512] FP32 (ops stage2OutBuf/bmm2Buffers).  Carried
-    // on Left CUBE_M16 tiles (fa tW style) instead of the Acc tile: the
-    // descale/flash-update chain runs TMULS/TADD on them, which TimingSim's
-    // PTO #291 check rejects on Acc operands.
+    // O / PV，每 PE [16, 512] FP32（ops stage2OutBuf/bmm2Buffers）。承载在 Left
+    // CUBE_M16 tile 上（fa tW 风格）而非 Acc tile：descale/FlashUpdate 链要在其
+    // 上做 TMULS/TADD，而 TimingSim 的 PTO #291 校验拒绝在 Acc 操作数上做这些
+    // 运算。
     using tileO = CubeTileM16<float, kPeTm, D>;
     using tilePV = CubeTileM16<float, kPeTm, D>;
     using tileOCast = CubeAccumulatorM16<__bf16, kPeTm, D>;
-    // Partial-block mask tile — the exact tScore type so the TADD mask
-    // application keeps one tile_shape (Location included).
+    // 部分块 mask tile —— 与 tScore 完全同型，使 TADD 加 mask 时保持同一
+    // tile_shape（含 Location）。
     using tileMask = CubeTileM16<float, kPeTm, kS2Base>;
-    // One KV row for the scalar-indexed staging path (ops CopyInSingleKv).
+    // 标量索引暂存路径用的单行 KV tile（ops CopyInSingleKv）。
     using tileKvRow = Tile<Location::Vec, kvdtype, 1, D, BLayout::RowMajor>;
 
     using gmQView = global_tensor<qdtype, RowMajor<kGroupM, D>>;
@@ -174,26 +166,23 @@ struct qsmla_v3_types {
 };
 
 // ---------------------------------------------------------------------------
-// v3 entry point — 4-PE CSA (HIF8 in / BF16 out).
+// v3 入口 —— 4-PE CSA（HIF8 入 / BF16 出）。
 //
-//   v0_res_scratch : [kS2Base, D] kvdtype staging buffer (ops v0Res).  CMP
-//                    indexed blocks and ORI tail blocks are staged here by
-//                    PE0 before the shared KV load.
-//   mask_scratch   : 2 x [kPeTm, kS2Base] float mask buffers.  Region 0 is
-//                    the all-zero mask written once per work item (ops
-//                    zero_mask_buf); region 1 is rebuilt per partial block.
-//   o_scratch      : [B*S1*N1, D] float O buffer.  Model-gap fallback: the
-//                    ops kernel keeps O resident in UB (stage2OutBuf), but a
-//                    resident O tile crossing the in-block scalar staging
-//                    loops trips the compiler's Shared-pool keep-alive TMOV
-//                    (Local TMOV assertion, gfrun) — the same gap that
-//                    blocked the qsmla-oq-resident experiments.  v3 therefore
-//                    half-residents O in GM (one TSTORE + one TLOAD per
-//                    block, numerically identical).
+//   v0_res_scratch : [kS2Base, D] kvdtype 暂存缓冲（ops v0Res）。CMP 索引块与
+//                    ORI 尾块在共享 KV 加载前由 PE0 暂存到这里。
+//   mask_scratch   : 2 × [kPeTm, kS2Base] float mask 缓冲。区域 0 是每个 work
+//                    item 写一次的全区零 mask（ops zero_mask_buf）；区域 1 在
+//                    每个部分块重建。
+//   o_scratch      : [B*S1*N1, D] float O 缓冲。模型缺口的兜底方案：ops kernel
+//                    把 O 常驻在 UB（stage2OutBuf），但驻留的 O tile 跨过块内
+//                    标量暂存循环会触发编译器的 Shared-pool keep-alive TMOV
+//                    （gfrun 的 Local TMOV 断言）—— 与阻塞 qsmla-oq-resident
+//                    实验的是同一个缺口。因此 v3 让 O 半驻留在 GM（每块一次
+//                    TSTORE + 一次 TLOAD，数值等价）。
 //
-// Everything lives in one function with a unified block loop (ORI blocks
-// first, CMP blocks after — ops s2LoopCount < / >= oriKvLoopEndIdx) so the
-// Shared Q handle never crosses a function boundary.
+// 全部逻辑集中在一个函数、一个统一的块循环里（先 ORI 块，后 CMP 块 —— 对齐
+// ops 的 s2LoopCount < / >= oriKvLoopEndIdx），使 Shared Q 句柄不跨越函数
+// 边界。
 // ---------------------------------------------------------------------------
 template <typename qdtype, typename kvdtype, typename odttype, typename ModeConfig>
 void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
@@ -245,52 +234,48 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
     constexpr float kProbScaleRecip = 1.0f / 16.0f;
     constexpr float kMaskInactive = -1.0e30f;   // ops mask sentinel
 
-    // Loop-invariant fixpipe options (hoisted, fa_2d_unroll_gmma style).
+    // 循环不变的 fixpipe 选项（已外提，fa_2d_unroll_gmma 风格）。
     constexpr auto qkOptions = fixp::keep_acc();
     constexpr auto pvOptions = fixp::keep_acc().transpose_b();
 
     const uint32_t tid = get_thread_idx();
     const float score_base = softmax_scale * q_descale;
 
-    // Per-thread CSA TopK collection result (identical on every PE; the
-    // index array itself is read-only so every PE can collect in parallel).
+    // 每线程的 CSA TopK 收集结果（各 PE 完全相同；索引数组本身只读，所以每个 PE
+    // 都可以并行收集）。
     int selected[CmpTopK > 0 ? CmpTopK : 1];
 
     for (int work = 0; work < kWorkCount; ++work) {
-        // G slicing mirrors the v2 unified path: Config::decode_work yields the
-        // 64-head slice (g_slice) and the head base q_head_begin =
-        // kv_head*G + g_slice*GSliceMax, so the work order, Q row base and
-        // output offset all match the v2 layout.
+        // G 切分对齐 v2 的统一路径：Config::decode_work 给出 64-head 切片（g_slice）
+        // 与 head 基址 q_head_begin = kv_head*G + g_slice*GSliceMax，使 work 顺序、
+        // Q 行基址与输出偏移都与 v2 布局一致。
         const QsmlaWorkItem item = Types::Base::decode_work(work);
         const int batch = item.batch;
         const int q_token = item.q_token;
         const int kv_head = item.kv_head;
-        // Q row layout (qc): BSND base is batch * S1, TND base is
-        // cu_seqlens_q[batch] (both give the same flattened token row for the
-        // uniform-length benchmark cases).
+        // Q 行布局（qc）：BSND 基址为 batch * S1，TND 基址为 cu_seqlens_q[batch]
+        // （对等长 benchmark 用例两者给出同一个展平 token 行）。
         const int64_t q_tok = qsmla_q_token_base(qc, batch, S1) + q_token;
         const int64_t q_row_base = q_tok * N1 + item.q_head_begin;
-        // v3.1: BSND rows carry the per-batch base; PA_BBND rows are absolute
-        // pool rows from the block table (base 0).
+        // v3.1：BSND 行带每 batch 基址；PA_BBND 行是来自块表的绝对池行（基址 0）。
         const int64_t kOriBaseRow = (pa.ori_block_table == nullptr)
             ? static_cast<int64_t>(batch) * S2 : 0;
         const int64_t kCmpBaseRow = (pa.cmp_block_table == nullptr)
             ? static_cast<int64_t>(batch) * CmpS2 : 0;
 
-        // --- Q load, once per work item (ops CopyQGmToL1) -------------------
+        // --- Q 加载：每个 work item 一次（ops CopyQGmToL1）-------------------
         tileQ tQ;
         gmQView gQ(q_ptr + q_row_base * D);
         TLOAD<tileQMatrix, 1>(tQ, gQ);
 
-        // --- online-softmax state init (ops Vec1 first-block init) ----------
+        // --- online-softmax 状态初始化（ops Vec1 首块初始化）---------------
         tileRow tMax, tSum;
         TEXPANDS(tMax, -1.0e30f);
         TEXPANDS(tSum, 0.0f);
 
-        // All-zero mask, written once per work item (ops Step E zero_mask_buf
-        // fast path: full blocks consume the shared zero buffer instead of
-        // materialising a fresh mask).  Every PE writes the full buffer —
-        // identical values, so the concurrent writes are benign.
+        // 全区零 mask：每个 work item 写一次（ops Step E zero_mask_buf 快路径：满块
+        // 直接复用共享零缓冲，不必现造 mask）。每个 PE 都写整块 —— 值完全相同，因此
+        // 并发写是良性的。
         {
             const int seg = kS2Base / kPeNum;
             const int col_begin = static_cast<int>(tid) * seg;
@@ -303,11 +288,10 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
             }
         }
 
-        // --- block source descriptor (ops ComputeS2LoopInfo) ----------------
-        // ORI window (golden/ops Band-mode window semantics), then CMP TopK
-        // collection with the causal-end filter (ops CalcCurValidS2 +
-        // ProcessSparseKv: stop at the first -1, drop out-of-range and
-        // over-causal indices).
+        // --- 块源描述（ops ComputeS2LoopInfo）----------------
+        // 先定 ORI 窗口（golden/ops 的 Band 模式窗口语义），再做带因果端过滤的 CMP
+        // TopK 收集（ops CalcCurValidS2 + ProcessSparseKv：遇到第一个 -1 停止，丢弃
+        // 越界与超出因果范围的索引）。
         const QsmlaSwaRange range =
             qsmla_swa_range(S2, S1, q_token, win_left, win_right);
         const int ori_rows = range.end - range.begin;
@@ -342,8 +326,8 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
             kvdtype *kv_src = nullptr;
 
             if (!is_cmp) {
-                // Blocks start at the window begin (ops s2LineStartIdx), so
-                // the valid range is [0, hi) inside the block.
+                // 块从窗口起点开始（ops s2LineStartIdx），
+                // 因此块内有效范围是 [0, hi)。
                 const int remain = range.end - (range.begin + blk * kS2Base);
                 hi = kS2Base < remain ? kS2Base : remain;
                 kv_descale = ori_kv_descale;
@@ -353,17 +337,15 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
                 const int ori_pos0 = range.begin + blk * kS2Base;
                 const bool ori_full_block =
                     (range.begin + (blk + 1) * kS2Base <= S2);
-                // PA_BBND: when the logical block is block_size-aligned and
-                // the PA block size equals the kernel block, the whole block
-                // is one contiguous physical block, so the mapped base still
-                // supports the direct shared load.
+                // PA_BBND：当逻辑块按 block_size 对齐、且 PA 块大小等于 kernel 块大小时，
+                // 整个块就是一个连续物理块，映射后的基址仍支持直连共享加载。
                 const bool pa_ori_direct = ori_full_block &&
                     (pa.ori_block_table != nullptr) &&
                     (pa.ori_block_size == kS2Base) &&
                     (ori_pos0 % pa.ori_block_size == 0);
                 if (ori_full_block && QSMLA_V3_1_ORI_FORCE_STAGE == 0 &&
                     (pa.ori_block_table == nullptr || pa_ori_direct)) {
-                    // Full block inside the batch: direct shared load from GM.
+                    // batch 内的满块：直接从 GM 做共享加载。
                     const int64_t base_row = (pa.ori_block_table == nullptr)
                         ? static_cast<int64_t>(batch) * S2 + ori_pos0
                         : static_cast<int64_t>(
@@ -372,14 +354,11 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
                               pa.ori_block_size;
                     kv_src = ori_kv_ptr + base_row * D;
                 } else {
-                    // Tail block: stage the valid rows through v0-res (ops
-                    // Vec0 contiguous path); leftover rows stay dirty and are
-                    // masked below.
+                    // 尾块：把有效行经 v0-res 暂存（ops Vec0 连续路径）；
+                    // 剩余行保持脏数据，由下面的 mask 清除。
                     if (tid == 0) {
-                        // One reused row tile: declaring it inside the loop
-                        // would allocate a fresh tile handle per row and
-                        // overflow the tile index (BackToFrontIndex assert)
-                        // for full 128-row blocks.
+                        // 复用一个行 tile：若在循环内声明，会为每一行分配新的 tile 句柄，
+                        // 对满 128 行块会撑爆 tile 索引（BackToFrontIndex 断言）。
                         tileKvRow tRow;
                         for (int r = 0; r < hi; ++r) {
                             const int64_t row = kOriBaseRow +
@@ -400,11 +379,9 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
                 hi = kS2Base < remain ? kS2Base : remain;
                 kv_descale = cmp_kv_descale;
                 if (tid == 0) {
-                    // Indexed gather: one 512 B row per TLOAD/TSTORE pair
-                    // (ops CopyInSingleKv).  PE0 owns the staging so the
-                    // shared load it initiates observes the completed stores.
-                    // The row tile is reused across the loop (see the ORI
-                    // staging note) to keep the tile-index footprint at one.
+                    // 索引 gather：每次 TLOAD/TSTORE 搬一行 512B（ops CopyInSingleKv）。
+                    // 暂存由 PE0 负责，使由它发起的共享加载能看到已完成的 store。
+                    // 行 tile 在循环内复用（见 ORI 暂存说明），把 tile 索引占用保持为 1。
                     tileKvRow tRow;
                     for (int r = 0; r < hi; ++r) {
                         const int64_t row = kCmpBaseRow +
@@ -420,11 +397,9 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
                 kv_src = v0_res_scratch;
             }
 
-            // Mask source selection (ops: full blocks share the zero mask
-            // buffer; partial blocks rebuild a [lo, hi) mask).  The TLOAD
-            // itself stays unconditional — a Cube-tile TLOAD inside a
-            // runtime conditional trips a backend Shared-copy bug — so the
-            // choice is expressed purely through the GM pointer.
+            // mask 源选择（ops：满块共用零 mask 缓冲；部分块重建 [lo, hi) 的 mask）。
+            // TLOAD 本身保持无条件执行 —— 运行时条件分支里的 Cube-tile TLOAD 会触发后端
+            // Shared-copy 缺陷 —— 因此只用 GM 指针来表达选择。
             const bool partial = (lo != 0 || hi != kS2Base);
             float *mask_src = mask_scratch;  // region 0: all-zero
             if (partial) {
@@ -441,16 +416,16 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
                 mask_src = tail;
             }
 
-            // --- IterateLoadQK: KV block -> shared Right operand ------------
+            // --- IterateLoadQK：KV 块 -> 共享 Right 操作数 ----------------
             tileKV tKV;
             gmKVView gKV(kv_src);
             TLOAD<tileKVMatrix, 1>(tKV, gKV);
 
-            // --- IterateBmm1CSA: S = Q @ K^T (single K=512 product) ---------
+            // --- IterateBmm1CSA：S = Q @ K^T（单次 K=512 乘）-------------
             tileScore tScore;
             TMATMUL(tScore, tQ, tKV, qkOptions);
 
-            // --- ProcessVec1: online softmax ---------------------------------
+            // --- ProcessVec1：online softmax ---------------------------------
             const float score_scale = score_base * kv_descale;
             TMULS(tScore, tScore, score_scale);
 
@@ -458,8 +433,8 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
             gmMaskView gMask(mask_src);
             TLOAD(tMask, gMask);
             TADD(tScore, tScore, tMask);
-            // Full blocks add the shared all-zero mask (numerically a no-op,
-            // mirroring the ops vector-side mask add on the zero buffer).
+            // 满块加上共享的全零 mask（数值上是恒等操作，对齐 ops 在零缓冲上加 mask 的
+            // 向量侧行为）。
 
             tileScoreRed tLocalMaxR;
             TROWMAX(tLocalMaxR, tScore);
@@ -468,8 +443,8 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
             tileRow tNewMax;
             TMAX(tNewMax, tMax, tLocalMax);
 
-            // P0 = exp(S' - m_new); alpha = exp(m_old - m_new) for later
-            // blocks only (the first block has no accumulated O to rescale).
+            // P0 = exp(S' - m_new)；alpha = exp(m_old - m_new) 仅后续块需要
+            // （首块没有已累积的 O 需要重缩放）。
             TROWEXPANDEXPDIF(tScore, tScore, tNewMax);
 
             tileRow tScale;
@@ -488,15 +463,15 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
                 TFMA(tNewSum, tSum, tScale, tLocalSum);
             }
 
-            // --- Quantize P to HIF8 (ops: exp * 16 -> cast, l1PBuffers) -----
+            // --- 把 P 量化为 HIF8（ops：exp * 16 -> cast，l1PBuffers）------
             tilePShard tPShard;
             TMULS(tScore, tScore, kProbScale);
             TCVT(tPShard, tScore);
 
-            // --- IterateBmm2CSA + ProcessVec2: PV and flash update ----------
+            // --- IterateBmm2CSA + ProcessVec2：PV 与 flash 更新 ----------
             tileO tO;
             if (is_first) {
-                // First block: O = PV * descale (ops Vec2 direct-copy path).
+                // 首块：O = PV * descale（ops Vec2 直接拷贝路径）。
                 TMATMUL(tO, tPShard, tKV, pvOptions, kGroupM);
                 TMULS(tO, tO, kv_descale);
             } else {
@@ -519,7 +494,7 @@ void quant_sparse_flash_mla_csa_v3_1_4pe_pto(
             tSum = tNewSum;
         }
 
-        // --- epilogue (ops Vec2 last block + Bmm2DataCopyOut) ----------------
+        // --- epilogue（ops Vec2 最后一块 + Bmm2DataCopyOut）----------------
         tileO tO;
         {
             gmOView gOLoad(o_scratch +
