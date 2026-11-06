@@ -1,0 +1,17 @@
+diff --git a/TimingSim/scalar_pe/iex/iex.cpp b/TimingSim/scalar_pe/iex/iex.cpp
+index 0b961dd7f..737cf691d 100644
+--- a/TimingSim/scalar_pe/iex/iex.cpp
++++ b/TimingSim/scalar_pe/iex/iex.cpp
+@@ -579,7 +579,11 @@ void IEX::receiveVecGprWriteback()
+         return;
+     }
+ 
+-    const VecGprWriteback writeback = vec_gpr_writeback_q->Front();
++    VecGprWriteback writeback = vec_gpr_writeback_q->Front();
++    // [local patch] 架构上 PE 与线程 1:1（PEID=stid），但 v1 只实例化 1 个 PE 对象
++    // (stdPeCount=1) 并让 iex_pe_rslv_array 按 peCount 分配；4 线程时线程 1..3 的
++    // PEID 会越界。这里在单 PE 场景把 peid 归一化到 0，便于验证 4 线程路径。
++    if (iex_pe_rslv_array.size() == 1) writeback.peid = 0;
+     // Malformed producer packets are wiring/contract errors, not flushed
+     // lineage. Keep the packet visible and reject before any RF mutation.
+     ASSERT(writeback.sourceTileOp == TileOp::TCMPS);

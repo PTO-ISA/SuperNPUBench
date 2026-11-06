@@ -9,6 +9,9 @@
 //   PERM_CASE=0: Per0213  [B,N,S,D]=[1,16,936,128] → [1,936,16,128]  (BNSD→BSND)
 //   PERM_CASE=1: Per021   [A,B,C]=[2,128,512]      → [2,512,128]
 //   PERM_CASE=2: Per102   [A,B,C]=[16,32,64]       → [32,16,64]
+#ifndef TRANSPOSE_TILE_ELEMENTS
+#define TRANSPOSE_TILE_ELEMENTS 512
+#endif
 #ifndef PERM_CASE
 #define PERM_CASE 0
 #endif
@@ -43,15 +46,15 @@ int main() {
     BENCHSTART;
 #if PERM_CASE == 1
     supernpu::multi_thread::transpose_nd_v4<
-        supernpu::tile_isa::TransposeV2Perm::Per021, std::int32_t, kD0, kD1, kD2, kD3, 512>(
+        supernpu::tile_isa::TransposeV2Perm::Per021, std::int32_t, kD0, kD1, kD2, kD3, TRANSPOSE_TILE_ELEMENTS>(
         input, output);
 #elif PERM_CASE == 2
     supernpu::multi_thread::transpose_nd_v4<
-        supernpu::tile_isa::TransposeV2Perm::Per102, std::int32_t, kD0, kD1, kD2, kD3, 512>(
+        supernpu::tile_isa::TransposeV2Perm::Per102, std::int32_t, kD0, kD1, kD2, kD3, TRANSPOSE_TILE_ELEMENTS>(
         input, output);
 #else
     supernpu::multi_thread::transpose_nd_v4<
-        supernpu::tile_isa::TransposeV2Perm::Per0213, std::int32_t, kD0, kD1, kD2, kD3, 512>(
+        supernpu::tile_isa::TransposeV2Perm::Per0213, std::int32_t, kD0, kD1, kD2, kD3, TRANSPOSE_TILE_ELEMENTS>(
         input, output);
 #endif
     BENCHEND;
