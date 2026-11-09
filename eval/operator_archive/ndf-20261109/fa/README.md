@@ -10,7 +10,7 @@ The implementation approximates unscaled attention using BF16 log references on 
 
 ## Frozen evidence (historical, not rerun for this commit)
 
-Sq=256, Skv=8192, qD=vD=128, Tm=128, Tk=256, 4 PEs, K preload=1, N=1, dblQ=1, QK preload=0: AlgoD 21488 versus scoped D2 20519 cycles (-4.51%; reported MFU 79.85%). At Skv=65536 the comparison regresses: 155269 versus 258099 cycles. These are shape/config-specific observations, not an accepted performance claim.
+Sq=256, Skv=8192, qD=vD=128, Tm=128, Tk=256, 4 PEs, K preload=1, N=1, dblQ=1, QK preload=0: AlgoD 21488 versus scoped D2 20519 cycles (-4.51%; reported MFU 79.85%). The historical Skv=65536 comparison is AlgoD 155269 versus early unscoped packed D2 258099 cycles (D2 source SHA256 `1bc9534a2fa0a45a86fd4a75f1c33dd205091469000a38b26c44972566891125`). That 64K result does not use the final scoped source archived here (SHA256 `203a0ee7cea5a6e196cde78ce6e25e44a37115b39a738c0751a6452d5f06bfe2`); no corresponding 64K result for this scoped candidate is established. These are shape/config-specific observations, not an accepted performance claim.
 
 Packed rowsum smoke and its negative control passed. Full attention later failed: 6756/32768 outputs exceed atol=1e-3, rtol=2e-2; old/new compiler full outputs are byte-identical. All six input readbacks matched and output size was 65536 bytes. The historical BroadcastByteOffset model issue is only a clue; causality is unresolved. Compiler #140 passing does not close full numerical acceptance.
 
