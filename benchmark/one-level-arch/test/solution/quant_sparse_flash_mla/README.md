@@ -79,6 +79,7 @@ Pass 2: 重访同一批块，P = exp(S − m)/l，O = Σ P·V（逐 D 块累加�
 | `quant_sparse_flash_mla.hpp` | **4-PE 统一五模式 kernel**（Shared CUBE + TransB）。`IMPL=swa/hca/csa/ori_sparse/ori_cmp_sparse_tadd_4pe` 的实现体 |
 | `quant_sparse_flash_mla_v2.hpp` | 4-PE **动态形状变体**（`QSMLA_DYNAMIC_SHAPE=on`），Vec tile DYNAMIC ValidRow/ValidCol；八分节结构 |
 | `quant_sparse_flash_mla_csa_1pe.hpp` | **单 PE CSA kernel**（FP16/HIF8 双态，六分节）：`CsaTiles` 类型目录 / `csa_stage_cmp` MGATHER 双链 / `csa_build_masks` 位模式 mask / `csa_mm1_score`（4 处去重）/ `csa_pass2_pv`（2 处去重）/ 主循环。`IMPL=csa_tadd_1pe` |
+| `quant_sparse_flash_mla_v3_3_3.hpp` | **4-PE CSA 主实现（唯一保留版本）**：O/m/l 全 UB 驻留 + staging 预取（ring 深度 `QSMLA_PRELOAD`，预取距离 N−1）+ 行级 ping-pong + 多 work（work 循环上移 host）。`IMPL=csa_v3_3_3_4pe` |
 | `quant_sparse_flash_mla_tadd.hpp` | 单 PE SWA kernel（单 PE Local CUBE 机制参考源；方阵 Tk==Td 约束 + 行归约 ≤2048B 断言；BSND 层 batch 共享 Kᵀ 转置）。`IMPL=tadd` |
 | `qsmla_config.hpp` | 共享形状/地址/窗口辅助：`QsmlaConfig`（work item 编解码）、`qsmla_swa_range/block_range`（窗口与块裁剪）、`QsmlaSwaRange` 等 |
 | `qsmla_mode.hpp` | 五模式配置：`QsmlaModeConfig`、`qsmla_csa_cmp_valid_end`（CMP 因果边界）、`qsmla_sparse_collect_indices`（TopK 索引收集） |
@@ -223,16 +224,15 @@ grep -E "Total Cycles|Tileop Counter" sim.log
 
 ---
 
-## 5. prebuilt ELF 直接运行（v2 / v3 daily）
+## 5. prebuilt ELF 直接运行（v2 daily）
 
 `kernels/solution/quant_sparse_flash_mla/prebuilt/` 内置 csa_small（B=1, S1=1,
 S2=128, N1=64, D=512, win127/0, cmp_s2=64, TopK=40, ratio=4, HIF8 入 / BF16 出）
-两个性能形态的自足 ELF（数据已嵌入），合入后无需编译即可运行：
+v2 性能形态的自足 ELF（数据已嵌入），合入后无需编译即可运行；v3.3.3 形态见 §5.2 现场编译：
 
 | ELF（prebuilt/ 内） | 形态 | gfsim cycles | 数值 |
 |---|---|---|---|
 | `..._Tm64_Tk32_Td64_IMPLcsa_tadd_4pe_...INPUTembedded.elf` | v2（tadd 线，Tk=32/Td=64） | 455,596 | R2=0 |
-| `..._Tm64_Tk128_Td512_IMPLcsa_v3_4pe_...INPUTembedded.elf` | v3（ops-arch35 流程，Tk=128/Td=512） | **26,022** | R2=0 |
 
 运行命令（在 SuperScalarModel 仓根目录执行；gfrun 为功能验证，gfsim 为时序仿真）：
 
@@ -247,7 +247,7 @@ S2=128, N1=64, D=512, win127/0, cmp_s2=64, TopK=40, ratio=4, HIF8 入 / BF16 出
 ### 5.1 daily / release 集成
 
 `compile.all`（release 打包 `ops-YYYYMMDD` 的 qsmla daily case）在既有五模式
-tadd 清单末尾追加 v3 形态（大 tile `Tm=64 Tk=128 Td_block=512 IMPL=csa_v3_4pe`），
+tadd 清单末尾追加 v3.3.3 形态（大 tile `Tm=64 Tk=128 Td_block=512 IMPL=csa_v3_3_3_4pe QSMLA_PRELOAD=2`），
 与五模式共用 csa_small 数据。release 自动产出的 output/ ELF 即含 v2/v3 两个形态。
 
 ### 5.2 从源码重编
@@ -262,9 +262,9 @@ make TESTCASE=quant_sparse_flash_mla QSMLA_SPARSE_EMBED_INPUT=on B=1 s1=1 s2=128
   cmp_s2=64 N1=64 N2=1 D=512 wleft=127 wright=0 softmax_scale=0.04419417 \
   ori_topk=40 cmp_topk=40 cmp_ratio=4 Tm=64 Tk=32 Td_block=64 QSMLA_DTYPE=HIF8 \
   QSMLA_SPARSE_DATA_ROOT=/tmp/qsmla-sparse-hif8 IMPL=csa_tadd_4pe
-# v3
+# v3.3.3（PRELOAD 可选 1~4，默认 2）
 make TESTCASE=quant_sparse_flash_mla QSMLA_SPARSE_EMBED_INPUT=on B=1 s1=1 s2=128 \
   cmp_s2=64 N1=64 N2=1 D=512 wleft=127 wright=0 softmax_scale=0.04419417 \
   ori_topk=40 cmp_topk=40 cmp_ratio=4 Tm=64 Tk=128 Td_block=512 QSMLA_DTYPE=HIF8 \
-  QSMLA_SPARSE_DATA_ROOT=/tmp/qsmla-sparse-hif8 IMPL=csa_v3_4pe
+  QSMLA_SPARSE_DATA_ROOT=/tmp/qsmla-sparse-hif8 IMPL=csa_v3_3_3_4pe QSMLA_PRELOAD=2
 ```
