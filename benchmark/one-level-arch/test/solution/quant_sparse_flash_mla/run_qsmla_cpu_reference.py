@@ -16,7 +16,7 @@ List registered cases::
 
 Generate one reference-feasible case::
 
-    python3 run_qsmla_cpu_reference.py --case baseline_swa \
+    python3 run_qsmla_cpu_reference.py --case csa_small \
         --output-root /tmp/qsmla-reference
 
 Generate every reference-feasible registered case::
