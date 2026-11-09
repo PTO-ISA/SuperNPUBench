@@ -1,0 +1,75 @@
+{
+  "format_version": 1,
+  "purpose": "Source archive of a measured historical single-buffer RMSNorm; no default kernel replacement",
+  "repository": "https://github.com/PTO-ISA/SuperNPUBench",
+  "base_main": "c1d9a4f982d218bd14605376fa8c72eb105887c2",
+  "kernel_source_commit": "e7a4a761b880b9ea820e5106b64756ebbc6da998",
+  "same_kernel_as": "92ecf231270dcfdbca975580d9644c7e68eb0ed6^",
+  "alignment_reference": "68451bf75414d397c4bcede7a00581ed73585e09",
+  "driver_changes": "Only add alignas(512) to input/gamma/output in original driver; unused R8192 partial_workspace remains original. Current main also aligns workspace.",
+  "source_hashes": {
+    "source/driver.cpp": "ca60507c598af408b7a455835157f918e4081a439e3648d7a907f5143be7ef87",
+    "source/solution/normalization/rms_norm/rms_norm_dynamic_tree_32k.hpp": "f31c818062496854adcfe82c91400b763531f7bf40c99b73ffd57ba324b49fe4",
+    "source/support/_start.s": "c2d709a779a5ca9136a17f1797f868a90b6373db95dbcdb56a3ba0791b4037e1",
+    "source/support/fileop.h": "fd4cda057fb67cfc38006a1be015f64afc9b635f7464ab7fc9d73deed2a7d63f",
+    "source/support/readBinary.h": "66b6f0dfd3a79ca00706c090a982c24d1ff2086a64474e7f029164e16324c803",
+    "source/support/writeBinary.h": "72a5976f2be2bf71535bfaa4203b8902188e642689c2e726c504dc60bbcc967c"
+  },
+  "shape": {
+    "A": 128,
+    "R": 8192,
+    "PE": 4,
+    "dtype": "FP16"
+  },
+  "inputs": {
+    "mode": "static zero buffers; no RES_CHECK",
+    "input_bytes": 2097152,
+    "gamma_bytes": 16384,
+    "output_bytes": 2097152,
+    "external_files": []
+  },
+  "compiler": {
+    "sha256": "52f1faa6b4f73284c91815824129e00f67dfcd616d544d93836ab570dcff4443",
+    "api_status": "Use matching headers/sysroot from the frozen compiler installation; not bundled"
+  },
+  "historical_run": {
+    "total_cycles": 43694,
+    "exit_code": 0,
+    "model_sha256": "981546a2f65ecb773126bcfb6ec7d575dfcc6214869ed014dcd1ece05455f222",
+    "elf_sha256": "c6ece73296066f6fd53c6930c4d00ea4f379250dcade2bc7d4afa2c7471fda00",
+    "disassembly_sha256": "b9314dcccfd315b8ab39c3b2b7a90cc78c910d34d5ca8b0ecf938e0f5bfb78ae",
+    "native_conf_sha256": "d28ee85a992acb14c0ba7592364dd44a8eb2c9ad22d037cae105cf2af62f5db0",
+    "environment": {
+      "RMS_TAIL_BYPASS": "1"
+    },
+    "full_trace_sha256": "c7e9ae3a7d47b40bafaf4bce649c46d6fdfa7757413556e2b4b074ffd8b891c9",
+    "nocounters_trace_sha256": "f9a6964f1c6a0beee15eac875c3100efea9f543d853d81a65a7337814c9849b4",
+    "correctness": "not_checked; zero-input scheduling only",
+    "runtime": "Historical PR1145 lazy/first-data-ready + tail-bypass + shared-bandwidth model",
+    "artifact_delivery": "Historical runtime identity retained; final ELF and portable rebuilt runtime are now Release attachments. See artifact_delivery.json for separate historical/published hashes and downloaded replay receipt."
+  },
+  "limitations": [
+    "Nonzero numerical correctness and negative control not performed",
+    "Current-main IO ping-pong did not complete with the historical tool combination; no same-configuration A/B or revert claim",
+    "Historical compiler/API/ISA dependencies are not a complete publicly hosted reproduction bundle"
+  ],
+  "archive_recipe_review": {
+    "copied_directory_build": "passed",
+    "copied_directory_timing_cycles": 43694,
+    "exit_code": 0,
+    "elf_sha256": "c6ece73296066f6fd53c6930c4d00ea4f379250dcade2bc7d4afa2c7471fda00",
+    "instruction_listing_matches_historical": true,
+    "elf_and_disassembly_personal_path_scan": "passed",
+    "correctness": "not_checked; static zero-input scheduling only"
+  },
+  "delivery_index": "artifact_delivery.json",
+  "delivery_owner_repository": "https://github.com/PTO-ISA/SuperNPUBench",
+  "release_replay": {
+    "total_cycles": 43694,
+    "runtime_sha256": "6467f7f40cb61be854abdf7c4d77ffda85a73da9a4b9532e25d6ef0a0a6bca97",
+    "elf_sha256": "c6ece73296066f6fd53c6930c4d00ea4f379250dcade2bc7d4afa2c7471fda00",
+    "downloaded_assets_verified": true,
+    "trace_hashes_equal_historical": true,
+    "numeric_status": "not_checked_static_zero_timing_only"
+  }
+}
