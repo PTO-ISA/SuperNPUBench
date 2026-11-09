@@ -1,0 +1,186 @@
+--- a/include/tileop-api/jcore/template_asm.hpp
++++ b/include/tileop-api/jcore/template_asm.hpp
+@@ -19845,61 +19845,129 @@
+       return src1.GetRangeBase();
+     return uintptr_t{0};
+   }();
++  constexpr unsigned Src0Size = [] {
++    if constexpr (is_subview_v<A>)
++      return A::SubviewSizeCode;
++    return A::TilesizeCode;
++  }();
++  constexpr unsigned Src1Size = [] {
++    if constexpr (is_subview_v<B>)
++      return B::SubviewSizeCode;
++    return B::TilesizeCode;
++  }();
++  constexpr unsigned Src0Offset = [] {
++    if constexpr (is_subview_v<A>)
++      return A::OffsetUnits;
++    return 0U;
++  }();
++  constexpr unsigned Src1Offset = [] {
++    if constexpr (is_subview_v<B>)
++      return B::OffsetUnits;
++    return 0U;
++  }();
+   asm("" : "+r"(controlValue));
+-  asm volatile(
+-      "BSTART.TEPL 119, %D[Type]\n"
+-      PTO_ZERO_PAD_LAYOUT_ASM
+-      "B.DIM zero, %c[Cols], ->lb0\n"
+-      "B.DIM zero, %c[Rows], ->lb1\n"
+-      "B.DIM zero, %c[FullCols], ->lb2\n"
+-      "B.IOT %[Src0], %[Src1], mask=1111\n"
+-      ".if %c[HasSrc0View]\n"
+-      "B.SUBVIEW 0, %[Src0Base], 0, %c[Src0Size]\n"
+-      ".endif\n"
+-      ".if %c[HasSrc1View]\n"
+-      "B.SUBVIEW 1, %[Src1Base], 0, %c[Src1Size]\n"
+-      ".endif\n"
+-      ".if %c[Assemble]\n"
+-      "B.IOT mask=1111, last, ->%[Dst]<%Z[Size]>\n"
+-      "B.ASSEMBLE %c[Init], %c[Last], %[RegSrc], %c[Off], %c[WriterSize]\n"
+-      ".else\n"
+-      "B.IOT mask=1111, last, ->%[Dst]<%Z[Size]>\n"
+-      ".endif\n"
+-      "B.IOR [%[Control]],[]\n"
+-      : [Dst] "=Tr"(dst.data())
+-      : [Src0] "Tr"(src0.data()), [Src1] "Tr"(src1.data()),
+-        [Src0Base] "r"(src0Base),
+-        [Src1Base] "r"(src1Base),
+-        [Control] "r"(controlValue),
+-        [Type] "i"(type_traits<typename D::DType>::TypeCode),
+-        [Cols] "i"(WriterCols), [Rows] "i"(A::ValidRow),
+-        [FullCols] "i"(D::Cols), [Size] "i"(D::TilesizeCode),
+-        [Src0Size] "i"(A::TilesizeCode), [Src1Size] "i"(B::TilesizeCode),
+-        [HasSrc0View] "i"(static_cast<int>(is_subtile_view_v<A> || is_subview_v<A>)),
+-        [HasSrc1View] "i"(static_cast<int>(is_subtile_view_v<B> || is_subview_v<B>)),
+-        [Assemble] "i"(static_cast<int>(is_assemble_v<D>)),
+-        [Init] "i"([] {
+-          if constexpr (is_assemble_v<D>) return static_cast<int>(D::INIT);
+-          return 0;
+-        }()),
+-        [Last] "i"([] {
+-          if constexpr (is_assemble_v<D>) return static_cast<int>(D::LAST);
+-          return 0;
+-        }()),
+-        [RegSrc] "r"([&] {
+-          if constexpr (is_assemble_v<D>)
+-            return static_cast<uintptr_t>(dst.GetRangeBase());
+-          return uintptr_t{0};
+-        }()),
+-        [Off] "i"([] {
+-          if constexpr (is_assemble_v<D>) return D::OffsetUnits;
+-          return 0U;
+-        }()),
+-        [WriterSize] "i"([] {
+-          if constexpr (is_assemble_v<D>) return D::WriterSizeCode;
+-          return 0U;
+-        }()),
+-        [ElemLayout] "i"(local_layout_code_v<D>));
++  if constexpr (Associated) {
++    // A Local MIDDLE/LAST writer has no destination binder. The existing
++    // parent is the final source-form B.IOT slot and must stay live for the
++    // remainder of the generation (PTO-B-IOT-STREAM-001).
++    const uintptr_t rangeBase = static_cast<uintptr_t>(dst.GetRangeBase());
++    asm volatile(
++        "BSTART.TEPL 119, %D[Type]\n"
++        PTO_ZERO_PAD_LAYOUT_ASM
++        "B.DIM zero, %c[Cols], ->lb0\n"
++        "B.DIM zero, %c[Rows], ->lb1\n"
++        "B.DIM zero, %c[FullCols], ->lb2\n"
++        "B.IOT %[Src0], %[Src1], mask=1111\n"
++        ".if %c[HasSrc0View]\n"
++        "B.SUBVIEW 0, %[Src0Base], %c[Src0Off], %c[Src0Size]\n"
++        ".endif\n"
++        ".if %c[HasSrc1View]\n"
++        "B.SUBVIEW 1, %[Src1Base], %c[Src1Off], %c[Src1Size]\n"
++        ".endif\n"
++        "B.IOT %[ParentRef], mask=1111, last\n"
++        "B.ASSEMBLE %c[Init], %c[Last], %[RegSrc], %c[Off], %c[WriterSize]\n"
++        "B.IOR [%[Control]],[]\n"
++        :
++        : [Src0] "Tr"(src0.data()), [Src1] "Tr"(src1.data()),
++          [ParentRef] "Tr"(dst.data()), [Src0Base] "r"(src0Base),
++          [Src1Base] "r"(src1Base), [Control] "r"(controlValue),
++          [Type] "i"(type_traits<typename D::DType>::TypeCode),
++          [Cols] "i"(WriterCols), [Rows] "i"(A::ValidRow),
++          [FullCols] "i"(D::Cols), [Src0Size] "i"(Src0Size),
++          [Src1Size] "i"(Src1Size), [Src0Off] "i"(Src0Offset),
++          [Src1Off] "i"(Src1Offset),
++          [HasSrc0View] "i"(static_cast<int>(is_subtile_view_v<A> || is_subview_v<A>)),
++          [HasSrc1View] "i"(static_cast<int>(is_subtile_view_v<B> || is_subview_v<B>)),
++          [Init] "i"(static_cast<int>(D::INIT)),
++          [Last] "i"(static_cast<int>(D::LAST)), [RegSrc] "r"(rangeBase),
++          [Off] "i"(D::OffsetUnits), [WriterSize] "i"(D::WriterSizeCode),
++          [ElemLayout] "i"(local_layout_code_v<D>)
++        : "memory");
++  } else if constexpr (is_assemble_v<D>) {
++    // INIT allocates the parent and therefore uses a real destination binder.
++    const uintptr_t rangeBase = static_cast<uintptr_t>(dst.GetRangeBase());
++    asm volatile(
++        "BSTART.TEPL 119, %D[Type]\n"
++        PTO_ZERO_PAD_LAYOUT_ASM
++        "B.DIM zero, %c[Cols], ->lb0\n"
++        "B.DIM zero, %c[Rows], ->lb1\n"
++        "B.DIM zero, %c[FullCols], ->lb2\n"
++        "B.IOT %[Src0], %[Src1], mask=1111, last, ->%[Dst]<%Z[Size]>\n"
++        ".if %c[HasSrc0View]\n"
++        "B.SUBVIEW 0, %[Src0Base], %c[Src0Off], %c[Src0Size]\n"
++        ".endif\n"
++        ".if %c[HasSrc1View]\n"
++        "B.SUBVIEW 1, %[Src1Base], %c[Src1Off], %c[Src1Size]\n"
++        ".endif\n"
++        "B.ASSEMBLE %c[Init], %c[Last], %[RegSrc], %c[Off], %c[WriterSize]\n"
++        "B.IOR [%[Control]],[]\n"
++        : [Dst] "=Tr"(dst.data())
++        : [Src0] "Tr"(src0.data()), [Src1] "Tr"(src1.data()),
++          [Src0Base] "r"(src0Base), [Src1Base] "r"(src1Base),
++          [Control] "r"(controlValue),
++          [Type] "i"(type_traits<typename D::DType>::TypeCode),
++          [Cols] "i"(WriterCols), [Rows] "i"(A::ValidRow),
++          [FullCols] "i"(D::Cols), [Size] "i"(D::TilesizeCode),
++          [Src0Size] "i"(Src0Size), [Src1Size] "i"(Src1Size),
++          [Src0Off] "i"(Src0Offset), [Src1Off] "i"(Src1Offset),
++          [HasSrc0View] "i"(static_cast<int>(is_subtile_view_v<A> || is_subview_v<A>)),
++          [HasSrc1View] "i"(static_cast<int>(is_subtile_view_v<B> || is_subview_v<B>)),
++          [Init] "i"(static_cast<int>(D::INIT)),
++          [Last] "i"(static_cast<int>(D::LAST)), [RegSrc] "r"(rangeBase),
++          [Off] "i"(D::OffsetUnits), [WriterSize] "i"(D::WriterSizeCode),
++          [ElemLayout] "i"(local_layout_code_v<D>)
++        : "memory");
++  } else {
++    // Keep the plain form free of B.ASSEMBLE text. Backend metadata parses
++    // inline-asm templates before assembler-time .if elimination.
++    asm volatile(
++        "BSTART.TEPL 119, %D[Type]\n"
++        PTO_ZERO_PAD_LAYOUT_ASM
++        "B.DIM zero, %c[Cols], ->lb0\n"
++        "B.DIM zero, %c[Rows], ->lb1\n"
++        "B.DIM zero, %c[FullCols], ->lb2\n"
++        "B.IOT %[Src0], %[Src1], mask=1111, last, ->%[Dst]<%Z[Size]>\n"
++        ".if %c[HasSrc0View]\n"
++        "B.SUBVIEW 0, %[Src0Base], %c[Src0Off], %c[Src0Size]\n"
++        ".endif\n"
++        ".if %c[HasSrc1View]\n"
++        "B.SUBVIEW 1, %[Src1Base], %c[Src1Off], %c[Src1Size]\n"
++        ".endif\n"
++        "B.IOR [%[Control]],[]\n"
++        : [Dst] "=Tr"(dst.data())
++        : [Src0] "Tr"(src0.data()), [Src1] "Tr"(src1.data()),
++          [Src0Base] "r"(src0Base), [Src1Base] "r"(src1Base),
++          [Control] "r"(controlValue),
++          [Type] "i"(type_traits<typename D::DType>::TypeCode),
++          [Cols] "i"(WriterCols), [Rows] "i"(A::ValidRow),
++          [FullCols] "i"(D::Cols), [Size] "i"(D::TilesizeCode),
++          [Src0Size] "i"(Src0Size), [Src1Size] "i"(Src1Size),
++          [Src0Off] "i"(Src0Offset), [Src1Off] "i"(Src1Offset),
++          [HasSrc0View] "i"(static_cast<int>(is_subtile_view_v<A> || is_subview_v<A>)),
++          [HasSrc1View] "i"(static_cast<int>(is_subtile_view_v<B> || is_subview_v<B>)),
++          [ElemLayout] "i"(local_layout_code_v<D>)
++        : "memory");
++  }
+ }
+ 
+ template <is_tile_data_v D, is_tile_data_v A, is_tile_data_v B>
