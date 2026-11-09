@@ -6,5 +6,10 @@
   "fa/source/fa_lowp_algD_driver.cpp": "05b6d4881c8f346a47fe6d8676d4a0dca76e2beb7874e0ef75d841c092db34d7",
   "fa/source/multi_thread/fa_lowp_algB/fa_lowp_algD.hpp": "57ced228b7edc038d350a09981b6e447eef060549e68ff37c93a18e6c40d7f32",
   "fa/source/multi_thread/fa_lowp_algB/fa_lowp_algD2.hpp": "203a0ee7cea5a6e196cde78ce6e25e44a37115b39a738c0751a6452d5f06bfe2",
+  "rmsnorm/README.md": "fb40ba5bd85bbe476e76018299247575e664a46bdcbfcd21784fc51212524e24",
+  "rmsnorm/continuous8/solution/normalization/rms_norm/rms_norm_dynamic_tree_32k.hpp": "5b170e171d3ba5ef3c0e59e615cd871036e0e5ecfac98552003d7c23719b26a5",
+  "rmsnorm/driver/rms_norm_dynamic_tree_32k.cpp": "1b411181ac97b3b3f6f3200a90e156a3ea90620d0e1d89f8db31352170f28c9c",
+  "rmsnorm/dual_output_live/solution/normalization/rms_norm/rms_norm_dynamic_tree_32k.hpp": "350d8c7f312068ef745533c5bef905d56e5457709cb4b4e476d9466ef6fe11db",
+  "rmsnorm/prefetch_store_priority/solution/normalization/rms_norm/rms_norm_dynamic_tree_32k.hpp": "ccbb300d349ef69761f240ef37a58ce19e6da3c7c26f96eb1fe48c97a8c0c1f7",
   "verify_sources.py": "51a16b5c480b15514ff7bf553b535ca8d1643f2e60d28ab3b34394c99ddb9ae9"
 }
