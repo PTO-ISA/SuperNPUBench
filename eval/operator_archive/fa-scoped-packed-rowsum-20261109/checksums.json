@@ -1,0 +1,14 @@
+{
+  "README.md": "7046e998701d410e46a70beedcc218eb449acaa4dd7a4745cdf8c52132cea5c3",
+  "SCOPE.md": "6f6a9797c1a795ca9c490bbf1097f6579a9101ebb55ec93ed5ee7cd3da6e4565",
+  "archive_scope.json": "e93327b3bdbb5d1e38aaa5cb307f94896aa5f2bd6497cfeffad1f719490076ff",
+  "dependencies/api_tpack_emit.patch": "709b3e31223464fb1be06871b3e6c1a21abcf210186b86065106b62004e96eb5",
+  "identity.json": "931d4f442e3691fe84235c2f461783ecba227f2970d59b0bfd6c2d53a39acb53",
+  "release_download_receipt.json": "52ed58a706d46a92e9b10400458711f6db7eef469c07883c1596e336363b2960",
+  "release_download_verification.json": "90870123cc4d3ebb43bc38240d922cbb67ce84ad668b4fe857feb9f61ea3d720",
+  "release_index.json": "28c85c32e8dfb8f580bdb4a22bf9ce0805bc851f87eafaf69d4d9a2bd1ebdf34",
+  "source/fa_lowp_algD_driver.cpp": "05b6d4881c8f346a47fe6d8676d4a0dca76e2beb7874e0ef75d841c092db34d7",
+  "source/multi_thread/fa_lowp_algB/fa_lowp_algD.hpp": "57ced228b7edc038d350a09981b6e447eef060549e68ff37c93a18e6c40d7f32",
+  "source/multi_thread/fa_lowp_algB/fa_lowp_algD2.hpp": "203a0ee7cea5a6e196cde78ce6e25e44a37115b39a738c0751a6452d5f06bfe2",
+  "verify_sources.py": "51a16b5c480b15514ff7bf553b535ca8d1643f2e60d28ab3b34394c99ddb9ae9"
+}

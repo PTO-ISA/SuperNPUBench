@@ -1,0 +1,179 @@
+{
+  "snapshot": "2026-11-09",
+  "status": "published_download_verified",
+  "tag": "work-archive-fa-20261109",
+  "assets": [
+    {
+      "filename": "fa-operator-r1.tar.gz",
+      "bytes": 2391366,
+      "sha256": "70b9f4ad43eda07e051aaac8b811aef2498274ecb510dd1aa97878a9b499d309",
+      "payload_root": "fa-operator-r1",
+      "asset_id": 727713407,
+      "repository": "PTO-ISA/SuperNPUBench",
+      "kind": "operator",
+      "publication_status": "download_verified",
+      "asset_id_name": "fa-operator-r1",
+      "required_for": [],
+      "optional_for": [
+        "review_predecessor_operator_payload",
+        "replay_predecessor_cases"
+      ],
+      "owner": "archive task: Codex; long-term maintainer unassigned (documented gap)",
+      "archive_pr": "https://github.com/PTO-ISA/SuperNPUBench/pull/284",
+      "download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r1.tar.gz",
+      "release_target": "e01c0d4bef6e6503c90df80a70d2a7d6bf0ca9d0",
+      "superseded_for_current_replay_by": "fa-operator-r2",
+      "download_verified": true,
+      "stable_publication_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r1.tar.gz"
+    },
+    {
+      "filename": "fa-runtime-r1.tar.gz",
+      "bytes": 8113111,
+      "sha256": "7c6080abe2076038d5657f171e708118b4aa898b3b39d945635278aeaa6ab47f",
+      "payload_root": "fa-runtime-r1",
+      "asset_id": 727719159,
+      "repository": "LinxISA/SuperScalarModel",
+      "kind": "runtime",
+      "publication_status": "download_verified",
+      "asset_id_name": "fa-runtime-r1",
+      "required_for": [
+        "replay_existing_elf"
+      ],
+      "optional_for": [],
+      "owner": "archive task: Codex; long-term maintainer unassigned (documented gap)",
+      "archive_pr": "https://github.com/LinxISA/SuperScalarModel/pull/1222",
+      "download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r1.tar.gz",
+      "release_target": "b28d6865a84c91b650eee779e4bf5280381a1d65",
+      "download_verified": true,
+      "stable_publication_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r1.tar.gz"
+    },
+    {
+      "filename": "fa-operator-r2.tar.gz",
+      "bytes": 2392281,
+      "sha256": "6157ff881ed00ebf95a64196ba6725f57d8fcb1931f7516950c9ff13390a82b6",
+      "payload_root": "fa-operator-r2",
+      "asset_id": 727972488,
+      "repository": "PTO-ISA/SuperNPUBench",
+      "kind": "operator",
+      "publication_status": "download_verified",
+      "asset_id_name": "fa-operator-r2",
+      "required_for": [
+        "replay_existing_elf"
+      ],
+      "optional_for": [],
+      "owner": "archive task: Codex; long-term maintainer unassigned (documented gap)",
+      "archive_pr": "https://github.com/PTO-ISA/SuperNPUBench/pull/284",
+      "download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r2.tar.gz",
+      "release_target": "e01c0d4bef6e6503c90df80a70d2a7d6bf0ca9d0",
+      "download_verified": true,
+      "stable_publication_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r2.tar.gz"
+    },
+    {
+      "filename": "fa-8k-algod-21488-optional-traces-r1.tar.gz",
+      "bytes": 5804689,
+      "sha256": "731bf0c907b04efc60d3dca356a122c5f4166ce9154f053c3a4c6b2a1cbe267e",
+      "historical_result_id": "fa-8k-algod-21488",
+      "members": 7,
+      "kind": "optional_historical_trace",
+      "repository": "LinxISA/SuperScalarModel",
+      "asset_id": 727733658,
+      "download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-8k-algod-21488-optional-traces-r1.tar.gz",
+      "publication_status": "uploaded",
+      "required_for": [],
+      "optional_for": [
+        "review_historical_trace"
+      ],
+      "download_verified": false,
+      "replay_dependency": false,
+      "stable_publication_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-8k-algod-21488-optional-traces-r1.tar.gz"
+    },
+    {
+      "filename": "fa-8k-scoped-d2-20519-optional-traces-r1.tar.gz",
+      "bytes": 5259967,
+      "sha256": "061e56692cce7f3edc3e7ff51c0d720fb90c1041d39dfc6f5ad21982affe89ff",
+      "historical_result_id": "fa-8k-scoped-d2-20519",
+      "members": 7,
+      "kind": "optional_historical_trace",
+      "repository": "LinxISA/SuperScalarModel",
+      "asset_id": 727734818,
+      "download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-8k-scoped-d2-20519-optional-traces-r1.tar.gz",
+      "publication_status": "uploaded",
+      "required_for": [],
+      "optional_for": [
+        "review_historical_trace"
+      ],
+      "download_verified": false,
+      "replay_dependency": false,
+      "stable_publication_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-8k-scoped-d2-20519-optional-traces-r1.tar.gz"
+    },
+    {
+      "filename": "fa-64k-algod-155269-optional-traces-r1.tar.gz",
+      "bytes": 45632359,
+      "sha256": "8ed28afd6ba2e85c61426fce494f2ebabc7159e11f1d6f7a75724e7e0e0a8a4b",
+      "historical_result_id": "fa-64k-algod-155269",
+      "members": 7,
+      "kind": "optional_historical_trace",
+      "repository": "LinxISA/SuperScalarModel",
+      "asset_id": 727735681,
+      "download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-64k-algod-155269-optional-traces-r1.tar.gz",
+      "publication_status": "uploaded",
+      "required_for": [],
+      "optional_for": [
+        "review_historical_trace"
+      ],
+      "download_verified": false,
+      "replay_dependency": false,
+      "stable_publication_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-64k-algod-155269-optional-traces-r1.tar.gz"
+    },
+    {
+      "filename": "fa-64k-unscoped-d2-258099-optional-traces-r1.tar.gz",
+      "bytes": 47021876,
+      "sha256": "2689cda62dd0a6f4229d03fbbbe7c41b50f6db6daabc9753d63cada1997ad0a3",
+      "historical_result_id": "fa-64k-unscoped-d2-258099",
+      "members": 7,
+      "kind": "optional_historical_trace",
+      "repository": "LinxISA/SuperScalarModel",
+      "asset_id": 727741145,
+      "download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-64k-unscoped-d2-258099-optional-traces-r1.tar.gz",
+      "publication_status": "uploaded",
+      "required_for": [],
+      "optional_for": [
+        "review_historical_trace"
+      ],
+      "download_verified": false,
+      "replay_dependency": false,
+      "stable_publication_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-64k-unscoped-d2-258099-optional-traces-r1.tar.gz"
+    }
+  ],
+  "download_receipt": "evidence/download_receipt.json",
+  "replay_report": "evidence/download_verification.json",
+  "actual_case_count": 4,
+  "observed_cases": [
+    {
+      "result_id": "fa-8k-algod-21488-portable-r1",
+      "total_cycles": 21488,
+      "driver_rc": 0,
+      "simulator_rc": 0
+    },
+    {
+      "result_id": "fa-8k-scoped-d2-20519-portable-r1",
+      "total_cycles": 20519,
+      "driver_rc": 0,
+      "simulator_rc": 0
+    },
+    {
+      "result_id": "fa-64k-algod-155269-portable-r1",
+      "total_cycles": 155269,
+      "driver_rc": 0,
+      "simulator_rc": 0
+    },
+    {
+      "result_id": "fa-64k-unscoped-d2-258099-portable-r2",
+      "total_cycles": 258099,
+      "driver_rc": 0,
+      "simulator_rc": 0
+    }
+  ],
+  "scope": "zero-input timing only; independent numerical and clean-main comparison gaps remain",
+  "stable_urls_status": "actual public browser_download_url verified by publisher"
+}

@@ -1,0 +1,92 @@
+{
+  "origin_sha256": "23ad07d99efefc93e889c5b890bd6855959874f3bf231a9d994ca50621d03423",
+  "origin_bytes": 4850,
+  "transformation": "JSON reserialization; author workspace and host Python prefixes replaced with symbolic labels; no run values changed",
+  "record": {
+    "scope": "Actual authenticated draft Release downloads; final stable publication URLs may change without asset bytes changing.",
+    "downloaded_at": "2026-11-09T15:30:26.916603+00:00",
+    "assets": [
+      {
+        "filename": "fa-operator-r1.tar.gz",
+        "bytes": 2391366,
+        "sha256": "70b9f4ad43eda07e051aaac8b811aef2498274ecb510dd1aa97878a9b499d309",
+        "payload_root": "fa-operator-r1",
+        "asset_id": 727713407,
+        "repository": "PTO-ISA/SuperNPUBench",
+        "kind": "operator",
+        "publication_status": "uploaded_draft",
+        "asset_id_name": "fa-operator-r1",
+        "required_for": [
+          "replay_existing_elf"
+        ],
+        "optional_for": [],
+        "owner": "archive task: Codex; long-term maintainer unassigned (documented gap)",
+        "archive_pr": "https://github.com/PTO-ISA/SuperNPUBench/pull/284",
+        "download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/untagged-cb35f69b49aada3d9e3d/fa-operator-r1.tar.gz",
+        "release_target": "e01c0d4bef6e6503c90df80a70d2a7d6bf0ca9d0",
+        "downloaded_at": "2026-11-09T14:20:48.195390+00:00",
+        "download_file": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_download/downloads/fa-operator-r1.tar.gz",
+        "extracted": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_download/extracted/fa-operator-r1",
+        "actual_bytes": 2391366,
+        "actual_sha256": "70b9f4ad43eda07e051aaac8b811aef2498274ecb510dd1aa97878a9b499d309",
+        "source": "Authenticated GitHub Release asset API, six-worker verified byte ranges",
+        "manifest_verify_rc": 0,
+        "extracted_audit": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_download/operator_extracted_audit.json"
+      },
+      {
+        "filename": "fa-runtime-r1.tar.gz",
+        "bytes": 8113111,
+        "sha256": "7c6080abe2076038d5657f171e708118b4aa898b3b39d945635278aeaa6ab47f",
+        "payload_root": "fa-runtime-r1",
+        "asset_id": 727719159,
+        "repository": "LinxISA/SuperScalarModel",
+        "kind": "runtime",
+        "publication_status": "uploaded_draft",
+        "asset_id_name": "fa-runtime-r1",
+        "required_for": [
+          "replay_existing_elf"
+        ],
+        "optional_for": [],
+        "owner": "archive task: Codex; long-term maintainer unassigned (documented gap)",
+        "archive_pr": "https://github.com/LinxISA/SuperScalarModel/pull/1222",
+        "download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/untagged-be4b2084a16e07eb4a9e/fa-runtime-r1.tar.gz",
+        "release_target": "b28d6865a84c91b650eee779e4bf5280381a1d65",
+        "downloaded_at": "2026-11-09T15:29:41.248107+00:00",
+        "download_file": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_download/downloads/fa-runtime-r1.tar.gz",
+        "extracted": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_download/extracted/fa-runtime-r1",
+        "actual_bytes": 8113111,
+        "actual_sha256": "7c6080abe2076038d5657f171e708118b4aa898b3b39d945635278aeaa6ab47f",
+        "source": "Authenticated GitHub Release asset API, six-worker verified byte ranges",
+        "manifest_verify_rc": 0,
+        "extracted_audit": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_download/runtime_extracted_audit.json"
+      },
+      {
+        "filename": "fa-operator-r2.tar.gz",
+        "bytes": 2392281,
+        "sha256": "6157ff881ed00ebf95a64196ba6725f57d8fcb1931f7516950c9ff13390a82b6",
+        "payload_root": "fa-operator-r2",
+        "asset_id": 727972488,
+        "repository": "PTO-ISA/SuperNPUBench",
+        "kind": "operator",
+        "publication_status": "uploaded_draft",
+        "asset_id_name": "fa-operator-r2",
+        "required_for": [
+          "replay_existing_elf"
+        ],
+        "optional_for": [],
+        "owner": "archive task: Codex; long-term maintainer unassigned (documented gap)",
+        "archive_pr": "https://github.com/PTO-ISA/SuperNPUBench/pull/284",
+        "download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/untagged-cb35f69b49aada3d9e3d/fa-operator-r2.tar.gz",
+        "release_target": "e01c0d4bef6e6503c90df80a70d2a7d6bf0ca9d0",
+        "downloaded_at": "2026-11-09T15:30:26.907707+00:00",
+        "download_file": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_download/downloads/fa-operator-r2.tar.gz",
+        "extracted": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_download/extracted/fa-operator-r2",
+        "actual_bytes": 2392281,
+        "actual_sha256": "6157ff881ed00ebf95a64196ba6725f57d8fcb1931f7516950c9ff13390a82b6",
+        "source": "Authenticated GitHub Release asset API, six-worker verified byte ranges",
+        "manifest_verify_rc": 0,
+        "extracted_audit": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_download/operator_extracted_audit.json"
+      }
+    ]
+  }
+}
