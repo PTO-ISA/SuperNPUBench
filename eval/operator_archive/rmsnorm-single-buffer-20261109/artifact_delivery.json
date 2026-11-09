@@ -5,10 +5,10 @@
   "source_archive_commit": "877aa052dfc6dc2c6cf1493a76d08b1472cc3b12",
   "result_id": "rmsnorm-single-buffer-align512-43694",
   "proposed_filename": "rmsnorm-single-buffer-43694-operator-r1.tar.gz",
-  "publication_status": "planned",
-  "bytes": null,
-  "sha256": null,
-  "download_url": null,
+  "publication_status": "published_download_verified",
+  "bytes": 28489,
+  "sha256": "713cda1f8f709723d630bfa2e669568902cbcc2323ea15f5d8269d3316b96ebd",
+  "download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-20261109/rmsnorm-single-buffer-43694-operator-r1.tar.gz",
   "measured_files": [
     {
       "path": "rmsnorm_single_buffer.elf",
@@ -37,9 +37,12 @@
   "runtime_dependency": {
     "owner_repository": "https://github.com/LinxISA/SuperScalarModel",
     "pr": 1221,
-    "runtime_sha256": "981546a2f65ecb773126bcfb6ec7d575dfcc6214869ed014dcd1ece05455f222",
+    "runtime_sha256": "6467f7f40cb61be854abdf7c4d77ffda85a73da9a4b9532e25d6ef0a0a6bca97",
     "native_conf_sha256": "d28ee85a992acb14c0ba7592364dd44a8eb2c9ad22d037cae105cf2af62f5db0",
-    "model_changes": "model_changes.md in Model PR1221"
+    "model_changes": "model_changes.md in Model PR1221",
+    "historical_runtime_sha256": "981546a2f65ecb773126bcfb6ec7d575dfcc6214869ed014dcd1ece05455f222",
+    "download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-20261109/model-rmsnorm-6467f7f4-runtime-r1.tar.gz",
+    "identity_note": "Source-rebuilt portable runtime; original historical binary is not redistributed. Separate hashes retained."
   },
   "input_contract": {
     "shape": "A128/R8192",
@@ -50,19 +53,25 @@
   },
   "validation": {
     "historical_copied_source_total_cycles": 43694,
-    "new_simulations": false,
-    "shared_asset_replay": "not_checked",
-    "current_check": "measured ELF/diss bytes and hashes checked; no package created/uploaded"
+    "new_simulations": true,
+    "shared_asset_replay": "pass",
+    "downloaded_total_cycles": 43694,
+    "full_and_nocounters_trace_hashes_equal_historical": true,
+    "original_author_directory_accesses": 0,
+    "receipt_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-20261109/download_verification.json",
+    "scope": "Author-run clean-environment relocation; static-zero timing only, not independent S or numerical acceptance"
   },
   "disassembly_identity_note": "Delivery diss has only its file-format header normalized to a basename; historical hashes remain in historical_diss and identity.json. ELF and all instruction/body bytes are unchanged.",
   "remaining_work": [
-    "make/verify the actual operator package and compiler-free replay entry",
-    "coordinate fixed runtime/config delivery with Model PR1221",
-    "publish immutable attachment, then independently download and replay"
+    "nonzero independent numerical oracle/readback/negative control",
+    "final same-ELF unmodified-main-model control and model attribution",
+    "independent S reviewer and long-term maintainer remain unassigned"
   ],
   "historical_diss": {
     "path": "rmsnorm_single_buffer.elf.diss",
     "bytes": 21502,
     "sha256": "745bb71d8fea2e8fad729d5f33d0f9e2c5c5ff506a4d2275b1771101c3b39080"
-  }
+  },
+  "filename": "rmsnorm-single-buffer-43694-operator-r1.tar.gz",
+  "release_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/tag/work-archive-20261109"
 }

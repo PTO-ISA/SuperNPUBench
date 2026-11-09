@@ -54,12 +54,10 @@ random SoC uniform[300,400], seed=2. The native conf is shipped byte-for-byte.
 The helper and streaming JSON reader preserve instruction/flow events while
 filtering PMU counters from the nocounters file.
 
-The compiler, historical runtime, ELF and full traces are **not hosted in this
-source archive**. Their hashes identify the author-retained artifacts; obtaining
-the matching tools remains necessary for independent timing reproduction.
-The source recipe is not a complete NDF result bundle. Rebuilt ELF hashes may
-differ after path remapping; compare source/tool/config identities and actual
-cycles rather than assuming binary equality.
+The Git source archive keeps small metadata and source files. The final ELF/diss and compiler-free
+runner are published separately as the operator Release attachment. The matching portable model
+runtime and optional historical traces are in the model Release; no compiler download is needed
+to replay the existing ELF. Source rebuilding remains optional and has the historical tool limits above.
 
 ## Scope of the result
 
@@ -77,18 +75,28 @@ baseline; ELF and disassembly personal-path scans pass. This check does not add
 nonzero numerical validation.
 
 
-## 跨仓库交付归属
+## Release 下载复跑
 
-本目录是算子源码及构建入口的权威存档；最终ELF/diss、构建身份及算子重放入口也由
-SuperNPUBench交付，计划通过本仓库Release附件承载，不将大二进制提交进Git。
-逐文件身份与计划状态见 [artifact_delivery.json](artifact_delivery.json)。当前附件仍为planned，
-没有创建、上传或下载验证；这里新增的是交付清单。
+[SuperNPUBench Release](https://github.com/PTO-ISA/SuperNPUBench/releases/tag/work-archive-20261109)
+提供 `rmsnorm-single-buffer-43694-operator-r1.tar.gz`（28,489 bytes，ELF/diss、源码快照、免编译runner）。
+[Model Release](https://github.com/LinxISA/SuperScalarModel/releases/tag/work-archive-20261109)
+提供 `model-rmsnorm-6467f7f4-runtime-r1.tar.gz`（8,247,968 bytes，runtime、运行库/loader、配置及模型问题映射）。
+两包解压在同级目录后：
 
-模型runtime、源码恢复patch、模型配置/问题分析与运行trace归
-[SuperScalarModel PR1221](https://github.com/LinxISA/SuperScalarModel/pull/1221)，
-按runtime hash与ELF/config hash关联；模型归档目标分支并非运行模型源码基线。
-源码固定commit仍为`877aa052dfc6dc2c6cf1493a76d08b1472cc3b12`，后续文档提交不能替代它。
+```bash
+python3 rmsnorm-operator-r1/replay.py --model-root rmsnorm-runtime-r1 --outdir replay_run
+```
 
-本次不修改kernel/driver、默认IO ping-pong或历史产物，不新增仿真。
-现有build_snapshot.py是源码构建入口；计划中的已有ELF免编译重放入口尚待补齐。
-只拉此PR目前仍不能完整复跑，43694拍仍是历史实验模型的静态零输入计时。
+Linux x86_64、Python>=3.9。其他cwd请使用实际解压路径；输出目录必须为新目录且在payload之外。
+不需要编译器、完整工具链或历史trace。两份可选附件为历史trace及固定commit+patch的模型源码重建recipe。
+具体URL、大小、hash和输入合同见 [artifact_delivery.json](artifact_delivery.json)；Release还附跨仓库
+`release_index.json` 与 `download_verification.json`。
+
+四附件均已实际从GitHub下载并校验；下载后的算子/runtime在干净环境、无原作者源码/build/run目录依赖下
+复跑 **43694 Total Cycles / rc=0**，新full/nocounters trace hash与历史结果一致。
+新runtime SHA6467f7f4来自同一base+8文件patch的prefix-map源码重建，原981546a2因包含个人路径不分发；
+新旧身份分别记录，没有覆盖历史二进制或修改二进制字符串。它只通过这份零输入计时case，尚无非零数值验收。
+
+算子源码固定commit仍为 `877aa052dfc6dc2c6cf1493a76d08b1472cc3b12`，文档/Release tag不替代运行身份。
+默认IO ping-pong保持；最终同ELF未修改主线模型对照、独立S复核及长期维护人仍缺。
+模型改动/issue关系见 [SuperScalarModel PR1221](https://github.com/LinxISA/SuperScalarModel/pull/1221)。

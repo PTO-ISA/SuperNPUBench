@@ -46,7 +46,7 @@
     "nocounters_trace_sha256": "f9a6964f1c6a0beee15eac875c3100efea9f543d853d81a65a7337814c9849b4",
     "correctness": "not_checked; zero-input scheduling only",
     "runtime": "Historical PR1145 lazy/first-data-ready + tail-bypass + shared-bandwidth model",
-    "artifact_delivery": "Compiler/runtime/ELF/full traces not published in this source archive; hashes identify the historical author-retained artifacts"
+    "artifact_delivery": "Historical runtime identity retained; final ELF and portable rebuilt runtime are now Release attachments. See artifact_delivery.json for separate historical/published hashes and downloaded replay receipt."
   },
   "limitations": [
     "Nonzero numerical correctness and negative control not performed",
@@ -63,5 +63,13 @@
     "correctness": "not_checked; static zero-input scheduling only"
   },
   "delivery_index": "artifact_delivery.json",
-  "delivery_owner_repository": "https://github.com/PTO-ISA/SuperNPUBench"
+  "delivery_owner_repository": "https://github.com/PTO-ISA/SuperNPUBench",
+  "release_replay": {
+    "total_cycles": 43694,
+    "runtime_sha256": "6467f7f40cb61be854abdf7c4d77ffda85a73da9a4b9532e25d6ef0a0a6bca97",
+    "elf_sha256": "c6ece73296066f6fd53c6930c4d00ea4f379250dcade2bc7d4afa2c7471fda00",
+    "downloaded_assets_verified": true,
+    "trace_hashes_equal_historical": true,
+    "numeric_status": "not_checked_static_zero_timing_only"
+  }
 }
