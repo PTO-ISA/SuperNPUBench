@@ -1,7 +1,3 @@
-# Standalone FA source archive
+# Standalone FA archive and separate Release delivery
 
-This package contains only FA; it is split from mixed PR281. See README.md for historical observations and known correctness limits.
-
-This draft provides source snapshots and an integrity index only. No ELF, disassembly, runtime, input/golden, effective configuration, trace, or portable shared replay is delivered here. Release delivery and shared replay remain pending. No new build or simulation was performed. This is an incomplete archive, not NDF-complete acceptance.
-
-Run `python3 verify_sources.py` from any working directory to verify the original archived material only. The verifier does not build or execute kernels and is not a correctness test.
+Required assets are publicly published and their actual downloaded bytes were verified. 4/4 actual downloaded cases reproduced rc0 and historical cycles; zero-input timing only. Source files remain byte-preserved and outside default kernel integration. SuperNPUBench owns operator ELF/diss/source; Model owns runtime/config/recovery and optional trace assets. Numerical6756/32768 failure, final scoped64K and clean-main same-ELF gaps remain. Integrity verification is separate from numerical or full NDF acceptance.

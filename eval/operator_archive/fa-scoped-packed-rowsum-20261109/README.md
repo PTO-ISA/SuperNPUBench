@@ -1,23 +1,33 @@
-# FA AlgoD2 scoped packed rowsum — experimental source snapshot
+# FA source archive and diagnostic timing replay
 
-This is the final identified 8K performance candidate, **not a numerically accepted operator**. The source is preserved byte-for-byte; it is not wired into the default kernel test suite. AlgoD already exists at `benchmark/one-level-arch/kernels/basic_op/fa/fa_lowp_algD.hpp` (introduced by `757d4e598bebfd0bbd1d4c47dddd8371bd15410c`); that main-branch implementation is distinct from this exploration baseline.
+This FA-only archive preserves the final8K scoped packed-rowsum source byte-for-byte and leaves default kernel integration unchanged. D2 compresses denominator rowsum using packed BF16 carriers and pair-local scope; the snapshot also moves V load after softmax. It approximates unscaled attention using BF16 log references and MXFP4/E8M0 probabilities, with FP32 PV accumulation. It is not exact FP32 softmax. The archived API patch belongs to Linx-TileOP-API; complete original ISA/compiler/API and operator commit/dirty closure remain unresolved.
 
-## Source and arithmetic
+Packed rowsum smoke and its negative control passed, but full attention failed6756/32768 outputs at atol1e-3/rtol2e-2. All six historical input readbacks matched and old/new compiler full outputs were byte-identical; BroadcastByteOffset issue history is background, not an established root cause. Historical8K AlgoD21488/scopedD220519 and64K AlgoD155269/early-unscopedD2258099 are diagnostic zero-input results. No final scoped64K result or clean-main model same-ELF/config/input A/B exists. Streamed JSON changes host memory/observability, not a claimed cycle optimization.
 
-`source/multi_thread/fa_lowp_algB/fa_lowp_algD2.hpp` is the scoped final candidate; `fa_lowp_algD.hpp` is its immediate exploration baseline. `source/fa_lowp_algD_driver.cpp` is the original SPMD driver. D2 compresses the denominator update per query/KV block from 31 to 15 core TileOPs: 8 TROWSUM + 4 TPACK + TMUL + TROWSUM + TMULS. Pair-local temporaries shorten live ranges. The D-to-D2 snapshot delta also moves V load after softmax; it must not be described as only changing rowsum.
+Source hashes are listed in identity.json. Matching four ELF/diss/source snapshots are separate operator Release assets; fixed model/config/libraries/recovery belong to the Model Release. This Git directory does not promise a complete operator/compiler rebuild. Source verification checks bytes only, not functional correctness.
 
-The implementation approximates unscaled attention using BF16 log references on an ln2 grid, MXFP4/E8M0 probabilities and FP32 PV accumulation. The denominator uses BF16 exponentials, while the numerator uses quantized probabilities. It is not an exact FP32 softmax implementation; packed reduction also changes rounding order.
+## Download and run
 
-## Frozen evidence (historical, not rerun for this commit)
+Requires Linux x86_64 and Python>=3.9. Current operator-r2 defaults to a10GiB host virtual address-space limit (RLIMIT_AS), configurable with --memory-limit-gib; this is not a resident-RAM allocation. Provide enough RAM plus swap for the simulator, and a compatible host hard limit. No compiler or historical trace is needed. The operator asset owns four ELF/diss pairs and matching source snapshots; the Model runtime asset owns the fixed model, loader/libraries, native configs and source recovery recipe. Current publication/download status and exact hashes are in release_index.json / DELIVERY_STATUS; Required assets are publicly published and their actual downloaded bytes were verified.
 
-Sq=256, Skv=8192, qD=vD=128, Tm=128, Tk=256, 4 PEs, K preload=1, N=1, dblQ=1, QK preload=0: AlgoD 21488 versus scoped D2 20519 cycles (-4.51%; reported MFU 79.85%). The historical Skv=65536 comparison is AlgoD 155269 versus early unscoped packed D2 258099 cycles (D2 source SHA256 `1bc9534a2fa0a45a86fd4a75f1c33dd205091469000a38b26c44972566891125`). That 64K result does not use the final scoped source archived here (SHA256 `203a0ee7cea5a6e196cde78ce6e25e44a37115b39a738c0751a6452d5f06bfe2`); no corresponding 64K result for this scoped candidate is established. These are shape/config-specific observations, not an accepted performance claim.
+- [Operator ELF/diss asset](https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r2.tar.gz) (SHA256 `6157ff881ed00ebf95a64196ba6725f57d8fcb1931f7516950c9ff13390a82b6`).
+- [Model runtime/config asset](https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r1.tar.gz) (SHA256 `7c6080abe2076038d5657f171e708118b4aa898b3b39d945635278aeaa6ab47f`).
 
-Packed rowsum smoke and its negative control passed. Full attention later failed: 6756/32768 outputs exceed atol=1e-3, rtol=2e-2; old/new compiler full outputs are byte-identical. All six input readbacks matched and output size was 65536 bytes. The historical BroadcastByteOffset model issue is only a clue; causality is unresolved. Compiler #140 passing does not close full numerical acceptance.
+```sh
+curl -fL https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r2.tar.gz -o fa-operator-r2.tar.gz
+curl -fL https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r1.tar.gz -o fa-runtime-r1.tar.gz
+tar -xzf fa-operator-r2.tar.gz
+tar -xzf fa-runtime-r1.tar.gz
+python3 fa-operator-r2/replay.py --operator-root fa-operator-r2 --model-root fa-runtime-r1 --case fa-8k-algod-21488-portable-r1 --outdir replay-fa-8k-algod --memory-limit-gib 10
+```
 
-## Build dependencies and remaining work
+Use a new output directory for each case. The runner verifies asset identities, copies configs, clears diagnostic environment contamination and records full compressed SwimLane, nocounters and cycle log. Optional historical trace assets are on the Model Release and are not replay dependencies.
 
-Use the original driver with `-I source` and the matching NPUBench `kernels` and `test/common` includes. Its intended flags are `-DFA_ALGD2=1 -DFA_ALGB_ALGO_D=1 -DFA_ALGB_D_PRELOAD=1 -DFA_ALGB_D_PRELOAD_N=1 -DFA_ALGB_D_DBLQ=1 -DFA_ALGB_D_PRELOAD_QK=0 -DTsq=256 -DTskv=8192 -DFA_QD=128 -DFA_VD=128 -DTm=128 -DTk=256`; functional builds additionally require RES_CHECK/ENABLE_BINARY_OUTPUT, a portable CHK_DIR, and the existing multi-thread worker runtime. Debug builds need shape macros visible before the header.
+| portable case | expected Total Cycles | actual downloaded replay in this snapshot |
+|---|---:|---|
+| `fa-8k-algod-21488-portable-r1` | 21488 | 21488, rc0 |
+| `fa-8k-scoped-d2-20519-portable-r1` | 20519 | 20519, rc0 |
+| `fa-64k-algod-155269-portable-r1` | 155269 | 155269, rc0 |
+| `fa-64k-unscoped-d2-258099-portable-r2` | 258099 | 258099, rc0 |
 
-The archived API transplant is in `dependencies/api_tpack_emit.patch`; it belongs to Linx-TileOP-API, not to the NPUBench kernel. It preserves Local MIDDLE/LAST parent lifetime and subview offsets. Do not blindly apply it to a different API revision. Historical toolchain/runtime identities are in `identity.json`; the exact API/ISA baseline and native effective configuration remain incomplete. The registered newer compiler previously rejected full descriptors/unroll forms; this snapshot does not claim to build on current main.
-
-No ELF, input files, golden or trace is published by this source-only commit. Full independent oracle/input generation, negative controls, portable build/test integration, current-compiler admission, native/effective configs and new 8K/64K SwimLane evidence must be completed before promotion to a default kernel. Missing artifacts or dependencies must be treated as failures, not successful skips.
+Full attention numerical validation remains failed:6756/32768 out of tolerance. All four timing ELFs use static zero inputs; timing replay cannot promote correctness. The258099-cycle64K D2 is early unscoped source, not final scoped candidate. Final scoped64K and clean-main model same-ELF/config/input comparison are absent. Historical compiler/API/ISA closure and operator original commit/dirty gaps remain.
