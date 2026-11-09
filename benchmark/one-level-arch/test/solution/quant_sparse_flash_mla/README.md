@@ -111,6 +111,55 @@ Pass 2: 重访同一批块，P = exp(S − m)/l，O = Σ P·V（逐 D 块累加�
 - **不 include bench 的 `test/common/template_asm.h`**：其旧式 MGATHER
   （`BSTART.TMA 4`）会遮蔽 TileOP-API 活跃版（`BSTART.TLSU MGATHER`）
 
+### 2.4 4-PE CSA 主实现 `csa_v3_3_3_4pe`（`quant_sparse_flash_mla_v3_3_3.hpp`）
+
+对齐 ops arch35 的 CSA 流程：单趟 online softmax、128-token KV 块、4 PE 按 16 行切分
+G 切片（`G = N1/N2`，切片宽 64 头）。编译期约束：`N1 % 64 == 0`、`N2 == 1`
+（PA 池 `[BlockNum, BlockSize, 1, D]` 的行步长是 `D`）、`G % 16 == 0`。
+
+**work 分解**：`work = (batch, q_token, kv_head, g_slice)`，由 `Config::decode_work()` 给出。
+work 循环放在 host 侧（`src/quant_sparse_flash_mla.cpp`），kernel 接收显式 `work_id`，
+规避 `kWorkCount > 1` 时编译器的 raw-spill 缺陷（llvm-project #143）。
+
+**寻址**：Q 走 BSND/TND 行基址；KV 支持 BSND 连续映射与 PA_BBND 块表映射
+（identity paging，块大小 128），块表为空时退化为 `batch * S2` 连续行；CMP 侧按
+`cmp_indices[(q_tok*N2 + kv_head)*CmpTopK]` 逐索引 gather。
+
+**Buffer 规划**：
+
+| 角色 | 位置 | 生命周期 |
+|---|---|---|
+| `tQ`（64×D） | Shared | 每 work 加载一次，块循环内复用 |
+| `tO` | UB | 整个块循环常驻（GM 侧 `o_scratch` 循环内零使用） |
+| `tMax` / `tSum` | UB | 跨块累积（不用 GM 往返） |
+| KV `tileKV`（128×D） | Shared | 同一时刻仅 1 个句柄 |
+| staging ring | GM | `QSMLA_PRELOAD` 份 × 128 × D |
+
+**staging 预取**：每块一份 GM slice 组成 ring，预取距离固定 `QSMLA_PRELOAD − 1`
+（取 `QSMLA_PRELOAD` 会让 `blk` 与 `blk+N` 落到同一 slot，覆盖当前块尚未加载的数据）。
+每拍顺序：暂存 `blk+(N−1)` → `TLOAD` 当前块 → 建 mask → 计算 → 描述符 roll；
+`QSMLA_PRELOAD=1` 退化为「每块现暂存」。前奏已暂存前 `min(N, total)` 块，
+循环从 `blk ≥ 1` 起才继续预取，避免重复暂存。
+
+**行级 ping-pong**：暂存用两个行 tile（`tRowA/tRowB`）两行一组展开
+`TLOAD A → TLOAD B → TSTORE A → TSTORE B`，让下一行装载与上一行写回重叠；奇数尾行单独处理。
+
+**mask**：满块走共享全零 mask 缓冲（快路径）；部分块在 mask region 1 重建 `[lo, hi)`
+的 mask（`kMaskInactive = -1e30`）。4 个 PE 各写 32 列，依赖本模型 4-PE lockstep
+（同一拍的写先于所有 PE 的整块 `TLOAD` 生效；gfrun 多次运行输出逐字节一致）。
+若改为每个 PE 写整块，GM 标量写增至 4 倍，csa_small 实测 18,242 → 39,948 周期。
+
+**PA 数据**：`Makefile` 为 paged KV / 块表加了生成规则，干净数据根上会自动调用
+`gen_pa_bbnd_data.py`（幂等，一次产 4 个文件），无需手工准备。
+
+**单块执行流**：`TMATMUL(S = Q·Kᵀ)` → `×score_base(=softmax_scale·q_descale)`
+→ `×kv_descale` → `+mask` → `TROWMAX` → `TMAX(m_new)` → `TROWEXPANDEXPDIF`（P 与 alpha）
+→ `TROWSUM` → `TFMA` 更新 `tSum` → `×16` + `TCVT` 量化成 HIF8 → `TMATMUL(PV, transpose_b)`
+→ `×kv_descale` → 非首块 `O = O·alpha + PV`（首块直接 `O = PV`）。
+
+**epilogue**：`O /= tSum` → `×1/16`（撤销 P 的量化缩放）→ `TCVT` 成 BF16 → 按 PE 行偏移
+`TSTORE` 到输出。
+
 ---
 
 ## 3. 编译与运行
