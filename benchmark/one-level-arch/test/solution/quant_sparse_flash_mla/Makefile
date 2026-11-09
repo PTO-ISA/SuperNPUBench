@@ -261,9 +261,21 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
          EXTRA_OBJ_FILES += $(QSMLA_ORI_KV_PA_OBJ) $(QSMLA_CMP_KV_PA_OBJ) \
                             $(QSMLA_ORI_BT_OBJ) $(QSMLA_CMP_BT_OBJ)
          DEFINES += -DQSMLA_SPARSE_KV_PA_BBND=1
+         # 干净数据根上由 gen_pa_bbnd_data.py 生成 paged KV + 块表（幂等，一次产 4 个文件）。
+         QSMLA_PA_GEN := python3 $(CURDIR)/gen_pa_bbnd_data.py --data-dir $(QSMLA_SPARSE_DATA_DIR) --b $(B) --s2 $(s2) --cmp-s2 $(cmp_s2) --n2 $(N2) --d $(D) --ext $(QSMLA_INPUT_EXT) --block-size $(QSMLA_PA_BLOCK)
+
+      $(QSMLA_SPARSE_DATA_DIR)/ori_kv_pa.$(QSMLA_INPUT_EXT).bin: $(QSMLA_SPARSE_DATA_DIR)/ori_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_SPARSE_DATA_DIR)/cmp_kv.$(QSMLA_INPUT_EXT).bin
+	$(QSMLA_PA_GEN)
+
+      $(QSMLA_SPARSE_DATA_DIR)/cmp_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_SPARSE_DATA_DIR)/ori_block_table.int32.bin $(QSMLA_SPARSE_DATA_DIR)/cmp_block_table.int32.bin: $(QSMLA_SPARSE_DATA_DIR)/ori_kv_pa.$(QSMLA_INPUT_EXT).bin
+	@test -f $@ || $(QSMLA_PA_GEN)
       endif
 
+      # v3.3.3 的 TARGET 已在 IMPL 分支内给出（含 _P$(QSMLA_PRELOAD)），此处不要覆盖，
+      # 否则不同 preload 深度会落到同一个 ELF 路径、互相覆盖。
+      ifneq ($(IMPL), csa_v3_3_3_4pe)
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_INPUTembedded.elf
+      endif
 
       $(QSMLA_Q_OBJ): $(QSMLA_SPARSE_DATA_DIR)/q.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
