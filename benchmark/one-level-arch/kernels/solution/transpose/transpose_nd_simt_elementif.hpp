@@ -79,7 +79,7 @@ void transpose_nd_simt_elementif_tile(DType *input, DType *output, int tile_star
                 for (int d = 0; d < Rank; ++d) {
                     const std::uint32_t coord =
                         (o / kOutStride[d]) % static_cast<std::uint32_t>(Dims[Perm[d]]);
-                    in_idx += coord * kInStride[kInv[d]];
+                    in_idx += coord * kInStride[Perm[d]];
                 }
                 vals[e] = input[in_idx];
             }

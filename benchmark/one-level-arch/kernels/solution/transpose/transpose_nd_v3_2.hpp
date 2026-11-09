@@ -164,10 +164,9 @@ void v32_tensor_move(DType *input, DType *output, std::uint32_t numel, int tile_
             if (off < 0) off = 0;
         }
         DataTile d;
-        auto gi = in_iter(0, off / TileElements);
-        auto go = out_iter(0, off / TileElements);
-        TLOAD(d, gi);
-        TSTORE(go, d);
+        Global gi_in(input + off), gi_out(output + off);
+        TLOAD(d, gi_in);
+        TSTORE(gi_out, d);
     }
 }
 

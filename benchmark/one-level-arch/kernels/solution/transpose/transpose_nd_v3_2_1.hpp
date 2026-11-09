@@ -114,11 +114,15 @@ void transpose_nd_v3_2_1(DType *input, DType *output, const v321_detail::V32Tili
         Iter it_in(input), it_out(output);
         (void)in_g; (void)out_g;
         for (int tt = pe_id; tt < t.numTiles; tt += static_cast<int>(PeCount)) {
+            int off = tt * TileElements;
+            if (off + TileElements > static_cast<int>(t.numel)) {
+                off = static_cast<int>(t.numel) - TileElements;
+                if (off < 0) off = 0;
+            }
             DataTile d;
-            auto gi = it_in(0, tt);
-            auto go = it_out(0, tt);
-            TLOAD(d, gi);
-            TSTORE(go, d);
+            Global gi_in(input + off), gi_out(output + off);
+            TLOAD(d, gi_in);
+            TSTORE(gi_out, d);
         }
         return;
     }
@@ -177,60 +181,16 @@ void transpose_nd_v3_2_1(DType *input, DType *output, const v321_detail::V32Tili
 
 
 /**
- * @brief v3.2.1 的**编译期特化路径**（小 shape 专用，对标 v3.1）
+ * @brief v3.2.1 入口：Host-tiling（参数由 `MakeV32Tiling()` 预先算好）
  *
- * 与 Host-tiling 版互补：shape/perm 编译期已知时，直接在编译期做
- * 轴规范化 + 场景选择，循环边界全为常量（`kFull`）→ 编译器可完全展开、
- * 多个 TLOAD/TSTORE 背靠背发射；配合**大 tile**（默认 2048）进一步减少 op 数。
- *
- * 用法：小 shape 由调用方选这个入口；大/动态 shape 用 `transpose_nd_v3_2_1`。
+ * 与 ops-math 原算子对齐：shape 在运行时确定，Host 侧算 tiling，
+ * kernel 只按参数搬运，不使用编译期 shape 特化。
  */
-template <typename DType, int Rank, int Elements, int TileElements,
-          std::uint32_t PeCount, std::array<int, 8> Dims, std::array<int, 8> Perm>
-void transpose_nd_v3_2_1_ct(DType *input, DType *output, int pe_id) {
-    constexpr v31_detail::ShapeInfo kRaw{Rank, Dims, Perm};
-    constexpr auto kRed = v31_detail::MergeAxis(v31_detail::RemoveAxis(kRaw));
-    constexpr auto kSc = v31_detail::SelectScenario(kRaw, sizeof(DType));
-    if constexpr (kSc == Scenario::TensorMove) {
-        v31_tensor_move<DType, Elements, TileElements>(input, output, pe_id,
-                                                       static_cast<int>(PeCount), pe_id == 0);
-    } else if constexpr (kSc == Scenario::NLast) {
-        constexpr int kNumPrefix = kRed.dim - 1;
-        constexpr int kL = kRed.inShape[kRed.dim - 1];
-        constexpr int kNumRows = Elements / kL;
-        v31_n_last<DType, kL, kNumRows, kNumPrefix, kRed.inShape, kRed.perm, TileElements>(
-            input, output, pe_id, static_cast<int>(PeCount), pe_id == 0);
-    } else {
-        v31_gather<DType, Rank, Elements, TileElements, Dims, Perm>(
-            input, output, pe_id, static_cast<int>(PeCount), pe_id == 0);
-    }
-}
-
-
-/**
- * @brief v3.2.1 统一路由入口（编译期路由）
- *
- * 在**编译期**按条件选择实现：
- *   - Rank >= 5（高维散列）        -> host-tiling 版（`transpose_nd_v3_2_1`）
- *   - Elements <= kSmallElements   -> 编译期特化版（`transpose_nd_v3_2_1_ct`，大 tile）
- *   - 其余（大 shape）             -> host-tiling 版（TE=512）
- *
- * @param t     Host 侧 `MakeV32Tiling()` 的结果（Rank<5 且小 shape 时不会用到）
- */
-template <typename DType, int Rank, int Elements, int SmallTileElements = 2048,
-          std::uint32_t PeCount,
-          std::array<int, 8> Dims, std::array<int, 8> Perm>
+template <typename DType, int CapElements, int TileElements = 512,
+          std::uint32_t PeCount = supernpu::multi_thread::kDefaultPeCount>
 void transpose_nd_v3_2_1_dispatch(DType *input, DType *output,
                                   const v321_detail::V32Tiling &t, int pe_id) {
-    constexpr int kSmallElements = 1 << 16;  // 64K 元素以内走编译期特化
-    if constexpr (Rank >= 5) {
-        transpose_nd_v3_2_1<DType, Elements, 512, PeCount>(input, output, t, pe_id);
-    } else if constexpr (Elements <= kSmallElements) {
-        transpose_nd_v3_2_1_ct<DType, Rank, Elements, SmallTileElements, PeCount, Dims, Perm>(
-            input, output, pe_id);
-    } else {
-        transpose_nd_v3_2_1<DType, Elements, 512, PeCount>(input, output, t, pe_id);
-    }
+    transpose_nd_v3_2_1<DType, CapElements, TileElements, PeCount>(input, output, t, pe_id);
 }
 
 }  // namespace supernpu::tile_isa

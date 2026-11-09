@@ -10,6 +10,7 @@ SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/transpose_v32.cpp
 TARGET = $(ELF_HEAD)_transpose_v32_PE4.elf
 V32_CASE ?= 0
 DEFINES += -DV32_CASE=$(V32_CASE)
+DEFINES += -DV32_TILE_ELEMENTS=$(V32_TILE_ELEMENTS)
 V32_TILE_ELEMENTS ?= 512
 else ifeq ($(TESTCASE),transpose_simt)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/transpose_simt.cpp

@@ -4,11 +4,9 @@
 #include "fileop.h"
 #include "multi_thread_res_check.h"
 #include "solution/transpose/transpose_nd_v3_2.hpp"
-#if defined(V32_USE_HOST_TILING) || defined(V32_CT) || defined(V32_DISPATCH)
 #include "solution/transpose/transpose_nd_v3_2_1.hpp"
-#endif
 
-// v3.2 测试（动态 shape + 场景分派）：shape/perm 均以**运行时数组**传入，
+// v3.2.1 测试（Host-tiling）：shape/perm 以**运行时数组**传入，
 // 覆盖三类场景与常见 rank/perm。
 //   CASE=0 1D [4096]        perm(0)              -> TENSOR_MOVE
 //   CASE=1 2D [64,64]       perm(1,0)            -> GATHER
@@ -16,7 +14,7 @@
 //   CASE=3 3D [32,64,512]   perm(0,2,1)          -> GATHER
 //   CASE=4 3D [16,32,64]    perm(2,0,1)          -> GATHER
 //   CASE=5 4D [8,8,8,8]     perm(0,2,1,3)        -> GATHER
-//   CASE=6 4D [1,16,936,128] perm(0,2,1,3)       -> GATHER
+//   CASE=6 4D [1,16,936,128] perm(0,2,1,3)       -> N_LAST
 //   CASE=7 5D [8,8,8,16,32] perm(0,1,4,3,2)      -> GATHER
 #ifndef V32_TILE_ELEMENTS
 #define V32_TILE_ELEMENTS 512
@@ -24,46 +22,33 @@
 #ifndef V32_CASE
 #define V32_CASE 0
 #endif
+#ifndef V32_PE
+#define V32_PE 4
+#endif
 
 #if V32_CASE == 1
 constexpr int kRank = 2;
-constexpr std::uint32_t kShape[2] = {64, 64};
-constexpr std::uint32_t kPerm[2] = {1, 0};
 constexpr int kCap = 64 * 64;
 #elif V32_CASE == 2
 constexpr int kRank = 3;
-constexpr std::uint32_t kShape[3] = {64, 64, 256};
-constexpr std::uint32_t kPerm[3] = {1, 0, 2};
 constexpr int kCap = 64 * 64 * 256;
 #elif V32_CASE == 3
 constexpr int kRank = 3;
-constexpr std::uint32_t kShape[3] = {32, 64, 512};
-constexpr std::uint32_t kPerm[3] = {0, 2, 1};
 constexpr int kCap = 32 * 64 * 512;
 #elif V32_CASE == 4
 constexpr int kRank = 3;
-constexpr std::uint32_t kShape[3] = {16, 32, 64};
-constexpr std::uint32_t kPerm[3] = {2, 0, 1};
 constexpr int kCap = 16 * 32 * 64;
 #elif V32_CASE == 5
 constexpr int kRank = 4;
-constexpr std::uint32_t kShape[4] = {8, 8, 8, 8};
-constexpr std::uint32_t kPerm[4] = {0, 2, 1, 3};
 constexpr int kCap = 8 * 8 * 8 * 8;
 #elif V32_CASE == 6
 constexpr int kRank = 4;
-constexpr std::uint32_t kShape[4] = {1, 16, 936, 128};
-constexpr std::uint32_t kPerm[4] = {0, 2, 1, 3};
 constexpr int kCap = 1 * 16 * 936 * 128;
 #elif V32_CASE == 7
 constexpr int kRank = 5;
-constexpr std::uint32_t kShape[5] = {8, 8, 8, 16, 32};
-constexpr std::uint32_t kPerm[5] = {0, 1, 4, 3, 2};
 constexpr int kCap = 8 * 8 * 8 * 16 * 32;
 #else
 constexpr int kRank = 1;
-constexpr std::uint32_t kShape[1] = {4096};
-constexpr std::uint32_t kPerm[1] = {0};
 constexpr int kCap = 4096;
 #endif
 
@@ -77,14 +62,43 @@ MultiThreadResCheckSync res_check_sync{};
 
 int main() {
     const std::uint32_t tid = get_thread_idx();
-    // 运行时 shape/perm（模拟动态传入）
-    std::uint32_t rt_in[kRank];
-    std::uint32_t rt_out[kRank];
-    std::uint32_t rt_perm[kRank];
+    // 运行时 shape/perm（模拟动态传入）。
+    // NOTE: 声明为 volatile —— 本模型会把相邻的 32 位标量写合并成一次 64 位栈写
+    //       并丢掉高半（曾导致 shape 出现 0）；volatile 强制逐元素写。
+    volatile std::uint32_t rt_in[kRank];
+    volatile std::uint32_t rt_out[kRank];
+    volatile std::uint32_t rt_perm[kRank];
+    // 同理，不走 constexpr 常量数组（其部分元素会被错误物化，见 issue #1038 同类问题）。
+#if V32_CASE == 0
+    rt_in[0] = 4096; rt_perm[0] = 0;
+#elif V32_CASE == 1
+    rt_in[0] = 64; rt_in[1] = 64; rt_perm[0] = 1; rt_perm[1] = 0;
+#elif V32_CASE == 2
+    rt_in[0] = 64; rt_in[1] = 64; rt_in[2] = 256;
+    rt_perm[0] = 1; rt_perm[1] = 0; rt_perm[2] = 2;
+#elif V32_CASE == 3
+    rt_in[0] = 32; rt_in[1] = 64; rt_in[2] = 512;
+    rt_perm[0] = 0; rt_perm[1] = 2; rt_perm[2] = 1;
+#elif V32_CASE == 4
+    rt_in[0] = 16; rt_in[1] = 32; rt_in[2] = 64;
+    rt_perm[0] = 2; rt_perm[1] = 0; rt_perm[2] = 1;
+#elif V32_CASE == 5
+    rt_in[0] = 8; rt_in[1] = 8; rt_in[2] = 8; rt_in[3] = 8;
+    rt_perm[0] = 0; rt_perm[1] = 2; rt_perm[2] = 1; rt_perm[3] = 3;
+#elif V32_CASE == 6
+    rt_in[0] = 1; rt_in[1] = 16; rt_in[2] = 936; rt_in[3] = 128;
+    rt_perm[0] = 0; rt_perm[1] = 2; rt_perm[2] = 1; rt_perm[3] = 3;
+#else
+    rt_in[0] = 8; rt_in[1] = 8; rt_in[2] = 8; rt_in[3] = 16; rt_in[4] = 32;
+    rt_perm[0] = 0; rt_perm[1] = 1; rt_perm[2] = 4; rt_perm[3] = 3; rt_perm[4] = 2;
+#endif
+    for (int i = 0; i < kRank; ++i) rt_out[i] = rt_in[rt_perm[i]];
+    // volatile → 普通数组转一手，供 `MakeV32Tiling()`（const 指针参数）使用。
+    std::uint32_t fin[kRank], fout[kRank], fperm[kRank];
     for (int i = 0; i < kRank; ++i) {
-        rt_in[i] = kShape[i];
-        rt_perm[i] = kPerm[i];
-        rt_out[i] = kShape[kPerm[i]];
+        fin[i] = rt_in[i];
+        fout[i] = rt_out[i];
+        fperm[i] = rt_perm[i];
     }
     // 自初始化：所有 PE 写入相同数据（确定性），供 host 侧 golden 比对；
     // 注意：这两段循环会被算进 gfsim 的 Total Cycles，纯性能测量请加 -DPERF_ONLY 跳过。
@@ -95,47 +109,22 @@ int main() {
 #ifdef RES_CHECK
     res_check_publish_inputs(res_check_sync, tid);
 #endif
-#if defined(V32_USE_HOST_TILING) || defined(V32_DISPATCH)
-    // Host 侧一次算好（不计入 BENCHSTART）
+    // 与 ops-math 原算子对齐：所有 case 统一走 Host-tiling（HT）路径。
     const auto tiling = supernpu::tile_isa::v321_detail::MakeV32Tiling(
-        kRank, rt_in, rt_out, rt_perm, static_cast<std::uint32_t>(kCap),
-        512, static_cast<int>(sizeof(std::int32_t)));  // 运行时路径固定 TE=512
-#endif
-#if defined(V32_CT) || defined(V32_DISPATCH)
-    constexpr auto kD8 = [](const std::uint32_t *a, int n) {
-        std::array<int, 8> r{};
-        for (int i = 0; i < 8; ++i) r[i] = (i < n) ? (int)a[i] : 1;
-        return r;
-    }(kShape, kRank);
-    constexpr auto kP8 = [](const std::uint32_t *a, int n) {
-        std::array<int, 8> r{};
-        for (int i = 0; i < 8; ++i) r[i] = (i < n) ? (int)a[i] : i;
-        return r;
-    }(kPerm, kRank);
-#endif
+        kRank, fin, fout, fperm, static_cast<std::uint32_t>(kCap), V32_TILE_ELEMENTS,
+        static_cast<int>(sizeof(std::int32_t)));
     BENCHSTART;
-#ifdef V32_DISPATCH
-    supernpu::tile_isa::transpose_nd_v3_2_1_dispatch<std::int32_t, kRank, kCap, V32_TILE_ELEMENTS, 4,
-                                                     kD8, kP8>(input, output, tiling, static_cast<int>(tid));
-#elif defined(V32_CT)
-    supernpu::tile_isa::transpose_nd_v3_2_1_ct<std::int32_t, kRank, kCap, V32_TILE_ELEMENTS, 4,
-                                                kD8, kP8>(input, output, static_cast<int>(tid));
-#elif defined(V32_USE_HOST_TILING)
-    supernpu::tile_isa::transpose_nd_v3_2_1<std::int32_t, kCap, V32_TILE_ELEMENTS, 4>(
+    supernpu::tile_isa::transpose_nd_v3_2_1_dispatch<std::int32_t, kCap, V32_TILE_ELEMENTS, V32_PE>(
         input, output, tiling, static_cast<int>(tid));
-#else
-    supernpu::multi_thread::transpose_nd_v3_2<std::int32_t, kCap, V32_TILE_ELEMENTS, 4>(
-        input, output, kRank, rt_in, rt_out, rt_perm, static_cast<std::uint32_t>(kCap));
-#endif
     BENCHEND;
 #ifdef RES_CHECK
     res_check_wait_for_all(res_check_sync, tid);
 #endif
+#ifdef ENABLE_BINARY_OUTPUT
     if (tid == 0) {
-        writeBinaryFile(
-            "/mnt/workspace/gitCode/ChenYiran/SuperScalar/SuperNPUBench/benchmark/one-level-arch/compare/solution_transpose_transpose_v32_PE4/output.bin",
-            reinterpret_cast<std::uint8_t *>(output),
-            sizeof(std::int32_t) * static_cast<std::size_t>(kCap));
+        writeBinaryFile(CHK_DIR "/output.bin", reinterpret_cast<std::uint8_t *>(output),
+                        sizeof(std::int32_t) * static_cast<std::size_t>(kCap));
     }
+#endif
     return 0;
 }
