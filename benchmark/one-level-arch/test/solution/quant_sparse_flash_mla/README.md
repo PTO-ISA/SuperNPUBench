@@ -160,6 +160,30 @@ work 循环放在 host 侧（`src/quant_sparse_flash_mla.cpp`），kernel 接收
 **epilogue**：`O /= tSum` → `×1/16`（撤销 P 的量化缩放）→ `TCVT` 成 BF16 → 按 PE 行偏移
 `TSTORE` 到输出。
 
+### 2.5 可运行用例清单
+
+仓库当前只保留**已在 gfrun 上跑通**的 9 个用例（`qsmla_cases.py`）：
+
+| case | 模式 | 推荐 IMPL | works | 数据来源 | 精度（2e-2 口径） |
+|---|---|---|---|---|---|
+| `csa_small` | CSA | `csa_v3_3_3_4pe` | 1 | 仓内生成（自足） | 100%（2.43e-4） |
+| `csa_medium` | CSA | `csa_v3_3_3_4pe` | 1 | 仓内生成（自足） | 100%（1.20e-3） |
+| `csa_mw_small` | CSA | `csa_v3_3_3_4pe` | 4 | 仓内生成（自足） | 100%（1.35e-2） |
+| `typical_bsnd_csa_s2_2048_topk1024_c4` | CSA | `csa_v3_3_3_4pe` | 64 | 仓外生产数据 | 99.36% → 100%@3e-2（2.94e-2） |
+| `typical_bsnd_csa_s2_128_topk32` | CSA | `csa_v3_3_3_4pe` | 32 | 仓外生产数据 | 99.70% → 100%@3.5e-2（3.30e-2） |
+| `swa_small` | SWA | `swa_tadd_4pe` | 1 | 仓内生成（自足） | 100%（4.92e-3） |
+| `hca_small` | HCA | `hca_tadd_4pe` | 1 | 仓内生成（自足） | 100%（4.67e-3） |
+| `ori_sparse_small` | ORI_SPARSE | `ori_sparse_tadd_4pe` | 1 | 仓内生成（自足） | 100%（9.07e-3） |
+| `ori_cmp_sparse_small` | ORI_CMP_SPARSE | `ori_cmp_sparse_tadd_4pe` | 1 | 仓内生成（自足） | 100%（4.79e-3） |
+
+说明：
+
+- CSA 五个用例统一走 `IMPL=csa_v3_3_3_4pe`（v3.3.3）；其余四个模式由统一 4-PE tadd kernel
+  按模式分派（v3.3.3 只实现 CSA）。
+- daily（`compile.all`）构建 5 个 five-mode 小用例 + `csa_v3_3_3_4pe`（`csa_small`，`QSMLA_PRELOAD=2`）。
+- `typical_bsnd_*` 依赖仓外 `qsmla_testdata/` 生产数据，非自足，需在有数据的环境单独构建。
+- `QSMLA_PRELOAD` 仅对 `csa_v3_3_3_4pe` 生效（默认 2，可选 1~4）。
+
 ---
 
 ## 3. 编译与运行
