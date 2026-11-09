@@ -1,0 +1,15 @@
+{
+  "status": "experimental_full_numerical_fail",
+  "source_sha256": {
+    "source/fa_lowp_algD_driver.cpp": "05b6d4881c8f346a47fe6d8676d4a0dca76e2beb7874e0ef75d841c092db34d7",
+    "source/multi_thread/fa_lowp_algB/fa_lowp_algD.hpp": "57ced228b7edc038d350a09981b6e447eef060549e68ff37c93a18e6c40d7f32",
+    "source/multi_thread/fa_lowp_algB/fa_lowp_algD2.hpp": "203a0ee7cea5a6e196cde78ce6e25e44a37115b39a738c0751a6452d5f06bfe2"
+  },
+  "historical_perf_elf_sha256": "82d046203473b4289593e780a634448595a76cd614441beb00b412693886fba3",
+  "historical_compiler_commit": "25f419f48bb4226ac29c0038f9162185ee6e3147",
+  "historical_model_commit": "89b2366ea704fd75fd702440496439dadf5496be",
+  "historical_perf_config_sha256": "089b75ed84c673c3b3972613b16eb942ddb7b2c1ecce9424564327009737f507",
+  "evidence_status": "Historical observations transcribed; original large artifacts not included. API/ISA full dependency lock incomplete.",
+  "historical_compiler_clang_sha256": "d590f0cda98208c6cc67538432101698a05f0fede8e988127fda2b43d9970199",
+  "historical_model_gfsim_sha256": "938fc03780f38bee1aa012caa6b7fc53b2acfb6f504a2ef647a422a1f0304544"
+}
