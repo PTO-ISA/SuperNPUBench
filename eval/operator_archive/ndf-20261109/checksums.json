@@ -1,5 +1,5 @@
 {
-  "README.md": "4c5be850b586fb78bd455b697bf0ede328e155074a7e2e58464cf1f092f2c0e6",
+  "README.md": "b812c0c8c0aa0cf8eb7185b712b6c8962a9d6a04a9d0356ea4ea46b2aad139ca",
   "fa/README.md": "67b9efc0ea22de300e9f4aca3afd4fb98ca41c7f363ecb1d08e9a331b4fbae49",
   "fa/dependencies/api_tpack_emit.patch": "709b3e31223464fb1be06871b3e6c1a21abcf210186b86065106b62004e96eb5",
   "fa/identity.json": "931d4f442e3691fe84235c2f461783ecba227f2970d59b0bfd6c2d53a39acb53",
@@ -11,10 +11,5 @@
   "fag/compact_source/fa_gmma_bwd_q.cpp": "092a53ff4ad1bf5bd4d133045538cdd574e16d02ee6d09d7e8c0449cfe48f264",
   "fag/prefetch_source/basic_op/fa/fa_gmma_bwd_q.hpp": "c5fdde2c9aa2180ed6e830993df837450bb7b4cba449e947075e33be161ac8a3",
   "fag/prefetch_source/fa_gmma_bwd_q.cpp": "c44b1ab21bf52628768a2ffd22becf27e41620b76aef03e4d0947ab1d22a9d49",
-  "rmsnorm/README.md": "fb40ba5bd85bbe476e76018299247575e664a46bdcbfcd21784fc51212524e24",
-  "rmsnorm/continuous8/solution/normalization/rms_norm/rms_norm_dynamic_tree_32k.hpp": "5b170e171d3ba5ef3c0e59e615cd871036e0e5ecfac98552003d7c23719b26a5",
-  "rmsnorm/driver/rms_norm_dynamic_tree_32k.cpp": "1b411181ac97b3b3f6f3200a90e156a3ea90620d0e1d89f8db31352170f28c9c",
-  "rmsnorm/dual_output_live/solution/normalization/rms_norm/rms_norm_dynamic_tree_32k.hpp": "350d8c7f312068ef745533c5bef905d56e5457709cb4b4e476d9466ef6fe11db",
-  "rmsnorm/prefetch_store_priority/solution/normalization/rms_norm/rms_norm_dynamic_tree_32k.hpp": "ccbb300d349ef69761f240ef37a58ce19e6da3c7c26f96eb1fe48c97a8c0c1f7",
   "verify_sources.py": "51a16b5c480b15514ff7bf553b535ca8d1643f2e60d28ab3b34394c99ddb9ae9"
 }
