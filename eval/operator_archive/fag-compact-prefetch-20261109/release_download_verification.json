@@ -1,0 +1,2300 @@
+{
+  "origin_sha256": "775b9bdea704032d45c05478ff19c67af631dd3aeb11296102eca17f7878a2ad",
+  "origin_bytes": 177091,
+  "transformation": "JSON reserialization; workspace/host Python prefix replaced by symbolic labels; observations unchanged",
+  "record": {
+    "operator": "FAG",
+    "scope": "Actual shared downloaded assets, unrelated-cwd env-i strace replay; zero-input timing only",
+    "cases": [
+      {
+        "resource_evidence": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2_resources.json",
+        "resources": {
+          "peak_tree_rss_bytes": 2315964416,
+          "minimum_mem_available_bytes": 3821154304,
+          "minimum_disk_free_bytes": 674721792,
+          "samples": [
+            {
+              "time": "2026-11-09T15:34:43.134898+00:00",
+              "tree_rss_bytes": 3579904,
+              "mem_available_bytes": 6107115520,
+              "disk_free_bytes": 688238592
+            },
+            {
+              "time": "2026-11-09T15:34:45.154954+00:00",
+              "tree_rss_bytes": 1158983680,
+              "mem_available_bytes": 4977410048,
+              "disk_free_bytes": 687554560
+            },
+            {
+              "time": "2026-11-09T15:34:47.169050+00:00",
+              "tree_rss_bytes": 1669349376,
+              "mem_available_bytes": 4467609600,
+              "disk_free_bytes": 687554560
+            },
+            {
+              "time": "2026-11-09T15:34:49.182789+00:00",
+              "tree_rss_bytes": 1740988416,
+              "mem_available_bytes": 4395114496,
+              "disk_free_bytes": 687554560
+            },
+            {
+              "time": "2026-11-09T15:34:51.198009+00:00",
+              "tree_rss_bytes": 1804247040,
+              "mem_available_bytes": 4331651072,
+              "disk_free_bytes": 687554560
+            },
+            {
+              "time": "2026-11-09T15:34:53.218184+00:00",
+              "tree_rss_bytes": 1873993728,
+              "mem_available_bytes": 4260945920,
+              "disk_free_bytes": 687554560
+            },
+            {
+              "time": "2026-11-09T15:34:55.230880+00:00",
+              "tree_rss_bytes": 2034573312,
+              "mem_available_bytes": 4116893696,
+              "disk_free_bytes": 687337472
+            },
+            {
+              "time": "2026-11-09T15:34:57.243519+00:00",
+              "tree_rss_bytes": 2170822656,
+              "mem_available_bytes": 3983515648,
+              "disk_free_bytes": 687337472
+            },
+            {
+              "time": "2026-11-09T15:34:59.264278+00:00",
+              "tree_rss_bytes": 2181636096,
+              "mem_available_bytes": 3966509056,
+              "disk_free_bytes": 687333376
+            },
+            {
+              "time": "2026-11-09T15:35:01.278491+00:00",
+              "tree_rss_bytes": 2204614656,
+              "mem_available_bytes": 3941564416,
+              "disk_free_bytes": 687333376
+            },
+            {
+              "time": "2026-11-09T15:35:03.291804+00:00",
+              "tree_rss_bytes": 2215968768,
+              "mem_available_bytes": 3929370624,
+              "disk_free_bytes": 687333376
+            },
+            {
+              "time": "2026-11-09T15:35:05.305462+00:00",
+              "tree_rss_bytes": 2220007424,
+              "mem_available_bytes": 3927805952,
+              "disk_free_bytes": 687312896
+            },
+            {
+              "time": "2026-11-09T15:35:07.317695+00:00",
+              "tree_rss_bytes": 2225684480,
+              "mem_available_bytes": 3922046976,
+              "disk_free_bytes": 687312896
+            },
+            {
+              "time": "2026-11-09T15:35:09.330582+00:00",
+              "tree_rss_bytes": 2233524224,
+              "mem_available_bytes": 3917422592,
+              "disk_free_bytes": 687312896
+            },
+            {
+              "time": "2026-11-09T15:35:11.343694+00:00",
+              "tree_rss_bytes": 2257649664,
+              "mem_available_bytes": 3895828480,
+              "disk_free_bytes": 687312896
+            },
+            {
+              "time": "2026-11-09T15:35:13.365290+00:00",
+              "tree_rss_bytes": 2266030080,
+              "mem_available_bytes": 3886804992,
+              "disk_free_bytes": 687308800
+            },
+            {
+              "time": "2026-11-09T15:35:15.388173+00:00",
+              "tree_rss_bytes": 2289278976,
+              "mem_available_bytes": 3863904256,
+              "disk_free_bytes": 687308800
+            },
+            {
+              "time": "2026-11-09T15:35:17.401255+00:00",
+              "tree_rss_bytes": 2295767040,
+              "mem_available_bytes": 3854573568,
+              "disk_free_bytes": 687284224
+            },
+            {
+              "time": "2026-11-09T15:35:19.413808+00:00",
+              "tree_rss_bytes": 2300633088,
+              "mem_available_bytes": 3847712768,
+              "disk_free_bytes": 687284224
+            },
+            {
+              "time": "2026-11-09T15:35:21.445867+00:00",
+              "tree_rss_bytes": 2310365184,
+              "mem_available_bytes": 3836362752,
+              "disk_free_bytes": 687284224
+            },
+            {
+              "time": "2026-11-09T15:35:23.458738+00:00",
+              "tree_rss_bytes": 2315964416,
+              "mem_available_bytes": 3821154304,
+              "disk_free_bytes": 686329856
+            },
+            {
+              "time": "2026-11-09T15:35:25.473525+00:00",
+              "tree_rss_bytes": 2218459136,
+              "mem_available_bytes": 3925155840,
+              "disk_free_bytes": 685277184
+            },
+            {
+              "time": "2026-11-09T15:35:27.494481+00:00",
+              "tree_rss_bytes": 41230336,
+              "mem_available_bytes": 6092001280,
+              "disk_free_bytes": 674750464
+            },
+            {
+              "time": "2026-11-09T15:35:29.507740+00:00",
+              "tree_rss_bytes": 22319104,
+              "mem_available_bytes": 6102122496,
+              "disk_free_bytes": 674721792
+            },
+            {
+              "time": "2026-11-09T15:35:31.520274+00:00",
+              "tree_rss_bytes": 22319104,
+              "mem_available_bytes": 6100344832,
+              "disk_free_bytes": 674721792
+            },
+            {
+              "time": "2026-11-09T15:35:33.542239+00:00",
+              "tree_rss_bytes": 22319104,
+              "mem_available_bytes": 6099755008,
+              "disk_free_bytes": 674721792
+            },
+            {
+              "time": "2026-11-09T15:35:35.559544+00:00",
+              "tree_rss_bytes": 22319104,
+              "mem_available_bytes": 6099734528,
+              "disk_free_bytes": 674721792
+            },
+            {
+              "time": "2026-11-09T15:35:37.572556+00:00",
+              "tree_rss_bytes": 22319104,
+              "mem_available_bytes": 6105661440,
+              "disk_free_bytes": 674721792
+            }
+          ]
+        },
+        "result_id": "fag-compact29028-portable-r2",
+        "historical_result_id": "fag-compact29028",
+        "completed_at": "2026-11-09T15:35:39.588246+00:00",
+        "driver_rc": 0,
+        "simulator_rc": 0,
+        "total_cycles": 29028,
+        "historical_cycles": 29028,
+        "full_uncompressed": {
+          "sha256": "bbd74cf8934d8fd3f4630047aed2335722c4228024708008adacb387195c5cf5",
+          "bytes": 56638022
+        },
+        "historical_full_uncompressed_equal": false,
+        "historical_annotation_normalized_equal": true,
+        "historical_full_uncompressed": {
+          "sha256": "adff0465b2bfb4753ebbf5a00609729cbaa97878cc7ec8be0167e030365b0a42",
+          "bytes": 58303127,
+          "verified_by": "streaming gzip decompression during archive preparation"
+        },
+        "annotation_normalization": {
+          "filtered_full_equal": true,
+          "full_normalized_historical_equal": true,
+          "historical_canonical_equal": true,
+          "events": 39536,
+          "canonical_sha256": "b561c0205eb131408c50d9caa1ec83bca56a1f084fd54c215221216890af608c",
+          "historical_raw_sha256": "becc0a8da44600203729b34eb84a3c8950dece1264333fd178127181ec463e25",
+          "actual_raw_sha256": "2fe43bb3a550b51e50905fd12610cd7263592b48970fa61b59d3974a6287920a",
+          "raw_hash_equal": false,
+          "full_normalized": {
+            "canonical_sha256": "e48953479697354be953c081ea0421bad1533864d0c9c5fea061b823853cd949",
+            "events": 515384,
+            "inverse_annotation_events": 0,
+            "metadata": {}
+          },
+          "historical_inverse_annotation_events": 6239,
+          "serialization_note": "Historical pure annotations inverted by exact documented rule; all other event fields/order/flows and root metadata canonical compared. Raw hashes remain distinct observations."
+        },
+        "nocounters_sha256": "2fe43bb3a550b51e50905fd12610cd7263592b48970fa61b59d3974a6287920a",
+        "nocounters_bytes": 10217483,
+        "historical_nocounters_sha256": "becc0a8da44600203729b34eb84a3c8950dece1264333fd178127181ec463e25",
+        "historical_nocounters_raw_hash_equal": false,
+        "historical_nocounters_note": "If raw hash differs, serialization must be independently reviewed; no equivalence inferred from raw hash.",
+        "file_access_trace": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2_file_access.strace",
+        "forbidden_accesses": [],
+        "workspace_paths_accessed": [
+          "${WORKSPACE}",
+          "${WORKSPACE}/perf_analysis",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/README.md",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-compact29028/case.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-compact29028/kernel.elf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-compact29028/kernel.elf.diss",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-prefetch89646/case.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-prefetch89646/kernel.elf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-prefetch89646/kernel.elf.diss",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-sl2_768_88050/case.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-sl2_768_88050/kernel.elf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-sl2_768_88050/kernel.elf.diss",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/files.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/historical_noc_semantic.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/historical_trace_equivalence.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/manifest.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/replay.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/__pycache__/trace_equivalence.cpython-310.pyc",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/__pycache__/trace_stream.cpython-310.pyc",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/derivation.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/run_swimlane.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/trace_equivalence.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/trace_stream.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/verify.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/README.md",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/bin/compact/gfsim",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/bin/static/gfsim",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/case_configs/fag-compact29028.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/case_configs/fag-prefetch89646.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/case_configs/fag-sl2_768_88050.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/copyright_path_review.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/files.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v2/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v3",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v3/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/ld-linux-x86-64.so.2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libc.so.6",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libgcc_s.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libm.so.6",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libstdc++.so.6",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libz.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/inventory.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libc6-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libelf1-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libgcc-s1-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libstdc++6-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/rapidjson-LICENSE",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/zlib1g-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/run_model.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/runtime_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/verify.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/perf.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/configs/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/invocation.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run/fag-compact29028-portable-r2.cellreg.csv",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run/fag-compact29028-portable-r2.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run/fag-compact29028-portable-r2.json.gz",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run/fag-compact29028-portable-r2.ratstall.csv",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run/fag-compact29028-portable-r2_full_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run/fag-compact29028-portable-r2_nocounters.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run/fag-compact29028-portable-r2_swim.log",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/replay_result.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/tmp"
+        ],
+        "numeric_status": "not_checked; no promotion",
+        "runtime_sha256": "61f6f36e7abbcb3827937b390d9bd913e543b0b279b0e806059e5c389a5e54cb",
+        "elf_sha256": "5ebaef32531ba25cb91389a31c1ad0184e54f9ee15151885909469d4b881409b",
+        "replay_result": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/replay_result.json",
+        "runner_nocounters_semantics": {
+          "filtered_full_equal": true,
+          "full_normalized_historical_equal": true,
+          "historical_canonical_equal": true,
+          "events": 39536,
+          "canonical_sha256": "b561c0205eb131408c50d9caa1ec83bca56a1f084fd54c215221216890af608c",
+          "historical_raw_sha256": "becc0a8da44600203729b34eb84a3c8950dece1264333fd178127181ec463e25",
+          "actual_raw_sha256": "2fe43bb3a550b51e50905fd12610cd7263592b48970fa61b59d3974a6287920a",
+          "raw_hash_equal": false,
+          "full_normalized": {
+            "canonical_sha256": "e48953479697354be953c081ea0421bad1533864d0c9c5fea061b823853cd949",
+            "events": 515384,
+            "inverse_annotation_events": 0,
+            "metadata": {}
+          },
+          "historical_inverse_annotation_events": 6239,
+          "serialization_note": "Historical pure annotations inverted by exact documented rule; all other event fields/order/flows and root metadata canonical compared. Raw hashes remain distinct observations."
+        },
+        "nocounters_semantic_check": {
+          "filtered_full_equal": true,
+          "historical_full_bytes_identical": false,
+          "historical_annotation_normalized_equal": true,
+          "events": 39536,
+          "note": "Raw bytes may differ due historical annotations/serialization; strict documented annotation inverse establishes full event fields/order/flows and metadata equivalence, not raw full-byte identity."
+        },
+        "nocounters_retention": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run/retention.json",
+        "nocounters_retained_gzip": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-compact29028-portable-r2/perf_run/fag-compact29028-portable-r2_nocounters.json.gz"
+      },
+      {
+        "resource_evidence": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2_resources.json",
+        "resources": {
+          "peak_tree_rss_bytes": 2758160384,
+          "minimum_mem_available_bytes": 3385888768,
+          "minimum_disk_free_bytes": 664662016,
+          "samples": [
+            {
+              "time": "2026-11-09T15:36:52.194742+00:00",
+              "tree_rss_bytes": 2121728,
+              "mem_available_bytes": 6114336768,
+              "disk_free_bytes": 683900928
+            },
+            {
+              "time": "2026-11-09T15:36:54.213445+00:00",
+              "tree_rss_bytes": 1082077184,
+              "mem_available_bytes": 5069852672,
+              "disk_free_bytes": 683212800
+            },
+            {
+              "time": "2026-11-09T15:36:56.231584+00:00",
+              "tree_rss_bytes": 1672220672,
+              "mem_available_bytes": 4489109504,
+              "disk_free_bytes": 683212800
+            },
+            {
+              "time": "2026-11-09T15:36:58.250323+00:00",
+              "tree_rss_bytes": 1750347776,
+              "mem_available_bytes": 4400869376,
+              "disk_free_bytes": 715575296
+            },
+            {
+              "time": "2026-11-09T15:37:00.263342+00:00",
+              "tree_rss_bytes": 1792520192,
+              "mem_available_bytes": 4358569984,
+              "disk_free_bytes": 715575296
+            },
+            {
+              "time": "2026-11-09T15:37:02.279267+00:00",
+              "tree_rss_bytes": 1839620096,
+              "mem_available_bytes": 4315316224,
+              "disk_free_bytes": 715571200
+            },
+            {
+              "time": "2026-11-09T15:37:04.292168+00:00",
+              "tree_rss_bytes": 1874763776,
+              "mem_available_bytes": 4282179584,
+              "disk_free_bytes": 715571200
+            },
+            {
+              "time": "2026-11-09T15:37:06.305515+00:00",
+              "tree_rss_bytes": 1944969216,
+              "mem_available_bytes": 4212264960,
+              "disk_free_bytes": 715571200
+            },
+            {
+              "time": "2026-11-09T15:37:08.318279+00:00",
+              "tree_rss_bytes": 1997684736,
+              "mem_available_bytes": 4156788736,
+              "disk_free_bytes": 715567104
+            },
+            {
+              "time": "2026-11-09T15:37:10.331213+00:00",
+              "tree_rss_bytes": 2017148928,
+              "mem_available_bytes": 4133244928,
+              "disk_free_bytes": 715550720
+            },
+            {
+              "time": "2026-11-09T15:37:12.351136+00:00",
+              "tree_rss_bytes": 2038505472,
+              "mem_available_bytes": 4109254656,
+              "disk_free_bytes": 715546624
+            },
+            {
+              "time": "2026-11-09T15:37:14.364902+00:00",
+              "tree_rss_bytes": 2048778240,
+              "mem_available_bytes": 4100009984,
+              "disk_free_bytes": 715546624
+            },
+            {
+              "time": "2026-11-09T15:37:16.377549+00:00",
+              "tree_rss_bytes": 2064130048,
+              "mem_available_bytes": 4083945472,
+              "disk_free_bytes": 715546624
+            },
+            {
+              "time": "2026-11-09T15:37:18.390857+00:00",
+              "tree_rss_bytes": 2071969792,
+              "mem_available_bytes": 4078563328,
+              "disk_free_bytes": 715546624
+            },
+            {
+              "time": "2026-11-09T15:37:20.403679+00:00",
+              "tree_rss_bytes": 2082512896,
+              "mem_available_bytes": 4061421568,
+              "disk_free_bytes": 715542528
+            },
+            {
+              "time": "2026-11-09T15:37:22.421406+00:00",
+              "tree_rss_bytes": 2090082304,
+              "mem_available_bytes": 4033204224,
+              "disk_free_bytes": 712859648
+            },
+            {
+              "time": "2026-11-09T15:37:24.433456+00:00",
+              "tree_rss_bytes": 2093596672,
+              "mem_available_bytes": 4039090176,
+              "disk_free_bytes": 712859648
+            },
+            {
+              "time": "2026-11-09T15:37:26.446729+00:00",
+              "tree_rss_bytes": 2116849664,
+              "mem_available_bytes": 4017721344,
+              "disk_free_bytes": 712859648
+            },
+            {
+              "time": "2026-11-09T15:37:28.459467+00:00",
+              "tree_rss_bytes": 2140639232,
+              "mem_available_bytes": 3993505792,
+              "disk_free_bytes": 712859648
+            },
+            {
+              "time": "2026-11-09T15:37:30.478357+00:00",
+              "tree_rss_bytes": 2159833088,
+              "mem_available_bytes": 3974979584,
+              "disk_free_bytes": 712859648
+            },
+            {
+              "time": "2026-11-09T15:37:32.497279+00:00",
+              "tree_rss_bytes": 2164158464,
+              "mem_available_bytes": 3971661824,
+              "disk_free_bytes": 712859648
+            },
+            {
+              "time": "2026-11-09T15:37:34.509683+00:00",
+              "tree_rss_bytes": 2167943168,
+              "mem_available_bytes": 3967606784,
+              "disk_free_bytes": 712855552
+            },
+            {
+              "time": "2026-11-09T15:37:36.528339+00:00",
+              "tree_rss_bytes": 2179026944,
+              "mem_available_bytes": 3952979968,
+              "disk_free_bytes": 712851456
+            },
+            {
+              "time": "2026-11-09T15:37:38.540824+00:00",
+              "tree_rss_bytes": 2185785344,
+              "mem_available_bytes": 3946012672,
+              "disk_free_bytes": 712851456
+            },
+            {
+              "time": "2026-11-09T15:37:40.553168+00:00",
+              "tree_rss_bytes": 2190651392,
+              "mem_available_bytes": 3941638144,
+              "disk_free_bytes": 712851456
+            },
+            {
+              "time": "2026-11-09T15:37:42.565894+00:00",
+              "tree_rss_bytes": 2194165760,
+              "mem_available_bytes": 3938582528,
+              "disk_free_bytes": 712851456
+            },
+            {
+              "time": "2026-11-09T15:37:44.581729+00:00",
+              "tree_rss_bytes": 2223091712,
+              "mem_available_bytes": 3912060928,
+              "disk_free_bytes": 712843264
+            },
+            {
+              "time": "2026-11-09T15:37:46.604103+00:00",
+              "tree_rss_bytes": 2230931456,
+              "mem_available_bytes": 3920179200,
+              "disk_free_bytes": 712835072
+            },
+            {
+              "time": "2026-11-09T15:37:48.623269+00:00",
+              "tree_rss_bytes": 2234982400,
+              "mem_available_bytes": 3912409088,
+              "disk_free_bytes": 712835072
+            },
+            {
+              "time": "2026-11-09T15:37:50.637329+00:00",
+              "tree_rss_bytes": 2238767104,
+              "mem_available_bytes": 3906297856,
+              "disk_free_bytes": 712835072
+            },
+            {
+              "time": "2026-11-09T15:37:52.654365+00:00",
+              "tree_rss_bytes": 2242387968,
+              "mem_available_bytes": 3900370944,
+              "disk_free_bytes": 712830976
+            },
+            {
+              "time": "2026-11-09T15:37:54.673767+00:00",
+              "tree_rss_bytes": 2271051776,
+              "mem_available_bytes": 3872591872,
+              "disk_free_bytes": 712830976
+            },
+            {
+              "time": "2026-11-09T15:37:56.690112+00:00",
+              "tree_rss_bytes": 2311061504,
+              "mem_available_bytes": 3832602624,
+              "disk_free_bytes": 712830976
+            },
+            {
+              "time": "2026-11-09T15:37:58.703863+00:00",
+              "tree_rss_bytes": 2315382784,
+              "mem_available_bytes": 3828224000,
+              "disk_free_bytes": 712830976
+            },
+            {
+              "time": "2026-11-09T15:38:00.718517+00:00",
+              "tree_rss_bytes": 2319167488,
+              "mem_available_bytes": 3824631808,
+              "disk_free_bytes": 712830976
+            },
+            {
+              "time": "2026-11-09T15:38:02.730956+00:00",
+              "tree_rss_bytes": 2322546688,
+              "mem_available_bytes": 3820564480,
+              "disk_free_bytes": 712822784
+            },
+            {
+              "time": "2026-11-09T15:38:04.750314+00:00",
+              "tree_rss_bytes": 2343632896,
+              "mem_available_bytes": 3802365952,
+              "disk_free_bytes": 712822784
+            },
+            {
+              "time": "2026-11-09T15:38:06.763589+00:00",
+              "tree_rss_bytes": 2348769280,
+              "mem_available_bytes": 3770691584,
+              "disk_free_bytes": 712818688
+            },
+            {
+              "time": "2026-11-09T15:38:08.790191+00:00",
+              "tree_rss_bytes": 2353094656,
+              "mem_available_bytes": 3770179584,
+              "disk_free_bytes": 712814592
+            },
+            {
+              "time": "2026-11-09T15:38:10.815225+00:00",
+              "tree_rss_bytes": 2356068352,
+              "mem_available_bytes": 3770241024,
+              "disk_free_bytes": 712814592
+            },
+            {
+              "time": "2026-11-09T15:38:12.828893+00:00",
+              "tree_rss_bytes": 2371207168,
+              "mem_available_bytes": 3771265024,
+              "disk_free_bytes": 715468800
+            },
+            {
+              "time": "2026-11-09T15:38:14.856396+00:00",
+              "tree_rss_bytes": 2392563712,
+              "mem_available_bytes": 3751190528,
+              "disk_free_bytes": 715464704
+            },
+            {
+              "time": "2026-11-09T15:38:16.869106+00:00",
+              "tree_rss_bytes": 2396618752,
+              "mem_available_bytes": 3747328000,
+              "disk_free_bytes": 715464704
+            },
+            {
+              "time": "2026-11-09T15:38:18.881200+00:00",
+              "tree_rss_bytes": 2400133120,
+              "mem_available_bytes": 3739660288,
+              "disk_free_bytes": 715464704
+            },
+            {
+              "time": "2026-11-09T15:38:20.893615+00:00",
+              "tree_rss_bytes": 2402566144,
+              "mem_available_bytes": 3736690688,
+              "disk_free_bytes": 715419648
+            },
+            {
+              "time": "2026-11-09T15:38:22.906069+00:00",
+              "tree_rss_bytes": 2406350848,
+              "mem_available_bytes": 3732692992,
+              "disk_free_bytes": 715419648
+            },
+            {
+              "time": "2026-11-09T15:38:24.921771+00:00",
+              "tree_rss_bytes": 2439602176,
+              "mem_available_bytes": 3709607936,
+              "disk_free_bytes": 715419648
+            },
+            {
+              "time": "2026-11-09T15:38:26.934097+00:00",
+              "tree_rss_bytes": 2444197888,
+              "mem_available_bytes": 3710652416,
+              "disk_free_bytes": 715415552
+            },
+            {
+              "time": "2026-11-09T15:38:28.966017+00:00",
+              "tree_rss_bytes": 2447441920,
+              "mem_available_bytes": 3703173120,
+              "disk_free_bytes": 715415552
+            },
+            {
+              "time": "2026-11-09T15:38:30.979701+00:00",
+              "tree_rss_bytes": 2450415616,
+              "mem_available_bytes": 3701161984,
+              "disk_free_bytes": 715407360
+            },
+            {
+              "time": "2026-11-09T15:38:32.993275+00:00",
+              "tree_rss_bytes": 2469068800,
+              "mem_available_bytes": 3681554432,
+              "disk_free_bytes": 715407360
+            },
+            {
+              "time": "2026-11-09T15:38:35.005575+00:00",
+              "tree_rss_bytes": 2487992320,
+              "mem_available_bytes": 3668484096,
+              "disk_free_bytes": 715407360
+            },
+            {
+              "time": "2026-11-09T15:38:37.018630+00:00",
+              "tree_rss_bytes": 2492047360,
+              "mem_available_bytes": 3668496384,
+              "disk_free_bytes": 715407360
+            },
+            {
+              "time": "2026-11-09T15:38:39.031886+00:00",
+              "tree_rss_bytes": 2495832064,
+              "mem_available_bytes": 3668246528,
+              "disk_free_bytes": 715407360
+            },
+            {
+              "time": "2026-11-09T15:38:41.044349+00:00",
+              "tree_rss_bytes": 2499346432,
+              "mem_available_bytes": 3667750912,
+              "disk_free_bytes": 715403264
+            },
+            {
+              "time": "2026-11-09T15:38:43.059107+00:00",
+              "tree_rss_bytes": 2526380032,
+              "mem_available_bytes": 3640655872,
+              "disk_free_bytes": 715403264
+            },
+            {
+              "time": "2026-11-09T15:38:45.071381+00:00",
+              "tree_rss_bytes": 2538815488,
+              "mem_available_bytes": 3625439232,
+              "disk_free_bytes": 715370496
+            },
+            {
+              "time": "2026-11-09T15:38:47.092084+00:00",
+              "tree_rss_bytes": 2550439936,
+              "mem_available_bytes": 3624923136,
+              "disk_free_bytes": 715370496
+            },
+            {
+              "time": "2026-11-09T15:38:49.105004+00:00",
+              "tree_rss_bytes": 2563416064,
+              "mem_available_bytes": 3611774976,
+              "disk_free_bytes": 715370496
+            },
+            {
+              "time": "2026-11-09T15:38:51.117521+00:00",
+              "tree_rss_bytes": 2570731520,
+              "mem_available_bytes": 3602841600,
+              "disk_free_bytes": 715370496
+            },
+            {
+              "time": "2026-11-09T15:38:53.130040+00:00",
+              "tree_rss_bytes": 2574774272,
+              "mem_available_bytes": 3588374528,
+              "disk_free_bytes": 715370496
+            },
+            {
+              "time": "2026-11-09T15:38:55.142477+00:00",
+              "tree_rss_bytes": 2583957504,
+              "mem_available_bytes": 3578867712,
+              "disk_free_bytes": 715366400
+            },
+            {
+              "time": "2026-11-09T15:38:57.154491+00:00",
+              "tree_rss_bytes": 2649378816,
+              "mem_available_bytes": 3508105216,
+              "disk_free_bytes": 715362304
+            },
+            {
+              "time": "2026-11-09T15:38:59.169749+00:00",
+              "tree_rss_bytes": 2652622848,
+              "mem_available_bytes": 3506098176,
+              "disk_free_bytes": 715362304
+            },
+            {
+              "time": "2026-11-09T15:39:01.182376+00:00",
+              "tree_rss_bytes": 2656403456,
+              "mem_available_bytes": 3502440448,
+              "disk_free_bytes": 715362304
+            },
+            {
+              "time": "2026-11-09T15:39:03.200636+00:00",
+              "tree_rss_bytes": 2660458496,
+              "mem_available_bytes": 3498889216,
+              "disk_free_bytes": 715362304
+            },
+            {
+              "time": "2026-11-09T15:39:05.213251+00:00",
+              "tree_rss_bytes": 2664513536,
+              "mem_available_bytes": 3495084032,
+              "disk_free_bytes": 715362304
+            },
+            {
+              "time": "2026-11-09T15:39:07.225493+00:00",
+              "tree_rss_bytes": 2673164288,
+              "mem_available_bytes": 3486572544,
+              "disk_free_bytes": 715362304
+            },
+            {
+              "time": "2026-11-09T15:39:09.245263+00:00",
+              "tree_rss_bytes": 2676465664,
+              "mem_available_bytes": 3475537920,
+              "disk_free_bytes": 715362304
+            },
+            {
+              "time": "2026-11-09T15:39:11.265427+00:00",
+              "tree_rss_bytes": 2680250368,
+              "mem_available_bytes": 3471724544,
+              "disk_free_bytes": 715345920
+            },
+            {
+              "time": "2026-11-09T15:39:13.287825+00:00",
+              "tree_rss_bytes": 2684305408,
+              "mem_available_bytes": 3462733824,
+              "disk_free_bytes": 715337728
+            },
+            {
+              "time": "2026-11-09T15:39:15.300860+00:00",
+              "tree_rss_bytes": 2697822208,
+              "mem_available_bytes": 3444236288,
+              "disk_free_bytes": 715329536
+            },
+            {
+              "time": "2026-11-09T15:39:17.317517+00:00",
+              "tree_rss_bytes": 2705932288,
+              "mem_available_bytes": 3441717248,
+              "disk_free_bytes": 715329536
+            },
+            {
+              "time": "2026-11-09T15:39:19.337270+00:00",
+              "tree_rss_bytes": 2711609344,
+              "mem_available_bytes": 3431731200,
+              "disk_free_bytes": 715329536
+            },
+            {
+              "time": "2026-11-09T15:39:21.349268+00:00",
+              "tree_rss_bytes": 2717556736,
+              "mem_available_bytes": 3427356672,
+              "disk_free_bytes": 715329536
+            },
+            {
+              "time": "2026-11-09T15:39:23.363150+00:00",
+              "tree_rss_bytes": 2727018496,
+              "mem_available_bytes": 3420635136,
+              "disk_free_bytes": 715329536
+            },
+            {
+              "time": "2026-11-09T15:39:25.384715+00:00",
+              "tree_rss_bytes": 2735669248,
+              "mem_available_bytes": 3420692480,
+              "disk_free_bytes": 715329536
+            },
+            {
+              "time": "2026-11-09T15:39:27.406319+00:00",
+              "tree_rss_bytes": 2741342208,
+              "mem_available_bytes": 3412561920,
+              "disk_free_bytes": 715325440
+            },
+            {
+              "time": "2026-11-09T15:39:29.426455+00:00",
+              "tree_rss_bytes": 2747019264,
+              "mem_available_bytes": 3399749632,
+              "disk_free_bytes": 715321344
+            },
+            {
+              "time": "2026-11-09T15:39:31.442835+00:00",
+              "tree_rss_bytes": 2755129344,
+              "mem_available_bytes": 3399761920,
+              "disk_free_bytes": 715321344
+            },
+            {
+              "time": "2026-11-09T15:39:33.458837+00:00",
+              "tree_rss_bytes": 2758160384,
+              "mem_available_bytes": 3391139840,
+              "disk_free_bytes": 713375744
+            },
+            {
+              "time": "2026-11-09T15:39:35.471352+00:00",
+              "tree_rss_bytes": 2758160384,
+              "mem_available_bytes": 3388837888,
+              "disk_free_bytes": 712085504
+            },
+            {
+              "time": "2026-11-09T15:39:37.490421+00:00",
+              "tree_rss_bytes": 2758160384,
+              "mem_available_bytes": 3385888768,
+              "disk_free_bytes": 710938624
+            },
+            {
+              "time": "2026-11-09T15:39:39.503542+00:00",
+              "tree_rss_bytes": 2758160384,
+              "mem_available_bytes": 3387314176,
+              "disk_free_bytes": 709853184
+            },
+            {
+              "time": "2026-11-09T15:39:41.517492+00:00",
+              "tree_rss_bytes": 2758160384,
+              "mem_available_bytes": 3389239296,
+              "disk_free_bytes": 708730880
+            },
+            {
+              "time": "2026-11-09T15:39:43.539729+00:00",
+              "tree_rss_bytes": 52154368,
+              "mem_available_bytes": 6071398400,
+              "disk_free_bytes": 700612608
+            },
+            {
+              "time": "2026-11-09T15:39:45.560276+00:00",
+              "tree_rss_bytes": 52154368,
+              "mem_available_bytes": 6062886912,
+              "disk_free_bytes": 683466752
+            },
+            {
+              "time": "2026-11-09T15:39:47.572834+00:00",
+              "tree_rss_bytes": 52154368,
+              "mem_available_bytes": 6062858240,
+              "disk_free_bytes": 666447872
+            },
+            {
+              "time": "2026-11-09T15:39:49.584886+00:00",
+              "tree_rss_bytes": 52154368,
+              "mem_available_bytes": 6062776320,
+              "disk_free_bytes": 664756224
+            },
+            {
+              "time": "2026-11-09T15:39:51.598238+00:00",
+              "tree_rss_bytes": 52154368,
+              "mem_available_bytes": 6070734848,
+              "disk_free_bytes": 664748032
+            },
+            {
+              "time": "2026-11-09T15:39:53.610729+00:00",
+              "tree_rss_bytes": 52154368,
+              "mem_available_bytes": 6068142080,
+              "disk_free_bytes": 664743936
+            },
+            {
+              "time": "2026-11-09T15:39:55.623959+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6074195968,
+              "disk_free_bytes": 664723456
+            },
+            {
+              "time": "2026-11-09T15:39:57.638668+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6066778112,
+              "disk_free_bytes": 664719360
+            },
+            {
+              "time": "2026-11-09T15:39:59.651873+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6073036800,
+              "disk_free_bytes": 664719360
+            },
+            {
+              "time": "2026-11-09T15:40:01.664312+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6069374976,
+              "disk_free_bytes": 664719360
+            },
+            {
+              "time": "2026-11-09T15:40:03.680244+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6069391360,
+              "disk_free_bytes": 664711168
+            },
+            {
+              "time": "2026-11-09T15:40:05.692947+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6062809088,
+              "disk_free_bytes": 664686592
+            },
+            {
+              "time": "2026-11-09T15:40:07.714521+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6061891584,
+              "disk_free_bytes": 664686592
+            },
+            {
+              "time": "2026-11-09T15:40:09.726929+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6061162496,
+              "disk_free_bytes": 664686592
+            },
+            {
+              "time": "2026-11-09T15:40:11.740129+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6060699648,
+              "disk_free_bytes": 664686592
+            },
+            {
+              "time": "2026-11-09T15:40:13.754314+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6060863488,
+              "disk_free_bytes": 664674304
+            },
+            {
+              "time": "2026-11-09T15:40:15.766846+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6060793856,
+              "disk_free_bytes": 664670208
+            },
+            {
+              "time": "2026-11-09T15:40:17.787391+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6060773376,
+              "disk_free_bytes": 664670208
+            },
+            {
+              "time": "2026-11-09T15:40:19.806880+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6060535808,
+              "disk_free_bytes": 664666112
+            },
+            {
+              "time": "2026-11-09T15:40:21.820728+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6060044288,
+              "disk_free_bytes": 664662016
+            },
+            {
+              "time": "2026-11-09T15:40:23.833406+00:00",
+              "tree_rss_bytes": 35241984,
+              "mem_available_bytes": 6059372544,
+              "disk_free_bytes": 664662016
+            }
+          ]
+        },
+        "result_id": "fag-prefetch89646-portable-r2",
+        "historical_result_id": "fag-prefetch89646",
+        "completed_at": "2026-11-09T15:40:25.849109+00:00",
+        "driver_rc": 0,
+        "simulator_rc": 0,
+        "total_cycles": 89646,
+        "historical_cycles": 89646,
+        "full_uncompressed": {
+          "sha256": "94ee0a56aae07fbe9cdd501345506d36b5f1eb74682290d7a0caedfb38a10e05",
+          "bytes": 185965089
+        },
+        "historical_full_uncompressed_equal": true,
+        "historical_annotation_normalized_equal": true,
+        "historical_full_uncompressed": {
+          "sha256": "94ee0a56aae07fbe9cdd501345506d36b5f1eb74682290d7a0caedfb38a10e05",
+          "bytes": 185965089,
+          "verified_by": "streaming gzip decompression during archive preparation"
+        },
+        "annotation_normalization": {
+          "filtered_full_equal": true,
+          "full_normalized_historical_equal": true,
+          "historical_canonical_equal": true,
+          "events": 162212,
+          "canonical_sha256": "fd536681ab613dcf8d50e2b7b5e79f77b7af1258166cce31a23f5b96252cc740",
+          "historical_raw_sha256": "46c74d4608b1881c10ebc58dc657f4d595d8d57d2a97067b709c28dda87ce025",
+          "actual_raw_sha256": "79d16852ba81edef3c88fd281e93b47bc611bf36226525596bd83e7b91f706b6",
+          "raw_hash_equal": false,
+          "full_normalized": {
+            "canonical_sha256": "aad3ab556ee466944033f73444c5dbb308107a8678aa0ce4f55fb6b9bc4f346f",
+            "events": 1640760,
+            "inverse_annotation_events": 0,
+            "metadata": {}
+          },
+          "historical_inverse_annotation_events": 0,
+          "serialization_note": "Historical pure annotations inverted by exact documented rule; all other event fields/order/flows and root metadata canonical compared. Raw hashes remain distinct observations."
+        },
+        "nocounters_sha256": "79d16852ba81edef3c88fd281e93b47bc611bf36226525596bd83e7b91f706b6",
+        "nocounters_bytes": 41261752,
+        "historical_nocounters_sha256": "46c74d4608b1881c10ebc58dc657f4d595d8d57d2a97067b709c28dda87ce025",
+        "historical_nocounters_raw_hash_equal": false,
+        "historical_nocounters_note": "If raw hash differs, serialization must be independently reviewed; no equivalence inferred from raw hash.",
+        "file_access_trace": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2_file_access.strace",
+        "forbidden_accesses": [],
+        "workspace_paths_accessed": [
+          "${WORKSPACE}",
+          "${WORKSPACE}/perf_analysis",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/README.md",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-compact29028/case.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-compact29028/kernel.elf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-compact29028/kernel.elf.diss",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-prefetch89646/case.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-prefetch89646/kernel.elf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-prefetch89646/kernel.elf.diss",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-sl2_768_88050/case.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-sl2_768_88050/kernel.elf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-sl2_768_88050/kernel.elf.diss",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/files.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/historical_noc_semantic.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/historical_trace_equivalence.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/manifest.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/replay.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/__pycache__/trace_equivalence.cpython-310.pyc",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/__pycache__/trace_stream.cpython-310.pyc",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/derivation.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/run_swimlane.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/trace_equivalence.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/trace_stream.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/verify.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/README.md",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/bin/compact/gfsim",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/bin/static/gfsim",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/case_configs/fag-compact29028.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/case_configs/fag-prefetch89646.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/case_configs/fag-sl2_768_88050.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/copyright_path_review.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/files.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v2/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v3",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v3/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/ld-linux-x86-64.so.2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libc.so.6",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libgcc_s.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libm.so.6",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libstdc++.so.6",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libz.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/inventory.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libc6-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libelf1-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libgcc-s1-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libstdc++6-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/rapidjson-LICENSE",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/zlib1g-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/run_model.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/runtime_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/verify.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/perf.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/configs/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/invocation.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run/fag-prefetch89646-portable-r2.cellreg.csv",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run/fag-prefetch89646-portable-r2.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run/fag-prefetch89646-portable-r2.json.gz",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run/fag-prefetch89646-portable-r2.ratstall.csv",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run/fag-prefetch89646-portable-r2_full_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run/fag-prefetch89646-portable-r2_nocounters.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run/fag-prefetch89646-portable-r2_swim.log",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/replay_result.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/tmp"
+        ],
+        "numeric_status": "not_checked; no promotion",
+        "runtime_sha256": "77978a0de5f7261c6d70d303725101feed8b4d889ce0a00a7ee786ee6e186b67",
+        "elf_sha256": "c7364cfdf4de0f0a31ff8d09fad3079811bb6ed707529d40186dff3a9fe5b552",
+        "replay_result": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/replay_result.json",
+        "runner_nocounters_semantics": {
+          "filtered_full_equal": true,
+          "full_normalized_historical_equal": true,
+          "historical_canonical_equal": true,
+          "events": 162212,
+          "canonical_sha256": "fd536681ab613dcf8d50e2b7b5e79f77b7af1258166cce31a23f5b96252cc740",
+          "historical_raw_sha256": "46c74d4608b1881c10ebc58dc657f4d595d8d57d2a97067b709c28dda87ce025",
+          "actual_raw_sha256": "79d16852ba81edef3c88fd281e93b47bc611bf36226525596bd83e7b91f706b6",
+          "raw_hash_equal": false,
+          "full_normalized": {
+            "canonical_sha256": "aad3ab556ee466944033f73444c5dbb308107a8678aa0ce4f55fb6b9bc4f346f",
+            "events": 1640760,
+            "inverse_annotation_events": 0,
+            "metadata": {}
+          },
+          "historical_inverse_annotation_events": 0,
+          "serialization_note": "Historical pure annotations inverted by exact documented rule; all other event fields/order/flows and root metadata canonical compared. Raw hashes remain distinct observations."
+        },
+        "nocounters_semantic_check": {
+          "filtered_full_equal": true,
+          "historical_full_bytes_identical": true,
+          "historical_annotation_normalized_equal": true,
+          "events": 162212,
+          "note": "Raw bytes may differ due historical annotations/serialization; strict exact documented annotation inverse establishes all event fields/order/flows and metadata equivalence, not raw full byte identity."
+        },
+        "nocounters_retention": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run/retention.json",
+        "nocounters_retained_gzip": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-prefetch89646-portable-r2/perf_run/fag-prefetch89646-portable-r2_nocounters.json.gz"
+      },
+      {
+        "resource_evidence": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2_resources.json",
+        "resources": {
+          "peak_tree_rss_bytes": 2755297280,
+          "minimum_mem_available_bytes": 3378491392,
+          "minimum_disk_free_bytes": 652013568,
+          "samples": [
+            {
+              "time": "2026-11-09T15:41:36.950069+00:00",
+              "tree_rss_bytes": 2088960,
+              "mem_available_bytes": 6105485312,
+              "disk_free_bytes": 703528960
+            },
+            {
+              "time": "2026-11-09T15:41:38.969020+00:00",
+              "tree_rss_bytes": 1091059712,
+              "mem_available_bytes": 5053190144,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:40.982205+00:00",
+              "tree_rss_bytes": 1672548352,
+              "mem_available_bytes": 4469813248,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:42.994161+00:00",
+              "tree_rss_bytes": 1750675456,
+              "mem_available_bytes": 4389634048,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:45.006157+00:00",
+              "tree_rss_bytes": 1792847872,
+              "mem_available_bytes": 4348153856,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:47.018091+00:00",
+              "tree_rss_bytes": 1848266752,
+              "mem_available_bytes": 4292419584,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:49.030222+00:00",
+              "tree_rss_bytes": 1890275328,
+              "mem_available_bytes": 4251398144,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:51.047603+00:00",
+              "tree_rss_bytes": 1955426304,
+              "mem_available_bytes": 4186394624,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:53.059291+00:00",
+              "tree_rss_bytes": 2009763840,
+              "mem_available_bytes": 4132466688,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:55.071984+00:00",
+              "tree_rss_bytes": 2018955264,
+              "mem_available_bytes": 4138409984,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:57.086157+00:00",
+              "tree_rss_bytes": 2039771136,
+              "mem_available_bytes": 4118536192,
+              "disk_free_bytes": 702840832
+            },
+            {
+              "time": "2026-11-09T15:41:59.099904+00:00",
+              "tree_rss_bytes": 2050043904,
+              "mem_available_bytes": 4097642496,
+              "disk_free_bytes": 702832640
+            },
+            {
+              "time": "2026-11-09T15:42:01.119019+00:00",
+              "tree_rss_bytes": 2067345408,
+              "mem_available_bytes": 4080369664,
+              "disk_free_bytes": 702832640
+            },
+            {
+              "time": "2026-11-09T15:42:03.130992+00:00",
+              "tree_rss_bytes": 2075455488,
+              "mem_available_bytes": 4071485440,
+              "disk_free_bytes": 702832640
+            },
+            {
+              "time": "2026-11-09T15:42:05.143087+00:00",
+              "tree_rss_bytes": 2084376576,
+              "mem_available_bytes": 4063068160,
+              "disk_free_bytes": 702832640
+            },
+            {
+              "time": "2026-11-09T15:42:07.154960+00:00",
+              "tree_rss_bytes": 2088701952,
+              "mem_available_bytes": 4058681344,
+              "disk_free_bytes": 702832640
+            },
+            {
+              "time": "2026-11-09T15:42:09.168876+00:00",
+              "tree_rss_bytes": 2111680512,
+              "mem_available_bytes": 4032655360,
+              "disk_free_bytes": 702832640
+            },
+            {
+              "time": "2026-11-09T15:42:11.187102+00:00",
+              "tree_rss_bytes": 2137354240,
+              "mem_available_bytes": 4003651584,
+              "disk_free_bytes": 702832640
+            },
+            {
+              "time": "2026-11-09T15:42:13.202496+00:00",
+              "tree_rss_bytes": 2141949952,
+              "mem_available_bytes": 3996700672,
+              "disk_free_bytes": 702828544
+            },
+            {
+              "time": "2026-11-09T15:42:15.214900+00:00",
+              "tree_rss_bytes": 2161414144,
+              "mem_available_bytes": 3976925184,
+              "disk_free_bytes": 702828544
+            },
+            {
+              "time": "2026-11-09T15:42:17.227978+00:00",
+              "tree_rss_bytes": 2165739520,
+              "mem_available_bytes": 3972808704,
+              "disk_free_bytes": 702828544
+            },
+            {
+              "time": "2026-11-09T15:42:19.247005+00:00",
+              "tree_rss_bytes": 2176552960,
+              "mem_available_bytes": 3961262080,
+              "disk_free_bytes": 702828544
+            },
+            {
+              "time": "2026-11-09T15:42:21.269800+00:00",
+              "tree_rss_bytes": 2181689344,
+              "mem_available_bytes": 3953086464,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:23.281734+00:00",
+              "tree_rss_bytes": 2191962112,
+              "mem_available_bytes": 3944267776,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:25.299300+00:00",
+              "tree_rss_bytes": 2195206144,
+              "mem_available_bytes": 3941228544,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:27.314105+00:00",
+              "tree_rss_bytes": 2200072192,
+              "mem_available_bytes": 3936591872,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:29.328001+00:00",
+              "tree_rss_bytes": 2226081792,
+              "mem_available_bytes": 3916226560,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:31.342037+00:00",
+              "tree_rss_bytes": 2230677504,
+              "mem_available_bytes": 3913400320,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:33.361705+00:00",
+              "tree_rss_bytes": 2234732544,
+              "mem_available_bytes": 3907481600,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:35.379570+00:00",
+              "tree_rss_bytes": 2238246912,
+              "mem_available_bytes": 3904430080,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:37.398043+00:00",
+              "tree_rss_bytes": 2256355328,
+              "mem_available_bytes": 3887140864,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:39.410170+00:00",
+              "tree_rss_bytes": 2273693696,
+              "mem_available_bytes": 3871756288,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:41.430290+00:00",
+              "tree_rss_bytes": 2312892416,
+              "mem_available_bytes": 3839021056,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:43.442795+00:00",
+              "tree_rss_bytes": 2317209600,
+              "mem_available_bytes": 3828920320,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:45.466042+00:00",
+              "tree_rss_bytes": 2320453632,
+              "mem_available_bytes": 3826122752,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:47.483833+00:00",
+              "tree_rss_bytes": 2337505280,
+              "mem_available_bytes": 3811479552,
+              "disk_free_bytes": 702820352
+            },
+            {
+              "time": "2026-11-09T15:42:49.495965+00:00",
+              "tree_rss_bytes": 2343182336,
+              "mem_available_bytes": 3806646272,
+              "disk_free_bytes": 702812160
+            },
+            {
+              "time": "2026-11-09T15:42:51.508082+00:00",
+              "tree_rss_bytes": 2347778048,
+              "mem_available_bytes": 3802550272,
+              "disk_free_bytes": 702812160
+            },
+            {
+              "time": "2026-11-09T15:42:53.520385+00:00",
+              "tree_rss_bytes": 2351022080,
+              "mem_available_bytes": 3799011328,
+              "disk_free_bytes": 702812160
+            },
+            {
+              "time": "2026-11-09T15:42:55.539946+00:00",
+              "tree_rss_bytes": 2355077120,
+              "mem_available_bytes": 3794644992,
+              "disk_free_bytes": 702808064
+            },
+            {
+              "time": "2026-11-09T15:42:57.557536+00:00",
+              "tree_rss_bytes": 2384814080,
+              "mem_available_bytes": 3763261440,
+              "disk_free_bytes": 702803968
+            },
+            {
+              "time": "2026-11-09T15:42:59.569079+00:00",
+              "tree_rss_bytes": 2391031808,
+              "mem_available_bytes": 3758796800,
+              "disk_free_bytes": 702791680
+            },
+            {
+              "time": "2026-11-09T15:43:01.580937+00:00",
+              "tree_rss_bytes": 2395627520,
+              "mem_available_bytes": 3755831296,
+              "disk_free_bytes": 702791680
+            },
+            {
+              "time": "2026-11-09T15:43:03.592599+00:00",
+              "tree_rss_bytes": 2398330880,
+              "mem_available_bytes": 3762966528,
+              "disk_free_bytes": 702791680
+            },
+            {
+              "time": "2026-11-09T15:43:05.604353+00:00",
+              "tree_rss_bytes": 2401845248,
+              "mem_available_bytes": 3761729536,
+              "disk_free_bytes": 702791680
+            },
+            {
+              "time": "2026-11-09T15:43:07.616451+00:00",
+              "tree_rss_bytes": 2432393216,
+              "mem_available_bytes": 3732316160,
+              "disk_free_bytes": 702791680
+            },
+            {
+              "time": "2026-11-09T15:43:09.634381+00:00",
+              "tree_rss_bytes": 2439962624,
+              "mem_available_bytes": 3727421440,
+              "disk_free_bytes": 702791680
+            },
+            {
+              "time": "2026-11-09T15:43:11.646190+00:00",
+              "tree_rss_bytes": 2444558336,
+              "mem_available_bytes": 3712733184,
+              "disk_free_bytes": 702787584
+            },
+            {
+              "time": "2026-11-09T15:43:13.658021+00:00",
+              "tree_rss_bytes": 2447532032,
+              "mem_available_bytes": 3710054400,
+              "disk_free_bytes": 702787584
+            },
+            {
+              "time": "2026-11-09T15:43:15.673802+00:00",
+              "tree_rss_bytes": 2451046400,
+              "mem_available_bytes": 3703889920,
+              "disk_free_bytes": 702787584
+            },
+            {
+              "time": "2026-11-09T15:43:17.687491+00:00",
+              "tree_rss_bytes": 2482946048,
+              "mem_available_bytes": 3671953408,
+              "disk_free_bytes": 702787584
+            },
+            {
+              "time": "2026-11-09T15:43:19.702715+00:00",
+              "tree_rss_bytes": 2486730752,
+              "mem_available_bytes": 3666804736,
+              "disk_free_bytes": 702783488
+            },
+            {
+              "time": "2026-11-09T15:43:21.715844+00:00",
+              "tree_rss_bytes": 2491056128,
+              "mem_available_bytes": 3665526784,
+              "disk_free_bytes": 702783488
+            },
+            {
+              "time": "2026-11-09T15:43:23.750000+00:00",
+              "tree_rss_bytes": 2494570496,
+              "mem_available_bytes": 3663077376,
+              "disk_free_bytes": 702783488
+            },
+            {
+              "time": "2026-11-09T15:43:25.763341+00:00",
+              "tree_rss_bytes": 2498117632,
+              "mem_available_bytes": 3660832768,
+              "disk_free_bytes": 702775296
+            },
+            {
+              "time": "2026-11-09T15:43:27.776251+00:00",
+              "tree_rss_bytes": 2528935936,
+              "mem_available_bytes": 3628224512,
+              "disk_free_bytes": 702767104
+            },
+            {
+              "time": "2026-11-09T15:43:29.788488+00:00",
+              "tree_rss_bytes": 2541912064,
+              "mem_available_bytes": 3614150656,
+              "disk_free_bytes": 702767104
+            },
+            {
+              "time": "2026-11-09T15:43:31.806389+00:00",
+              "tree_rss_bytes": 2552184832,
+              "mem_available_bytes": 3602554880,
+              "disk_free_bytes": 702767104
+            },
+            {
+              "time": "2026-11-09T15:43:33.819535+00:00",
+              "tree_rss_bytes": 2564890624,
+              "mem_available_bytes": 3589947392,
+              "disk_free_bytes": 702767104
+            },
+            {
+              "time": "2026-11-09T15:43:35.831559+00:00",
+              "tree_rss_bytes": 2571218944,
+              "mem_available_bytes": 3581181952,
+              "disk_free_bytes": 702767104
+            },
+            {
+              "time": "2026-11-09T15:43:37.843314+00:00",
+              "tree_rss_bytes": 2575810560,
+              "mem_available_bytes": 3566239744,
+              "disk_free_bytes": 702758912
+            },
+            {
+              "time": "2026-11-09T15:43:39.856007+00:00",
+              "tree_rss_bytes": 2584731648,
+              "mem_available_bytes": 3559555072,
+              "disk_free_bytes": 702758912
+            },
+            {
+              "time": "2026-11-09T15:43:41.868519+00:00",
+              "tree_rss_bytes": 2650423296,
+              "mem_available_bytes": 3493699584,
+              "disk_free_bytes": 702758912
+            },
+            {
+              "time": "2026-11-09T15:43:43.880939+00:00",
+              "tree_rss_bytes": 2653396992,
+              "mem_available_bytes": 3490652160,
+              "disk_free_bytes": 702758912
+            },
+            {
+              "time": "2026-11-09T15:43:45.893493+00:00",
+              "tree_rss_bytes": 2657181696,
+              "mem_available_bytes": 3487047680,
+              "disk_free_bytes": 702758912
+            },
+            {
+              "time": "2026-11-09T15:43:47.913192+00:00",
+              "tree_rss_bytes": 2660691968,
+              "mem_available_bytes": 3486924800,
+              "disk_free_bytes": 702754816
+            },
+            {
+              "time": "2026-11-09T15:43:49.926758+00:00",
+              "tree_rss_bytes": 2665287680,
+              "mem_available_bytes": 3486633984,
+              "disk_free_bytes": 702754816
+            },
+            {
+              "time": "2026-11-09T15:43:51.959602+00:00",
+              "tree_rss_bytes": 2673938432,
+              "mem_available_bytes": 3480190976,
+              "disk_free_bytes": 702750720
+            },
+            {
+              "time": "2026-11-09T15:43:53.972511+00:00",
+              "tree_rss_bytes": 2676977664,
+              "mem_available_bytes": 3467202560,
+              "disk_free_bytes": 702750720
+            },
+            {
+              "time": "2026-11-09T15:43:55.985100+00:00",
+              "tree_rss_bytes": 2680492032,
+              "mem_available_bytes": 3463921664,
+              "disk_free_bytes": 702750720
+            },
+            {
+              "time": "2026-11-09T15:43:57.996833+00:00",
+              "tree_rss_bytes": 2684817408,
+              "mem_available_bytes": 3458617344,
+              "disk_free_bytes": 702750720
+            },
+            {
+              "time": "2026-11-09T15:44:00.009282+00:00",
+              "tree_rss_bytes": 2698334208,
+              "mem_available_bytes": 3443937280,
+              "disk_free_bytes": 702750720
+            },
+            {
+              "time": "2026-11-09T15:44:02.021952+00:00",
+              "tree_rss_bytes": 2705903616,
+              "mem_available_bytes": 3434901504,
+              "disk_free_bytes": 702750720
+            },
+            {
+              "time": "2026-11-09T15:44:04.035993+00:00",
+              "tree_rss_bytes": 2712121344,
+              "mem_available_bytes": 3434655744,
+              "disk_free_bytes": 702750720
+            },
+            {
+              "time": "2026-11-09T15:44:06.051212+00:00",
+              "tree_rss_bytes": 2716446720,
+              "mem_available_bytes": 3431354368,
+              "disk_free_bytes": 702742528
+            },
+            {
+              "time": "2026-11-09T15:44:08.063245+00:00",
+              "tree_rss_bytes": 2727260160,
+              "mem_available_bytes": 3420520448,
+              "disk_free_bytes": 702742528
+            },
+            {
+              "time": "2026-11-09T15:44:10.074840+00:00",
+              "tree_rss_bytes": 2736721920,
+              "mem_available_bytes": 3411247104,
+              "disk_free_bytes": 702742528
+            },
+            {
+              "time": "2026-11-09T15:44:12.091563+00:00",
+              "tree_rss_bytes": 2742128640,
+              "mem_available_bytes": 3405582336,
+              "disk_free_bytes": 702738432
+            },
+            {
+              "time": "2026-11-09T15:44:14.104494+00:00",
+              "tree_rss_bytes": 2748076032,
+              "mem_available_bytes": 3400282112,
+              "disk_free_bytes": 702738432
+            },
+            {
+              "time": "2026-11-09T15:44:16.118638+00:00",
+              "tree_rss_bytes": 2755297280,
+              "mem_available_bytes": 3387027456,
+              "disk_free_bytes": 701968384
+            },
+            {
+              "time": "2026-11-09T15:44:18.131828+00:00",
+              "tree_rss_bytes": 2755297280,
+              "mem_available_bytes": 3390554112,
+              "disk_free_bytes": 700178432
+            },
+            {
+              "time": "2026-11-09T15:44:20.144512+00:00",
+              "tree_rss_bytes": 2755297280,
+              "mem_available_bytes": 3378491392,
+              "disk_free_bytes": 699056128
+            },
+            {
+              "time": "2026-11-09T15:44:22.156469+00:00",
+              "tree_rss_bytes": 2755297280,
+              "mem_available_bytes": 3385389056,
+              "disk_free_bytes": 697974784
+            },
+            {
+              "time": "2026-11-09T15:44:24.171569+00:00",
+              "tree_rss_bytes": 2755297280,
+              "mem_available_bytes": 3378589696,
+              "disk_free_bytes": 696856576
+            },
+            {
+              "time": "2026-11-09T15:44:26.183616+00:00",
+              "tree_rss_bytes": 2503000064,
+              "mem_available_bytes": 3636117504,
+              "disk_free_bytes": 696004608
+            },
+            {
+              "time": "2026-11-09T15:44:28.195359+00:00",
+              "tree_rss_bytes": 52641792,
+              "mem_available_bytes": 6078349312,
+              "disk_free_bytes": 681246720
+            },
+            {
+              "time": "2026-11-09T15:44:30.207601+00:00",
+              "tree_rss_bytes": 52641792,
+              "mem_available_bytes": 6077743104,
+              "disk_free_bytes": 664915968
+            },
+            {
+              "time": "2026-11-09T15:44:32.227250+00:00",
+              "tree_rss_bytes": 52641792,
+              "mem_available_bytes": 6074384384,
+              "disk_free_bytes": 652058624
+            },
+            {
+              "time": "2026-11-09T15:44:34.248243+00:00",
+              "tree_rss_bytes": 52641792,
+              "mem_available_bytes": 6073950208,
+              "disk_free_bytes": 652058624
+            },
+            {
+              "time": "2026-11-09T15:44:36.260466+00:00",
+              "tree_rss_bytes": 52641792,
+              "mem_available_bytes": 6073966592,
+              "disk_free_bytes": 652058624
+            },
+            {
+              "time": "2026-11-09T15:44:38.273811+00:00",
+              "tree_rss_bytes": 30015488,
+              "mem_available_bytes": 6105321472,
+              "disk_free_bytes": 652054528
+            },
+            {
+              "time": "2026-11-09T15:44:40.295711+00:00",
+              "tree_rss_bytes": 30347264,
+              "mem_available_bytes": 6103986176,
+              "disk_free_bytes": 652042240
+            },
+            {
+              "time": "2026-11-09T15:44:42.308076+00:00",
+              "tree_rss_bytes": 30347264,
+              "mem_available_bytes": 6099996672,
+              "disk_free_bytes": 652021760
+            },
+            {
+              "time": "2026-11-09T15:44:44.320848+00:00",
+              "tree_rss_bytes": 30347264,
+              "mem_available_bytes": 6099300352,
+              "disk_free_bytes": 652021760
+            },
+            {
+              "time": "2026-11-09T15:44:46.342367+00:00",
+              "tree_rss_bytes": 30347264,
+              "mem_available_bytes": 6099316736,
+              "disk_free_bytes": 652017664
+            },
+            {
+              "time": "2026-11-09T15:44:48.369087+00:00",
+              "tree_rss_bytes": 30347264,
+              "mem_available_bytes": 6098292736,
+              "disk_free_bytes": 652017664
+            },
+            {
+              "time": "2026-11-09T15:44:50.390999+00:00",
+              "tree_rss_bytes": 30347264,
+              "mem_available_bytes": 6095171584,
+              "disk_free_bytes": 652017664
+            },
+            {
+              "time": "2026-11-09T15:44:52.403355+00:00",
+              "tree_rss_bytes": 30347264,
+              "mem_available_bytes": 6091603968,
+              "disk_free_bytes": 652017664
+            },
+            {
+              "time": "2026-11-09T15:44:54.419922+00:00",
+              "tree_rss_bytes": 30588928,
+              "mem_available_bytes": 6097350656,
+              "disk_free_bytes": 652017664
+            },
+            {
+              "time": "2026-11-09T15:44:56.433669+00:00",
+              "tree_rss_bytes": 30588928,
+              "mem_available_bytes": 6097367040,
+              "disk_free_bytes": 652017664
+            },
+            {
+              "time": "2026-11-09T15:44:58.445233+00:00",
+              "tree_rss_bytes": 30588928,
+              "mem_available_bytes": 6093299712,
+              "disk_free_bytes": 652013568
+            },
+            {
+              "time": "2026-11-09T15:45:00.457936+00:00",
+              "tree_rss_bytes": 30588928,
+              "mem_available_bytes": 6091087872,
+              "disk_free_bytes": 652013568
+            },
+            {
+              "time": "2026-11-09T15:45:02.469781+00:00",
+              "tree_rss_bytes": 30588928,
+              "mem_available_bytes": 6090031104,
+              "disk_free_bytes": 652013568
+            },
+            {
+              "time": "2026-11-09T15:45:04.482346+00:00",
+              "tree_rss_bytes": 30588928,
+              "mem_available_bytes": 6090092544,
+              "disk_free_bytes": 652013568
+            },
+            {
+              "time": "2026-11-09T15:45:06.503804+00:00",
+              "tree_rss_bytes": 30588928,
+              "mem_available_bytes": 6090108928,
+              "disk_free_bytes": 652013568
+            }
+          ]
+        },
+        "result_id": "fag-sl2_768_88050-portable-r2",
+        "historical_result_id": "fag-sl2_768_88050",
+        "completed_at": "2026-11-09T15:45:08.519454+00:00",
+        "driver_rc": 0,
+        "simulator_rc": 0,
+        "total_cycles": 88050,
+        "historical_cycles": 88050,
+        "full_uncompressed": {
+          "sha256": "fb2cfbcdc67f72e2ef4630e8cde70af8cf7a8d3ff88a4cf3359d4b219690533b",
+          "bytes": 183610226
+        },
+        "historical_full_uncompressed_equal": false,
+        "historical_annotation_normalized_equal": true,
+        "historical_full_uncompressed": {
+          "sha256": "b3f15496e80fb6cff629fd20ed4421b30a736b2952e068e65fbb8e9557f5334f",
+          "bytes": 183983729,
+          "verified_by": "streaming gzip decompression during archive preparation"
+        },
+        "annotation_normalization": {
+          "filtered_full_equal": true,
+          "full_normalized_historical_equal": true,
+          "historical_canonical_equal": true,
+          "events": 162820,
+          "canonical_sha256": "c5c0249f8b5aefb86d05386228af5a6631c7c18acf9ebd1b65ad865725579ef1",
+          "historical_raw_sha256": "e1388bf3bdfadd0bf362ffe43d30bcf8cc519af610e8f40f85119e11b9b8f4ff",
+          "actual_raw_sha256": "a7941491539d759647d96d98d82fd4768b0b8c279f18c08d5884284a031dc6f2",
+          "raw_hash_equal": false,
+          "full_normalized": {
+            "canonical_sha256": "0ad36ab8dd5e54ec3a242ab1b428b9bf5b0ff843d5912d1d2b170e80fd04c46f",
+            "events": 1615622,
+            "inverse_annotation_events": 0,
+            "metadata": {}
+          },
+          "historical_inverse_annotation_events": 2160,
+          "serialization_note": "Historical pure annotations inverted by exact documented rule; all other event fields/order/flows and root metadata canonical compared. Raw hashes remain distinct observations."
+        },
+        "nocounters_sha256": "a7941491539d759647d96d98d82fd4768b0b8c279f18c08d5884284a031dc6f2",
+        "nocounters_bytes": 41411341,
+        "historical_nocounters_sha256": "e1388bf3bdfadd0bf362ffe43d30bcf8cc519af610e8f40f85119e11b9b8f4ff",
+        "historical_nocounters_raw_hash_equal": false,
+        "historical_nocounters_note": "If raw hash differs, serialization must be independently reviewed; no equivalence inferred from raw hash.",
+        "file_access_trace": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2_file_access.strace",
+        "forbidden_accesses": [],
+        "workspace_paths_accessed": [
+          "${WORKSPACE}",
+          "${WORKSPACE}/perf_analysis",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/README.md",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-compact29028/case.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-compact29028/kernel.elf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-compact29028/kernel.elf.diss",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-prefetch89646/case.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-prefetch89646/kernel.elf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-prefetch89646/kernel.elf.diss",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-sl2_768_88050/case.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-sl2_768_88050/kernel.elf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/cases/fag-sl2_768_88050/kernel.elf.diss",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/files.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/historical_noc_semantic.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/historical_trace_equivalence.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/manifest.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/replay.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/__pycache__/trace_equivalence.cpython-310.pyc",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/__pycache__/trace_stream.cpython-310.pyc",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/derivation.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/run_swimlane.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/trace_equivalence.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/tools/trace_stream.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2/verify.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/README.md",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/bin/compact/gfsim",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/bin/static/gfsim",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/case_configs/fag-compact29028.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/case_configs/fag-prefetch89646.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/case_configs/fag-sl2_768_88050.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/compact_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/compiled_defaults/static_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/compact-native/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/configuration_inputs/prefetch-native/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/copyright_path_review.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/files.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v2/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v3",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/glibc-hwcaps/x86-64-v3/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/haswell/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/ld-linux-x86-64.so.2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libc.so.6",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libgcc_s.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libm.so.6",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libstdc++.so.6",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/libz.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/haswell/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/tls/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/x86_64",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/lib/x86_64/libelf.so.1",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/inventory.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libc6-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libelf1-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libgcc-s1-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/libstdc++6-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/rapidjson-LICENSE",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/notices/zlib1g-copyright",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/run_model.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/runtime_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1/verify.py",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/DFX.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/SoftCore.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/Trace.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/bctrl.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/bfu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/cell.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/core.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/cube.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/fourpe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/group.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/iex.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/ifu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/l1.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/l2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/lsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/perf.conf",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/sl2.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/spe.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/superScalar.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/tilelsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/tlsu.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/configs/vec.toml",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/invocation.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run/fag-sl2_768_88050-portable-r2.cellreg.csv",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run/fag-sl2_768_88050-portable-r2.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run/fag-sl2_768_88050-portable-r2.json.gz",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run/fag-sl2_768_88050-portable-r2.ratstall.csv",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run/fag-sl2_768_88050-portable-r2_full_identity.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run/fag-sl2_768_88050-portable-r2_nocounters.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run/fag-sl2_768_88050-portable-r2_swim.log",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/replay_result.json",
+          "${WORKSPACE}/perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/tmp"
+        ],
+        "numeric_status": "not_checked; no promotion",
+        "runtime_sha256": "77978a0de5f7261c6d70d303725101feed8b4d889ce0a00a7ee786ee6e186b67",
+        "elf_sha256": "c7364cfdf4de0f0a31ff8d09fad3079811bb6ed707529d40186dff3a9fe5b552",
+        "replay_result": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/replay_result.json",
+        "runner_nocounters_semantics": {
+          "filtered_full_equal": true,
+          "full_normalized_historical_equal": true,
+          "historical_canonical_equal": true,
+          "events": 162820,
+          "canonical_sha256": "c5c0249f8b5aefb86d05386228af5a6631c7c18acf9ebd1b65ad865725579ef1",
+          "historical_raw_sha256": "e1388bf3bdfadd0bf362ffe43d30bcf8cc519af610e8f40f85119e11b9b8f4ff",
+          "actual_raw_sha256": "a7941491539d759647d96d98d82fd4768b0b8c279f18c08d5884284a031dc6f2",
+          "raw_hash_equal": false,
+          "full_normalized": {
+            "canonical_sha256": "0ad36ab8dd5e54ec3a242ab1b428b9bf5b0ff843d5912d1d2b170e80fd04c46f",
+            "events": 1615622,
+            "inverse_annotation_events": 0,
+            "metadata": {}
+          },
+          "historical_inverse_annotation_events": 2160,
+          "serialization_note": "Historical pure annotations inverted by exact documented rule; all other event fields/order/flows and root metadata canonical compared. Raw hashes remain distinct observations."
+        },
+        "nocounters_semantic_check": {
+          "filtered_full_equal": true,
+          "historical_full_bytes_identical": false,
+          "historical_annotation_normalized_equal": true,
+          "events": 162820,
+          "note": "Raw bytes may differ due historical annotations/serialization; strict exact documented annotation inverse establishes all event fields/order/flows and metadata equivalence, not raw full byte identity."
+        },
+        "nocounters_retention": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run/retention.json",
+        "nocounters_retained_gzip": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_replay/fag-sl2_768_88050-portable-r2/perf_run/fag-sl2_768_88050-portable-r2_nocounters.json.gz"
+      }
+    ]
+  }
+}

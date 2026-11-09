@@ -1,0 +1,100 @@
+{
+  "origin_sha256": "4071680baf536d86eb8b27629a30008a6af24dd95a5f53a7672d968d0102a865",
+  "origin_bytes": 5681,
+  "transformation": "JSON reserialization; workspace/host Python prefix replaced by symbolic labels; observations unchanged",
+  "record": {
+    "scope": "Actual authenticated draft Release downloads; final stable publication URLs may change without asset bytes changing.",
+    "downloaded_at": "2026-11-09T15:34:23.426010+00:00",
+    "assets": [
+      {
+        "filename": "fag-operator-r1.tar.gz",
+        "bytes": 69252,
+        "sha256": "8fcb3678ccea22c13c4bdadef0f87c7c807603c6b86bb2e41ae1348366d99cba",
+        "payload_root": "fag-operator-r1",
+        "asset_id": 727802409,
+        "repository": "PTO-ISA/SuperNPUBench",
+        "kind": "operator",
+        "publication_status": "uploaded",
+        "asset_id_name": "fag-operator-r1",
+        "required_for": [],
+        "optional_for": [
+          "review_predecessor_operator_payload",
+          "replay_predecessor_cases"
+        ],
+        "owner": "archive task: Codex; long-term maintainer unassigned (documented gap)",
+        "archive_pr": "https://github.com/PTO-ISA/SuperNPUBench/pull/283",
+        "download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fag-20261109/fag-operator-r1.tar.gz",
+        "release_target": "64609e35f675d65dbeef263176329f75d1736a25",
+        "superseded_for_current_replay_by": "fag-operator-r2",
+        "download_verified": false,
+        "actual_bytes": 69252,
+        "actual_sha256": "8fcb3678ccea22c13c4bdadef0f87c7c807603c6b86bb2e41ae1348366d99cba",
+        "download_file": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/downloads/fag-operator-r1.tar.gz",
+        "extracted": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r1",
+        "manifest_verify_rc": 0,
+        "source": "Original actual r1 authenticated download retained; receipt index reconstructed from retained bytes, original download log, extracted identity/audit and r1 actual rejected execution",
+        "downloaded_at": "2026-11-09T14:36:00+00:00",
+        "downloaded_at_precision": "minute_from_retained_download_file_mtime; exact original receipt document was overwritten by r2 script and is not claimed recovered",
+        "receipt_reconstructed_at": "2026-11-09T15:50:45.834594+00:00",
+        "historical_receipt_original_bytes": "unavailable_overwritten_by_r2_download_script",
+        "r1_actual_run_evidence": "shared_replay/fag-compact29028-portable-r1/invocation.json",
+        "reconstructed_receipt": true
+      },
+      {
+        "filename": "fag-runtime-r1.tar.gz",
+        "bytes": 13334957,
+        "sha256": "43f12fefa061ea301ac20441d56ace0930cefc4fe33eafdd991e5cd15beff9d5",
+        "payload_root": "fag-runtime-r1",
+        "asset_id": 727802903,
+        "repository": "LinxISA/SuperScalarModel",
+        "kind": "runtime",
+        "publication_status": "uploaded_draft",
+        "asset_id_name": "fag-runtime-r1",
+        "required_for": [
+          "replay_existing_elf"
+        ],
+        "optional_for": [],
+        "owner": "archive task: Codex; long-term maintainer unassigned (documented gap)",
+        "archive_pr": "https://github.com/LinxISA/SuperScalarModel/pull/1223",
+        "download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/untagged-6a022b60e986cc738d15/fag-runtime-r1.tar.gz",
+        "release_target": "c2ac32cacd71557c69beec97c17d408a0e3b5cb8",
+        "downloaded_at": "2026-11-09T15:34:20.643857+00:00",
+        "download_file": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/downloads/fag-runtime-r1.tar.gz",
+        "extracted": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-runtime-r1",
+        "actual_bytes": 13334957,
+        "actual_sha256": "43f12fefa061ea301ac20441d56ace0930cefc4fe33eafdd991e5cd15beff9d5",
+        "source": "Authenticated GitHub Release asset API, six-worker verified byte ranges",
+        "manifest_verify_rc": 0,
+        "extracted_audit": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/runtime_extracted_audit.json"
+      },
+      {
+        "filename": "fag-operator-r2.tar.gz",
+        "bytes": 70553,
+        "sha256": "c45b79b5bf5e92f5e71bd401f2aaf1c31b7ae0dd6b8d9d5573fbd869bc4ff37d",
+        "payload_root": "fag-operator-r2",
+        "asset_id": 727986394,
+        "repository": "PTO-ISA/SuperNPUBench",
+        "kind": "operator",
+        "publication_status": "uploaded_draft",
+        "asset_id_name": "fag-operator-r2",
+        "required_for": [
+          "replay_existing_elf"
+        ],
+        "optional_for": [],
+        "owner": "archive task: Codex; long-term maintainer unassigned (documented gap)",
+        "archive_pr": "https://github.com/PTO-ISA/SuperNPUBench/pull/283",
+        "download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/untagged-eac00b05797e3339f2e0/fag-operator-r2.tar.gz",
+        "release_target": "64609e35f675d65dbeef263176329f75d1736a25",
+        "downloaded_at": "2026-11-09T15:34:23.425490+00:00",
+        "download_file": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/downloads/fag-operator-r2.tar.gz",
+        "extracted": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/extracted/fag-operator-r2",
+        "actual_bytes": 70553,
+        "actual_sha256": "c45b79b5bf5e92f5e71bd401f2aaf1c31b7ae0dd6b8d9d5573fbd869bc4ff37d",
+        "source": "Authenticated GitHub Release asset API, six-worker verified byte ranges",
+        "manifest_verify_rc": 0,
+        "extracted_audit": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fag/shared_download/operator_extracted_audit.json"
+      }
+    ],
+    "r1_receipt_reconstruction": "Original receipt JSON overwritten by r2 downloader; retained original asset bytes, extracted payload and actual r1 execution independently establish download; timestamp precision and recovery explicitly recorded."
+  }
+}

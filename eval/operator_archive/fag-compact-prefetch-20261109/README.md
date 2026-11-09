@@ -1,27 +1,25 @@
-# FAG direct backward — experimental source snapshots
+# FAG standalone source archive and Release replay
 
-`compact_source` preserves compact/colexpand/subfirst for Sq1024; `prefetch_source` preserves the Sq4096 prefetch-V1 candidate with runtime output scales. Each contains `basic_op/fa/fa_gmma_bwd_q.hpp` and the matching `fa_gmma_bwd_q.cpp` driver. They export the same operator and must be built separately. They are not connected to the default test suite by this archive commit.
+Required assets are publicly published; actual downloaded bytes are verified. 3/3 actual downloaded zero-input timing cases have completed receipts. Each reproduced rc0, historical cycles and complete annotation-normalized full-trace fields/order/metadata (compact6239 fag_direct labels, slots7682160 fag labels;89646 unannotated); nocounters event/field/metadata equivalence is checked separately from raw serialization. Source files remain unchanged and outside default integration.
 
-The FP8 E4M3 inputs are Q/K/V/dO; lse, delta and outputs dQ/dK/dV are FP32. The kernel loops over Q inside a KV tile, uses MatDType P/dS operands and FP32 accumulation, compact auxiliary vectors and colexpand subtraction, dV internalACC, dQ atomic accumulation, and optional direct CUBE-to-Shared transport. dQ must be initialized before accumulation. Prefetch V1 overlaps next-Q/auxiliary loads and reuses the next operands; runtime output scaling remains explicit. Header comments and macros preserve exact implementation assumptions.
+Requires Linux x86_64 and Python>=3.9; no compiler or historical trace is needed. SuperNPUBench owns the two unique ELF/diss pairs (three case configs); Model owns two fixed runtime variants with a single loader/library closure, configs and source recovery recipe. Exact hashes, IDs and current publication state are in release_index.json / DELIVERY_STATUS.
 
-## Historical evidence, kept separate
+[Operator asset](https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fag-20261109/fag-operator-r2.tar.gz); [Model runtime/config asset](https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fag-20261109/fag-runtime-r1.tar.gz).
 
-| Candidate/config | Cycles | Validation scope |
+```sh
+curl -fL https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fag-20261109/fag-operator-r2.tar.gz -o fag-operator-r2.tar.gz
+curl -fL https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fag-20261109/fag-runtime-r1.tar.gz -o fag-runtime-r1.tar.gz
+tar -xzf fag-operator-r2.tar.gz
+tar -xzf fag-runtime-r1.tar.gz
+python3 fag-operator-r2/replay.py --operator-root fag-operator-r2 --model-root fag-runtime-r1 --case fag-compact29028-portable-r2 --outdir replay-fag-compact
+```
+
+Use a new output directory for each case. Runtime/config hashes are cross-pinned by the operator manifest. The runner clears inherited diagnostic settings, fixes per-case environment, verifies config override echoes, rc/cycles and full-trace canonical identities after only exact documented historical annotation inverse, and compares all nocounters events/metadata with the filtered full trace plus historical semantic digest. Different raw nocounters hashes are reported as different serialization, never as byte equality. Every run retains cycle log, full gzip, lossless nocounters gzip and identities. Optional historical trace assets are separately available, not run dependencies; their downloads are not verified.
+
+| portable case | historical expected cycles | actual downloaded observation |
 |---|---:|---|
-| compact, Sq1024/Skv128/D256, 4PE, stream-only 001 | 29028 | Historical nonzero exact evidence is separate from zero-input timing/ablation; not a same-run performance acceptance |
-| prefetch V1, Sq4096/Skv128/D256, SL2 data slots512 | 89646 | Fixed historical ELF; equivalence to predecessor does not prove independent golden correctness |
-| same prefetch ELF, SL2 data slots768 | 88050 | Hardware-resource diagnostic (+32KiB); no second kernel change |
+| `fag-compact29028-portable-r2` | 29028 | 29028, rc0 |
+| `fag-prefetch89646-portable-r2` | 89646 | 89646, rc0 |
+| `fag-sl2_768_88050-portable-r2` | 88050 | 88050, rc0 |
 
-The Sq4096 predecessor passed only 0.005-tolerance comparison; dQ/dK were not bit-exact. Prefetch/output-scale equivalence to that predecessor must not be upgraded to independent exact-golden validation. The output-scale-only experiment was slower (93188 versus 92787). The compact and prefetch timings use different shapes/model assumptions and cannot be compared as a single optimization series.
-
-## Existing public provenance
-
-SuperScalarModel commit `6156d025568eb2cc8c95225da9fc2f84cd64a022` contains the output-scale predecessor sources at `perf_handoff/fag_internalacc_output_scale_lastuse_20261103/source/`. Commit `516b9d4b77265eafeca087c6303e7ec1af5d8906` contains its handoff artifacts; `8f5321d56a5336afba1211ef358dbf8540ed7179` adds the prefetch patch/runner/result. These commits belong to `explore/tmov-tlsu-cell-static-20261103`; they are absent from workshop archive commit `2547509024c1ed8ff00b0a89a27d8107f637fa9a`. They were not previously SuperNPUBench operator commits.
-
-Prefetch ELF SHA256 is `c7364cfdf4de0f0a31ff8d09fad3079811bb6ed707529d40186dff3a9fe5b552`, shared by 89646/88050. Historical prefetch runtime source is Model `59d965a55d5e90dbc6652d9bb1f6d9590941a46d`, gfsim SHA256 `6a6acc4ae305f000899e3190e7c2a26034528a19afb6fa34d0232a954dbaba8d`. Correction to the original archive narrative: the compact 29028-cycle case uses integrated Task1 source `a346c831e162d450a3efa1291175f2cf98ae802b`, gfsim SHA256 `8b5b1ba648da03c35bbb7df13879a76647d53fa4610f985d7f5e28b4b71001c0`. Its build identity records `8e06ee6ae038c74571fc5de8ee178e2ab6c4a8cc`; final source `a346c831e162d450a3efa1291175f2cf98ae802b` only updates tests and does not change the production binary. Upstream `eb9079d4c1597f99da4058af7ba87dedc322dbe4` is the integration baseline, not the complete source identity for this case. The previously quoted `ddc9c9eb86fdb871d6aedef7739d06824f7314b19491f558cb3024772d1cadb8` belongs to a separate mainline runtime and must not be attributed to the archived compact29028 run. Model transport/streaming flags and capacity changes are not kernel changes and are not applied here.
-
-## Dependencies and remaining gaps
-
-Build one variant with its directory as the include root, matching TileOP headers plus NPUBench `kernels`, `test/common` and `test/common/src` support. Drivers need benchmark/fileop/multi_thread_res_check headers. Use explicit Sq/Skv/D/Tk and direct-shared/compact-aux settings; the default driver Skv=256 does not select the reported Skv128 case. Functional builds require RES_CHECK/ENABLE_BINARY_OUTPUT, the group worker runtime and portable CHK_DIR/FA_BWD_CHECK_DIR. Inputs are srcq/srck/srcv/srcdo plus src{lse,delta} for compact aux (or expanded lseB/deltaB); prefetch additionally reads three runtime output scales. All expected readbacks and all three outputs must be checked.
-
-This source-only submission includes no new ELF, generated inputs/golden, config export or trace and performs no new numerical/performance run. Compiler/API/ISA complete locks, exact flags, input generation, fresh independent golden/negative controls, source-to-ELF reconstruction, same-run nonzero timing and independent review remain required. Use the public Model handoff as provenance, not as evidence that this snapshot is independently reproducible on current main. Missing inputs/dependencies are failures, never successful skips.
+All timing ELFs use static zero input. Sq1024 separate historical exact checks and Sq4096 separate frozen-baseline equivalence do not constitute same-run TimingSim numeric acceptance; independent Sq4096 dQ/dK host-golden differences remain unresolved. Same-ELF clean-main model comparison, original operator compiler/API/ISA closure and independent S/numerical acceptance remain gaps. Slots768 adds32KiB SL2 data capacity: a hardware assumption, not a kernel or issue fix.

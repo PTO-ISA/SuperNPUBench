@@ -1,7 +1,5 @@
-# Standalone FAG source archive
+# FAG scope
 
-This package contains only FAG; it is split from mixed PR281. See README.md for historical observations and known correctness limits.
+Required assets are publicly published; actual downloaded bytes are verified. 3/3 actual downloaded zero-input timing cases have completed receipts. Each reproduced rc0, historical cycles and complete annotation-normalized full-trace fields/order/metadata (compact6239 fag_direct labels, slots7682160 fag labels;89646 unannotated); nocounters event/field/metadata equivalence is checked separately from raw serialization. Source verification checks metadata bytes, not numerical acceptance.
 
-This draft provides source snapshots and an integrity index only. No ELF, disassembly, runtime, input/golden, effective configuration, trace, or portable shared replay is delivered here. Release delivery and shared replay remain pending. No new build or simulation was performed. This is an incomplete archive, not NDF-complete acceptance.
-
-Run `python3 verify_sources.py` from any working directory to verify the original archived material only. The verifier does not build or execute kernels and is not a correctness test.
+All timing ELFs use static zero input. Sq1024 separate historical exact checks and Sq4096 separate frozen-baseline equivalence do not constitute same-run TimingSim numeric acceptance; independent Sq4096 dQ/dK host-golden differences remain unresolved. Same-ELF clean-main model comparison, original operator compiler/API/ISA closure and independent S/numerical acceptance remain gaps. Slots768 adds32KiB SL2 data capacity: a hardware assumption, not a kernel or issue fix.
