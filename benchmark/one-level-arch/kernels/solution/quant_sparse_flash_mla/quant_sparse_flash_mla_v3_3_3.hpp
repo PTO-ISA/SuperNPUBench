@@ -138,6 +138,14 @@ struct qsmla_v3_types {
 
     static_assert(G % 16 == 0 && N1 % 16 == 0,
                   "v3 requires G divisible by the 4-PE M16 split");
+    // G 切片固定为 64 头（ops mRealSize 上界），kernel 不使用 m_real 裁剪尾片，
+    // 因此 N1 必须能被 64 整除，否则尾片会越界读写。
+    static_assert(Base::GSliceMax == 64, "GSliceMax must remain 64");
+    static_assert(N1 % 64 == 0,
+                  "v3.3.3 requires N1 % 64 == 0 (fixed 64-head G slice)");
+    // PA_BBND 物理池为 [BlockNum, BlockSize, 1, D]，ORI/CMP 行寻址按 D 展平且
+    // 不含 N2 维，故只支持 N2 == 1。
+    static_assert(N2 == 1, "v3.3.3 requires N2 == 1 (KV row stride is D)");
 
     static constexpr int kGroupM = Base::GSliceMax;  // 64-head G slice (ops mRealSize)
     static constexpr int kPeNum = 4;
@@ -294,8 +302,10 @@ void quant_sparse_flash_mla_csa_v3_3_3_4pe_pto(
         tileO tO;
 
         // 全区零 mask：每个 work item 写一次（ops Step E zero_mask_buf 快路径：满块
-        // 直接复用共享零缓冲，不必现造 mask）。每个 PE 都写整块 —— 值完全相同，因此
-        // 并发写是良性的。
+        // 直接复用共享零缓冲，不必现造 mask）。4 个 PE 各写 32 列 —— 本模型 4-PE 按
+        // lockstep 推进，同一拍的写先于所有 PE 的整块 TLOAD 生效（gfrun 三次运行输出
+        // 逐字节一致）。若改成每个 PE 写整块，GM 标量写增至 4 倍，csa_small 实测
+        // 18,242 -> 39,948 周期（+119%），因此保持分片。
         {
             const int seg = kS2Base / kPeNum;
             const int col_begin = static_cast<int>(tid) * seg;
@@ -508,7 +518,9 @@ void quant_sparse_flash_mla_csa_v3_3_3_4pe_pto(
             // 距离取 kPreload-1 而不是 kPreload：否则 blk 与 blk+kPreload 会映射到
             // 同一个 slot，把当前块尚未加载的数据覆盖掉。
             const int pf = blk + kPreload - 1;
-            if (pf < total_blocks) {
+            // 前奏已暂存 0..min(kPreload,total)-1，从 blk=1 起才需要新块，
+            // 避免把最后一块在进入循环时重复暂存一遍。
+            if (pf >= kPreload && pf < total_blocks) {
                 const int pslot = pf % kPreload;
                 tileKvRow stageRowA, stageRowB;
                 resolve_block(pf, v0_slots[pslot], d_lo[pslot], d_hi[pslot],
@@ -534,6 +546,9 @@ void quant_sparse_flash_mla_csa_v3_3_3_4pe_pto(
                 float *mask_src = mask_scratch;  // region 0: all-zero
                 if (partial) {
                     float *tail = mask_scratch + kPeTm * kS2Base;  // region 1
+                    // 4 个 PE 各写 32 列的 [lo, hi) mask，依赖 4-PE lockstep 的
+                    // 「同拍写先于整块 TLOAD 可见」；若改为每 PE 全量写，csa_small
+                    // 实测 18,242 -> 39,948 周期（+119%），故保持分片。
                     const int seg = kS2Base / kPeNum;
                     const int col_begin = static_cast<int>(tid) * seg;
                     const int col_end = col_begin + seg;
