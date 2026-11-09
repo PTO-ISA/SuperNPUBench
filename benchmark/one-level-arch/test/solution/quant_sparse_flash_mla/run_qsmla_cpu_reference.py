@@ -89,7 +89,10 @@ def main() -> int:
             return 2
         selected = (case,)
     else:
-        selected = tuple(case for case in QSMLA_CASES if case.reference_feasible)
+        # 巨型用例（数十亿标量点积、多 GB 中间对象）不进入批量生成，
+        # 需要时用 --case 单独生成。
+        selected = tuple(case for case in QSMLA_CASES
+                         if case.reference_feasible and case.bulk_reference)
     try:
         run_references(selected, args.output_root, args.dtype)
     except (ValueError, subprocess.CalledProcessError) as error:
