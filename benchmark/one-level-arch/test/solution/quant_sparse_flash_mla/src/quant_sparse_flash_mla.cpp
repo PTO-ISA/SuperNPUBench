@@ -291,8 +291,10 @@ int main(){
 #else
     kvdtype* cmp_kv = nullptr;
 #endif
-#ifdef QSMLA_SPARSE_KV_PA_BBND
+#if defined(QSMLA_SPARSE_KV_PA_BBND) && !defined(QSMLA_PA_ISOLATE_NULL_TABLES)
     // PA_BBND: KV bases point at the paged pools; rows come from the tables.
+    // 隔离模式（QSMLA_PA_ISOLATE=on）会置空块表并退回「batch*S2 连续行」寻址，
+    // 此时必须保留连续 KV 指针；指向 PA 池会造成 batch 间行步长不一致。
     kv = reinterpret_cast<kvdtype*>(
         const_cast<uint8_t*>(_binary_ori_kv_pa_hif8_start));
     if constexpr (N1 > 1) {
