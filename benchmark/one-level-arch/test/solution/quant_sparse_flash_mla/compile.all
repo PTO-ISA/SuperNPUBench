@@ -36,8 +36,7 @@ for pair in \
   make $COMMON IMPL="$impl"
 done
 
-# v3：ops-arch35 流程移植的单趟 online softmax CSA（csa_small 性能最优形态，
-# 同 case 同数据下 gfsim 实测 26,022 cyc / R2=0，对照 v2 tadd 线 455,596 cyc）。
-# 大 tile 形态：Tk=128（KV 块）/ Td_block=512（D 不切）；与五模式共用
-# csa_small 数据（上方循环已生成，Makefile 按 IMPL 推导同一数据子目录）。
-make $COMMON Tm=64 Tk=128 Td_block=512 IMPL=csa_v3_4pe
+# v3.3.3：4-PE CSA 主实现（O/m/l 全 UB 驻留 + staging 预取 + 行级 ping-pong +
+# 可配置 preload + 多 work）。大 tile 形态：Tk=128（KV 块）/ Td_block=512（D 不切）；
+# 与五模式共用 csa_small 数据（上方循环已生成，Makefile 按 IMPL 推导同一数据子目录）。
+make $COMMON Tm=64 Tk=128 Td_block=512 IMPL=csa_v3_3_3_4pe QSMLA_PRELOAD=2
