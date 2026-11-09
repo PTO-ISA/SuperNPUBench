@@ -1,0 +1,17 @@
+{
+  "operator": "fag",
+  "archive_status": "incomplete",
+  "review_level": "run_reproduced",
+  "source_archive_commit": "caa9b37d37b90f2f09df7130029e7917eb5ec62e",
+  "base_commit": "37ee19990f965cc7a8b30378fe1a40dfaeb76359",
+  "scope": "Git source snapshots and index remain outside default integration; separate cross-repository Release assets have three actual downloaded diagnostic zero-input timing replays, not numerical or full NDF acceptance",
+  "release_status": "published_download_verified",
+  "new_builds": false,
+  "new_simulations": true,
+  "actual_downloaded_case_count": 3,
+  "historical_source_unchanged": true,
+  "release_index": "release_index.json",
+  "delivery_timing_replay_count": 3,
+  "initial_r1_rejected_run_count": 1,
+  "new_simulations_by_source_metadata_preparer": false
+}
