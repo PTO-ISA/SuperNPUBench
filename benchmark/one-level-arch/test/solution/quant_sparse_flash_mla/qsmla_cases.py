@@ -38,6 +38,8 @@ class QsmlaCase:
     enable_stage: str = "stage0_reference"
     coverage: FrozenSet[str] = frozenset()
     reference_feasible: bool = True
+    # 是否纳入 --all-reference 批量生成（超大用例可由 --case 单独生成）。
+    bulk_reference: bool = True
     note: str = ""
     cmp_s2: int = 0
     ori_topk: int = 0
@@ -330,6 +332,7 @@ _QSMLA_MODE_CASES: Tuple[QsmlaCase, ...] = (
               softmax_scale=0.04419417,
               source="user:typical_csa_c4",
               enable_stage="gfrun", reference_feasible=True,
+              bulk_reference=False,
               mode_generation_feasible=True,
               coverage=frozenset({"typical_csa", "bsnd_layout", "batch_gqa",
                                   "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
