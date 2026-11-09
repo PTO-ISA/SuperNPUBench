@@ -61,5 +61,7 @@
     "instruction_listing_matches_historical": true,
     "elf_and_disassembly_personal_path_scan": "passed",
     "correctness": "not_checked; static zero-input scheduling only"
-  }
+  },
+  "delivery_index": "artifact_delivery.json",
+  "delivery_owner_repository": "https://github.com/PTO-ISA/SuperNPUBench"
 }

@@ -75,3 +75,20 @@ from an unrelated cwd: **43,694 Total Cycles**, rc=0, with full/nocounters
 SwimLane produced. The portable ELF instruction listing matches the historical
 baseline; ELF and disassembly personal-path scans pass. This check does not add
 nonzero numerical validation.
+
+
+## 跨仓库交付归属
+
+本目录是算子源码及构建入口的权威存档；最终ELF/diss、构建身份及算子重放入口也由
+SuperNPUBench交付，计划通过本仓库Release附件承载，不将大二进制提交进Git。
+逐文件身份与计划状态见 [artifact_delivery.json](artifact_delivery.json)。当前附件仍为planned，
+没有创建、上传或下载验证；这里新增的是交付清单。
+
+模型runtime、源码恢复patch、模型配置/问题分析与运行trace归
+[SuperScalarModel PR1221](https://github.com/LinxISA/SuperScalarModel/pull/1221)，
+按runtime hash与ELF/config hash关联；模型归档目标分支并非运行模型源码基线。
+源码固定commit仍为`877aa052dfc6dc2c6cf1493a76d08b1472cc3b12`，后续文档提交不能替代它。
+
+本次不修改kernel/driver、默认IO ping-pong或历史产物，不新增仿真。
+现有build_snapshot.py是源码构建入口；计划中的已有ELF免编译重放入口尚待补齐。
+只拉此PR目前仍不能完整复跑，43694拍仍是历史实验模型的静态零输入计时。

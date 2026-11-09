@@ -1,9 +1,10 @@
 {
-  "README.md": "6ab5aa6faa376cbbb7b6baf2c65decf815d7d8baca23e27dba1b60e674b3ce90",
+  "README.md": "f3d2a69a4183647ec45abf42e476e8b0b71346e701ee735e675c2e7866129947",
+  "artifact_delivery.json": "78f12fc93226d9df9456436bb6cfec0186e4ec82af6b54a0c15cf82406d0bfbc",
   "build_flags.json": "d15883c0dbc3ed784949918989490c8450ef7ccccca37fc22e48893b74200e88",
   "build_snapshot.py": "f738f14f280a9c0fd349123623ef4188c465ebfba636340702dd4be47cb0d298",
   "configs/r128_w128_shared128.conf": "d28ee85a992acb14c0ba7592364dd44a8eb2c9ad22d037cae105cf2af62f5db0",
-  "identity.json": "7b899641cdd156161fd6c9ec06b69f62ccc99d737e2327584da228c04f797f4c",
+  "identity.json": "e67dd6d4c7fcd2612d351ceec110af22b9d0c356f830ce7ed75c462d031d6ab1",
   "source/driver.cpp": "ca60507c598af408b7a455835157f918e4081a439e3648d7a907f5143be7ef87",
   "source/solution/normalization/rms_norm/rms_norm_dynamic_tree_32k.hpp": "f31c818062496854adcfe82c91400b763531f7bf40c99b73ffd57ba324b49fe4",
   "source/support/_start.s": "c2d709a779a5ca9136a17f1797f868a90b6373db95dbcdb56a3ba0791b4037e1",
