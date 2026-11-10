@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export COMPILER_DIR=/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
+cd "$(dirname "$0")"
+make TESTCASE=hashtable_lookup res_check=off CC_OPT=default "$@"
