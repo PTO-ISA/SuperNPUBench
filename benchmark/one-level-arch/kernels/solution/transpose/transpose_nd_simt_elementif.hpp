@@ -44,12 +44,7 @@ void transpose_nd_simt_elementif_tile(DType *input, DType *output, int tile_star
     constexpr int kFull = Elements / TileElements;
     constexpr int kTail = Elements % TileElements;
 
-    // 逆置换 + 编译期输入/输出 stride
-    constexpr auto kInv = [](std::array<int, 8> p) {
-        std::array<int, 8> inv{};
-        for (int i = 0; i < Rank; ++i) inv[p[i]] = i;
-        return inv;
-    }(Perm);
+    // 编译期输入/输出 stride（索引都用前向 Perm，非自逆置换才正确）
     constexpr std::array<std::uint32_t, Rank> kInStride = [] {
         std::array<std::uint32_t, Rank> s{};
         std::uint32_t acc = 1;
@@ -109,7 +104,7 @@ void transpose_nd_simt_elementif_tile(DType *input, DType *output, int tile_star
                         for (int d = 0; d < Rank; ++d) {
                             const std::uint32_t coord =
                                 (o / kOutStride[d]) % static_cast<std::uint32_t>(Dims[Perm[d]]);
-                            in_idx += coord * kInStride[kInv[d]];
+                            in_idx += coord * kInStride[Perm[d]];
                         }
                         vals[e] = input[in_idx];
                     } else {

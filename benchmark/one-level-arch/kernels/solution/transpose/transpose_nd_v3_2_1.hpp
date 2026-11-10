@@ -231,6 +231,8 @@ inline V32Tiling MakeV32Tiling(int rank, const std::uint32_t *in_shape,
 template <typename DType, int CapElements, int TileElements = 512,
           std::uint32_t PeCount = supernpu::multi_thread::kDefaultPeCount>
 void transpose_nd_v3_2_1(DType *input, DType *output, const v321_detail::V32Tiling &t, int pe_id) {
+    static_assert(static_cast<unsigned long long>(CapElements) * sizeof(DType) <= 0xFFFFFFFFULL,
+                  "GATHER/TENSOR_MOVE 的偏移是 uint32：张量字节数必须 < 4 GiB");
     using DataTile = pto::Tile<pto::Location::Vec, DType, 1, TileElements, pto::BLayout::RowMajor>;
     using Global = pto::global_tensor<DType, pto::RowMajor<1, CapElements>>;
 
