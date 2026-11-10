@@ -69,3 +69,13 @@ make -C benchmark/one-level-arch/test/solution/transpose TESTCASE=transpose_simt
 - 校验过程中发现两个模型缺陷（与 kernel 无关）：
   1. `constexpr` 常量数组的部分元素被错误物化（`{64,64}` 读成 `{64,0}`，与 #1038 同类）；
   2. 相邻的 32 位标量写会被合并成一次 64 位栈写并丢掉高半 → 测试里用 `volatile` 逐元素写绕过。
+
+## 实现要点（对齐评审）
+
+- **N_LAST**：保留轴长度不是 128 的整数倍时，Host 侧自动回退到 GATHER（避免行尾余数丢失）。
+- **GATHER / TENSOR_MOVE 尾块**：用"重叠整块"技巧（最后一块从 `numel - TileElements` 起），
+  不会写到 `ceil(numel/TileElements)*TileElements` 之外；输出缓冲仍建议按 tile 向上取整分配。
+- **测试初始化**：只由 PE0 初始化 `input/output`，再用轻量 PE 屏障同步（屏障带自旋上限，
+  `multiThreadNum != PE` 时退化为继续执行，不会死锁）；SIMT 导出前同样有完成屏障。
+- **SIMT 构建**：`-mllvm -linxv5-enable-generic-element=true` 用 `override` 追加，
+  命令行传 `CC_OPTS=...` 也不会丢；`ENABLE_BINARY_OUTPUT` 不再强制打开（gfsim 不支持 guest `write()`）。

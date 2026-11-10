@@ -13,8 +13,9 @@ SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/transpose_simt.cpp
 TARGET = $(ELF_HEAD)_transpose_simt_PE4.elf
 SIMT_CASE ?= 0
 SIMT_PE ?= 4
-DEFINES += -DSIMT_CASE=$(SIMT_CASE) -DSIMT_PE=$(SIMT_PE) -DENABLE_BINARY_OUTPUT
-CC_OPTS += -mllvm -linxv5-enable-generic-element=true
+DEFINES += -DSIMT_CASE=$(SIMT_CASE) -DSIMT_PE=$(SIMT_PE)
+# 必须保留（命令行传入 CC_OPTS 时普通赋值会被忽略，故用 override）
+override CC_OPTS += -mllvm -linxv5-enable-generic-element=true
 else
 $(error Unsupported TESTCASE=$(TESTCASE); expected transpose_v32 | transpose_simt)
 endif

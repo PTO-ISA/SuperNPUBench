@@ -197,6 +197,8 @@ inline V32Tiling MakeV32Tiling(int rank, const std::uint32_t *in_shape,
             acc2 *= red2.inShape[red2.perm[k]];
         }
         for (int i = 0; i < t.numPrefix; ++i) t.prefixPerm[i] = red2.perm[i];
+        // 行尾不足 128 时按行搬移会丢掉余数 → 回退通用 GATHER（与 v3.2 一致）
+        if ((t.L % 128) != 0) t.scenario = static_cast<int>(v32_detail::Scenario::Gather);
     } else if (t.scenario == static_cast<int>(v32_detail::Scenario::Gather)) {
         t.rank = red2.dim;
         std::uint32_t is[8] = {1, 1, 1, 1, 1, 1, 1, 1};
@@ -278,7 +280,13 @@ void transpose_nd_v3_2_1(DType *input, DType *output, const v321_detail::V32Tili
     for (int tt = pe_id; tt < t.numTiles; tt += static_cast<int>(PeCount)) {
         DataTile dst;
         OffsetTile lin, q, cyc, cb, coord, contrib, off;
-        TCI(lin, (std::uint32_t)tt * TileElements);
+        // 尾块用"重叠整块"：最后一块从 (numel - TileElements) 起，避免写到 numel 之外
+        int base = tt * TileElements;
+        if (base + TileElements > static_cast<int>(t.numel)) {
+            base = static_cast<int>(t.numel) - TileElements;
+            if (base < 0) base = 0;
+        }
+        TCI(lin, (std::uint32_t)base);
         TEXPANDS(off, 0u);
         #pragma clang loop unroll(full)
         for (int d = t.rank - 1; d >= 0; --d) {
@@ -291,9 +299,9 @@ void transpose_nd_v3_2_1(DType *input, DType *output, const v321_detail::V32Tili
             TMULS(contrib, coord, t.inStride[d] * static_cast<std::uint32_t>(sizeof(DType)));
             TADD(off, off, contrib);
         }
-        auto go = out_iter(0, tt);
         MGATHER(dst, in_g, off);
-        TSTORE(go, dst);
+        OutputGlobal og(output + base);
+        TSTORE(og, dst);
     }
 }
 
