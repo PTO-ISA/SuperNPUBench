@@ -1,0 +1,85 @@
+{
+  "reviewer": "Codex parent",
+  "cases": [
+    {
+      "case": "split2",
+      "source_files": [
+        {
+          "path": "cases/split2/source/split.hpp",
+          "sha256": "bb7f2eca07578d02e7801177cb976300303ec5729a11bf970bef34f9ec5d76f9",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/split2/source/main.cpp",
+          "sha256": "d9ac09d508e02e2640eaa85f6d91e4e9d8577a64ccfe7a7f8aa0945cfbbacf3c",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/split2/source/mxquant_scalar_ref.h",
+          "sha256": "92fa68e0e2569eec2a7f6f6c3336308fe05344cc0720fb380087b7e51e14704e",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/split2/source/bulk.hpp",
+          "sha256": "5cb7bbc3ace7db2c5cabbd38c50071decab5f7284b702ae30a81bf8d7318d038",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/split2/source/baseline.hpp",
+          "sha256": "010120359fa3560f74abc36be2edd4a13785f323c7a589746780091e9a91c91f",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/split2/source/pipeline.hpp",
+          "sha256": "b266279de5e34236ac30b6007291c4dc7f8149685691a03ab8d389ad5d563ccc",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/split2/source/link.ld",
+          "sha256": "fb976d33f94637f671b9360f3f4e9734cc9d20d9f9b788cb23f131a7c187244c",
+          "matches_original_identity": true
+        }
+      ],
+      "elf_original_bytes_unchanged": true,
+      "diss_original_bytes_changed_lines_only": [
+        2
+      ],
+      "original_identity_sha256": "115f2ca2b275464a196863cff76139b68282e729ebc0e8b32c1b598a671004a5"
+    },
+    {
+      "case": "baseline",
+      "source_files": [
+        {
+          "path": "cases/baseline/source/main.cpp",
+          "sha256": "3921731073db4428461fbd5f36dfa9bf6ad170fb0dc5729b779636368a18809a",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/baseline/source/mxquant_scalar_ref.h",
+          "sha256": "92fa68e0e2569eec2a7f6f6c3336308fe05344cc0720fb380087b7e51e14704e",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/baseline/source/bulk.hpp",
+          "sha256": "5cb7bbc3ace7db2c5cabbd38c50071decab5f7284b702ae30a81bf8d7318d038",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/baseline/source/baseline.hpp",
+          "sha256": "010120359fa3560f74abc36be2edd4a13785f323c7a589746780091e9a91c91f",
+          "matches_original_identity": true
+        },
+        {
+          "path": "cases/baseline/source/link.ld",
+          "sha256": "fb976d33f94637f671b9360f3f4e9734cc9d20d9f9b788cb23f131a7c187244c",
+          "matches_original_identity": true
+        }
+      ],
+      "elf_original_bytes_unchanged": true,
+      "diss_original_bytes_changed_lines_only": [
+        2
+      ],
+      "original_identity_sha256": "91b74c82e4a4d6b4e136936bff72dda31d5d6ace5916d0d2cbebdf245b1baabb"
+    }
+  ]
+}

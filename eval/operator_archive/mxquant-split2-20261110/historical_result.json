@@ -1,0 +1,2449 @@
+{
+  "status": "timing_diagnostics_only",
+  "numeric_limitation": "Original frozen RMS TimingSim fails baseline numerical output; same-ELF gfrun validation passes.",
+  "window_definition": "TEPL SLOT block spans, half-open trace cycle intervals; includes waits/gaps. Resource duplicate events excluded. Concurrent band windows must not be summed.",
+  "results": [
+    {
+      "variant": "packed_pingpong",
+      "total_cycles": 5545,
+      "elements_per_cycle": 23.637871956717763,
+      "vector_window": [
+        1365,
+        4050
+      ],
+      "vector_window_elements_per_cycle": 48.816387337057726,
+      "vector_tileops": 1376,
+      "tlsu_tileops": 64,
+      "cellreg_pe_peaks": {
+        "PE0 CellReg used bytes": 73472,
+        "PE1 CellReg used bytes": 76544,
+        "PE2 CellReg used bytes": 88832,
+        "PE3 CellReg used bytes": 80128
+      },
+      "cellreg_simultaneous_peak": 288384,
+      "rows": [
+        {
+          "pe": 0,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1365,
+            1864
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": null,
+          "load_window": [
+            787,
+            1364
+          ],
+          "load_chunks": [
+            [
+              787,
+              1364
+            ]
+          ],
+          "payload_store_window": [
+            2350,
+            3523
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2366,
+            2928
+          ],
+          "single_pe_elements_per_cycle": 14.576512455516013,
+          "gap_from_previous": 502,
+          "load_window": [
+            810,
+            2365
+          ],
+          "load_chunks": [
+            [
+              810,
+              2365
+            ]
+          ],
+          "payload_store_window": [
+            2936,
+            3801
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2633,
+            3245
+          ],
+          "single_pe_elements_per_cycle": 13.38562091503268,
+          "gap_from_previous": -295,
+          "load_window": [
+            1490,
+            2509
+          ],
+          "load_chunks": [
+            [
+              1490,
+              2509
+            ]
+          ],
+          "payload_store_window": [
+            3508,
+            4577
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3551,
+            4050
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": 306,
+          "load_window": [
+            2402,
+            3550
+          ],
+          "load_chunks": [
+            [
+              2402,
+              3550
+            ]
+          ],
+          "payload_store_window": [
+            4062,
+            5108
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1647,
+            2146
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": null,
+          "load_window": [
+            792,
+            1646
+          ],
+          "load_chunks": [
+            [
+              792,
+              1646
+            ]
+          ],
+          "payload_store_window": [
+            2348,
+            3408
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2227,
+            2729
+          ],
+          "single_pe_elements_per_cycle": 16.318725099601593,
+          "gap_from_previous": 81,
+          "load_window": [
+            808,
+            2226
+          ],
+          "load_chunks": [
+            [
+              808,
+              2226
+            ]
+          ],
+          "payload_store_window": [
+            2938,
+            3923
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2792,
+            3292
+          ],
+          "single_pe_elements_per_cycle": 16.384,
+          "gap_from_previous": 63,
+          "load_window": [
+            1684,
+            2791
+          ],
+          "load_chunks": [
+            [
+              1684,
+              2791
+            ]
+          ],
+          "payload_store_window": [
+            3506,
+            4441
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3404,
+            3915
+          ],
+          "single_pe_elements_per_cycle": 16.031311154598825,
+          "gap_from_previous": 112,
+          "load_window": [
+            2263,
+            3403
+          ],
+          "load_chunks": [
+            [
+              2263,
+              3403
+            ]
+          ],
+          "payload_store_window": [
+            4060,
+            4972
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1507,
+            2006
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": null,
+          "load_window": [
+            789,
+            1506
+          ],
+          "load_chunks": [
+            [
+              789,
+              1506
+            ]
+          ],
+          "payload_store_window": [
+            2346,
+            3273
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2085,
+            2587
+          ],
+          "single_pe_elements_per_cycle": 16.318725099601593,
+          "gap_from_previous": 79,
+          "load_window": [
+            806,
+            2084
+          ],
+          "load_chunks": [
+            [
+              806,
+              2084
+            ]
+          ],
+          "payload_store_window": [
+            2934,
+            3656
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2653,
+            3154
+          ],
+          "single_pe_elements_per_cycle": 16.35129740518962,
+          "gap_from_previous": 66,
+          "load_window": [
+            1544,
+            2652
+          ],
+          "load_chunks": [
+            [
+              1544,
+              2652
+            ]
+          ],
+          "payload_store_window": [
+            3504,
+            4314
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3094,
+            3681
+          ],
+          "single_pe_elements_per_cycle": 13.955706984667803,
+          "gap_from_previous": -60,
+          "load_window": [
+            2129,
+            3093
+          ],
+          "load_chunks": [
+            [
+              2129,
+              3093
+            ]
+          ],
+          "payload_store_window": [
+            4057,
+            4824
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1780,
+            2338
+          ],
+          "single_pe_elements_per_cycle": 14.68100358422939,
+          "gap_from_previous": null,
+          "load_window": [
+            794,
+            1779
+          ],
+          "load_chunks": [
+            [
+              794,
+              1779
+            ]
+          ],
+          "payload_store_window": [
+            2344,
+            3145
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2050,
+            2662
+          ],
+          "single_pe_elements_per_cycle": 13.38562091503268,
+          "gap_from_previous": -288,
+          "load_window": [
+            805,
+            1942
+          ],
+          "load_chunks": [
+            [
+              805,
+              1942
+            ]
+          ],
+          "payload_store_window": [
+            2940,
+            4049
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2936,
+            3496
+          ],
+          "single_pe_elements_per_cycle": 14.628571428571428,
+          "gap_from_previous": 274,
+          "load_window": [
+            1817,
+            2935
+          ],
+          "load_chunks": [
+            [
+              1817,
+              2935
+            ]
+          ],
+          "payload_store_window": [
+            3502,
+            4181
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3260,
+            3814
+          ],
+          "single_pe_elements_per_cycle": 14.787003610108304,
+          "gap_from_previous": -236,
+          "load_window": [
+            2229,
+            3259
+          ],
+          "load_chunks": [
+            [
+              2229,
+              3259
+            ]
+          ],
+          "payload_store_window": [
+            4056,
+            4702
+          ]
+        }
+      ],
+      "aggregate_bands": [
+        {
+          "row_band": 0,
+          "aggregate_vector_window": [
+            1365,
+            2338
+          ],
+          "elements_per_cycle": 33.677286742034944
+        },
+        {
+          "row_band": 1,
+          "aggregate_vector_window": [
+            2050,
+            2928
+          ],
+          "elements_per_cycle": 37.32118451025057
+        },
+        {
+          "row_band": 2,
+          "aggregate_vector_window": [
+            2633,
+            3496
+          ],
+          "elements_per_cycle": 37.96987253765933
+        },
+        {
+          "row_band": 3,
+          "aggregate_vector_window": [
+            3094,
+            4050
+          ],
+          "elements_per_cycle": 34.27615062761506
+        }
+      ],
+      "elf_sha256": "52c85c560fad4ff92fe91ef9a66ac4703165fb8b161b469afb779495632354b8",
+      "gfrun_pass": true,
+      "trace": "subview_pingpong_20261106/perf_runs/embedded_packed_pingpong/mxquant_nocounters.json"
+    },
+    {
+      "variant": "prefetch3",
+      "total_cycles": 5613,
+      "elements_per_cycle": 23.35150543381436,
+      "vector_window": [
+        1365,
+        4032
+      ],
+      "vector_window_elements_per_cycle": 49.145856767904014,
+      "vector_tileops": 1376,
+      "tlsu_tileops": 76,
+      "cellreg_pe_peaks": {
+        "PE0 CellReg used bytes": 88064,
+        "PE1 CellReg used bytes": 86784,
+        "PE2 CellReg used bytes": 88832,
+        "PE3 CellReg used bytes": 74240
+      },
+      "cellreg_simultaneous_peak": 300416,
+      "rows": [
+        {
+          "pe": 0,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1365,
+            1864
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": null,
+          "load_window": [
+            787,
+            1364
+          ],
+          "load_chunks": [
+            [
+              787,
+              1364
+            ]
+          ],
+          "payload_store_window": [
+            2350,
+            3598
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2366,
+            2865
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": 502,
+          "load_window": [
+            810,
+            2365
+          ],
+          "load_chunks": [
+            [
+              810,
+              2365
+            ]
+          ],
+          "payload_store_window": [
+            2873,
+            3856
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2951,
+            3468
+          ],
+          "single_pe_elements_per_cycle": 15.845261121856867,
+          "gap_from_previous": 86,
+          "load_window": [
+            826,
+            2950
+          ],
+          "load_chunks": [
+            [
+              826,
+              2950
+            ]
+          ],
+          "payload_store_window": [
+            3480,
+            4648
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3235,
+            3978
+          ],
+          "single_pe_elements_per_cycle": 11.02557200538358,
+          "gap_from_previous": -233,
+          "load_window": [
+            1506,
+            3099
+          ],
+          "load_chunks": [
+            [
+              1506,
+              3099
+            ]
+          ],
+          "payload_store_window": [
+            4044,
+            5177
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1647,
+            2146
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": null,
+          "load_window": [
+            792,
+            1646
+          ],
+          "load_chunks": [
+            [
+              792,
+              1646
+            ]
+          ],
+          "payload_store_window": [
+            2348,
+            3479
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2227,
+            2729
+          ],
+          "single_pe_elements_per_cycle": 16.318725099601593,
+          "gap_from_previous": 81,
+          "load_window": [
+            808,
+            2226
+          ],
+          "load_chunks": [
+            [
+              808,
+              2226
+            ]
+          ],
+          "payload_store_window": [
+            2875,
+            3995
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2806,
+            3306
+          ],
+          "single_pe_elements_per_cycle": 16.384,
+          "gap_from_previous": 77,
+          "load_window": [
+            823,
+            2805
+          ],
+          "load_chunks": [
+            [
+              823,
+              2805
+            ]
+          ],
+          "payload_store_window": [
+            3478,
+            4518
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3394,
+            3919
+          ],
+          "single_pe_elements_per_cycle": 15.603809523809524,
+          "gap_from_previous": 88,
+          "load_window": [
+            1683,
+            3393
+          ],
+          "load_chunks": [
+            [
+              1683,
+              3393
+            ]
+          ],
+          "payload_store_window": [
+            4042,
+            5041
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1507,
+            2006
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": null,
+          "load_window": [
+            789,
+            1506
+          ],
+          "load_chunks": [
+            [
+              789,
+              1506
+            ]
+          ],
+          "payload_store_window": [
+            2346,
+            3350
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2085,
+            2587
+          ],
+          "single_pe_elements_per_cycle": 16.318725099601593,
+          "gap_from_previous": 79,
+          "load_window": [
+            806,
+            2084
+          ],
+          "load_chunks": [
+            [
+              806,
+              2084
+            ]
+          ],
+          "payload_store_window": [
+            2871,
+            3726
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2671,
+            3172
+          ],
+          "single_pe_elements_per_cycle": 16.35129740518962,
+          "gap_from_previous": 84,
+          "load_window": [
+            820,
+            2670
+          ],
+          "load_chunks": [
+            [
+              820,
+              2670
+            ]
+          ],
+          "payload_store_window": [
+            3476,
+            4381
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3248,
+            3776
+          ],
+          "single_pe_elements_per_cycle": 15.515151515151516,
+          "gap_from_previous": 76,
+          "load_window": [
+            1543,
+            3247
+          ],
+          "load_chunks": [
+            [
+              1543,
+              3247
+            ]
+          ],
+          "payload_store_window": [
+            4039,
+            4895
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1780,
+            2338
+          ],
+          "single_pe_elements_per_cycle": 14.68100358422939,
+          "gap_from_previous": null,
+          "load_window": [
+            794,
+            1779
+          ],
+          "load_chunks": [
+            [
+              794,
+              1779
+            ]
+          ],
+          "payload_store_window": [
+            2344,
+            3217
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2050,
+            2723
+          ],
+          "single_pe_elements_per_cycle": 12.172362555720653,
+          "gap_from_previous": -288,
+          "load_window": [
+            805,
+            1942
+          ],
+          "load_chunks": [
+            [
+              805,
+              1942
+            ]
+          ],
+          "payload_store_window": [
+            2877,
+            4124
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2528,
+            3073
+          ],
+          "single_pe_elements_per_cycle": 15.03119266055046,
+          "gap_from_previous": -195,
+          "load_window": [
+            818,
+            2527
+          ],
+          "load_chunks": [
+            [
+              818,
+              2527
+            ]
+          ],
+          "payload_store_window": [
+            3474,
+            4255
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3530,
+            4032
+          ],
+          "single_pe_elements_per_cycle": 16.318725099601593,
+          "gap_from_previous": 457,
+          "load_window": [
+            1816,
+            3529
+          ],
+          "load_chunks": [
+            [
+              1816,
+              3529
+            ]
+          ],
+          "payload_store_window": [
+            4038,
+            4778
+          ]
+        }
+      ],
+      "aggregate_bands": [
+        {
+          "row_band": 0,
+          "aggregate_vector_window": [
+            1365,
+            2338
+          ],
+          "elements_per_cycle": 33.677286742034944
+        },
+        {
+          "row_band": 1,
+          "aggregate_vector_window": [
+            2050,
+            2865
+          ],
+          "elements_per_cycle": 40.206134969325156
+        },
+        {
+          "row_band": 2,
+          "aggregate_vector_window": [
+            2528,
+            3468
+          ],
+          "elements_per_cycle": 34.85957446808511
+        },
+        {
+          "row_band": 3,
+          "aggregate_vector_window": [
+            3235,
+            4032
+          ],
+          "elements_per_cycle": 41.114178168130486
+        }
+      ],
+      "elf_sha256": "693bfe947057a01ed66e757adaa72b748c4154d8bf5c2d2e2d83dc66e7e95d06",
+      "gfrun_pass": true,
+      "trace": "pipeline_20261106/perf_runs/embedded_prefetch3/mxquant_nocounters.json"
+    },
+    {
+      "variant": "prefetch4",
+      "total_cycles": 5599,
+      "elements_per_cycle": 23.409894624040007,
+      "vector_window": [
+        1365,
+        4422
+      ],
+      "vector_window_elements_per_cycle": 42.876022244030096,
+      "vector_tileops": 1376,
+      "tlsu_tileops": 80,
+      "cellreg_pe_peaks": {
+        "PE0 CellReg used bytes": 76800,
+        "PE1 CellReg used bytes": 74880,
+        "PE2 CellReg used bytes": 76800,
+        "PE3 CellReg used bytes": 82560
+      },
+      "cellreg_simultaneous_peak": 283648,
+      "rows": [
+        {
+          "pe": 0,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1365,
+            1864
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": null,
+          "load_window": [
+            787,
+            1364
+          ],
+          "load_chunks": [
+            [
+              787,
+              1364
+            ]
+          ],
+          "payload_store_window": [
+            2350,
+            3585
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2366,
+            2865
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": 502,
+          "load_window": [
+            810,
+            2365
+          ],
+          "load_chunks": [
+            [
+              810,
+              2365
+            ]
+          ],
+          "payload_store_window": [
+            2873,
+            3839
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2951,
+            3803
+          ],
+          "single_pe_elements_per_cycle": 9.615023474178404,
+          "gap_from_previous": 86,
+          "load_window": [
+            826,
+            2950
+          ],
+          "load_chunks": [
+            [
+              826,
+              2950
+            ]
+          ],
+          "payload_store_window": [
+            3795,
+            4585
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3796,
+            4422
+          ],
+          "single_pe_elements_per_cycle": 13.08626198083067,
+          "gap_from_previous": -7,
+          "load_window": [
+            836,
+            3528
+          ],
+          "load_chunks": [
+            [
+              836,
+              3528
+            ]
+          ],
+          "payload_store_window": [
+            4434,
+            5161
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1647,
+            2146
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": null,
+          "load_window": [
+            792,
+            1646
+          ],
+          "load_chunks": [
+            [
+              792,
+              1646
+            ]
+          ],
+          "payload_store_window": [
+            2348,
+            3468
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2227,
+            2729
+          ],
+          "single_pe_elements_per_cycle": 16.318725099601593,
+          "gap_from_previous": 81,
+          "load_window": [
+            808,
+            2226
+          ],
+          "load_chunks": [
+            [
+              808,
+              2226
+            ]
+          ],
+          "payload_store_window": [
+            2875,
+            3968
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2806,
+            3665
+          ],
+          "single_pe_elements_per_cycle": 9.536670547147846,
+          "gap_from_previous": 77,
+          "load_window": [
+            823,
+            2805
+          ],
+          "load_chunks": [
+            [
+              823,
+              2805
+            ]
+          ],
+          "payload_store_window": [
+            3794,
+            4465
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3657,
+            4275
+          ],
+          "single_pe_elements_per_cycle": 13.255663430420713,
+          "gap_from_previous": -8,
+          "load_window": [
+            835,
+            3389
+          ],
+          "load_chunks": [
+            [
+              835,
+              3389
+            ]
+          ],
+          "payload_store_window": [
+            4432,
+            5031
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1507,
+            2006
+          ],
+          "single_pe_elements_per_cycle": 16.416833667334668,
+          "gap_from_previous": null,
+          "load_window": [
+            789,
+            1506
+          ],
+          "load_chunks": [
+            [
+              789,
+              1506
+            ]
+          ],
+          "payload_store_window": [
+            2346,
+            3339
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2085,
+            2587
+          ],
+          "single_pe_elements_per_cycle": 16.318725099601593,
+          "gap_from_previous": 79,
+          "load_window": [
+            806,
+            2084
+          ],
+          "load_chunks": [
+            [
+              806,
+              2084
+            ]
+          ],
+          "payload_store_window": [
+            2871,
+            3712
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2671,
+            3513
+          ],
+          "single_pe_elements_per_cycle": 9.729216152019003,
+          "gap_from_previous": 84,
+          "load_window": [
+            820,
+            2670
+          ],
+          "load_chunks": [
+            [
+              820,
+              2670
+            ]
+          ],
+          "payload_store_window": [
+            3793,
+            4348
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3507,
+            4205
+          ],
+          "single_pe_elements_per_cycle": 11.736389684813753,
+          "gap_from_previous": -6,
+          "load_window": [
+            834,
+            3238
+          ],
+          "load_chunks": [
+            [
+              834,
+              3238
+            ]
+          ],
+          "payload_store_window": [
+            4430,
+            4895
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1780,
+            2338
+          ],
+          "single_pe_elements_per_cycle": 14.68100358422939,
+          "gap_from_previous": null,
+          "load_window": [
+            794,
+            1779
+          ],
+          "load_chunks": [
+            [
+              794,
+              1779
+            ]
+          ],
+          "payload_store_window": [
+            2344,
+            3215
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2050,
+            2723
+          ],
+          "single_pe_elements_per_cycle": 12.172362555720653,
+          "gap_from_previous": -288,
+          "load_window": [
+            805,
+            1942
+          ],
+          "load_chunks": [
+            [
+              805,
+              1942
+            ]
+          ],
+          "payload_store_window": [
+            2877,
+            4103
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2528,
+            3365
+          ],
+          "single_pe_elements_per_cycle": 9.787335722819593,
+          "gap_from_previous": -195,
+          "load_window": [
+            818,
+            2527
+          ],
+          "load_chunks": [
+            [
+              818,
+              2527
+            ]
+          ],
+          "payload_store_window": [
+            3792,
+            4235
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3360,
+            4201
+          ],
+          "single_pe_elements_per_cycle": 9.74078478002378,
+          "gap_from_previous": -5,
+          "load_window": [
+            833,
+            3093
+          ],
+          "load_chunks": [
+            [
+              833,
+              3093
+            ]
+          ],
+          "payload_store_window": [
+            4428,
+            4760
+          ]
+        }
+      ],
+      "aggregate_bands": [
+        {
+          "row_band": 0,
+          "aggregate_vector_window": [
+            1365,
+            2338
+          ],
+          "elements_per_cycle": 33.677286742034944
+        },
+        {
+          "row_band": 1,
+          "aggregate_vector_window": [
+            2050,
+            2865
+          ],
+          "elements_per_cycle": 40.206134969325156
+        },
+        {
+          "row_band": 2,
+          "aggregate_vector_window": [
+            2528,
+            3803
+          ],
+          "elements_per_cycle": 25.700392156862744
+        },
+        {
+          "row_band": 3,
+          "aggregate_vector_window": [
+            3360,
+            4422
+          ],
+          "elements_per_cycle": 30.854990583804142
+        }
+      ],
+      "elf_sha256": "b13934c687e2f1e602ae87e9afe09eab0f4357c694319c480b9650f68ebb6f4d",
+      "gfrun_pass": true,
+      "trace": "pipeline_20261106/perf_runs/embedded_prefetch4/mxquant_nocounters.json"
+    },
+    {
+      "variant": "split2",
+      "total_cycles": 5464,
+      "elements_per_cycle": 23.988286969253295,
+      "vector_window": [
+        1271,
+        4237
+      ],
+      "vector_window_elements_per_cycle": 44.19150370869858,
+      "vector_tileops": 1376,
+      "tlsu_tileops": 88,
+      "cellreg_pe_peaks": {
+        "PE0 CellReg used bytes": 75264,
+        "PE1 CellReg used bytes": 68608,
+        "PE2 CellReg used bytes": 68480,
+        "PE3 CellReg used bytes": 68608
+      },
+      "cellreg_simultaneous_peak": 206720,
+      "rows": [
+        {
+          "pe": 0,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1271,
+            2100
+          ],
+          "single_pe_elements_per_cycle": 9.881785283474064,
+          "gap_from_previous": null,
+          "load_window": [
+            786,
+            1802
+          ],
+          "load_chunks": [
+            [
+              786,
+              1270
+            ],
+            [
+              806,
+              1802
+            ]
+          ],
+          "payload_store_window": [
+            2112,
+            3345
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2111,
+            2709
+          ],
+          "single_pe_elements_per_cycle": 13.698996655518394,
+          "gap_from_previous": 11,
+          "load_window": [
+            819,
+            2414
+          ],
+          "load_chunks": [
+            [
+              819,
+              2110
+            ],
+            [
+              830,
+              2414
+            ]
+          ],
+          "payload_store_window": [
+            2721,
+            3952
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2644,
+            3200
+          ],
+          "single_pe_elements_per_cycle": 14.733812949640289,
+          "gap_from_previous": -65,
+          "load_window": [
+            1497,
+            2893
+          ],
+          "load_chunks": [
+            [
+              1497,
+              2642
+            ],
+            [
+              1509,
+              2893
+            ]
+          ],
+          "payload_store_window": [
+            3534,
+            4491
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3721,
+            4237
+          ],
+          "single_pe_elements_per_cycle": 15.875968992248062,
+          "gap_from_previous": 521,
+          "load_window": [
+            2163,
+            3864
+          ],
+          "load_chunks": [
+            [
+              2163,
+              3720
+            ],
+            [
+              2167,
+              3864
+            ]
+          ],
+          "payload_store_window": [
+            4249,
+            5027
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1510,
+            2048
+          ],
+          "single_pe_elements_per_cycle": 15.226765799256505,
+          "gap_from_previous": null,
+          "load_window": [
+            791,
+            1736
+          ],
+          "load_chunks": [
+            [
+              791,
+              1509
+            ],
+            [
+              805,
+              1736
+            ]
+          ],
+          "payload_store_window": [
+            2110,
+            3137
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2034,
+            2639
+          ],
+          "single_pe_elements_per_cycle": 13.540495867768595,
+          "gap_from_previous": -14,
+          "load_window": [
+            818,
+            2342
+          ],
+          "load_chunks": [
+            [
+              818,
+              2033
+            ],
+            [
+              828,
+              2342
+            ]
+          ],
+          "payload_store_window": [
+            2719,
+            3822
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2962,
+            3522
+          ],
+          "single_pe_elements_per_cycle": 14.628571428571428,
+          "gap_from_previous": 323,
+          "load_window": [
+            1562,
+            3033
+          ],
+          "load_chunks": [
+            [
+              1562,
+              2961
+            ],
+            [
+              1566,
+              3033
+            ]
+          ],
+          "payload_store_window": [
+            3532,
+            4352
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3317,
+            3918
+          ],
+          "single_pe_elements_per_cycle": 13.630615640599002,
+          "gap_from_previous": -205,
+          "load_window": [
+            2139,
+            3625
+          ],
+          "load_chunks": [
+            [
+              2139,
+              3316
+            ],
+            [
+              2151,
+              3625
+            ]
+          ],
+          "payload_store_window": [
+            4247,
+            4896
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1364,
+            1959
+          ],
+          "single_pe_elements_per_cycle": 13.768067226890757,
+          "gap_from_previous": null,
+          "load_window": [
+            788,
+            1662
+          ],
+          "load_chunks": [
+            [
+              788,
+              1363
+            ],
+            [
+              802,
+              1662
+            ]
+          ],
+          "payload_store_window": [
+            2108,
+            2916
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            1961,
+            2566
+          ],
+          "single_pe_elements_per_cycle": 13.540495867768595,
+          "gap_from_previous": 2,
+          "load_window": [
+            817,
+            2268
+          ],
+          "load_chunks": [
+            [
+              817,
+              1960
+            ],
+            [
+              827,
+              2268
+            ]
+          ],
+          "payload_store_window": [
+            2717,
+            3701
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2567,
+            3107
+          ],
+          "single_pe_elements_per_cycle": 15.170370370370371,
+          "gap_from_previous": 1,
+          "load_window": [
+            1495,
+            2795
+          ],
+          "load_chunks": [
+            [
+              1495,
+              2566
+            ],
+            [
+              1506,
+              2795
+            ]
+          ],
+          "payload_store_window": [
+            3530,
+            4223
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3210,
+            3841
+          ],
+          "single_pe_elements_per_cycle": 12.98256735340729,
+          "gap_from_previous": 103,
+          "load_window": [
+            2138,
+            3544
+          ],
+          "load_chunks": [
+            [
+              2138,
+              3209
+            ],
+            [
+              2150,
+              3544
+            ]
+          ],
+          "payload_store_window": [
+            4245,
+            4754
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1437,
+            1955
+          ],
+          "single_pe_elements_per_cycle": 15.814671814671815,
+          "gap_from_previous": null,
+          "load_window": [
+            789,
+            1585
+          ],
+          "load_chunks": [
+            [
+              789,
+              1436
+            ],
+            [
+              801,
+              1585
+            ]
+          ],
+          "payload_store_window": [
+            2106,
+            2728
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            1882,
+            2486
+          ],
+          "single_pe_elements_per_cycle": 13.562913907284768,
+          "gap_from_previous": -73,
+          "load_window": [
+            815,
+            2189
+          ],
+          "load_chunks": [
+            [
+              815,
+              1880
+            ],
+            [
+              825,
+              2189
+            ]
+          ],
+          "payload_store_window": [
+            2715,
+            3550
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2489,
+            3035
+          ],
+          "single_pe_elements_per_cycle": 15.003663003663004,
+          "gap_from_previous": 3,
+          "load_window": [
+            1494,
+            2725
+          ],
+          "load_chunks": [
+            [
+              1494,
+              2488
+            ],
+            [
+              1504,
+              2725
+            ]
+          ],
+          "payload_store_window": [
+            3528,
+            4091
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3140,
+            3722
+          ],
+          "single_pe_elements_per_cycle": 14.075601374570446,
+          "gap_from_previous": 105,
+          "load_window": [
+            2136,
+            3424
+          ],
+          "load_chunks": [
+            [
+              2136,
+              3139
+            ],
+            [
+              2148,
+              3424
+            ]
+          ],
+          "payload_store_window": [
+            4243,
+            4625
+          ]
+        }
+      ],
+      "aggregate_bands": [
+        {
+          "row_band": 0,
+          "aggregate_vector_window": [
+            1271,
+            2100
+          ],
+          "elements_per_cycle": 39.52714113389626
+        },
+        {
+          "row_band": 1,
+          "aggregate_vector_window": [
+            1882,
+            2709
+          ],
+          "elements_per_cycle": 39.62273276904474
+        },
+        {
+          "row_band": 2,
+          "aggregate_vector_window": [
+            2489,
+            3522
+          ],
+          "elements_per_cycle": 31.721200387221685
+        },
+        {
+          "row_band": 3,
+          "aggregate_vector_window": [
+            3140,
+            4237
+          ],
+          "elements_per_cycle": 29.870556061987237
+        }
+      ],
+      "elf_sha256": "7c22bc2503eec2f6236fddaeaa750d58bb05d54b9d8bc591eea15e5b8d56bbc8",
+      "gfrun_pass": true,
+      "trace": "pipeline_20261106/perf_runs/embedded_split2/mxquant_nocounters.json"
+    },
+    {
+      "variant": "split2_plain",
+      "total_cycles": 5482,
+      "elements_per_cycle": 23.90952207223641,
+      "vector_window": [
+        1271,
+        4536
+      ],
+      "vector_window_elements_per_cycle": 40.14456355283308,
+      "vector_tileops": 1376,
+      "tlsu_tileops": 64,
+      "cellreg_pe_peaks": {
+        "PE0 CellReg used bytes": 50816,
+        "PE1 CellReg used bytes": 50816,
+        "PE2 CellReg used bytes": 52736,
+        "PE3 CellReg used bytes": 52736
+      },
+      "cellreg_simultaneous_peak": 121728,
+      "rows": [],
+      "aggregate_bands": [],
+      "elf_sha256": "4b371956c4dc7aa1b5e1d92ad95c2366d146890d2cabda8ee698ee73f7f0b382",
+      "gfrun_pass": true,
+      "trace": "pipeline_20261106/perf_runs/embedded_split2_plain/mxquant_nocounters.json"
+    },
+    {
+      "variant": "split2_stagger",
+      "total_cycles": 5495,
+      "elements_per_cycle": 23.852957233848954,
+      "vector_window": [
+        1276,
+        4160
+      ],
+      "vector_window_elements_per_cycle": 45.447988904299585,
+      "vector_tileops": 1376,
+      "tlsu_tileops": 76,
+      "cellreg_pe_peaks": {
+        "PE0 CellReg used bytes": 64768,
+        "PE1 CellReg used bytes": 60416,
+        "PE2 CellReg used bytes": 60288,
+        "PE3 CellReg used bytes": 58752
+      },
+      "cellreg_simultaneous_peak": 182656,
+      "rows": [
+        {
+          "pe": 0,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1276,
+            2098
+          ],
+          "single_pe_elements_per_cycle": 9.965936739659368,
+          "gap_from_previous": null,
+          "load_window": [
+            787,
+            1801
+          ],
+          "load_chunks": [
+            [
+              787,
+              1275
+            ],
+            [
+              809,
+              1801
+            ]
+          ],
+          "payload_store_window": [
+            2110,
+            3006
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2101,
+            2640
+          ],
+          "single_pe_elements_per_cycle": 15.198515769944342,
+          "gap_from_previous": 3,
+          "load_window": [
+            824,
+            2324
+          ],
+          "load_chunks": [
+            [
+              824,
+              2100
+            ],
+            [
+              1491,
+              2324
+            ]
+          ],
+          "payload_store_window": [
+            3022,
+            3998
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2586,
+            3736
+          ],
+          "single_pe_elements_per_cycle": 7.1234782608695655,
+          "gap_from_previous": -54,
+          "load_window": [
+            1502,
+            3379
+          ],
+          "load_chunks": [
+            [
+              1502,
+              2585
+            ],
+            [
+              2153,
+              3379
+            ]
+          ],
+          "payload_store_window": [
+            3746,
+            4396
+          ]
+        },
+        {
+          "pe": 0,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3526,
+            4146
+          ],
+          "single_pe_elements_per_cycle": 13.212903225806452,
+          "gap_from_previous": -210,
+          "load_window": [
+            2157,
+            3788
+          ],
+          "load_chunks": [
+            [
+              2157,
+              3524
+            ],
+            [
+              2770,
+              3788
+            ]
+          ],
+          "payload_store_window": [
+            4172,
+            5060
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1438,
+            2028
+          ],
+          "single_pe_elements_per_cycle": 13.884745762711864,
+          "gap_from_previous": null,
+          "load_window": [
+            792,
+            1731
+          ],
+          "load_chunks": [
+            [
+              792,
+              1437
+            ],
+            [
+              807,
+              1731
+            ]
+          ],
+          "payload_store_window": [
+            2108,
+            2790
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            2031,
+            2571
+          ],
+          "single_pe_elements_per_cycle": 15.170370370370371,
+          "gap_from_previous": 3,
+          "load_window": [
+            822,
+            2249
+          ],
+          "load_chunks": [
+            [
+              822,
+              2030
+            ],
+            [
+              1490,
+              2249
+            ]
+          ],
+          "payload_store_window": [
+            3020,
+            3872
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2487,
+            3278
+          ],
+          "single_pe_elements_per_cycle": 10.356510745891278,
+          "gap_from_previous": -84,
+          "load_window": [
+            1501,
+            2981
+          ],
+          "load_chunks": [
+            [
+              1501,
+              2485
+            ],
+            [
+              2126,
+              2981
+            ]
+          ],
+          "payload_store_window": [
+            3744,
+            4270
+          ]
+        },
+        {
+          "pe": 1,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3312,
+            3984
+          ],
+          "single_pe_elements_per_cycle": 12.19047619047619,
+          "gap_from_previous": 34,
+          "load_window": [
+            2138,
+            3692
+          ],
+          "load_chunks": [
+            [
+              2138,
+              3311
+            ],
+            [
+              2768,
+              3692
+            ]
+          ],
+          "payload_store_window": [
+            4168,
+            4794
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1365,
+            1953
+          ],
+          "single_pe_elements_per_cycle": 13.931972789115646,
+          "gap_from_previous": null,
+          "load_window": [
+            789,
+            1659
+          ],
+          "load_chunks": [
+            [
+              789,
+              1364
+            ],
+            [
+              805,
+              1659
+            ]
+          ],
+          "payload_store_window": [
+            2106,
+            2589
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            1956,
+            2552
+          ],
+          "single_pe_elements_per_cycle": 13.74496644295302,
+          "gap_from_previous": 3,
+          "load_window": [
+            820,
+            2176
+          ],
+          "load_chunks": [
+            [
+              820,
+              1955
+            ],
+            [
+              1487,
+              2176
+            ]
+          ],
+          "payload_store_window": [
+            3018,
+            3756
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2408,
+            3188
+          ],
+          "single_pe_elements_per_cycle": 10.502564102564103,
+          "gap_from_previous": -144,
+          "load_window": [
+            1499,
+            2893
+          ],
+          "load_chunks": [
+            [
+              1499,
+              2407
+            ],
+            [
+              2123,
+              2893
+            ]
+          ],
+          "payload_store_window": [
+            3742,
+            4136
+          ]
+        },
+        {
+          "pe": 2,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3204,
+            3902
+          ],
+          "single_pe_elements_per_cycle": 11.736389684813753,
+          "gap_from_previous": 16,
+          "load_window": [
+            2137,
+            3606
+          ],
+          "load_chunks": [
+            [
+              2137,
+              3203
+            ],
+            [
+              2766,
+              3606
+            ]
+          ],
+          "payload_store_window": [
+            4166,
+            4657
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 0,
+          "vector_ops": 86,
+          "vector_window": [
+            1511,
+            2066
+          ],
+          "single_pe_elements_per_cycle": 14.76036036036036,
+          "gap_from_previous": null,
+          "load_window": [
+            794,
+            1583
+          ],
+          "load_chunks": [
+            [
+              794,
+              1510
+            ],
+            [
+              804,
+              1583
+            ]
+          ],
+          "payload_store_window": [
+            2104,
+            2399
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 1,
+          "vector_ops": 86,
+          "vector_window": [
+            1882,
+            3010
+          ],
+          "single_pe_elements_per_cycle": 7.26241134751773,
+          "gap_from_previous": -184,
+          "load_window": [
+            818,
+            2658
+          ],
+          "load_chunks": [
+            [
+              818,
+              1881
+            ],
+            [
+              1563,
+              2658
+            ]
+          ],
+          "payload_store_window": [
+            3016,
+            3583
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 2,
+          "vector_ops": 86,
+          "vector_window": [
+            2796,
+            3412
+          ],
+          "single_pe_elements_per_cycle": 13.2987012987013,
+          "gap_from_previous": -214,
+          "load_window": [
+            1567,
+            2826
+          ],
+          "load_chunks": [
+            [
+              1567,
+              2732
+            ],
+            [
+              2122,
+              2826
+            ]
+          ],
+          "payload_store_window": [
+            3748,
+            4527
+          ]
+        },
+        {
+          "pe": 3,
+          "row_band": 3,
+          "vector_ops": 86,
+          "vector_window": [
+            3167,
+            4160
+          ],
+          "single_pe_elements_per_cycle": 8.249748237663646,
+          "gap_from_previous": -245,
+          "load_window": [
+            2136,
+            3865
+          ],
+          "load_chunks": [
+            [
+              2136,
+              3091
+            ],
+            [
+              2944,
+              3865
+            ]
+          ],
+          "payload_store_window": [
+            4170,
+            4928
+          ]
+        }
+      ],
+      "aggregate_bands": [
+        {
+          "row_band": 0,
+          "aggregate_vector_window": [
+            1276,
+            2098
+          ],
+          "elements_per_cycle": 39.86374695863747
+        },
+        {
+          "row_band": 1,
+          "aggregate_vector_window": [
+            1882,
+            3010
+          ],
+          "elements_per_cycle": 29.04964539007092
+        },
+        {
+          "row_band": 2,
+          "aggregate_vector_window": [
+            2408,
+            3736
+          ],
+          "elements_per_cycle": 24.674698795180724
+        },
+        {
+          "row_band": 3,
+          "aggregate_vector_window": [
+            3167,
+            4160
+          ],
+          "elements_per_cycle": 32.99899295065458
+        }
+      ],
+      "elf_sha256": "2470638ba6d1edec2f00912c013f7e2e6f71e55260013eefd4d821c5e1c38995",
+      "gfrun_pass": true,
+      "trace": "pipeline_20261106/perf_runs/embedded_split2_stagger/mxquant_nocounters.json"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "commands": [
+    [
+      "${TOOLCHAIN}/bin/clang++",
+      "-c",
+      "-mlxbc",
+      "-fenable-matrix",
+      "-O2",
+      "-mllvm",
+      "-enable-all-vector-as-tilereg=true",
+      "-mllvm",
+      "-linxv5-enable-HL-Inst-Opt=true",
+      "-mllvm",
+      "-linxv5-enable-dim-opt=true",
+      "-mllvm",
+      "-linxv5-enable-ldst-bridge=false",
+      "-mllvm",
+      "-linxv5-enable-continuous-mem-opt=true",
+      "-mllvm",
+      "-linxv5-enable-tile-clock-hand=false",
+      "-mllvm",
+      "-linxv5-enable-simt-clock-hand=true",
+      "-mllvm",
+      "-enable-misched=false",
+      "-std=c++20",
+      "-fno-crash-diagnostics",
+      "-D__linx",
+      "-DENABLE_TENSOR_INSTR",
+      "-DVARIANT=7",
+      "-I${BENCHMARK}/include",
+      "-I${BENCHMARK}/test/common",
+      "-I${BENCHMARK}/test/common/src",
+      "-I${BENCHMARK}/kernels",
+      "-I${BENCHMARK}/models",
+      "-DINPUT_FILE=\"${INPUTS}/input.bin\"",
+      "${SOURCE}/main.cpp",
+      "-o",
+      "${OUTPUT}/main.o"
+    ],
+    [
+      "${TOOLCHAIN}/bin/clang++",
+      "-nostdlib",
+      "-nostartfiles",
+      "-Wl,-T,${SOURCE}/link.ld",
+      "${BENCHMARK}/test/common/_start.s",
+      "${OUTPUT}/main.o",
+      "-o",
+      "${OUTPUT}/split2.elf"
+    ]
+  ],
+  "original_commands_sha256": "dc913af37ad973b79ab585d7a69729aaf66cc5551fb882fc87c0c0c08639c40e",
+  "substitutions": "Caller provides explicit roots. Historical exact compiler needed; no compiler required for ELF replay."
+}
