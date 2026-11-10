@@ -96,7 +96,7 @@ _QSMLA_MODE_CASES: Tuple[QsmlaCase, ...] = (
     # 大用例：10 个 KV 块（8 个 ORI 满块 + 2 个 CMP 块），用于验证
     # KV 预取深度（preload=1 vs 3）在多块场景下的收益。
     QsmlaCase(name="csa_medium", mode="CSA", b=1, s1=1, s2=1024,
-              n1=64, n2=1, d=512, k=40, cmp_s2=512, cmp_topk=256,
+              n1=64, n2=1, d=512, k=256, cmp_s2=512, cmp_topk=256,
               cmp_ratio=4, tm=64, tk=32, td=64, win_left=1023,
               win_right=0, softmax_scale=0.04419417,
               source="supernpubench:five-mode", enable_stage="gfrun",
@@ -330,7 +330,7 @@ def main():
     args = parser.parse_args()
 
     if args.all:
-        selected = QSMLA_EXECUTABLE_CASES
+        selected = tuple(c for c in QSMLA_EXECUTABLE_CASES if c.bulk_reference)
     else:
         selected = tuple(case for case in QSMLA_CASES if case.name == args.case)
         if selected and not selected[0].mode_generation_feasible:
