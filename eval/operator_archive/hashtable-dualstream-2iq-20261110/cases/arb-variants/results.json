@@ -1,0 +1,52 @@
+{
+  "result_id": "arb-variants",
+  "status": "全部为被否决方案（negative results），仅保留结论与命令",
+  "switch": "GFSIM_VEC_STREAM_ARB=1；GFSIM_VEC_STREAM_AGING=1024",
+  "variants": [
+    {
+      "id": "v1-buggy",
+      "total_cycles": 142218,
+      "note": "内存判定误用 TMA_IQ（实际为 TLSU_IQ）⇒ 永不命中，只有空队列/老化生效"
+    },
+    {
+      "id": "v2-memory-only",
+      "total_cycles": 139316,
+      "note": "修好判定，但只在队头等 TELSU 产出源时让出；等 VEC 前驱时抱着引擎"
+    },
+    {
+      "id": "v3-responsive",
+      "total_cycles": 135676,
+      "note": "主选流不能发就借、能发即收回；run 中位=1 块，分离度不足"
+    },
+    {
+      "id": "v4-exec-guard",
+      "total_cycles": 137210,
+      "note": "加\"前驱正在执行就不切\"；前驱寿命 100–400 拍，抱着等是亏的"
+    },
+    {
+      "id": "v5-one-inflight",
+      "total_cycles": 155492,
+      "note": "加\"借用方在飞最多 1 条\"；VecArbOneReady=232,020 拍（有活不发）"
+    }
+  ],
+  "instrumentation": [
+    "VecArbBothEmpty",
+    "VecArbOneReady",
+    "VecArbBothReady",
+    "VecArbSwitchEmpty",
+    "VecArbSwitchMemory",
+    "VecArbSwitchAging",
+    "VecArbEmptyPark",
+    "VecArbEmptyNoBlock",
+    "VecArbEmptyCmdQSum",
+    "VecArbEmptyCmdQMax",
+    "VecArbEmptyDeferred"
+  ],
+  "measured_cycle_classes": {
+    "both_not_dispatchable": 524063,
+    "exactly_one_dispatchable": 30750,
+    "both_dispatchable": 2451
+  },
+  "conclusion": "派发侧按流仲裁无收益：可选择的拍仅 5.5%（94% 两条流都不可发）；派发不可撤回且 VecTop 按到达序执行。",
+  "conclusion_source": "LinxISA/SuperScalarModel issue #1206；DUALSTREAM_HANDOFF.md §23"
+}

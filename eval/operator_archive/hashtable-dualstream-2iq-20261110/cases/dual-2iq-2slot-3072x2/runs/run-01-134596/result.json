@@ -1,0 +1,28 @@
+{
+  "run_id": "dual2iq_20261110_r01",
+  "result_id": "dual-2iq-2slot-3072x2",
+  "status": "pass",
+  "total_cycles": 134596,
+  "kernel_span_cycles": 72566,
+  "kernel_span_window": {
+    "first_input_TLOAD": 361,
+    "last_result_TSTORE_end": 72927
+  },
+  "per_thread_last_tstore_end": {
+    "PE0": 54848,
+    "PE1": 66122,
+    "PE2": 65573,
+    "PE3": 52443,
+    "PE4": 58283,
+    "PE5": 72927,
+    "PE6": 67100,
+    "PE7": 58551
+  },
+  "finisher": "0x5555 pass",
+  "elf_sha256": {
+    "htA": "407250c79f1e1e43d163bc5ccb2e4dedc9c054e28f9a8029f0a0e5e83fac8fc2",
+    "htB0": "5571df1de4b56681d7ad7bb0ee22d81bd95bfb68fb9304dbdaf6601e11df0116"
+  },
+  "deterministic": true,
+  "notes": "两条流各 3072 query（每 PE 768 = 3 batch），2 槽/轮；A/B 互换亦 PASS（137,688）。"
+}

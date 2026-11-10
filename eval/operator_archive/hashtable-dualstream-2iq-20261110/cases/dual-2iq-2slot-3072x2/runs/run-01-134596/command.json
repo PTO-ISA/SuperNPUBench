@@ -1,0 +1,37 @@
+{
+  "cwd": "SuperScalarModel-dualstream",
+  "argv": [
+    "./bin/gfsim",
+    "--test-finisher",
+    "1",
+    "-f",
+    "htA.elf",
+    "--elf2",
+    "htB0.elf",
+    "--conf",
+    "dualstream",
+    "-s",
+    "cube.enable_internal_acc=true",
+    "-s",
+    "bctrl.vec_cell_sched_enable=true",
+    "-s",
+    "core.soc_random=false",
+    "-s",
+    "core.soc_enable=false",
+    "-s",
+    "core.read_bandwidth_limit=128",
+    "-s",
+    "core.write_bandwidth_limit=128",
+    "-s",
+    "core.sharetreg_size_bytes=262144",
+    "-s",
+    "core.sharetreg_ssb_count=64"
+  ],
+  "env": {
+    "GFSIM_VEC_STREAM_ARB": "unset (default 0)"
+  },
+  "total_cycles": 134596,
+  "finisher": "linx_test_finisher write addr=0x10009000 val=0x5555 pass",
+  "exit_code": 0,
+  "host": "macOS darwin 25.4.0 arm64"
+}

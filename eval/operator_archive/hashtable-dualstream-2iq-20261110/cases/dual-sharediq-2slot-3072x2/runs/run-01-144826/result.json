@@ -1,0 +1,22 @@
+{
+  "result_id": "dual-sharediq-2slot-3072x2",
+  "status": "pass（作为对照基线，非采用方案）",
+  "total_cycles": 144826,
+  "kernel_span_cycles": 79056,
+  "kernel_span_window": {
+    "first_input_TLOAD": 361,
+    "last_result_TSTORE_end": 79417
+  },
+  "finisher": "0x5555 pass",
+  "elf_sha256": {
+    "htA": "407250c79f1e1e43d163bc5ccb2e4dedc9c054e28f9a8029f0a0e5e83fac8fc2",
+    "htB0": "5571df1de4b56681d7ad7bb0ee22d81bd95bfb68fb9304dbdaf6601e11df0116"
+  },
+  "model_layout": "VEC_IQ 每 PE 一条共享（b04f3ae50 布局）；其余配置与主例相同",
+  "model_commits": {
+    "dualstream_tip": "98a44667c",
+    "merged_pr": "18b24f6ca",
+    "wakeup_fix": "eea0f5f2b"
+  },
+  "note": "同一对半份 ELF、同一 gfsim 参数；与主例的差异只有 VEC_IQ 分区方式（共享 vs 每流独立）。"
+}

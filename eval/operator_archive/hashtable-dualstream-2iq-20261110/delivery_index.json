@@ -1,0 +1,37 @@
+{
+  "task_id": "hashtable_dualstream_archive_20261110",
+  "archive_status": "adopted_result_measured",
+  "performance_status": "measured",
+  "scope": "独立归档；不替换默认算子；双流对照实验",
+  "adopted_case": "cases/dual-2iq-2slot-3072x2",
+  "assets": [
+    {
+      "filename": "hashtable-dualstream-operator-r1.tar.gz",
+      "bytes": 65155915,
+      "sha256": "baa753b900fbfd3ebc8a270c6b41988a272995eabc3fe7f661f1394876a09526",
+      "payload_root": "hashtable-dualstream-operator-r1",
+      "repository": "PTO-ISA/SuperNPUBench",
+      "tag": "work-archive-hashtable-dualstream-20261110",
+      "browser_download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-hashtable-dualstream-20261110/hashtable-dualstream-operator-r1.tar.gz",
+      "role": "ELF pair + full swimlane + primary run log",
+      "members": [
+        "elf/htA.elf",
+        "elf/htB0.elf",
+        "trace/dual-2iq-arb-off.swim.json",
+        "runs/run-01-134596/run.log"
+      ]
+    }
+  ],
+  "model_runtime_shipped": false,
+  "toolchain_shipped": false,
+  "gfsim_replay": "performed for the adopted case (134,596, exit 0)",
+  "numeric_acceptance": "finisher 0x5555 pass for every case; output arrays not re-compared against golden in this package (the single-stream archive owns that checker)",
+  "source_commit_identity": "this Git commit is archival publication; measured source hashes in cases/*/identity.json",
+  "missing": [
+    "-t 1 raw per-cycle logs (about 2 GB per run) not archived",
+    "_nocounters.json not generated",
+    "PipeView raw log not captured",
+    "dual-stream canonical (soc_random=true) not run",
+    "independent reviewer not assigned"
+  ]
+}

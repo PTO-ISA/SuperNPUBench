@@ -1,0 +1,28 @@
+{
+  "conf": "dualstream",
+  "core.streamCount": 2,
+  "core.threadCount": 8,
+  "core.stdPeCount": 1,
+  "core.cube_core_num": 4,
+  "core.cube_thread_num": 1,
+  "core.vec_core_num": 4,
+  "fourpe.pe_cluster_enable": false,
+  "bfu.brq_depth": 576,
+  "cli_overrides": {
+    "cube.enable_internal_acc": true,
+    "bctrl.vec_cell_sched_enable": true,
+    "core.soc_random": false,
+    "core.soc_enable": false,
+    "core.read_bandwidth_limit": 128,
+    "core.write_bandwidth_limit": 128,
+    "core.sharetreg_size_bytes": 262144,
+    "core.sharetreg_ssb_count": 64,
+    "GFSIM_VEC_STREAM_ARB": 0
+  },
+  "derived": {
+    "vecIqPartitions": 8,
+    "vecIqDepthPerPartition": 16,
+    "vecL1Depth": 32,
+    "depth_division": "vecL1Depth / streamCount（容量守恒 8x16 = 4x32）"
+  }
+}
