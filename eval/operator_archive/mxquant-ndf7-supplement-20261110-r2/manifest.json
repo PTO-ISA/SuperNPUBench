@@ -7,22 +7,22 @@
   "new_model_execution": "Local guarded gfrun only; no gfsim",
   "new_build": false,
   "new_checks": "114 split checklist; actual guarded functional run and negative controls, independent scalar generator, material hash and lineage inventory; historical evidence separately scoped",
-  "review_status": "not_checked",
+  "review_status": "limited_parent_review_guard_actual_buffers_and89material_hashes",
   "files": [
     {
       "path": "README.md",
-      "bytes": 4625,
-      "sha256": "76c2131474611c9f24c6160da8dcd5ca85246a5c12698ab21eeff121fe1b85b7"
+      "bytes": 4899,
+      "sha256": "785db8be12f84451968893b2e84b063e621351f4b940bfdbb96301320c5809e9"
     },
     {
       "path": "capabilities.json",
-      "bytes": 3069,
-      "sha256": "f6c29b56be664dea29deb5323be8bdbf533a1b12deb77b2b688a1a43951747fb"
+      "bytes": 3374,
+      "sha256": "b0e157dcb206fceccad18f33b8a6d8a377b70ef5a60306f9700258063a1e9ef2"
     },
     {
       "path": "checks.json",
-      "bytes": 211568,
-      "sha256": "ff7341a4cef474c7db1a5fdced3a80cac054ba1c2d6eb0d6fea76f784cabba0c"
+      "bytes": 211856,
+      "sha256": "3383003d106a923bfbcbef557a90494e6437bc8e7b14f8b15a73a49e5114eccd"
     },
     {
       "path": "entrypoint_review.md",
@@ -90,6 +90,11 @@
       "sha256": "b956c366bdfcb6b1efb1c894c7caf67f5f1a947f7b222aafe5b2b0602b6cc444"
     },
     {
+      "path": "evidence/parent_review.json",
+      "bytes": 834,
+      "sha256": "9a6343a74f34bd851a903d7597e813b4b9d6cda5b699a6b0f72d4306165d0ce0"
+    },
+    {
       "path": "evidence/runtime_closure_search.json",
       "bytes": 3364,
       "sha256": "7c7d9c7987eb96cdddc5b20b9541daccc405f5ea18a1a21de8fabae8aef8a6c9"
@@ -106,8 +111,8 @@
     },
     {
       "path": "gaps.json",
-      "bytes": 4417,
-      "sha256": "d2fc71c1ca979848837c5086a834781f31fd0e7618886c19e11c530e68819854"
+      "bytes": 4549,
+      "sha256": "683af18d28aebb868ab84188d650ea05a03354b89d9a548338a3c7bd9bb6d4eb"
     },
     {
       "path": "guarded_replay.py",
@@ -124,5 +129,6 @@
       "bytes": 218,
       "sha256": "1d4f6ca7652a00c2cfdc8ec3058883aa1e6268edd1b999a888d765f566aab203"
     }
-  ]
+  ],
+  "review_evidence": "evidence/parent_review.json"
 }

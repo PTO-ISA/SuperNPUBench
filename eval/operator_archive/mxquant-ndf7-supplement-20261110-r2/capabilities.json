@@ -9,8 +9,10 @@
       "actual_state": "New r2 local split2 full exact and checker negative control; polluted environment sanitized. Missing input/corrupt ELF/wrong runtime rejected before model launch. No shared-runtime or timing acceptance.",
       "evidence": "evidence/guard_validation.json",
       "review": {
-        "status": "not_checked",
-        "reviewer": null
+        "status": "reviewed_local_functional_scope_only",
+        "reviewer": "parent agent",
+        "evidence": "evidence/parent_review.json",
+        "scope": "Guard boundaries and ten recorded subprocess outcomes; independently compared262144/131072/4096B actual input/output/scales to shipped input/golden, all exact; runtime is caller-provided, not shared"
       },
       "owner": "Codex archive / model or operator maintainers",
       "remaining": "gaps.json"

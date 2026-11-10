@@ -3069,11 +3069,12 @@
       "evidence": "evidence/check_observations.json#MX-114",
       "checked_by_and_at": "Codex MXQuant archive agent, 2026-11-10",
       "review": {
-        "status": "not_checked",
-        "reviewer_and_time": null,
-        "observation_and_evidence": "Parent review pending"
+        "status": "reviewed_limited_scope",
+        "reviewer_and_time": "parent agent,2026-11-10",
+        "observation_and_evidence": "Inspected guard path/order/pins/allowlist; read ten outcomes; independently compared actual functional buffers exactly. evidence/parent_review.json; not a new parent runtime execution."
       },
       "gap_reference": "gaps.json G-runtime remains"
     }
-  ]
+  ],
+  "limited_independent_review": "evidence/parent_review.json; not blanket check acceptance"
 }

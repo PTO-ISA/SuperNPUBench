@@ -67,9 +67,9 @@
     {
       "field": "G-review",
       "status": "not_collected",
-      "reason": "Newr2 parent independent review pending",
-      "impact": "No independent r2 acceptance",
-      "next_action_or_recovery_command": "Parent inspect files/evidence and record actual review separately",
+      "reason": "Limited parent guard/buffer/hash review completed; remaining full checklist and missing operation reviews not performed",
+      "impact": "No blanket NDF/timing/build acceptance",
+      "next_action_or_recovery_command": "Preserve evidence/parent_review.json limited scope; review missing operations only after dependency closure",
       "owner": "Codex archive / responsible model and operator maintainers",
       "inventory_reference": "inventory.json"
     },
