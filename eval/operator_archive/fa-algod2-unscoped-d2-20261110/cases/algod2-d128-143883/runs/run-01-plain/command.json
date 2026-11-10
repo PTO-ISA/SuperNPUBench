@@ -1,0 +1,22 @@
+{
+  "run_id": "run-01-plain",
+  "result_id": "algod2-d128-143883",
+  "cwd": "SuperScalarModel @ repro/algod2-final-143883 (repository root)",
+  "argv": [
+    "./bin/gfsim",
+    "-f",
+    "repro/algod2/algod2.elf",
+    "--conf",
+    "fa_fp4_tag36_brob1024_veciq32_disp4"
+  ],
+  "env": {
+    "GFSIM_*": "unset",
+    "soc_lat_random_seed": "model default 1 (not explicitly set)",
+    "host": "macOS darwin 25.4.0 arm64"
+  },
+  "trace": "none",
+  "total_cycles": 143883,
+  "exit_code": 0,
+  "completion": "log ends with SuperScalar Report Stop + Syscall Barrier (sb_executed=1)",
+  "note": "first archived run; produced before a rebuild of the same commit"
+}

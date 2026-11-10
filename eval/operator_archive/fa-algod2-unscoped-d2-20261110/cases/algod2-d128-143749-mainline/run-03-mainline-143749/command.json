@@ -1,0 +1,22 @@
+{
+  "run_id": "run-03-mainline-143749",
+  "result_id": "algod2-d128-143749-mainline",
+  "cwd": "SuperScalarModel @ 34c110137 (detached, repository root)",
+  "argv": [
+    "./bin/gfsim",
+    "-f",
+    "perf_runs/ndf_archive/algod2.elf",
+    "--conf",
+    "fa_fp4_tag36_brob1024_veciq32_disp4"
+  ],
+  "env": {
+    "GFSIM_*": "unset",
+    "soc_lat_random_seed": "model default 1 (not explicitly set)",
+    "host": "macOS darwin 25.4.0 arm64"
+  },
+  "trace": "none",
+  "total_cycles": 143749,
+  "exit_code": 0,
+  "completion": "log ends with SuperScalar Report Stop + Syscall Barrier (sb_executed=1)",
+  "note": "same ELF (byte-identical working copy) and same entry config on unmodified mainline; effective tag is clamped to 8 and the class-aware knob does not exist"
+}

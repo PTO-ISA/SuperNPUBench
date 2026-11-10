@@ -1,0 +1,82 @@
+{
+  "task_id": "fa_algod2_unscoped_d2_archive_20261110",
+  "archive_status": "incomplete",
+  "performance_status": "diagnostic",
+  "review_level": "unreviewed",
+  "scope": "独立归档：这颗 algod2 ELF 的源码快照、构建配方与两组测量记录；不替换默认算子，不改 eval/perf_data",
+  "adopted_case": "cases/algod2-d128-143883",
+  "assets": [
+    {
+      "filename": "fa-operator-r2.tar.gz",
+      "bytes": 2392281,
+      "sha256": "6157ff881ed00ebf95a64196ba6725f57d8fcb1931f7516950c9ff13390a82b6",
+      "payload_root": "fa-operator-r2",
+      "repository": "PTO-ISA/SuperNPUBench",
+      "tag": "work-archive-fa-20261109",
+      "browser_download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r2.tar.gz",
+      "role": "ELF + diss + source snapshots (including the unscoped D2 used here)",
+      "required_for": ["replay_existing_elf"],
+      "optional_for": [],
+      "members_relevant_to_this_case": ["bin/fa-64k-unscoped-d2-258099.elf", "bin/fa-64k-unscoped-d2-258099.elf.diss", "source_snapshot/fa-64k-unscoped-d2-258099/"],
+      "publication_status": "download_verified (per fa-scoped-packed-rowsum-20261109/release_index.json)"
+    },
+    {
+      "filename": "fa-runtime-r1.tar.gz",
+      "bytes": 8113111,
+      "sha256": "7c6080abe2076038d5657f171e708118b4aa898b3b39d945635278aeaa6ab47f",
+      "payload_root": "fa-runtime-r1",
+      "repository": "LinxISA/SuperScalarModel",
+      "tag": "work-archive-fa-20261109",
+      "browser_download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r1.tar.gz",
+      "role": "fixed model runtime + native configs for replaying the historical 258,099 case",
+      "required_for": ["replay_historical_258099"],
+      "optional_for": ["replay_this_case_if_using_the_asl_model"],
+      "publication_status": "download_verified (per the operator archive release index)",
+      "note": "this runtime is the asl model, NOT the branch dd83d4519 that produced 143,883; this package's candidate replay needs the model source instead"
+    }
+  ],
+  "model_side_materials": {
+    "archived_in": "LinxISA/SuperScalarModel PR #1240 -> archives/ndf-algod2-20261110-r1/",
+    "committed_there": [
+      "evidence/algod2-d128-r2-plain/gfsim.log (sha256 f13aaea7…)",
+      "evidence/algod2-d128-r2-plain-r2/gfsim.log (sha256 0b0ed0b0…)",
+      "evidence/algod2-d128-mainline/gfsim.log (sha256 fa8577cd…)",
+      "analysis/optimization.md, analysis/failures.md, analysis/fa_corpus.md",
+      "dependency/model_composition.json (5 modification ids)",
+      "coverage.json (111 requirements), gaps.json (14 gaps)"
+    ],
+    "not_duplicated_here_because": "the ownership rule keeps model run logs and large traces with the model repository; this package pins their identity and points at them"
+  },
+  "large_assets_not_in_git": [
+    {
+      "what": "full swimlane of the 143,883 run",
+      "where": "model repo branch repro/algod2-final-143883, repro/algod2/algod2_final_143883.swimlane.json.zip",
+      "bytes": 66937384,
+      "sha256": "e5e3e57d16f575641932f423c81aa919770591d1d961f42c334bcc3d06ec0df4",
+      "uncompressed_bytes": 1339157935
+    },
+    {
+      "what": "nocounters variant derived from it",
+      "where": "local only (not published)",
+      "bytes": 928355672,
+      "sha256": "7f77025f2b98c60a789792bf2ad6d369f733084f69786f97a8003dd03c06cf44"
+    }
+  ],
+  "gfsim_replay": "candidate replayed twice in the author's working tree (143,883 both times); no relocated or fresh-download replay",
+  "numeric_acceptance": "not performed; all runs are zero-input timing and the logs contain no PASS/golden comparison",
+  "source_commit_identity": "this Git commit is archival publication; measured source hashes are in operator_identity.json and source/",
+  "missing": [
+    "fresh Release download + isolated-directory replay (G1)",
+    "operator rebuild (toolchain not shipped) (G2)",
+    "successful logs for the 165,091 and 143,996 historical arms (G3)",
+    "numerical validation (G4)",
+    "model source recovery hash comparison (G5)",
+    "model binary byte-identical rebuild (G6)",
+    "historical arm model commits (G7)",
+    "mainline same-config attribution by change (G8)",
+    "258,099 vs 143,883 difference decomposition (G9)",
+    "PipeView for the adopted configuration (G10)",
+    "index consistency: fa-operator-r3 attachment is not listed in fa-scoped-packed-rowsum-20261109/release_index.json (G11)",
+    "independent reviewer (G13)",
+    "relocated replay with proof of no read-back to the author's tree (G14)"
+  ]

@@ -1,0 +1,26 @@
+{
+  "run_id": "run-01-plain",
+  "status": "pass",
+  "total_cycles": 143883,
+  "metrics": {
+    "cube_mac_utilization": "91.10%",
+    "cube_mac_exec_occupancy": "135322 (94.05%)",
+    "group_total_cycles": 143337,
+    "ipc": 3.680664,
+    "ipc_uop_per_pe": 1.47132,
+    "cellreg_avg_occupied_bytes": 156778.34,
+    "cellreg_avg_utilization_pct": 59.8062,
+    "split_no_free_slot_cycles": 125539,
+    "tile_allocator_failures": 0,
+    "tile_physical_bind_failures": 0
+  },
+  "elf_sha256": "3dba89659bdea3cbe6857ca05b54b57b54a4ac8cd245f7ba023b29a1adec2d1f",
+  "config_sha256": "be8a99aa035f420c67d4508b2be38a8fa70cce4ed23365bf3d713a14d52b1784",
+  "log": {
+    "model_archive": "archives/ndf-algod2-20261110-r1/evidence/algod2-d128-r2-plain/gfsim.log",
+    "bytes": 287678,
+    "sha256": "f13aaea75e61f86a1cf9715ffe854ebc5482b6c1397009bbec3116da5b19605e"
+  },
+  "correctness": "not_checked (zero-input timing; no golden comparison in the log)",
+  "raw_cycle_line": "Cube Total Cycles................................:    143883"
+}
