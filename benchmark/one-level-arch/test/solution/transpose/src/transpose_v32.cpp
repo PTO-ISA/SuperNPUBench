@@ -3,7 +3,6 @@
 #include "benchmark.h"
 #include "fileop.h"
 #include "multi_thread_res_check.h"
-#include "solution/transpose/transpose_nd_v3_2.hpp"
 #include "solution/transpose/transpose_nd_v3_2_1.hpp"
 
 // v3.2.1 测试（Host-tiling）：shape/perm 以**运行时数组**传入，

@@ -6,9 +6,7 @@
 
 | 文件 | 说明 |
 |---|---|
-| `transpose_nd_v3_1.hpp` | 场景分派（TENSOR_MOVE / N_LAST / GATHER），全编译期；**v3.2.1 的依赖** |
-| `transpose_nd_v3_2.hpp` | v3.1 的动态 shape 版；提供 `v32_detail` 规范化/路由；**v3.2.1 的依赖** |
-| **`transpose_nd_v3_2_1.hpp`** | **最终版**：`MakeV32Tiling`（Host-tiling）+ `transpose_nd_v3_2_1`（HT kernel）+ `dispatch` 入口（全部走 HT） |
+| **`transpose_nd_v3_2_1.hpp`** | **唯一 kernel**：`MakeV32Tiling`（Host-tiling）+ `transpose_nd_v3_2_1`（HT kernel）+ `dispatch` 入口；轴规范化/场景判定（`v32_detail`）已内置，单文件无外部依赖 |
 | `transpose_nd_simt_elementif.hpp` | SIMT（element-if，对标 ops-math SMALL_SHAPE 10001） |
 
 ## 最终性能（gfsim 4 PE，i32，`-DPERF_ONLY`）

@@ -11,16 +11,134 @@
  *   - kernel 只收这个 `V32Tiling` 结构体，**switch 一次**后按参数搬，
  *     不再做 rank 循环、不再重算 stride。
  *
- * 复用 v3.2 的规范化/路由实现（`v32_detail`），保证语义一致。
+ * 为保持单一文件，轴规范化/路由实现（`v32_detail`）已内置到本文件。
  */
 
-#include "solution/transpose/transpose_nd_v3_2.hpp"
-#include "solution/transpose/transpose_nd_v3_1.hpp"
+#include <common/pto_tileop.hpp>
+#include "basic_op/utils/spmd_partition.hpp"
 
 #include <array>
 #include <cstdint>
 
 namespace supernpu::tile_isa {
+
+// ---- 轴规范化 / 场景判定（运行时；原 transpose_nd_v3_2.hpp 的 v32_detail） ----
+namespace v32_detail {
+
+constexpr int kMaxAxis = 8;
+constexpr int kMoveAlignLastMinEle = 32;                     // MOVEALIGN_LAST_MIN_ELE
+constexpr unsigned long long kSmallShapeThres = 4000000ULL;  // SMALL_SHAPE_BYTES_THRES_HOLD
+
+enum class Scenario { TensorMove, NLast, Gather };
+
+struct RShape {
+    int dim = 0;
+    std::array<int, kMaxAxis> inShape{};
+    std::array<int, kMaxAxis> perm{};
+};
+
+// RemoveAxisV2：删除 size==1 的轴并重映射 perm（运行时版，与 v3.1 constexpr 版等价）
+inline RShape RemoveAxisRuntime(const RShape &s) {
+    if (s.dim == 1) return s;
+    bool allOne = true;
+    for (int i = 0; i < s.dim; ++i) {
+        if (s.inShape[i] != 1) { allOne = false; break; }
+    }
+    RShape r{};
+    if (allOne) { r.dim = 1; r.inShape[0] = 1; r.perm[0] = 0; return r; }
+
+    std::array<int, kMaxAxis> shape{};
+    std::array<int, kMaxAxis> delPerm{};
+    int shapeSize = 0, delSize = 0;
+    for (int i = 0; i < s.dim; ++i) {
+        if (s.inShape[i] != 1) {
+            shape[shapeSize++] = s.inShape[i];
+        } else {
+            for (int j = 0; j < s.dim; ++j) {
+                if (s.perm[j] == i) delPerm[delSize++] = s.perm[j];
+            }
+        }
+    }
+    for (int i = 1; i < delSize; ++i) {  // 降序插入排序
+        int key = delPerm[i], j = i - 1;
+        while (j >= 0 && delPerm[j] < key) { delPerm[j + 1] = delPerm[j]; --j; }
+        delPerm[j + 1] = key;
+    }
+    std::array<int, kMaxAxis> newPerm{};
+    int newSize = 0;
+    for (int i = 0; i < s.dim; ++i) {
+        bool del = false;
+        for (int j = 0; j < delSize; ++j) if (s.perm[i] == delPerm[j]) del = true;
+        if (!del) newPerm[newSize++] = s.perm[i];
+    }
+    for (int i = 0; i < delSize; ++i) {
+        for (int j = 0; j < newSize; ++j) if (newPerm[j] > delPerm[i]) --newPerm[j];
+    }
+    r.dim = newSize;
+    for (int i = 0; i < shapeSize; ++i) r.inShape[i] = shape[i];
+    for (int i = 0; i < newSize; ++i) r.perm[i] = newPerm[i];
+    return r;
+}
+
+// MergeAxisV2：合并 perm 中连续的轴（运行时版）
+inline RShape MergeAxisRuntime(const RShape &s) {
+    if (s.dim == 1) return s;
+    auto perm = s.perm;
+    auto shape = s.inShape;
+    std::array<int, kMaxAxis> mergedShape{};
+    std::array<int, kMaxAxis> newDimPosition{};
+    for (int i = 0; i < kMaxAxis; ++i) newDimPosition[i] = -1;
+    int curHead = perm[0];
+    newDimPosition[curHead] = 0;
+    mergedShape[0] = shape[curHead];
+    int dimIndex = 0;
+    for (int pi = 1; pi < s.dim; ++pi) {
+        if (curHead + 1 == perm[pi]) {
+            curHead = perm[pi];
+            mergedShape[dimIndex] *= shape[curHead];
+        } else {
+            curHead = perm[pi];
+            ++dimIndex;
+            newDimPosition[curHead] = dimIndex;
+            mergedShape[dimIndex] = shape[curHead];
+        }
+    }
+    const int newDim = dimIndex + 1;
+    int di = 0;
+    for (int i = 0; i < s.dim; ++i) if (newDimPosition[i] >= 0) newDimPosition[di++] = newDimPosition[i];
+
+    std::array<int, kMaxAxis> newPerm{}, newShape{};
+    di = 0;
+    for (int i = 0; i < s.dim; ++i) {
+        if (newDimPosition[i] >= 0) {
+            const int np = newDimPosition[i];
+            for (int j = 0; j < s.dim; ++j) if (newDimPosition[j] == i) { newPerm[di] = j; break; }
+            newShape[di] = mergedShape[np];
+            ++di;
+        }
+    }
+    RShape r{};
+    r.dim = newDim;
+    for (int i = 0; i < newDim; ++i) { r.inShape[i] = newShape[i]; r.perm[i] = newPerm[i]; }
+    return r;
+}
+
+// 运行时路由（与 v3.1 SelectScenario 同规则）
+inline Scenario SelectScenarioRuntime(const RShape &raw, unsigned long long eleBytes) {
+    RShape s = MergeAxisRuntime(RemoveAxisRuntime(raw));
+    if (s.dim == 1) return Scenario::TensorMove;
+    const int last = s.dim - 1;
+    const bool isLastAxisTranspose = (s.perm[last] != last);
+    if (isLastAxisTranspose) return Scenario::Gather;
+    unsigned long long vol = 1;
+    for (int i = 0; i < s.dim; ++i) vol *= static_cast<unsigned long long>(s.inShape[i]);
+    const unsigned long long bytes = vol * eleBytes;
+    if (s.inShape[last] >= kMoveAlignLastMinEle && bytes >= kSmallShapeThres) return Scenario::NLast;
+    return Scenario::Gather;  // 其余（NDDMA 等）回退通用 MGATHER
+}
+
+}  // namespace v32_detail
+
 namespace v321_detail {
 
 constexpr int kMaxAxis = 8;
