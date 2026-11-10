@@ -1,0 +1,13 @@
+{
+  "source_sha256": {
+    "source/main.cpp": "3921731073db4428461fbd5f36dfa9bf6ad170fb0dc5729b779636368a18809a",
+    "source/mxquant_scalar_ref.h": "92fa68e0e2569eec2a7f6f6c3336308fe05344cc0720fb380087b7e51e14704e",
+    "source/bulk.hpp": "5cb7bbc3ace7db2c5cabbd38c50071decab5f7284b702ae30a81bf8d7318d038",
+    "source/baseline.hpp": "010120359fa3560f74abc36be2edd4a13785f323c7a589746780091e9a91c91f",
+    "source/link.ld": "fb976d33f94637f671b9360f3f4e9734cc9d20d9f9b788cb23f131a7c187244c"
+  },
+  "compiler_sha256": "52f1faa6b4f73284c91815824129e00f67dfcd616d544d93836ab570dcff4443",
+  "input_sha256": "e2dd002ab8ccfc8149bc9a20b8b3aa9c9ffa082e3da4a121d0680ee125caf1e3",
+  "elf_sha256": "2a80c7c9d8d16b3c012845878dd1b72094eaacb50d430569a7f9d0eb7e4bfeea",
+  "provenance": "Final retained sources were independently rebuilt; entire ELF compared byte-for-byte to canonical measured ELF."
+}

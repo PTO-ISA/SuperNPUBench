@@ -1,0 +1,45 @@
+{
+  "task_id": "mxquant_archive_20261110",
+  "archive_status": "incomplete",
+  "performance_status": "diagnostic",
+  "TLSU_bound": "unconfirmed; user has not carefully analyzed overall bound; simulation shows TLSU waits introducing Vector gaps",
+  "scope": "independent archive only; no default kernel replacement",
+  "assets": [
+    {
+      "filename": "mxquant-operator-r1.tar.gz",
+      "bytes": 910566,
+      "sha256": "9578958a57f817bb34b288b772538b4076379335f4e606a9cfe5664ab7df6130",
+      "payload_root": "mxquant-operator-r1",
+      "repository": "PTO-ISA/SuperNPUBench",
+      "tag": "work-archive-mxquant-20261110",
+      "browser_download_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-mxquant-20261110/mxquant-operator-r1.tar.gz",
+      "role": "operator ELF/diss/source/input/runner",
+      "packed_members_byte_verified": 43
+    },
+    {
+      "filename": "mxquant-historical-traces-r1.tar.gz",
+      "bytes": 5907009,
+      "sha256": "a55d576ef8120af4ee1a7ccba46092f12c9b75073671600d1584dc7640196124",
+      "payload_root": "mxquant-historical-traces-r1",
+      "repository": "LinxISA/SuperScalarModel",
+      "tag": "work-archive-mxquant-20261110",
+      "browser_download_url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-mxquant-20261110/mxquant-historical-traces-r1.tar.gz",
+      "role": "optional historical full/nocounters/logs and stage PipeView; no runtime",
+      "packed_members_byte_verified": 25
+    }
+  ],
+  "model_runtime_shipped": false,
+  "toolchain_shipped": false,
+  "local_functional_review": "functional_replay_review.json",
+  "gfsim_replay": "not_performed",
+  "numeric_timing_acceptance": false,
+  "source_commit_identity": "this Git commit is archival publication; historical measured source hashes are in cases/*/identity.json",
+  "release_note": "full executable package owns ELF/diss/inputs; Git files are source/index only; Model private repository access needed for trace",
+  "missing": [
+    "portable historical bebc timing model",
+    "historical binary build-time source/config closure",
+    "TimingSim numerical acceptance",
+    "final mainline same-configuration comparison",
+    "whole-operator quantitative bound attribution"
+  ]
+}

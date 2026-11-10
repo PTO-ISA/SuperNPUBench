@@ -1,0 +1,43 @@
+{
+  "format": 1,
+  "status": "incomplete",
+  "bottleneck_analysis": "未仔细/充分分析是否 TLSU bound；仿真观察为 TLSU 等待引入 Vector 断流，不作整体 TLSU bound 定论。",
+  "cases": {
+    "split2": {
+      "elf_sha256": "7c22bc2503eec2f6236fddaeaa750d58bb05d54b9d8bc591eea15e5b8d56bbc8",
+      "original_diss_sha256": "4ef803874804fe2868536f47c7be0840bfa04f354671521341600f431ec64e29",
+      "published_diss_sha256": "2f7bae5b8bbcaa129fc31673129bf74032db1dcf55e27f2227c91c1404e300c3",
+      "diss_derivation": {
+        "changed_lines_1based": [
+          2
+        ],
+        "change": "ELF title path replaced with basename; all remaining bytes identical"
+      },
+      "identity_sha256": "115f2ca2b275464a196863cff76139b68282e729ebc0e8b32c1b598a671004a5",
+      "original_commands_sha256": "dc913af37ad973b79ab585d7a69729aaf66cc5551fb882fc87c0c0c08639c40e",
+      "source_all_original_identity_hashes_match": true,
+      "expected_cycles": 5464
+    },
+    "baseline": {
+      "elf_sha256": "2a80c7c9d8d16b3c012845878dd1b72094eaacb50d430569a7f9d0eb7e4bfeea",
+      "original_diss_sha256": "12f85f68b4e2050dbe7a64ed7e9cf661cab54fb11adc60363e9b1f7dc628c7d3",
+      "published_diss_sha256": "59f059544dbd997d543b5d39daa3e510d98279db9b296e502ad4acb0a5d5bc41",
+      "diss_derivation": {
+        "changed_lines_1based": [
+          2
+        ],
+        "change": "ELF title path replaced with basename; all remaining bytes identical"
+      },
+      "identity_sha256": "91b74c82e4a4d6b4e136936bff72dda31d5d6ace5916d0d2cbebdf245b1baabb",
+      "original_commands_sha256": "19444b6a4fe6b3b2b04074e04631cab1dbad13a149d809c7735357cef1ee776d",
+      "source_all_original_identity_hashes_match": true,
+      "expected_cycles": 13349
+    }
+  },
+  "swimlane_helper_sha256": "2e2170d69b1703e10b61e1b0f5f8e5064a84a80cb2516c7a8b1e349069d78088",
+  "timing_model_sha256": "bebcf1197d78cacdf65109ad1ad76d42604d7996b37c298d92063f82435b7224",
+  "gfrun_sha256": "9b0cf76eaa3ac62902f9511929a961cb064c8930fa9f9af7f8d967aa57eb1fb9",
+  "same_elf_gfrun_exact_historical": true,
+  "timingsim_numerical_acceptance": false,
+  "new_replay": "not_run_by_preparation"
+}

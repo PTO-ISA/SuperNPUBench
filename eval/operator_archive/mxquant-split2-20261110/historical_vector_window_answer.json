@@ -1,0 +1,94 @@
+{
+  "source": "../subview_pingpong_20261106/four_band_analysis.json",
+  "scope": "Original packed_pingpong, 512x256, four PEs; block windows include waits. No new simulation.",
+  "pe0_blocks": [
+    {
+      "row_band": 0,
+      "elements": 8192,
+      "window": [
+        1365,
+        1864
+      ],
+      "cycles": 499,
+      "elements_per_cycle": 16.416833667334668
+    },
+    {
+      "row_band": 1,
+      "elements": 8192,
+      "window": [
+        2366,
+        2928
+      ],
+      "cycles": 562,
+      "elements_per_cycle": 14.576512455516013
+    },
+    {
+      "row_band": 2,
+      "elements": 8192,
+      "window": [
+        2633,
+        3245
+      ],
+      "cycles": 612,
+      "elements_per_cycle": 13.38562091503268
+    },
+    {
+      "row_band": 3,
+      "elements": 8192,
+      "window": [
+        3551,
+        4050
+      ],
+      "cycles": 499,
+      "elements_per_cycle": 16.416833667334668
+    }
+  ],
+  "all_pe_all_vector_wall_window": {
+    "elements": 131072,
+    "window": [
+      1365,
+      4050
+    ],
+    "cycles": 2685,
+    "elements_per_cycle": 48.816387337057726
+  },
+  "all_pe_by_band": [
+    {
+      "row_band": 0,
+      "elements": 32768,
+      "window": [
+        1365,
+        2338
+      ],
+      "elements_per_cycle": 33.677286742034944
+    },
+    {
+      "row_band": 1,
+      "elements": 32768,
+      "window": [
+        2050,
+        2928
+      ],
+      "elements_per_cycle": 37.32118451025057
+    },
+    {
+      "row_band": 2,
+      "elements": 32768,
+      "window": [
+        2633,
+        3496
+      ],
+      "elements_per_cycle": 37.96987253765933
+    },
+    {
+      "row_band": 3,
+      "elements": 32768,
+      "window": [
+        3094,
+        4050
+      ],
+      "elements_per_cycle": 34.27615062761506
+    }
+  ],
+  "warning": "Per-band windows overlap. Never sum them for total throughput, or multiply one PE window throughput by four as an observed aggregate peak."
+}

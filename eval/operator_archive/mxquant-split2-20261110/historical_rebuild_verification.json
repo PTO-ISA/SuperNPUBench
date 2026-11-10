@@ -1,0 +1,74 @@
+{
+  "derivation": "Historical record: only original workspace-root strings replaced by ${ORIGINAL_WORKSPACE}; historical proof, not current rerun.",
+  "original_sha256": "b61b26cf86e83d1e69b793008bcc8aa170edc7beb09c6576f279b5a357f9935c",
+  "record": {
+    "variant": "split2",
+    "byte_identical": true,
+    "elf_sha256": "7c22bc2503eec2f6236fddaeaa750d58bb05d54b9d8bc591eea15e5b8d56bbc8",
+    "commands": [
+      [
+        "${ORIGINAL_WORKSPACE}/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang++",
+        "-c",
+        "-mlxbc",
+        "-fenable-matrix",
+        "-O2",
+        "-mllvm",
+        "-enable-all-vector-as-tilereg=true",
+        "-mllvm",
+        "-linxv5-enable-HL-Inst-Opt=true",
+        "-mllvm",
+        "-linxv5-enable-dim-opt=true",
+        "-mllvm",
+        "-linxv5-enable-ldst-bridge=false",
+        "-mllvm",
+        "-linxv5-enable-continuous-mem-opt=true",
+        "-mllvm",
+        "-linxv5-enable-tile-clock-hand=false",
+        "-mllvm",
+        "-linxv5-enable-simt-clock-hand=true",
+        "-mllvm",
+        "-enable-misched=false",
+        "-std=c++20",
+        "-fno-crash-diagnostics",
+        "-D__linx",
+        "-DENABLE_TENSOR_INSTR",
+        "-DVARIANT=7",
+        "-I${ORIGINAL_WORKSPACE}/benchmark/benchmark/one-level-arch/include",
+        "-I${ORIGINAL_WORKSPACE}/benchmark/benchmark/one-level-arch/test/common",
+        "-I${ORIGINAL_WORKSPACE}/benchmark/benchmark/one-level-arch/test/common/src",
+        "-I${ORIGINAL_WORKSPACE}/benchmark/benchmark/one-level-arch/kernels",
+        "-I${ORIGINAL_WORKSPACE}/benchmark/benchmark/one-level-arch/models",
+        "-DINPUT_FILE=\"${ORIGINAL_WORKSPACE}/perf_analysis/mxquant_rms_20261105/pipeline_20261106/inputs/input.bin\"",
+        "${ORIGINAL_WORKSPACE}/perf_analysis/mxquant_rms_20261105/pipeline_20261106/artifacts/split2/source_snapshot/main.cpp",
+        "-o",
+        "${ORIGINAL_WORKSPACE}/perf_analysis/mxquant_rms_20261105/pipeline_20261106/rebuild_verify/split2/main.o"
+      ],
+      [
+        "${ORIGINAL_WORKSPACE}/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang++",
+        "-nostdlib",
+        "-nostartfiles",
+        "-Wl,-T,${ORIGINAL_WORKSPACE}/perf_analysis/mxquant_rms_20261105/pipeline_20261106/artifacts/split2/source_snapshot/link.ld",
+        "${ORIGINAL_WORKSPACE}/benchmark/benchmark/one-level-arch/test/common/_start.s",
+        "${ORIGINAL_WORKSPACE}/perf_analysis/mxquant_rms_20261105/pipeline_20261106/rebuild_verify/split2/main.o",
+        "-o",
+        "${ORIGINAL_WORKSPACE}/perf_analysis/mxquant_rms_20261105/pipeline_20261106/rebuild_verify/split2/split2.elf"
+      ]
+    ],
+    "identity": {
+      "source_sha256": {
+        "source/split.hpp": "bb7f2eca07578d02e7801177cb976300303ec5729a11bf970bef34f9ec5d76f9",
+        "source/main.cpp": "d9ac09d508e02e2640eaa85f6d91e4e9d8577a64ccfe7a7f8aa0945cfbbacf3c",
+        "source/mxquant_scalar_ref.h": "92fa68e0e2569eec2a7f6f6c3336308fe05344cc0720fb380087b7e51e14704e",
+        "source/bulk.hpp": "5cb7bbc3ace7db2c5cabbd38c50071decab5f7284b702ae30a81bf8d7318d038",
+        "source/baseline.hpp": "010120359fa3560f74abc36be2edd4a13785f323c7a589746780091e9a91c91f",
+        "source/pipeline.hpp": "b266279de5e34236ac30b6007291c4dc7f8149685691a03ab8d389ad5d563ccc",
+        "source/link.ld": "fb976d33f94637f671b9360f3f4e9734cc9d20d9f9b788cb23f131a7c187244c"
+      },
+      "compiler_sha256": "52f1faa6b4f73284c91815824129e00f67dfcd616d544d93836ab570dcff4443",
+      "input_sha256": "e2dd002ab8ccfc8149bc9a20b8b3aa9c9ffa082e3da4a121d0680ee125caf1e3"
+    },
+    "method": "Rebuild from per-artifact frozen source_snapshot into new output root; complete ELF byte comparison before duplicate build deletion.",
+    "cwd": "${ORIGINAL_WORKSPACE}",
+    "cleanup": "Duplicate ELF/object/disassembly removed after verification."
+  }
+}
