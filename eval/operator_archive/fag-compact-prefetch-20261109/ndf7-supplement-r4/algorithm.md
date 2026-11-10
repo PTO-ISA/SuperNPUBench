@@ -1,0 +1,11 @@
+# FAG mathematical target and frozen implementation
+
+For Q[Sq,D], K[Skv,D], V[Skv,D] and dO[Sq,D], the target backward step uses scale=1/sqrt(D), S=QK^T, P=exp(scale*S-lse[:,None]), dP=dOV^T, dS=scale*P*(dP-delta[:,None]), dV=P^TdO, dK=dS^TQ and dQ=dSK. `lse` and `delta` are supplied auxiliaries, not recomputed by this kernel; target consistency of those inputs is a caller contract. The frozen implementation rounds P and dS into the matmul operand dtype, so it is not exact full-FP32 backward.
+
+The source snapshots use FP8 E4M3 Q/K/V/dO and rounded P/dS matmul operands, FP32 elementwise intermediates/accumulators/gradients, four PEs, Q/KV tiles128, D256 and Skv128. Only Sq1024 and Sq4096 are replayed. KV rows are split across PEs; the inner loop traverses Q blocks. dV/dK accumulate across Q; dV uses internalACC in the prefetch snapshot. dQ is accumulated with FP32 GM atomic add and must be initialized to zero. Runtime output scales are identity in the timing build; nonzero functional evidence is a separate ELF.
+
+Compact auxiliaries load Sq-vectors and expand at the consuming instruction. This reduces logical GM payload, not automatically physical M32 carrier or CellReg allocation. The source comments report144KiB logical shared operands; this is not an independently measured physical allocation. Direct CUBE-to-Shared ND transport and static reservation are model implementation/hardware assumptions, not proof of ISA/ASL acceptance.
+
+Assumptions and violation behavior are indexed in the immutable r3 algorithm_assumptions.json. Their known limits remain: no generic-tail/alias/stride/special-value acceptance, no complete frozen ISA/ASL witness, no independent Sq4096 dQ/dK correctness closure. All timing inputs are static zero; zero timing cannot validate these mathematical contracts. The new host checker rechecks old outputs against a model-derived predecessor only.
+
+Source basis: SuperNPUBench commit3f8db15af9eb6120ea4e555eff5c8418a5f85c91, eval/operator_archive/fag-compact-prefetch-20261109/{compact_source,prefetch_source}; exact driver/header hashes remain in inventory.json. This description records source semantics and limitations, not newly proven mathematical correctness.

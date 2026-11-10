@@ -1,0 +1,37 @@
+{
+  "reviewer": "parent agent",
+  "scope": [
+    "Read replay and source recovery implementations and scoped numerical evidence",
+    "Independently rehashed all three newly captured full gzip traces and checked cycle/runtime/ELF receipts",
+    "Inspected normalized historical trace comparison claims; raw hashes intentionally differ after historical annotation removal"
+  ],
+  "results": [
+    {
+      "case": "compact",
+      "cycles": 29028,
+      "full_decompressed_sha256": "bbd74cf8934d8fd3f4630047aed2335722c4228024708008adacb387195c5cf5",
+      "bytes": 56638022,
+      "recorded_normalized_full_and_noc_comparison": "pass; algorithms read separately, not independently recomputed in this review"
+    },
+    {
+      "case": "prefetch",
+      "cycles": 89646,
+      "full_decompressed_sha256": "94ee0a56aae07fbe9cdd501345506d36b5f1eb74682290d7a0caedfb38a10e05",
+      "bytes": 185965089,
+      "recorded_normalized_full_and_noc_comparison": "pass; algorithms read separately, not independently recomputed in this review"
+    },
+    {
+      "case": "slots768",
+      "cycles": 88050,
+      "full_decompressed_sha256": "fb2cfbcdc67f72e2ef4630e8cde70af8cf7a8d3ff88a4cf3359d4b219690533b",
+      "bytes": 183610226,
+      "recorded_normalized_full_and_noc_comparison": "pass; algorithms read separately, not independently recomputed in this review"
+    }
+  ],
+  "limits": [
+    "No independent numerical golden accepted",
+    "No fresh model rebuild in this supplement",
+    "Every check row not blanket re-reviewed"
+  ],
+  "decision": "archive supplement publication acceptable after failure-path fix and final scan"
+}
