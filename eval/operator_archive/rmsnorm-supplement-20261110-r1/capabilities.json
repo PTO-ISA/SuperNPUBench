@@ -1,0 +1,69 @@
+{
+  "metadata_integrity": "pass (new checks)",
+  "operations": [
+    {
+      "operation": "fixed_elf_replay",
+      "provided": "Existing r1 shared operator/runtime plus guard; static zero only",
+      "status": "new_shared_asset_guard_replay_pass (author executed); independent review pending",
+      "evidence": [
+        "download_verification.json",
+        "evidence/preflight.json",
+        "evidence/historical_trace_check.json",
+        "evidence/new_replay_result.json",
+        "evidence/new_replay_command.json",
+        "evidence/new_trace_compression.json"
+      ],
+      "entry": "python3 guard.py replay --operator OP --runtime RT --outdir NEW",
+      "review": "Parent independently reviewed guard and executed gzip trace/receipt identity checker; no independent ELF reexecution. parent_review.json",
+      "gaps": [
+        "numerical",
+        "independent_review"
+      ]
+    },
+    {
+      "operation": "model_source_recovery_rebuild",
+      "provided": "Changed-file recovery/postimages verified; full recipe reference only",
+      "status": "changed_files_pass; full_recovery_unknown; new_rebuild_not_checked",
+      "entry": "python3 guard.py restore --model-repo REPO --recipe RECIPE --outdir NEW --changed-files-only",
+      "evidence": [
+        "evidence/restoration.json",
+        "actual_compile_commands.json",
+        "build_identity.json"
+      ],
+      "review": "not_checked",
+      "gaps": [
+        "source_full",
+        "new_replay"
+      ]
+    },
+    {
+      "operation": "operator_source_rebuild",
+      "provided": "Source snapshot/build script and historical command; exact closure not advertised",
+      "status": "historical_build_record_only; new_build_not_checked",
+      "entry": "r1 source_snapshot/build_snapshot.py requires pinned toolchain; validate all components first",
+      "evidence": [
+        "historical_build_identity.json",
+        "compiler_source_references.json"
+      ],
+      "review": "not_checked",
+      "gaps": [
+        "compiler_closure"
+      ]
+    },
+    {
+      "operation": "numerical_validation_or_recount",
+      "provided": false,
+      "status": "not_checked; neither new engine execution nor old-output checker recount",
+      "entry": null,
+      "evidence": [
+        "gaps.json"
+      ],
+      "review": "not_checked",
+      "gaps": [
+        "numerical"
+      ]
+    }
+  ],
+  "canonical_evidence_root": "https://github.com/LinxISA/SuperScalarModel/tree/archive/rmsnorm-draft7-supplement-20261110/archives/rmsnorm-supplement-20261110-r1",
+  "path_semantics": "All operation entry/evidence paths below resolve against canonical_evidence_root, not this operator directory."
+}
