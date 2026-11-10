@@ -146,6 +146,11 @@ struct qsmla_v3_types {
     // PA_BBND 物理池为 [BlockNum, BlockSize, 1, D]，ORI/CMP 行寻址按 D 展平且
     // 不含 N2 维，故只支持 N2 == 1。
     static_assert(N2 == 1, "v3.3.3 requires N2 == 1 (KV row stride is D)");
+    // kernel 固定 Tm=64 / Tk=128 / Td_block=D（不读 Base::Tile*），因此拒绝其他
+    // tile 设置，避免用不生效的 tile 参数产出误导性的 ELF 名与性能数据。
+    static_assert(Base::TileM == 64, "v3.3.3 fixes the M tile at 64");
+    static_assert(Base::TileK == 128, "v3.3.3 fixes the KV tile at 128 rows");
+    static_assert(Base::TileD == D, "v3.3.3 requires the full D tile");
 
     static constexpr int kGroupM = Base::GSliceMax;  // 64-head G slice (ops mRealSize)
     static constexpr int kPeNum = 4;
