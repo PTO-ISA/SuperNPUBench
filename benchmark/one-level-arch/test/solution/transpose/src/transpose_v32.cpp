@@ -46,6 +46,9 @@ constexpr int kCap = 1 * 16 * 936 * 128;
 #elif V32_CASE == 7
 constexpr int kRank = 5;
 constexpr int kCap = 8 * 8 * 8 * 16 * 32;
+#elif V32_CASE == 9
+constexpr int kRank = 3;
+constexpr int kCap = 200 * 200 * 32;
 #else
 constexpr int kRank = 1;
 constexpr int kCap = 4096;
@@ -108,6 +111,9 @@ int main() {
 #elif V32_CASE == 6
     rt_in[0] = 1; rt_in[1] = 16; rt_in[2] = 936; rt_in[3] = 128;
     rt_perm[0] = 0; rt_perm[1] = 2; rt_perm[2] = 1; rt_perm[3] = 3;
+#elif V32_CASE == 9
+    rt_in[0] = 200; rt_in[1] = 200; rt_in[2] = 32;
+    rt_perm[0] = 1; rt_perm[1] = 0; rt_perm[2] = 2;
 #else
     rt_in[0] = 8; rt_in[1] = 8; rt_in[2] = 8; rt_in[3] = 16; rt_in[4] = 32;
     rt_perm[0] = 0; rt_perm[1] = 1; rt_perm[2] = 4; rt_perm[3] = 3; rt_perm[4] = 2;

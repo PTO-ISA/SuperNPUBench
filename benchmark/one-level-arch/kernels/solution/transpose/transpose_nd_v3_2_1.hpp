@@ -185,6 +185,14 @@ inline V32Tiling MakeV32Tiling(int rank, const std::uint32_t *in_shape,
             return r;
         }()));
 
+    // N_LAST 要求保留轴长度是 128 的整数倍，否则回退 GATHER。
+    // 注意：必须在**填字段之前**改 scenario，否则会留在 N_LAST 分支里、
+    // 导致 GATHER 所需的 rank/dim/stride/invPerm 全是 0。
+    if (t.scenario == static_cast<int>(v32_detail::Scenario::NLast) &&
+        (red2.inShape[red2.dim - 1] % 128) != 0) {
+        t.scenario = static_cast<int>(v32_detail::Scenario::Gather);
+    }
+
     if (t.scenario == static_cast<int>(v32_detail::Scenario::NLast)) {
         t.numPrefix = red2.dim - 1;
         t.L = red2.inShape[red2.dim - 1];
@@ -197,8 +205,6 @@ inline V32Tiling MakeV32Tiling(int rank, const std::uint32_t *in_shape,
             acc2 *= red2.inShape[red2.perm[k]];
         }
         for (int i = 0; i < t.numPrefix; ++i) t.prefixPerm[i] = red2.perm[i];
-        // 行尾不足 128 时按行搬移会丢掉余数 → 回退通用 GATHER（与 v3.2 一致）
-        if ((t.L % 128) != 0) t.scenario = static_cast<int>(v32_detail::Scenario::Gather);
     } else if (t.scenario == static_cast<int>(v32_detail::Scenario::Gather)) {
         t.rank = red2.dim;
         std::uint32_t is[8] = {1, 1, 1, 1, 1, 1, 1, 1};
