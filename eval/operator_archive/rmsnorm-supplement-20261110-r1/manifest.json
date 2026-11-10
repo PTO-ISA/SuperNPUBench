@@ -1,8 +1,8 @@
 [
   {
     "path": "README.md",
-    "bytes": 2085,
-    "sha256": "3d57179c9dba949ef35e83f4f9c4177225d0258986ebb33565fe8089ab2479f8"
+    "bytes": 2573,
+    "sha256": "4f33a4f7a8234dff2f16661afc75a981c77b2858d64e252e49abb624775ef94a"
   },
   {
     "path": "algorithm.md",
@@ -11,8 +11,8 @@
   },
   {
     "path": "capabilities.json",
-    "bytes": 2658,
-    "sha256": "69a98333d1d7e47c7d798d8747a85cebbcf6ff8a4274ef338c1210b79213d930"
+    "bytes": 2656,
+    "sha256": "7f322806f0e05da1bb41c6c954c20707942e34d81a19f6f54f8ce2ed4b568c52"
   },
   {
     "path": "compiler_source_references.json",

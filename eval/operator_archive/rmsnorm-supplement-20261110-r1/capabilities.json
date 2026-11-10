@@ -64,6 +64,6 @@
       ]
     }
   ],
-  "canonical_evidence_root": "https://github.com/LinxISA/SuperScalarModel/tree/archive/rmsnorm-draft7-supplement-20261110/archives/rmsnorm-supplement-20261110-r1",
+  "canonical_evidence_root": "https://github.com/LinxISA/SuperScalarModel/tree/1c99d1326f9cfe3c87b7d1e9008376205aa70a49/archives/rmsnorm-supplement-20261110-r1",
   "path_semantics": "All operation entry/evidence paths below resolve against canonical_evidence_root, not this operator directory."
 }
