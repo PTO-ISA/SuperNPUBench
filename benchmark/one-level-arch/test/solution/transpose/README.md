@@ -57,8 +57,11 @@ make -C benchmark/one-level-arch/test/solution/transpose TESTCASE=transpose_simt
 ```
 
 - **性能测量必须加 `-DPERF_ONLY`**：否则测试自身的初始化循环会被算进 gfsim 的 `Total Cycles`（小 case 会虚高数十倍）。
-- SIMT 需要冻结组合：llvm `482b4207` / TileOP `b223de6` / bench `9076bd0` / model `8e8d8ac7`，
-  且必须加 `--pto059-execution-mask-dev`（否则报 `illegal TCI`）。
+- SIMT 需要**完整冻结组合**：llvm `482b4207` / TileOP **`b223de6`** / bench `9076bd0` / model `8e8d8ac7`，
+  且必须加 `--pto059-execution-mask-dev`（否则报 `illegal TCI`）。缺任何一个都编译不过：
+  - 非 element-if 版编译器/API 没有 `pto::ElementTile`；
+  - TileOP API 版本不对时 `BorrowedTileArray::logical_index` / `TMOV` / 部分 `TSTORE` 重载不存在；
+  - `ElementTile` 只支持 **32 / 128** 元素（测试用 128）。
 
 ## 已知遗留
 

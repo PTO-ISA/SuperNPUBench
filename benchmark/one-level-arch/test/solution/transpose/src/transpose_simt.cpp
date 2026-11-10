@@ -5,6 +5,9 @@
 #include "solution/transpose/transpose_nd_simt_elementif.hpp"
 
 // element-if（SIMT/SMALL_SHAPE）测试：4D [8,8,8,8] perm(0,2,1,3)
+#ifndef SIMT_PE
+#define SIMT_PE 4
+#endif
 #ifndef SIMT_CASE
 #define SIMT_CASE 0
 #endif
@@ -29,12 +32,12 @@ int main() {
     BENCHSTART;
 #if SIMT_CASE == 1
     supernpu::tile_isa::transpose_nd_simt_elementif_tile<
-        std::int32_t, 3, kNumel, 512, std::array<int, 8>{32, 64, 512}, std::array<int, 8>{0, 2, 1}>(
-        input, output, static_cast<int>(tid), 4, tid == 0);
+        std::int32_t, 3, kNumel, 128, std::array<int, 8>{32, 64, 512}, std::array<int, 8>{0, 2, 1}>(
+        input, output, static_cast<int>(tid), SIMT_PE, tid == 0);
 #else
     supernpu::tile_isa::transpose_nd_simt_elementif_tile<
-        std::int32_t, 4, kNumel, 512, std::array<int, 8>{8, 8, 8, 8}, std::array<int, 8>{0, 2, 1, 3}>(
-        input, output, static_cast<int>(tid), 4, tid == 0);
+        std::int32_t, 4, kNumel, 128, std::array<int, 8>{8, 8, 8, 8}, std::array<int, 8>{0, 2, 1, 3}>(
+        input, output, static_cast<int>(tid), SIMT_PE, tid == 0);
 #endif
     BENCHEND;
     if (tid == 0) {
