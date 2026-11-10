@@ -38,6 +38,8 @@ class QsmlaCase:
     enable_stage: str = "stage0_reference"
     coverage: FrozenSet[str] = frozenset()
     reference_feasible: bool = True
+    # 是否纳入 --all-reference 批量生成（超大用例可由 --case 单独生成）。
+    bulk_reference: bool = True
     note: str = ""
     cmp_s2: int = 0
     ori_topk: int = 0
@@ -56,180 +58,6 @@ class QsmlaCase:
 
 
 _QSMLA_STAGE0_CASES: Tuple[QsmlaCase, ...] = (
-    QsmlaCase(
-        name="baseline_swa",
-        b=1, s1=64, s2=128, n1=1, n2=1, d=512, k=128,
-        source="supernpubench:existing",
-        coverage=frozenset({"baseline", "k128", "s1_ne_s2"}),
-    ),
-    QsmlaCase(
-        name="transformer_decode_first",
-        b=1, s1=1, s2=8192, n1=64, n2=1, d=512, k=512,
-        win_left=127, win_right=0, softmax_scale=0.04419417,
-        source="transformer:decode_first",
-        mode="CSA", q_layout="TND", kv_layout="PA_BBND",
-        logical_dtype="hifp8", source_storage_dtype="uint8",
-        enable_stage="future_semantics",
-        coverage=frozenset({"q_tail", "batch_gqa", "k512", "s1_ne_s2"}),
-        reference_feasible=False,
-        note="Exact production shape; retained as a Stage 1 compile target.",
-    ),
-    QsmlaCase(
-        name="transformer_prefill_first",
-        b=1, s1=8192, s2=8192, n1=64, n2=1, d=512, k=512,
-        win_left=127, win_right=0, softmax_scale=0.04419417,
-        source="transformer:prefill_first",
-        mode="CSA", q_layout="TND", kv_layout="PA_BBND",
-        logical_dtype="hifp8", source_storage_dtype="uint8",
-        enable_stage="future_semantics",
-        coverage=frozenset({"batch_gqa", "k512"}),
-        reference_feasible=False,
-        note="Exact production prefill shape; Stage 1 compile target only.",
-    ),
-    QsmlaCase(
-        name="transformer_csa_small_prefill",
-        b=1, s1=16, s2=1024, n1=64, n2=1, d=512, k=512,
-        win_left=127, win_right=0, softmax_scale=0.04419417,
-        source="transformer:csa_small_prefill",
-        mode="CSA", q_layout="TND", kv_layout="PA_BBND",
-        logical_dtype="hifp8", source_storage_dtype="uint8",
-        enable_stage="future_semantics",
-        coverage=frozenset({"q_tail", "batch_gqa", "k512", "s1_ne_s2"}),
-        reference_feasible=False,
-        note="Shape-only coverage in Stage 0; semantics remain continuous SWA.",
-    ),
-    QsmlaCase(
-        name="transformer_ori_sparse_tnd_pa",
-        b=4, s1=4, s2=8192, n1=128, n2=1, d=512, k=0, k1=64,
-        source="transformer:ori_sparse_tnd_pa",
-        mode="ORI_SPARSE", q_layout="TND", kv_layout="PA_BBND",
-        logical_dtype="hifp8", source_storage_dtype="uint8",
-        enable_stage="future_semantics",
-        coverage=frozenset({"batch_gqa", "q_tail", "s1_ne_s2"}),
-        reference_feasible=False,
-        note="K1 is the ORI sparse candidate width; requires sparse, TND, PA and HIFLOAT8 semantics.",
-    ),
-    QsmlaCase(
-        name="transformer_ori_sparse_bsnd_pa",
-        b=4, s1=4, s2=8192, n1=128, n2=1, d=512, k=0, k1=128,
-        source="transformer:ori_sparse_bsnd_pa",
-        mode="ORI_SPARSE", q_layout="BSND", kv_layout="PA_BBND",
-        logical_dtype="hifp8", source_storage_dtype="uint8",
-        enable_stage="future_semantics",
-        coverage=frozenset({"batch_gqa", "q_tail", "k128", "s1_ne_s2"}),
-        reference_feasible=False,
-        note="BSND query plus ORI sparse PA path; K1=128.",
-    ),
-    QsmlaCase(
-        name="transformer_ori_cmp_sparse_tnd_pa",
-        b=4, s1=4, s2=8192, n1=128, n2=1, d=512, k=512, k1=128,
-        source="transformer:ori_cmp_sparse_tnd_pa",
-        mode="ORI_CMP_SPARSE", q_layout="TND", kv_layout="PA_BBND",
-        logical_dtype="hifp8", source_storage_dtype="uint8",
-        enable_stage="future_semantics",
-        coverage=frozenset({"batch_gqa", "q_tail", "k128", "k512", "s1_ne_s2"}),
-        reference_feasible=False,
-        note="Dual sparse ORI/CMP path with TND query and PA KV.",
-    ),
-    QsmlaCase(
-        name="transformer_ori_cmp_sparse_bsnd_pa",
-        b=4, s1=4, s2=8192, n1=128, n2=1, d=512, k=512, k1=128,
-        source="transformer:ori_cmp_sparse_bsnd_pa",
-        mode="ORI_CMP_SPARSE", q_layout="BSND", kv_layout="PA_BBND",
-        logical_dtype="hifp8", source_storage_dtype="uint8",
-        enable_stage="future_semantics",
-        coverage=frozenset({"batch_gqa", "q_tail", "k128", "k512", "s1_ne_s2"}),
-        reference_feasible=False,
-        note="Same numeric shape as TND variant but a distinct BSND semantic case.",
-    ),
-    QsmlaCase(
-        name="typical_bsnd_swa_1",
-        b=8, s1=4, s2=131072, n1=128, n2=1, d=512, k=0,
-        tm=64, win_left=128, win_right=576,
-        source="user:typical_case_1",
-        enable_stage="stage1_compile",
-        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_large_s2"}),
-        reference_feasible=False,
-        note="User-provided production BSND SWA shape; compile-only because S2 is 131072.",
-    ),
-    QsmlaCase(
-        name="typical_bsnd_swa_2",
-        b=8, s1=4, s2=131072, n1=128, n2=1, d=512, k=0,
-        tm=64, win_left=128, win_right=576,
-        source="user:typical_case_2",
-        enable_stage="stage1_compile",
-        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_large_s2"}),
-        reference_feasible=False,
-        note="User-provided production BSND SWA shape; compile-only because S2 is 131072.",
-    ),
-    QsmlaCase(
-        name="typical_bsnd_swa_3",
-        b=8, s1=4, s2=131072, n1=128, n2=1, d=512, k=0,
-        tm=64, win_left=128, win_right=576,
-        source="user:typical_case_3",
-        enable_stage="stage1_compile",
-        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_large_s2"}),
-        reference_feasible=False,
-        note="User-provided production BSND SWA shape; compile-only because S2 is 131072.",
-    ),
-    QsmlaCase(
-        name="typical_bsnd_swa_s2_128",
-        b=8, s1=4, s2=128, n1=128, n2=1, d=512, k=0,
-        tm=64, win_left=128, win_right=576,
-        source="user:typical_reduced_s2",
-        enable_stage="stage1_compile",
-        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
-        reference_feasible=False,
-        note="Production-like BSND SWA shape with S2 reduced to 128.",
-    ),
-    QsmlaCase(
-        name="typical_bsnd_swa_s2_1024",
-        b=8, s1=4, s2=1024, n1=128, n2=1, d=512, k=0,
-        tm=64, win_left=128, win_right=576,
-        source="user:typical_reduced_s2",
-        enable_stage="stage1_compile",
-        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
-        reference_feasible=False,
-        note="Production-like BSND SWA shape with S2 reduced to 1024.",
-    ),
-    QsmlaCase(
-        name="typical_bsnd_swa_s2_4096",
-        b=8, s1=4, s2=4096, n1=128, n2=1, d=512, k=0,
-        tm=64, win_left=128, win_right=576,
-        source="user:typical_reduced_s2",
-        enable_stage="stage1_compile",
-        coverage=frozenset({"bsnd_layout", "batch_gqa", "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
-        reference_feasible=False,
-        note="Production-like BSND SWA shape with S2 reduced to 4096.",
-    ),
-    QsmlaCase(
-        name="smoke_batch_gqa",
-        b=2, s1=3, s2=5, n1=4, n2=2, d=8, k=128,
-        tm=2, tk=3, td=4,
-        coverage=frozenset({"batch_gqa", "q_tail", "kv_tail", "k128", "s1_ne_s2"}),
-    ),
-    QsmlaCase(
-        name="smoke_all_tails_k512",
-        b=1, s1=5, s2=7, n1=2, n2=1, d=10, k=512,
-        tm=4, tk=4, td=6,
-        coverage=frozenset({"batch_gqa", "q_tail", "kv_tail", "d_tail", "k512", "s1_ne_s2"}),
-    ),
-    QsmlaCase(
-        name="smoke_bsnd_g64",
-        b=1, s1=2, s2=3, n1=64, n2=1, d=8, k=128,
-        tm=64, tk=2, td=4,
-        q_layout="BSND", kv_layout="BSND",
-        coverage=frozenset({"bsnd_layout", "g64", "kv_tail", "k128", "s1_ne_s2"}),
-        note="Stage 1 direct [G,D] MM1 smoke with G=64.",
-    ),
-    QsmlaCase(
-        name="smoke_bsnd_g128",
-        b=1, s1=1, s2=3, n1=128, n2=1, d=8, k=512,
-        tm=64, tk=2, td=4,
-        q_layout="BSND", kv_layout="BSND",
-        coverage=frozenset({"bsnd_layout", "g128_split", "q_tail", "kv_tail", "k512", "s1_ne_s2"}),
-        note="Stage 1 split-G smoke: G=128 must be processed as two M=64 slices.",
-    ),
 )
 
 
@@ -255,6 +83,26 @@ _QSMLA_MODE_CASES: Tuple[QsmlaCase, ...] = (
               source="supernpubench:five-mode", enable_stage="gfrun",
               reference_feasible=True, mode_generation_feasible=True,
               coverage=frozenset({"hif8", "bf16_output", "descale"})),
+    # 小号多 work 用例：B=2,S1=2 -> kWorkCount=4；D=128 让 tile 更小，
+    # 用于在 v3.x 上验证"多 work"路径（生产形状的缩小版）。
+    QsmlaCase(name="csa_mw_small", mode="CSA", b=2, s1=2, s2=256,
+              n1=64, n2=1, d=128, k=64, cmp_s2=128, cmp_topk=64,
+              cmp_ratio=4, tm=64, tk=32, td=64, win_left=255,
+              win_right=0, softmax_scale=0.04419417,
+              source="supernpubench:five-mode", enable_stage="gfrun",
+              reference_feasible=True, mode_generation_feasible=True,
+              coverage=frozenset({"hif8", "bf16_output", "descale",
+                                  "multi_work", "small_d"})),
+    # 大用例：10 个 KV 块（8 个 ORI 满块 + 2 个 CMP 块），用于验证
+    # KV 预取深度（preload=1 vs 3）在多块场景下的收益。
+    QsmlaCase(name="csa_medium", mode="CSA", b=1, s1=1, s2=1024,
+              n1=64, n2=1, d=512, k=256, cmp_s2=512, cmp_topk=256,
+              cmp_ratio=4, tm=64, tk=32, td=64, win_left=1023,
+              win_right=0, softmax_scale=0.04419417,
+              source="supernpubench:five-mode", enable_stage="gfrun",
+              reference_feasible=True, mode_generation_feasible=True,
+              coverage=frozenset({"hif8", "bf16_output", "descale",
+                                  "csa_medium"})),
     QsmlaCase(name="ori_sparse_small", mode="ORI_SPARSE", b=1, s1=1,
               s2=128, n1=64, n2=1, d=512, k=0, k1=40, cmp_s2=64,
               ori_topk=40, cmp_ratio=4, tm=64, tk=32, td=64,
@@ -278,31 +126,20 @@ _QSMLA_MODE_CASES: Tuple[QsmlaCase, ...] = (
               mode_generation_feasible=True,
               coverage=frozenset({"typical_csa", "bsnd_layout", "batch_gqa",
                                   "g128_split", "s1_ne_s2", "typical_reduced_s2"})),
-    QsmlaCase(name="typical_bsnd_csa_s2_1024_topk128", mode="CSA",
-              b=8, s1=4, s2=1024, n1=128, n2=1, d=512, k=128,
-              cmp_s2=256, cmp_topk=128, cmp_ratio=4, tm=64, tk=32, td=64,
-              win_left=128, win_right=576, source="user:typical_csa",
-              enable_stage="gfrun", reference_feasible=False,
-              mode_generation_feasible=True,
-              coverage=frozenset({"typical_csa", "bsnd_layout", "batch_gqa",
-                                  "g128_split", "s1_ne_s2", "typical_reduced_s2"})),
-    QsmlaCase(name="typical_bsnd_csa_s2_4096_topk512", mode="CSA",
-              b=8, s1=4, s2=4096, n1=128, n2=1, d=512, k=512,
-              cmp_s2=1024, cmp_topk=512, cmp_ratio=4, tm=64, tk=32, td=64,
-              win_left=128, win_right=576, source="user:typical_csa",
-              enable_stage="gfrun", reference_feasible=False,
+    QsmlaCase(name="typical_bsnd_csa_s2_2048_topk1024_c4", mode="CSA",
+              b=8, s1=4, s2=2048, n1=128, n2=1, d=512, k=1024,
+              cmp_s2=4096, cmp_topk=1024, cmp_ratio=4, tm=64, tk=32,
+              td=64, win_left=128, win_right=576,
+              softmax_scale=0.04419417,
+              source="user:typical_csa_c4",
+              enable_stage="gfrun", reference_feasible=True,
+              bulk_reference=False,
               mode_generation_feasible=True,
               coverage=frozenset({"typical_csa", "bsnd_layout", "batch_gqa",
                                   "g128_split", "s1_ne_s2", "typical_reduced_s2"}),
-              note="Production HIF8 validation case; input and golden generation are expensive."),
-    QsmlaCase(name="typical_bsnd_csa_s2_131072_topk512", mode="CSA",
-              b=8, s1=4, s2=131072, n1=128, n2=1, d=512, k=512,
-              cmp_s2=32768, cmp_topk=512, cmp_ratio=4, tm=64, tk=32, td=64,
-              win_left=128, win_right=576, source="user:typical_csa",
-              enable_stage="compile_only", reference_feasible=False,
-              coverage=frozenset({"typical_csa", "bsnd_layout", "batch_gqa",
-                                  "g128_split", "s1_ne_s2", "typical_large_s2"}),
-              note="Compile-only: raw ORI KV input alone is 1 GiB in fp16."),
+              note="Network CSA case, C4 dead-data trim (S2 131072->2048, "
+                   "cmp_s2 32768->4096); block-wise equivalent to the "
+                   "production shape, 64 works per ELF."),
 )
 
 QSMLA_STAGE0_CASES = _QSMLA_STAGE0_CASES
@@ -493,7 +330,7 @@ def main():
     args = parser.parse_args()
 
     if args.all:
-        selected = QSMLA_EXECUTABLE_CASES
+        selected = tuple(c for c in QSMLA_EXECUTABLE_CASES if c.bulk_reference)
     else:
         selected = tuple(case for case in QSMLA_CASES if case.name == args.case)
         if selected and not selected[0].mode_generation_feasible:

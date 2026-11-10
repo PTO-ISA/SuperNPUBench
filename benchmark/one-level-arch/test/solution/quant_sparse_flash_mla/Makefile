@@ -49,6 +49,9 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    # HIF8 remains the default dtype for the unified four-PE implementations.
    QSMLA_UNIFIED_IMPLS := swa_tadd_4pe hca_tadd_4pe csa_tadd_4pe ori_sparse_tadd_4pe ori_cmp_sparse_tadd_4pe
     QSMLA_1PE_IMPLS := csa_tadd_1pe
+    # 唯一保留的 v3 形态：v3.3.3（O/m/l 全 UB 驻留 + staging 预取 + 行级 ping-pong
+    # + 可配置 preload + 多 work）。其余历史版本已移除。
+    QSMLA_V3_IMPLS := csa_v3_3_3_4pe
     # Dynamic-shape variant (v2): Vec tiles use DYNAMIC ValidRow/ValidCol.
     # Only valid for the unified four-PE IMPLs.
     ifeq ($(QSMLA_DYNAMIC_SHAPE), on)
@@ -57,7 +60,7 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
        endif
        DEFINES += -DQSMLA_USE_DYNAMIC_SHAPE
     endif
-   ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS)),)
+   ifeq ($(filter $(IMPL),tadd tadd_4pe $(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS) $(QSMLA_V3_IMPLS)),)
       $(error unsupported QSMLA IMPL=$(IMPL); use tadd or a unified four-PE implementation)
    endif
     ifeq ($(IMPL), tadd)
@@ -126,6 +129,28 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL).elf
    endif
 
+   # v3.3.3: 可配置预取深度（QSMLA_PRELOAD=x，默认 2）。
+   QSMLA_PRELOAD ?= 2
+   ifeq ($(IMPL), csa_v3_3_3_4pe)
+      DEFINES += -DQSMLA_USE_CSA_V3_3_3_4PE
+      DEFINES += -DQSMLA_PRELOAD=$(QSMLA_PRELOAD)
+      DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      # kernel 固定大 tile：默认值即正确形态（命令行显式传值仍可覆盖，
+      # 但 kernel 会 static_assert 拒绝不匹配的设置）。
+      Tm = 64
+      Tk = 128
+      Td_block = $(D)
+      QSMLA_SPARSE_CASE := csa_small
+      QSMLA_SPARSE_PA := on
+      ifeq ($(QSMLA_PA_ISOLATE), on)
+         DEFINES += -DQSMLA_PA_ISOLATE_NULL_TABLES
+      endif
+      ifneq ($(QSMLA_DTYPE), HIF8)
+         $(error csa_v3_3_3_4pe requires QSMLA_DTYPE=HIF8)
+      endif
+   TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_P$(QSMLA_PRELOAD)_DTYPE$(QSMLA_DTYPE)_KVPABBND_INPUTembedded.elf
+   endif
+
    # Single-PE CSA (Local CUBE path, FP16, embedded input only).
    ifeq ($(IMPL), csa_tadd_1pe)
       ifneq ($(QSMLA_SPARSE_EMBED_INPUT), on)
@@ -178,7 +203,7 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
    endif
 
    ifeq ($(QSMLA_SPARSE_EMBED_INPUT), on)
-      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS)),)
+      ifeq ($(filter $(IMPL),$(QSMLA_UNIFIED_IMPLS) $(QSMLA_1PE_IMPLS) $(QSMLA_V3_IMPLS)),)
          $(error QSMLA_SPARSE_EMBED_INPUT requires a unified four-PE IMPL or csa_tadd_1pe)
       endif
       QSMLA_SPARSE_DATA_ROOT ?= /tmp/qsmla-sparse
@@ -188,6 +213,18 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       QSMLA_Q_BYTES := $(shell expr $(B) \* $(s1) \* $(N1) \* $(D) \* $(QSMLA_INPUT_BYTES))
       QSMLA_ORI_KV_BYTES := $(shell expr $(B) \* $(s2) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
       QSMLA_CMP_KV_BYTES := $(shell expr $(B) \* $(cmp_s2) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
+      # PA_BBND pool sizing (block_size = 128).
+      QSMLA_PA_BLOCK := 128
+      QSMLA_ORI_ROWS_PA := $(shell expr \( \( $(s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK) \) \* $(QSMLA_PA_BLOCK))
+      QSMLA_ORI_BYTES_PA := $(shell expr $(B) \* $(QSMLA_ORI_ROWS_PA) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
+      QSMLA_CMP_ROWS_PA := $(shell expr \( \( $(cmp_s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK) \) \* $(QSMLA_PA_BLOCK))
+      QSMLA_CMP_BYTES_PA := $(shell expr $(B) \* $(QSMLA_CMP_ROWS_PA) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
+      QSMLA_PA_MAX_BLOCKS := $(shell expr \( $(s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK))
+      QSMLA_PA_TABLE_BYTES := $(shell expr $(B) \* $(QSMLA_PA_MAX_BLOCKS) \* 4)
+      # CMP block table is its own width (ceil(cmp_s2 / block)); for cmp_s2 > s2
+      # it is wider than the ORI table (e.g. the network CSA case).
+      QSMLA_PA_CMP_MAX_BLOCKS := $(shell expr \( $(cmp_s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK))
+      QSMLA_PA_CMP_TABLE_BYTES := $(shell expr $(B) \* $(QSMLA_PA_CMP_MAX_BLOCKS) \* 4)
       QSMLA_ORI_INDEX_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* $(ori_topk) \* 4)
       QSMLA_CMP_INDEX_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* $(cmp_topk) \* 4)
       QSMLA_LENGTH_BYTES := $(shell expr $(B) \* $(s1) \* $(N2) \* 4)
@@ -197,11 +234,11 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       EXTRA_OBJ_FILES += $(QSMLA_Q_OBJ) $(QSMLA_ORI_KV_OBJ)
       DEFINES += -DQSMLA_USE_SPARSE_EMBEDDED_INPUT
 
-      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
+      ifneq ($(filter $(IMPL),hca_tadd_4pe csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe csa_v3_3_3_4pe),)
          QSMLA_CMP_KV_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_kv.o
          EXTRA_OBJ_FILES += $(QSMLA_CMP_KV_OBJ)
       endif
-       ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe),)
+       ifneq ($(filter $(IMPL),csa_tadd_4pe ori_cmp_sparse_tadd_4pe csa_tadd_1pe csa_v3_3_3_4pe),)
           QSMLA_CMP_INDEX_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_indices.o
           EXTRA_OBJ_FILES += $(QSMLA_CMP_INDEX_OBJ)
        endif
@@ -223,7 +260,31 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
          EXTRA_OBJ_FILES += $(QSMLA_CMP_LENGTH_OBJ)
       endif
 
+      # PA_BBND variants: paged KV copies + [B, max_blocks] identity block
+      # tables (block_size = 128), generated beside the case data.
+      ifeq ($(QSMLA_SPARSE_PA), on)
+         QSMLA_ORI_KV_PA_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_kv_pa.o
+         QSMLA_CMP_KV_PA_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_kv_pa.o
+         QSMLA_ORI_BT_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/ori_block_table.o
+         QSMLA_CMP_BT_OBJ := $(QSMLA_SPARSE_OBJ_DIR)/cmp_block_table.o
+         EXTRA_OBJ_FILES += $(QSMLA_ORI_KV_PA_OBJ) $(QSMLA_CMP_KV_PA_OBJ) \
+                            $(QSMLA_ORI_BT_OBJ) $(QSMLA_CMP_BT_OBJ)
+         DEFINES += -DQSMLA_SPARSE_KV_PA_BBND=1
+         # 干净数据根上由 gen_pa_bbnd_data.py 生成 paged KV + 块表（幂等，一次产 4 个文件）。
+         QSMLA_PA_GEN := python3 $(CURDIR)/gen_pa_bbnd_data.py --data-dir $(QSMLA_SPARSE_DATA_DIR) --b $(B) --s2 $(s2) --cmp-s2 $(cmp_s2) --n2 $(N2) --d $(D) --ext $(QSMLA_INPUT_EXT) --block-size $(QSMLA_PA_BLOCK)
+
+      $(QSMLA_SPARSE_DATA_DIR)/ori_kv_pa.$(QSMLA_INPUT_EXT).bin: $(QSMLA_SPARSE_DATA_DIR)/ori_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_SPARSE_DATA_DIR)/cmp_kv.$(QSMLA_INPUT_EXT).bin
+	$(QSMLA_PA_GEN)
+
+      $(QSMLA_SPARSE_DATA_DIR)/cmp_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_SPARSE_DATA_DIR)/ori_block_table.int32.bin $(QSMLA_SPARSE_DATA_DIR)/cmp_block_table.int32.bin: $(QSMLA_SPARSE_DATA_DIR)/ori_kv_pa.$(QSMLA_INPUT_EXT).bin
+	@test -f $@ || $(QSMLA_PA_GEN)
+      endif
+
+      # v3.3.3 的 TARGET 已在 IMPL 分支内给出（含 _P$(QSMLA_PRELOAD)），此处不要覆盖，
+      # 否则不同 preload 深度会落到同一个 ELF 路径、互相覆盖。
+      ifneq ($(IMPL), csa_v3_3_3_4pe)
       TARGET = $(ELF_HEAD)/$(TESTCASE)_B$(B)_s1$(s1)_oriS2$(s2)_cmpS2$(cmp_s2)_N1$(N1)_N2$(N2)_D$(D)_oriK$(ori_topk)_cmpK$(cmp_topk)_ratio$(cmp_ratio)_Tm$(Tm)_Tk$(Tk)_Td$(Td_block)_IMPL$(IMPL)_DTYPE$(QSMLA_DTYPE)_INPUTembedded.elf
+      endif
 
       $(QSMLA_Q_OBJ): $(QSMLA_SPARSE_DATA_DIR)/q.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
@@ -256,6 +317,24 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       $(QSMLA_CMP_LENGTH_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_topk_length.int32.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
 	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_topk_length_int32 --bytes $(QSMLA_LENGTH_BYTES) --exact-bytes
+
+      ifeq ($(QSMLA_SPARSE_PA), on)
+      $(QSMLA_ORI_KV_PA_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_BYTES_PA) --exact-bytes
+
+      $(QSMLA_CMP_KV_PA_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_CMP_BYTES_PA) --exact-bytes
+
+      $(QSMLA_ORI_BT_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_block_table.int32.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_block_table_int32 --bytes $(QSMLA_PA_TABLE_BYTES) --exact-bytes
+
+      $(QSMLA_CMP_BT_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_block_table.int32.bin $(QSMLA_INPUT_BUILDER)
+	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_block_table_int32 --bytes $(QSMLA_PA_CMP_TABLE_BYTES) --exact-bytes
+      endif
    endif
 endif
 

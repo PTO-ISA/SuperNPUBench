@@ -1,7 +1,15 @@
 #include <common/pto_tileop.hpp>
 #include "benchmark.h"
 #include "fileop.h"
-#if defined(QSMLA_USE_TADD_4PE) || \
+
+#ifndef QSMLA_PRELOAD
+#define QSMLA_PRELOAD 2
+#endif
+#if defined(QSMLA_USE_CSA_V3_3_3_4PE)
+#include "solution/quant_sparse_flash_mla/quant_sparse_flash_mla_v3_3_3.hpp"
+// v3.3.3 复用 v3.1 的 plumbing（PA/TND scratch、ModeConfig、数据守卫）。
+#define QSMLA_USE_CSA_V3_1_4PE
+#elif defined(QSMLA_USE_TADD_4PE) || \
     defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
@@ -167,7 +175,8 @@ extern const uint8_t _binary_ori_kv_t_hif8_start[];
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_1_4PE)
 extern const uint8_t _binary_cmp_kv_hif8_start[];
 #endif
 #else
@@ -179,13 +188,15 @@ extern const uint8_t _binary_ori_kv_t_fp16_start[];
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_1_4PE)
 extern const uint8_t _binary_cmp_kv_fp16_start[];
 #endif
 #endif
 #if defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_1_4PE)
 extern const uint8_t _binary_cmp_sparse_indices_int32_start[];
 #endif
 #if defined(QSMLA_USE_ORI_SPARSE_TADD_4PE) || \
@@ -195,6 +206,12 @@ extern const uint8_t _binary_ori_topk_length_int32_start[];
 #endif
 #if defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE)
 extern const uint8_t _binary_cmp_topk_length_int32_start[];
+#endif
+#ifdef QSMLA_SPARSE_KV_PA_BBND
+extern const uint8_t _binary_ori_kv_pa_hif8_start[];
+extern const uint8_t _binary_cmp_kv_pa_hif8_start[];
+extern const uint8_t _binary_ori_block_table_int32_start[];
+extern const uint8_t _binary_cmp_block_table_int32_start[];
 #endif
 }
 #endif
@@ -214,7 +231,10 @@ int main(){
     using Config = QsmlaConfig<
         B, s1, s2, N1, N2, D, 0, kTm, kTk, kTd, g_slice_max>;
 
-#ifdef QSMLA_USE_TADD_4PE
+#if defined(QSMLA_USE_CSA_V3_1_4PE)
+    using ModeConfig = QsmlaModeConfig<
+        Config, QsmlaMode::CSA, cmp_s2, ori_topk, cmp_topk>;
+#elif defined(QSMLA_USE_TADD_4PE)
     using ModeConfig = QsmlaModeConfig<
         Config, QsmlaMode::SWA, 0, 0, 0>;
 #elif defined(QSMLA_USE_HCA_TADD_4PE)
@@ -259,7 +279,8 @@ int main(){
 #if defined(QSMLA_USE_HCA_TADD_4PE) || \
     defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_1_4PE)
 #ifdef QSMLA_USE_HIF8
     kvdtype* cmp_kv = reinterpret_cast<kvdtype*>(
         const_cast<uint8_t*>(_binary_cmp_kv_hif8_start));
@@ -270,9 +291,21 @@ int main(){
 #else
     kvdtype* cmp_kv = nullptr;
 #endif
+#if defined(QSMLA_SPARSE_KV_PA_BBND) && !defined(QSMLA_PA_ISOLATE_NULL_TABLES)
+    // PA_BBND: KV bases point at the paged pools; rows come from the tables.
+    // 隔离模式（QSMLA_PA_ISOLATE=on）会置空块表并退回「batch*S2 连续行」寻址，
+    // 此时必须保留连续 KV 指针；指向 PA 池会造成 batch 间行步长不一致。
+    kv = reinterpret_cast<kvdtype*>(
+        const_cast<uint8_t*>(_binary_ori_kv_pa_hif8_start));
+    if constexpr (N1 > 1) {
+        cmp_kv = reinterpret_cast<kvdtype*>(
+            const_cast<uint8_t*>(_binary_cmp_kv_pa_hif8_start));
+    }
+#endif
 #if defined(QSMLA_USE_CSA_TADD_4PE) || \
     defined(QSMLA_USE_ORI_CMP_SPARSE_TADD_4PE) || \
-    defined(QSMLA_USE_CSA_TADD_1PE)
+    defined(QSMLA_USE_CSA_TADD_1PE) || \
+    defined(QSMLA_USE_CSA_V3_1_4PE)
     const int* cmp_indices = reinterpret_cast<const int*>(
         _binary_cmp_sparse_indices_int32_start);
 #else
@@ -320,7 +353,24 @@ int main(){
 
     odttype* out = (odttype*)MAP_MEM_BASE;
 
-#if defined(QSMLA_USE_UNIFIED_TADD_4PE)
+#if defined(QSMLA_USE_CSA_V3_1_4PE)
+    // v3 scratch: GM staging buffer for one 128-token KV block (ops v0Res)
+    // + 2 mask regions + O half-resident buffer (model-gap fallback).
+    constexpr uint64_t out_bytes =
+        static_cast<uint64_t>(B) * s1 * N1 * D * sizeof(odttype);
+    // v3.3.3：staging slice 份数 = 预取深度 QSMLA_PRELOAD。
+    constexpr uint64_t v0_bytes =
+        static_cast<uint64_t>(QSMLA_PRELOAD) * 128 * D * sizeof(kvdtype);
+    constexpr uint64_t mask_bytes = 2 * (g_slice_max / 4) * 128 * sizeof(float);
+    constexpr uint64_t o_bytes =
+        static_cast<uint64_t>(B) * s1 * N1 * D * sizeof(float);
+    constexpr uint64_t v0_addr = MAP_MEM_BASE + align_up_4k(out_bytes);
+    constexpr uint64_t mask_addr = v0_addr + align_up_4k(v0_bytes);
+    constexpr uint64_t o_addr = mask_addr + align_up_4k(mask_bytes);
+    kvdtype* v0_res_scratch = reinterpret_cast<kvdtype*>(v0_addr);
+    float* mask_scratch = reinterpret_cast<float*>(mask_addr);
+    float* o_scratch = reinterpret_cast<float*>(o_addr);
+#elif defined(QSMLA_USE_UNIFIED_TADD_4PE)
     // Cooperative scratch must live in shared GM rather than a PE-private
     // function stack.  Each PE computes and receives these identical mapped
     // addresses, matching the shared-workspace contract used by the 4-PE FA.
@@ -345,7 +395,43 @@ int main(){
 #endif
 
     BENCHSTART;
-#ifdef QSMLA_USE_CSA_TADD_1PE
+#ifdef QSMLA_USE_CSA_V3_1_4PE
+    // v3.1: v3 + PA_BBND block-table KV addressing.
+    QsmlaPaConfig pa;
+#ifdef QSMLA_PA_ISOLATE_NULL_TABLES
+    pa.ori_block_table = nullptr;
+    pa.cmp_block_table = nullptr;
+#else
+    pa.ori_block_table = reinterpret_cast<const int32_t*>(
+        _binary_ori_block_table_int32_start);
+    pa.cmp_block_table = reinterpret_cast<const int32_t*>(
+        _binary_cmp_block_table_int32_start);
+#endif
+    pa.ori_block_size = QSMLA_PA_BLOCK_SIZE;
+    pa.cmp_block_size = QSMLA_PA_BLOCK_SIZE;
+    pa.ori_max_blocks = (s2 + QSMLA_PA_BLOCK_SIZE - 1) / QSMLA_PA_BLOCK_SIZE;
+    pa.cmp_max_blocks =
+        (cmp_s2 + QSMLA_PA_BLOCK_SIZE - 1) / QSMLA_PA_BLOCK_SIZE;
+    // Query layout: TND flattened token rows.  cu_seqlens_q is optional; the
+    // uniform-length benchmark cases fall back to the per-batch base b * S1.
+    QsmlaQueryConfig qc;
+    qc.q_tnd = true;
+    qc.cu_seqlens_q = nullptr;
+#if defined(QSMLA_USE_CSA_V3_3_3_4PE)
+    // v3.3.3：work 循环提到 host 侧（每 work 一次调用，规避 kWorkCount>1 的
+    // 编译器 raw-spill 限制，llvm-project #143）。
+    for (int qsmla_w = 0; qsmla_w < Config::WorkCount; ++qsmla_w) {
+        quant_sparse_flash_mla_csa_v3_3_3_4pe_pto<
+            qdtype, kvdtype, odttype, ModeConfig>(
+                out, q, kv, cmp_kv,
+                ori_indices, cmp_indices, ori_lengths, cmp_lengths,
+                softmax_scale_val,
+                q_descale_val, ori_kv_descale_val, cmp_kv_descale_val,
+                cmp_ratio, win_left, win_right,
+                v0_res_scratch, mask_scratch, o_scratch, qsmla_w, pa, qc);
+    }
+#endif
+#elif defined(QSMLA_USE_CSA_TADD_1PE)
     // 单 PE CSA：Local CUBE 路径（FP16/HIF8 双态，嵌入输入；
     // FP16 下 descale 宏为 1，HIF8 下为 per-tensor 反量化因子）
     using ModeConfig = QsmlaModeConfig<
