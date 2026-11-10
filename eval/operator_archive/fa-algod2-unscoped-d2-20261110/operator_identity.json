@@ -1,0 +1,87 @@
+{
+  "format": 1,
+  "status": "complete_for_measured_result",
+  "operator": "FA MXFP4 AlgoD D128（kernel variant algod2 / unscoped D2）",
+  "shape": {"algo": "D", "dim": 128, "sq": 256, "skv": 65536, "tm": 128, "tk": 256},
+  "elf": {
+    "name_in_payload": "fa-64k-unscoped-d2-258099.elf",
+    "local_alias": "algod2.elf",
+    "bytes": 631768,
+    "sha256": "3dba89659bdea3cbe6857ca05b54b57b54a4ac8cd245f7ba023b29a1adec2d1f",
+    "identity_evidence": "byte-identical to the model repo's repro/algod2/algod2.elf and to the ELF inside fa-operator-r2.tar.gz; the sha256 is recorded by this repo's eval/operator_archive/fa-scoped-packed-rowsum-20261109/release_download_verification.json under result_id fa-64k-unscoped-d2-258099-portable-r2"
+  },
+  "disassembly": {
+    "path_local": "REPRO_fa_scoped_1109/fa-operator-r2/bin/fa-64k-unscoped-d2-258099.elf.diss",
+    "bytes": 9321731,
+    "sha256": "b64db266f1f2a1759413d765ef8ed5e430f97d04fcee3ec7dc09a80219439831",
+    "identity_evidence": "first line reads 'algod2.elf: file format elf64-unknown'",
+    "shipped_in": "fa-operator-r2.tar.gz (not committed here)"
+  },
+  "source": {
+    "variant": "unscoped D2",
+    "committed_here": true,
+    "files": [
+      {"path": "source/fa_lowp_algD_driver.cpp", "bytes": 3582, "sha256": "05b6d4881c8f346a47fe6d8676d4a0dca76e2beb7874e0ef75d841c092db34d7"},
+      {"path": "source/multi_thread/fa_lowp_algB/fa_lowp_algD.hpp", "bytes": 27581, "sha256": "a30a523ddb0faec90b2b00c96d78ef61cfaabe17877f08fe1ac1b4cc9c885b82"},
+      {"path": "source/multi_thread/fa_lowp_algB/fa_lowp_algD2.hpp", "bytes": 28523, "sha256": "1bc9534a2fa0a45a86fd4a75f1c33dd205091469000a38b26c44972566891125"},
+      {"path": "source/multi_thread/fa_lowp_algB/fa_lowp_algB.hpp", "bytes": 41, "sha256": "7670a8e0f6a4f0f20c5c998ecfbeb0ad3ebbfad7040e44f4b134f9cce83f46da"}
+    ],
+    "relation_to_sibling_archive": {
+      "path": "eval/operator_archive/fa-scoped-packed-rowsum-20261109/source/",
+      "variant_there": "final scoped D2",
+      "sha256_there": {"fa_lowp_algD2.hpp": "203a0ee7cea5a6e196cde78ce6e25e44a37115b39a738c0751a6452d5f06bfe2"},
+      "warning": "the scoped snapshot is NOT the source of this ELF; rebuilding from it yields a different binary"
+    }
+  },
+  "build": {
+    "recipe": "build/recipe.json",
+    "historical_output_path": "perf_analysis/algod_exploration_20261015/algod2_packed_rowsum_20261021/skv64k/builds/algod2/algod2.elf",
+    "rebuild_performed": false,
+    "rebuild_note": "operator_build not_checked: the toolchain binaries are not shipped, so no byte-identical rebuild was attempted"
+  },
+  "toolchain": {
+    "compiler": {"repo": "https://github.com/LinxISA/llvm-project", "commit": "25f419f48bb4226ac29c0038f9162185ee6e3147", "clang_sha256_prefix": "d590f0cd", "lld_sha256_prefix": "6334e9a1", "objdump_sha256_prefix": "c69058d0"},
+    "api": {"repo": "https://github.com/LinxISA/Linx-TileOP-API", "base_commit": "ecae381331e2dd4ef13270df5518ca9ebda19ef4", "patch": "../fa-scoped-packed-rowsum-20261109/dependencies/api_tpack_emit.patch", "patch_sha256_prefix": "709b3e31"},
+    "harness": {"repo": "https://github.com/PTO-ISA/SuperNPUBench", "commit": "705dde39f6e071729ba23abadd3ac435ded384b5"},
+    "note": "identities are copied from the operator-side records; this package does not re-verify the toolchain"
+  },
+  "timing_model": {
+    "repo": "https://github.com/LinxISA/SuperScalarModel",
+    "candidate": {
+      "branch": "repro/algod2-final-143883",
+      "commit": "dd83d451969f7ebefa6b5fb9b1d594b35a0e6dc1",
+      "merge_base_with_main": "58c53ec32fc2067611336cd16d014e6a2ac4addc",
+      "binary_sha256": "69ed905c8eb01f6364f610943b4d02e4cc8955993c089d2025c30de825b45e28",
+      "enabled_changes": ["resident-tag cap 8->36 (PR #1219)", "splitter class-aware admission (PR #1182)", "splitter service counters", "TLSU beat-register return (PR #1128, in base)"]
+    },
+    "mainline_control": {
+      "commit": "34c110137a5c039f0283118749450e7966556118",
+      "binary_note": "not preserved (overwritten by the candidate rebuild)",
+      "effective_differences": ["cube.l0aResidentTagNum echoed 36 but clamped to 8", "vecSplitClassAwareAdmit absent"]
+    }
+  },
+  "cases": {
+    "algod2-d128-143883": {"total_cycles": 143883, "adopted": true, "runs": 2, "evidence": "cases/algod2-d128-143883/"},
+    "algod2-d128-143749-mainline": {"total_cycles": 143749, "adopted": false, "note": "same ELF and same entry config on unmodified mainline"},
+    "algod2-d128-144036-prefix": {"total_cycles": 144036, "adopted": false, "note": "same branch family before the splitter fix; model commit not recorded"},
+    "algod2-lazy128-165091": {"total_cycles": 165091, "adopted": false, "note": "pathology arm; trace only, no successful log"}
+  },
+  "cross_record_rules": [
+    "the 258,099 record in fa-scoped-packed-rowsum-20261109 was produced by the asl model (bdbafed5) with the early fourpe.conf; 143,883 by this branch with the frozen exploration profile — the difference must not be reported as an optimisation gain",
+    "143,749 (mainline, same entry config) vs 143,883 (branch) differs in 33 mainline commits, 8 branch commits and two semantic knobs; no attribution is claimed",
+    "source commit, archive-document commit and binary hash are three separate identities"
+  ],
+  "gaps": [
+    "G1 no fresh Release download + isolated replay",
+    "G2 no operator rebuild (toolchain not shipped)",
+    "G3 no run_swimlane.py entry point; 165,091 and 143,996 have no successful log",
+    "G4 numerical validation not performed (zero-input)",
+    "G5 model source recovery not hash-compared",
+    "G6 model binary rebuild not compared byte-wise",
+    "G7 historical arm model commits unknown",
+    "G8 mainline attribution not decomposed",
+    "G9 258,099 vs 143,883 difference not decomposed",
+    "G10 no PipeView for the adopted configuration",
+    "G13 no independent reviewer",
+    "G14 no relocated replay"
+  ]}

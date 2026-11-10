@@ -1,0 +1,27 @@
+{
+  "case": "algod2-d128-143883",
+  "historial_workspace": "perf_analysis/algod_exploration_20261015/algod2_packed_rowsum_20261021/skv64k/",
+  "output_name": "builds/algod2/algod2.elf",
+  "defines": [
+    "-DTsq=256", "-DTskv=65536", "-DFA_QD=128", "-DFA_VD=128", "-DTm=128", "-DTk=256",
+    "-DFA_ALGB_ALGO_D=1", "-DFA_ALGB_ALGO_C=0", "-DFA_ALGB_GM_FUSED=2",
+    "-DFA_ALGB_D_PRELOAD=1", "-DFA_ALGB_D_PRELOAD_N=1", "-DFA_ALGB_D_PRELOAD_QK=0",
+    "-DFA_ALGB_D_DBLQ=1", "-DFA_ALGB_D_CONST_KV_ADDR=0",
+    "-D__linx", "-DENABLE_TENSOR_INSTR", "-DFA_ALGD2=1"
+  ],
+  "compile": "clang++ -c -mlxbc -fenable-matrix -O2 -std=c++20 <LinxV5 -mllvm flags> <defines> -I<api>/include -I<harness> fa_lowp_algD_driver.cpp -o kernel.o",
+  "link": "clang++ --sysroot=<sysroot> -resource-dir=<resource-dir> -nostdlib -fuse-ld=lld <harness>/_start.s kernel.o -o algod2.elf",
+  "disassemble": "llvm-objdump -dl algod2.elf",
+  "source_entry": "source/fa_lowp_algD_driver.cpp",
+  "source_include": "source/multi_thread/fa_lowp_algB/fa_lowp_algD2.hpp (selected by -DFA_ALGD2=1 through fa_lowp_algB.hpp)",
+  "recorded_in": "fa-operator-r2.tar.gz -> build_recipes.json and historical_evidence/fa-64k-unscoped-d2-258099/build.json",
+  "rebuild_performed": false,
+  "rebuild_reason": "the pinned compiler binaries (clang d590f0cd…, lld 6334e9a1…) are not shipped; a byte-identical rebuild is not claimed",
+  "verify": {
+    "elf_sha256": "3dba89659bdea3cbe6857ca05b54b57b54a4ac8cd245f7ba023b29a1adec2d1f",
+    "source_sha256": {
+      "fa_lowp_algD_driver.cpp": "05b6d4881c8f346a47fe6d8676d4a0dca76e2beb7874e0ef75d841c092db34d7",
+      "fa_lowp_algD2.hpp": "1bc9534a2fa0a45a86fd4a75f1c33dd205091469000a38b26c44972566891125"
+    }
+  }
+}

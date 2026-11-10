@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "result_id": "algod2-lazy128-165091",
+  "role": "key failure — the pathology this archive's analysis starts from",
+  "scope": "lazy tile bind + bctrl.vecL1Depth=128 在拆分器修复之前的结果；只作观察，不是可复现结果",
+  "operator": "FA MXFP4 AlgoD D128（algod2 / unscoped D2）",
+  "shape": {"algo": "D", "dim": 128, "sq": 256, "skv": 65536, "tm": 128, "tk": 256},
+  "elf_sha256": "3dba89659bdea3cbe6857ca05b54b57b54a4ac8cd245f7ba023b29a1adec2d1f",
+  "total_cycles": 165091,
+  "config": {
+    "entrypoint": "configs/fa_fp4_tag36_brob1024_veciq128_disp4_lazy.conf",
+    "sha256": "853683cb868e55bec3075704ad3e070141855f43657d02cafc573ea3a2c0c550",
+    "differences_from_adopted": ["bctrl.vecL1Depth=128", "bctrl.tile_lazy_alloc_enable=true"]
+  },
+  "evidence": {
+    "successful_log": null,
+    "reason": "no successful log survives for this configuration; the only log with this name is an abort (TPACK/TUNPACK raw carrier assertion) without a cycles line",
+    "trace": {"where": "local only: perf_runs/algod2/algod2__rob1024_speROB256_dec8_tag36_veciq128_lazy__tc165091.swimlane.json", "bytes": 1452180946, "committed": false},
+    "cycle_value_source": "trace file name and issue #1175 / #1198 text"
+  },
+  "model_commit": "unknown (same branch family, before 79ddc53ad by ordering)",
+  "interpretation": "after the splitter admission fix the same deep-queue configuration lands at 143,838; the 21,253-cycle gap is the within-branch controlled comparison reported in the model archive",
+  "cross_reference": "LinxISA/SuperScalarModel PR #1240 -> archives/ndf-algod2-20261110-r1/analysis/failures.md"
+}

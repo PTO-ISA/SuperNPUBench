@@ -1,0 +1,67 @@
+{
+  "format": 1,
+  "result_id": "algod2-d128-143883",
+  "scope": "这颗 ELF 在冻结探索配置下的计时记录；不替换默认算子，不做数值验收",
+  "operator": "FA MXFP4 AlgoD D128（algod2 / unscoped D2）",
+  "shape": {"algo": "D", "dim": 128, "sq": 256, "skv": 65536, "tm": 128, "tk": 256},
+  "elf_sha256": "3dba89659bdea3cbe6857ca05b54b57b54a4ac8cd245f7ba023b29a1adec2d1f",
+  "elf_bytes": 631768,
+  "source_files_sha256": {
+    "source/fa_lowp_algD_driver.cpp": "05b6d4881c8f346a47fe6d8676d4a0dca76e2beb7874e0ef75d841c092db34d7",
+    "source/multi_thread/fa_lowp_algB/fa_lowp_algD.hpp": "a30a523ddb0faec90b2b00c96d78ef61cfaabe17877f08fe1ac1b4cc9c885b82",
+    "source/multi_thread/fa_lowp_algB/fa_lowp_algD2.hpp": "1bc9534a2fa0a45a86fd4a75f1c33dd205091469000a38b26c44972566891125",
+    "source/multi_thread/fa_lowp_algB/fa_lowp_algB.hpp": "7670a8e0f6a4f0f20c5c998ecfbeb0ad3ebbfad7040e44f4b134f9cce83f46da"
+  },
+  "dependencies": {
+    "model": {
+      "repo": "https://github.com/LinxISA/SuperScalarModel",
+      "branch": "repro/algod2-final-143883",
+      "commit": "dd83d451969f7ebefa6b5fb9b1d594b35a0e6dc1",
+      "merge_base_with_main": "58c53ec32fc2067611336cd16d014e6a2ac4addc",
+      "mainline_at_archive_time": "34c110137a5c039f0283118749450e7966556118",
+      "binary_sha256": "69ed905c8eb01f6364f610943b4d02e4cc8955993c089d2025c30de825b45e28",
+      "changes_enabled": {
+        "resident_tag_cap_36": {"pr": 1219, "commit": "1284f03a5", "status": "OPEN"},
+        "splitter_class_aware_admission": {"pr": 1182, "commit": "79ddc53ad", "status": "OPEN"},
+        "splitter_service_counters": {"commit": "abc5567ad", "note": "observability only"},
+        "tlsu_beat_register_return": {"pr": 1128, "commit": "58c53ec32", "status": "merged in main as d6c8535c6"}
+      },
+      "not_enabled": {"pr_1204": "lazy-path internal-ACC alias", "pr_1218": "TPACK/TSORT alias gate"}
+    },
+    "compiler": {"repo": "https://github.com/LinxISA/llvm-project", "commit": "25f419f48bb4226ac29c0038f9162185ee6e3147"},
+    "api": {"repo": "https://github.com/LinxISA/Linx-TileOP-API", "commit": "ecae381331e2dd4ef13270df5518ca9ebda19ef4", "patch": "api_tpack_emit.patch"},
+    "benchmark": {"repo": "https://github.com/PTO-ISA/SuperNPUBench", "commit": "705dde39f6e071729ba23abadd3ac435ded384b5"}
+  },
+  "config": {
+    "entrypoint": "configs/fa_fp4_tag36_brob1024_veciq32_disp4.conf",
+    "sha256": "be8a99aa035f420c67d4508b2be38a8fa70cce4ed23365bf3d713a14d52b1784",
+    "effective_snapshot": "configs/effective/r2-plain.effective.json",
+    "effective_snapshot_origin": "reconstructed from the gfsim log Override configurations block",
+    "semantic_knobs": {"bctrl.vecL1Depth": 32, "cube.l0aResidentTagNum": 36, "vecSplitBandwidth": "default 4", "vecSplitClassAwareAdmit": "default true", "tile_lazy_alloc_enable": "eager"}
+  },
+  "expected_cycles": 143883,
+  "metrics": {
+    "cube_mac_utilization": "91.10%",
+    "cube_mac_exec_occupancy": "135322 (94.05%)",
+    "group_total_cycles": 143337,
+    "ipc": 3.680664,
+    "ipc_uop_per_pe": 1.471320,
+    "tileop_num": 23544,
+    "cellreg_avg_occupied_bytes": 156778.34,
+    "cellreg_avg_utilization_pct": 59.8062,
+    "tile_allocator_failures": 0,
+    "tile_physical_bind_failures": 0,
+    "split_no_free_slot_cycles": 125539,
+    "split_class_starved_int": 26549,
+    "split_class_starved_fma": 52371,
+    "split_class_starved_lnexp": 0,
+    "split_all_slots_stalled_cycles": 43079
+  },
+  "runs": [
+    {"run_id": "run-01-plain", "total_cycles": 143883, "trace": "none", "log": {"where": "LinxISA/SuperScalarModel PR #1240 -> archives/ndf-algod2-20261110-r1/evidence/algod2-d128-r2-plain/gfsim.log", "bytes": 287678, "sha256": "f13aaea75e61f86a1cf9715ffe854ebc5482b6c1397009bbec3116da5b19605e"}},
+    {"run_id": "run-02-plain-repeat", "total_cycles": 143883, "trace": "none", "log": {"where": "same model archive, evidence/algod2-d128-r2-plain-r2/gfsim.log", "bytes": 287678, "sha256": "0b0ed0b043810b8203881334e3ef037658a3497e51d975ebf45b172db8dab878"}}
+  ],
+  "determinism": "the two runs agree on every simulated metric; the two logs differ only in the host wall-clock lines 'Simulation time' (169s vs 194s) and 'Simulation speed' (3.14 vs 2.73 KIPS)",
+  "correctness": "not_checked — zero-input timing, no golden, no PASS line",
+  "analysis": "../analysis/README.md",
+  "model_archive": "LinxISA/SuperScalarModel PR #1240 -> archives/ndf-algod2-20261110-r1/"}
