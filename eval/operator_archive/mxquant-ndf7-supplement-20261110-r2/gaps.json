@@ -72,6 +72,15 @@
       "next_action_or_recovery_command": "Parent inspect files/evidence and record actual review separately",
       "owner": "Codex archive / responsible model and operator maintainers",
       "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-modifications",
+      "status": "missing",
+      "reason": "Per-modification IDs/categories/issue relationship/reverse command lifecycle not fully recorded in historical prose",
+      "impact": "No complete local-modification requirement acceptance",
+      "owner": "Codex archive / model maintainers",
+      "next_action_or_recovery_command": "Derive distinct modification records from frozen patch and verified ISA/implementation scope; do not infer binary enablement from archive-time postimages",
+      "inventory_reference": "inventory.json I-source"
     }
   ]
 }

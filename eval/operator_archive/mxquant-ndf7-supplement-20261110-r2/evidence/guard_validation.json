@@ -1,5 +1,19 @@
 {
-  "method": "Actual subprocess commands from unrelated cwd; intentional RMS/Python/loader pollution; no original assets modified",
+  "method": "Actual subprocess commands from unrelated cwd; intentional RMS/Python/loader pollution; all negative controls verified before runtime; no original assets modified",
+  "command_template": "python3 -B guarded_replay.py OPERATION --operator-root OPERATOR --model-root MODEL --outdir FRESH_OUTPUT",
+  "cwd": "r2 supplement directory separate from operator/model roots",
+  "wrapper_sha256": "c49494a5b4a3579b3124724840901a2fb4fc4a4b635050ccdc6827de1b7c8691",
+  "pins_sha256": "96a9f48fd633060d651cd7eab3f955031b2cf5085c63eca0d1a7874ead8c1125",
+  "tool": {
+    "python_version": "3.14.7 | packaged by Anaconda, Inc. | (main, Aug 14 2026, 10:21:40) [GCC 14.3.0]",
+    "python_executable_sha256": "6c9425f09041c817456374f883fa5f064f094fc02174ec90f2621b4292541258"
+  },
+  "parent_environment_overrides": {
+    "RMS_TAIL_BYPASS": "0",
+    "RMS_IDEAL_L2_READ_BANK": "1",
+    "PYTHONPATH": "unavailable-python-path",
+    "LD_LIBRARY_PATH": "unavailable-loader-path"
+  },
   "tests": [
     {
       "test": "performance_refused",
@@ -62,6 +76,48 @@
       }
     },
     {
+      "test": "escaped_operator_symlink",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Operator file escapes payload: inputs/input.bin"
+      }
+    },
+    {
+      "test": "output_under_operator",
+      "returncode": 2,
+      "record": {
+        "runtime_executed": false,
+        "reason": "usage: guarded_replay.py [-h] --operator-root OPERATOR_ROOT\n                         [--model-root MODEL_ROOT] [--case {baseline,split2}]\n                         --outdir OUTDIR\n                         {gfrun,performance,build-recipe}\nguarded_replay.py: error: Output must be outside operator and model payloads",
+        "output_created": false
+      }
+    },
+    {
+      "test": "output_under_model",
+      "returncode": 2,
+      "record": {
+        "runtime_executed": false,
+        "reason": "usage: guarded_replay.py [-h] --operator-root OPERATOR_ROOT\n                         [--model-root MODEL_ROOT] [--case {baseline,split2}]\n                         --outdir OUTDIR\n                         {gfrun,performance,build-recipe}\nguarded_replay.py: error: Output must be outside operator and model payloads",
+        "output_created": false
+      }
+    },
+    {
+      "test": "escaped_pin_manifest",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Pin manifest escapes launcher payload"
+      }
+    },
+    {
       "test": "functional_polluted_environment",
       "returncode": 0,
       "record": {
@@ -102,149 +158,6 @@
           "pass": true
         },
         "reason": "Fixed-ELF local functional validation only; shared runtime and timing/build acceptance remain unavailable."
-      }
-    }
-  ],
-  "command_template": "python3 -B guarded_replay.py OPERATION --operator-root OPERATOR --model-root MODEL --outdir NEW_DIR",
-  "cwd": "task-local directory different from operator and model roots",
-  "tool": {
-    "python_version": "3.14.7 | packaged by Anaconda, Inc. | (main, Aug 14 2026, 10:21:40) [GCC 14.3.0]",
-    "python_executable_sha256": "6c9425f09041c817456374f883fa5f064f094fc02174ec90f2621b4292541258"
-  },
-  "wrapper_sha256": "773fcc77b80a9b842017b744390c8a2327c369ebaa6287021e890113fd11c619",
-  "pins_sha256": "96a9f48fd633060d651cd7eab3f955031b2cf5085c63eca0d1a7874ead8c1125",
-  "initial_test_correction": "First wrong-runtime test selected a different local model directory but its gfrun had identical expected9b0c hash, so valid functional run succeeded. Corrected negative control uses task-local /bin/true bytes. No shared-model changes.",
-  "commands": [
-    {
-      "test": "performance_refused",
-      "cwd": "r2 supplement directory (not operator/model root)",
-      "command": [
-        "python3",
-        "-B",
-        "guarded_replay.py",
-        "performance",
-        "--operator-root",
-        "EXTRACTED_OPERATOR_R1",
-        "--model-root",
-        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
-        "--outdir",
-        "FRESH_TEST_OUTPUT"
-      ],
-      "parent_environment_overrides": {
-        "RMS_TAIL_BYPASS": "0",
-        "RMS_IDEAL_L2_READ_BANK": "1",
-        "PYTHONPATH": "unavailable-python-path",
-        "LD_LIBRARY_PATH": "unavailable-loader-path"
-      }
-    },
-    {
-      "test": "build_refused",
-      "cwd": "r2 supplement directory (not operator/model root)",
-      "command": [
-        "python3",
-        "-B",
-        "guarded_replay.py",
-        "build-recipe",
-        "--operator-root",
-        "EXTRACTED_OPERATOR_R1",
-        "--model-root",
-        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
-        "--outdir",
-        "FRESH_TEST_OUTPUT"
-      ],
-      "parent_environment_overrides": {
-        "RMS_TAIL_BYPASS": "0",
-        "RMS_IDEAL_L2_READ_BANK": "1",
-        "PYTHONPATH": "unavailable-python-path",
-        "LD_LIBRARY_PATH": "unavailable-loader-path"
-      }
-    },
-    {
-      "test": "wrong_runtime",
-      "cwd": "r2 supplement directory (not operator/model root)",
-      "command": [
-        "python3",
-        "-B",
-        "guarded_replay.py",
-        "gfrun",
-        "--operator-root",
-        "EXTRACTED_OPERATOR_R1",
-        "--model-root",
-        "TEST_MODEL_WITH_BIN_TRUE",
-        "--outdir",
-        "FRESH_TEST_OUTPUT"
-      ],
-      "parent_environment_overrides": {
-        "RMS_TAIL_BYPASS": "0",
-        "RMS_IDEAL_L2_READ_BANK": "1",
-        "PYTHONPATH": "unavailable-python-path",
-        "LD_LIBRARY_PATH": "unavailable-loader-path"
-      }
-    },
-    {
-      "test": "missing_input",
-      "cwd": "r2 supplement directory (not operator/model root)",
-      "command": [
-        "python3",
-        "-B",
-        "guarded_replay.py",
-        "gfrun",
-        "--operator-root",
-        "TEST_OPERATOR_MISSING_INPUT",
-        "--model-root",
-        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
-        "--outdir",
-        "FRESH_TEST_OUTPUT"
-      ],
-      "parent_environment_overrides": {
-        "RMS_TAIL_BYPASS": "0",
-        "RMS_IDEAL_L2_READ_BANK": "1",
-        "PYTHONPATH": "unavailable-python-path",
-        "LD_LIBRARY_PATH": "unavailable-loader-path"
-      }
-    },
-    {
-      "test": "wrong_elf",
-      "cwd": "r2 supplement directory (not operator/model root)",
-      "command": [
-        "python3",
-        "-B",
-        "guarded_replay.py",
-        "gfrun",
-        "--operator-root",
-        "TEST_OPERATOR_CORRUPT_ELF",
-        "--model-root",
-        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
-        "--outdir",
-        "FRESH_TEST_OUTPUT"
-      ],
-      "parent_environment_overrides": {
-        "RMS_TAIL_BYPASS": "0",
-        "RMS_IDEAL_L2_READ_BANK": "1",
-        "PYTHONPATH": "unavailable-python-path",
-        "LD_LIBRARY_PATH": "unavailable-loader-path"
-      }
-    },
-    {
-      "test": "functional_polluted_environment",
-      "cwd": "r2 supplement directory (not operator/model root)",
-      "command": [
-        "python3",
-        "-B",
-        "guarded_replay.py",
-        "gfrun",
-        "--operator-root",
-        "EXTRACTED_OPERATOR_R1",
-        "--model-root",
-        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
-        "--outdir",
-        "FRESH_TEST_OUTPUT"
-      ],
-      "parent_environment_overrides": {
-        "RMS_TAIL_BYPASS": "0",
-        "RMS_IDEAL_L2_READ_BANK": "1",
-        "PYTHONPATH": "unavailable-python-path",
-        "LD_LIBRARY_PATH": "unavailable-loader-path"
       }
     }
   ]

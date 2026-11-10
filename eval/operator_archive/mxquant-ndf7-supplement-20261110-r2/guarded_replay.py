@@ -12,7 +12,9 @@ def main():
  p.add_argument('--model-root',type=Path)
  p.add_argument('--case',choices=['baseline','split2'],default='split2')
  p.add_argument('--outdir',type=Path,required=True)
- a=p.parse_args(); out=a.outdir.resolve()
+ a=p.parse_args(); out=a.outdir.resolve(); operator=a.operator_root.resolve(); model=a.model_root.resolve() if a.model_root is not None else None
+ if out.is_relative_to(operator) or (model is not None and out.is_relative_to(model)):
+  p.error('Output must be outside operator and model payloads')
  if out.exists():p.error('Output must be a fresh directory')
  out.mkdir(parents=True)
  report={'operation':a.operation,'case':a.case,'runtime_executed':False,'status':'rejected','returncode':2}
@@ -22,12 +24,17 @@ def main():
  if a.operation=='performance':return finish('Performance refused: portable historical timing runtime and verified complete frozen configuration closure are not delivered. Historical cycle matching is not numerical acceptance.')
  if a.operation=='build-recipe':return finish('Build refused: only a historical recipe is available; full compiler/linker/API/harness/resource/sysroot closure is not pinned or verified.')
  if a.model_root is None:return finish('Explicit model root is required')
- operator=a.operator_root.resolve(); model=a.model_root.resolve(); runtime=model/'bin/gfrun'
+ runtime=model/'bin/gfrun'
  try:
   if sha(runtime)!=RUNTIME:return finish('Functional runtime identity mismatch')
-  pins=json.loads((ROOT/'functional_pins.json').read_text())
+  pinfile=ROOT/'functional_pins.json'
+  if not pinfile.resolve().is_relative_to(ROOT):return finish('Pin manifest escapes launcher payload')
+  pins=json.loads(pinfile.read_text())
   for item in pins['operator_files']:
-   f=operator/item['path']
+   relative=Path(item['path'])
+   if relative.is_absolute() or '..' in relative.parts:return finish('Invalid pin path')
+   f=operator/relative
+   if not f.resolve().is_relative_to(operator):return finish('Operator file escapes payload: '+item['path'])
    if not f.is_file() or f.stat().st_size!=item['bytes'] or sha(f)!=item['sha256']:return finish('Operator file missing or identity mismatch: '+item['path'])
  except (OSError,ValueError,KeyError) as e:return finish('Dependency check failed: '+type(e).__name__)
  # Allowlist drops loader, Python, model and user-shell overrides; no inherited configuration.
