@@ -19,7 +19,11 @@ static_assert(HASH_PE_COUNT == 1 || HASH_PE_COUNT == 4);
 namespace {
 using supernpu::hash_lookup::TableEntry;
 constexpr unsigned capacity = HASH_CAPACITY, count = 139;
-alignas(4096) TableEntry table[capacity + 3];
+#ifndef HASH_TABLE_GUARD
+#define HASH_TABLE_GUARD 112
+#endif
+constexpr unsigned kGuardEntries = HASH_TABLE_GUARD / sizeof(TableEntry);
+alignas(4096) TableEntry table[capacity + kGuardEntries];
 alignas(4096) int64_t queries[count];
 alignas(4096) int32_t output[count + 2];
 #ifdef RES_CHECK
@@ -53,7 +57,7 @@ void prepare() {
         table[slot] = {key, static_cast<int32_t>(n*17 + 3), 0};
     }
     // Guard tail required by the default kernel: mirror slots 0..2.
-    for (unsigned i = 0; i < 3; ++i) table[capacity + i] = table[i];
+    for (unsigned i = 0; i < kGuardEntries; ++i) table[capacity + i] = table[i];
     for (unsigned i = 0; i < count; ++i) {
         queries[i] = i % 7 == 0 ? -1 : make_key(i % (capacity + 7));
 #ifdef RES_CHECK

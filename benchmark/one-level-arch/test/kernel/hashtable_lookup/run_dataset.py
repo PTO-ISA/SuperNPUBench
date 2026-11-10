@@ -38,8 +38,9 @@ def main():
     parser.add_argument('--output-dir', type=Path)
     parser.add_argument('--build-only', action='store_true')
     parser.add_argument('--completion-barrier', action='store_true', help='Experimental all-PE barrier before perf finisher')
-    parser.add_argument('--table-guard', type=int, default=48, metavar='BYTES',
-                        help='Append BYTES of guard entries mirroring the table head')
+    parser.add_argument('--table-guard', type=int, default=112, metavar='BYTES',
+                        help='Append BYTES of guard entries mirroring the table head '
+                             '(adaptive 2+6 default needs 112; use 48 with HASH_ADAPTIVE_TAIL=2)')
     parser.add_argument('--kernel-header', type=Path,
                         help='Experimental kernel header; default is the baseline kernel')
     parser.add_argument('--timeout', type=int, default=600)

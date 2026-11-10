@@ -17,9 +17,11 @@
 using supernpu::hash_lookup::TableEntry;
 extern "C" const TableEntry table[2550000];
 extern "C" const int64_t queries[6144];
-// Default kernel probes four slots per round and needs a 48-byte guard tail.
+// Adaptive 2+6 default: the B phase reads up to slot o+7, so the guard tail
+// must provide 7 entries (112 bytes).  Use 48 with HASH_ADAPTIVE_TAIL=2 or
+// the stride4 implementation.
 #ifndef HASH_TABLE_GUARD
-#define HASH_TABLE_GUARD 48
+#define HASH_TABLE_GUARD 112
 #endif
 #if HASH_TABLE_GUARD > 0
 #define HASH_STR_(x) #x

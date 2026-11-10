@@ -11,6 +11,65 @@ supernpu::multi_thread::hashtable_lookup<Capacity, 4>(table, queries, output, co
 
 第一种由调用者分配任务；第二种按 PE ID 划分连续 query 区间，要求启动对应数量的 PE。接口包含非 32 倍数的 count 分支，但尾加载存在已知访问域问题，尚未数值验证通过；当前验证范围要求每个 PE 的查询数是 32 的倍数。count=0 不访存。输入与输出不可重叠。
 
+## 自适应 2+6 probe（2026-11-10 起的默认实现）
+
+每轮 probe 拆成两个阶段：
+
+- **A 阶段**：所有仍 active 的 lane gather slot o、o+1（两条 gather 背靠背发出）；
+- **B 阶段**：只有 A 里两个 slot 都没命中的 lane 才 gather slot o+2 … o+7
+  （6 条 gather 一起发出，再按顺序比较）。
+
+旧 stride4 实现把 4 条 gather 都挂在轮首 mask 下，命中较早的 lane（约 80% 在前两个
+slot 就结束)仍要为后面的 slot 付 gather 请求；自适应版把 B 阶段 mask 收紧到 A 之后的
+`activeB`，直接省掉这部分投机请求，同时用更宽的 B 组减少总轮数。
+
+B 宽度由 `HASH_ADAPTIVE_TAIL` 选择（默认 6；设 2 即回到 2+2）。guard 契约随 tail 变化：
+Capacity-1 之后需要 `HASH_ADAPTIVE_TAIL + 1` 个可读的 16 B 项（镜像 slot 0..tail），
+即 tail=6 → 7 项 / 112 B，tail=2 → 3 项 / 48 B；要求 Capacity >= 4。
+测试 harness 的 `hash_table_guard` 默认已改为 112。
+
+### 性能（SoA perf kernel，gfsim random300；非本 AoS 实现的直接测量）
+
+| RWDB | 64-lane 2+6 | 256-lane 2+6 |
+|---:|---:|---:|
+| 8（默认） | 143,096 | 170,132 |
+| 16 | 118,207 | 136,217 |
+| 24 | 117,524 | 95,444 |
+| 32 | 116,635 | 86,331 |
+| **48** | **114,348** | **81,317** |
+| 64 | 117,209 | — |
+
+- 256-lane 2+6 + `TAG_WAY=7` + RWDB=48 → **77,312**（random300）。
+- 对照：2+2 在默认 RWDB=8 下 64-lane 135,819；256-lane 在 RWDB=48 下 2+2 为 90,483。
+- 环境：`SuperScalarModel-pr1177/bin/gfsim`（head `18b24f6ca`），
+  `core.soc_random=true`、`core.mean_read_latency=300`、`core.mean_write_latency=300`、
+  读写带宽 128 B/cycle、`core.sharetreg_size_bytes=262144`、`core.sharetreg_ssb_count=64`、
+  `TAG_WAY_COUNT=4`（除注明外）；RWDB 用 `-s sl2.RWDB_ENTRY_COUNT=N` 覆盖。
+  kernel 为 batch-map + SoA、64/128/256 lane；perf kernel 每次 gather 返回 256 B，
+  与本算子的 32 lane × 8 B gather 相同（都是 2 beat），所以 RWDB 结论可直接沿用。
+
+### 为什么 RWDB 用 48
+
+1. 2+6 每轮每个 PE 发 8 条 gather（2 A + 6 B），每条返回 256 B = 2 个 beat。
+   RWDB=8 只能同时放 `floor(8/2)=4` 条 gather，6 条 B gather 被拆成多波串行；
+   RWDB=48 可放 24 条在飞 = 3 个完整 2+6 轮，足以覆盖 gather 返回延迟
+   （entry 驻留 p50 约 86 cycle，整条 gather 273~290 cycle）。
+2. 实测扫描 64-lane 2+6：8→143,096、16→118,207、24→117,524、32→116,635、
+   **48→114,348**、64→117,209。48 是最优点；再加深没有收益（返回队列/延迟交互），
+   反而略退化。
+3. 256-lane 2+6 同样在 48 见顶（81,317），不是某个 lane 宽度的偶然。
+4. 注意：RWDB 是硬件配置项。在默认 RWDB=8 下，2+2 仍优于 2+6（135,819 vs 143,096），
+   所以 2+6 作为默认的前提是目标配置 RWDB ≥ 16（推荐 48）；否则请用
+   `-DHASH_ADAPTIVE_TAIL=2` 并把 `hash_table_guard` 设回 48。
+
+### 验证
+
+- 编译（主 `linx-toolchain-build`）：`hash_mode=smoke/perf/verify` 三种构建均通过。
+- 计时验证受限：gfsim 在该算子的 64 位 gather 返回路径触发既有断言
+  `responseReturnBeatId == geo.mrobEntryIdx`，2+6/2+2/stride4 三版同样触发，与本改动
+  无关；gfrun 侧此前记录的 INT64 TLOAD 限制也仍未解。
+
+
 - 表项为 16 字节：int64 key、int32 value、int32 padding；空槽 key=-1，miss 输出 -1。无删除标记，key=-1 不可插入。
 - MurmurHash3 x86_32、seed=0，低 32 位先混合，再高 32 位，最后按 8 字节长度 finalize；与用户附件和 two-level 算法一致。
 - 哈希使用 TMULS/TADDS/TXOR/TSHLS/TSHRS/TOR 等 TileOP。无符号取模采用 two-level 的两次有符号 TREM 恒等式，不要求 capacity 为 2 的幂。
@@ -98,18 +157,20 @@ python3 /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-l
 
 本轮证据目录：`/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/outputs/hash_lookup_element_20261026/`，包含 compiler_peid.patch、toolchain_peid_build.log、toolchain_peid_install.log、peid_fixed_versions.txt、kernel_peid_fixed.elf、kernel_peid_fixed.diss 和 gfrun_main_peid_fixed.log。
 
-## 默认实现（2026-11-03）
+## 默认实现（2026-11-10 更新）
 
-公共入口 `hashtable_lookup.hpp` 现转发到
-`hashtable_lookup_tileop_stride4_guard.hpp`：每轮同时探测 4 个连续槽位，
-配合 48 字节表尾 guard 省掉每槽回绕计算。
+公共入口 `hashtable_lookup.hpp` 转发到 `hashtable_lookup_tileop_adaptive.hpp`：
+自适应 2+6 probe（A 阶段读 2 槽；B 阶段只对 A 未命中的 lane 读 6 槽），
+表尾 guard 112 B（7 项，镜像 slot 0..6）。性能、环境与 RWDB=48 的取舍见上文
+“自适应 2+6 probe” 一节。
 
-- 6144 query / 4 PE / 70% 装载：**140,166 cycles**（首 TLOAD → 末 TSTORE），
-  相对 177,474 基线 **-21.0%**；verify PASS（6144 输出 + 两侧哨兵）。
-- 表契约：调用方必须在 slot `Capacity-1` 之后提供 3 个可读的 16 字节 entry，
-  镜像 slot 0..2，且 `Capacity >= 4`。
-- 测试夹具：`hash_table_guard` 默认 48（Makefile），`run_dataset.py` 的
-  `--table-guard` 默认 48；smoke 表已扩展为 `capacity + 3` 并填充 guard。
+- 2026-11-03 记录（历史，已被上面的默认替换）：stride4 每轮探测 4 个连续槽位、
+  48 字节 guard；6144 query / 4 PE / 70% 装载 **140,166 cycles**（首 TLOAD → 末
+  TSTORE），相对 177,474 基线 -21.0%。
+- 表契约（当前）：调用方必须在 slot `Capacity-1` 之后提供 7 个可读的 16 字节 entry
+  （镜像 slot 0..6），且 `Capacity >= 4`；`HASH_ADAPTIVE_TAIL=2` 或 stride4 回退时为 3 个。
+- 测试夹具：`hash_table_guard` 默认 112（Makefile / dataset fixture / smoke 表 /
+  `run_dataset.py --table-guard`）；smoke 表按 `HASH_TABLE_GUARD/16` 扩展并填充 guard。
 - 不带 guard 的实现仍保留在 `hashtable_lookup_tileop_masked.hpp`；如需回退，
   用 `HASH_KERNEL_HEADER=<...>/hashtable_lookup_tileop_masked.hpp
   hash_table_guard=0` 编译。

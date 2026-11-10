@@ -1,8 +1,10 @@
 TESTCASE ?= hashtable_lookup
 hash_mode ?= smoke
 hash_perf_barrier ?= 0
-# Default kernel probes four slots per round and needs a 48-byte guard tail.
-hash_table_guard ?= 48
+# Default kernel is adaptive 2+6: the B phase reads up to slot o+7, so it
+# needs a 7-entry (112-byte) guard tail.  Override with hash_table_guard=48
+# when selecting the 2+2 (HASH_ADAPTIVE_TAIL=2) or stride4 implementation.
+hash_table_guard ?= 112
 DEFINES += -DHASH_PERF_BARRIER=$(hash_perf_barrier) -DHASH_TABLE_GUARD=$(hash_table_guard)
 ifneq ($(filter $(hash_mode),perf verify),)
 ifeq ($(res_check),on)
