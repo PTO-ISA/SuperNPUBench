@@ -1,39 +1,51 @@
 {
   "tag": "work-archive-fag-20261109",
-  "preserve_old_assets": true,
+  "old_assets_unchanged": true,
   "assets": [
     {
       "filename": "fag-operator-r3.tar.gz",
       "bytes": 71112,
       "sha256": "dc82dd8ae863f2f36bea260c4ea7947933c06030ac410ee0dd97d2f87145060f",
-      "status": "uploaded",
+      "status": "uploaded_actual_download_verified",
       "repository": "PTO-ISA/SuperNPUBench",
       "scope": "Zero-input replay",
       "asset_id": 730672953,
       "url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fag-20261109/fag-operator-r3.tar.gz",
-      "remote_bytes": 71112
+      "download_command": "gh api repos/PTO-ISA/SuperNPUBench/releases/assets/730672953 -H Accept:application/octet-stream",
+      "actual_bytes": 71112,
+      "actual_sha256": "dc82dd8ae863f2f36bea260c4ea7947933c06030ac410ee0dd97d2f87145060f",
+      "downloaded_at": "2026-11-10T08:25:23.658008+00:00",
+      "path": "downloaded/fag-operator-r3.tar.gz"
     },
     {
       "filename": "fag-model-source-recipe-r2.tar.gz",
       "bytes": 375672,
       "sha256": "8b4a57e3ded31b5fcdae51a0d1f394de1d519d79efb9d3a9141edbde77611438",
-      "status": "uploaded",
+      "status": "uploaded_actual_download_verified",
       "repository": "LinxISA/SuperScalarModel",
       "scope": "Tracked source recovery recipe; new recovery/build not executed",
       "asset_id": 730673198,
       "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fag-20261109/fag-model-source-recipe-r2.tar.gz",
-      "remote_bytes": 375672
+      "download_command": "gh api repos/LinxISA/SuperScalarModel/releases/assets/730673198 -H Accept:application/octet-stream",
+      "actual_bytes": 375672,
+      "actual_sha256": "8b4a57e3ded31b5fcdae51a0d1f394de1d519d79efb9d3a9141edbde77611438",
+      "downloaded_at": "2026-11-10T08:25:32.174894+00:00",
+      "path": "downloaded/fag-model-source-recipe-r2.tar.gz"
     },
     {
       "filename": "fag-nonzero-review-r1.tar.gz",
       "bytes": 10400277,
       "sha256": "2ac5e41809abb85d04c5e4cb1eb356ce055e240cc3bfa83ad891dc9ba602f22a",
-      "status": "uploaded",
+      "status": "uploaded_actual_download_verified",
       "repository": "LinxISA/SuperScalarModel",
       "scope": "Host recheck of captured prior outputs; not fresh operator/independent golden",
       "asset_id": 730673197,
       "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fag-20261109/fag-nonzero-review-r1.tar.gz",
-      "remote_bytes": 10400277
+      "download_command": "gh api repos/LinxISA/SuperScalarModel/releases/assets/730673197 -H Accept:application/octet-stream",
+      "actual_bytes": 10400277,
+      "actual_sha256": "2ac5e41809abb85d04c5e4cb1eb356ce055e240cc3bfa83ad891dc9ba602f22a",
+      "downloaded_at": "2026-11-10T08:38:09.221702+00:00",
+      "path": "downloaded/fag-nonzero-review-r1.tar.gz"
     }
   ]
 }

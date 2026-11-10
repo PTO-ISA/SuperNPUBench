@@ -130,8 +130,8 @@
     },
     {
       "path": "release_assets.json",
-      "bytes": 1609,
-      "sha256": "77f79da6c8d64be08e1de1dc004048af77804951802257751f640e65f8561017"
+      "bytes": 2686,
+      "sha256": "b4abf081d4153c9c5ac76a6d3bf2a2f20a5fa2cb265615358e0e55236456ad2f"
     }
   ]
 }
