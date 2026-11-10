@@ -54,6 +54,13 @@ def main():
         elif sha(p) != digest:
             failures.append(f"sha256 mismatch: {rel}")
 
+    # 1b. every JSON file parses
+    for jp in sorted(ROOT.rglob("*.json")):
+        try:
+            json.loads(jp.read_text())
+        except ValueError as exc:
+            failures.append(f"invalid JSON: {jp.relative_to(ROOT).as_posix()} ({exc})")
+
     # 2. source hashes
     ident = json.loads((ROOT / "operator_identity.json").read_text())
     for rec in ident["source"]["files"]:
