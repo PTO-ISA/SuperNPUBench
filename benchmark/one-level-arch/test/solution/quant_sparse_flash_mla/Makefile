@@ -135,8 +135,16 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       DEFINES += -DQSMLA_USE_CSA_V3_3_3_4PE
       DEFINES += -DQSMLA_PRELOAD=$(QSMLA_PRELOAD)
       DEFINES += -DQSMLA_PA_BLOCK_SIZE=128
+      # kernel 固定大 tile：默认值即正确形态（命令行显式传值仍可覆盖，
+      # 但 kernel 会 static_assert 拒绝不匹配的设置）。
+      Tm = 64
+      Tk = 128
+      Td_block = $(D)
       QSMLA_SPARSE_CASE := csa_small
       QSMLA_SPARSE_PA := on
+      ifeq ($(QSMLA_PA_ISOLATE), on)
+         DEFINES += -DQSMLA_PA_ISOLATE_NULL_TABLES
+      endif
       ifneq ($(QSMLA_DTYPE), HIF8)
          $(error csa_v3_3_3_4pe requires QSMLA_DTYPE=HIF8)
       endif
@@ -208,6 +216,7 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       # PA_BBND pool sizing (block_size = 128).
       QSMLA_PA_BLOCK := 128
       QSMLA_ORI_ROWS_PA := $(shell expr \( \( $(s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK) \) \* $(QSMLA_PA_BLOCK))
+      QSMLA_ORI_BYTES_PA := $(shell expr $(B) \* $(QSMLA_ORI_ROWS_PA) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
       QSMLA_CMP_ROWS_PA := $(shell expr \( \( $(cmp_s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK) \) \* $(QSMLA_PA_BLOCK))
       QSMLA_CMP_BYTES_PA := $(shell expr $(B) \* $(QSMLA_CMP_ROWS_PA) \* $(N2) \* $(D) \* $(QSMLA_INPUT_BYTES))
       QSMLA_PA_MAX_BLOCKS := $(shell expr \( $(s2) + $(QSMLA_PA_BLOCK) - 1 \) / $(QSMLA_PA_BLOCK))
@@ -312,7 +321,7 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
       ifeq ($(QSMLA_SPARSE_PA), on)
       $(QSMLA_ORI_KV_PA_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_BYTES_PA) --exact-bytes
 
       $(QSMLA_CMP_KV_PA_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
