@@ -1,0 +1,15 @@
+{
+  "conf": "fourpe",
+  "cli_overrides": {
+    "softcore.multiThreadNum": 4,
+    "cube.enable_internal_acc": true,
+    "bctrl.vec_cell_sched_enable": true,
+    "core.soc_random": false,
+    "core.soc_enable": false,
+    "core.read_bandwidth_limit": 128,
+    "core.write_bandwidth_limit": 128,
+    "core.sharetreg_size_bytes": 262144,
+    "core.sharetreg_ssb_count": 64
+  },
+  "note": "归档单流参考用例 eval/perf_data/hashtable_lookup/lo32_o3_73223_20261104"
+}

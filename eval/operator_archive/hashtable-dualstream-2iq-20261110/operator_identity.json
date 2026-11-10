@@ -1,0 +1,48 @@
+{
+  "format": 1,
+  "status": "complete_for_measured_result",
+  "operator": "hashtable_lookup / lo32_o3（256-lane, 2 slots per round, linear probing）",
+  "cases": {
+    "dual-2iq-2slot-3072x2": {
+      "eln": 134596,
+      "kernel_span": 72566,
+      "elf_sha256": {
+        "htA": "407250c79f1e1e43d163bc5ccb2e4dedc9c054e28f9a8029f0a0e5e83fac8fc2",
+        "htB0": "5571df1de4b56681d7ad7bb0ee22d81bd95bfb68fb9304dbdaf6601e11df0116"
+      },
+      "adopted": true
+    },
+    "dual-sharediq-2slot-3072x2": {
+      "total_cycles": 144826,
+      "kernel_span": 79056,
+      "adopted": false
+    },
+    "single-ref-73223": {
+      "total_cycles": 135299,
+      "kernel_span": 73223,
+      "adopted": false,
+      "note": "已有的 eval/perf_data 归档；本包只引用"
+    }
+  },
+  "timing_model": {
+    "repo": "LinxISA/SuperScalarModel",
+    "base": "feat/dualstream@98a44667c",
+    "merged_pr": "#1177 18b24f6ca",
+    "result_commits": [
+      "45cda61b1",
+      "79c7ef226"
+    ],
+    "binary_sha256": "eb3e6a418e1e6912ce5eef8638c79b37acd819cd939c18c44fd3df32a742df7e"
+  },
+  "compiler": {
+    "repo": "LinxISA/llvm-project",
+    "commit": "a5f03b38",
+    "pr": 146
+  },
+  "api": {
+    "repo": "LinxISA/Linx-TileOP-API",
+    "commit": "decac4f",
+    "pr": 303
+  },
+  "new_replay": "performance replay performed for the adopted case under the archived binary"
+}
