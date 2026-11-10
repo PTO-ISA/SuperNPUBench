@@ -1,0 +1,61 @@
+{
+  "revision": "mxquant-r2",
+  "operations": [
+    {
+      "operation": "fixed_elf_replay",
+      "provided_scope": "conditional local functional only; shared timing not provided",
+      "required_assets_permissions_identity": "gfrun requires caller-supplied9b0c; timing requires withheld bebcf119, operator-r1/config/input",
+      "entrypoint": "guarded_replay.py gfrun --operator-root EXTRACTED_OPERATOR_R1 --model-root EXPLICIT_MODEL --case split2 --outdir NEW_DIR",
+      "actual_state": "New r2 local split2 full exact and checker negative control; polluted environment sanitized. Missing input/corrupt ELF/wrong runtime rejected before model launch. No shared-runtime or timing acceptance.",
+      "evidence": "evidence/guard_validation.json",
+      "review": {
+        "status": "not_checked",
+        "reviewer": null
+      },
+      "owner": "Codex archive / model or operator maintainers",
+      "remaining": "gaps.json"
+    },
+    {
+      "operation": "model_source_rebuild",
+      "provided_scope": "not provided",
+      "required_assets_permissions_identity": "private base + archive-time patches only; complete binary-time closure unknown",
+      "entrypoint": "dependency/README.md recovery recipe only",
+      "actual_state": "tracked19 recovery historical pass; rebuild/run not_checked",
+      "evidence": "evidence/runtime_closure_search.json",
+      "review": {
+        "status": "not_checked",
+        "reviewer": null
+      },
+      "owner": "Codex archive / model or operator maintainers",
+      "remaining": "gaps.json"
+    },
+    {
+      "operation": "operator_source_rebuild",
+      "provided_scope": "recipe provided, not accepted",
+      "required_assets_permissions_identity": "source/compiler/API/harness/linker/resource/sysroot all required; closure incomplete",
+      "entrypoint": "build.py CASE --toolchain-root TOOLCHAIN --benchmark-root BENCHMARK --outdir NEW_DIR",
+      "actual_state": "Historical ELF/source identity evidence retained; this revision no compilation",
+      "evidence": "evidence/material_hashes.json",
+      "review": {
+        "status": "not_checked",
+        "reviewer": null
+      },
+      "owner": "Codex archive / model or operator maintainers",
+      "remaining": "gaps.json"
+    },
+    {
+      "operation": "numerical_validation_or_failure_recount",
+      "provided_scope": "fresh host generator; historical gfrun records; no new timing checker execution",
+      "required_assets_permissions_identity": "shipped independent golden.py + input/golden bytes; old execution evidence",
+      "entrypoint": "golden.input_and_golden()",
+      "actual_state": "new host byte regeneration pass; baseline historical timing output129998/131072 scale4092/4096 mismatch; split2 timing not_checked; new r2 guarded split2 gfrun full exact",
+      "evidence": "evidence/golden_recheck.json; evidence/functional_replay_review.json",
+      "review": {
+        "status": "not_checked",
+        "reviewer": null
+      },
+      "owner": "Codex archive / model or operator maintainers",
+      "remaining": "gaps.json"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "date": "2026-11-10",
+  "checks": [
+    {
+      "asset_id": 729950457,
+      "repository": "PTO-ISA/SuperNPUBench",
+      "filename": "mxquant-operator-r1.tar.gz",
+      "bytes": 910566,
+      "sha256": "9578958a57f817bb34b288b772538b4076379335f4e606a9cfe5664ab7df6130",
+      "expected_sha256": "9578958a57f817bb34b288b772538b4076379335f4e606a9cfe5664ab7df6130",
+      "pass": true,
+      "method": "actual authenticated GitHub asset API byte-range retrieval; all Content-Range/body lengths and whole SHA256 checked",
+      "execution_scope": "transfer/extraction integrity only; not model replay"
+    },
+    {
+      "asset_id": 729953176,
+      "repository": "LinxISA/SuperScalarModel",
+      "filename": "mxquant-historical-traces-r1.tar.gz",
+      "bytes": 5907009,
+      "sha256": "a55d576ef8120af4ee1a7ccba46092f12c9b75073671600d1584dc7640196124",
+      "expected_sha256": "a55d576ef8120af4ee1a7ccba46092f12c9b75073671600d1584dc7640196124",
+      "pass": true,
+      "method": "actual authenticated GitHub asset API byte-range retrieval; all Content-Range/body lengths and whole SHA256 checked",
+      "execution_scope": "transfer/extraction integrity only; not model replay"
+    }
+  ],
+  "gfsim_performance_replay": "not_performed",
+  "shared_runtime_shipped": false,
+  "downloaded_operator_functional_check": {
+    "case": "split2",
+    "phase": "gfrun",
+    "result": {
+      "case": "split2",
+      "phase": "gfrun",
+      "elf_sha256": "7c22bc2503eec2f6236fddaeaa750d58bb05d54b9d8bc591eea15e5b8d56bbc8",
+      "runtime_sha256": "9b0cf76eaa3ac62902f9511929a961cb064c8930fa9f9af7f8d967aa57eb1fb9",
+      "numeric_timing_acceptance": false,
+      "returncode": 0,
+      "input": {
+        "pass": true,
+        "bytes": 262144,
+        "mismatches": 0,
+        "first": []
+      },
+      "output": {
+        "pass": true,
+        "bytes": 131072,
+        "mismatches": 0,
+        "first": []
+      },
+      "scales": {
+        "pass": true,
+        "bytes": 4096,
+        "mismatches": 0,
+        "first": []
+      },
+      "negative_control_rejected": true,
+      "pass": true
+    },
+    "runtime_source": "explicit local copied runtime; not Release-delivered",
+    "access_log_sha256": "211f0710a3c57f5eddabe74a109c6bd15b5f8ddcf375925123764b9b169c6dda",
+    "no_original_operator_or_timing_model_directory_access": true,
+    "only_downloaded_operator_inputs_elf_used": true,
+    "method": "strace -f -s4096 trace=file; env -i system Python -B -E -s from unrelated cwd",
+    "scope": "downloaded operator functionality with explicit local dependency; not gfsim replay or full S"
+  },
+  "downloaded_all_file_audits": {
+    "operator": "pass",
+    "trace_including_gzip_decoded_bytes": "pass"
+  }
+}

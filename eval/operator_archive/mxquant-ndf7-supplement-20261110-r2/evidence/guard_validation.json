@@ -1,0 +1,251 @@
+{
+  "method": "Actual subprocess commands from unrelated cwd; intentional RMS/Python/loader pollution; no original assets modified",
+  "tests": [
+    {
+      "test": "performance_refused",
+      "returncode": 2,
+      "record": {
+        "operation": "performance",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Performance refused: portable historical timing runtime and verified complete frozen configuration closure are not delivered. Historical cycle matching is not numerical acceptance."
+      }
+    },
+    {
+      "test": "build_refused",
+      "returncode": 2,
+      "record": {
+        "operation": "build-recipe",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Build refused: only a historical recipe is available; full compiler/linker/API/harness/resource/sysroot closure is not pinned or verified."
+      }
+    },
+    {
+      "test": "wrong_runtime",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Functional runtime identity mismatch"
+      }
+    },
+    {
+      "test": "missing_input",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Operator file missing or identity mismatch: inputs/input.bin"
+      }
+    },
+    {
+      "test": "wrong_elf",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Operator file missing or identity mismatch: cases/split2/split2.elf"
+      }
+    },
+    {
+      "test": "functional_polluted_environment",
+      "returncode": 0,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": true,
+        "status": "pass",
+        "returncode": 0,
+        "runtime_sha256": "9b0cf76eaa3ac62902f9511929a961cb064c8930fa9f9af7f8d967aa57eb1fb9",
+        "operator_pins_sha256": "96a9f48fd633060d651cd7eab3f955031b2cf5085c63eca0d1a7874ead8c1125",
+        "environment_policy": "allowlist PATH/LANG/LC_ALL/PYTHONNOUSERSITE/TMPDIR; no inherited loader/model/Python variables",
+        "runner_result": {
+          "case": "split2",
+          "phase": "gfrun",
+          "elf_sha256": "7c22bc2503eec2f6236fddaeaa750d58bb05d54b9d8bc591eea15e5b8d56bbc8",
+          "runtime_sha256": "9b0cf76eaa3ac62902f9511929a961cb064c8930fa9f9af7f8d967aa57eb1fb9",
+          "numeric_timing_acceptance": false,
+          "returncode": 0,
+          "input": {
+            "pass": true,
+            "bytes": 262144,
+            "mismatches": 0,
+            "first": []
+          },
+          "output": {
+            "pass": true,
+            "bytes": 131072,
+            "mismatches": 0,
+            "first": []
+          },
+          "scales": {
+            "pass": true,
+            "bytes": 4096,
+            "mismatches": 0,
+            "first": []
+          },
+          "negative_control_rejected": true,
+          "pass": true
+        },
+        "reason": "Fixed-ELF local functional validation only; shared runtime and timing/build acceptance remain unavailable."
+      }
+    }
+  ],
+  "command_template": "python3 -B guarded_replay.py OPERATION --operator-root OPERATOR --model-root MODEL --outdir NEW_DIR",
+  "cwd": "task-local directory different from operator and model roots",
+  "tool": {
+    "python_version": "3.14.7 | packaged by Anaconda, Inc. | (main, Aug 14 2026, 10:21:40) [GCC 14.3.0]",
+    "python_executable_sha256": "6c9425f09041c817456374f883fa5f064f094fc02174ec90f2621b4292541258"
+  },
+  "wrapper_sha256": "773fcc77b80a9b842017b744390c8a2327c369ebaa6287021e890113fd11c619",
+  "pins_sha256": "96a9f48fd633060d651cd7eab3f955031b2cf5085c63eca0d1a7874ead8c1125",
+  "initial_test_correction": "First wrong-runtime test selected a different local model directory but its gfrun had identical expected9b0c hash, so valid functional run succeeded. Corrected negative control uses task-local /bin/true bytes. No shared-model changes.",
+  "commands": [
+    {
+      "test": "performance_refused",
+      "cwd": "r2 supplement directory (not operator/model root)",
+      "command": [
+        "python3",
+        "-B",
+        "guarded_replay.py",
+        "performance",
+        "--operator-root",
+        "EXTRACTED_OPERATOR_R1",
+        "--model-root",
+        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
+        "--outdir",
+        "FRESH_TEST_OUTPUT"
+      ],
+      "parent_environment_overrides": {
+        "RMS_TAIL_BYPASS": "0",
+        "RMS_IDEAL_L2_READ_BANK": "1",
+        "PYTHONPATH": "unavailable-python-path",
+        "LD_LIBRARY_PATH": "unavailable-loader-path"
+      }
+    },
+    {
+      "test": "build_refused",
+      "cwd": "r2 supplement directory (not operator/model root)",
+      "command": [
+        "python3",
+        "-B",
+        "guarded_replay.py",
+        "build-recipe",
+        "--operator-root",
+        "EXTRACTED_OPERATOR_R1",
+        "--model-root",
+        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
+        "--outdir",
+        "FRESH_TEST_OUTPUT"
+      ],
+      "parent_environment_overrides": {
+        "RMS_TAIL_BYPASS": "0",
+        "RMS_IDEAL_L2_READ_BANK": "1",
+        "PYTHONPATH": "unavailable-python-path",
+        "LD_LIBRARY_PATH": "unavailable-loader-path"
+      }
+    },
+    {
+      "test": "wrong_runtime",
+      "cwd": "r2 supplement directory (not operator/model root)",
+      "command": [
+        "python3",
+        "-B",
+        "guarded_replay.py",
+        "gfrun",
+        "--operator-root",
+        "EXTRACTED_OPERATOR_R1",
+        "--model-root",
+        "TEST_MODEL_WITH_BIN_TRUE",
+        "--outdir",
+        "FRESH_TEST_OUTPUT"
+      ],
+      "parent_environment_overrides": {
+        "RMS_TAIL_BYPASS": "0",
+        "RMS_IDEAL_L2_READ_BANK": "1",
+        "PYTHONPATH": "unavailable-python-path",
+        "LD_LIBRARY_PATH": "unavailable-loader-path"
+      }
+    },
+    {
+      "test": "missing_input",
+      "cwd": "r2 supplement directory (not operator/model root)",
+      "command": [
+        "python3",
+        "-B",
+        "guarded_replay.py",
+        "gfrun",
+        "--operator-root",
+        "TEST_OPERATOR_MISSING_INPUT",
+        "--model-root",
+        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
+        "--outdir",
+        "FRESH_TEST_OUTPUT"
+      ],
+      "parent_environment_overrides": {
+        "RMS_TAIL_BYPASS": "0",
+        "RMS_IDEAL_L2_READ_BANK": "1",
+        "PYTHONPATH": "unavailable-python-path",
+        "LD_LIBRARY_PATH": "unavailable-loader-path"
+      }
+    },
+    {
+      "test": "wrong_elf",
+      "cwd": "r2 supplement directory (not operator/model root)",
+      "command": [
+        "python3",
+        "-B",
+        "guarded_replay.py",
+        "gfrun",
+        "--operator-root",
+        "TEST_OPERATOR_CORRUPT_ELF",
+        "--model-root",
+        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
+        "--outdir",
+        "FRESH_TEST_OUTPUT"
+      ],
+      "parent_environment_overrides": {
+        "RMS_TAIL_BYPASS": "0",
+        "RMS_IDEAL_L2_READ_BANK": "1",
+        "PYTHONPATH": "unavailable-python-path",
+        "LD_LIBRARY_PATH": "unavailable-loader-path"
+      }
+    },
+    {
+      "test": "functional_polluted_environment",
+      "cwd": "r2 supplement directory (not operator/model root)",
+      "command": [
+        "python3",
+        "-B",
+        "guarded_replay.py",
+        "gfrun",
+        "--operator-root",
+        "EXTRACTED_OPERATOR_R1",
+        "--model-root",
+        "EXPLICIT_MODEL_WITH_9b0c_GFRUN",
+        "--outdir",
+        "FRESH_TEST_OUTPUT"
+      ],
+      "parent_environment_overrides": {
+        "RMS_TAIL_BYPASS": "0",
+        "RMS_IDEAL_L2_READ_BANK": "1",
+        "PYTHONPATH": "unavailable-python-path",
+        "LD_LIBRARY_PATH": "unavailable-loader-path"
+      }
+    }
+  ]
+}

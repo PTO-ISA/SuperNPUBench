@@ -1,0 +1,77 @@
+{
+  "revision": "mxquant-r2",
+  "gaps": [
+    {
+      "field": "G-runtime",
+      "status": "missing",
+      "reason": "Portable shared exact historical runtime absent from Release; original binary exists locally but path-leaks",
+      "impact": "Blocks shared fixed-ELF replay",
+      "next_action_or_recovery_command": "Recover verified closure; prefix-map rebuild with NEW identity and validate",
+      "owner": "Codex archive / responsible model and operator maintainers",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-source",
+      "status": "unknown",
+      "reason": "19tracked and earlier8file snapshots do not establish full bebcf119 source identity/untracked/defaults",
+      "impact": "Blocks historical runtime source recovery/build acceptance",
+      "next_action_or_recovery_command": "Audit build-time generated/untracked source and flags, not current directory state",
+      "owner": "Codex archive / responsible model and operator maintainers",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-config",
+      "status": "unknown",
+      "reason": "Native conf exists, compiled defaults/transitive config/effective snapshot not proven",
+      "impact": "Blocks reproducible timing setup",
+      "next_action_or_recovery_command": "Freeze full default configuration and prove actual loading",
+      "owner": "Codex archive / responsible model and operator maintainers",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-toolchain",
+      "status": "unknown",
+      "reason": "Historical recipes/compiler hash do not constitute shared full API/harness/sysroot closure",
+      "impact": "Blocks independent operator rebuild",
+      "next_action_or_recovery_command": "Pin or deliver complete build dependencies and execute rebuild+run",
+      "owner": "Codex archive / responsible model and operator maintainers",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-numeric",
+      "status": "not_collected",
+      "reason": "TimingSim split2 not numerically accepted; historical baseline failed",
+      "impact": "Diagnostic performance only",
+      "next_action_or_recovery_command": "Same-ELF independent numeric readback/golden and negative controls",
+      "owner": "Codex archive / responsible model and operator maintainers",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-analysis",
+      "status": "not_collected",
+      "reason": "Overall TLSU bound and same-contract mainline comparison unfinished",
+      "impact": "Cannot assign overall bound or mainline performance",
+      "next_action_or_recovery_command": "Collect causal controls after correctness is accepted",
+      "owner": "Codex archive / responsible model and operator maintainers",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-algorithm",
+      "status": "missing",
+      "reason": "Per-assumption IDs/violation handling and explicit formal numerical edge contract insufficient; ISA/ASL snapshot not frozen",
+      "impact": "No complete NDF conformance/general legality claim",
+      "next_action_or_recovery_command": "Supplement algorithm assumptions from fixed source and contract without inventing general support",
+      "owner": "Codex archive / responsible model and operator maintainers",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-review",
+      "status": "not_collected",
+      "reason": "Newr2 parent independent review pending",
+      "impact": "No independent r2 acceptance",
+      "next_action_or_recovery_command": "Parent inspect files/evidence and record actual review separately",
+      "owner": "Codex archive / responsible model and operator maintainers",
+      "inventory_reference": "inventory.json"
+    }
+  ]
+}

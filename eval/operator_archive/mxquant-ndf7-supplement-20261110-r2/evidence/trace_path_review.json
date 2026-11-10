@@ -1,0 +1,301 @@
+{
+  "status": "pass",
+  "scope": "every payload file: raw bytes, relative names and gzip decompressed bytes; no exclusions",
+  "tool_sha256": "049addb184da361543fb9ea362ffad61616a2c2b9b7ef351a85590abc81a185c",
+  "python": "3.14.7 | packaged by Anaconda, Inc. | (main, Aug 14 2026, 10:21:40) [GCC 14.3.0]",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "5f110b83d2d4f6d8641f9563960ce4b2b9800cec0f157ef4ff266d80d6dc8a95",
+      "bytes": 1012,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "baseline-13349/mxquant.json.gz",
+      "sha256": "d094738b9c26488dbc3ca483280680d9fc1541bf9532fc4f5b76c084d6f2ed00",
+      "bytes": 1072348,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "bdbf28211cc9e0c4e1c33494f55fead0c62ade68f9a073651bafb9fe27c3a5fc",
+        "bytes": 34293098,
+        "findings": []
+      }
+    },
+    {
+      "path": "baseline-13349/mxquant_nocounters.json.gz",
+      "sha256": "1b6bf4f5fe78e3405b41fd65b67365a55fd9137615ef4c0fb04e36db42b1e112",
+      "bytes": 377815,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "942b15304f1a37dd252b47a15a88a55238fb6cac8cf04ae1cada5944183897fb",
+        "bytes": 6252522,
+        "findings": []
+      }
+    },
+    {
+      "path": "baseline-13349/mxquant_swim.log.gz",
+      "sha256": "4cb24a2d5621d135ba30864e80a51fe8df9e7f6a39232424bb649aed118fdd90",
+      "bytes": 17182,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "a361345374bfb5a4887f3b526d4510c0a4e9ed98a939f7acba4df7c4ed450ef7",
+        "bytes": 215388,
+        "findings": []
+      }
+    },
+    {
+      "path": "control256-5459/mxquant.json.gz",
+      "sha256": "fd2eba3ab7af6ef345170121e24a800dafc899c91658ab28b4814f258e16fec1",
+      "bytes": 611023,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "818b1c9cc25ab0fd265273b4b2994241f408cdf21a4f1bf7a09de7458df1d5f6",
+        "bytes": 17033712,
+        "findings": []
+      }
+    },
+    {
+      "path": "control256-5459/mxquant_nocounters.json.gz",
+      "sha256": "622a4f9cc22755aa5e96e18799f8179fdfc091fe38f69e22fcf5b3aeca7b8181",
+      "bytes": 282661,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "29ed2ea4c738d47c03307d94c081f98d75a4de5ec6fd0fe4e7d26b1f6c9886d8",
+        "bytes": 4605557,
+        "findings": []
+      }
+    },
+    {
+      "path": "control256-5459/mxquant_swim.log.gz",
+      "sha256": "644d3e020bd70383e9ea6cdadc22fea61b2c2a736e1fc4f4532ac5d4670178e3",
+      "bytes": 16534,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "a5303b95892eba2cc3bee091abf840aa87e09b70f500ab33448276447540ed28",
+        "bytes": 206126,
+        "findings": []
+      }
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "fec82d16d33cea031e101ec5c6f402072fdfa4f333b75048da8d504195341f9b",
+      "bytes": 12783,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "packed-pingpong-5545/mxquant.json.gz",
+      "sha256": "83a6ee5dbf4fe1c509fb50692621af266032e6f4b1d2d679506da541dd1bab32",
+      "bytes": 616165,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "6d7cffad5fd27407f1655cf112f14d6ce45c3434acd6643e1e5278ebd49fac15",
+        "bytes": 17117303,
+        "findings": []
+      }
+    },
+    {
+      "path": "packed-pingpong-5545/mxquant_nocounters.json.gz",
+      "sha256": "52129b0a14124ec113d174ece24f09f0ae796fbc3dc8889cf149a33d03f8973d",
+      "bytes": 287740,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "4f2397699e5d35a5252f058f0bac26ea816cde9b6fb2ab18d2eb9f8d9b966c97",
+        "bytes": 4585632,
+        "findings": []
+      }
+    },
+    {
+      "path": "packed-pingpong-5545/mxquant_swim.log.gz",
+      "sha256": "7e1c931fdab947bf48cad7767db3d712eaac4e6f3824b404e02f48c8a484a859",
+      "bytes": 16447,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "ce0a9bb413fb6500e3e4fac1c37eb7e396d5ed3fc33888a0129fe083ea0c400c",
+        "bytes": 204835,
+        "findings": []
+      }
+    },
+    {
+      "path": "split2-5464/mxquant.json.gz",
+      "sha256": "ca6d463f63400f9792c371fea248fc9e0a03a8cc9dcc3036597d3352f55dae9f",
+      "bytes": 611233,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "dc445b6e4463745eaa4fdb4e30af76c12e7345c3a0bf37d1fcbf66db11f89d8c",
+        "bytes": 17015421,
+        "findings": []
+      }
+    },
+    {
+      "path": "split2-5464/mxquant_nocounters.json.gz",
+      "sha256": "4f83d3ccb93b1eb51adbd788488a8a8d613a1da8bbd85ec6c6d8c484db000592",
+      "bytes": 282661,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "e98d2a985ddc60629a199e4da8320032bb35f73e61a253f3e014da5279f4ecf1",
+        "bytes": 4592012,
+        "findings": []
+      }
+    },
+    {
+      "path": "split2-5464/mxquant_swim.log.gz",
+      "sha256": "2f1b900cc6ccdc9f49f5a3a3e2546153cad9a16341b2539ea339de3579647207",
+      "bytes": 16511,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "b593b0175d1f05541d94571dd311fd0e5b249b30b75df8ec67c29e7e0e0002ca",
+        "bytes": 206105,
+        "findings": []
+      }
+    },
+    {
+      "path": "stages-5464-mxquant_swim.log.gz",
+      "sha256": "3ef855aed692e07332f765f8b111c979deb2e14fca34fbdb5ce7558d968f4b32",
+      "bytes": 16558,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "b2e2f9f06f941484ddc4a4f41aa0fb94ba814b0713bbf367ca74403374801e24",
+        "bytes": 206308,
+        "findings": []
+      }
+    },
+    {
+      "path": "stages-5464-pipeline.out.gz",
+      "sha256": "b2ac57214e1560abfbb20ebc65db4a7ebee4741f752c612be31692275fd43b22",
+      "bytes": 832229,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "5b171cc36ec103d44b731327d632598d74904637c4e8bb8e8547be75f88faf80",
+        "bytes": 5388005,
+        "findings": []
+      }
+    },
+    {
+      "path": "wide1024-6599/mxquant.json.gz",
+      "sha256": "44df23e8f18b73ea428f337f5c03b7ec7b09560812efeeb7f9dde99a08a2f5aa",
+      "bytes": 663171,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "ceb5c32624f4675307979c80c656c58cdd7f9c3227a60ed19cfc7b3074d15fc4",
+        "bytes": 19180708,
+        "findings": []
+      }
+    },
+    {
+      "path": "wide1024-6599/mxquant_nocounters.json.gz",
+      "sha256": "cbc846f1f7d61fb8a0e1670fc9abe19f94ab7e3c700005d7fae1071ebaac5b09",
+      "bytes": 289542,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "e3ed3e21a45c7f26b29aee5264a40d22ba327b99153090c66dc5f7835da922d1",
+        "bytes": 4606674,
+        "findings": []
+      }
+    },
+    {
+      "path": "wide1024-6599/mxquant_swim.log.gz",
+      "sha256": "0e1b49f4cf36d328213a2a7a34698bfd5d3b56ea38b9d1ab91199cff2465ecca",
+      "bytes": 16332,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "56e3c52cfaa3a4e68b0abe892d99a0fd1f1d76622ca5ef2fefb7de41f9cb0d23",
+        "bytes": 204813,
+        "findings": []
+      }
+    },
+    {
+      "path": "wide512-5709/mxquant.json.gz",
+      "sha256": "c2e43fe43e01ffa8adfa0b933f38de354ebb7919e9682aa4d5701e152b974218",
+      "bytes": 625692,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "c4a9a5e57cafe21320f3933582714f102a2c39810536ef5d352a299ba307e717",
+        "bytes": 17463097,
+        "findings": []
+      }
+    },
+    {
+      "path": "wide512-5709/mxquant_nocounters.json.gz",
+      "sha256": "2d13971b199e983ed9ee3656b8fb12014f9025dc14ccfb61af44858790b535a0",
+      "bytes": 290180,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "a01f584bd023eec0c09068100f755d7e6ee8798658640ef59b37045c354b756e",
+        "bytes": 4602074,
+        "findings": []
+      }
+    },
+    {
+      "path": "wide512-5709/mxquant_swim.log.gz",
+      "sha256": "f755d26622be7823cb9f8878897ff92bf02f553d65a57c7a8fcea738df140511",
+      "bytes": 16341,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "f8bde27d757ded4c22e0d8d669519e62fcee94a4523577c0b00b285a0123d379",
+        "bytes": 204627,
+        "findings": []
+      }
+    },
+    {
+      "path": "wide512-split2-5750/mxquant.json.gz",
+      "sha256": "1f48520da37910878147d8726316947c38e4cb338624c63fb07e900e4a8958cd",
+      "bytes": 619191,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "6b3e671d626b4b0072dde478860e67791283ec1733d282740e0d184e8fa25926",
+        "bytes": 17451082,
+        "findings": []
+      }
+    },
+    {
+      "path": "wide512-split2-5750/mxquant_nocounters.json.gz",
+      "sha256": "d5d7376fae8ca646ed4f506d2aac03c465e31ebf870facbc650a8e1089656978",
+      "bytes": 280597,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "89b6f163b2c5d873b3b2355f6f2e185218bc62d3550134d8e6c80b48724a96ed",
+        "bytes": 4516760,
+        "findings": []
+      }
+    },
+    {
+      "path": "wide512-split2-5750/mxquant_swim.log.gz",
+      "sha256": "c92335ffffbf3821386940f20bf4ea2bc19a00a13086f20fbe1e29039f6f07eb",
+      "bytes": 16251,
+      "findings": [],
+      "filename_findings": [],
+      "decompressed": {
+        "sha256": "55f5df3527d0f039a9d7df2f8136392f6f40590309570ae52b26b7f5b59dc0f8",
+        "bytes": 204647,
+        "findings": []
+      }
+    }
+  ],
+  "reviewed_findings": [],
+  "unresolved_findings": [],
+  "limitations": "byte-pattern scan is not a proof of semantic portability; relocated replay is separate"
+}
