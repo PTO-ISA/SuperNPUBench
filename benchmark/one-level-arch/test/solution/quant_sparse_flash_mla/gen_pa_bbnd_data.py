@@ -41,11 +41,13 @@ def main() -> int:
     assert len(ori) == args.b * args.s2 * row, (len(ori), args.b * args.s2 * row)
     assert len(cmp_) == args.b * args.cmp_s2 * row, len(cmp_)
 
-    # ORI pool: per batch one block when block_size == s2 (block-aligned pool).
-    assert args.s2 % blk == 0, "ori s2 must be a multiple of the block size"
-    ori_blocks = args.s2 // blk
+    # ORI pool: pad each batch's valid rows to whole blocks (same as CMP), so a
+    # non-block-aligned S2 stays buildable via the kernel's ORI-tail staging.
+    ori_blocks = (args.s2 + blk - 1) // blk
     with open(os.path.join(d, f"ori_kv_pa.{args.ext}.bin"), "wb") as f:
-        f.write(ori)
+        for b in range(args.b):
+            chunk = ori[b * args.s2 * row:(b + 1) * args.s2 * row]
+            f.write(chunk + bytes((ori_blocks * blk - args.s2) * row))
 
     # CMP pool: pad each batch's valid rows to a full block.
     cmp_blocks = (args.cmp_s2 + blk - 1) // blk
