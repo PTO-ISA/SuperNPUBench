@@ -1,0 +1,65 @@
+[
+  {
+    "html_url": "https://github.com/LinxISA/SuperScalarModel/issues/1010",
+    "number": 1010,
+    "title": "[gfsim][VECTOR] TPACK 缺 TimingSim 时序模型，且无法建模 B.ASSEMBLE writer 链",
+    "state": "closed",
+    "closed_at": "2026-10-24T05:18:12Z",
+    "merged_at": null,
+    "merge_commit_sha": null
+  },
+  {
+    "html_url": "https://github.com/LinxISA/SuperScalarModel/issues/1053",
+    "number": 1053,
+    "title": "[gfsim][OEX] 乱序退休仅回收一个 vtag，已退休条目积压导致 64K ASSEMBLE rename 断言",
+    "state": "closed",
+    "closed_at": "2026-10-23T08:43:43Z",
+    "merged_at": null,
+    "merge_commit_sha": null
+  },
+  {
+    "html_url": "https://github.com/LinxISA/SuperScalarModel/issues/926",
+    "number": 926,
+    "title": "[gfrun][NA] TROWEXPAND ignores BroadcastByteOffset and reads BF16 slot 0",
+    "state": "closed",
+    "closed_at": "2026-11-03T14:57:45Z",
+    "merged_at": null,
+    "merge_commit_sha": null
+  },
+  {
+    "html_url": "https://github.com/LinxISA/SuperScalarModel/issues/979",
+    "number": 979,
+    "title": "[gfrun][NA] TROWEXPAND 族不解码 B.DATR.RMode 的 BroadcastByteOffset（规范 normative 字段）——CUBE 打包 CELL 广播恒读列 0，奇数槽拿错系数，静默错值无断言",
+    "state": "open",
+    "closed_at": null,
+    "merged_at": null,
+    "merge_commit_sha": null
+  },
+  {
+    "html_url": "https://github.com/LinxISA/SuperScalarModel/pull/1057",
+    "number": 1057,
+    "title": "[gfsim][VECTOR] 实现 TPACK 时序执行及 local assemble parent 生命周期",
+    "state": "closed",
+    "closed_at": "2026-10-24T05:18:11Z",
+    "merged_at": "2026-10-24T05:18:11Z",
+    "merge_commit_sha": "6d4ea35ec8029596882a245316c2f30b8dab9314"
+  },
+  {
+    "html_url": "https://github.com/LinxISA/SuperScalarModel/pull/1054",
+    "number": 1054,
+    "title": "[gfsim][OEX] 排空乱序退休后的可回收 vtag，修复 64K ASSEMBLE rename 断言",
+    "state": "closed",
+    "closed_at": "2026-10-23T08:43:41Z",
+    "merged_at": "2026-10-23T08:43:41Z",
+    "merge_commit_sha": "32c04e840e7cb40fcdc9247cb569af5d5473598a"
+  },
+  {
+    "html_url": "https://github.com/LinxISA/SuperScalarModel/pull/957",
+    "number": 957,
+    "title": "[gfrun][Core/TEPL/TLSU] Continue #892/#911 with current-ASL PE context and strict SYS contracts",
+    "state": "open",
+    "closed_at": null,
+    "merged_at": null,
+    "merge_commit_sha": "116b0a25c415563efb6e590930e9edf89f14e632"
+  }
+]

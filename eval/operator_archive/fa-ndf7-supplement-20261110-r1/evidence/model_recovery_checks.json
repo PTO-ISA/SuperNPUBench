@@ -1,0 +1,22 @@
+{
+  "script_sha256": "7cae147e2e8c4f104dd1f38f45e9358d2cbc4c67fc23df406e99c5044d7277af",
+  "tests": [
+    {
+      "test": "plain",
+      "patch_returncode": 0,
+      "postimages_matched": 7,
+      "unpatched_rejected": true,
+      "corrupted_rejected": true,
+      "patch_stdout": "patching file TimingSim/frontend/bctrl/BIssue.cpp\npatching file TimingSim/infra/SimSys.cpp\npatching file modelSpec/local_vector_assemble_fix.md\npatching file tests/timing_test/rename/tile_retire_reclaim_test.cpp\npatching file tests/timing_test/trace_stream_test.cpp\npatching file tools/trace_logger/TraceLogger.cpp\npatching file tools/trace_logger/TraceLogger.h\n"
+    },
+    {
+      "test": "inside_parent_git",
+      "patch_returncode": 0,
+      "postimages_matched": 7,
+      "unpatched_rejected": true,
+      "corrupted_rejected": true,
+      "patch_stdout": "patching file TimingSim/frontend/bctrl/BIssue.cpp\npatching file TimingSim/infra/SimSys.cpp\npatching file modelSpec/local_vector_assemble_fix.md\npatching file tests/timing_test/rename/tile_retire_reclaim_test.cpp\npatching file tests/timing_test/trace_stream_test.cpp\npatching file tools/trace_logger/TraceLogger.cpp\npatching file tools/trace_logger/TraceLogger.h\n"
+    }
+  ],
+  "scope": "Seven changed-file patch fixtures only, plain directory and enclosing real Git worktree; no full new model build"
+}

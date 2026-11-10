@@ -1,0 +1,18 @@
+{
+  "live_ls_remote_head": "b403567d3a84c39ff6ffa5b4a42ea73b5aa66d13",
+  "base_is_ancestor_of_live_head": true,
+  "historical_local_head": "89b2366ea704fd75fd702440496439dadf5496be",
+  "patch": "portable-model.patch",
+  "patch_sha256": "5175abc99863b2b4d048fb94c69233a49c4e15d2799c4d2eb11906fdc6217519",
+  "patch_bytes": 19409,
+  "contains_local_untracked_files": false,
+  "instruction": "With repository read access, fetch reachable_branch, git archive repository_base, apply portable-model.patch with patch -p1, verify source/postimages.json. rebuild_model.py automates these steps; it does not fetch historical_local_head.",
+  "recovered_tree": "424a94d7c5ae79f4584234298b99a65df8d4f1fb",
+  "expected_historical_tree": "424a94d7c5ae79f4584234298b99a65df8d4f1fb",
+  "patch_recovery_exact": true,
+  "repository": "https://github.com/LinxISA/SuperScalarModel",
+  "repository_base": "dd86f8a20b9161bdb1f836dc234c86d187d561e4",
+  "reachable_branch": "fix/gfsim-tpack-issue1010",
+  "access": "private repository; read permission required",
+  "rebuild_qualification": "GCC plus libstdc++; archive host GCC 11.4.0, Ubuntu22.04.5. Other hosts require case qualification; compiler/library differences may change cycles."
+}

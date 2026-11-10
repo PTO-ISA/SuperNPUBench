@@ -1,0 +1,203 @@
+{
+  "archive_revision": "fa-ndf7-supplement-metadata-20261110",
+  "new_download_replay_status": "one new independent8K scoped run; previous four shared cases bound by identical ELF/runtime/configs; not four new runs",
+  "operations": [
+    {
+      "operation": "fixed_elf_replay",
+      "provided_scope": "Four fixed cases; previous shared4/4 plus new independent8K scoped1/1",
+      "entrypoint": "asset_materials/fa-operator-r3/replay.py",
+      "arguments": "--operator-root OP --model-root MODEL --outdir NEW --case CASE",
+      "actual_status": "run_reproduced_new_one_case; historical_four_retained",
+      "actual_observation": "one new independent8K scoped run; previous four shared cases bound by identical ELF/runtime/configs; not four new runs",
+      "required_assets_permissions_identity": {
+        "inventory_references": [
+          "I01",
+          "I02"
+        ],
+        "operator_asset": {
+          "name": "fa-operator-r3-ndf7-20261110.tar.gz",
+          "bytes": 6166138,
+          "sha256": "0b9a63e6ccbab2c7e2b5bc4f3e02fd844ea4eac2e706bd4d63d865be4263791d",
+          "repo": "PTO-ISA/SuperNPUBench",
+          "url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r3-ndf7-20261110.tar.gz"
+        },
+        "model_asset": {
+          "name": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "bytes": 8118855,
+          "sha256": "13a42198a78c28623dcac5d08870393b004a91456b83d7c04338d401edd3985c",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-ndf7-20261110.tar.gz"
+        },
+        "model_access": "private repository read access required",
+        "compiler": "only source build needs explicitly provided hash-pinned tools; existing ELF replay needs no compiler",
+        "mandatory_runtime_guard_overlay": {
+          "name": "fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "bytes": 7647,
+          "sha256": "211eb90bdc45ea8a814814be79b9db80beffdec2cde28ceda8a06605a075fa39",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "mandatory_after": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "asset_api_url": "https://api.github.com/repos/LinxISA/SuperScalarModel/releases/assets/730701763"
+        }
+      },
+      "evidence": [
+        "evidence/independent_shared_replay_review.json",
+        "evidence/historical_current_identity_binding.json"
+      ],
+      "review": {
+        "status": "independent_one_case_run_reviewed",
+        "evidence": "evidence/independent_shared_replay_review.json"
+      },
+      "remaining_gap": "Current runner other3not newly executed; previous shared evidence retained",
+      "owner": "Codex FA archive parent"
+    },
+    {
+      "operation": "model_source_recovery_rebuild",
+      "provided_scope": "7changed-file restoration fixtures verified; full rebuild pending",
+      "entrypoint": "asset_materials/fa-runtime-r2/rebuild_model.py",
+      "arguments": "--model-repo REPO --source-out NEW_SOURCE --build-out NEW_BUILD",
+      "actual_status": "not_checked",
+      "actual_observation": "Seven changed-file fixtures only, not a fresh full build. Guard overlay corrects qualification empty-case/output isolation; source recovery/compiler discovery not claimed hermetic. GCC11.4/libstdc++ historical family, every new binary still needs its own four-case qualification.",
+      "required_assets_permissions_identity": {
+        "inventory_references": [
+          "I06",
+          "I09"
+        ],
+        "operator_asset": {
+          "name": "fa-operator-r3-ndf7-20261110.tar.gz",
+          "bytes": 6166138,
+          "sha256": "0b9a63e6ccbab2c7e2b5bc4f3e02fd844ea4eac2e706bd4d63d865be4263791d",
+          "repo": "PTO-ISA/SuperNPUBench",
+          "url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r3-ndf7-20261110.tar.gz"
+        },
+        "model_asset": {
+          "name": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "bytes": 8118855,
+          "sha256": "13a42198a78c28623dcac5d08870393b004a91456b83d7c04338d401edd3985c",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-ndf7-20261110.tar.gz"
+        },
+        "model_access": "private repository read access required",
+        "compiler": "only source build needs explicitly provided hash-pinned tools; existing ELF replay needs no compiler",
+        "mandatory_runtime_guard_overlay": {
+          "name": "fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "bytes": 7647,
+          "sha256": "211eb90bdc45ea8a814814be79b9db80beffdec2cde28ceda8a06605a075fa39",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "mandatory_after": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "asset_api_url": "https://api.github.com/repos/LinxISA/SuperScalarModel/releases/assets/730701763"
+        }
+      },
+      "evidence": [
+        "evidence/model_recovery_checks.json"
+      ],
+      "review": {
+        "status": "not_checked",
+        "reviewer": null,
+        "reason": "Parent independently review/update actual new operation evidence"
+      },
+      "remaining_gap": "G-modelbuild",
+      "owner": "Codex FA archive parent"
+    },
+    {
+      "operation": "operator_source_rebuild",
+      "provided_scope": "local four timing ELFs rebuilt byte-identical; post-download qualification pending",
+      "entrypoint": "asset_materials/fa-operator-r3/build.py",
+      "arguments": "--case HISTORICAL_ID --toolchain-root PINNED_INSTALL --outdir NEW",
+      "actual_status": "not_checked",
+      "actual_observation": "Four actual local builds byte-identical to shipped ELFs; one identical binary content independently executed via downloaded8K scoped case. Other new build qualifications not repeated; historical shared4/4 bound by unchanged byte identities. Exact tools locally supplied; full portable compiler build unqualified.",
+      "required_assets_permissions_identity": {
+        "inventory_references": [
+          "I03",
+          "I04",
+          "I05"
+        ],
+        "operator_asset": {
+          "name": "fa-operator-r3-ndf7-20261110.tar.gz",
+          "bytes": 6166138,
+          "sha256": "0b9a63e6ccbab2c7e2b5bc4f3e02fd844ea4eac2e706bd4d63d865be4263791d",
+          "repo": "PTO-ISA/SuperNPUBench",
+          "url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r3-ndf7-20261110.tar.gz"
+        },
+        "model_asset": {
+          "name": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "bytes": 8118855,
+          "sha256": "13a42198a78c28623dcac5d08870393b004a91456b83d7c04338d401edd3985c",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-ndf7-20261110.tar.gz"
+        },
+        "model_access": "private repository read access required",
+        "compiler": "only source build needs explicitly provided hash-pinned tools; existing ELF replay needs no compiler",
+        "mandatory_runtime_guard_overlay": {
+          "name": "fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "bytes": 7647,
+          "sha256": "211eb90bdc45ea8a814814be79b9db80beffdec2cde28ceda8a06605a075fa39",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "mandatory_after": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "asset_api_url": "https://api.github.com/repos/LinxISA/SuperScalarModel/releases/assets/730701763"
+        }
+      },
+      "evidence": [
+        "evidence/builds/*/build_result.json"
+      ],
+      "review": {
+        "status": "not_checked",
+        "reviewer": null,
+        "reason": "Parent independently review/update actual new operation evidence"
+      },
+      "remaining_gap": "G-buildrun",
+      "owner": "Codex FA archive parent"
+    },
+    {
+      "operation": "numeric_failure_recount",
+      "provided_scope": "host checker over packaged historical output; no fresh model execution",
+      "entrypoint": "asset_materials/fa-operator-r3/recheck_failure.py",
+      "arguments": "python3 OPERATOR/recheck_failure.py --out NEW_JSON",
+      "actual_status": "pass_host_failure_recount_correctness_fail",
+      "actual_observation": "Actual downloaded host checker recovers6756/32768 and zero/NaN rejection. CLI requires --out; frozen package README omitted it, corrected current instructions authoritative. No fresh numerical model execution.",
+      "required_assets_permissions_identity": {
+        "inventory_references": [
+          "I07"
+        ],
+        "operator_asset": {
+          "name": "fa-operator-r3-ndf7-20261110.tar.gz",
+          "bytes": 6166138,
+          "sha256": "0b9a63e6ccbab2c7e2b5bc4f3e02fd844ea4eac2e706bd4d63d865be4263791d",
+          "repo": "PTO-ISA/SuperNPUBench",
+          "url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r3-ndf7-20261110.tar.gz"
+        },
+        "model_asset": {
+          "name": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "bytes": 8118855,
+          "sha256": "13a42198a78c28623dcac5d08870393b004a91456b83d7c04338d401edd3985c",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-ndf7-20261110.tar.gz"
+        },
+        "model_access": "private repository read access required",
+        "compiler": "only source build needs explicitly provided hash-pinned tools; existing ELF replay needs no compiler",
+        "mandatory_runtime_guard_overlay": {
+          "name": "fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "bytes": 7647,
+          "sha256": "211eb90bdc45ea8a814814be79b9db80beffdec2cde28ceda8a06605a075fa39",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "mandatory_after": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "asset_api_url": "https://api.github.com/repos/LinxISA/SuperScalarModel/releases/assets/730701763"
+        }
+      },
+      "evidence": [
+        "evidence/numerical_recheck.json",
+        "evidence/downloaded_numerical_recheck.json"
+      ],
+      "review": {
+        "status": "not_checked",
+        "reviewer": null,
+        "reason": "Parent independently review/update actual new operation evidence"
+      },
+      "remaining_gap": "G-numeric",
+      "owner": "Codex FA archive parent"
+    }
+  ]
+}

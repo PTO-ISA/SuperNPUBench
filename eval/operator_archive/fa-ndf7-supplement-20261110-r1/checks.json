@@ -1,0 +1,2332 @@
+{
+  "archive_spec_version": "v1.0-draft.7",
+  "archive_spec_sha256": "66462847e345c6fe9a23a0b9f356d5fb35d7902a62d6aa6f1d9ab218e0e5f394",
+  "spec_status": "local unpublished draft; original text not copied",
+  "archive_revision": "fa-ndf7-supplement-metadata-20261110",
+  "overall_conformance": false,
+  "scope": "Per-item material and operation checks, supplemented by actual parent commands and independent scoped material review; no overall NDF conformance. New downloaded replay evidence appended separately.",
+  "checks": [
+    {
+      "check_id": "FA-001",
+      "clause_and_requirement": "001/002 / result/case identity,cycles and fixed ELF mapping",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/manifest.json",
+          "sha256": "e90f74de16ee204d68adef7b1273bd62af0121be2b40a9553f7f1de8e7e6afaf",
+          "locator": "cases",
+          "source_original_sha256": "e90f74de16ee204d68adef7b1273bd62af0121be2b40a9553f7f1de8e7e6afaf"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Four cases explicitly map21488/20519/155269/258099 cycles to distinct ELF hashes; prior failure for64Kunscoped is not reused as a result.",
+      "evidence": "asset_materials/fa-operator-r3/manifest.json#cases",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-002",
+      "clause_and_requirement": "002/008 / diagnostic and independent correctness scope",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/numerical_recheck.json",
+          "sha256": "2e0daebb89670f49df1bfd3b00144da9aef2c133a922a532e85c4073edbea4ab",
+          "locator": "audit_status,numerical_status,scope",
+          "source_original_sha256": "2e0daebb89670f49df1bfd3b00144da9aef2c133a922a532e85c4073edbea4ab"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "audit_status=pass while numerical_status=fail; recomputation is historical nonzero8K output, not timing ELF or model execution.",
+      "evidence": "evidence/numerical_recheck.json#audit_status,numerical_status,scope",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-003",
+      "clause_and_requirement": "003 / frozen build recipes include flags/macros/include/link/cwd",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/build.py",
+          "sha256": "d3cdb34023c08c1c230e73c0692487f538f0fda883a9ebf160cb6ac0bec4fe8c",
+          "locator": "main flags/commands/result",
+          "source_original_sha256": "d3cdb34023c08c1c230e73c0692487f538f0fda883a9ebf160cb6ac0bec4fe8c"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Script consumes per-case flags, explicit sysroot/resource/includes and startup link; captures commands,cwd,ELF/diss hashes and prefix maps.",
+      "evidence": "asset_materials/fa-operator-r3/build.py#main flags/commands/result",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-004",
+      "clause_and_requirement": "003 / actual local ELF rebuild fa-8k-algod-21488-final",
+      "operation_and_scope": "fa-8k-algod-21488-final local build only",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/builds/fa-8k-algod-21488-final/build_result.json",
+          "sha256": "cb0c2668d69d67ca184e8997e660a7c42ea84721e30f68ea8a8db09906240b20",
+          "locator": "historical_elf_bytes_equal,elf_sha256,historical_elf_sha256,diss_sha256",
+          "source_original_sha256": "0e63e88e97c3af41fcfa39504734b37a700d8a44560eff7b04324c3bd03b3dd4"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Recorded local build result byte_equal=true; new and historical ELF SHA256=d1a5003b5293c2d47a27fd73c828c6fcebbeeb2387b138d5d3e11a64454ae0e5; diss hash=d889f40c2bca2f5b121fb1450bfb72ea48fb3fce1966c3c75d4e609ad93f0190. Build-only, no run acceptance.",
+      "evidence": "evidence/builds/fa-8k-algod-21488-final/build_result.json#historical_elf_bytes_equal,elf_sha256,historical_elf_sha256,diss_sha256",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": "G-buildrun"
+    },
+    {
+      "check_id": "FA-005",
+      "clause_and_requirement": "003 / actual local ELF rebuild fa-8k-scoped-d2-20519-final",
+      "operation_and_scope": "fa-8k-scoped-d2-20519-final local build only",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/builds/fa-8k-scoped-d2-20519-final/build_result.json",
+          "sha256": "9418d7c766290817feabe193d4dd3a02ef66c9f696ac5b8f3e52a1982c3b7c37",
+          "locator": "historical_elf_bytes_equal,elf_sha256,historical_elf_sha256,diss_sha256",
+          "source_original_sha256": "fc78a4215c3fd7190a149f872ab5e2ab2880f12142100c41660b7ec1ac77a06a"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Recorded local build result byte_equal=true; new and historical ELF SHA256=82d046203473b4289593e780a634448595a76cd614441beb00b412693886fba3; diss hash=fd210a850bc7fe3a05d4e1314b3d23190addb9c97968c454ec905eb26970721d. Build-only, no run acceptance.",
+      "evidence": "evidence/builds/fa-8k-scoped-d2-20519-final/build_result.json#historical_elf_bytes_equal,elf_sha256,historical_elf_sha256,diss_sha256",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": "G-buildrun"
+    },
+    {
+      "check_id": "FA-006",
+      "clause_and_requirement": "003 / actual local ELF rebuild fa-64k-unscoped-d2-258099-final",
+      "operation_and_scope": "fa-64k-unscoped-d2-258099-final local build only",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/builds/fa-64k-unscoped-d2-258099-final/build_result.json",
+          "sha256": "abd8f64fa5fe614a198cebae3cb44c22f333fad6d3bbf506262c296246ae219c",
+          "locator": "historical_elf_bytes_equal,elf_sha256,historical_elf_sha256,diss_sha256",
+          "source_original_sha256": "068db87ef640d21c1a525219e0c3059866c56296acd3f8a2f8e5d5c7bd604aec"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Recorded local build result byte_equal=true; new and historical ELF SHA256=3dba89659bdea3cbe6857ca05b54b57b54a4ac8cd245f7ba023b29a1adec2d1f; diss hash=2f9ab2d053de9a63e2dd04de5d829c84ad1ec986ab65312366270dcc9bad3c3c. Build-only, no run acceptance.",
+      "evidence": "evidence/builds/fa-64k-unscoped-d2-258099-final/build_result.json#historical_elf_bytes_equal,elf_sha256,historical_elf_sha256,diss_sha256",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": "G-buildrun"
+    },
+    {
+      "check_id": "FA-007",
+      "clause_and_requirement": "003 / actual local ELF rebuild fa-64k-algod-155269",
+      "operation_and_scope": "fa-64k-algod-155269 local build only",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/builds/fa-64k-algod-155269/build_result.json",
+          "sha256": "1fa6c0ca0c1634a179cd78402b1a4f72ce13ab3bbed0641fe230c3a791a1a149",
+          "locator": "historical_elf_bytes_equal,elf_sha256,historical_elf_sha256,diss_sha256",
+          "source_original_sha256": "99c4347a3baa4eeba7955e08046d358ee18efef6720032503caf2601d3cffc6b"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Recorded local build result byte_equal=true; new and historical ELF SHA256=9fc11122bad3927226c17022658ff09c99f05fae71515e7b56c0fe5c337c9c11; diss hash=07aa03d20c33a17e26a920cf59626d918ce2bfd3b45311d8560a25a63ecb62de. Build-only, no run acceptance.",
+      "evidence": "evidence/builds/fa-64k-algod-155269/build_result.json#historical_elf_bytes_equal,elf_sha256,historical_elf_sha256,diss_sha256",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": "G-buildrun"
+    },
+    {
+      "check_id": "FA-008",
+      "clause_and_requirement": "003/010 / newly downloaded rebuilt ELF qualification",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/final_build_identity.json",
+          "sha256": "1436905b6fc5593319cefe7a3a449eb1c369ca4d8f82e591b295fdb488a26b40",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "1436905b6fc5593319cefe7a3a449eb1c369ca4d8f82e591b295fdb488a26b40"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "All four local builds are byte-identical to downloaded ELFs. Independent new8K scoped execution covers one identical binary content; other three current-run qualifications not repeated. No full four-new-build_reproduced upgrade.",
+      "evidence": "evidence/final_build_identity.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "All four local builds are byte-identical to downloaded ELFs. Independent new8K scoped execution covers one identical binary content; other three current-run qualifications not repeated. No full four-new-build_reproduced upgrade."
+      },
+      "gap_reference": "G-buildrun"
+    },
+    {
+      "check_id": "FA-009",
+      "clause_and_requirement": "004 / API origin/order and complete pin list",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/dependencies/identity.json",
+          "sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6",
+          "locator": "api",
+          "source_original_sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Repository Linx-TileOP-API; baseecae381331e2dd4ef13270df5518ca9ebda19ef4 then only preserved patch transplanted from8f43777; do not apply full upstream commit first.",
+      "evidence": "asset_materials/fa-operator-r3/dependencies/identity.json#api",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-010",
+      "clause_and_requirement": "004 / harness fixed source identity",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/dependencies/identity.json",
+          "sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6",
+          "locator": "harness",
+          "source_original_sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "SuperNPUBench705dde39f6e071729ba23abadd3ac435ded384b5 test/common snapshot provided; not current-main harness.",
+      "evidence": "asset_materials/fa-operator-r3/dependencies/identity.json#harness",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-011",
+      "clause_and_requirement": "004 / sysroot header subset closure",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/dependencies/sysroot_headers.json",
+          "sha256": "67462f6521d7dae581978b63af6fa32c6fff9131ae533fe6775ef6d242542b64",
+          "locator": "606 entries",
+          "source_original_sha256": "67462f6521d7dae581978b63af6fa32c6fff9131ae533fe6775ef6d242542b64"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "606 header identities are recorded and build.py checks them before compilation; four local actual builds qualify timing subset only.",
+      "evidence": "asset_materials/fa-operator-r3/dependencies/sysroot_headers.json#606 entries",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-012",
+      "clause_and_requirement": "004 / compiler/linker/objdump pin vs distribution",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/dependencies/identity.json",
+          "sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6",
+          "locator": "toolchain",
+          "source_original_sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Tool hashes d590f0cd/6334e9a1/c69058d0 and source25f419f4 recorded. SDK not delivered; exact tools caller-supplied, source recipe derived not rerun.",
+      "evidence": "asset_materials/fa-operator-r3/dependencies/identity.json#toolchain",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": "G-toolchain"
+    },
+    {
+      "check_id": "FA-013",
+      "clause_and_requirement": "004 / portable qualification of caller-supplied compiler source build (SDK not required for ELF replay)",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/dependencies/identity.json",
+          "sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No full toolchain download is required by this archive. Compiler source commit/hash and recipe are recorded; exact locally qualified tool binaries are caller-supplied. Portable source-build qualification for other hosts not checked.",
+      "evidence": "asset_materials/fa-operator-r3/dependencies/identity.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "No full toolchain download is required by this archive. Compiler source commit/hash and recipe are recorded; exact locally qualified tool binaries are caller-supplied. Portable source-build qualification for other hosts not checked."
+      },
+      "gap_reference": "G-toolchain"
+    },
+    {
+      "check_id": "FA-014",
+      "clause_and_requirement": "004.1 / existing model modification IDs and issue relationships",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "FA-M01 rawTPACK/assemble,FA-M02 retired vtags,FA-M03 trace streaming,FA-M04 API emit have categories/upstream/state refs; validity diagnostic; old public-access prose is not adopted.",
+      "evidence": "previous_archive/model_changes.json#modifications",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-015",
+      "clause_and_requirement": "004.1 / issue states time-scoped not inferred validation",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/issue_status_current.json",
+          "sha256": "954db1ebd388f64ad0e21d1321dc3dada4f0d23ef8a9dc9e736e4b5646dd0a37",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "b99fbc4084185457f69a3e2e420e3bee4b9f5e50e81fef1344d457d4af92ed51"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Current authenticated issue snapshot confirms1010/1053 closed,1057/1054 merged with exact merge commits;957/979 open and926 closed remain numerical background, not numerical acceptance.",
+      "evidence": "evidence/issue_status_current.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "scoped_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Current authenticated issue snapshot confirms1010/1053 closed,1057/1054 merged with exact merge commits;957/979 open and926 closed remain numerical background, not numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-016",
+      "clause_and_requirement": "004.2 / complete native config identities in operator manifest",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/manifest.json",
+          "sha256": "e90f74de16ee204d68adef7b1273bd62af0121be2b40a9553f7f1de8e7e6afaf",
+          "locator": "configs_sha256",
+          "source_original_sha256": "e90f74de16ee204d68adef7b1273bd62af0121be2b40a9553f7f1de8e7e6afaf"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "22 native files including perf.conf plus21 TOML have full SHA256 references; runtime replay must load these, not host defaults.",
+      "evidence": "asset_materials/fa-operator-r3/manifest.json#configs_sha256",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-017",
+      "clause_and_requirement": "004.2 / actual newly downloaded config loading",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/independent_shared_replay_review.json",
+          "sha256": "52c0063ac66e526c45fec760770fb40689d14ef0d2731813e71ede27ff7cb96c",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "0be1879a759f8273aab9e3527b0b9b00894f1ca1fa5a068e72e066c2c4631abe"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Independent new8K scoped run checks native configs, copies all22 hashes, has zero configuration-load errors and reproduces20519/fullhash. Other three new runs not claimed.",
+      "evidence": "evidence/independent_shared_replay_review.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "scoped_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Independent new8K scoped run checks native configs, copies all22 hashes, has zero configuration-load errors and reproduces20519/fullhash. Other three new runs not claimed."
+      },
+      "gap_reference": "G-replay"
+    },
+    {
+      "check_id": "FA-018",
+      "clause_and_requirement": "004.3 / model recover base and patch identity",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-runtime-r2/source/recovery.json",
+          "sha256": "2c73c4f0e4fda1ad55c3a5150766d104155948a424e7f90655b6af3d9361aeec",
+          "locator": "repository_base,patch_sha256,expected_historical_tree",
+          "source_original_sha256": "2c73c4f0e4fda1ad55c3a5150766d104155948a424e7f90655b6af3d9361aeec"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Private Model base dd86f8a20b9161bdb1f836dc234c86d187d561e4 + patch5175abc9... expects tree424a94d7...; source history89b2366e separately named.",
+      "evidence": "asset_materials/fa-runtime-r2/source/recovery.json#repository_base,patch_sha256,expected_historical_tree",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-019",
+      "clause_and_requirement": "004.3 / apply succeeds in plain/enclosing Git contexts",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/model_recovery_checks.json",
+          "sha256": "a113c33eff832aa49bc0ec6bd44726e0b155ca1bddc05120aff35d508c61840c",
+          "locator": "tests[]",
+          "source_original_sha256": "a113c33eff832aa49bc0ec6bd44726e0b155ca1bddc05120aff35d508c61840c"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Both plain and inside_parent_git fixtures patch_returncode0 and7postimages matched; unpatched/corrupted rejected. Scope explicitly7changed-file fixtures only.",
+      "evidence": "evidence/model_recovery_checks.json#tests[]",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-020",
+      "clause_and_requirement": "004.3 / necessary historical untracked/generated closure",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-runtime-r2/source/recovery.json",
+          "sha256": "2c73c4f0e4fda1ad55c3a5150766d104155948a424e7f90655b6af3d9361aeec",
+          "locator": "contains_local_untracked_files",
+          "source_original_sha256": "2c73c4f0e4fda1ad55c3a5150766d104155948a424e7f90655b6af3d9361aeec"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Field false is present but this snapshot did not newly audit all original status/compile/generated dependencies; do not infer full closure from7file fixture.",
+      "evidence": "asset_materials/fa-runtime-r2/source/recovery.json#contains_local_untracked_files",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending; no full-clause acceptance inferred"
+      },
+      "gap_reference": "G-untracked"
+    },
+    {
+      "check_id": "FA-021",
+      "clause_and_requirement": "004.3/010 / fresh complete model build and qualification",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/model_recovery_checks.json",
+          "sha256": "a113c33eff832aa49bc0ec6bd44726e0b155ca1bddc05120aff35d508c61840c",
+          "locator": "scope",
+          "source_original_sha256": "a113c33eff832aa49bc0ec6bd44726e0b155ca1bddc05120aff35d508c61840c"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No full new model build; historical GCC11.4.0/libstdc++ qualification is documented, not newly executed.",
+      "evidence": "evidence/model_recovery_checks.json#scope",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending; no full-clause acceptance inferred"
+      },
+      "gap_reference": "G-modelbuild"
+    },
+    {
+      "check_id": "FA-022",
+      "clause_and_requirement": "004.4 / new asset published identities and permission split",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/download_receipt.json",
+          "sha256": "7ead52584eb945167bab172ffe5b738399d428e429f7da7ab69a4a83cd81c092",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "7ead52584eb945167bab172ffe5b738399d428e429f7da7ab69a4a83cd81c092"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Two new base assets and mandatory small runtime guard overlay published under new immutable names; private Model permission explicit.",
+      "evidence": "evidence/download_receipt.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "scoped_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Two new base assets and mandatory small runtime guard overlay published under new immutable names; private Model permission explicit."
+      },
+      "gap_reference": "G-qualification-guard"
+    },
+    {
+      "check_id": "FA-023",
+      "clause_and_requirement": "004.4/010 / new downloaded bytes and extraction verification",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/downloaded_preflight_review.json",
+          "sha256": "1a0c37dca8b19636e7fca8c4d94b5782d6ed70c8c13bb7b439b45ba9f2935d2c",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "1a0c37dca8b19636e7fca8c4d94b5782d6ed70c8c13bb7b439b45ba9f2935d2c"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "All three actual network downloads match SHA/size; independent sibling rehashed them;1418 extracted files preflight pass with two reviewed license-URL scanner false positives.",
+      "evidence": "evidence/downloaded_preflight_review.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "scoped_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "All three actual network downloads match SHA/size; independent sibling rehashed them;1418 extracted files preflight pass with two reviewed license-URL scanner false positives."
+      },
+      "gap_reference": "G-download"
+    },
+    {
+      "check_id": "FA-024",
+      "clause_and_requirement": "005 / independent numeric inputs/readbacks/golden failure identity",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/numerical_failure/identity.json",
+          "sha256": "c35e760e39907397fcffff8f0e009f5942926b94e76028f5a621a371b9bc0d29",
+          "locator": "whole identity",
+          "source_original_sha256": "c35e760e39907397fcffff8f0e009f5942926b94e76028f5a621a371b9bc0d29"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Packaged historical numerical inputs,readbacks,output and independent reference have identity record; distinct hosted numerical ELF, not four zero-input measured ELFs.",
+      "evidence": "asset_materials/fa-operator-r3/numerical_failure/identity.json#whole identity",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-025",
+      "clause_and_requirement": "005 / host failure recount and negative controls",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/numerical_recheck.json",
+          "sha256": "2e0daebb89670f49df1bfd3b00144da9aef2c133a922a532e85c4073edbea4ab",
+          "locator": "bad,total,negative_zero_bad,negative_nan_bad,historical_input_readbacks_match",
+          "source_original_sha256": "2e0daebb89670f49df1bfd3b00144da9aef2c133a922a532e85c4073edbea4ab"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Recount6756/32768; zero control26641,NaN32768 bad; input readbacks match. Audit succeeds precisely by recovering known failure, no new operator executed.",
+      "evidence": "evidence/numerical_recheck.json#bad,total,negative_zero_bad,negative_nan_bad,historical_input_readbacks_match",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-026",
+      "clause_and_requirement": "005 / numerical correctness accepted",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/numerical_recheck.json",
+          "sha256": "2e0daebb89670f49df1bfd3b00144da9aef2c133a922a532e85c4073edbea4ab",
+          "locator": "numerical_status",
+          "source_original_sha256": "2e0daebb89670f49df1bfd3b00144da9aef2c133a922a532e85c4073edbea4ab"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "fail",
+      "actual_observation_and_exit_code": "numerical_status=fail;6756 mismatches remain. No timing correctness inferred.",
+      "evidence": "evidence/numerical_recheck.json#numerical_status",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": "G-numeric"
+    },
+    {
+      "check_id": "FA-027",
+      "clause_and_requirement": "005 / general boundary correctness coverage",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/algorithm_assumptions.json",
+          "sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f",
+          "locator": "assumptions",
+          "source_original_sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Existing assumptions available but no fresh general boundary/tail/NaN/Inf correctness execution audited.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending; no full-clause acceptance inferred"
+      },
+      "gap_reference": "G-numeric"
+    },
+    {
+      "check_id": "FA-028",
+      "clause_and_requirement": "006 / expected full trace identities per timing case",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/manifest.json",
+          "sha256": "e90f74de16ee204d68adef7b1273bd62af0121be2b40a9553f7f1de8e7e6afaf",
+          "locator": "cases[].full_trace",
+          "source_original_sha256": "e90f74de16ee204d68adef7b1273bd62af0121be2b40a9553f7f1de8e7e6afaf"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Four full hashes/bytes explicitly pinned:110415525,101301625,859090794,1020145527B; these are historical expected traces, not new traces.",
+      "evidence": "asset_materials/fa-operator-r3/manifest.json#cases[].full_trace",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-029",
+      "clause_and_requirement": "006 / new cycle/full/nocounters artifacts per performance run",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/independent_shared_replay_review.json",
+          "sha256": "52c0063ac66e526c45fec760770fb40689d14ef0d2731813e71ede27ff7cb96c",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "0be1879a759f8273aab9e3527b0b9b00894f1ca1fa5a068e72e066c2c4631abe"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "One independent new run20519/rc0 has new log/full/noc gzip and independently decoded full hash. Four previous shared runs remain bound to unchanged ELF/runtime/configs. Two extra64K replays deliberately cancelled and not accepted.",
+      "evidence": "evidence/independent_shared_replay_review.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "scoped_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "One independent new run20519/rc0 has new log/full/noc gzip and independently decoded full hash. Four previous shared runs remain bound to unchanged ELF/runtime/configs. Two extra64K replays deliberately cancelled and not accepted."
+      },
+      "gap_reference": "G-replay"
+    },
+    {
+      "check_id": "FA-030",
+      "clause_and_requirement": "006 / trace annotation scope",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": false,
+      "applicability_reason": "This subtask supplies no semantic labels or annotation claims.",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "not_applicable",
+      "actual_observation_and_exit_code": "This subtask supplies no semantic labels or annotation claims.",
+      "evidence": "No execution evidence available at this snapshot",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending; no full-clause acceptance inferred"
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-031",
+      "clause_and_requirement": "007 / mainline equal-contract and staged causal A/B",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/performance_history.json",
+          "sha256": "14cd8343bc76dd2992ff661872c39cbb32e1710b176e751057a63ad665fe221c",
+          "locator": "historical comparisons",
+          "source_original_sha256": "14cd8343bc76dd2992ff661872c39cbb32e1710b176e751057a63ad665fe221c"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Historical process available; final current-mainline sameELF/config and per-modification causal A/B not freshly established.",
+      "evidence": "previous_archive/performance_history.json#historical comparisons",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending; no full-clause acceptance inferred"
+      },
+      "gap_reference": "G-mainline"
+    },
+    {
+      "check_id": "FA-032",
+      "clause_and_requirement": "008/009 / new revision preserves historical assets",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/manifest.json",
+          "sha256": "e90f74de16ee204d68adef7b1273bd62af0121be2b40a9553f7f1de8e7e6afaf",
+          "locator": "revision,archive_spec_publication",
+          "source_original_sha256": "e90f74de16ee204d68adef7b1273bd62af0121be2b40a9553f7f1de8e7e6afaf"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Operator revisionr3 with local-draft-only spec hash; separate runtime r2. This metadata author modifies only four new metadata files, no old payload/worktree.",
+      "evidence": "asset_materials/fa-operator-r3/manifest.json#revision,archive_spec_publication",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-033",
+      "clause_and_requirement": "011 / ISA contract identity/form legality",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/gaps.json",
+          "sha256": "26d011f332c5a4bfd00ab5e4c9a6a0b3674465492c97b862a46d65201a652fea",
+          "locator": "known gaps",
+          "source_original_sha256": "26d011f332c5a4bfd00ab5e4c9a6a0b3674465492c97b862a46d65201a652fea"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Historical ISA/ASL revision not established; API expressibility,LLVM lowering,functional/timing support remain separate claims.",
+      "evidence": "previous_archive/gaps.json#known gaps",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending; no full-clause acceptance inferred"
+      },
+      "gap_reference": "G-ISA"
+    },
+    {
+      "check_id": "FA-034",
+      "clause_and_requirement": "5 / new payload text/binary path review",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/payload_path_review.json",
+          "sha256": "d02598ea57a3d1906b32402e04910c4499041702542923fa320fdfb1d2bf49e2",
+          "locator": "whole review",
+          "source_original_sha256": "d02598ea57a3d1906b32402e04910c4499041702542923fa320fdfb1d2bf49e2"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Existing scanner reviewed1418files,rc1; exactly2license Unicode HTTP URL findings classified false positives,other_findings0. No new metadata/staged scan performed here.",
+      "evidence": "evidence/payload_path_review.json#whole review",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-035",
+      "clause_and_requirement": "6.1.1 / new metadata independent parent review",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/independent_material_review.json",
+          "sha256": "d51825aa1e358154de11fef41f5da5ea3ae244031e561c5c6b9ad9075073766d",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "d51825aa1e358154de11fef41f5da5ea3ae244031e561c5c6b9ad9075073766d"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Parent read84individual observations, verified all referenced published-file identities, independently rehashed4final build outputs, and records limited sibling material review plus one sibling ELF execution. Unchecked rows stay not_checked.",
+      "evidence": "evidence/independent_material_review.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "scoped_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Parent read84individual observations, verified all referenced published-file identities, independently rehashed4final build outputs, and records limited sibling material review plus one sibling ELF execution. Unchecked rows stay not_checked."
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-036",
+      "clause_and_requirement": "6.1.2 / four operation capabilities separated",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "asset_materials/fa-operator-r3/build.py",
+          "sha256": "d3cdb34023c08c1c230e73c0692487f538f0fda883a9ebf160cb6ac0bec4fe8c",
+          "locator": "result.scope",
+          "source_original_sha256": "d3cdb34023c08c1c230e73c0692487f538f0fda883a9ebf160cb6ac0bec4fe8c"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Build script explicitly says build only and replay qualification needed; metadata capabilities separately records fixed replay/model rebuild/operator rebuild/host recount.",
+      "evidence": "asset_materials/fa-operator-r3/build.py#result.scope",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-037",
+      "clause_and_requirement": "6.2 / actual negative preflight bad_memory",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/negative_checks_raw.json",
+          "sha256": "61cd4bfeaf3eed312ae0004c8bb5bce969c4fe785f841a146d3e9b5fc54a963f",
+          "locator": "test=bad_memory",
+          "source_original_sha256": "5a1d67351a5fa20ed0f5d2278d215d7bf3f5b9d26a1da9a19b0d1614e13d05c1"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Observed negative test rejects before simulation; simulation_executed=false. Check is preflight guard scope, not numerical/performance run acceptance.",
+      "evidence": "evidence/negative_checks_raw.json#test=bad_memory",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-038",
+      "clause_and_requirement": "6.2 / actual negative preflight unknown_case",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/negative_checks_raw.json",
+          "sha256": "61cd4bfeaf3eed312ae0004c8bb5bce969c4fe785f841a146d3e9b5fc54a963f",
+          "locator": "test=unknown_case",
+          "source_original_sha256": "5a1d67351a5fa20ed0f5d2278d215d7bf3f5b9d26a1da9a19b0d1614e13d05c1"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Observed negative test rejects before simulation; simulation_executed=false. Check is preflight guard scope, not numerical/performance run acceptance.",
+      "evidence": "evidence/negative_checks_raw.json#test=unknown_case",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-039",
+      "clause_and_requirement": "6.2 / actual negative preflight unqualified_override",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/negative_checks_raw.json",
+          "sha256": "61cd4bfeaf3eed312ae0004c8bb5bce969c4fe785f841a146d3e9b5fc54a963f",
+          "locator": "test=unqualified_override",
+          "source_original_sha256": "5a1d67351a5fa20ed0f5d2278d215d7bf3f5b9d26a1da9a19b0d1614e13d05c1"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Observed negative test rejects before simulation; simulation_executed=false. Check is preflight guard scope, not numerical/performance run acceptance.",
+      "evidence": "evidence/negative_checks_raw.json#test=unqualified_override",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-040",
+      "clause_and_requirement": "6.2 / actual negative preflight output_inside",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/negative_checks_raw.json",
+          "sha256": "61cd4bfeaf3eed312ae0004c8bb5bce969c4fe785f841a146d3e9b5fc54a963f",
+          "locator": "test=output_inside",
+          "source_original_sha256": "5a1d67351a5fa20ed0f5d2278d215d7bf3f5b9d26a1da9a19b0d1614e13d05c1"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Observed negative test rejects before simulation; simulation_executed=false. Check is preflight guard scope, not numerical/performance run acceptance.",
+      "evidence": "evidence/negative_checks_raw.json#test=output_inside",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-041",
+      "clause_and_requirement": "6.2 / actual negative preflight missing_config",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/negative_checks_raw.json",
+          "sha256": "61cd4bfeaf3eed312ae0004c8bb5bce969c4fe785f841a146d3e9b5fc54a963f",
+          "locator": "test=missing_config",
+          "source_original_sha256": "5a1d67351a5fa20ed0f5d2278d215d7bf3f5b9d26a1da9a19b0d1614e13d05c1"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Observed negative test rejects before simulation; simulation_executed=false. Check is preflight guard scope, not numerical/performance run acceptance.",
+      "evidence": "evidence/negative_checks_raw.json#test=missing_config",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-042",
+      "clause_and_requirement": "6.2 / actual negative preflight bad_elf",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/negative_checks_raw.json",
+          "sha256": "61cd4bfeaf3eed312ae0004c8bb5bce969c4fe785f841a146d3e9b5fc54a963f",
+          "locator": "test=bad_elf",
+          "source_original_sha256": "5a1d67351a5fa20ed0f5d2278d215d7bf3f5b9d26a1da9a19b0d1614e13d05c1"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Observed negative test rejects before simulation; simulation_executed=false. Check is preflight guard scope, not numerical/performance run acceptance.",
+      "evidence": "evidence/negative_checks_raw.json#test=bad_elf",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-043",
+      "clause_and_requirement": "6.2 / actual negative preflight wrong_runtime",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/negative_checks_raw.json",
+          "sha256": "61cd4bfeaf3eed312ae0004c8bb5bce969c4fe785f841a146d3e9b5fc54a963f",
+          "locator": "test=wrong_runtime",
+          "source_original_sha256": "5a1d67351a5fa20ed0f5d2278d215d7bf3f5b9d26a1da9a19b0d1614e13d05c1"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Observed negative test rejects before simulation; simulation_executed=false. Check is preflight guard scope, not numerical/performance run acceptance.",
+      "evidence": "evidence/negative_checks_raw.json#test=wrong_runtime",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-044",
+      "clause_and_requirement": "6.2 / actual negative preflight escaped_dependency",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/negative_checks_raw.json",
+          "sha256": "61cd4bfeaf3eed312ae0004c8bb5bce969c4fe785f841a146d3e9b5fc54a963f",
+          "locator": "test=escaped_dependency",
+          "source_original_sha256": "5a1d67351a5fa20ed0f5d2278d215d7bf3f5b9d26a1da9a19b0d1614e13d05c1"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Observed negative test rejects before simulation; simulation_executed=false. Check is preflight guard scope, not numerical/performance run acceptance.",
+      "evidence": "evidence/negative_checks_raw.json#test=escaped_dependency",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-045",
+      "clause_and_requirement": "6.2 / polluted environment preflight only",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/negative_checks_raw.json",
+          "sha256": "61cd4bfeaf3eed312ae0004c8bb5bce969c4fe785f841a146d3e9b5fc54a963f",
+          "locator": "test=polluted_environment",
+          "source_original_sha256": "5a1d67351a5fa20ed0f5d2278d215d7bf3f5b9d26a1da9a19b0d1614e13d05c1"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "rc0 operator1368/runtime50file integrity plus preflight; simulation_executed=false, therefore not a real replay.",
+      "evidence": "evidence/negative_checks_raw.json#test=polluted_environment",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Read the referenced artifacts/implementation and checked the stated limited observation; raw build/negative/numerical tests were executed by parent. Source provenance reviewed against fixed historical material; no overall-clause or independent numerical acceptance."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-046",
+      "clause_and_requirement": "6.3 / worktree/environment closure",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "This metadata-only subtask creates no worktree/build/run; parent owns publication and final closure evidence.",
+      "evidence": "No execution evidence available at this snapshot",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending; no full-clause acceptance inferred"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-047",
+      "clause_and_requirement": "002 / \u00a73.5 / goal/owner/date/result index completeness",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "README.md",
+          "sha256": "b20e67f129b7f418f797bf833d59ff0f3207a4aec3198850517470b36d3dcec2",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "b20e67f129b7f418f797bf833d59ff0f3207a4aec3198850517470b36d3dcec2"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Current supplement homepage identifies task/date/archive owner, result-case index, incomplete diagnostic scope and unassigned long-term numeric/model ownership.",
+      "evidence": "README.md",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "scoped_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Current supplement homepage identifies task/date/archive owner, result-case index, incomplete diagnostic scope and unassigned long-term numeric/model ownership."
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-048",
+      "clause_and_requirement": "002 / \u00a73.5 / shape/dtype/layout/tiling/PE/workload metadata completeness",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Build flags exist but complete workload/layout/tiling scope per each four case not newly audited.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-049",
+      "clause_and_requirement": "002 / \u00a73.5 / raw original exits/timeouts/truncation per historical run",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "New runs pending; all old original exit/completion/truncation fields not audited per case.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-050",
+      "clause_and_requirement": "002 / \u00a73.5 / retention of important failed attempts and cleanup dependencies",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old process records exist, but all report/script dependency relationships for removed or retained attempts not newly audited.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-051",
+      "clause_and_requirement": "002 / \u00a73.5 / all frozen files/asset bytes and SHA completeness",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/downloaded_preflight_review.json",
+          "sha256": "1a0c37dca8b19636e7fca8c4d94b5782d6ed70c8c13bb7b439b45ba9f2935d2c",
+          "locator": "whole record, limited scope stated",
+          "source_original_sha256": "1a0c37dca8b19636e7fca8c4d94b5782d6ed70c8c13bb7b439b45ba9f2935d2c"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Actual downloaded archive SHA/bytes rechecked and both verifiers check every one of1418regular payload files; final published-file manifest is separate.",
+      "evidence": "evidence/downloaded_preflight_review.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "scoped_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Actual downloaded archive SHA/bytes rechecked and both verifiers check every one of1418regular payload files; final published-file manifest is separate."
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-052",
+      "clause_and_requirement": "002 / \u00a73.5 / PipeView/equivalent event support for dependency claims",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No fresh PipeView/event causal analysis performed; expected full hashes alone cannot support every pipeline/causal claim.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-053",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M01 contract/before-after behavior and required detailed fields",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M01",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old model_changes entry exists but no independent audit of full before/after contract,side effects,validation and per-case binary binding in this metadata task.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M01",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-054",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M01 enable/revert/default/upstream lifecycle",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M01",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old entry states switches/revert/upstream; full detailed correctness and lifecycle sufficiency not independently accepted; frozen old public-access wording is stale.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M01",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-055",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M01 same-contract causal control and omission rationale",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M01",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No independently audited control isolates this modification; absence limits causal attribution rather than implying no effect.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M01",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-056",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M02 contract/before-after behavior and required detailed fields",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M02",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old model_changes entry exists but no independent audit of full before/after contract,side effects,validation and per-case binary binding in this metadata task.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M02",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-057",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M02 enable/revert/default/upstream lifecycle",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M02",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old entry states switches/revert/upstream; full detailed correctness and lifecycle sufficiency not independently accepted; frozen old public-access wording is stale.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M02",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-058",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M02 same-contract causal control and omission rationale",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M02",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No independently audited control isolates this modification; absence limits causal attribution rather than implying no effect.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M02",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-059",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M03 contract/before-after behavior and required detailed fields",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M03",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old model_changes entry exists but no independent audit of full before/after contract,side effects,validation and per-case binary binding in this metadata task.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M03",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-060",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M03 enable/revert/default/upstream lifecycle",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M03",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old entry states switches/revert/upstream; full detailed correctness and lifecycle sufficiency not independently accepted; frozen old public-access wording is stale.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M03",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-061",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M03 same-contract causal control and omission rationale",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M03",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No independently audited control isolates this modification; absence limits causal attribution rather than implying no effect.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M03",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-062",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M04 contract/before-after behavior and required detailed fields",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M04",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old model_changes entry exists but no independent audit of full before/after contract,side effects,validation and per-case binary binding in this metadata task.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M04",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-063",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M04 enable/revert/default/upstream lifecycle",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M04",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old entry states switches/revert/upstream; full detailed correctness and lifecycle sufficiency not independently accepted; frozen old public-access wording is stale.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M04",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-064",
+      "clause_and_requirement": "004.1 / \u00a73.7.1 / FA-M04 same-contract causal control and omission rationale",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "modifications modification_id=FA-M04",
+          "source_original_sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No independently audited control isolates this modification; absence limits causal attribution rather than implying no effect.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M04",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-065",
+      "clause_and_requirement": "004 / homepage/result manifest modification-ID three-level cross-reference",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/composition_and_scope.json",
+          "sha256": "93266cda50f121a01704eafb1b7f93fb06e0f8a60837b50e6cb05b8340f975ce",
+          "locator": "modifications and cases",
+          "source_original_sha256": "93266cda50f121a01704eafb1b7f93fb06e0f8a60837b50e6cb05b8340f975ce"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Homepage, per-case composition index and final archive manifest bind FA-M01..04 to each ELF and fixed runtime; detailed per-mechanism causal/control/side-effect rows remain not_checked.",
+      "evidence": "evidence/composition_and_scope.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-066",
+      "clause_and_requirement": "004 / extra software/packing/preprocessing cost attribution",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/manifest.json",
+          "sha256": "2e9ff495445037a4c9000c10e747ef93023b5f19047e14269a7205cd8ebcaa07",
+          "locator": "existing dependency/config metadata",
+          "source_original_sha256": "2e9ff495445037a4c9000c10e747ef93023b5f19047e14269a7205cd8ebcaa07"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No per-operation boundary audit here proves all extra transformation/packing costs included or explicitly excluded.",
+      "evidence": "previous_archive/manifest.json#existing dependency/config metadata",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-067",
+      "clause_and_requirement": "004 / frequency/peak/capacity/bandwidth denominator scopes",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/manifest.json",
+          "sha256": "2e9ff495445037a4c9000c10e747ef93023b5f19047e14269a7205cd8ebcaa07",
+          "locator": "existing dependency/config metadata",
+          "source_original_sha256": "2e9ff495445037a4c9000c10e747ef93023b5f19047e14269a7205cd8ebcaa07"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Cycles require no frequency conversion, but all stated hardware budgets/peak denominators not independently recomputed.",
+      "evidence": "previous_archive/manifest.json#existing dependency/config metadata",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-068",
+      "clause_and_requirement": "004 / effective configuration export vs reconstructed snapshot provenance",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/manifest.json",
+          "sha256": "2e9ff495445037a4c9000c10e747ef93023b5f19047e14269a7205cd8ebcaa07",
+          "locator": "existing dependency/config metadata",
+          "source_original_sha256": "2e9ff495445037a4c9000c10e747ef93023b5f19047e14269a7205cd8ebcaa07"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "22 native config hashes are preserved; all effective defaults/CLI/env ordering and historical applied-value proof not newly audited.",
+      "evidence": "previous_archive/manifest.json#existing dependency/config metadata",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-069",
+      "clause_and_requirement": "011 / \u00a73.12 / target math/numerical semantics edge cases",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/algorithm_assumptions.json",
+          "sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f",
+          "locator": "assumptions (not individually accepted)",
+          "source_original_sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Existing algorithm/assumption record not audited for rounding,NaN/Inf/zero,accumulation/normalization details.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-070",
+      "clause_and_requirement": "011 / \u00a73.12 / assumption IDs/correctness-premise evidence",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/algorithm_assumptions.json",
+          "sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f",
+          "locator": "assumptions (not individually accepted)",
+          "source_original_sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Per-assumption IDs and support exist in old file but all correctness premises and enforcement not individually accepted.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-071",
+      "clause_and_requirement": "011 / \u00a73.12 / storage/alias/padding/coverage assumptions",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/algorithm_assumptions.json",
+          "sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f",
+          "locator": "assumptions (not individually accepted)",
+          "source_original_sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No new per-case alias/alignment/packing/overwrite or out-of-bounds contract verification.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-072",
+      "clause_and_requirement": "011 / \u00a73.12 / PE mapping/synchronization/producer ordering",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/algorithm_assumptions.json",
+          "sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f",
+          "locator": "assumptions (not individually accepted)",
+          "source_original_sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No new synchronization and cross-core producer-consumer contract validation.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-073",
+      "clause_and_requirement": "011 / \u00a73.12 / reuse/capacity/lifetimes and double-buffer constraints",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/algorithm_assumptions.json",
+          "sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f",
+          "locator": "assumptions (not individually accepted)",
+          "source_original_sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No proof from logical reuse to physical read/capacity behavior supplied by this metadata-only task.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-074",
+      "clause_and_requirement": "011 / \u00a73.12 / optimization conditions vs unverified hypotheses",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/algorithm_assumptions.json",
+          "sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f",
+          "locator": "assumptions (not individually accepted)",
+          "source_original_sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Old assumptions retained but each performance hypothesis and violation behavior not independently traced.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-075",
+      "clause_and_requirement": "011 / \u00a73.12 / violated-premise behavior/support/reject/fallback",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "previous_archive/algorithm_assumptions.json",
+          "sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f",
+          "locator": "assumptions (not individually accepted)",
+          "source_original_sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No new execution demonstrates rejection/fallback/out-of-scope behavior for every assumption.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-076",
+      "clause_and_requirement": "009/6.3 / owner/reviewer and immutable supersedes identity",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "New payload revision IDs exist; final metadata commit/source/archive ownership and cross-repo handoff identity pending parent.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-077",
+      "clause_and_requirement": "009/6.3 / close prerequisites source/staged/untracked protection",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Parent owns active publication state; this author did not inspect all source/staged/untracked protection.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-078",
+      "clause_and_requirement": "009/6.3 / no active processes/config/cwd/replay dependencies before close",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "No environment removed by this subtask; parent must inspect active process/dependency state before closing.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-079",
+      "clause_and_requirement": "009/6.3 / registry actual worktree reconciliation and restore command",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_checked",
+      "actual_observation_and_exit_code": "Parent final lifecycle closure/registry/restore evidence not available at this snapshot.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": "G-review"
+    },
+    {
+      "check_id": "FA-080",
+      "clause_and_requirement": "002 / \u00a73.5 optional / screenshots/slides/recordings",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": false,
+      "applicability_reason": "Optional visual aids not used as sole evidence; omitted to avoid redundant derived materials.",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_applicable",
+      "actual_observation_and_exit_code": "Optional visual aids not used as sole evidence; omitted to avoid redundant derived materials.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-081",
+      "clause_and_requirement": "002 / \u00a73.5 optional / all intermediate ELF/build cache/all attempt traces",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": false,
+      "applicability_reason": "Optional full histories/cache not required; only necessary baseline/adopted/key-control/failed evidence retained by parent.",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_applicable",
+      "actual_observation_and_exit_code": "Optional full histories/cache not required; only necessary baseline/adopted/key-control/failed evidence retained by parent.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-082",
+      "clause_and_requirement": "002 / \u00a73.5 optional / container image",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": false,
+      "applicability_reason": "No container-dependent operation claimed; fixed payload plus explicit host requirements supplied instead.",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_applicable",
+      "actual_observation_and_exit_code": "No container-dependent operation claimed; fixed payload plus explicit host requirements supplied instead.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-083",
+      "clause_and_requirement": "002 / \u00a73.5 optional / frequency conversion/peak MFU",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": false,
+      "applicability_reason": "This metadata offers Total cycles comparison only; no frequency-derived time or MFU/peak claim.",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "not_applicable",
+      "actual_observation_and_exit_code": "This metadata offers Total cycles comparison only; no frequency-derived time or MFU/peak claim.",
+      "evidence": "No actual evidence inspected for this independent requirement",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "not_checked",
+        "reviewer_and_time": null,
+        "observation_and_evidence": "Parent review pending"
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-084",
+      "clause_and_requirement": "6.2 / qualification guard vacuous cases/output isolation",
+      "operation_and_scope": "FA archive supplement; only named narrow evidence reviewed",
+      "applicable": true,
+      "applicability_reason": "Applicable to diagnostic F/P archive; evidence not automatically accepted from presence",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/overlay_guard_tests_raw.json",
+          "sha256": "75e619a315c969ed0a1f5bb366a0ce1e328efe3506ea6a112eda243326e352bc",
+          "locator": "three actual negative tests",
+          "source_original_sha256": "75e619a315c969ed0a1f5bb366a0ce1e328efe3506ea6a112eda243326e352bc"
+        },
+        {
+          "path": "evidence/independent_material_review.json",
+          "sha256": "d51825aa1e358154de11fef41f5da5ea3ae244031e561c5c6b9ad9075073766d",
+          "locator": "findings and followup",
+          "source_original_sha256": "d51825aa1e358154de11fef41f5da5ea3ae244031e561c5c6b9ad9075073766d"
+        }
+      ],
+      "method_and_expected_behavior": "Item-specific requirement identified by manual NDF matrix review. No execution or full audit performed; requires parent follow-up against cited source.",
+      "command_cwd_environment_and_tool_identity": "No new test/build/simulation run by metadata author; intended commands do not count as evidence.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Independent review identified original empty-case/nested-output defects; new immutable guard overlay fixes them. Actual three negative tests exit2 with no created output. New full model build remains not_checked.",
+      "evidence": "asset_materials/fa-runtime-r2/qualify_rebuilt.py#parent audit pending new overlay",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "material_reviewed",
+        "reviewer_and_time": "Independent RMSNorm agent and parent,2026-11-10",
+        "observation_and_evidence": "Independent followup reads patched guards and actual negative receipts; no fresh model build."
+      },
+      "gap_reference": "G-qualification-guard"
+    },
+    {
+      "check_id": "FA-085",
+      "clause_and_requirement": "006/010 / large compressed trace filtering offline",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/large_trace_compression_review.json",
+          "sha256": "5a896e4d24e9637a5741d7846c369065c64bdf21a9a34d5326224a6c1878958b",
+          "locator": "whole actual operation receipt",
+          "source_original_sha256": "5a896e4d24e9637a5741d7846c369065c64bdf21a9a34d5326224a6c1878958b"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Two complete historical64Kfull traces,859090794/1020145527B, processed by new gzip-nocounters helper. Generated nocounters uncompressed SHA/size equal historical artifacts; no new simulator execution.",
+      "evidence": "evidence/large_trace_compression_review.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "parent_actual_execution_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Two complete historical64Kfull traces,859090794/1020145527B, processed by new gzip-nocounters helper. Generated nocounters uncompressed SHA/size equal historical artifacts; no new simulator execution."
+      },
+      "gap_reference": null
+    },
+    {
+      "check_id": "FA-086",
+      "clause_and_requirement": "004.4/010 / actual downloaded host failure audit",
+      "operation_and_scope": "FA archive material supplement",
+      "applicable": true,
+      "applicability_reason": "Applies to executable diagnostic F/P archive",
+      "inventory_reference": "inventory.json",
+      "materials_and_identities": [
+        {
+          "path": "evidence/downloaded_numerical_recheck.json",
+          "sha256": "2e0daebb89670f49df1bfd3b00144da9aef2c133a922a532e85c4073edbea4ab",
+          "locator": "whole actual operation receipt",
+          "source_original_sha256": "2e0daebb89670f49df1bfd3b00144da9aef2c133a922a532e85c4073edbea4ab"
+        }
+      ],
+      "method_and_expected_behavior": "Read exact evidence field/source locator; record its existing observed scope. This metadata serialization is not execution or independent ledger validation.",
+      "command_cwd_environment_and_tool_identity": "No model/compiler invoked by metadata author. Source execution command/cwd/env are retained in referenced build_result or test evidence when applicable; manual inspection has no process exit code.",
+      "status": "pass",
+      "actual_observation_and_exit_code": "Executed checker from actual downloaded operator asset with --out NEW_JSON. It recovers6756/32768 numerical fail and zero/NaN negatives; no fresh model executed.",
+      "evidence": "evidence/downloaded_numerical_recheck.json",
+      "checked_by_and_at": "Codex MXQuant agent assisting FA metadata,2026-11-10",
+      "review": {
+        "status": "parent_actual_execution_reviewed",
+        "reviewer_and_time": "Parent agent,2026-11-10",
+        "observation_and_evidence": "Executed checker from actual downloaded operator asset with --out NEW_JSON. It recovers6756/32768 numerical fail and zero/NaN negatives; no fresh model executed."
+      },
+      "gap_reference": null
+    }
+  ],
+  "counts": {
+    "pass": 42,
+    "fail": 1,
+    "not_checked": 38,
+    "not_applicable": 5
+  }
+}

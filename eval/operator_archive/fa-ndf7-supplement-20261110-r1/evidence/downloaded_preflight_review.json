@@ -1,0 +1,16 @@
+{
+  "cases": 4,
+  "status": "pass",
+  "operator_files": 1368,
+  "model_files": 50,
+  "scope": "actual downloaded/extracted operator, base runtime plus verified guard overlay; file preflight only, no simulation acceptance",
+  "path_scan": "downloaded_path_scan.txt",
+  "path_findings": "Two unmodified Unicode license HTTP URLs falsely match /data/; same reviewed findings as payload_path_review.json",
+  "numeric_recheck_command": [
+    "python3",
+    "OPERATOR/recheck_failure.py",
+    "--out",
+    "FRESH_JSON"
+  ],
+  "readme_erratum": "The frozen operator asset README omits required --out in its checker example. Use this corrected command; the CLI rejects omission with rc2."
+}

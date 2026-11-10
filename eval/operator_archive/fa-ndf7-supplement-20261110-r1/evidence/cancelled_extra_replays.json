@@ -1,0 +1,10 @@
+{
+  "status": "cancelled_extra_validation",
+  "reason": "Existing Linux64K receipt shows5.3GiB RSS and24.5min; the original two-worker estimate from8K RSS was insufficient. No kernel/model/config bytes changed; four historical shared runs remain valid. New runner independent8K passed; changed gzip-nocounters path will be checked offline against historical complete64K traces.",
+  "simulator_pids_interrupted": [
+    1559316,
+    1559318
+  ],
+  "not_operator_failures": true,
+  "acceptance": "No cycles or new64K acceptance inferred; fixed materials and historical identities unchanged"
+}
