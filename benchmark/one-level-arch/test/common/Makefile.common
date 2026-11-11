@@ -76,7 +76,7 @@ CXX_VER ?= -std=c++20
 	ifeq ($(baremetal), on)
 	CC_LINK += -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
 	else
-	CC_LINK += -nostartfiles $(ROOT)/test/common/_start.s
+	CC_LINK += -static -nostartfiles
 	endif
 
     DEFINES += -DENABLE_TENSOR_INSTR
@@ -114,6 +114,25 @@ CHK_DIR ?= $(ROOT)/compare/$(notdir $(basename $(TARGET)))
 DEFINES += -DCHK_DIR=\"$(CHK_DIR)\"
 CC_LINK =
 EXTRA_OBJ_FILES += $(OBJ_ROOT)/$(COMM_SRC_DIR)/group_worker_runtime.o
+endif
+
+# Default hosted Linx entry. Keep CPU and baremetal startup independent.
+ifeq ($(PLAT),linx)
+ifneq ($(baremetal),on)
+SSM_RUNTIME_DIR := $(TEST_ROOT)/common/ssm_runtime
+SSM_OBJ_DIR := $(OBJ_ROOT)/common/ssm_runtime
+CC_LINK := -static -nostartfiles
+EXTRA_OBJ_FILES := $(filter-out $(OBJ_ROOT)/$(COMM_SRC_DIR)/group_worker_runtime.o,$(EXTRA_OBJ_FILES))
+EXTRA_OBJ_FILES += $(SSM_OBJ_DIR)/adapter.o $(SSM_OBJ_DIR)/group_worker.o $(SSM_OBJ_DIR)/main_bridge.o
+
+$(SSM_OBJ_DIR)/%.o: $(SSM_RUNTIME_DIR)/%.c $(SSM_RUNTIME_DIR)/ssm_hosted_startup.h
+	@mkdir -p $(@D)
+	$(CC) -mlxbc -D__linx -O2 -ffreestanding -fno-builtin -c $< -o $@
+
+$(SSM_OBJ_DIR)/main_bridge.o: $(TEST_ROOT)/common/ssm_main_bridge.s
+	@mkdir -p $(@D)
+	$(AS) -mlxbc -c $< -o $@
+endif
 endif
 
 .DEFAULT_GOAL := all
