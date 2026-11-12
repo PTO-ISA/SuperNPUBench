@@ -3,7 +3,9 @@
   "task_id": "hashlk_20261112_lvhao_01",
   "result_id": "r3_operator_adaptive_aos",
   "archive_revision": 1,
-  "profiles": ["F"],
+  "profiles": [
+    "F"
+  ],
   "owner": "lvhao",
   "archiver": "lvhao",
   "created_at": "2026-11-12T16:30:00+08:00",
@@ -18,17 +20,21 @@
   },
   "algorithm": {
     "definition_and_implementation_differences": "hashtable_lookup_tileop_adaptive.hpp",
-    "assumptions": [{
-      "assumption_id": "A-003",
-      "statement": "Capacity-1 后有 7 个可读 16 B guard；count 为 32 的倍数（当前验证范围）",
-      "category": "input",
-      "affects": ["correctness"],
-      "status": "assumed",
-      "guarantee_or_check": "harness 默认 hash_table_guard=112；smoke 表按 HASH_TABLE_GUARD/16 填充",
-      "violation_behavior": "越界读",
-      "evidence": "../../config/random300.json",
-      "modification_ids": []
-    }]
+    "assumptions": [
+      {
+        "assumption_id": "A-003",
+        "statement": "Capacity-1 后有 7 个可读 16 B guard；count 为 32 的倍数（当前验证范围）",
+        "category": "input",
+        "affects": [
+          "correctness"
+        ],
+        "status": "assumed",
+        "guarantee_or_check": "harness 默认 hash_table_guard=112；smoke 表按 HASH_TABLE_GUARD/16 填充",
+        "violation_behavior": "越界读",
+        "evidence": "../../config/random300.json",
+        "modification_ids": []
+      }
+    ]
   },
   "source": {
     "repository": "https://github.com/PTO-ISA/SuperNPUBench",
@@ -45,7 +51,8 @@
   "elf": {
     "path": "/tmp/hash_op26/kernel/hashtable_lookup/elf/kernel_hashtable_lookup_hashtable_lookup_6144_perf_PE4.elf",
     "sha256": "38a5f34af9b0ab65d690d4c2766319aef5bde991f72933a4a5fa31933214476b",
-    "availability": "local-only (GAP-EXT-1)"
+    "availability": "local-only (GAP-EXT-1)",
+    "diss": "perf.diss"
   },
   "runs": [],
   "validation": {
@@ -53,7 +60,13 @@
     "negative_control": "not_run",
     "blocker": "gfsim ASSERTION FAILED: responseReturnBeatId == geo.mrobEntryIdx"
   },
-  "dependencies": ["model pr1177@18b24f6ca", "main linx-toolchain-build clang (build only)"],
+  "dependencies": [
+    "model pr1177@18b24f6ca",
+    "main linx-toolchain-build clang (build only)"
+  ],
   "modification_ids": [],
-  "gaps": ["GAP-R3-1", "GAP-EXT-1"]
+  "gaps": [
+    "GAP-R3-1",
+    "GAP-EXT-1"
+  ]
 }

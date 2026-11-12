@@ -4,7 +4,10 @@
   "result_id": "r1_64l_2p2_135819",
   "archive_revision": 1,
   "supersedes": null,
-  "profiles": ["P", "S"],
+  "profiles": [
+    "P",
+    "S"
+  ],
   "owner": "lvhao",
   "archiver": "lvhao",
   "created_at": "2026-11-12T16:30:00+08:00",
@@ -20,17 +23,22 @@
   },
   "algorithm": {
     "definition_and_implementation_differences": "kernel_adaptive_2_2.hpp / hashtable_lookup_soa_wide.hpp (2+2)",
-    "assumptions": [{
-      "assumption_id": "A-001",
-      "statement": "queries 的 key 均在表中；count 为 Lanes 的整数倍；表尾有可读 guard",
-      "category": "input",
-      "affects": ["correctness", "performance"],
-      "status": "assumed",
-      "guarantee_or_check": "fixture 数据保证；checker 校验 6144 输出",
-      "violation_behavior": "未支持",
-      "evidence": "../../dependencies/dataset/MANIFEST.sha256",
-      "modification_ids": []
-    }]
+    "assumptions": [
+      {
+        "assumption_id": "A-001",
+        "statement": "queries 的 key 均在表中；count 为 Lanes 的整数倍；表尾有可读 guard",
+        "category": "input",
+        "affects": [
+          "correctness",
+          "performance"
+        ],
+        "status": "assumed",
+        "guarantee_or_check": "fixture 数据保证；checker 校验 6144 输出",
+        "violation_behavior": "未支持",
+        "evidence": "../../dependencies/dataset/MANIFEST.sha256",
+        "modification_ids": []
+      }
+    ]
   },
   "source": {
     "repository": "https://github.com/PTO-ISA/SuperNPUBench",
@@ -48,7 +56,7 @@
     "path": "outputs/hash64_batchmap_20261105/slots_sweep/elfs/adaptive_2p2_perf.elf",
     "sha256": "2324ea4c438bb2eb3b6214190611c2c643b06338c348784a59d0301ef2e3b7d6",
     "md5": "f5d5a0cb935efe851504a17559fe1ba1",
-    "diss": "not_archived",
+    "diss": "perf.diss",
     "availability": "local-only (GAP-EXT-1)"
   },
   "inputs": {
@@ -60,23 +68,44 @@
   "config": {
     "entry": "../../config/random300.json",
     "effective_snapshot": "../../config/random300.json",
-    "overrides": ["softcore.multiThreadNum=4", "core.soc_random=true", "core.mean_read_latency=300", "core.mean_write_latency=300", "core.read_bandwidth_limit=128", "core.write_bandwidth_limit=128", "core.sharetreg_size_bytes=262144", "core.sharetreg_ssb_count=64"]
+    "overrides": [
+      "softcore.multiThreadNum=4",
+      "core.soc_random=true",
+      "core.mean_read_latency=300",
+      "core.mean_write_latency=300",
+      "core.read_bandwidth_limit=128",
+      "core.write_bandwidth_limit=128",
+      "core.sharetreg_size_bytes=262144",
+      "core.sharetreg_ssb_count=64"
+    ]
   },
-  "runs": [{
-    "run_id": "r1_rand300_01",
-    "command": "../../build/run_perf.sh (结果见 run.log)",
-    "log": "run.log",
-    "exit_status": 0,
-    "total_cycles": 135819,
-    "metric_scope": "gfsim Total Cycles（整个 fixture，含同步/校验前？perf 构建无 checker）",
-    "trace": "not_collected (GAP-TRACE-1)"
-  }],
+  "runs": [
+    {
+      "run_id": "r1_rand300_01",
+      "command": "../../build/run_perf.sh (结果见 run.log)",
+      "log": "run.log",
+      "exit_status": 0,
+      "total_cycles": 135819,
+      "metric_scope": "gfsim Total Cycles（整个 fixture，含同步/校验前？perf 构建无 checker）",
+      "trace": "not_collected (GAP-TRACE-1)"
+    }
+  ],
   "validation": {
     "numeric_check": "PASS (same-structure check build; errors=0)",
     "negative_control": "not_run",
     "coverage": "6144/6144 queries"
   },
-  "dependencies": ["model pr1177@18b24f6ca", "compiler llvm@a75987bcc+patch", "API pr303 snapshot"],
-  "modification_ids": ["M-COMPILER-01"],
-  "gaps": ["GAP-EXT-1 (ELF/trace not published)", "GAP-TRACE-1 (no full swimlane)", "GAP-COV-1"]
+  "dependencies": [
+    "model pr1177@18b24f6ca",
+    "compiler llvm@a75987bcc+patch",
+    "API pr303 snapshot"
+  ],
+  "modification_ids": [
+    "M-COMPILER-01"
+  ],
+  "gaps": [
+    "GAP-EXT-1 (ELF/trace not published)",
+    "GAP-TRACE-1 (no full swimlane)",
+    "GAP-COV-1"
+  ]
 }

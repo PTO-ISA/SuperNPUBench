@@ -1,0 +1,1204 @@
+
+/tmp/soa_op/perf.elf:	file format elf64-unknown
+
+Disassembly of section .text:
+
+00000000000100f0 <__cxx_global_var_init>:
+   100f0: 0164                 	C.BSTART.STD	COND, 0x1011c <.LBB6_2>
+   100f2: 03a7df87             	addtpc	14973, 	->t
+   100f6: f9ec4f99             	lbui	[t#1, -98], 	->t
+   100fa: 0636                 	c.setc.ne	t#1, zero
+   100fc: 0800                 	C.BSTART.STD	
+   100fe: 03a7df87             	addtpc	14973, 	->t
+   10102: 0dec1f95             	subi	t#1, 222, 	->t
+   10106: f856                 	c.movi	1, 	->t
+   10108: 45ac7f59             	sdi.u	t#1, [t#3, -222]
+   1010c: 03903059             	sdi	zero, [t#2, 8]
+   10110: 09902059             	swi	zero, [t#2, 16]
+   10114: 03a7df87             	addtpc	14973, 	->t
+   10118: f98c8f59             	sbi	t#2, [t#1, -132]
+
+000000000001011c <.LBB6_2>:
+   1011c: 3800                 	C.BSTART.STD	RET
+   1011e: 029c                 	c.setc.tgt	ra
+   10120: 0800                 	C.BSTART.STD	
+
+0000000000010122 <__cxx_global_var_init.4>:
+   10122: 0164                 	C.BSTART.STD	COND, 0x1014e <.LBB7_2>
+   10124: 03a7df87             	addtpc	14973, 	->t
+   10128: f74c4f99             	lbui	[t#1, -140], 	->t
+   1012c: 0636                 	c.setc.ne	t#1, zero
+   1012e: 0800                 	C.BSTART.STD	
+   10130: 03a7df87             	addtpc	14973, 	->t
+   10134: 0f8c1f95             	subi	t#1, 248, 	->t
+   10138: f856                 	c.movi	1, 	->t
+   1013a: 11ac7f59             	sdi.u	t#1, [t#3, -248]
+   1013e: 03903059             	sdi	zero, [t#2, 8]
+   10142: 09902059             	swi	zero, [t#2, 16]
+   10146: 03a7df87             	addtpc	14973, 	->t
+   1014a: a58c8f59             	sbi	t#2, [t#1, -174]
+
+000000000001014e <.LBB7_2>:
+   1014e: 3800                 	C.BSTART.STD	RET
+   10150: 029c                 	c.setc.tgt	ra
+   10152: 0800                 	C.BSTART.STD	
+
+0000000000010154 <__cxx_global_var_init.5>:
+   10154: 0164                 	C.BSTART.STD	COND, 0x10180 <.LBB8_2>
+   10156: 03a7df87             	addtpc	14973, 	->t
+   1015a: f4ac4f99             	lbui	[t#1, -182], 	->t
+   1015e: 0636                 	c.setc.ne	t#1, zero
+   10160: 0800                 	C.BSTART.STD	
+   10162: 03a7df87             	addtpc	14973, 	->t
+   10166: 112c1f95             	subi	t#1, 274, 	->t
+   1016a: f856                 	c.movi	1, 	->t
+   1016c: ddac7ed9             	sdi.u	t#1, [t#3, -274]
+   10170: 03903059             	sdi	zero, [t#2, 8]
+   10174: 09902059             	swi	zero, [t#2, 16]
+   10178: 03a7df87             	addtpc	14973, 	->t
+   1017c: 518c8f59             	sbi	t#2, [t#1, -216]
+
+0000000000010180 <.LBB8_2>:
+   10180: 3800                 	C.BSTART.STD	RET
+   10182: 029c                 	c.setc.tgt	ra
+   10184: 0800                 	C.BSTART.STD	
+
+0000000000010186 <__cxx_global_var_init.6>:
+   10186: 0164                 	C.BSTART.STD	COND, 0x101b2 <.LBB9_2>
+   10188: 03a7df87             	addtpc	14973, 	->t
+   1018c: f20c4f99             	lbui	[t#1, -224], 	->t
+   10190: 0636                 	c.setc.ne	t#1, zero
+   10192: 0800                 	C.BSTART.STD	
+   10194: 03a7df87             	addtpc	14973, 	->t
+   10198: 12cc1f95             	subi	t#1, 300, 	->t
+   1019c: f856                 	c.movi	1, 	->t
+   1019e: a9ac7ed9             	sdi.u	t#1, [t#3, -300]
+   101a2: 03903059             	sdi	zero, [t#2, 8]
+   101a6: 09902059             	swi	zero, [t#2, 16]
+   101aa: 03a7df87             	addtpc	14973, 	->t
+   101ae: fd8c8ed9             	sbi	t#2, [t#1, -258]
+
+00000000000101b2 <.LBB9_2>:
+   101b2: 3800                 	C.BSTART.STD	RET
+   101b4: 029c                 	c.setc.tgt	ra
+   101b6: 0800                 	C.BSTART.STD	
+
+00000000000101b8 <_ZN3pto18layout_type_to_strENS_10LayoutEnumE>:
+   101b8: 00d4                 	C.BSTART.STD	COND, 0x101d2 <.LBB0_2>
+   101ba: 03a75187             	addtpc	14965, 	->a1
+   101be: f896                 	c.movi	2, 	->t
+   101c0: 002c6065             	setc.ltu	t#1, a0
+   101c4: 00a2                 	C.BSTART.STD	DIRECT, 0x101d8 <.LBB0_3>
+   101c6: 03a76f87             	addtpc	14966, 	->t
+   101ca: 1c6c1f95             	subi	t#1, 454, 	->t
+   101ce: 182c3109             	ld	[t#1, a0<<3], 	->a0
+
+00000000000101d2 <.LBB0_2>:
+   101d2: 0800                 	C.BSTART.STD	
+   101d4: 19219115             	subi	a1, 402, 	->a0
+
+00000000000101d8 <.LBB0_3>:
+   101d8: 3800                 	C.BSTART.STD	RET
+   101da: 029c                 	c.setc.tgt	ra
+   101dc: 0800                 	C.BSTART.STD	
+
+00000000000101de <wide_mask_run>:
+   101de: 0172                 	C.BSTART.STD	DIRECT, 0x1020c <_ZN8supernpu11hash_lookup8soa_wide3runILj2550000ELj256ELj4EEEvPKjPKiPKlPiS4_j>
+   101e0: 026ecf87             	addtpc	9964, 	->t
+   101e4: 1e0c1115             	subi	t#1, 480, 	->a0
+   101e8: 030a7f87             	addtpc	12455, 	->t
+   101ec: 1e8c1195             	subi	t#1, 488, 	->a1
+   101f0: 03a63f87             	addtpc	14947, 	->t
+   101f4: 1f0c1215             	subi	t#1, 496, 	->a2
+   101f8: 03a77f87             	addtpc	14967, 	->t
+   101fc: 1f4c1295             	subi	t#1, 500, 	->a3
+   10200: 03a62f87             	addtpc	14946, 	->t
+   10204: 200c1315             	subi	t#1, 512, 	->a4
+   10208: 3996                 	c.movi	6, 	->a5
+   1020a: 0800                 	C.BSTART.STD	
+
+000000000001020c <_ZN8supernpu11hash_lookup8soa_wide3runILj2550000ELj256ELj4EEEvPKjPKiPKlPiS4_j>:
+   1020c: 41158041             	FENTRY	[s0 ~ s6], sp!, 256
+   10210: 0004c421             	BSTART.STD	COND, 0x11520 <.LBB2_268>
+   10214: 802004bb             	ssrget	2050, 	->a7
+   10218: f8d6                 	c.movi	3, 	->t
+   1021a: 029c6fc5             	cmp.ltu	t#1, a7.sw, 	->t
+   1021e: 00038fd5             	cmp.eqi	a5, 0, 	->t
+   10222: 018cb065             	setc.or	t#2, t#1
+   10226: 0800                 	C.BSTART.STD	
+   10228: 4006                 	c.movr	zero, 	->a6
+   1022a: 0074a4c7             	mulw	a7, a5, 	->a7
+   1022e: 81f3a3e7             	bic	a5, 32, 32, 	->a5
+
+0000000000010232 <.LBB2_3>:
+   10232: 0800                 	C.BSTART.STD	
+   10234: 4248                 	c.add	a7, a6, ->t
+   10236: 15836f89             	lwu	[a4, t#1.uw<<2], 	->t
+   1023a: 008c7a15             	slli	t#1, 8, 	->x0
+   1023e: 59820a85             	add	a2, t#1.sw<<11, 	->x1
+   10242: 04000b15             	addi	zero, 64, 	->x2
+   10246: c0011181 01f01aa3    	TLOAD             <Row=32, ValidCol=8, U64, ND2M32, Zero>, [base=x1, stride=x2], ->T<2KB>
+          483c023c 000aee13
+          016a8013
+   1025a: c1b19181 19901023    	TCVT              <Col=1, ValidRow=32, ValidCol=8, U64, U32>, T#1.reuse, ->T<1KB>
+          483c023c 000a5e13
+   1026a: c1b19181 19901023    	TCVT              <Col=1, ValidRow=32, ValidCol=8, U64, U32>, T#2.reuse, ->T<1KB>
+          483c023c 001a5e13
+   1027a: 0800                 	C.BSTART.STD	
+   1027c: 02000a95             	addi	zero, 32, 	->x1
+   10280: c2a19181 19f01ea3    	TSHRS             <Row=32, Col=8, U64, CUBE_M32>, T#3.reuse, x1, ->T<2KB>
+          483c023c de13823c
+          8013002a 000a
+   10296: c1b19181 19901023    	TCVT              <Col=1, ValidRow=32, ValidCol=8, U64, U32>, T#1.reuse, ->T<1KB>
+          483c023c 000a5e13
+   102a6: 0800                 	C.BSTART.STD	
+   102a8: a806                 	c.movr	zero, 	->x1
+   102aa: cbb19181 19f01ea3    	TEXPANDS          <Row=32, Col=8, U32, CUBE_M32>, x1, ->T<1KB>
+          483c023c 6e13823c
+          8013000a 000a
+   102c0: 0800                 	C.BSTART.STD	
+   102c2: cc9e2f97             	lui	-210462, 	->t
+   102c6: d51c0595             	addi	t#1, 3409, 	->s0
+   102ca: ca219181 19f01ea3    	TMULS             <Row=32, Col=8, U32, CUBE_M32>, T#4.reuse, s0, ->T<1KB>
+          483c023c 5e13823c
+          8013003a 0005
+   102e0: 0800                 	C.BSTART.STD	
+   102e2: 63d6                 	c.movi	15, 	->s1
+   102e4: ca919181 19f01ea3    	TSHLS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s1, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 0006
+   102fa: 0800                 	C.BSTART.STD	
+   102fc: 01100695             	addi	zero, 17, 	->s2
+   10300: caa19181 19f01ea3    	TSHRS             <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, s2, ->T<1KB>
+          483c023c 5e13823c
+          8013001a 0006
+   10316: c8719181 19f01ea3    	TOR               <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          001a
+   10328: 0800                 	C.BSTART.STD	
+   1032a: 1b873f97             	lui	112755, 	->t
+   1032e: 593c0715             	addi	t#1, 1427, 	->s3
+   10332: ca219181 19f01ea3    	TMULS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s3, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 0007
+   10348: c8819181 19f01ea3    	TXOR              <Row=32, Col=8, U32, CUBE_M32>, T#6.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          005a
+   1035a: 0800                 	C.BSTART.STD	
+   1035c: b356                 	c.movi	13, 	->x2
+   1035e: ca919181 19f01ea3    	TSHLS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, x2, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 000b
+   10374: 0800                 	C.BSTART.STD	
+   10376: 01300795             	addi	zero, 19, 	->s4
+   1037a: caa19181 19f01ea3    	TSHRS             <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, s4, ->T<1KB>
+          483c023c 5e13823c
+          8013001a 0007
+   10390: c8719181 19f01ea3    	TOR               <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          001a
+   103a2: 0800                 	C.BSTART.STD	
+   103a4: 8156                 	c.movi	5, 	->s5
+   103a6: ca219181 19f01ea3    	TMULS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s5, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 0008
+   103bc: 0800                 	C.BSTART.STD	
+   103be: e6546f97             	lui	-105146, 	->t
+   103c2: b64c0895             	addi	t#1, 2916, 	->s6
+   103c6: ca019181 19f01ea3    	TADDS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s6, ->T<1KB>
+          483c023c 5e13823c
+          8013000a 0008
+   103dc: c8211181             	BSTART.TMOV	U32
+   103e0: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   103e4: 023c                 	C.B.DIMI	8, 	->lb0
+   103e6: 483c                 	C.B.DIMI	32, 	->lb1
+   103e8: 823c                 	C.B.DIMI	8, 	->lb2
+   103ea: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   103ee: ca219181 19f01ea3    	TMULS             <Row=32, Col=8, U32, CUBE_M32>, T#14.reuse, s0, ->T<1KB>
+          483c023c 5e13823c
+          801300da 0005
+   10404: ca919181 19f01ea3    	TSHLS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s1, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 0006
+   1041a: caa19181 19f01ea3    	TSHRS             <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, s2, ->T<1KB>
+          483c023c 5e13823c
+          8013001a 0006
+   10430: c8719181 19f01ea3    	TOR               <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          001a
+   10442: ca219181 19f01ea3    	TMULS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s3, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 0007
+   10458: c8819181 19f01ea3    	TXOR              <Row=32, Col=8, U32, CUBE_M32>, T#7.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          006a
+   1046a: ca919181 19f01ea3    	TSHLS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, x2, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 000b
+   10480: caa19181 19f01ea3    	TSHRS             <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, s4, ->T<1KB>
+          483c023c 5e13823c
+          8013001a 0007
+   10496: c8719181 19f01ea3    	TOR               <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          001a
+   104a8: ca219181 19f01ea3    	TMULS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s5, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 0008
+   104be: ca019181 19f01ea3    	TADDS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s6, ->T<1KB>
+          483c023c 5e13823c
+          8013000a 0008
+   104d4: 0800                 	C.BSTART.STD	
+   104d6: 5a16                 	c.movi	8, 	->s0
+   104d8: cbb19181 19f01ea3    	TEXPANDS          <Row=32, Col=8, U32, CUBE_M32>, s0, ->T<1KB>
+          483c023c 6e13823c
+          8013000a 0005
+   104ee: c8819181 19f01ea3    	TXOR              <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          001a
+   10500: 0800                 	C.BSTART.STD	
+   10502: 01000595             	addi	zero, 16, 	->s0
+   10506: caa19181 19f01ea3    	TSHRS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s0, ->T<1KB>
+          483c023c 5e13823c
+          8013000a 0005
+   1051c: c8819181 19f01ea3    	TXOR              <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          001a
+   1052e: 0800                 	C.BSTART.STD	
+   10530: 85ebcf97             	lui	-500036, 	->t
+   10534: a6bc0615             	addi	t#1, 2667, 	->s1
+   10538: c8211181             	BSTART.TMOV	U32
+   1053c: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10540: 023c                 	C.B.DIMI	8, 	->lb0
+   10542: 483c                 	C.B.DIMI	32, 	->lb1
+   10544: 823c                 	C.B.DIMI	8, 	->lb2
+   10546: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   1054a: ca219181 19f01ea3    	TMULS             <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, s1, ->T<1KB>
+          483c023c 5e13823c
+          0013001a 0006
+   10560: caa19181 19f01ea3    	TSHRS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, x2, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 000b
+   10576: c8819181 19f01ea3    	TXOR              <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          001a
+   10588: 0800                 	C.BSTART.STD	
+   1058a: c2b2af97             	lui	-251094, 	->t
+   1058e: e35c0b15             	addi	t#1, 3637, 	->x2
+   10592: ca219181 19f01ea3    	TMULS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, x2, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 000b
+   105a8: caa19181 19f01ea3    	TSHRS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s0, ->T<1KB>
+          483c023c 5e13823c
+          8013000a 0005
+   105be: c8819181 19f01ea3    	TXOR              <Row=32, Col=8, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          001a
+   105d0: 0800                 	C.BSTART.STD	
+   105d2: 5856                 	c.movi	1, 	->s0
+   105d4: caa19181 19f01ea3    	TSHRS             <Row=32, Col=8, U32, CUBE_M32>, T#1.reuse, s0, ->T<1KB>
+          483c023c 5e13823c
+          8013000a 0005
+   105ea: cbb19181 19f01ea3    	TEXPANDS          <Row=32, Col=8, U32, CUBE_M32>, s0, ->T<1KB>
+          483c023c 6e13823c
+          8013000a 0005
+   10600: c8619181 19f01ea3    	TAND              <Row=32, Col=8, U32, CUBE_M32>, T#3.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          002a
+   10612: c9b19181 19101023    	TCVT              <Col=1, ValidRow=32, ValidCol=8, U32, S32>, T#3.reuse, ->T<1KB>
+          483c023c 002a5e13
+   10622: c9b19181 19101023    	TCVT              <Col=1, ValidRow=32, ValidCol=8, U32, S32>, T#2.reuse, ->T<1KB>
+          483c023c 001a5e13
+   10632: 0800                 	C.BSTART.STD	
+   10634: 0026ef97             	lui	622, 	->t
+   10638: 8f0c0b15             	addi	t#1, 2288, 	->x2
+   1063c: 6586                 	c.movr	x2, 	->s1
+   1063e: 8bb19181 19f01ea3    	TEXPANDS          <Row=32, Col=8, S32, CUBE_M32>, s1, ->T<1KB>
+          483c023c 6e13823c
+          0013000a 0006
+   10654: 88419181 19f01ea3    	TREM              <Row=32, Col=8, S32, CUBE_M32>, T#3.reuse, T#1.reuse, ->T<1KB>
+          483c023c 4e13823c
+          002a
+   10666: 0800                 	C.BSTART.STD	
+   10668: 6096                 	c.movi	2, 	->s1
+   1066a: 8a219181 19f01ea3    	TMULS             <Row=32, Col=8, S32, CUBE_M32>, T#1.reuse, s1, ->T<1KB>
+          483c023c 5e13823c
+          0013000a 0006
+   10680: 88019181 19f01ea3    	TADD              <Row=32, Col=8, S32, CUBE_M32>, T#1.reuse, T#4.reuse, ->T<1KB>
+          483c023c 4e13823c
+          0c0a
+   10692: 88419181 19f01ea3    	TREM              <Row=32, Col=8, S32, CUBE_M32>, T#1.reuse, T#4.reuse, ->U<1KB>
+          483c023c 4e93823c
+          0c0a
+   106a4: 0800                 	C.BSTART.STD	
+   106a6: 67d6                 	c.movi	-1, 	->s1
+   106a8: 8bb19181 19f01ea3    	TEXPANDS          <Row=32, Col=8, S32, CUBE_M32>, s1, ->N<1KB>
+          483c023c 6f93823c
+          0013000a 0006
+   106be: c8211181             	BSTART.TMOV	U32
+   106c2: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   106c6: 023c                 	C.B.DIMI	8, 	->lb0
+   106c8: 483c                 	C.B.DIMI	32, 	->lb1
+   106ca: 823c                 	C.B.DIMI	8, 	->lb2
+   106cc: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   106d0: 8bb19181 19f01ea3    	TEXPANDS          <Row=32, Col=8, S32, CUBE_M32>, s1, ->T<1KB>
+          483c023c 6e13823c
+          0013000a 0006
+   106e6: cbb19181 19f01ea3    	TEXPANDS          <Row=32, Col=8, U32, CUBE_M32>, s0, ->U<1KB>
+          483c023c 6e93823c
+          8013000a 0005
+   106fc: 0800                 	C.BSTART.STD	
+   106fe: 5806                 	c.movr	zero, 	->s0
+
+0000000000010700 <.LBB2_92>:
+   10700: cc119181 19f01ea3    	TROWMAX           <Row=32, Col=8, U32, CUBE_M32>, U#1.reuse, ->T<1KB>
+          483c023c 5e13823c
+          010a
+   10712: cad19181 21f01023    	TCMPS             <Row=32, Col=8, ValidCol=1, U32, NE, Zero>, T#1.reuse, x1, ->s1
+          483c007c 5e13823c
+          86130008 000a
+   10728: 63b4                 	C.BSTART.STD	COND, 0x1139e <.LBB2_249>
+   1072a: 00061fd5             	cmp.nei	s1, 0, 	->t
+   1072e: 52dc                 	c.sext.w	s0, ->t
+   10730: 016c6fc5             	cmp.ltu	t#1, x2, 	->t
+   10734: c6a8                 	c.and	t#3, t#1, ->t
+   10736: 0626                 	c.setc.eq	t#1, zero
+   10738: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->U<1KB>
+          483c023c 0013823c
+          6e930000 000a
+   1074e: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, U#2.reuse, U#1.reuse, ->U<256B>
+          483c023c 4e93823c
+          4119
+   10760: 0800                 	C.BSTART.STD	
+   10762: 6856                 	c.movi	1, 	->s2
+   10764: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->T<1KB>
+          483c023c 8013823c
+          6e130006 000a
+   1077a: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   10790: c8d19181 21f01023    	TCMP              <Row=32, Col=8, U32, NE, Zero>, T#2.reuse, T#1.reuse, ->U<256B>
+          483c023c 4e93823c
+          0019
+   107a2: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#2.reuse, U#1.reuse, ->T<256B>
+          483c023c 41194e13
+   107b2: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->T<1KB>
+          483c023c 8013823c
+          6e130006 000a
+   107c8: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   107de: c8d19181 21f01023    	TCMP              <Row=32, Col=8, U32, NE, Zero>, T#2.reuse, T#1.reuse, ->U<256B>
+          483c023c 4e93823c
+          0019
+   107f0: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, U#1.reuse, ->U<256B>
+          483c023c 40294e93
+   10800: c8019181             	BSTART.TEPL	TADD, U32
+   10804: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10808: 023c                 	C.B.DIMI	8, 	->lb0
+   1080a: 483c                 	C.B.DIMI	32, 	->lb1
+   1080c: 51604e13             	B.IOT	u#7.reuse, u#5.reuse, mask=1111
+   10810: 011a5e13             	B.IOT	u#2.reuse, mask=1111, last, 	->t<1KB>
+   10814: 0800                 	C.BSTART.STD	
+   10816: 02000615             	addi	zero, 32, 	->s1
+   1081a: cae19181 19f01ea3    	TLEA              <U32, CUBE_M32, ValidRow=32, ValidCol=8>, T#1.reuse, s1, ->T<2KB>
+          483c023c 000ade13
+          00060013
+   1082e: c8611181             	BSTART.MGATHER.MASK	U32
+   10832: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10836: 023c                 	C.B.DIMI	8, 	->lb0
+   10838: 483c                 	C.B.DIMI	32, 	->lb1
+   1083a: 400a4e13             	B.IOT	t#1.reuse, u#1.reuse, mask=1111, last, 	->t<1KB>
+   1083e: 00010013             	B.IOR	[a0], []
+   10842: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->T<1KB>
+          483c023c 8013823c
+          6e130006 000a
+   10858: c8019181             	BSTART.TEPL	TADD, U32
+   1085c: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10860: 023c                 	C.B.DIMI	8, 	->lb0
+   10862: 483c                 	C.B.DIMI	32, 	->lb1
+   10864: 01604e13             	B.IOT	u#7.reuse, t#1.reuse, mask=1111
+   10868: 010a5e13             	B.IOT	u#1.reuse, mask=1111, last, 	->t<1KB>
+   1086c: cae19181 19f01ea3    	TLEA              <U32, CUBE_M32, ValidRow=32, ValidCol=8>, T#1.reuse, s1, ->T<2KB>
+          483c023c 000ade13
+          00060013
+   10880: c8611181             	BSTART.MGATHER.MASK	U32
+   10884: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10888: 023c                 	C.B.DIMI	8, 	->lb0
+   1088a: 483c                 	C.B.DIMI	32, 	->lb1
+   1088c: 400a4e13             	B.IOT	t#1.reuse, u#1.reuse, mask=1111, last, 	->t<1KB>
+   10890: 00010013             	B.IOR	[a0], []
+   10894: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, T#5.reuse, T#15.reuse, ->T<256B>
+          483c023c 4e13823c
+          3849
+   108a6: c8211181             	BSTART.TMOV	U32
+   108aa: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   108ae: 023c                 	C.B.DIMI	8, 	->lb0
+   108b0: 483c                 	C.B.DIMI	32, 	->lb1
+   108b2: 823c                 	C.B.DIMI	8, 	->lb2
+   108b4: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   108b8: 88211181             	BSTART.TMOV	S32
+   108bc: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   108c0: 023c                 	C.B.DIMI	8, 	->lb0
+   108c2: 483c                 	C.B.DIMI	32, 	->lb1
+   108c4: 823c                 	C.B.DIMI	8, 	->lb2
+   108c6: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   108ca: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, U#2.reuse, ->T<256B>
+          483c023c 44294e13
+   108da: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#4.reuse, U#3.reuse, ->T<256B>
+          483c023c 48394e13
+   108ea: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, T#6.reuse, T#4.reuse, ->T<256B>
+          483c023c 4e13823c
+          0c59
+   108fc: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, T#1.reuse, ->T<256B>
+          483c023c 00294e13
+   1090c: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, T#1.reuse, ->T<256B>
+          483c023c 00294e13
+   1091c: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, T#1.reuse, U#5.reuse, U#6.reuse, ->T<1KB>
+          4e13823c 5e135000
+          015a
+   1092e: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, U#4.reuse, U#5.reuse, T#1.reuse, ->M<1KB>
+          4e13823c 5f135130
+          000a
+   10940: 0800                 	C.BSTART.STD	
+   10942: 7096                 	c.movi	2, 	->s3
+   10944: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s3, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130007 000a
+   1095a: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#3.reuse, U#2.reuse, ->T<256B>
+          483c023c 45294e13
+   1096a: 88019181             	BSTART.TEPL	TADD, S32
+   1096e: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10972: 023c                 	C.B.DIMI	8, 	->lb0
+   10974: 483c                 	C.B.DIMI	32, 	->lb1
+   10976: 05604e13             	B.IOT	u#7.reuse, t#2.reuse, mask=1111
+   1097a: 000a5f13             	B.IOT	t#1.reuse, mask=1111, last, 	->m<1KB>
+   1097e: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#11.reuse, U#3.reuse, ->T<256B>
+          483c023c 48a94e13
+   1098e: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, U#1.reuse, ->T<256B>
+          483c023c 40094e13
+   1099e: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->T<1KB>
+          483c023c 8013823c
+          6e130006 000a
+   109b4: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   109ca: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, T#3.reuse, T#2.reuse, T#1.reuse, ->T<1KB>
+          4e13823c 5e130420
+          000a
+   109dc: 88019181             	BSTART.TEPL	TADD, S32
+   109e0: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   109e4: 023c                 	C.B.DIMI	8, 	->lb0
+   109e6: 483c                 	C.B.DIMI	32, 	->lb1
+   109e8: 01604e13             	B.IOT	u#7.reuse, t#1.reuse, mask=1111
+   109ec: 010a5e13             	B.IOT	u#1.reuse, mask=1111, last, 	->t<1KB>
+   109f0: c8211181             	BSTART.TMOV	U32
+   109f4: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   109f8: 023c                 	C.B.DIMI	8, 	->lb0
+   109fa: 483c                 	C.B.DIMI	32, 	->lb1
+   109fc: 823c                 	C.B.DIMI	8, 	->lb2
+   109fe: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   10a02: 88211181             	BSTART.TMOV	S32
+   10a06: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10a0a: 023c                 	C.B.DIMI	8, 	->lb0
+   10a0c: 483c                 	C.B.DIMI	32, 	->lb1
+   10a0e: 823c                 	C.B.DIMI	8, 	->lb2
+   10a10: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   10a14: 89a19181 483c023c    	TSEL              <Row=32, Col=8, S32>, T#12.reuse, T#3.reuse, N#1.reuse, ->T<1KB>
+          4e13823c 5e1308b0
+          030a
+   10a26: 89a19181 483c023c    	TSEL              <Row=32, Col=8, S32>, U#4.reuse, N#1.reuse, T#1.reuse, ->M<1KB>
+          4e13823c 5f13c130
+          000a
+   10a38: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->M<1KB>
+          483c023c 0013823c
+          6f130000 000a
+   10a4e: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, M#4.reuse, M#1.reuse, ->M<256B>
+          483c023c 4f13823c
+          8239
+   10a60: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->T<1KB>
+          483c023c 8013823c
+          6e130006 000a
+   10a76: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   10a8c: c8d19181 21f01023    	TCMP              <Row=32, Col=8, U32, NE, Zero>, T#2.reuse, T#1.reuse, ->M<256B>
+          483c023c 4f13823c
+          0019
+   10a9e: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, M#2.reuse, M#1.reuse, ->T<256B>
+          483c023c 82194e13
+   10aae: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->T<1KB>
+          483c023c 8013823c
+          6e130006 000a
+   10ac4: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   10ada: c8d19181 21f01023    	TCMP              <Row=32, Col=8, U32, NE, Zero>, T#2.reuse, T#1.reuse, ->M<256B>
+          483c023c 4f13823c
+          0019
+   10aec: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, M#1.reuse, ->U<256B>
+          483c023c 80294e93
+   10afc: c8019181             	BSTART.TEPL	TADD, U32
+   10b00: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10b04: 023c                 	C.B.DIMI	8, 	->lb0
+   10b06: 483c                 	C.B.DIMI	32, 	->lb1
+   10b08: 8e504e13             	B.IOT	m#6.reuse, m#4.reuse, mask=1111
+   10b0c: 020a5e13             	B.IOT	m#1.reuse, mask=1111, last, 	->t<1KB>
+   10b10: cae19181 19f01ea3    	TLEA              <U32, CUBE_M32, ValidRow=32, ValidCol=8>, T#1.reuse, s1, ->T<2KB>
+          483c023c 000ade13
+          00060013
+   10b24: c8611181             	BSTART.MGATHER.MASK	U32
+   10b28: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10b2c: 023c                 	C.B.DIMI	8, 	->lb0
+   10b2e: 483c                 	C.B.DIMI	32, 	->lb1
+   10b30: 400a4e93             	B.IOT	t#1.reuse, u#1.reuse, mask=1111, last, 	->u<1KB>
+   10b34: 00010013             	B.IOR	[a0], []
+   10b38: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->M<1KB>
+          483c023c 8013823c
+          6f130006 000a
+   10b4e: c8019181             	BSTART.TEPL	TADD, U32
+   10b52: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10b56: 023c                 	C.B.DIMI	8, 	->lb0
+   10b58: 483c                 	C.B.DIMI	32, 	->lb1
+   10b5a: 82604e13             	B.IOT	m#7.reuse, m#1.reuse, mask=1111
+   10b5e: 011a5e13             	B.IOT	u#2.reuse, mask=1111, last, 	->t<1KB>
+   10b62: cae19181 19f01ea3    	TLEA              <U32, CUBE_M32, ValidRow=32, ValidCol=8>, T#1.reuse, s1, ->T<2KB>
+          483c023c 000ade13
+          00060013
+   10b76: c8611181             	BSTART.MGATHER.MASK	U32
+   10b7a: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10b7e: 023c                 	C.B.DIMI	8, 	->lb0
+   10b80: 483c                 	C.B.DIMI	32, 	->lb1
+   10b82: 440a4e93             	B.IOT	t#1.reuse, u#2.reuse, mask=1111, last, 	->u<1KB>
+   10b86: 00010013             	B.IOR	[a0], []
+   10b8a: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s3, zero, ->M<1KB>
+          483c023c 0013823c
+          6f130007 000a
+   10ba0: c8019181             	BSTART.TEPL	TADD, U32
+   10ba4: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10ba8: 023c                 	C.B.DIMI	8, 	->lb0
+   10baa: 483c                 	C.B.DIMI	32, 	->lb1
+   10bac: 82704e13             	B.IOT	m#8.reuse, m#1.reuse, mask=1111
+   10bb0: 012a5e13             	B.IOT	u#3.reuse, mask=1111, last, 	->t<1KB>
+   10bb4: cae19181 19f01ea3    	TLEA              <U32, CUBE_M32, ValidRow=32, ValidCol=8>, T#1.reuse, s1, ->T<2KB>
+          483c023c 000ade13
+          00060013
+   10bc8: c8611181             	BSTART.MGATHER.MASK	U32
+   10bcc: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10bd0: 023c                 	C.B.DIMI	8, 	->lb0
+   10bd2: 483c                 	C.B.DIMI	32, 	->lb1
+   10bd4: 480a4e93             	B.IOT	t#1.reuse, u#3.reuse, mask=1111, last, 	->u<1KB>
+   10bd8: 00010013             	B.IOR	[a0], []
+   10bdc: 0800                 	C.BSTART.STD	
+   10bde: 68d6                 	c.movi	3, 	->s2
+   10be0: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->M<1KB>
+          483c023c 8013823c
+          6f130006 000a
+   10bf6: c8019181             	BSTART.TEPL	TADD, U32
+   10bfa: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10bfe: 023c                 	C.B.DIMI	8, 	->lb0
+   10c00: 483c                 	C.B.DIMI	32, 	->lb1
+   10c02: 82804e13             	B.IOT	m#9.reuse, m#1.reuse, mask=1111
+   10c06: 013a5e13             	B.IOT	u#4.reuse, mask=1111, last, 	->t<1KB>
+   10c0a: cae19181 19f01ea3    	TLEA              <U32, CUBE_M32, ValidRow=32, ValidCol=8>, T#1.reuse, s1, ->T<2KB>
+          483c023c 000ade13
+          00060013
+   10c1e: c8611181             	BSTART.MGATHER.MASK	U32
+   10c22: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10c26: 023c                 	C.B.DIMI	8, 	->lb0
+   10c28: 483c                 	C.B.DIMI	32, 	->lb1
+   10c2a: 4c0a4e93             	B.IOT	t#1.reuse, u#4.reuse, mask=1111, last, 	->u<1KB>
+   10c2e: 00010013             	B.IOR	[a0], []
+   10c32: 0800                 	C.BSTART.STD	
+   10c34: 6916                 	c.movi	4, 	->s2
+   10c36: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->M<1KB>
+          483c023c 8013823c
+          6f130006 000a
+   10c4c: c8211181             	BSTART.TMOV	U32
+   10c50: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10c54: 023c                 	C.B.DIMI	8, 	->lb0
+   10c56: 483c                 	C.B.DIMI	32, 	->lb1
+   10c58: 823c                 	C.B.DIMI	8, 	->lb2
+   10c5a: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   10c5e: 88211181             	BSTART.TMOV	S32
+   10c62: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10c66: 023c                 	C.B.DIMI	8, 	->lb0
+   10c68: 483c                 	C.B.DIMI	32, 	->lb1
+   10c6a: 823c                 	C.B.DIMI	8, 	->lb2
+   10c6c: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   10c70: c8019181             	BSTART.TEPL	TADD, U32
+   10c74: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10c78: 023c                 	C.B.DIMI	8, 	->lb0
+   10c7a: 483c                 	C.B.DIMI	32, 	->lb1
+   10c7c: 82904e13             	B.IOT	m#10.reuse, m#1.reuse, mask=1111
+   10c80: 014a5e13             	B.IOT	u#5.reuse, mask=1111, last, 	->t<1KB>
+   10c84: cae19181 19f01ea3    	TLEA              <U32, CUBE_M32, ValidRow=32, ValidCol=8>, T#1.reuse, s1, ->T<2KB>
+          483c023c 000ade13
+          00060013
+   10c98: c8611181             	BSTART.MGATHER.MASK	U32
+   10c9c: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10ca0: 023c                 	C.B.DIMI	8, 	->lb0
+   10ca2: 483c                 	C.B.DIMI	32, 	->lb1
+   10ca4: 500a4e93             	B.IOT	t#1.reuse, u#5.reuse, mask=1111, last, 	->u<1KB>
+   10ca8: 00010013             	B.IOR	[a0], []
+   10cac: 0800                 	C.BSTART.STD	
+   10cae: 6956                 	c.movi	5, 	->s2
+   10cb0: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s2, zero, ->M<1KB>
+          483c023c 8013823c
+          6f130006 000a
+   10cc6: c8019181             	BSTART.TEPL	TADD, U32
+   10cca: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   10cce: 023c                 	C.B.DIMI	8, 	->lb0
+   10cd0: 483c                 	C.B.DIMI	32, 	->lb1
+   10cd2: 82a04e13             	B.IOT	m#11.reuse, m#1.reuse, mask=1111
+   10cd6: 015a5e13             	B.IOT	u#6.reuse, mask=1111, last, 	->t<1KB>
+   10cda: cae19181 19f01ea3    	TLEA              <U32, CUBE_M32, ValidRow=32, ValidCol=8>, T#1.reuse, s1, ->T<2KB>
+          483c023c 000ade13
+          00060013
+   10cee: c8611181             	BSTART.MGATHER.MASK	U32
+   10cf2: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10cf6: 023c                 	C.B.DIMI	8, 	->lb0
+   10cf8: 483c                 	C.B.DIMI	32, 	->lb1
+   10cfa: 540a4e93             	B.IOT	t#1.reuse, u#6.reuse, mask=1111, last, 	->u<1KB>
+   10cfe: 00010013             	B.IOR	[a0], []
+   10d02: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, M#8.reuse, M#6.reuse, ->U<256B>
+          483c023c 96794e93
+   10d12: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, M#8.reuse, M#7.reuse, ->U<256B>
+          483c023c 9a794e93
+   10d22: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, M#8.reuse, M#9.reuse, U#8.reuse, ->T<1KB>
+          4e13823c 5e13a270
+          017a
+   10d34: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, T#1.reuse, T#7.reuse, ->U<256B>
+          483c023c 4e93823c
+          1809
+   10d46: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#1.reuse, M#6.reuse, ->T<256B>
+          483c023c 95094e13
+   10d56: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#1.reuse, M#7.reuse, ->T<256B>
+          483c023c 99094e13
+   10d66: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, M#8.reuse, M#9.reuse, U#8.reuse, ->T<1KB>
+          4e13823c 5e13a270
+          017a
+   10d78: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, T#1.reuse, T#10.reuse, ->U<256B>
+          483c023c 4e93823c
+          2409
+   10d8a: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, U#1.reuse, ->T<256B>
+          483c023c 40294e13
+   10d9a: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, T#1.reuse, ->T<256B>
+          483c023c 00294e13
+   10daa: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, M#6.reuse, ->T<256B>
+          483c023c 94094e13
+   10dba: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, M#7.reuse, ->T<256B>
+          483c023c 98194e13
+   10dca: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, M#8.reuse, M#9.reuse, U#8.reuse, ->T<1KB>
+          4e13823c 5e13a270
+          017a
+   10ddc: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, T#1.reuse, T#15.reuse, ->U<256B>
+          483c023c 4e93823c
+          3809
+   10dee: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, U#1.reuse, ->T<256B>
+          483c023c 40294e13
+   10dfe: c8211181             	BSTART.TMOV	U32
+   10e02: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10e06: 023c                 	C.B.DIMI	8, 	->lb0
+   10e08: 483c                 	C.B.DIMI	32, 	->lb1
+   10e0a: 823c                 	C.B.DIMI	8, 	->lb2
+   10e0c: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   10e10: 88211181             	BSTART.TMOV	S32
+   10e14: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10e18: 023c                 	C.B.DIMI	8, 	->lb0
+   10e1a: 483c                 	C.B.DIMI	32, 	->lb1
+   10e1c: 823c                 	C.B.DIMI	8, 	->lb2
+   10e1e: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   10e22: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#5.reuse, T#3.reuse, ->T<256B>
+          483c023c 08494e13
+   10e32: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, M#6.reuse, ->T<256B>
+          483c023c 94094e13
+   10e42: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, M#7.reuse, ->T<256B>
+          483c023c 98194e13
+   10e52: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, M#8.reuse, M#9.reuse, U#8.reuse, ->T<1KB>
+          4e13823c 5e13a270
+          017a
+   10e64: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, T#1.reuse, T#6.reuse, ->U<256B>
+          483c023c 4e93823c
+          1409
+   10e76: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, U#1.reuse, ->T<256B>
+          483c023c 40294e13
+   10e86: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#3.reuse, T#1.reuse, ->T<256B>
+          483c023c 00294e13
+   10e96: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, M#7.reuse, ->T<256B>
+          483c023c 98094e13
+   10ea6: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, M#6.reuse, ->T<256B>
+          483c023c 94094e13
+   10eb6: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, M#8.reuse, M#9.reuse, U#8.reuse, ->T<1KB>
+          4e13823c 5e13a270
+          017a
+   10ec8: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, T#1.reuse, T#11.reuse, ->U<256B>
+          483c023c 4e93823c
+          2809
+   10eda: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#1.reuse, M#6.reuse, ->T<256B>
+          483c023c 95094e13
+   10eea: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#1.reuse, M#7.reuse, ->T<256B>
+          483c023c 99094e13
+   10efa: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, M#8.reuse, M#9.reuse, U#8.reuse, ->T<1KB>
+          4e13823c 5e13a270
+          017a
+   10f0c: c8d19181 01f01023    	TCMP              <Row=32, Col=8, U32, Zero>, T#1.reuse, T#14.reuse, ->T<256B>
+          483c023c 4e13823c
+          3409
+   10f1e: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#4.reuse, T#1.reuse, ->T<256B>
+          483c023c 00394e13
+   10f2e: c8211181             	BSTART.TMOV	U32
+   10f32: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10f36: 023c                 	C.B.DIMI	8, 	->lb0
+   10f38: 483c                 	C.B.DIMI	32, 	->lb1
+   10f3a: 823c                 	C.B.DIMI	8, 	->lb2
+   10f3c: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   10f40: 88211181             	BSTART.TMOV	S32
+   10f44: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   10f48: 023c                 	C.B.DIMI	8, 	->lb0
+   10f4a: 483c                 	C.B.DIMI	32, 	->lb1
+   10f4c: 823c                 	C.B.DIMI	8, 	->lb2
+   10f4e: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   10f52: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#6.reuse, T#3.reuse, ->T<256B>
+          483c023c 08594e13
+   10f62: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#11.reuse, T#1.reuse, ->T<256B>
+          483c023c 00a94e13
+   10f72: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#11.reuse, M#7.reuse, ->T<256B>
+          483c023c 98a94e13
+   10f82: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<256B>
+          483c023c 00194e13
+   10f92: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, M#7.reuse, ->T<256B>
+          483c023c 98094e13
+   10fa2: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, M#7.reuse, M#6.reuse, ->U<256B>
+          483c023c 96694e93
+   10fb2: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, U#1.reuse, ->T<256B>
+          483c023c 40094e13
+   10fc2: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#8.reuse, T#1.reuse, ->T<256B>
+          483c023c 01794e13
+   10fd2: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#7.reuse, T#1.reuse, ->U<256B>
+          483c023c 01694e93
+   10fe2: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#1.reuse, M#6.reuse, ->T<256B>
+          483c023c 95094e13
+   10ff2: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#1.reuse, M#7.reuse, ->T<256B>
+          483c023c 99094e13
+   11002: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, U#7.reuse, ->T<256B>
+          483c023c 58194e13
+   11012: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<256B>
+          483c023c 00194e13
+   11022: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, M#7.reuse, ->T<256B>
+          483c023c 98094e13
+   11032: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, M#6.reuse, ->T<256B>
+          483c023c 94094e13
+   11042: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, U#6.reuse, ->T<256B>
+          483c023c 54194e13
+   11052: c8211181             	BSTART.TMOV	U32
+   11056: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   1105a: 023c                 	C.B.DIMI	8, 	->lb0
+   1105c: 483c                 	C.B.DIMI	32, 	->lb1
+   1105e: 823c                 	C.B.DIMI	8, 	->lb2
+   11060: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   11064: 88211181             	BSTART.TMOV	S32
+   11068: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   1106c: 023c                 	C.B.DIMI	8, 	->lb0
+   1106e: 483c                 	C.B.DIMI	32, 	->lb1
+   11070: 823c                 	C.B.DIMI	8, 	->lb2
+   11072: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   11076: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   1108c: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   110a2: c8d19181 21f01023    	TCMP              <Row=32, Col=8, U32, NE, Zero>, T#2.reuse, T#1.reuse, ->T<256B>
+          483c023c 4e13823c
+          0019
+   110b4: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#7.reuse, T#1.reuse, ->T<256B>
+          483c023c 00694e13
+   110c4: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#7.reuse, T#1.reuse, ->U<256B>
+          483c023c 00694e93
+   110d4: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#9.reuse, U#1.reuse, ->T<256B>
+          483c023c 40894e13
+   110e4: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, M#6.reuse, ->T<256B>
+          483c023c 94094e13
+   110f4: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, U#6.reuse, ->T<256B>
+          483c023c 54194e13
+   11104: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, T#5.reuse, ->T<256B>
+          483c023c 10194e13
+   11114: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, T#1.reuse, ->U<256B>
+          483c023c 00194e93
+   11124: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#4.reuse, U#1.reuse, ->T<256B>
+          483c023c 40394e13
+   11134: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#1.reuse, M#6.reuse, ->T<256B>
+          483c023c 94094e13
+   11144: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, U#6.reuse, ->T<256B>
+          483c023c 54194e13
+   11154: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, T#9.reuse, ->T<256B>
+          483c023c 20194e13
+   11164: d8719181 19f01ea3    	TOR               <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#2.reuse, T#1.reuse, ->U<256B>
+          483c023c 00194e93
+   11174: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#4.reuse, U#1.reuse, ->U<256B>
+          483c023c 40394e93
+   11184: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, U#5.reuse, M#12.reuse, M#9.reuse, ->T<1KB>
+          4e13823c 5e13ad40
+          028a
+   11196: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, U#3.reuse, M#9.reuse, T#1.reuse, ->T<1KB>
+          4e13823c 5e13a120
+          000a
+   111a8: c8211181             	BSTART.TMOV	U32
+   111ac: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   111b0: 023c                 	C.B.DIMI	8, 	->lb0
+   111b2: 483c                 	C.B.DIMI	32, 	->lb1
+   111b4: 823c                 	C.B.DIMI	8, 	->lb2
+   111b6: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   111ba: 88211181             	BSTART.TMOV	S32
+   111be: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   111c2: 023c                 	C.B.DIMI	8, 	->lb0
+   111c4: 483c                 	C.B.DIMI	32, 	->lb1
+   111c6: 823c                 	C.B.DIMI	8, 	->lb2
+   111c8: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   111cc: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, U#1.reuse, M#9.reuse, T#3.reuse, ->T<1KB>
+          4e13823c 5e13a100
+          002a
+   111de: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, U#2.reuse, M#9.reuse, T#1.reuse, ->T<1KB>
+          4e13823c 5e13a110
+          000a
+   111f0: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, U#4.reuse, M#9.reuse, T#1.reuse, ->U<1KB>
+          4e13823c 5e93a130
+          000a
+   11202: 0800                 	C.BSTART.STD	
+   11204: 6196                 	c.movi	6, 	->s1
+   11206: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, s1, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130006 000a
+   1121c: 88019181             	BSTART.TEPL	TADD, S32
+   11220: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   11224: 023c                 	C.B.DIMI	8, 	->lb0
+   11226: 483c                 	C.B.DIMI	32, 	->lb1
+   11228: 02a04e13             	B.IOT	m#11.reuse, t#1.reuse, mask=1111
+   1122c: 016a5e93             	B.IOT	u#7.reuse, mask=1111, last, 	->u<1KB>
+   11230: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#6.reuse, M#6.reuse, ->T<256B>
+          483c023c 95594e13
+   11240: 88019181             	BSTART.TEPL	TADD, S32
+   11244: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   11248: 023c                 	C.B.DIMI	8, 	->lb0
+   1124a: 483c                 	C.B.DIMI	32, 	->lb1
+   1124c: 92a04e13             	B.IOT	m#11.reuse, m#5.reuse, mask=1111
+   11250: 000a5e13             	B.IOT	t#1.reuse, mask=1111, last, 	->t<1KB>
+   11254: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#4.reuse, M#6.reuse, ->T<256B>
+          483c023c 95394e13
+   11264: 88019181             	BSTART.TEPL	TADD, S32
+   11268: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   1126c: 023c                 	C.B.DIMI	8, 	->lb0
+   1126e: 483c                 	C.B.DIMI	32, 	->lb1
+   11270: 8aa04e13             	B.IOT	m#11.reuse, m#3.reuse, mask=1111
+   11274: 000a5e13             	B.IOT	t#1.reuse, mask=1111, last, 	->t<1KB>
+   11278: c9a19181 483c023c    	TSEL              <Row=32, Col=8, U32>, U#9.reuse, M#2.reuse, M#1.reuse, ->T<1KB>
+          4e13823c 5e138580
+          020a
+   1128a: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#3.reuse, M#6.reuse, ->T<256B>
+          483c023c 95294e13
+   1129a: 88019181             	BSTART.TEPL	TADD, S32
+   1129e: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   112a2: 023c                 	C.B.DIMI	8, 	->lb0
+   112a4: 483c                 	C.B.DIMI	32, 	->lb1
+   112a6: a8104e13             	B.IOT	t#2.reuse, m#11.reuse, mask=1111
+   112aa: 000a5e13             	B.IOT	t#1.reuse, mask=1111, last, 	->t<1KB>
+   112ae: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, U#5.reuse, M#6.reuse, ->T<256B>
+          483c023c 95494e13
+   112be: 88019181             	BSTART.TEPL	TADD, S32
+   112c2: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   112c6: 023c                 	C.B.DIMI	8, 	->lb0
+   112c8: 483c                 	C.B.DIMI	32, 	->lb1
+   112ca: 8ea04e13             	B.IOT	m#11.reuse, m#4.reuse, mask=1111
+   112ce: 000a5e13             	B.IOT	t#1.reuse, mask=1111, last, 	->t<1KB>
+   112d2: 89a19181 483c023c    	TSEL              <Row=32, Col=8, S32>, U#7.reuse, M#10.reuse, M#11.reuse, ->T<1KB>
+          4e13823c 5e13a560
+          02aa
+   112e4: 89a19181 483c023c    	TSEL              <Row=32, Col=8, S32>, U#5.reuse, T#2.reuse, T#1.reuse, ->T<1KB>
+          4e13823c 5e130540
+          000a
+   112f6: c8211181             	BSTART.TMOV	U32
+   112fa: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   112fe: 023c                 	C.B.DIMI	8, 	->lb0
+   11300: 483c                 	C.B.DIMI	32, 	->lb1
+   11302: 823c                 	C.B.DIMI	8, 	->lb2
+   11304: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   11308: 88211181             	BSTART.TMOV	S32
+   1130c: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   11310: 023c                 	C.B.DIMI	8, 	->lb0
+   11312: 483c                 	C.B.DIMI	32, 	->lb1
+   11314: 823c                 	C.B.DIMI	8, 	->lb2
+   11316: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   1131a: 89a19181 483c023c    	TSEL              <Row=32, Col=8, S32>, U#3.reuse, T#7.reuse, T#3.reuse, ->T<1KB>
+          4e13823c 5e131920
+          002a
+   1132c: 89a19181 483c023c    	TSEL              <Row=32, Col=8, S32>, U#4.reuse, T#11.reuse, T#1.reuse, ->T<1KB>
+          4e13823c 5e132930
+          000a
+   1133e: 89a19181 483c023c    	TSEL              <Row=32, Col=8, S32>, U#6.reuse, T#14.reuse, T#1.reuse, ->N<1KB>
+          4e13823c 5f933550
+          000a
+   11350: c8211181             	BSTART.TMOV	U32
+   11354: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   11358: 023c                 	C.B.DIMI	8, 	->lb0
+   1135a: 483c                 	C.B.DIMI	32, 	->lb1
+   1135c: 823c                 	C.B.DIMI	8, 	->lb2
+   1135e: 003a5e13             	B.IOT	t#4.reuse, mask=1111, last, 	->t<1KB>
+   11362: 88211181             	BSTART.TMOV	S32
+   11366: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   1136a: 023c                 	C.B.DIMI	8, 	->lb0
+   1136c: 483c                 	C.B.DIMI	32, 	->lb1
+   1136e: 823c                 	C.B.DIMI	8, 	->lb2
+   11370: 003a5e13             	B.IOT	t#4.reuse, mask=1111, last, 	->t<1KB>
+   11374: 88211181             	BSTART.TMOV	S32
+   11378: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   1137c: 023c                 	C.B.DIMI	8, 	->lb0
+   1137e: 483c                 	C.B.DIMI	32, 	->lb1
+   11380: 823c                 	C.B.DIMI	8, 	->lb2
+   11382: 010a5e93             	B.IOT	u#1.reuse, mask=1111, last, 	->u<1KB>
+   11386: c8211181             	BSTART.TMOV	U32
+   1138a: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   1138e: 023c                 	C.B.DIMI	8, 	->lb0
+   11390: 483c                 	C.B.DIMI	32, 	->lb1
+   11392: 823c                 	C.B.DIMI	8, 	->lb2
+   11394: 012a5e93             	B.IOT	u#3.reuse, mask=1111, last, 	->u<1KB>
+   11398: 9b42                 	C.BSTART.STD	DIRECT, 0x10700 <.LBB2_92>
+   1139a: 00858595             	addi	s0, 8, 	->s0
+
+000000000001139e <.LBB2_249>:
+   1139e: 0800                 	C.BSTART.STD	
+   113a0: ffd6                 	c.movi	-1, 	->t
+   113a2: 05803a85             	or	zero, t#1.not, 	->x1
+   113a6: 8e619181 01f01ea3    	TCI               <Row=32, Col=8, S32, Zero, CUBE_M32>, x1, zero, ->T<1KB>
+          483c023c 8013823c
+          6e13000a 000a
+   113bc: 88d19181 61f01023    	TCMP              <Row=32, Col=8, S32, GT, Zero>, N#1.reuse, T#1.reuse, ->T<256B>
+          483c023c 4e13823c
+          0309
+   113ce: 0800                 	C.BSTART.STD	
+   113d0: b056                 	c.movi	1, 	->x2
+   113d2: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, x2, zero, ->T<1KB>
+          483c023c 0013823c
+          6e13000b 000a
+   113e8: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   113fe: c8d19181 21f01023    	TCMP              <Row=32, Col=8, U32, NE, Zero>, T#2.reuse, T#1.reuse, ->T<256B>
+          483c023c 4e13823c
+          0019
+   11410: d8619181 19f01ea3    	TAND              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#4.reuse, T#1.reuse, ->T<256B>
+          483c023c 00394e13
+   11420: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   11436: c8019181             	BSTART.TEPL	TADD, U32
+   1143a: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+   1143e: 023c                 	C.B.DIMI	8, 	->lb0
+   11440: 483c                 	C.B.DIMI	32, 	->lb1
+   11442: 03004e13             	B.IOT	n#1.reuse, t#1.reuse, mask=1111
+   11446: 002a5e13             	B.IOT	t#3.reuse, mask=1111, last, 	->t<1KB>
+   1144a: 0800                 	C.BSTART.STD	
+   1144c: 02000a95             	addi	zero, 32, 	->x1
+   11450: cae19181 19f01ea3    	TLEA              <U32, CUBE_M32, ValidRow=32, ValidCol=8>, T#1.reuse, x1, ->T<2KB>
+          483c023c 000ade13
+          000a8013
+   11464: c8611181             	BSTART.MGATHER.MASK	U32
+   11468: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   1146c: 023c                 	C.B.DIMI	8, 	->lb0
+   1146e: 483c                 	C.B.DIMI	32, 	->lb1
+   11470: 0c0a4e13             	B.IOT	t#1.reuse, t#4.reuse, mask=1111, last, 	->t<1KB>
+   11474: 00018013             	B.IOR	[a1], []
+   11478: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, x2, zero, ->T<1KB>
+          483c023c 0013823c
+          6e13000b 000a
+   1148e: ce619181 01f01ea3    	TCI               <Row=32, Col=8, U32, Zero, CUBE_M32>, zero, zero, ->T<1KB>
+          483c023c 0013823c
+          6e130000 000a
+   114a4: c8d19181 21f01023    	TCMP              <Row=32, Col=8, U32, NE, Zero>, T#2.reuse, T#1.reuse, ->T<256B>
+          483c023c 4e13823c
+          0019
+   114b6: d8819181 19f01ea3    	TXOR              <Row=32, Col=1, ValidCol=8, U8, CUBE_M32>, T#12.reuse, T#1.reuse, ->T<256B>
+          483c023c 00b94e13
+   114c6: 88211181             	BSTART.TMOV	S32
+   114ca: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+   114ce: 023c                 	C.B.DIMI	8, 	->lb0
+   114d0: 483c                 	C.B.DIMI	32, 	->lb1
+   114d2: 823c                 	C.B.DIMI	8, 	->lb2
+   114d4: 00fa5e13             	B.IOT	t#16.reuse, mask=1111, last, 	->t<1KB>
+   114d8: 89a19181 483c023c    	TSEL              <Row=32, Col=8, S32>, T#14.reuse, T#6.reuse, T#1.reuse, ->T<1KB>
+          4e13823c 5e1314d0
+          000a
+   114ea: 89a19181 483c023c    	TSEL              <Row=32, Col=8, S32>, T#3.reuse, T#2.reuse, T#1.reuse, ->T<1KB>
+          4e13823c 5e130420
+          000a
+   114fc: 0800                 	C.BSTART.STD	
+   114fe: 11428a05             	add	a3, x0.sw<<2, 	->x0
+   11502: 88111181 19f01c23    	TSTORE            <Row=32, ValidCol=8, S32, M322ND>, T#1.reuse, [base=x0, stride=x1]
+          483c023c 00085e13
+          015a0013
+   11516: fffb4721             	BSTART.STD	COND, 0x10232 <.LBB2_3>
+   1151a: 00140415             	addi	a6, 1, 	->a6
+   1151e: 3a36                 	c.setc.ne	a6, a5
+
+0000000000011520 <.LBB2_268>:
+   11520: 4115a041             	FRET.RA	[s0 ~ s6], sp!, 256
+   11524: 0800                 	C.BSTART.STD	
+
+0000000000011526 <wide_mask_checker_load_begin>:
+   11526: 0800                 	C.BSTART.STD	
+   11528: 1006                 	c.movr	zero, 	->a0
+   1152a: 03a76f87             	addtpc	14966, 	->t
+   1152e: 526c1195             	subi	t#1, 1318, 	->a1
+   11532: 03a6ef87             	addtpc	14958, 	->t
+   11536: 532c1215             	subi	t#1, 1330, 	->a2
+   1153a: 00001f97             	lui	1, 	->t
+   1153e: 800c0295             	addi	t#1, 2048, 	->a3
+
+0000000000011542 <.LBB3_3>:
+   11542: 0004                 	C.BSTART.STD	COND, 0x11542 <.LBB3_3>
+   11544: 0001af89             	lw	[a1, zero], 	->t
+   11548: 00418195             	addi	a1, 4, 	->a1
+   1154c: 00022f89             	lw	[a2, zero], 	->t
+   11550: 018c9fc5             	cmp.ne	t#2, t#1, 	->t
+   11554: 01810125             	addw	a0, t#1.sw, 	->a0
+   11558: 00420215             	addi	a2, 4, 	->a2
+   1155c: 00129295             	subi	a3, 1, 	->a3
+   11560: 0176                 	c.setc.ne	a3, zero
+   11562: 0800                 	C.BSTART.STD	
+   11564: 03a76f87             	addtpc	14966, 	->t
+   11568: 564c1f15             	subi	t#1, 1380, 	->u
+   1156c: a9cc2fa9             	lwi.u	[t#1, -1380], 	->t
+   11570: 12345f97             	lui	74565, 	->t
+   11574: 678c0f15             	addi	t#1, 1656, 	->u
+   11578: 01cccf05             	xor	t#2, u#1.sw, 	->u
+   1157c: 00006f97             	lui	6, 	->t
+   11580: 260c                 	c.addi	t#1, 4, ->t
+   11582: 018f2f89             	lw	[u#3, t#1], 	->t
+   11586: 01dc4f85             	xor	t#1, u#2.sw, 	->t
+   1158a: 018e3fa5             	orw	u#1, t#1.sw, 	->t
+   1158e: 082c                 	c.cmp.nei	t#1, 0, ->t
+   11590: 01810125             	addw	a0, t#1.sw, 	->a0
+
+0000000000011594 <wide_mask_checker_load_end>:
+   11594: 3800                 	C.BSTART.STD	RET
+   11596: 029c                 	c.setc.tgt	ra
+   11598: 0800                 	C.BSTART.STD	
+
+000000000001159a <main>:
+   1159a: 40d50041             	FENTRY	[ra ~ s2], sp!, 256
+   1159e: 01a4                 	C.BSTART.STD	COND, 0x115d2 <.LBB4_7>
+   115a0: 80200fbb             	ssrget	2050, 	->t
+   115a4: 81fc2667             	bic	t#1, 32, 32, 	->s1
+   115a8: 0326                 	c.setc.eq	s1, zero
+   115aa: 000605d5             	cmp.eqi	s1, 0, 	->s0
+
+00000000000115ae <.LBB4_2>:
+   115ae: 0004                 	C.BSTART.STD	COND, 0x115ae <.LBB4_2>
+   115b0: 03a7cf87             	addtpc	14972, 	->t
+   115b4: a58c2fa9             	lwi.u	[t#1, -1448], 	->t
+   115b8: 0626                 	c.setc.eq	t#1, zero
+   115ba: fffb0911             	BSTART.STD	DIRECT, 0x101de <wide_mask_run>
+   115be: 5056                 	c.setret	1, ->ra <.LBB4_2+0x12>
+   115c0: 0382                 	C.BSTART.STD	DIRECT, 0x11630 <.LBB4_16>
+   115c2: 03a7cf87             	addtpc	14972, 	->t
+   115c6: 5bac1f95             	subi	t#1, 1466, 	->t
+   115ca: 10cc0f85             	add	t#1, s1.sw<<2, 	->t
+   115ce: f856                 	c.movi	1, 	->t
+   115d0: 0e6a                 	c.swi	t#1, [t#2, 4]
+
+00000000000115d2 <.LBB4_7>:
+   115d2: 0800                 	C.BSTART.STD	
+   115d4: 03a76f87             	addtpc	14966, 	->t
+   115d8: 5d4c1f15             	subi	t#1, 1492, 	->u
+   115dc: 12345f97             	lui	74565, 	->t
+   115e0: 678c0f95             	addi	t#1, 1656, 	->t
+   115e4: 59ac6a59             	swi.u	t#1, [t#3, -1492]
+   115e8: 00006f97             	lui	6, 	->t
+   115ec: 260c                 	c.addi	t#1, 4, ->t
+   115ee: d18e6049             	sw.u	t#3, [u#1, t#1]
+   115f2: fffafb11             	BSTART.STD	DIRECT, 0x101de <wide_mask_run>
+   115f6: 5216                 	c.setret	8, ->ra <.LBB4_7+0x34>
+   115f8: 03a7cf87             	addtpc	14972, 	->t
+   115fc: 5f0c1615             	subi	t#1, 1520, 	->s1
+   11600: 6856                 	c.movi	1, 	->s2
+   11602: 2186ea59             	swi.u	s2, [t#1, -1520]
+   11606: 0800                 	C.BSTART.STD	
+   11608: 02c6a059             	swi	s2, [s1, 4]
+
+000000000001160c <.LBB4_12>:
+   1160c: 0004                 	C.BSTART.STD	COND, 0x1160c <.LBB4_12>
+   1160e: 03a7cf87             	addtpc	14972, 	->t
+   11612: a02c2fa9             	lwi.u	[t#1, -1534], 	->t
+   11616: 0626                 	c.setc.eq	t#1, zero
+
+0000000000011618 <.LBB4_13>:
+   11618: 0004                 	C.BSTART.STD	COND, 0x11618 <.LBB4_13>
+   1161a: 03a7cf87             	addtpc	14972, 	->t
+   1161e: 9fac2fa9             	lwi.u	[t#1, -1542], 	->t
+   11622: 0626                 	c.setc.eq	t#1, zero
+
+0000000000011624 <.LBB4_14>:
+   11624: 0004                 	C.BSTART.STD	COND, 0x11624 <.LBB4_14>
+   11626: 03a7cf87             	addtpc	14972, 	->t
+   1162a: 9f2c2fa9             	lwi.u	[t#1, -1550], 	->t
+   1162e: 0626                 	c.setc.eq	t#1, zero
+
+0000000000011630 <.LBB4_16>:
+   11630: 0094                 	C.BSTART.STD	COND, 0x11642 <.LBB4_18>
+   11632: 02f6                 	c.setc.ne	s0, zero
+
+0000000000011634 <.LBB4_17>:
+   11634: 0004                 	C.BSTART.STD	COND, 0x11634 <.LBB4_17>
+   11636: 03a7cf87             	addtpc	14972, 	->t
+   1163a: a52c2fa9             	lwi.u	[t#1, -1454], 	->t
+   1163e: 0626                 	c.setc.eq	t#1, zero
+   11640: 00c2                 	C.BSTART.STD	DIRECT, 0x11658 <.LBB4_21>
+
+0000000000011642 <.LBB4_18>:
+   11642: 0800                 	C.BSTART.STD	
+   11644: 03a7cf87             	addtpc	14972, 	->t
+   11648: 79806a59             	swi.u	zero, [t#1, -1476]
+   1164c: 0800                 	C.BSTART.STD	
+   1164e: 03a7cf87             	addtpc	14972, 	->t
+   11652: f856                 	c.movi	1, 	->t
+   11654: 759c6a59             	swi.u	t#1, [t#2, -1478]
+
+0000000000011658 <.LBB4_21>:
+   11658: 0800                 	C.BSTART.STD	
+   1165a: 03a7cf87             	addtpc	14972, 	->t
+   1165e: a26c21a9             	lwi.u	[t#1, -1498], 	->a1
+
+0000000000011662 <wide_mask_finisher_store>:
+   11662: 0800                 	C.BSTART.STD	
+   11664: 1006                 	c.movr	zero, 	->a0
+   11666: 00018f55             	cmp.eqi	a1, 0, 	->u
+   1166a: 00003f97             	lui	3, 	->t
+   1166e: 333c0f95             	addi	t#1, 819, 	->t
+   11672: 803c3f85             	or	t#1, a1.sw<<16, 	->t
+   11676: 00005f97             	lui	5, 	->t
+   1167a: 555c0f95             	addi	t#1, 1365, 	->t
+   1167e: e1ac0ff7             	csel	u#1, t#1, t#3, 	->t
+   11682: 10009f97             	lui	65545, 	->t
+   11686: c80c2049             	sw	t#2, [t#1, zero<<2]
+   1168a: 40d53041             	FRET.STK	[ra ~ s2], sp!, 256
+   1168e: 0800                 	C.BSTART.STD	
+
+0000000000011690 <_start>:
+   11690: 40a50041             	FENTRY	[ra ~ ra], sp!, 256
+   11694: f832                 	C.BSTART.STD	DIRECT, 0x1159a <main>
+   11696: 5056                 	c.setret	1, ->ra <.LBB5_2>
+
+0000000000011698 <.LBB5_2>:
+   11698: 0002                 	C.BSTART.STD	DIRECT, 0x11698 <.LBB5_2>
+   1169a: 0800                 	C.BSTART.STD	
+
+000000000001169c <_ZN3pto12TPARTELEMENTINS_4TileILNS_8LocationE0EiLi32ELi8ELNS_7BLayoutE3ELi32ELi8ELNS_7SLayoutE0ELi512ELNS_8PadValueE3ELNS_11CompactModeE0ELb1EEEEEDcRT_>:
+   1169c: 3800                 	C.BSTART.STD	RET
+   1169e: 02010115             	addi	a0, 32, 	->a0
+   116a2: 029c                 	c.setc.tgt	ra
+   116a4: 0800                 	C.BSTART.STD	
+
+00000000000116a6 <_ZN3pto12TPARTELEMENTINS_4TileILNS_8LocationE0EjLi32ELi8ELNS_7BLayoutE3ELi32ELi8ELNS_7SLayoutE0ELi512ELNS_8PadValueE3ELNS_11CompactModeE0ELb1EEEEEDcRT_>:
+   116a6: 3800                 	C.BSTART.STD	RET
+   116a8: 02010115             	addi	a0, 32, 	->a0
+   116ac: 029c                 	c.setc.tgt	ra
+   116ae: 0800                 	C.BSTART.STD	

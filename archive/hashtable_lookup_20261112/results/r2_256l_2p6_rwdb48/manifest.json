@@ -4,7 +4,9 @@
   "result_id": "r2_256l_2p6_rwdb48",
   "archive_revision": 1,
   "supersedes": null,
-  "profiles": ["P"],
+  "profiles": [
+    "P"
+  ],
   "owner": "lvhao",
   "archiver": "lvhao",
   "created_at": "2026-11-12T16:30:00+08:00",
@@ -19,17 +21,24 @@
   },
   "algorithm": {
     "definition_and_implementation_differences": "hashtable_lookup_soa_wide.hpp (HASH_ADAPTIVE_TAIL 默认 6)",
-    "assumptions": [{
-      "assumption_id": "A-002",
-      "statement": "count 为 Lanes 整数倍；表尾 guard ≥ 7 项（推荐 128）；RWDB=48、TAG_WAY=4（或 7）为固定硬件配置",
-      "category": "memory",
-      "affects": ["performance"],
-      "status": "assumed",
-      "guarantee_or_check": "fixture 提供 512 B guard；配置由 run 脚本显式设置",
-      "violation_behavior": "越界读/性能结论不成立",
-      "evidence": "../../config/random300.json",
-      "modification_ids": ["H-RWDB", "H-WAY"]
-    }]
+    "assumptions": [
+      {
+        "assumption_id": "A-002",
+        "statement": "count 为 Lanes 整数倍；表尾 guard ≥ 7 项（推荐 128）；RWDB=48、TAG_WAY=4（或 7）为固定硬件配置",
+        "category": "memory",
+        "affects": [
+          "performance"
+        ],
+        "status": "assumed",
+        "guarantee_or_check": "fixture 提供 512 B guard；配置由 run 脚本显式设置",
+        "violation_behavior": "越界读/性能结论不成立",
+        "evidence": "../../config/random300.json",
+        "modification_ids": [
+          "H-RWDB",
+          "H-WAY"
+        ]
+      }
+    ]
   },
   "source": {
     "repository": "https://github.com/PTO-ISA/SuperNPUBench",
@@ -41,30 +50,67 @@
     "script_and_flags": "../../build/build_kernel.sh",
     "log": "not_archived (GAP-LOG-1)",
     "environment": "../../README.md",
-    "source_elf_binding_evidence": "not_rebuilt_since_publish (GAP-BIND-1)"
+    "source_elf_binding_evidence": "rebuilt byte-identically via ../../build/build_kernel.sh soa_operator: sha256 35218ed0..."
   },
   "elf": {
     "path": "/tmp/soa_op/perf.elf",
     "sha256": "35218ed00c5f34cd2a30d0c8ef7fea66ecfd5047611575d397246813383f1e2f",
     "md5": "2c399989166e64ffb1f07b51a2f0e939",
-    "diss": "not_archived",
+    "diss": "perf.diss",
     "availability": "local-only (GAP-EXT-1)"
   },
   "inputs": {
-    "keys32": "sha256 cefe0478...", "values": "sha256 511719ca...",
-    "batch_map": "sha256 abea4b6f...", "reference_elf": "sha256 960ba161..."
+    "keys32": "sha256 cefe0478...",
+    "values": "sha256 511719ca...",
+    "batch_map": "sha256 abea4b6f...",
+    "reference_elf": "sha256 960ba161..."
   },
   "config": {
     "entry": "../../config/random300.json",
-    "overrides": ["sl2.RWDB_ENTRY_COUNT=48", "sl2.TAG_WAY_COUNT=7 (way7 run only)"]
+    "overrides": [
+      "sl2.RWDB_ENTRY_COUNT=48",
+      "sl2.TAG_WAY_COUNT=7 (way7 run only)"
+    ]
   },
   "runs": [
-    {"run_id": "r2_rand300_rw8", "log": "run_rw8.log", "total_cycles": 169868, "config": "RWDB=8"},
-    {"run_id": "r2_rand300_rw48", "log": "run_rw48.log", "total_cycles": 82256, "config": "RWDB=48"},
-    {"run_id": "r2_rand300_rw48_way7", "log": "run_rw48_way7.log", "total_cycles": 76959, "config": "RWDB=48, WAY=7"}
+    {
+      "run_id": "r2_rand300_rw8",
+      "log": "run_rw8.log",
+      "total_cycles": 169868,
+      "config": "RWDB=8"
+    },
+    {
+      "run_id": "r2_rand300_rw48",
+      "log": "run_rw48.log",
+      "total_cycles": 82256,
+      "config": "RWDB=48"
+    },
+    {
+      "run_id": "r2_rand300_rw48_way7",
+      "log": "run_rw48_way7.log",
+      "total_cycles": 76959,
+      "config": "RWDB=48, WAY=7"
+    }
   ],
-  "validation": {"numeric_check": "same-structure check PASS; this ELF not checked (GAP-R2-CHECK)", "negative_control": "not_run"},
-  "dependencies": ["model pr1177@18b24f6ca", "compiler llvm@a75987bcc+patch", "API pr303 snapshot", "keys/values/batch_map"],
-  "modification_ids": ["M-COMPILER-01", "H-RWDB", "H-WAY"],
-  "gaps": ["GAP-EXT-1", "GAP-R2-CHECK", "GAP-BIND-1", "GAP-TRACE-1"]
+  "validation": {
+    "numeric_check": "same-structure check PASS; this ELF not checked (GAP-R2-CHECK)",
+    "negative_control": "not_run"
+  },
+  "dependencies": [
+    "model pr1177@18b24f6ca",
+    "compiler llvm@a75987bcc+patch",
+    "API pr303 snapshot",
+    "keys/values/batch_map"
+  ],
+  "modification_ids": [
+    "M-COMPILER-01",
+    "H-RWDB",
+    "H-WAY"
+  ],
+  "gaps": [
+    "GAP-EXT-1",
+    "GAP-R2-CHECK",
+    "GAP-BIND-1",
+    "GAP-TRACE-1"
+  ]
 }

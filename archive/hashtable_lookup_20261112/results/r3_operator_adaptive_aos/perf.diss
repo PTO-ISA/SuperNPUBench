@@ -1,0 +1,670 @@
+
+/tmp/hash_op26/kernel/hashtable_lookup/elf/kernel_hashtable_lookup_hashtable_lookup_6144_perf_PE4.elf:	file format elf64-unknown
+
+Disassembly of section .text:
+
+0000000002707084 <_start>:
+ 2707084: 0082                 	C.BSTART.STD	DIRECT, 0x2707094 <main>
+ 2707086: 5056                 	c.setret	1, ->ra <_end>
+
+0000000002707088 <_end>:
+ 2707088: 0840                 	C.BSTART.AUX	
+ 270708a: 05e00a95             	addi	zero, 94, 	->x1
+ 270708e: 0010302b             	acrc 1
+ 2707092: 0000                 	C.BSTOP
+
+0000000002707094 <main>:
+ 2707094: 40a50041             	FENTRY	[ra ~ ra], sp!, 256
+ 2707098: 0840                 	C.BSTART.AUX	
+ 270709a: 0260013b             	ssrget	38, 	->a0
+ 270709e: 0234                 	C.BSTART.STD	COND, 0x27070e4 <.LBB0_3>
+ 27070a0: ff16                 	c.movi	-4, 	->t
+ 27070a2: 6e1c                 	c.zext.w	t#1, ->t
+ 27070a4: 01812065             	setc.and	a0, t#1
+ 27070a8: 05d2                 	C.BSTART.STD	DIRECT, 0x2707162 <_ZN8supernpu11hash_lookup6lookupILj2550000EEEvPKNS0_10TableEntryEPKlPij>
+ 27070aa: 5756                 	c.setret	29, ->ra <.LBB0_3>
+ 27070ac: 689c                 	c.zext.w	a0, ->t
+ 27070ae: 60000f95             	addi	zero, 1536, 	->t
+ 27070b2: 018c8f47             	mul	t#2, t#1, 	->u
+ 27070b6: 01810fc7             	mul	a0, t#1, 	->t
+ 27070ba: e618                 	c.sub	t#1, u#1, ->t
+ 27070bc: 600c02b5             	addiw	t#1, 1536, 	->a3
+ 27070c0: ffff3f87             	addtpc	-13, 	->t
+ 27070c4: 0c0c1f95             	subi	t#1, 192, 	->t
+ 27070c8: 1fcc0185             	add	t#1, u#1<<3, 	->a1
+ 27070cc: 00003f87             	addtpc	3, 	->t
+ 27070d0: 0ccc1f95             	subi	t#1, 204, 	->t
+ 27070d4: 17cc0f85             	add	t#1, u#1<<2, 	->t
+ 27070d8: 004c0215             	addi	t#1, 4, 	->a2
+ 27070dc: fd90af87             	addtpc	-9974, 	->t
+ 27070e0: 0dcc1115             	subi	t#1, 220, 	->a0
+
+00000000027070e4 <.LBB0_3>:
+ 27070e4: 0800                 	C.BSTART.STD	
+ 27070e6: 1006                 	c.movr	zero, 	->a0
+ 27070e8: 00005f97             	lui	5, 	->t
+ 27070ec: 555c0f95             	addi	t#1, 1365, 	->t
+ 27070f0: 10009f97             	lui	65545, 	->t
+ 27070f4: c80c2049             	sw	t#2, [t#1, zero<<2]
+ 27070f8: 40a53041             	FRET.STK	[ra ~ ra], sp!, 256
+ 27070fc: 0800                 	C.BSTART.STD	
+
+00000000027070fe <__cxx_global_var_init>:
+ 27070fe: 0164                 	C.BSTART.STD	COND, 0x270712a <.LBB1_2>
+ 2707100: 00009f87             	addtpc	9, 	->t
+ 2707104: f38c4f99             	lbui	[t#1, -200], 	->t
+ 2707108: 0636                 	c.setc.ne	t#1, zero
+ 270710a: 0800                 	C.BSTART.STD	
+ 270710c: 00009f87             	addtpc	9, 	->t
+ 2707110: 104c1f95             	subi	t#1, 260, 	->t
+ 2707114: f856                 	c.movi	1, 	->t
+ 2707116: f9ac7ed9             	sdi.u	t#1, [t#3, -260]
+ 270711a: 03903059             	sdi	zero, [t#2, 8]
+ 270711e: 09902059             	swi	zero, [t#2, 16]
+ 2707122: 00009f87             	addtpc	9, 	->t
+ 2707126: 2d8c8f59             	sbi	t#2, [t#1, -234]
+
+000000000270712a <.LBB1_2>:
+ 270712a: 3800                 	C.BSTART.STD	RET
+ 270712c: 029c                 	c.setc.tgt	ra
+ 270712e: 0800                 	C.BSTART.STD	
+
+0000000002707130 <__cxx_global_var_init.1>:
+ 2707130: 0164                 	C.BSTART.STD	COND, 0x270715c <.LBB2_2>
+ 2707132: 00009f87             	addtpc	9, 	->t
+ 2707136: f0ec4f99             	lbui	[t#1, -242], 	->t
+ 270713a: 0636                 	c.setc.ne	t#1, zero
+ 270713c: 0800                 	C.BSTART.STD	
+ 270713e: 00009f87             	addtpc	9, 	->t
+ 2707142: 11ec1f95             	subi	t#1, 286, 	->t
+ 2707146: f856                 	c.movi	1, 	->t
+ 2707148: c5ac7ed9             	sdi.u	t#1, [t#3, -286]
+ 270714c: 03903059             	sdi	zero, [t#2, 8]
+ 2707150: 09902059             	swi	zero, [t#2, 16]
+ 2707154: 00009f87             	addtpc	9, 	->t
+ 2707158: d98c8ed9             	sbi	t#2, [t#1, -276]
+
+000000000270715c <.LBB2_2>:
+ 270715c: 3800                 	C.BSTART.STD	RET
+ 270715e: 029c                 	c.setc.tgt	ra
+ 2707160: 0800                 	C.BSTART.STD	
+
+0000000002707162 <_ZN8supernpu11hash_lookup6lookupILj2550000EEEvPKNS0_10TableEntryEPKlPij>:
+ 2707162: 41358041             	FENTRY	[s0 ~ s8], sp!, 256
+ 2707166: 5344                 	C.BSTART.STD	COND, 0x2707bce <.LBB3_184>
+ 2707168: 0202e075             	setc.ltui	a3, 32
+ 270716c: 2a123059             	sdi	a2, [sp, 168]
+ 2707170: 2811b059             	sdi	a1, [sp, 160]
+ 2707174: 2c12b059             	sdi	a3, [sp, 176]
+ 2707178: 0800                 	C.BSTART.STD	
+ 270717a: 2806                 	c.movr	zero, 	->a3
+ 270717c: 408c                 	c.addi	a0, 8, ->t
+ 270717e: 261c3059             	sdi	t#1, [sp, 152]
+ 2707182: 02000195             	addi	zero, 32, 	->a1
+
+0000000002707186 <.LBB3_3>:
+ 2707186: 0800                 	C.BSTART.STD	
+ 2707188: f946                 	c.movr	a3, 	->t
+ 270718a: 28c6                 	c.movr	a1, 	->a3
+ 270718c: 6e1c                 	c.zext.w	t#1, ->t
+ 270718e: 221c3059             	sdi	t#1, [sp, 136]
+ 2707192: 0140bf99             	ldi	[sp, 160], 	->t
+ 2707196: 1bac0185             	add	t#1, t#3.uw<<3, 	->a1
+ 270719a: a216                 	c.movi	8, 	->x0
+ 270719c: c0011181 01f01aa3    	TLOAD             <Row=32, ValidCol=1, U64, ND2M32, Zero>, [base=a1, stride=x0], ->N<256B>
+          6f93483c 80130009
+          0141
+ 27071ae: c1b19181 19901023    	TCVT              <Col=1, ValidRow=32, U64, U32>, N#1.reuse, ->T<128B>
+          483c007c 0308de13
+ 27071be: 0800                 	C.BSTART.STD	
+ 27071c0: 02000f95             	addi	zero, 32, 	->t
+ 27071c4: 201c3059             	sdi	t#1, [sp, 128]
+ 27071c8: 02000195             	addi	zero, 32, 	->a1
+ 27071cc: c2a19181 19f01ea3    	TSHRS             <Row=32, Col=1, U64, CUBE_M32>, N#1.reuse, a1, ->T<256B>
+          483c007c 03095e13
+          00018013
+ 27071e0: c1b19181 19901023    	TCVT              <Col=1, ValidRow=32, U64, U32>, T#1.reuse, ->T<128B>
+          483c007c 0008de13
+ 27071f0: 0800                 	C.BSTART.STD	
+ 27071f2: b006                 	c.movr	zero, 	->x2
+ 27071f4: cbb19181 19f01ea3    	TEXPANDS          <Row=32, Col=1, U32, CUBE_M32>, x2, ->T<128B>
+          483c007c 0008ee13
+          000b0013
+ 2707208: 0800                 	C.BSTART.STD	
+ 270720a: cc9e2f97             	lui	-210462, 	->t
+ 270720e: d51c0215             	addi	t#1, 3409, 	->a2
+ 2707212: ca219181 19f01ea3    	TMULS             <Row=32, Col=1, U32, CUBE_M32>, T#4.reuse, a2, ->T<128B>
+          483c007c 0038de13
+          00020013
+ 2707226: 0800                 	C.BSTART.STD	
+ 2707228: 33d6                 	c.movi	15, 	->a4
+ 270722a: 0800                 	C.BSTART.STD	
+ 270722c: 2412b059             	sdi	a3, [sp, 144]
+ 2707230: ca919181 19f01ea3    	TSHLS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, a4, ->T<128B>
+          483c007c 0008de13
+          00030013
+ 2707244: 0800                 	C.BSTART.STD	
+ 2707246: 01100415             	addi	zero, 17, 	->a6
+ 270724a: caa19181 19f01ea3    	TSHRS             <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, a6, ->T<128B>
+          483c007c 0018de13
+          00040013
+ 270725e: c8719181 19f01ea3    	TOR               <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<128B>
+          483c007c 0018ce13
+ 270726e: 0800                 	C.BSTART.STD	
+ 2707270: 1b873f97             	lui	112755, 	->t
+ 2707274: 593c0195             	addi	t#1, 1427, 	->a1
+ 2707278: ca219181 19f01ea3    	TMULS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, a1, ->T<128B>
+          483c007c 0008de13
+          00018013
+ 270728c: c8819181 19f01ea3    	TXOR              <Row=32, Col=1, U32, CUBE_M32>, T#6.reuse, T#1.reuse, ->T<128B>
+          483c007c 0058ce13
+ 270729c: 0800                 	C.BSTART.STD	
+ 270729e: ab56                 	c.movi	13, 	->x1
+ 27072a0: ca919181 19f01ea3    	TSHLS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, x1, ->T<128B>
+          483c007c 0008de13
+          000a8013
+ 27072b4: 0800                 	C.BSTART.STD	
+ 27072b6: 01300595             	addi	zero, 19, 	->s0
+ 27072ba: caa19181 19f01ea3    	TSHRS             <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, s0, ->T<128B>
+          483c007c 0018de13
+          00058013
+ 27072ce: c8719181 19f01ea3    	TOR               <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<128B>
+          483c007c 0018ce13
+ 27072de: 0800                 	C.BSTART.STD	
+ 27072e0: 2956                 	c.movi	5, 	->a3
+ 27072e2: ca219181 19f01ea3    	TMULS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, a3, ->T<128B>
+          483c007c 0008de13
+          00028013
+ 27072f6: 0800                 	C.BSTART.STD	
+ 27072f8: e6546f97             	lui	-105146, 	->t
+ 27072fc: b64c0615             	addi	t#1, 2916, 	->s1
+ 2707300: ca019181 19f01ea3    	TADDS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, s1, ->T<128B>
+          483c007c 0008de13
+          00060013
+ 2707314: ca219181 19f01ea3    	TMULS             <Row=32, Col=1, U32, CUBE_M32>, T#13.reuse, a2, ->T<128B>
+          483c007c 00c8de13
+          00020013
+ 2707328: ca919181 19f01ea3    	TSHLS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, a4, ->T<128B>
+          483c007c 0008de13
+          00030013
+ 270733c: caa19181 19f01ea3    	TSHRS             <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, a6, ->T<128B>
+          483c007c 0018de13
+          00040013
+ 2707350: c8719181 19f01ea3    	TOR               <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<128B>
+          483c007c 0018ce13
+ 2707360: ca219181 19f01ea3    	TMULS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, a1, ->T<128B>
+          483c007c 0008de13
+          00018013
+ 2707374: c8819181 19f01ea3    	TXOR              <Row=32, Col=1, U32, CUBE_M32>, T#6.reuse, T#1.reuse, ->T<128B>
+          483c007c 0058ce13
+ 2707384: ca919181 19f01ea3    	TSHLS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, x1, ->T<128B>
+          483c007c 0008de13
+          000a8013
+ 2707398: caa19181 19f01ea3    	TSHRS             <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, s0, ->T<128B>
+          483c007c 0018de13
+          00058013
+ 27073ac: c8719181 19f01ea3    	TOR               <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<128B>
+          483c007c 0018ce13
+ 27073bc: ca219181 19f01ea3    	TMULS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, a3, ->T<128B>
+          483c007c 0008de13
+          00028013
+ 27073d0: ca019181 19f01ea3    	TADDS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, s1, ->T<128B>
+          483c007c 0008de13
+          00060013
+ 27073e4: cbb19181 19f01ea3    	TEXPANDS          <Row=32, Col=1, U32, CUBE_M32>, x0, ->T<128B>
+          483c007c 0008ee13
+          000a0013
+ 27073f8: c8819181 19f01ea3    	TXOR              <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<128B>
+          483c007c 0018ce13
+ 2707408: 0800                 	C.BSTART.STD	
+ 270740a: 01000a15             	addi	zero, 16, 	->x0
+ 270740e: caa19181 19f01ea3    	TSHRS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, x0, ->T<128B>
+          483c007c 0008de13
+          000a0013
+ 2707422: c8819181 19f01ea3    	TXOR              <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<128B>
+          483c007c 0018ce13
+ 2707432: 0800                 	C.BSTART.STD	
+ 2707434: 85ebcf97             	lui	-500036, 	->t
+ 2707438: a6bc0195             	addi	t#1, 2667, 	->a1
+ 270743c: ca219181 19f01ea3    	TMULS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, a1, ->T<128B>
+          483c007c 0008de13
+          00018013
+ 2707450: caa19181 19f01ea3    	TSHRS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, x1, ->T<128B>
+          483c007c 0008de13
+          000a8013
+ 2707464: c8819181 19f01ea3    	TXOR              <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<128B>
+          483c007c 0018ce13
+ 2707474: 0800                 	C.BSTART.STD	
+ 2707476: c2b2af97             	lui	-251094, 	->t
+ 270747a: e35c0195             	addi	t#1, 3637, 	->a1
+ 270747e: ca219181 19f01ea3    	TMULS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, a1, ->T<128B>
+          483c007c 0008de13
+          00018013
+ 2707492: caa19181 19f01ea3    	TSHRS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, x0, ->T<128B>
+          483c007c 0008de13
+          000a0013
+ 27074a6: c8819181 19f01ea3    	TXOR              <Row=32, Col=1, U32, CUBE_M32>, T#2.reuse, T#1.reuse, ->T<128B>
+          483c007c 0018ce13
+ 27074b6: 0800                 	C.BSTART.STD	
+ 27074b8: 1856                 	c.movi	1, 	->a1
+ 27074ba: caa19181 19f01ea3    	TSHRS             <Row=32, Col=1, U32, CUBE_M32>, T#1.reuse, a1, ->T<128B>
+          483c007c 0008de13
+          00018013
+ 27074ce: cbb19181 19f01ea3    	TEXPANDS          <Row=32, Col=1, U32, CUBE_M32>, a1, ->T<128B>
+          483c007c 0008ee13
+          00018013
+ 27074e2: c8619181 19f01ea3    	TAND              <Row=32, Col=1, U32, CUBE_M32>, T#3.reuse, T#1.reuse, ->T<128B>
+          483c007c 0028ce13
+ 27074f2: c9b19181 19101023    	TCVT              <Col=1, ValidRow=32, U32, S32>, T#3.reuse, ->T<128B>
+          483c007c 0028de13
+ 2707502: c9b19181 19101023    	TCVT              <Col=1, ValidRow=32, U32, S32>, T#2.reuse, ->T<128B>
+          483c007c 0018de13
+ 2707512: 0800                 	C.BSTART.STD	
+ 2707514: 0026ef97             	lui	622, 	->t
+ 2707518: 8f0c0195             	addi	t#1, 2288, 	->a1
+ 270751c: 8bb19181 19f01ea3    	TEXPANDS          <Row=32, Col=1, S32, CUBE_M32>, a1, ->T<128B>
+          483c007c 0008ee13
+          00018013
+ 2707530: 88419181 19f01ea3    	TREM              <Row=32, Col=1, S32, CUBE_M32>, T#3.reuse, T#1.reuse, ->T<128B>
+          483c007c 0028ce13
+ 2707540: 0800                 	C.BSTART.STD	
+ 2707542: 1896                 	c.movi	2, 	->a1
+ 2707544: 8a219181 19f01ea3    	TMULS             <Row=32, Col=1, S32, CUBE_M32>, T#1.reuse, a1, ->T<128B>
+          483c007c 0008de13
+          00018013
+ 2707558: 88019181 19f01ea3    	TADD              <Row=32, Col=1, S32, CUBE_M32>, T#1.reuse, T#4.reuse, ->T<128B>
+          483c007c 0c08ce13
+ 2707568: 88419181 19f01ea3    	TREM              <Row=32, Col=1, S32, CUBE_M32>, T#1.reuse, T#4.reuse, ->T<128B>
+          483c007c 0c08ce13
+ 2707578: 8a219181 19f01ea3    	TMULS             <Row=32, Col=1, S32, CUBE_M32>, T#1.reuse, x0, ->U<128B>
+          483c007c 0008de93
+          000a0013
+ 270758c: 8bb19181 19f01ea3    	TEXPANDS          <Row=32, Col=1, S32, CUBE_M32>, x2, ->U<128B>
+          483c007c 0008ee93
+          000b0013
+ 27075a0: 8bb19181 19f01ea3    	TEXPANDS          <Row=32, Col=1, S32, CUBE_M32>, x2, ->T<128B>
+          483c007c 0008ee13
+          000b0013
+ 27075b4: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#2.reuse, x0, ->T<128B>
+          483c007c 0118de13
+          000a0013
+ 27075c8: 0800                 	C.BSTART.STD	
+ 27075ca: 0100b199             	ldi	[sp, 128], 	->a1
+ 27075ce: 0800                 	C.BSTART.STD	
+ 27075d0: 2011b059             	sdi	a1, [sp, 128]
+ 27075d4: 0100b199             	ldi	[sp, 128], 	->a1
+ 27075d8: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#2.reuse, a1, ->N<128B>
+          483c007c 0118df93
+          00018013
+ 27075ec: 0800                 	C.BSTART.STD	
+ 27075ee: 03000b15             	addi	zero, 48, 	->x2
+ 27075f2: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#2.reuse, x2, ->M<128B>
+          483c007c 0118df13
+          000b0013
+ 2707606: 0800                 	C.BSTART.STD	
+ 2707608: 04000595             	addi	zero, 64, 	->s0
+ 270760c: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#2.reuse, s0, ->U<128B>
+          483c007c 0118de93
+          00058013
+ 2707620: 0800                 	C.BSTART.STD	
+ 2707622: 05000615             	addi	zero, 80, 	->s1
+ 2707626: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#3.reuse, s1, ->T<128B>
+          483c007c 0128de13
+          00060013
+ 270763a: 0800                 	C.BSTART.STD	
+ 270763c: 06000695             	addi	zero, 96, 	->s2
+ 2707640: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#3.reuse, s2, ->M<128B>
+          483c007c 0128df13
+          00068013
+ 2707654: 0800                 	C.BSTART.STD	
+ 2707656: 07000715             	addi	zero, 112, 	->s3
+ 270765a: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#3.reuse, s3, ->T<128B>
+          483c007c 0128de13
+          00070013
+ 270766e: 0800                 	C.BSTART.STD	
+ 2707670: 7806                 	c.movr	zero, 	->s4
+ 2707672: 8006                 	c.movr	zero, 	->s5
+ 2707674: ffd6                 	c.movi	-1, 	->t
+ 2707676: 03803405             	or	zero, t#1.uw, 	->a6
+
+000000000270767a <.LBB3_109>:
+ 270767a: c0411181             	BSTART.MGATHER	U64
+ 270767e: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+ 2707682: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707684: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707686: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707688: 01295e13             	B.IOT	u#3.reuse, mask=1111, last, 	->t<256B>
+ 270768c: 04810013             	B.IOR [a0,a6,zero], ExecMaskPresent
+ 2707690: c0411181             	BSTART.MGATHER	U64
+ 2707694: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+ 2707698: 007c                 	C.B.DIMI	1, 	->lb0
+ 270769a: 483c                 	C.B.DIMI	32, 	->lb1
+ 270769c: 807c                 	C.B.DIMI	1, 	->lb2
+ 270769e: 00395e13             	B.IOT	t#4.reuse, mask=1111, last, 	->t<256B>
+ 27076a2: 04810013             	B.IOR [a0,a6,zero], ExecMaskPresent
+ 27076a6: 0800                 	C.BSTART.STD	
+ 27076a8: 97d6                 	c.movi	-1, 	->s7
+ 27076aa: c2d19181 01f01023    	TCMPS             <Row=32, Col=1, U64, Zero>, T#2.reuse, s7, ->a1
+          483c007c 5e13807c
+          01930018 0009
+ 27076c0: c0d19181 01f01023    	TCMP              <Row=32, Col=1, U64, Zero>, T#2.reuse, N#2.reuse, ->a2
+          483c007c 4e13807c
+          0213c418 0000
+ 27076d6: 0800                 	C.BSTART.STD	
+ 27076d8: 04342f85             	and	a6, a1.not, 	->t
+ 27076dc: 064c2885             	and	t#1, a2, 	->s6
+ 27076e0: 89a19181             	BSTART.TEPL	TSEL, S32
+ 27076e4: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 27076e8: 007c                 	C.B.DIMI	1, 	->lb0
+ 27076ea: 483c                 	C.B.DIMI	32, 	->lb1
+ 27076ec: 807c                 	C.B.DIMI	1, 	->lb2
+ 27076ee: 4528ce13             	B.IOT	u#3.reuse, u#2.reuse, mask=1111, last, 	->t<128B>
+ 27076f2: 00088013             	B.IOR	[s6], []
+ 27076f6: 0800                 	C.BSTART.STD	
+ 27076f8: 1938                 	c.or	a2, a1, ->t
+ 27076fa: 05842185             	and	a6, t#1.not, 	->a1
+ 27076fe: c2d19181 01f01023    	TCMPS             <Row=32, Col=1, U64, Zero>, T#2.reuse, s7, ->a2
+          483c007c 5e13807c
+          02130018 0009
+ 2707714: c0d19181 01f01023    	TCMP              <Row=32, Col=1, U64, Zero>, T#2.reuse, N#2.reuse, ->a3
+          483c007c 4e13807c
+          0293c418 0000
+ 270772a: 0800                 	C.BSTART.STD	
+ 270772c: 0441af85             	and	a1, a2.not, 	->t
+ 2707730: 065c2985             	and	t#1, a3, 	->s8
+ 2707734: 89a19181             	BSTART.TEPL	TSEL, S32
+ 2707738: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 270773c: 007c                 	C.B.DIMI	1, 	->lb0
+ 270773e: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707740: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707742: 0058ce13             	B.IOT	t#6.reuse, t#1.reuse, mask=1111, last, 	->t<128B>
+ 2707746: 00098013             	B.IOR	[s8], []
+ 270774a: 0800                 	C.BSTART.STD	
+ 270774c: 2178                 	c.or	a3, a2, ->t
+ 270774e: 0581a185             	and	a1, t#1.not, 	->a1
+ 2707752: c0411181             	BSTART.MGATHER	U64
+ 2707756: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+ 270775a: 007c                 	C.B.DIMI	1, 	->lb0
+ 270775c: 483c                 	C.B.DIMI	32, 	->lb1
+ 270775e: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707760: 03095e13             	B.IOT	n#1.reuse, mask=1111, last, 	->t<256B>
+ 2707764: 04310013             	B.IOR [a0,a1,zero], ExecMaskPresent
+ 2707768: c0411181             	BSTART.MGATHER	U64
+ 270776c: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+ 2707770: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707772: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707774: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707776: 02195e13             	B.IOT	m#2.reuse, mask=1111, last, 	->t<256B>
+ 270777a: 04310013             	B.IOR [a0,a1,zero], ExecMaskPresent
+ 270777e: c0411181             	BSTART.MGATHER	U64
+ 2707782: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+ 2707786: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707788: 483c                 	C.B.DIMI	32, 	->lb1
+ 270778a: 807c                 	C.B.DIMI	1, 	->lb2
+ 270778c: 01095e13             	B.IOT	u#1.reuse, mask=1111, last, 	->t<256B>
+ 2707790: 04310013             	B.IOR [a0,a1,zero], ExecMaskPresent
+ 2707794: c0411181             	BSTART.MGATHER	U64
+ 2707798: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+ 270779c: 007c                 	C.B.DIMI	1, 	->lb0
+ 270779e: 483c                 	C.B.DIMI	32, 	->lb1
+ 27077a0: 807c                 	C.B.DIMI	1, 	->lb2
+ 27077a2: 00895e13             	B.IOT	t#9.reuse, mask=1111, last, 	->t<256B>
+ 27077a6: 04310013             	B.IOR [a0,a1,zero], ExecMaskPresent
+ 27077aa: c0411181             	BSTART.MGATHER	U64
+ 27077ae: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+ 27077b2: 007c                 	C.B.DIMI	1, 	->lb0
+ 27077b4: 483c                 	C.B.DIMI	32, 	->lb1
+ 27077b6: 807c                 	C.B.DIMI	1, 	->lb2
+ 27077b8: 02095e13             	B.IOT	m#1.reuse, mask=1111, last, 	->t<256B>
+ 27077bc: 04310013             	B.IOR [a0,a1,zero], ExecMaskPresent
+ 27077c0: c0411181             	BSTART.MGATHER	U64
+ 27077c4: 01f03ea3             	B.DATR	CUBE_M32, DTYPE_NONE, Zero, byte0, Eq, RNONE, nosat, 0, 1
+ 27077c8: 007c                 	C.B.DIMI	1, 	->lb0
+ 27077ca: 483c                 	C.B.DIMI	32, 	->lb1
+ 27077cc: 807c                 	C.B.DIMI	1, 	->lb2
+ 27077ce: 00995e13             	B.IOT	t#10.reuse, mask=1111, last, 	->t<256B>
+ 27077d2: 04310013             	B.IOR [a0,a1,zero], ExecMaskPresent
+ 27077d6: c2d19181 01f01023    	TCMPS             <Row=32, Col=1, U64, Zero>, T#6.reuse, s7, ->a2
+          483c007c 5e13807c
+          02130058 0009
+ 27077ec: c0d19181 01f01023    	TCMP              <Row=32, Col=1, U64, Zero>, T#6.reuse, N#2.reuse, ->a3
+          483c007c 4e13807c
+          0293c458 0000
+ 2707802: 0800                 	C.BSTART.STD	
+ 2707804: 0441af85             	and	a1, a2.not, 	->t
+ 2707808: 065c2305             	and	t#1, a3, 	->a4
+ 270780c: 89a19181             	BSTART.TEPL	TSEL, S32
+ 2707810: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707814: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707816: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707818: 807c                 	C.B.DIMI	1, 	->lb2
+ 270781a: 1b08ce13             	B.IOT	n#1.reuse, t#7.reuse, mask=1111, last, 	->t<128B>
+ 270781e: 00030013             	B.IOR	[a4], []
+ 2707822: 0800                 	C.BSTART.STD	
+ 2707824: 2178                 	c.or	a3, a2, ->t
+ 2707826: 0581a185             	and	a1, t#1.not, 	->a1
+ 270782a: c2d19181 01f01023    	TCMPS             <Row=32, Col=1, U64, Zero>, T#6.reuse, s7, ->a3
+          483c007c 5e13807c
+          02930058 0009
+ 2707840: c0d19181 01f01023    	TCMP              <Row=32, Col=1, U64, Zero>, T#6.reuse, N#2.reuse, ->a5
+          483c007c 4e13807c
+          0393c458 0000
+ 2707856: 0800                 	C.BSTART.STD	
+ 2707858: 0451af85             	and	a1, a3.not, 	->t
+ 270785c: 067c2205             	and	t#1, a5, 	->a2
+ 2707860: 89a19181             	BSTART.TEPL	TSEL, S32
+ 2707864: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707868: 007c                 	C.B.DIMI	1, 	->lb0
+ 270786a: 483c                 	C.B.DIMI	32, 	->lb1
+ 270786c: 807c                 	C.B.DIMI	1, 	->lb2
+ 270786e: 0218ce13             	B.IOT	m#2.reuse, t#1.reuse, mask=1111, last, 	->t<128B>
+ 2707872: 00020013             	B.IOR	[a2], []
+ 2707876: 0800                 	C.BSTART.STD	
+ 2707878: 29f8                 	c.or	a5, a3, ->t
+ 270787a: 0581a285             	and	a1, t#1.not, 	->a3
+ 270787e: c2d19181 01f01023    	TCMPS             <Row=32, Col=1, U64, Zero>, T#6.reuse, s7, ->a5
+          483c007c 5e13807c
+          03930058 0009
+ 2707894: c0d19181 01f01023    	TCMP              <Row=32, Col=1, U64, Zero>, T#6.reuse, N#2.reuse, ->a6
+          483c007c 4e13807c
+          0413c458 0000
+ 27078aa: 0800                 	C.BSTART.STD	
+ 27078ac: 0472af85             	and	a3, a5.not, 	->t
+ 27078b0: 068c2185             	and	t#1, a6, 	->a1
+ 27078b4: 89a19181             	BSTART.TEPL	TSEL, S32
+ 27078b8: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 27078bc: 007c                 	C.B.DIMI	1, 	->lb0
+ 27078be: 483c                 	C.B.DIMI	32, 	->lb1
+ 27078c0: 807c                 	C.B.DIMI	1, 	->lb2
+ 27078c2: 0108ce13             	B.IOT	u#1.reuse, t#1.reuse, mask=1111, last, 	->t<128B>
+ 27078c6: 00018013             	B.IOR	[a1], []
+ 27078ca: 0800                 	C.BSTART.STD	
+ 27078cc: 3a38                 	c.or	a6, a5, ->t
+ 27078ce: 0582a385             	and	a3, t#1.not, 	->a5
+ 27078d2: c2d19181 01f01023    	TCMPS             <Row=32, Col=1, U64, Zero>, T#6.reuse, s7, ->a6
+          483c007c 5e13807c
+          04130058 0009
+ 27078e8: c0d19181 01f01023    	TCMP              <Row=32, Col=1, U64, Zero>, T#6.reuse, N#2.reuse, ->a7
+          483c007c 4e13807c
+          0493c458 0000
+ 27078fe: 0800                 	C.BSTART.STD	
+ 2707900: 0483af85             	and	a5, a6.not, 	->t
+ 2707904: 069c2285             	and	t#1, a7, 	->a3
+ 2707908: 89a19181             	BSTART.TEPL	TSEL, S32
+ 270790c: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707910: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707912: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707914: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707916: 00e8ce13             	B.IOT	t#15.reuse, t#1.reuse, mask=1111, last, 	->t<128B>
+ 270791a: 00028013             	B.IOR	[a3], []
+ 270791e: 0800                 	C.BSTART.STD	
+ 2707920: 4278                 	c.or	a7, a6, ->t
+ 2707922: 0583a405             	and	a5, t#1.not, 	->a6
+ 2707926: c2d19181 01f01023    	TCMPS             <Row=32, Col=1, U64, Zero>, T#6.reuse, s7, ->a7
+          483c007c 5e13807c
+          04930058 0009
+ 270793c: c0d19181 01f01023    	TCMP              <Row=32, Col=1, U64, Zero>, T#6.reuse, N#2.reuse, ->x1
+          483c007c 4e13807c
+          0a93c458 0000
+ 2707952: 0800                 	C.BSTART.STD	
+ 2707954: 04942f85             	and	a6, a7.not, 	->t
+ 2707958: 075c2385             	and	t#1, x1, 	->a5
+ 270795c: 89a19181             	BSTART.TEPL	TSEL, S32
+ 2707960: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707964: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707966: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707968: 807c                 	C.B.DIMI	1, 	->lb2
+ 270796a: 0208ce13             	B.IOT	m#1.reuse, t#1.reuse, mask=1111, last, 	->t<128B>
+ 270796e: 00038013             	B.IOR	[a5], []
+ 2707972: 0800                 	C.BSTART.STD	
+ 2707974: 4d78                 	c.or	x1, a7, ->t
+ 2707976: 05842405             	and	a6, t#1.not, 	->a6
+ 270797a: c2d19181 01f01023    	TCMPS             <Row=32, Col=1, U64, Zero>, T#6.reuse, s7, ->a7
+          483c007c 5e13807c
+          04930058 0009
+ 2707990: c0d19181 01f01023    	TCMP              <Row=32, Col=1, U64, Zero>, T#6.reuse, N#2.reuse, ->x1
+          483c007c 4e13807c
+          0a93c458 0000
+ 27079a6: 0800                 	C.BSTART.STD	
+ 27079a8: 04942f85             	and	a6, a7.not, 	->t
+ 27079ac: 075c2905             	and	t#1, x1, 	->s7
+ 27079b0: 89a19181             	BSTART.TEPL	TSEL, S32
+ 27079b4: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 27079b8: 007c                 	C.B.DIMI	1, 	->lb0
+ 27079ba: 483c                 	C.B.DIMI	32, 	->lb1
+ 27079bc: 807c                 	C.B.DIMI	1, 	->lb2
+ 27079be: 00f8ce93             	B.IOT	t#16.reuse, t#1.reuse, mask=1111, last, 	->u<128B>
+ 27079c2: 00090013             	B.IOR	[s7], []
+ 27079c6: 0800                 	C.BSTART.STD	
+ 27079c8: 4d78                 	c.or	x1, a7, ->t
+ 27079ca: 05842405             	and	a6, t#1.not, 	->a6
+ 27079ce: 7c78                 	c.or	s6, s4, ->t
+ 27079d0: 9e38                 	c.or	t#1, s8, ->t
+ 27079d2: 3638                 	c.or	t#1, a4, ->t
+ 27079d4: 2638                 	c.or	t#1, a2, ->t
+ 27079d6: 1e38                 	c.or	t#1, a1, ->t
+ 27079d8: 2e38                 	c.or	t#1, a3, ->t
+ 27079da: 3e38                 	c.or	t#1, a5, ->t
+ 27079dc: 072c3785             	or	t#1, s7, 	->s4
+ 27079e0: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, T#16.reuse, x0, ->T<128B>
+          483c007c 00f8de13
+          000a0013
+ 27079f4: 0800                 	C.BSTART.STD	
+ 27079f6: 026e8f97             	lui	9960, 	->t
+ 27079fa: f00c0195             	addi	t#1, 3840, 	->a1
+ 27079fe: 8ad19181 a1f01023    	TCMPS             <Row=32, Col=1, S32, GE, Zero>, T#1.reuse, a1, ->a1
+          483c007c 00085e13
+          00018193
+ 2707a12: 0800                 	C.BSTART.STD	
+ 2707a14: fd917f97             	lui	-9961, 	->t
+ 2707a18: 100c0215             	addi	t#1, 256, 	->a2
+ 2707a1c: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, T#1.reuse, a2, ->T<128B>
+          483c007c 0008de13
+          00020013
+ 2707a30: 89a19181             	BSTART.TEPL	TSEL, S32
+ 2707a34: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707a38: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707a3a: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707a3c: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707a3e: 0408ce93             	B.IOT	t#1.reuse, t#2.reuse, mask=1111, last, 	->u<128B>
+ 2707a42: 00018013             	B.IOR	[a1], []
+ 2707a46: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#1.reuse, x0, ->T<128B>
+          483c007c 0108de13
+          000a0013
+ 2707a5a: 0800                 	C.BSTART.STD	
+ 2707a5c: 0100b199             	ldi	[sp, 128], 	->a1
+ 2707a60: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#1.reuse, a1, ->N<128B>
+          483c007c 0108df93
+          00018013
+ 2707a74: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#1.reuse, x2, ->M<128B>
+          483c007c 0108df13
+          000b0013
+ 2707a88: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#1.reuse, s0, ->U<128B>
+          483c007c 0108de93
+          00058013
+ 2707a9c: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#2.reuse, s1, ->T<128B>
+          483c007c 0118de13
+          00060013
+ 2707ab0: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#2.reuse, s2, ->M<128B>
+          483c007c 0118df13
+          00068013
+ 2707ac4: 8a019181 19f01ea3    	TADDS             <Row=32, Col=1, S32, CUBE_M32>, U#2.reuse, s3, ->T<128B>
+          483c007c 0118de13
+          00070013
+ 2707ad8: c0211181             	BSTART.TMOV	U64
+ 2707adc: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707ae0: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707ae2: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707ae4: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707ae6: 03295f93             	B.IOT	n#3.reuse, mask=1111, last, 	->n<256B>
+ 2707aea: 88211181             	BSTART.TMOV	S32
+ 2707aee: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707af2: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707af4: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707af6: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707af8: 0318df93             	B.IOT	n#2.reuse, mask=1111, last, 	->n<128B>
+ 2707afc: 88211181             	BSTART.TMOV	S32
+ 2707b00: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707b04: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707b06: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707b08: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707b0a: 0118de93             	B.IOT	u#2.reuse, mask=1111, last, 	->u<128B>
+ 2707b0e: 88211181             	BSTART.TMOV	S32
+ 2707b12: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707b16: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707b18: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707b1a: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707b1c: 0138de93             	B.IOT	u#4.reuse, mask=1111, last, 	->u<128B>
+ 2707b20: 88211181             	BSTART.TMOV	S32
+ 2707b24: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707b28: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707b2a: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707b2c: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707b2e: 0128de93             	B.IOT	u#3.reuse, mask=1111, last, 	->u<128B>
+ 2707b32: da44                 	C.BSTART.STD	COND, 0x270767a <.LBB3_109>
+ 2707b34: 440c                 	c.addi	s5, 8, ->t
+ 2707b36: 541c                 	c.sext.w	s5, ->t
+ 2707b38: 8646                 	c.movr	t#2, 	->s5
+ 2707b3a: 00041fd5             	cmp.nei	a6, 0, 	->t
+ 2707b3e: 0026e197             	lui	622, 	->a1
+ 2707b42: 8e818f95             	addi	a1, 2280, 	->t
+ 2707b46: 018d6fc5             	cmp.ltu	t#3, t#1, 	->t
+ 2707b4a: 018d2065             	setc.and	t#3, t#1
+ 2707b4e: 0800                 	C.BSTART.STD	
+ 2707b50: 0130b199             	ldi	[sp, 152], 	->a1
+ 2707b54: 88411181             	BSTART.MGATHER	S32
+ 2707b58: 19f01ea3             	B.DATR	CUBE_M32.normal, Null
+ 2707b5c: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707b5e: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707b60: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707b62: 0118de13             	B.IOT	u#2.reuse, mask=1111, last, 	->t<128B>
+ 2707b66: 00018013             	B.IOR	[a1], []
+ 2707b6a: 0800                 	C.BSTART.STD	
+ 2707b6c: 0120b299             	ldi	[sp, 144], 	->a3
+ 2707b70: 1fd6                 	c.movi	-1, 	->a1
+ 2707b72: 8bb19181 19f01ea3    	TEXPANDS          <Row=32, Col=1, S32, CUBE_M32>, a1, ->T<128B>
+          483c007c 0008ee13
+          00018013
+ 2707b86: 89a19181             	BSTART.TEPL	TSEL, S32
+ 2707b8a: 01f01ea3             	B.DATR	CUBE_M32.normal, Zero
+ 2707b8e: 007c                 	C.B.DIMI	1, 	->lb0
+ 2707b90: 483c                 	C.B.DIMI	32, 	->lb1
+ 2707b92: 807c                 	C.B.DIMI	1, 	->lb2
+ 2707b94: 0018ce13             	B.IOT	t#2.reuse, t#1.reuse, mask=1111, last, 	->t<128B>
+ 2707b98: 00078013             	B.IOR	[s4], []
+ 2707b9c: 0800                 	C.BSTART.STD	
+ 2707b9e: 0150bf99             	ldi	[sp, 168], 	->t
+ 2707ba2: 0110bf99             	ldi	[sp, 136], 	->t
+ 2707ba6: 178c8185             	add	t#2, t#1<<2, 	->a1
+ 2707baa: 2116                 	c.movi	4, 	->a2
+ 2707bac: 88111181 19f01c23    	TSTORE            <Row=32, ValidCol=1, S32, M322ND>, T#1.reuse, [base=a1, stride=a2]
+          483c007c 00085e13
+          00418013
+ 2707bc0: ae34                 	C.BSTART.STD	COND, 0x2707186 <.LBB3_3>
+ 2707bc2: 02028195             	addi	a3, 32, 	->a1
+ 2707bc6: 0160b219             	ldi	[sp, 176], 	->a2
+ 2707bca: 02327065             	setc.geu	a2, a1.sw
+
+0000000002707bce <.LBB3_184>:
+ 2707bce: 4135a041             	FRET.RA	[s0 ~ s8], sp!, 256
+ 2707bd2: 0800                 	C.BSTART.STD	
