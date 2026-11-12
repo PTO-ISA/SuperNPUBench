@@ -39,8 +39,8 @@
 | WORK-ARCHIVE-004-R014 | patch可应用、tracked恢复、完整恢复、构建和运行范围分别记录 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 人工核对归档材料 | partial | 见 note / results、dependencies | lvhao / 未复核 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
 | WORK-ARCHIVE-004-R015 | 跨仓库资产归属及源码commit/元数据commit/二进制身份分别固定 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 人工核对归档材料 | partial | 见 note / results、dependencies | lvhao / 未复核 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
 | WORK-ARCHIVE-004-R016 | 每个外部资产用途、必需/可选、内容/排除项、格式与大小/hash | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 逐项核对 | pass | ASSETS.md | lvhao / 未复核 | 无 |
-| WORK-ARCHIVE-004-R017 | 每个外部资产固定获取方式、权限、责任人及核对日期 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 核对资产表 | partial | ASSETS.md | lvhao / 未复核 | 获取方式/责任人/日期已写；Release URL 与 download_verified 待发布后补 |
-| WORK-ARCHIVE-004-R018 | planned/prepared/uploaded/download_verified与实际动作相符 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 核对状态 | partial | ASSETS.md | lvhao / 未复核 | prepared/uploaded/download_verified 状态已区分；当前仅 patch 在 git 内 |
+| WORK-ARCHIVE-004-R017 | 每个外部资产固定获取方式、权限、责任人及核对日期 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 核对 Release 与下载 | pass | ASSETS.md, validation/material_check.md | lvhao / 未复核 | 无 |
+| WORK-ARCHIVE-004-R018 | planned/prepared/uploaded/download_verified与实际动作相符 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 核对状态 | pass | ASSETS.md, validation/material_check.md | lvhao / 未复核 | 无 |
 | WORK-ARCHIVE-004-R019 | runtime必需依赖与历史可选trace分开，工具链按操作提供 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 人工核对归档材料 | partial | 见 note / results、dependencies | lvhao / 未复核 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
 | WORK-ARCHIVE-004-R020 | Release/README/PR/索引的内容、身份、能力和限制一致 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 人工核对归档材料 | partial | 见 note / results、dependencies | lvhao / 未复核 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
 | WORK-ARCHIVE-004-R021 | 跨仓库result/ELF/diss/runtime/config身份双向核对，无未来commit伪填 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 人工核对归档材料 | partial | 见 note / results、dependencies | lvhao / 未复核 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
@@ -82,8 +82,8 @@
 | WORK-ARCHIVE-009-R003 | supersedes/撤回原因、当前索引与历史版本保留 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 核对 revision 记录 | pass | README.md | lvhao / 未复核 | 无 |
 | WORK-ARCHIVE-009-R004 | 无并行写同一冻结目标，归档后统一更新索引 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 人工核对归档材料 | partial | 见 note / results、dependencies | lvhao / 未复核 | README；reviewer 未指派；其余协作项已记录。 |
 | WORK-ARCHIVE-009-R005 | 首页剩余工作、阻塞与关闭条件 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 人工核对归档材料 | partial | 见 note / results、dependencies | lvhao / 未复核 | README；reviewer 未指派；其余协作项已记录。 |
-| WORK-ARCHIVE-010-R001 | 最终staged、payload及实际下载解压内容的个人路径检查 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 运行扫描 | partial | validation/PATH_SCAN.md | lvhao / 未复核 | 归档与 release payload 已扫描；实际下载解压后的 payload 待 Release 后补 |
-| WORK-ARCHIVE-010-R002 | 二进制/压缩内容实际检查，扫描工具/文件/身份/退出码留存 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 核对扫描记录 | partial | validation/PATH_SCAN.md, path_scan_revision3.jsonl | lvhao / 未复核 | 扫描工具 sha256/命令/文件清单/退出码已留；下载侧待补 |
+| WORK-ARCHIVE-010-R001 | 最终staged、payload及实际下载解压内容的个人路径检查 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 下载+解压+扫描 | pass | validation/material_check.md | lvhao / 未复核 | 无 |
+| WORK-ARCHIVE-010-R002 | 二进制/压缩内容实际检查，扫描工具/文件/身份/退出码留存 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 核对记录 | pass | validation/material_check.md, validation/PATH_SCAN.md | lvhao / 未复核 | 无 |
 | WORK-ARCHIVE-010-R003 | 路径命中逐项修复/误报依据，不排除目录或删改许可证换通过 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 逐项复核 | pass | validation/PATH_SCAN.md | lvhao / 未复核 | 无 |
 | WORK-ARCHIVE-010-R004 | prefix-map覆盖各语言/生成源码/子项目实际命令及新产物复核 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 未执行 | not_checked | 见 note / results、dependencies | lvhao / 未复核 | COMPLIANCE.md；验收层级未做独立复核（非归档人）。 |
 | WORK-ARCHIVE-010-R005 | 脱敏/派生副本的原件、变换和最终身份及可执行/审阅范围 | 适用 | revision 3 归档文件与外部资产（见 ASSETS） | 核对变换记录 | pass | release_r3/sanitization.json, validation/PATH_SCAN.md | lvhao / 未复核 | 无 |

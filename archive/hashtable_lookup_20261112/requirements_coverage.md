@@ -5,7 +5,7 @@
 - 归档 revision：3（2026-11-12）；**自评，未经独立复核**。
 - 状态定义：`pass` = 归档内有可定位证据；`partial` = 部分满足，缺口见 note；
   `not_checked` = 未执行/未验证；`not_applicable` = 本任务不适用（已给理由）。
-- 统计：pass 51 / partial 42 / not_checked 16 / not_applicable 2（共 111 项）。
+- 统计：pass 55 / partial 38 / not_checked 16 / not_applicable 2（共 111 项）。
 
 | requirement_id | locator | subject | status | check_id | 证据 / 缺口 |
 |---|---|---|---|---|---|
@@ -43,8 +43,8 @@
 | WORK-ARCHIVE-004-R014 | §3.7.3 | patch可应用、tracked恢复、完整恢复、构建和运行范围分别记录 | partial | CHK-004-R014 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
 | WORK-ARCHIVE-004-R015 | §3.7.4 | 跨仓库资产归属及源码commit/元数据commit/二进制身份分别固定 | partial | CHK-004-R015 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
 | WORK-ARCHIVE-004-R016 | §3.7.4 | 每个外部资产用途、必需/可选、内容/排除项、格式与大小/hash | pass | CHK-004-R016 | 8 个外部资产含用途、必需/可选、字节、SHA256、格式 |
-| WORK-ARCHIVE-004-R017 | §3.7.4 | 每个外部资产固定获取方式、权限、责任人及核对日期 | partial | CHK-004-R017 | 获取方式/责任人/日期已写；Release URL 与 download_verified 待发布后补 |
-| WORK-ARCHIVE-004-R018 | §3.7.4 | planned/prepared/uploaded/download_verified与实际动作相符 | partial | CHK-004-R018 | prepared/uploaded/download_verified 状态已区分；当前仅 patch 在 git 内 |
+| WORK-ARCHIVE-004-R017 | §3.7.4 | 每个外部资产固定获取方式、权限、责任人及核对日期 | pass | CHK-004-R017 | 8 个资产已发布并下载验证；URL/权限/责任人/日期齐全 |
+| WORK-ARCHIVE-004-R018 | §3.7.4 | planned/prepared/uploaded/download_verified与实际动作相符 | pass | CHK-004-R018 | prepared/uploaded/download_verified 状态与实际记录一致 |
 | WORK-ARCHIVE-004-R019 | §3.7.4 | runtime必需依赖与历史可选trace分开，工具链按操作提供 | partial | CHK-004-R019 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
 | WORK-ARCHIVE-004-R020 | §3.7.4 | Release/README/PR/索引的内容、身份、能力和限制一致 | partial | CHK-004-R020 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
 | WORK-ARCHIVE-004-R021 | §3.7.4 | 跨仓库result/ELF/diss/runtime/config身份双向核对，无未来commit伪填 | partial | CHK-004-R021 | dependencies/*/manifest.json；依赖身份已固定；API 来源缺 GAP-API-1。 |
@@ -86,8 +86,8 @@
 | WORK-ARCHIVE-009-R003 | §3.11 | supersedes/撤回原因、当前索引与历史版本保留 | pass | CHK-009-R003 | revision 记录含变更内容与未关闭项 |
 | WORK-ARCHIVE-009-R004 | §3.11 | 无并行写同一冻结目标，归档后统一更新索引 | partial | CHK-009-R004 | README；reviewer 未指派；其余协作项已记录。 |
 | WORK-ARCHIVE-009-R005 | §3.11 | 首页剩余工作、阻塞与关闭条件 | partial | CHK-009-R005 | README；reviewer 未指派；其余协作项已记录。 |
-| WORK-ARCHIVE-010-R001 | §5、§5.1 | 最终staged、payload及实际下载解压内容的个人路径检查 | partial | CHK-010-R001 | 归档与 release payload 已扫描；实际下载解压后的 payload 待 Release 后补 |
-| WORK-ARCHIVE-010-R002 | §5.1 | 二进制/压缩内容实际检查，扫描工具/文件/身份/退出码留存 | partial | CHK-010-R002 | 扫描工具 sha256/命令/文件清单/退出码已留；下载侧待补 |
+| WORK-ARCHIVE-010-R001 | §5、§5.1 | 最终staged、payload及实际下载解压内容的个人路径检查 | pass | CHK-010-R001 | 下载的 12 个附件与解压 payload 已扫描：个人路径 0 命中 |
+| WORK-ARCHIVE-010-R002 | §5.1 | 二进制/压缩内容实际检查，扫描工具/文件/身份/退出码留存 | pass | CHK-010-R002 | 扫描工具 sha256/文件清单/命中判定/退出码已留 |
 | WORK-ARCHIVE-010-R003 | §5.1 | 路径命中逐项修复/误报依据，不排除目录或删改许可证换通过 | pass | CHK-010-R003 | 8 条 /tmp 命中逐项判定；无个人路径；未排除目录/改许可证 |
 | WORK-ARCHIVE-010-R004 | §5.2 | prefix-map覆盖各语言/生成源码/子项目实际命令及新产物复核 | not_checked | CHK-010-R004 | COMPLIANCE.md；验收层级未做独立复核（非归档人）。 |
 | WORK-ARCHIVE-010-R005 | §5.2 | 脱敏/派生副本的原件、变换和最终身份及可执行/审阅范围 | pass | CHK-010-R005 | 脱敏规则、原件/派生 hash 已记录（swim.log/meta） |

@@ -69,7 +69,7 @@ def main():
     ap.add_argument("--jsonl")
     a = ap.parse_args()
     files = []
-    skip_prefix = os.path.join(a.root, "validation", "path_scan_revision3")
+    skip_prefix = os.path.join(a.root, "validation", "path_scan_revision")
     for dp, _, fns in os.walk(a.root):
         for fn in sorted(fns):
             p = os.path.join(dp, fn)

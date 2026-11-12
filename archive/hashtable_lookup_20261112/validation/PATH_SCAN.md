@@ -1,12 +1,12 @@
 # 路径检查记录（NDF §5.1，revision 3）
 
-- 工具：`build/scan_paths.py`，sha256 `c34f2db2f47f513a95ef6c1f86294c49b5146db7a6bdf0406900d5bccec2abd5`
-- 命令：`python3 build/scan_paths.py . --jsonl validation/path_scan_revision3.jsonl`
-- 范围：归档全部 55 个文件（扫描记录自身除外）；文本按行、二进制按字节偏移；`.gz` 先流式解压再扫描压缩前内容。
-- 结果：`files=55 hits=25 forbidden=0`；原始输出见 `path_scan_revision3.log`，逐条见
-  `path_scan_revision3.jsonl`。
+- 工具：`build/scan_paths.py`，sha256 `54ceb79e7c3452b7461db8fd5a5a62eeed99187a917fc51973c4e63b476b5cd8`
+- 命令：`python3 build/scan_paths.py . --jsonl validation/path_scan_revision4.jsonl`
+- 范围：归档全部 57 个文件（扫描记录自身除外）；文本按行、二进制按字节偏移；`.gz` 先流式解压再扫描压缩前内容。
+- 结果：`files=57 hits=27 forbidden=0`；原始输出见 `path_scan_revision4.log`，逐条见
+  `path_scan_revision4.jsonl`（revision 3 的 `path_scan_revision3.*` 作为历史记录保留）。
 - 个人绝对路径（`/Users/<name>`、`/home/<name>`、`C:\Users\<name>`、用户名）命中为 0。
-- 所有 25 条命中均为 `/tmp` 临时路径（无个人路径）。其中 8 条在结果日志/负控输出中，
+- 所有 27 条命中均为 `/tmp` 临时路径（无个人路径）。其中 8 条在结果日志/负控输出中，
   其余在 `validation/*.md` 与 `build_repro_r3.log` 中作为被记录的命令/路径出现。逐项处置如下：
 
 | 文件:行 | 内容 | 判定 | 理由 |

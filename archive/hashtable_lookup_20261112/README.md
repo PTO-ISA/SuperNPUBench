@@ -3,7 +3,7 @@
 - **task_id / 负责人 / 更新日期**：`hashlk_20261112_lvhao_01` / lvhao / 2026-11-12
 - **归档规范**：NDF work-archive draft.8（SuperScalarModel PR #1238，
   `docs/NDF_WORK_ARCHIVE.md`，分支 `archive/workshop-20261109`）
-- **稳定要求登记表 / 覆盖映射**：`requirements_coverage.md`（111 项逐条状态；revision 3 自评 pass 51 / partial 42 /
+- **稳定要求登记表 / 覆盖映射**：`requirements_coverage.md`（111 项逐条状态；revision 4 自评 pass 55 / partial 38 /
   not_checked 16 / not_applicable 2，未经独立复核）；逐条记录见 `validation/check_records.md`
 - **目标与问题**：在 random SoC（300-cycle 均值延迟）下优化 `basic_op/hashtable_lookup`
   的线性探测循环，回答“加宽投机窗口 / 加宽 lane / 加深 RWDB 各自是否有效”，并把 per-SoC
@@ -35,10 +35,9 @@
 - **依赖组成**：compiler=llvm-project@a75987bcc+patch；model=SuperScalarModel@18b24f6ca
   clean；API=PR303 期快照（本地归档，来源 commit 未知，缺项）；dataset=keys/values/batch
   map/参考 ELF（哈希见 `dependencies/dataset`）。
-- **外部资产交付状态**：逐项字段表见 `ASSETS.md`（asset_id / required_for / 字节 /
-  SHA256 / 位置 / 状态 / 责任日期）。当前 `A-COMPILER-PATCH` 在 git 内；参考 ELF、
-  r1/r2/r3 ELF、完整 SwimLane/nocounters 均为 `prepared`（作者本机），**未上传
-  Release**（`GAP-EXT-1`）；API 快照来源未确认（`GAP-API-1`）。
+- **外部资产交付状态**：`ASSETS.md` 列 11 个资产，已发布到
+  Release `hashlk-20261112-r3` 并下载验证（11/11 SHA256 匹配；见
+  `validation/material_check.md`）；API 快照来源仍未确认（`GAP-API-1`）。
 - **冻结配置**：`config/random300.json`、`config/deterministic.json`；加载脚本
   `build/run_perf.sh`（显式使用归档配置，不读个人配置）。
 - **复现入口**：`build/build_kernel.sh` + `build/run_perf.sh`；验收层级见“复现性审计”。
@@ -59,13 +58,13 @@
 | 计时模型 | `SuperScalarModel-pr1177` @ `18b24f6ca`（clean） | **可以**：该 commit 在上游 `LinxISA/SuperScalarModel`；`python3 build.py`（CMake+ninja），产物 `bin/gfsim` sha256 `12066cbd…` | 需要固定 CMake 版本/主机说明；`build/` 目录的完整 cache 未归档 |
 | 编译器 | `LinxISA/llvm-project` @ `a75987bcc` + `compiler.patch`（46,475 B，6 文件） | **有条件可以**：上游 commit + 归档 patch；clang 构建选项：Release、`clang;lld`、`LLVM_TARGETS_TO_BUILD=LinxV5` | patch 之外的 8 个 untracked 测试文件未参与构建（列于 `untracked-files.txt`）；完整 LLVM 构建日志未归档 |
 | PTO API 快照 | `tileop-api/`（169 文件，`MANIFEST.sha256`） | **不可以**：本地快照，来源 commit/PR 未确认 | **GAP-API-1**：需确认上游 PR/commit，或把快照发布为固定依赖包 |
-| 数据集 | keys32/values/batch map/参考 ELF | **部分**：keys/values 有生成脚本与哈希；参考 ELF (`9610ba16…`) 是本地资产 | **GAP-DATA-1**：参考 ELF 未上库；生成脚本依赖它 |
-| 构建产物 | 9 个矩阵 ELF + soa_wide fixture + operator ELF | 可用 `build/build_kernel.sh` 重建；已核对 md5 与历史一致（见各 result manifest） | **GAP-EXT-1**：ELF 未随归档提交，仅记录哈希与本地路径 |
+| 数据集 | keys32/values/batch map/参考 ELF | **可以**：keys/values 有生成脚本与哈希；参考 ELF 已发布（`A-REF-ELF`） | `GAP-DATA-1` 剩余：参考 ELF 的原始生成信息未恢复 |
+| 构建产物 | 9 个矩阵 ELF + soa_wide fixture + operator ELF | 可用 `build/build_kernel.sh` 重建；已核对 md5/sha256 与历史一致 | ELF 已发布（`A-R1/R2/R3-ELF`），可下载验证 |
 
-结论：**目前还不能做到“完全按文档、零本地内容”复现**。最小闭合路径是：
-（a）把 API 快照确认到上游 commit 或发布为依赖包；（b）把参考 ELF 与算子 ELF 发布到
-Release（或纳入本归档）；（c）补 LLVM/CMake 构建日志；（d）补附录 J.4 的逐条覆盖表。
-本归档已把能固定的身份/哈希/命令先固定下来（见 `dependencies/` 与 `results/*/manifest.json`）。
+结论：**资产侧已闭合**——参考 ELF、r1/r2/r3 ELF、trace、PipeView、API 快照均已发布
+并可下载验证（`ASSETS.md`）。仍未闭合的是：API 快照的上游 commit（`GAP-API-1`）、
+LLVM/gfsim 的完整构建日志（`GAP-LOG-1`），以及独立复核（`run_reproduced` /
+`build_reproduced`）。
 
 ## 实现环境（问题 2：详细环境说明）
 
@@ -102,8 +101,8 @@ Release（或纳入本归档）；（c）补 LLVM/CMake 构建日志；（d）�
 - `GAP-COV-1`（已关闭）：111 项覆盖映射见 `requirements_coverage.md`；状态为自评，
   仍需逐条 material check 才能关闭 WORK-ARCHIVE-010。
 - `GAP-API-1`：API 快照来源未确认。
-- `GAP-DATA-1`：参考 ELF（`960ba161…`）未上库，数据生成链不闭合。
-- `GAP-EXT-1`：运行 ELF / SwimLane / PipeView 未发布到公共存储。
+- `GAP-DATA-1`（部分关闭）：参考 ELF（`960ba161…`）已发布；其原始生成信息仍未恢复。
+- `GAP-EXT-1`（已关闭）：运行 ELF / trace / PipeView 已发布到 Release 并下载验证。
 - `GAP-LOG-1`：LLVM 与 gfsim 的完整构建日志未归档（仅记录二进制 hash 与构建入口）。
 - `GAP-R3-1`：算子默认实现没有算子级计时——gfsim 在 64 位 key gather 上断言
   `responseReturnBeatId == geo.mrobEntryIdx`（2026-11-12 复现，pr1177 clean），
@@ -139,3 +138,14 @@ Release（或纳入本归档）；（c）补 LLVM/CMake 构建日志；（d）�
 - 文档：`dependencies/LOCAL_MODIFICATIONS.md`、`validation/check_records.md`
   （111 项）、`requirements_coverage.md` 更新、diss 头规范化记录。
 - 仍未关闭：Release 发布与下载侧 material、独立复核、`GAP-R2-CHECK`、`GAP-LOG-1`。
+
+### revision 4（2026-11-12，发布与 material_checked）
+
+- 发布 Release `hashlk-20261112-r3`（固定 commit `4359f297`）：4 个 ELF、
+  4 组 trace、PipeView、API 快照、归档 tarball 与 `assets.tsv`。
+- 从 Release 重新下载：11/11 SHA256 匹配；归档内部 56 行清单自校验通过；
+  下载与解压 payload 个人路径 0 命中（`validation/material_check.md`）。
+- tar 包改用中性 owner（`ndf`），旧包作废；`ASSETS.md` 更新 URL 与新 hash。
+- 覆盖统计更新为 pass 55 / partial 38 / n/a 2 / not_checked 16。
+- 仍未关闭：独立 `run_reproduced`、独立 `build_reproduced`、`GAP-R2-CHECK`、
+  `GAP-LOG-1`、API 上游来源。

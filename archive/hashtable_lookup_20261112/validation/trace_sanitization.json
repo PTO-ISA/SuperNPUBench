@@ -1,0 +1,142 @@
+[
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r1_rand300_01/r1_swim.json.gz",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r1_rand300_01/r1_swim.json.gz",
+    "orig_sha256": "d46ff56a1613fc72d3f4e8a56a58a450db7d058c7dfc8a9733ee53ab9ba94fdc",
+    "dst_sha256": "d46ff56a1613fc72d3f4e8a56a58a450db7d058c7dfc8a9733ee53ab9ba94fdc",
+    "note": "copy (content scan clean)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r1_rand300_01/r1_swim_nocounters.json.gz",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r1_rand300_01/r1_swim_nocounters.json.gz",
+    "orig_sha256": "ba3a268c30f9ef130688fd4242c0a0468ced2a1ef49df350e0d656c1a8c072da",
+    "dst_sha256": "ba3a268c30f9ef130688fd4242c0a0468ced2a1ef49df350e0d656c1a8c072da",
+    "note": "copy (content scan clean)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r1_rand300_01/r1_swim_nocounters.json",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r1_rand300_01/r1_swim_nocounters.json",
+    "orig_sha256": "4b87666ed8a999efd08c653aad188959c7a11446ccef66b41c586e39ef6bf28e",
+    "dst_sha256": "4b87666ed8a999efd08c653aad188959c7a11446ccef66b41c586e39ef6bf28e",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r1_rand300_01/r1_swim.json",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r1_rand300_01/r1_swim.json",
+    "orig_sha256": "a0f5669dd8fa8ae7d022029658369de726d7161dae0983d868cb73405d9ba990",
+    "dst_sha256": "a0f5669dd8fa8ae7d022029658369de726d7161dae0983d868cb73405d9ba990",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r1_rand300_01/r1_meta.json",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r1_rand300_01/r1_meta.json",
+    "orig_sha256": "bda04f3f3d5e23a9ffcd817340eec083709ffd9c021ee8037a8e21523e20fc60",
+    "dst_sha256": "d4ec604f9362c7596b731c9243a31621a9b2d4e8c43537dae44cac52c51a7be1",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r1_rand300_01/r1_swim.log",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r1_rand300_01/r1_swim.log",
+    "orig_sha256": "5276092461c4e6672da26848b3068cdddb0e1d89c77604edf234a92b0fbc4da6",
+    "dst_sha256": "78ccca40cb2c0d2b4fceda79ed905a5d7146d420ad9b51c1a2b03c216e7ee409",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r2_rand300_rw48/r2_swim_nocounters.json.gz",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r2_rand300_rw48/r2_swim_nocounters.json.gz",
+    "orig_sha256": "66fc11410aa844b6449d4312d04b24353c1c4e9aae9a2e9444108b3f53e8fcc5",
+    "dst_sha256": "66fc11410aa844b6449d4312d04b24353c1c4e9aae9a2e9444108b3f53e8fcc5",
+    "note": "copy (content scan clean)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r2_rand300_rw48/r2_swim.json",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r2_rand300_rw48/r2_swim.json",
+    "orig_sha256": "3476091c9b3873abe8a53259bc1da62c4b957fdda0518d9ed52919924ad9d556",
+    "dst_sha256": "3476091c9b3873abe8a53259bc1da62c4b957fdda0518d9ed52919924ad9d556",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r2_rand300_rw48/r2_meta.json",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r2_rand300_rw48/r2_meta.json",
+    "orig_sha256": "41b52809b0d6d5b9a1bf7b47695b8f215174bd35a55cad31a1847d3221964d5f",
+    "dst_sha256": "d841811ff12f3c67ed96928672d6828cf486fcdc0a9be9b72f7015804fe0bfec",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r2_rand300_rw48/r2_swim.log",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r2_rand300_rw48/r2_swim.log",
+    "orig_sha256": "4b9e7b5b2d8a572b3b5226a69d2dc64de0ab09bb29c6026c4e11fdb42e49f607",
+    "dst_sha256": "4c803d886de9d2fb2dc020df3680674c0fd11d589590d061a675aafee9d73a9c",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r2_rand300_rw48/r2_swim_nocounters.json",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r2_rand300_rw48/r2_swim_nocounters.json",
+    "orig_sha256": "fad3cd2ccdb2ecceab81e10efbfffc588ed18bd796d01aa05ee352a2bf18a364",
+    "dst_sha256": "fad3cd2ccdb2ecceab81e10efbfffc588ed18bd796d01aa05ee352a2bf18a364",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r2_rand300_rw48/r2_swim.json.gz",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r2_rand300_rw48/r2_swim.json.gz",
+    "orig_sha256": "d5a867bce24fe4957670d593e9c07851ca3c58ccdd8ec0733eccbf5b4e2a94ed",
+    "dst_sha256": "d5a867bce24fe4957670d593e9c07851ca3c58ccdd8ec0733eccbf5b4e2a94ed",
+    "note": "copy (content scan clean)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r3_extra/r2_rw48_way7_swim.log",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r3_extra/r2_rw48_way7_swim.log",
+    "orig_sha256": "b065e601109729988ab354dcfc7680a4e3bf7a9ab17904a1c5f906b3bc04dfd2",
+    "dst_sha256": "5cac1e2ca0715aa101986d03c4a4a935064f32978f60d9772fe921876686dfdd",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r3_extra/r2_rw8_meta.json",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r3_extra/r2_rw8_meta.json",
+    "orig_sha256": "c8ced88121fcefe74cce2fa43f61a45dc01102c76a2da15e268ace011e154d3a",
+    "dst_sha256": "a9894951eccc82a4e3a069802e740956a34eeb9d7cd5f4592486216378da10c1",
+    "note": "meta elf path -> asset_id"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r3_extra/r2_rw48_way7_meta.json",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r3_extra/r2_rw48_way7_meta.json",
+    "orig_sha256": "3b98d35988506cbf7824847db21aeb9fc7db7814dc54f7a453d332bb2586eea2",
+    "dst_sha256": "be79a5c1f7f17e2cd3437893d70d4799b7f87a91be31a00502f801111dd24c4c",
+    "note": "meta elf path -> asset_id"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r3_extra/r1_pipeview.log",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r3_extra/r1_pipeview.log",
+    "orig_sha256": "d151ea294a0e20942100d740f11db15c5775d71b492927429af4d32b82ddc592",
+    "dst_sha256": "3fa6ffba04a2de16e74755c60ab0375506f0b753ae7887d4b96de2fc8ff66969",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r3_extra/r2_rw8_swim.log",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r3_extra/r2_rw8_swim.log",
+    "orig_sha256": "4b895823314e9740b5041e8a40a7b107c6520898786a22df07dd03defb884720",
+    "dst_sha256": "7886736cb32207bc05bc3e14c1f6f56f5ae1991a45a4abeea4db8d0e9d15dd70",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r3_extra/r1_pipeview.time",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r3_extra/r1_pipeview.time",
+    "orig_sha256": "5fd31e9aab46cc03d36bcacb55432a0aa6929343f887bc079e99ac9bb79b567f",
+    "dst_sha256": "5fd31e9aab46cc03d36bcacb55432a0aa6929343f887bc079e99ac9bb79b567f",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r3_extra/r2_pipeview.time",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r3_extra/r2_pipeview.time",
+    "orig_sha256": "4c09e7b4fd5ec8b2fdd9cbe3b2f51c8356cd815a8af39afa993112e88b540725",
+    "dst_sha256": "4c09e7b4fd5ec8b2fdd9cbe3b2f51c8356cd815a8af39afa993112e88b540725",
+    "note": "sanitized text (paths -> placeholders)"
+  },
+  {
+    "src": "outputs/hashtable_lookup_archive_assets/r3_extra/r2_pipeview.log",
+    "dst": "outputs/hashtable_lookup_archive_assets/release_r3/r3_extra/r2_pipeview.log",
+    "orig_sha256": "44985e22b4164462dccfbf47b33f6df2b6568974ca34b4b5bc0e59ccf4bdf8a1",
+    "dst_sha256": "e54994519f0c73017063189654d0c79918f76566b514bd5b62ce4155aca7cb53",
+    "note": "sanitized text (paths -> placeholders)"
+  }
+]
