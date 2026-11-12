@@ -79,10 +79,29 @@ endif
 ifeq ($(baremetal), on)
     CC_LINK += -static -lm -nostartfiles -L $(OBJ_ROOT)/$(COMM_SRC_DIR) -T $(LINK_SCRIPT)
 else
-    CC_LINK += -nostartfiles $(TEST_ROOT)/common/_start.s
+    CC_LINK += -static -nostartfiles
 endif
 
 DEFINES += -DENABLE_TENSOR_INSTR
+endif
+
+# Default hosted Linx entry: mirror benchmark/one-level-arch/test/common/Makefile.common.
+# Microbenchmark cases define int main(), so the SSM bridge calls main() on each PE.
+ifeq ($(PLAT),linx)
+ifneq ($(baremetal),on)
+SSM_RUNTIME_DIR := $(TEST_ROOT)/common/ssm_runtime
+SSM_OBJ_DIR := $(OBJ_ROOT)/common/ssm_runtime
+CC_LINK := -static -nostartfiles
+EXTRA_OBJ_FILES += $(SSM_OBJ_DIR)/adapter.o $(SSM_OBJ_DIR)/group_worker.o $(SSM_OBJ_DIR)/main_bridge.o
+
+$(SSM_OBJ_DIR)/%.o: $(SSM_RUNTIME_DIR)/%.c $(SSM_RUNTIME_DIR)/ssm_hosted_startup.h
+	@mkdir -p $(@D)
+	$(CC) -mlxbc -D__linx -O2 -ffreestanding -fno-builtin -c $< -o $@
+
+$(SSM_OBJ_DIR)/main_bridge.o: $(TEST_ROOT)/common/ssm_main_bridge.s
+	@mkdir -p $(@D)
+	$(AS) -mlxbc -c $< -o $@
+endif
 endif
 
 # Include paths
@@ -135,9 +154,9 @@ $(OBJ_ROOT)/$(COMM_SRC_DIR)%.lds : $(TEST_ROOT)/$(COMM_SRC_DIR)%.lds.S
 	$(CC) $(DEFINES) $(INCLUDE) -E -P -C -o $@ $<
 
 # Linking rule
-$(TARGET): $(LINK_SCRIPT) $(COMM_OBJ) $(OBJ)
+$(TARGET): $(LINK_SCRIPT) $(COMM_OBJ) $(OBJ) $(EXTRA_OBJ_FILES)
 	@mkdir -p $(shell dirname $@)
-	$(LINK) $(CC_LINK) $(OBJ) $(COMM_OBJ) -o $@
+	$(LINK) $(CC_LINK) $(OBJ) $(COMM_OBJ) $(EXTRA_OBJ_FILES) -o $@
 
 # Create directories
 pre_work:
