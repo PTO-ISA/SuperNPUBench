@@ -1,4 +1,4 @@
-# SuperNPUBench Startup
+# SuperNPUBench Getting Started
 
 更新日期：2026-11-12。本文介绍 SuperNPUBench 的系统结构与开发环境，并以 matmul 为例，串起源码、编译、功能验证、时序执行和性能分析的完整流程。
 
