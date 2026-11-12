@@ -11,6 +11,33 @@ supernpu::multi_thread::hashtable_lookup<Capacity, 4>(table, queries, output, co
 
 第一种由调用者分配任务；第二种按 PE ID 划分连续 query 区间，要求启动对应数量的 PE。接口包含非 32 倍数的 count 分支，但尾加载存在已知访问域问题，尚未数值验证通过；当前验证范围要求每个 PE 的查询数是 32 的倍数。count=0 不访存。输入与输出不可重叠。
 
+## 实现清单与取舍（2026-11-12）
+
+| 文件 | 数据契约 | 探测风格 | guard | 定位 |
+|---|---|---|---|---|
+| `hashtable_lookup_tileop_adaptive.hpp` | AoS 16 B | 32-lane，2+6（`HASH_ADAPTIVE_TAIL=2` 回 2+2） | 112 B（7 项） | **当前默认** |
+| `hashtable_lookup_tileop_stride4_guard.hpp` | AoS 16 B | 32-lane，4 槽/轮，轮首 mask | 48 B（3 项） | 上一版默认 / 性能基线 |
+| `hashtable_lookup_tileop_masked.hpp` | AoS 16 B | 32-lane，1 槽/轮 masked gather | 无（表尾 `TCMPS<EQ>` 回绕） | 调用方无法提供 guard 时使用 |
+| `hashtable_lookup_element.hpp` | AoS 16 B | 32-lane，element-if 逐 lane 判断 | 无（逐槽回绕） | element-region 写法参考 |
+| `hashtable_lookup_soa_wide.hpp` | **SoA**（`uint32 keys[]` + `int32 values[]`） | 64/128/256/512-lane，2+6 | ≥7 项（推荐 128） | 宽 lane 性能参考（非默认） |
+
+### 是否都必要
+
+- **功能必需**：`adaptive`（默认入口）、`masked`（无 guard 场景的唯一实现）。
+- **保留作基线/参考**：`stride4_guard`（README 的 140,166 基线与 A/B 对照）、`element`（element-region 最小示例，历史验证记录对应）。
+- **新增参考实现**：`soa_wide` —— 256-lane 2+6 的唯一实现，但**不能**替换默认入口：表布局（SoA vs AoS）、API、lane 宽度、批次调度都不同；只在 SoA 数据契约下可用。
+- **可删除**：`hashtable_lookup_tileop.hpp`（存在于部分本地分支，1 槽/轮 full gather、无 guard，功能被 `masked` 覆盖；main 上没有此文件，不建议再保留）。
+
+### `soa_wide` 的构建要求（与主工具链不同，opt-in）
+
+- 编译器：`llvm-project-pr146/build-hash/bin/clang++`，并加 `-mllvm -linxv5-force-element-tile-mask=true`；
+- PTO API：`outputs/hash256_soa_20261105/optimization/dependencies/tileop-api`
+  （主 `linx-toolchain-build` 的 `TPARTELEMENT` 只接受 32 元元素区域，宽 tile 会报
+  `Numel == 32` 约束失败）；
+- 契约：`count` 必须是 `Lanes` 的整数倍；表尾至少 7 项可读 guard（推荐 128 项）；
+  4 PE + `batchMap[bi] * Lanes` 的批次调度；
+- 实测（random300）：256-lane 2+6 @RWDB=48 = **81,317**；加 `TAG_WAY=7` = **77,312**。
+
 ## 自适应 2+6 probe（2026-11-10 起的默认实现）
 
 每轮 probe 拆成两个阶段：
