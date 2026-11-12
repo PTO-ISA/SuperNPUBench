@@ -3,8 +3,8 @@
 - **task_id / 负责人 / 更新日期**：`hashlk_20261112_lvhao_01` / lvhao / 2026-11-12
 - **归档规范**：NDF work-archive draft.8（SuperScalarModel PR #1238，
   `docs/NDF_WORK_ARCHIVE.md`，分支 `archive/workshop-20261109`）
-- **稳定要求登记表 / 覆盖映射**：`not_produced`（本归档为 draft，尚未按附录 J.4 生成 111 项
-  逐条覆盖表；缺口见“缺项与风险”）
+- **稳定要求登记表 / 覆盖映射**：`requirements_coverage.md`（111 项逐条状态；
+  自评 pass 12 / partial 70 / not_checked 29 / not_applicable 0，未经独立复核）
 - **目标与问题**：在 random SoC（300-cycle 均值延迟）下优化 `basic_op/hashtable_lookup`
   的线性探测循环，回答“加宽投机窗口 / 加宽 lane / 加深 RWDB 各自是否有效”，并把 per-SoC
   配置下的最优实现与算子默认实现一起归档。
@@ -34,11 +34,10 @@
 - **依赖组成**：compiler=llvm-project@a75987bcc+patch；model=SuperScalarModel@18b24f6ca
   clean；API=PR303 期快照（本地归档，来源 commit 未知，缺项）；dataset=keys/values/batch
   map/参考 ELF（哈希见 `dependencies/dataset`）。
-- **外部资产交付状态**：
-  - 已可获取：本归档内的日志、配置、脚本、hash、compiler patch、API 快照文件清单；
-  - 仅本地：运行 ELF（r1/r2/r3 的 ELF 位于 `outputs/` 或 `/tmp`，哈希已记录；
-    未随本归档提交）、完整 SwimLane/PipeView（位于 `outputs/hash64_batchmap_20261105/...`）；
-  - `GAP-EXT-1`：以上大二进制尚未上传到公共 Release，读者目前只能在作者机器路径获取。
+- **外部资产交付状态**：逐项字段表见 `ASSETS.md`（asset_id / required_for / 字节 /
+  SHA256 / 位置 / 状态 / 责任日期）。当前 `A-COMPILER-PATCH` 在 git 内；参考 ELF、
+  r1/r2/r3 ELF、完整 SwimLane/nocounters 均为 `prepared`（作者本机），**未上传
+  Release**（`GAP-EXT-1`）；API 快照来源未确认（`GAP-API-1`）。
 - **冻结配置**：`config/random300.json`、`config/deterministic.json`；加载脚本
   `build/run_perf.sh`（显式使用归档配置，不读个人配置）。
 - **复现入口**：`build/build_kernel.sh` + `build/run_perf.sh`；验收层级见“复现性审计”。
@@ -96,7 +95,8 @@ Release（或纳入本归档）；（c）补 LLVM/CMake 构建日志；（d）�
 
 ## 缺项与风险
 
-- `GAP-COV-1`：未生成 NDF 附录 J.4 的 111 项 requirement 覆盖表（本归档为 draft）。
+- `GAP-COV-1`（已关闭）：111 项覆盖映射见 `requirements_coverage.md`；状态为自评，
+  仍需逐条 material check 才能关闭 WORK-ARCHIVE-010。
 - `GAP-API-1`：API 快照来源未确认。
 - `GAP-DATA-1`：参考 ELF（`960ba161…`）未上库，数据生成链不闭合。
 - `GAP-EXT-1`：运行 ELF / SwimLane / PipeView 未发布到公共存储。
@@ -107,3 +107,17 @@ Release（或纳入本归档）；（c）补 LLVM/CMake 构建日志；（d）�
 - `GAP-MODEL-1`：计时用了 pr1177 工作树而非 AGENTS 默认的 `SuperScalarModel`；
   主线当前（`fb7db9c74`）在 reference 模拟器报
   `illegal TLOAD operand or descriptor contract`（dtype=24 INT64），无法产出周期。
+
+## revision 记录
+
+- **revision 2（2026-11-12）**：补齐 NDF draft.8 审计缺项中的可执行部分——
+  - 新增 `ASSETS.md`（§3.7.4 字段表）与 `FILE_MANIFEST.json`（逐文件字节数 + SHA256）；
+  - 新增 `requirements_coverage.md`（111 项覆盖映射，自评）；
+  - r1/r2 各补完整 SwimLane + nocounters + 运行日志（`A-R1/R2-TRACE`，本机
+    `outputs/hashtable_lookup_archive_assets/`），重跑周期数与原始 `run.log` 一致
+    （135,819 / 82,256）；
+  - r1/r2 README 补周期起止点、计入范围与指标分母声明；r2 `algorithm.md` 补完整
+    假设/正确性/性能条件，并说明 81,317（早期 sweep）与 82,256（本归档）的来源差异；
+  - `COMPLIANCE.md` 按上述证据更新（WORK-ARCHIVE-006 由 ❌ 改为部分）。
+  - 仍未关闭：独立复核、负控、r2 PipeView、资产发布（`GAP-EXT-1`）。
+- **revision 1（2026-11-12）**：初版（结果索引、manifest、`perf.diss`、合规审计）。

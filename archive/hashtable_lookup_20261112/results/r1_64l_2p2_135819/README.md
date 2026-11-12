@@ -17,3 +17,18 @@
 - **证据/复现**：`run.log`；`build/` 脚本；ELF 在
   `outputs/hash64_batchmap_20261105/slots_sweep/elfs/adaptive_2p2_perf.elf`
   （`GAP-EXT-1`：未发布）。
+
+## 性能口径（NDF §3.9 / WORK-ARCHIVE-006）
+
+- 原始行：`Total Cycles = 135,819`（`run.log`；random300：`soc_random=true`、
+  read/write 300 cycles、128 B/cycle、TAG_WAY=4、RWDB=8）。
+- kernel 边界（`A-R1-TRACE` 重跑，周期数与 `run.log` 一致）：首个 TLOAD cycle
+  1,415 → 末 TSTORE 结束 135,741，kernel span = **134,326** cycles（占 Total 的
+  98.9%）；差额约 1.5k cycles 为启动/finisher。
+- 计入/不计入：计入 kernel、线程同步与 finisher 写；不计入 host 时间与 checker
+  （perf 构建跳过数值检查）。
+- 指标公式：本结果只声明延迟（cycles），不声明 MFU/有效带宽峰值，故无峰值分母；
+  `analysis/PERFORMANCE_MATRIX.md` 的 GM 读流量仅作诊断，不作吞吐结论。
+- 重复性：单次确定性仿真；不声明统计稳定性。
+- trace：完整 SwimLane 与 nocounters 已保存（`ASSETS.md` 的 `A-R1-TRACE`，
+  本机 `outputs/hashtable_lookup_archive_assets/r1_rand300_01/`）。

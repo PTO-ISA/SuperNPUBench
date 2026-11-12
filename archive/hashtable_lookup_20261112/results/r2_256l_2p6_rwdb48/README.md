@@ -26,3 +26,18 @@
 - **结论边界**：RWDB=48 / WAY=7 是 §3.7 的 hardware_assumption（`H-RWDB`/`H-WAY`），
   不得与默认配置成绩混用；默认 RWDB=8 时该实现是 169,868，慢于 r1 的 135,819。
 - **证据**：`run_*.log`；矩阵与 soa_wide 对比见 `../../analysis/PERFORMANCE_MATRIX.md`。
+
+## 性能口径（NDF §3.9 / WORK-ARCHIVE-006）
+
+- 原始行（`run_rw48.log`）：`Total Cycles = 82,256`；配置为 random300 +
+  `sl2.RWDB_ENTRY_COUNT=48`、TAG_WAY=4。
+- kernel 边界（`A-R2-TRACE` 重跑，周期数与 `run_rw48.log` 一致）：首个 TLOAD
+  cycle 1,461 → 末 TSTORE 结束 82,130，kernel span = **80,669** cycles
+  （占 Total 的 98.1%）。
+- 计入/不计入：计入 kernel、线程同步与 finisher 写；不计入 host 时间与 checker
+  （perf 构建跳过数值检查）。
+- 指标公式：只声明延迟（cycles），不声明 MFU/有效带宽峰值，无峰值分母。
+- 重复性：单次确定性仿真；不声明统计稳定性。
+- trace：完整 SwimLane/nocounters 已保存（`A-R2-TRACE`，本机
+  `outputs/hashtable_lookup_archive_assets/r2_rand300_rw48/`）；PipeView 尚未采集
+  （`GAP-PV-1`）。

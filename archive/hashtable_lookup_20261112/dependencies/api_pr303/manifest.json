@@ -1,0 +1,23 @@
+{
+  "dependency_id": "dep-api-pto-pr303-snapshot-lvhao-01",
+  "type": "pto_api_snapshot",
+  "source": {
+    "repo": "unknown",
+    "commit": null,
+    "known_identity": "PR303-period tileop-api snapshot; 169 files"
+  },
+  "local_state": {
+    "path": "outputs/hash256_soa_20261105/optimization/dependencies/tileop-api",
+    "manifest": "MANIFEST.sha256",
+    "manifest_sha256": "256f5eb516f3a700e57f25dbf9fbe5463a437f6131902822026c873b45eef4d8",
+    "purpose": "256-element TPARTELEMENT regions; main linx-toolchain-build API only accepts 32"
+  },
+  "tools": {},
+  "build": {"entry": null, "log": null, "gap": "GAP-API-1"},
+  "recovery": "local snapshot only; not reproducible from upstream documents",
+  "config": "include path used by build/build_kernel.sh",
+  "issues": [
+    {"url": "none", "status": "not_filed", "note": "upstream PR/commit for this snapshot not identified"}
+  ],
+  "classification": ["correctness_fix"]
+}

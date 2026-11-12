@@ -1,0 +1,31 @@
+{
+  "dependency_id": "dep-model-superscalarmodel-18b24f6c-lvhao-01",
+  "type": "timing_model",
+  "source": {
+    "repo": "https://github.com/LinxISA/SuperScalarModel",
+    "commit": "18b24f6ca7f71369aee9245426daa68cc741dad5",
+    "dirty": false
+  },
+  "local_state": {
+    "note": "clean worktree SuperScalarModel-pr1177; used instead of the main SuperScalarModel checkout"
+  },
+  "tools": {
+    "gfsim": {"path": "bin/gfsim", "sha256": "12066cbdc29466d95cce1229129ff5fa03edbdd22880fbad57d55caec87633d8"}
+  },
+  "build": {
+    "entry": "python3 build.py (CMake + Ninja; CMAKE_CXX_COMPILER=/usr/bin/clang++)",
+    "host": "macOS darwin 25.5.0 arm64",
+    "log": null,
+    "gap": "GAP-LOG-1"
+  },
+  "recovery": "git clone + git checkout 18b24f6ca + python3 build.py; verify gfsim sha256",
+  "config": {
+    "runtime": "config/random300.json, config/deterministic.json",
+    "cwd": "simulator worktree root"
+  },
+  "issues": [
+    {"url": "https://github.com/LinxISA/SuperScalarModel/pull/1210", "status": "open", "note": "RWDB 8-entry wave all-or-nothing admission; basis for H-RWDB"}
+  ],
+  "classification": ["diagnostic_bypass"],
+  "bypass_reason": "main SuperScalarModel cannot run these ELFs: PTO #291 cube layout assertion (earlier) / illegal INT64 TLOAD (fb7db9c74 dirty, 2026-11-12)"
+}

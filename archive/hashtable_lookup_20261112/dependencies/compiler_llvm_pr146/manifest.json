@@ -1,0 +1,33 @@
+{
+  "dependency_id": "dep-compiler-llvm-pr146-a75987bc-lvhao-01",
+  "type": "compiler",
+  "source": {
+    "repo": "https://github.com/LinxISA/llvm-project",
+    "commit": "a75987bcc1d9cf5fcd98c1c64c6ca03badbb6919",
+    "known_identity": "PR146-period local build; not an upstream release"
+  },
+  "local_state": {
+    "patch": "compiler.patch",
+    "patch_bytes": 46475,
+    "patch_sha256": "5fef1a21a823c37e251b8fcc904837da25efd9546e9b6f4c3b9d691210553a5d",
+    "tracked_changes": 6,
+    "untracked": "untracked-files.txt (8 test files; not used by kernel builds)"
+  },
+  "tools": {
+    "clang++": {"path": "build-hash/bin/clang++", "sha256": "35898d127974570667e06f828dbd3fbffcef6b42bc5acd82d7c0b1686222a2e4"},
+    "ld.lld": {"path": "build-hash/bin/ld.lld", "sha256": "d57959a1fe1941fa0bf20060398bac74012cf14a5a42bcc262b987f44f8ae0bb"},
+    "version": "clang version 15.0.4 (linx64v5-musl-local 3529f346745052582e6e3885e5de43f56a75616b)"
+  },
+  "build": {
+    "entry": "cmake -G Ninja -S llvm -B build-hash -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS='clang;lld' -DLLVM_TARGETS_TO_BUILD=LinxV5 && ninja -C build-hash clang lld",
+    "host": "macOS darwin 25.5.0 arm64",
+    "log": null,
+    "gap": "GAP-LOG-1; byte-identical compiler rebuild not verified (GAP-BIND-2)"
+  },
+  "recovery": "git clone + git checkout a75987bcc + git apply compiler.patch (+ optional untracked tests) + build",
+  "config": "see results/*/manifest.json build_options",
+  "issues": [
+    {"url": "none", "status": "not_filed", "note": "local patch only; no upstream PR relation"}
+  ],
+  "classification": ["correctness_fix", "performance_mechanism"]
+}
