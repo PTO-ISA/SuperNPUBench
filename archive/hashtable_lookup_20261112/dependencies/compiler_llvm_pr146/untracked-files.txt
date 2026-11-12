@@ -1,0 +1,8 @@
+clang/test/LinxV5/pto-element-dynamic-predication.cpp
+clang/test/LinxV5/pto-element-nested-predication.cpp
+llvm/test/CodeGen/LinxV5/element-predication-dynamic-loop.ll
+llvm/test/CodeGen/LinxV5/element-predication-dynamic-reconvergence.ll
+llvm/test/CodeGen/LinxV5/element-predication-nested-loop-invalid.ll
+llvm/test/CodeGen/LinxV5/element-predication-nested-loop.ll
+llvm/test/CodeGen/LinxV5/element-predication-reconvergence.ll
+llvm/test/CodeGen/LinxV5/v5-bit-width-verifier.mir

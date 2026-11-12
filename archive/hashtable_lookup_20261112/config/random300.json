@@ -1,0 +1,25 @@
+{
+  "name": "random300",
+  "model": {
+    "worktree": "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177",
+    "commit": "18b24f6ca7f71369aee9245426daa68cc741dad5",
+    "binary_sha256": "12066cbdc29466d95cce1229129ff5fa03edbdd22880fbad57d55caec87633d8",
+    "cwd": "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177"
+  },
+  "cmdline": [
+    "--test-finisher", "1",
+    "-s", "softcore.multiThreadNum=4",
+    "-s", "cube.enable_internal_acc=true",
+    "-s", "bctrl.vec_cell_sched_enable=true",
+    "-s", "core.soc_random=true",
+    "-s", "core.mean_read_latency=300",
+    "-s", "core.mean_write_latency=300",
+    "-s", "core.read_bandwidth_limit=128",
+    "-s", "core.write_bandwidth_limit=128",
+    "-s", "core.sharetreg_size_bytes=262144",
+    "-s", "core.sharetreg_ssb_count=64"
+  ],
+  "sl2_defaults": {"TAG_SET_COUNT": 64, "TAG_WAY_COUNT": 4, "RWDB_ENTRY_COUNT": 8, "BEAT_SIZE": 128, "CACHELINE_SIZE": 128},
+  "overrides": {"RWDB_ENTRY_COUNT": "optional (r2: 48)", "TAG_WAY_COUNT": "optional (r2 way7: 7)"},
+  "env": "none required; do not inherit modified GFSIM_* variables"
+}

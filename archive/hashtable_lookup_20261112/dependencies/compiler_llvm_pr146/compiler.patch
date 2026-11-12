@@ -1,0 +1,978 @@
+diff --git a/llvm/docs/PTOElementFor.rst b/llvm/docs/PTOElementFor.rst
+index ffdaa630d..65bc0dda3 100644
+--- a/llvm/docs/PTOElementFor.rst
++++ b/llvm/docs/PTOElementFor.rst
+@@ -62,6 +62,57 @@ lane count.  The 4096 limit is an implementation bound for this development
+ stage, not an ISA limit.
+ 
+ Conditional edges use poison-safe ``select(parent_mask, condition, false)``.
++The complementary edge reuses that masked result as ``parent_mask XOR
++then_mask``, rather than evaluating an unmasked condition.  At a reconvergence
++block that postdominates its immediate dominator, the incoming execution mask
++is restored from that dominator.  Nested diamonds therefore restore their
++enclosing mask without repeatedly OR-reducing their incoming edge masks.
++PHI values still use individual edge masks, and a path that bypasses a block
++prevents this restoration.  These are explicit SSA-mask optimizations; they
++do not emit SIMT execution-state instructions or change Tile publication order.
++Nested loops with a SCEV-proven
++maximum of 1..64 iterations are instead fully flattened before predication,
++preserving their early exits, continue paths and loop-carried values in SSA.
++This includes bounded runtime trip counts and recursively nested loops.
++Expansion is limited to 4096 instructions per loop and 16384 per region;
++larger expansions and unknown bounds use the dynamic profile below when legal.
++These bounds are compiler implementation limits, not ISA limits.  Flattening
++may increase code size.
++It is required legalization rather than optional profitability unrolling, so
++``llvm.loop.unroll.disable`` does not prevent it.  A nested loop carrying its
++own element-region marker is rejected rather than duplicating that contract.
++
++Dynamic nested control currently supports a 32-element domain, scalar i32
++data and i32 loop-carried values.  Pointer construction can use i32-to-i64
++zero extension, but pointer PHIs, native i64/floating recurrences and typed
++carrier publications are not part of this profile.  Unsupported operations
++receive diagnostics rather than falling back to SIMT instructions.
++
++The dynamic profile schedules one acyclic CFG traversal at a time.  Each
++nested backedge has a pending element mask; its values are retained in explicit
++SSA state PHIs.  A new traversal injects only pending elements at their target
++headers, while completed elements remain inactive.  ``continue`` reaches its
++loop latch, ``break`` reaches its own exit, and nested-loop completion restores
++the enclosing flow through ordinary edge masks.  A reduction of all pending
++backedge masks controls the scalar scheduler branch.  No pending element means
++immediate scheduler exit; a temporarily empty inner branch does not terminate
++other live loops.  This does not require a statically known trip bound.
++
++Scheduler state is retained only when a use can cross a scheduling traversal,
++including backedge PHI operands and values used after an inner loop completes.
++Ordinary forward uses and same-traversal PHI edges do not require history
++Tiles.  Reconverged diamonds restore their dominating mask only when every
++incoming path belongs to the same traversal; postdominance alone is not enough
++across an inner loop.  Repeated mask unions and identical predicated blends
++are shared within the region, without speculating inactive computations.
++
++Physical legalization maps mask PHIs to GPR state and i32 data PHIs to explicit
++Tile state, with uniform/initial values materialized in the preheader.  The
++runtime scheduler keeps a fixed instruction traversal, including masked-off
++Tile publications; it does not insert arbitrary per-arm zero-mask skips that
++would change the relative-reference queue topology.  There is no hidden SIMT
++execution-mask register.  General per-arm skipping, other element shapes and
++typed carrier loop publications remain outside this profile.
+ Any number of incoming PHI edges are blended by their edge masks.  Integer
+ arithmetic, comparisons, selects, integer casts and scalar integer-element GEPs
+ are widened.  Loads and stores become masked ``llvm.vp.gather/scatter``; in
+@@ -72,7 +123,8 @@ Memory streams must currently have a proven unit-element stride.  Streams with
+ a store must either reference disjoint underlying objects or have the same
+ address SCEV and access size.  A scalar ``NoAlias`` result for ``a[i]`` versus
+ ``a[i+1]`` is insufficient, because these streams overlap across iterations.
+-Nested loops, non-induction recurrences, unplanned live-outs, atomics, volatile
++Unsupported dynamic-loop types/shapes, outer non-induction recurrences,
++unplanned live-outs, atomics, volatile
+ accesses, unknown calls and unsupported types receive diagnostics in this
+ stage.  These restrictions are compiler coverage limits, not new source syntax.
+ 
+diff --git a/llvm/lib/Target/LinxV5/LinxV5ElementRegion.cpp b/llvm/lib/Target/LinxV5/LinxV5ElementRegion.cpp
+index e5f7d94a7..ff9359a99 100644
+--- a/llvm/lib/Target/LinxV5/LinxV5ElementRegion.cpp
++++ b/llvm/lib/Target/LinxV5/LinxV5ElementRegion.cpp
+@@ -12,6 +12,7 @@
+ #include "llvm/ADT/SmallPtrSet.h"
+ #include "llvm/ADT/SmallVector.h"
+ #include "llvm/Analysis/AliasAnalysis.h"
++#include "llvm/Analysis/AssumptionCache.h"
+ #include "llvm/Analysis/CFG.h"
+ #include "llvm/Analysis/InstructionSimplify.h"
+ #include "llvm/Analysis/LazyValueInfo.h"
+@@ -49,6 +50,7 @@
+ #include "llvm/Transforms/Utils/LoopSimplify.h"
+ #include "llvm/Transforms/Utils/LoopUtils.h"
+ #include "llvm/Transforms/Utils/Mem2Reg.h"
++#include "llvm/Transforms/Utils/UnrollLoop.h"
+ 
+ #include <limits>
+ 
+@@ -205,6 +207,7 @@ constexpr StringLiteral IntraElementOrderMD =
+     "llvm.loop.linx.pto.element.intra_element_order";
+ constexpr StringLiteral PredicatedOwnerMD = "linx.pto.element.vp.owner";
+ constexpr StringLiteral PredicatedDomainMD = "linx.pto.element.vp.domain";
++constexpr StringLiteral PredicatedSchedulerMD = "linx.pto.element.vp.scheduler";
+ constexpr StringLiteral ScalarizedLaneZeroMD =
+     "linx.pto.element.scalarized_lane_zero";
+ 
+@@ -938,6 +941,7 @@ struct PredicatedRegion {
+   SmallPtrSet<CallInst *, 4> ProvenDeadTraps;
+   SmallPtrSet<StoreInst *, 1> UnorderedScatters;
+   SmallPtrSet<Value *, 32> PositiveB32Values;
++  bool Dynamic = false;
+ };
+ 
+ // IndVarSimplify may widen source B32 control/address expressions to i64.
+@@ -1282,11 +1286,12 @@ static bool planPredication(Function &F, Loop &L, ScalarEvolution &SE,
+   if (F.hasFnAttribute(Attribute::StrictFP))
+     return Fail(L.getHeader()->getTerminator(),
+                 "strictfp/fenv requires constrained floating-point lowering");
+-  if (!L.isInnermost() || !L.getLoopPreheader() || !L.getLoopLatch() ||
++  Plan.Dynamic = !L.isInnermost();
++  if (!L.getLoopPreheader() || !L.getLoopLatch() ||
+       !L.getExitBlock() || L.getExitingBlock() != L.getLoopLatch() ||
+       L.getExitBlock()->getSinglePredecessor() != L.getLoopLatch())
+     return Fail(L.getHeader()->getTerminator(),
+-                "requires an innermost single-latch loop without early exits");
++                "requires a single-latch element loop without outer early exits");
+   auto *Sentinel = findRegionSentinel(F, getElementRegionToken(L));
+   if (!Sentinel || !DT.dominates(Sentinel, L.getHeader()))
+     return Fail(L.getHeader()->getTerminator(),
+@@ -1304,6 +1309,37 @@ static bool planPredication(Function &F, Loop &L, ScalarEvolution &SE,
+     return Fail(L.getHeader()->getTerminator(),
+                 "requires a proven 1..4096 trip count and zero-based unit induction");
+   Plan.CarrierCount = Plan.Count;
++  if (Plan.Dynamic) {
++    if (Plan.Count != 32 ||
++        std::distance(L.getHeader()->phis().begin(),
++                      L.getHeader()->phis().end()) != 1)
++      return Fail(L.getHeader()->getTerminator(),
++                  "dynamic nested control requires logical32 and only the "
++                  "outer induction PHI");
++    for (BasicBlock *BB : L.blocks())
++      for (Instruction &I : *BB) {
++        if (&I == Plan.Induction || I.isTerminator() ||
++            isa<DbgInfoIntrinsic>(I))
++          continue;
++        bool IndexExtension =
++            isa<ZExtInst>(I) && I.getType()->isIntegerTy(64) &&
++            I.getOperand(0)->getType()->isIntegerTy(32) &&
++            llvm::all_of(I.users(), [](User *Use) {
++              return isa<GetElementPtrInst>(Use);
++            });
++        if (I.getType()->isVectorTy() ||
++            (!I.getType()->isVoidTy() && !I.getType()->isPointerTy() &&
++             !I.getType()->isIntegerTy(1) && !I.getType()->isIntegerTy(32) &&
++             !IndexExtension) ||
++            (isa<PHINode>(I) && !I.getType()->isIntegerTy(32)))
++          return Fail(&I, "dynamic nested control requires scalar i32 data "
++                          "and i32 loop-carried values");
++        if (auto *Call = dyn_cast<CallBase>(&I))
++          if (!isa<DbgInfoIntrinsic>(Call))
++            return Fail(&I, "dynamic nested control does not support calls "
++                            "or nested element contracts");
++      }
++  }
+   Optional<ElementProfile> Norm;
+   for (BasicBlock *BB : L.blocks())
+     for (Instruction &I : *BB)
+@@ -1349,7 +1385,7 @@ static bool planPredication(Function &F, Loop &L, ScalarEvolution &SE,
+     unsigned Count = 0;
+     for (BasicBlock *Pred : predecessors(BB))
+       if (L.contains(Pred) &&
+-          !(Pred == L.getLoopLatch() && BB == L.getHeader()))
++          !DT.dominates(BB, Pred))
+         ++Count;
+     Pending[BB] = Count;
+   }
+@@ -1358,7 +1394,7 @@ static bool planPredication(Function &F, Loop &L, ScalarEvolution &SE,
+     BasicBlock *BB = Plan.Order[I];
+     for (BasicBlock *Succ : successors(BB)) {
+       if (!L.contains(Succ) ||
+-          (BB == L.getLoopLatch() && Succ == L.getHeader()))
++          DT.dominates(Succ, BB))
+         continue;
+       if (--Pending[Succ] == 0)
+         Plan.Order.push_back(Succ);
+@@ -2586,7 +2622,8 @@ static bool planPredication(Function &F, Loop &L, ScalarEvolution &SE,
+         return Fail(Memory[J], "memory streams may overlap across elements");
+     }
+   }
+-  planPositiveB32Representation(F, SE, DT, LVI, Plan);
++  if (!Plan.Dynamic)
++    planPositiveB32Representation(F, SE, DT, LVI, Plan);
+   return true;
+ }
+ 
+@@ -2604,22 +2641,59 @@ static void emitPredication(Function &F, const PredicatedRegion &Plan,
+   Value *True = Constant::getAllOnesValue(MaskTy);
+   Value *EVL = B.getInt32(Plan.Count);
+   DenseMap<Value *, Value *> Values;
++  DenseMap<Value *, PHINode *> SchedulerValues;
++  DenseMap<std::pair<BasicBlock *, unsigned>, PHINode *> SchedulerMasks;
++  SmallVector<PHINode *, 32> SchedulerPhis;
++  BasicBlock *Preheader = L.getLoopPreheader();
++  BasicBlock *Exit = L.getExitBlock();
++  Instruction *FirstGenerated = nullptr;
+   DenseMap<Value *, Value *> PositiveB32Values;
+   SmallPtrSet<Instruction *, 8> ScalarNarrowImports;
+   SimplifyQuery SQ(F.getParent()->getDataLayout());
++  DenseMap<std::pair<Value *, Value *>, Value *> MaskUnions;
++  DenseMap<std::pair<Value *, std::pair<Value *, Value *>>, Value *> Blends;
+   auto UnionMask = [&](Value *Left, Value *Right, const Twine &Name) {
+     if (Value *Simple = simplifyOrInst(Left, Right, SQ))
+       return Simple;
+-    return B.CreateOr(Left, Right, Name);
++    if (Value *Existing = MaskUnions.lookup({Left, Right}))
++      return Existing;
++    if (Value *Existing = MaskUnions.lookup({Right, Left}))
++      return Existing;
++    return MaskUnions[{Left, Right}] = B.CreateOr(Left, Right, Name);
+   };
+   auto Blend = [&](Value *Mask, Value *Yes, Value *No, const Twine &Name) {
+     if (Value *Simple = simplifySelectInst(Mask, Yes, No, SQ))
+       return Simple;
+-    return B.CreateSelect(Mask, Yes, No, Name);
++    auto Key = std::make_pair(Mask, std::make_pair(Yes, No));
++    if (Value *Existing = Blends.lookup(Key))
++      return Existing;
++    return Blends[Key] = B.CreateSelect(Mask, Yes, No, Name);
+   };
+   // Successor index is part of identity: a conditional can have two edges to
+   // the same destination, and neither edge may be silently dropped.
+   DenseMap<std::pair<BasicBlock *, unsigned>, Value *> Edges;
++  DenseMap<BasicBlock *, Value *> BlockMasks;
++  PostDominatorTree PDT(F);
++  DenseMap<std::pair<BasicBlock *, BasicBlock *>, bool> TraversalCache;
++  auto SameTraversal = [&](BasicBlock *From, BasicBlock *To) {
++    auto Key = std::make_pair(From, To);
++    auto Cached = TraversalCache.find(Key);
++    if (Cached != TraversalCache.end())
++      return Cached->second;
++    SmallVector<BasicBlock *, 16> Worklist{To};
++    SmallPtrSet<BasicBlock *, 16> Visited;
++    while (!Worklist.empty()) {
++      BasicBlock *Current = Worklist.pop_back_val();
++      if (Current == From || !Visited.insert(Current).second)
++        continue;
++      for (BasicBlock *Pred : predecessors(Current)) {
++        if (!L.contains(Pred) || DT.dominates(Current, Pred))
++          return TraversalCache[Key] = false;
++        Worklist.push_back(Pred);
++      }
++    }
++    return TraversalCache[Key] = true;
++  };
+   SmallVector<Constant *, 32> Indices;
+   Type *InductionTy = Plan.PositiveB32Values.contains(Plan.Induction)
+                           ? B.getInt32Ty()
+@@ -2725,7 +2799,9 @@ static void emitPredication(Function &F, const PredicatedRegion &Plan,
+     auto *Term = Pred->getTerminator();
+     for (unsigned J = 0; J < Term->getNumSuccessors(); ++J)
+       if (Term->getSuccessor(J) == Dest) {
+-        Value *Edge = Edges.lookup({Pred, J});
++        Value *Edge = DT.dominates(Dest, Pred) && Plan.Dynamic
++                          ? SchedulerMasks.lookup({Pred, J})
++                          : Edges.lookup({Pred, J});
+         assert(Edge && "all predecessor edges must already be built");
+         Mask = UnionMask(Mask, Edge, "pto.edge.union");
+       }
+@@ -2741,11 +2817,69 @@ static void emitPredication(Function &F, const PredicatedRegion &Plan,
+     return B.Insert(GetElementPtrInst::Create(B.getInt32Ty(), Wide, {Zero}),
+                     "pto.uniform.address");
+   };
++  if (Plan.Dynamic) {
++    auto NewPhi = [&](Type *Ty, const Twine &Name) {
++      auto *Phi = B.Insert(PHINode::Create(Ty, 2), Name);
++      SchedulerPhis.push_back(Phi);
++      if (!FirstGenerated)
++        FirstGenerated = Phi;
++      return Phi;
++    };
++    for (BasicBlock *BB : Plan.Order) {
++      auto *Term = BB->getTerminator();
++      for (unsigned Index = 0; Index < Term->getNumSuccessors(); ++Index) {
++        BasicBlock *Succ = Term->getSuccessor(Index);
++        if (L.contains(Succ) && DT.dominates(Succ, BB) &&
++            Succ != L.getHeader())
++          SchedulerMasks[{BB, Index}] = NewPhi(MaskTy, "pto.loop.pending");
++      }
++      for (Instruction &I : *BB)
++        if (&I != Plan.Induction && !I.isTerminator() &&
++            (I.getType()->isIntegerTy(1) || I.getType()->isIntegerTy(32)) &&
++            llvm::any_of(I.uses(), [&](Use &Operand) {
++              auto *UseInst = dyn_cast<Instruction>(Operand.getUser());
++              if (!UseInst || UseInst == Plan.Induction)
++                return false;
++              BasicBlock *UseBlock = UseInst->getParent();
++              if (auto *Phi = dyn_cast<PHINode>(UseInst)) {
++                BasicBlock *Incoming =
++                    Phi->getIncomingBlock(Operand.getOperandNo());
++                if (DT.dominates(UseBlock, Incoming))
++                  return true;
++                UseBlock = Incoming;
++              }
++              return !SameTraversal(BB, UseBlock);
++            })) {
++          auto *Phi = NewPhi(WideType(&I), "pto.loop.value");
++          SchedulerValues[&I] = Phi;
++          Values[&I] = Phi;
++        }
++    }
++  }
++  PHINode *EntryMask = nullptr;
++  if (Plan.Dynamic) {
++    EntryMask = B.Insert(PHINode::Create(MaskTy, 2), "pto.loop.entry");
++    SchedulerPhis.push_back(EntryMask);
++  }
+   for (BasicBlock *BB : Plan.Order) {
+-    Value *Mask = BB == L.getHeader() ? True : False;
+-    if (BB != L.getHeader())
+-      for (BasicBlock *Pred : predecessors(BB))
+-        Mask = UnionMask(Mask, EdgeFrom(Pred, BB), "pto.block.mask");
++    Value *Mask = BB == L.getHeader()
++                      ? (Plan.Dynamic ? static_cast<Value *>(EntryMask) : True)
++                      : nullptr;
++    if (BB != L.getHeader()) {
++      auto *Node = DT.getNode(BB);
++      BasicBlock *Dominator = Node && Node->getIDom()
++                                  ? Node->getIDom()->getBlock()
++                                  : nullptr;
++      if (Dominator && PDT.dominates(BB, Dominator) &&
++          (!Plan.Dynamic || SameTraversal(Dominator, BB)))
++        Mask = BlockMasks.lookup(Dominator);
++      if (!Mask) {
++        Mask = False;
++        for (BasicBlock *Pred : predecessors(BB))
++          Mask = UnionMask(Mask, EdgeFrom(Pred, BB), "pto.block.mask");
++      }
++    }
++    BlockMasks[BB] = Mask;
+     for (Instruction &I : *BB) {
+       if (&I == Plan.Induction ||
+           Plan.Accumulators.count(dyn_cast<PHINode>(&I)) || I.isTerminator() ||
+@@ -2773,7 +2907,13 @@ static void emitPredication(Function &F, const PredicatedRegion &Plan,
+         Result = PoisonValue::get(WideTy);
+         for (unsigned J = 0; J < Phi->getNumIncomingValues(); ++J)
+           Result = Blend(EdgeFrom(Phi->getIncomingBlock(J), BB),
+-                         PositiveB32Result
++                         Plan.Dynamic &&
++                                 DT.dominates(BB, Phi->getIncomingBlock(J))
++                             ? (SchedulerValues.count(Phi->getIncomingValue(J))
++                                    ? static_cast<Value *>(SchedulerValues.lookup(
++                                          Phi->getIncomingValue(J)))
++                                    : Widen(Phi->getIncomingValue(J)))
++                             : PositiveB32Result
+                              ? WidenPositiveB32(Phi->getIncomingValue(J))
+                              : Widen(Phi->getIncomingValue(J)),
+                          Result, "pto.phi");
+@@ -2969,6 +3109,9 @@ static void emitPredication(Function &F, const PredicatedRegion &Plan,
+         llvm_unreachable("preflight must reject unsupported instructions");
+       }
+       if (Result) {
++        if (Plan.Dynamic && SchedulerValues.count(&I))
++          Result = Blend(Mask, Result, SchedulerValues.lookup(&I),
++                         "pto.loop.retain");
+         if (PositiveB32Result)
+           PositiveB32Values[&I] = Result;
+         else
+@@ -2981,12 +3124,17 @@ static void emitPredication(Function &F, const PredicatedRegion &Plan,
+     for (unsigned J = 0; J < Branch->getNumSuccessors(); ++J) {
+       Value *Edge = Mask;
+       if (Branch->isConditional()) {
+-        Value *Condition = Widen(Branch->getCondition());
+-        if (J)
+-          Condition = B.CreateNot(Condition, "pto.edge.not");
+-        // As in LoopVectorize::createEdgeMask, and(false, poison) is poison;
+-        // select suppresses a condition that was never evaluated by this element.
+-        Edge = Blend(Mask, Condition, False, "pto.edge.mask");
++        if (J) {
++          Value *ThenMask = Edges.lookup({BB, 0});
++          Edge = simplifyXorInst(Mask, ThenMask, SQ);
++          if (!Edge)
++            Edge = match(Mask, m_AllOnes())
++                       ? B.CreateNot(ThenMask, "pto.edge.else")
++                       : B.CreateXor(Mask, ThenMask, "pto.edge.else");
++        } else {
++          Value *Condition = Widen(Branch->getCondition());
++          Edge = Blend(Mask, Condition, False, "pto.edge.mask");
++        }
+       }
+       Edges[{BB, J}] = Edge;
+     }
+@@ -3022,7 +3170,41 @@ static void emitPredication(Function &F, const PredicatedRegion &Plan,
+       PredicatedDomainMD,
+       MDNode::get(F.getContext(),
+                   ConstantAsMetadata::get(B.getInt32(Plan.CarrierCount))));
++  Value *Pending = False;
++  if (Plan.Dynamic) {
++    for (const auto &Entry : SchedulerMasks) {
++      Value *Backedge = Edges.lookup(Entry.first);
++      Entry.second->addIncoming(False, Preheader);
++      Entry.second->addIncoming(Backedge, Preheader);
++      Pending = UnionMask(Pending, Backedge, "pto.loop.live");
++    }
++    for (const auto &Entry : SchedulerValues) {
++      Entry.second->addIncoming(Constant::getNullValue(Entry.second->getType()),
++                                Preheader);
++      Entry.second->addIncoming(Values.lookup(Entry.first), Preheader);
++    }
++    EntryMask->addIncoming(True, Preheader);
++    EntryMask->addIncoming(False, Preheader);
++    for (Instruction *I = FirstGenerated; I != Preheader->getTerminator();
++         I = I->getNextNode())
++      I->setMetadata(PredicatedOwnerMD, Token);
++  }
+   deleteDeadLoop(&L, &DT, &SE, &LI);
++  if (Plan.Dynamic) {
++    BasicBlock *Scheduler =
++        Preheader->splitBasicBlock(FirstGenerated, "pto.loop.scheduler");
++    for (PHINode *Phi : SchedulerPhis)
++      Phi->setIncomingBlock(1, Scheduler);
++    IRBuilder<> LoopBuilder(Scheduler->getTerminator());
++    Value *Any = LoopBuilder.CreateIntrinsic(Intrinsic::vector_reduce_or,
++                                             {MaskTy}, {Pending}, nullptr,
++                                             "pto.loop.any");
++    cast<Instruction>(Any)->setMetadata(PredicatedOwnerMD, Token);
++    Scheduler->getTerminator()->eraseFromParent();
++    auto *Branch = BranchInst::Create(Scheduler, Exit, Any, Scheduler);
++    Branch->setMetadata(PredicatedSchedulerMD, Token);
++    findRegionSentinel(F, Token)->setMetadata(PredicatedSchedulerMD, Token);
++  }
+ }
+ 
+ // Tile values cross the region boundary through whole-carrier register inputs.
+@@ -3197,6 +3379,8 @@ class ElementTileLegalizer {
+   SmallPtrSet<Instruction *, 32> OwnedSet;
+   SmallPtrSet<Value *, 32> Validated;
+   SmallVector<CallInst *, 8> Publications;
++  bool HasScheduler = false;
++  BasicBlock *SchedulerPreheader = nullptr;
+   SmallPtrSet<PHINode *, 16> MaterializedImportPhis;
+   DenseMap<PHINode *, uint64_t> &ImportedPhiTypes;
+   unsigned DomainCount;
+@@ -4016,6 +4200,14 @@ class ElementTileLegalizer {
+       return isVector(V, 1) || isVector(V, 32) || isVector(V, 64) ||
+              isF32Vector(V) || isF16Vector(V) ||
+              fail(V, "unsupported undefined element type");
++    if (auto *Phi = dyn_cast<PHINode>(V)) {
++      if (!HasScheduler || (!isVector(V, 1) && !isVector(V, 32)))
++        return fail(V, "scheduler PHI requires an i1 mask or i32 Tile");
++      for (Value *Incoming : Phi->incoming_values())
++        if (!validate(Incoming))
++          return false;
++      return true;
++    }
+     if (auto *Freeze = dyn_cast<FreezeInst>(V)) {
+       if (!isVector(Freeze, 32) && !isI64LeafVector(Freeze) &&
+           !isF32Vector(Freeze) && !isF16Vector(Freeze))
+@@ -4624,6 +4816,9 @@ class ElementTileLegalizer {
+   }
+ 
+   Value *mask(Value *V) {
++    IRBuilderBase::InsertPointGuard Guard(B);
++    if (HasScheduler && (isa<Constant>(V) || getSplatValue(V)))
++      B.SetInsertPoint(SchedulerPreheader->getTerminator());
+     auto It = Masks.find(V);
+     if (It != Masks.end())
+       return It->second;
+@@ -5100,6 +5295,9 @@ class ElementTileLegalizer {
+   }
+ 
+   Value *value(Value *V, uint64_t PreferredType = 0) {
++    IRBuilderBase::InsertPointGuard Guard(B);
++    if (HasScheduler && (isa<Constant>(V) || getSplatValue(V)))
++      B.SetInsertPoint(SchedulerPreheader->getTerminator());
+     if (NormProfile)
+       return valueNorm(V);
+     auto It = Data.find(V);
+@@ -5306,15 +5504,45 @@ public:
+         B(F.getContext()) {
+     for (Instruction *I : Owned) {
+       OwnedSet.insert(I);
++      HasScheduler |= I->getParent()->getTerminator()->getMetadata(
++                          PredicatedSchedulerMD) != nullptr;
+       if (auto View = getViewDescriptor(I))
+         if (View->Profile.Layout == 0)
+           NormProfile = View->Profile;
+     }
++    if (HasScheduler)
++      for (BasicBlock *Pred : predecessors(Owned.front()->getParent()))
++        if (Pred != Owned.front()->getParent())
++          SchedulerPreheader = Pred;
+   }
+ 
+   bool preflight() {
+     if (Owned.empty())
+       return fail(nullptr, "empty predicated region");
++    if (HasScheduler && (DomainCount != 32 || !SchedulerPreheader))
++      return fail(nullptr, "malformed logical32 scheduler control flow");
++    if (HasScheduler) {
++      BasicBlock *Block = Owned.front()->getParent();
++      auto *Branch = dyn_cast<BranchInst>(Block->getTerminator());
++      if (!Branch || !Branch->isConditional() ||
++          Branch->getSuccessor(0) != Block ||
++          Branch->getSuccessor(1) == Block || pred_size(Block) != 2)
++        return fail(Branch, "scheduler requires one preheader and one backedge");
++      for (Instruction *I : Owned) {
++        if (auto *Phi = dyn_cast<PHINode>(I))
++          if (Phi->getNumIncomingValues() != 2 ||
++              Phi->getIncomingBlock(0) != SchedulerPreheader ||
++              Phi->getIncomingBlock(1) != Block || !validate(Phi))
++            return fail(Phi, "malformed scheduler state PHI");
++        if (auto *Reduction = dyn_cast<IntrinsicInst>(I))
++          if (Reduction->getIntrinsicID() == Intrinsic::vector_reduce_or)
++            if (!validate(Reduction->getArgOperand(0)) ||
++                !Reduction->hasOneUse() ||
++                Branch->getCondition() != Reduction)
++              return fail(Reduction,
++                          "scheduler reduction must control its backedge");
++      }
++    }
+     for (Instruction *I : Owned) {
+       if (isa<FPMathOperator>(I) && I->getFastMathFlags().any())
+         return fail(I, "floating instructions require no fast-math");
+@@ -5327,7 +5555,9 @@ public:
+           return true;
+         for (User *U : V->users()) {
+           auto *UserI = dyn_cast<Instruction>(U);
+-          if (UserI && OwnedSet.contains(UserI))
++          if (UserI && (OwnedSet.contains(UserI) ||
++                        (HasScheduler && isa<BranchInst>(UserI) &&
++                         UserI->getMetadata(PredicatedSchedulerMD))))
+             continue;
+           External = true;
+           if (isa_and_nonnull<ReturnInst>(UserI) &&
+@@ -5392,6 +5622,19 @@ public:
+   }
+ 
+   void emit() {
++    for (Instruction *I : Owned)
++      if (auto *Phi = dyn_cast<PHINode>(I)) {
++        Type *Ty = isVector(Phi, 1) ? Type::getInt64Ty(F.getContext())
++                                    : Phi->getType();
++        auto *Replacement = PHINode::Create(Ty, Phi->getNumIncomingValues(),
++                                             "pto.scheduler.phi", Phi);
++        if (isVector(Phi, 1))
++          Masks[Phi] = Replacement;
++        else {
++          Data[Phi] = Replacement;
++          PhysicalTypes[Replacement] = 25;
++        }
++      }
+     NativeI64RegionType = 0;
+     NativeI32RegionType = 0;
+     MixedNativeI64RegionTypes = false;
+@@ -5486,6 +5729,30 @@ public:
+         return !I || !OwnedSet.contains(I);
+       });
+     }
++    if (HasScheduler) {
++      for (Instruction *I : Owned)
++        if (auto *Reduction = dyn_cast<IntrinsicInst>(I))
++          if (Reduction->getIntrinsicID() == Intrinsic::vector_reduce_or) {
++            B.SetInsertPoint(Reduction);
++            Reduction->replaceAllUsesWith(B.CreateICmpNE(
++                mask(Reduction->getArgOperand(0)), B.getInt64(0),
++                "pto.scheduler.any"));
++          }
++      for (Instruction *I : Owned)
++        if (auto *Phi = dyn_cast<PHINode>(I)) {
++          auto *Replacement = cast<PHINode>(isVector(Phi, 1)
++                                                ? Masks.lookup(Phi)
++                                                : Data.lookup(Phi));
++          for (unsigned Index = 0; Index < Phi->getNumIncomingValues(); ++Index) {
++            BasicBlock *Pred = Phi->getIncomingBlock(Index);
++            B.SetInsertPoint(Pred->getTerminator());
++            Value *Incoming = isVector(Phi, 1)
++                                  ? mask(Phi->getIncomingValue(Index))
++                                  : value(Phi->getIncomingValue(Index), 25);
++            Replacement->addIncoming(Incoming, Pred);
++          }
++        }
++    }
+     for (Instruction *I : Owned)
+       I->dropAllReferences();
+     for (Instruction *I : Owned)
+@@ -8082,6 +8349,41 @@ LinxV5ElementPredicationPass::run(Function &F, FunctionAnalysisManager &AM) {
+       break;
+     auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+     auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
++    if (!Selected->isInnermost()) {
++      Loop *Nested = Selected->getSubLoops().front();
++      while (!Nested->isInnermost())
++        Nested = Nested->getSubLoops().front();
++      if (getElementRegionToken(*Nested)) {
++        diagnose(F, Nested->getHeader()->getTerminator(),
++                 "predication: nested marked element regions are not supported");
++        break;
++      }
++      unsigned MaxTripCount = SE.getSmallConstantMaxTripCount(Nested);
++      uint64_t InstructionCount = 0;
++      for (BasicBlock *BB : Nested->blocks())
++        InstructionCount += BB->size();
++      uint64_t RegionInstructionCount = 0;
++      for (BasicBlock *BB : Selected->blocks())
++        RegionInstructionCount += BB->size();
++      if (MaxTripCount && MaxTripCount <= 64 &&
++          InstructionCount * MaxTripCount <= 4096 &&
++          RegionInstructionCount + InstructionCount * (MaxTripCount - 1) <=
++              16384) {
++        auto &AC = AM.getResult<AssumptionAnalysis>(F);
++        auto &TTI = AM.getResult<TargetIRAnalysis>(F);
++        LoopUnrollResult Result = UnrollLoop(
++            Nested, {MaxTripCount, true, false, false, false, true}, &LI, &SE,
++            &DT, &AC, &TTI, nullptr, true);
++        if (Result != LoopUnrollResult::FullyUnrolled) {
++          diagnose(F, Selected->getHeader()->getTerminator(),
++                   "predication: bounded nested loop could not be flattened");
++          break;
++        }
++        AM.invalidate(F, PreservedAnalyses::none());
++        Changed = true;
++        continue;
++      }
++    }
+     auto &LVI = AM.getResult<LazyValueAnalysis>(F);
+     PredicatedRegion Plan;
+     if (!planPredication(F, *Selected, SE, DT, LVI, AM.getResult<AAManager>(F),
+diff --git a/llvm/lib/Target/LinxV5/LinxV5InstrInfo.cpp b/llvm/lib/Target/LinxV5/LinxV5InstrInfo.cpp
+index 8a6d34b10..95d5d338c 100644
+--- a/llvm/lib/Target/LinxV5/LinxV5InstrInfo.cpp
++++ b/llvm/lib/Target/LinxV5/LinxV5InstrInfo.cpp
+@@ -1019,6 +1019,23 @@ static Optional<unsigned> getInlineAsmLayout(MachineInstr &MI,
+   if (!Text.contains("B.DATR"))
+     return LinxV5Op::ArgFormat::NORM;
+ 
++  // A B.DATR spelling may start at PadValue and omit Layout entirely, for
++  // example `B.DATR Zero` or `B.DATR Zero, EQ`.  The architectural default
++  // layout is NORM.  Treating this form as unknown drops the destination
++  // descriptor at CFG joins and hides a real NORM-vs-CUBE mismatch behind a
++  // generic "canonical entry contract" failure.
++  SmallVector<StringRef, 8> AttributeLines;
++  Text.split(AttributeLines, '\n');
++  for (StringRef Line : AttributeLines) {
++    Line = Line.trim();
++    if (!Line.consume_front("B.DATR"))
++      continue;
++    StringRef FirstField = Line.trim().split(',').first.trim();
++    if (FirstField == "Zero" || FirstField == "Max" ||
++        FirstField == "Min" || FirstField == "Null")
++      return LinxV5Op::ArgFormat::NORM;
++  }
++
+   // Identity conversions may spell only dtype and rounding in B.DATR.
+   // Every possible attribute line then has the architectural default NORM
+   // layout. Require exact two-field spellings and the same resolved dtype as
+@@ -2669,6 +2686,9 @@ bool LinxV5InstrInfo::verifyInstruction(const MachineInstr &MI,
+         case LinxV5Op::OPERAND_UIMM3:
+           Ok = isUInt<3>(Imm);
+           break;
++        case LinxV5Op::OPERAND_UIMM3_64:
++          Ok = Imm >= 1 && Imm <= 8;
++          break;
+         case LinxV5Op::OPERAND_UIMM4:
+           Ok = isUInt<4>(Imm);
+           break;
+@@ -2681,6 +2701,9 @@ bool LinxV5InstrInfo::verifyInstruction(const MachineInstr &MI,
+         case LinxV5Op::OPERAND_UIMM6:
+           Ok = isUInt<6>(Imm);
+           break;
++        case LinxV5Op::OPERAND_UIMM6_64:
++          Ok = Imm >= 1 && Imm <= 64;
++          break;
+         case LinxV5Op::OPERAND_UIMM7:
+           Ok = isUInt<7>(Imm);
+           break;
+diff --git a/llvm/lib/Target/LinxV5/LinxV5TRegToOffset.cpp b/llvm/lib/Target/LinxV5/LinxV5TRegToOffset.cpp
+index 9e1f5d8f1..f3b49933e 100644
+--- a/llvm/lib/Target/LinxV5/LinxV5TRegToOffset.cpp
++++ b/llvm/lib/Target/LinxV5/LinxV5TRegToOffset.cpp
+@@ -123,6 +123,27 @@ struct QueueContractEntry {
+   }
+ };
+ 
++static void printQueueDescriptor(raw_ostream &OS, const LinxRegOp &Value,
++                                 const TargetRegisterInfo *TRI) {
++  OS << printReg(Value.Reg, TRI) << "/" << Value.Size;
++  if (!Value.Descriptor) {
++    OS << "{no-desc}";
++    return;
++  }
++  const LinxV5::TileDescriptor &D = *Value.Descriptor;
++  OS << "{dtype=" << D.DataType << ",layout=" << D.Layout
++     << ",vr=" << D.ValidRow << ",vc=" << D.ValidCol
++     << ",pc=" << D.PhysicalCol << ",size=" << D.SizeCode
++     << ",packed=" << D.PackedPredicate
++     << ",basis=" << D.PredicateBasisType
++     << ",vr-reg=" << printReg(D.ValidRowReg, TRI)
++     << ",vc-reg=" << printReg(D.ValidColReg, TRI)
++     << ",pc-reg=" << printReg(D.PhysicalColReg, TRI)
++     << ",vr-def=" << static_cast<const void *>(D.ValidRowDef)
++     << ",vc-def=" << static_cast<const void *>(D.ValidColDef)
++     << ",pc-def=" << static_cast<const void *>(D.PhysicalColDef) << "}";
++}
++
+ struct RCCompare {
+   bool operator()(const TargetRegisterClass *a,
+                   const TargetRegisterClass *b) const {
+@@ -890,8 +911,11 @@ bool SlotCalc::BuildCopy(MachineBasicBlock::iterator Before, LinxRegOp RegOp,
+           report_fatal_error(
+               "LinxV5 TRegToOffset attempted PseudoTCOPY with non-Local tile");
+         if (!RegOp.Descriptor)
+-          report_fatal_error(
+-              "cannot prove a complete Local tile descriptor for window COPY");
++          RegOp.Descriptor =
++              LinxV5::tryGetTileRegDescriptor(*MBB, Before, RegOp.Reg);
++        if (!RegOp.Descriptor)
++          return false; // local adaptation: skip an unprovable alignment copy
++
+         LinxV5::TileDescriptor Descriptor = *RegOp.Descriptor;
+         if (Descriptor.SizeCode != RegSizeCode)
+           report_fatal_error(
+@@ -2196,13 +2220,17 @@ void LinxV5TRegToOffsetOpt::certifyEntryContracts(MachineFunction &MF) {
+                           << printMBBReference(Succ) << " in "
+                           << TRI->getRegClassName(RC) << "\n";
+                    dbgs() << "canonical:";
+-                   for (const QueueContractEntry &Entry : Canonical)
+-                     dbgs() << " " << printReg(Entry.Value.Reg, TRI) << "/"
+-                            << Entry.Value.Size << "@" << Entry.Age;
++                   for (const QueueContractEntry &Entry : Canonical) {
++                     dbgs() << " ";
++                     printQueueDescriptor(dbgs(), Entry.Value, TRI);
++                     dbgs() << "@" << Entry.Age;
++                   }
+                    dbgs() << " actual:";
+-                   for (const QueueContractEntry &Entry : Actual)
+-                     dbgs() << " " << printReg(Entry.Value.Reg, TRI) << "/"
+-                            << Entry.Value.Size << "@" << Entry.Age;
++                   for (const QueueContractEntry &Entry : Actual) {
++                     dbgs() << " ";
++                     printQueueDescriptor(dbgs(), Entry.Value, TRI);
++                     dbgs() << "@" << Entry.Age;
++                   }
+                    dbgs() << "\n");
+         report_fatal_error(
+             "Local tile CFG edge violates the canonical entry contract");
+diff --git a/llvm/test/CodeGen/LinxV5/Inputs/element-predication-host.c b/llvm/test/CodeGen/LinxV5/Inputs/element-predication-host.c
+index ca3547618..336c2f45e 100644
+--- a/llvm/test/CodeGen/LinxV5/Inputs/element-predication-host.c
++++ b/llvm/test/CodeGen/LinxV5/Inputs/element-predication-host.c
+@@ -6,6 +6,16 @@ extern void tail_33(const uint32_t *, uint32_t *, uint64_t, _Bool, uint32_t);
+ extern void tail_129(const uint32_t *, uint32_t *, uint64_t, _Bool, uint32_t);
+ extern void two_regions(int32_t *);
+ extern void conditional(uint32_t *, const uint32_t *);
++extern void nested_break_continue(uint32_t *, uint32_t, uint32_t, uint32_t);
++extern void nested_cpp(uint32_t *, uint32_t, uint32_t, uint32_t, uint32_t);
++extern void lane_bound_cpp(uint32_t *, uint32_t, uint32_t, uint32_t);
++extern void nested_effect_cpp(uint32_t *);
++extern void dynamic_loop(uint32_t *, uint32_t, uint32_t);
++extern void dynamic_diamond(uint32_t *, uint32_t);
++extern void dynamic_cpp(uint32_t *, uint32_t, uint32_t, uint32_t, uint32_t,
++                        uint32_t);
++extern void dynamic_nested_cpp(uint32_t *, uint32_t, uint32_t, uint32_t);
++extern void dynamic_effect_cpp(uint32_t *, uint32_t, uint32_t);
+ 
+ int main(void) {
+   int32_t values[4] = {-2, 0, 4, 25};
+@@ -69,6 +79,157 @@ int main(void) {
+     if (output[i] != expected)
+       return 6;
+   }
++  for (uint32_t limit = 0; limit < 6; ++limit)
++    for (uint32_t stop = 0; stop < 6; ++stop)
++      for (uint32_t skip = 0; skip < 6; ++skip)
++        for (uint32_t divisor = 1; divisor < 5; ++divisor) {
++          uint32_t nested[32];
++          uint32_t cpp_nested[32];
++          nested_break_continue(nested, stop, skip, divisor);
++          nested_cpp(cpp_nested, limit, stop, skip, divisor);
++          for (uint32_t element = 0; element < 32; ++element) {
++            uint32_t expected = 0;
++            uint32_t cpp_expected = 0;
++            for (uint32_t iteration = 0; iteration < 4; ++iteration) {
++              if (iteration == ((element + stop) & 3))
++                break;
++              if (iteration == skip)
++                continue;
++              expected += (element + iteration) / divisor;
++            }
++            for (uint32_t iteration = 0; iteration < (limit & 3); ++iteration) {
++              if (iteration == ((element + stop) & 3))
++                break;
++              if (iteration == skip)
++                continue;
++              for (uint32_t inner = 0; inner < 2; ++inner)
++                cpp_expected += (element + iteration + inner) / divisor;
++            }
++            if (nested[element] != expected ||
++                cpp_nested[element] != cpp_expected)
++              return 7;
++          }
++        }
++  nested_cpp(output, 0, 0, 0, 0);
++  for (unsigned element = 0; element < 32; ++element)
++    if (output[element] != 0)
++      return 8;
++  nested_cpp(output, 1, 0, 0, 0);
++  for (unsigned element = 0; element < 32; ++element)
++    if (output[element] != 0)
++      return 9;
++  for (uint32_t valid = 0; valid <= 33; ++valid)
++    for (uint32_t seed = 0; seed < 6; ++seed) {
++      for (unsigned element = 0; element < 32; ++element)
++        output[element] = 0xdeadbeef;
++      lane_bound_cpp(output, valid, seed, 3);
++      for (unsigned element = 0; element < 32; ++element) {
++        uint32_t expected = 0xdeadbeef;
++        if (element < valid) {
++          expected = element;
++          for (uint32_t iteration = 0; iteration < ((element + seed) & 3);
++               ++iteration)
++            expected += (element + iteration) / 3;
++        }
++        if (output[element] != expected)
++          return 10;
++      }
++    }
++  lane_bound_cpp(0, 0, 0, 0);
++  for (unsigned element = 0; element < 32; ++element)
++    output[element] = element + 1;
++  nested_effect_cpp(output);
++  for (unsigned element = 0; element < 32; ++element) {
++    uint32_t expected = element + 1;
++    for (unsigned iteration = 0; iteration < 3; ++iteration) {
++      if (iteration == (element & 3))
++        break;
++      if (iteration == 1)
++        continue;
++      expected = expected * 3 + iteration;
++    }
++    if (output[element] != expected)
++      return 11;
++  }
++  for (uint32_t limit = 0; limit < 130; ++limit) {
++    dynamic_diamond(output, limit);
++    for (uint32_t element = 0; element < 32; ++element) {
++      uint32_t expected = 0;
++      for (uint32_t iteration = 0; iteration < limit; ++iteration)
++        expected += element + iteration + (element < 16 ? 1 : 2);
++      if (output[element] != expected)
++        return 16;
++    }
++  }
++  for (uint32_t limit = 0; limit < 130; ++limit)
++    for (uint32_t skip = 0; skip < 5; ++skip) {
++      dynamic_loop(output, limit, skip);
++      for (uint32_t element = 0; element < 32; ++element) {
++        uint32_t expected = 0;
++        for (uint32_t iteration = 0; iteration < limit; ++iteration)
++          if (iteration != skip)
++            expected += element + iteration;
++        if (output[element] != expected)
++          return 12;
++      }
++      dynamic_cpp(output, limit, 3, skip, 3, 29);
++      for (uint32_t element = 0; element < 32; ++element) {
++        uint32_t expected = 0;
++        for (uint32_t iteration = 0; iteration < limit; ++iteration)
++          if (iteration != skip)
++            expected += element + iteration;
++        if (element < 29) {
++          expected = element;
++          for (uint32_t iteration = 0; iteration < element % 7 + limit;
++               ++iteration) {
++            if (iteration == element % 5 + 3)
++              break;
++            if (iteration == skip)
++              continue;
++            expected += (element + iteration) / 3;
++          }
++        }
++        if (output[element] != expected)
++          return 13;
++      }
++    }
++  for (uint32_t limit = 0; limit < 12; ++limit)
++    for (uint32_t inner_limit = 0; inner_limit < 8; ++inner_limit) {
++      dynamic_nested_cpp(output, limit, inner_limit, 2);
++      for (uint32_t element = 0; element < 32; ++element) {
++        uint32_t expected = 0;
++        for (uint32_t outer = 0; outer < limit; ++outer) {
++          if (outer == 2)
++            continue;
++          for (uint32_t inner = 0; inner < inner_limit; ++inner) {
++            if (inner == element % 5)
++              break;
++            expected += element + outer + inner;
++          }
++        }
++        if (output[element] != expected)
++          return 14;
++      }
++    }
++  dynamic_cpp(0, 7, 0, 0, 0, 0);
++  for (uint32_t limit = 0; limit < 12; ++limit)
++    for (uint32_t skip = 0; skip < 5; ++skip) {
++      for (uint32_t element = 0; element < 32; ++element)
++        output[element] = element + 1;
++      dynamic_effect_cpp(output, limit, skip);
++      for (uint32_t element = 0; element < 32; ++element) {
++        uint32_t expected = element + 1;
++        for (uint32_t iteration = 0; iteration < limit; ++iteration) {
++          if (iteration == element % 5)
++            break;
++          if (iteration == skip)
++            continue;
++          expected = expected * 3 + iteration;
++        }
++        if (output[element] != expected)
++          return 15;
++      }
++    }
+   puts("element predication host semantics: PASS");
+   return 0;
+ }
+diff --git a/llvm/test/CodeGen/LinxV5/Inputs/run-element-predication-host.py b/llvm/test/CodeGen/LinxV5/Inputs/run-element-predication-host.py
+index 7dd4291d9..53533d92e 100644
+--- a/llvm/test/CodeGen/LinxV5/Inputs/run-element-predication-host.py
++++ b/llvm/test/CodeGen/LinxV5/Inputs/run-element-predication-host.py
+@@ -79,14 +79,53 @@ run([args.opt, '-enable-new-pm=0', '-expandvp', '-verify',
+      '-expandvp-override-evl-transform=Discard',
+      '-expandvp-override-mask-transform=Convert',
+      '-S', cpp_portable, '-o', cpp_expanded])
++additional_expanded = []
++additional_evidence = []
++for name, source in (
++        ('nested-ir', here.parent / 'element-predication-nested-loop.ll'),
++        ('nested-cpp', repo / 'clang/test/LinxV5/pto-element-nested-predication.cpp'),
++        ('dynamic-ir', here.parent / 'element-predication-dynamic-loop.ll'),
++        ('dynamic-diamond', here.parent / 'element-predication-dynamic-reconvergence.ll'),
++        ('dynamic-cpp', repo / 'clang/test/LinxV5/pto-element-dynamic-predication.cpp')):
++    nested_input = source
++    if source.suffix == '.cpp':
++        nested_input = out / (name + '-raw.ll')
++        run([target_clang, '--target=linx64v5', '-mlxbc', '-O1', '-Xclang',
++             '-disable-llvm-passes', '-emit-llvm', '-S', source, '-o', nested_input])
++    nested_wide = out / (name + '-predicated.ll')
++    run([args.opt, '-mtriple=linx64v5',
++         '-passes=mem2reg,loop-simplify,loop-rotate,instcombine,lcssa,linx-v5-element-predication,verify',
++         '-verify-each', '-S', nested_input, '-o', nested_wide])
++    text, count = re.subn(pattern, '', nested_wide.read_text(), flags=re.MULTILINE)
++    assert count == (3 if name == 'nested-cpp' else
++                     3 if name == 'dynamic-cpp' else 1), (
++        'unexpected nested region count', name, count)
++    text = re.sub(r'^declare void @llvm\.linx\.experimental\.element\.region\(metadata\).*\n',
++                  '', text, flags=re.MULTILINE)
++    assert '@llvm.linx.' not in text, 'nested test copy contains target intrinsics'
++    text = re.sub(r'^target (triple|datalayout) = .*\n', '', text, flags=re.MULTILINE)
++    text = re.sub(r'"target-features"="[^"]*"', '', text)
++    nested_portable = out / (name + '-portable.ll')
++    nested_portable.write_text(text)
++    nested_expanded = out / (name + '-expanded.ll')
++    run([args.opt, '-enable-new-pm=0', '-expandvp', '-verify',
++         '-expandvp-override-evl-transform=Discard',
++         '-expandvp-override-mask-transform=Convert',
++         '-S', nested_portable, '-o', nested_expanded])
++    additional_expanded.append(nested_expanded)
++    additional_evidence.extend((source, nested_wide, nested_portable,
++                                nested_expanded))
++    if nested_input != source:
++        additional_evidence.append(nested_input)
+ exe = out / 'host-check'
+-run([args.clang, '-O2', expanded, cpp_expanded,
++run([args.clang, '-O2', expanded, cpp_expanded, *additional_expanded,
+      here / 'element-predication-host.c', '-o', exe])
+ run([exe])
+ manifest = {'stage': 'P2 generic IR host semantics; not PTO codegen/gfrun/gfsim',
+             'commands': commands,
+             'hashes': {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                        for p in (fixture, cpp, wide, portable, expanded, raw,
+-                                 cpp_wide, cpp_portable, cpp_expanded, exe)}}
++                                 cpp_wide, cpp_portable, cpp_expanded, exe,
++                                 *additional_evidence)}}
+ (out / 'evidence.json').write_text(json.dumps(manifest, indent=2) + '\n')
+ print(out / 'evidence.json')

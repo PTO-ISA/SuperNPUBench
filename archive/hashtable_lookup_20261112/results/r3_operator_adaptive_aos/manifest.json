@@ -1,0 +1,59 @@
+{
+  "archive_spec_version": "v1.0-draft.8",
+  "task_id": "hashlk_20261112_lvhao_01",
+  "result_id": "r3_operator_adaptive_aos",
+  "archive_revision": 1,
+  "profiles": ["F"],
+  "owner": "lvhao",
+  "archiver": "lvhao",
+  "created_at": "2026-11-12T16:30:00+08:00",
+  "archive_status": "draft",
+  "work_status": "blocked",
+  "role": "operator-default",
+  "workload": {
+    "algorithm": "linear probing, adaptive two-plus-six on 32-lane AoS tiles",
+    "shape_dtype_layout": "6144 queries x int64; AoS TableEntry 16 B (int64 key, int32 value, padding); 32 lanes/batch",
+    "tiling_and_mapping": "32-lane ElementTile, PeCount=4, count/32 batches",
+    "assumptions_and_limits": "guard 112 B (7 entries mirroring slots 0..6), Capacity >= 4"
+  },
+  "algorithm": {
+    "definition_and_implementation_differences": "hashtable_lookup_tileop_adaptive.hpp",
+    "assumptions": [{
+      "assumption_id": "A-003",
+      "statement": "Capacity-1 后有 7 个可读 16 B guard；count 为 32 的倍数（当前验证范围）",
+      "category": "input",
+      "affects": ["correctness"],
+      "status": "assumed",
+      "guarantee_or_check": "harness 默认 hash_table_guard=112；smoke 表按 HASH_TABLE_GUARD/16 填充",
+      "violation_behavior": "越界读",
+      "evidence": "../../config/random300.json",
+      "modification_ids": []
+    }]
+  },
+  "source": {
+    "repository": "https://github.com/PTO-ISA/SuperNPUBench",
+    "commit": "7d3503bc",
+    "dirty_state_and_recovery": "n/a",
+    "source_header_checksums": "operator header 见 main 7d3503bc"
+  },
+  "build": {
+    "script_and_flags": "make TESTCASE=hashtable_lookup res_check=off CC_OPT=default hash_mode={smoke,perf,verify}",
+    "log": "not_archived",
+    "environment": "../../README.md",
+    "source_elf_binding_evidence": "perf ELF sha256 38a5f34a..."
+  },
+  "elf": {
+    "path": "/tmp/hash_op26/kernel/hashtable_lookup/elf/kernel_hashtable_lookup_hashtable_lookup_6144_perf_PE4.elf",
+    "sha256": "38a5f34af9b0ab65d690d4c2766319aef5bde991f72933a4a5fa31933214476b",
+    "availability": "local-only (GAP-EXT-1)"
+  },
+  "runs": [],
+  "validation": {
+    "numeric_check": "not_run (model limitation)",
+    "negative_control": "not_run",
+    "blocker": "gfsim ASSERTION FAILED: responseReturnBeatId == geo.mrobEntryIdx"
+  },
+  "dependencies": ["model pr1177@18b24f6ca", "main linx-toolchain-build clang (build only)"],
+  "modification_ids": [],
+  "gaps": ["GAP-R3-1", "GAP-EXT-1"]
+}

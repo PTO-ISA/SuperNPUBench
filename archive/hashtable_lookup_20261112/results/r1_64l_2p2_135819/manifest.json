@@ -1,0 +1,82 @@
+{
+  "archive_spec_version": "v1.0-draft.8",
+  "task_id": "hashlk_20261112_lvhao_01",
+  "result_id": "r1_64l_2p2_135819",
+  "archive_revision": 1,
+  "supersedes": null,
+  "profiles": ["P", "S"],
+  "owner": "lvhao",
+  "archiver": "lvhao",
+  "created_at": "2026-11-12T16:30:00+08:00",
+  "archive_status": "draft",
+  "work_status": "active",
+  "role": "baseline",
+  "workload": {
+    "algorithm": "linear probing, adaptive two-plus-two (A: 2 slots all lanes, B: 2 slots for A-miss lanes)",
+    "shape_dtype_layout": "6144 queries x int64; table Capacity=2550000; keys u32 SoA; values i32 SoA; 64 lanes/batch; 96 batches (24 per PE)",
+    "tiling_and_mapping": "Lanes=64, PeCount=4, batch map 96 entries; per-PE 24 batches",
+    "useful_and_physical_work": "per query ~2.9 key loads + 1 value load; guard reads up to +3 slots",
+    "assumptions_and_limits": "../analysis/RWDB_BOTTLENECK.md"
+  },
+  "algorithm": {
+    "definition_and_implementation_differences": "kernel_adaptive_2_2.hpp / hashtable_lookup_soa_wide.hpp (2+2)",
+    "assumptions": [{
+      "assumption_id": "A-001",
+      "statement": "queries 的 key 均在表中；count 为 Lanes 的整数倍；表尾有可读 guard",
+      "category": "input",
+      "affects": ["correctness", "performance"],
+      "status": "assumed",
+      "guarantee_or_check": "fixture 数据保证；checker 校验 6144 输出",
+      "violation_behavior": "未支持",
+      "evidence": "../../dependencies/dataset/MANIFEST.sha256",
+      "modification_ids": []
+    }]
+  },
+  "source": {
+    "repository": "https://github.com/PTO-ISA/SuperNPUBench",
+    "commit": "7d3503bc (operator default) / outputs/hash64_batchmap_20261105 归档快照",
+    "dirty_state_and_recovery": "../../dependencies/compiler_llvm_pr146/compiler.patch",
+    "source_header_checksums": "kernel sha256 见 outputs/.../slots_sweep/adaptive；复现脚本见 ../../build/"
+  },
+  "build": {
+    "script_and_flags": "../../build/build_kernel.sh",
+    "log": "../../dependencies/compiler_llvm_pr146/README.md",
+    "environment": "../../README.md (实现环境)",
+    "source_elf_binding_evidence": "重建 ELF md5=f5d5a0cb935efe851504a17559fe1ba1 与归档一致"
+  },
+  "elf": {
+    "path": "outputs/hash64_batchmap_20261105/slots_sweep/elfs/adaptive_2p2_perf.elf",
+    "sha256": "2324ea4c438bb2eb3b6214190611c2c643b06338c348784a59d0301ef2e3b7d6",
+    "md5": "f5d5a0cb935efe851504a17559fe1ba1",
+    "diss": "not_archived",
+    "availability": "local-only (GAP-EXT-1)"
+  },
+  "inputs": {
+    "keys32": "outputs/hash256_batchmap_20261105/data/keys32.bin sha256 cefe0478...",
+    "values": "outputs/hash256_batchmap_20261105/data/values.bin sha256 511719ca...",
+    "batch_map": "outputs/hash64_batchmap_20261105/slots_sweep/repro_matrix/maps/map64.bin sha256 f59fa8c7...",
+    "reference_elf": "eval/perf_data/hashtable_lookup/hash_6144_PE4.elf sha256 960ba161..."
+  },
+  "config": {
+    "entry": "../../config/random300.json",
+    "effective_snapshot": "../../config/random300.json",
+    "overrides": ["softcore.multiThreadNum=4", "core.soc_random=true", "core.mean_read_latency=300", "core.mean_write_latency=300", "core.read_bandwidth_limit=128", "core.write_bandwidth_limit=128", "core.sharetreg_size_bytes=262144", "core.sharetreg_ssb_count=64"]
+  },
+  "runs": [{
+    "run_id": "r1_rand300_01",
+    "command": "../../build/run_perf.sh (结果见 run.log)",
+    "log": "run.log",
+    "exit_status": 0,
+    "total_cycles": 135819,
+    "metric_scope": "gfsim Total Cycles（整个 fixture，含同步/校验前？perf 构建无 checker）",
+    "trace": "not_collected (GAP-TRACE-1)"
+  }],
+  "validation": {
+    "numeric_check": "PASS (same-structure check build; errors=0)",
+    "negative_control": "not_run",
+    "coverage": "6144/6144 queries"
+  },
+  "dependencies": ["model pr1177@18b24f6ca", "compiler llvm@a75987bcc+patch", "API pr303 snapshot"],
+  "modification_ids": ["M-COMPILER-01"],
+  "gaps": ["GAP-EXT-1 (ELF/trace not published)", "GAP-TRACE-1 (no full swimlane)", "GAP-COV-1"]
+}
