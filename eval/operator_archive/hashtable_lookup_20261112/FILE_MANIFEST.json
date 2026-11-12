@@ -1,13 +1,13 @@
 {
   "archive_id": "hashtable_lookup_20261112",
-  "revision": 4,
+  "revision": 5,
   "generated": "2026-11-12",
   "note": "FILE_MANIFEST.json and FILE_MANIFEST.sha256 exclude themselves to avoid self-reference.",
   "files": [
     {
       "path": "ASSETS.md",
-      "bytes": 4364,
-      "sha256": "726fd2c92dbf84b5442df77cf9f93ebd0e0de1a039595f761815474d0dd7c29b"
+      "bytes": 4574,
+      "sha256": "a41399720f523567d30becb2c97a521eb58d7d0e0080e1902c1f232cb61856a0"
     },
     {
       "path": "COMPLIANCE.md",
@@ -16,8 +16,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 12165,
-      "sha256": "1f3401015ec5d697a385492692b1a4601b2098f933edafde7afc5bcac5b888d8"
+      "bytes": 12621,
+      "sha256": "19c310e4a406dd9e9ac160a159c3e9be6393f0ac3965c7767d3ffbdc75029b21"
     },
     {
       "path": "analysis/IMPLEMENTATIONS.md",
@@ -236,8 +236,8 @@
     },
     {
       "path": "validation/material_check.md",
-      "bytes": 2677,
-      "sha256": "b30af439e5b9159b3be80a1791da16d44dbbf881bd95ca8688635c9996658c15"
+      "bytes": 3281,
+      "sha256": "ab44be8106bd8e8d310ddb155b341bd607c9f79cfb43f9c002414c54fb0d76d7"
     },
     {
       "path": "validation/negative_control/README.md",
@@ -291,6 +291,16 @@
     },
     {
       "path": "validation/path_scan_revision4.log",
+      "bytes": 1906,
+      "sha256": "d3924f9c8e70e89573a8e63a1d94daad24f73b7bc8cb268c6a41349d90b710d0"
+    },
+    {
+      "path": "validation/path_scan_revision5.jsonl",
+      "bytes": 7585,
+      "sha256": "6d38a993fe7b9cb417aaa7543f5f6cb87bf1c1640764be359adec6bb342e9346"
+    },
+    {
+      "path": "validation/path_scan_revision5.log",
       "bytes": 1906,
       "sha256": "d3924f9c8e70e89573a8e63a1d94daad24f73b7bc8cb268c6a41349d90b710d0"
     },

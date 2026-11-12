@@ -21,7 +21,8 @@ Release：https://github.com/PTO-ISA/SuperNPUBench/releases/tag/hashlk-20261112-
 | `A-R2-RW8-TRACE` | required_for: perf_trace（r2 rw8） | `r2_rw8_trace_r3.tar.gz` | 8,491,639 | `11855369754368f4a4a28be3df880379fc1ecbdb9385e4ee68e479a0eadf3e82` | uploaded + download_verified |
 | `A-PIPEV` | required_for: pipeview_review | `pipeview_r3.tar.gz` | 22,623,778 | `d43aadd65bf193b041479ae9a15feec913570ead11125fbc6cd84417eb8c1f5a` | uploaded + download_verified |
 | `A-API-SNAPSHOT` | required_for: build_reproduced | `api_snapshot_r3.tar.gz`（169 文件，解压后 1,863,758 B） | 207,959 | `a84075b812b0d49fe27ee456f1a06b00655e3db9e4a91df745779942c8518c9e` | uploaded + download_verified |
-| `A-ARCHIVE-R3` | required_for: material_check | `hashlk_archive_r3.tar.gz`（本归档目录） | 212,367 | `3a61008aba0d0dac1184030e051fcf249f9839e9a7a6afcdef27bca1b04d2fa2` | uploaded + download_verified |
+| `A-ARCHIVE-R3` | 历史快照（revision 3，旧路径） | `hashlk_archive_r3.tar.gz` | 212,367 | `3a61008aba0d0dac1184030e051fcf249f9839e9a7a6afcdef27bca1b04d2fa2` | uploaded + download_verified（历史） |
+| `A-ARCHIVE-R5` | required_for: material_check（当前路径） | `hashlk_archive_r5.tar.gz` | 220,886 | `470923ca70b30ea6488c858b475f472c94fdc9b9fbc50c2b41bb357100d82441` | uploaded + download_verified |
 
 ## 组合与使用
 

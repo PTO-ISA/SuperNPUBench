@@ -149,3 +149,11 @@ LLVM/gfsim 的完整构建日志（`GAP-LOG-1`），以及独立复核（`run_re
 - 覆盖统计更新为 pass 55 / partial 38 / n/a 2 / not_checked 16。
 - 仍未关闭：独立 `run_reproduced`、独立 `build_reproduced`、`GAP-R2-CHECK`、
   `GAP-LOG-1`、API 上游来源。
+
+### revision 5（2026-11-12，归档路径迁移）
+
+- 归档目录从 `archive/hashtable_lookup_20261112/` 迁移到
+  `eval/operator_archive/hashtable_lookup_20261112/`，符合团队 operator archive 布局。
+- 归档内部相对引用（`../dependencies`、`results/*` 等）不随迁移改变。
+- 新增 `A-ARCHIVE-R5` tarball；`A-ARCHIVE-R3` 作为 revision 3 的历史快照保留，
+  不覆盖已发布资产。文件清单/哈希已重算。

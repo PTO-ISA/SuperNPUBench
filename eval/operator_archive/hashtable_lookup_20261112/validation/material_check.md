@@ -21,7 +21,8 @@ shasum -a 256 -c assets.sha256                                                 #
 ## 2. 归档包内部清单
 
 ```text
-cd extracted/hashlk_archive_r3/archive/hashtable_lookup_20261112
+cd extracted/hashlk_archive_r3/archive/hashtable_lookup_20261112   # A-ARCHIVE-R3 快照路径；
+# revision 5 起仓库路径为 eval/operator_archive/hashtable_lookup_20261112
 sha256sum -c FILE_MANIFEST.sha256    # rc=0，56/56 OK（55 文件 + JSON 自身排除）
 python3 -m json.tool FILE_MANIFEST.json  # 可解析
 ```
@@ -52,3 +53,12 @@ python3 -m json.tool FILE_MANIFEST.json  # 可解析
 - 未执行：实际运行复现（`run_reproduced`）与独立目录重建（`build_reproduced`）；
   二者必须由非归档人完成，尚未发生。
 - 本记录不能升级为 `run_reproduced`，也不能替代数值验证。
+
+## 5. revision 5 路径迁移后的归档包
+
+- `A-ARCHIVE-R5`（`hashlk_archive_r5.tar.gz`，220,886 B，sha256
+  `470923ca70b30ea6488c858b475f472c94fdc9b9fbc50c2b41bb357100d82441`）：
+  从 Release 下载后哈希一致；解压内容与
+  `eval/operator_archive/hashtable_lookup_20261112/` 工作树逐文件一致
+  （`diff -r` rc=0）；扫描 61 个文件、个人路径 0 命中。
+- `A-ARCHIVE-R3` 保留为 revision 3 的历史快照（旧路径 `archive/...`），不覆盖。
