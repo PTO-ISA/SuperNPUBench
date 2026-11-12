@@ -12,14 +12,18 @@
   `-mllvm -linxv5-force-element-tile-mask=true`；fixture 由归档 256 版改 include
   到 soa_wide（`build/build_kernel.sh` 有完整命令）。
   ELF sha256 `35218ed00c5f34cd2a30d0c8ef7fea66ecfd5047611575d397246813383f1e2f`
-  （当前只在 `/tmp/soa_op/perf.elf`，`GAP-EXT-1`）。
+  （当前只在 `<R2_ELF_DIR>/perf.elf`，`GAP-EXT-1`）。
 - **性能（random300，`run_*.log`）**：
 
-| run | RWDB | TAG_WAY | Total Cycles |
-|---|---:|---:|---:|
-| `run_rw8.log` | 8 | 4 | 169,868 |
-| `run_rw48.log` | 48 | 4 | **82,256** |
-| `run_rw48_way7.log` | 48 | 7 | **76,959** |
+| run | RWDB | TAG_WAY | Total Cycles | kernel span | trace |
+|---|---:|---:|---:|---:|---|
+| `run_rw8.log` | 8 | 4 | 169,868 | 168,240（1,461–169,701） | `A-R2-RW8-TRACE` |
+| `run_rw48.log` | 48 | 4 | **82,256** | 80,669（1,461–82,130） | `A-R2-TRACE` |
+| `run_rw48_way7.log` | 48 | 7 | **76,959** | 75,351（1,461–76,812） | `A-R2-WAY7-TRACE` |
+
+三个 run 的 trace 重跑周期与日志完全一致；均以 `linx_test_finisher ... pass` 结束、
+退出码 0，trace 覆盖完整运行（无截断）。PipeView 诊断运行（`A-PIPEV`）周期不变
+（r2 = 82,256），宿主实测 15.1 s、峰值 RSS 2.34 GB。
 
 - **正确性**：同结构（64-lane 2+6）check 构建 PASS（`errors=0`）；**256-lane 2+6 本身
   未单独做 check 构建**（`GAP-R2-CHECK`）。数值结论以 r1/算子 check 为准。
@@ -41,3 +45,16 @@
 - trace：完整 SwimLane/nocounters 已保存（`A-R2-TRACE`，本机
   `outputs/hashtable_lookup_archive_assets/r2_rand300_rw48/`）；PipeView 尚未采集
   （`GAP-PV-1`）。
+
+## ISA / 模型假设与 trace 完整性
+
+- 目标三元组 `linx64v5-unknown-linux-musl`；计时用 gfsim（timing model），
+  ASL 功能模型不适用；数值验证由同结构 64-lane check 构建在 gfsim 上完成
+  （`GAP-R2-CHECK`：256-lane 本身未单独 check）。
+- trace 为完整运行（`--swimlane 1`，无窗口/截断），事件范围从首个 TLOAD 到末
+  TSTORE 之后；日志末行 `linx_test_finisher ... pass` 证明排空与完成，退出码 0。
+- 发布包中的 `swim.log`/`meta.json` 已脱敏（`<REPO>`/`<GFSIM_WORKTREE>`/
+  `<R2_ELF_DIR>` 占位），JSON trace 内容未改；原件与派生 hash 见
+  `release_r3/sanitization.json` 与 `validation/PATH_SCAN.md`。
+- 负控与失败路径见 `validation/negative_control/`（同一 ELF 翻转 1 个 golden 字节
+  即 `val=0x3333 fail`、rc=70）。

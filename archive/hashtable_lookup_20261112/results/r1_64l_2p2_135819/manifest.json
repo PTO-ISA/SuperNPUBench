@@ -53,11 +53,12 @@
     "source_elf_binding_evidence": "重建 ELF md5=f5d5a0cb935efe851504a17559fe1ba1 与归档一致"
   },
   "elf": {
-    "path": "outputs/hash64_batchmap_20261105/slots_sweep/elfs/adaptive_2p2_perf.elf",
     "sha256": "2324ea4c438bb2eb3b6214190611c2c643b06338c348784a59d0301ef2e3b7d6",
     "md5": "f5d5a0cb935efe851504a17559fe1ba1",
     "diss": "perf.diss",
-    "availability": "local-only (GAP-EXT-1)"
+    "availability": "local-only (GAP-EXT-1)",
+    "asset_id": "A-R1-ELF",
+    "local_path_status": "prepared; see ASSETS.md"
   },
   "inputs": {
     "keys32": "outputs/hash256_batchmap_20261105/data/keys32.bin sha256 cefe0478...",

@@ -2,24 +2,30 @@
 # 构建 hashtable_lookup 结果 ELF。
 #   ./build_kernel.sh matrix <64|128|256> <2_2|2_4|2_6> <outdir>
 #   ./build_kernel.sh soa_operator <outdir>        # 256-lane 2+6，走 basic_op 的 soa_wide
-# 依赖（可用环境变量覆盖）：
-#   REPO    SuperNPUBench 根目录（默认：本归档的上两级）
-#   CLANG   llvm-project-pr146/build-hash/bin/clang++
-#   LD      同目录 ld.lld
-#   API     PTO API 快照（tileop-api 目录）
-#   REF     eval/perf_data/hashtable_lookup/hash_6144_PE4.elf
-#   DATA    keys32.bin/values.bin/batch_map.bin 目录
-#   REPRO   outputs/hash64_batchmap_20261105/slots_sweep/repro_matrix
+#
+# 必填环境变量（归档不保存个人路径，也不提供指向作者机器的默认值）：
+#   CLANG    pinned clang++  (sha256 35898d127974570667e06f828dbd3fbffcef6b42bc5acd82d7c0b1686222a2e4)
+#   LD       pinned ld.lld   (sha256 d57959a1fe1941fa0bf20060398bac74012cf14a5a42bcc262b987f44f8ae0bb)
+#   SYSROOT  linx64v5-musl sysroot (headers/libs only)
+# 可选环境变量（默认按 REPO/归档相对路径解析）：
+#   REPO     SuperNPUBench 根目录（默认：本归档的上两级）
+#   API      PTO API 快照（tileop-api 目录）
+#   REF      eval/perf_data/hashtable_lookup/hash_6144_PE4.elf
+#   DATA     keys32.bin/values.bin/batch_map.bin 目录
+#   REPRO    outputs/hash64_batchmap_20261105/slots_sweep/repro_matrix
 set -e
-R=${REPO:-$(cd "$(dirname "$0")/../../.." && pwd)}
 A=$(cd "$(dirname "$0")/.." && pwd)
-CLANG=${CLANG:-/Users/blacktraker/Programming/gitproj/DV4/llvm-project-pr146/build-hash/bin/clang++}
-LD=${LD:-/Users/blacktraker/Programming/gitproj/DV4/llvm-project-pr146/build-hash/bin/ld.lld}
+R=${REPO:-$(cd "$A/../.." && pwd)}
+: "${CLANG:?set CLANG to the pinned clang++ (see dependencies/compiler_llvm_pr146)}"
+: "${LD:?set LD to the pinned ld.lld (see dependencies/compiler_llvm_pr146)}"
+: "${SYSROOT:?set SYSROOT to the linx64v5 sysroot used for the build}"
 API=${API:-$R/outputs/hash256_soa_20261105/optimization/dependencies/tileop-api}
 REF=${REF:-$R/eval/perf_data/hashtable_lookup/hash_6144_PE4.elf}
 DATA=${DATA:-$R/outputs/hash256_batchmap_20261105/data}
 REPRO=${REPRO:-$R/outputs/hash64_batchmap_20261105/slots_sweep/repro_matrix}
-SYSROOT=${SYSROOT:-/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/sysroot}
+for p in "$CLANG" "$LD" "$SYSROOT" "$API" "$REF" "$DATA" "$REPRO"; do
+  [ -e "$p" ] || { echo "missing required path: $p" >&2; exit 2; }
+done
 COMMON=(--target=linx64v5-unknown-linux-musl -mlxbc -fenable-matrix -O3 -std=c++20
   -D__linx -DENABLE_TENSOR_INSTR -ffreestanding -fno-exceptions -fno-rtti
   -fno-vectorize -fno-slp-vectorize

@@ -3,8 +3,8 @@
 - **task_id / 负责人 / 更新日期**：`hashlk_20261112_lvhao_01` / lvhao / 2026-11-12
 - **归档规范**：NDF work-archive draft.8（SuperScalarModel PR #1238，
   `docs/NDF_WORK_ARCHIVE.md`，分支 `archive/workshop-20261109`）
-- **稳定要求登记表 / 覆盖映射**：`requirements_coverage.md`（111 项逐条状态；
-  自评 pass 12 / partial 70 / not_checked 29 / not_applicable 0，未经独立复核）
+- **稳定要求登记表 / 覆盖映射**：`requirements_coverage.md`（111 项逐条状态；revision 3 自评 pass 51 / partial 42 /
+  not_checked 16 / not_applicable 2，未经独立复核）；逐条记录见 `validation/check_records.md`
 - **目标与问题**：在 random SoC（300-cycle 均值延迟）下优化 `basic_op/hashtable_lookup`
   的线性探测循环，回答“加宽投机窗口 / 加宽 lane / 加深 RWDB 各自是否有效”，并把 per-SoC
   配置下的最优实现与算子默认实现一起归档。
@@ -17,7 +17,8 @@
 - **算法定义/前提**：`results/r2_256l_2p6_rwdb48/algorithm.md` 与
   `analysis/RWDB_BOTTLENECK.md`；核心前提是表尾 guard 可读、count 为 Lanes 整数倍、
   RWDB/TAG_WAY 按归档配置固定。
-- **本地修改摘要**：
+- **本地修改摘要**：逐项字段（分类/开关/影响/验证/副作用/替代/上游/移除条件）见
+  `dependencies/LOCAL_MODIFICATIONS.md`。
   - `M-COMPILER-01`（compiler，correctness/feature fix）：`LinxISA/llvm-project` @
     `a75987bcc` + 本地 patch（6 个 tracked 文件，`compiler.patch`；另有 8 个编译器测试
     untracked 文件，不参与 kernel 构建）。影响：SoA 宽 lane 元素区域能编译；kernel 侧
@@ -71,23 +72,26 @@ Release（或纳入本归档）；（c）补 LLVM/CMake 构建日志；（d）�
 | 项 | 值 |
 |---|---|
 | 主机 | macOS darwin 25.5.0 arm64 |
-| 计时模型 | `/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177/bin/gfsim`，head `18b24f6ca`，sha256 `12066cbdc29466d95cce1229129ff5fa03edbdd22880fbad57d55caec87633d8` |
-| 编译器 | `/Users/blacktraker/Programming/gitproj/DV4/llvm-project-pr146/build-hash/bin/clang++`，`clang version 15.0.4 (linx64v5-musl-local 3529f346…)`，sha256 `35898d127974570667e06f828dbd3fbffcef6b42bc5acd82d7c0b1686222a2e4` |
+| 计时模型 | `<GFSIM_WORKTREE>/bin/gfsim`，head `18b24f6ca`，sha256 `12066cbdc29466d95cce1229129ff5fa03edbdd22880fbad57d55caec87633d8` |
+| 编译器 | `<LLVM_BUILD>/bin/clang++`，`clang version 15.0.4 (linx64v5-musl-local 3529f346…)`，sha256 `35898d127974570667e06f828dbd3fbffcef6b42bc5acd82d7c0b1686222a2e4` |
 | 链接器 | 同目录 `ld.lld`，sha256 `d57959a1fe1941fa0bf20060398bac74012cf14a5a42bcc262b987f44f8ae0bb` |
-| sysroot | `/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/sysroot`（仅头文件/库，不参与 clang 生成） |
+| sysroot | `<SYSROOT>`（仅头文件/库，不参与 clang 生成） |
 | PTO API | `outputs/hash256_soa_20261105/optimization/dependencies/tileop-api`（169 文件） |
 | 数据集 | `outputs/hash256_batchmap_20261105/data/{keys32,values,batch_map}.bin`；参考 ELF `eval/perf_data/hashtable_lookup/hash_6144_PE4.elf` |
 | 运行配置 | `config/random300.json` / `config/deterministic.json` |
-| 运行 cwd | `/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177` |
+| 运行 cwd | `<GFSIM_WORKTREE>` |
 | 计时口径 | gfsim 收尾打印的 `Total Cycles`；不含宿主机时间；单次确定性仿真 |
+
+> revision 3 起本表用 `<GFSIM_WORKTREE>` / `<LLVM_BUILD>` / `<SYSROOT>` 占位；真实个人路径只保留在
+> revision 1/2 的 git 历史中作为构建过程记录，不在发布材料中重复。路径与二进制身份（sha256）不变。
 
 ## 归档内复现入口自检（2026-11-12）
 
-- `./build/build_kernel.sh matrix 64 2_2 /tmp/x` → `perf.elf` md5
+- `./build/build_kernel.sh matrix 64 2_2 <OUTDIR>` → `perf.elf` md5
   `f5d5a0cb935efe851504a17559fe1ba1`，与归档 ELF 一致；
-- `./build/build_kernel.sh soa_operator /tmp/y` → `perf.elf` sha256
+- `./build/build_kernel.sh soa_operator <OUTDIR>` → `perf.elf` sha256
   `35218ed0…f1e2f`，与 r2 实测 ELF 一致；
-- `./build/run_perf.sh /tmp/x/perf.elf random300` → `Total Cycles 135819`。
+- `./build/run_perf.sh <OUTDIR>/perf.elf random300` → `Total Cycles 135819`。
 
 即：**只要具备本地依赖（compiler patch + API 快照 + 数据/参考 ELF）**，本归档的构建与
 运行入口可以逐字节重建 ELF 并复现周期数；仍缺的是把这些依赖发布成公共可获取材料
@@ -121,3 +125,17 @@ Release（或纳入本归档）；（c）补 LLVM/CMake 构建日志；（d）�
   - `COMPLIANCE.md` 按上述证据更新（WORK-ARCHIVE-006 由 ❌ 改为部分）。
   - 仍未关闭：独立复核、负控、r2 PipeView、资产发布（`GAP-EXT-1`）。
 - **revision 1（2026-11-12）**：初版（结果索引、manifest、`perf.diss`、合规审计）。
+
+### revision 3（2026-11-12，NDF 补齐）
+
+- 路径整改：脚本/配置/README 去个人绝对路径；新增 `build/scan_paths.py`，
+  52 文件扫描个人路径 0 命中（`validation/PATH_SCAN.md`）。
+- trace：补 r2 rw8 / way7 完整 SwimLane + nocounters（周期与日志一致），
+  r1/r2 PipeView 原始数据（周期不变），宿主资源实测。
+- 负控：r1 check ELF 翻转 1 个 golden 字节 → `val=0x3333 fail`、rc=70
+  （`validation/negative_control/`）。
+- 重建：参数化 `build_kernel.sh` 重建 r1/r2，ELF 与归档字节一致
+  （`validation/build_repro_r3.log`）。
+- 文档：`dependencies/LOCAL_MODIFICATIONS.md`、`validation/check_records.md`
+  （111 项）、`requirements_coverage.md` 更新、diss 头规范化记录。
+- 仍未关闭：Release 发布与下载侧 material、独立复核、`GAP-R2-CHECK`、`GAP-LOG-1`。

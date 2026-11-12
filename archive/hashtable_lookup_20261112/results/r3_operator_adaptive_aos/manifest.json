@@ -49,10 +49,11 @@
     "source_elf_binding_evidence": "perf ELF sha256 38a5f34a..."
   },
   "elf": {
-    "path": "/tmp/hash_op26/kernel/hashtable_lookup/elf/kernel_hashtable_lookup_hashtable_lookup_6144_perf_PE4.elf",
     "sha256": "38a5f34af9b0ab65d690d4c2766319aef5bde991f72933a4a5fa31933214476b",
     "availability": "local-only (GAP-EXT-1)",
-    "diss": "perf.diss"
+    "diss": "perf.diss",
+    "asset_id": "A-R3-ELF",
+    "local_path_status": "prepared; see ASSETS.md"
   },
   "runs": [],
   "validation": {

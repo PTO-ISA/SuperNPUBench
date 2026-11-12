@@ -53,11 +53,12 @@
     "source_elf_binding_evidence": "rebuilt byte-identically via ../../build/build_kernel.sh soa_operator: sha256 35218ed0..."
   },
   "elf": {
-    "path": "/tmp/soa_op/perf.elf",
     "sha256": "35218ed00c5f34cd2a30d0c8ef7fea66ecfd5047611575d397246813383f1e2f",
     "md5": "2c399989166e64ffb1f07b51a2f0e939",
     "diss": "perf.diss",
-    "availability": "local-only (GAP-EXT-1)"
+    "availability": "local-only (GAP-EXT-1)",
+    "asset_id": "A-R2-ELF",
+    "local_path_status": "prepared; see ASSETS.md"
   },
   "inputs": {
     "keys32": "sha256 cefe0478...",

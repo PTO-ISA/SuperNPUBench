@@ -1,5 +1,5 @@
 
-/tmp/hash_op26/kernel/hashtable_lookup/elf/kernel_hashtable_lookup_hashtable_lookup_6144_perf_PE4.elf:	file format elf64-unknown
+perf.elf:	file format elf64-unknown
 
 Disassembly of section .text:
 

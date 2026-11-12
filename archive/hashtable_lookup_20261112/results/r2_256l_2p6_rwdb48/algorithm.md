@@ -100,7 +100,7 @@ queries --TLOAD(256 lane)--> hash --> offsets --A(2)+B(6) rounds--> hitOffset
 
 `hashtable_lookup_soa_wide.hpp` 头注释与提交信息里的 **81,317 / 77,312** 来自更早的
 独立 sweep（`outputs/hash256_adaptive_2p6_rwdb_sweep_20261110/runp_rwdb48.log`，
-显式 `--conf fourpe`，ELF `/tmp/adaptive256/kp.elf`）。本归档 r2 使用后续构建的
-`/tmp/soa_op/perf.elf` + ELF auto-detect 的 fourpe 配置，同一组 flags 下得到
+显式 `--conf fourpe`，ELF `<R1_WORKDIR>/kp.elf`）。本归档 r2 使用后续构建的
+`<R2_ELF_DIR>/perf.elf` + ELF auto-detect 的 fourpe 配置，同一组 flags 下得到
 **82,256 / 76,959**。两者相差约 1.2%，差异来源是配置入口与 ELF 版本，不是模型参数；
 本归档以 `run_rw48*.log` 的 82,256 / 76,959 为准，81,317 仅作为历史旁证。

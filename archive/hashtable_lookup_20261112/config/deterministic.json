@@ -1,7 +1,8 @@
 {
   "name": "deterministic",
   "model": {
-    "worktree": "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177",
+    "worktree_env": "MODEL",
+    "worktree": "<GFSIM_WORKTREE>",
     "commit": "18b24f6ca7f71369aee9245426daa68cc741dad5"
   },
   "cmdline": [

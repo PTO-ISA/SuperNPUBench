@@ -1,10 +1,11 @@
 {
   "name": "random300",
   "model": {
-    "worktree": "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177",
+    "worktree_env": "MODEL",
+    "worktree": "<GFSIM_WORKTREE>",
     "commit": "18b24f6ca7f71369aee9245426daa68cc741dad5",
     "binary_sha256": "12066cbdc29466d95cce1229129ff5fa03edbdd22880fbad57d55caec87633d8",
-    "cwd": "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-pr1177"
+    "cwd": "<GFSIM_WORKTREE>"
   },
   "cmdline": [
     "--test-finisher", "1",

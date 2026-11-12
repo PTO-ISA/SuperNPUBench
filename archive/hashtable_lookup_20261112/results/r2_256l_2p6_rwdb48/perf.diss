@@ -1,5 +1,5 @@
 
-/tmp/soa_op/perf.elf:	file format elf64-unknown
+perf.elf:	file format elf64-unknown
 
 Disassembly of section .text:
 

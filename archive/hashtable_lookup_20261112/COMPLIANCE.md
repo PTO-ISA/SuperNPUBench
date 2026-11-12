@@ -1,57 +1,55 @@
-# NDF 合规性审计（draft.8，2026-11-12，revision 2）
+# NDF 合规性审计（draft.8，2026-11-12，revision 3）
 
-**结论：仍为 `incomplete`。** 本轮补齐后可核对的范围扩大到：全部 P 运行都有完整
-SwimLane/nocounters 与周期起止口径（r1/r2 重跑周期数与原始 `run.log` 一致：
-135,819 / 82,256），外部资产有字段表，111 项要求有覆盖映射。仍**不能**宣称
-`material_checked`、`run_reproduced`、`build_reproduced` 或 NDF 整体合规。
+**结论：仍为 `incomplete`，但已从“只可宣称 metadata_integrity”推进到“材料与逐条
+检查已自评，等待发布与独立复核”。** revision 3 补齐了：路径整改与扫描、r2 的
+rw8/way7 完整 trace、r1/r2 PipeView、宿主资源实测、比较器负控、kernel 重建日志、
+修改/假设详情、111 项逐条检查记录。仍**不能**宣称 `material_checked`（下载侧未做）、
+`run_reproduced`、`build_reproduced` 或 NDF 整体合规。
 
 ## 条款状态
 
-| 条款 | 要求摘要 | 状态 | 缺口/说明 |
-|---|---|---|---|
-| WORK-ARCHIVE-001 | 三级身份、目录、不可变依赖 ID | 部分 | task/result/run 有；目录用相对路径映射（允许）；四个依赖的 `manifest.json` 已建（含 `dependency_id`/来源/哈希），但 API 快照的上游 commit 仍未知（`GAP-API-1`） |
-| WORK-ARCHIVE-002 | 内容要求矩阵（28 项） | 部分 | 新增：`ASSETS.md` 资产字段表、r1/r2 周期起止与分母声明、`requirements_coverage.md` 覆盖表、r2 `algorithm.md` 完整假设/正确性/性能条件。仍缺：r2 PipeView（`GAP-PV-1`）、负控、独立复核、修改详情完整字段 |
-| WORK-ARCHIVE-003 | 源码/构建/ELF 对应 | 部分 | 仓库/commit/patch/构建选项/ELF 哈希 ✅；构建日志缺（`GAP-LOG-1`）；编译器二进制逐字节重建未证（`GAP-BIND-2`） |
-| WORK-ARCHIVE-004 | 依赖与本地修改 | 部分 | compiler/model/api/dataset 的 `manifest.json` 已建；compiler/model 二进制哈希 ✅；API 快照来源缺（`GAP-API-1`）；修改详情表的上游生命周期字段不全 |
-| WORK-ARCHIVE-005 | 输入与正确性 | 部分 | 输入哈希 ✅；checker 身份/脚本/日志未归档；边界用例覆盖表缺；负控 `not_run` |
-| WORK-ARCHIVE-006 | 性能口径与 trace | 部分 | r1/r2 的完整 SwimLane + nocounters + swim 日志已归档（`A-R1/R2-TRACE`，含字节数/SHA256）；首 TLOAD→末 TSTORE 的 kernel span 已记录（134,326 / 80,669）；初始化/同步/读回计入范围与“延迟指标无峰值分母”已声明。仍缺：r2 PipeView（`GAP-PV-1`） |
-| WORK-ARCHIVE-007 | 优化结论与保留 | ✅ 基本满足 | observation / hypothesis / controlled_comparison / derived_bound 已区分；保留策略见 `analysis/` |
-| WORK-ARCHIVE-009 | 协作与不可变 | 部分 | owner/archiver ✅；revision 记录已补（README 末尾）；reviewer 仍为空 |
-| WORK-ARCHIVE-010 | 分级验收 | ❌ 未达到 | 111 项覆盖表已建（`requirements_coverage.md`，自评），但未逐条 material check；无独立复核 → 不能 `run_reproduced`；未做独立目录重建 → 不能 `build_reproduced` |
-| WORK-ARCHIVE-011 | 算法定义与假设清单 | 部分 | r2 `algorithm.md` 已含数据布局、哈希、探测伪代码、正确性条件、性能成立条件；假设 A-001/2/3 与 `H-RWDB`/`H-WAY` 有 id 与违反行为；ISA 版本仅在目标 triple 层面记录（`linx64v5`），ASL 不适用（gfsim 为计时模型） |
-
-## 本轮新增/更新的证据
-
-| 证据 | 位置 | 覆盖条款 |
+| 条款 | 状态 | 说明 |
 |---|---|---|
-| 资产字段表（asset_id/required_for/字节/SHA256/位置/状态） | `ASSETS.md` | 002、006、009 |
-| 逐文件字节数 + SHA256 | `FILE_MANIFEST.json`、`FILE_MANIFEST.sha256` | 002 |
-| 111 项覆盖映射（自评） | `requirements_coverage.md` | 002、010 |
-| r1 完整 trace（full + nocounters + log，gzip） | 本机 `outputs/hashtable_lookup_archive_assets/r1_rand300_01/` | 006 |
-| r2 完整 trace（full + nocounters + log，gzip） | 本机 `outputs/hashtable_lookup_archive_assets/r2_rand300_rw48/` | 006 |
-| kernel span 与口径 | `results/r1.../README.md`、`results/r2.../README.md` | 006 |
-| 算法/正确性/性能条件 | `results/r2.../algorithm.md` | 002、011 |
-| 依赖 manifest | `dependencies/*/manifest.json` | 001、004 |
+| WORK-ARCHIVE-001 | 部分 | 四个依赖 manifest 已建；API 上游 commit 仍未知（`GAP-API-1`） |
+| WORK-ARCHIVE-002 | 部分 | 资产字段表、周期口径、覆盖表、检查记录、算法文档齐全；r3 失败运行仅诊断、无 256-lane 独立 check（`GAP-R2-CHECK`） |
+| WORK-ARCHIVE-003 | 部分 | kernel 重建日志已补（r1/r2 字节一致）；LLVM/gfsim 完整构建日志仍缺（`GAP-LOG-1`） |
+| WORK-ARCHIVE-004 | 部分 | 修改/假设详情表已补；API 来源与 Release URL 待补 |
+| WORK-ARCHIVE-005 | 部分 | 负控与 checker 身份已归档；输出读回与边界覆盖仍缺 |
+| WORK-ARCHIVE-006 | ✅ 基本满足（自评） | 5 个 P 运行均有日志+full+nocounters；r1/r2 有 PipeView；span/口径/宿主资源齐全；语义标注不适用；r2 PipeView 未解析（仅原始数据） |
+| WORK-ARCHIVE-007 | ✅ | 优化证据链与保留策略不变 |
+| WORK-ARCHIVE-008 | 部分 | 各状态维度已有显式记录，但无独立复核 |
+| WORK-ARCHIVE-009 | 部分 | revision 3 记录已建；reviewer 仍为空 |
+| WORK-ARCHIVE-010 | ❌ 未达到 | 覆盖表与逐条记录已建（自评）；缺下载后 material、独立 `run_reproduced`、独立 `build_reproduced` |
+| WORK-ARCHIVE-011 | ✅（自评） | `algorithm.md` 含定义/伪代码/正确性/性能条件/假设表；ISA/ASL 已陈述 |
 
-## 距合规最近的补齐项（按性价比排序）
+## revision 3 新增证据
 
-1. **独立复核**：由非归档人按 `build/run_perf.sh` 在独立目录重建并运行，记录
-   `run_reproduced`；这是 WORK-ARCHIVE-010 的唯一硬门槛。
-2. **r2 PipeView**：`GAP-PV-1`，用于支撑“RWDB 并发/停顿”结论；当前结论由
-   `analysis/RWDB_BOTTLENECK.md` 的 PMU + 周期对比支撑，未用流水事件。
-3. **资产发布**：把 `A-REF-ELF`、`A-R1/R2/R3-ELF`、`A-R1/R2-TRACE` 上传 Release，
-   补 `download_verified` 与校验和（`GAP-EXT-1`）。
-4. **负控**：对 checker 输入篡改输出，证明错误结果会被拒绝（`not_run`）。
-5. **逐条 material check**：按 `requirements_coverage.md` 的 `check_id` 实际执行并
-   把 `partial/not_checked` 升级或保持。
-6. **构建日志**：补 LLVM/gfsim 的完整构建日志（`GAP-LOG-1`）。
+| 证据 | 位置 |
+|---|---|
+| 路径整改与扫描（工具 sha256、52 文件、0 个人路径） | `validation/PATH_SCAN.md`、`path_scan_revision3.jsonl` |
+| 111 项覆盖映射（pass 51 / partial 42 / n/a 2 / not_checked 16） | `requirements_coverage.md` |
+| 111 项逐条检查记录（§6.1.1 字段） | `validation/check_records.md` |
+| r2 rw8 / way7 完整 trace（周期与日志一致） | `ASSETS.md` 的 `A-R2-RW8-TRACE` / `A-R2-WAY7-TRACE` |
+| r1/r2 PipeView（周期不变） | `A-PIPEV` |
+| 宿主资源：15.1 s、峰值 RSS 2.34 GB | `results/r1.../README.md`、`A-PIPEV` |
+| 比较器负控：0x5555 pass / 0x3333 fail、rc 0/70 | `validation/negative_control/` |
+| kernel 重建：r1 md5、r2 sha256 与归档一致 | `validation/build_repro_r3.log` |
+| diss 头规范化（仅第 2 行，正文一致） | `validation/diss_normalization.md` |
+| 修改/绕过/硬件假设逐项字段 | `dependencies/LOCAL_MODIFICATIONS.md` |
+
+## 距合规最近的动作
+
+1. **发布 Release**（资产 + 归档 tarball），补 URL 后做下载侧 `material_checked`。
+2. **独立复核**：非归档人在独立目录下载并重跑 r1/r2，产生新周期日志与 SwimLane，
+   同时跑 check；记录复核人/时间/revision/命令/偏差。
+3. **独立重建**：固定工具链下重建 r1/r2 ELF 并比较（作者本地已一致，缺独立环境）。
+4. 补 `GAP-R2-CHECK`（256-lane 独立 check）与 `GAP-LOG-1`（LLVM/gfsim 构建日志）。
 
 ## 现在可以宣称的能力
 
-- `metadata_integrity`：`FILE_MANIFEST.json` + `FILE_MANIFEST.sha256` 可逐文件核对；
-  manifest JSON 可解析。
-- 作者本地 `build_reproduced` 的**子项**：`build/build_kernel.sh` 重建 r1/r2 ELF
-  逐字节一致（md5 `f5d5a0cb…` / sha256 `35218ed0…`），`build/run_perf.sh` 复现 135,819。
-- **trace 一致性**：r1/r2 的 SwimLane 重跑周期数与原始 `run.log` 完全一致
-  （135,819 / 82,256），日志以 `linx_test_finisher ... pass` 结束。
-- **不能**宣称：独立运行复现、数值运行 PASS（r3）、NDF 整体合规。
+- `metadata_integrity`：清单/JSON/hash 全量核对通过。
+- 作者本地 `build_reproduced` 子项：r1/r2 ELF 字节一致。
+- 路径检查（归档 + release payload）：个人路径 0 命中，命中逐项有判定。
+- 比较器负控：错误输出被拒绝（rc=70）。
+- **不能**宣称：`material_checked`（下载侧）、`run_reproduced`、`build_reproduced`、
+  NDF 整体合规。

@@ -32,3 +32,15 @@
 - 重复性：单次确定性仿真；不声明统计稳定性。
 - trace：完整 SwimLane 与 nocounters 已保存（`ASSETS.md` 的 `A-R1-TRACE`，
   本机 `outputs/hashtable_lookup_archive_assets/r1_rand300_01/`）。
+
+## 附加证据（revision 3）
+
+- **PipeView**：`A-PIPEV` 的 r1 诊断运行周期与性能运行一致（135,819），
+  说明该开关未改变被测时序；原始 `.out` 已 gzip 归档。
+- **宿主资源**（§3.9.1，代表性 r2 运行）：墙钟 15.1 s，峰值 RSS 2.34 GB，
+  磁盘 trace 原始 305 MB / gzip 9.3 MB；r1 为 526 MB / 16.8 MB。测量方式为
+  `/usr/bin/time -l`，非估算。
+- **ISA / ASL**：目标 `linx64v5-unknown-linux-musl`；gfsim 为计时模型，ASL 不适用。
+- **负控**：`validation/negative_control/`——r1 check ELF 翻转 1 个 golden 字节后
+  `val=0x3333 fail`、rc=70；正常 ELF `val=0x5555 pass`、rc=0。
+- **trace 完整性**：完整运行、无截断；日志以 `pass` 结束、退出码 0。

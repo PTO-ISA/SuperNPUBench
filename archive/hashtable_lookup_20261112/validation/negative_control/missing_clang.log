@@ -1,0 +1,1 @@
+./build/build_kernel.sh:19: CLANG: set CLANG to the pinned clang++ (see dependencies/compiler_llvm_pr146)

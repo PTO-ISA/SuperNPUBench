@@ -61,6 +61,11 @@ extern "C" int main() {
     res_check_publish_inputs(sync, tid);
 #endif
     supernpu::multi_thread::hashtable_lookup<2550000, 4>(table, queries, output + 1, 6144);
+#ifdef HASH_NEG_CONTROL
+    // Negative control: corrupt one result so the in-ELF comparator must
+    // report a mismatch and the finisher must not see status 0x5555.
+    if (get_thread_idx() == 0) output[1] ^= 1;
+#endif
 #if HASH_VERIFY
     res_check_wait_for_all(sync, tid);
     if (tid == 0) {

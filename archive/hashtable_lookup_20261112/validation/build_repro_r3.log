@@ -1,0 +1,12 @@
+# rebuild 2026-11-12T12:08:12Z
+# CLANG=<LLVM_BUILD>/bin/clang++
+# LD=<LLVM_BUILD>/bin/ld.lld
+# SYSROOT=<SYSROOT>
+# cmd: ./build/build_kernel.sh matrix 64 2_2 /tmp/r3_rebuild_r1
+built /tmp/r3_rebuild_r1/perf.elf
+# cmd: ./build/build_kernel.sh soa_operator /tmp/r3_rebuild_r2
+built /tmp/r3_rebuild_r2/perf.elf
+# hashes
+MD5 (/tmp/r3_rebuild_r1/perf.elf) = f5d5a0cb935efe851504a17559fe1ba1
+2324ea4c438bb2eb3b6214190611c2c643b06338c348784a59d0301ef2e3b7d6  /tmp/r3_rebuild_r1/perf.elf
+35218ed00c5f34cd2a30d0c8ef7fea66ecfd5047611575d397246813383f1e2f  /tmp/r3_rebuild_r2/perf.elf
