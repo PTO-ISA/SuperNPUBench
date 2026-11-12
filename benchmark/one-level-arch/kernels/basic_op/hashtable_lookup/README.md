@@ -16,20 +16,17 @@ supernpu::multi_thread::hashtable_lookup<Capacity, 4>(table, queries, output, co
 | 文件 | 数据契约 | 探测风格 | guard | 定位 |
 |---|---|---|---|---|
 | `hashtable_lookup_tileop_adaptive.hpp` | AoS 16 B | 32-lane，2+6（`HASH_ADAPTIVE_TAIL=2` 回 2+2） | 112 B（7 项） | **当前默认** |
+| `hashtable_lookup_tileop_stride4_guard.hpp` | AoS 16 B | 32-lane，4 槽/轮，轮首 mask | 48 B（3 项） | 上一版默认 / 性能基线 |
 | `hashtable_lookup_tileop_masked.hpp` | AoS 16 B | 32-lane，1 槽/轮 masked gather | 无（表尾 `TCMPS<EQ>` 回绕） | 调用方无法提供 guard 时使用 |
+| `hashtable_lookup_element.hpp` | AoS 16 B | 32-lane，element-if 逐 lane 判断 | 无（逐槽回绕） | element-region 写法参考 |
 | `hashtable_lookup_soa_wide.hpp` | **SoA**（`uint32 keys[]` + `int32 values[]`） | 64/128/256/512-lane，2+6 | ≥7 项（推荐 128） | 宽 lane 性能参考（非默认） |
-
-2026-11-12 清理：删除了 `hashtable_lookup_element.hpp`（element-if 参考实现）和
-`hashtable_lookup_tileop_stride4_guard.hpp`（上一版默认实现）；两者仍可在 git 历史
-（`3fef3336` 及更早）中取回。
 
 ### 是否都必要
 
 - **功能必需**：`adaptive`（默认入口）、`masked`（无 guard 场景的唯一实现）。
+- **保留作基线/参考**：`stride4_guard`（README 的 140,166 基线与 A/B 对照）、`element`（element-region 最小示例，历史验证记录对应）。
 - **新增参考实现**：`soa_wide` —— 256-lane 2+6 的唯一实现，但**不能**替换默认入口：表布局（SoA vs AoS）、API、lane 宽度、批次调度都不同；只在 SoA 数据契约下可用。
-- **已删除（非必要）**：`element`（element-region 参考）、`stride4_guard`（上一版默认/基线）、
-  `hashtable_lookup_tileop.hpp`（仅本地分支存在，1 槽/轮 full gather，被 `masked` 覆盖）。
-  历史记录与性能数字保留在本文档和 git 历史中。
+- **可删除**：`hashtable_lookup_tileop.hpp`（存在于部分本地分支，1 槽/轮 full gather、无 guard，功能被 `masked` 覆盖；main 上没有此文件，不建议再保留）。
 
 ### `soa_wide` 的构建要求（与主工具链不同，opt-in）
 
@@ -194,11 +191,11 @@ python3 /Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/benchmark/one-l
 表尾 guard 112 B（7 项，镜像 slot 0..6）。性能、环境与 RWDB=48 的取舍见上文
 “自适应 2+6 probe” 一节。
 
-- 2026-11-03 记录（历史；该 stride4 头已在 2026-11-12 清理中删除，记录保留）：
-  stride4 每轮探测 4 个连续槽位、48 字节 guard；6144 query / 4 PE / 70% 装载
-  **140,166 cycles**（首 TLOAD → 末 TSTORE），相对 177,474 基线 -21.0%。
+- 2026-11-03 记录（历史，已被上面的默认替换）：stride4 每轮探测 4 个连续槽位、
+  48 字节 guard；6144 query / 4 PE / 70% 装载 **140,166 cycles**（首 TLOAD → 末
+  TSTORE），相对 177,474 基线 -21.0%。
 - 表契约（当前）：调用方必须在 slot `Capacity-1` 之后提供 7 个可读的 16 字节 entry
-  （镜像 slot 0..6），且 `Capacity >= 4`；`HASH_ADAPTIVE_TAIL=2` 时为 3 个。
+  （镜像 slot 0..6），且 `Capacity >= 4`；`HASH_ADAPTIVE_TAIL=2` 或 stride4 回退时为 3 个。
 - 测试夹具：`hash_table_guard` 默认 112（Makefile / dataset fixture / smoke 表 /
   `run_dataset.py --table-guard`）；smoke 表按 `HASH_TABLE_GUARD/16` 扩展并填充 guard。
 - 不带 guard 的实现仍保留在 `hashtable_lookup_tileop_masked.hpp`；如需回退，
