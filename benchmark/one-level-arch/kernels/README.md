@@ -15,7 +15,7 @@ Header-only PTO operator implementations, organized by execution model:
 |---|---|
 | ArgMaxV2 | `basic_op/argmaxv2/` |
 | Broadcast | `basic_op/broadcast/` |
-| Concat (gather / scatter) | `basic_op/concat/` |
+| Concat (runtime tensor list / two inputs / gather / scatter) | [`basic_op/concat/`](basic_op/concat/README.md) |
 | 1x1 Conv2D | `basic_op/conv2d/` |
 | GELU / TADD | `basic_op/element_wise/` |
 | FlashAttention | `basic_op/fa/` |
