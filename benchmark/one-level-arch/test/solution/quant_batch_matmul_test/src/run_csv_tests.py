@@ -151,11 +151,13 @@ def _pack_row(lo_codes, hi_codes):
 # ---------------------------------------------------------------------------
 
 def build_elf(case, args):
+    is_reuse_a = case["dtype"] == "hif4_reuseA"
     testcase = "quant_batch_matmul_test_mxfp4_mt" if case["dtype"] == "mxfp4" else "quant_batch_matmul_test_hif4"
     # ELF_HEAD = solution_quant_batch_matmul_test, TARGET = ELF_HEAD_TESTCASE_B...
     # ELF_HEAD already contains "quant_batch_matmul_test", and so does TESTCASE,
     # producing a double prefix in the actual ELF name.
-    elf_name = f"solution_quant_batch_matmul_test_{testcase}_B{case['B']}_M{case['M']}_N{case['N']}_K{case['K']}_tM{case['tM']}_tN{case['tN']}_tK{case['tK']}.elf"
+    suffix = "_reuseA" if is_reuse_a else ""
+    elf_name = f"solution_quant_batch_matmul_test_{testcase}_B{case['B']}_M{case['M']}_N{case['N']}_K{case['K']}_tM{case['tM']}_tN{case['tN']}_tK{case['tK']}{suffix}.elf"
     elf_path = OUTPUT_ROOT / "solution" / "quant_batch_matmul_test" / "elf" / elf_name
 
     cmd = [
@@ -166,6 +168,8 @@ def build_elf(case, args):
         f"COMPILER_DIR={args.compiler_dir}",
         "res_check=on",
     ]
+    if is_reuse_a:
+        cmd.append("REUSEA=on")
     proc = subprocess.run(cmd, cwd=str(TEST_DIR), capture_output=True, text=True, timeout=300)
     if proc.returncode != 0:
         return None, f"compile failed: {proc.stderr[-500:]}"
@@ -198,7 +202,7 @@ def prepare_case(case, elf_path, args):
     A_f32 = rng.standard_normal((B, M, K)).astype(np.float32) * args.input_scale
     B_f32 = rng.standard_normal((B, K, N)).astype(np.float32) * args.input_scale
 
-    is_hif4 = (dtype == "hif4")
+    is_hif4 = (dtype in ("hif4", "hif4_reuseA"))
     codebook = _FP4_HIF4 if is_hif4 else _FP4_E2M1
     scale_group = HIF4_SCALE_GROUP if is_hif4 else MXFP4_SCALE_GROUP
     max_val = 1.75 if is_hif4 else 6.0
