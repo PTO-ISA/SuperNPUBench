@@ -70,6 +70,14 @@ Each backend implements operator categories:
 | **sort** | `topk` (radix-bucket histogram) |
 | **deepseek** | 22 migrated DeepSeek kernels (engram/mhc/moe/quant/transpose) |
 
+Mapped-window communication operators are available under
+[`kernels/communication`](benchmark/one-level-arch/kernels/communication/README.md):
+FP32 Put/Get, ReduceSum and weighted combine, with per-chunk ready/ack sequencing.
+Validation covers a POSIX shared-MMAP multi-process protocol and separate
+single-PE PTO payload execution. A Linx/NPU cross-device synchronization backend
+is not yet provided. See the linked guide for build commands and completion
+requirements.
+
 ## Setup Environment
 
 SuperNPUBench compiles with the **Linx toolchain** (`linx_blockisa_llvm_musl`,
