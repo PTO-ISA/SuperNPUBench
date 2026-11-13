@@ -1,0 +1,37 @@
+[
+  {
+    "path": "README.md",
+    "bytes": 2573,
+    "sha256": "4f33a4f7a8234dff2f16661afc75a981c77b2858d64e252e49abb624775ef94a"
+  },
+  {
+    "path": "algorithm.md",
+    "bytes": 1483,
+    "sha256": "d48e4fbf5e8033129d92ecd49a9ec6cf133c3b127e0d07859ca23a0ea4d36780"
+  },
+  {
+    "path": "capabilities.json",
+    "bytes": 2656,
+    "sha256": "7f322806f0e05da1bb41c6c954c20707942e34d81a19f6f54f8ce2ed4b568c52"
+  },
+  {
+    "path": "compiler_source_references.json",
+    "bytes": 1335,
+    "sha256": "936d7bf69a3dd22c1d2c0414e7b00266f2f56a7263268f447a1f1a098bb157ac"
+  },
+  {
+    "path": "historical_build_identity.json",
+    "bytes": 4126,
+    "sha256": "721878f1a36c38aeefb2c2d8887b16c149367842f847bd93f4da7b9ff2b86829"
+  },
+  {
+    "path": "rmsnorm-operator-r1-inventory.json",
+    "bytes": 3915,
+    "sha256": "f19916bc1d7a2df554565ed4b261e63c5192ecd322ccf3c7ff58604cfc63f13d"
+  },
+  {
+    "path": "spec_identity.json",
+    "bytes": 200,
+    "sha256": "9e4dcfeeaf1944ec3ad0ebad55c7ca5e5c43813113b8add5eaf7c55a4951a624"
+  }
+]
