@@ -1,0 +1,29 @@
+[
+  {
+    "historical_result_id": "fag-compact29028",
+    "filtered_full_equals_historical_noc_all_events": true,
+    "events": 39536,
+    "metadata_equal": true,
+    "canonical_sha256": "c5b1d68fbc8a767473f5844f5bda6a4b439c7ed45cb64aac4b440fcacc36075c",
+    "historical_raw_noc_sha256": "becc0a8da44600203729b34eb84a3c8950dece1264333fd178127181ec463e25",
+    "canonical_rule": "UTF8 sorted-key compact JSON per event plus newline, then sorted-key compact root metadata JSON; excludes counter events"
+  },
+  {
+    "historical_result_id": "fag-prefetch89646",
+    "filtered_full_equals_historical_noc_all_events": true,
+    "events": 162212,
+    "metadata_equal": true,
+    "canonical_sha256": "fd536681ab613dcf8d50e2b7b5e79f77b7af1258166cce31a23f5b96252cc740",
+    "historical_raw_noc_sha256": "46c74d4608b1881c10ebc58dc657f4d595d8d57d2a97067b709c28dda87ce025",
+    "canonical_rule": "UTF8 sorted-key compact JSON per event plus newline, then sorted-key compact root metadata JSON; excludes counter events"
+  },
+  {
+    "historical_result_id": "fag-sl2_768_88050",
+    "filtered_full_equals_historical_noc_all_events": true,
+    "events": 162820,
+    "metadata_equal": true,
+    "canonical_sha256": "fb3dc9ae4655494cd27c85b78a403db5201f45fb40004911cbf131de4504b70d",
+    "historical_raw_noc_sha256": "e1388bf3bdfadd0bf362ffe43d30bcf8cc519af610e8f40f85119e11b9b8f4ff",
+    "canonical_rule": "UTF8 sorted-key compact JSON per event plus newline, then sorted-key compact root metadata JSON; excludes counter events"
+  }
+]

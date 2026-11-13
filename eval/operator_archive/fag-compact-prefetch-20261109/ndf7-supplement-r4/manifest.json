@@ -1,0 +1,22 @@
+{
+  "archive_spec_version": "v1.0-draft.7 local unpublished draft",
+  "archive_revision": 4,
+  "archive_status": "incomplete",
+  "performance_status": "diagnostic",
+  "work_status": "closed_after_publication",
+  "owner": "Codex FAG supplement archive task; long-term maintainer unassigned",
+  "historical_revision": {
+    "operator_commit": "3f8db15af9eb6120ea4e555eff5c8418a5f85c91",
+    "model_commit": "b0f1433984a6fe85084b068aa41a9dc1e23dae66"
+  },
+  "capabilities": "capabilities.json",
+  "gaps": "gaps.json",
+  "parent_review": "parent_review.json",
+  "local_spec_reference": "local_spec_reference.json",
+  "file_hashes": "checksums.json",
+  "shared_assets": "release_assets.json",
+  "new_model_or_compiler_development_environment": false,
+  "new_local_operator_build_scope": "Compact only; ELF byte-identical to replayed5ebaef32531ba25cb91389a31c1ad0184e54f9ee15151885909469d4b881409b; shared toolchain not provided",
+  "new_replay_scope": "Local candidate3 cases plus actual downloaded final compact; same-run numerical not_checked",
+  "spec_body_distributed": false
+}

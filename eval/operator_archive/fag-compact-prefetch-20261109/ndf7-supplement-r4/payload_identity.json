@@ -1,0 +1,9 @@
+{
+  "root": "fag-operator-r3",
+  "status": "prepared_not_published",
+  "previous_asset_id": 727986394,
+  "previous_sha256": "c45b79b5bf5e92f5e71bd401f2aaf1c31b7ae0dd6b8d9d5573fbd869bc4ff37d",
+  "files_manifest_sha256": "07131f24783dd56cbdd0191f277ef3dad52293e4b9f36c333b02471561b949f6",
+  "runner_sha256": "aeae27a235d8e78d8fa1b911132b4d848890b6855ca1e5c1302292a1811b551b",
+  "runtime_dependency": "Unchanged Model fag-runtime-r1 asset727802903 sha25643f12fefa061ea301ac20441d56ace0930cefc4fe33eafdd991e5cd15beff9d5"
+}

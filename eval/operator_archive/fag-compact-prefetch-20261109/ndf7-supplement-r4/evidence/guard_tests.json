@@ -1,0 +1,245 @@
+[
+  {
+    "test": "relocated_clean",
+    "operation": "preflight only; no gfsim",
+    "command": [
+      "python3",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/relocated_clean/operator/replay.py",
+      "--operator-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/relocated_clean/operator",
+      "--model-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/relocated_clean/runtime",
+      "--case",
+      "fag-compact29028-portable-r3",
+      "--outdir",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/relocated_clean/out",
+      "--preflight"
+    ],
+    "cwd": "perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/relocated_clean",
+    "environment": {
+      "RMS_TAIL_BYPASS": "unexpected",
+      "TLSU_SHARED_SOURCE_DECOUPLE": "unexpected"
+    },
+    "returncode": 0,
+    "expected_rc": "0",
+    "expected_observed": true,
+    "output": "Payload exact file postimages verified; no simulator execution\nPayload file identities verified\nPREFLIGHT ONLY: identities verified; no simulation or numerical claim\n",
+    "new_output_created": false
+  },
+  {
+    "test": "missing_elf",
+    "operation": "preflight only; no gfsim",
+    "command": [
+      "python3",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_elf/operator/replay.py",
+      "--operator-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_elf/operator",
+      "--model-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_elf/runtime",
+      "--case",
+      "fag-compact29028-portable-r3",
+      "--outdir",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_elf/out",
+      "--preflight"
+    ],
+    "cwd": "perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_elf",
+    "environment": {
+      "RMS_TAIL_BYPASS": "unexpected",
+      "TLSU_SHARED_SOURCE_DECOUPLE": "unexpected"
+    },
+    "returncode": 1,
+    "expected_rc": "nonzero",
+    "expected_observed": true,
+    "output": "Payload file set differs: ['cases/fag-compact29028/kernel.elf']\n",
+    "new_output_created": false
+  },
+  {
+    "test": "changed_elf",
+    "operation": "preflight only; no gfsim",
+    "command": [
+      "python3",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_elf/operator/replay.py",
+      "--operator-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_elf/operator",
+      "--model-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_elf/runtime",
+      "--case",
+      "fag-compact29028-portable-r3",
+      "--outdir",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_elf/out",
+      "--preflight"
+    ],
+    "cwd": "perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_elf",
+    "environment": {
+      "RMS_TAIL_BYPASS": "unexpected",
+      "TLSU_SHARED_SOURCE_DECOUPLE": "unexpected"
+    },
+    "returncode": 1,
+    "expected_rc": "nonzero",
+    "expected_observed": true,
+    "output": "FAIL: cases/fag-compact29028/kernel.elf\nTraceback (most recent call last):\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_elf/operator/replay.py\", line 74, in <module>\n    if __name__=='__main__':main()\n                            ~~~~^^\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_elf/operator/replay.py\", line 28, in main\n    subprocess.run([sys.executable,str(root/'verify.py')],env=env,check=True)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"${HOME}/miniconda3/lib/python3.14/subprocess.py\", line 578, in run\n    raise CalledProcessError(retcode, process.args,\n                             output=stdout, stderr=stderr)\nsubprocess.CalledProcessError: Command '['${HOME}/miniconda3/bin/python3', '${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_elf/operator/verify.py']' returned non-zero exit status 1.\n",
+    "new_output_created": false
+  },
+  {
+    "test": "missing_config",
+    "operation": "preflight only; no gfsim",
+    "command": [
+      "python3",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_config/operator/replay.py",
+      "--operator-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_config/operator",
+      "--model-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_config/runtime",
+      "--case",
+      "fag-compact29028-portable-r3",
+      "--outdir",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_config/out",
+      "--preflight"
+    ],
+    "cwd": "perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/missing_config",
+    "environment": {
+      "RMS_TAIL_BYPASS": "unexpected",
+      "TLSU_SHARED_SOURCE_DECOUPLE": "unexpected"
+    },
+    "returncode": 1,
+    "expected_rc": "nonzero",
+    "expected_observed": true,
+    "output": "Payload exact file postimages verified; no simulator execution\nPayload file set differs: ['case_configs/fag-compact29028.conf']\n",
+    "new_output_created": false
+  },
+  {
+    "test": "changed_config",
+    "operation": "preflight only; no gfsim",
+    "command": [
+      "python3",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_config/operator/replay.py",
+      "--operator-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_config/operator",
+      "--model-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_config/runtime",
+      "--case",
+      "fag-compact29028-portable-r3",
+      "--outdir",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_config/out",
+      "--preflight"
+    ],
+    "cwd": "perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_config",
+    "environment": {
+      "RMS_TAIL_BYPASS": "unexpected",
+      "TLSU_SHARED_SOURCE_DECOUPLE": "unexpected"
+    },
+    "returncode": 1,
+    "expected_rc": "nonzero",
+    "expected_observed": true,
+    "output": "Payload exact file postimages verified; no simulator execution\nFAIL: configuration_inputs/compact-native/sl2.toml\nTraceback (most recent call last):\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_config/operator/replay.py\", line 74, in <module>\n    if __name__=='__main__':main()\n                            ~~~~^^\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_config/operator/replay.py\", line 28, in main\n    subprocess.run([sys.executable,str(root/'verify.py')],env=env,check=True)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"${HOME}/miniconda3/lib/python3.14/subprocess.py\", line 578, in run\n    raise CalledProcessError(retcode, process.args,\n                             output=stdout, stderr=stderr)\nsubprocess.CalledProcessError: Command '['${HOME}/miniconda3/bin/python3', '${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/changed_config/runtime/verify.py']' returned non-zero exit status 1.\n",
+    "new_output_created": false
+  },
+  {
+    "test": "extra_config",
+    "operation": "preflight only; no gfsim",
+    "command": [
+      "python3",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/extra_config/operator/replay.py",
+      "--operator-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/extra_config/operator",
+      "--model-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/extra_config/runtime",
+      "--case",
+      "fag-compact29028-portable-r3",
+      "--outdir",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/extra_config/out",
+      "--preflight"
+    ],
+    "cwd": "perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/extra_config",
+    "environment": {
+      "RMS_TAIL_BYPASS": "unexpected",
+      "TLSU_SHARED_SOURCE_DECOUPLE": "unexpected"
+    },
+    "returncode": 1,
+    "expected_rc": "nonzero",
+    "expected_observed": true,
+    "output": "Payload exact file postimages verified; no simulator execution\nPayload file set differs: ['configuration_inputs/compact-native/extra.toml']\n",
+    "new_output_created": false
+  },
+  {
+    "test": "symlink",
+    "operation": "preflight only; no gfsim",
+    "command": [
+      "python3",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/symlink/operator/replay.py",
+      "--operator-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/symlink/operator",
+      "--model-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/symlink/runtime",
+      "--case",
+      "fag-compact29028-portable-r3",
+      "--outdir",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/symlink/out",
+      "--preflight"
+    ],
+    "cwd": "perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/symlink",
+    "environment": {
+      "RMS_TAIL_BYPASS": "unexpected",
+      "TLSU_SHARED_SOURCE_DECOUPLE": "unexpected"
+    },
+    "returncode": 1,
+    "expected_rc": "nonzero",
+    "expected_observed": true,
+    "output": "Payload exact file postimages verified; no simulator execution\nPayload symlink rejected: configuration_inputs/compact-native/sl2.toml\n",
+    "new_output_created": false
+  },
+  {
+    "test": "stale_output",
+    "operation": "preflight only; no gfsim",
+    "command": [
+      "python3",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/stale_output/operator/replay.py",
+      "--operator-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/stale_output/operator",
+      "--model-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/stale_output/runtime",
+      "--case",
+      "fag-compact29028-portable-r3",
+      "--outdir",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/stale_output/out",
+      "--preflight"
+    ],
+    "cwd": "perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/stale_output",
+    "environment": {
+      "RMS_TAIL_BYPASS": "unexpected",
+      "TLSU_SHARED_SOURCE_DECOUPLE": "unexpected"
+    },
+    "returncode": 2,
+    "expected_rc": "nonzero",
+    "expected_observed": true,
+    "output": "usage: replay.py [-h] --operator-root OPERATOR_ROOT --model-root MODEL_ROOT\n                 --outdir OUTDIR [--preflight] --case CASE [--timeout TIMEOUT]\nreplay.py: error: choose new output directory outside payloads\n",
+    "new_output_created": false
+  },
+  {
+    "test": "unknown_case",
+    "operation": "preflight only; no gfsim",
+    "command": [
+      "python3",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/unknown_case/operator/replay.py",
+      "--operator-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/unknown_case/operator",
+      "--model-root",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/unknown_case/runtime",
+      "--case",
+      "unknown",
+      "--outdir",
+      "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/unknown_case/out",
+      "--preflight"
+    ],
+    "cwd": "perf_analysis/work_archive_20261110/ndf7_supplement/fag/guard-fixture/unknown_case",
+    "environment": {
+      "RMS_TAIL_BYPASS": "unexpected",
+      "TLSU_SHARED_SOURCE_DECOUPLE": "unexpected"
+    },
+    "returncode": 2,
+    "expected_rc": "nonzero",
+    "expected_observed": true,
+    "output": "usage: replay.py [-h] --operator-root OPERATOR_ROOT --model-root MODEL_ROOT\n                 --outdir OUTDIR [--preflight] --case CASE [--timeout TIMEOUT]\nreplay.py: error: unknown or duplicate case id\n",
+    "new_output_created": false
+  }
+]

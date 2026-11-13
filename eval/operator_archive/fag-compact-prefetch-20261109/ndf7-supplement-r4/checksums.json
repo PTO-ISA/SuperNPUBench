@@ -1,0 +1,137 @@
+{
+  "excluded": [
+    "checksums.json"
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 1431,
+      "sha256": "043ce2383753fddb51db0768271f6e8acea3a3e91935db76a6c0b0719af2441c"
+    },
+    {
+      "path": "algorithm.md",
+      "bytes": 2212,
+      "sha256": "2ee968502c94860695af3ab510fe89172f6bdeab8a29e23a92b5ce47e538ba75"
+    },
+    {
+      "path": "capabilities.json",
+      "bytes": 3500,
+      "sha256": "af6dcdfda340b6cd4bfc276c13f33005404a951bb5fb8b6ecc736c905166292a"
+    },
+    {
+      "path": "evidence/guard_tests.json",
+      "bytes": 12773,
+      "sha256": "d1e2092b9c8c12281384accea1b924600f1d7794b6e8de188b6c2273f80f582e"
+    },
+    {
+      "path": "gaps.json",
+      "bytes": 6273,
+      "sha256": "1356680e1b53696b821e8d361eb7a3d07be2c7cc4de058a762976bd5b3b33c84"
+    },
+    {
+      "path": "local_build_evidence.json",
+      "bytes": 144289,
+      "sha256": "2b4d0b3babf3178a6df788cb3b9cd7b3edc71fd74cbad5ea888f3ab15876ec30"
+    },
+    {
+      "path": "local_spec_reference.json",
+      "bytes": 203,
+      "sha256": "bd03f187fbed498cdec9480b3d99d1d1889062b839ce0b248dc05157631a9622"
+    },
+    {
+      "path": "make_payload.py",
+      "bytes": 1073,
+      "sha256": "016d6d143061e3a07dd6e3b8bdbf74edd723335fbaec7211cd2997a7a514d2f8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 1077,
+      "sha256": "e485f8c86dee75f9357a68be2c8b25066d4048078da4739fc488baf76ee35b22"
+    },
+    {
+      "path": "parent_review.json",
+      "bytes": 1623,
+      "sha256": "5178a564546fea43eadb93e03f36952571c0ff174891fa0095cae8bfbf92b6dd"
+    },
+    {
+      "path": "payload_identity.json",
+      "bytes": 519,
+      "sha256": "106ed050a3096c4e3145a5ab0cfa7e804a9730d60309133198a64675ee94164b"
+    },
+    {
+      "path": "payload_source/README.md",
+      "bytes": 1059,
+      "sha256": "fb7e34bae7a1d27fa66209360574e3b5afbaf65520d2d4b167388fa81342b1cf"
+    },
+    {
+      "path": "payload_source/cases/fag-compact29028/case.json",
+      "bytes": 1202,
+      "sha256": "4f19ce3a4c18b2738565fbde9ad62f78c7b25e7c91c8fab1187c2d8e524f033d"
+    },
+    {
+      "path": "payload_source/cases/fag-prefetch89646/case.json",
+      "bytes": 1233,
+      "sha256": "6d36632c2c33fd369a8603e8fcc747e959a4ff09ab883e2c724b4e8126b7b3e3"
+    },
+    {
+      "path": "payload_source/cases/fag-sl2_768_88050/case.json",
+      "bytes": 1233,
+      "sha256": "0674aa7be1f4521a1dfdb1915b35913bd777b2c7fb7f19bf070abc1cb4a0beb2"
+    },
+    {
+      "path": "payload_source/files.json",
+      "bytes": 3098,
+      "sha256": "07131f24783dd56cbdd0191f277ef3dad52293e4b9f36c333b02471561b949f6"
+    },
+    {
+      "path": "payload_source/historical_noc_semantic.json",
+      "bytes": 1519,
+      "sha256": "a1a7aba211c6fd0cb1656a0f9abe6cb90c3e6a02efe97fc748e9ecc0354b2c60"
+    },
+    {
+      "path": "payload_source/historical_trace_equivalence.json",
+      "bytes": 3461,
+      "sha256": "d3c28aab126c4889cf3c10078ea40644c435b5285e154904456d0240d3e92d0d"
+    },
+    {
+      "path": "payload_source/manifest.json",
+      "bytes": 15718,
+      "sha256": "fec99feb391f0e37e516ed2df57939989f260079d62e5a50dd985efe9bfbdd3b"
+    },
+    {
+      "path": "payload_source/replay.py",
+      "bytes": 7163,
+      "sha256": "aeae27a235d8e78d8fa1b911132b4d848890b6855ca1e5c1302292a1811b551b"
+    },
+    {
+      "path": "payload_source/tools/derivation.json",
+      "bytes": 1399,
+      "sha256": "4ef61a16c6d247a075e71cdb9d7e6d4c3df8f04d958dc5e437bf32be2a3b2fdb"
+    },
+    {
+      "path": "payload_source/tools/run_swimlane.py",
+      "bytes": 5076,
+      "sha256": "a81a545f645409dbe12b13f96d66b4c82b89725fb726c90e2cb1ac0474a2a15e"
+    },
+    {
+      "path": "payload_source/tools/trace_equivalence.py",
+      "bytes": 1313,
+      "sha256": "bc94d517c1b1d6583c13e91149755bc6a16d799f6eb52d64a25ff4b3204bf30d"
+    },
+    {
+      "path": "payload_source/tools/trace_stream.py",
+      "bytes": 5502,
+      "sha256": "ff3c4129fcd9067f1b889e4e0bb94b064704d85552194e6dec1c56b98f353d38"
+    },
+    {
+      "path": "payload_source/verify.py",
+      "bytes": 943,
+      "sha256": "6875acd297ab650e4e7883882a40a20b9974092e084616903d2e80c1976ba684"
+    },
+    {
+      "path": "release_assets.json",
+      "bytes": 2686,
+      "sha256": "b4abf081d4153c9c5ac76a6d3bf2a2f20a5fa2cb265615358e0e55236456ad2f"
+    }
+  ]
+}
