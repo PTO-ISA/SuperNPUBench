@@ -1,0 +1,56 @@
+[
+  {
+    "test": "polluted_environment",
+    "returncode": 0,
+    "simulation_executed": false,
+    "output": "{\"status\": \"pass\", \"kind\": \"operator\", \"files\": 1368, \"scope\": \"payload bytes and declared host dependencies; no numerical acceptance\"}\n{\"status\": \"pass\", \"kind\": \"model_runtime\", \"files\": 50, \"scope\": \"payload bytes and declared host dependencies; no numerical acceptance\"}\n{\"status\": \"pass\", \"scope\": \"preflight only; simulation not run\", \"case\": \"fa-8k-scoped-d2-20519-portable-r1\"}\n"
+  },
+  {
+    "test": "bad_memory",
+    "returncode": 2,
+    "simulation_executed": false,
+    "output": "usage: replay.py [-h] --operator-root OPERATOR_ROOT --model-root MODEL_ROOT\n                 --outdir OUTDIR --case CASE [--timeout TIMEOUT]\n                 [--memory-limit-gib MEMORY_LIMIT_GIB] [--preflight]\n                 [--qualification-mode] [--rebuilt-runtime REBUILT_RUNTIME]\n                 [--rebuilt-elf REBUILT_ELF]\nreplay.py: error: memory-limit-gib must be 1..64\n"
+  },
+  {
+    "test": "unknown_case",
+    "returncode": 2,
+    "simulation_executed": false,
+    "output": "usage: replay.py [-h] --operator-root OPERATOR_ROOT --model-root MODEL_ROOT\n                 --outdir OUTDIR --case CASE [--timeout TIMEOUT]\n                 [--memory-limit-gib MEMORY_LIMIT_GIB] [--preflight]\n                 [--qualification-mode] [--rebuilt-runtime REBUILT_RUNTIME]\n                 [--rebuilt-elf REBUILT_ELF]\nreplay.py: error: unknown or duplicate case\n"
+  },
+  {
+    "test": "unqualified_override",
+    "returncode": 2,
+    "simulation_executed": false,
+    "output": "usage: replay.py [-h] --operator-root OPERATOR_ROOT --model-root MODEL_ROOT\n                 --outdir OUTDIR --case CASE [--timeout TIMEOUT]\n                 [--memory-limit-gib MEMORY_LIMIT_GIB] [--preflight]\n                 [--qualification-mode] [--rebuilt-runtime REBUILT_RUNTIME]\n                 [--rebuilt-elf REBUILT_ELF]\nreplay.py: error: rebuilt artifact overrides require explicit --qualification-mode\n"
+  },
+  {
+    "test": "output_inside",
+    "returncode": 2,
+    "simulation_executed": false,
+    "output": "usage: replay.py [-h] --operator-root OPERATOR_ROOT --model-root MODEL_ROOT\n                 --outdir OUTDIR --case CASE [--timeout TIMEOUT]\n                 [--memory-limit-gib MEMORY_LIMIT_GIB] [--preflight]\n                 [--qualification-mode] [--rebuilt-runtime REBUILT_RUNTIME]\n                 [--rebuilt-elf REBUILT_ELF]\nreplay.py: error: choose a new output directory outside payloads\n"
+  },
+  {
+    "test": "missing_config",
+    "returncode": 1,
+    "simulation_executed": false,
+    "output": "{\"status\": \"pass\", \"kind\": \"operator\", \"files\": 1368, \"scope\": \"payload bytes and declared host dependencies; no numerical acceptance\"}\nFAIL: missing/unexpected payload files\nTraceback (most recent call last):\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/payloads/fa-operator-r3/replay.py\", line 112, in <module>\n    main()\n    ~~~~^^\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/payloads/fa-operator-r3/replay.py\", line 53, in main\n    subprocess.run(cmd, env=env, check=True)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"${HOST_TOOL_PATH}\", line 578, in run\n    raise CalledProcessError(retcode, process.args,\n                             output=stdout, stderr=stderr)\nsubprocess.CalledProcessError: Command '['${HOST_TOOL_PATH}', '${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/negative/missing_config/verify.py']' returned non-zero exit status 1.\n"
+  },
+  {
+    "test": "bad_elf",
+    "returncode": 1,
+    "simulation_executed": false,
+    "output": "FAIL: payload identity: bin/fa-8k-scoped-d2-20519.elf\nTraceback (most recent call last):\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/payloads/fa-operator-r3/replay.py\", line 112, in <module>\n    main()\n    ~~~~^^\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/payloads/fa-operator-r3/replay.py\", line 53, in main\n    subprocess.run(cmd, env=env, check=True)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"${HOST_TOOL_PATH}\", line 578, in run\n    raise CalledProcessError(retcode, process.args,\n                             output=stdout, stderr=stderr)\nsubprocess.CalledProcessError: Command '['${HOST_TOOL_PATH}', '${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/negative/bad_elf/verify.py']' returned non-zero exit status 1.\n"
+  },
+  {
+    "test": "wrong_runtime",
+    "returncode": 1,
+    "simulation_executed": false,
+    "output": "{\"status\": \"pass\", \"kind\": \"operator\", \"files\": 1368, \"scope\": \"payload bytes and declared host dependencies; no numerical acceptance\"}\nFAIL: payload identity: bin/gfsim\nTraceback (most recent call last):\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/payloads/fa-operator-r3/replay.py\", line 112, in <module>\n    main()\n    ~~~~^^\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/payloads/fa-operator-r3/replay.py\", line 53, in main\n    subprocess.run(cmd, env=env, check=True)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"${HOST_TOOL_PATH}\", line 578, in run\n    raise CalledProcessError(retcode, process.args,\n                             output=stdout, stderr=stderr)\nsubprocess.CalledProcessError: Command '['${HOST_TOOL_PATH}', '${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/negative/wrong_runtime/verify.py']' returned non-zero exit status 1.\n"
+  },
+  {
+    "test": "escaped_dependency",
+    "returncode": 1,
+    "simulation_executed": false,
+    "output": "{\"status\": \"pass\", \"kind\": \"operator\", \"files\": 1368, \"scope\": \"payload bytes and declared host dependencies; no numerical acceptance\"}\nFAIL: symlinks are not permitted in a self-contained payload\nTraceback (most recent call last):\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/payloads/fa-operator-r3/replay.py\", line 112, in <module>\n    main()\n    ~~~~^^\n  File \"${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/payloads/fa-operator-r3/replay.py\", line 53, in main\n    subprocess.run(cmd, env=env, check=True)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"${HOST_TOOL_PATH}\", line 578, in run\n    raise CalledProcessError(retcode, process.args,\n                             output=stdout, stderr=stderr)\nsubprocess.CalledProcessError: Command '['${HOST_TOOL_PATH}', '${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/negative/escaped_dependency/verify.py']' returned non-zero exit status 1.\n"
+  }
+]

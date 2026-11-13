@@ -1,0 +1,9 @@
+{
+  "scope": "Final small archive review; complete binary/archive closure separately checked in payload_path_review.json",
+  "json_python_syntax": "all parsed",
+  "metadata_material_refs_checked": 87,
+  "metadata_missing_or_bad_hashes": 0,
+  "path_scanner_findings": "Diagnostic text quotes /data/. from preserved Unicode HTTP license URLs in two copyright notices. This is a reviewed false positive, not a personal source path. Original license text unchanged.",
+  "provenance_source": "Previous archive selected from Model commit34e61f82435d0b9f69c820a6ddf113e7e2b03cd1; this supplement is additive",
+  "overall_conformance": false
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "test": "qualification_output_nested",
+    "returncode": 2,
+    "output": "usage: qualify_rebuilt.py [-h] --operator-root OPERATOR_ROOT --runtime RUNTIME\n                          --outdir OUTDIR\nqualify_rebuilt.py: error: output must be outside model and operator payloads\n",
+    "output_created": false
+  },
+  {
+    "test": "rebuild_output_nested",
+    "returncode": 2,
+    "output": "usage: rebuild_model.py [-h] --model-repo MODEL_REPO --source-out SOURCE_OUT\n                        --build-out BUILD_OUT [--cxx CXX] [--cc CC]\n                        [--recover-only]\nrebuild_model.py: error: choose distinct new source/build directories, build outside source\n",
+    "output_created": false
+  },
+  {
+    "test": "empty_cases_rejected",
+    "returncode": 2,
+    "output": "usage: qualify_rebuilt.py [-h] --operator-root OPERATOR_ROOT --runtime RUNTIME\n                          --outdir OUTDIR\nqualify_rebuilt.py: error: qualification requires the four fixed archived cases\n",
+    "output_created": false
+  }
+]

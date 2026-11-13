@@ -1,0 +1,10 @@
+{
+  "audit_status": "pass",
+  "numerical_status": "fail",
+  "bad": 6756,
+  "total": 32768,
+  "negative_zero_bad": 26641,
+  "negative_nan_bad": 32768,
+  "historical_input_readbacks_match": true,
+  "scope": "Recheck historical 8K nonzero output only; no new gfrun/gfsim execution. Distinct hosted numerical ELF, not measured timing ELF."
+}

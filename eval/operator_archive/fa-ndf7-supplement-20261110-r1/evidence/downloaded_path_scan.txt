@@ -1,0 +1,3 @@
+FAIL fa-runtime-r2/notices/libgcc-s1-copyright: /data/.
+FAIL fa-runtime-r2/notices/libstdc++6-copyright: /data/.
+Checked 1418 files; 2 with personal absolute paths.

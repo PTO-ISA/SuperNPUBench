@@ -1,0 +1,207 @@
+{
+  "archive_revision": "fa-ndf7-supplement-metadata-20261110",
+  "archive_spec_version": "v1.0-draft.7 local unpublished draft",
+  "inventory_status": "Actual published/downloaded identities and extracted closure checked; operations kept separate",
+  "items": [
+    {
+      "inventory_id": "I01",
+      "material_and_operation": "new operator Release/fixed ELF/source dependencies",
+      "actual_search_scope": "FA_ARCHIVE_SUPPLEMENT.md review requests; task payloads/evidence/builds; fixed prior Model r3 metadata. No whole-machine or network audit by this metadata author.",
+      "availability": "\u5df2\u5171\u4eab",
+      "locations_and_identity": [
+        {
+          "name": "fa-operator-r3-ndf7-20261110.tar.gz",
+          "bytes": 6166138,
+          "sha256": "0b9a63e6ccbab2c7e2b5bc4f3e02fd844ea4eac2e706bd4d63d865be4263791d",
+          "repo": "PTO-ISA/SuperNPUBench",
+          "url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r3-ndf7-20261110.tar.gz"
+        },
+        {
+          "path": "asset_materials/fa-operator-r3/manifest.json",
+          "sha256": "e90f74de16ee204d68adef7b1273bd62af0121be2b40a9553f7f1de8e7e6afaf",
+          "locator": "whole document; scope stated below"
+        }
+      ],
+      "actual_observation": "Four cases and exact payload inventory shipped; source/API/harness/606sysroot included.",
+      "impact": "Executable dependencies downloaded and checked; no independent numerical acceptance",
+      "owner": "Codex FA archive parent",
+      "next_action": "Read capabilities.json: historical4/4 plus new independent1/1, not four new runs"
+    },
+    {
+      "inventory_id": "I02",
+      "material_and_operation": "new runtime Release/host libraries/configs",
+      "actual_search_scope": "FA_ARCHIVE_SUPPLEMENT.md review requests; task payloads/evidence/builds; fixed prior Model r3 metadata. No whole-machine or network audit by this metadata author.",
+      "availability": "\u5df2\u5171\u4eab",
+      "locations_and_identity": [
+        {
+          "name": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "bytes": 8118855,
+          "sha256": "13a42198a78c28623dcac5d08870393b004a91456b83d7c04338d401edd3985c",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-ndf7-20261110.tar.gz"
+        },
+        {
+          "path": "asset_materials/fa-runtime-r2/manifest.json",
+          "sha256": "e09846dc11203c34c04bd2c4c9886a9fd924bd6ce6f4c7f677bd95c994c431b0",
+          "locator": "whole document; scope stated below"
+        },
+        {
+          "name": "fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "bytes": 7647,
+          "sha256": "211eb90bdc45ea8a814814be79b9db80beffdec2cde28ceda8a06605a075fa39",
+          "repo": "LinxISA/SuperScalarModel",
+          "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+          "mandatory_after": "fa-runtime-r2-ndf7-20261110.tar.gz",
+          "asset_api_url": "https://api.github.com/repos/LinxISA/SuperScalarModel/releases/assets/730701763"
+        }
+      ],
+      "actual_observation": "runtime f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a; private Model access required.",
+      "impact": "Executable dependencies downloaded and checked; no independent numerical acceptance",
+      "owner": "Codex FA archive parent",
+      "next_action": "Read capabilities.json: historical4/4 plus new independent1/1, not four new runs"
+    },
+    {
+      "inventory_id": "I03",
+      "material_and_operation": "operator compiler/linker/objdump",
+      "actual_search_scope": "FA_ARCHIVE_SUPPLEMENT.md review requests; task payloads/evidence/builds; fixed prior Model r3 metadata. No whole-machine or network audit by this metadata author.",
+      "availability": "\u672c\u5730\u5b58\u5728\u672a\u4ea4\u4ed8",
+      "locations_and_identity": [
+        {
+          "path": "asset_materials/fa-operator-r3/dependencies/identity.json",
+          "sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6",
+          "locator": "toolchain"
+        }
+      ],
+      "actual_observation": "Compiler d590f0cd...,lld6334e9a1...,objdumpc69058d0... caller-supplied; complete SDK is explicitly not delivered.",
+      "impact": "No turnkey shared full-toolchain reproduction.",
+      "owner": "Codex FA archive parent",
+      "next_action": "Use exact pinned binaries; do not infer hashes from compiler source commit."
+    },
+    {
+      "inventory_id": "I04",
+      "material_and_operation": "API/harness/resource/sysroot",
+      "actual_search_scope": "FA_ARCHIVE_SUPPLEMENT.md review requests; task payloads/evidence/builds; fixed prior Model r3 metadata. No whole-machine or network audit by this metadata author.",
+      "availability": "\u5df2\u5171\u4eab",
+      "locations_and_identity": [
+        {
+          "path": "asset_materials/fa-operator-r3/dependencies/identity.json",
+          "sha256": "5b22daf615a8f121db45cb77d415cf700b77d2f42492649488f6337ae3b27ac6",
+          "locator": "whole document; scope stated below"
+        },
+        {
+          "path": "asset_materials/fa-operator-r3/dependencies/sysroot_headers.json",
+          "sha256": "67462f6521d7dae581978b63af6fa32c6fff9131ae533fe6775ef6d242542b64",
+          "locator": "whole document; scope stated below"
+        }
+      ],
+      "actual_observation": "API baseecae3813 + transplanted8f43777 patch; harness705dde39;606sysroot header pins.",
+      "impact": "Timing build subset only; not hosted libc/CRT support.",
+      "owner": "Codex FA archive parent",
+      "next_action": "Preserve package pin checks and local four build evidence."
+    },
+    {
+      "inventory_id": "I05",
+      "material_and_operation": "four local build records",
+      "actual_search_scope": "FA_ARCHIVE_SUPPLEMENT.md review requests; task payloads/evidence/builds; fixed prior Model r3 metadata. No whole-machine or network audit by this metadata author.",
+      "availability": "\u672c\u5730\u5b58\u5728\u672a\u4ea4\u4ed8",
+      "locations_and_identity": [],
+      "actual_observation": "builds final8kAlgoD/final8kD2/final64kunscoped and64kAlgoD155269 all state historical_elf_bytes_equal=true.",
+      "impact": "Records are local; fresh downloaded rebuilt-ELF run not yet checked.",
+      "owner": "Codex FA archive parent",
+      "next_action": "Parent publish sanitized build evidence and qualify new runs."
+    },
+    {
+      "inventory_id": "I06",
+      "material_and_operation": "model patch/postimages/recovery",
+      "actual_search_scope": "FA_ARCHIVE_SUPPLEMENT.md review requests; task payloads/evidence/builds; fixed prior Model r3 metadata. No whole-machine or network audit by this metadata author.",
+      "availability": "\u5df2\u5171\u4eab",
+      "locations_and_identity": [
+        {
+          "path": "asset_materials/fa-runtime-r2/source/recovery.json",
+          "sha256": "2c73c4f0e4fda1ad55c3a5150766d104155948a424e7f90655b6af3d9361aeec",
+          "locator": "whole document; scope stated below"
+        },
+        {
+          "path": "evidence/model_recovery_checks.json",
+          "sha256": "a113c33eff832aa49bc0ec6bd44726e0b155ca1bddc05120aff35d508c61840c",
+          "locator": "whole document; scope stated below"
+        }
+      ],
+      "actual_observation": "7 changed-file fixtures applied with patch rc0, postimages7/7, unpatched/corrupt rejected in plain/enclosing Git contexts.",
+      "impact": "Not a complete fresh model source build.",
+      "owner": "Codex FA archive parent",
+      "next_action": "Restore full source in registered entry before any full-build claim."
+    },
+    {
+      "inventory_id": "I07",
+      "material_and_operation": "historical numerical failure inputs/readback/checker",
+      "actual_search_scope": "FA_ARCHIVE_SUPPLEMENT.md review requests; task payloads/evidence/builds; fixed prior Model r3 metadata. No whole-machine or network audit by this metadata author.",
+      "availability": "\u5df2\u5171\u4eab",
+      "locations_and_identity": [
+        {
+          "path": "asset_materials/fa-operator-r3/numerical_failure/identity.json",
+          "sha256": "c35e760e39907397fcffff8f0e009f5942926b94e76028f5a621a371b9bc0d29",
+          "locator": "whole document; scope stated below"
+        },
+        {
+          "path": "evidence/numerical_recheck.json",
+          "sha256": "2e0daebb89670f49df1bfd3b00144da9aef2c133a922a532e85c4073edbea4ab",
+          "locator": "whole document; scope stated below"
+        }
+      ],
+      "actual_observation": "Host audit pass but6756/32768 bad; zero/NaN controls bad26641/32768. Different numerical ELF from timing ELF.",
+      "impact": "Correctness remains fail; no new gfrun/gfsim execution.",
+      "owner": "Codex FA archive parent",
+      "next_action": "Keep failed numerical contract separate; fix/revalidate in separate task."
+    },
+    {
+      "inventory_id": "I08",
+      "material_and_operation": "prior model composition/issues/assumptions",
+      "actual_search_scope": "FA_ARCHIVE_SUPPLEMENT.md review requests; task payloads/evidence/builds; fixed prior Model r3 metadata. No whole-machine or network audit by this metadata author.",
+      "availability": "\u5df2\u5171\u4eab",
+      "locations_and_identity": [
+        {
+          "path": "previous_archive/model_changes.json",
+          "sha256": "a0a7fd532fbc0eb09dedf9d7d64566aac3626b914d34b07ed725078a6b03b0b0",
+          "locator": "whole document; scope stated below"
+        },
+        {
+          "path": "previous_archive/issue_status.json",
+          "sha256": "abce300951e53edabef5217760e3db42455729f7b26d7b45a7cda0ea8bde590c",
+          "locator": "whole document; scope stated below"
+        },
+        {
+          "path": "previous_archive/algorithm_assumptions.json",
+          "sha256": "7f6a6503223f6dab4d4838d531502eb0f78603980b2f3124633328128053a80f",
+          "locator": "whole document; scope stated below"
+        }
+      ],
+      "actual_observation": "FA-M01..04 and dated issue snapshot exist; old public-access wording is stale for private Model.",
+      "impact": "Prior scope not upgraded; issue closure not proof of present validation.",
+      "owner": "Codex FA archive parent",
+      "next_action": "Reference fixed old r3 source commit when publishing; retain private-access correction."
+    },
+    {
+      "inventory_id": "I09",
+      "material_and_operation": "full build provenance/untracked/ISA/mainline causal controls",
+      "actual_search_scope": "FA_ARCHIVE_SUPPLEMENT.md review requests; task payloads/evidence/builds; fixed prior Model r3 metadata. No whole-machine or network audit by this metadata author.",
+      "availability": "\u8eab\u4efd\u5f85\u786e\u8ba4",
+      "locations_and_identity": [
+        {
+          "path": "asset_materials/fa-runtime-r2/source/recovery.json",
+          "sha256": "2c73c4f0e4fda1ad55c3a5150766d104155948a424e7f90655b6af3d9361aeec",
+          "locator": "whole document; scope stated below"
+        },
+        {
+          "path": "previous_archive/gaps.json",
+          "sha256": "26d011f332c5a4bfd00ab5e4c9a6a0b3674465492c97b862a46d65201a652fea",
+          "locator": "whole document; scope stated below"
+        }
+      ],
+      "actual_observation": "Seven postimages and old recovered-tree identity do not independently prove necessary historical untracked/generated closure or ISA revision.",
+      "impact": "Blocks full-source/mainline-causal/ISA conformance acceptance.",
+      "owner": "Codex FA archive parent",
+      "next_action": "Audit original status/build closure; same-contract baseline/candidate comparison after correctness."
+    }
+  ]
+}

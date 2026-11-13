@@ -1,0 +1,120 @@
+{
+  "reviewer": "Codex RMSNorm sibling agent /root/ndf7_rmsnorm",
+  "date": "2026-11-10",
+  "scope": "Independent read-only material/source review of FA entry points and runtime README; no FA ELF execution, no model/operator build, no numerical validation. Frozen payload not edited.",
+  "files": [
+    {
+      "path": "payloads/fa-operator-r3/replay.py",
+      "bytes": 6091,
+      "sha256": "aa4ca63c574363c9fdd13cffb427d98273c09524514224565cf0776970f32e3c"
+    },
+    {
+      "path": "payloads/fa-operator-r3/build.py",
+      "bytes": 4033,
+      "sha256": "d3cdb34023c08c1c230e73c0692487f538f0fda883a9ebf160cb6ac0bec4fe8c"
+    },
+    {
+      "path": "payloads/fa-runtime-r2/rebuild_model.py",
+      "bytes": 5629,
+      "sha256": "7cae147e2e8c4f104dd1f38f45e9358d2cbc4c67fc23df406e99c5044d7277af"
+    },
+    {
+      "path": "payloads/fa-runtime-r2/qualify_rebuilt.py",
+      "bytes": 1771,
+      "sha256": "4394a9d46e914ec5fbe0179a1d78d65b5460422d8e5f0d0d29711dab5d9f7569"
+    },
+    {
+      "path": "payloads/fa-operator-r3/verify.py",
+      "bytes": 2823,
+      "sha256": "e6d1686778684f10cc5a377e93b64af402b6f9bd2c6d408136ea1bb1628d5471"
+    },
+    {
+      "path": "payloads/fa-runtime-r2/verify.py",
+      "bytes": 3112,
+      "sha256": "42713bd541a65c8a8da57d1cd320088b1df5c0437d912d8ec406ef5c477bf278"
+    },
+    {
+      "path": "payloads/fa-runtime-r2/README.md",
+      "bytes": 1947,
+      "sha256": "03c880b0b4406951b90a85dd561f99febe7c1d89c1a51185e91c979860647dea"
+    }
+  ],
+  "observations": [
+    {
+      "id": "FA-R1",
+      "severity": "medium",
+      "file": "payloads/fa-runtime-r2/qualify_rebuilt.py",
+      "finding": "Empty manifest cases list vacuously satisfies len(rows)==len(cases) and all(...), reporting pass without execution. Entry reads manifest before verifying either payload and creates outdir immediately.",
+      "impact": "Shipped manifest has cases, so valid four-case path unaffected; malformed/modified manifest acceptance path is insufficiently guarded. Do not treat wrapper as independently proving exactly four cases.",
+      "recommendation": "Verify payload data and require exact four expected case IDs/nonempty list before creating output; new immutable revision or explicit unqualified capability."
+    },
+    {
+      "id": "FA-R2",
+      "severity": "low",
+      "file": "payloads/fa-runtime-r2/qualify_rebuilt.py",
+      "finding": "Outdir is not rejected when nested inside operator/runtime payload; mkdir runs before replay verifier, leaving payload polluted when child rejects unexpected files.",
+      "impact": "Fails rather than false-positive under valid manifest, but irreversible directory pollution breaks later verification until removed.",
+      "recommendation": "Reject nested payload output before mkdir."
+    },
+    {
+      "id": "FA-R3",
+      "severity": "medium",
+      "file": "payloads/fa-runtime-r2/rebuild_model.py",
+      "finding": "No whole-payload verify.py --data-only call before execution; patch/postimages are checked but other executable/config hooks are not preverified here. Build inherits entire host environment, including CPATH/CPLUS_INCLUDE_PATH/LD/PYTHON/CMake-related variables.",
+      "impact": "Model-source build is explicitly not executed/accepted this revision; README correctly requires new runtime qualification. Future rebuild is not a hermetic qualified operation merely because GCC version gate passes.",
+      "recommendation": "Keep model_build not_checked and environment limitations explicit, or add immutable-revision preflight and allowlist/build-tool identities before accepting builds."
+    },
+    {
+      "id": "FA-R4",
+      "severity": "low",
+      "file": "payloads/fa-operator-r3/build.py",
+      "finding": "Build subprocesses use an environment subset but PATH/LANG values are inherited; top-level verify.py runs in unsanitized environment. Top-level toolchain/system dependencies are not wholly hermetic.",
+      "impact": "Exact clang/lld/objdump binaries and shipped header hashes are checked; no numerical or timing acceptance inferred by build_result. Scope is appropriately build-only.",
+      "recommendation": "For a future accepted standalone build capability, sanitize before verifier and use fixed PATH/locale; qualify rebuilt ELF separately as documented."
+    }
+  ],
+  "positive_findings": [
+    "replay validates both payloads and rejects all internal symlinks; default replay checks fixed runtime/ELF/conf hashes",
+    "replay environment is explicit allowlist with output-local TMPDIR; outdir outside operator/model, preflight explicitly does not execute ELF",
+    "qualification overrides require explicit mode; PASS requires simulator rc0, expected cycles, three artifacts and exact uncompressed full trace identity",
+    "operator build pins compiler/linker/objdump and shipped API/harness/sysroot header digests and labels build-only",
+    "model restore uses patch -p1 with postimage checks and -j4; GCC/libstdc++ gate and qualification required",
+    "README explicitly retains model-build not performed, zero-input timing-only, numerical unresolved and no mainline same-ELF inference"
+  ],
+  "review_level": "material_checked for source/claim consistency only; qualified_run/build/numerical not_checked",
+  "overall": "Limited material review with findings; not full NDF conformance PASS. Parent informed; fixes require new revision or explicit capability limitation; do not silently mutate uploaded payload.",
+  "followup": {
+    "date": "2026-11-10",
+    "method": "Read-only independent review of new script bytes and author three negative-test records; no independent FA execution/build",
+    "files": [
+      {
+        "path": "payloads/fa-runtime-r2/rebuild_model.py",
+        "sha256": "174c04adfb91956de22e3efc5874995b4735c51a57fb0384c4136c538ff8598e",
+        "bytes": 6095
+      },
+      {
+        "path": "payloads/fa-runtime-r2/qualify_rebuilt.py",
+        "sha256": "4952af335302e086647ffd66e5d87315795914eec1faa8d93f895a87b77c6c28",
+        "bytes": 2377
+      },
+      {
+        "path": "evidence/overlay_guard_tests_raw.json",
+        "sha256": "75e619a315c969ed0a1f5bb366a0ce1e328efe3506ea6a112eda243326e352bc",
+        "bytes": 1035
+      }
+    ],
+    "resolved_by_code_review": [
+      "FA-R1 empty cases now require exactly four fixed IDs and length4 before output creation; data integrity verifiers run before mkdir",
+      "FA-R2 nested payload output rejected before mkdir",
+      "FA-R3 whole runtime verify --data-only added before recovery; C compiler GCC gate added alongside C++ libstdc++ gate; actual configure/build use explicit env allowlist"
+    ],
+    "author_tests_reviewed": "All three author negative tests rc2 and output_created=false; this is evidence review, not reattributed execution",
+    "remaining_limits": [
+      "verify subprocesses, git archive/patch and compiler macro/version checks in rebuild still run with inherited host env before sanitized build; selected compiler resolved with inherited PATH. Do not call whole recovery/build operation hermetic. Actual cmake compile environment now cleared.",
+      "qualify preflight verifier environment inherited; child replay itself sanitizes environment.",
+      "New full source build and independent FA ELF/numeric execution remain not_checked; qualification script existence is not four-case runtime acceptance.",
+      "FA-R4 optional operator build preflight/inherited PATH scope remains as originally noted"
+    ],
+    "conclusion": "Original vacuous PASS and payload-output pollution defects addressed in read-only code scope. New immutable overlay is appropriate; old r2 asset must remain unchanged. Limited material review only; no NDF blanket PASS."
+  }
+}

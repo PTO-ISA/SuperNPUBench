@@ -1,0 +1,51 @@
+{
+  "scope": "Recheck historical 8K nonzero output only; no new gfrun/gfsim execution. Distinct hosted numerical ELF, not measured timing ELF.",
+  "shape": [
+    256,
+    8192,
+    128,
+    128
+  ],
+  "seed": 1,
+  "tolerance": {
+    "atol": 0.001,
+    "rtol": 0.02
+  },
+  "expected_bad": 6756,
+  "total": 32768,
+  "expected_output_sha256": "de02a7a0231e71e6410046896a102fab512b5d58f35fc666e708ac468342b9bc",
+  "golden_sha256": "976d45d7a026ee17f747edbd79bd41414ec0835fb26915b6e8cda63a1abd3b6f",
+  "historical_numerical_elf_sha256": "9c4ddc553211b7254208622b7a8b4da711250235700c979eff8f7f5a48e9fc74",
+  "historical_gfrun_sha256": "568c632c369ba6bf6702934616c0f8cc87175171efc799fa6b71533df6bfda40",
+  "reference_sha256": "0fa28f395ee86bcbdee433466f240a65933d2acc394d93926f97e936e58d738a",
+  "generator_arguments": [
+    "--sq",
+    "256",
+    "--skv",
+    "8192",
+    "--tk",
+    "256",
+    "--algorithm",
+    "D",
+    "--seed",
+    "1"
+  ],
+  "generator_python_dependencies": "numpy; precomputed independent golden is supplied, generator execution is separate and version qualification remains not_checked",
+  "files": {
+    "srck_scale_readback.bin": "c0ba72ef52b2d5b854c5d514155a758cf0e3a1e101038715cfd28e767c84955a",
+    "res.bin": "de02a7a0231e71e6410046896a102fab512b5d58f35fc666e708ac468342b9bc",
+    "golden.bin": "976d45d7a026ee17f747edbd79bd41414ec0835fb26915b6e8cda63a1abd3b6f",
+    "srcq_readback.bin": "8e8749c54a4980c86cebbe5114b1b786c6b11f4b9360ac2033357c8c571466e5",
+    "srcq_scale_readback.bin": "ca30eccdb3356862b733e4079c918cea6f243a07933c66f3093fc53986c81ddc",
+    "srck_scale.bin": "c0ba72ef52b2d5b854c5d514155a758cf0e3a1e101038715cfd28e767c84955a",
+    "srcq.bin": "8e8749c54a4980c86cebbe5114b1b786c6b11f4b9360ac2033357c8c571466e5",
+    "srck_readback.bin": "2a4fef63720c15e222001e3bb75e86395356025706f2d8e19361ca4bdc0b6e24",
+    "srcv_scale_readback.bin": "c0ba72ef52b2d5b854c5d514155a758cf0e3a1e101038715cfd28e767c84955a",
+    "srcq_scale.bin": "ca30eccdb3356862b733e4079c918cea6f243a07933c66f3093fc53986c81ddc",
+    "srcv.bin": "9c7e7dc43cea409698a12c5359944fb444fb82af56797750c8e18f2dafbf9f2a",
+    "srcv_scale.bin": "c0ba72ef52b2d5b854c5d514155a758cf0e3a1e101038715cfd28e767c84955a",
+    "srck.bin": "2a4fef63720c15e222001e3bb75e86395356025706f2d8e19361ca4bdc0b6e24",
+    "srcv_readback.bin": "9c7e7dc43cea409698a12c5359944fb444fb82af56797750c8e18f2dafbf9f2a",
+    "reference.py": "0fa28f395ee86bcbdee433466f240a65933d2acc394d93926f97e936e58d738a"
+  }
+}

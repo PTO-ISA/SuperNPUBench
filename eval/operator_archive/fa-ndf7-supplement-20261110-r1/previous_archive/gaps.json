@@ -1,0 +1,93 @@
+{
+  "archive_status": "incomplete",
+  "gaps": [
+    {
+      "field": "release_receipts",
+      "status": "published_download_verified",
+      "reason": "Required assets are publicly published and their actual downloaded bytes were verified. 4/4 actual downloaded cases reproduced rc0 and historical cycles; zero-input timing only.",
+      "impact": "Zero-input timing scope; does not establish numerical correctness, full NDF acceptance or independent S review.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Fill release_assets.json with immutable asset id/url/bytes/SHA256 and independently downloaded receipt."
+    },
+    {
+      "field": "portable_run",
+      "status": "verified_scope_limited",
+      "reason": "Required assets are publicly published and their actual downloaded bytes were verified. 4/4 actual downloaded cases reproduced rc0 and historical cycles; zero-input timing only.",
+      "impact": "Zero-input timing scope; does not establish numerical correctness, full NDF acceptance or independent S review.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Fill only from actual downloaded-asset runner evidence; retain dependency/build_identity.json as build identity."
+    },
+    {
+      "field": "historical_source_commit_dirty",
+      "status": "unknown",
+      "reason": "Original operator build source commit/dirty status is not completely recoverable from historical metadata.",
+      "impact": "Archive Git commit identifies a snapshot, not the original build checkout.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Retain per-file historical hashes and exact snapshot/patch; record unknown origin rather than infer clean state."
+    },
+    {
+      "field": "compiler_api_isa_closure",
+      "status": "unknown",
+      "reason": "Historical compiler/API/sysroot/ISA complete identity closure is incomplete.",
+      "impact": "Cannot claim current compiler rebuild or original ISA compliance from model completion.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Preserve known hashes/commits in r2 dependencies/build evidence; explicitly separate source recovery from optional toolchain reconstruction."
+    },
+    {
+      "field": "native_effective_config",
+      "status": "not_collected",
+      "reason": "Full historical effective config dump is absent. FA 21 retained TOMLs match historical recorded hashes.",
+      "impact": "Explicit conf and observed overrides do not prove every effective default.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Publish exact replay configuration and effective dump if supported; distinguish reconstructed values and original unknowns."
+    },
+    {
+      "field": "full_correctness",
+      "status": "unresolved",
+      "reason": "FA full attention has 6756/32768 tolerance failures; rowsum smoke is narrower.",
+      "impact": "Zero-input timing cannot promote correctness.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Use independent nonzero golden and all-input readbacks, outputs, guard and negative controls in same supported scope."
+    },
+    {
+      "field": "clean_main_same_elf_model_control",
+      "status": "not_collected",
+      "reason": "No final clean-main model comparison on identical ELF/config/input supplied.",
+      "impact": "No current mainline speedup attribution; local mechanisms remain diagnostic.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Run same portable ELF and exact config/input on pinned clean-main model, or record unsupported failure without a score."
+    },
+    {
+      "field": "shared_replay",
+      "status": "verified_scope_limited",
+      "reason": "Required assets are publicly published and their actual downloaded bytes were verified. 4/4 actual downloaded cases reproduced rc0 and historical cycles; zero-input timing only.",
+      "impact": "Zero-input timing scope; does not establish numerical correctness, full NDF acceptance or independent S review.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Download from each final Release into unrelated directory, verify all hashes and execute explicit runner; record model/ELF/config identity, rc, cycles and traces."
+    },
+    {
+      "field": "review_and_maintainer",
+      "status": "unknown",
+      "reason": "Final external material/replay reviewer and long-term owner not assigned.",
+      "impact": "No acceptance approval.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Assign reviewer/maintainer and attach exact revision review after artifacts are fixed."
+    },
+    {
+      "field": "pipeview_and_annotations",
+      "status": "not_collected",
+      "reason": "No new portable-result PipeView or semantic annotation lineage supplied.",
+      "impact": "Do not use unshared pipeline evidence to establish new causal performance claims.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Retain historical equivalent trace references; supply annotation script/output hashes for any newly published annotations."
+    },
+    {
+      "field": "scoped_64k",
+      "status": "not_collected",
+      "reason": "No established 64K result for final scoped D2.",
+      "impact": "258099 is early unscoped D2 only.",
+      "owner": "release_preparer/main_agent",
+      "next_action_or_recovery_command": "Measure final scoped candidate with new result/run identity if requested; never reassign early unscoped trace."
+    }
+  ]
+}

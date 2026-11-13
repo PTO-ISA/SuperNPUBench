@@ -1,0 +1,117 @@
+{
+  "algorithm": "Approximate unscaled attention: BF16 ln2-grid references, BF16 denominator exponentials, MXFP4/E8M0 numerator probabilities, FP32 PV accumulation. Packed rowsum changes rounding order. It is not exact FP32 softmax.",
+  "implementation_and_scope": {
+    "cases": [
+      {
+        "id": "fa-8k-algod-21488",
+        "shape": [
+          256,
+          8192,
+          128,
+          128
+        ],
+        "variant": "AlgoD control"
+      },
+      {
+        "id": "fa-8k-scoped-d2-20519",
+        "shape": [
+          256,
+          8192,
+          128,
+          128
+        ],
+        "variant": "final pair-local scoped D2"
+      },
+      {
+        "id": "fa-64k-algod-155269",
+        "shape": [
+          256,
+          65536,
+          128,
+          128
+        ],
+        "variant": "AlgoD control"
+      },
+      {
+        "id": "fa-64k-unscoped-d2-258099",
+        "shape": [
+          256,
+          65536,
+          128,
+          128
+        ],
+        "variant": "early unscoped packed D2"
+      }
+    ],
+    "tail_and_generalization": "Only frozen shapes/tiling are described; no generic tail support or safe input rejection claimed.",
+    "caller_contract": "Refer to exact historical source/driver; validation of preconditions for general caller remains gap.",
+    "dtype_layout_tiling": {
+      "pe_count": 4,
+      "tile_q": 128,
+      "tile_kv": 256,
+      "input_dtype": "BF16 reference/MX low precision attention",
+      "layout": "Exact descriptor/source snapshot in old r2 operator/build records; full generic layout contract not inferred.",
+      "work_units": "historical_total_cycles only; no new MFU denominator asserted; historical per-case denominator remains old evidence"
+    }
+  },
+  "assumptions": [
+    {
+      "id": "A-TIMING",
+      "statement": "Historical timing uses zero inputs; nonzero functional checks are separate runs/ELFs.",
+      "category": "input/numerics",
+      "status": "verified_historical_record",
+      "guarantee_or_check": "../ndf-fa-20261109-r2/results.json",
+      "violation_behavior": "Do not generalize zero-input completion to numerical correctness.",
+      "affects": [
+        "correctness",
+        "performance"
+      ]
+    },
+    {
+      "id": "A-IDENTITY",
+      "statement": "Portable prefix-mapped rebuild changes artifact identity; historical trace/ELF identities remain historical.",
+      "category": "implementation",
+      "status": "verified_for_recorded_portable_timing_cases",
+      "guarantee_or_check": "results.json; dependency/build_identity.json; evidence/download_receipt.json; evidence/parent_actual_review.json",
+      "violation_behavior": "Reject mixed old/new model/ELF/config evidence.",
+      "affects": [
+        "correctness",
+        "performance"
+      ]
+    },
+    {
+      "id": "A-CONFIG",
+      "statement": "Performance is conditional on pinned capacity, per-PE/core bandwidth, latency distribution, seed and scheduling flags.",
+      "category": "memory/pipeline",
+      "status": "partially_known",
+      "guarantee_or_check": "../ndf-fa-20261109-r2/configurations.json; native_effective_config gap",
+      "violation_behavior": "Any config change requires explicit new run identity; no cross-config ratio claimed.",
+      "affects": [
+        "performance"
+      ]
+    },
+    {
+      "id": "A-FA-SCOPE",
+      "statement": "8K final scoped candidate and early unscoped 64K candidate are distinct source hashes.",
+      "category": "implementation",
+      "status": "verified_historical_record",
+      "guarantee_or_check": "../ndf-fa-20261109-r2/results.json",
+      "violation_behavior": "Do not label unscoped258099 as scoped64K result.",
+      "affects": [
+        "correctness",
+        "performance"
+      ]
+    },
+    {
+      "id": "A-FA-ISA",
+      "statement": "Original20519 ISA revision is not established; later legality checks are separate.",
+      "category": "implementation",
+      "status": "unknown",
+      "guarantee_or_check": "compiler_api_isa_closure gap",
+      "violation_behavior": "Diagnostic only; no contract-conformant acceptance claim.",
+      "affects": [
+        "correctness"
+      ]
+    }
+  ]
+}

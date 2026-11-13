@@ -1,0 +1,18 @@
+{
+  "deduplicated_regular_files": 1418,
+  "payloads": [
+    {
+      "payload": "fa-operator-r3",
+      "files": 1368,
+      "method": "Every prepared file byte-compared with actual downloaded/extracted file, then replaced by a regular-file hardlink. Neither file depends on the other pathname; immutable bytes unchanged.",
+      "all_files_equal": true
+    },
+    {
+      "payload": "fa-runtime-r2",
+      "files": 50,
+      "method": "Every prepared file byte-compared with actual downloaded/extracted file, then replaced by a regular-file hardlink. Neither file depends on the other pathname; immutable bytes unchanged.",
+      "all_files_equal": true
+    }
+  ],
+  "reason": "Limit disk usage without removing evidence paths or introducing symlink dependencies"
+}
