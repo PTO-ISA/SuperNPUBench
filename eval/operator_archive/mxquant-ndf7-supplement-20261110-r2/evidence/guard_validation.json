@@ -1,0 +1,164 @@
+{
+  "method": "Actual subprocess commands from unrelated cwd; intentional RMS/Python/loader pollution; all negative controls verified before runtime; no original assets modified",
+  "command_template": "python3 -B guarded_replay.py OPERATION --operator-root OPERATOR --model-root MODEL --outdir FRESH_OUTPUT",
+  "cwd": "r2 supplement directory separate from operator/model roots",
+  "wrapper_sha256": "c49494a5b4a3579b3124724840901a2fb4fc4a4b635050ccdc6827de1b7c8691",
+  "pins_sha256": "96a9f48fd633060d651cd7eab3f955031b2cf5085c63eca0d1a7874ead8c1125",
+  "tool": {
+    "python_version": "3.14.7 | packaged by Anaconda, Inc. | (main, Aug 14 2026, 10:21:40) [GCC 14.3.0]",
+    "python_executable_sha256": "6c9425f09041c817456374f883fa5f064f094fc02174ec90f2621b4292541258"
+  },
+  "parent_environment_overrides": {
+    "RMS_TAIL_BYPASS": "0",
+    "RMS_IDEAL_L2_READ_BANK": "1",
+    "PYTHONPATH": "unavailable-python-path",
+    "LD_LIBRARY_PATH": "unavailable-loader-path"
+  },
+  "tests": [
+    {
+      "test": "performance_refused",
+      "returncode": 2,
+      "record": {
+        "operation": "performance",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Performance refused: portable historical timing runtime and verified complete frozen configuration closure are not delivered. Historical cycle matching is not numerical acceptance."
+      }
+    },
+    {
+      "test": "build_refused",
+      "returncode": 2,
+      "record": {
+        "operation": "build-recipe",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Build refused: only a historical recipe is available; full compiler/linker/API/harness/resource/sysroot closure is not pinned or verified."
+      }
+    },
+    {
+      "test": "wrong_runtime",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Functional runtime identity mismatch"
+      }
+    },
+    {
+      "test": "missing_input",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Operator file missing or identity mismatch: inputs/input.bin"
+      }
+    },
+    {
+      "test": "wrong_elf",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Operator file missing or identity mismatch: cases/split2/split2.elf"
+      }
+    },
+    {
+      "test": "escaped_operator_symlink",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Operator file escapes payload: inputs/input.bin"
+      }
+    },
+    {
+      "test": "output_under_operator",
+      "returncode": 2,
+      "record": {
+        "runtime_executed": false,
+        "reason": "usage: guarded_replay.py [-h] --operator-root OPERATOR_ROOT\n                         [--model-root MODEL_ROOT] [--case {baseline,split2}]\n                         --outdir OUTDIR\n                         {gfrun,performance,build-recipe}\nguarded_replay.py: error: Output must be outside operator and model payloads",
+        "output_created": false
+      }
+    },
+    {
+      "test": "output_under_model",
+      "returncode": 2,
+      "record": {
+        "runtime_executed": false,
+        "reason": "usage: guarded_replay.py [-h] --operator-root OPERATOR_ROOT\n                         [--model-root MODEL_ROOT] [--case {baseline,split2}]\n                         --outdir OUTDIR\n                         {gfrun,performance,build-recipe}\nguarded_replay.py: error: Output must be outside operator and model payloads",
+        "output_created": false
+      }
+    },
+    {
+      "test": "escaped_pin_manifest",
+      "returncode": 2,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": false,
+        "status": "rejected",
+        "returncode": 2,
+        "reason": "Pin manifest escapes launcher payload"
+      }
+    },
+    {
+      "test": "functional_polluted_environment",
+      "returncode": 0,
+      "record": {
+        "operation": "gfrun",
+        "case": "split2",
+        "runtime_executed": true,
+        "status": "pass",
+        "returncode": 0,
+        "runtime_sha256": "9b0cf76eaa3ac62902f9511929a961cb064c8930fa9f9af7f8d967aa57eb1fb9",
+        "operator_pins_sha256": "96a9f48fd633060d651cd7eab3f955031b2cf5085c63eca0d1a7874ead8c1125",
+        "environment_policy": "allowlist PATH/LANG/LC_ALL/PYTHONNOUSERSITE/TMPDIR; no inherited loader/model/Python variables",
+        "runner_result": {
+          "case": "split2",
+          "phase": "gfrun",
+          "elf_sha256": "7c22bc2503eec2f6236fddaeaa750d58bb05d54b9d8bc591eea15e5b8d56bbc8",
+          "runtime_sha256": "9b0cf76eaa3ac62902f9511929a961cb064c8930fa9f9af7f8d967aa57eb1fb9",
+          "numeric_timing_acceptance": false,
+          "returncode": 0,
+          "input": {
+            "pass": true,
+            "bytes": 262144,
+            "mismatches": 0,
+            "first": []
+          },
+          "output": {
+            "pass": true,
+            "bytes": 131072,
+            "mismatches": 0,
+            "first": []
+          },
+          "scales": {
+            "pass": true,
+            "bytes": 4096,
+            "mismatches": 0,
+            "first": []
+          },
+          "negative_control_rejected": true,
+          "pass": true
+        },
+        "reason": "Fixed-ELF local functional validation only; shared runtime and timing/build acceptance remain unavailable."
+      }
+    }
+  ]
+}

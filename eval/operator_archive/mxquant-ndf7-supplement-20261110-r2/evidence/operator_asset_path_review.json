@@ -1,0 +1,312 @@
+{
+  "status": "pass",
+  "scope": "every payload file: raw bytes, relative names and gzip decompressed bytes; no exclusions",
+  "tool_sha256": "049addb184da361543fb9ea362ffad61616a2c2b9b7ef351a85590abc81a185c",
+  "python": "3.14.7 | packaged by Anaconda, Inc. | (main, Aug 14 2026, 10:21:40) [GCC 14.3.0]",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "e37a505320c62ddc843169ffe2b8ab3b59222e8bf77526517fa2cb2e993aa7df",
+      "bytes": 5395,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "SHA256SUMS",
+      "sha256": "294aac60f99e3c61357b9c859bd69882acb5a9fa1b391974e71bb8831c1b0f59",
+      "bytes": 3885,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "build.py",
+      "sha256": "2958c0babd3176d2c2a116b6a0d6b3b98d9561731285cab735660fdeb5d7b070",
+      "bytes": 2132,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/baseline.elf",
+      "sha256": "2a80c7c9d8d16b3c012845878dd1b72094eaacb50d430569a7f9d0eb7e4bfeea",
+      "bytes": 415384,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/baseline.elf.diss",
+      "sha256": "59f059544dbd997d543b5d39daa3e510d98279db9b296e502ad4acb0a5d5bc41",
+      "bytes": 31478,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/build_recipe.json",
+      "sha256": "a6e459b387f3637cd16724f9608174f95220436ccecebc70b3f647f5f232ccac",
+      "bytes": 1460,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/identity.json",
+      "sha256": "91b74c82e4a4d6b4e136936bff72dda31d5d6ace5916d0d2cbebdf245b1baabb",
+      "bytes": 888,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/run.json",
+      "sha256": "8f1d143e5089435e02cdb5deae170f4f8b806518216615ae8fbcf8a4ccbb1a4b",
+      "bytes": 2024,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/source/baseline.hpp",
+      "sha256": "010120359fa3560f74abc36be2edd4a13785f323c7a589746780091e9a91c91f",
+      "bytes": 7210,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/source/bulk.hpp",
+      "sha256": "5cb7bbc3ace7db2c5cabbd38c50071decab5f7284b702ae30a81bf8d7318d038",
+      "bytes": 5734,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/source/link.ld",
+      "sha256": "fb976d33f94637f671b9360f3f4e9734cc9d20d9f9b788cb23f131a7c187244c",
+      "bytes": 363,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/source/main.cpp",
+      "sha256": "3921731073db4428461fbd5f36dfa9bf6ad170fb0dc5729b779636368a18809a",
+      "bytes": 1795,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/source/mxquant_scalar_ref.h",
+      "sha256": "92fa68e0e2569eec2a7f6f6c3336308fe05344cc0720fb380087b7e51e14704e",
+      "bytes": 5715,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/baseline/symbols.txt",
+      "sha256": "70001f5551f72623ffdba99ceab91a406efcd74b9d93631d526fa5f8002fef23",
+      "bytes": 4141,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/build_recipe.json",
+      "sha256": "d65a7c4c75e17c682cb02bacd1be270350a7173c2868264a2d1259dd0bba8b5d",
+      "bytes": 1458,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/identity.json",
+      "sha256": "115f2ca2b275464a196863cff76139b68282e729ebc0e8b32c1b598a671004a5",
+      "bytes": 860,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/run.json",
+      "sha256": "ed667a551b5393ccea94dc2f6aad90e2c78ab7b6e06001db38ef737d137859bd",
+      "bytes": 832,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/source/baseline.hpp",
+      "sha256": "010120359fa3560f74abc36be2edd4a13785f323c7a589746780091e9a91c91f",
+      "bytes": 7210,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/source/bulk.hpp",
+      "sha256": "5cb7bbc3ace7db2c5cabbd38c50071decab5f7284b702ae30a81bf8d7318d038",
+      "bytes": 5734,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/source/link.ld",
+      "sha256": "fb976d33f94637f671b9360f3f4e9734cc9d20d9f9b788cb23f131a7c187244c",
+      "bytes": 363,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/source/main.cpp",
+      "sha256": "d9ac09d508e02e2640eaa85f6d91e4e9d8577a64ccfe7a7f8aa0945cfbbacf3c",
+      "bytes": 2024,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/source/mxquant_scalar_ref.h",
+      "sha256": "92fa68e0e2569eec2a7f6f6c3336308fe05344cc0720fb380087b7e51e14704e",
+      "bytes": 5715,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/source/pipeline.hpp",
+      "sha256": "b266279de5e34236ac30b6007291c4dc7f8149685691a03ab8d389ad5d563ccc",
+      "bytes": 782,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/source/split.hpp",
+      "sha256": "bb7f2eca07578d02e7801177cb976300303ec5729a11bf970bef34f9ec5d76f9",
+      "bytes": 2561,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/split2.elf",
+      "sha256": "7c22bc2503eec2f6236fddaeaa750d58bb05d54b9d8bc591eea15e5b8d56bbc8",
+      "bytes": 419456,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/split2.elf.diss",
+      "sha256": "2f7bae5b8bbcaa129fc31673129bf74032db1dcf55e27f2227c91c1404e300c3",
+      "bytes": 111180,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "cases/split2/symbols.txt",
+      "sha256": "469937fe98330efe3d2f9ed7fa4733d82003e4839753df5dafde2e2d43674003",
+      "bytes": 4126,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "configs/rms.conf",
+      "sha256": "f3c2f39d23633d9fd886ab8ef5539808cf92823a16c931f0715414ba21719887",
+      "bytes": 5722,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "configs/validation_fixed.conf",
+      "sha256": "1fe835afb5b7190e3f1f683eade2a354c6ae9a9eaf5bbc11bd558473668c4868",
+      "bytes": 5723,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "functional_replay_review.json",
+      "sha256": "e661108b7218a76842c52bdf9d0b9defe692cb53ce1e8f76e0f6a8da44956477",
+      "bytes": 3398,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "golden.py",
+      "sha256": "fd73a740151374d22f68d5729d9b59c25639252d9bccfca43d0ccb9796c759d1",
+      "bytes": 1428,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "historical_manifest.json",
+      "sha256": "411a3ba73cd12db5656fea1b4ea44a1395b1fafd74d1c7552d71dc74f75a7cda",
+      "bytes": 21178,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "historical_rebuild_verification.json",
+      "sha256": "a83be3ce685368757f402d046cb4059329bbcee8201fff15596f73adf97a839d",
+      "bytes": 3831,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "historical_result.json",
+      "sha256": "bbae609216216624b4d4380d80a96914f481e36dad113bdc216f3851440b0990",
+      "bytes": 53513,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "historical_vector_window_answer.json",
+      "sha256": "ee6f00db86d0396944861e8d3ffa3d0d3a3b5fda1f21a7d912905082e89e4d70",
+      "bytes": 1914,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "inputs/golden_payload.bin",
+      "sha256": "7f13bc900b87771310da91d74148e22d8191dbdd234f2574b179f673da985aea",
+      "bytes": 131072,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "inputs/golden_scales.bin",
+      "sha256": "c20cd4a164aad162abe7db33f6cb3ac8b58611f5566d687d669b7d8a076d596a",
+      "bytes": 4096,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "inputs/input.bin",
+      "sha256": "e2dd002ab8ccfc8149bc9a20b8b3aa9c9ffa082e3da4a121d0680ee125caf1e3",
+      "bytes": 262144,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "operator_identity.json",
+      "sha256": "7ca9d97a1b763c6ecc150c05118e30881569611f3c773089f77f8ff40bfa925a",
+      "bytes": 2165,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "replay.py",
+      "sha256": "68ee5c18c541359a7290be915206535cfdc420d55e0b5696b5cf117bcfe0eba9",
+      "bytes": 4172,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "run_model.py",
+      "sha256": "069ca22c3f85f914073ede5107b022c908860664f1b4ac71f9ca66ba0be21c34",
+      "bytes": 779,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "run_swimlane.py",
+      "sha256": "2e2170d69b1703e10b61e1b0f5f8e5064a84a80cb2516c7a8b1e349069d78088",
+      "bytes": 3483,
+      "findings": [],
+      "filename_findings": []
+    },
+    {
+      "path": "width_candidate_outcomes.json",
+      "sha256": "8a30e74e73cee653ad251f515f343fd390293005ce1d78ecd30361fa6456b2b0",
+      "bytes": 8630,
+      "findings": [],
+      "filename_findings": []
+    }
+  ],
+  "reviewed_findings": [],
+  "unresolved_findings": [],
+  "limitations": "byte-pattern scan is not a proof of semantic portability; relocated replay is separate"
+}

@@ -1,0 +1,67 @@
+{
+  "searched_roots": [
+    "perf_analysis/hif4_quant_20261105",
+    "perf_analysis/mxquant_rms_20261105",
+    "perf_analysis/rms_issue265_20261027/model_trace1145_20261030",
+    "perf_analysis/rms_issue265_20261027/tlsu_observer_20261029/perf_runs/pr1145_tail_shared128_cell256/source_archive"
+  ],
+  "scope": "Lineage-specific existing runtime/build/source archive candidates, not exhaustive machine search",
+  "candidates": [
+    {
+      "path": "perf_analysis/hif4_quant_20261105/runtime/gfsim",
+      "bytes": 15099616,
+      "sha256": "bebcf1197d78cacdf65109ad1ad76d42604d7996b37c298d92063f82435b7224",
+      "personal_path_occurrences": 163,
+      "historical_match": true
+    },
+    {
+      "path": "perf_analysis/rms_issue265_20261027/model_trace1145_20261030/bin/gfsim",
+      "bytes": 15099616,
+      "sha256": "bebcf1197d78cacdf65109ad1ad76d42604d7996b37c298d92063f82435b7224",
+      "personal_path_occurrences": 163,
+      "historical_match": true
+    },
+    {
+      "path": "perf_analysis/rms_issue265_20261027/model_trace1145_20261030/build_trace1145_20261030/CMakeCache.txt",
+      "bytes": 17051,
+      "sha256": "114410d8eb2950bbbfbab4cc6dfe705ab8f650ed7202c6b781792d86a2ff916d"
+    },
+    {
+      "path": "perf_analysis/rms_issue265_20261027/model_trace1145_20261030/build_trace1145_20261030/compile_commands.json",
+      "bytes": 825504,
+      "sha256": "003f82bc26429e27d9573a005346ae40ee44c2f782ec38f32e0a0b239a0a9b15"
+    },
+    {
+      "path": "perf_analysis/rms_issue265_20261027/tlsu_observer_20261029/perf_runs/pr1145_tail_shared128_cell256/source_archive/status.txt",
+      "bytes": 407,
+      "sha256": "430913b21baf23a420a0a05a56bac32e3da4f746a2077ac32e9f677a2d5f22a4"
+    },
+    {
+      "path": "perf_analysis/rms_issue265_20261027/tlsu_observer_20261029/perf_runs/pr1145_tail_shared128_cell256/source_archive/staged.patch",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "perf_analysis/rms_issue265_20261027/tlsu_observer_20261029/perf_runs/pr1145_tail_shared128_cell256/source_archive/source_changes.tar.gz",
+      "bytes": 90008,
+      "sha256": "7e78f5977f4324ebc3d1aca41e556de65d10e0bed21a89cc08c02f1dda5b538e",
+      "members": [
+        "TimingSim/core/Core.cpp",
+        "TimingSim/group/tlsu/L2/l2_inst_buffer.cpp",
+        "TimingSim/group/tlsu/L2/l2_inst_buffer.h",
+        "TimingSim/group/tlsu/L2/l2_top.cpp",
+        "TimingSim/memory/soc/RandomModelSoC.cpp",
+        "TimingSim/memory/soc/RandomModelSoC.h",
+        "configs/core.toml",
+        "tests/sl2_test/l2_inst_buffer_test.cpp"
+      ]
+    },
+    {
+      "path": "perf_analysis/rms_issue265_20261027/tlsu_observer_20261029/perf_runs/pr1145_tail_shared128_cell256/source_archive/unstaged.patch",
+      "bytes": 21558,
+      "sha256": "004683a6c483509fb8c90727c5df618e65b29811fec1b76299fd9de310795984"
+    }
+  ],
+  "conclusion": "Historical binary exists locally; no proven complete build-time source+untracked+effective defaults binding. Archive-time tracked patches differ from historical proof; portable RMS6467 is not substitute.",
+  "next_action": "Recover build-time tracked/untracked/generated inputs and actual flags for bebcf119, prefix-map build as NEW runtime identity, then same-ELF numeric/config/performance validation; coordinate model registration before build."
+}

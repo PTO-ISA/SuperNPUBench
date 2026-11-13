@@ -1,0 +1,16 @@
+{
+  "method": "SHA256 actual previously downloaded assets; no new network download or execution",
+  "assets": [
+    {
+      "asset": "mxquant-historical-traces-r1.tar.gz",
+      "bytes": 5907009,
+      "sha256": "a55d576ef8120af4ee1a7ccba46092f12c9b75073671600d1584dc7640196124"
+    },
+    {
+      "asset": "mxquant-operator-r1.tar.gz",
+      "bytes": 910566,
+      "sha256": "9578958a57f817bb34b288b772538b4076379335f4e606a9cfe5664ab7df6130"
+    }
+  ],
+  "previous_download_record_sha256": "17a2d8ae843baf1b802c4c4276a3dd078b3fe2fd9c94a7960f19d77465706029"
+}
