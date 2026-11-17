@@ -21,39 +21,62 @@ make -C benchmark/one-level-arch/test/kernel/vec/host_device run
 ```
 
 The build links the model's resident MsgBuffer worker with the benchmark's
-Linx kernel in one ELF. It writes a function-symbol index next to the ELF.
-Use the index from that exact build. The host executable, ELF and index are in
-the benchmark's `output/` directory. Set `OUTPUT` to a fresh directory when
-changing the toolchain or dependency revisions. `HOST_CXX` selects the native
-compiler and `GFRUN` overrides the simulator path.
+Linx kernel in one ELF. In live host mode gfrun reads the function symbols from
+the ELF it loaded. A kernel handle belongs to that session. Build outputs are
+in the benchmark's `output/` directory. Set `OUTPUT` to a fresh directory
+when changing toolchain or dependency revisions. `HOST_CXX` selects the native
+compiler and `GFRUN` overrides the simulator path. To exercise queue and
+lifetime behavior with the native host tests, run
+`make -C benchmark/one-level-arch/test/kernel/vec/host_device test-host`.
+
+## Submit a kernel chain
+
+One host submission thread owns each device session and its default FIFO stream. The TADD host allocates its
+buffers before boot, then calls `initialize()` to run the workers to READY and
+BWE. The host queues the following work before its only `synchronize()`:
+
+1. Upload the three inputs and initialize the two block-geometry records.
+2. Submit TADD with eight logical blocks to compute `tmp = a + b` in GM.
+3. Reuse the same host argument object and kernel handle. Submit TADD with four
+   blocks to compute `out = tmp + c` in GM.
+4. Download the final output and the two records.
+
+The host compares all 1,088 FP32 elements with `(a + b) + c`. It checks the
+logical block IDs and counts from both launches, releases the temporary buffer
+and verifies that a new allocation at the same address has a distinct lifetime.
 
 ## Add a benchmark
 
-1. Write a native host `main()` and a separate Linx kernel with the C signature
-   `extern "C" uint64_t kernel_name(uint64_t argument)`. The return value is
-   zero for success. Share the argument layout in a header with fixed-width
-   fields. Addresses in that structure are guest GM addresses.
-2. Construct `supernpu::Device(gfrun, firmware)`, use `allocate` to reserve
-   GM, and `upload` to copy input and the argument structure. `initialize()`
-   releases the workers and waits until each has reported READY and parked.
-3. Call `launch("kernel_name", blockDim, argumentAddress)`. In the kernel use
-   `pto::GetBlockIdx()` and `pto::GetBlockNum()` to split work. For independent
-   tiles, block `i` visits tile `i`, `i + blockDim`, and so on. Each block
-   returns through the firmware, which posts DONE and waits for more work.
-4. Call `wait()` before reading, updating inputs, or starting another launch.
-   A nonzero kernel status raises an exception. Use `download` to copy results
-   to native memory. `close()` checks the model exit status and releases the
-   session allocations.
-5. Set `HOST_MAIN`, `HOST_HEADERS` and `DEVICE_KERNEL` in the case Makefile and
-   include [device/host_device.mk](device/host_device.mk).
+Write a native `main()` and a Linx entry with the C signature
+`extern "C" uint64_t kernel_name(uint64_t argument)`. Returning zero indicates
+success. Share a trivially copyable argument structure with fixed-width fields
+between host and device. Set `HOST_MAIN`, `HOST_HEADERS` and `DEVICE_KERNEL` in
+the case Makefile and include [device/host_device.mk](device/host_device.mk).
 
-The backend serializes launches and transfers. Transfers use temporary binary
-files on the local host. HSCB carries the entry PC, argument address and
-dispatch identity. Each independent block may run on any resident hardware
-thread. Operators containing a fixed-participant hardware barrier require a
-compatible worker group and launch policy before migration.
+- **Buffers.** Use `allocateBuffer(bytes, alignment)` to obtain a session-owned
+  handle. Allocation and release are synchronous operations. Get a GM address for an argument field with `device.address(buffer)`.
+  Use `release(buffer)` to make the allocation available for reuse after earlier work completes. Copies of
+  the released handle become invalid even if a new allocation has the same GM
+  address. Initialize a reused allocation before reading it.
+- **Kernels and arguments.** Resolve the entry once with
+  `device.kernel("kernel_name")`, then reuse the handle across launches. Pass
+  the block count, argument object and referenced buffer handles to
+  `enqueueLaunch`. The runtime snapshots the argument bytes on submission,
+  uploads them to a device descriptor for execution, and retains the descriptor
+  through the matching DONEs. Include every buffer whose address the kernel uses
+  in the dependency list. The host can reuse the argument object immediately.
+- **Copies and synchronization.** `enqueueUpload` snapshots the host input.
+  Call the enqueue methods after `initialize()`. `enqueueDownload` needs a
+  writable host destination that remains alive until
+  `synchronize()` completes. The stream executes operations in submission order;
+  a later kernel sees the writes of earlier kernels. Synchronization reports
+  execution errors. Explicit `close()` checks the model's exit status.
+- **Block geometry.** In a kernel, `pto::GetBlockIdx()` identifies the current
+  logical block and `pto::GetBlockNum()` returns the submitted count. For
+  independent tiles, block `i` visits tile `i`, `i + blockDim`, and so on.
+  Operators with a fixed-participant hardware barrier also need a compatible
+  worker group and dispatch policy.
 
-The TADD host checks 17 tiles of 64 FP32 elements with 8 logical blocks, uses
-the first result as the second input, then repeats with 4 blocks. Each round
-checks every element, each active block's register values, and the untouched
-geometry entries for inactive blocks.
+The background host thread drives one gfrun command at a time. Transfers use
+temporary binary files. This backend models ordering, completion and data
+visibility for a single stream. Its host elapsed time includes IPC and file I/O.

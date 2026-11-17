@@ -1,4 +1,5 @@
 # Consumer sets HOST_MAIN and DEVICE_KERNEL. Run make in its benchmark directory.
+ifneq ($(MAKECMDGOALS),test-host)
 ifndef COMPILER_DIR
 $(error Set COMPILER_DIR to the Linx toolchain bin directory)
 endif
@@ -7,6 +8,7 @@ $(error Set TILEOP_API_ROOT to the Linx-TileOP-API checkout)
 endif
 ifndef MODEL_ROOT
 $(error Set MODEL_ROOT to the SuperScalarModel checkout)
+endif
 endif
 
 RUNTIME := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
@@ -24,15 +26,21 @@ DEVICE_FLAGS := --target=linx64v5-unknown-linux-musl -std=c++20 -O2 -mlxbc \
     -ffreestanding -fno-exceptions -fno-rtti -fno-jump-tables -fno-stack-protector \
     -I$(TILEOP_INCLUDE) -I$(REPO)/benchmark/one-level-arch/kernels
 
-.PHONY: all run firmware
+.PHONY: all run firmware test-host
 all: $(OUTPUT)/host firmware
 
 $(OUTPUT):
 	mkdir -p "$@"
 
 $(OUTPUT)/host: $(HOST_MAIN) $(HOST_HEADERS) $(RUNTIME)/host/device.hpp $(RUNTIME)/host/device.cpp | $(OUTPUT)
-	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -I$(RUNTIME)/host \
+	$(HOST_CXX) -pthread -std=c++17 -O2 -Wall -Wextra -I$(RUNTIME)/host \
 	    $(HOST_MAIN) $(RUNTIME)/host/device.cpp -o "$@"
+
+test-host: $(OUTPUT)/device_test
+	"$(OUTPUT)/device_test" "$(RUNTIME)/host/fake_gfrun.py"
+
+$(OUTPUT)/device_test: $(RUNTIME)/host/device_test.cpp $(RUNTIME)/host/device.cpp $(RUNTIME)/host/device.hpp | $(OUTPUT)
+	$(HOST_CXX) -pthread -std=c++17 -O2 -Wall -Wextra $(filter %.cpp,$^) -o "$@"
 
 $(OUTPUT)/kernel.o: $(DEVICE_KERNEL) | $(OUTPUT)
 	$(LINX_CXX) $(DEVICE_FLAGS) -MMD -MP -c "$<" -o "$@"
