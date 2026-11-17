@@ -5,52 +5,130 @@
 #include <iostream>
 #include <stdexcept>
 
+namespace {
+
+template <std::size_t Size>
+void checkGeometry(const std::array<uint64_t, Size>& observed,
+                   unsigned blockDim, const char* launch) {
+    for (unsigned block = 0; block < observed.size(); ++block) {
+        const uint64_t expected = block < blockDim
+                                      ? (uint64_t(blockDim) << 32) | block
+                                      : UINT64_MAX;
+        if (observed[block] != expected) {
+            throw std::runtime_error(std::string(launch) +
+                                     " launch has incorrect block geometry");
+        }
+    }
+}
+
+}  // namespace
+
 int main(int argc, char** argv) try {
     if (argc != 3) throw std::runtime_error("usage: tadd_host GFRUN WORKERS.ELF");
+
     supernpu::Device device(argv[1], argv[2]);
     constexpr unsigned tiles = 17;
-    std::array<float, tiles * kTileElements> a, b, result;
-    std::array<uint64_t, 8> geometry;
-    TaddArgs args{device.allocate(sizeof(a)), device.allocate(sizeof(b)),
-                  device.allocate(sizeof(result)), device.allocate(sizeof(geometry)), tiles};
-    const auto descriptor = device.allocate(sizeof(args));
-    device.upload(descriptor, &args, sizeof(args));
-    for (unsigned i = 0; i < a.size(); ++i) {
-        a[i] = static_cast<int>(i % 97) - 48;
-        b[i] = static_cast<int>(i % 31) - 15;
+    constexpr unsigned elements = tiles * kTileElements;
+    constexpr unsigned firstBlockDim = 8;
+    constexpr unsigned secondBlockDim = 4;
+
+    std::array<float, elements> a, b, c, result;
+    std::array<uint64_t, firstBlockDim> firstGeometry;
+    std::array<uint64_t, firstBlockDim> secondGeometry;
+    for (unsigned element = 0; element < elements; ++element) {
+        a[element] = static_cast<int>(element % 97) - 48;
+        b[element] = static_cast<int>(element % 31) - 15;
+        c[element] = static_cast<int>(element % 17) - 8;
     }
-    device.upload(args.a, a.data(), sizeof(a));
-    device.upload(args.b, b.data(), sizeof(b));
+    result.fill(-98765.0f);
+    firstGeometry.fill(UINT64_MAX);
+    secondGeometry.fill(UINT64_MAX);
+
+    auto aDevice = device.allocateBuffer(sizeof(a));
+    auto bDevice = device.allocateBuffer(sizeof(b));
+    auto cDevice = device.allocateBuffer(sizeof(c));
+    auto temporary = device.allocateBuffer(sizeof(result));
+    auto output = device.allocateBuffer(sizeof(result));
+    auto firstGeometryDevice = device.allocateBuffer(sizeof(firstGeometry));
+    auto secondGeometryDevice = device.allocateBuffer(sizeof(secondGeometry));
+    const uint64_t temporaryAddress = device.address(temporary);
+    const auto staleTemporary = temporary;
+
     device.initialize();
-    for (const unsigned blocks : {8u, 4u}) {
-        if (blocks == 4) {
-            // Derive the second input from the completed first launch.
-            a = result;
-            device.upload(args.a, a.data(), sizeof(a));
+    const auto tadd = device.kernel("bench_tadd");
+
+    device.enqueueUpload(aDevice, a.data(), sizeof(a));
+    device.enqueueUpload(bDevice, b.data(), sizeof(b));
+    device.enqueueUpload(cDevice, c.data(), sizeof(c));
+    device.enqueueUpload(firstGeometryDevice, firstGeometry.data(),
+                         sizeof(firstGeometry));
+    device.enqueueUpload(secondGeometryDevice, secondGeometry.data(),
+                         sizeof(secondGeometry));
+
+    TaddArgs args{device.address(aDevice), device.address(bDevice),
+                  device.address(temporary), device.address(firstGeometryDevice),
+                  tiles};
+    device.enqueueLaunch(tadd, firstBlockDim, args,
+                         {aDevice, bDevice, temporary, firstGeometryDevice});
+
+    // Reuse and mutate the same host object without waiting for the first
+    // launch to finish. The stream must preserve the first argument snapshot
+    // while taking a new snapshot for the dependent second launch.
+    args = TaddArgs{device.address(temporary), device.address(cDevice),
+                    device.address(output), device.address(secondGeometryDevice),
+                    tiles};
+    device.enqueueLaunch(tadd, secondBlockDim, args,
+                         {temporary, cDevice, output, secondGeometryDevice});
+
+    device.enqueueDownload(result.data(), output, sizeof(result));
+    device.enqueueDownload(firstGeometry.data(), firstGeometryDevice,
+                           sizeof(firstGeometry));
+    device.enqueueDownload(secondGeometry.data(), secondGeometryDevice,
+                           sizeof(secondGeometry));
+    device.synchronize();
+
+    for (unsigned element = 0; element < elements; ++element) {
+        const float expected = a[element] + b[element] + c[element];
+        if (result[element] != expected) {
+            std::cerr << "element " << element << " expected " << expected
+                      << " got " << result[element] << '\n';
+            return 1;
         }
-        result.fill(-98765.0f);
-        geometry.fill(UINT64_MAX);
-        device.upload(args.out, result.data(), sizeof(result));
-        device.upload(args.geometry, geometry.data(), sizeof(geometry));
-        device.launch("bench_tadd", blocks, descriptor);
-        device.wait();
-        device.download(result.data(), args.out, sizeof(result));
-        device.download(geometry.data(), args.geometry, sizeof(geometry));
-        for (unsigned i = 0; i < result.size(); ++i) {
-            if (result[i] != a[i] + b[i]) {
-                std::cerr << "element " << i << " expected " << a[i] + b[i]
-                          << " got " << result[i] << '\n';
-                return 1;
-            }
-        }
-        for (unsigned i = 0; i < geometry.size(); ++i) {
-            const uint64_t expected = i < blocks ? (uint64_t(blocks) << 32) | i : UINT64_MAX;
-            if (geometry[i] != expected) throw std::runtime_error("unexpected logical block geometry");
-        }
-        std::cout << "PASS blockDim=" << blocks << ", " << result.size()
-                  << " TADD elements, 8 geometry slots checked\n";
     }
+    checkGeometry(firstGeometry, firstBlockDim, "first");
+    checkGeometry(secondGeometry, secondBlockDim, "second");
+
+    device.release(temporary);
+    auto reused = device.allocateBuffer(sizeof(result));
+    if (device.address(reused) != temporaryAddress)
+        throw std::runtime_error("released device allocation was not reused");
+
+    // The old handle must remain stale even after its numeric address is
+    // assigned to a new allocation generation.
+    bool rejectedStaleHandle = false;
+    try {
+        (void)device.address(staleTemporary);
+    } catch (const std::logic_error&) {
+        rejectedStaleHandle = true;
+    }
+    if (!rejectedStaleHandle)
+        throw std::runtime_error("released buffer handle remained usable");
+
+    device.release(reused);
+    device.release(secondGeometryDevice);
+    device.release(firstGeometryDevice);
+    device.release(output);
+    device.release(cDevice);
+    device.release(bDevice);
+    device.release(aDevice);
     device.close();
+
+    std::cout << "PASS default stream: TADD(a,b)->tmp, TADD(tmp,c)->out, "
+              << elements << " FP32 results equal a+b+c\n"
+              << "PASS launch snapshots: blockDim=8 then blockDim=4, "
+              << "independent geometry and mutable host args preserved\n"
+              << "PASS device buffer: temporary stayed in GM, address "
+              << temporaryAddress << " was freed and reused, stale handle rejected\n";
     return 0;
 } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';
