@@ -33,6 +33,9 @@ compile_one_level() {
 }
 
 case $ARCH in
+    host-device)
+        exec make -C "$SCRIPT_DIR/benchmark/one-level-arch/test/kernel/vec/host_device" all
+        ;;
     two-level|two-level-arch|linx)
         compile_two_level
         ;;
@@ -44,9 +47,10 @@ case $ARCH in
         compile_one_level
         ;;
     *)
-        echo "Usage: $0 [two-level|one-level|all]"
+        echo "Usage: $0 [two-level|one-level|host-device|all]"
         echo "  two-level  - Compile two-level-arch backend only (benchmark/two-level-arch)"
         echo "  one-level  - Compile one-level-arch backend only (benchmark/one-level-arch)"
+        echo "  host-device - Build the native host and resident TADD device image"
         echo "  all        - Compile all backends (default)"
         exit 1
         ;;

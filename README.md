@@ -181,6 +181,13 @@ cd microbenchmark && bash compile_all.sh all
 
 Artifacts land in `benchmark/<arch>/output/kernel/<operator>/elf/`.
 
+## Native host and resident device workers
+
+The TADD benchmark has a native CPU `main()` which allocates device GM,
+uploads input, boots eight gfrun workers, submits two launches and verifies the
+result on the CPU. Build it with `./compile_all.sh host-device`.
+See the [runtime build and launch instructions](runtime/README.md).
+
 ## Microbenchmark
 
 `microbenchmark/` is an instruction-level bench organized by ISA family,
