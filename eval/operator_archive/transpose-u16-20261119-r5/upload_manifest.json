@@ -1,0 +1,644 @@
+{
+  "archive_id": "transpose-u16-20261119-r5",
+  "date": "2026-11-19",
+  "uploader": "lvhao7896",
+  "release_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/tag/transpose-u16-20261119-r5",
+  "asset_url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/transpose-u16-20261119-r5/transpose-r5-frozen-local-20261119.tar.gz",
+  "bytes": 104325923,
+  "sha256": "e09e9be1ee45d1584bf713a5fd84475c07c12a303f3ab504656ecb0be62046b6",
+  "delivery_status": "uploaded",
+  "download_replay": "not_performed",
+  "independent_review": "deferred_by_user",
+  "ndf_status": "incomplete",
+  "model_runtime_bundled": false,
+  "tool_identity": {
+    "compiler_version": "clang version 15.0.4 (linx64v5-musl-local 13b51d9f7d7f71dcaa83b011e3dda68df1ca5e5a)\nTarget: linx64v5-unknown-linux-musl\nThread model: posix\nInstalledDir: ${DV4_ROOT}/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin\n",
+    "tool_hashes": {
+      "clang": "2a7d8f0401108d4c268b84cdfd3748ce06f7e72f2983cb64d496f1ed46ef479e",
+      "clang++": "2a7d8f0401108d4c268b84cdfd3748ce06f7e72f2983cb64d496f1ed46ef479e",
+      "ld.lld": "3d77eb905d918d234401db788eb93197d689c0a898f7c69d270db7e1a7d0f1d5",
+      "llvm-objdump": "ea7c69207cbff36661bd38f1ac564454105a6aad164fb7692ff7135f128725da"
+    },
+    "model_hashes": {
+      "gfrun": "fbc545133c110a19926e9987d1cce9af8232ce8d313ce92b820297254a14e4c8",
+      "gfsim": "c7287d02a5e405b8d054c41d5dc3bbe391b9eed81cede1c48b5bb112892da963"
+    },
+    "numpy": "2.0.2"
+  },
+  "results": [
+    {
+      "case_id": "gather_plane3",
+      "shape": [
+        1476,
+        32
+      ],
+      "perm": [
+        1,
+        0
+      ],
+      "output_shape": [
+        32,
+        1476
+      ],
+      "tiling": {
+        "logical_valid": "32x32 full rectangles",
+        "physical_data_tile": "32x32",
+        "cell_layout": "M32",
+        "tail_policy": "rows32; cols1476=46*32+4; final4columns use per-column32x1 valid,32x2 physical TLOAD/TSTORE",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "244445ccc67d7afb670e23a38dd31fcde7942c7bf7d508b0968f3885573263c2",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "6edbb7e5370d705df7a3e6c8b68a11d8625a4dc0efc1d5354bc3c1614cadebec",
+      "cycles": 7088,
+      "latency_us": 3.937777777777778,
+      "previous_cycles": 7088,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "gather_plane1",
+      "shape": [
+        129,
+        22,
+        120
+      ],
+      "perm": [
+        2,
+        1,
+        0
+      ],
+      "output_shape": [
+        120,
+        22,
+        129
+      ],
+      "tiling": {
+        "logical_valid": "32x32 full rectangles",
+        "physical_data_tile": "32x32",
+        "cell_layout": "M32 full; M32 TLOAD24-row tail, M16 not used at24",
+        "tail_policy": "rows120=3*32+24; cols129=4*32+1; all short rectangles use per-column TLOAD/TSTORE",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "42ae13fe2ad564c1b7908a6cd58bcf4e21a1fdfb0acd168d484719aa35eeebe0",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "027bad1e7b25dad95ed019758b51cbff0cda4ba3a546e48272dbdac095869f44",
+      "cycles": 88280,
+      "latency_us": 49.044444444444444,
+      "previous_cycles": 88280,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "gather_plane2",
+      "shape": [
+        8,
+        4096,
+        3
+      ],
+      "perm": [
+        0,
+        2,
+        1
+      ],
+      "output_shape": [
+        8,
+        3,
+        4096
+      ],
+      "tiling": {
+        "logical_valid": "32x16 flattened plane",
+        "physical_data_tile": "32x16",
+        "cell_layout": "M32",
+        "tail_policy": "4096-element plane split8*512; no partial transfer",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "3132a7d409ba6b125395f8f25d58893d2ef2ae9eb06729255d96efeff693f900",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "004fc2ab3483c03ec94dd52aa33ef201605de7daebcf8dfbf59a0fddcbee5fbf",
+      "cycles": 12310,
+      "latency_us": 6.838888888888889,
+      "previous_cycles": 12310,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "gather_plane4",
+      "shape": [
+        8,
+        64,
+        4,
+        16,
+        7
+      ],
+      "perm": [
+        0,
+        3,
+        2,
+        1,
+        4
+      ],
+      "output_shape": [
+        8,
+        16,
+        4,
+        64,
+        7
+      ],
+      "tiling": {
+        "logical_valid": "32x14 flattened plane",
+        "physical_data_tile": "32x14",
+        "cell_layout": "M32",
+        "tail_policy": "448-element plane, no row tail",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "9a855e3e1f5489d3e7967465c9f55056bda5f1c78c07550364f3e5e2f6034c6b",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "e4878a230b860e709a1df0f4ae41a0b6ab0cb732238110ae8884cc0968eb97a6",
+      "cycles": 49933,
+      "latency_us": 27.740555555555556,
+      "previous_cycles": 49933,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "gather_plane5",
+      "shape": [
+        8,
+        8,
+        64,
+        64
+      ],
+      "perm": [
+        0,
+        2,
+        1,
+        3
+      ],
+      "output_shape": [
+        8,
+        64,
+        8,
+        64
+      ],
+      "tiling": {
+        "logical_valid": "32x16 flattened plane",
+        "physical_data_tile": "32x16",
+        "cell_layout": "M32",
+        "tail_policy": "512-element plane, no tail",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "92439909bda5fa2da9f2a3e06433d286c58f73d4614a34efb42d3dcfa0a9b044",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "ddabc67746d46f9189957ad94cf89d27ecc9ae2097e48434fee5ed9db5b762c9",
+      "cycles": 24296,
+      "latency_us": 13.497777777777777,
+      "previous_cycles": 24296,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "tload1",
+      "shape": [
+        129,
+        22,
+        120
+      ],
+      "perm": [
+        2,
+        1,
+        0
+      ],
+      "output_shape": [
+        120,
+        22,
+        129
+      ],
+      "tiling": {
+        "logical_valid": "32x1",
+        "physical_data_tile": "32x2",
+        "cell_layout": "M32; M16 row tail",
+        "tail_policy": "tail valid1x1,physical16x4",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "807b5c3e7518e0aae3f273bc2f0d7e08c3cba50f8b06a1b976e4d3a459be032c",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "7947e642838c27f13aa1473a79c238f29b8540b1680954282655a65bfd139ac6",
+      "cycles": 470147,
+      "latency_us": 261.1927777777778,
+      "previous_cycles": 470147,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "tload2",
+      "shape": [
+        8,
+        4096,
+        3
+      ],
+      "perm": [
+        0,
+        2,
+        1
+      ],
+      "output_shape": [
+        8,
+        3,
+        4096
+      ],
+      "tiling": {
+        "logical_valid": "32x1",
+        "physical_data_tile": "32x2",
+        "cell_layout": "M32",
+        "tail_policy": "none",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "783e469ea4b8bbdfa6e94662257017e9fb79d87086b38a5fc07b968540d39ea9",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "784d778dc1b114224f8b150a198351d1a5b75ada5fa00f3779473d2a09de94d4",
+      "cycles": 51659,
+      "latency_us": 28.699444444444445,
+      "previous_cycles": 51659,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "tload3",
+      "shape": [
+        1476,
+        32
+      ],
+      "perm": [
+        1,
+        0
+      ],
+      "output_shape": [
+        32,
+        1476
+      ],
+      "tiling": {
+        "logical_valid": "32x1",
+        "physical_data_tile": "32x2",
+        "cell_layout": "M32; M16 row tail",
+        "tail_policy": "tail valid4x1,physical16x4",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "d6c73aadce240a2ab1cc5ff51c5990cf950c9e8c5ed8e16d0f45a1ba182610e5",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "dc5f863640efe73627a00d4ae30d5885e0586b40e646c67faae77dbbc83e974b",
+      "cycles": 34468,
+      "latency_us": 19.148888888888887,
+      "previous_cycles": 34468,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "tload4",
+      "shape": [
+        8,
+        64,
+        4,
+        16,
+        7
+      ],
+      "perm": [
+        0,
+        3,
+        2,
+        1,
+        4
+      ],
+      "output_shape": [
+        8,
+        16,
+        4,
+        64,
+        7
+      ],
+      "tiling": {
+        "logical_valid": "32x7 logical; transfers32x4 +32x2 +32x1",
+        "physical_data_tile": "32x4 +32x2 +32x2",
+        "cell_layout": "M32",
+        "tail_policy": "odd columns split4+2+1",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "f570ca5b10cc9cd6ccfdd4f7184dcfc5616f8f9c4b27a7b5be10dd20c4ff06df",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "f03c6e3624ea1a303bfc1832f511387ce2a1d87b9af0ec12bd8f0418f84e65f3",
+      "cycles": 133065,
+      "latency_us": 73.925,
+      "previous_cycles": 133065,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "tload5",
+      "shape": [
+        8,
+        8,
+        64,
+        64
+      ],
+      "perm": [
+        0,
+        2,
+        1,
+        3
+      ],
+      "output_shape": [
+        8,
+        64,
+        8,
+        64
+      ],
+      "tiling": {
+        "logical_valid": "8x64",
+        "physical_data_tile": "16x64",
+        "cell_layout": "M16",
+        "tail_policy": "none",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "1738b5a86cb0f6404ca088ee5ae98ccb4ae1874b21163abe8f0a009ca6c6251a",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "98b2701f501305201b4a5d0bd226480eaeacebb47b9a1fa44ceb0addb9476feb",
+      "cycles": 15542,
+      "latency_us": 8.634444444444444,
+      "previous_cycles": 15542,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "u16_shapes1",
+      "shape": [
+        129,
+        22,
+        120
+      ],
+      "perm": [
+        2,
+        1,
+        0
+      ],
+      "output_shape": [
+        120,
+        22,
+        129
+      ],
+      "tiling": {
+        "logical_valid": "32x1",
+        "physical_data_tile": "32x2",
+        "cell_layout": "M32",
+        "tail_policy": "tail valid 1x1, physical32x2",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "ff603a28b8a05b51f247fd76773bef6a12ec3cd17287f11bfce55eb12a62411c",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "f1d8f63d7bdf646e5d83fe99c9373337593fd16bcb841a638e7c006a136177de",
+      "cycles": 483909,
+      "latency_us": 268.8383333333333,
+      "previous_cycles": 483909,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "u16_shapes2",
+      "shape": [
+        8,
+        4096,
+        3
+      ],
+      "perm": [
+        0,
+        2,
+        1
+      ],
+      "output_shape": [
+        8,
+        3,
+        4096
+      ],
+      "tiling": {
+        "logical_valid": "32x1",
+        "physical_data_tile": "32x2",
+        "cell_layout": "M32",
+        "tail_policy": "none",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "0ffb174bd4102eded496f3fd414e5837b0924396598f559c81825a2a398ac567",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "08f6d01fa7d924b8d72b543aed47800310229ddd640959d2e2d1845e8d00c986",
+      "cycles": 63365,
+      "latency_us": 35.202777777777776,
+      "previous_cycles": 63365,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "u16_shapes3",
+      "shape": [
+        1476,
+        32
+      ],
+      "perm": [
+        1,
+        0
+      ],
+      "output_shape": [
+        32,
+        1476
+      ],
+      "tiling": {
+        "logical_valid": "32x1",
+        "physical_data_tile": "32x2",
+        "cell_layout": "M32",
+        "tail_policy": "tail valid4x1, physical32x2",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "759a04cd7dc36e1e874fabef0827e9262aef018e3617d7ffa7a03613afc6595a",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "adf56621ef3b71b045e0b47061db791dc064db7b9e12dfe07954d61b3fd05f58",
+      "cycles": 45361,
+      "latency_us": 25.200555555555557,
+      "previous_cycles": 45361,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "u16_shapes4",
+      "shape": [
+        8,
+        64,
+        4,
+        16,
+        7
+      ],
+      "perm": [
+        0,
+        3,
+        2,
+        1,
+        4
+      ],
+      "output_shape": [
+        8,
+        16,
+        4,
+        64,
+        7
+      ],
+      "tiling": {
+        "logical_valid": "8x7 logical; transfers8x4 +8x2 +8x1",
+        "physical_data_tile": "32x4 +32x2 +32x2",
+        "cell_layout": "M32",
+        "tail_policy": "odd columns split4+2+1",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "8914fe197f22d72e879f345f598f567ec5b2bd9f4e6470b5f88691132cda784d",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "f34c6e06a3423744c42bcb4dddc922b933ccc2d3004fbea7beba825ced9cbeb1",
+      "cycles": 271510,
+      "latency_us": 150.8388888888889,
+      "previous_cycles": 271510,
+      "cycle_delta": 0
+    },
+    {
+      "case_id": "u16_shapes5",
+      "shape": [
+        8,
+        8,
+        64,
+        64
+      ],
+      "perm": [
+        0,
+        2,
+        1,
+        3
+      ],
+      "output_shape": [
+        8,
+        64,
+        8,
+        64
+      ],
+      "tiling": {
+        "logical_valid": "1x64",
+        "physical_data_tile": "32x64",
+        "cell_layout": "M32",
+        "tail_policy": "none",
+        "evidence_kind": "source-derived from frozen kernel templates and recorded default compile macros; not dynamic tile-state readback"
+      },
+      "shared_bytes": 0,
+      "frequency_GHz": 1.8,
+      "gfsim_numeric": "blocked by hosted file-service issue1306",
+      "numeric_elf_sha256": "a8cf1c308b44bbc26970bf4ac2bff070ce1ca75d03cfad9ab432ad1105c8d9d4",
+      "gfrun_numeric": "pass",
+      "perf_elf_sha256": "b1f56332fc862a2ec0b29e548500b46269221cc7d82d1553ca6dbdc9b7374168",
+      "cycles": 87492,
+      "latency_us": 48.60666666666667,
+      "previous_cycles": 87492,
+      "cycle_delta": 0
+    }
+  ],
+  "frozen_manifest": {
+    "revision": "r5",
+    "status": "frozen_local_diagnostic",
+    "numeric_executor": "gfrun with native file service",
+    "numeric_cases_pass": 15,
+    "perf_executor": "gfsim",
+    "perf_cases_complete": 15,
+    "all_cycle_deltas_zero": true,
+    "gfsim_numeric": "not validated; issue1306",
+    "independent_review": "deferred_by_user",
+    "trace_cases_complete": 15,
+    "trace_cycle_equal_cases": 15,
+    "portable_entry": "tools/reproduce.py",
+    "runner_controls": "validation/runner_controls.json",
+    "source_recovery": "dependencies/source_recovery/manifest.json",
+    "dependency_identity": "dependencies/build_inputs.json",
+    "remaining": "NDF_REMAINING.md",
+    "archive_status": "frozen_local",
+    "ndf_status": "incomplete",
+    "frozen_date": "2026-11-19",
+    "runtime_policy": "Original installed runtime hashes in identity.json remain authoritative. Portable Release/NDEBUG runtime is excluded.",
+    "shared_delivery_status": "not_published",
+    "numerical_status": "15_of_15_pass_gfrun",
+    "performance_status": "15_of_15_completed_unreviewed",
+    "runtime_difference": "validation/model_runtime_difference.json"
+  },
+  "local_extraction_verification": {
+    "package": "transpose-r5-frozen-local-20261119.tar.gz",
+    "bytes": 104325923,
+    "sha256": "e09e9be1ee45d1584bf713a5fd84475c07c12a303f3ab504656ecb0be62046b6",
+    "status": "frozen local diagnostic archive; not shared delivery",
+    "actual_tar_extract_hash_verification": true,
+    "actual_extracted_operations": [
+      {
+        "operation": "numeric",
+        "case": "gather_plane3",
+        "argv": [
+          "temporary paths omitted; exact command template in REPRODUCE.md"
+        ],
+        "exit": 0,
+        "elapsed_seconds": 0.279585333,
+        "pass": true,
+        "expected_bytes": 94464,
+        "actual_bytes": 94464,
+        "sha256": "4021b5f44373705832628602e22a200b5d3d64b118ed7548c2478e21246b7352"
+      },
+      {
+        "operation": "perf",
+        "case": "gather_plane3",
+        "argv": [
+          "temporary paths omitted; exact command template in REPRODUCE.md"
+        ],
+        "exit": 0,
+        "elapsed_seconds": 1.432207708,
+        "pass": true,
+        "cycles": 7088
+      },
+      {
+        "operation": "rebuild",
+        "case": "gather_plane3",
+        "argv": [
+          "temporary paths omitted; exact command template in REPRODUCE.md"
+        ],
+        "exit": 0,
+        "elapsed_seconds": 2.686751125,
+        "pass": true,
+        "byte_identical": true
+      }
+    ],
+    "scope": "representative actual extraction operations; external tools supplied by current local installations; no downloaded runtime or independent review"
+  }
+}
