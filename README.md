@@ -183,9 +183,11 @@ Artifacts land in `benchmark/<arch>/output/kernel/<operator>/elf/`.
 
 ## Native host and resident device workers
 
-The TADD benchmark's native CPU `main()` allocates device GM and boots eight
-gfrun workers. It queues two TADD launches on the default stream, keeps their
-intermediate result in GM and synchronizes once to verify `(a + b) + c`. Build it with `./compile_all.sh host-device`.
+The host-device benchmark's native CPU `main()` allocates device GM and boots
+eight gfrun workers. It queues two TADD launches and a second kernel shape with
+mixed typed arguments, keeps intermediate data in GM, and synchronizes once to
+verify `(a + b) + c` and the generic launch result. Build it with
+`./compile_all.sh host-device`.
 See the [runtime build and launch instructions](runtime/README.md).
 
 ## Microbenchmark

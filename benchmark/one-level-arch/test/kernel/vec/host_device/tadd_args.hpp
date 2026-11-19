@@ -2,12 +2,7 @@
 
 #include <stdint.h>
 
-struct TaddArgs {
-    uint64_t a, b, out;
-    uint64_t geometry;
-    uint64_t tiles;
-};
-static_assert(sizeof(TaddArgs) == 5 * sizeof(uint64_t));
+constexpr uint32_t kTaddKernelSchema = 0x54414444u;  // "TADD"
 constexpr unsigned kTileRows = 4;
 constexpr unsigned kTileCols = 16;
 constexpr unsigned kTileElements = kTileRows * kTileCols;

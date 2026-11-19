@@ -1,5 +1,6 @@
 #include "device.hpp"
 #include "tadd_args.hpp"
+#include "fill_args.hpp"
 
 #include <array>
 #include <iostream>
@@ -35,6 +36,7 @@ int main(int argc, char** argv) try {
     std::array<float, elements> a, b, c, result;
     std::array<uint64_t, firstBlockDim> firstGeometry;
     std::array<uint64_t, firstBlockDim> secondGeometry;
+    std::array<int32_t, 37> zeroResult;
     for (unsigned element = 0; element < elements; ++element) {
         a[element] = static_cast<int>(element % 97) - 48;
         b[element] = static_cast<int>(element % 31) - 15;
@@ -43,6 +45,7 @@ int main(int argc, char** argv) try {
     result.fill(-98765.0f);
     firstGeometry.fill(UINT64_MAX);
     secondGeometry.fill(UINT64_MAX);
+    zeroResult.fill(-1);
 
     auto aDevice = device.allocateBuffer(sizeof(a));
     auto bDevice = device.allocateBuffer(sizeof(b));
@@ -51,11 +54,13 @@ int main(int argc, char** argv) try {
     auto output = device.allocateBuffer(sizeof(result));
     auto firstGeometryDevice = device.allocateBuffer(sizeof(firstGeometry));
     auto secondGeometryDevice = device.allocateBuffer(sizeof(secondGeometry));
+    auto zeroDevice = device.allocateBuffer(sizeof(zeroResult));
     const uint64_t temporaryAddress = device.address(temporary);
     const auto staleTemporary = temporary;
 
     device.initialize();
     const auto tadd = device.kernel("bench_tadd");
+    const auto fill = device.kernel("bench_fill");
 
     device.enqueueUpload(aDevice, a.data(), sizeof(a));
     device.enqueueUpload(bDevice, b.data(), sizeof(b));
@@ -64,27 +69,40 @@ int main(int argc, char** argv) try {
                          sizeof(firstGeometry));
     device.enqueueUpload(secondGeometryDevice, secondGeometry.data(),
                          sizeof(secondGeometry));
+    device.enqueueUpload(zeroDevice, zeroResult.data(), sizeof(zeroResult));
 
-    TaddArgs args{device.address(aDevice), device.address(bDevice),
-                  device.address(temporary), device.address(firstGeometryDevice),
-                  tiles};
-    device.enqueueLaunch(tadd, firstBlockDim, args,
-                         {aDevice, bDevice, temporary, firstGeometryDevice});
+    supernpu::KernelCall<kTaddKernelSchema> args;
+    args.buffer(aDevice)
+        .buffer(bDevice)
+        .buffer(temporary)
+        .buffer(firstGeometryDevice)
+        .u64(tiles);
+    device.enqueueLaunch(tadd, firstBlockDim, args);
 
     // Reuse and mutate the same host object without waiting for the first
     // launch to finish. The stream must preserve the first argument snapshot
     // while taking a new snapshot for the dependent second launch.
-    args = TaddArgs{device.address(temporary), device.address(cDevice),
-                    device.address(output), device.address(secondGeometryDevice),
-                    tiles};
-    device.enqueueLaunch(tadd, secondBlockDim, args,
-                         {temporary, cDevice, output, secondGeometryDevice});
+    args = {};
+    args.buffer(temporary)
+        .buffer(cDevice)
+        .buffer(output)
+        .buffer(secondGeometryDevice)
+        .u64(tiles);
+    device.enqueueLaunch(tadd, secondBlockDim, args);
+
+    supernpu::KernelCall<kFillKernelSchema> fillZero;
+    fillZero.buffer(zeroDevice)
+        .u32(static_cast<uint32_t>(zeroResult.size()))
+        .i32(-3)
+        .u64(0);
+    device.enqueueLaunch(fill, 3, fillZero);
 
     device.enqueueDownload(result.data(), output, sizeof(result));
     device.enqueueDownload(firstGeometry.data(), firstGeometryDevice,
                            sizeof(firstGeometry));
     device.enqueueDownload(secondGeometry.data(), secondGeometryDevice,
                            sizeof(secondGeometry));
+    device.enqueueDownload(zeroResult.data(), zeroDevice, sizeof(zeroResult));
     device.synchronize();
 
     for (unsigned element = 0; element < elements; ++element) {
@@ -97,6 +115,10 @@ int main(int argc, char** argv) try {
     }
     checkGeometry(firstGeometry, firstBlockDim, "first");
     checkGeometry(secondGeometry, secondBlockDim, "second");
+    for (const auto value : zeroResult) {
+        if (value != -3)
+            throw std::runtime_error("fill kernel arguments were not preserved");
+    }
 
     device.release(temporary);
     auto reused = device.allocateBuffer(sizeof(result));
@@ -121,6 +143,7 @@ int main(int argc, char** argv) try {
     device.release(cDevice);
     device.release(bDevice);
     device.release(aDevice);
+    device.release(zeroDevice);
     device.close();
 
     std::cout << "PASS default stream: TADD(a,b)->tmp, TADD(tmp,c)->out, "
@@ -129,6 +152,8 @@ int main(int argc, char** argv) try {
               << "independent geometry and mutable host args preserved\n"
               << "PASS device buffer: temporary stayed in GM, address "
               << temporaryAddress << " was freed and reused, stale handle rejected\n";
+    std::cout << "PASS generic launch: two kernel entries, typed buffer/u64/u32/i32 "
+                 "arguments, signed value and zero scalar verified\n";
     return 0;
 } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';

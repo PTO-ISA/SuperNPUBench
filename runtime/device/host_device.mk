@@ -24,36 +24,53 @@ TILEOP_INCLUDE := $(TILEOP_API_ROOT)/include
 DEVICE_FLAGS := --target=linx64v5-unknown-linux-musl -std=c++20 -O2 -mlxbc \
     -fenable-matrix -mllvm -enable-all-vector-as-tilereg=true -DENABLE_TENSOR_INSTR \
     -ffreestanding -fno-exceptions -fno-rtti -fno-jump-tables -fno-stack-protector \
-    -I$(TILEOP_INCLUDE) -I$(REPO)/benchmark/one-level-arch/kernels
+    -I$(TILEOP_INCLUDE) -I$(REPO)/benchmark/one-level-arch/kernels -I$(RUNTIME)
+DEVICE_KERNEL_SOURCES ?= $(DEVICE_KERNEL)
+DEVICE_KERNEL_OBJECTS := $(addprefix $(OUTPUT)/device/,$(DEVICE_KERNEL_SOURCES:.cpp=.o))
 
-.PHONY: all run firmware test-host
+.PHONY: all run run-negative firmware test-host
 all: $(OUTPUT)/host firmware
 
 $(OUTPUT):
 	mkdir -p "$@"
 
 $(OUTPUT)/host: $(HOST_MAIN) $(HOST_HEADERS) $(RUNTIME)/host/device.hpp $(RUNTIME)/host/device.cpp | $(OUTPUT)
-	$(HOST_CXX) -pthread -std=c++17 -O2 -Wall -Wextra -I$(RUNTIME)/host \
+	$(HOST_CXX) -pthread -std=c++17 -O2 -Wall -Wextra -I$(RUNTIME) -I$(RUNTIME)/host \
 	    $(HOST_MAIN) $(RUNTIME)/host/device.cpp -o "$@"
 
-test-host: $(OUTPUT)/device_test
+ifneq ($(strip $(HOST_NEGATIVE)),)
+$(OUTPUT)/invalid_host: $(HOST_NEGATIVE) $(HOST_HEADERS) $(RUNTIME)/host/device.hpp $(RUNTIME)/common/kernel_abi.hpp $(RUNTIME)/host/device.cpp | $(OUTPUT)
+	$(HOST_CXX) -pthread -std=c++17 -O2 -Wall -Wextra -I$(RUNTIME) -I$(RUNTIME)/host \
+	    $(HOST_NEGATIVE) $(RUNTIME)/host/device.cpp -o "$@"
+endif
+
+test-host: $(OUTPUT)/device_test $(OUTPUT)/kernel_entry_test
 	"$(OUTPUT)/device_test" "$(RUNTIME)/host/fake_gfrun.py"
+	"$(OUTPUT)/kernel_entry_test"
 
-$(OUTPUT)/device_test: $(RUNTIME)/host/device_test.cpp $(RUNTIME)/host/device.cpp $(RUNTIME)/host/device.hpp | $(OUTPUT)
-	$(HOST_CXX) -pthread -std=c++17 -O2 -Wall -Wextra $(filter %.cpp,$^) -o "$@"
+$(OUTPUT)/device_test: $(RUNTIME)/host/device_test.cpp $(RUNTIME)/host/device.cpp $(RUNTIME)/host/device.hpp $(RUNTIME)/common/kernel_abi.hpp | $(OUTPUT)
+	$(HOST_CXX) -pthread -std=c++17 -O2 -Wall -Wextra -I$(RUNTIME) $(filter %.cpp,$^) -o "$@"
 
-$(OUTPUT)/kernel.o: $(DEVICE_KERNEL) | $(OUTPUT)
+$(OUTPUT)/kernel_entry_test: $(RUNTIME)/device/kernel_entry_test.cpp $(RUNTIME)/device/kernel_entry.hpp $(RUNTIME)/common/kernel_abi.hpp | $(OUTPUT)
+	$(HOST_CXX) -std=c++17 -O2 -Wall -Wextra -I$(RUNTIME) "$<" -o "$@"
+
+$(OUTPUT)/device/%.o: %.cpp $(RUNTIME)/device/kernel_entry.hpp $(RUNTIME)/common/kernel_abi.hpp | $(OUTPUT)
+	@mkdir -p "$(@D)"
 	$(LINX_CXX) $(DEVICE_FLAGS) -MMD -MP -c "$<" -o "$@"
 
-firmware: $(OUTPUT)/kernel.o
+firmware: $(DEVICE_KERNEL_OBJECTS)
 	$(MAKE) -C "$(WORKER_RUNTIME)" msgb-image OUTPUT="$(OUTPUT)" \
 	    LINX_CXX="$(LINX_CXX)" LINX_LD="$(LINX_LD)" TILEOP_INCLUDE="$(TILEOP_INCLUDE)" \
-	    KERNEL_OBJECTS="$(OUTPUT)/kernel.o"
+	    KERNEL_OBJECTS="$(DEVICE_KERNEL_OBJECTS)"
 	$(DUMP) -t "$(OUTPUT)/workers.elf" > "$(OUTPUT)/workers.syms"
 	awk '$$2 == "g" && $$3 == "F" {print $$1, $$NF}' "$(OUTPUT)/workers.syms" > "$(OUTPUT)/workers.elf.kernels"
 
 run: all
 	"$(OUTPUT)/host" "$(GFRUN)" "$(OUTPUT)/workers.elf"
 
+run-negative: firmware $(if $(strip $(HOST_NEGATIVE)),$(OUTPUT)/invalid_host)
+	@test -n "$(strip $(HOST_NEGATIVE))" || { echo "HOST_NEGATIVE is not set" >&2; exit 2; }
+	"$(OUTPUT)/invalid_host" "$(GFRUN)" "$(OUTPUT)/workers.elf"
+
 GFRUN ?= $(MODEL_ROOT)/bin/gfrun
--include $(OUTPUT)/kernel.d
+-include $(DEVICE_KERNEL_OBJECTS:.o=.d)

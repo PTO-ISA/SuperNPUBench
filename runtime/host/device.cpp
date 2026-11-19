@@ -481,27 +481,56 @@ void Device::enqueueDownload(void* destination, const Buffer& source, size_t byt
 void Device::enqueueLaunchBytes(const Kernel& function, unsigned blockDim,
                                 const void* args, size_t argsSize, size_t argsAlignment,
                                 std::initializer_list<Buffer> dependencies) {
+    if (!args || !argsSize) throw std::invalid_argument("kernel arguments are empty");
+    std::vector<unsigned char> snapshot(argsSize);
+    std::memcpy(snapshot.data(), args, argsSize);
+    enqueueLaunchVectorBytes(function, blockDim, std::move(snapshot),
+                             std::max<size_t>(8, argsAlignment),
+                             std::vector<Buffer>(dependencies));
+}
+
+void Device::enqueueLaunchArguments(
+    const Kernel& function, unsigned blockDim,
+    const KernelArgumentHeader& header,
+    const std::vector<KernelArgumentRecord>& arguments,
+    const std::vector<Buffer>& dependencies) {
+    if (arguments.size() > UINT32_MAX)
+        throw std::length_error("too many kernel arguments");
+    std::vector<unsigned char> descriptor(
+        sizeof(header) + arguments.size() * sizeof(KernelArgumentRecord));
+    std::memcpy(descriptor.data(), &header, sizeof(header));
+    if (!arguments.empty()) {
+        std::memcpy(descriptor.data() + sizeof(header), arguments.data(),
+                    arguments.size() * sizeof(KernelArgumentRecord));
+    }
+    enqueueLaunchVectorBytes(function, blockDim, std::move(descriptor), 8,
+                             dependencies);
+}
+
+void Device::enqueueLaunchVectorBytes(
+    const Kernel& function, unsigned blockDim,
+    std::vector<unsigned char> descriptor, size_t descriptorAlignment,
+    const std::vector<Buffer>& dependencies) {
     impl_->checkOwner(function.owner_);
     if (!function.address_) throw std::invalid_argument("kernel handle is empty");
     if (!impl_->initialized || !blockDim)
         throw std::logic_error("launch needs initialized device and blockDim > 0");
-    if (!args || !argsSize) throw std::invalid_argument("kernel arguments are empty");
     std::vector<std::shared_ptr<detail::Allocation>> retained;
     retained.reserve(dependencies.size());
-    for (const auto& dependency : dependencies) retained.push_back(impl_->check(dependency));
-    std::vector<unsigned char> snapshot(argsSize);
-    std::memcpy(snapshot.data(), args, argsSize);
-    const size_t alignment = std::max<size_t>(8, argsAlignment);
-    impl_->enqueue({[this, function, blockDim, snapshot = std::move(snapshot), alignment] {
-                        const uint64_t descriptor = impl_->directAllocate(snapshot.size(), alignment);
+    for (const auto& dependency : dependencies)
+        retained.push_back(impl_->check(dependency));
+    impl_->enqueue({[this, function, blockDim, descriptorAlignment,
+                     descriptor = std::move(descriptor)] {
+                        const auto address =
+                            impl_->directAllocate(descriptor.size(), descriptorAlignment);
                         try {
-                            impl_->directUpload(descriptor, snapshot.data(), snapshot.size());
-                            impl_->directLaunch(function.address_, blockDim, descriptor);
+                            impl_->directUpload(address, descriptor.data(), descriptor.size());
+                            impl_->directLaunch(function.address_, blockDim, address);
                         } catch (...) {
-                            try { impl_->directFree(descriptor); } catch (...) {}
+                            try { impl_->directFree(address); } catch (...) {}
                             throw;
                         }
-                        impl_->directFree(descriptor);
+                        impl_->directFree(address);
                     },
                     std::move(retained)});
 }

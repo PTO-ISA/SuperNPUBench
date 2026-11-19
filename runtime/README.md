@@ -47,24 +47,23 @@ and verifies that a new allocation at the same address has a distinct lifetime.
 
 ## Add a benchmark
 
-Write a native `main()` and a Linx entry with the C signature
+Write a native `main()` and one or more Linx entries with the C signature
 `extern "C" uint64_t kernel_name(uint64_t argument)`. Returning zero indicates
-success. Share a trivially copyable argument structure with fixed-width fields
-between host and device. Set `HOST_MAIN`, `HOST_HEADERS` and `DEVICE_KERNEL` in
-the case Makefile and include [device/host_device.mk](device/host_device.mk).
+success. Use the [generic kernel launch ABI](KERNEL_LAUNCH_ABI.md) for new
+kernels. Set `HOST_MAIN`, `HOST_HEADERS` and `DEVICE_KERNEL_SOURCES` in the case
+Makefile and include [device/host_device.mk](device/host_device.mk).
 
 - **Buffers.** Use `allocateBuffer(bytes, alignment)` to obtain a session-owned
   handle. Allocation and release are synchronous operations. Get a GM address for an argument field with `device.address(buffer)`.
   Use `release(buffer)` to make the allocation available for reuse after earlier work completes. Copies of
   the released handle become invalid even if a new allocation has the same GM
   address. Initialize a reused allocation before reading it.
-- **Kernels and arguments.** Resolve the entry once with
+- **Kernels and arguments.** Resolve each entry once with
   `device.kernel("kernel_name")`, then reuse the handle across launches. Pass
-  the block count, argument object and referenced buffer handles to
-  `enqueueLaunch`. The runtime snapshots the argument bytes on submission,
-  uploads them to a device descriptor for execution, and retains the descriptor
-  through the matching DONEs. Include every buffer whose address the kernel uses
-  in the dependency list. The host can reuse the argument object immediately.
+  the block count and a `KernelCall<Schema>` to `enqueueLaunch`. Buffer arguments
+  record their GM addresses and retain their allocations automatically. Fixed-
+  width scalar arguments and the complete descriptor are snapshotted on
+  submission and retained through matching DONE.
 - **Copies and synchronization.** `enqueueUpload` snapshots the host input.
   Call the enqueue methods after `initialize()`. `enqueueDownload` needs a
   writable host destination that remains alive until
@@ -76,6 +75,11 @@ the case Makefile and include [device/host_device.mk](device/host_device.mk).
   independent tiles, block `i` visits tile `i`, `i + blockDim`, and so on.
   Operators with a fixed-participant hardware barrier also need a compatible
   worker group and dispatch policy.
+
+The example ELF exports two distinct entries. `bench_tadd` consumes four buffer
+arguments and a 64-bit tile count. `bench_fill` consumes a buffer, 32-bit count,
+signed value and a zero 64-bit step. A separate negative run confirms that a
+schema mismatch returns a device error before the implementation runs.
 
 The background host thread drives one gfrun command at a time. Transfers use
 temporary binary files. This backend models ordering, completion and data

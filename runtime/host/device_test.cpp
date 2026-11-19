@@ -68,7 +68,9 @@ int main(int argc, char** argv) {
         }
         assert(rangeRejected);
         stream.enqueueLaunch(function, 1, Args{1}, {buffer});
-        stream.enqueueLaunch(function, 1, Args{2}, {buffer});
+        supernpu::KernelCall<0x54455354u> generic;
+        generic.buffer(buffer).i32(0);
+        stream.enqueueLaunch(function, 1, generic);
         std::ofstream(marker + ".submitted").put('\n');
         stream.synchronize();
         std::remove((marker + ".submitted").c_str());
