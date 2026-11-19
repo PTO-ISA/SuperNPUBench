@@ -46,6 +46,7 @@ compile_operator() {
 }
 
 # Compile all operators
+compile_operator "$REPO_ROOT/test/solution/communication" "solution/communication"
 compile_operator "$REPO_ROOT/test/solution/moe_dispatch" "solution/moe_dispatch"
 compile_operator "$REPO_ROOT/test/solution/moe_combine" "solution/moe_combine"
 compile_operator "$REPO_ROOT/test/solution/mega_moe" "solution/mega_moe"
