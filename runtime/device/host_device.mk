@@ -25,6 +25,11 @@ DEVICE_FLAGS := --target=linx64v5-unknown-linux-musl -std=c++20 -O2 -mlxbc \
     -fenable-matrix -mllvm -enable-all-vector-as-tilereg=true -DENABLE_TENSOR_INSTR \
     -ffreestanding -fno-exceptions -fno-rtti -fno-jump-tables -fno-stack-protector \
     -I$(TILEOP_INCLUDE) -I$(REPO)/benchmark/one-level-arch/kernels -I$(RUNTIME)
+# Standalone LLVM builds can use an existing target sysroot for libc++ headers.
+ifneq ($(strip $(LINX_SYSROOT)),)
+DEVICE_FLAGS += --sysroot=$(LINX_SYSROOT) -isystem $(LINX_SYSROOT)/usr/include/c++/v1
+endif
+
 DEVICE_KERNEL_SOURCES ?= $(DEVICE_KERNEL)
 DEVICE_KERNEL_OBJECTS := $(addprefix $(OUTPUT)/device/,$(DEVICE_KERNEL_SOURCES:.cpp=.o))
 

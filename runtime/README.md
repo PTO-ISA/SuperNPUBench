@@ -25,7 +25,15 @@ Linx kernel in one ELF. In live host mode gfrun reads the function symbols from
 the ELF it loaded. A kernel handle belongs to that session. Build outputs are
 in the benchmark's `output/` directory. Set `OUTPUT` to a fresh directory
 when changing toolchain or dependency revisions. `HOST_CXX` selects the native
-compiler and `GFRUN` overrides the simulator path. To exercise queue and
+compiler and `GFRUN` overrides the simulator path.
+A standalone compiler build can set `LINX_SYSROOT` to a Linx musl sysroot with
+`usr/include/c++/v1` headers. The source-built compiler supplies code generation
+and the checked-out TileOP API supplies the device interfaces.
+
+Current model `main` requires the binary-ALU SrcRType encoding fix in
+[LinxV5 compiler PR #171](https://github.com/LinxISA/llvm-project/pull/171).
+Compiler commit `852e7f5d22b7b0c9a0efc379e84cedd19fe5599b` includes this fix on
+`dev-llvm15_56`. To exercise queue and
 lifetime behavior with the native host tests, run
 `make -C benchmark/one-level-arch/test/kernel/vec/host_device test-host`.
 
