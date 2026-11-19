@@ -1,0 +1,32 @@
+name: Host runtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'runtime/**'
+      - 'benchmark/one-level-arch/test/kernel/vec/host_device/**'
+      - '.github/workflows/runtime.yml'
+  push:
+    branches: [codex/host-device-block-launch]
+    paths:
+      - 'runtime/**'
+      - 'benchmark/one-level-arch/test/kernel/vec/host_device/**'
+      - '.github/workflows/runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Check native stream ordering and handle lifetimes
+        run: make -C benchmark/one-level-arch/test/kernel/vec/host_device test-host
+      - name: Check whitespace
+        run: git diff --check HEAD^
