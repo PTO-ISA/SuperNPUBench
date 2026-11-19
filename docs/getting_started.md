@@ -2,6 +2,20 @@
 
 更新日期：2026-11-12。本文介绍 SuperNPUBench 的系统结构与开发环境，并以 matmul 为例，串起源码、编译、功能验证、时序执行和性能分析的完整流程。
 
+## A、环境准备
+
+- benchmark 下载：https://github.com/PTO-ISA/SuperNPUBench
+- 工具链下载：https://github.com/LinxISA/linx-toolchain-build
+- SuperScalar model 下载：https://github.com/LinxISA/SuperScalarModel
+
+## B、让 AI 编译好后，它们的关联关系看如下 md
+
+https://github.com/PTO-ISA/SuperNPUBench/blob/main/docs/getting_started.md
+
+## C、注意事项
+
+版本对齐：有新特性提交到 main，要拉取新分支。
+
 ## 1 系统全景
 
 ![SuperNPUBench 系统软件栈与评测体系](./workflow/assets/supernpubench_software_stack.png)
