@@ -1,0 +1,24 @@
+{
+  "method": "Execute shipped independent Python scalar generator and compare shipped bytes; no gfrun/gfsim executed",
+  "tool": "Python 3 standard library",
+  "comparisons": [
+    {
+      "file": "input.bin",
+      "bytes": 262144,
+      "sha256": "e2dd002ab8ccfc8149bc9a20b8b3aa9c9ffa082e3da4a121d0680ee125caf1e3",
+      "equal": true
+    },
+    {
+      "file": "golden_payload.bin",
+      "bytes": 131072,
+      "sha256": "7f13bc900b87771310da91d74148e22d8191dbdd234f2574b179f673da985aea",
+      "equal": true
+    },
+    {
+      "file": "golden_scales.bin",
+      "bytes": 4096,
+      "sha256": "c20cd4a164aad162abe7db33f6cb3ac8b58611f5566d687d669b7d8a076d596a",
+      "equal": true
+    }
+  ]
+}

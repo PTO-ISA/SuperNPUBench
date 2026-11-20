@@ -1,0 +1,549 @@
+{
+  "scope": "Item-specific actual manual observations; source locators denote immutable r1 Model/operator materials or this r2; unresolved requirements not asserted pass.",
+  "observations": [
+    {
+      "check_id": "MX-002",
+      "source_locator": "manifest.json#owner,date,primary_cycles",
+      "actual_observation": "owner is Codex / MXQuant archive, date2026-11-10; primary_cycles binds embedded_baseline13349 and split25464.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-003",
+      "source_locator": "operator_identity.json#timing_model_sha256,gfrun_sha256",
+      "actual_observation": "timing runtime bebcf119 and functional9b0c are distinct full SHA256 references, rather than model directory names.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-004",
+      "source_locator": "manifest.json#types,performance_status,shared_delivery_acceptance",
+      "actual_observation": "types=[F,P], performance_status=diagnostic and shared_delivery_acceptance=false; no S claim.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-005",
+      "source_locator": "algorithm.md#paragraph1",
+      "actual_observation": "BF16[512,256], group32, 4PE,128rows/PE,total131072 elements; input262144B,payload131072B,scale4096B.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-006",
+      "source_locator": "algorithm.md#paragraphs3-4; bottleneck_observation.json",
+      "actual_observation": "Documents random shared128/uniform300-400 assumptions, tail bypass and unresolved TimingSim correctness; TLSU bound remains unconfirmed.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-008",
+      "source_locator": "source_recovery_check.json; dependency/README.md#paragraph1",
+      "actual_observation": "Prior authorized fixed-base extraction and19postimage comparison are recorded; scope explicitly archive-time tracked files only, not binary build-time provenance.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-011",
+      "source_locator": "operator cases/split2/build_recipe.json#commands",
+      "actual_observation": "Compile uses-mlxbc,-fenable-matrix,-O2,-DVARIANT=7,explicit benchmark includes and INPUT_FILE; link uses-nostdlib,-nostartfiles,link.ld,_start.s. build.py cwd=root, substitutions explicitly supplied.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-013",
+      "source_locator": "operator_identity.json#cases.split2,cases.baseline",
+      "actual_observation": "split2 ELF7c22bc25; baseline2a80c7c9; diss title-line-only derivation records original and published SHA. Current actual43-file index records published bytes.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-014",
+      "source_locator": "evidence/pipeline_rebuild_verification.json; operator historical_rebuild_verification.json",
+      "actual_observation": "Historical rebuild verification files exist and are hash-indexed; this r2 does not treat them as a new compilation.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-017",
+      "source_locator": "dependency/README.md#paragraphs1-2",
+      "actual_observation": "Full base598638a8dfbd00b1535ce5226c4a88dd10becdc4 plus pre_existing then ideal_bank_ablation, or aggregate archive-time-source alternative; not all three.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-018",
+      "source_locator": "dependency/source_and_runtime_inventory.json#binaries; r2/evidence/runtime_closure_search.json#candidates",
+      "actual_observation": "Historical bebcf119 is15099616B; RMS6467 is16712000B with different digest. Two newly hashed lineage binaries equal bebcf119; substitution rejected in prose.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-020",
+      "source_locator": "dependency/source_and_runtime_inventory.json#binaries.mxquant_historical.needed",
+      "actual_observation": "readelf dynamic section lists libelf.so.1,libstdc++.so.6,libm.so.6,libgcc_s.so.1,libc.so.6; exact deployed library hashes remain unverified.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-022",
+      "source_locator": "r1 README.md; r2 README.md#paragraphs1,5",
+      "actual_observation": "Both homepages warn of incomplete diagnostic results; r2 explicitly names withheld runtime,19-file archive-time source and ideal-bank experimental postimages.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-023",
+      "source_locator": "model_changes.md#paragraphs1-3; r2 gaps.json#G-source",
+      "actual_observation": "Tail bypass enable1 and ordinary ideal-bank disabled are stated; original binary/source composition linkage remains unknown, not silently asserted equal.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-029",
+      "source_locator": "performance_history.md#finalparagraph; model_changes.md#paragraph2",
+      "actual_observation": "TagPipe4/ideal-bank2-3% marked hardware diagnostics; not original configuration speedup or whole TLSU-bound proof.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-030",
+      "source_locator": "configs/rms.conf; configs/stages.conf; configs/validation_fixed.conf",
+      "actual_observation": "All three native .conf files are present in inspected Model r1; filenames are preserved rather than README-only settings.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-031",
+      "source_locator": "manifest.json#files; r2/evidence/material_hashes.json#published_model",
+      "actual_observation": "rms.conf5722B SHA f3c2f39d; stages5777B SHA0fb266af; validation_fixed5723B SHA1fe835af; full digests in indexed entries.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-033",
+      "source_locator": "operator run_model.py#lines10-13",
+      "actual_observation": "Adapter pops RMS_IDEAL_L2_READ_BANK and RMS_IDEAL_L2_WRITE_BANK and assigns RMS_TAIL_BYPASS=1. Other inherited variables were an r1 limitation; r2 functional allowlist separate.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-037",
+      "source_locator": "evidence/pipeline_manifest.json; operator cases/baseline/run.json,cases/split2/run.json",
+      "actual_observation": "Frozen pipeline manifest/run metadata preserve historical config references; complete compiled-default effective configuration is explicitly not proven.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-038",
+      "source_locator": "dependency/README.md#paragraph3",
+      "actual_observation": "Text states recovery covers only19archive-time tracked modified files; source_changes8file earlier snapshot is only candidate, not promoted to binary closure.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-040",
+      "source_locator": "manifest.json#verification; dependency/README.md#paragraph3",
+      "actual_observation": "source_recovery=pass is limited by source_scope; model_build=not_performed and original binary closure unproven are separately explicit.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-041",
+      "source_locator": "model_changes.md#paragraph3",
+      "actual_observation": "Explicitly says no mainline fix conclusion and no invented MXQuant issue-solution chain; no existing issue closed by this archival supplement.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-042",
+      "source_locator": "delivery_index.json#assets[].role,published_runtime",
+      "actual_observation": "Operator package marked ELF/diss/source/input/runner; Model traces marked optional, no runtime; published_runtime=false.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-043",
+      "source_locator": "delivery_index.json#operator.repository,assets[].repository",
+      "actual_observation": "Operator responsibilities go PTO-ISA/SuperNPUBench; trace/model responsibilities LinxISA/SuperScalarModel.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-044",
+      "source_locator": "r2/evidence/final_delivery_index.json; operator_identity.json#cases",
+      "actual_observation": "Delivery index retains source commit, archive merge identities and asset IDs independently; ELF/diss identities are separate in operator_identity, not inferred from PR merge.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-045",
+      "source_locator": "r2/evidence/asset_identity_recheck.json; r2/evidence/download_verification.json",
+      "actual_observation": "Actual previously downloaded archives rehashed; operator910566B SHA9578958a...,trace5907009B SHAa55d576e...; old download extraction comparison retained, not a new network fetch.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-046",
+      "source_locator": "r1 README.md; r2 README.md#paragraph4",
+      "actual_observation": "Model source/trace access requires private repository permission; public operator asset availability does not imply permission to Model runtime/source.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-050",
+      "source_locator": "r2/evidence/golden_recheck.json#comparisons",
+      "actual_observation": "New scalar regeneration compares three byte arrays:262144,131072,4096B, all equal archived inputs; seeded nonzero generator is shared in golden.py.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-051",
+      "source_locator": "operator golden.py#input_and_golden; r2/evidence/golden_recheck.json",
+      "actual_observation": "Host Python scalar generator computes input and quantized goldens independently of simulator outputs; all three recorded comparisons equal=true.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-052",
+      "source_locator": "r2/evidence/functional_replay_review.json#runs; r2/evidence/guard_validation.json#functional_polluted_environment",
+      "actual_observation": "Historical baseline/split2 both rc0/full exact; new r2 split2 rc0 input262144/output131072/scales4096B each0mismatches.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-053",
+      "source_locator": "r2/evidence/guard_validation.json#functional_polluted_environment.record.runner_result.negative_control_rejected",
+      "actual_observation": "Actual new runner compares output against one-bit-corrupted golden; negative_control_rejected=true alongside full correct-output pass.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-054",
+      "source_locator": "evidence/numerical/baseline_embedded_timing_fixed.json; manifest.json#correctness",
+      "actual_observation": "Historical timing baseline rc0 but output129998/131072 mismatches and scales4092/4096 mismatches; numeric fail separate from gfrun pass.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-057",
+      "source_locator": "algorithm.md#finalparagraph",
+      "actual_observation": "Total includes GM reads/writes and finish; throughput131072/Total cycles aggregates4PE; no TEXPANDS subtraction or frequency conversion.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-058",
+      "source_locator": "r2/evidence/historical_trace_review.json; delivery_index.json#assets",
+      "actual_observation": "Seven original full/noc/log cases are preserved in optional trace archive; package roles distinguish this from mandatory runtime dependency.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-059",
+      "source_locator": "r2/evidence/historical_trace_review.json",
+      "actual_observation": "Prior event-level review records full-to-noc removal of ph:C only, retaining original other fields/events; r2 preserves that existing evidence with hash identity.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-062",
+      "source_locator": "r2/evidence/historical_trace_review.json; delivery_index.json#assets[1]",
+      "actual_observation": "Stage PipeView is included with optional traces and reviewed; this supports stage observation only, not quantified overall-bound inference.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-065",
+      "source_locator": "performance_history.md#table,finalparagraph",
+      "actual_observation": "Baseline13349,adopted5464,control5459,wide5709/5750/6599,earlystore5622/scalefirst5490,inflight5464 and rejected wide assembly/split4 conclusions retained.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-066",
+      "source_locator": "performance_history.md#paragraph1,table,finalparagraph",
+      "actual_observation": "Ordinary rows attributed to original random/shared128; control256 codegen5cycle difference and TagPipe/ideal-bank hardware ablations are explicitly excluded from optimization attribution.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-067",
+      "source_locator": "r2 README.md#warning; bottleneck_observation.json",
+      "actual_observation": "TLSU waits/Vector gaps are observed; user has not sufficiently analyzed overall TLSU bound. Quantitative causal bound and mainline comparison remain unfinished.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-068",
+      "source_locator": "manifest.json#correctness,performance_status; r2 capabilities.json",
+      "actual_observation": "Historical gfrun exact does not erase gfsim failure; r2 functional pass is separate from rejected timing/build modes.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-071",
+      "source_locator": "manifest.json#work_status,archive_status,performance_status,correctness",
+      "actual_observation": "work=parked,archive=incomplete,performance=diagnostic; correctness.gfrun=pass and gfsim=fail retained as separate dimensions.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-072",
+      "source_locator": "r2 manifest.json#supersedes; r2 README.md",
+      "actual_observation": "Only new r2 subtree added; manifests retain historical source/runtime identities and explicitly decline historical acceptance upgrade.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-074",
+      "source_locator": "r2 README.md#paragraph2; r2 checks.json#checks[].review",
+      "actual_observation": "Codex MXQuant archive agent is author; every r2 independent-review status remains not_checked rather than self-approved.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-075",
+      "source_locator": "r2 manifest.json#supersedes; Git new-file-only diff",
+      "actual_observation": "Diff adds separate r2 directory in each repository, no modification to tracked r1; supersedes metadata scope only.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-076",
+      "source_locator": "r2 README.md#closeconditions; r2 gaps.json",
+      "actual_observation": "Remaining work: runtime provenance/effective config/portable new identity/per-operation validation/algorithm assumptions/ISA snapshot, with owners and next actions in gap ledger.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-078",
+      "source_locator": "r2/evidence/functional_replay_review.json#runs[].result,access_log_sha256",
+      "actual_observation": "Historical copied-cwd baseline/split2 exact records bind actual ELF/runtime hashes and separate strace log hash; no-original-input/model file reads recorded.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-079",
+      "source_locator": "r2/evidence/download_verification.json; r2/evidence/guard_validation.json",
+      "actual_observation": "Downloaded byte identity and member verification are preserved as old evidence; new local r2 gfrun execution is a separately scoped record, no shared gfsim replay inferred.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-083",
+      "source_locator": "algorithm.md#paragraphs1-2",
+      "actual_observation": "Group32 absmax-derived scale and quantization described separately from [32,128] input halves and [32,256] assembled payload/U32 packed scales implementation.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-084",
+      "source_locator": "algorithm.md#paragraph1; operator golden.py",
+      "actual_observation": "Declared scope only BF16[512,256],group32,4PE and seeded generated input; no generalized tail/extreme-value coverage is claimed.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-088",
+      "source_locator": "algorithm.md#paragraphs2-3",
+      "actual_observation": "Input ping-pong,subviews,payload/scale assembly and CellReg256KiB/PE are stated as implementation/config dependencies; no full capacity proof is claimed.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-089",
+      "source_locator": "algorithm.md#finalparagraph; performance_history.md#table",
+      "actual_observation": "GM I/O and completion remain in Total; split2 half-input overlap is an observation of schedule, not whole-pipeline numeric-accepted bound.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-092",
+      "source_locator": "r2/evidence/runtime_closure_search.json#searched_roots,candidates; r2 inventory.json",
+      "actual_observation": "Before classifying missing shared runtime, searched four lineage roots and hashed two exact binaries plus CMakeCache/compile_commands/earlier source archive candidates.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-093",
+      "source_locator": "r2 inventory.json#I-timing,I-source,I-toolchain",
+      "actual_observation": "Timing binary=本地存在未交付; historical source/toolchain closure=身份待确认; no assertion that local binary does not exist.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-094",
+      "source_locator": "r2 gaps.json#gaps[]",
+      "actual_observation": "Every gap object contains field,status,reason,impact,owner,next_action_or_recovery_command,inventory_reference; unknown source and missing shared artifact are distinct.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-095",
+      "source_locator": "r2/evidence/operator_asset_path_review.json",
+      "actual_observation": "Prior all43operator text/ELF/diss/input byte scan preserved; published ELF unchanged, diss title-only derivation distinguished from original hashes.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-096",
+      "source_locator": "r2/evidence/trace_path_review.json",
+      "actual_observation": "Prior gzip decompressed-member scan is preserved, not just tar filename scan; logs were identified as sanitized derivatives and original hashes retained.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-097",
+      "source_locator": "r2/evidence/runtime_closure_search.json#candidates[0:2]; delivery_index.json#published_runtime",
+      "actual_observation": "Both local exact runtime copies have163personal-prefix occurrences; published_runtime=false, no binary included in new r2 or trace asset.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-100",
+      "source_locator": "r2 checks.json#check_id",
+      "actual_observation": "114unique entries distinguish native configs/default closure/loading,source recovery/build/run and separate correctness/trace claims; no overall-pass field.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-101",
+      "source_locator": "r2 checks.json; r2/evidence/check_observations.json",
+      "actual_observation": "Each entry records applicability,scope,material identities,method,status,observation,evidence,author,review status and gap reference; this file refines each material pass with distinct inspected observation.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-102",
+      "source_locator": "r2 manifest.json#overall_ndf_conformance; r2 checks.json#overall_conformance",
+      "actual_observation": "Both explicit false; unresolved mandatory requirements remain fail/not_checked rather than hash-check success being promoted to conformity.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-103",
+      "source_locator": "r2 capabilities.json#operations",
+      "actual_observation": "Four operations independently listed:fixed ELF,model rebuild,operator rebuild,numeric/checker; each has assets,entry,status,evidence,review and remaining-gap fields.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-104",
+      "source_locator": "r2/evidence/golden_recheck.json#method; r2/evidence/guard_validation.json",
+      "actual_observation": "Scalar generator check states no model invocation; new gfrun execution has separate actual runtime/ELF/returncode record.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-105",
+      "source_locator": "r2/evidence/guard_validation.json#missing_input,wrong_elf",
+      "actual_observation": "Both new controls returned2 and runtime_executed=false; missing file and modified ELF are rejected by all-file content pins before original replay starts.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-106",
+      "source_locator": "r2/evidence/guard_validation.json#functional_polluted_environment",
+      "actual_observation": "Successful new functional output has negative_control_rejected=true; correctness and rejection are both required by original replay return condition.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-107",
+      "source_locator": "r2/evidence/functional_replay_review.json#runs[].method,no_original_operator_input_or_model_root_accesses",
+      "actual_observation": "Earlier empty-environment copied-directory strace specifically reviewed file accesses and distinguished ancestor metadata; r2 does not pretend new strace capture.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-110",
+      "source_locator": "r2 README.md; r2/evidence/runtime_closure_search.json",
+      "actual_observation": "All original lineage artifacts read-only; task creates separate publication branches and test output dirs. No model tracked file or historical ELF was edited by this task.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-111",
+      "source_locator": "r2 README.md; Git worktree list",
+      "actual_observation": "Created only two sparse publication checkouts with no build/model development, no compiler development entry; existing runtime used read-only.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    },
+    {
+      "check_id": "MX-114",
+      "source_locator": "r2 guarded_replay.py; r2/evidence/guard_validation.json",
+      "actual_observation": "Actual polluted-env split2 functional rc0/full exact; performance/build/wrong-runtime/missing-input/bad-ELF/escaped-payload-link/escaped-pin-manifest rejected; output-under-operator/model rejected before mkdir.",
+      "identity_index": "evidence/material_hashes.json for r1; manifest.json for r2",
+      "reviewer": "Codex MXQuant archive agent",
+      "date": "2026-11-10"
+    }
+  ]
+}

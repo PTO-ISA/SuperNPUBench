@@ -1,0 +1,134 @@
+{
+  "archive_revision": "mxquant-ndf7-supplement-r2",
+  "supersedes": "r1 metadata scope only; all original assets immutable",
+  "archive_status": "incomplete",
+  "performance_status": "diagnostic",
+  "overall_ndf_conformance": false,
+  "new_model_execution": "Local guarded gfrun only; no gfsim",
+  "new_build": false,
+  "new_checks": "114 split checklist; actual guarded functional run and negative controls, independent scalar generator, material hash and lineage inventory; historical evidence separately scoped",
+  "review_status": "limited_parent_review_guard_actual_buffers_and89material_hashes",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 4899,
+      "sha256": "785db8be12f84451968893b2e84b063e621351f4b940bfdbb96301320c5809e9"
+    },
+    {
+      "path": "capabilities.json",
+      "bytes": 3374,
+      "sha256": "b0e157dcb206fceccad18f33b8a6d8a377b70ef5a60306f9700258063a1e9ef2"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 211856,
+      "sha256": "3383003d106a923bfbcbef557a90494e6437bc8e7b14f8b15a73a49e5114eccd"
+    },
+    {
+      "path": "entrypoint_review.md",
+      "bytes": 2882,
+      "sha256": "4149ce63018f41d40189b5d91206cb1363c1a37a40efd187be2a0a093c29767b"
+    },
+    {
+      "path": "evidence/asset_identity_recheck.json",
+      "bytes": 560,
+      "sha256": "af3e7e5f99fecbf152d6fbd657acdfd626d341c4e66fb08538b4d9a43042f4b1"
+    },
+    {
+      "path": "evidence/check_observations.json",
+      "bytes": 31879,
+      "sha256": "e25b3fe4c6ed026e2bc9aecc17b7b28d92b592f4514ab3f76e500eab135b4067"
+    },
+    {
+      "path": "evidence/download_verification.json",
+      "bytes": 2710,
+      "sha256": "17a2d8ae843baf1b802c4c4276a3dd078b3fe2fd9c94a7960f19d77465706029"
+    },
+    {
+      "path": "evidence/environment_preservation.json",
+      "bytes": 1568,
+      "sha256": "9ae46f49aba99b041f2ba520378d9f20e6f580542f9e25b2aaab53e0c127b978"
+    },
+    {
+      "path": "evidence/final_delivery_index.json",
+      "bytes": 8862,
+      "sha256": "9ea5b048430de20e597fa216cb77728345b42b4d63c49eac3810ee63f75d9146"
+    },
+    {
+      "path": "evidence/functional_replay_review.json",
+      "bytes": 3398,
+      "sha256": "e661108b7218a76842c52bdf9d0b9defe692cb53ce1e8f76e0f6a8da44956477"
+    },
+    {
+      "path": "evidence/golden_recheck.json",
+      "bytes": 699,
+      "sha256": "64e3b570fda50d8af3de28ebe493d590d24722315dea6cdb6aa690da9996309a"
+    },
+    {
+      "path": "evidence/guard_validation.json",
+      "bytes": 5971,
+      "sha256": "21aa0e8d57a2921cb7c9f3bef75624c9fcb023df33d921dab41e383abae083d0"
+    },
+    {
+      "path": "evidence/historical_trace_review.json",
+      "bytes": 2108,
+      "sha256": "857fcf22015564a78e74c5b07dc293f2174bcd286e3e4e14c99d9f5135714c28"
+    },
+    {
+      "path": "evidence/material_hashes.json",
+      "bytes": 14521,
+      "sha256": "345fbe290b0b314472e77262290c1ca6e471995d05be1bf4fc75f6a97e38a08a"
+    },
+    {
+      "path": "evidence/material_review.json",
+      "bytes": 6993,
+      "sha256": "93ce64aa5fb8edfb1120311b03599b6c14bc012bf2ae56ddc4290b530fab4221"
+    },
+    {
+      "path": "evidence/operator_asset_path_review.json",
+      "bytes": 9658,
+      "sha256": "b956c366bdfcb6b1efb1c894c7caf67f5f1a947f7b222aafe5b2b0602b6cc444"
+    },
+    {
+      "path": "evidence/parent_review.json",
+      "bytes": 834,
+      "sha256": "9a6343a74f34bd851a903d7597e813b4b9d6cda5b699a6b0f72d4306165d0ce0"
+    },
+    {
+      "path": "evidence/runtime_closure_search.json",
+      "bytes": 3364,
+      "sha256": "7c7d9c7987eb96cdddc5b20b9541daccc405f5ea18a1a21de8fabae8aef8a6c9"
+    },
+    {
+      "path": "evidence/trace_path_review.json",
+      "bytes": 9923,
+      "sha256": "74210de7d78197e46c05e32664301ba4a2532c658fc81dc9ad35b391a24f27b9"
+    },
+    {
+      "path": "functional_pins.json",
+      "bytes": 7040,
+      "sha256": "96a9f48fd633060d651cd7eab3f955031b2cf5085c63eca0d1a7874ead8c1125"
+    },
+    {
+      "path": "gaps.json",
+      "bytes": 4549,
+      "sha256": "683af18d28aebb868ab84188d650ea05a03354b89d9a548338a3c7bd9bb6d4eb"
+    },
+    {
+      "path": "guarded_replay.py",
+      "bytes": 3974,
+      "sha256": "c49494a5b4a3579b3124724840901a2fb4fc4a4b635050ccdc6827de1b7c8691"
+    },
+    {
+      "path": "inventory.json",
+      "bytes": 4954,
+      "sha256": "4d44f545e2fd8999256724397973faa52fb4f1c9a5162f07ba50fb7db65fca6e"
+    },
+    {
+      "path": "spec_identity.json",
+      "bytes": 218,
+      "sha256": "1d4f6ca7652a00c2cfdc8ec3058883aa1e6268edd1b999a888d765f566aab203"
+    }
+  ],
+  "review_evidence": "evidence/parent_review.json"
+}

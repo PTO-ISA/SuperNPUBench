@@ -1,0 +1,69 @@
+{
+  "scope": "Seven historical runs; full/noc event/field/order/root metadata and cycle logs checked. Logs derived by explicit workspace-prefix replacement; full/noc/PipeView bytes unchanged.",
+  "cases": [
+    {
+      "case": "split2-5464",
+      "total_cycles": 5464,
+      "full_events": 120529,
+      "noncounter_events": 19589,
+      "filtered_full_matches_noc_all_fields_and_root_metadata": true,
+      "numeric_acceptance": false,
+      "new_run": false
+    },
+    {
+      "case": "baseline-13349",
+      "total_cycles": 13349,
+      "full_events": 260215,
+      "noncounter_events": 31333,
+      "filtered_full_matches_noc_all_fields_and_root_metadata": true,
+      "numeric_acceptance": false,
+      "new_run": false
+    },
+    {
+      "case": "control256-5459",
+      "total_cycles": 5459,
+      "full_events": 120560,
+      "noncounter_events": 19586,
+      "filtered_full_matches_noc_all_fields_and_root_metadata": true,
+      "numeric_acceptance": false,
+      "new_run": false
+    },
+    {
+      "case": "wide512-5709",
+      "total_cycles": 5709,
+      "full_events": 123976,
+      "noncounter_events": 19383,
+      "filtered_full_matches_noc_all_fields_and_root_metadata": true,
+      "numeric_acceptance": false,
+      "new_run": false
+    },
+    {
+      "case": "wide512-split2-5750",
+      "total_cycles": 5750,
+      "full_events": 124235,
+      "noncounter_events": 18965,
+      "filtered_full_matches_noc_all_fields_and_root_metadata": true,
+      "numeric_acceptance": false,
+      "new_run": false
+    },
+    {
+      "case": "wide1024-6599",
+      "total_cycles": 6599,
+      "full_events": 138133,
+      "noncounter_events": 19265,
+      "filtered_full_matches_noc_all_fields_and_root_metadata": true,
+      "numeric_acceptance": false,
+      "new_run": false
+    },
+    {
+      "case": "packed-pingpong-5545",
+      "total_cycles": 5545,
+      "full_events": 121161,
+      "noncounter_events": 19270,
+      "filtered_full_matches_noc_all_fields_and_root_metadata": true,
+      "numeric_acceptance": false,
+      "new_run": false
+    }
+  ],
+  "source_stage_full_exact_equal": true
+}
