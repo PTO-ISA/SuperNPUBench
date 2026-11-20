@@ -1,0 +1,21 @@
+{
+  "llvm": {
+    "repository": "https://github.com/LinxISA/llvm-project",
+    "commit": "25f419f48bb4226ac29c0038f9162185ee6e3147",
+    "version": "15.0.4",
+    "source_identity_evidence": "Historical RMS build_manifest clang --version and current frozen clang --version agree.",
+    "local_changes": "Inventory recorded a dirty LinxV5InstrInfo.td; inclusion in frozen binary is not established. Base commit alone is not a claim of bit-identical compiler rebuild."
+  },
+  "tileop_api": {
+    "repository": "https://github.com/LinxISA/Linx-TileOP-API",
+    "commit": "bffad5b3d16411a967e949f7cb4929d588d9f889",
+    "version": "0.58.7",
+    "source_identity_evidence": "Installed pto_tileop_api_revision.hpp declares this exact revision; 15 other API headers from historical RMS dependency hashes match the clean source checkout. The revision header is generated and differs from the source template.",
+    "installed_revision_header_sha256": "7830daac3f8e7709ddf87c473a1e06e272edd06694c616bde0afaf5a6bc9d33a"
+  },
+  "sysroot": {
+    "status": "exact full component commit closure not established; used header hashes retained in original dependency evidence"
+  },
+  "delivery_policy": "source_references_only_no_toolchain_archive_required",
+  "replay_requirement": "No compiler/API/sysroot is needed to replay the already-built ELF."
+}

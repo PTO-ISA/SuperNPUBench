@@ -1,0 +1,89 @@
+{
+  "origin": {
+    "path": "perf_analysis/rms_align512_compare_20261109/landing/review/run/build_identity.json",
+    "sha256": "66779e4c18d7510a677f2a8ce2e7c5788f7090bb47fe005f9dc7ec365622b54a",
+    "bytes": 4047
+  },
+  "transformation": "JSON reserialization; personal workspace prefix replaced by ${ASSET_ROOT}; original bytes remain identified by origin hash. Historical commands are evidence, not a portable runner.",
+  "record": {
+    "commands": [
+      [
+        "${ASSET_ROOT}/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang++",
+        "-c",
+        "-mlxbc",
+        "-fenable-matrix",
+        "-O2",
+        "-mllvm",
+        "-enable-all-vector-as-tilereg=true",
+        "-mllvm",
+        "-linxv5-enable-HL-Inst-Opt=true",
+        "-mllvm",
+        "-linxv5-enable-dim-opt=true",
+        "-mllvm",
+        "-linxv5-enable-ldst-bridge=false",
+        "-mllvm",
+        "-linxv5-enable-continuous-mem-opt=true",
+        "-mllvm",
+        "-linxv5-enable-tile-clock-hand=false",
+        "-mllvm",
+        "-linxv5-enable-simt-clock-hand=true",
+        "-mllvm",
+        "-enable-misched=false",
+        "-std=c++20",
+        "-DDType=__half",
+        "-DPE_NUM=4",
+        "-DG_A=128",
+        "-DG_R=8192",
+        "-D__linx",
+        "-DENABLE_TENSOR_INSTR",
+        "-I${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/source_snapshot/source/support",
+        "-I${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/source_snapshot/source",
+        "-ffile-prefix-map=${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/source_snapshot=.",
+        "-fdebug-prefix-map=${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/source_snapshot=.",
+        "-ffile-prefix-map=${ASSET_ROOT}/linx-toolchain-build/output/linx_blockisa_llvm_musl=toolchain",
+        "-fdebug-prefix-map=${ASSET_ROOT}/linx-toolchain-build/output/linx_blockisa_llvm_musl=toolchain",
+        "${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/source_snapshot/source/driver.cpp",
+        "-o",
+        "${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/run/kernel.o"
+      ],
+      [
+        "${ASSET_ROOT}/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/clang++",
+        "-nostartfiles",
+        "${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/source_snapshot/source/support/_start.s",
+        "${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/run/kernel.o",
+        "-o",
+        "${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/run/rmsnorm_single_buffer.elf"
+      ],
+      [
+        "${ASSET_ROOT}/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin/llvm-objdump",
+        "-dl",
+        "${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/run/rmsnorm_single_buffer.elf"
+      ]
+    ],
+    "compiler_sha256": "52f1faa6b4f73284c91815824129e00f67dfcd616d544d93836ab570dcff4443",
+    "elf_sha256": "c6ece73296066f6fd53c6930c4d00ea4f379250dcade2bc7d4afa2c7471fda00",
+    "diss_sha256": "745bb71d8fea2e8fad729d5f33d0f9e2c5c5ff506a4d2275b1771101c3b39080",
+    "correctness": "not_checked; zero-input timing build only",
+    "run_command": [
+      "${PYTHON3}",
+      "${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/source_snapshot/tools/run_swimlane.py",
+      "--gfsim",
+      "${ASSET_ROOT}/perf_analysis/rms_issue265_20261027/tlsu_observer_20261029/perf_runs/pr1145_tail_shared128_cell256/runtime_gfsim",
+      "--elf",
+      "${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/run/rmsnorm_single_buffer.elf",
+      "--outdir",
+      "${ASSET_ROOT}/perf_analysis/rms_align512_compare_20261109/landing/review/run/perf_run",
+      "--name",
+      "rmsnorm",
+      "--conf",
+      "r128_w128_shared128.conf",
+      "--timeout",
+      "300"
+    ],
+    "model_sha256": "981546a2f65ecb773126bcfb6ec7d575dfcc6214869ed014dcd1ece05455f222",
+    "environment_overrides": {
+      "RMS_TAIL_BYPASS": "1"
+    }
+  },
+  "path_base": "external_asset_root"
+}
