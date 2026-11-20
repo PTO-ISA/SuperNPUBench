@@ -1,0 +1,220 @@
+{
+  "kind": "operator",
+  "cases": [
+    {
+      "id": "fag-compact29028-portable-r3",
+      "historical_result_id": "fag-compact29028",
+      "config_id": "fag-compact29028",
+      "cycles": 29028,
+      "elf": "cases/fag-compact29028/kernel.elf",
+      "elf_sha256": "5ebaef32531ba25cb91389a31c1ad0184e54f9ee15151885909469d4b881409b",
+      "runtime_variant": "compact",
+      "config_set": "compact-native",
+      "environment": {
+        "RMS_TAIL_BYPASS": "0",
+        "TLSU_SHARED_SOURCE_DECOUPLE": "0",
+        "TLSU_STORE_BEAT_STREAM": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1"
+      },
+      "historical_full_identity": {
+        "sha256": "adff0465b2bfb4753ebbf5a00609729cbaa97878cc7ec8be0167e030365b0a42",
+        "bytes": 58303127,
+        "verified_by": "streaming gzip decompression during archive preparation"
+      },
+      "historical_nocounters_sha256": "becc0a8da44600203729b34eb84a3c8950dece1264333fd178127181ec463e25",
+      "historical_nocounters_canonical_sha256": "c5b1d68fbc8a767473f5844f5bda6a4b439c7ed45cb64aac4b440fcacc36075c",
+      "historical_full_normalized": {
+        "canonical_sha256": "e48953479697354be953c081ea0421bad1533864d0c9c5fea061b823853cd949",
+        "events": 515384,
+        "inverse_annotation_events": 6239,
+        "metadata": {}
+      },
+      "historical_noc_normalized": {
+        "canonical_sha256": "b561c0205eb131408c50d9caa1ec83bca56a1f084fd54c215221216890af608c",
+        "events": 39536,
+        "inverse_annotation_events": 6239,
+        "metadata": {}
+      }
+    },
+    {
+      "id": "fag-prefetch89646-portable-r3",
+      "historical_result_id": "fag-prefetch89646",
+      "config_id": "fag-prefetch89646",
+      "cycles": 89646,
+      "elf": "cases/fag-prefetch89646/kernel.elf",
+      "elf_sha256": "c7364cfdf4de0f0a31ff8d09fad3079811bb6ed707529d40186dff3a9fe5b552",
+      "runtime_variant": "static",
+      "config_set": "prefetch-native",
+      "environment": {
+        "RMS_TAIL_BYPASS": "1",
+        "TLSU_SHARED_SOURCE_DECOUPLE": "1",
+        "TLSU_STORE_BEAT_STREAM": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "SL2_DEBUG_SLOTS": "16"
+      },
+      "historical_full_identity": {
+        "sha256": "94ee0a56aae07fbe9cdd501345506d36b5f1eb74682290d7a0caedfb38a10e05",
+        "bytes": 185965089,
+        "verified_by": "streaming gzip decompression during archive preparation"
+      },
+      "historical_nocounters_sha256": "46c74d4608b1881c10ebc58dc657f4d595d8d57d2a97067b709c28dda87ce025",
+      "historical_nocounters_canonical_sha256": "fd536681ab613dcf8d50e2b7b5e79f77b7af1258166cce31a23f5b96252cc740",
+      "historical_full_normalized": {
+        "canonical_sha256": "aad3ab556ee466944033f73444c5dbb308107a8678aa0ce4f55fb6b9bc4f346f",
+        "events": 1640760,
+        "inverse_annotation_events": 0,
+        "metadata": {}
+      },
+      "historical_noc_normalized": {
+        "canonical_sha256": "fd536681ab613dcf8d50e2b7b5e79f77b7af1258166cce31a23f5b96252cc740",
+        "events": 162212,
+        "inverse_annotation_events": 0,
+        "metadata": {}
+      }
+    },
+    {
+      "id": "fag-sl2_768_88050-portable-r3",
+      "historical_result_id": "fag-sl2_768_88050",
+      "config_id": "fag-sl2_768_88050",
+      "cycles": 88050,
+      "elf": "cases/fag-sl2_768_88050/kernel.elf",
+      "elf_sha256": "c7364cfdf4de0f0a31ff8d09fad3079811bb6ed707529d40186dff3a9fe5b552",
+      "runtime_variant": "static",
+      "config_set": "prefetch-native",
+      "environment": {
+        "RMS_TAIL_BYPASS": "1",
+        "TLSU_SHARED_SOURCE_DECOUPLE": "1",
+        "TLSU_STORE_BEAT_STREAM": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "SL2_DEBUG_SLOTS": "16"
+      },
+      "historical_full_identity": {
+        "sha256": "b3f15496e80fb6cff629fd20ed4421b30a736b2952e068e65fbb8e9557f5334f",
+        "bytes": 183983729,
+        "verified_by": "streaming gzip decompression during archive preparation"
+      },
+      "historical_nocounters_sha256": "e1388bf3bdfadd0bf362ffe43d30bcf8cc519af610e8f40f85119e11b9b8f4ff",
+      "historical_nocounters_canonical_sha256": "fb3dc9ae4655494cd27c85b78a403db5201f45fb40004911cbf131de4504b70d",
+      "historical_full_normalized": {
+        "canonical_sha256": "0ad36ab8dd5e54ec3a242ab1b428b9bf5b0ff843d5912d1d2b170e80fd04c46f",
+        "events": 1615622,
+        "inverse_annotation_events": 2160,
+        "metadata": {}
+      },
+      "historical_noc_normalized": {
+        "canonical_sha256": "c5c0249f8b5aefb86d05386228af5a6631c7c18acf9ebd1b65ad865725579ef1",
+        "events": 162820,
+        "inverse_annotation_events": 2160,
+        "metadata": {}
+      }
+    }
+  ],
+  "numerical_boundary": "All timing cases zero input. Sq1024 separate exact evidence; Sq4096 separate baseline equivalence, independent dQ/dK host oracle differences unresolved.",
+  "release_tag": "work-archive-fag-20261109",
+  "runtime_variants": {
+    "compact": {
+      "source_head": "a346c831e162d450a3efa1291175f2cf98ae802b",
+      "sha256": "61f6f36e7abbcb3827937b390d9bd913e543b0b279b0e806059e5c389a5e54cb"
+    },
+    "static": {
+      "source_head": "59d965a55d5e90dbc6652d9bb1f6d9590941a46d",
+      "sha256": "77978a0de5f7261c6d70d303725101feed8b4d889ce0a00a7ee786ee6e186b67"
+    }
+  },
+  "model_configuration_sha256": {
+    "case_configs/fag-compact29028.conf": "6d3f87cf19a6adb69395161ab9004be693aac2bfaeee8dea0388d69afa30f0c3",
+    "case_configs/fag-prefetch89646.conf": "ee54a68d2d4dc5e2a7bfeb55a9014e73eb7279f4bd20daab896791e531df2d75",
+    "case_configs/fag-sl2_768_88050.conf": "dac3642382ba8a8a2a2668900687a634c35a0c7c5692431880325caa559be9e0",
+    "configuration_inputs/compact-native/DFX.toml": "dcfdcd401d10e5a1155501768109de066c76d8f85648d45b9e36713455f68f6a",
+    "configuration_inputs/compact-native/SoftCore.toml": "5d1e1006f00ec69ddf3f99649b8ab8a8b998313625b4cb0fae6cd6c114d41b60",
+    "configuration_inputs/compact-native/Trace.toml": "f917fb6fbc6a2fa1f32184f839f5d076b1b5a29fb123cfca57fc5d736a07fd24",
+    "configuration_inputs/compact-native/bctrl.toml": "930dfeef9d215e0dfbd208edea41a4cbb3ffb7f964c72233ea271a09f754382b",
+    "configuration_inputs/compact-native/bfu.toml": "07451b18f4c512ba6f09b38793b77cb8988b64aed65d7abe4344c2cf8e3231d6",
+    "configuration_inputs/compact-native/cell.toml": "ba1335ffcf202c755627b24de0b947e895e839e50e3637bf3a4e7c5fa6315785",
+    "configuration_inputs/compact-native/core.toml": "74159c32fba37ee6dd6d2be2a63e6e35000be96d0d440dd7ba0043720c954b69",
+    "configuration_inputs/compact-native/cube.toml": "bffbd01f49fb613982d29af88cb54c3a24b944f6c49071cf1f4ced0c1d51e7a4",
+    "configuration_inputs/compact-native/fourpe.toml": "85fee34d63a047dfdff41b33fc88fbfe65e4e88a5ac21470d5e5fc74ce9bfbd9",
+    "configuration_inputs/compact-native/group.toml": "4f484307a64542d407c8e50b817707597a6acdea2a539c7c126ae60f4946f879",
+    "configuration_inputs/compact-native/iex.toml": "1fd0b9fcd08cdafdf4278fe5e19a8b58fe4759075b4a456080dd86f35a49856b",
+    "configuration_inputs/compact-native/ifu.toml": "88d9b69cb0dbe99310fc2db1aee3a2abdd35d557c9b288ac97efe56db797b486",
+    "configuration_inputs/compact-native/l1.toml": "e2d472d9610fb73b1f24456228f0b51ab4ea8d05a1811def5423404b1696e11c",
+    "configuration_inputs/compact-native/l2.toml": "60b366196656e1f730aabd50663b438de2c56fea64b1208ad5611d039964a351",
+    "configuration_inputs/compact-native/lsu.toml": "d18b1ff0558bcfbbc28b7f58c61b75e139472a188081a8a52f23d4907c5c1d93",
+    "configuration_inputs/compact-native/sl2.toml": "2c0cd837bfebfb4f9045ef6af159103f6790f85485146e785d2c6b5c5823ad87",
+    "configuration_inputs/compact-native/spe.toml": "675eef6d7b7a2c05fd1ba92276a32024f685bd4f3f4e537d8f7a41f3a86983c6",
+    "configuration_inputs/compact-native/superScalar.toml": "fab07018760fb3e9baee641bb585f942d3b4bcbdea3c0e13a3efa9538ed386c6",
+    "configuration_inputs/compact-native/tilelsu.toml": "6a580d5a3f5b03971e65a13b37c4cf43c5f479e4aa6fd07fb4f3a337d1ab3695",
+    "configuration_inputs/compact-native/tlsu.toml": "b233f683aa4e73b49932ad02c3bcb63c4c6e1bc700e62dcca1c653e4e734ee0d",
+    "configuration_inputs/compact-native/vec.toml": "43e89cfc7d5fa0e97648236822263843fb3c4cad03c30c95fed3aed567dc240c",
+    "configuration_inputs/prefetch-native/DFX.toml": "dcfdcd401d10e5a1155501768109de066c76d8f85648d45b9e36713455f68f6a",
+    "configuration_inputs/prefetch-native/SoftCore.toml": "5d1e1006f00ec69ddf3f99649b8ab8a8b998313625b4cb0fae6cd6c114d41b60",
+    "configuration_inputs/prefetch-native/Trace.toml": "f917fb6fbc6a2fa1f32184f839f5d076b1b5a29fb123cfca57fc5d736a07fd24",
+    "configuration_inputs/prefetch-native/bctrl.toml": "930dfeef9d215e0dfbd208edea41a4cbb3ffb7f964c72233ea271a09f754382b",
+    "configuration_inputs/prefetch-native/bfu.toml": "07451b18f4c512ba6f09b38793b77cb8988b64aed65d7abe4344c2cf8e3231d6",
+    "configuration_inputs/prefetch-native/cell.toml": "ba1335ffcf202c755627b24de0b947e895e839e50e3637bf3a4e7c5fa6315785",
+    "configuration_inputs/prefetch-native/core.toml": "74159c32fba37ee6dd6d2be2a63e6e35000be96d0d440dd7ba0043720c954b69",
+    "configuration_inputs/prefetch-native/cube.toml": "bffbd01f49fb613982d29af88cb54c3a24b944f6c49071cf1f4ced0c1d51e7a4",
+    "configuration_inputs/prefetch-native/fourpe.toml": "85fee34d63a047dfdff41b33fc88fbfe65e4e88a5ac21470d5e5fc74ce9bfbd9",
+    "configuration_inputs/prefetch-native/group.toml": "4f484307a64542d407c8e50b817707597a6acdea2a539c7c126ae60f4946f879",
+    "configuration_inputs/prefetch-native/iex.toml": "1fd0b9fcd08cdafdf4278fe5e19a8b58fe4759075b4a456080dd86f35a49856b",
+    "configuration_inputs/prefetch-native/ifu.toml": "88d9b69cb0dbe99310fc2db1aee3a2abdd35d557c9b288ac97efe56db797b486",
+    "configuration_inputs/prefetch-native/l1.toml": "e2d472d9610fb73b1f24456228f0b51ab4ea8d05a1811def5423404b1696e11c",
+    "configuration_inputs/prefetch-native/l2.toml": "60b366196656e1f730aabd50663b438de2c56fea64b1208ad5611d039964a351",
+    "configuration_inputs/prefetch-native/lsu.toml": "d18b1ff0558bcfbbc28b7f58c61b75e139472a188081a8a52f23d4907c5c1d93",
+    "configuration_inputs/prefetch-native/sl2.toml": "2c0cd837bfebfb4f9045ef6af159103f6790f85485146e785d2c6b5c5823ad87",
+    "configuration_inputs/prefetch-native/spe.toml": "675eef6d7b7a2c05fd1ba92276a32024f685bd4f3f4e537d8f7a41f3a86983c6",
+    "configuration_inputs/prefetch-native/superScalar.toml": "fab07018760fb3e9baee641bb585f942d3b4bcbdea3c0e13a3efa9538ed386c6",
+    "configuration_inputs/prefetch-native/tilelsu.toml": "6a580d5a3f5b03971e65a13b37c4cf43c5f479e4aa6fd07fb4f3a337d1ab3695",
+    "configuration_inputs/prefetch-native/tlsu.toml": "a5ae3728704c484fbd476540af1a488e7f372bd69f24e2f970a25bf1d216421c",
+    "configuration_inputs/prefetch-native/vec.toml": "43e89cfc7d5fa0e97648236822263843fb3c4cad03c30c95fed3aed567dc240c",
+    "compiled_defaults/compact/DFX.toml": "dcfdcd401d10e5a1155501768109de066c76d8f85648d45b9e36713455f68f6a",
+    "compiled_defaults/compact/SoftCore.toml": "5d1e1006f00ec69ddf3f99649b8ab8a8b998313625b4cb0fae6cd6c114d41b60",
+    "compiled_defaults/compact/Trace.toml": "f917fb6fbc6a2fa1f32184f839f5d076b1b5a29fb123cfca57fc5d736a07fd24",
+    "compiled_defaults/compact/bctrl.toml": "930dfeef9d215e0dfbd208edea41a4cbb3ffb7f964c72233ea271a09f754382b",
+    "compiled_defaults/compact/bfu.toml": "07451b18f4c512ba6f09b38793b77cb8988b64aed65d7abe4344c2cf8e3231d6",
+    "compiled_defaults/compact/cell.toml": "ba1335ffcf202c755627b24de0b947e895e839e50e3637bf3a4e7c5fa6315785",
+    "compiled_defaults/compact/core.toml": "74159c32fba37ee6dd6d2be2a63e6e35000be96d0d440dd7ba0043720c954b69",
+    "compiled_defaults/compact/cube.toml": "bffbd01f49fb613982d29af88cb54c3a24b944f6c49071cf1f4ced0c1d51e7a4",
+    "compiled_defaults/compact/fourpe.toml": "85fee34d63a047dfdff41b33fc88fbfe65e4e88a5ac21470d5e5fc74ce9bfbd9",
+    "compiled_defaults/compact/group.toml": "4f484307a64542d407c8e50b817707597a6acdea2a539c7c126ae60f4946f879",
+    "compiled_defaults/compact/iex.toml": "1fd0b9fcd08cdafdf4278fe5e19a8b58fe4759075b4a456080dd86f35a49856b",
+    "compiled_defaults/compact/ifu.toml": "88d9b69cb0dbe99310fc2db1aee3a2abdd35d557c9b288ac97efe56db797b486",
+    "compiled_defaults/compact/l1.toml": "e2d472d9610fb73b1f24456228f0b51ab4ea8d05a1811def5423404b1696e11c",
+    "compiled_defaults/compact/l2.toml": "60b366196656e1f730aabd50663b438de2c56fea64b1208ad5611d039964a351",
+    "compiled_defaults/compact/lsu.toml": "d18b1ff0558bcfbbc28b7f58c61b75e139472a188081a8a52f23d4907c5c1d93",
+    "compiled_defaults/compact/sl2.toml": "2c0cd837bfebfb4f9045ef6af159103f6790f85485146e785d2c6b5c5823ad87",
+    "compiled_defaults/compact/spe.toml": "675eef6d7b7a2c05fd1ba92276a32024f685bd4f3f4e537d8f7a41f3a86983c6",
+    "compiled_defaults/compact/superScalar.toml": "fab07018760fb3e9baee641bb585f942d3b4bcbdea3c0e13a3efa9538ed386c6",
+    "compiled_defaults/compact/tilelsu.toml": "6a580d5a3f5b03971e65a13b37c4cf43c5f479e4aa6fd07fb4f3a337d1ab3695",
+    "compiled_defaults/compact/tlsu.toml": "b233f683aa4e73b49932ad02c3bcb63c4c6e1bc700e62dcca1c653e4e734ee0d",
+    "compiled_defaults/compact/vec.toml": "43e89cfc7d5fa0e97648236822263843fb3c4cad03c30c95fed3aed567dc240c",
+    "compiled_defaults/compact_identity.json": "e836426103e63a92f34bcd76a16eb403e65954837247b93122553b2c49bf9078",
+    "compiled_defaults/static/DFX.toml": "dcfdcd401d10e5a1155501768109de066c76d8f85648d45b9e36713455f68f6a",
+    "compiled_defaults/static/SoftCore.toml": "5d1e1006f00ec69ddf3f99649b8ab8a8b998313625b4cb0fae6cd6c114d41b60",
+    "compiled_defaults/static/Trace.toml": "f917fb6fbc6a2fa1f32184f839f5d076b1b5a29fb123cfca57fc5d736a07fd24",
+    "compiled_defaults/static/bctrl.toml": "930dfeef9d215e0dfbd208edea41a4cbb3ffb7f964c72233ea271a09f754382b",
+    "compiled_defaults/static/bfu.toml": "07451b18f4c512ba6f09b38793b77cb8988b64aed65d7abe4344c2cf8e3231d6",
+    "compiled_defaults/static/cell.toml": "ba1335ffcf202c755627b24de0b947e895e839e50e3637bf3a4e7c5fa6315785",
+    "compiled_defaults/static/core.toml": "74159c32fba37ee6dd6d2be2a63e6e35000be96d0d440dd7ba0043720c954b69",
+    "compiled_defaults/static/cube.toml": "bffbd01f49fb613982d29af88cb54c3a24b944f6c49071cf1f4ced0c1d51e7a4",
+    "compiled_defaults/static/fourpe.toml": "85fee34d63a047dfdff41b33fc88fbfe65e4e88a5ac21470d5e5fc74ce9bfbd9",
+    "compiled_defaults/static/group.toml": "4f484307a64542d407c8e50b817707597a6acdea2a539c7c126ae60f4946f879",
+    "compiled_defaults/static/iex.toml": "1fd0b9fcd08cdafdf4278fe5e19a8b58fe4759075b4a456080dd86f35a49856b",
+    "compiled_defaults/static/ifu.toml": "88d9b69cb0dbe99310fc2db1aee3a2abdd35d557c9b288ac97efe56db797b486",
+    "compiled_defaults/static/l1.toml": "e2d472d9610fb73b1f24456228f0b51ab4ea8d05a1811def5423404b1696e11c",
+    "compiled_defaults/static/l2.toml": "60b366196656e1f730aabd50663b438de2c56fea64b1208ad5611d039964a351",
+    "compiled_defaults/static/lsu.toml": "d18b1ff0558bcfbbc28b7f58c61b75e139472a188081a8a52f23d4907c5c1d93",
+    "compiled_defaults/static/sl2.toml": "2c0cd837bfebfb4f9045ef6af159103f6790f85485146e785d2c6b5c5823ad87",
+    "compiled_defaults/static/spe.toml": "675eef6d7b7a2c05fd1ba92276a32024f685bd4f3f4e537d8f7a41f3a86983c6",
+    "compiled_defaults/static/superScalar.toml": "fab07018760fb3e9baee641bb585f942d3b4bcbdea3c0e13a3efa9538ed386c6",
+    "compiled_defaults/static/tilelsu.toml": "6a580d5a3f5b03971e65a13b37c4cf43c5f479e4aa6fd07fb4f3a337d1ab3695",
+    "compiled_defaults/static/tlsu.toml": "a5ae3728704c484fbd476540af1a488e7f372bd69f24e2f970a25bf1d216421c",
+    "compiled_defaults/static/vec.toml": "43e89cfc7d5fa0e97648236822263843fb3c4cad03c30c95fed3aed567dc240c",
+    "compiled_defaults/static_identity.json": "901962425a02cefaf080ef75d3583b1a951efdc3c1040f391f4dab59c388c3c0"
+  },
+  "archive_revision": 4,
+  "payload_revision": "operator-r3"
+}

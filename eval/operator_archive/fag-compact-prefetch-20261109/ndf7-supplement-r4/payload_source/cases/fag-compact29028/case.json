@@ -1,0 +1,32 @@
+{
+  "id": "fag-compact29028-portable-r2",
+  "cycles": 29028,
+  "shape": [
+    1024,
+    128,
+    256
+  ],
+  "elf_sha256": "5ebaef32531ba25cb91389a31c1ad0184e54f9ee15151885909469d4b881409b",
+  "historical_diss_sha256": "e2bb75ce12458a8b192b30d35e7a382854313484cf603161a56fb7c0f10f75e3",
+  "published_diss_sha256": "6ae0672c527ecb5ecd41c326d1ab6a0bb1efb743d28a26f96a405bd34a0b6da9",
+  "diss_transform": "only objdump file header normalized; all other bytes preserved",
+  "changed_header_lines": [
+    {
+      "line": 2,
+      "old_sha256": "57ff28a3a516eb20f106dd7ffb487edbe5764a81637cad78fe2de82aaa1028ef"
+    }
+  ],
+  "runtime_historical_sha256": "8b5b1ba648da03c35bbb7df13879a76647d53fa4610f985d7f5e28b4b71001c0",
+  "runtime_portable_sha256": "61f6f36e7abbcb3827937b390d9bd913e543b0b279b0e806059e5c389a5e54cb",
+  "environment": {
+    "RMS_TAIL_BYPASS": "0",
+    "TLSU_SHARED_SOURCE_DECOUPLE": "0",
+    "TLSU_STORE_BEAT_STREAM": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "input": "static zero-initialized timing build; no external data",
+  "numeric_status": "not_checked_in_timing_run",
+  "performance_status": "diagnostic",
+  "historical_result_id": "fag-compact29028"
+}

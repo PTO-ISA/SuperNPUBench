@@ -1,0 +1,118 @@
+{
+  "archive_status": "incomplete",
+  "performance_status": "diagnostic",
+  "gaps": [
+    {
+      "field": "original_source",
+      "status": "unknown",
+      "reason": "Historical original operator checkout commit/dirty/untracked closure not bound",
+      "impact": "Snapshot and successful new local compact build do not reconstruct original checkout",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Keep source hashes; recover historical status only from primary evidence"
+    },
+    {
+      "field": "toolchain",
+      "status": "unknown",
+      "reason": "Compiler hash and631 actual local headers now known; complete shared compiler/linker/sysroot/API/ISA source identities not closed",
+      "impact": "Shared operator source rebuild not offered",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Publish maintained path-clean toolchain/API only in separate scoped task"
+    },
+    {
+      "field": "layout_work",
+      "status": "unknown",
+      "reason": "General layout/stride/alias/work-count contract incomplete",
+      "impact": "No generic correctness or MFU claim",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Freeze formal caller contract and useful/padded workload accounting"
+    },
+    {
+      "field": "composition",
+      "status": "unknown",
+      "reason": "Inherited mechanism batches have coarse per-file mapping and no complete single-mechanism rollback validation",
+      "impact": "No per-mechanism speedup attribution",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Audit each source increment against fixed base before removal/control experiment"
+    },
+    {
+      "field": "effective_config",
+      "status": "unknown",
+      "reason": "Original TOML loaded bytes not proven; no complete native effective export",
+      "impact": "New replay pinned inputs and source defaults do not retroactively prove original defaults",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Add source-derived structured full effective snapshot with explicit unknowns"
+    },
+    {
+      "field": "source_closure",
+      "status": "unknown",
+      "reason": "Tracked production commits exported and current fixed checkout verified; historical required untracked/generated closure not proven",
+      "impact": "No complete historical source recovery claim",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Inspect primary build dependency and original status evidence"
+    },
+    {
+      "field": "numeric",
+      "status": "not_collected",
+      "reason": "No fresh nonzero execution or independent Sq4096 dQ/dK golden acceptance",
+      "impact": "Timing remains diagnostic; old-output exact predecessor is not oracle correctness",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Run independent oracle and new numerical execution with readbacks and negative controls"
+    },
+    {
+      "field": "main_control",
+      "status": "not_collected",
+      "reason": "No final same-ELF/config/input clean-main model control supplied",
+      "impact": "No current mainline speedup attribution",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Schedule clean-main failure/control in separate result with SwimLane"
+    },
+    {
+      "field": "timing",
+      "status": "not_collected",
+      "reason": "No pure-kernel PC/cost decomposition or PipeView capture provided",
+      "impact": "Total Cycles only; no new stall causal claim",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Collect equivalent instruction events or PipeView with distinct run identity"
+    },
+    {
+      "field": "algorithm",
+      "status": "unknown",
+      "reason": "All assumption guarantees/numerical special values/general tail behavior not verified",
+      "impact": "Only frozen two-shape timing and scoped host checks offered",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Bind caller assumptions to ISA and independent oracle"
+    },
+    {
+      "field": "model_build",
+      "status": "not_collected",
+      "reason": "No new model build this supplement; old portable build receipts retained",
+      "impact": "Current source verifier is not new build acceptance",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Use source-recipe-r2 with separate registered build entry if requested"
+    },
+    {
+      "field": "operator_build",
+      "status": "not_collected",
+      "reason": "New local compact only; Sq4096 and shared toolchain rebuild not performed",
+      "impact": "No general shared source-build capability",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Close toolchain delivery then rebuild all claimed shapes"
+    },
+    {
+      "field": "review",
+      "status": "unknown",
+      "reason": "Root reviewed code and full-trace hashes; did not independently recompute normalized events or all check rows",
+      "impact": "No blanket independent NDF acceptance",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Review exact remaining operation/check atoms"
+    },
+    {
+      "field": "maintainer",
+      "status": "unknown",
+      "reason": "Long-term owner not assigned by user",
+      "impact": "Archive task owner is not long-term maintenance commitment",
+      "owner": "Codex archive task for evidence; long-term maintainer unassigned",
+      "next_action_or_recovery_command": "Assign team maintainer before claiming maintained dependency"
+    }
+  ]
+}

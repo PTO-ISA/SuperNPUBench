@@ -1,0 +1,70 @@
+{
+  "archive_revision": 4,
+  "spec_reference": "v1.0-draft.7 local unpublished draft; no spec text in shared archive",
+  "operations": [
+    {
+      "operation": "fixed_elf_local",
+      "provided_scope": "provided",
+      "status": "pass",
+      "evidence": "runs/{compact,prefetch,slots768}/replay_result.json",
+      "limit": "New local candidate runner3 cases rc0/29028/89646/88050; complete traces; failure-only .get correction after success runs recorded; no numeric check",
+      "review": "evidence/parent_review.json scope only; no blanket independent acceptance"
+    },
+    {
+      "operation": "fixed_elf_shared_download",
+      "provided_scope": "provided",
+      "status": "pass",
+      "evidence": "runs/downloaded-compact/replay_result.json; evidence/downloaded_preflight.json",
+      "limit": "Actual downloaded final operator-r3 and previously downloaded runtime-r1: compact rc0/29028 and full/noc equivalence; preflight all3 only; prefetch/slots768 actual runs are local candidate, not3 downloaded runs",
+      "review": "evidence/parent_review.json scope only; no blanket independent acceptance"
+    },
+    {
+      "operation": "model_tracked_source",
+      "provided_scope": "provided",
+      "status": "pass",
+      "evidence": "evidence/source_export_postimages.json; evidence/postimage_guard_tests.json",
+      "limit": "Streamed fixed Git tree all regular tracked files and actual existing compact checkout; no new remote recovery",
+      "review": "evidence/parent_review.json scope only; no blanket independent acceptance"
+    },
+    {
+      "operation": "model_build",
+      "provided_scope": "not_newly_provided",
+      "status": "not_checked",
+      "evidence": "historical_model_build_closure.json",
+      "limit": "11-09 actual portable build evidence retained; no fresh model compilation",
+      "review": "evidence/parent_review.json scope only; no blanket independent acceptance"
+    },
+    {
+      "operation": "operator_local_compact_build",
+      "provided_scope": "provided_local_only",
+      "status": "pass",
+      "evidence": "evidence/operator_build_compact.json",
+      "limit": "Actual compiler/linker/objdump,631 include identities, byte-identical ELF binding to actual replay; shared compiler not distributed",
+      "review": "evidence/parent_review.json scope only; no blanket independent acceptance"
+    },
+    {
+      "operation": "operator_shared_build",
+      "provided_scope": "not_provided",
+      "status": "not_checked",
+      "evidence": "gaps.json#toolchain",
+      "limit": "No portable compiler/sysroot/API closure; old ELF replay needs no compiler",
+      "review": "evidence/parent_review.json scope only; no blanket independent acceptance"
+    },
+    {
+      "operation": "captured_numeric_host_recheck",
+      "provided_scope": "provided",
+      "status": "pass",
+      "evidence": "evidence/captured_recheck.json; evidence/captured_recheck_negative.json",
+      "limit": "Only rechecks old seven readbacks and3 finite/nonzero outputs exact to model-derived predecessor; bitflip rejected",
+      "review": "evidence/parent_review.json scope only; no blanket independent acceptance"
+    },
+    {
+      "operation": "fresh_numeric_execution",
+      "provided_scope": "not_provided",
+      "status": "not_checked",
+      "evidence": "gaps.json#numeric",
+      "limit": "No fresh gfrun or nonzero gfsim; independent oracle unresolved",
+      "review": "evidence/parent_review.json scope only; no blanket independent acceptance"
+    }
+  ]
+}

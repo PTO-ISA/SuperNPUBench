@@ -1,0 +1,33 @@
+{
+  "id": "fag-prefetch89646-portable-r2",
+  "cycles": 89646,
+  "shape": [
+    4096,
+    128,
+    256
+  ],
+  "elf_sha256": "c7364cfdf4de0f0a31ff8d09fad3079811bb6ed707529d40186dff3a9fe5b552",
+  "historical_diss_sha256": "be21485e5d1015f3893a42e120682db4ac98355fb49746cba0e7f1fb20d098a4",
+  "published_diss_sha256": "aee860b636745628d6432d33c093ad9916a1bd795ca4e27707e6e38addfe2fbb",
+  "diss_transform": "only objdump file header normalized; all other bytes preserved",
+  "changed_header_lines": [
+    {
+      "line": 2,
+      "old_sha256": "64bba4082d0332b300527ee5e957692c4d6903885213ff12b64606159e597928"
+    }
+  ],
+  "runtime_historical_sha256": "6a6acc4ae305f000899e3190e7c2a26034528a19afb6fa34d0232a954dbaba8d",
+  "runtime_portable_sha256": "77978a0de5f7261c6d70d303725101feed8b4d889ce0a00a7ee786ee6e186b67",
+  "environment": {
+    "RMS_TAIL_BYPASS": "1",
+    "TLSU_SHARED_SOURCE_DECOUPLE": "1",
+    "TLSU_STORE_BEAT_STREAM": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "SL2_DEBUG_SLOTS": "16"
+  },
+  "input": "static zero-initialized timing build; no external data",
+  "numeric_status": "not_checked_in_timing_run",
+  "performance_status": "diagnostic",
+  "historical_result_id": "fag-prefetch89646"
+}

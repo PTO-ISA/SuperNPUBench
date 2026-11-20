@@ -1,0 +1,62 @@
+[
+  {
+    "historical_result_id": "fag-compact29028",
+    "historical_full_raw_sha256": "adff0465b2bfb4753ebbf5a00609729cbaa97878cc7ec8be0167e030365b0a42",
+    "historical_full_raw_bytes": 58303127,
+    "historical_noc_raw_sha256": "becc0a8da44600203729b34eb84a3c8950dece1264333fd178127181ec463e25",
+    "inverse_rule": "Only when documented fag_direct or fag object and original-name string exist AND name equals selected annotation.label + separator | + original-name: restore name from original-name, delete exactly args.original-name and the selected args.fag_direct or args.fag; all other fields, event order and metadata preserved. Invalid forms reject.",
+    "full_normalized": {
+      "canonical_sha256": "e48953479697354be953c081ea0421bad1533864d0c9c5fea061b823853cd949",
+      "events": 515384,
+      "inverse_annotation_events": 6239,
+      "metadata": {}
+    },
+    "noc_normalized": {
+      "canonical_sha256": "b561c0205eb131408c50d9caa1ec83bca56a1f084fd54c215221216890af608c",
+      "events": 39536,
+      "inverse_annotation_events": 6239,
+      "metadata": {}
+    },
+    "historical_full_filter_exactly_equals_historical_noc": true
+  },
+  {
+    "historical_result_id": "fag-prefetch89646",
+    "historical_full_raw_sha256": "94ee0a56aae07fbe9cdd501345506d36b5f1eb74682290d7a0caedfb38a10e05",
+    "historical_full_raw_bytes": 185965089,
+    "historical_noc_raw_sha256": "46c74d4608b1881c10ebc58dc657f4d595d8d57d2a97067b709c28dda87ce025",
+    "inverse_rule": "Only when documented fag_direct or fag object and original-name string exist AND name equals selected annotation.label + separator | + original-name: restore name from original-name, delete exactly args.original-name and the selected args.fag_direct or args.fag; all other fields, event order and metadata preserved. Invalid forms reject.",
+    "full_normalized": {
+      "canonical_sha256": "aad3ab556ee466944033f73444c5dbb308107a8678aa0ce4f55fb6b9bc4f346f",
+      "events": 1640760,
+      "inverse_annotation_events": 0,
+      "metadata": {}
+    },
+    "noc_normalized": {
+      "canonical_sha256": "fd536681ab613dcf8d50e2b7b5e79f77b7af1258166cce31a23f5b96252cc740",
+      "events": 162212,
+      "inverse_annotation_events": 0,
+      "metadata": {}
+    },
+    "historical_full_filter_exactly_equals_historical_noc": true
+  },
+  {
+    "historical_result_id": "fag-sl2_768_88050",
+    "historical_full_raw_sha256": "b3f15496e80fb6cff629fd20ed4421b30a736b2952e068e65fbb8e9557f5334f",
+    "historical_full_raw_bytes": 183983729,
+    "historical_noc_raw_sha256": "e1388bf3bdfadd0bf362ffe43d30bcf8cc519af610e8f40f85119e11b9b8f4ff",
+    "inverse_rule": "Only when documented fag_direct or fag object and original-name string exist AND name equals selected annotation.label + separator | + original-name: restore name from original-name, delete exactly args.original-name and the selected args.fag_direct or args.fag; all other fields, event order and metadata preserved. Invalid forms reject.",
+    "full_normalized": {
+      "canonical_sha256": "0ad36ab8dd5e54ec3a242ab1b428b9bf5b0ff843d5912d1d2b170e80fd04c46f",
+      "events": 1615622,
+      "inverse_annotation_events": 2160,
+      "metadata": {}
+    },
+    "noc_normalized": {
+      "canonical_sha256": "c5c0249f8b5aefb86d05386228af5a6631c7c18acf9ebd1b65ad865725579ef1",
+      "events": 162820,
+      "inverse_annotation_events": 2160,
+      "metadata": {}
+    },
+    "historical_full_filter_exactly_equals_historical_noc": true
+  }
+]
