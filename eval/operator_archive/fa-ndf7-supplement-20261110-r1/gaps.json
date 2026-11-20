@@ -1,0 +1,497 @@
+{
+  "overall_conformance": false,
+  "owner": "Codex FA archive parent",
+  "gaps": [
+    {
+      "field": "G-download",
+      "status": "resolved_for_three_new_assets",
+      "reason": "All actual downloads and unpacked payload closure checked, including mandatory guard overlay",
+      "impact": "Does not imply numerical correctness",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Use recorded fixed asset identities and permissions",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-replay",
+      "status": "limited_new_coverage",
+      "reason": "Previous4/4 shared runs byte-bound to unchanged current ELF/runtime/config; new current-runner8K scoped independently20519pass. Extra64K runs cancelled; not counted.",
+      "impact": "No claim of four freshly executed new-runner cases",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Optional per-case new runner trials use fresh output directories and adequate host memory; historical Linux64K can need~5.3GiB RSS/25min",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-buildrun",
+      "status": "not_collected",
+      "reason": "Four local ELF builds byte-identical, but downloaded rebuilt-ELF qualification runs pending",
+      "impact": "Build-only evidence does not alone grant build_reproduced",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Run qualification-mode with each rebuilt ELF and bind new run evidence.",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-modelbuild",
+      "status": "not_collected",
+      "reason": "Only7file fixture application/postimage/negative checks newly executed",
+      "impact": "No new full model build or qualification",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Recover full source in registered entry, GCC/libstdc++ qualified build, record hash and four runs.",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-toolchain",
+      "status": "caller_supplied_tools_not_portably_qualified",
+      "reason": "Source commit/hashes recorded and exact local tools qualified; full SDK deliberately not bundled",
+      "impact": "Operator build requires explicitly supplied matching installation",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Supply hash-pinned tools for local build; separately qualify any rebuilt compiler instead of assuming source commit guarantees bytes",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-numeric",
+      "status": "unknown",
+      "reason": "Host recalculation confirms6756/32768 mismatch; full root cause and numerical acceptance unresolved",
+      "impact": "Performance remains diagnostic/zero-input timing scope",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Separate numerical fix and same-ELF independent validation; do not equate host audit pass with correctness.",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-ISA",
+      "status": "unknown",
+      "reason": "Historical ISA/ASL contract revision not established",
+      "impact": "No ISA-conformant accepted performance or legality assertion",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Freeze relevant contract and check exact forms separately from API/lowering/model.",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-untracked",
+      "status": "unknown",
+      "reason": "Full necessary historical untracked/generated/submodule source provenance not newly audited",
+      "impact": "No complete historical source-closure conclusion",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Audit original status and compile dependencies; prove necessity or preserve missing assets.",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-mainline",
+      "status": "not_collected",
+      "reason": "No final same-ELF/config mainline or staged causal A/B",
+      "impact": "No clean upstream performance or per-fix causal attribution",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Compare registered fixed mainline/model variants with equal contract after numerical closure.",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-review",
+      "status": "not_collected",
+      "reason": "This metadata author inspected files but independent parent review of new four metadata files pending",
+      "impact": "No blanket NDF conformance",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Parent inspect locators and actual logs; update only checked operations.",
+      "inventory_reference": "inventory.json"
+    },
+    {
+      "field": "G-qualification-guard",
+      "status": "resolved_guard_defects_only",
+      "reason": "Independent findings fixed by immutable small overlay; empty-case and nested-output negatives rc2 with no output",
+      "impact": "No full new model build acceptance",
+      "owner": "Codex FA archive parent",
+      "next_action_or_recovery_command": "Extract base runtime then verified mandatory guard overlay",
+      "inventory_reference": "inventory.json I06"
+    }
+  ],
+  "requirement_gaps": [
+    {
+      "check_id": "FA-008",
+      "clause": "003/010 / newly downloaded rebuilt ELF qualification",
+      "status": "not_checked",
+      "reason": "All four local builds are byte-identical to downloaded ELFs. Independent new8K scoped execution covers one identical binary content; other three current-run qualifications not repeated. No full four-new-build_reproduced upgrade.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "evidence/final_build_identity.json"
+    },
+    {
+      "check_id": "FA-013",
+      "clause": "004 / portable qualification of caller-supplied compiler source build (SDK not required for ELF replay)",
+      "status": "not_checked",
+      "reason": "No full toolchain download is required by this archive. Compiler source commit/hash and recipe are recorded; exact locally qualified tool binaries are caller-supplied. Portable source-build qualification for other hosts not checked.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "asset_materials/fa-operator-r3/dependencies/identity.json"
+    },
+    {
+      "check_id": "FA-020",
+      "clause": "004.3 / necessary historical untracked/generated closure",
+      "status": "not_checked",
+      "reason": "Field false is present but this snapshot did not newly audit all original status/compile/generated dependencies; do not infer full closure from7file fixture.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "asset_materials/fa-runtime-r2/source/recovery.json#contains_local_untracked_files"
+    },
+    {
+      "check_id": "FA-021",
+      "clause": "004.3/010 / fresh complete model build and qualification",
+      "status": "not_checked",
+      "reason": "No full new model build; historical GCC11.4.0/libstdc++ qualification is documented, not newly executed.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "evidence/model_recovery_checks.json#scope"
+    },
+    {
+      "check_id": "FA-026",
+      "clause": "005 / numerical correctness accepted",
+      "status": "fail",
+      "reason": "numerical_status=fail;6756 mismatches remain. No timing correctness inferred.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "evidence/numerical_recheck.json#numerical_status"
+    },
+    {
+      "check_id": "FA-027",
+      "clause": "005 / general boundary correctness coverage",
+      "status": "not_checked",
+      "reason": "Existing assumptions available but no fresh general boundary/tail/NaN/Inf correctness execution audited.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions"
+    },
+    {
+      "check_id": "FA-031",
+      "clause": "007 / mainline equal-contract and staged causal A/B",
+      "status": "not_checked",
+      "reason": "Historical process available; final current-mainline sameELF/config and per-modification causal A/B not freshly established.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/performance_history.json#historical comparisons"
+    },
+    {
+      "check_id": "FA-033",
+      "clause": "011 / ISA contract identity/form legality",
+      "status": "not_checked",
+      "reason": "Historical ISA/ASL revision not established; API expressibility,LLVM lowering,functional/timing support remain separate claims.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/gaps.json#known gaps"
+    },
+    {
+      "check_id": "FA-046",
+      "clause": "6.3 / worktree/environment closure",
+      "status": "not_checked",
+      "reason": "This metadata-only subtask creates no worktree/build/run; parent owns publication and final closure evidence.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "No execution evidence available at this snapshot"
+    },
+    {
+      "check_id": "FA-048",
+      "clause": "002 / \u00a73.5 / shape/dtype/layout/tiling/PE/workload metadata completeness",
+      "status": "not_checked",
+      "reason": "Build flags exist but complete workload/layout/tiling scope per each four case not newly audited.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "No actual evidence inspected for this independent requirement"
+    },
+    {
+      "check_id": "FA-049",
+      "clause": "002 / \u00a73.5 / raw original exits/timeouts/truncation per historical run",
+      "status": "not_checked",
+      "reason": "New runs pending; all old original exit/completion/truncation fields not audited per case.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "No actual evidence inspected for this independent requirement"
+    },
+    {
+      "check_id": "FA-050",
+      "clause": "002 / \u00a73.5 / retention of important failed attempts and cleanup dependencies",
+      "status": "not_checked",
+      "reason": "Old process records exist, but all report/script dependency relationships for removed or retained attempts not newly audited.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "No actual evidence inspected for this independent requirement"
+    },
+    {
+      "check_id": "FA-052",
+      "clause": "002 / \u00a73.5 / PipeView/equivalent event support for dependency claims",
+      "status": "not_checked",
+      "reason": "No fresh PipeView/event causal analysis performed; expected full hashes alone cannot support every pipeline/causal claim.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "No actual evidence inspected for this independent requirement"
+    },
+    {
+      "check_id": "FA-053",
+      "clause": "004.1 / \u00a73.7.1 / FA-M01 contract/before-after behavior and required detailed fields",
+      "status": "not_checked",
+      "reason": "Old model_changes entry exists but no independent audit of full before/after contract,side effects,validation and per-case binary binding in this metadata task.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M01"
+    },
+    {
+      "check_id": "FA-054",
+      "clause": "004.1 / \u00a73.7.1 / FA-M01 enable/revert/default/upstream lifecycle",
+      "status": "not_checked",
+      "reason": "Old entry states switches/revert/upstream; full detailed correctness and lifecycle sufficiency not independently accepted; frozen old public-access wording is stale.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M01"
+    },
+    {
+      "check_id": "FA-055",
+      "clause": "004.1 / \u00a73.7.1 / FA-M01 same-contract causal control and omission rationale",
+      "status": "not_checked",
+      "reason": "No independently audited control isolates this modification; absence limits causal attribution rather than implying no effect.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M01"
+    },
+    {
+      "check_id": "FA-056",
+      "clause": "004.1 / \u00a73.7.1 / FA-M02 contract/before-after behavior and required detailed fields",
+      "status": "not_checked",
+      "reason": "Old model_changes entry exists but no independent audit of full before/after contract,side effects,validation and per-case binary binding in this metadata task.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M02"
+    },
+    {
+      "check_id": "FA-057",
+      "clause": "004.1 / \u00a73.7.1 / FA-M02 enable/revert/default/upstream lifecycle",
+      "status": "not_checked",
+      "reason": "Old entry states switches/revert/upstream; full detailed correctness and lifecycle sufficiency not independently accepted; frozen old public-access wording is stale.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M02"
+    },
+    {
+      "check_id": "FA-058",
+      "clause": "004.1 / \u00a73.7.1 / FA-M02 same-contract causal control and omission rationale",
+      "status": "not_checked",
+      "reason": "No independently audited control isolates this modification; absence limits causal attribution rather than implying no effect.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M02"
+    },
+    {
+      "check_id": "FA-059",
+      "clause": "004.1 / \u00a73.7.1 / FA-M03 contract/before-after behavior and required detailed fields",
+      "status": "not_checked",
+      "reason": "Old model_changes entry exists but no independent audit of full before/after contract,side effects,validation and per-case binary binding in this metadata task.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M03"
+    },
+    {
+      "check_id": "FA-060",
+      "clause": "004.1 / \u00a73.7.1 / FA-M03 enable/revert/default/upstream lifecycle",
+      "status": "not_checked",
+      "reason": "Old entry states switches/revert/upstream; full detailed correctness and lifecycle sufficiency not independently accepted; frozen old public-access wording is stale.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M03"
+    },
+    {
+      "check_id": "FA-061",
+      "clause": "004.1 / \u00a73.7.1 / FA-M03 same-contract causal control and omission rationale",
+      "status": "not_checked",
+      "reason": "No independently audited control isolates this modification; absence limits causal attribution rather than implying no effect.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M03"
+    },
+    {
+      "check_id": "FA-062",
+      "clause": "004.1 / \u00a73.7.1 / FA-M04 contract/before-after behavior and required detailed fields",
+      "status": "not_checked",
+      "reason": "Old model_changes entry exists but no independent audit of full before/after contract,side effects,validation and per-case binary binding in this metadata task.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M04"
+    },
+    {
+      "check_id": "FA-063",
+      "clause": "004.1 / \u00a73.7.1 / FA-M04 enable/revert/default/upstream lifecycle",
+      "status": "not_checked",
+      "reason": "Old entry states switches/revert/upstream; full detailed correctness and lifecycle sufficiency not independently accepted; frozen old public-access wording is stale.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M04"
+    },
+    {
+      "check_id": "FA-064",
+      "clause": "004.1 / \u00a73.7.1 / FA-M04 same-contract causal control and omission rationale",
+      "status": "not_checked",
+      "reason": "No independently audited control isolates this modification; absence limits causal attribution rather than implying no effect.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/model_changes.json#modifications modification_id=FA-M04"
+    },
+    {
+      "check_id": "FA-066",
+      "clause": "004 / extra software/packing/preprocessing cost attribution",
+      "status": "not_checked",
+      "reason": "No per-operation boundary audit here proves all extra transformation/packing costs included or explicitly excluded.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/manifest.json#existing dependency/config metadata"
+    },
+    {
+      "check_id": "FA-067",
+      "clause": "004 / frequency/peak/capacity/bandwidth denominator scopes",
+      "status": "not_checked",
+      "reason": "Cycles require no frequency conversion, but all stated hardware budgets/peak denominators not independently recomputed.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/manifest.json#existing dependency/config metadata"
+    },
+    {
+      "check_id": "FA-068",
+      "clause": "004 / effective configuration export vs reconstructed snapshot provenance",
+      "status": "not_checked",
+      "reason": "22 native config hashes are preserved; all effective defaults/CLI/env ordering and historical applied-value proof not newly audited.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/manifest.json#existing dependency/config metadata"
+    },
+    {
+      "check_id": "FA-069",
+      "clause": "011 / \u00a73.12 / target math/numerical semantics edge cases",
+      "status": "not_checked",
+      "reason": "Existing algorithm/assumption record not audited for rounding,NaN/Inf/zero,accumulation/normalization details.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)"
+    },
+    {
+      "check_id": "FA-070",
+      "clause": "011 / \u00a73.12 / assumption IDs/correctness-premise evidence",
+      "status": "not_checked",
+      "reason": "Per-assumption IDs and support exist in old file but all correctness premises and enforcement not individually accepted.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)"
+    },
+    {
+      "check_id": "FA-071",
+      "clause": "011 / \u00a73.12 / storage/alias/padding/coverage assumptions",
+      "status": "not_checked",
+      "reason": "No new per-case alias/alignment/packing/overwrite or out-of-bounds contract verification.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)"
+    },
+    {
+      "check_id": "FA-072",
+      "clause": "011 / \u00a73.12 / PE mapping/synchronization/producer ordering",
+      "status": "not_checked",
+      "reason": "No new synchronization and cross-core producer-consumer contract validation.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)"
+    },
+    {
+      "check_id": "FA-073",
+      "clause": "011 / \u00a73.12 / reuse/capacity/lifetimes and double-buffer constraints",
+      "status": "not_checked",
+      "reason": "No proof from logical reuse to physical read/capacity behavior supplied by this metadata-only task.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)"
+    },
+    {
+      "check_id": "FA-074",
+      "clause": "011 / \u00a73.12 / optimization conditions vs unverified hypotheses",
+      "status": "not_checked",
+      "reason": "Old assumptions retained but each performance hypothesis and violation behavior not independently traced.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)"
+    },
+    {
+      "check_id": "FA-075",
+      "clause": "011 / \u00a73.12 / violated-premise behavior/support/reject/fallback",
+      "status": "not_checked",
+      "reason": "No new execution demonstrates rejection/fallback/out-of-scope behavior for every assumption.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "previous_archive/algorithm_assumptions.json#assumptions (not individually accepted)"
+    },
+    {
+      "check_id": "FA-076",
+      "clause": "009/6.3 / owner/reviewer and immutable supersedes identity",
+      "status": "not_checked",
+      "reason": "New payload revision IDs exist; final metadata commit/source/archive ownership and cross-repo handoff identity pending parent.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "No actual evidence inspected for this independent requirement"
+    },
+    {
+      "check_id": "FA-077",
+      "clause": "009/6.3 / close prerequisites source/staged/untracked protection",
+      "status": "not_checked",
+      "reason": "Parent owns active publication state; this author did not inspect all source/staged/untracked protection.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "No actual evidence inspected for this independent requirement"
+    },
+    {
+      "check_id": "FA-078",
+      "clause": "009/6.3 / no active processes/config/cwd/replay dependencies before close",
+      "status": "not_checked",
+      "reason": "No environment removed by this subtask; parent must inspect active process/dependency state before closing.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "No actual evidence inspected for this independent requirement"
+    },
+    {
+      "check_id": "FA-079",
+      "clause": "009/6.3 / registry actual worktree reconciliation and restore command",
+      "status": "not_checked",
+      "reason": "Parent final lifecycle closure/registry/restore evidence not available at this snapshot.",
+      "impact": "Limits the stated operation/claim; does not invalidate identity-bound historical timing or new independent8K timing",
+      "owner": "Archive maintainer for records; numerical/model owner unassigned for scientific fixes",
+      "next_action": "Before expanding acceptance, perform the exact missing check described in this row and attach actual identity-bound evidence; available recovery/run commands are in the linked capability. Existing diagnostic scope remains allowed.",
+      "evidence": "No actual evidence inspected for this independent requirement"
+    }
+  ]
+}

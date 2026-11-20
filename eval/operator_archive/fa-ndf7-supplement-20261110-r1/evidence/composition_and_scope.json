@@ -1,0 +1,108 @@
+{
+  "task_id": "fa-ndf7-supplement-20261110",
+  "modifications": [
+    {
+      "id": "FA-M01",
+      "classification": "functional and timing implementation fix",
+      "purpose": "Raw TPACK and Local assemble parent lifecycle",
+      "source_commit": "dd86f8a20b9161bdb1f836dc234c86d187d561e4",
+      "upstream_issue": 1010,
+      "upstream_pr": 1057,
+      "enabled": "compiled into the fixed runtime; no separate per-case switch",
+      "performance_causal_control": "not_checked; no clean-main same-ELF/config A/B"
+    },
+    {
+      "id": "FA-M02",
+      "classification": "resource lifetime correctness fix",
+      "purpose": "Drain reclaimable retired vtag prefix",
+      "source_commit": "ec578433e46cdd49c4a6c8c0ae9d39a546ecd409",
+      "upstream_issue": 1053,
+      "upstream_pr": 1054,
+      "enabled": "compiled into fixed runtime; no capacity increase",
+      "performance_causal_control": "not_checked; avoiding rename assertion does not alone prove end-to-end gain"
+    },
+    {
+      "id": "FA-M03",
+      "classification": "host trace observability and memory mechanism",
+      "purpose": "Stream complete trace JSON without constructing whole output DOM",
+      "source_commit": "89b2366ea704fd75fd702440496439dadf5496be",
+      "upstream_issue": null,
+      "upstream_pr": null,
+      "enabled": "compiled trace writer; --swimlane1/--swimfile used by runner",
+      "performance_causal_control": "No simulated-cycle improvement claimed; full traces checked separately"
+    },
+    {
+      "id": "FA-M04",
+      "classification": "TileOP API emission interface change",
+      "purpose": "TPACK parent lifecycle/subview emission",
+      "base_commit": "ecae381331e2dd4ef13270df5518ca9ebda19ef4",
+      "transplanted_change_commit": "8f43777b020bc6e8114ad70f35c2751deddc0ab9",
+      "enabled": "shipped frozen API overlay used by actual four operator builds",
+      "performance_causal_control": "Separate API claim; historical ISA contract not established"
+    }
+  ],
+  "cases": [
+    {
+      "id": "fa-8k-algod-21488-portable-r1",
+      "elf_sha256": "d1a5003b5293c2d47a27fd73c828c6fcebbeeb2387b138d5d3e11a64454ae0e5",
+      "enabled_modification_ids": [
+        "FA-M01",
+        "FA-M02",
+        "FA-M03",
+        "FA-M04"
+      ],
+      "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+      "configuration_identity": "All22 exact native files in operator manifest.json#configs_sha256",
+      "input": "static zero timing buffers; distinct hosted numerical ELF not accepted"
+    },
+    {
+      "id": "fa-8k-scoped-d2-20519-portable-r1",
+      "elf_sha256": "82d046203473b4289593e780a634448595a76cd614441beb00b412693886fba3",
+      "enabled_modification_ids": [
+        "FA-M01",
+        "FA-M02",
+        "FA-M03",
+        "FA-M04"
+      ],
+      "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+      "configuration_identity": "All22 exact native files in operator manifest.json#configs_sha256",
+      "input": "static zero timing buffers; distinct hosted numerical ELF not accepted"
+    },
+    {
+      "id": "fa-64k-algod-155269-portable-r1",
+      "elf_sha256": "9fc11122bad3927226c17022658ff09c99f05fae71515e7b56c0fe5c337c9c11",
+      "enabled_modification_ids": [
+        "FA-M01",
+        "FA-M02",
+        "FA-M03",
+        "FA-M04"
+      ],
+      "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+      "configuration_identity": "All22 exact native files in operator manifest.json#configs_sha256",
+      "input": "static zero timing buffers; distinct hosted numerical ELF not accepted"
+    },
+    {
+      "id": "fa-64k-unscoped-d2-258099-portable-r2",
+      "elf_sha256": "3dba89659bdea3cbe6857ca05b54b57b54a4ac8cd245f7ba023b29a1adec2d1f",
+      "enabled_modification_ids": [
+        "FA-M01",
+        "FA-M02",
+        "FA-M03",
+        "FA-M04"
+      ],
+      "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+      "configuration_identity": "All22 exact native files in operator manifest.json#configs_sha256",
+      "input": "static zero timing buffers; distinct hosted numerical ELF not accepted"
+    }
+  ],
+  "default_environment": "No shared model/compiler defaults changed; runtime is a fixed archival dependency, not current mainline",
+  "recovery": "Fixed repository base plus source/portable-model.patch and all7postimage guards; a new binary requires independent four-case qualification",
+  "removal_or_revert": "Do not surgically edit the archived runtime. Build a separately identified source variant with documented contract; recovery of prior bytes via immutable r1/r2 assets. Per-mechanism rollback and side-effect verification remain not_checked.",
+  "long_term_owner": "unassigned; source commit/issue/PR owners are provenance, not inferred current maintenance commitments",
+  "limits": [
+    "No hardware capacity/bandwidth/idealization knob newly introduced by this supplement",
+    "Full effective model defaults are not exported completely",
+    "Historical issue fixes are not independent complete FA numerical acceptance",
+    "No clean-mainline performance value or per-fix causal gain fabricated"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "scope": "Four actual final builds with bundled API/resource/harness/sysroot; pinned locally supplied compiler; same ELF bytes as historical; qualification execution separate",
+  "cases": [
+    {
+      "case": "fa-8k-algod-21488",
+      "receipt": "builds/fa-8k-algod-21488-final/build_result.json",
+      "elf_sha256": "d1a5003b5293c2d47a27fd73c828c6fcebbeeb2387b138d5d3e11a64454ae0e5",
+      "diss_sha256": "d889f40c2bca2f5b121fb1450bfb72ea48fb3fce1966c3c75d4e609ad93f0190",
+      "byte_equal": true
+    },
+    {
+      "case": "fa-8k-scoped-d2-20519",
+      "receipt": "builds/fa-8k-scoped-d2-20519-final/build_result.json",
+      "elf_sha256": "82d046203473b4289593e780a634448595a76cd614441beb00b412693886fba3",
+      "diss_sha256": "fd210a850bc7fe3a05d4e1314b3d23190addb9c97968c454ec905eb26970721d",
+      "byte_equal": true
+    },
+    {
+      "case": "fa-64k-algod-155269",
+      "receipt": "builds/fa-64k-algod-155269/build_result.json",
+      "elf_sha256": "9fc11122bad3927226c17022658ff09c99f05fae71515e7b56c0fe5c337c9c11",
+      "diss_sha256": "07aa03d20c33a17e26a920cf59626d918ce2bfd3b45311d8560a25a63ecb62de",
+      "byte_equal": true
+    },
+    {
+      "case": "fa-64k-unscoped-d2-258099",
+      "receipt": "builds/fa-64k-unscoped-d2-258099-final/build_result.json",
+      "elf_sha256": "3dba89659bdea3cbe6857ca05b54b57b54a4ac8cd245f7ba023b29a1adec2d1f",
+      "diss_sha256": "2f9ab2d053de9a63e2dd04de5d829c84ad1ec986ab65312366270dcc9bad3c3c",
+      "byte_equal": true
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "scope": "Historical process observations only; new downloaded portable timing receipts are separately recorded in results.json and evidence/. Intermediate historical stages were not rerun.",
+  "all_timing_input": "zero_input",
+  "status": "diagnostic",
+  "stages": [
+    {
+      "stage": "8k_original",
+      "total_cycles": 21488,
+      "variant": "AlgoD",
+      "comparison_cycles": null,
+      "relative_change_pct": null,
+      "causal_limit": "Frozen 8K control.",
+      "evidence": "Historical r2 result/evidence where indexed; intermediate context in model_changes.md sources.",
+      "portable_result": false
+    },
+    {
+      "stage": "8k_early_packed",
+      "total_cycles": 20598,
+      "variant": "early packed D2",
+      "comparison_cycles": 21488,
+      "relative_change_pct": -4.14185,
+      "causal_limit": "Historical intermediate observation; not a final scoped or new portable result.",
+      "evidence": "Historical r2 result/evidence where indexed; intermediate context in model_changes.md sources.",
+      "portable_result": false
+    },
+    {
+      "stage": "8k_scoped",
+      "total_cycles": 20519,
+      "variant": "pair-local scoped D2",
+      "comparison_cycles": 20598,
+      "relative_change_pct": -0.38353,
+      "causal_limit": "Relative to AlgoD delta also moves V after softmax; not rowsum-only.",
+      "evidence": "Historical r2 result/evidence where indexed; intermediate context in model_changes.md sources.",
+      "portable_result": false
+    },
+    {
+      "stage": "8k_loadV_diagnostic",
+      "total_cycles": 22271,
+      "variant": "AlgoD V-load moved",
+      "comparison_cycles": 21488,
+      "relative_change_pct": 3.64389,
+      "causal_limit": "Separate failed scheduling attempt, +3.64%; not the final D2 comparison.",
+      "evidence": "Historical r2 result/evidence where indexed; intermediate context in model_changes.md sources.",
+      "portable_result": false
+    },
+    {
+      "stage": "64k_original",
+      "total_cycles": 155269,
+      "variant": "AlgoD",
+      "comparison_cycles": null,
+      "relative_change_pct": null,
+      "causal_limit": "Different shape from8K.",
+      "evidence": "Historical r2 result/evidence where indexed; intermediate context in model_changes.md sources.",
+      "portable_result": false
+    },
+    {
+      "stage": "64k_unscoped",
+      "total_cycles": 258099,
+      "variant": "early unscoped packed D2",
+      "comparison_cycles": 155269,
+      "relative_change_pct": 66.227,
+      "causal_limit": "Regression pertains to early unscoped source; final scoped64K unmeasured.",
+      "evidence": "Historical r2 result/evidence where indexed; intermediate context in model_changes.md sources.",
+      "portable_result": false
+    }
+  ],
+  "same_elf_clean_main_control": "missing",
+  "causality": "No cross-shape/config/runtime chaining into an accepted single-kernel speedup."
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "case": "fa-64k-algod-155269-portable-r1",
+    "scope": "Offline counter stripping/compression only; not a new gfsim run",
+    "source_full_raw_sha256": "3cba371e05c0577e4f75c152398cb91a777bf3e59b181a635598204cc933beff",
+    "source_full_raw_bytes": 859090794,
+    "full_events": 4981223,
+    "kept_nocounters_events": 1716161,
+    "new_nocounters_raw_sha256": "00475549d76ab002a0a5c8b56402061127a7aa4d8a887a05785e190675f697db",
+    "new_nocounters_raw_bytes": 545658864,
+    "historical_nocounters_bytes_equal_by_size_sha256": true,
+    "helper_sha256": "30fe0b0f23a9f1fc4274b8e59b4143d2ae11bdb7814675f0e6f39bb50ddb00fd",
+    "elapsed_seconds": 80.8046737536788
+  },
+  {
+    "case": "fa-64k-unscoped-d2-258099-portable-r2",
+    "scope": "Offline counter stripping/compression only; not a new gfsim run",
+    "source_full_raw_sha256": "79c5708ae29d3a7e519a3839fcfa28c26028cdcc5f1f4daafdf86ad013a9cafd",
+    "source_full_raw_bytes": 1020145527,
+    "full_events": 6570638,
+    "kept_nocounters_events": 1883200,
+    "new_nocounters_raw_sha256": "3ea1f53c8c07485ddc9962d3aeac93646c1f24084cc9ba04f1166099033cc115",
+    "new_nocounters_raw_bytes": 566508018,
+    "historical_nocounters_bytes_equal_by_size_sha256": true,
+    "helper_sha256": "30fe0b0f23a9f1fc4274b8e59b4143d2ae11bdb7814675f0e6f39bb50ddb00fd",
+    "elapsed_seconds": 91.17656878009439
+  }
+]

@@ -1,0 +1,49 @@
+{
+  "scope": "Old four actual shared runs bound to unchanged current ELF/runtime/config bytes; only one new runner case independently executed. This is not four new runs or causal model comparison.",
+  "cases": [
+    {
+      "case": "fa-8k-algod-21488-portable-r1",
+      "historical_shared_returncode": 0,
+      "historical_shared_cycles": 21488,
+      "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+      "elf_sha256": "d1a5003b5293c2d47a27fd73c828c6fcebbeeb2387b138d5d3e11a64454ae0e5",
+      "current_downloaded_elf_bytes_equal": true,
+      "all_22_config_identities_equal": true,
+      "new_runner_actual_execution": "not_repeated; prior shared execution retained",
+      "previous_receipt": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_replay/fa-8k-algod-21488-portable-r1/replay_result.json"
+    },
+    {
+      "case": "fa-8k-scoped-d2-20519-portable-r1",
+      "historical_shared_returncode": 0,
+      "historical_shared_cycles": 20519,
+      "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+      "elf_sha256": "82d046203473b4289593e780a634448595a76cd614441beb00b412693886fba3",
+      "current_downloaded_elf_bytes_equal": true,
+      "all_22_config_identities_equal": true,
+      "new_runner_actual_execution": "independent20519 pass",
+      "previous_receipt": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_replay/fa-8k-scoped-d2-20519-portable-r1/replay_result.json"
+    },
+    {
+      "case": "fa-64k-algod-155269-portable-r1",
+      "historical_shared_returncode": 0,
+      "historical_shared_cycles": 155269,
+      "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+      "elf_sha256": "9fc11122bad3927226c17022658ff09c99f05fae71515e7b56c0fe5c337c9c11",
+      "current_downloaded_elf_bytes_equal": true,
+      "all_22_config_identities_equal": true,
+      "new_runner_actual_execution": "not_repeated; prior shared execution retained",
+      "previous_receipt": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_replay/fa-64k-algod-155269-portable-r1/replay_result.json"
+    },
+    {
+      "case": "fa-64k-unscoped-d2-258099-portable-r2",
+      "historical_shared_returncode": 0,
+      "historical_shared_cycles": 258099,
+      "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+      "elf_sha256": "3dba89659bdea3cbe6857ca05b54b57b54a4ac8cd245f7ba023b29a1adec2d1f",
+      "current_downloaded_elf_bytes_equal": true,
+      "all_22_config_identities_equal": true,
+      "new_runner_actual_execution": "not_repeated; prior shared execution retained",
+      "previous_receipt": "perf_analysis/work_archive_20261109/fa_fag_release_20261109/fa/shared_replay/fa-64k-unscoped-d2-258099-portable-r2/replay_result.json"
+    }
+  ]
+}

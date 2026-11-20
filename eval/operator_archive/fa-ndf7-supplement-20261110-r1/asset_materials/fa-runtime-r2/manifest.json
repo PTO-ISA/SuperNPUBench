@@ -1,0 +1,264 @@
+{
+  "kind": "model_runtime",
+  "historical_runtime_sha256": "938fc03780f38bee1aa012caa6b7fc53b2acfb6f504a2ef647a422a1f0304544",
+  "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+  "source_head": "89b2366ea704fd75fd702440496439dadf5496be",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 2447,
+      "sha256": "969fcafc420ebd857183c8ded2083c7a41366c33a1875052e993f2e40aaf415f"
+    },
+    {
+      "path": "bin/gfsim",
+      "bytes": 16393432,
+      "sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a"
+    },
+    {
+      "path": "build_identity.json",
+      "bytes": 391,
+      "sha256": "bb0b852d5b37c1cc666ce5e33af1898ffc534166fc642e2e95ee75761f005525"
+    },
+    {
+      "path": "configs/DFX.toml",
+      "bytes": 2489,
+      "sha256": "753d3ce79a211aebbddbe073a3023969176abc9d99675d8d0076d45fed541230"
+    },
+    {
+      "path": "configs/SoftCore.toml",
+      "bytes": 1167,
+      "sha256": "5d1e1006f00ec69ddf3f99649b8ab8a8b998313625b4cb0fae6cd6c114d41b60"
+    },
+    {
+      "path": "configs/Trace.toml",
+      "bytes": 141,
+      "sha256": "f917fb6fbc6a2fa1f32184f839f5d076b1b5a29fb123cfca57fc5d736a07fd24"
+    },
+    {
+      "path": "configs/bctrl.toml",
+      "bytes": 5069,
+      "sha256": "4c482e3826b38737cd2e6c9666c87b2bb096632203b62f3fbbec23758f4bc618"
+    },
+    {
+      "path": "configs/bfu.toml",
+      "bytes": 2039,
+      "sha256": "8c4efce703f945faef419cb11a88b4eb26b149d05602542aa0672f620927b106"
+    },
+    {
+      "path": "configs/cell.toml",
+      "bytes": 2898,
+      "sha256": "ba1335ffcf202c755627b24de0b947e895e839e50e3637bf3a4e7c5fa6315785"
+    },
+    {
+      "path": "configs/core.toml",
+      "bytes": 7432,
+      "sha256": "76dad3b3f355fb3a179cd0502802c3b27053c91f9dc6fc048edadbaab38727d1"
+    },
+    {
+      "path": "configs/cube.toml",
+      "bytes": 6097,
+      "sha256": "51037cefb5aa9b53685c440e951f96c4c40fc10d8d45351e6c7d2701f43e870f"
+    },
+    {
+      "path": "configs/fourpe.toml",
+      "bytes": 2084,
+      "sha256": "85fee34d63a047dfdff41b33fc88fbfe65e4e88a5ac21470d5e5fc74ce9bfbd9"
+    },
+    {
+      "path": "configs/group.toml",
+      "bytes": 4988,
+      "sha256": "4f484307a64542d407c8e50b817707597a6acdea2a539c7c126ae60f4946f879"
+    },
+    {
+      "path": "configs/iex.toml",
+      "bytes": 2737,
+      "sha256": "1fd0b9fcd08cdafdf4278fe5e19a8b58fe4759075b4a456080dd86f35a49856b"
+    },
+    {
+      "path": "configs/ifu.toml",
+      "bytes": 1621,
+      "sha256": "88d9b69cb0dbe99310fc2db1aee3a2abdd35d557c9b288ac97efe56db797b486"
+    },
+    {
+      "path": "configs/l1.toml",
+      "bytes": 472,
+      "sha256": "e2d472d9610fb73b1f24456228f0b51ab4ea8d05a1811def5423404b1696e11c"
+    },
+    {
+      "path": "configs/l2.toml",
+      "bytes": 1403,
+      "sha256": "60b366196656e1f730aabd50663b438de2c56fea64b1208ad5611d039964a351"
+    },
+    {
+      "path": "configs/lsu.toml",
+      "bytes": 1561,
+      "sha256": "d18b1ff0558bcfbbc28b7f58c61b75e139472a188081a8a52f23d4907c5c1d93"
+    },
+    {
+      "path": "configs/perf.conf",
+      "bytes": 1563,
+      "sha256": "089b75ed84c673c3b3972613b16eb942ddb7b2c1ecce9424564327009737f507"
+    },
+    {
+      "path": "configs/sl2.toml",
+      "bytes": 5176,
+      "sha256": "a0f8a6504a81d4541ff70525be4fe485ab47022a68a50c7ae672abc63063bbc1"
+    },
+    {
+      "path": "configs/spe.toml",
+      "bytes": 334,
+      "sha256": "4b374e6a4a5f11b0f84cf771d344481826da1650431e9f8916697d99437eb968"
+    },
+    {
+      "path": "configs/superScalar.toml",
+      "bytes": 320,
+      "sha256": "fab07018760fb3e9baee641bb585f942d3b4bcbdea3c0e13a3efa9538ed386c6"
+    },
+    {
+      "path": "configs/tilelsu.toml",
+      "bytes": 2905,
+      "sha256": "6a580d5a3f5b03971e65a13b37c4cf43c5f479e4aa6fd07fb4f3a337d1ab3695"
+    },
+    {
+      "path": "configs/tlsu.toml",
+      "bytes": 6458,
+      "sha256": "26582bb2b29354e17a0a54410fa1351e55f6ef4ee8eb19b7994d9f323ea0f66e"
+    },
+    {
+      "path": "configs/vec.toml",
+      "bytes": 3817,
+      "sha256": "645c5d90defebeb363fd9f667bd784a7c2b42a8f056f8330f42bbe894743bea4"
+    },
+    {
+      "path": "host_requirements.json",
+      "bytes": 2356,
+      "sha256": "5a522c7d1d37232ff80b07d795c57709eee8d5a0c19fb0565c4e831eb1acb61e"
+    },
+    {
+      "path": "lib/ld-linux-x86-64.so.2",
+      "bytes": 240936,
+      "sha256": "41daf7836f7fce21a40ca63a00c5caf21b05a35a76ccc075d86f1716212cdf01"
+    },
+    {
+      "path": "lib/libc.so.6",
+      "bytes": 2220400,
+      "sha256": "b2cf6c33b74d2f22543b7a469a75b538911e690f769d0b238843a49465b83793"
+    },
+    {
+      "path": "lib/libelf.so.1",
+      "bytes": 117400,
+      "sha256": "89a10cfe5c07353235f80dbff50f4602b89811bed7b19621c3a4023157eb1c85"
+    },
+    {
+      "path": "lib/libgcc_s.so.1",
+      "bytes": 125488,
+      "sha256": "fc9d43b2f6c20e53b009238f767c5b949d202389e20de9e202ea684b4ba3729a"
+    },
+    {
+      "path": "lib/libm.so.6",
+      "bytes": 940560,
+      "sha256": "3dd5511ae94785c9f921429b0f2b2f7aabb461b6f0e6de6dfdbef15f24bdfee6"
+    },
+    {
+      "path": "lib/libstdc++.so.6",
+      "bytes": 2260296,
+      "sha256": "ff0825e113603c3866680d5d52216bc6d8eedf3a59f52a0aef67ff01994db128"
+    },
+    {
+      "path": "lib/libz.so.1",
+      "bytes": 108936,
+      "sha256": "64c206f0146cc58bbddc4f22054436f4ff278f5a554aa3ce6921ddf7e9133370"
+    },
+    {
+      "path": "model_changes.md",
+      "bytes": 2584,
+      "sha256": "9b013f673dad8a39b2fa769dedb534ceeb1875bf24c511fd95a95620c191e972"
+    },
+    {
+      "path": "notices/inventory.json",
+      "bytes": 401,
+      "sha256": "42ca6f3c851bca15a6b4d70dc664524d4f72317a7f833c3c0241676259676d38"
+    },
+    {
+      "path": "notices/libc6-copyright",
+      "bytes": 26462,
+      "sha256": "d3c95b56fa33e28b57860580f0baf4e4f4de2a268a2b80f1d031a5191bade265"
+    },
+    {
+      "path": "notices/libelf1-copyright",
+      "bytes": 2602,
+      "sha256": "3094413c0f7d7db1bfd7aab16a086a209eb3c9c0e4b785218f58dc16e025cbd0"
+    },
+    {
+      "path": "notices/libgcc-s1-copyright",
+      "bytes": 68194,
+      "sha256": "da8191658b3452ce9caf31638ba61dab31a38c619fa39df119812e050f592fd3"
+    },
+    {
+      "path": "notices/libstdc++6-copyright",
+      "bytes": 68194,
+      "sha256": "da8191658b3452ce9caf31638ba61dab31a38c619fa39df119812e050f592fd3"
+    },
+    {
+      "path": "notices/rapidjson-LICENSE",
+      "bytes": 5091,
+      "sha256": "5f70c6459878715202ea3d78243fbcd02aca3bd64cedfb3c75bfbc4e293cf70e"
+    },
+    {
+      "path": "notices/zlib1g-copyright",
+      "bytes": 2920,
+      "sha256": "d77204eee882807240f6351c4f5ae2a4bcdb5b773ff77d10647b9b66b826b2fb"
+    },
+    {
+      "path": "qualify_rebuilt.py",
+      "bytes": 2377,
+      "sha256": "4952af335302e086647ffd66e5d87315795914eec1faa8d93f895a87b77c6c28"
+    },
+    {
+      "path": "rebuild_model.py",
+      "bytes": 6095,
+      "sha256": "174c04adfb91956de22e3efc5874995b4735c51a57fb0384c4136c538ff8598e"
+    },
+    {
+      "path": "run_model.py",
+      "bytes": 442,
+      "sha256": "44a43a2b6f69c52bb06c665fe9e147c175e31cdf914c0ae78100c118cdb31b62"
+    },
+    {
+      "path": "source/portable-model.patch",
+      "bytes": 19409,
+      "sha256": "5175abc99863b2b4d048fb94c69233a49c4e15d2799c4d2eb11906fdc6217519"
+    },
+    {
+      "path": "source/postimages.json",
+      "bytes": 961,
+      "sha256": "f242bd172309f8c6b3a32aa198b7962431eda490ff79369556013498c71fb7de"
+    },
+    {
+      "path": "source/recovery.json",
+      "bytes": 1216,
+      "sha256": "2c73c4f0e4fda1ad55c3a5150766d104155948a424e7f90655b6af3d9361aeec"
+    },
+    {
+      "path": "source_compile_flags.json",
+      "bytes": 339,
+      "sha256": "eb7ea4e32c8a9c7284bc12b5ffce2f92a284111e21004753cd104fface549b7e"
+    },
+    {
+      "path": "verify.py",
+      "bytes": 3112,
+      "sha256": "42713bd541a65c8a8da57d1cd320088b1df5c0437d912d8ec406ef5c477bf278"
+    }
+  ],
+  "published_source_identity": {
+    "public_base": "dd86f8a20b9161bdb1f836dc234c86d187d561e4",
+    "patch_sha256": "5175abc99863b2b4d048fb94c69233a49c4e15d2799c4d2eb11906fdc6217519",
+    "recovered_tree": "424a94d7c5ae79f4584234298b99a65df8d4f1fb"
+  },
+  "historical_source_identity": {
+    "head": "89b2366ea704fd75fd702440496439dadf5496be",
+    "tree": "424a94d7c5ae79f4584234298b99a65df8d4f1fb"
+  },
+  "revision": "r2-guard-overlay-r1",
+  "archive_spec_version": "v1.0-draft.7"
+}

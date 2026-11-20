@@ -1,0 +1,96 @@
+{
+  "archive_spec_version": "v1.0-draft.6",
+  "operator": "FA",
+  "task_id": "fa-work-archive-20261109",
+  "archive_revision": 3,
+  "target_path": "archives/ndf-fa-20261109-r3",
+  "archive_status": "incomplete",
+  "work_status": "archived",
+  "review_level": "run_reproduced",
+  "index_state": "published_download_verified",
+  "owner": "release_preparer/main_agent; long-term maintainer pending",
+  "reviewer": {
+    "name": "Codex parent",
+    "evidence": "evidence/parent_actual_review.json",
+    "scope": "Same-team actual delivery review; no independent second-person numerical or S acceptance"
+  },
+  "profiles": [
+    "P",
+    "S_pending"
+  ],
+  "historical_r2": {
+    "commit": "b28d6865a84c91b650eee779e4bf5280381a1d65",
+    "path": "archives/ndf-fa-20261109-r2",
+    "preservation": "All r2 files/bytes stay unchanged; r3 is additive.",
+    "url": "https://github.com/LinxISA/SuperScalarModel/tree/b28d6865a84c91b650eee779e4bf5280381a1d65/archives/ndf-fa-20261109-r2/"
+  },
+  "operator_source_archive": {
+    "repository": "https://github.com/PTO-ISA/SuperNPUBench",
+    "pr": 284,
+    "commit": "2ba5b96feffdf0786675f3bf4b13d173ea981005",
+    "historical_build_commit": "unknown; archive commit is not build identity",
+    "dirty_state": "unknown where original build evidence lacks it",
+    "source_snapshot_commit": "e01c0d4bef6e6503c90df80a70d2a7d6bf0ca9d0",
+    "archive_metadata_commit": "2ba5b96feffdf0786675f3bf4b13d173ea981005",
+    "path": "eval/operator_archive/fa-scoped-packed-rowsum-20261109",
+    "url": "https://github.com/PTO-ISA/SuperNPUBench/tree/2ba5b96feffdf0786675f3bf4b13d173ea981005/eval/operator_archive/fa-scoped-packed-rowsum-20261109"
+  },
+  "new_result_id_rule": "Historical result id + -portable-r1 for the first three successes; fourth success uses -portable-r2 after an immutable host-limit-only operator revision. Failed fourth r1 evidence remains separate.",
+  "release_tag": "work-archive-fa-20261109",
+  "dependencies": "release_assets.json",
+  "assumptions": "algorithm_assumptions.json",
+  "model_changes": "model_changes.md",
+  "performance_history": "performance_history.json",
+  "ndf_review": "ndf_clause_review.json",
+  "handoff": "handoff.md",
+  "gaps": "gaps.json",
+  "files_checksums": "checksums.json",
+  "new_simulations_by_metadata_preparer": false,
+  "new_builds_by_metadata_preparer": false,
+  "runtime_reproduction_claim": true,
+  "metadata_integrity_only": false,
+  "created_at": "2026-11-09",
+  "model_changes_structured": "model_changes.json",
+  "build_source_snapshot": "dependency/build_identity.json",
+  "build_toolchain": "dependency/model_build_toolchain.json",
+  "source_recovery": "dependency/public_source_recovery.json",
+  "payload_path_review": "dependency/payload_path_review.json",
+  "verification": {
+    "source_recovery": {
+      "status": "exact_tree_match",
+      "evidence": "dependency/public_source_recovery.json"
+    },
+    "model_build": {
+      "status": "build_reproduced",
+      "scope": "actual source-derived model runtime with277 C/C++ commands checked; operator build not performed",
+      "evidence": "dependency/build_identity.json"
+    },
+    "path_portability": {
+      "status": "pass_with_reviewed_license_URL_findings",
+      "evidence": "dependency/payload_path_review.json",
+      "relocated_replay": "evidence/download_verification.json"
+    },
+    "operator_build": {
+      "status": "not_performed",
+      "scope": "unchanged historical ELF/diss; compiler/API/ISA reconstruction incomplete"
+    },
+    "shared_asset_replay": {
+      "status": "actual_four_case_zero_input_timing",
+      "case_count": 4,
+      "evidence": "evidence/download_verification.json"
+    },
+    "local_replay": {
+      "status": "run_reproduced",
+      "scope": "4/4 actual downloaded cases reproduced rc0 and historical cycles; zero-input timing only."
+    }
+  },
+  "archive_spec_sha256": "f98af4784c745173c74a9994fd25c428ff6eed5384b8659b5f0ef3006fe77dc2",
+  "environment_closure": {
+    "status": "closed_recoverable",
+    "evidence": "dependency/build_closure.json",
+    "scope": "task-only source export/build cache closed; historical runtime/source unchanged; fixed runtime retained"
+  },
+  "new_replay_simulations_in_delivery": true,
+  "delivery_simulation_scope": "Actual downloaded timing replays and separately retained failed r1 fourth case; metadata generation itself never executes simulator",
+  "snapshot_interpretation": "dependency/build_identity.json is an immutable build-time snapshot; later runtime replay is recorded by results.json and evidence/download_verification.json. Original r1 payload identity records are provenance; current operator revision is pinned by release_assets.json and actual extracted audit."
+}

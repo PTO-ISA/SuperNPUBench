@@ -1,0 +1,22 @@
+{
+  "reason": "Verified network downloads retained; no script/report runtime dependency on prepared duplicate archives or one completed range fragment",
+  "removed_duplicates": [
+    {
+      "removed_duplicate": "assets/fa-operator-r3-ndf7-20261110.tar.gz",
+      "retained_download": "downloaded/fa-operator-r3-ndf7-20261110.tar.gz",
+      "sha256": "0b9a63e6ccbab2c7e2b5bc4f3e02fd844ea4eac2e706bd4d63d865be4263791d",
+      "bytes": 6166138
+    },
+    {
+      "removed_duplicate": "assets/fa-runtime-r2-ndf7-20261110.tar.gz",
+      "retained_download": "downloaded/fa-runtime-r2-ndf7-20261110.tar.gz",
+      "sha256": "13a42198a78c28623dcac5d08870393b004a91456b83d7c04338d401edd3985c",
+      "bytes": 8118855
+    }
+  ],
+  "receipt_path_compatibility": {
+    "alias": "downloaded/range-model-verified.tar.gz",
+    "canonical": "downloaded/fa-runtime-r2-ndf7-20261110.tar.gz",
+    "method": "regular-file hardlink; both original hash-review locator and canonical asset name retained; no extra file bytes"
+  }
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "name": "fa-operator-r3-ndf7-20261110.tar.gz",
+    "bytes": 6166138,
+    "sha256": "0b9a63e6ccbab2c7e2b5bc4f3e02fd844ea4eac2e706bd4d63d865be4263791d",
+    "repo": "PTO-ISA/SuperNPUBench",
+    "url": "https://github.com/PTO-ISA/SuperNPUBench/releases/download/work-archive-fa-20261109/fa-operator-r3-ndf7-20261110.tar.gz",
+    "asset_api_url": "https://api.github.com/repos/PTO-ISA/SuperNPUBench/releases/assets/730676487",
+    "download_verified": true,
+    "method": "Authenticated API range assembly; one stalled range re-fetched by unique query; all response ranges/size plus assembled SHA256 checked"
+  },
+  {
+    "name": "fa-runtime-r2-ndf7-20261110.tar.gz",
+    "bytes": 8118855,
+    "sha256": "13a42198a78c28623dcac5d08870393b004a91456b83d7c04338d401edd3985c",
+    "repo": "LinxISA/SuperScalarModel",
+    "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-ndf7-20261110.tar.gz",
+    "asset_api_url": "https://api.github.com/repos/LinxISA/SuperScalarModel/releases/assets/730677291",
+    "download_verified": true,
+    "method": "Authenticated API byte-range recovery; exact206 Content-Range/size checks; actual assembled archive SHA256 equals published identity"
+  },
+  {
+    "name": "fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+    "bytes": 7647,
+    "sha256": "211eb90bdc45ea8a814814be79b9db80beffdec2cde28ceda8a06605a075fa39",
+    "repo": "LinxISA/SuperScalarModel",
+    "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+    "mandatory_after": "fa-runtime-r2-ndf7-20261110.tar.gz",
+    "asset_api_url": "https://api.github.com/repos/LinxISA/SuperScalarModel/releases/assets/730701763",
+    "download_verified": true
+  }
+]

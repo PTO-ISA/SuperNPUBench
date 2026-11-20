@@ -1,0 +1,18 @@
+{
+  "scanner": "check_paths.py",
+  "files": 1418,
+  "returncode": 1,
+  "findings": [
+    {
+      "file": "payloads/fa-runtime-r2/notices/libgcc-s1-copyright",
+      "classification": "false_positive",
+      "reason": "Unmodified Unicode license contains an HTTP unicode.org/cldr/data/ URL, not a filesystem or personal path"
+    },
+    {
+      "file": "payloads/fa-runtime-r2/notices/libstdc++6-copyright",
+      "classification": "false_positive",
+      "reason": "Unmodified Unicode license contains an HTTP unicode.org/cldr/data/ URL, not a filesystem or personal path"
+    }
+  ],
+  "other_findings": 0
+}

@@ -1,0 +1,91 @@
+{
+  "scope": "Required assets are publicly published and their actual downloaded bytes were verified. 4/4 actual downloaded cases reproduced rc0 and historical cycles; zero-input timing only.",
+  "modifications": [
+    {
+      "modification_id": "FA-M01",
+      "kind": "correctness_fix",
+      "source_identity": "dd86f8a20b9161bdb1f836dc234c86d187d561e4",
+      "purpose": "raw TPACK and local assemble parent lifecycle",
+      "switch_and_default": "always present in frozen combined model",
+      "enabled_cases": "all FA archived cases",
+      "files": "TimingSim/pe/vec and frontend/bctrl/BIssue.cpp",
+      "validation_and_effect": "model_changes.md",
+      "side_effects_and_limits": "Specialized byte golden does not validate full FA.",
+      "upstream": [
+        "https://github.com/LinxISA/SuperScalarModel/issues/1010",
+        "https://github.com/LinxISA/SuperScalarModel/pull/1057"
+      ],
+      "state_snapshot": "issue_status.json",
+      "apply_restore": "Download/extract matching runtime Release asset from release_assets.json. Fetch public Model branch fix/gfsim-tpack-issue1010; then python3 <runtime>/rebuild_model.py --model-repo <clone-containing-dd86f8a20b9161bdb1f836dc234c86d187d561e4> --source-out <new-source> --build-out <new-build>. Recipe archives fixed public base and applies source/portable-model.patch once; resulting tree424a94d7c5ae79f4584234298b99a65df8d4f1fb. No compiler/toolchain is needed for prebuilt replay.",
+      "revert": "Use separately frozen control runtime/config; do not modify historical runtime in place.",
+      "alternative_and_removal_condition": "Retire local mechanism only after contract-matched upstream replacement, same-ELF control and acceptance evidence exist.",
+      "validity": "diagnostic"
+    },
+    {
+      "modification_id": "FA-M02",
+      "kind": "correctness_fix",
+      "source_identity": "ec578433e46cdd49c4a6c8c0ae9d39a546ecd409",
+      "purpose": "drain retired vtags",
+      "switch_and_default": "always present in frozen combined model",
+      "enabled_cases": "all FA archived cases",
+      "files": "TimingSim/frontend/bctrl/BIssue.cpp",
+      "validation_and_effect": "model_changes.md",
+      "side_effects_and_limits": "No capacity increase; 64K checkoff is not full numerical acceptance.",
+      "upstream": [
+        "https://github.com/LinxISA/SuperScalarModel/issues/1053",
+        "https://github.com/LinxISA/SuperScalarModel/pull/1054"
+      ],
+      "state_snapshot": "issue_status.json",
+      "apply_restore": "Download/extract matching runtime Release asset from release_assets.json. Fetch public Model branch fix/gfsim-tpack-issue1010; then python3 <runtime>/rebuild_model.py --model-repo <clone-containing-dd86f8a20b9161bdb1f836dc234c86d187d561e4> --source-out <new-source> --build-out <new-build>. Recipe archives fixed public base and applies source/portable-model.patch once; resulting tree424a94d7c5ae79f4584234298b99a65df8d4f1fb. No compiler/toolchain is needed for prebuilt replay.",
+      "revert": "Use separately frozen control runtime/config; do not modify historical runtime in place.",
+      "alternative_and_removal_condition": "Retire local mechanism only after contract-matched upstream replacement, same-ELF control and acceptance evidence exist.",
+      "validity": "diagnostic"
+    },
+    {
+      "modification_id": "FA-M03",
+      "kind": "performance_mechanism",
+      "source_identity": "89b2366ea704fd75fd702440496439dadf5496be",
+      "purpose": "stream complete trace JSON without aggregate DOM",
+      "switch_and_default": "always present in frozen trace-export model",
+      "enabled_cases": "all FA archived cases",
+      "files": "tools/trace_logger/TraceLogger.cpp; TimingSim/infra/SimSys.cpp",
+      "validation_and_effect": "model_changes.md",
+      "side_effects_and_limits": "Observability/host memory mechanism; not claimed simulated-cycle optimization.",
+      "upstream": "not_filed: no dedicated model issue identified; do not invent issue ownership",
+      "state_snapshot": "issue_status.json",
+      "apply_restore": "Download/extract matching runtime Release asset from release_assets.json. Fetch public Model branch fix/gfsim-tpack-issue1010; then python3 <runtime>/rebuild_model.py --model-repo <clone-containing-dd86f8a20b9161bdb1f836dc234c86d187d561e4> --source-out <new-source> --build-out <new-build>. Recipe archives fixed public base and applies source/portable-model.patch once; resulting tree424a94d7c5ae79f4584234298b99a65df8d4f1fb. No compiler/toolchain is needed for prebuilt replay.",
+      "revert": "Use separately frozen control runtime/config; do not modify historical runtime in place.",
+      "alternative_and_removal_condition": "Retire local mechanism only after contract-matched upstream replacement, same-ELF control and acceptance evidence exist.",
+      "validity": "diagnostic"
+    },
+    {
+      "modification_id": "FA-M04",
+      "kind": "correctness_fix",
+      "source_identity": "API ecae381331e2dd4ef13270df5518ca9ebda19ef4 +8f43777b020bc6e8114ad70f35c2751deddc0ab9 and preserved patch",
+      "purpose": "API TPACK emit parent lifetime/subview",
+      "switch_and_default": "matching archived patch only; never blindly apply to other API revision",
+      "enabled_cases": "FA scoped packed rowsum",
+      "files": "NPUBench dependencies/api_tpack_emit.patch",
+      "validation_and_effect": "model_changes.md",
+      "side_effects_and_limits": "API expressibility does not prove original ISA revision or complete lowering legality.",
+      "upstream": "not_filed: no dedicated model issue identified; do not invent issue ownership",
+      "state_snapshot": "issue_status.json",
+      "apply_restore": "Kernel/API snapshot references remain in immutable r2 and operator source_snapshot/source_manifest; no complete API/compiler rebuild acceptance. Prebuilt runtime recovery is dependency/public_source_recovery.json and runtime rebuild_model.py.",
+      "revert": "Use separately frozen control runtime/config; do not modify historical runtime in place.",
+      "alternative_and_removal_condition": "Retire local mechanism only after contract-matched upstream replacement, same-ELF control and acceptance evidence exist.",
+      "validity": "diagnostic"
+    }
+  ],
+  "excluded": [
+    {
+      "issues": [
+        957,
+        926,
+        979
+      ],
+      "reason": "Numerical background only; not a demonstrated cause or active added repair for full FA failure."
+    }
+  ],
+  "portable_source_recovery": "dependency/public_source_recovery.json",
+  "portable_build_identity": "dependency/build_identity.json"
+}

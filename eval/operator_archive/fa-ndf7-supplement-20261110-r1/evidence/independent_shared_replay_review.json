@@ -1,0 +1,91 @@
+{
+  "reviewer": "Codex independent RMSNorm sibling agent /root/ndf7_rmsnorm",
+  "date": "2026-11-10",
+  "status": "pass",
+  "scope": "Independent actual shared-asset ELF replay of one 8k-scoped static-zero timing case; no numerical validation, no model/operator build, no four-case or mainline A/B acceptance",
+  "case": "fa-8k-scoped-d2-20519-portable-r1",
+  "cwd": "../rmsnorm (unrelated task root)",
+  "command": [
+    "/usr/bin/python3",
+    "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/downloaded/extracted/fa-operator-r3/tools/run_swimlane.py",
+    "--gfsim",
+    "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/downloaded/extracted/fa-runtime-r2/run_model.py",
+    "--elf",
+    "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/downloaded/extracted/fa-operator-r3/bin/fa-8k-scoped-d2-20519.elf",
+    "--outdir",
+    "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/runs/shared-independent-8k-scoped/perf_run",
+    "--name",
+    "fa-8k-scoped-d2-20519-portable-r1",
+    "--gzip-full",
+    "--gzip-nocounters",
+    "--conf",
+    "perf.conf",
+    "--timeout",
+    "3600",
+    "--memory-limit-gib",
+    "10"
+  ],
+  "entry": "downloaded/extracted/fa-operator-r3/replay.py with absolute operator/model/outdir arguments under /usr/bin/time -v",
+  "pollution_applied": {
+    "RMS_TAIL_BYPASS": "0",
+    "GFSIM_UNKNOWN_REVIEW_POLLUTION": "1",
+    "PYTHONPATH": "/nonexistent",
+    "LD_LIBRARY_PATH": "/nonexistent"
+  },
+  "environment_actual": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "TZ": "UTC",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "TMPDIR": "${WORKSPACE}/perf_analysis/work_archive_20261110/ndf7_supplement/fa/runs/shared-independent-8k-scoped/tmp"
+  },
+  "pollution_removed": true,
+  "returncode": 0,
+  "total_cycles": 20519,
+  "runtime_sha256": "f288a7053ddeeafabf42df45b292d04b47954022c6c5c1d990bde633ce40447a",
+  "elf_sha256": "82d046203473b4289593e780a634448595a76cd614441beb00b412693886fba3",
+  "input_origin": "Exact downloaded operator ELF embeds static zero input; no RES_CHECK or external input files. Runtime base package plus actual downloaded guard overlay; libraries/config from downloaded runtime payload.",
+  "download_archives_independently_hashed": [
+    {
+      "path": "downloaded/fa-operator-r3-ndf7-20261110.tar.gz",
+      "sha256": "0b9a63e6ccbab2c7e2b5bc4f3e02fd844ea4eac2e706bd4d63d865be4263791d",
+      "bytes": 6166138
+    },
+    {
+      "path": "downloaded/range-model-verified.tar.gz",
+      "sha256": "13a42198a78c28623dcac5d08870393b004a91456b83d7c04338d401edd3985c",
+      "bytes": 8118855
+    },
+    {
+      "path": "downloaded/fa-runtime-r2-guard-overlay-r1-20261110.tar.gz",
+      "sha256": "211eb90bdc45ea8a814814be79b9db80beffdec2cde28ceda8a06605a075fa39",
+      "bytes": 7647
+    }
+  ],
+  "traces": [
+    {
+      "path": "runs/shared-independent-8k-scoped/perf_run/fa-8k-scoped-d2-20519-portable-r1.json.gz",
+      "compressed_bytes": 4090990,
+      "compressed_sha256": "354278790db19fed8adb29b4f91b53f36b8e2389e766081ee600d584f61a7c1a",
+      "uncompressed_bytes": 101301625,
+      "uncompressed_sha256": "a330ed9b5cd7c6d0b834d1fc44c0d74fda9f454e5a8f3aa956eb47c3dc1bdda6"
+    },
+    {
+      "path": "runs/shared-independent-8k-scoped/perf_run/fa-8k-scoped-d2-20519-portable-r1_nocounters.json.gz",
+      "compressed_bytes": 2746981,
+      "compressed_sha256": "a4ea0a4e3423212d09a7057b1c73af8e4c87f0e82844886aa62146133a55f88b",
+      "uncompressed_bytes": 63438134,
+      "uncompressed_sha256": "ab562a15afb623dce600488ff38dfa2eb3e903ffd6f4cf5203d9576e06137cb0"
+    }
+  ],
+  "configuration_load_errors": [],
+  "resource_log": "runs/shared-independent-8k-scoped.resource.txt",
+  "maximum_rss_kib": 2354732,
+  "console": "runs/shared-independent-8k-scoped.console.txt",
+  "run_directory": "runs/shared-independent-8k-scoped",
+  "numeric_status": "not_checked",
+  "payload_unchanged": "No edits or pycache; payload verifiers passed before executing ELF",
+  "initial_attempt": "Shell redirect failed because runs parent absent; no ELF executed. Created parent only, then executed once into new outdir.",
+  "limits": "Static-zero timing and exact full trace only; independent reviewer did not rebuild or numerically validate anything."
+}

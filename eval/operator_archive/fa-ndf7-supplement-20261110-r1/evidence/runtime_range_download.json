@@ -1,0 +1,10 @@
+{
+  "name": "fa-runtime-r2-ndf7-20261110.tar.gz",
+  "bytes": 8118855,
+  "sha256": "13a42198a78c28623dcac5d08870393b004a91456b83d7c04338d401edd3985c",
+  "repo": "LinxISA/SuperScalarModel",
+  "url": "https://github.com/LinxISA/SuperScalarModel/releases/download/work-archive-fa-20261109/fa-runtime-r2-ndf7-20261110.tar.gz",
+  "asset_api_url": "https://api.github.com/repos/LinxISA/SuperScalarModel/releases/assets/730677291",
+  "download_verified": true,
+  "method": "Authenticated API byte-range recovery; exact206 Content-Range/size checks; actual assembled archive SHA256 equals published identity"
+}

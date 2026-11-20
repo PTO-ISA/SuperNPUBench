@@ -1,0 +1,30 @@
+[
+  {
+    "run": "runs/shared-fa-64k-unscoped-d2-258099-portable-r2",
+    "returncode": 241,
+    "total_cycles": null,
+    "reason": "Controlled cancellation of unnecessary repetition; not kernel failure",
+    "empty_trace_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "removed_invalid_traces": [
+      {
+        "path": "runs/shared-fa-64k-unscoped-d2-258099-portable-r2/perf_run/fa-64k-unscoped-d2-258099-portable-r2.json.gz",
+        "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "bytes": 20
+      }
+    ]
+  },
+  {
+    "run": "runs/shared-fa-64k-algod-155269-portable-r1",
+    "returncode": 241,
+    "total_cycles": null,
+    "reason": "Controlled cancellation of unnecessary repetition; not kernel failure",
+    "empty_trace_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "removed_invalid_traces": [
+      {
+        "path": "runs/shared-fa-64k-algod-155269-portable-r1/perf_run/fa-64k-algod-155269-portable-r1.json.gz",
+        "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "bytes": 20
+      }
+    ]
+  }
+]
