@@ -4,13 +4,6 @@
 
 namespace deepseek_v41 {
 
-struct GlobalMemory {
-    template <class T> void put(T &destination, const T &source) { destination = source; }
-    template <class T> void get(T &destination, const T &source) { destination = source; }
-    void handoff(HiddenState &moe_input, const HiddenState &attention_output) { moe_input = attention_output; }
-    const Expert<4> &expert(const Weights &w, int id) const { return w.routed[id]; }
-};
-
 inline void route(const float (&x)[Hidden], const Weights &w, Route (&routes)[TopK]) {
     float logits[Experts], scores[Experts], biased[Experts];
     linear(x, w.router, logits);
@@ -48,6 +41,25 @@ void run_expert(const MxActivation<Hidden> &x, const Expert<Bits> &w, float weig
 struct Dispatch {
     Route route;
     MxActivation<Hidden> x;
+    uint8_t reserved[3]{}; // fill the last word of the PGAS packet
+};
+static_assert(sizeof(Dispatch) == 48);
+
+struct alignas(64) ExpertInbox {
+    Dispatch packets[TopK];
+    int count;
+};
+
+struct GlobalMemory {
+    template <class T> void put(T &destination, const T &source) { destination = source; }
+    template <class T> void get(T &destination, const T &source) { destination = source; }
+    bool handoff(HiddenState &moe_input, const HiddenState &attention_output) {
+        moe_input = attention_output;
+        return true;
+    }
+    const Expert<4> &expert(const Weights &w, int id) const { return w.routed[id]; }
+    ExpertInbox &inbox(int owner) { return inboxes[owner]; }
+    ExpertInbox inboxes[2];
 };
 
 template <class Memory>
@@ -61,19 +73,19 @@ void moe(const Weights &w, const HiddenState &h, int shards, LayerOutput &out, M
 
     // Each expert shard has its own receive window. Return addresses are the
     // original TopK slots, even when the execution order differs from routing order.
-    Dispatch inbox[2][TopK];
-    int sent[2] = {}, received[2];
+    int sent[2] = {};
     int per_shard = Experts / shards;
     for (const auto &r : out.routes) {
         int owner = r.expert / per_shard;
         Dispatch packet{r, x};
-        mem.put(inbox[owner][sent[owner]++], packet);
+        mem.put(mem.inbox(owner).packets[sent[owner]++], packet);
     }
     for (int owner = 0; owner < shards; ++owner)
-        mem.put(received[owner], sent[owner]);
+        mem.put(mem.inbox(owner).count, sent[owner]);
     for (int owner = 0; owner < shards; ++owner) {
-        for (int i = 0; i < received[owner]; ++i) {
-            const auto &p = inbox[owner][i];
+        const auto &inbox = mem.inbox(owner);
+        for (int i = 0; i < inbox.count; ++i) {
+            const auto &p = inbox.packets[i];
             Contribution y;
             run_expert(p.x, mem.expert(w, p.route.expert), p.route.weight, y);
             mem.put(out.routed[p.route.slot], y);
@@ -116,7 +128,8 @@ bool decode_layer(int layer_idx, const Token &t, const Weights &w, LayerCache &c
     if (!attention(s, w, t, h, cache, published, out, mem))
         return false;
     HiddenState moe_input;
-    mem.handoff(moe_input, out.attention);
+    if (!mem.handoff(moe_input, out.attention))
+        return false;
     moe(w, moe_input, shards, out, mem);
     return true;
 }

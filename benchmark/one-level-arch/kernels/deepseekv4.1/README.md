@@ -1,5 +1,7 @@
 # DeepSeek-V4.1-Flash single-core decode
 
+The [WSE example](../wse/README.md) uses this layer with PGAS and SoC L1.SRAM transports.
+
 `decode_layer(layer_idx, token, weights, cache, published, shards, output, memory)` evaluates one text-backbone layer for one decode position. Supply the weights of that layer, the four incoming HC streams and their staggered pre-mix. Keep the layer's window and compressor pair state across tokens. Give the following layer `output.next` and the current query's `published` indices. Layer 20 takes the final encoder HC state. The caller provides RoPE rows, physical window slots and, at layers 1 and 14, host-looked-up Engram rows.
 
 | Zero-based layer | Attention | Side effects |

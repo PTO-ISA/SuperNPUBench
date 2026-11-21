@@ -2,3 +2,4 @@
 set -eu
 cd "$(dirname "$0")"
 make TESTCASE=decode diss
+make TESTCASE=wse diss
