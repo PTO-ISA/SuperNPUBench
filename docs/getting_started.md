@@ -343,7 +343,7 @@ export WORKSPACE_ROOT="$HOME/linx-workspace"
 export BENCH_ROOT="$WORKSPACE_ROOT/SuperNPUBench"
 export TOOLCHAIN_ROOT="$WORKSPACE_ROOT/linx-toolchain-build"
 export TIMING_ROOT="$WORKSPACE_ROOT/SuperScalarModel"
-export FUNCTIONAL_ROOT="$WORKSPACE_ROOT/SuperScalarModel-asl"
+export FUNCTIONAL_ROOT="$WORKSPACE_ROOT/SuperScalarModel"
 export COMPILER_DIR="${TOOLCHAIN_ROOT}/output/linx_blockisa_llvm_musl/bin"
 "$COMPILER_DIR/clang++" --version
 
