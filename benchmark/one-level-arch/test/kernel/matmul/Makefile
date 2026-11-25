@@ -170,3 +170,13 @@ precision-check:
 	done; \
 	echo "matmul precision summary: PASS=$$pass FAIL=$$fail"; \
 	exit $$status
+
+# L1 emits payload + scale, not the FP32 res.bin used by golden-check.
+.PHONY: hif4-l1-check
+hif4-l1-check:
+	$(MAKE) -B TESTCASE=matmul_hif4_l1_quantize DTYPE=float B=1 M=128 N=64 K=256 \
+		tM=128 tN=64 tK=128 COMPILER_DIR=$(COMPILER_DIR) \
+		OBJ_ROOT=$(OBJ_ROOT)/hif4-l1-check res_check=on CHK_DIR=. all
+	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/check_hif4_l1.py \
+		--elf $(OBJ_ROOT)/hif4-l1-check/kernel/matmul/elf/kernel_matmul_matmul_hif4_l1_quantize_B1_M128_N64_K256_tM128_tN64_tK128.elf \
+		--output $(OBJ_ROOT)/hif4-l1-check/data

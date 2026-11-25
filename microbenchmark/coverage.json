@@ -3719,6 +3719,18 @@
       "status": "active"
     },
     {
+      "name": "fixp_tmatmul_s8_rowmax_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "s8_rowmax",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
       "name": "fixp_tmatmul_bias_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
       "operation": "TMATMUL_BIAS",
@@ -4415,6 +4427,18 @@
       "status": "active"
     },
     {
+      "name": "fixp_tmatmul_shared_s8_rowmax_M32_N32_K32_tM32_tN32_tK32",
+      "family": "fixp",
+      "operation": "TMATMUL",
+      "mode": "shared_s8_rowmax",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "status": "active"
+    },
+    {
       "name": "fixp_tmatmul_shared_acc_cscale_M32_N32_K32_tM32_tN32_tK32",
       "family": "fixp",
       "operation": "TMATMUL_ACC",
@@ -4645,38 +4669,13 @@
       "operation": "MSCATTER_POPC",
       "status": "unsupported",
       "reason": "PTO ISA 0.58.6 operation is not exposed by the installed TileOP API"
-    },
-    {
-      "name": "fixp_tmatmul_s8_rowmax_M32_N32_K32_tM32_tN32_tK32",
-      "family": "fixp",
-      "operation": "TMATMUL",
-      "mode": "s8_rowmax",
-      "shape": [
-        32,
-        32,
-        32
-      ],
-      "status": "unsupported",
-      "reason": "Matrix RowMax requires FP32/FP16/BF16 final D; S8 needs a separate quantization stage"
-    },
-    {
-      "name": "fixp_tmatmul_shared_s8_rowmax_M32_N32_K32_tM32_tN32_tK32",
-      "family": "fixp",
-      "operation": "TMATMUL",
-      "mode": "shared_s8_rowmax",
-      "shape": [
-        32,
-        32,
-        32
-      ],
-      "status": "unsupported",
-      "reason": "Matrix RowMax requires FP32/FP16/BF16 final D; S8 needs a separate quantization stage"
     }
   ],
   "notes": [
     "TLOAD_ND2NZ and TLOAD_CUBE are API helpers, not named PTO operations",
     "standalone BSTART.TIMG2COL coverage is tagged as a command-form",
     "fixp modes are maintained separately in fixp/compile.all",
+    "s8_rowmax modes use FP32 RowMax then unit-scale saturating RNE S8 conversion",
     "active operation names follow pto-spec 0.58.6; retired TileOP compatibility wrappers are excluded"
   ]
 }

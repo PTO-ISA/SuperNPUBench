@@ -1,10 +1,7 @@
 #!/bin/bash
 # Multi-thread GMMA FlashAttention precision variants.
 
-# HiF4 requires Matrix-MX plus U32 scales; these three plain-matrix drivers
-# have no scale input ABI. Keep it explicitly unsupported rather than treating
-# an invalid ordinary TMATMUL as a supported precision variant.
-echo "UNSUPPORTED HIF4_VECBF16: plain FA drivers lack Matrix-MX scale inputs"
+# HiF4 uses a native Matrix-MX baseline with explicit U32 scale inputs.
 : "${COMPILER_DIR:?Set COMPILER_DIR to the Linx compiler bin directory}"
 
 # fa_gmma_dynamic uses runtime Q/KV loop bounds with single-pass online
@@ -73,7 +70,8 @@ for testcase in fa_2d_unroll_gmma fa_fixpipe fa_gmma_kchains; do
         HIF8_VECFP32 \
         FP8_VECFP32 \
         FP8_VECBF16 \
-        MXFP4_VECBF16; do
+        MXFP4_VECBF16 \
+        HIF4_VECBF16; do
         make diss TESTCASE="$testcase" \
             COMPILER_DIR="$COMPILER_DIR" \
             FA_MODE="$mode" Sq=1024 Skv=1024 Tm=128 Tk=128 \
@@ -92,7 +90,8 @@ for testcase in fa_2d_unroll_gmma fa_fixpipe fa_gmma_kchains; do
         HIF8_VECFP32 \
         FP8_VECFP32 \
         FP8_VECBF16 \
-        MXFP4_VECBF16; do
+        MXFP4_VECBF16 \
+        HIF4_VECBF16; do
         make diss TESTCASE="$testcase" \
             COMPILER_DIR="$COMPILER_DIR" \
             FA_MODE="$mode" Sq=128 Skv=8192 Tm=128 Tk=128 \
@@ -110,7 +109,8 @@ for testcase in fa_2d_unroll_gmma fa_fixpipe fa_gmma_kchains; do
         HIF8_VECFP32 \
         FP8_VECFP32 \
         FP8_VECBF16 \
-        MXFP4_VECBF16; do
+        MXFP4_VECBF16 \
+        HIF4_VECBF16; do
         # issue #192: the Sq256/Skv512/Tk256 CubeFP32 variants of 2d_unroll
         # and kchains deadlock on the 256 KiB shareTReg pool (full-pool
         # footprint + generational overlap) and are excluded; fixpipe's

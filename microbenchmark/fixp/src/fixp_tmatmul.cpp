@@ -28,27 +28,6 @@
 
 #include "benchmark.h"
 
-#ifdef RES_CHECK
-static volatile int g_numeric_failure = 0;
-__attribute__((noinline)) void fill_bytes(void *p, size_t n, uint8_t value) {
-  volatile uint8_t source = value;
-  auto *bytes = reinterpret_cast<uint8_t *>(p);
-  for (size_t i = 0; i < n; ++i) bytes[i] = source;
-}
-template <typename T>
-__attribute__((noinline)) void check_zero_result(const T *p, int n) {
-  const auto *bytes = reinterpret_cast<const uint8_t *>(p);
-  for (size_t i = 0; i < static_cast<size_t>(n) * sizeof(T); ++i)
-    if (bytes[i] != 0) {
-      g_numeric_failure = 1;
-      return;
-    }
-}
-#else
-template <typename T>
-inline void check_zero_result(const T *, int) {}
-#endif
-
 #ifndef TM
 #define TM 32
 #endif
@@ -59,6 +38,64 @@ inline void check_zero_result(const T *, int) {}
 
 #ifndef TK
 #define TK 32
+#endif
+
+#ifdef RES_CHECK
+static volatile int g_numeric_failure = 0;
+__attribute__((noinline)) void fill_bytes(void *p, size_t n, uint8_t value) {
+  volatile uint8_t source = value;
+  auto *bytes = reinterpret_cast<uint8_t *>(p);
+  for (size_t i = 0; i < n; ++i) bytes[i] = source;
+}
+#if defined(S8_ROWMAX) || defined(SHARED_S8_ROWMAX)
+constexpr float s8_input_values[] = {0.5f, 1.5f, 2.5f, -0.5f, -1.5f, -2.5f, 200.0f, -200.0f};
+constexpr int8_t s8_expected_values[] = {0, 2, 2, 0, -2, -2, 127, -128};
+#endif
+template <typename T>
+__attribute__((noinline)) void check_zero_result(const T *p, int n) {
+#if defined(S8_ROWMAX) || defined(SHARED_S8_ROWMAX)
+  // These two modes use a nonzero identity-B oracle, including RNE ties
+  // and both saturation limits. Other modes retain their zero-input oracle.
+  if constexpr (std::is_same_v<T, int8_t>) {
+    for (int r = 0; r < TM; ++r)
+      for (int c = 0; c < TN; ++c) {
+        const int gr = r
+#ifdef SHARED_S8_ROWMAX
+            + get_thread_idx() * TM
+#endif
+            ;
+        const int8_t expected = c < TK ? s8_expected_values[(gr + c) % 8] : 0;
+        if (p[r * TN + c] != expected) g_numeric_failure = 1;
+      }
+    return;
+  }
+  if constexpr (std::is_same_v<T, float>) {
+    for (int r = 0; r < TM; ++r) {
+      const int gr = r
+#ifdef SHARED_S8_ROWMAX
+          + get_thread_idx() * TM
+#endif
+          ;
+      float expected = -200.0f;
+      for (int c = 0; c < TN; ++c) {
+        const float x = c < TK ? s8_input_values[(gr + c) % 8] : 0;
+        if (x > expected) expected = x;
+      }
+      if (p[r] != expected) g_numeric_failure = 1;
+    }
+    return;
+  }
+#endif
+  const auto *bytes = reinterpret_cast<const uint8_t *>(p);
+  for (size_t i = 0; i < static_cast<size_t>(n) * sizeof(T); ++i)
+    if (bytes[i] != 0) {
+      g_numeric_failure = 1;
+      return;
+    }
+}
+#else
+template <typename T>
+inline void check_zero_result(const T *, int) {}
 #endif
 
 using namespace pto;
@@ -404,6 +441,12 @@ struct buf_t {
     // zero auxiliary operands make zero the common oracle for every mode.
     fill_bytes(d, TM * TN * sizeof(DstT), 1);
     fill_bytes(aux, kAuxBytes, 0);
+#if defined(S8_ROWMAX) || defined(SHARED_S8_ROWMAX)
+    for (int r = 0; r < 4 * TM; ++r)
+      for (int k = 0; k < TK; ++k) a[r * TK + k] = static_cast<SrcT>(s8_input_values[(r + k) % 8]);
+    for (int k = 0; k < TK; ++k)
+      for (int c = 0; c < TN; ++c) b[k * TN + c] = static_cast<SrcT>(k == c ? 1 : 0);
+#endif
 #else
     auto *descriptors = reinterpret_cast<uint64_t *>(aux);
     for (size_t i = 0; i < kAuxBytes / sizeof(uint64_t); ++i)
@@ -774,17 +817,23 @@ int main() {
     TMATMUL(d, a, b, fixp::f16().group_max<16>(group_out));
   });
 #elif defined(S8_ROWMAX)
-  // Negative coverage only: S8 final D cannot request Matrix RowMax.
+  // Two-stage contract: FP32 matmul/row maximum, then unit-scale RNE S8.
+  // RowMax is pre-quantization; S8 itself is never a Matrix reduction dtype.
   buf_t<__half, int8_t> buf;
-  run_matmul<__half, int8_t>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
-    row_max_tile_t<TM> row_out;
-    TMATMUL(d, a, b, fixp::s8(mk_desc(1, 0, 9)).row_max(row_out));
-  });
+  run_matmul<__half, int8_t>(buf.a, buf.b, buf.d,
+      [&](auto &d, auto &a, auto &b) {
+        cube_acc_t<float, TM, TN> raw;
+        row_max_tile_t<TM> row_out;
+        TMATMUL(raw, a, b, fixp::keep_acc().row_max(row_out));
+        global_tensor<float, RowMajor<TM, 1>> row_gm(reinterpret_cast<float *>(buf.aux));
+        TSTORE_CUBE(row_gm, row_out);
+        // Clamp explicitly so integer conversion cannot wrap on overflow.
+        TMINS(raw, raw, 127.0f);
+        TMAXS(raw, raw, -128.0f);
+        TCVT<LINX_RNE>(d, raw);
+      });
+  check_zero_result(reinterpret_cast<float *>(buf.aux), TM);
 
-// === operation-family coverage (param-free keep_acc) =====================
-// Verifies each op's BSTART.CUBE mnemonic + math operand stream (C / Bias /
-// Scale tiles). Mode macros are short labels (BIAS/ACC/MX/GEMV/...) so they
-// never collide with the op function names (TMATMUL_BIAS / TGEMV / ...).
 #elif defined(BIAS)                       // D = A*B + Bias
   buf_t<__half, float> buf;
   run_matmul<__half, float>(buf.a, buf.b, buf.d,
@@ -1231,14 +1280,24 @@ int main() {
         group_max_tile_t<TM, (TN + 15) / 16, __half> group_out;
         TMATMUL(tD, tA, tB, fixp::f16().group_max<16>(group_out));
       });
-#elif defined(SHARED_S8_ROWMAX)              // Shared A/B + s8 + RowMax
-  // Negative coverage only: S8 final D cannot request Matrix RowMax.
+#elif defined(SHARED_S8_ROWMAX)
+  // Two-stage contract: FP32 matmul/row maximum, then unit-scale RNE S8.
+  // RowMax is pre-quantization; S8 itself is never a Matrix reduction dtype.
   buf_t<__half, int8_t> buf;
   run_matmul_shared<int8_t>(buf.a, buf.b, buf.d,
-      [&](auto &tD, auto &tA, auto &tB) {
+      [&](auto &d, auto &a, auto &b) {
+        cube_acc_t<float, TM, TN> raw;
         row_max_tile_t<TM> row_out;
-        TMATMUL(tD, tA, tB, fixp::s8(mk_desc(1, 0, 9)).row_max(row_out));
+        TMATMUL(raw, a, b, fixp::keep_acc().row_max(row_out));
+        global_tensor<float, RowMajor<TM, 1>> row_gm(reinterpret_cast<float *>(buf.aux));
+        TSTORE_CUBE(row_gm, row_out);
+        // Clamp explicitly so integer conversion cannot wrap on overflow.
+        TMINS(raw, raw, 127.0f);
+        TMAXS(raw, raw, -128.0f);
+        TCVT<LINX_RNE>(d, raw);
       });
+  check_zero_result(reinterpret_cast<float *>(buf.aux), TM);
+
 #elif defined(SHARED_ACC_CSCALE)             // Shared A/B + ACC + CScale
   buf_t<__half, float> buf;
   run_matmul_shared<float>(buf.a, buf.b, buf.d,

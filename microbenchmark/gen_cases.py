@@ -828,11 +828,6 @@ def main():
          "dtype": "bf16", "shape": [16, 16], "status": "unsupported",
          "reason": "main compiler crashes during BF16 TABS instruction selection"},
     ]
-    for mode in ("s8_rowmax", "shared_s8_rowmax"):
-        unsupported.append({"name": f"fixp_tmatmul_{mode}_M32_N32_K32_tM32_tN32_tK32",
-                            "family": "fixp", "operation": "TMATMUL", "mode": mode,
-                            "shape": [32, 32, 32], "status": "unsupported",
-                            "reason": "Matrix RowMax requires FP32/FP16/BF16 final D; S8 needs a separate quantization stage"})
     # PTO ISA 0.58.6 added named atomic gather/scatter operations. The current
     # installed TileOP API has not exposed these names yet (CAS is separate and
     # covered above), so retain them as explicit API-gap records.
@@ -849,6 +844,7 @@ def main():
                    "notes": ["TLOAD_ND2NZ and TLOAD_CUBE are API helpers, not named PTO operations",
                              "standalone BSTART.TIMG2COL coverage is tagged as a command-form",
                              "fixp modes are maintained separately in fixp/compile.all",
+                             "s8_rowmax modes use FP32 RowMax then unit-scale saturating RNE S8 conversion",
                              "active operation names follow pto-spec 0.58.6; retired TileOP compatibility wrappers are excluded"]},
                   f, indent=2)
         f.write("\n")

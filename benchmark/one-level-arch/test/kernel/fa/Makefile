@@ -74,13 +74,10 @@ VECTOR_DTYPE := __bf16
 PACKED_FACTOR := 1
 USE_MX := 0
 else ifeq ($(FA_MODE),HIF4_VECBF16)
-ifneq ($(filter $(TESTCASE),fa_2d_unroll_gmma fa_gmma_kchains fa_fixpipe),)
-$(error HIF4_VECBF16 requires Matrix-MX with U32 scales; $(TESTCASE) has no scale input ABI)
-endif
 MATRIX_DTYPE := __fp4_hif4x2
 VECTOR_DTYPE := __bf16
 PACKED_FACTOR := 2
-USE_MX := 0
+USE_MX := $(if $(filter $(TESTCASE),fa_2d_unroll_gmma fa_gmma_kchains fa_fixpipe),1,0)
 else
 $(error Unsupported FA_MODE=$(FA_MODE); expected FP32_VECFP32, FP32_VECBF16, BF16_VECFP32, BF16_VECBF16, FP16_VECFP32, MXFP8_VECFP32, MXFP4_VECBF16, HIF8_VECFP32, FP8_VECFP32, FP8_VECBF16, or HIF4_VECBF16)
 endif
@@ -108,7 +105,15 @@ DEFINES += -DFA_MAX_SKV=$(MaxSkv)
 DEFINES += -DFA_X_DIM=$(X_dim)
 DEFINES += -DFA_Y_DIM=$(Y_dim)
 
-ifeq ($(TESTCASE),fa_2d_unroll_gmma)
+HIF4_NATIVE_DRIVER := $(if $(filter HIF4_VECBF16,$(FA_MODE)),$(filter $(TESTCASE),fa_2d_unroll_gmma fa_gmma_kchains fa_fixpipe))
+ifneq ($(HIF4_NATIVE_DRIVER),)
+SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_hif4.cpp
+ifeq ($(TESTCASE),fa_fixpipe)
+DEFINES += -DHIF4_VARIANT=2
+else ifeq ($(TESTCASE),fa_gmma_kchains)
+DEFINES += -DHIF4_VARIANT=1
+endif
+else ifeq ($(TESTCASE),fa_2d_unroll_gmma)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_2d_unroll_gmma.cpp
 else ifeq ($(TESTCASE),fa_gmma_kchains)
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/fa_gmma_kchains.cpp
@@ -162,6 +167,15 @@ include ../../common/Makefile.common
 
 .PHONY: golden-check precision-check
 
+ifneq ($(HIF4_NATIVE_DRIVER),)
+golden-check:
+	$(MAKE) -B TESTCASE=$(TESTCASE) FA_MODE=$(FA_MODE) \
+		Sq=$(Sq) Skv=$(Skv) QD=$(QD) VD=$(VD) Tm=$(Tm) Tk=$(Tk) \
+		X_dim=$(X_dim) Y_dim=$(Y_dim) COMPILER_DIR=$(COMPILER_DIR) \
+		OBJ_ROOT=$(OBJ_ROOT) res_check=on CHK_DIR=. all
+	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/check_hif4_fa.py \
+		--elf $(TARGET) --output $(OBJ_ROOT)/hif4-fa-check/$(TESTCASE)
+else
 golden-check:
 	$(MAKE) -B TESTCASE=$(TESTCASE) FA_MODE=$(FA_MODE) \
 		Sq=$(Sq) Skv=$(Skv) QD=$(QD) VD=$(VD) Tm=$(Tm) Tk=$(Tk) \
@@ -169,6 +183,8 @@ golden-check:
 		COMPILER_DIR=$(COMPILER_DIR) OBJ_ROOT=$(OBJ_ROOT) \
 		res_check=on all
 	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/gfrun_fa.py --elf $(TARGET)
+
+endif
 
 precision-check:
 	@status=0; pass=0; fail=0; \
