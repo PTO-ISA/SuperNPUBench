@@ -76,7 +76,7 @@ int main() {
   // B is stored B-major as [Batch, N, K].
   static dtype src1_storage[Batch * globN * globK + 2 * ALIGN];
   static float c_storage[Batch * globM * globN + 2 * ALIGN];
-  // TCVT/TSTORE packs two logical HiF4 lanes per byte.
+  // Explicit S1P2 encoding packs two logical lanes per byte.
   static uint8_t data_storage[Batch * globM * globN / 2 + 2 * ALIGN];
   static uint8_t scale_storage[Batch * globM * kScaleCols + 2 * ALIGN];
 

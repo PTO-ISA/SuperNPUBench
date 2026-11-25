@@ -148,7 +148,7 @@ MODES = [
     ("rowgroup_maxabs", "TMATMUL", False, (0, 0, GROUP_N_CODE[8], 1, 1, 1, 1), 0, 1,
      "keep_acc().row_max(in,out).group_max<8>(out).max_abs()"),
     ("f16_groupmax",    "TMATMUL", False, (1, 0, GROUP_N_CODE[16], 0, 1, 0, 0), 0, 0, "f16().group_max<16>(out)"),
-    ("s8_rowmax",       "TMATMUL", False, (24, 0, 0, 1, 0, 0, 0), 1, 0, "s8(desc).row_max(out)"),
+    ("s8_rowmax",       "TMATMUL", False, (0, 0, 0, 1, 0, 0, 0), 0, 0, "FP32 row_max + clamp/RNE S8 TCVT (two-stage)"),
 
     # --- operation-family coverage (param-free keep_acc) -------------------
     ("bias",            "TMATMUL.BIAS", False, (0, 0, 0, 0, 0, 0, 0), 0, 0, "TMATMUL_BIAS(c,a,b,bias,keep_acc())"),
@@ -213,7 +213,7 @@ MODES = [
     ("shared_rowgroup_maxabs", "TMATMUL", True, (0, 0, GROUP_N_CODE[8], 1, 1, 1, 1), 0, 1,
      "SharedTile<A/B> + keep_acc().row_max(in,out).group_max<8>(out).max_abs()"),
     ("shared_f16_groupmax",  "TMATMUL", True, (1, 0, GROUP_N_CODE[16], 0, 1, 0, 0), 0, 0, "SharedTile<A/B> + f16().group_max<16>(out)"),
-    ("shared_s8_rowmax",     "TMATMUL", True, (24, 0, 0, 1, 0, 0, 0), 1, 0, "SharedTile<A/B> + s8(desc).row_max(out)"),
+    ("shared_s8_rowmax",     "TMATMUL", True, (0, 0, 0, 1, 0, 0, 0), 0, 0, "SharedTile<A/B> + FP32 row_max + clamp/RNE S8 TCVT"),
     ("shared_acc_cscale",    "TMATMUL.ACC", True, (0, 0, 0, 0, 0, 0, 0, 0, 0, 1), 0, 1, "SharedTile<A/B> + TMATMUL_ACC + CScale"),
     ("trans_a",         "TMATMUL", True, (0, 0, 0, 0, 0, 0, 0, 1, 0, 0), 0, 0, "Shared A/B + transpose_a"),
     ("trans_b",         "TMATMUL", True, (0, 0, 0, 0, 0, 0, 0, 0, 1, 0), 0, 0, "Shared A/B + transpose_b"),
