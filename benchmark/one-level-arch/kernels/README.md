@@ -8,6 +8,8 @@ Header-only PTO operator implementations, organized by execution model:
   `basic_op/utils/`.
 - [`solution/`](../test/solution): fused / end-to-end operator solutions built
   on top of the kernel primitives.
+- [DeepSeek-V4.1-Flash](deepseekv4.1/README.md) implements a full, layer-indexed single-core decode block.
+- [WSE DeepSeek-V4.1-Flash](wse/README.md) runs that block with PGAS packets and SoC L1.SRAM SDMA transfers.
 
 ## basic_op/ operators
 
