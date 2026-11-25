@@ -7,6 +7,7 @@
 
 #include <common/pto_tileop.hpp>
 #include <cstdint>
+#include <type_traits>
 #include "benchmark.h"
 #include "bench_utils.hpp"
 #include "timg2col_tileop.hpp"
@@ -125,6 +126,7 @@ void bench_prefetch(D *, D *a) {
 // element in the supplied GM array; expected/replacement are explicit tiles.
 template <typename D, int M, int N>
 void bench_gather_cas(D *c, D *a, int32_t *idx) {
+    static_assert(std::is_unsigned_v<D>, "CAS requires unsigned bit carriers");
     using gmIdx = global_tensor<int32_t, RowMajor<M, N>>;
     using tileIdx = Tile<Location::Vec, int32_t, M, N, BLayout::RowMajor>;
     using itIdx = global_iterator<gmIdx, tileIdx>;

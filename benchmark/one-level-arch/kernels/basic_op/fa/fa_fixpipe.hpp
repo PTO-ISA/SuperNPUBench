@@ -13,7 +13,7 @@ using namespace pto;
 //
 // This kernel follows fa_2d_unroll_gmma.hpp exactly, except that QK's
 // standalone TROWMAX is fused into the QK TMATMUL through fixpipe RowMaxEn.
-// The fixpipe result is the row maximum of the unscaled FP32 accumulator, so
+// The fixpipe result uses the final destination dtype and is unscaled, so
 // it is scaled by the same positive 1/sqrt(scaleD) factor as the score tile.
 // TROWSUM remains a TileOp because B.FPATR has no row-sum output.
 //
@@ -95,8 +95,7 @@ void flash_attention_fixpipe_impl(
     using tileV = SharedTile<tileVMatrix>;
 
     // Match fa_2d_unroll_gmma: QK writes directly to the vector-precision
-    // Left tile.  RowMax is still computed from the FP32 FullAcc before this
-    // optional fixpipe conversion.
+    // Left tile. RowMax uses the final destination dtype.
     using tileWM16 = CubeTileM16<vector_dtype, kPeTm, kTk>;
     using tileWM32 = CubeTileM32<vector_dtype, kPeTm, kTk>;
     using tileW = std::conditional_t<(kPeTm <= 16), tileWM16, tileWM32>;
@@ -135,9 +134,8 @@ void flash_attention_fixpipe_impl(
     using tileLocalSum = tileMax;
     using tileSum = tileRowFp32;
 
-    // Fixpipe auxiliary outputs must be FP32, physical one-column carriers,
-    // and at least 128 bytes. The supported CUBE_M32 shape is exactly 128B.
-    using tileFixpipeRowMax = VecTileM32<float, 32, 1, kPeTm, 1>;
+    // Auxiliary output dtype and primary layout must match final D.
+    using tileFixpipeRowMax = tileMax;
 
     using itQ = global_iterator<gmQ, tileQMatrix>;
     using itK = global_iterator<gmK, tileKMatrix>;
@@ -187,17 +185,16 @@ void flash_attention_fixpipe_impl(
             auto gK = gIterK(j, 0);
             TLOAD<tileKMatrix, 1>(tK, gK);
 
-            // RowMaxOut is an FP32 auxiliary destination computed from the
-            // unscaled FullAcc before conversion. K is already stored as
+            // RowMaxOut uses the final destination dtype. K is already stored as
             // [N,K], so QK must not request transpose_b.
-            tileFixpipeRowMax tLocalMaxFp32;
+            tileFixpipeRowMax tLocalMaxFinal;
             if constexpr (std::is_same_v<vector_dtype, float>) {
-                auto qkOptions = fixp::keep_acc().row_max(tLocalMaxFp32);
+                auto qkOptions = fixp::keep_acc().row_max(tLocalMaxFinal);
                 TMATMUL(tW, tQ, tK, qkOptions);
             } else {
                 static_assert(std::is_same_v<vector_dtype, __bf16>,
                               "QK fixpipe output supports FP32 or BF16 vector dtype");
-                auto qkOptions = fixp::bf16().row_max(tLocalMaxFp32);
+                auto qkOptions = fixp::bf16().row_max(tLocalMaxFinal);
                 TMATMUL(tW, tQ, tK, qkOptions);
             }
 
@@ -205,13 +202,13 @@ void flash_attention_fixpipe_impl(
             // max(c*x) = c*max(x) for c > 0, so scaling tLocalMax after
             // the fused row_max is equivalent to TROWMAX on the scaled tile.
             TMULS(tW, tW, scale);
-            TMULS(tLocalMaxFp32, tLocalMaxFp32, scale);
+            TMULS(tLocalMaxFinal, tLocalMaxFinal, scale);
 
             tileMax tLocalMax;
             if constexpr (std::is_same_v<tileMax, tileFixpipeRowMax>) {
-                tLocalMax = tLocalMaxFp32;
+                tLocalMax = tLocalMaxFinal;
             } else {
-                TCVT(tLocalMax, tLocalMaxFp32);
+                TCVT(tLocalMax, tLocalMaxFinal);
             }
 
             // --- Softmax ---

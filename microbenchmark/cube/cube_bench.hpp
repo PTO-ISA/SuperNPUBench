@@ -27,8 +27,7 @@ template <typename AccD, int M, int N>
 using cube_c_t = std::conditional_t<(M <= 16), CubeAccumulatorM16<AccD, M, N>,
                                     CubeAccumulatorM32<AccD, M, N>>;
 template <typename AccD, int N>
-using cube_bias_t = Tile<Location::Bias, AccD, 8, N,
-                         BLayout::RowMajor, 1, N>;
+using cube_bias_t = CubeTileN8<AccD, 4, N, 1, N>;
 
 template <typename D, int M, int K>
 using gm_a_t = global_tensor<D, RowMajor<M, K>>;
@@ -73,7 +72,7 @@ void bench_matmul_bias(cube_acc_element_t<D> *out, D *a, D *b,
     cube_c_t<AccD, M, N> tD; cube_bias_t<AccD, N> tBias;
     TLOAD_CUBE(tA, gA);
     TLOAD_CUBE(tB, gB);
-    TLOAD(tBias, gBias);
+    TLOAD_CUBE(tBias, gBias);
     TMATMUL_BIAS(tD, tA, tB, tBias);
     TSTORE_CUBE(gD, tD);
 }

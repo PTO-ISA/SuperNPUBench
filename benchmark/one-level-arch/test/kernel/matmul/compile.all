@@ -108,12 +108,33 @@ fi
 #   S3: 256x128x7168    S4: 64x128x7168
 #   S5: 64x64x7168      S6: 128x256x32768
 #
-# Every configuration in the table is represented by the grids below; no
-# capacity gate (issue #192 only excludes the two FA Tk256 FP32 cases).
+# Oversized candidates are reported and excluded before invoking the compiler.
 matrix_built=0
+matrix_skipped=0
+shared_capacity_ok() {
+    local dtype=$1 tn=$2 tk=$3 elem=1 packed=1 scale=0 group=32
+    case "$dtype" in
+        float) elem=4 ;;
+        __half|__bf16) elem=2 ;;
+        MXFP8) scale=1 ;;
+        MXFP4) packed=2; scale=1 ;;
+        HIF4|HIF4X2) packed=2; scale=4; group=64 ;;
+    esac
+    local bytes=$(( (128 + tn) * tk * elem / packed ))
+    if (( scale > 0 )); then
+        local cols=$(( ((tk + group - 1) / group + 31) / 32 * 32 ))
+        bytes=$(( bytes + (128 + tn) * cols * scale ))
+    fi
+    if (( bytes > 262144 )); then
+        echo "SKIP SharedTReg: $dtype tM=128 tN=$tn tK=$tk needs $bytes bytes (limit 262144)"
+        matrix_skipped=$((matrix_skipped + 1))
+        return 1
+    fi
+}
 
 compile_shared_matrix_case() {
     local suite=$1 dtype=$2 m=$3 n=$4 k=$5 tn=$6 tk=$7
+    shared_capacity_ok "$dtype" "$tn" "$tk" || return 0
     make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
         DTYPE="$dtype" B=1 M="$m" N="$n" K="$k" \
         tM=128 tN="$tn" tK="$tk"
@@ -122,6 +143,7 @@ compile_shared_matrix_case() {
 
 compile_lowp_matrix_case() {
     local suite=$1 mode=$2 m=$3 n=$4 k=$5 tn=$6 tk=$7
+    shared_capacity_ok "$mode" "$tn" "$tk" || return 0
     make diss TESTCASE=matmul_lowp LP_MODE="$mode" \
         COMPILER_DIR="$COMPILER_DIR" \
         B=1 M="$m" N="$n" K="$k" tM=128 tN="$tn" tK="$tk"

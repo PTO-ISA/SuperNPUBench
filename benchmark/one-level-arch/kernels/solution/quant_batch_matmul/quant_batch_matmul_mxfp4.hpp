@@ -77,17 +77,15 @@ __attribute__((noinline)) void quant_batch_matmul_mxfp4(
     itC gIterC(dst);
 
     using gmAMX  = global_tensor<__fp8_e8m0, RowMajor<blockM, gScaleK>>;
-    using gmBMX  = global_tensor<__fp8_e8m0, RowMajor<gScaleK, gN>>;
-    // Scale tile: RowMajor layout (ISA compile-time requires RowMajor for MX scale)
-    using tileAMX = Tile<Location::Scaling, __fp8_e8m0, tM, tKv,
-                         BLayout::RowMajor, tM, kScaleK, SLayout::NoneBox>;
-    using tileBMX = Tile<Location::Scaling, __fp8_e8m0, tKv, tN,
-                         BLayout::RowMajor, kScaleK, tN, SLayout::NoneBox>;
+    // Local scale operands use CUBE_M32. ScaleB is logically [N, groups],
+    // while the existing external fixture is [groups, N]; express that
+    // transpose through GM strides instead of reinterpreting packed bytes.
+    using gmBMX = GlobalTensor<__fp8_e8m0, Shape<1,1,1,tN,kScaleK>,
+        Stride<1,1,tN*kScaleK,1,gN>, Layout::ND>;
+    using tileAMX = CubeTileM32<__fp8_e8m0, tM, kScaleK>;
+    using tileBMX = CubeTileM32<__fp8_e8m0, tN, kScaleK>;
     using itAMX = global_iterator<gmAMX, tileAMX>;
-    using itBMX = global_iterator<gmBMX, tileBMX>;
-
     itAMX gIterAMX(src0_mx);
-    itBMX gIterBMX(src1_mx);
 
     for (int i = 0; i < Mb; ++i) {
         for (int j = 0; j < Nb; ++j) {
@@ -97,7 +95,7 @@ __attribute__((noinline)) void quant_batch_matmul_mxfp4(
                 auto gA = gIterA(i, k);
                 auto gB = gIterB(k, j);
                 auto gAMX = gIterAMX(i, k);
-                auto gBMX = gIterBMX(k, j);
+                gmBMX gBMX(src1_mx + k * kScaleK * gN + j * tN);
                 tileA tA;
                 tileB tB;
                 tileAMX tAMX;
@@ -105,8 +103,8 @@ __attribute__((noinline)) void quant_batch_matmul_mxfp4(
 
                 TLOAD(tA, gA);
                 TLOAD(tB, gB);
-                TLOAD(tAMX, gAMX);
-                TLOAD(tBMX, gBMX);
+                TLOAD_CUBE(tAMX, gAMX);
+                TLOAD_CUBE(tBMX, gBMX);
 
                 TMATMUL_MX(tC, tA, tAMX, tB, tBMX);
             }

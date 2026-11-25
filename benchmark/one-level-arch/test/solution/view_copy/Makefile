@@ -23,11 +23,13 @@ endif
 SRC_FILE += $(TEST_ROOT)/$(CASE_SRC_DIR)/$(TESTCASE).cpp
 include ../../common/Makefile.common
 
-# These tests use the direct-entry four-PE runtime, not hosted libc startup.
+# Hosted builds use the common SSM adapter. Only baremetal supplies start.s.
 ifeq ($(PLAT),linx)
 # The bundled compiler's BFI constant synthesis miscompiles repeated words.
 CC_OPTS += -mllvm -linxv5-enable-bfi-opt=false
+ifeq ($(baremetal),on)
 CC_LINK = -nostartfiles $(TEST_ROOT)/solution/common/start.s
+endif
 endif
 
 # Explicit timing-model mode: guest stdio is unsupported in gfsim.
