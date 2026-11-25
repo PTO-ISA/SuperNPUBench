@@ -66,8 +66,9 @@ void matmul_lowp_reuseA_full_cache(float *out, Input *ap, Input *bp,
     constexpr int ScaleCols = FastPath::ScaleCols;
     constexpr int PaddedScaleCols = FastPath::PaddedScaleCols;
 
-    using GlobalA = global_tensor<Input, RowMajor<M, K / PackedFactor>>;
-    using GlobalB = global_tensor<Input, RowMajor<N, K / PackedFactor>>;
+    // Logical lanes here; packed byte offsets are applied to pointers below.
+    using GlobalA = global_tensor<Input, RowMajor<M, K>>;
+    using GlobalB = global_tensor<Input, RowMajor<N, K>>;
     using GlobalAScale = global_tensor<Scale, RowMajor<M, K / ScaleGroup>>;
     using GlobalBScale = global_tensor<Scale, RowMajor<N, K / ScaleGroup>>;
     using GlobalC = global_tensor<float, RowMajor<M, N>>;

@@ -28,15 +28,15 @@ Per ELF the script:
      ELF name;
   2. generates random input (src0.bin = A, src1.bin = B-major B) and
      golden.bin (= A @ B^T in fp32, after input-dtype quantization);
-  3. pre-allocates res.bin (the guest cannot reliably create files);
+  3. removes stale output and supplies a per-ELF hosted file root;
   4. runs gfrun on the ELF (the multi_thread variant gets
      `-s softcore.multiThreadNum=4`; single-threaded MASK uses `gfrun -f`);
   5. compares res.bin vs golden.bin with np.allclose (atol/rtol) and
-     reports mse / max-abs, flagging an all-zero res.bin (RES_CHECK off?).
+     reports mse / max-abs, rejecting missing or mismatched output.
 
-Note: the kernel only performs file I/O when built with `res_check=on`
-(see test/common/Makefile.common). ELFs built without it leave res.bin at
-zero; the script reports that as a "no output / RES_CHECK off?" failure.
+Build with `res_check=on CHK_DIR=.` for relative hosted file paths.
+Note: the kernel only performs file I/O when built with `res_check=on`.
+ELFs built without it produce no res.bin and fail the output check.
 """
 
 import argparse
@@ -97,7 +97,7 @@ if ROOT is None:
     ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "../../../.."))
 CMP_ROOT = os.path.join(ROOT, "compare")
 
-DEFAULT_GFRUN = "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel-asl/bin/gfrun"
+DEFAULT_GFRUN = "/Users/blacktraker/Programming/gitproj/DV4/SuperScalarModel/bin/gfrun"
 # NOTE: gfrun's "-t" flag is a LOG LEVEL (1: basic per-instruction trace,
 # 2: tile detail), NOT a thread/PE count. Passing it makes gfrun print every
 # instruction, which is fatal for non-trivial shapes (millions of lines).
@@ -661,16 +661,18 @@ def gen_input_and_golden(elf_name, path, args):
             b_scale_q.tofile(os.path.join(path, "src1_scale.bin"))
     golden.tofile(os.path.join(path, "golden.bin"))
 
-    # Pre-allocate res.bin (zero). Guest cannot reliably create files.
-    res = np.zeros((B, M, N), dtype=np.float32)
-    res.tofile(os.path.join(path, "res.bin"))
+    # The hosted service creates res.bin. Absence is a missing store/run,
+    # while an explicitly written all-zero result can be mathematically valid.
+    result_path = os.path.join(path, "res.bin")
+    if os.path.exists(result_path):
+        os.remove(result_path)
     return shape
 
 
 # ---------------------------------------------------------------------------
 # Run / compare
 # ---------------------------------------------------------------------------
-def run_qemu(elf, args):
+def run_qemu(elf, args, cmp_data_path):
     elf_name = os.path.basename(elf).replace(".elf", "").strip()
     shape = parse_matmul_shape(elf_name, args)
 
@@ -688,7 +690,8 @@ def run_qemu(elf, args):
         pe = shape.get("threads", 4)
         if "softcore.multiThreadNum" not in gfrun_args:
             gfrun_args = f" -s softcore.multiThreadNum={pe} {gfrun_args} "
-    command = [args.gfrun, *shlex.split(gfrun_args), elf]
+    command = [args.gfrun, "--hosted-file-root", os.path.abspath(cmp_data_path),
+               *shlex.split(gfrun_args), os.path.abspath(elf)]
     simulator_root = os.path.dirname(os.path.dirname(os.path.abspath(args.gfrun)))
     print(f"[run] cwd={simulator_root} {shlex.join(command)}")
     try:
@@ -702,7 +705,8 @@ def run_qemu(elf, args):
     try:
         out, _ = proc.communicate(timeout=args.timeout)
         output = out.decode(errors="replace")
-        status = "pass" if proc.returncode == 0 else "fail"
+        completed = "formal_End=1 formal_Abort=0 status=0" in output
+        status = "pass" if proc.returncode == 0 and completed else "fail"
     except subprocess.TimeoutExpired:
         # Drain whatever gfrun printed before we kill it, so a hang leaves a
         # useful breadcrumb (where it stopped) instead of a bare "timeout".
@@ -731,12 +735,6 @@ def compare_array(cmp_data, golden_data, dtype, atol, rtol):
         return "shape mismatch", {
             "res_size": int(res.size),
             "golden_size": int(ref.size),
-            "mse": float("nan"),
-            "max_abs": float("nan"),
-        }
-    if not np.any(res):
-        # All-zero result: the kernel did not write (RES_CHECK off / crash).
-        return "no output (res.bin all zero; RES_CHECK off or run crashed?)", {
             "mse": float("nan"),
             "max_abs": float("nan"),
         }
@@ -805,7 +803,7 @@ def check_elf(elf, args):
         return elf_name, "skip", f"not a matmul ELF: {e}", {"mse": float("nan"), "max_abs": float("nan")}
     print(f"[shape] {shape}")
 
-    _, status, output = run_qemu(elf, args)
+    _, status, output = run_qemu(elf, args, cmp_data_path)
     if status != "pass":
         return elf_name, status, "not chk", {"mse": float("nan"), "max_abs": float("nan"), "run_output": output}
 
@@ -838,6 +836,8 @@ if __name__ == "__main__":
     parser.add_argument("-d", dest="dbg_elf", default=None, type=str,
                         help="single ELF to check (debug)")
     parser.add_argument("-o", dest="res_log", default="matmul_result_check.log", type=str)
+    parser.add_argument("--compare-root", default=CMP_ROOT,
+                        help="host directory for per-ELF inputs and results; build with CHK_DIR=.")
     parser.add_argument("--gfrun", default=DEFAULT_GFRUN, type=str)
     parser.add_argument("--gfrun-args", default=DEFAULT_GFRUN_ARGS, type=str,
                         help="extra gfrun flags (default ' -f '); for the "
@@ -849,6 +849,7 @@ if __name__ == "__main__":
     parser.add_argument("--out-rtol", default=None, type=float)
     parser.add_argument("--workers", default=MAX_WORKERS, type=int)
     args = parser.parse_args()
+    CMP_ROOT = os.path.abspath(args.compare_root)
 
     # Allow CLI atol/rtol override for fp32 (other dtypes keep their table).
     if args.out_atol is not None:

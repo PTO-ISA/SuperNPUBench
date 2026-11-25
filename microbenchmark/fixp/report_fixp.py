@@ -265,9 +265,9 @@ def parse_bundle(lines):
     started = False
     for ln in lines:
         line = ln.strip()
-        m = re.search(r"BSTART\.\w+\s+([A-Z][A-Z.]*)", line)
+        m = re.search(r"(?:C\.)?BSTART\.([A-Z][A-Z.]*)(?:\s+([A-Z][A-Z.]*))?", line)
         if m:
-            tok = m.group(1)
+            tok = m.group(1) if m.group(1) in MNEMONICS else m.group(2)
             if tok in MNEMONICS:
                 if not started:
                     mnemonic = tok
@@ -279,14 +279,16 @@ def parse_bundle(lines):
             continue
         if not started:
             continue
-        m2 = re.search(
-            r"^\s*([0-9a-f]+):\s+([0-9a-f]+)\s+B\.FPATR"
-            r"\s+([0-9]+),\s+([0-9]+),\s+([0-9]+),\s+([0-9]+),\s+"
-            r"([0-9]+),\s+([0-9]+),\s+([0-9]+),\s+([0-9]+),\s+"
-            r"([0-9]+),\s+([0-9]+)$", line)
+        m2 = re.search(r"^\s*[0-9a-f]+:\s+([0-9a-f]{8})\s+B\.FPATR\b", line)
         if m2 and fpatr is None:
-            word = int(m2.group(2), 16)
-            fpatr = tuple(int(x) for x in m2.groups()[2:])
+            # Decode the instruction word: independent of numeric versus
+            # named operand spelling in macro/physical objdump output.
+            word = int(m2.group(1), 16)
+            fpatr = ((word >> 26) & 63, (word >> 23) & 7,
+                     (word >> 19) & 15, (word >> 18) & 1,
+                     (word >> 17) & 1, (word >> 16) & 1,
+                     (word >> 15) & 1, (word >> 7) & 1,
+                     (word >> 8) & 1, (word >> 9) & 1)
         m = re.search(r"B\.IOR\s+\[([^\]]*)\]", line)
         if m:
             gprs = [g.strip() for g in m.group(1).split(",")
@@ -401,6 +403,10 @@ def main():
     out.append("Source: `microbenchmark/fixp/src/fixp_tmatmul.cpp` (one binary per "
                "fixp configuration), built and disassembled by "
                "`microbenchmark/fixp/compile.all`.")
+    out.append("")
+    out.append("Disassembly may use physical fallback for unsupported macro rendering; "
+               "see each ELF\'s .diss.mode and preserved .diss.macro-errors. "
+               "Contract checks decode B.FPATR from the raw instruction word.")
     out.append("")
     out.append("Kernel: a single call to one of the 12 matrix post-process "
                "operations (TMATMUL{,_BIAS,_ACC,_MX,_MX_BIAS,_MX_ACC} + "

@@ -138,15 +138,15 @@ golden-check:
 		LOWP_RESIDENT_CHAINS=$(LOWP_RESIDENT_CHAINS) \
 		B=$(B) M=$(M) N=$(N) K=$(K) tM=$(tM) tN=$(tN) tK=$(tK) \
 		COMPILER_DIR=$(COMPILER_DIR) OBJ_ROOT=$(OBJ_ROOT) \
-		res_check=on all
-	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/gfrun_matmul.py -d $(TARGET)
+		res_check=on CHK_DIR=. all
+	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/gfrun_matmul.py -d $(TARGET) --compare-root $(OBJ_ROOT)/matmul-check
 else
 golden-check:
 	$(MAKE) -B TESTCASE=$(TESTCASE) DTYPE=$(DTYPE) B=$(B) M=$(M) N=$(N) K=$(K) \
 		tM=$(tM) tN=$(tN) tK=$(tK) \
 		COMPILER_DIR=$(COMPILER_DIR) OBJ_ROOT=$(OBJ_ROOT) \
-		res_check=on all
-	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/gfrun_matmul.py -d $(TARGET)
+		res_check=on CHK_DIR=. all
+	python3 $(TEST_ROOT)/$(CASE_SRC_DIR)/gfrun_matmul.py -d $(TARGET) --compare-root $(OBJ_ROOT)/matmul-check
 endif
 
 # Compact numerical portfolio. FP32/FP16/BF16 use K/tK=2 and MXFP4 uses

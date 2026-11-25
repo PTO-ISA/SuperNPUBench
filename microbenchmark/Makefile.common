@@ -125,7 +125,7 @@ endif
 all: pre_work $(TARGET)
 
 diss: pre_work $(TARGET)
-	$(DUMP) -dl $(TARGET) > $(TARGET).diss
+	python3 "$(TEST_ROOT)/common/dump_elf.py" --objdump "$(DUMP)" --elf "$(TARGET)"
 
 # Compilation rules
 $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp

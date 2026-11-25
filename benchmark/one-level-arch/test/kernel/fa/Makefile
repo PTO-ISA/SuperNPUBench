@@ -213,3 +213,10 @@ algd-check:
 		--elf $(TARGET) --gfrun "$(GFRUN)" \
 		--case-dir $(ROOT)/compare/fa_lowp_algD_Sq$(Sq)_Skv$(Skv) \
 		--sq $(Sq) --skv $(Skv)
+
+# All native HiF4 variants share fa_hif4.o; make does not track -D options.
+# Force recompilation for variant/shape/RES_CHECK changes and header edits.
+ifneq ($(HIF4_NATIVE_DRIVER),)
+.PHONY: force_hif4_rebuild
+$(OBJ): force_hif4_rebuild
+endif
