@@ -7,6 +7,7 @@
 #endif
 
 #include <stdint.h>
+#include "ssm_hosted_startup.h"
 
 struct pto_runtime_group_context {
   uint32_t magic;
@@ -31,11 +32,11 @@ enum {
   PTO_RUNTIME_GROUP_STATE_ABORT = 3u,
 };
 
-extern const struct pto_runtime_group_context *
+extern SSM_SCALAR_INTRA const struct pto_runtime_group_context *
 __pto_runtime_group_context_get(void) __attribute__((weak));
-extern int __linx_group_pe_main(
+extern SSM_SCALAR_INTRA int __linx_group_pe_main(
     unsigned, const struct pto_runtime_group_context *) __attribute__((weak));
-extern void __pto_runtime_group_complete(
+extern SSM_SCALAR_INTRA void __pto_runtime_group_complete(
     const struct pto_runtime_group_context *, int)
     __attribute__((weak, noreturn));
 

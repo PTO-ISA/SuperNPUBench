@@ -4,7 +4,7 @@
 #include "ssm_hosted_startup.h"
 
 struct pto_runtime_group_context;
-extern void __linx_group_worker_start(void) __attribute__((noreturn));
+extern SSM_SCALAR_INTRA void __linx_group_worker_start(void) __attribute__((noreturn));
 
 // Strong writable slot populated by the SSM launcher before any PE executes.
 volatile uintptr_t __ssm_pto_group_context;
