@@ -68,3 +68,7 @@ Shared S8 将 mode 改为 SHARED_S8_ROWMAX、ELF 后缀改为 shared_s8_rowmax�
 - 合并两轮记录可计为原清单 62 项有效配置编译通过、18 项超容量配置已删除；不能说 80 项全部运行通过。
 - 未跑 gfsim，不提供性能结论。
 - 当前 llvm-objdump 的部分 Matrix RowMax 宏反汇编仍失败；`--disassembler-options=no-tile-macros` 可以导出物理指令。该工具链限制不等于 ELF 编译或 gfrun 失败；本轮未改它，也不声称完整 `compile.all` 的宏反汇编报告已通过。
+
+## main 后续审计修复
+
+Packed matmul（含 reuseA）、HiF4 FA 增量构建、旧 matmul hosted checker 和宏反汇编兼容处理已补修。最新范围和针对性验证见 `/Users/blacktraker/Programming/gitproj/DV4/SuperNPUBench/docs/issue298_main_audit_fixes_20261125.md`。上游宏渲染限制仍在，构建现在显式使用物理 fallback，不掩盖其他错误。

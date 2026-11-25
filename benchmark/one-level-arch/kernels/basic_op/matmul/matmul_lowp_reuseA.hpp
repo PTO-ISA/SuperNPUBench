@@ -49,8 +49,9 @@ struct ReuseAKernel {
         Scale *b_scale;
     };
 
-    using GlobalA = global_tensor<Input, RowMajor<PhysicalM, StoredK>>;
-    using GlobalB = global_tensor<Input, RowMajor<gN, StoredK>>;
+    // Tensor strides count logical lanes; pointer offsets use StoredK bytes.
+    using GlobalA = global_tensor<Input, RowMajor<PhysicalM, PhysicalK>>;
+    using GlobalB = global_tensor<Input, RowMajor<gN, PhysicalK>>;
     using GlobalC = global_tensor<float, RowMajor<gM, gN>>;
     using GlobalAScale = global_tensor<Scale, RowMajor<PhysicalM, GlobalScaleCols>>;
     using GlobalBScale = global_tensor<Scale, RowMajor<gN, GlobalScaleCols>>;

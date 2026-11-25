@@ -62,11 +62,10 @@ void matmul_shared_lowp(float *c_ptr, dtype *a_ptr, dtype *b_ptr,
     const uint32_t tid = get_thread_idx();
 
     // Matrix K is expressed in logical elements in the ISA. Packed FP4x2
-    // global storage still advances in byte carriers, so use slice tensors
-    // with physical row strides and construct each block from an explicit
-    // packed-storage pointer below.
-    using gmASlice = global_tensor<dtype, RowMajor<kGroupM, kStoredGK>>;
-    using gmBSlice = global_tensor<dtype, RowMajor<tN, kStoredGK>>;
+    // GM tensor strides count logical elements; GetStrideBytes applies the
+    // dtype bit width. Only pointer offsets below advance in packed bytes.
+    using gmASlice = global_tensor<dtype, RowMajor<kGroupM, gK>>;
+    using gmBSlice = global_tensor<dtype, RowMajor<tN, gK>>;
     using gmC = global_tensor<float, RowMajor<gM, gN>>;
 
     using tileAMatrix = SharedMatrixLeft<dtype, kTileRows, tK, kValidRowM, tK>;
