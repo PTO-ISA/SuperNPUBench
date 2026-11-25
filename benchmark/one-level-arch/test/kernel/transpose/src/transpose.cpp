@@ -23,9 +23,11 @@ int main() {
     res_check_publish_inputs(res_check_sync, tid);
 #endif
     BENCHSTART;
-    supernpu::multi_thread::TransposeU16Transfer<64, 1, 64, false> transfer;
-    for (unsigned col = tid; col < 64; col += 4)
+    supernpu::multi_thread::TransposeU16Transfer<32, 1, 64, false> transfer;
+    for (unsigned col = tid; col < 64; col += 4) {
         transfer.copy(input + col, output + col * 64);
+        transfer.copy(input + 32 * 64 + col, output + col * 64 + 32);
+    }
     BENCHEND;
 #ifdef RES_CHECK
     res_check_wait_for_all(res_check_sync, tid);

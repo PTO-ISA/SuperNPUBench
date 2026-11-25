@@ -74,6 +74,9 @@ VECTOR_DTYPE := __bf16
 PACKED_FACTOR := 1
 USE_MX := 0
 else ifeq ($(FA_MODE),HIF4_VECBF16)
+ifneq ($(filter $(TESTCASE),fa_2d_unroll_gmma fa_gmma_kchains fa_fixpipe),)
+$(error HIF4_VECBF16 requires Matrix-MX with U32 scales; $(TESTCASE) has no scale input ABI)
+endif
 MATRIX_DTYPE := __fp4_hif4x2
 VECTOR_DTYPE := __bf16
 PACKED_FACTOR := 2

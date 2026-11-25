@@ -195,11 +195,11 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
 
       $(QSMLA_Q_OBJ): $(QSMLA_DATA_DIR)/q.fp16.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_DATA_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol q_fp16 --bytes $(QSMLA_Q_BYTES)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol q_fp16 --bytes $(QSMLA_Q_BYTES)
 
       $(QSMLA_KV_OBJ): $(QSMLA_DATA_DIR)/kv_s2_4096.fp16.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_DATA_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol kv_fp16 --bytes $(QSMLA_KV_BYTES)
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol kv_fp16 --bytes $(QSMLA_KV_BYTES)
    endif
 
    ifeq ($(QSMLA_SPARSE_EMBED_INPUT), on)
@@ -288,52 +288,52 @@ ifeq ($(TESTCASE), quant_sparse_flash_mla)
 
       $(QSMLA_Q_OBJ): $(QSMLA_SPARSE_DATA_DIR)/q.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol q_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_Q_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol q_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_Q_BYTES) --exact-bytes
 
        $(QSMLA_ORI_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol ori_kv_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
 
        $(QSMLA_ORI_KV_T_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv_t.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_t_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol ori_kv_t_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_KV_BYTES) --exact-bytes
 
       $(QSMLA_CMP_KV_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_kv_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_CMP_KV_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol cmp_kv_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_CMP_KV_BYTES) --exact-bytes
 
       $(QSMLA_ORI_INDEX_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_sparse_indices.int32.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_sparse_indices_int32 --bytes $(QSMLA_ORI_INDEX_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol ori_sparse_indices_int32 --bytes $(QSMLA_ORI_INDEX_BYTES) --exact-bytes
 
       $(QSMLA_CMP_INDEX_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_sparse_indices.int32.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_sparse_indices_int32 --bytes $(QSMLA_CMP_INDEX_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol cmp_sparse_indices_int32 --bytes $(QSMLA_CMP_INDEX_BYTES) --exact-bytes
 
       $(QSMLA_ORI_LENGTH_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_topk_length.int32.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_topk_length_int32 --bytes $(QSMLA_LENGTH_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol ori_topk_length_int32 --bytes $(QSMLA_LENGTH_BYTES) --exact-bytes
 
       $(QSMLA_CMP_LENGTH_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_topk_length.int32.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_topk_length_int32 --bytes $(QSMLA_LENGTH_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol cmp_topk_length_int32 --bytes $(QSMLA_LENGTH_BYTES) --exact-bytes
 
       ifeq ($(QSMLA_SPARSE_PA), on)
       $(QSMLA_ORI_KV_PA_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_BYTES_PA) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol ori_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_ORI_BYTES_PA) --exact-bytes
 
       $(QSMLA_CMP_KV_PA_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_kv_pa.$(QSMLA_INPUT_EXT).bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_CMP_BYTES_PA) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol cmp_kv_pa_$(QSMLA_INPUT_EXT) --bytes $(QSMLA_CMP_BYTES_PA) --exact-bytes
 
       $(QSMLA_ORI_BT_OBJ): $(QSMLA_SPARSE_DATA_DIR)/ori_block_table.int32.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol ori_block_table_int32 --bytes $(QSMLA_PA_TABLE_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol ori_block_table_int32 --bytes $(QSMLA_PA_TABLE_BYTES) --exact-bytes
 
       $(QSMLA_CMP_BT_OBJ): $(QSMLA_SPARSE_DATA_DIR)/cmp_block_table.int32.bin $(QSMLA_INPUT_BUILDER)
 	@mkdir -p $(QSMLA_SPARSE_OBJ_DIR)
-	python3 $(QSMLA_INPUT_BUILDER) --compiler $(CXX) --input $< --output $@ --symbol cmp_block_table_int32 --bytes $(QSMLA_PA_CMP_TABLE_BYTES) --exact-bytes
+	python3 $(QSMLA_INPUT_BUILDER) --compiler $(firstword $(CXX)) $(foreach arg,$(wordlist 2,$(words $(CXX)),$(CXX)),--compiler-arg=$(arg)) --input $< --output $@ --symbol cmp_block_table_int32 --bytes $(QSMLA_PA_CMP_TABLE_BYTES) --exact-bytes
       endif
    endif
 endif

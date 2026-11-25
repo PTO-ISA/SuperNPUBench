@@ -9,6 +9,7 @@
 
 #include <common/pto_tileop.hpp>
 #include <cstdint>
+#include <type_traits>
 #include "benchmark.h"
 #include "bench_utils.hpp"
 
@@ -149,10 +150,10 @@ void bench_fma(D *c, D *a, D *b, D *d) {
 }
 
 // Row reduction: source MxN, destination Mx1.
-template <typename D, int M, int N>
-void bench_reduce_row(D *c, D *a, auto op) {
-    using gmC = global_tensor<D, RowMajor<M, 1>>;
-    using tileC = Tile<Location::Vec, D, M, 1, BLayout::RowMajor>;
+template <typename D, int M, int N, typename Out = D>
+void bench_reduce_row(Out *c, D *a, auto op) {
+    using gmC = global_tensor<Out, RowMajor<M, 1>>;
+    using tileC = Tile<Location::Vec, Out, M, 1, BLayout::RowMajor>;
     using itC = global_iterator<gmC, tileC>;
     iter_t<D, M, N> gA(a); itC gC(c);
     auto gA0 = gA(0, 0);
@@ -165,10 +166,13 @@ void bench_reduce_row(D *c, D *a, auto op) {
 }
 
 // Column reduction: source MxN, destination 1xN.
-template <typename D, int M, int N>
-void bench_reduce_col(D *c, D *a, auto op) {
-    using gmC = global_tensor<D, RowMajor<1, N>>;
-    using tileC = Tile<Location::Vec, D, 1, N, BLayout::RowMajor>;
+template <typename D, int M, int N, typename Out = D>
+void bench_reduce_col(Out *c, D *a, auto op) {
+    using gmC = global_tensor<Out, RowMajor<1, N>>;
+    // Preserve a full physical carrier; only the first row is written back.
+    // Current column-ARG lowering retains the source row geometry.
+    using tileC = Tile<Location::Vec, Out,
+        std::is_same_v<Out, D> ? 1 : M, N, BLayout::RowMajor, 1, N>;
     using itC = global_iterator<gmC, tileC>;
     iter_t<D, M, N> gA(a); itC gC(c);
     auto gA0 = gA(0, 0);

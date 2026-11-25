@@ -99,9 +99,9 @@ using row_max_tile_t =
 
 // GroupMax has the same CUBE_M32 layout requirement; only its valid column
 // count differs (ceil(N / GroupN)).
-template <int M, int GCols>
+template <int M, int GCols, typename T = float>
 using group_max_tile_t =
-    VecTileM32<float, M, GCols, M, GCols>;
+    VecTileM32<T, M, GCols, M, GCols>;
 
 // --- Auxiliary operand tiles for the operation-family modes ---------------
 // (Only PostProcess parameter tiles carry the >=512 B minimum; the math
@@ -132,22 +132,19 @@ template <int M, int N>
 using cscale_tile_t =
     Tile<Location::Vec, uint8_t, M, N, BLayout::CubeM32, M, 1>;
 
-// MX scale tiles use one E8M0 value per 32 elements along K.  Physical shapes
-// are padded to at least 512 B while valid shapes follow the matrix contract:
-// ScaleA=M x ceil(K/32), ScaleB=ceil(K/32) x N.
+// MX scale tiles use CUBE_M32 and one E8M0 value per 32 elements along K.
+// Valid shapes are ScaleA=M x ceil(K/32), ScaleB=N x ceil(K/32).
+// Keep their role Vec so GEMV overloads cannot mistake a scale for its Left input.
 template <int M, int K>
 using scale_a_tile_t =
-    Tile<Location::Vec, __fp8_e8m0, M, 16, BLayout::RowMajor,
-         M, (K + 31) / 32>;
+    VecTileM32<__fp8_e8m0, M, (K + 31) / 32>;
 template <int K, int N>
 using scale_b_tile_t =
-    Tile<Location::Vec, __fp8_e8m0, 16, N, BLayout::RowMajor,
-         (K + 31) / 32, N>;
-// TGEMV_MX vector scale: valid 1 x ceil(K/32), padded to 512 B.
+    VecTileM32<__fp8_e8m0, N, (K + 31) / 32>;
+// TGEMV_MX vector scale: valid 1 x ceil(K/32), physical M32 carrier.
 template <int K>
 using scale_vec_tile_t =
-    Tile<Location::Vec, __fp8_e8m0, 16, 32, BLayout::RowMajor,
-         1, (K + 31) / 32>;
+    VecTileM32<__fp8_e8m0, 32, (K + 31) / 32, 1, (K + 31) / 32>;
 
 // Auxiliary matrix operands are real Tile operands, not C++ parameter
 // objects.  Keep their creation, definition and use in one inlined scope;
@@ -773,10 +770,11 @@ int main() {
 #elif defined(F16_GROUPMAX)
   buf_t<__half, __half> buf;
   run_matmul<__half, __half>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
-    group_max_tile_t<TM, (TN + 15) / 16> group_out;
+    group_max_tile_t<TM, (TN + 15) / 16, __half> group_out;
     TMATMUL(d, a, b, fixp::f16().group_max<16>(group_out));
   });
 #elif defined(S8_ROWMAX)
+  // Negative coverage only: S8 final D cannot request Matrix RowMax.
   buf_t<__half, int8_t> buf;
   run_matmul<__half, int8_t>(buf.a, buf.b, buf.d, [&](auto &d, auto &a, auto &b) {
     row_max_tile_t<TM> row_out;
@@ -1226,21 +1224,15 @@ int main() {
             .max_abs());
       });
 #elif defined(SHARED_F16_GROUPMAX)           // Shared A/B + f16 + GroupMax<16>
-  // NOTE: compiles + FPATR-valid, but gfrun rejects the cooperative collective
-  // when a non-keep_acc PreQuant (f16/s8 destination) is combined with a
-  // max-reduction (RowMax/GroupMax). The single-PE twin passes, so this is a
-  // cooperative-path model gap, not a test-code bug. keep_acc+GroupMax on
-  // shared (shared_groupmax_16) works; only the f16/s8 PreQuant breaks it.
+  // GroupMax follows the final FP16 destination type.
   buf_t<__half, __half> buf;
   run_matmul_shared<__half>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {
-        group_max_tile_t<TM, (TN + 15) / 16> group_out;
+        group_max_tile_t<TM, (TN + 15) / 16, __half> group_out;
         TMATMUL(tD, tA, tB, fixp::f16().group_max<16>(group_out));
       });
 #elif defined(SHARED_S8_ROWMAX)              // Shared A/B + s8 + RowMax
-  // NOTE: same cooperative+PreQuant+max-reduction gap as SHARED_F16_GROUPMAX.
-  // Compiles + FPATR-valid; single-PE twin passes; gfrun rejects the
-  // collective on the cooperative path. keep_acc+RowMax (shared_rowmax) works.
+  // Negative coverage only: S8 final D cannot request Matrix RowMax.
   buf_t<__half, int8_t> buf;
   run_matmul_shared<int8_t>(buf.a, buf.b, buf.d,
       [&](auto &tD, auto &tA, auto &tB) {

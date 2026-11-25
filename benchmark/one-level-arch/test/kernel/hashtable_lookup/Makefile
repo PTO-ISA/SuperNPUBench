@@ -25,10 +25,13 @@ DEFINES += -DHASH_KERNEL_HEADER='"$(HASH_KERNEL_HEADER)"'
 endif
 include ../../common/Makefile.common
 
-# Smoke path: no libc/startup objects or compiler-generated libc calls.
+# Avoid compiler-generated libc calls in the smoke path. Hosted startup
+# remains owned by the SSM adapter; baremetal supplies the assembly entry.
 ifneq ($(res_check),on)
 CC_OPTS += -ffreestanding
+ifeq ($(baremetal),on)
 CC_LINK = -nostdlib -nostartfiles $(ROOT)/test/common/_start.s
+endif
 endif
 
 # Mode changes are compile-time changes. Never reuse a perf object for verify

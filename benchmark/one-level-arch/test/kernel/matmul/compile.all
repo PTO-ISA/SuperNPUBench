@@ -103,17 +103,39 @@ fi
 
 # === S1-S6 matmul_shared performance matrix ===
 # Source: matmul_shared_S1_S6_pmu_refreshed_20260921.xlsx, sheet
-# "完整对比表".  The table contains 264 shape/dtype/tile configurations:
+# "完整对比表". The grids below retain only capacity-valid configurations:
 #   S1: 2048x256x2048   S2: 128x256x7168
 #   S3: 256x128x7168    S4: 64x128x7168
 #   S5: 64x64x7168      S6: 128x256x32768
 #
-# Every configuration in the table is represented by the grids below; no
-# capacity gate (issue #192 only excludes the two FA Tk256 FP32 cases).
+# The 18 known oversized combinations are removed from these grids.
+# Keep the capacity guard for future additions.
 matrix_built=0
+matrix_skipped=0
+shared_capacity_ok() {
+    local dtype=$1 tn=$2 tk=$3 elem=1 packed=1 scale=0 group=32
+    case "$dtype" in
+        float) elem=4 ;;
+        __half|__bf16) elem=2 ;;
+        MXFP8) scale=1 ;;
+        MXFP4) packed=2; scale=1 ;;
+        HIF4|HIF4X2) packed=2; scale=4; group=64 ;;
+    esac
+    local bytes=$(( (128 + tn) * tk * elem / packed ))
+    if (( scale > 0 )); then
+        local cols=$(( ((tk + group - 1) / group + 31) / 32 * 32 ))
+        bytes=$(( bytes + (128 + tn) * cols * scale ))
+    fi
+    if (( bytes > 262144 )); then
+        echo "SKIP SharedTReg: $dtype tM=128 tN=$tn tK=$tk needs $bytes bytes (limit 262144)"
+        matrix_skipped=$((matrix_skipped + 1))
+        return 1
+    fi
+}
 
 compile_shared_matrix_case() {
     local suite=$1 dtype=$2 m=$3 n=$4 k=$5 tn=$6 tk=$7
+    shared_capacity_ok "$dtype" "$tn" "$tk" || return 0
     make diss TESTCASE=matmul_shared COMPILER_DIR="$COMPILER_DIR" \
         DTYPE="$dtype" B=1 M="$m" N="$n" K="$k" \
         tM=128 tN="$tn" tK="$tk"
@@ -122,6 +144,7 @@ compile_shared_matrix_case() {
 
 compile_lowp_matrix_case() {
     local suite=$1 mode=$2 m=$3 n=$4 k=$5 tn=$6 tk=$7
+    shared_capacity_ok "$mode" "$tn" "$tk" || return 0
     make diss TESTCASE=matmul_lowp LP_MODE="$mode" \
         COMPILER_DIR="$COMPILER_DIR" \
         B=1 M="$m" N="$n" K="$k" tM=128 tN="$tn" tK="$tk"
@@ -150,11 +173,13 @@ compile_lowp_grid() {
 
 # FP32 table grids.
 compile_shared_grid S1 float 2048 256 2048 "64 128"     "64 128 256"
-compile_shared_grid S2 float 128  256 7168 "64 128 256" "64 128 256"
-compile_shared_grid S3 float 256  128 7168 "64 128"     "64 128 256 512"
-compile_shared_grid S4 float 64   128 7168 "64 128"     "64 128 256 512"
-compile_shared_grid S5 float 64   64  7168 "64"         "64 128 256 512"
-compile_shared_grid S6 float 128  256 32768 "64 128 256" "64 128 256"
+compile_shared_grid S2 float 128 256 7168 "64 128" "64 128 256"
+compile_shared_grid S2 float 128 256 7168 "256"    "64 128"
+compile_shared_grid S3 float 256  128 7168 "64 128"     "64 128 256"
+compile_shared_grid S4 float 64   128 7168 "64 128"     "64 128 256"
+compile_shared_grid S5 float 64   64  7168 "64"         "64 128 256"
+compile_shared_grid S6 float 128 256 32768 "64 128" "64 128 256"
+compile_shared_grid S6 float 128 256 32768 "256"    "64 128"
 
 # BF16 and FP16 table grids.
 for dtype in __bf16 __half; do
@@ -166,14 +191,26 @@ for dtype in __bf16 __half; do
     compile_shared_grid S6 "$dtype" 128  256 32768 "64 128 256" "64 128 256"
 done
 
-# FP8/MXFP8/MXFP4 table grids. The raw grids contain every spreadsheet row.
+# Low-precision grids: constrain K by dtype and N before generating cases.
+# FP8 N256/K1024 needs 384 KiB; MXFP8 N128/N256 at K1024 needs
+# 264/396 KiB including scales. MXFP4 combinations remain unchanged.
 for mode in FP8 MXFP8 MXFP4; do
-    compile_lowp_grid S1 "$mode" 2048 256 2048  "64 128 256" "256 512 1024"
-    compile_lowp_grid S2 "$mode" 128  256 7168  "64 128 256" "256 512 1024"
-    compile_lowp_grid S3 "$mode" 256  128 7168  "64 128"     "256 512 1024"
-    compile_lowp_grid S4 "$mode" 64   128 7168  "64 128"     "256 512 1024"
-    compile_lowp_grid S5 "$mode" 64   64  7168  "64"         "256 512 1024"
-    compile_lowp_grid S6 "$mode" 128  256 32768 "64 128 256" "256 512 1024"
+    for tn in 64 128 256; do
+        case "$mode:$tn" in
+            FP8:256|MXFP8:128|MXFP8:256) tk_values="256 512" ;;
+            *) tk_values="256 512 1024" ;;
+        esac
+        compile_lowp_grid S1 "$mode" 2048 256 2048  "$tn" "$tk_values"
+        compile_lowp_grid S2 "$mode" 128  256 7168  "$tn" "$tk_values"
+        compile_lowp_grid S6 "$mode" 128  256 32768 "$tn" "$tk_values"
+        if (( tn <= 128 )); then
+            compile_lowp_grid S3 "$mode" 256 128 7168 "$tn" "$tk_values"
+            compile_lowp_grid S4 "$mode" 64  128 7168 "$tn" "$tk_values"
+        fi
+        if (( tn == 64 )); then
+            compile_lowp_grid S5 "$mode" 64 64 7168 "$tn" "$tk_values"
+        fi
+    done
 done
 
 echo "S1-S6 matmul matrix: BUILT=$matrix_built"

@@ -28,7 +28,7 @@ MODES=(
   rowmax rowmax_init
   groupmax_8 groupmax_16 groupmax_32 groupmax_48 groupmax_64
   groupmax_80 groupmax_96 groupmax_112 groupmax_128 rowgroup_maxabs
-  f16_groupmax s8_rowmax
+  f16_groupmax
   # operation-family coverage (param-free keep_acc) — 11 ops beyond plain TMATMUL
   bias acc acc_cscale
   mx_scale0 mx_scale_a mx_scale_b mx mxbias mxacc mxacc_cscale
@@ -50,7 +50,7 @@ MODES=(
   shared_rowmax_init
   shared_groupmax_16 shared_groupmax_32 shared_groupmax_48 shared_groupmax_64
   shared_groupmax_80 shared_groupmax_96 shared_groupmax_112 shared_groupmax_128
-  shared_rowgroup_maxabs shared_f16_groupmax shared_s8_rowmax
+  shared_rowgroup_maxabs shared_f16_groupmax
   # shared ACC + CScale
   shared_acc_cscale
   trans_a trans_b trans_ab
@@ -61,7 +61,9 @@ MODES=(
 # The current main compiler emits an invalid empty operand stream
 # (B.IOR [zero,a1],[]) for the standalone LRELU_ONLY descriptor. Keep it
 # explicit instead of counting a known backend encoding gap as active failure.
-UNSUPPORTED=(lrelu_only)
+# S8 final destinations cannot request Matrix RowMax. Keep the explicit
+# negative cases in the source, but do not count them as active instructions.
+UNSUPPORTED=(lrelu_only s8_rowmax shared_s8_rowmax)
 
 PASS=0
 FAIL=0

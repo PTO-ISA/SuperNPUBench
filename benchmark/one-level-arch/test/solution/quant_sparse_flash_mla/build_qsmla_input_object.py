@@ -9,7 +9,8 @@ from pathlib import Path
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--compiler", required=True, type=Path)
+    parser.add_argument("--compiler", required=True)
+    parser.add_argument("--compiler-arg", action="append", default=[])
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--symbol", required=True)
@@ -58,7 +59,7 @@ _binary_{args.symbol}_end:
     try:
         subprocess.run(
             [
-                str(args.compiler), "-target", "linx64v5", "-c",
+                args.compiler, *args.compiler_arg, "-target", "linx64v5", "-c",
                 str(asm_path), "-o", str(args.output),
             ],
             check=True,
