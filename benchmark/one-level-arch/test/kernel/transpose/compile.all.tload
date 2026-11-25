@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
+export COMPILER_DIR=${COMPILER_DIR:-/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin}
+MODE=${1:-both}
+GENERIC_CASE=${2:-0}
+TILE_ROWS=${3:-0}
+TILE_COLS=${4:-64}
+if ! [[ "$TILE_ROWS" =~ ^[0-9]+$ && "$TILE_COLS" =~ ^[0-9]+$ ]] ||
+   (( TILE_ROWS > 32 || TILE_COLS < 1 || TILE_COLS > 256 )); then
+    echo 'tile rows must be 0(auto)..32; tile cols must be 1..256' >&2; exit 2
+fi
+case "$GENERIC_CASE" in 0|1|2|3|4|5) ;; *) echo "case must be 0..5" >&2; exit 2 ;; esac
+case "$MODE" in perf) CHECKS=(0) ;; check) CHECKS=(1) ;; both) CHECKS=(0 1) ;; *) echo 'usage: compile.all.tload [both|perf|check] [case:0..5] [rows:0=auto] [cols:64]' >&2; exit 2 ;; esac
+BUILD_ROOT=${OBJ_ROOT:-"$SCRIPT_DIR/../../../output/transpose_tload/case$GENERIC_CASE"}
+BUILD_ROOT="$BUILD_ROOT/r${TILE_ROWS}_c${TILE_COLS}"
+mkdir -p "$BUILD_ROOT"
+BUILD_ROOT=$(cd "$BUILD_ROOT" && pwd)
+for check in "${CHECKS[@]}"; do
+    make -C "$SCRIPT_DIR" TESTCASE=transpose_tload GENERIC_CASE="$GENERIC_CASE" TRANSPOSE_CHECK="$check" \
+        CC_OPT=default CFLAGS="${CFLAGS:-} -DTRANSPOSE_TILE_ROWS=$TILE_ROWS -DTRANSPOSE_TILE_COLS=$TILE_COLS" COMPILER_DIR="$COMPILER_DIR" OBJ_ROOT="$BUILD_ROOT/check$check" diss
+done

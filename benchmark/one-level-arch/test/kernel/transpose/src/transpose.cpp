@@ -3,11 +3,11 @@
 #include "benchmark.h"
 #include "fileop.h"
 #include "multi_thread_res_check.h"
-#include "basic_op/transpose/transpose.hpp"
+#include "basic_op/transpose/transpose_u16_shapes.hpp"
 
 namespace {
-alignas(4096) std::int32_t input[64 * 64];
-alignas(4096) std::int32_t output[64 * 64];
+alignas(4096) std::uint16_t input[64 * 64];
+alignas(4096) std::uint16_t output[64 * 64];
 #ifdef RES_CHECK
 MultiThreadResCheckSync res_check_sync{};
 #endif
@@ -23,8 +23,9 @@ int main() {
     res_check_publish_inputs(res_check_sync, tid);
 #endif
     BENCHSTART;
-    supernpu::multi_thread::transpose_2d<
-        std::int32_t, 64, 64, 16, 16>(input, output);
+    supernpu::multi_thread::TransposeU16Transfer<64, 1, 64, false> transfer;
+    for (unsigned col = tid; col < 64; col += 4)
+        transfer.copy(input + col, output + col * 64);
     BENCHEND;
 #ifdef RES_CHECK
     res_check_wait_for_all(res_check_sync, tid);

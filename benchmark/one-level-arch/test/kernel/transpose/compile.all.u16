@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
+export COMPILER_DIR=${COMPILER_DIR:-/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin}
+MODE=${1:-both}
+if [ "$#" -gt 0 ]; then shift; fi
+case "$MODE" in mgather) PATHS=(1) ;; tload) PATHS=(0) ;; both) PATHS=(1 0) ;; *) echo 'usage: compile.all.u16 [both|mgather|tload] [1..5 ...]' >&2; exit 2 ;; esac
+if [ "$#" -eq 0 ]; then set -- 1 2 3 4 5; fi
+BUILD_ROOT=${OBJ_ROOT:-"$SCRIPT_DIR/../../../output/transpose_u16_shapes"}
+mkdir -p "$BUILD_ROOT"
+BUILD_ROOT=$(cd "$BUILD_ROOT" && pwd)
+for shape_case in "$@"; do
+    case "$shape_case" in 1|2|3|4|5) ;; *) echo "Invalid case: $shape_case" >&2; exit 2 ;; esac
+    for gather in "${PATHS[@]}"; do
+        make -C "$SCRIPT_DIR" TESTCASE=transpose_u16_shapes SHAPE_CASE="$shape_case" \
+            TRANSPOSE_GATHER="$gather" CC_OPT=default COMPILER_DIR="$COMPILER_DIR" \
+            OBJ_ROOT="$BUILD_ROOT/case${shape_case}_g${gather}" diss
+    done
+done

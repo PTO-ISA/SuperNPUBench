@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
+export COMPILER_DIR=/Users/blacktraker/Programming/gitproj/DV4/linx-toolchain-build/output/linx_blockisa_llvm_musl/bin
+MODE=${1:-both}
+CASE=${2:-1}
+TILE=${3:-512}
+MAX_PLANE=${4:-4096}
+[[ "$TILE" =~ ^[0-9]+$ && "$MAX_PLANE" =~ ^[0-9]+$ ]] || exit 2
+(( TILE >= 32 && TILE <= 512 && TILE % 32 == 0 && MAX_PLANE >= 1 && MAX_PLANE <= 4096 )) || exit 2
+case "$CASE" in
+  1) SHAPE=129u,22u,120u; PERM=2u,1u,0u ;;
+  2) SHAPE=8u,4096u,3u; PERM=0u,2u,1u ;;
+  3) SHAPE=1476u,32u; PERM=1u,0u ;;
+  4) SHAPE=8u,64u,4u,16u,7u; PERM=0u,3u,2u,1u,4u ;;
+  5) SHAPE=8u,8u,64u,64u; PERM=0u,2u,1u,3u ;;
+  6) SHAPE=128u,22u,120u; PERM=2u,1u,0u ;;
+  *) echo 'case must be 1..6' >&2; exit 2 ;;
+esac
+case "$MODE" in
+  check) CHECKS=(1) ;; perf) CHECKS=(0) ;; both) CHECKS=(1 0) ;;
+  *) echo 'usage: compile.all.gather_plane [both|check|perf] [case:1..6] [tile_elements:512] [max_plane_elements:4096]' >&2; exit 2 ;;
+esac
+BUILD_ROOT=${OBJ_ROOT:-"$SCRIPT_DIR/../../../output/transpose_gather_plane/case$CASE/t${TILE}_p${MAX_PLANE}"}
+mkdir -p "$BUILD_ROOT"
+BUILD_ROOT=$(cd "$BUILD_ROOT" && pwd)
+for check in "${CHECKS[@]}"; do
+  make -C "$SCRIPT_DIR" TESTCASE=transpose_gather_plane TRANSPOSE_CHECK="$check" CC_OPT=default \
+    COMPILER_DIR="$COMPILER_DIR" OBJ_ROOT="$BUILD_ROOT/check$check" \
+    CFLAGS="${CFLAGS:-} -DTRANSPOSE_SHAPE=$SHAPE -DTRANSPOSE_PERM=$PERM -DTRANSPOSE_TILE_ELEMENTS=$TILE -DTRANSPOSE_MAX_PLANE=$MAX_PLANE" diss
+done
